@@ -229,346 +229,427 @@ export function addReviewPointer(existing: string, template: string | null): str
     .find((line) => line.startsWith("Read `REVIEW.md` before reviewing a pull request"));
   if (pointer === undefined) return existing;
 
-  let fence: {
-    character: string;
-    length: number;
-    container: string;
-    contentColumn: number;
-  } | null = null;
-  let comment = false;
-  let spanEnd = 0;
-  let linkStart = 0;
-  let linkEnd = 0;
-  let tagEnd = 0;
-  let offset = 0;
-  const blockTags =
-    "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul".replace(
-      /[a-z]/g,
-      (letter) => `[${letter}${letter.toUpperCase()}]`,
+  const referenceLabels = new Set<string>();
+  const normalizeLabel = (label: string): string =>
+    label
+      .replace(/[ \t\r\n]+/g, " ")
+      .replace(/^ | $/g, "")
+      .toLowerCase()
+      .toUpperCase();
+  // Discover operative definitions before checking forward-reference image descriptions.
+  for (let pass = 0; pass < 2; pass += 1) {
+    let fence: {
+      character: string;
+      length: number;
+      container: string;
+      contentColumn: number;
+    } | null = null;
+    let comment = false;
+    let spanEnd = 0;
+    let linkStart = 0;
+    let linkEnd = 0;
+    let tagEnd = 0;
+    let referenceEnd = 0;
+    let offset = 0;
+    const blockTags =
+      "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul".replace(
+        /[a-z]/g,
+        (letter) => `[${letter}${letter.toUpperCase()}]`,
+      );
+    const interrupt = String.raw` {0,3}(?:#{1,6}(?:[ \t]|\r?$)|>|~{3,}|\x60{3,}[^\x60\r\n]*\r?$|(?:=+|-+)[ \t]*\r?$|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})\r?$|(?:[-+*]|0{0,8}1[.)])[ \t]+\S|<(?:!--|\?|![A-Za-z]|!\[[cC][dD][aA][tT][aA]\[|(?:[pP][rR][eE]|[sS][cC][rR][iI][pP][tT]|[sS][tT][yY][lL][eE]|[tT][eE][xX][tT][aA][rR][eE][aA])(?=[ \t>]|\r?$)|/?(?:${blockTags})(?=[ \t>]|/>|\r?$)))`;
+    const continuation = String.raw`\r?\n(?![ \t]*(?:\r?\n|(?![\s\S])))(?!${interrupt})`;
+    const destination = String.raw`(?<destination><(?:\\.|[^<>\\\r\n])*>|(?:\\.|[^\x00-\x20\x7f<>\\])+)`;
+    const title = String.raw`(?:"(?:[^"\\\r\n]|\\.|${continuation})*"|'(?:[^'\\\r\n]|\\.|${continuation})*'|\((?:[^()\\\r\n]|\\.|${continuation})*\))`;
+    const spacing = String.raw`(?:[ \t]+(?:${continuation}[ \t]*)?|[ \t]*${continuation}[ \t]*)`;
+    const paragraphInterrupt = new RegExp(String.raw`^${interrupt}`);
+    const htmlContinuation = continuation.replace("[cC][dD][aA][tT][aA]", "CDATA");
+    const htmlSpace = new RegExp(String.raw`(?:[ \t]|${htmlContinuation})+`, "y");
+    const htmlName = /<\/?[A-Za-z][A-Za-z0-9-]*/y;
+    const htmlAttribute = /[A-Za-z_:][A-Za-z0-9:._-]*/y;
+    const htmlValue = new RegExp(
+      String.raw`(?:[^"'=<>\x60\x00-\x20]+|'(?:[^'\r\n]|${htmlContinuation})*'|"(?:[^"\r\n]|${htmlContinuation})*")`,
+      "y",
     );
-  const interrupt = String.raw` {0,3}(?:#{1,6}(?:[ \t]|\r?$)|>|~{3,}|\x60{3,}[^\x60\r\n]*\r?$|(?:=+|-+)[ \t]*\r?$|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})\r?$|(?:[-+*]|0{0,8}1[.)])[ \t]+\S|<(?:!--|\?|![A-Za-z]|!\[[cC][dD][aA][tT][aA]\[|(?:[pP][rR][eE]|[sS][cC][rR][iI][pP][tT]|[sS][tT][yY][lL][eE]|[tT][eE][xX][tT][aA][rR][eE][aA])(?=[ \t>]|\r?$)|/?(?:${blockTags})(?=[ \t>]|/>|\r?$)))`;
-  const continuation = String.raw`\r?\n(?![ \t]*(?:\r?\n|(?![\s\S])))(?!${interrupt})`;
-  const destination = String.raw`(?<destination><(?:\\.|[^<>\\\r\n])*>|(?:\\.|[^\x00-\x20\x7f<>\\])+)`;
-  const title = String.raw`(?:"(?:[^"\\\r\n]|\\.|${continuation})*"|'(?:[^'\\\r\n]|\\.|${continuation})*'|\((?:[^()\\\r\n]|\\.|${continuation})*\))`;
-  const spacing = String.raw`(?:[ \t]+(?:${continuation}[ \t]*)?|[ \t]*${continuation}[ \t]*)`;
-  const paragraphInterrupt = new RegExp(String.raw`^${interrupt}`);
-  const htmlContinuation = continuation.replace("[cC][dD][aA][tT][aA]", "CDATA");
-  const htmlSpace = new RegExp(String.raw`(?:[ \t]|${htmlContinuation})+`, "y");
-  const htmlName = /<\/?[A-Za-z][A-Za-z0-9-]*/y;
-  const htmlAttribute = /[A-Za-z_:][A-Za-z0-9:._-]*/y;
-  const htmlValue = new RegExp(
-    String.raw`(?:[^"'=<>\x60\x00-\x20]+|'(?:[^'\r\n]|${htmlContinuation})*'|"(?:[^"\r\n]|${htmlContinuation})*")`,
-    "y",
-  );
-  const htmlSpaceEnd = (start: number): number => {
-    htmlSpace.lastIndex = start;
-    return htmlSpace.exec(existing) === null ? start : htmlSpace.lastIndex;
-  };
-  const htmlTagEnd = (start: number): number => {
-    htmlName.lastIndex = start;
-    if (htmlName.exec(existing) === null) return start;
-    let cursor = htmlName.lastIndex;
-    if (existing[start + 1] === "/") {
-      cursor = htmlSpaceEnd(cursor);
-      return existing[cursor] === ">" ? cursor + 1 : start;
-    }
-    for (;;) {
-      if (existing[cursor] === ">") return cursor + 1;
-      if (existing.startsWith("/>", cursor)) return cursor + 2;
-      const spaced = htmlSpaceEnd(cursor);
-      if (spaced === cursor) return start;
-      cursor = spaced;
-      if (existing[cursor] === ">") return cursor + 1;
-      if (existing.startsWith("/>", cursor)) return cursor + 2;
-      htmlAttribute.lastIndex = cursor;
-      if (htmlAttribute.exec(existing) === null) return start;
-      cursor = htmlAttribute.lastIndex;
-      const equals = htmlSpaceEnd(cursor);
-      if (existing[equals] !== "=") continue;
-      htmlValue.lastIndex = htmlSpaceEnd(equals + 1);
-      if (htmlValue.exec(existing) === null) return start;
-      cursor = htmlValue.lastIndex;
-    }
-  };
-  const link = new RegExp(
-    String.raw`^\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\]\([ \t]*(?:${continuation}[ \t]*)?(?:${destination})?(?:${spacing}${title})?[ \t]*(?:${continuation}[ \t]*)?\)`,
-    "m",
-  );
-  const destinationLength = (target: string, inline = false): number => {
-    if (target.startsWith("<")) return target.length;
-    let depth = 0;
-    for (let index = 0; index < target.length; index += 1) {
-      if (target[index] === "\\") {
-        index += 1;
-        continue;
+    const htmlSpaceEnd = (start: number): number => {
+      htmlSpace.lastIndex = start;
+      return htmlSpace.exec(existing) === null ? start : htmlSpace.lastIndex;
+    };
+    const htmlTagEnd = (start: number): number => {
+      htmlName.lastIndex = start;
+      if (htmlName.exec(existing) === null) return start;
+      let cursor = htmlName.lastIndex;
+      if (existing[start + 1] === "/") {
+        cursor = htmlSpaceEnd(cursor);
+        return existing[cursor] === ">" ? cursor + 1 : start;
       }
-      if (target[index] === "(") depth += 1;
-      if (target[index] === ")") depth -= 1;
-      if (depth < 0) return inline ? index : -1;
-      if (depth > 32) return -1;
-    }
-    return depth === 0 ? target.length : -1;
-  };
-  const listContentColumns: number[] = [];
-  const columnAfter = (prefix: string): number => {
-    let column = 0;
-    for (const character of prefix) {
-      column += character === "\t" ? 4 - (column % 4) : 1;
-    }
-    return column;
-  };
-  let indentedCode = false;
-  let htmlEnd: RegExp | null = null;
-  let htmlContentColumn = 0;
-  let htmlContainer = "";
-  let paragraph = false;
-  let quotedParagraph = false;
-  for (const raw of existing.split("\n")) {
-    const container = containerOf(raw);
-    const blank = raw.trim().length === 0;
-    const plain = plainLine(raw);
-    const wasQuotedParagraph = quotedParagraph;
-    const lazyQuote =
-      quotedParagraph && container === "" && !blank && !paragraphInterrupt.test(plain);
-    quotedParagraph = false;
-    const prefix = /^[ \t]*/.exec(plain)?.[0] ?? "";
-    const fenceIndentation = columnAfter(prefix);
-    if (
-      fence !== null &&
-      (container !== fence.container || (!blank && fenceIndentation < fence.contentColumn))
-    ) {
-      fence = null;
-    }
-    if (fence !== null) {
-      paragraph = false;
-      const closing = /^(`{3,}|~{3,})[ \t]*$/.exec(plain.slice(prefix.length))?.[1] ?? "";
-      if (
-        fenceIndentation <= fence.contentColumn + 3 &&
-        closing[0] === fence.character &&
-        closing.length >= fence.length
-      ) {
-        fence = null;
+      for (;;) {
+        if (existing[cursor] === ">") return cursor + 1;
+        if (existing.startsWith("/>", cursor)) return cursor + 2;
+        const spaced = htmlSpaceEnd(cursor);
+        if (spaced === cursor) return start;
+        cursor = spaced;
+        if (existing[cursor] === ">") return cursor + 1;
+        if (existing.startsWith("/>", cursor)) return cursor + 2;
+        htmlAttribute.lastIndex = cursor;
+        if (htmlAttribute.exec(existing) === null) return start;
+        cursor = htmlAttribute.lastIndex;
+        const equals = htmlSpaceEnd(cursor);
+        if (existing[equals] !== "=") continue;
+        htmlValue.lastIndex = htmlSpaceEnd(equals + 1);
+        if (htmlValue.exec(existing) === null) return start;
+        cursor = htmlValue.lastIndex;
       }
-      offset += raw.length + 1;
-      continue;
+    };
+    const link = new RegExp(
+      String.raw`\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\]\([ \t]*(?:${continuation}[ \t]*)?(?:${destination})?(?:${spacing}${title})?[ \t]*(?:${continuation}[ \t]*)?\)`,
+      "y",
+    );
+    const label = String.raw`\[(?<label>(?:\\.|[^\[\]\\\r\n]|${continuation})+)\]`;
+    const definition = new RegExp(
+      String.raw`^\uFEFF? {0,3}${label}:[ \t]*(?:${continuation}[ \t]*)?${destination}(?:${spacing}${title})?[ \t]*\r?$`,
+      "gm",
+    );
+    const referenceImage = new RegExp(
+      String.raw`\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\](?:\[(?<reference>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\])?`,
+      "y",
+    );
+    const destinationLength = (target: string, inline = false): number => {
+      if (target.startsWith("<")) return target.length;
+      let depth = 0;
+      for (let index = 0; index < target.length; index += 1) {
+        if (target[index] === "\\") {
+          index += 1;
+          continue;
+        }
+        if (target[index] === "(") depth += 1;
+        if (target[index] === ")") depth -= 1;
+        if (depth < 0) return inline ? index : -1;
+        if (depth > 32) return -1;
+      }
+      return depth === 0 ? target.length : -1;
+    };
+    const definitions = new Map<number, { end: number; label: string }>();
+    for (const match of existing.matchAll(definition)) {
+      const text = match.groups?.label ?? "";
+      if (Buffer.byteLength(text, "utf8") > 1000 || !/[^ \t\r\n]/.test(text)) continue;
+      if (destinationLength(match.groups?.destination ?? "") < 0) continue;
+      definitions.set(match.index, {
+        end: match.index + match[0].length,
+        label: normalizeLabel(text),
+      });
     }
-    if (
-      htmlEnd !== null &&
-      (container !== htmlContainer || (!blank && fenceIndentation < htmlContentColumn))
-    ) {
-      htmlEnd = null;
-    }
-    if (htmlEnd !== null) {
-      if (htmlEnd.test(raw)) htmlEnd = null;
-      paragraph = false;
-      offset += raw.length + 1;
-      continue;
-    }
-    const indentation = columnAfter(/^[ \t]*/.exec(raw)?.[0] ?? "");
-    while (!blank && indentation < (listContentColumns.at(-1) ?? 0)) listContentColumns.pop();
-    const contentColumn = listContentColumns.at(-1) ?? 0;
-    const indented = indentation >= contentColumn + 4;
-    if (!comment && ((indentedCode && (blank || indented)) || (!paragraph && indented))) {
-      indentedCode = true;
-      paragraph = false;
-      offset += raw.length + 1;
-      continue;
-    }
-    indentedCode = false;
-    const marker = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/.exec(raw);
-    if (
-      !comment &&
-      offset >= spanEnd &&
-      offset >= linkEnd &&
-      offset >= tagEnd &&
-      marker !== null &&
-      indentation <= contentColumn + 3
-    ) {
-      const markerEnd = columnAfter(`${marker[1] ?? ""}${marker[2] ?? ""}`);
-      const gap = columnAfter(marker[0]) - markerEnd;
-      listContentColumns.push(markerEnd + (gap > 4 ? 1 : gap));
-      if (gap > 4) {
-        indentedCode = true;
+    const listContentColumns: number[] = [];
+    const columnAfter = (prefix: string): number => {
+      let column = 0;
+      for (const character of prefix) {
+        column += character === "\t" ? 4 - (column % 4) : 1;
+      }
+      return column;
+    };
+    let indentedCode = false;
+    let htmlEnd: RegExp | null = null;
+    let htmlContentColumn = 0;
+    let htmlContainer = "";
+    let paragraph = false;
+    let quotedParagraph = false;
+    for (const raw of existing.split("\n")) {
+      if (offset < referenceEnd) {
         paragraph = false;
+        quotedParagraph = false;
         offset += raw.length + 1;
         continue;
       }
-    }
-    const openingLine = fenceLine(raw);
-    const openingPrefix = /^[ \t]*/.exec(openingLine)?.[0] ?? "";
-    const openingColumn = columnAfter(openingPrefix);
-    const openingBase = marker === null ? (listContentColumns.at(-1) ?? 0) : 0;
-    const opening = /^(`{3,}|~{3,})(.*)$/.exec(openingLine.slice(openingPrefix.length));
-    const run = opening?.[1] ?? "";
-    const rest = opening?.[2] ?? "";
-    if (
-      !comment &&
-      offset >= spanEnd &&
-      offset >= linkEnd &&
-      offset >= tagEnd &&
-      openingColumn >= openingBase &&
-      openingColumn <= openingBase + 3 &&
-      opening &&
-      !(run.startsWith("`") && rest.includes("`"))
-    ) {
-      fence = {
-        character: run[0] ?? "`",
-        length: run.length,
-        container,
-        contentColumn: listContentColumns.at(-1) ?? 0,
-      };
-      paragraph = false;
-      offset += raw.length + 1;
-      continue;
-    }
-    const htmlLine = openingLine.slice(openingPrefix.length);
-    if (
-      !comment &&
-      offset >= spanEnd &&
-      offset >= linkEnd &&
-      offset >= tagEnd &&
-      openingColumn >= openingBase &&
-      openingColumn <= openingBase + 3
-    ) {
-      if (/^<(?:pre|script|style|textarea)(?=[ \t>]|$)/i.test(htmlLine)) {
-        htmlEnd = /<\/(?:pre|script|style|textarea)>/i;
-      } else if (/^<\?/.test(htmlLine)) {
-        htmlEnd = /\?>/;
-      } else if (/^<![A-Za-z]/.test(htmlLine)) {
-        htmlEnd = />/;
-      } else if (/^<!\[CDATA\[/.test(htmlLine)) {
-        htmlEnd = /\]\]>/;
-      } else if (
-        /^ {0,3}<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|\/>|$)/i.test(
-          htmlLine,
-        )
+      const container = containerOf(raw);
+      const blank = raw.trim().length === 0;
+      const plain = plainLine(raw);
+      const wasQuotedParagraph = quotedParagraph;
+      const lazyQuote =
+        quotedParagraph && container === "" && !blank && !paragraphInterrupt.test(plain);
+      quotedParagraph = false;
+      const prefix = /^[ \t]*/.exec(plain)?.[0] ?? "";
+      const fenceIndentation = columnAfter(prefix);
+      if (
+        fence !== null &&
+        (container !== fence.container || (!blank && fenceIndentation < fence.contentColumn))
       ) {
-        htmlEnd = /^[ \t]*\r?$/;
-      } else if (
-        !paragraph &&
-        /^ {0,3}(?:<(?!pre(?:[ \t/>]|$)|script(?:[ \t/>]|$)|style(?:[ \t/>]|$)|textarea(?:[ \t/>]|$))[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t]*=[ \t]*(?:(?:(?!["'=<>`])[\x21-\uFFFF])+|'[^']*'|"[^"]*"))?)*[ \t]*\/?>|<\/[A-Za-z][A-Za-z0-9-]*[ \t]*>)[ \t]*\r?$/i.test(
-          htmlLine,
-        )
+        fence = null;
+      }
+      if (fence !== null) {
+        paragraph = false;
+        const closing = /^(`{3,}|~{3,})[ \t]*$/.exec(plain.slice(prefix.length))?.[1] ?? "";
+        if (
+          fenceIndentation <= fence.contentColumn + 3 &&
+          closing[0] === fence.character &&
+          closing.length >= fence.length
+        ) {
+          fence = null;
+        }
+        offset += raw.length + 1;
+        continue;
+      }
+      if (
+        htmlEnd !== null &&
+        (container !== htmlContainer || (!blank && fenceIndentation < htmlContentColumn))
       ) {
-        htmlEnd = /^[ \t]*\r?$/;
+        htmlEnd = null;
       }
       if (htmlEnd !== null) {
-        htmlContentColumn = listContentColumns.at(-1) ?? 0;
-        htmlContainer = container;
         if (htmlEnd.test(raw)) htmlEnd = null;
         paragraph = false;
         offset += raw.length + 1;
         continue;
       }
-    }
-
-    let visible = "";
-    let hasInlineLink = offset < linkEnd;
-    for (let index = 0; index < raw.length;) {
-      if (offset + index < tagEnd) {
-        index = Math.min(raw.length, tagEnd - offset);
+      const indentation = columnAfter(/^[ \t]*/.exec(raw)?.[0] ?? "");
+      while (!blank && indentation < (listContentColumns.at(-1) ?? 0)) listContentColumns.pop();
+      const contentColumn = listContentColumns.at(-1) ?? 0;
+      const indented = indentation >= contentColumn + 4;
+      if (!comment && ((indentedCode && (blank || indented)) || (!paragraph && indented))) {
+        indentedCode = true;
+        paragraph = false;
+        offset += raw.length + 1;
         continue;
       }
-      if (offset + index >= linkStart && offset + index < linkEnd) {
-        index = Math.min(raw.length, linkEnd - offset);
-        continue;
-      }
-      if (offset + index < spanEnd) {
-        index += 1;
-        continue;
-      }
-      if (comment) {
-        const end = raw.indexOf("-->", index);
-        if (end === -1) break;
-        comment = false;
-        index = end + 3;
-        continue;
-      }
-      if (raw.startsWith("<!--", index)) {
-        comment = true;
-        index += 4;
-        continue;
-      }
-      if (raw[index] === "<" && !/^\uFEFF? {0,3}#{1,6}(?:[ \t]|\r?$)/.test(openingLine)) {
-        let escapes = 0;
-        for (let before = index - 1; before >= 0 && raw[before] === "\\"; before -= 1) escapes += 1;
-        const end = escapes % 2 === 0 ? htmlTagEnd(offset + index) : offset + index;
-        if (end > offset + raw.length) {
-          tagEnd = end;
-          visible += "\uFFFC";
+      indentedCode = false;
+      const marker = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/.exec(raw);
+      if (
+        !comment &&
+        offset >= spanEnd &&
+        offset >= linkEnd &&
+        offset >= tagEnd &&
+        marker !== null &&
+        indentation <= contentColumn + 3
+      ) {
+        const markerEnd = columnAfter(`${marker[1] ?? ""}${marker[2] ?? ""}`);
+        const gap = columnAfter(marker[0]) - markerEnd;
+        listContentColumns.push(markerEnd + (gap > 4 ? 1 : gap));
+        if (gap > 4) {
+          indentedCode = true;
+          paragraph = false;
+          offset += raw.length + 1;
           continue;
         }
       }
-      if (raw[index] === "[") {
-        let escapes = 0;
-        for (let before = index - 1; before >= 0 && raw[before] === "\\"; before -= 1) escapes += 1;
-        const tail = existing.slice(offset + index);
-        let inline = link.exec(tail);
-        if (escapes % 2 === 0 && inline?.index === 0) {
-          const target = inline.groups?.destination ?? "";
-          const text = inline.groups?.text ?? "";
-          const length = destinationLength(target, true);
-          if (length >= 0 && length < target.length) {
-            const start = inline[0].indexOf(target, text.length + 3);
-            inline = link.exec(tail.slice(0, start + length + 1));
-          }
-          if (
-            length >= 0 &&
-            inline?.index === 0 &&
-            destinationLength(inline.groups?.destination ?? "") >= 0
-          ) {
-            linkStart = offset + index + 1 + text.length;
-            linkEnd = offset + index + inline[0].length;
-            hasInlineLink = true;
-            index += 1;
+      const openingLine = fenceLine(raw);
+      const openingPrefix = /^[ \t]*/.exec(openingLine)?.[0] ?? "";
+      const openingColumn = columnAfter(openingPrefix);
+      const openingBase = marker === null ? (listContentColumns.at(-1) ?? 0) : 0;
+      const opening = /^(`{3,}|~{3,})(.*)$/.exec(openingLine.slice(openingPrefix.length));
+      const run = opening?.[1] ?? "";
+      const rest = opening?.[2] ?? "";
+      if (
+        !comment &&
+        offset >= spanEnd &&
+        offset >= linkEnd &&
+        offset >= tagEnd &&
+        openingColumn >= openingBase &&
+        openingColumn <= openingBase + 3 &&
+        opening &&
+        !(run.startsWith("`") && rest.includes("`"))
+      ) {
+        fence = {
+          character: run[0] ?? "`",
+          length: run.length,
+          container,
+          contentColumn: listContentColumns.at(-1) ?? 0,
+        };
+        paragraph = false;
+        offset += raw.length + 1;
+        continue;
+      }
+      const htmlLine = openingLine.slice(openingPrefix.length);
+      if (
+        !comment &&
+        offset >= spanEnd &&
+        offset >= linkEnd &&
+        offset >= tagEnd &&
+        openingColumn >= openingBase &&
+        openingColumn <= openingBase + 3
+      ) {
+        if (/^<(?:pre|script|style|textarea)(?=[ \t>]|$)/i.test(htmlLine)) {
+          htmlEnd = /<\/(?:pre|script|style|textarea)>/i;
+        } else if (/^<\?/.test(htmlLine)) {
+          htmlEnd = /\?>/;
+        } else if (/^<![A-Za-z]/.test(htmlLine)) {
+          htmlEnd = />/;
+        } else if (/^<!\[CDATA\[/.test(htmlLine)) {
+          htmlEnd = /\]\]>/;
+        } else if (
+          /^ {0,3}<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|\/>|$)/i.test(
+            htmlLine,
+          )
+        ) {
+          htmlEnd = /^[ \t]*\r?$/;
+        } else if (
+          !paragraph &&
+          /^ {0,3}(?:<(?!pre(?:[ \t/>]|$)|script(?:[ \t/>]|$)|style(?:[ \t/>]|$)|textarea(?:[ \t/>]|$))[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t]*=[ \t]*(?:(?:(?!["'=<>`])[\x21-\uFFFF])+|'[^']*'|"[^"]*"))?)*[ \t]*\/?>|<\/[A-Za-z][A-Za-z0-9-]*[ \t]*>)[ \t]*\r?$/i.test(
+            htmlLine,
+          )
+        ) {
+          htmlEnd = /^[ \t]*\r?$/;
+        }
+        if (htmlEnd !== null) {
+          htmlContentColumn = listContentColumns.at(-1) ?? 0;
+          htmlContainer = container;
+          if (htmlEnd.test(raw)) htmlEnd = null;
+          paragraph = false;
+          offset += raw.length + 1;
+          continue;
+        }
+      }
+
+      const reference = definitions.get(offset);
+      if (
+        reference !== undefined &&
+        !paragraph &&
+        !comment &&
+        container === "" &&
+        !lazyQuote &&
+        offset >= spanEnd &&
+        offset >= linkEnd &&
+        offset >= tagEnd
+      ) {
+        referenceLabels.add(reference.label);
+        referenceEnd = reference.end;
+        offset += raw.length + 1;
+        continue;
+      }
+
+      let visible = "";
+      let hasInlineLink = offset < linkEnd;
+      for (let index = 0; index < raw.length;) {
+        if (offset + index < tagEnd) {
+          index = Math.min(raw.length, tagEnd - offset);
+          continue;
+        }
+        if (offset + index >= linkStart && offset + index < linkEnd) {
+          index = Math.min(raw.length, linkEnd - offset);
+          continue;
+        }
+        if (offset + index < spanEnd) {
+          index += 1;
+          continue;
+        }
+        if (comment) {
+          const end = raw.indexOf("-->", index);
+          if (end === -1) break;
+          comment = false;
+          index = end + 3;
+          continue;
+        }
+        if (raw.startsWith("<!--", index)) {
+          comment = true;
+          index += 4;
+          continue;
+        }
+        if (raw[index] === "<" && !/^\uFEFF? {0,3}#{1,6}(?:[ \t]|\r?$)/.test(openingLine)) {
+          let escapes = 0;
+          for (let before = index - 1; before >= 0 && raw[before] === "\\"; before -= 1)
+            escapes += 1;
+          const end = escapes % 2 === 0 ? htmlTagEnd(offset + index) : offset + index;
+          if (end > offset + raw.length) {
+            tagEnd = end;
+            visible += "\uFFFC";
             continue;
           }
         }
-      }
-      if (raw[index] === "`") {
-        const tail = existing.slice(offset + index);
-        const span = /^(`+)(?!`)(?:(?!\r?\n[ \t]*\r?\n)[\s\S])*?(?<!`)\1(?!`)/.exec(tail)?.[0];
-        if (span === "`REVIEW.md`") {
-          visible += span;
-          index += span.length;
+        if (raw[index] === "[") {
+          let escapes = 0;
+          for (let before = index - 1; before >= 0 && raw[before] === "\\"; before -= 1)
+            escapes += 1;
+          const start = offset + index;
+          link.lastIndex = start;
+          let inline = escapes % 2 === 0 ? link.exec(existing) : null;
+          let imageEscapes = 0;
+          for (let before = index - 2; before >= 0 && raw[before] === "\\"; before -= 1)
+            imageEscapes += 1;
+          const image = raw[index - 1] === "!" && imageEscapes % 2 === 0;
+          if (inline !== null) {
+            const target = inline.groups?.destination ?? "";
+            const text = inline.groups?.text ?? "";
+            const length = destinationLength(target, true);
+            if (length >= 0 && length < target.length) {
+              const targetStart = inline[0].indexOf(target, text.length + 3);
+              const complete = inline[0].slice(0, targetStart + length + 1);
+              link.lastIndex = 0;
+              inline = link.exec(complete);
+            }
+            if (
+              length >= 0 &&
+              inline !== null &&
+              destinationLength(inline.groups?.destination ?? "") >= 0
+            ) {
+              linkStart = image ? start : start + 1 + text.length;
+              linkEnd = start + inline[0].length;
+              hasInlineLink = true;
+              if (image) visible += "\uFFFC";
+              else index += 1;
+              continue;
+            }
+          }
+          if (image && escapes % 2 === 0) {
+            referenceImage.lastIndex = start;
+            const reference = referenceImage.exec(existing);
+            const text = reference?.groups?.reference || reference?.groups?.text || "";
+            if (
+              reference !== null &&
+              Buffer.byteLength(text, "utf8") <= 1000 &&
+              referenceLabels.has(normalizeLabel(text))
+            ) {
+              linkStart = start;
+              linkEnd = referenceImage.lastIndex;
+              visible += "\uFFFC";
+              hasInlineLink = true;
+              continue;
+            }
+          }
+        }
+        if (raw[index] === "`") {
+          const tail = existing.slice(offset + index);
+          const span = /^(`+)(?!`)(?:(?!\r?\n[ \t]*\r?\n)[\s\S])*?(?<!`)\1(?!`)/.exec(tail)?.[0];
+          if (span === "`REVIEW.md`") {
+            visible += span;
+            index += span.length;
+            continue;
+          }
+          if (span !== undefined) {
+            spanEnd = offset + index + span.length;
+            continue;
+          }
+          const unmatched = /^`+/.exec(tail)?.[0] ?? "`";
+          visible += unmatched;
+          index += unmatched.length;
           continue;
         }
-        if (span !== undefined) {
-          spanEnd = offset + index + span.length;
-          continue;
-        }
-        const unmatched = /^`+/.exec(tail)?.[0] ?? "`";
-        visible += unmatched;
-        index += unmatched.length;
-        continue;
+        visible += raw.charAt(index);
+        index += 1;
       }
-      visible += raw.charAt(index);
-      index += 1;
+      const paragraphText = container === "" ? visible : plainLine(visible);
+      paragraph =
+        (hasInlineLink || paragraphText.trim().length > 0) &&
+        !/^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}|=+[ \t]*)\r?$)/.test(
+          paragraphText,
+        );
+      if (container !== "" || lazyQuote) {
+        const quotePrefix = /^[ \t]*/.exec(paragraphText)?.[0] ?? "";
+        const quoteMarker = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/.exec(paragraphText);
+        const quoteGap =
+          quoteMarker === null
+            ? 0
+            : columnAfter(quoteMarker[0]) -
+              columnAfter(`${quoteMarker[1] ?? ""}${quoteMarker[2] ?? ""}`);
+        if ((!wasQuotedParagraph && columnAfter(quotePrefix) >= 4) || quoteGap > 4)
+          paragraph = false;
+        quotedParagraph = paragraph && !paragraphInterrupt.test(fenceLine(visible));
+      }
+      if (
+        pass === 1 &&
+        container === "" &&
+        !lazyQuote &&
+        visible.trim().replace(/^(?:[-*+]|\d{1,9}[.)])[ \t]+/, "") === pointer
+      )
+        return existing;
+      offset += raw.length + 1;
     }
-    const paragraphText = container === "" ? visible : plainLine(visible);
-    paragraph =
-      (hasInlineLink || paragraphText.trim().length > 0) &&
-      !/^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}|=+[ \t]*)\r?$)/.test(
-        paragraphText,
-      );
-    if (container !== "" || lazyQuote) {
-      const quotePrefix = /^[ \t]*/.exec(paragraphText)?.[0] ?? "";
-      const quoteMarker = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/.exec(paragraphText);
-      const quoteGap =
-        quoteMarker === null
-          ? 0
-          : columnAfter(quoteMarker[0]) -
-            columnAfter(`${quoteMarker[1] ?? ""}${quoteMarker[2] ?? ""}`);
-      if ((!wasQuotedParagraph && columnAfter(quotePrefix) >= 4) || quoteGap > 4) paragraph = false;
-      quotedParagraph = paragraph && !paragraphInterrupt.test(fenceLine(visible));
-    }
-    if (
-      container === "" &&
-      !lazyQuote &&
-      visible.trim().replace(/^(?:[-*+]|\d{1,9}[.)])[ \t]+/, "") === pointer
-    )
-      return existing;
-    offset += raw.length + 1;
   }
 
   const end = /\r\n|\n/.exec(existing)?.[0] ?? "\n";

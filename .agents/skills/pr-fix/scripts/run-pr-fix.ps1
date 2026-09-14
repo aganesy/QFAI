@@ -158,7 +158,7 @@ function Compliance([string]$Body) {
     "tests_section" = "(?m)^## 4\..*Tests.*$"
     "review_focus" = "(?m)^## Review Focus \(auto by type\)\s*$"
     "open_questions" = "(?m)^## Open Questions / Follow-ups(?:.*)?$"
-    "removal_list" = "(?m)^## What (?:this|a) change made unnecessary[ \t]*$"
+    "removal_list" = "(?m)^ {0,3}## What (?:this|a) change made unnecessary(?:[ \t]+#+)?[ \t]*$"
   }
   $missing = @()
   foreach ($entry in $required.GetEnumerator()) {

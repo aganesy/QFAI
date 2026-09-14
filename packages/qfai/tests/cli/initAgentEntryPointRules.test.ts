@@ -708,6 +708,79 @@ describe("a hand-wired file this run cannot extend is named", () => {
 
 describe("optional review directive detection", () => {
   it.each(["\n", "\r\n"])(
+    "link-reference boundary: adds guidance outside image labels with %j",
+    (end) => {
+      for (const image of [
+        `![${end}${REVIEW_POINTER}${end}](/image.png)`,
+        `![${end}${REVIEW_POINTER}${end}][image]${end}${end}[image]: /image.png`,
+        `![${end}${REVIEW_POINTER}${end}][]${end}${end}[${end}${REVIEW_POINTER}${end}]: /image.png`,
+        `![${end}${REVIEW_POINTER}${end}]${end}${end}[${end}${REVIEW_POINTER}${end}]: /image.png`,
+      ]) {
+        const existing = `\uFEFF${image}${end}`;
+        const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+        expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+        expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+      }
+    },
+  );
+
+  it.each(["\n", "\r\n"])(
+    "link-reference boundary: adds guidance outside reference definitions with %j",
+    (end) => {
+      for (const definition of [
+        `[example]: /url "${end}${REVIEW_POINTER}${end}"`,
+        `[example]: /url '${end}${REVIEW_POINTER}${end}'`,
+        `[example]: /url (${end}${REVIEW_POINTER}${end})`,
+        `[${end}${REVIEW_POINTER}${end}]: /url`,
+      ]) {
+        const existing = `\uFEFF${definition}${end}`;
+        const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+        expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+        expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+      }
+    },
+  );
+
+  it.each(["\n", "\r\n"])(
+    "link-reference boundary: retains ordinary and unresolved label text with %j",
+    (end) => {
+      for (const source of [
+        `[${end}${REVIEW_POINTER}${end}](/url)`,
+        `\\![${end}${REVIEW_POINTER}${end}](/url)`,
+        `![${end}${REVIEW_POINTER}${end}][missing]`,
+        `Paragraph text${end}[example]: /url "${end}${REVIEW_POINTER}${end}"`,
+        `[example]: /url "${end}${REVIEW_POINTER}${end}## Live heading${end}"`,
+      ]) {
+        const existing = `\uFEFF${source}${end}`;
+        expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+      }
+    },
+  );
+
+  it("link-reference boundary: does not copy the remaining tail for unmatched inline links", () => {
+    const existing = `${"[ \n".repeat(6400)}\n${REVIEW_POINTER}\n`;
+    const originalSlice = String.prototype.slice;
+    let copiedTail = 0;
+    const spy = vi.spyOn(String.prototype, "slice").mockImplementation(function (
+      this: string,
+      start?: number,
+      end?: number,
+    ) {
+      const result = originalSlice.call(this, start, end);
+      if (this === existing) copiedTail += result.length;
+      return result;
+    });
+    let updated: string;
+    try {
+      updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(updated).toBe(existing);
+    expect(copiedTail).toBeLessThanOrEqual(existing.length * 4);
+  });
+
+  it.each(["\n", "\r\n"])(
     "adds guidance outside lowercase CDATA-like attribute text with %j",
     (end) => {
       const existing = `\uFEFF<span title="${end}<![cdata[${end}${REVIEW_POINTER}${end}">Example</span>${end}`;
@@ -967,6 +1040,14 @@ describe("optional review directive detection", () => {
           `<span\ntitle='\n${REVIEW_POINTER}\n'>Example</span>`,
           `<span title="\n<![cdata[\n${REVIEW_POINTER}\n">Example</span>`,
           `> [example]: /url\n${REVIEW_POINTER}`,
+          `![\n${REVIEW_POINTER}\n](/image.png)`,
+          `![\n${REVIEW_POINTER}\n][image]\n\n[image]: /image.png`,
+          `![\n${REVIEW_POINTER}\n][]\n\n[\n${REVIEW_POINTER}\n]: /image.png`,
+          `![\n${REVIEW_POINTER}\n]\n\n[\n${REVIEW_POINTER}\n]: /image.png`,
+          `[example]: /url "\n${REVIEW_POINTER}\n"`,
+          `[example]: /url '\n${REVIEW_POINTER}\n'`,
+          `[example]: /url (\n${REVIEW_POINTER}\n)`,
+          `[\n${REVIEW_POINTER}\n]: /url`,
         ]) {
           const originals = templates.map(({ name, text, mode }) => ({
             name,

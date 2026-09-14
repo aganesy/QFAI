@@ -124,6 +124,28 @@ describe("pr-fix wrapper docs", () => {
 
 describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
   it.each([
+    "   ## What this change made unnecessary",
+    "## What this change made unnecessary ##",
+    "  ## What this change made unnecessary ###  ",
+  ])("link-reference boundary: does not rebuild valid authored heading %s", async (heading) => {
+    const body = `${compliantPrBody().replace("## What this change made unnecessary", heading)}\n\n## Adoption bar\n\nKeep the complete safety floor.\n`;
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+    expect(existsSync(path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"))).toBe(
+      false,
+    );
+    expect(combinedOutput(result)).toContain("Dry-run completed.");
+  });
+
+  it.each([
     "<p>Nothing.</p>",
     "<div>\nNothing.\n</div>",
     "<span>\nNothing.\n</span>",
