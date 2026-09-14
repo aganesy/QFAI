@@ -527,15 +527,13 @@ while ($streak -lt $effectiveRequiredZeroStreak) {
   $firstPoll = $false
 
   $snapshot = RunJson "gh" @("pr", "view", "$targetPrNumber", "--json", "number,title,body,baseRefName,headRefName,statusCheckRollup,url") "Failed to refresh PR details."
-  if (-not $DryRun) {
-    $bodyCheck = Compliance ([string]$snapshot.body)
-    if (-not $bodyCheck.IsCompliant) {
-      $streak = 0
-      $bodyArtifact = "pr-{0}-body-compliance.json" -f $targetPrNumber
-      [void](SaveJson -Root $root -Name $bodyArtifact -Value $bodyCheck)
-      [void](SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_body" -BlockingArtifact $bodyArtifact -NextAction "Restore the required authored PR sections, update the PR body, then rerun the live monitor.")
-      throw "PR body is no longer template-compliant. Update the PR body, then rerun the live monitor."
-    }
+  $bodyCheck = Compliance ([string]$snapshot.body)
+  if (-not $bodyCheck.IsCompliant -and (-not $DryRun -or [string]$snapshot.body -cne [string]$pr.body)) {
+    $streak = 0
+    $bodyArtifact = "pr-{0}-body-compliance.json" -f $targetPrNumber
+    [void](SaveJson -Root $root -Name $bodyArtifact -Value $bodyCheck)
+    [void](SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_body" -BlockingArtifact $bodyArtifact -NextAction "Restore the required authored PR sections, update the PR body, then rerun the live monitor.")
+    throw "PR body is no longer template-compliant. Update the PR body, then rerun the live monitor."
   }
   $threads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $targetPrNumber)
   $checkState = EvaluateChecks $snapshot

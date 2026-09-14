@@ -123,11 +123,41 @@ describe("pr-fix wrapper docs", () => {
 });
 
 describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
+  it.each(["removed", "comment only"])(
+    "rejects a changed dry-run removal answer: %s",
+    async (change) => {
+      const clean = makePrView([successCheck()]);
+      const body = compliantPrBody().replace(
+        /## What this change made unnecessary\n\nNothing\.\n\n/,
+        change === "removed" ? "" : "## What this change made unnecessary\n\n<!-- Nothing. -->\n\n",
+      );
+      const result = await runPrFix({
+        extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+        scenario: makeScenario({
+          prViews: [clean, makePrView([successCheck()], { body })],
+          threads: [[]],
+        }),
+      });
+      expect(result.code).not.toBe(0);
+      expect(combinedOutput(result)).toContain("PR body is no longer template-compliant");
+      expect(combinedOutput(result)).not.toContain("Dry-run completed.");
+      expect(result.ghState.prEditCount ?? 0).toBe(0);
+      expect(existsSync(path.join(result.repoDir, "tmp", "pr-fix", "pr-166-handoff.json"))).toBe(
+        false,
+      );
+      const status = await readJson(
+        path.join(result.repoDir, "tmp", "pr-fix", "pr-166-monitor-status.json"),
+      );
+      expect(status.State).toBe("action_required_body");
+      expect(status.CurrentStreak).toBe(0);
+    },
+  );
+
   it.each([
     "   ## What this change made unnecessary",
     "## What this change made unnecessary ##",
     "  ## What this change made unnecessary ###  ",
-  ])("link-reference boundary: does not rebuild valid authored heading %s", async (heading) => {
+  ])("preserves valid authored removal heading %s", async (heading) => {
     const body = `${compliantPrBody().replace("## What this change made unnecessary", heading)}\n\n## Adoption bar\n\nKeep the complete safety floor.\n`;
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],

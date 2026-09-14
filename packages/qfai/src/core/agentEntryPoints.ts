@@ -236,6 +236,100 @@ export function addReviewPointer(existing: string, template: string | null): str
       .replace(/^ | $/g, "")
       .toLowerCase()
       .toUpperCase();
+  const blockTags =
+    "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul".replace(
+      /[a-z]/g,
+      (letter) => `[${letter}${letter.toUpperCase()}]`,
+    );
+  const interrupt = String.raw` {0,3}(?:#{1,6}(?:[ \t]|\r?$)|>|~{3,}|\x60{3,}[^\x60\r\n]*\r?$|(?:=+|-+)[ \t]*\r?$|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})\r?$|(?:[-+*]|0{0,8}1[.)])[ \t]+\S|<(?:!--|\?|![A-Za-z]|!\[[cC][dD][aA][tT][aA]\[|(?:[pP][rR][eE]|[sS][cC][rR][iI][pP][tT]|[sS][tT][yY][lL][eE]|[tT][eE][xX][tT][aA][rR][eE][aA])(?=[ \t>]|\r?$)|/?(?:${blockTags})(?=[ \t>]|/>|\r?$)))`;
+  const continuation = String.raw`\r?\n(?![ \t]*(?:\r?\n|(?![\s\S])))(?!${interrupt})`;
+  const destination = String.raw`(?<destination><(?:\\.|[^<>\\\r\n])*>|(?:\\.|[^\x00-\x20\x7f<>\\])+)`;
+  const title = String.raw`(?:"(?:[^"\\\r\n]|\\.|${continuation})*"|'(?:[^'\\\r\n]|\\.|${continuation})*'|\((?:[^()\\\r\n]|\\.|${continuation})*\))`;
+  const spacing = String.raw`(?:[ \t]+(?:${continuation}[ \t]*)?|[ \t]*${continuation}[ \t]*)`;
+  const paragraphInterrupt = new RegExp(String.raw`^${interrupt}`);
+  const htmlContinuation = continuation.replace("[cC][dD][aA][tT][aA]", "CDATA");
+  const htmlSpace = new RegExp(String.raw`(?:[ \t]|${htmlContinuation})+`, "y");
+  const htmlName = /<\/?[A-Za-z][A-Za-z0-9-]*/y;
+  const htmlAttribute = /[A-Za-z_:][A-Za-z0-9:._-]*/y;
+  const htmlValue = new RegExp(
+    String.raw`(?:[^"'=<>\x60\x00-\x20]+|'(?:[^'\r\n]|${htmlContinuation})*'|"(?:[^"\r\n]|${htmlContinuation})*")`,
+    "y",
+  );
+  const htmlSpaceEnd = (start: number): number => {
+    htmlSpace.lastIndex = start;
+    return htmlSpace.exec(existing) === null ? start : htmlSpace.lastIndex;
+  };
+  const htmlTagEnd = (start: number): number => {
+    htmlName.lastIndex = start;
+    if (htmlName.exec(existing) === null) return start;
+    let cursor = htmlName.lastIndex;
+    if (existing[start + 1] === "/") {
+      cursor = htmlSpaceEnd(cursor);
+      return existing[cursor] === ">" ? cursor + 1 : start;
+    }
+    for (;;) {
+      if (existing[cursor] === ">") return cursor + 1;
+      if (existing.startsWith("/>", cursor)) return cursor + 2;
+      const spaced = htmlSpaceEnd(cursor);
+      if (spaced === cursor) return start;
+      cursor = spaced;
+      if (existing[cursor] === ">") return cursor + 1;
+      if (existing.startsWith("/>", cursor)) return cursor + 2;
+      htmlAttribute.lastIndex = cursor;
+      if (htmlAttribute.exec(existing) === null) return start;
+      cursor = htmlAttribute.lastIndex;
+      const equals = htmlSpaceEnd(cursor);
+      if (existing[equals] !== "=") continue;
+      htmlValue.lastIndex = htmlSpaceEnd(equals + 1);
+      if (htmlValue.exec(existing) === null) return start;
+      cursor = htmlValue.lastIndex;
+    }
+  };
+  const link = new RegExp(
+    String.raw`\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\]\([ \t]*(?:${continuation}[ \t]*)?(?:${destination})?(?:${spacing}${title})?[ \t]*(?:${continuation}[ \t]*)?\)`,
+    "y",
+  );
+  const label = String.raw`\[(?<label>(?:\\.|[^\[\]\\\r\n]|${continuation})+)\]`;
+  const definition = new RegExp(
+    String.raw`^\uFEFF?(?<prefix>(?: {0,3}>[ \t]?)*[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]+)?)${label}:[ \t]*(?:${continuation}[ \t]*)?${destination}(?:${spacing}${title})?[ \t]*\r?$`,
+    "gm",
+  );
+  const referenceImage = new RegExp(
+    String.raw`\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\](?:\[(?<reference>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\])?`,
+    "y",
+  );
+  const destinationLength = (target: string, inline = false): number => {
+    if (target.startsWith("<")) return target.length;
+    let depth = 0;
+    for (let index = 0; index < target.length; index += 1) {
+      if (target[index] === "\\") {
+        index += 1;
+        continue;
+      }
+      if (target[index] === "(") depth += 1;
+      if (target[index] === ")") depth -= 1;
+      if (depth < 0) return inline ? index : -1;
+      if (depth > 32) return -1;
+    }
+    return depth === 0 ? target.length : -1;
+  };
+  const definitions = new Map<number, { end: number; label: string }>();
+  for (const match of existing.matchAll(definition)) {
+    const text = match.groups?.label ?? "";
+    if (Buffer.byteLength(text, "utf8") > 1000 || !/[^ \t\r\n]/.test(text)) continue;
+    if (destinationLength(match.groups?.destination ?? "") < 0) continue;
+    definitions.set(match.index, {
+      end: match.index + match[0].length,
+      label: normalizeLabel(text),
+    });
+  }
+  const columnAfter = (prefix: string): number => {
+    let column = 0;
+    for (const character of prefix) {
+      column += character === "\t" ? 4 - (column % 4) : 1;
+    }
+    return column;
+  };
   // Discover operative definitions before checking forward-reference image descriptions.
   for (let pass = 0; pass < 2; pass += 1) {
     let fence: {
@@ -251,101 +345,7 @@ export function addReviewPointer(existing: string, template: string | null): str
     let tagEnd = 0;
     let referenceEnd = 0;
     let offset = 0;
-    const blockTags =
-      "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul".replace(
-        /[a-z]/g,
-        (letter) => `[${letter}${letter.toUpperCase()}]`,
-      );
-    const interrupt = String.raw` {0,3}(?:#{1,6}(?:[ \t]|\r?$)|>|~{3,}|\x60{3,}[^\x60\r\n]*\r?$|(?:=+|-+)[ \t]*\r?$|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})\r?$|(?:[-+*]|0{0,8}1[.)])[ \t]+\S|<(?:!--|\?|![A-Za-z]|!\[[cC][dD][aA][tT][aA]\[|(?:[pP][rR][eE]|[sS][cC][rR][iI][pP][tT]|[sS][tT][yY][lL][eE]|[tT][eE][xX][tT][aA][rR][eE][aA])(?=[ \t>]|\r?$)|/?(?:${blockTags})(?=[ \t>]|/>|\r?$)))`;
-    const continuation = String.raw`\r?\n(?![ \t]*(?:\r?\n|(?![\s\S])))(?!${interrupt})`;
-    const destination = String.raw`(?<destination><(?:\\.|[^<>\\\r\n])*>|(?:\\.|[^\x00-\x20\x7f<>\\])+)`;
-    const title = String.raw`(?:"(?:[^"\\\r\n]|\\.|${continuation})*"|'(?:[^'\\\r\n]|\\.|${continuation})*'|\((?:[^()\\\r\n]|\\.|${continuation})*\))`;
-    const spacing = String.raw`(?:[ \t]+(?:${continuation}[ \t]*)?|[ \t]*${continuation}[ \t]*)`;
-    const paragraphInterrupt = new RegExp(String.raw`^${interrupt}`);
-    const htmlContinuation = continuation.replace("[cC][dD][aA][tT][aA]", "CDATA");
-    const htmlSpace = new RegExp(String.raw`(?:[ \t]|${htmlContinuation})+`, "y");
-    const htmlName = /<\/?[A-Za-z][A-Za-z0-9-]*/y;
-    const htmlAttribute = /[A-Za-z_:][A-Za-z0-9:._-]*/y;
-    const htmlValue = new RegExp(
-      String.raw`(?:[^"'=<>\x60\x00-\x20]+|'(?:[^'\r\n]|${htmlContinuation})*'|"(?:[^"\r\n]|${htmlContinuation})*")`,
-      "y",
-    );
-    const htmlSpaceEnd = (start: number): number => {
-      htmlSpace.lastIndex = start;
-      return htmlSpace.exec(existing) === null ? start : htmlSpace.lastIndex;
-    };
-    const htmlTagEnd = (start: number): number => {
-      htmlName.lastIndex = start;
-      if (htmlName.exec(existing) === null) return start;
-      let cursor = htmlName.lastIndex;
-      if (existing[start + 1] === "/") {
-        cursor = htmlSpaceEnd(cursor);
-        return existing[cursor] === ">" ? cursor + 1 : start;
-      }
-      for (;;) {
-        if (existing[cursor] === ">") return cursor + 1;
-        if (existing.startsWith("/>", cursor)) return cursor + 2;
-        const spaced = htmlSpaceEnd(cursor);
-        if (spaced === cursor) return start;
-        cursor = spaced;
-        if (existing[cursor] === ">") return cursor + 1;
-        if (existing.startsWith("/>", cursor)) return cursor + 2;
-        htmlAttribute.lastIndex = cursor;
-        if (htmlAttribute.exec(existing) === null) return start;
-        cursor = htmlAttribute.lastIndex;
-        const equals = htmlSpaceEnd(cursor);
-        if (existing[equals] !== "=") continue;
-        htmlValue.lastIndex = htmlSpaceEnd(equals + 1);
-        if (htmlValue.exec(existing) === null) return start;
-        cursor = htmlValue.lastIndex;
-      }
-    };
-    const link = new RegExp(
-      String.raw`\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\]\([ \t]*(?:${continuation}[ \t]*)?(?:${destination})?(?:${spacing}${title})?[ \t]*(?:${continuation}[ \t]*)?\)`,
-      "y",
-    );
-    const label = String.raw`\[(?<label>(?:\\.|[^\[\]\\\r\n]|${continuation})+)\]`;
-    const definition = new RegExp(
-      String.raw`^\uFEFF? {0,3}${label}:[ \t]*(?:${continuation}[ \t]*)?${destination}(?:${spacing}${title})?[ \t]*\r?$`,
-      "gm",
-    );
-    const referenceImage = new RegExp(
-      String.raw`\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\](?:\[(?<reference>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\])?`,
-      "y",
-    );
-    const destinationLength = (target: string, inline = false): number => {
-      if (target.startsWith("<")) return target.length;
-      let depth = 0;
-      for (let index = 0; index < target.length; index += 1) {
-        if (target[index] === "\\") {
-          index += 1;
-          continue;
-        }
-        if (target[index] === "(") depth += 1;
-        if (target[index] === ")") depth -= 1;
-        if (depth < 0) return inline ? index : -1;
-        if (depth > 32) return -1;
-      }
-      return depth === 0 ? target.length : -1;
-    };
-    const definitions = new Map<number, { end: number; label: string }>();
-    for (const match of existing.matchAll(definition)) {
-      const text = match.groups?.label ?? "";
-      if (Buffer.byteLength(text, "utf8") > 1000 || !/[^ \t\r\n]/.test(text)) continue;
-      if (destinationLength(match.groups?.destination ?? "") < 0) continue;
-      definitions.set(match.index, {
-        end: match.index + match[0].length,
-        label: normalizeLabel(text),
-      });
-    }
     const listContentColumns: number[] = [];
-    const columnAfter = (prefix: string): number => {
-      let column = 0;
-      for (const character of prefix) {
-        column += character === "\t" ? 4 - (column % 4) : 1;
-      }
-      return column;
-    };
     let indentedCode = false;
     let htmlEnd: RegExp | null = null;
     let htmlContentColumn = 0;
@@ -498,11 +498,21 @@ export function addReviewPointer(existing: string, template: string | null): str
       }
 
       const reference = definitions.get(offset);
+      const definitionMarker = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/.exec(plain);
+      const definitionGap =
+        definitionMarker === null
+          ? 0
+          : columnAfter(definitionMarker[0]) -
+            columnAfter(`${definitionMarker[1] ?? ""}${definitionMarker[2] ?? ""}`);
+      const startsContainer =
+        (container !== "" && !wasQuotedParagraph) ||
+        (definitionMarker !== null && paragraphInterrupt.test(plain));
+      const definitionIndented = container !== "" && (fenceIndentation >= 4 || definitionGap > 4);
       if (
         reference !== undefined &&
-        !paragraph &&
+        (!paragraph || startsContainer) &&
         !comment &&
-        container === "" &&
+        !definitionIndented &&
         !lazyQuote &&
         offset >= spanEnd &&
         offset >= linkEnd &&
@@ -510,6 +520,8 @@ export function addReviewPointer(existing: string, template: string | null): str
       ) {
         referenceLabels.add(reference.label);
         referenceEnd = reference.end;
+        paragraph = false;
+        quotedParagraph = container !== "";
         offset += raw.length + 1;
         continue;
       }

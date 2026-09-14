@@ -3399,7 +3399,7 @@ async function ensureAgentEntryPointRules(
         continue;
       }
       if (dryRun) {
-        info(`  would update: ${formatReportPath(target)} (review policy and rule citations)`);
+        info(`  would update: ${formatReportPath(target)} (agent instructions)`);
         copied.push(target);
         continue;
       }
@@ -3409,9 +3409,7 @@ async function ensureAgentEntryPointRules(
         skipped.push(target);
         continue;
       }
-      info(
-        `  updated: ${formatReportPath(target)} (review policy and rule citations; existing content kept)`,
-      );
+      info(`  updated: ${formatReportPath(target)} (agent instructions; existing content kept)`);
       copied.push(target);
       continue;
     }
@@ -3449,7 +3447,7 @@ async function ensureAgentEntryPointRules(
         continue;
       }
       if (dryRun) {
-        info(`  would update: ${formatReportPath(target)} (review policy and rule citations)`);
+        info(`  would update: ${formatReportPath(target)} (agent instructions)`);
       } else {
         const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
         if (wrote !== null) {
@@ -3457,9 +3455,7 @@ async function ensureAgentEntryPointRules(
           skipped.push(target);
           continue;
         }
-        info(
-          `  updated: ${formatReportPath(target)} (review policy and rule citations; existing content kept)`,
-        );
+        info(`  updated: ${formatReportPath(target)} (agent instructions; existing content kept)`);
       }
       copied.push(target);
       continue;

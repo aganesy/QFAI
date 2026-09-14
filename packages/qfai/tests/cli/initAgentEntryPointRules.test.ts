@@ -80,6 +80,55 @@ async function initCapturingStderr(root: string): Promise<string> {
 }
 
 describe("qfai init connects a pre-existing agent entry point to the rule masters", () => {
+  it.each([false, true])("reports only instruction updates with dryRun %j", async (dryRun) => {
+    for (const handWired of [false, true]) {
+      for (const pointerOnly of [false, true]) {
+        await withProject(async (root) => {
+          const master = ".agents/rules/grilling.md";
+          await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
+          await runInit({ dir: root, force: false, dryRun: false, yes: true });
+          const section = extractManagedRulesSection(await readTemplate("AGENTS.md")) ?? "";
+          const seeded = handWired
+            ? `${PROJECT_TEXT}${citedRuleMasters(section)
+                .map((rule) => `- \`${rule}\``)
+                .join("\n")}\n`
+            : await readEntryPoint(root, "AGENTS.md");
+          const before = pointerOnly
+            ? withoutAddedReviewPointer(seeded)
+            : `${REVIEW_POINTER}\n\n${withoutAddedReviewPointer(seeded)}`
+                .split("\n")
+                .filter((line) => !(line.startsWith("- ") && line.includes(master)))
+                .join("\n");
+          await writeFile(path.join(root, "AGENTS.md"), before, "utf-8");
+          if (!pointerOnly) await rm(path.join(root, ...master.split("/")), { force: true });
+          const chunks: string[] = [];
+          const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+            chunks.push(String(chunk));
+            return true;
+          });
+          try {
+            await runInit({ dir: root, force: false, dryRun, yes: true });
+          } finally {
+            spy.mockRestore();
+          }
+          const line = chunks
+            .join("")
+            .split("\n")
+            .find((entry) => /(?:would update|updated): .*AGENTS[.]md \(/.test(entry));
+          expect(line).toContain("(agent instructions");
+          expect(line).not.toContain("review policy and rule citations");
+          const after = await readEntryPoint(root, "AGENTS.md");
+          if (dryRun) expect(after).toBe(before);
+          else if (pointerOnly) expect(after).toBe(`${REVIEW_POINTER}\n\n${before}`);
+          else {
+            expect(after).toContain(master);
+            expect(occurrences(after, REVIEW_POINTER)).toBe(1);
+          }
+        });
+      }
+    }
+  });
+
   it("installs optional review policy into existing entry points", async () => {
     const pointer =
       "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository. Read it before writing the PR description as well.";
@@ -707,6 +756,101 @@ describe("a hand-wired file this run cannot extend is named", () => {
 });
 
 describe("optional review directive detection", () => {
+  it.each([
+    ["quote", "> [image]: /image.png\n", true],
+    ["list", "- [image]: /image.png\n", true],
+    ["nested quoted list", "> > - [image]: /image.png\n", true],
+    ["list continuation", "- Item\n\n  [image]: /image.png\n", true],
+    ["quoted paragraph", "> Paragraph\n> [image]: /image.png\n", false],
+    ["list paragraph", "- Paragraph\n  [image]: /image.png\n", false],
+    ["quoted fence", "> ~~~\n> [image]: /image.png\n> ~~~\n", false],
+    ["list fence", "- ~~~\n  [image]: /image.png\n  ~~~\n", false],
+    ["quoted HTML", "> <div>\n> [image]: /image.png\n> </div>\n", false],
+    ["list HTML", "- <div>\n  [image]: /image.png\n  </div>\n", false],
+  ] as const)(
+    "resolves only operative container definitions in a %s",
+    (_name, definition, hidden) => {
+      for (const end of ["\n", "\r\n"]) {
+        const existing = `\uFEFF![\n${REVIEW_POINTER}\n][image]\n\n${definition}`.replace(
+          /\n/g,
+          end,
+        );
+        const expected = hidden
+          ? `\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`
+          : existing;
+        const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+        expect(updated).toBe(expected);
+        expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+      }
+    },
+  );
+
+  it.each([false, true])(
+    "writes guidance outside container-resolved images with force=%s",
+    async (force) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const templates = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+            name,
+            text: await readEntryPoint(root, name),
+            mode: (await stat(path.join(root, name))).mode,
+          })),
+        );
+        for (const end of ["\n", "\r\n"]) {
+          const originals = templates.map(({ name, text, mode }) => ({
+            name,
+            mode,
+            text: `\uFEFF${text.replace(REVIEW_POINTER, `![\n${REVIEW_POINTER}\n][image]\n\n${name === "AGENTS.md" ? "> " : "- "}[image]: /image.png`)}${PROJECT_TEXT}`.replace(
+              /\n/g,
+              end,
+            ),
+          }));
+          for (const { name, text } of originals)
+            await writeFile(path.join(root, name), text, "utf-8");
+          await runInit({ dir: root, force, dryRun: false, yes: true });
+          for (const { name, text, mode } of originals) {
+            expect(await readEntryPoint(root, name)).toBe(
+              `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}`,
+            );
+            expect((await stat(path.join(root, name))).mode).toBe(mode);
+          }
+          await runInit({ dir: root, force, dryRun: false, yes: true });
+          for (const { name, text, mode } of originals) {
+            expect(await readEntryPoint(root, name)).toBe(
+              `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}`,
+            );
+            expect((await stat(path.join(root, name))).mode).toBe(mode);
+          }
+        }
+      });
+    },
+  );
+
+  it("reuses invariant reference parsing across discovery passes", () => {
+    const existing = `![\n${REVIEW_POINTER}\n][image]\n\n[image]: /image.png\n`;
+    const spy = vi.spyOn(String.prototype, "matchAll");
+    let calls: number;
+    let updated: string;
+    try {
+      updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      calls = spy.mock.calls.length;
+    } finally {
+      spy.mockRestore();
+    }
+    expect(updated).toBe(`${REVIEW_POINTER}\n\n${existing}`);
+    expect(calls).toBe(1);
+  });
+
+  it.each([333, 334])("preserves GitHub's CJK reference boundary at %i characters", (length) => {
+    const label = "漢".repeat(length);
+    const existing = `![\n${REVIEW_POINTER}\n][${label}]\n\n[${label}]: /image.png\n`;
+    const expected = length === 333 ? `${REVIEW_POINTER}\n\n${existing}` : existing;
+    const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+    expect(updated).toBe(expected);
+    expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+  });
+
   it.each(["\n", "\r\n"])(
     "link-reference boundary: adds guidance outside image labels with %j",
     (end) => {
