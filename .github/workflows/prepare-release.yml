@@ -281,7 +281,7 @@ jobs:
             const generated = readFileSync(bodyPath, 'utf8');
             const section =
               /^ {0,3}## What (?:this|a) change made unnecessary(?:[ \t]+#+)?[ \t]*\r?\n([\s\S]*?)(?=^ {0,3}#{1,2}(?:[ \t]|\r?$)|(?![\s\S]))/m;
-            const maskExamples = (body) => {
+            const maskExamples = (body, setextHeadings = false) => {
               const definitions = new Map();
               const blockTags =
                 'address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul'.replace(
@@ -335,7 +335,10 @@ jobs:
               let htmlEnd = null;
               let htmlTextVisible = false;
               let paragraph = false;
-              const visible = body.replace(/^[^\n]*/gm, (line, offset) => {
+              let paragraphStart = -1;
+              const headings = [];
+              let visible = body.replace(/^[^\n]*/gm, (line, offset) => {
+                if (!paragraph) paragraphStart = -1;
                 if (offset < referenceEnd) return line.replace(/[^\r\n]/g, ' ');
                 let insideHtml = Boolean(htmlEnd);
                 if (fence) {
@@ -472,20 +475,34 @@ jobs:
                 }
                 if (insideHtml && /^ {0,3}#{1,6}(?:[ \t]|$)/.test(visible))
                   visible = line.replace(/[^\r\n]/g, ' ');
+                if (
+                  setextHeadings && paragraphStart >= 0 && !insideHtml && !inComment &&
+                  offset >= spanEnd && offset >= linkEnd && /^ {0,3}(?:=+|-+)[ \t]*\r?$/.test(line)
+                ) headings.push(paragraphStart);
+                const wasParagraph = paragraph;
                 paragraph =
                   !insideHtml &&
                   (hasInlineLink || visible.trim().length > 0) &&
                   !/^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}|=+[ \t]*)\r?$)/.test(
                     visible,
                   );
+                if (
+                  !wasParagraph && paragraph && /^ {0,3}[^ \t\r\n]/.test(line) &&
+                  !/^ {0,3}(?:>|[-+*](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$))/.test(line)
+                ) paragraphStart = offset;
                 return visible;
               });
+              for (const start of headings) {
+                const newline = visible.indexOf('\n', start);
+                const end = newline < 0 ? visible.length : newline;
+                visible = visible.slice(0, start) + '#' + ' '.repeat(end - start - 1) + visible.slice(end);
+              }
               return {
                 visible,
                 unfinished: Boolean(fence) || inComment || Boolean(htmlEnd && !htmlEnd.test('')),
               };
             };
-            const parsed = maskExamples(existing);
+            const parsed = maskExamples(existing, true);
             const match = section.exec(parsed.visible);
             const hasAnswer = (candidate) => {
               const answer = (candidate?.[1] ?? '')

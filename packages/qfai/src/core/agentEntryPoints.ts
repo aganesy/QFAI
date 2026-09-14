@@ -237,7 +237,38 @@ export function addReviewPointer(existing: string, template: string | null): str
   } | null = null;
   let comment = false;
   let spanEnd = 0;
+  let linkStart = 0;
+  let linkEnd = 0;
   let offset = 0;
+  const blockTags =
+    "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul".replace(
+      /[a-z]/g,
+      (letter) => `[${letter}${letter.toUpperCase()}]`,
+    );
+  const interrupt = String.raw` {0,3}(?:#{1,6}(?:[ \t]|\r?$)|>|~{3,}|\x60{3,}[^\x60\r\n]*\r?$|(?:=+|-+)[ \t]*\r?$|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})\r?$|(?:[-+*]|0{0,8}1[.)])[ \t]+\S|<(?:!--|\?|![A-Za-z]|!\[[cC][dD][aA][tT][aA]\[|(?:[pP][rR][eE]|[sS][cC][rR][iI][pP][tT]|[sS][tT][yY][lL][eE]|[tT][eE][xX][tT][aA][rR][eE][aA])(?=[ \t>]|\r?$)|/?(?:${blockTags})(?=[ \t>]|/>|\r?$)))`;
+  const continuation = String.raw`\r?\n(?![ \t]*(?:\r?\n|(?![\s\S])))(?!${interrupt})`;
+  const destination = String.raw`(?<destination><(?:\\.|[^<>\\\r\n])*>|(?:\\.|[^\x00-\x20\x7f<>\\])+)`;
+  const title = String.raw`(?:"(?:[^"\\\r\n]|\\.|${continuation})*"|'(?:[^'\\\r\n]|\\.|${continuation})*'|\((?:[^()\\\r\n]|\\.|${continuation})*\))`;
+  const spacing = String.raw`(?:[ \t]+(?:${continuation}[ \t]*)?|[ \t]*${continuation}[ \t]*)`;
+  const link = new RegExp(
+    String.raw`^\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\]\([ \t]*(?:${continuation}[ \t]*)?(?:${destination})?(?:${spacing}${title})?[ \t]*(?:${continuation}[ \t]*)?\)`,
+    "m",
+  );
+  const destinationLength = (target: string, inline = false): number => {
+    if (target.startsWith("<")) return target.length;
+    let depth = 0;
+    for (let index = 0; index < target.length; index += 1) {
+      if (target[index] === "\\") {
+        index += 1;
+        continue;
+      }
+      if (target[index] === "(") depth += 1;
+      if (target[index] === ")") depth -= 1;
+      if (depth < 0) return inline ? index : -1;
+      if (depth > 32) return -1;
+    }
+    return depth === 0 ? target.length : -1;
+  };
   const listContentColumns: number[] = [];
   const columnAfter = (prefix: string): number => {
     let column = 0;
@@ -248,6 +279,8 @@ export function addReviewPointer(existing: string, template: string | null): str
   };
   let indentedCode = false;
   let htmlEnd: RegExp | null = null;
+  let htmlContentColumn = 0;
+  let htmlContainer = "";
   let paragraph = false;
   for (const raw of existing.split("\n")) {
     const container = containerOf(raw);
@@ -274,6 +307,12 @@ export function addReviewPointer(existing: string, template: string | null): str
       offset += raw.length + 1;
       continue;
     }
+    if (
+      htmlEnd !== null &&
+      (container !== htmlContainer || (!blank && fenceIndentation < htmlContentColumn))
+    ) {
+      htmlEnd = null;
+    }
     if (htmlEnd !== null) {
       if (htmlEnd.test(raw)) htmlEnd = null;
       paragraph = false;
@@ -292,7 +331,13 @@ export function addReviewPointer(existing: string, template: string | null): str
     }
     indentedCode = false;
     const marker = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/.exec(raw);
-    if (!comment && offset >= spanEnd && marker !== null && indentation <= contentColumn + 3) {
+    if (
+      !comment &&
+      offset >= spanEnd &&
+      offset >= linkEnd &&
+      marker !== null &&
+      indentation <= contentColumn + 3
+    ) {
       const markerEnd = columnAfter(`${marker[1] ?? ""}${marker[2] ?? ""}`);
       const gap = columnAfter(marker[0]) - markerEnd;
       listContentColumns.push(markerEnd + (gap > 4 ? 1 : gap));
@@ -313,6 +358,7 @@ export function addReviewPointer(existing: string, template: string | null): str
     if (
       !comment &&
       offset >= spanEnd &&
+      offset >= linkEnd &&
       openingColumn >= openingBase &&
       openingColumn <= openingBase + 3 &&
       opening &&
@@ -328,30 +374,39 @@ export function addReviewPointer(existing: string, template: string | null): str
       offset += raw.length + 1;
       continue;
     }
-    if (!comment) {
-      if (/^ {0,3}<(?:pre|script|style|textarea)(?=[ \t>]|$)/i.test(raw)) {
+    const htmlLine = openingLine.slice(openingPrefix.length);
+    if (
+      !comment &&
+      offset >= spanEnd &&
+      offset >= linkEnd &&
+      openingColumn >= openingBase &&
+      openingColumn <= openingBase + 3
+    ) {
+      if (/^<(?:pre|script|style|textarea)(?=[ \t>]|$)/i.test(htmlLine)) {
         htmlEnd = /<\/(?:pre|script|style|textarea)>/i;
-      } else if (/^ {0,3}<\?/.test(raw)) {
+      } else if (/^<\?/.test(htmlLine)) {
         htmlEnd = /\?>/;
-      } else if (/^ {0,3}<![A-Za-z]/.test(raw)) {
+      } else if (/^<![A-Za-z]/.test(htmlLine)) {
         htmlEnd = />/;
-      } else if (/^ {0,3}<!\[CDATA\[/.test(raw)) {
+      } else if (/^<!\[CDATA\[/.test(htmlLine)) {
         htmlEnd = /\]\]>/;
       } else if (
         /^ {0,3}<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|\/>|$)/i.test(
-          raw,
+          htmlLine,
         )
       ) {
         htmlEnd = /^[ \t]*\r?$/;
       } else if (
         !paragraph &&
         /^ {0,3}(?:<(?!pre(?:[ \t/>]|$)|script(?:[ \t/>]|$)|style(?:[ \t/>]|$)|textarea(?:[ \t/>]|$))[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t]*=[ \t]*(?:(?:(?!["'=<>`])[\x21-\uFFFF])+|'[^']*'|"[^"]*"))?)*[ \t]*\/?>|<\/[A-Za-z][A-Za-z0-9-]*[ \t]*>)[ \t]*\r?$/i.test(
-          raw,
+          htmlLine,
         )
       ) {
         htmlEnd = /^[ \t]*\r?$/;
       }
       if (htmlEnd !== null) {
+        htmlContentColumn = listContentColumns.at(-1) ?? 0;
+        htmlContainer = container;
         if (htmlEnd.test(raw)) htmlEnd = null;
         paragraph = false;
         offset += raw.length + 1;
@@ -360,7 +415,12 @@ export function addReviewPointer(existing: string, template: string | null): str
     }
 
     let visible = "";
+    let hasInlineLink = offset < linkEnd;
     for (let index = 0; index < raw.length;) {
+      if (offset + index >= linkStart && offset + index < linkEnd) {
+        index = Math.min(raw.length, linkEnd - offset);
+        continue;
+      }
       if (offset + index < spanEnd) {
         index += 1;
         continue;
@@ -376,6 +436,32 @@ export function addReviewPointer(existing: string, template: string | null): str
         comment = true;
         index += 4;
         continue;
+      }
+      if (raw[index] === "[") {
+        let escapes = 0;
+        for (let before = index - 1; before >= 0 && raw[before] === "\\"; before -= 1) escapes += 1;
+        const tail = existing.slice(offset + index);
+        let inline = link.exec(tail);
+        if (escapes % 2 === 0 && inline?.index === 0) {
+          const target = inline.groups?.destination ?? "";
+          const text = inline.groups?.text ?? "";
+          const length = destinationLength(target, true);
+          if (length >= 0 && length < target.length) {
+            const start = inline[0].indexOf(target, text.length + 3);
+            inline = link.exec(tail.slice(0, start + length + 1));
+          }
+          if (
+            length >= 0 &&
+            inline?.index === 0 &&
+            destinationLength(inline.groups?.destination ?? "") >= 0
+          ) {
+            linkStart = offset + index + 1 + text.length;
+            linkEnd = offset + index + inline[0].length;
+            hasInlineLink = true;
+            index += 1;
+            continue;
+          }
+        }
       }
       if (raw[index] === "`") {
         const tail = existing.slice(offset + index);
@@ -398,7 +484,7 @@ export function addReviewPointer(existing: string, template: string | null): str
       index += 1;
     }
     paragraph =
-      visible.trim().length > 0 &&
+      (hasInlineLink || visible.trim().length > 0) &&
       !/^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}|=+[ \t]*)\r?$)/.test(
         visible,
       );

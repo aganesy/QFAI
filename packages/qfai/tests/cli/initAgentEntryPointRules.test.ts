@@ -707,6 +707,37 @@ describe("a hand-wired file this run cannot extend is named", () => {
 });
 
 describe("optional review directive detection", () => {
+  it.each(
+    ["pre", "div", "span"].flatMap((tag) =>
+      ["-", "10.", "   -"].map((marker) => [tag, marker] as const),
+    ),
+  )("adds guidance outside list HTML %s / %s", (tag, marker) => {
+    const indent = " ".repeat(marker.length + 1);
+    const existing = `# Project rules\n\n${marker} <${tag}>\n${indent}${REVIEW_POINTER}\n${indent}</${tag}>\n\nKeep every byte.\n`;
+    const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+    expect(updated).toBe(`${REVIEW_POINTER}\n\n${existing}`);
+    expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+  });
+
+  it.each(['"', "'", "("])("adds guidance outside a multiline link title %s", (delimiter) => {
+    const close = delimiter === "(" ? ")" : delimiter;
+    const existing = `\uFEFF# Project rules\r\n\r\n[](https://example.com ${delimiter}\r\n${REVIEW_POINTER}\r\n${close})\r\nKeep every byte.\r\n`;
+    const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+    expect(updated).toBe(`\uFEFF${REVIEW_POINTER}\r\n\r\n${existing.slice(1)}`);
+    expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+  });
+
+  it.each([
+    ["escaped link", `\\[](https://example.com "\n${REVIEW_POINTER}\n")\n`],
+    ["invalid blank title", `[](https://example.com "\n\n${REVIEW_POINTER}\n")\n`],
+    ["visible label", `[${REVIEW_POINTER}](https://example.com "\nExample\n")\n`],
+    ["after a closed link", `[](/url)\n\n${REVIEW_POINTER}\n`],
+    ["after a dedented list HTML block", `- <pre>\n  Example only.\n\n${REVIEW_POINTER}\n`],
+  ])("retains a live directive %s", (_name, section) => {
+    const existing = `# Project rules\n\n${section}`;
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+  });
+
   it.each(["```", "~~~"].flatMap((fence) => ["-", "1.", "10)"].map((marker) => [fence, marker])))(
     "keeps list-like %s fence content with %s inside its real close",
     (fence, marker) => {
@@ -838,6 +869,8 @@ describe("optional review directive detection", () => {
           `<pre>\n${REVIEW_POINTER}\n</pre>`,
           `- Project rules\n\n      ${REVIEW_POINTER}`,
           `10. Project rules\n\n        ${REVIEW_POINTER}`,
+          `- <pre>\n  ${REVIEW_POINTER}\n  </pre>`,
+          `[](https://example.com "\n${REVIEW_POINTER}\n")`,
         ]) {
           const originals = templates.map(({ name, text, mode }) => ({
             name,

@@ -5,7 +5,7 @@ function NormalizeBody([string]$Body) {
   return $text.TrimEnd()
 }
 
-function MaskBodyExamples([string]$Body) {
+function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
   $definitions = [System.Collections.Generic.Dictionary[int, int]]::new()
   $interrupt = ' {0,3}(?:#{1,6}(?:[ \t]|$)|>|~{3,}|`{3,}[^`\n]*$|(?:=+|-+)[ \t]*$|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})$|(?:[-+*]|0{0,8}1[.)])[ \t]+\S|(?i:<(?:!--|\?|![A-Za-z]|!\[CDATA\[|(?:pre|script|style|textarea)(?=[ \t>]|$)|/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|/>|$))))'
   $continuation = '\n(?![ \t]*(?:\n|\z))(?!' + $interrupt + ')'
@@ -45,7 +45,10 @@ function MaskBodyExamples([string]$Body) {
   $htmlEnd = ""
   $htmlTextVisible = $false
   $paragraph = $false
+  $paragraphStart = -1
+  $headings = [System.Collections.Generic.List[int]]::new()
   $masked = @(foreach ($line in ($Body -split "`n")) {
+    if (-not $paragraph) { $paragraphStart = -1 }
     if ($offset -lt $referenceEnd) {
       $line -replace '[^\r\n]', ' '
       $offset += $line.Length + 1
@@ -177,11 +180,25 @@ function MaskBodyExamples([string]$Body) {
       continue
     }
     if ($insideHtml -and $visible -match '^ {0,3}#{1,6}(?:[ \t]|$)') { $visible = $line -replace '[^\r\n]', ' ' }
+    if ($SetextHeadings -and $paragraphStart -ge 0 -and -not $insideHtml -and -not $inComment -and $offset -ge $spanEnd -and $offset -ge $linkEnd -and $line -match '^ {0,3}(?:=+|-+)[ \t]*\r?$') {
+      $headings.Add($paragraphStart)
+    }
+    $wasParagraph = $paragraph
     $paragraph = -not $insideHtml -and ($hasInlineLink -or -not [string]::IsNullOrWhiteSpace($visible)) -and $visible -notmatch '^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}|=+[ \t]*)\r?$)'
+    if (-not $wasParagraph -and $paragraph -and $line -match '^ {0,3}[^ \t\r\n]' -and $line -notmatch '^ {0,3}(?:>|[-+*](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$))') {
+      $paragraphStart = $offset
+    }
     $visible
     $offset += $line.Length + 1
   })
-  return $masked -join "`n"
+  $text = $masked -join "`n"
+  foreach ($start in $headings) {
+    $end = $text.IndexOf("`n", $start)
+    if ($end -lt 0) { $end = $text.Length }
+    $length = $end - $start
+    $text = $text.Remove($start, $length).Insert($start, ('#' + (' ' * ($length - 1))))
+  }
+  return $text
 }
 
 function StripAutoImport([string]$Body) {
@@ -194,7 +211,7 @@ function StripAutoImport([string]$Body) {
 
 function RemovalAnswer([string]$Body) {
   $raw = StripAutoImport $Body
-  $text = MaskBodyExamples $raw
+  $text = MaskBodyExamples $raw -SetextHeadings
   $match = [regex]::Match($text, '(?ms)^ {0,3}## What (?:this|a) change made unnecessary(?:[ \t]+#+)?[ \t]*\n(?<answer>.*?)(?=^ {0,3}#{1,2}(?:[ \t]|$)|\z)')
   if (-not $match.Success) { return "" }
   $answer = $match.Groups['answer']

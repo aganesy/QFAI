@@ -369,6 +369,37 @@ describe("resuming a release pull-request description", () => {
   );
 
   it.each(
+    ["---", "==="].flatMap((underline) =>
+      ["Adoption bar", "Adoption\nbar"].map((title) => [underline, title] as const),
+    ),
+  )("preserves a Setext %s / %j section during removal repair", async (underline, title) => {
+    const workflow = await readFile(
+      path.join(REPO_ROOT, ".github/workflows/prepare-release.yml"),
+      "utf-8",
+    );
+    const script = workflow.match(
+      /^\s*node - .* <<'REPAIR_BODY'\r?\n([\s\S]*?)^\s*REPAIR_BODY[ \t]*$/m,
+    )?.[1];
+    if (script === undefined) throw new Error("Release body repair script is absent");
+    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-release-setext-"));
+    tempDirs.push(dir);
+    const existingPath = path.join(dir, "existing.md");
+    const bodyPath = path.join(dir, "generated.md");
+    const later = `${title}\n${underline}\nKeep publication approval.\n`;
+    const existing = `## What this change made unnecessary\n\n${later}`;
+    const generated = "## What this change made unnecessary\n\nSuperseded pin.\n";
+    await writeFile(existingPath, existing, "utf-8");
+    await writeFile(bodyPath, generated, "utf-8");
+    const result = spawnSync(process.execPath, ["-", existingPath, bodyPath], {
+      input: script,
+      encoding: "utf-8",
+    });
+    if (result.error !== undefined) throw result.error;
+    expect(result.status, result.stderr).toBe(0);
+    expect(await readFile(bodyPath, "utf-8")).toBe(`${generated}\n${later}`);
+  });
+
+  it.each(
     [1, 2, 3].flatMap((indent) =>
       ["#", "##"].map((level) => `${" ".repeat(indent)}${level} Adoption bar`),
     ),
@@ -415,6 +446,10 @@ describe("resuming a release pull-request description", () => {
     ["TODO prefix", "## What this change made unnecessary\n\nTODO: fill this in\n"],
     ["TBD prefix", "## What this change made unnecessary\n\nTBD: list the removals\n"],
     ["thematic break", "## What this change made unnecessary\n\n---\n"],
+    ...["---", "==="].map((underline) => [
+      `reference paragraph becomes Setext ${underline}`,
+      `## What this change made unnecessary\n\n[Nothing]: /url "Title\n${underline}\nNothing"\n`,
+    ]),
     ["empty quotation", "## What this change made unnecessary\n\n>\n"],
     ["empty link", "## What this change made unnecessary\n\n[]()\n"],
     ["empty link with target", "## What this change made unnecessary\n\n[](https://example.com)\n"],
@@ -528,8 +563,6 @@ describe("resuming a release pull-request description", () => {
         "## Adoption bar",
         "~~~",
         "> Nothing",
-        "---",
-        "===",
         "- Nothing",
         "01. Nothing",
         "<![cdata[",
@@ -666,6 +699,11 @@ describe("resuming a release pull-request description", () => {
       } else {
         const outsideCode = maskFencedCodeBlocks(updated).replace(/<!--[\s\S]*?-->/g, "");
         expect(outsideCode.match(/^## What this change made unnecessary$/gm)).toHaveLength(1);
+        if (name.startsWith("reference paragraph becomes Setext")) {
+          expect(
+            updated.endsWith(section.slice("## What this change made unnecessary\n\n".length)),
+          ).toBe(true);
+        }
       }
     }
   });

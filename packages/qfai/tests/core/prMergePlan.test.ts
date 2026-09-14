@@ -130,9 +130,28 @@ afterEach(async () => {
  * lower it.
  */
 describe("run-pr-merge plan", () => {
+  it.each(
+    ["---", "==="].flatMap((underline) =>
+      ["Adoption bar", "Adoption\nbar"].map((title) => [underline, title] as const),
+    ),
+  )("blocks an empty removal answer before Setext %s / %j", async (underline, title) => {
+    const baseline = makeScenario({});
+    const body = `## What this change made unnecessary\n\n${title}\n${underline}\nKeep publication approval.\n`;
+    const result = await runPrMerge({
+      live: true,
+      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+    });
+    expect(result.code).not.toBe(0);
+    expect(result.ghState.prMergeCount ?? 0).toBe(0);
+  });
+
   it.each([
     ["absent", ""],
     ["Markdown-only", "## What this change made unnecessary\n\n---\n"],
+    ...["---", "==="].map((underline) => [
+      `reference paragraph becomes Setext ${underline}`,
+      `## What this change made unnecessary\n\n[Nothing]: /url "Title\n${underline}\nNothing"\n`,
+    ]),
     ["None marker", "## What this change made unnecessary\n\nNone.\n"],
     ["N/A marker", "## What this change made unnecessary\n\nN/A\n"],
     ["named space entity", "## What this change made unnecessary\n\n&nbsp;\n"],
@@ -258,8 +277,6 @@ describe("run-pr-merge plan", () => {
       "## Adoption bar",
       "~~~",
       "> Nothing",
-      "---",
-      "===",
       "- Nothing",
       "01. Nothing",
       "<![cdata[",

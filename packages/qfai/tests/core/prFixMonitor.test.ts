@@ -148,8 +148,6 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       "## Adoption bar",
       "~~~",
       "> Nothing",
-      "---",
-      "===",
       "- Nothing",
       "01. Nothing",
       "<![cdata[",
@@ -215,6 +213,24 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(result.ghState.prEditCount ?? 0).toBe(0);
   });
 
+  it.each(
+    ["---", "==="].flatMap((underline) =>
+      ["Adoption bar", "Adoption\nbar"].map((title) => [underline, title] as const),
+    ),
+  )("blocks an empty removal answer before Setext %s / %j", async (underline, title) => {
+    const body = `## What this change made unnecessary\n\n${title}\n${underline}\nKeep publication approval.\n`;
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).not.toBe(0);
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+  });
+
   it("accepts a real heading after a first-line indented HTML example", async () => {
     const body = "    <pre>\n## What this change made unnecessary\nNothing.\n";
     const result = await runPrFix({
@@ -274,6 +290,10 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ],
     ["import-only body", "## Auto-import\n\n"],
     ["thematic break", "## What this change made unnecessary\n\n---\n"],
+    ...["---", "==="].map((underline) => [
+      `reference paragraph becomes Setext ${underline}`,
+      `## What this change made unnecessary\n\n[Nothing]: /url "Title\n${underline}\nNothing"\n`,
+    ]),
     ["empty quotation", "## What this change made unnecessary\n\n>\n"],
     ["empty link", "## What this change made unnecessary\n\n[]()\n"],
     ["empty link with target", "## What this change made unnecessary\n\n[](https://example.com)\n"],
