@@ -26,7 +26,7 @@
  *
  * This file grows row by row; each describe block is one ledger row.
  */
-import { cp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -34,6 +34,7 @@ import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
+import { invokedScriptBodies } from "../../../../scripts/check-workflow-hygiene.mjs";
 import {
   collectWorkflowJobs,
   isRecord,
@@ -839,6 +840,12 @@ async function readScripts(packageJsonPath: string): Promise<Record<string, stri
   return entries;
 }
 
+function lintScriptBodies(root: string): string {
+  return invokedScriptBodies("pnpm ci:lint", root)
+    .map(([, body]) => body ?? "")
+    .join("\n");
+}
+
 describe("TC-0003-0050 (TDD-0050): gate is wired into the lint aggregate and not the release-only aggregate", () => {
   // One it() per TC-0003-0050 verify bullet.
   //
@@ -866,9 +873,10 @@ describe("TC-0003-0050 (TDD-0050): gate is wired into the lint aggregate and not
   it("the gate's invocation path appears in pnpm ci:lint, in the form the existing vitest lane already uses", async () => {
     const rootScripts = await readScripts(path.join(repoRoot, "package.json"));
     const ciLint = rootScripts["ci:lint"] ?? "";
+    const lintBodies = lintScriptBodies(repoRoot);
     expect(ciLint, "the root manifest declares no ci:lint script").not.toEqual("");
     expect(
-      ciLint,
+      lintBodies,
       `ci:lint must name the gate's invocation path (${GATE_ROOT_INVOCATION}) — the lint aggregate is what pull requests run`,
     ).toContain(GATE_ROOT_INVOCATION);
 
@@ -885,7 +893,7 @@ describe("TC-0003-0050 (TDD-0050): gate is wired into the lint aggregate and not
     ).toEqual(fileURLToPath(import.meta.url));
 
     // Ruling 125 made falsifiable: the precedent it copies is really there.
-    expect(ciLint, "the precedent vitest lane is no longer in ci:lint").toContain(
+    expect(lintBodies, "the precedent vitest lane is no longer in ci:lint").toContain(
       PRECEDENT_ROOT_INVOCATION,
     );
     expect(packageScripts[PRECEDENT_PACKAGE_SCRIPT] ?? "").toContain("vitest run");
@@ -894,7 +902,7 @@ describe("TC-0003-0050 (TDD-0050): gate is wired into the lint aggregate and not
   it("the gate's invocation path does not appear in pnpm ci:gate, which only the release workflow runs", async () => {
     const rootScripts = await readScripts(path.join(repoRoot, "package.json"));
     const ciGate = rootScripts["ci:gate"] ?? "";
-    const ciLint = rootScripts["ci:lint"] ?? "";
+    const lintBodies = lintScriptBodies(repoRoot);
     expect(ciGate, "the root manifest declares no ci:gate script").not.toEqual("");
 
     for (const named of [GATE_ROOT_INVOCATION, GATE_PACKAGE_SCRIPT, GATE_TEST_REL]) {
@@ -914,8 +922,37 @@ describe("TC-0003-0050 (TDD-0050): gate is wired into the lint aggregate and not
       ciGate,
       "ci:gate no longer runs the package suite — ruling 124's premise would need revisiting",
     ).toContain(RELEASE_TRANSITIVE_ENTRY);
-    expect(ciLint).toContain(GATE_ROOT_INVOCATION);
-    expect(ciLint).not.toContain(RELEASE_TRANSITIVE_ENTRY);
+    expect(lintBodies).toContain(GATE_ROOT_INVOCATION);
+    expect(lintBodies).not.toContain(RELEASE_TRANSITIVE_ENTRY);
+  });
+
+  it("an uncalled script cannot replace either named check in the lint invocation path", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "scripts"), { recursive: true });
+    await cp(
+      path.join(repoRoot, "scripts/run-lint-checks.sh"),
+      path.join(root, "scripts/run-lint-checks.sh"),
+    );
+    const scripts = await readScripts(path.join(repoRoot, "package.json"));
+    const manifest = path.join(root, "package.json");
+    await writeFile(manifest, JSON.stringify({ scripts }), "utf-8");
+    expect(lintScriptBodies(root)).toContain(GATE_ROOT_INVOCATION);
+    expect(lintScriptBodies(root)).toContain(PRECEDENT_ROOT_INVOCATION);
+
+    const owners = Object.entries(scripts).filter(([, body]) =>
+      body.includes(GATE_ROOT_INVOCATION),
+    );
+    expect(owners).toHaveLength(1);
+    for (const [name, body] of owners) {
+      scripts[name] = body
+        .replace(GATE_ROOT_INVOCATION, ":")
+        .replace(PRECEDENT_ROOT_INVOCATION, ":");
+    }
+    scripts["uncalled-checks"] = `${GATE_ROOT_INVOCATION} && ${PRECEDENT_ROOT_INVOCATION}`;
+    await writeFile(manifest, JSON.stringify({ scripts }), "utf-8");
+    expect(scripts["uncalled-checks"]).toContain(GATE_ROOT_INVOCATION);
+    expect(lintScriptBodies(root)).not.toContain(GATE_ROOT_INVOCATION);
+    expect(lintScriptBodies(root)).not.toContain(PRECEDENT_ROOT_INVOCATION);
   });
 
   it("the subsumed asset assertions' test-case reference stays registered on the expected-shape side", async () => {

@@ -265,6 +265,7 @@
     "tests/scripts/checkTscCompiler.test.ts",
     "tests/scripts/eslintSuppressionCensus.test.ts",
     "tests/scripts/freshInitFindings.test.ts",
+    "tests/scripts/lintParallel.test.ts",
     "tests/scripts/ownWorkflowTopology.test.ts",
     "tests/scripts/releaseNotesDrift.test.ts",
     "tests/scripts/renovateMechanism.test.ts",
