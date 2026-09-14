@@ -2158,7 +2158,9 @@ const PLANTS: {
     label: "a matrix stops disabling fail-fast",
     file: "ci.yml",
     plant: (dir) => {
-      editWorkflow(dir, "ci.yml", (text) => text.replace("fail-fast: false", "fail-fast: true"));
+      editWorkflow(dir, "ci.yml", (text) =>
+        text.replace(/(^ {2}test:[\s\S]*?fail-fast: )false/m, "$1true"),
+      );
       return "test";
     },
   },
