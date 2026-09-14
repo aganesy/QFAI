@@ -280,34 +280,55 @@ jobs:
             const existing = readFileSync(existingPath, 'utf8');
             const generated = readFileSync(bodyPath, 'utf8');
             const section =
-              /^## What (?:this|a) change made unnecessary[ \t]*\r?\n([\s\S]*?)(?=^ {0,3}#{1,2}(?:[ \t]|\r?$)|(?![\s\S]))/m;
+              /^ {0,3}## What (?:this|a) change made unnecessary(?:[ \t]+#+)?[ \t]*\r?\n([\s\S]*?)(?=^ {0,3}#{1,2}(?:[ \t]|\r?$)|(?![\s\S]))/m;
             const maskExamples = (body) => {
               const definitions = new Map();
-              const definition =
-                /^ {0,3}\[(?<label>(?:\\.|(?!\r?\n[ \t]*\r?\n)[^\[\]\\])+)\]:[ \t]*(?:\r?\n[ \t]*)?(?<destination><(?:\\.|[^<>\\\r\n])*>|(?:\\.|[^\x00-\x20\x7f<>\\])+)(?:(?:[ \t]+(?:\r?\n[ \t]*)?|[ \t]*\r?\n[ \t]*)(?:"(?:(?!\r?\n[ \t]*\r?\n)[^"\\]|\\.)*"|'(?:(?!\r?\n[ \t]*\r?\n)[^'\\]|\\.)*'|\((?:(?!\r?\n[ \t]*\r?\n)[^()\\]|\\.)*\)))?[ \t]*\r?$/gm;
+              const blockTags =
+                'address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul'.replace(
+                  /[a-z]/g,
+                  (letter) => `[${letter}${letter.toUpperCase()}]`,
+                );
+              const interrupt = String.raw` {0,3}(?:#{1,6}(?:[ \t]|\r?$)|>|~{3,}|\x60{3,}[^\x60\r\n]*\r?$|(?:=+|-+)[ \t]*\r?$|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})\r?$|(?:[-+*]|0{0,8}1[.)])[ \t]+\S|<(?:!--|\?|![A-Za-z]|!\[[cC][dD][aA][tT][aA]\[|(?:[pP][rR][eE]|[sS][cC][rR][iI][pP][tT]|[sS][tT][yY][lL][eE]|[tT][eE][xX][tT][aA][rR][eE][aA])(?=[ \t>]|\r?$)|/?(?:${blockTags})(?=[ \t>]|/>|\r?$)))`;
+              const continuation = String.raw`\r?\n(?![ \t]*(?:\r?\n|(?![\s\S])))(?!${interrupt})`;
+              const label = String.raw`\[(?<label>(?:\\.|[^\[\]\\\r\n]|${continuation})+)\]`;
+              const destination = String.raw`(?<destination><(?:\\.|[^<>\\\r\n])*>|(?:\\.|[^\x00-\x20\x7f<>\\])+)`;
+              const title = String.raw`(?:"(?:[^"\\\r\n]|\\.|${continuation})*"|'(?:[^'\\\r\n]|\\.|${continuation})*'|\((?:[^()\\\r\n]|\\.|${continuation})*\))`;
+              const spacing = String.raw`(?:[ \t]+(?:${continuation}[ \t]*)?|[ \t]*${continuation}[ \t]*)`;
+              const definition = new RegExp(
+                String.raw`^ {0,3}${label}:[ \t]*(?:${continuation}[ \t]*)?${destination}(?:${spacing}${title})?[ \t]*\r?$`,
+                'gm',
+              );
+              const link = new RegExp(
+                String.raw`^\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\]\([ \t]*(?:${continuation}[ \t]*)?(?:${destination})?(?:${spacing}${title})?[ \t]*(?:${continuation}[ \t]*)?\)`,
+                'm',
+              );
+              const destinationLength = (target, inline = false) => {
+                if (target.startsWith('<')) return target.length;
+                let depth = 0;
+                for (let index = 0; index < target.length; index += 1) {
+                  if (target[index] === '\\') {
+                    index += 1;
+                    continue;
+                  }
+                  if (target[index] === '(') depth += 1;
+                  if (target[index] === ')') depth -= 1;
+                  if (depth < 0) return inline ? index : -1;
+                  if (depth > 32) return -1;
+                }
+                return depth === 0 ? target.length : -1;
+              };
               for (const reference of body.matchAll(definition)) {
                 if (
-                  [...reference.groups.label.replace(/\r\n/g, '\n')].length > 999 ||
+                  Buffer.byteLength(reference.groups.label.replace(/\r\n/g, '\n'), 'utf8') > 1000 ||
                   !/[^ \t\r\n]/.test(reference.groups.label)
                 )
                   continue;
-                const target = reference.groups.destination;
-                if (!target.startsWith('<')) {
-                  let depth = 0;
-                  for (let index = 0; index < target.length; index += 1) {
-                    if (target[index] === '\\') {
-                      index += 1;
-                      continue;
-                    }
-                    if (target[index] === '(') depth += 1;
-                    if (target[index] === ')') depth -= 1;
-                    if (depth < 0) break;
-                  }
-                  if (depth !== 0) continue;
-                }
+                if (destinationLength(reference.groups.destination) < 0) continue;
                 definitions.set(reference.index, reference.index + reference[0].length);
               }
               let referenceEnd = 0;
+              let linkStart = 0;
+              let linkEnd = 0;
               let fence = '';
               let inComment = false;
               let spanEnd = 0;
@@ -319,7 +340,7 @@ jobs:
                 let insideHtml = Boolean(htmlEnd);
                 if (fence) {
                   paragraph = false;
-                  const closing = /^[ \t]{0,3}(`{3,}|~{3,})[ \t]*\r?$/.exec(line)?.[1] ?? '';
+                  const closing = /^ {0,3}(`{3,}|~{3,})[ \t]*\r?$/.exec(line)?.[1] ?? '';
                   if (closing[0] === fence[0] && closing.length >= fence.length) fence = '';
                   return line.replace(/[^\r\n]/g, ' ');
                 }
@@ -365,7 +386,7 @@ jobs:
                   referenceEnd = definitions.get(offset);
                   return line.replace(/[^\r\n]/g, ' ');
                 }
-                const rawOpening = /^[ \t]{0,3}(`{3,}|~{3,})(.*)\r?$/.exec(line);
+                const rawOpening = /^ {0,3}(`{3,}|~{3,})(.*)\r?$/.exec(line);
                 if (
                   !insideHtml &&
                   !inComment &&
@@ -378,13 +399,45 @@ jobs:
                   return line.replace(/[^\r\n]/g, ' ');
                 }
                 let visible = line;
+                let hasInlineLink = offset < linkEnd;
                 let position = 0;
                 while (position < line.length) {
+                  if (offset + position >= linkStart && offset + position < linkEnd) {
+                    const next = Math.min(line.length, linkEnd - offset);
+                    visible = visible.slice(0, position) + ' '.repeat(next - position) + visible.slice(next);
+                    position = next;
+                    continue;
+                  }
                   if (offset + position < spanEnd) {
                     position = Math.min(line.length, spanEnd - offset);
                     continue;
                   }
                   if (!inComment) {
+                    if (!insideHtml && line[position] === '[') {
+                      let escapes = 0;
+                      for (let before = position - 1; before >= 0 && line[before] === '\\'; before -= 1)
+                        escapes += 1;
+                      const tail = body.slice(offset + position);
+                      let inline = link.exec(tail);
+                      if (escapes % 2 === 0 && inline?.index === 0) {
+                        const target = inline.groups.destination ?? '';
+                        const length = destinationLength(target, true);
+                        if (length >= 0 && length < target.length) {
+                          const start = inline[0].indexOf(target, inline.groups.text.length + 3);
+                          inline = link.exec(tail.slice(0, start + length + 1));
+                        }
+                        if (
+                          length >= 0 &&
+                          inline?.index === 0 &&
+                          destinationLength(inline.groups.destination ?? '') >= 0
+                        ) {
+                          visible = visible.slice(0, position) + ' ' + visible.slice(position + 1);
+                          linkStart = offset + position + 1 + inline.groups.text.length;
+                          linkEnd = offset + position + inline[0].length;
+                          hasInlineLink = true;
+                        }
+                      }
+                    }
                     if (!insideHtml && line[position] === '`') {
                       const tail = body.slice(offset + position);
                       const span = /^(`+)(?!`)(?:(?!\r?\n[ \t]*\r?\n)[\s\S])*?(?<!`)\1(?!`)/.exec(tail)?.[0];
@@ -411,7 +464,7 @@ jobs:
                   position = next;
                   inComment = end < 0;
                 }
-                const opening = /^[ \t]{0,3}(`{3,}|~{3,})(.*)\r?$/.exec(visible);
+                const opening = /^ {0,3}(`{3,}|~{3,})(.*)\r?$/.exec(visible);
                 if (!insideHtml && opening && !(opening[1][0] === '`' && opening[2].includes('`'))) {
                   fence = opening[1];
                   paragraph = false;
@@ -421,7 +474,7 @@ jobs:
                   visible = line.replace(/[^\r\n]/g, ' ');
                 paragraph =
                   !insideHtml &&
-                  visible.trim().length > 0 &&
+                  (hasInlineLink || visible.trim().length > 0) &&
                   !/^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}|=+[ \t]*)\r?$)/.test(
                     visible,
                   );
@@ -439,7 +492,6 @@ jobs:
                 .replace(/\r\n/g, '\n')
                 .replace(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?/gm, '')
                 .replace(/^[ \t]*>+[ \t]*/gm, '')
-                .replace(/\[([^\]]*)\]\([^\)\r\n]*\)/g, '$1')
                 .replace(
                   /<\/?[A-Za-z][A-Za-z0-9:-]*(?:[ \t\n]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t\n]*=[ \t\n]*(?:[^"'=<>`\x00-\x20]+|'[^']*'|"[^"]*"))?)*[ \t\n]*\/?>/g,
                   '',

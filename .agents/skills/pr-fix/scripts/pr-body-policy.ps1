@@ -7,32 +7,37 @@ function NormalizeBody([string]$Body) {
 
 function MaskBodyExamples([string]$Body) {
   $definitions = [System.Collections.Generic.Dictionary[int, int]]::new()
-  $label = '\[(?<label>(?:\\.|(?!\n[ \t]*\n)[^\[\]\\])+)\]'
+  $interrupt = ' {0,3}(?:#{1,6}(?:[ \t]|$)|>|~{3,}|`{3,}[^`\n]*$|(?:=+|-+)[ \t]*$|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})$|(?:[-+*]|0{0,8}1[.)])[ \t]+\S|(?i:<(?:!--|\?|![A-Za-z]|!\[CDATA\[|(?:pre|script|style|textarea)(?=[ \t>]|$)|/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|/>|$))))'
+  $continuation = '\n(?![ \t]*(?:\n|\z))(?!' + $interrupt + ')'
+  $label = '\[(?<label>(?:\\.|[^\[\]\\\n]|' + $continuation + ')+)\]'
   $destination = '(?<destination><(?:\\.|[^<>\\\n])*>|(?:\\.|[^\x00-\x20\x7f<>\\])+)'
-  $title = '(?:"(?:(?!\n[ \t]*\n)[^"\\]|\\.)*"|''(?:(?!\n[ \t]*\n)[^''\\]|\\.)*''|\((?:(?!\n[ \t]*\n)[^()\\]|\\.)*\))'
-  $definition = '(?m)^ {0,3}' + $label + ':[ \t]*(?:\n[ \t]*)?' + $destination + '(?:(?:[ \t]+(?:\n[ \t]*)?|[ \t]*\n[ \t]*)' + $title + ')?[ \t]*$'
+  $title = '(?:"(?:[^"\\\n]|\\.|' + $continuation + ')*"|''(?:[^''\\\n]|\\.|' + $continuation + ')*''|\((?:[^()\\\n]|\\.|' + $continuation + ')*\))'
+  $spacing = '(?:[ \t]+(?:' + $continuation + '[ \t]*)?|[ \t]*' + $continuation + '[ \t]*)'
+  $definition = '(?m)^ {0,3}' + $label + ':[ \t]*(?:' + $continuation + '[ \t]*)?' + $destination + '(?:' + $spacing + $title + ')?[ \t]*$'
+  $link = '(?m)\A\[(?<text>(?:\\.|[^\[\]\\\n]|' + $continuation + ')*)\]\([ \t]*(?:' + $continuation + '[ \t]*)?(?:' + $destination + ')?(?:' + $spacing + $title + ')?[ \t]*(?:' + $continuation + '[ \t]*)?\)'
+  $destinationLength = {
+    param([string]$Target, [bool]$Inline = $false)
+    if ($Target.StartsWith('<', [System.StringComparison]::Ordinal)) { return $Target.Length }
+    $depth = 0
+    for ($targetIndex = 0; $targetIndex -lt $Target.Length; $targetIndex += 1) {
+      if ($Target[$targetIndex] -eq '\') { $targetIndex += 1; continue }
+      if ($Target[$targetIndex] -eq '(') { $depth += 1 }
+      if ($Target[$targetIndex] -eq ')') { $depth -= 1 }
+      if ($depth -lt 0) { if ($Inline) { return $targetIndex }; return -1 }
+      if ($depth -gt 32) { return -1 }
+    }
+    if ($depth -ne 0) { return -1 }
+    return $Target.Length
+  }
   foreach ($reference in [regex]::Matches($Body, $definition)) {
     $referenceLabel = $reference.Groups['label'].Value
-    $labelCharacters = 0
-    for ($labelIndex = 0; $labelIndex -lt $referenceLabel.Length; $labelIndex += 1) {
-      $labelCharacters += 1
-      if ([char]::IsHighSurrogate($referenceLabel[$labelIndex]) -and $labelIndex + 1 -lt $referenceLabel.Length -and [char]::IsLowSurrogate($referenceLabel[$labelIndex + 1])) { $labelIndex += 1 }
-    }
-    if ($labelCharacters -gt 999 -or $referenceLabel -notmatch '[^ \t\n]') { continue }
-    $target = $reference.Groups['destination'].Value
-    if (-not $target.StartsWith('<', [System.StringComparison]::Ordinal)) {
-      $depth = 0
-      for ($targetIndex = 0; $targetIndex -lt $target.Length; $targetIndex += 1) {
-        if ($target[$targetIndex] -eq '\') { $targetIndex += 1; continue }
-        if ($target[$targetIndex] -eq '(') { $depth += 1 }
-        if ($target[$targetIndex] -eq ')') { $depth -= 1 }
-        if ($depth -lt 0) { break }
-      }
-      if ($depth -ne 0) { continue }
-    }
+    if ([Text.Encoding]::UTF8.GetByteCount($referenceLabel) -gt 1000 -or $referenceLabel -notmatch '[^ \t\n]') { continue }
+    if ((& $destinationLength $reference.Groups['destination'].Value) -lt 0) { continue }
     $definitions.Add($reference.Index, $reference.Index + $reference.Length)
   }
   $referenceEnd = 0
+  $linkStart = 0
+  $linkEnd = 0
   $fence = ""
   $inComment = $false
   $spanEnd = 0
@@ -49,7 +54,7 @@ function MaskBodyExamples([string]$Body) {
     $insideHtml = $htmlEnd.Length -gt 0
     if ($fence.Length -gt 0) {
       $paragraph = $false
-      $closing = [regex]::Match($line, '^[ \t]{0,3}(`{3,}|~{3,})[ \t]*$').Groups[1].Value
+      $closing = [regex]::Match($line, '^ {0,3}(`{3,}|~{3,})[ \t]*$').Groups[1].Value
       if ($closing.Length -ge $fence.Length -and $closing[0] -eq $fence[0]) { $fence = "" }
       $line -replace '[^\r\n]', ' '
       $offset += $line.Length + 1
@@ -98,7 +103,7 @@ function MaskBodyExamples([string]$Body) {
       $offset += $line.Length + 1
       continue
     }
-    $opening = [regex]::Match($line, '^[ \t]{0,3}(`{3,}|~{3,})(.*)$')
+    $opening = [regex]::Match($line, '^ {0,3}(`{3,}|~{3,})(.*)$')
     if (-not $insideHtml -and -not $inComment -and $offset -ge $spanEnd -and $opening.Success -and -not ($opening.Groups[1].Value[0] -eq '`' -and $opening.Groups[2].Value.Contains('`'))) {
       $fence = $opening.Groups[1].Value
       $paragraph = $false
@@ -107,13 +112,39 @@ function MaskBodyExamples([string]$Body) {
       continue
     }
     $visible = $line
+    $hasInlineLink = $offset -lt $linkEnd
     $position = 0
     while ($position -lt $line.Length) {
+      if ($offset + $position -ge $linkStart -and $offset + $position -lt $linkEnd) {
+        $next = [Math]::Min($line.Length, $linkEnd - $offset)
+        $visible = $visible.Remove($position, $next - $position).Insert($position, (' ' * ($next - $position)))
+        $position = $next
+        continue
+      }
       if ($offset + $position -lt $spanEnd) {
         $position = [Math]::Min($line.Length, $spanEnd - $offset)
         continue
       }
       if (-not $inComment) {
+        if (-not $insideHtml -and $line[$position] -eq '[') {
+          $escapes = 0
+          for ($before = $position - 1; $before -ge 0 -and $line[$before] -eq '\'; $before -= 1) { $escapes += 1 }
+          $tail = $Body.Substring($offset + $position)
+          $inline = [regex]::Match($tail, $link)
+          if ($escapes % 2 -eq 0 -and $inline.Success) {
+            $target = $inline.Groups['destination']
+            $length = & $destinationLength $target.Value $true
+            if ($length -ge 0 -and $length -lt $target.Length) {
+              $inline = [regex]::Match($tail.Substring(0, $target.Index + $length + 1), $link)
+            }
+            if ($length -ge 0 -and $inline.Success -and (& $destinationLength $inline.Groups['destination'].Value) -ge 0) {
+              $visible = $visible.Remove($position, 1).Insert($position, ' ')
+              $linkStart = $offset + $position + $inline.Groups['text'].Index + $inline.Groups['text'].Length
+              $linkEnd = $offset + $position + $inline.Length
+              $hasInlineLink = $true
+            }
+          }
+        }
         if (-not $insideHtml -and $line[$position] -eq '`') {
           $tail = $Body.Substring($offset + $position)
           $span = [regex]::Match($tail, '^(`+)(?!`)(?:(?!\r?\n[ \t]*\r?\n)[\s\S])*?(?<!`)\1(?!`)')
@@ -137,7 +168,7 @@ function MaskBodyExamples([string]$Body) {
       $position = $next
       $inComment = $end -lt 0
     }
-    $opening = [regex]::Match($visible, '^[ \t]{0,3}(`{3,}|~{3,})(.*)$')
+    $opening = [regex]::Match($visible, '^ {0,3}(`{3,}|~{3,})(.*)$')
     if (-not $insideHtml -and $opening.Success -and -not ($opening.Groups[1].Value[0] -eq '`' -and $opening.Groups[2].Value.Contains('`'))) {
       $fence = $opening.Groups[1].Value
       $paragraph = $false
@@ -146,7 +177,7 @@ function MaskBodyExamples([string]$Body) {
       continue
     }
     if ($insideHtml -and $visible -match '^ {0,3}#{1,6}(?:[ \t]|$)') { $visible = $line -replace '[^\r\n]', ' ' }
-    $paragraph = -not $insideHtml -and -not [string]::IsNullOrWhiteSpace($visible) -and $visible -notmatch '^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}|=+[ \t]*)\r?$)'
+    $paragraph = -not $insideHtml -and ($hasInlineLink -or -not [string]::IsNullOrWhiteSpace($visible)) -and $visible -notmatch '^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}|=+[ \t]*)\r?$)'
     $visible
     $offset += $line.Length + 1
   })
@@ -156,7 +187,7 @@ function MaskBodyExamples([string]$Body) {
 function StripAutoImport([string]$Body) {
   $normalized = NormalizeBody $Body
   if ([string]::IsNullOrWhiteSpace($normalized)) { return "" }
-  $boundary = [regex]::Match((MaskBodyExamples $normalized), '(?m)^## Auto-import[ \t]*$')
+  $boundary = [regex]::Match((MaskBodyExamples $normalized), '(?m)^ {0,3}## Auto-import(?:[ \t]+#+)?[ \t]*$')
   if ($boundary.Success) { return $normalized.Substring(0, $boundary.Index).TrimEnd() }
   return $normalized
 }
@@ -164,12 +195,11 @@ function StripAutoImport([string]$Body) {
 function RemovalAnswer([string]$Body) {
   $raw = StripAutoImport $Body
   $text = MaskBodyExamples $raw
-  $match = [regex]::Match($text, '(?ms)^## What (?:this|a) change made unnecessary[ \t]*\n(?<answer>.*?)(?=^ {0,3}#{1,2}(?:[ \t]|$)|\z)')
+  $match = [regex]::Match($text, '(?ms)^ {0,3}## What (?:this|a) change made unnecessary(?:[ \t]+#+)?[ \t]*\n(?<answer>.*?)(?=^ {0,3}#{1,2}(?:[ \t]|$)|\z)')
   if (-not $match.Success) { return "" }
   $answer = $match.Groups['answer']
   $meaningful = [regex]::Replace($answer.Value, '(?m)^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?', '')
   $meaningful = [regex]::Replace($meaningful, '(?m)^[ \t]*>+[ \t]*', '')
-  $meaningful = [regex]::Replace($meaningful, '\[([^\]]*)\]\([^\)\r\n]*\)', '$1')
   $meaningful = [regex]::Replace($meaningful, '</?[A-Za-z][A-Za-z0-9:-]*(?:[ \t\n]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t\n]*=[ \t\n]*(?:[^"''=<>`\x00-\x20]+|''[^'']*''|"[^"]*"))?)*[ \t\n]*/?>', '')
   $meaningful = [regex]::Replace($meaningful, '&(?:#(?:[xX][0-9A-Fa-f]+|\d+)|[A-Za-z][A-Za-z0-9]*);', ' ')
   $meaningful = [regex]::Replace($meaningful, '[`*_]', '').Trim()

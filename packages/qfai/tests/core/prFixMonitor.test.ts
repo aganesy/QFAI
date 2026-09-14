@@ -143,6 +143,78 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(result.ghState.prEditCount ?? 0).toBe(0);
   });
 
+  it.each([
+    ...[
+      "## Adoption bar",
+      "~~~",
+      "> Nothing",
+      "---",
+      "===",
+      "- Nothing",
+      "01. Nothing",
+      "<![cdata[",
+      "<div>",
+    ].map((block) => [
+      `title interrupted by ${block}`,
+      `[Nothing]: /url "Title\n${block}\nNothing"\n`,
+    ]),
+    ["label interrupted by a heading", "[Nothing\n## Adoption bar\nNothing]: /url\n"],
+    ["destination interrupted by HTML", "[Nothing]:\n<div>\n"],
+    ["1001 ASCII bytes", `[${"a".repeat(1001)}]: /url\n`],
+    ["1004 emoji bytes", `[${"😀".repeat(251)}]: /url\n`],
+    ["1002 accented bytes", `[${"é".repeat(501)}]: /url\n`],
+    ["33 nested parentheses", `[Nothing]: /${"(".repeat(33)}a${")".repeat(33)}\n`],
+    ["empty anchor then a literal reference", "[](/url)\n[Nothing]: /target\n"],
+    ["escaped multiline link", '\\[](https://example.com "\nNothing\n")\n'],
+    ["literal HTML link", "<div>\n[](https://example.com)\n</div>\n"],
+    ["literal inline code link", "`[](https://example.com)`\n"],
+    ["escaped single-line link", "\\[](https://example.com)\n"],
+  ])("preserves visible reference-like text: %s", async (_name, answer) => {
+    const body = `## What this change made unnecessary\n\n${answer}`;
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+  });
+
+  it.each([
+    ...[
+      "## What this change made unnecessary ##",
+      " ## What this change made unnecessary",
+      "  ## What a change made unnecessary ###",
+      "   ## What this change made unnecessary",
+    ].map((heading) => [heading, `${heading}\n\nA removed pin.\n`]),
+    ...["\t", " \t"].flatMap((indent) =>
+      ["```", "~~~", "<pre>"].map((opener) => [
+        `indented code ${JSON.stringify(indent + opener)}`,
+        `${indent}${opener}\n## What this change made unnecessary\n\nA removed pin.\n`,
+      ]),
+    ),
+    ["multiline visible link", '[A removed pin](https://example.com "\nNothing\n")\n'],
+    ["literal link with a blank title line", '[](https://example.com "\n\nNothing\n")\n'],
+    ["literal link with an unquoted title", "[](https://example.com \nNothing\n)\n"],
+  ])("accepts rendered Markdown: %s", async (_name, section) => {
+    const body = section.includes("## What")
+      ? section
+      : `## What this change made unnecessary\n\n${section}`;
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+  });
+
   it("accepts a real heading after a first-line indented HTML example", async () => {
     const body = "    <pre>\n## What this change made unnecessary\nNothing.\n";
     const result = await runPrFix({
@@ -196,6 +268,10 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ["FIXME prefix", "## What this change made unnecessary\n\nFIXME: list the removals\n"],
     ["HACK placeholder", "## What this change made unnecessary\n\nHACK\n"],
     ["imported answer", "## Auto-import\n\n## What this change made unnecessary\n\nNothing.\n"],
+    [
+      "imported ATX answer",
+      "   ## Auto-import ##\n\n ## What this change made unnecessary ###\n\nNothing.\n",
+    ],
     ["import-only body", "## Auto-import\n\n"],
     ["thematic break", "## What this change made unnecessary\n\n---\n"],
     ["empty quotation", "## What this change made unnecessary\n\n>\n"],
@@ -209,7 +285,7 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ],
     ...[
       "[Nothing]:\n   https://example.com\n",
-      '[Nothing]: https://example.com "Title\n## Adoption bar\nNothing"\n',
+      '[Nothing]: https://example.com "Title\nwith a line break"\n',
       "[Nothing]: <https://example.com/space here>\n",
       "[Nothing]: https://example.com/a(b)c\n",
       "[Nothing]: https://example.com\r\n",
@@ -217,6 +293,37 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ].map((definition) => [
       `reference boundary ${JSON.stringify(definition)}`,
       `## What this change made unnecessary\n\n${definition}`,
+    ]),
+    ...[
+      ["1000 ASCII bytes", `[${"a".repeat(1000)}]: /url\n`],
+      ["1000 emoji bytes", `[${"😀".repeat(250)}]: /url\n`],
+      ["1000 accented bytes", `[${"é".repeat(500)}]: /url\n`],
+      ["CRLF label", `[${"a".repeat(996)}\r\nok]: /url\r\n`],
+      ["32 nested parentheses", `[Nothing]: /${"(".repeat(32)}a${")".repeat(32)}\n`],
+      ["optional title before a heading", '[Nothing]: /url\n"\n## Adoption bar\nNothing"\n'],
+      ...["+", "2. Nothing", "<span>", "    ## Adoption bar"].map((line) => [
+        `non-interrupting title line ${line}`,
+        `[Nothing]: /url "Title\n${line}\nNothing"\n`,
+      ]),
+    ].map(([name, definition]) => [
+      `hidden reference ${name}`,
+      `## What this change made unnecessary\n\n${definition}`,
+    ]),
+    ...[
+      '[](https://example.com "\nNothing\n")',
+      "[](https://example.com '\nNothing\n')",
+      "[](https://example.com (\nNothing\n))",
+      '[ ](https://example.com "\nNothing\n")',
+      '[](<https://example.com> "\nNothing\n")',
+      '[](https://example.com/a(b)c "\nNothing\n")',
+    ].map((link) => [
+      `empty multiline link ${JSON.stringify(link)}`,
+      `## What this change made unnecessary\n\n${link}\n`,
+    ]),
+    ["tab-indented fence closer", "~~~\n\t~~~\n## What this change made unnecessary\n\nNothing.\n"],
+    ...["[](/url))", "[](/url(a)))", "[]())"].map((link) => [
+      `empty link with trailing parenthesis ${link}`,
+      `## What this change made unnecessary\n\n${link}\n`,
     ]),
     [
       "multiline HTML tag",
