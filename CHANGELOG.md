@@ -18,6 +18,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   retain their customizations with manual constitution reconciliation or a
   backed-up restoration of the exact shipped master for automatic installation.
 
+- **Preflight uses repository-first reuse order** (#1796). Article IX checks
+  existing code, including duplicates or overlap, before the standard library,
+  platform and installed dependencies. One bullet covers detection and reuse.
+
 - **Repository reuse is the second of seven minimal-implementation rungs**
   (#1795). Check the codebase before the standard library, platform and installed
   dependencies. Existing repository code can answer the accepted behavior
