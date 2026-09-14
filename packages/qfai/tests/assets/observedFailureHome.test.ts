@@ -35,8 +35,10 @@ describe("an observed failure has one home, a test-case row", () => {
       expect(template.indexOf("### Type column values")).toBeGreaterThan(-1);
       expect(template.indexOf(HEADING)).toBeGreaterThan(template.indexOf("### Type column values"));
       const body = flat(section(template, HEADING));
-      expect(body).toContain("Reuse a row for the same behavior and boundary");
-      expect(body).toContain("Add a new `TC-*` row only for a distinct behavior or boundary");
+      expect(body).toContain("Reuse a row when its behavior, boundary, oracle and layer all match");
+      expect(body).toContain(
+        "Add a new `TC-*` row only for a distinct behavior, boundary, oracle or layer",
+      );
       expect(body).toContain(
         "`Type` follows the scenario in the legend above, not the observation's origin",
       );

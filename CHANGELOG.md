@@ -51,8 +51,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   minimal-implementation safety floor protects coverage of the failure paths
   production code retains.
 
-- Record observed failures on the test cases that exercise them, preserving
-  scenario types and reusing matching behavior/boundary rows (#1801).
+- Record observed failures on the test cases that exercise them. Preserve
+  scenario types; reuse a row only when behavior, boundary, oracle and layer
+  match (#1801).
 
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the

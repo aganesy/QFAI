@@ -148,9 +148,9 @@ is not the answer either.
 ### A failure observed in use
 
 A failure someone saw happen — in production, in a report, in a log — is
-recorded in a test-case row. Reuse a row for the same behavior and boundary;
-strengthen its steps, expected result and observation notes. Add a new `TC-*`
-row only for a distinct behavior or boundary.
+recorded in a test-case row. Reuse a row when its behavior, boundary, oracle
+and layer all match; strengthen its steps, expected result and observation
+notes. Add a new `TC-*` row only for a distinct behavior, boundary, oracle or layer.
 
 - `Type` follows the scenario in the legend above, not the observation's origin.
 - `AC-Refs` or `EX-Ref` names the behavior that failed.
