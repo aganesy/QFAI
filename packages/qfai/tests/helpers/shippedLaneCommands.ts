@@ -1436,12 +1436,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // which is what makes this a review of one line.
   [".gitignore", "c208ecdc03ad18a379512fd21bd13e32035bb1df008144cde7ea32b4fc9b798c"],
   // Root entry points are executable instructions, so their bytes are pinned.
-  // Init preserves project edits and adds only newly shipped master bullets.
+  // Init preserves project edits while adding missing review guidance and newly shipped master bullets.
   // Their conditional REVIEW.md pointer reads optional policy without shipping it.
   // Derive a new pin from fresh init and reproduce the prior raw digest by
   // removing only the changed text.
-  ["AGENTS.md", "a6b3562d1783b91046b85e6a5d0d73d755d2da1af8ca47deb09d870926ccab41"],
-  ["CLAUDE.md", "17e0aaf3cf744f5f4152134643a90849fb6a6a9abf6bb9264c9b0304cb001bbc"],
+  ["AGENTS.md", "95cf98472b52dbe9776fd8f70547d6c5728775b3572235a8638bc69a30f72563"],
+  ["CLAUDE.md", "ffcd8d888eed3e1900381d728606bc218655028ac3256f52fa79c3af12dc2d28"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools

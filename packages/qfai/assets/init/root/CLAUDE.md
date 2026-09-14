@@ -24,11 +24,10 @@ the master rather than this file.
 - `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.
 - `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.
 
-This section, markers included, is the only part `npx qfai init` writes. A
-repository that already had a `CLAUDE.md` gets it appended once. A later run
-adds a bullet for a rule it is shipping into this project for the first time,
-and changes nothing else: a bullet you deleted stays deleted, and everything you
-wrote inside the section is left as you wrote it.
+`npx qfai init` appends this section once and adds the review directive when
+absent. Later runs add only that directive and bullets for newly shipped rules.
+Deleted bullets stay deleted. Project text inside and outside this section is
+preserved.
 
 <!-- qfai:cross-ai-rules:end -->
 

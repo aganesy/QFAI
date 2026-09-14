@@ -47,6 +47,10 @@ describe("QFAI-DENSITY-005 rule-cell outlier", () => {
         const finding = issues.find((entry) => entry.code === "QFAI-DENSITY-005");
         expect(finding?.severity).toBe("warning");
         expect(finding?.refs).toEqual(["BR-0003"]);
+        // Cutting is the first remedy, and a split is kept for two independent
+        // rules: a split adds an abstract item the cell may not need.
+        expect(finding?.suggested_action).toMatch(/^Cut what the cell carries beyond its rule/);
+        expect(finding?.suggested_action).toContain("Split the row only if");
       },
     );
   });

@@ -6,6 +6,51 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Reviewer cards file excess as a blocking code-quality defect** (#1798).
+  All six reviewer roles trace excess to Article VII, require a concrete cut
+  and replacement, and refuse cuts that remove or weaken a referenced
+  safety-floor obligation. The route uses installed Article VII authority;
+  refreshed cards cannot override a retained older constitution.
+
+- **Article VII makes cutting the governing doctrine** (#1794). The least
+  that satisfies a requirement is the right amount; additional scope or code
+  needs justification. The article ranks above other articles and conflicting
+  constitution instructions, below the referenced safety floor. The absolute
+  output-language rule, required evidence and fact verification, mandatory
+  approvals, irreversible-action confirmations and prototyping scope floor
+  remain protected. Required
+  traceability, repository gates, and their evidence are protected in the
+  safety floor rather than repeated in the article. Every missing governed
+  asset uses exclusive full-byte publication, shipped permissions, destination
+  identity and byte verification, and pinned staging cleanup with inspection
+  causes. Unchanged governed assets stay in the verbose skipped report.
+  Forced repairs publish exclusively after displacing an unreadable occupant.
+  Creation probes precede displacement; publication preserves later regular files.
+  An unreadable shipped set stops before copies or migration. Edited masters
+  retain their customizations with manual constitution reconciliation or a
+  backed-up restoration of the exact shipped master for automatic installation.
+
+- **Implementation agent cards name repository-first reuse** (#1797). Backend,
+  frontend and DevOps agents check this codebase before the standard library,
+  platform or installed dependencies. Their operating, catalog and Codex copies
+  carry the same guidance. Planning cards retain their first-rung scope.
+
+- **Preflight uses repository-first reuse order** (#1796). Article IX checks
+  existing code, including duplicates or overlap, before the standard library,
+  platform and installed dependencies. One bullet covers detection and reuse.
+
+- **Repository reuse is the second of seven minimal-implementation rungs**
+  (#1795). Check the codebase before the standard library, platform and installed
+  dependencies. Existing repository code can answer the accepted behavior
+  without a duplicate implementation. The shipped copy has the same order.
+
+- Define a trust boundary by uncontrolled callers and sources, including public
+  library exports and plugin or tenant contexts (#1803).
+
+- **Retained failures keep unit-level coverage** (#1793). The
+  minimal-implementation safety floor protects coverage of the failure paths
+  production code retains.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
@@ -21,11 +66,40 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it. It follows the reasoning the backfilled-evidence warning already gives, and
   the SDD profile hears it, since the columns are that stage's to write.
 
+### Changed
+
+- **`QFAI-DENSITY-005` names cutting before splitting** (#1808). The warning for an
+  oversized business-rule cell told the author to split the row into two rules,
+  which adds an abstract item where the cell most often carries examples,
+  rationale or history rather than a second rule. It now asks the author to cut
+  what the cell carries beyond its rule first, and to split only when what remains
+  is two rules that can each be falsified on their own. The warning, its threshold
+  and its severity are unchanged, and its message is now in English.
+
 ### Fixed
 
-- **Generated Copilot review instructions retain the project's review policy**
-  (#1814). Fresh and forced init output points to `REVIEW.md` when the project
-  has that file. The package does not supply the repository's own review policy.
+- The implementation reviewer flags promises neither awaited nor returned rather
+  than requiring catches on propagated async failures. A dropped rejection keeps
+  its correctness class (#1805).
+
+- Completion and implementation review stop conditions now include demonstrated
+  regressions against named constitution or catalog rules (#1799). New upstream
+  product obligations remain advisory.
+
+- Generated TypeScript review guidance flags dropped promises and preserves
+  propagation rather than requiring catches for unnamed failures. The repository
+  copy matches the generated block (#1806).
+
+- Repository async guidance requires awaited or returned promises and points to
+  the shared implementation rule for consuming callers, kept failures and
+  callback boundaries. Required handling and incomplete error messages remain
+  review findings (#1804).
+
+- The implementation rule handles only failures not excluded by types or schemas
+  and named by a specification, contract or observation, subject to the safety
+  floor. Other failures propagate; promises must be awaited or returned to a
+  consuming caller. Callback hosts that ignore returns require an explicit
+  adapter that adopts the asynchronous result and handles boundary rejections (#1802).
 
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
@@ -37,6 +111,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   also lists no untracked FIFO, socket or device, so adding or removing one left
   the address unchanged; the step now asks the filesystem for them and stops on
   any it finds. A test runs the step's own commands in a temporary repository.
+
+- **Generated agent review instructions retain the project's review policy**
+  (#1814). Fresh, existing and forced init output points to `REVIEW.md` when the
+  project has that file. Existing entry-point text stays intact. The package
+  does not supply the repository's own review policy. PR readers reject
+  placeholder answers, preserve literal comment markers in code and refuse
+  release-body repairs hidden by unfinished Markdown blocks.
 
 - **The completion gate recomputes the checkpoint seal over the checkpoint's own
   revision** (#1738). `checkpoint-verification.md` seals the checkpoint command

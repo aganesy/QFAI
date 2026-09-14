@@ -46,6 +46,25 @@ Reinit behavior (existing `.qfai/` present):
 - User-authored work-log entries (`.qfai/steering/*.md` that match the entry frontmatter schema with `id` matching filename stem) MUST NOT be overwritten.
 - Collisions where the user-edited file lives at an old (pre-recut) path surface a `W-USER-EDIT-PRESERVED` finding via the validate gate (REQ-0013).
 
+#### Same-marker reminder upgrade gap
+
+Existing `.claude/settings.json` hook groups are recognized by their
+sorted status-message list within the same event, including repeated markers.
+Removing a repeated marker changes the identity. Ordinary init and `--force`
+preserve an existing same-marker group's command, arguments, matcher and custom
+fields, including older shipped reminder text. Only missing groups are added.
+An older implementation reminder therefore needs a manual update; force does
+not deliver its changed text automatically.
+
+Obtain a fresh settings file with the installed release's
+`qfai init --dir <scratch-dir>` in an unused scratch directory. Back up the
+project's settings and compare the same event and sorted marker list. Compare
+each field before editing. Refresh only the message-bearing argument; preserve
+a customized executable, unrelated arguments, markers, matchers, custom fields
+and unrelated settings. Do not replace the existing `command` or entire `args`
+with template values, append a duplicate group or change its markers to request
+an update; a different identity can run both reminders.
+
 Exit codes:
 
 | Code | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -114,6 +133,87 @@ Roll back in two moves, by status:
 
 Then read `git diff` separately for the in-place edits the flow makes outside `.qfai/assistant/` (the managed `.gitignore` block, the integration wrappers). The `W-USER-EDIT-PRESERVED` notes printed by the run name the destinations that were left alone.
 
+## Constitution and safety-floor compatibility
+
+The constitution is installed or refreshed only when the complete regular file
+`.agents/rules/minimal-implementation.md` matches the shipped master. Only
+line-ending differences are ignored. Other edits remain protected and require
+a manual merge of the rule and constitution. A matching substring is not
+authorization: Markdown outside § 2 can make the floor non-operative.
+
+A missing, unreadable or non-regular master, including a leaf symlink or linked
+`.agents` / `.agents/rules` parent, cannot
+authorize the upgrade. Init keeps the previous constitution and its receipt,
+and reports that the shipped master could not be verified. A first init in that
+state does not install the constitution or record it as written.
+For an absent constitution, preserve master edits by manually installing and
+reconciling the constitution. Automatic installation requires backing up
+customizations and restoring the exact shipped master before rerunning init.
+An existing constitution requires a manual merge of both files; the note does
+not request a force rewrite of unrelated adopter assets.
+
+The governed writer rechecks the master after the other template copies and
+the destination hash. The generic template copier excludes both governed
+layers; every missing governed asset uses the exclusive staging writer.
+The check is not an atomic filesystem transaction with the write.
+
+A dry run includes the constitution when the same plan would create or update
+its compatible rule master under unlinked parents. A planned write through a
+linked parent cannot authorize the preview. It writes neither file.
+
+Creating missing governed assets, including publication after a forced occupant
+repair, requires hard-link support and permission.
+An uninspectable force-repair candidate stops the run with its original cause
+before copies, migration or repair.
+Init first verifies the complete readable shipped governed set. Failure stops
+before any copy or migration and asks the user to restore or reinstall QFAI.
+Before any asset copy or migration, init probes the nearest existing directory
+for each eligible absent governed path or force-repaired unreadable occupant.
+It removes only its own probe files.
+The creation handle pins the probe's device and inode. Before each removal,
+init rechecks the no-follow identity. A changed or unverifiable occupant is
+preserved and aborts initialization with inspection guidance, not a deletion
+instruction. Metadata verification and removal are not an atomic transaction.
+If removal fails, init attempts the remaining owned cleanup, reports every
+retained probe path and aborts before copying or migrating package assets.
+Restore access and remove only the reported probe files before retrying.
+A failed probe creation or link check aborts with the affected directory,
+write-access and hard-link recovery guidance, and preserves existing assets;
+it never falls back to a partial final-path copy or an overwriting rename.
+Existing readable regular governed files and a constitution deferred by an
+edited safety master need no creation probe. Dry runs perform no probe or writes.
+The check cannot prevent a filesystem or permission change later in the run.
+
+If cleanup fails after exclusive publication, init keeps the complete published
+file and its receipt. It reports the staging path and asks the user to restore
+access, remove only that staging file and rerun init. The published file is not
+removed or rewritten to clean up its hard-link alias.
+If exclusive publication loses a creation race and staging cleanup fails,
+init reports that retained staging path before propagating the original write
+error. Accepting a concurrent destination never hides this cleanup warning.
+
+The exclusive creation handle also pins the publication stage's device and
+inode. It writes complete bytes and applies the shipped permission bits through
+that handle, independently of the creator's umask. The writer verifies the
+stage's no-follow identity before publication and the destination's identity
+immediately after linking. A changed destination follows the protected
+concurrent-content path, not a successful-copy classification. Before recording
+a successful shipped write, init also verifies the destination's canonical bytes.
+Neither check authorizes overwriting concurrent content. The writer closes
+the handle before unlinking the staging name and rechecks ownership immediately
+before cleanup on either outcome. A close failure retains the stage for manual
+cleanup after the handle is closed.
+A changed or unverifiable stage remains untouched and is reported with
+ownership-inspection guidance, never an instruction to delete its replacement.
+When inspection fails, that warning retains the original error reason.
+Identity verification and pathname removal are not an atomic transaction.
+Metadata and close failures remain available. Every created handle has a close
+attempt, and a close failure propagates rather than authorizing unlink.
+Stage-creation failures retain their cause and stop initialization. An occupied
+stage is not evidence that another process created the final governed file.
+Existing canonical governed assets are reported as skipped, including their
+paths under `--verbose`. Their bytes and provenance classification are unchanged.
+
 ## Shipped GitHub Actions workflows
 
 `qfai init` writes the shipped workflow set into `<root>/.github/workflows/`.
@@ -143,7 +243,8 @@ The obligations that are specific to this command:
   `pruneStaleQfaiWrappers` cover generated wrapper directories QFAI owns
   entirely; `.github/workflows/` is adopter-authored and is not one of them.
 - Running init twice into the same tree writes nothing and changes no
-  provenance entry, **with one exception**: the rule citations below.
+  provenance entry, except for the missing rule citations or review directive
+  described below.
 
 ### Rule citations in an existing entry point
 
@@ -158,7 +259,13 @@ inserted after the last rule bullet — inside the managed markers where the fil
 has them, and anywhere in the list where it does not, because the Copilot file
 is generated whole and carries none.
 
-**What it may not.** Anything else in the file. A bullet the project deleted is
+Init also adds the shipped review directive to `AGENTS.md` and `CLAUDE.md`
+when no operative copy exists. It asks agents to read `REVIEW.md` before
+reviewing or writing a PR description, only when the project has that file.
+Init does not create `REVIEW.md`. The directive is prepended so an unfinished
+example or comment cannot hide it. Existing text and line endings are preserved.
+
+**What it may not.** Replace any other text in the file. A bullet the project deleted is
 not restored, because that master's file is on disk and the copy skips it.
 Prose the project wrote inside the section survives. The heading is never
 duplicated: an existing section is edited in place, and the append path is for a
@@ -169,7 +276,8 @@ masters it does not name go into the list it keeps, one bullet each; the section
 is not appended on top, which would restate every citation the file already has.
 Nothing records a bullet as removed there, so an uncited master is one the file
 never named. Where the citations are not a bullet list a line can be added to —
-prose, a numbered list — the run names the masters to add and writes nothing.
+prose, a numbered list — the run names the masters to add without inserting
+rule bullets. It may still add the missing review directive.
 
 **What it refuses, naming the file and the reason.** A symbolic link at the
 target or at any path component below the destination root, a hard link with
