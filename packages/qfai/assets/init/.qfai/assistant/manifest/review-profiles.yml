@@ -34,6 +34,5 @@ optional_modes:
     bare_negation_invalid: true
   pattern-doubler:
     kind: advisory
-    description: Demand additional ID-bearing patterns with rationale when pattern coverage is thin.
+    description: Propose missing concrete business-flow, US, AC, EX or TC coverage with rationale; do not demand more abstract rules or numeric targets.
     rationale_required: true
-    default_target: "2x current ID-bearing items"
