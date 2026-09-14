@@ -39,11 +39,25 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
   $linkStart = 0
   $linkEnd = 0
   $fence = ""
+  $fenceContentColumn = 0
+  $fenceContainer = ""
   $inComment = $false
   $spanEnd = 0
   $offset = 0
   $htmlEnd = ""
   $htmlTextVisible = $false
+  $htmlContentColumn = 0
+  $htmlContainer = ""
+  $listContentColumns = [System.Collections.Generic.Stack[int]]::new()
+  $listContainer = ""
+  $columnAfter = {
+    param([string]$Prefix)
+    $column = 0
+    foreach ($character in $Prefix.ToCharArray()) {
+      $column += if ($character -eq "`t") { 4 - ($column % 4) } else { 1 }
+    }
+    return $column
+  }
   $paragraph = $false
   $paragraphStart = -1
   $headings = [System.Collections.Generic.List[int]]::new()
@@ -54,11 +68,19 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
       $offset += $line.Length + 1
       continue
     }
+    $content = $line -replace '^ {0,3}(?:> ?)+', ''
+    $container = [regex]::Match($line, '^ {0,3}(?:> ?)*').Value -replace '[^>]', ''
+    $indentation = & $columnAfter ([regex]::Match($content, '^[ \t]*').Value)
+    $blank = [string]::IsNullOrWhiteSpace($line)
+    if ($container -cne $listContainer) { $listContentColumns.Clear(); $listContainer = $container }
+    while (-not $blank -and $listContentColumns.Count -gt 0 -and $indentation -lt $listContentColumns.Peek()) { [void]$listContentColumns.Pop() }
+    if ($fence.Length -gt 0 -and ($container -cne $fenceContainer -or (-not $blank -and $indentation -lt $fenceContentColumn))) { $fence = "" }
+    if ($htmlEnd.Length -gt 0 -and ($container -cne $htmlContainer -or (-not $blank -and $indentation -lt $htmlContentColumn))) { $htmlEnd = "" }
     $insideHtml = $htmlEnd.Length -gt 0
     if ($fence.Length -gt 0) {
       $paragraph = $false
-      $closing = [regex]::Match($line, '^ {0,3}(`{3,}|~{3,})[ \t]*$').Groups[1].Value
-      if ($closing.Length -ge $fence.Length -and $closing[0] -eq $fence[0]) { $fence = "" }
+      $closing = [regex]::Match(($content -replace '^[ \t]*', ''), '^(`{3,}|~{3,})[ \t]*\r?$').Groups[1].Value
+      if ($indentation -le $fenceContentColumn + 3 -and $closing.Length -ge $fence.Length -and $closing[0] -eq $fence[0]) { $fence = "" }
       $line -replace '[^\r\n]', ' '
       $offset += $line.Length + 1
       continue
@@ -72,24 +94,51 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
         continue
       }
     }
-    if (-not $inComment -and -not $insideHtml) {
+    $contentColumn = if ($listContentColumns.Count -gt 0) { $listContentColumns.Peek() } else { 0 }
+    $htmlAllowed = $indentation -ge $contentColumn -and $indentation -le $contentColumn + 3
+    $htmlLine = $content
+    $marker = [regex]::Match($content, '^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)')
+    if (-not $insideHtml -and -not $inComment -and $offset -ge $spanEnd -and $offset -ge $linkEnd -and $htmlAllowed -and $marker.Success -and (-not $paragraph -or $contentColumn -gt 0 -or ($marker.Groups[2].Value -match '^(?:[-*+]|0{0,8}1[.)])$' -and $content.Substring($marker.Length) -match '^\S'))) {
+      $markerEnd = & $columnAfter ($marker.Groups[1].Value + $marker.Groups[2].Value)
+      $gap = (& $columnAfter $marker.Value) - $markerEnd
+      $padding = if ($gap -gt 4) { 1 } else { $gap }
+      $listContentColumns.Push($markerEnd + $padding)
+      $htmlLine = $content.Substring($marker.Length)
+      $htmlAllowed = $gap -le 4
+      $paragraph = $false
+      $paragraphStart = -1
+    }
+    $htmlLine = $htmlLine -replace '^[ \t]*', ''
+    $opening = [regex]::Match($htmlLine, '^(`{3,}|~{3,})(.*)$')
+    if (-not $insideHtml -and -not $inComment -and $offset -ge $spanEnd -and $offset -ge $linkEnd -and $htmlAllowed -and $opening.Success -and -not ($opening.Groups[1].Value[0] -eq '`' -and $opening.Groups[2].Value.Contains('`'))) {
+      $fence = $opening.Groups[1].Value
+      $fenceContentColumn = if ($listContentColumns.Count -gt 0) { $listContentColumns.Peek() } else { 0 }
+      $fenceContainer = $container
+      $paragraph = $false
+      $line -replace '[^\r\n]', ' '
+      $offset += $line.Length + 1
+      continue
+    }
+    if (-not $inComment -and -not $insideHtml -and $offset -ge $spanEnd -and $offset -ge $linkEnd -and $htmlAllowed) {
       $htmlTextVisible = $false
-      if ($line -match '^ {0,3}<(?:pre|script|style|textarea)(?=[ \t>]|$)') {
+      if ($htmlLine -match '^<(?:pre|script|style|textarea)(?=[ \t>]|$)') {
         $htmlEnd = '</(?:pre|script|style|textarea)>'
-      } elseif ($line -match '^ {0,3}<\?') {
+      } elseif ($htmlLine -match '^<\?') {
         $htmlEnd = '\?>'
-      } elseif ($line -match '^ {0,3}<![A-Za-z]') {
+      } elseif ($htmlLine -match '^<![A-Za-z]') {
         $htmlEnd = '>'
-      } elseif ($line -cmatch '^ {0,3}<!\[CDATA\[') {
+      } elseif ($htmlLine -cmatch '^<!\[CDATA\[') {
         $htmlEnd = '\]\]>'
-      } elseif ($line -match '^ {0,3}</?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|/>|$)') {
+      } elseif ($htmlLine -match '^</?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|/>|$)') {
         $htmlEnd = '^[ \t]*\r?$'
         $htmlTextVisible = $true
-      } elseif (-not $paragraph -and $line -match '^ {0,3}(?:<(?!pre(?:[ \t/>]|$)|script(?:[ \t/>]|$)|style(?:[ \t/>]|$)|textarea(?:[ \t/>]|$))[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t]*=[ \t]*(?:[^"''=<>`\x00-\x20]+|''[^'']*''|"[^"]*"))?)*[ \t]*/?>|</[A-Za-z][A-Za-z0-9-]*[ \t]*>)[ \t]*\r?$') {
+      } elseif (-not $paragraph -and $htmlLine -match '^(?:<(?!pre(?:[ \t/>]|$)|script(?:[ \t/>]|$)|style(?:[ \t/>]|$)|textarea(?:[ \t/>]|$))[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t]*=[ \t]*(?:[^"''=<>`\x00-\x20]+|''[^'']*''|"[^"]*"))?)*[ \t]*/?>|</[A-Za-z][A-Za-z0-9-]*[ \t]*>)[ \t]*\r?$') {
         $htmlEnd = '^[ \t]*\r?$'
         $htmlTextVisible = $true
       }
       if ($htmlEnd.Length -gt 0) {
+        $htmlContentColumn = if ($listContentColumns.Count -gt 0) { $listContentColumns.Peek() } else { 0 }
+        $htmlContainer = $container
         $insideHtml = $true
         $paragraph = $false
         if ($line -match $htmlEnd) { $htmlEnd = "" }
@@ -102,14 +151,6 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
     }
     if (-not $insideHtml -and -not $inComment -and $offset -ge $spanEnd -and -not $paragraph -and $definitions.ContainsKey($offset)) {
       $referenceEnd = $definitions[$offset]
-      $line -replace '[^\r\n]', ' '
-      $offset += $line.Length + 1
-      continue
-    }
-    $opening = [regex]::Match($line, '^ {0,3}(`{3,}|~{3,})(.*)$')
-    if (-not $insideHtml -and -not $inComment -and $offset -ge $spanEnd -and $opening.Success -and -not ($opening.Groups[1].Value[0] -eq '`' -and $opening.Groups[2].Value.Contains('`'))) {
-      $fence = $opening.Groups[1].Value
-      $paragraph = $false
       $line -replace '[^\r\n]', ' '
       $offset += $line.Length + 1
       continue
@@ -174,6 +215,8 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
     $opening = [regex]::Match($visible, '^ {0,3}(`{3,}|~{3,})(.*)$')
     if (-not $insideHtml -and $opening.Success -and -not ($opening.Groups[1].Value[0] -eq '`' -and $opening.Groups[2].Value.Contains('`'))) {
       $fence = $opening.Groups[1].Value
+      $fenceContentColumn = if ($listContentColumns.Count -gt 0) { $listContentColumns.Peek() } else { 0 }
+      $fenceContainer = $container
       $paragraph = $false
       $line -replace '[^\r\n]', ' '
       $offset += $line.Length + 1
@@ -184,7 +227,8 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
       $headings.Add($paragraphStart)
     }
     $wasParagraph = $paragraph
-    $paragraph = -not $insideHtml -and ($hasInlineLink -or -not [string]::IsNullOrWhiteSpace($visible)) -and $visible -notmatch '^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}|=+[ \t]*)\r?$)'
+    $equalsUnderline = $wasParagraph -and $line -match '^ {0,3}=+[ \t]*\r?$'
+    $paragraph = -not $insideHtml -and -not $equalsUnderline -and ($hasInlineLink -or -not [string]::IsNullOrWhiteSpace($visible)) -and $visible -notmatch '^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})\r?$)'
     if (-not $wasParagraph -and $paragraph -and $line -match '^ {0,3}[^ \t\r\n]' -and $line -notmatch '^ {0,3}(?:>|[-+*](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$))') {
       $paragraphStart = $offset
     }

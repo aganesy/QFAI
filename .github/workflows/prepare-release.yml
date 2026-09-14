@@ -330,21 +330,48 @@ jobs:
               let linkStart = 0;
               let linkEnd = 0;
               let fence = '';
+              let fenceContentColumn = 0;
+              let fenceContainer = '';
               let inComment = false;
               let spanEnd = 0;
               let htmlEnd = null;
               let htmlTextVisible = false;
+              let htmlContentColumn = 0;
+              let htmlContainer = '';
+              const listContentColumns = [];
+              let listContainer = '';
+              const columnAfter = (prefix) => {
+                let column = 0;
+                for (const character of prefix)
+                  column += character === '\t' ? 4 - (column % 4) : 1;
+                return column;
+              };
               let paragraph = false;
               let paragraphStart = -1;
               const headings = [];
               let visible = body.replace(/^[^\n]*/gm, (line, offset) => {
                 if (!paragraph) paragraphStart = -1;
                 if (offset < referenceEnd) return line.replace(/[^\r\n]/g, ' ');
+                const content = line.replace(/^ {0,3}(?:> ?)+/, '');
+                const container = (/^ {0,3}(?:> ?)*/.exec(line)?.[0] ?? '').replace(/[^>]/g, '');
+                const indentation = columnAfter(/^[ \t]*/.exec(content)?.[0] ?? '');
+                const blank = line.trim().length === 0;
+                if (container !== listContainer) {
+                  listContentColumns.length = 0;
+                  listContainer = container;
+                }
+                while (!blank && indentation < (listContentColumns.at(-1) ?? 0))
+                  listContentColumns.pop();
+                if (fence && (container !== fenceContainer || (!blank && indentation < fenceContentColumn)))
+                  fence = '';
+                if (htmlEnd && (container !== htmlContainer || (!blank && indentation < htmlContentColumn)))
+                  htmlEnd = null;
                 let insideHtml = Boolean(htmlEnd);
                 if (fence) {
                   paragraph = false;
-                  const closing = /^ {0,3}(`{3,}|~{3,})[ \t]*\r?$/.exec(line)?.[1] ?? '';
-                  if (closing[0] === fence[0] && closing.length >= fence.length) fence = '';
+                  const closing = /^(`{3,}|~{3,})[ \t]*\r?$/.exec(content.replace(/^[ \t]*/, ''))?.[1] ?? '';
+                  if (indentation <= fenceContentColumn + 3 && closing[0] === fence[0] && closing.length >= fence.length)
+                    fence = '';
                   return line.replace(/[^\r\n]/g, ' ');
                 }
                 if (htmlEnd) {
@@ -352,33 +379,66 @@ jobs:
                   if (htmlEnd.test(line)) htmlEnd = null;
                   if (!htmlTextVisible) return line.replace(/[^\r\n]/g, ' ');
                 }
-                if (!inComment && !insideHtml) {
+                const contentColumn = listContentColumns.at(-1) ?? 0;
+                let htmlAllowed = indentation >= contentColumn && indentation <= contentColumn + 3;
+                let htmlLine = content;
+                const marker = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/.exec(content);
+                if (
+                  !insideHtml && !inComment && offset >= spanEnd && offset >= linkEnd &&
+                  htmlAllowed && marker &&
+                  (!paragraph || contentColumn > 0 ||
+                    (/^(?:[-*+]|0{0,8}1[.)])$/.test(marker[2]) && /^\S/.test(content.slice(marker[0].length))))
+                ) {
+                  const markerEnd = columnAfter(marker[1] + marker[2]);
+                  const gap = columnAfter(marker[0]) - markerEnd;
+                  listContentColumns.push(markerEnd + (gap > 4 ? 1 : gap));
+                  htmlLine = content.slice(marker[0].length);
+                  htmlAllowed = gap <= 4;
+                  paragraph = false;
+                  paragraphStart = -1;
+                }
+                htmlLine = htmlLine.replace(/^[ \t]*/, '');
+                const rawOpening = /^(`{3,}|~{3,})(.*)\r?$/.exec(htmlLine);
+                if (
+                  !insideHtml && !inComment && offset >= spanEnd && offset >= linkEnd &&
+                  htmlAllowed && rawOpening &&
+                  !(rawOpening[1][0] === '`' && rawOpening[2].includes('`'))
+                ) {
+                  fence = rawOpening[1];
+                  fenceContentColumn = listContentColumns.at(-1) ?? 0;
+                  fenceContainer = container;
+                  paragraph = false;
+                  return line.replace(/[^\r\n]/g, ' ');
+                }
+                if (!inComment && !insideHtml && offset >= spanEnd && offset >= linkEnd && htmlAllowed) {
                   htmlTextVisible = false;
-                  if (/^ {0,3}<(?:pre|script|style|textarea)(?=[ \t>]|$)/i.test(line)) {
+                  if (/^<(?:pre|script|style|textarea)(?=[ \t>]|$)/i.test(htmlLine)) {
                     htmlEnd = /<\/(?:pre|script|style|textarea)>/i;
-                  } else if (/^ {0,3}<\?/.test(line)) {
+                  } else if (/^<\?/.test(htmlLine)) {
                     htmlEnd = /\?>/;
-                  } else if (/^ {0,3}<![A-Za-z]/.test(line)) {
+                  } else if (/^<![A-Za-z]/.test(htmlLine)) {
                     htmlEnd = />/;
-                  } else if (/^ {0,3}<!\[CDATA\[/.test(line)) {
+                  } else if (/^<!\[CDATA\[/.test(htmlLine)) {
                     htmlEnd = /\]\]>/;
                   } else if (
-                    /^ {0,3}<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|\/>|$)/i.test(
-                      line,
+                    /^<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|\/>|$)/i.test(
+                      htmlLine,
                     )
                   ) {
                     htmlEnd = /^[ \t]*\r?$/;
                     htmlTextVisible = true;
                   } else if (
                     !paragraph &&
-                    /^ {0,3}(?:<(?!pre(?:[ \t/>]|$)|script(?:[ \t/>]|$)|style(?:[ \t/>]|$)|textarea(?:[ \t/>]|$))[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t]*=[ \t]*(?:[^"'=<>`\x00-\x20]+|'[^']*'|"[^"]*"))?)*[ \t]*\/?>|<\/[A-Za-z][A-Za-z0-9-]*[ \t]*>)[ \t]*\r?$/i.test(
-                      line,
+                    /^(?:<(?!pre(?:[ \t/>]|$)|script(?:[ \t/>]|$)|style(?:[ \t/>]|$)|textarea(?:[ \t/>]|$))[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t]*=[ \t]*(?:[^"'=<>`\x00-\x20]+|'[^']*'|"[^"]*"))?)*[ \t]*\/?>|<\/[A-Za-z][A-Za-z0-9-]*[ \t]*>)[ \t]*\r?$/i.test(
+                      htmlLine,
                     )
                   ) {
                     htmlEnd = /^[ \t]*\r?$/;
                     htmlTextVisible = true;
                   }
                   if (htmlEnd) {
+                    htmlContentColumn = listContentColumns.at(-1) ?? 0;
+                    htmlContainer = container;
                     insideHtml = true;
                     paragraph = false;
                     if (htmlEnd.test(line)) htmlEnd = null;
@@ -387,18 +447,6 @@ jobs:
                 }
                 if (!insideHtml && !inComment && offset >= spanEnd && !paragraph && definitions.has(offset)) {
                   referenceEnd = definitions.get(offset);
-                  return line.replace(/[^\r\n]/g, ' ');
-                }
-                const rawOpening = /^ {0,3}(`{3,}|~{3,})(.*)\r?$/.exec(line);
-                if (
-                  !insideHtml &&
-                  !inComment &&
-                  offset >= spanEnd &&
-                  rawOpening &&
-                  !(rawOpening[1][0] === '`' && rawOpening[2].includes('`'))
-                ) {
-                  fence = rawOpening[1];
-                  paragraph = false;
                   return line.replace(/[^\r\n]/g, ' ');
                 }
                 let visible = line;
@@ -470,6 +518,8 @@ jobs:
                 const opening = /^ {0,3}(`{3,}|~{3,})(.*)\r?$/.exec(visible);
                 if (!insideHtml && opening && !(opening[1][0] === '`' && opening[2].includes('`'))) {
                   fence = opening[1];
+                  fenceContentColumn = listContentColumns.at(-1) ?? 0;
+                  fenceContainer = container;
                   paragraph = false;
                   return line.replace(/[^\r\n]/g, ' ');
                 }
@@ -480,10 +530,12 @@ jobs:
                   offset >= spanEnd && offset >= linkEnd && /^ {0,3}(?:=+|-+)[ \t]*\r?$/.test(line)
                 ) headings.push(paragraphStart);
                 const wasParagraph = paragraph;
+                const equalsUnderline = wasParagraph && /^ {0,3}=+[ \t]*\r?$/.test(line);
                 paragraph =
                   !insideHtml &&
+                  !equalsUnderline &&
                   (hasInlineLink || visible.trim().length > 0) &&
-                  !/^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}|=+[ \t]*)\r?$)/.test(
+                  !/^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})\r?$)/.test(
                     visible,
                   );
                 if (

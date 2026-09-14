@@ -215,7 +215,7 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
 
   it.each(
     ["---", "==="].flatMap((underline) =>
-      ["Adoption bar", "Adoption\nbar"].map((title) => [underline, title] as const),
+      ["Adoption bar", "Adoption\nbar", "=", "==="].map((title) => [underline, title] as const),
     ),
   )("blocks an empty removal answer before Setext %s / %j", async (underline, title) => {
     const body = `## What this change made unnecessary\n\n${title}\n${underline}\nKeep publication approval.\n`;
@@ -233,6 +233,24 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
 
   it("accepts a real heading after a first-line indented HTML example", async () => {
     const body = "    <pre>\n## What this change made unnecessary\nNothing.\n";
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+  });
+
+  it.each(
+    ["- ", "1. ", "  - "].flatMap((marker) =>
+      ["<pre>", "```", "~~~"].map((opening) => [marker, opening] as const),
+    ),
+  )("accepts a real removal section dedented from a container %j / %s", async (marker, opening) => {
+    const body = `${marker}${opening}\n${" ".repeat(marker.length)}Example\n## What this change made unnecessary\nNothing.\n`;
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
       scenario: makeScenario({
@@ -378,6 +396,18 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       `raw HTML ${tag}`,
       `<${tag}>\n## What this change made unnecessary\nNothing.\n</${tag}>\n`,
     ]),
+    ...["- ", "1. ", "  - "].flatMap((marker) =>
+      ["pre", "div", "span"].map((tag) => [
+        `raw HTML list-contained ${JSON.stringify(marker)} ${tag}`,
+        `${marker}<${tag}>\n${" ".repeat(marker.length)}## What this change made unnecessary\n${" ".repeat(marker.length)}Nothing.\n${" ".repeat(marker.length)}</${tag}>\n`,
+      ]),
+    ),
+    ...["- ", "1. ", "  - "].flatMap((marker) =>
+      ["```", "~~~"].map((fence) => [
+        `list-contained fence ${JSON.stringify(marker)} ${fence}`,
+        `${marker}${fence}\n${" ".repeat(marker.length)}## What this change made unnecessary\n${" ".repeat(marker.length)}Nothing.\n${" ".repeat(marker.length)}${fence}\n`,
+      ]),
+    ),
     [
       "raw HTML processing instruction",
       "<?qfai\n## What this change made unnecessary\nNothing.\n?>\n",

@@ -369,8 +369,39 @@ describe("resuming a release pull-request description", () => {
   );
 
   it.each(
+    ["- ", "1. ", "  - "].flatMap((marker) =>
+      ["```", "~~~"].map((fence) => [marker, fence] as const),
+    ),
+  )("ignores a list-contained fence %j / %s during removal repair", async (marker, fence) => {
+    const workflow = await readFile(
+      path.join(REPO_ROOT, ".github/workflows/prepare-release.yml"),
+      "utf-8",
+    );
+    const script = workflow.match(
+      /^\s*node - .* <<'REPAIR_BODY'\r?\n([\s\S]*?)^\s*REPAIR_BODY[ \t]*$/m,
+    )?.[1];
+    if (script === undefined) throw new Error("Release body repair script is absent");
+    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-release-list-fence-"));
+    tempDirs.push(dir);
+    const existingPath = path.join(dir, "existing.md");
+    const bodyPath = path.join(dir, "generated.md");
+    const prefix = "# Prepared release\n\nKeep publication approval.\n\n";
+    const existing = `${prefix}${marker}${fence}\n${" ".repeat(marker.length)}## What this change made unnecessary\n${" ".repeat(marker.length)}Nothing.\n${" ".repeat(marker.length)}${fence}\n`;
+    const generated = "## What this change made unnecessary\n\nSuperseded pin.\n";
+    await writeFile(existingPath, existing, "utf-8");
+    await writeFile(bodyPath, generated, "utf-8");
+    const result = spawnSync(process.execPath, ["-", existingPath, bodyPath], {
+      input: script,
+      encoding: "utf-8",
+    });
+    if (result.error !== undefined) throw result.error;
+    expect(result.status, result.stderr).toBe(0);
+    expect(await readFile(bodyPath, "utf-8")).toBe(`${existing.trimEnd()}\n\n${generated}`);
+  });
+
+  it.each(
     ["---", "==="].flatMap((underline) =>
-      ["Adoption bar", "Adoption\nbar"].map((title) => [underline, title] as const),
+      ["Adoption bar", "Adoption\nbar", "=", "==="].map((title) => [underline, title] as const),
     ),
   )("preserves a Setext %s / %j section during removal repair", async (underline, title) => {
     const workflow = await readFile(
@@ -535,6 +566,18 @@ describe("resuming a release pull-request description", () => {
       `raw HTML ${tag} example`,
       `<${tag}>\n## What this change made unnecessary\nNothing.\n</${tag}>\n`,
     ]),
+    ...["- ", "1. ", "  - "].flatMap((marker) =>
+      ["pre", "div", "span"].map((tag) => [
+        `raw HTML list-contained ${JSON.stringify(marker)} ${tag}`,
+        `${marker}<${tag}>\n${" ".repeat(marker.length)}## What this change made unnecessary\n${" ".repeat(marker.length)}Nothing.\n${" ".repeat(marker.length)}</${tag}>\n`,
+      ]),
+    ),
+    ...["- ", "1. ", "  - "].flatMap((marker) =>
+      ["<pre>", "```", "~~~"].map((opening) => [
+        `authored real removal section dedented from a container ${JSON.stringify(marker)} ${opening}`,
+        `${marker}${opening}\n${" ".repeat(marker.length)}Example\n## What this change made unnecessary\nNothing.\n`,
+      ]),
+    ),
     [
       "raw HTML processing instruction",
       "<?qfai\n## What this change made unnecessary\nNothing.\n?>\n",
