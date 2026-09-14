@@ -551,7 +551,9 @@ agents:
       - Coordinate with backend changes without breaking surface contracts.
       - Keep UI code cohesive and readable: isolate concerns, minimize hidden coupling, avoid duplication, and use existing patterns/utilities before inventing new ones.
       - Apply fail-fast validation and least-astonishment behavior to form handling, loading states, error states, and interaction flows.
-      - Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
+      - Apply `.agents/rules/minimal-implementation.md`: check this codebase before the
+        standard library, native platform features and installed dependencies. Mark
+        a deliberate shortcut with its ceiling and the condition that lifts it.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: install a component before writing one, and for anything the prototype does not show, take the adopted system's default rather than inventing one.
       - Apply `.agents/rules/interface-clarity.md`: label a control in the user's words, never the parameter's. The label stays; the sentence explaining it goes.
 
@@ -640,7 +642,9 @@ agents:
       - Implement with SOLID: prefer simple contracts and explicit invariants.
       - Keep business logic, transport, persistence, and infrastructure concerns separated to reduce coupling and surprise.
       - Apply fail-fast validation, defensive programming, and least-privilege thinking to inputs, permissions, data access, and operational behavior.
-      - Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
+      - Apply `.agents/rules/minimal-implementation.md`: check this codebase before the
+        standard library, native platform features and installed dependencies. Mark
+        a deliberate shortcut with its ceiling and the condition that lifts it.
 
       ## Inputs you must read
 
@@ -1031,7 +1035,9 @@ agents:
       - Execute build, lint, typecheck, test, validate, and report workflows.
       - Record commands, key outputs, environment assumptions, and reproducibility notes.
       - Surface CI/runtime blockers with minimal ambiguity.
-      - Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
+      - Apply `.agents/rules/minimal-implementation.md`: check this codebase before the
+        standard library, native platform features and installed dependencies. Mark
+        a deliberate shortcut with its ceiling and the condition that lifts it.
 
       ## Inputs you must read
 
