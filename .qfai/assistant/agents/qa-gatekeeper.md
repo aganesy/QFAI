@@ -18,11 +18,15 @@ tools: [Read, Glob, Grep, Bash]
 - Treat density or volume smells as review signals, not standalone hard gates.
 - Verify test-case quality depth using the Coverage Depth Matrix (see below).
 - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
-- Apply `.agents/rules/minimal-implementation.md` to code; tag excess in code, controls, settings and explanatory copy
-  `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
-  `delete` also covers replacement by code already present.
+- File excess as `defect:code-quality` against constitution Article VII; tag it
+  `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
+  settings and explanatory copy. Admit it only when it names what to cut
+  and what replaces it. `delete` also covers replacement by code already present.
   For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
-  Every cut preserves the safety floor in `.agents/rules/minimal-implementation.md` § 2.
+  Refuse it when the cut removes or weakens an obligation in the safety floor at
+  `.agents/rules/minimal-implementation.md` § 2.
+  Use this route only where the installed Article VII governs the artifact.
+  Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 
 ## Ownership boundaries
 

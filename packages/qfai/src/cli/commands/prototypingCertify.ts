@@ -2658,19 +2658,10 @@ async function hasPerSpecSubdir(iterDirAbs: string): Promise<boolean> {
  * Returns an empty array on read / parse failure or on a missing
  * `screens:` array.
  *
- * pre-fix the read / parse
- * failure path silently swallowed the error and returned `[]`, which
- * the aggregate-warn at the call site only surfaced when the entire
- * matched set produced zero screens. In a half-failure (e.g. three
- * matched files, one with a YAML parse error, two with valid
- * `screens:`), the call site's aggregate warn never fired because the
- * other files filled the array — and the operator never saw the parse
- * error. This per-file `warn` line names the offending file and
- * narrows the error class (read vs parse) so authoring typos surface
- * at the certify gate. The function still returns `[]` on failure so
- * existing callers keep their contracts; CLAUDE.md "every async path
- * must have explicit error handling" is satisfied via the
- * named-error warn.
+ * Reports each read or YAML parse failure with its file name. An
+ * aggregate zero-screen warning cannot expose one failed file when
+ * other files provide valid screens. The empty-array result preserves
+ * the caller's contract while the per-file warning exposes that failure.
  */
 async function parseUiScreenFile(
   root: string,
