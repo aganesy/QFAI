@@ -47,6 +47,74 @@ describe("trust boundaries depend on the caller's control", () => {
   });
 });
 
+describe("repository async guidance agrees with the retained-failure test", () => {
+  it.each(["CLAUDE.md", "REVIEW.md", "AGENTS.md"])(
+    "%s preserves propagation and the whole floor",
+    async (file) => {
+      const text = await readFile(path.join(ROOT, file), "utf-8");
+      const flat = text.replace(/\s+/g, " ").toLowerCase();
+      expect(flat).toContain("await or return every promise");
+      expect(flat).toContain(".agents/rules/minimal-implementation.md");
+      expect(flat).toContain("§ 2");
+      expect(flat).toContain("governs consuming callers, kept failures and callback boundaries");
+      expect(flat).not.toContain("returning propagates only when its caller awaits or adopts");
+      expect(flat).not.toContain("do not add a catch for a failure that no specification");
+      expect(flat).not.toContain("require an adapter that adopts asynchronous work");
+      expect(flat).not.toContain("every async path must have explicit error handling");
+      if (file === "REVIEW.md") {
+        expect(flat).not.toContain("missing error handling or incomplete error messages");
+        expect(flat).toContain("incomplete error messages");
+        expect(flat).toContain("neither awaited nor returned");
+      }
+    },
+  );
+});
+
+describe("the retained-failure test stays under the safety floor", () => {
+  it.each([
+    ".agents/rules/minimal-implementation.md",
+    "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md",
+  ])("%s names the criterion, propagation and process boundary", async (relative) => {
+    const text = await readFile(path.join(ROOT, relative), "utf-8");
+    const failure = text.split("### Which failures are handled here")[1]?.split(/^## /m)[0];
+    expect(failure).toBeDefined();
+    const flat = failure?.replace(/\s+/g, " ");
+    expect(flat).toContain("Subject to the safety floor in this section");
+    expect(flat).toContain("no type or schema excludes it");
+    expect(flat).toContain("the specification, a contract or an actual observation names it");
+    expect(flat).toContain(
+      "only when both hold: no type or schema excludes it, and the specification, a contract or an actual observation names it. Other failures propagate to the caller.",
+    );
+    expect(flat).toContain(
+      "Every promise is awaited or returned to a caller that awaits or adopts it, never dropped",
+    );
+    expect(flat).toContain("callback runtime ignores returned promises");
+    expect(flat).toContain(
+      "Subject to the same floor, when a callback runtime ignores returned promises, " +
+        "use an explicit adapter that adopts the asynchronous result and handles " +
+        "rejections at that trust boundary.",
+    );
+    expect(flat).toContain(
+      "Do not make the callback async and assume its ignored outer promise is consumed",
+    );
+    expect(flat).toContain("<paths.specsDir>/spec-*/06_Test-Cases.md");
+    expect(flat).toContain("Resolve `paths.specsDir` from `qfai.config.yaml`");
+    expect(flat).toContain("process entry point is a trust boundary");
+    expect(flat).toContain("A dropped rejection remains a correctness defect");
+    expect(flat).toContain("06_Test-Cases.md");
+  });
+
+  it("keeps the operating rule byte-identical to its shipped master", async () => {
+    const [master, shipped] = await Promise.all([
+      readFile(path.join(ROOT, ".agents/rules/minimal-implementation.md")),
+      readFile(
+        path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md"),
+      ),
+    ]);
+    expect(master.equals(shipped)).toBe(true);
+  });
+});
+
 /**
  * Every rule master, read off the directory.
  *
@@ -271,13 +339,49 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     const MASTERS = [
       ".agents/rules/minimal-implementation.md",
       "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md",
-    ];
+    ] as const;
+
+    it.each(MASTERS)("%s protects unit coverage of retained failures in the floor", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      const floor = text.split("## 2. What the ladder never removes")[1]?.split("## 3.")[0];
+      expect(floor).toContain("- Unit-level coverage of the failures the code retains.");
+    });
+
+    it("keeps the operating and shipped minimal-implementation rules byte-identical", async () => {
+      const [master, shipped] = await Promise.all([
+        readFile(path.join(ROOT, MASTERS[0])),
+        readFile(path.join(ROOT, MASTERS[1])),
+      ]);
+      expect(shipped.equals(master)).toBe(true);
+    });
+
+    it.each(MASTERS)("%s gives repository reuse the second of seven rungs", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      const rungs = [...text.matchAll(/^(\d+)\. \*\*(.+?)\*\*/gm)].map((match) => [
+        match[1],
+        match[2],
+      ]);
+      expect(rungs).toEqual([
+        ["1", "Does this need to exist at all?"],
+        ["2", "Is it already in this codebase?"],
+        ["3", "Does the standard library do it?"],
+        ["4", "Does a native platform feature cover it?"],
+        ["5", "Does an already-installed dependency solve it?"],
+        ["6", "Can it be one line?"],
+        ["7", "Only then"],
+      ]);
+      expect(text).toMatch(/standard library has one is not a simplification; it is rung 3\./);
+      expect(text).toMatch(
+        /5\. \*\*Does an already-installed dependency solve it\?\*\* Reach for what the\s+project already carries before adding anything\./,
+      );
+    });
 
     it.each(MASTERS)("%s states every clause", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       // One token per clause that no other clause in the file carries, so a
       // clause cannot be dropped and still leave the master looking complete.
       for (const clause of [
+        /already in this codebase/i,
         /standard library/i,
         /already-installed dependency/i,
         /trust boundary/i,
@@ -288,6 +392,16 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       ]) {
         expect(text).toMatch(clause);
       }
+    });
+
+    it.each([
+      "packages/qfai/assets/init/.qfai/assistant/constitution/constitution.md",
+      ".qfai/assistant/constitution/constitution.md",
+    ])("%s names this repository first among the reuse rungs", async (rel) => {
+      const text = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
+      expect(text).toContain(
+        "find what already covers the change, in the order the reuse rungs of `.agents/rules/minimal-implementation.md` give: this repository, including a duplicate or overlapping implementation, then the standard library, the platform, and the dependencies already installed",
+      );
     });
 
     // The two halves of the marker are one obligation. A ceiling with no
