@@ -268,6 +268,59 @@ describe("the constitution and its safety floor upgrade together", () => {
     expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
   });
 
+  it("refreshes reviewer cards without granting a retained constitution newer authority", async () => {
+    const edited = (await readFile(minimumPath(), "utf-8")) + "\nOur own related guidance.\n";
+    const previous =
+      "# Constitution\n\n## Article VII — Minimal scope with explicit deltas\n\n" +
+      "Make the smallest change that satisfies the spec and passes gates.\n" +
+      "How much code implements a behaviour is governed by `.agents/rules/minimal-implementation.md`.\n";
+    const baselinePath = path.join(
+      assistantPath(),
+      "constitution",
+      "shared-skill-delegation-baseline.md",
+    );
+    const previousBaseline = "# Shared skill-delegation baseline\n\nFollow Article VII.\n";
+    const roles = [
+      "architecture-reviewer",
+      "completion-reviewer",
+      "implementation-reviewer",
+      "product-surface-reviewer",
+      "qa-gatekeeper",
+      "requirements-reviewer",
+    ];
+    await writeFile(minimumPath(), edited, "utf-8");
+    await writeFile(constitutionPath(), previous, "utf-8");
+    await writeFile(baselinePath, previousBaseline, "utf-8");
+    const lock = await readAssistantAssetsLock(assistantPath());
+    if (lock === null) throw new Error("The first init must record its governed assets.");
+    await writeAssistantAssetsLock(assistantPath(), {
+      files: {
+        ...lock.files,
+        "constitution/constitution.md": hashAssistantAssetText(previous),
+        "constitution/shared-skill-delegation-baseline.md":
+          hashAssistantAssetText(previousBaseline),
+      },
+    });
+    for (const role of roles) {
+      await writeFile(path.join(assistantPath(), "agents", `${role}.md`), "# Previous reviewer\n");
+    }
+
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+    expect(await readFile(minimumPath(), "utf-8")).toBe(edited);
+    expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
+    const retained = await readAssistantAssetsLock(assistantPath());
+    expect(retained?.files["constitution/constitution.md"]).toBe(hashAssistantAssetText(previous));
+    expect(await readFile(baselinePath, "utf-8")).toContain(
+      "A retained constitution does not gain newer authority from refreshed cards.",
+    );
+    for (const role of roles) {
+      expect(await readFile(path.join(assistantPath(), "agents", `${role}.md`), "utf-8")).toContain(
+        "Use this route only where the installed Article VII governs the artifact.",
+      );
+    }
+  });
+
   it.each(["indented", "fenced", "spaced heading"])(
     "does not authorize an automatic upgrade from a %s master",
     async (variant) => {

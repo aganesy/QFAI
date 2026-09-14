@@ -167,6 +167,8 @@ The ordinal rises on a handoff that opens a general series on the same artifact,
 - Reviewers must verify test-layer policy enforcement when relevant.
 - Do not treat test volume ratios or floors as hard gates unless the skill explicitly says so.
 - Do not declare DONE until all routed blocking reviewers return `PASS`.
+- Any in-scope blocking finding from an invoked reviewer prevents DONE until resolved;
+  `blocking_agents` requires a reviewer's PASS only when that reviewer is routed.
 - Every reviewer returning `FAIL` or `REVISE` must include a concrete fix proposal.
 
 ### Round budget and convergence (MUST)
@@ -188,6 +190,13 @@ A finding outside the reviewing stage's remit is recorded and deferred, never bl
 | `/web-research`    | Source authority and freshness, citation accuracy, claim support                                    | Spec content, implementation structure                                                  |
 | `/qfai-grilling`   | Decisions asked rather than assumed, facts naming where they were read, the session's end condition | The merit of what the user decided, and the artifacts the invoking stage writes from it |
 | `/qfai-grill`      | The same, reported to the user rather than to a stage                                               | The merit of what the user decided; there is no artifact to review                      |
+
+Article VII excess in the reviewing stage's own artifacts is in scope;
+quality of downstream implementation code is deferred at upstream stages.
+
+Apply this route only where the installed Article VII governs the artifact.
+A retained constitution does not gain newer authority from refreshed cards.
+Report an unsupported Article VII route as advisory and follow the installed constitution.
 
 **Fallback for any stage not listed.** A stage that references this baseline without a row above has, as its remit, the artifacts that stage itself produces; everything upstream of them is out of scope, recorded and deferred. Add the row when a new stage starts routing blocking reviewers, so the in/out split is not re-derived per run.
 

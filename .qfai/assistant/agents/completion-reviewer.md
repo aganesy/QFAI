@@ -15,7 +15,12 @@ tools: [Read, Glob, Grep, Bash]
 - Return only PASS or REVISE, with actionable rework instructions on REVISE.
 - Enforce validate evidence, required coverage obligations, and no self-approval.
 - Verify rejected options are not reintroduced without RE-OPEN.
-- Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+- File excess as `defect:code-quality` against constitution Article VII; tag it
+  `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
+  and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+  `.agents/rules/minimal-implementation.md` § 2.
+  Use this route only where the installed Article VII governs the artifact.
+  Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 
 ## Inputs you must read
 
