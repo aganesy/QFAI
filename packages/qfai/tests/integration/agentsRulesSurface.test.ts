@@ -8,6 +8,22 @@ import { describe, expect, it } from "vitest";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
 
+describe("reviewer stop conditions distinguish named-rule defects from new product obligations", () => {
+  it.each(
+    ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>
+      ["completion-reviewer", "implementation-reviewer"].map((role) => ({ tree, role })),
+    ),
+  )("$tree/$role retains the named-rule defect route", async ({ tree, role }) => {
+    const text = await readFile(path.join(ROOT, tree, "assistant/agents", `${role}.md`), "utf-8");
+    const stop = text.split("## Stop conditions")[1]?.split(/^## /m)[0]?.replace(/\s+/g, " ");
+    expect(stop).toBeDefined();
+    expect(stop).toContain("The finding would add a product obligation upstream never asked for.");
+    expect(stop).toContain("raise it as an advisory finding plus a Change Request proposal");
+    expect(stop).toContain("a regression against a named constitution or catalog rule");
+    expect(stop).toContain("it stays blocking and traces to its `defect:*` class");
+  });
+});
+
 describe("repository async guidance agrees with the retained-failure test", () => {
   it.each(["CLAUDE.md", "REVIEW.md", "AGENTS.md"])(
     "%s preserves propagation and the whole floor",
