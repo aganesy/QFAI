@@ -51,7 +51,7 @@ describe("Article VII governs cutting above other articles and below the safety 
         constitution.split("## Article VII —")[1]?.split("## Article VIII —")[0] ?? "",
       );
       expect(article).toContain(
-        "Only the safety floor in `.agents/rules/minimal-implementation.md` § 2 and the unnumbered Absolute Rule — Output Language outrank this article.",
+        "The safety floor in `.agents/rules/minimal-implementation.md` § 2, the unnumbered Absolute Rule — Output Language, and mandatory approvals and irreversible-action confirmations outrank this article.",
       );
       expect(article).toContain("takes precedence over every other article");
       expect(article).toContain("conflicting instructions in other constitution documents");

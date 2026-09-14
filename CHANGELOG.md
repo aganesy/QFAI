@@ -16,9 +16,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that satisfies a requirement is the right amount; additional scope or code
   needs justification. The article ranks above other articles and conflicting
   constitution instructions, below the referenced safety floor. The absolute
-  output-language rule and prototyping scope floor remain unchanged. Required
+  output-language rule, mandatory approvals, irreversible-action confirmations
+  and prototyping scope floor remain protected. Required
   traceability, repository gates, and their evidence are protected in the
-  safety floor rather than repeated in the article.
+  safety floor rather than repeated in the article. Every missing governed
+  asset uses exclusive full-byte publication, shipped permissions, destination
+  identity and byte verification, and pinned staging cleanup with inspection
+  causes. Unchanged governed assets stay in the verbose skipped report.
+  An unreadable shipped set stops before copies or migration. Edited masters
+  retain their customizations with manual constitution reconciliation or a
+  backed-up restoration of the exact shipped master for automatic installation.
+
+- **Preflight uses repository-first reuse order** (#1796). Article IX checks
+  existing code, including duplicates or overlap, before the standard library,
+  platform and installed dependencies. One bullet covers detection and reuse.
 
 - **Repository reuse is the second of seven minimal-implementation rungs**
   (#1795). Check the codebase before the standard library, platform and installed

@@ -437,7 +437,9 @@ describe("the constitution and its safety floor upgrade together", () => {
       const output = await captureStdout(() =>
         runInit({ dir: fresh, force: false, dryRun: false, yes: true }),
       );
-      expect(output).toContain("rerun `qfai init` to install the missing constitution");
+      expect(output).toContain("manually installing and reconciling the constitution");
+      expect(output).toContain("back up customizations, restore the exact shipped master");
+      expect(output).not.toContain("then rerun `qfai init` to install the missing constitution");
       expect(output).not.toContain("running `qfai init --force` again");
 
       const assistant = path.join(fresh, ".qfai", "assistant");
