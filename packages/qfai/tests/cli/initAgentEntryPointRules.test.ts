@@ -756,6 +756,79 @@ describe("a hand-wired file this run cannot extend is named", () => {
 });
 
 describe("optional review directive detection", () => {
+  it.each(["- > ", "> - > ", "- > - > "])(
+    "resolves reference definitions after alternating containers %j",
+    (prefix) => {
+      for (const end of ["\n", "\r\n"]) {
+        const existing =
+          `\uFEFF![\n${REVIEW_POINTER}\n][image]\n\n${prefix}[image]: /image.png\n`.replace(
+            /\n/g,
+            end,
+          );
+        const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+        expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+        expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+      }
+    },
+  );
+
+  it.each(["\n", "\r\n"])(
+    "masks footnote definitions and keeps dedented guidance with %j",
+    (end) => {
+      const lazy = `\uFEFF[^1]: Hidden note${end}${REVIEW_POINTER}${end}`;
+      expect(addReviewPointer(lazy, `${REVIEW_POINTER}\n`)).toBe(
+        `\uFEFF${REVIEW_POINTER}${end}${end}${lazy.slice(1)}`,
+      );
+      for (const separation of ["", end]) {
+        const existing = `\uFEFF[^1]: Hidden note${end}${separation}    ${REVIEW_POINTER}${end}`;
+        const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+        expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+        expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+      }
+      for (const boundary of [end, `# Heading${end}`]) {
+        const live = `\uFEFF[^1]: Hidden note${end}${boundary}${REVIEW_POINTER}${end}`;
+        expect(addReviewPointer(live, `${REVIEW_POINTER}\n`)).toBe(live);
+      }
+    },
+  );
+
+  it.each([
+    "# Heading",
+    "- Item",
+    "> Quoted\n",
+    "---",
+    "~~~\nExample\n~~~",
+    "<div>\nExample\n</div>\n",
+  ])("stops multiline code spans at a block interruption %j", (block) => {
+    for (const end of ["\n", "\r\n"]) {
+      const existing = `\uFEFF\`\`Unclosed\n${block}\n${REVIEW_POINTER}\nClosing\`\`\n`.replace(
+        /\n/g,
+        end,
+      );
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    }
+  });
+
+  it.each([997, 998])("normalizes CRLF before the %i-byte reference boundary", (length) => {
+    for (const end of ["\n", "\r\n"]) {
+      const label = `${"a".repeat(length)}${end}ok`;
+      const existing = `\uFEFF![${end}${REVIEW_POINTER}${end}][${label}]${end}${end}[${label}]: /image.png${end}`;
+      const expected =
+        length === 997 ? `\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}` : existing;
+      const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      expect(updated).toBe(expected);
+      expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+    }
+  });
+
+  it.each(["\n", "\r\n"])("preserves closed code-span comment markers with %j", (end) => {
+    const existing = `\uFEFFUse \`a\n<!--\nb\` literally.\n\n${REVIEW_POINTER}\n`.replace(
+      /\n/g,
+      end,
+    );
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+  });
+
   it.each([
     ["quote", "> [image]: /image.png\n", true],
     ["list", "- [image]: /image.png\n", true],
@@ -821,6 +894,52 @@ describe("optional review directive detection", () => {
               `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}`,
             );
             expect((await stat(path.join(root, name))).mode).toBe(mode);
+          }
+        }
+      });
+    },
+  );
+
+  it.each([false, true])(
+    "keeps review boundary repairs byte-preserving with force=%s",
+    async (force) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const templates = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+            name,
+            text: await readEntryPoint(root, name),
+            mode: (await stat(path.join(root, name))).mode,
+          })),
+        );
+        const label = `${"a".repeat(997)}\nok`;
+        for (const source of [
+          { text: `![\n${REVIEW_POINTER}\n][image]\n\n- > [image]: /image.png`, hidden: true },
+          { text: `[^1]: Hidden note\n    ${REVIEW_POINTER}`, hidden: true },
+          { text: `[^1]: Hidden note\n${REVIEW_POINTER}`, hidden: true },
+          { text: `![\n${REVIEW_POINTER}\n][${label}]\n\n[${label}]: /image.png`, hidden: true },
+          { text: `\`\`Unclosed\n# Heading\n${REVIEW_POINTER}\nClosing\`\``, hidden: false },
+        ]) {
+          for (const end of ["\n", "\r\n"]) {
+            const originals = templates.map(({ name, text, mode }) => ({
+              name,
+              mode,
+              text: `\uFEFF${text.replace(REVIEW_POINTER, source.text)}${PROJECT_TEXT}`.replace(
+                /\n/g,
+                end,
+              ),
+            }));
+            for (const { name, text } of originals)
+              await writeFile(path.join(root, name), text, "utf-8");
+            for (let run = 0; run < 2; run += 1) {
+              await runInit({ dir: root, force, dryRun: false, yes: true });
+              for (const { name, text, mode } of originals) {
+                expect(await readEntryPoint(root, name)).toBe(
+                  source.hidden ? `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}` : text,
+                );
+                expect((await stat(path.join(root, name))).mode).toBe(mode);
+              }
+            }
           }
         }
       });

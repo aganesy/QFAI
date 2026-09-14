@@ -123,6 +123,26 @@ describe("pr-fix wrapper docs", () => {
 });
 
 describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
+  it("matches malformed link candidates without allocating each remaining tail", async () => {
+    const policyPath = path.join(repoRoot, ".agents/skills/pr-fix/scripts/pr-body-policy.ps1");
+    const policy = await readFile(policyPath, "utf-8");
+    const branch = policy
+      .split("if (-not $insideHtml -and $line[$position] -eq '[')")[1]
+      ?.split("if (-not $insideHtml -and $line[$position] -eq '`')")[0];
+    expect(branch).toBeDefined();
+    expect(branch).not.toContain("$Body.Substring($offset + $position)");
+    const result = await spawnCommand(
+      "pwsh",
+      [
+        "-NoProfile",
+        "-Command",
+        `. '${policyPath.replace(/'/g, "''")}'; $body = '## What this change made unnecessary' + [Environment]::NewLine + ('[ ' + [Environment]::NewLine) * 640 + 'Nothing.'; if ([string]::IsNullOrWhiteSpace((RemovalAnswer $body))) { exit 1 }`,
+      ],
+      process.env,
+    );
+    expect(result.code).toBe(0);
+  });
+
   it.each(["removed", "comment only"])(
     "rejects a changed dry-run removal answer: %s",
     async (change) => {
@@ -219,6 +239,15 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ["literal HTML link", "<div>\n[](https://example.com)\n</div>\n"],
     ["literal inline code link", "`[](https://example.com)`\n"],
     ["escaped single-line link", "\\[](https://example.com)\n"],
+    ["ordinary link text", "[Nothing](/url)"],
+    ["escaped image", "\\![Nothing](/image.png)"],
+    ["unresolved image", "![Nothing][missing]"],
+    ["quoted definition-like paragraph", "> Paragraph\n> [Nothing]: /url"],
+    ["list definition-like paragraph", "- Paragraph\n  [Nothing]: /url"],
+    ["image with prose", "![Example](/image.png)\n\nNothing."],
+    ["code-like reference container top level", "    [Nothing]: /url"],
+    ["code-like reference container quote", ">     [Nothing]: /url"],
+    ["code-like reference container list", "-     [Nothing]: /url"],
   ])("preserves visible reference-like text: %s", async (_name, answer) => {
     const body = `## What this change made unnecessary\n\n${answer}`;
     const result = await runPrFix({
@@ -231,6 +260,13 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
     expect(result.code).toBe(0);
     expect(result.ghState.prEditCount ?? 0).toBe(0);
+    if (_name.startsWith("code-like reference container")) {
+      const preview = await readFile(
+        path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
+        "utf-8",
+      );
+      expect(preview).toContain(`## What this change made unnecessary\n\n${answer}`);
+    }
   });
 
   it.each([
@@ -369,6 +405,19 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ["empty link with target", "## What this change made unnecessary\n\n[](https://example.com)\n"],
     ["HTML break", "## What this change made unnecessary\n\n<br>\n"],
     ["HTML empty block", "## What this change made unnecessary\n\n<div>\n</div>\n"],
+    ...[
+      "![Nothing](/image.png)",
+      "![Nothing][image]\n\n[image]: /image.png",
+      "![Nothing][]\n\n[Nothing]: /image.png",
+      "![Nothing]\n\n[Nothing]: /image.png",
+      "> [Nothing]: /url",
+      "- [Nothing]: /url",
+      "- > [Nothing]: /url",
+      "> - > [Nothing]: /url",
+    ].map((source) => [
+      `hidden image/container answer ${JSON.stringify(source)}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
     [
       "link-reference definition",
       "## What this change made unnecessary\n\n[Nothing]: https://example.com\n",

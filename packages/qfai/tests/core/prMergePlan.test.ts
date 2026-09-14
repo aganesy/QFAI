@@ -176,6 +176,19 @@ describe("run-pr-merge plan", () => {
     ["FIXME prefix", "## What this change made unnecessary\n\nFIXME: list the removals\n"],
     ["HACK placeholder", "## What this change made unnecessary\n\nHACK\n"],
     ["HTML empty block", "## What this change made unnecessary\n\n<div>\n</div>\n"],
+    ...[
+      "![Nothing](/image.png)",
+      "![Nothing][image]\n\n[image]: /image.png",
+      "![Nothing][]\n\n[Nothing]: /image.png",
+      "![Nothing]\n\n[Nothing]: /image.png",
+      "> [Nothing]: /url",
+      "- [Nothing]: /url",
+      "- > [Nothing]: /url",
+      "> - > [Nothing]: /url",
+    ].map((source) => [
+      `hidden image/container answer ${JSON.stringify(source)}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
     [
       "link-reference definition",
       "## What this change made unnecessary\n\n[Nothing]: https://example.com\n",
@@ -323,6 +336,15 @@ describe("run-pr-merge plan", () => {
     ["literal HTML link", "<div>\n[](https://example.com)\n</div>\n"],
     ["literal inline code link", "`[](https://example.com)`\n"],
     ["escaped single-line link", "\\[](https://example.com)\n"],
+    ["ordinary link text", "[Nothing](/url)"],
+    ["escaped image", "\\![Nothing](/image.png)"],
+    ["unresolved image", "![Nothing][missing]"],
+    ["quoted definition-like paragraph", "> Paragraph\n> [Nothing]: /url"],
+    ["list definition-like paragraph", "- Paragraph\n  [Nothing]: /url"],
+    ["image with prose", "![Example](/image.png)\n\nNothing."],
+    ["code-like reference container top level", "    [Nothing]: /url"],
+    ["code-like reference container quote", ">     [Nothing]: /url"],
+    ["code-like reference container list", "-     [Nothing]: /url"],
   ])("preserves visible reference-like text: %s", async (_name, answer) => {
     const baseline = makeScenario({});
     const body = `## What this change made unnecessary\n\n${answer}`;

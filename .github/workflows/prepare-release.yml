@@ -283,6 +283,9 @@ jobs:
               /^ {0,3}## What (?:this|a) change made unnecessary(?:[ \t]+#+)?[ \t]*\r?\n([\s\S]*?)(?=^ {0,3}#{1,2}(?:[ \t]|\r?$)|(?![\s\S]))/m;
             const maskExamples = (body, setextHeadings = false) => {
               const definitions = new Map();
+              const definitionLabels = new Map();
+              const referenceLabels = new Set();
+              const normalizeLabel = (label) => label.replace(/[ \t\r\n]+/g, ' ').trim().toLowerCase().toUpperCase();
               const blockTags =
                 'address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul'.replace(
                   /[a-z]/g,
@@ -295,12 +298,16 @@ jobs:
               const title = String.raw`(?:"(?:[^"\\\r\n]|\\.|${continuation})*"|'(?:[^'\\\r\n]|\\.|${continuation})*'|\((?:[^()\\\r\n]|\\.|${continuation})*\))`;
               const spacing = String.raw`(?:[ \t]+(?:${continuation}[ \t]*)?|[ \t]*${continuation}[ \t]*)`;
               const definition = new RegExp(
-                String.raw`^ {0,3}${label}:[ \t]*(?:${continuation}[ \t]*)?${destination}(?:${spacing}${title})?[ \t]*\r?$`,
+                String.raw`^(?: {0,3}(?:>[ \t]?|(?:[-*+]|\d{1,9}[.)])[ \t]+))*[ \t]*${label}:[ \t]*(?:${continuation}[ \t]*)?${destination}(?:${spacing}${title})?[ \t]*\r?$`,
                 'gm',
               );
               const link = new RegExp(
-                String.raw`^\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\]\([ \t]*(?:${continuation}[ \t]*)?(?:${destination})?(?:${spacing}${title})?[ \t]*(?:${continuation}[ \t]*)?\)`,
-                'm',
+                String.raw`\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\]\([ \t]*(?:${continuation}[ \t]*)?(?:${destination})?(?:${spacing}${title})?[ \t]*(?:${continuation}[ \t]*)?\)`,
+                'y',
+              );
+              const referenceImage = new RegExp(
+                String.raw`\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\](?:\[(?<reference>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\])?`,
+                'y',
               );
               const destinationLength = (target, inline = false) => {
                 if (target.startsWith('<')) return target.length;
@@ -325,234 +332,258 @@ jobs:
                   continue;
                 if (destinationLength(reference.groups.destination) < 0) continue;
                 definitions.set(reference.index, reference.index + reference[0].length);
+                definitionLabels.set(reference.index, normalizeLabel(reference.groups.label));
               }
-              let referenceEnd = 0;
-              let linkStart = 0;
-              let linkEnd = 0;
-              let fence = '';
-              let fenceContentColumn = 0;
-              let fenceContainer = '';
-              let inComment = false;
-              let spanEnd = 0;
-              let htmlEnd = null;
-              let htmlTextVisible = false;
-              let htmlContentColumn = 0;
-              let htmlContainer = '';
-              const listContentColumns = [];
-              let listContainer = '';
-              const columnAfter = (prefix) => {
-                let column = 0;
-                for (const character of prefix)
-                  column += character === '\t' ? 4 - (column % 4) : 1;
-                return column;
-              };
-              let paragraph = false;
-              let paragraphStart = -1;
-              const headings = [];
-              let visible = body.replace(/^[^\n]*/gm, (line, offset) => {
-                if (!paragraph) paragraphStart = -1;
-                if (offset < referenceEnd) return line.replace(/[^\r\n]/g, ' ');
-                const content = line.replace(/^ {0,3}(?:> ?)+/, '');
-                const container = (/^ {0,3}(?:> ?)*/.exec(line)?.[0] ?? '').replace(/[^>]/g, '');
-                const indentation = columnAfter(/^[ \t]*/.exec(content)?.[0] ?? '');
-                const blank = line.trim().length === 0;
-                if (container !== listContainer) {
-                  listContentColumns.length = 0;
-                  listContainer = container;
-                }
-                while (!blank && indentation < (listContentColumns.at(-1) ?? 0))
-                  listContentColumns.pop();
-                if (fence && (container !== fenceContainer || (!blank && indentation < fenceContentColumn)))
-                  fence = '';
-                if (htmlEnd && (container !== htmlContainer || (!blank && indentation < htmlContentColumn)))
-                  htmlEnd = null;
-                let insideHtml = Boolean(htmlEnd);
-                if (fence) {
-                  paragraph = false;
-                  const closing = /^(`{3,}|~{3,})[ \t]*\r?$/.exec(content.replace(/^[ \t]*/, ''))?.[1] ?? '';
-                  if (indentation <= fenceContentColumn + 3 && closing[0] === fence[0] && closing.length >= fence.length)
+              let visible = '';
+              let unfinished = false;
+              for (let pass = 0; pass < 2; pass += 1) {
+                let referenceEnd = 0;
+                let linkStart = 0;
+                let linkEnd = 0;
+                let fence = '';
+                let fenceContentColumn = 0;
+                let fenceContainer = '';
+                let inComment = false;
+                let spanEnd = 0;
+                let htmlEnd = null;
+                let htmlTextVisible = false;
+                let htmlContentColumn = 0;
+                let htmlContainer = '';
+                const listContentColumns = [];
+                let listContainer = '';
+                const columnAfter = (prefix) => {
+                  let column = 0;
+                  for (const character of prefix)
+                    column += character === '\t' ? 4 - (column % 4) : 1;
+                  return column;
+                };
+                let paragraph = false;
+                let paragraphStart = -1;
+                const headings = [];
+                visible = body.replace(/^[^\n]*/gm, (line, offset) => {
+                  if (!paragraph) paragraphStart = -1;
+                  if (offset < referenceEnd) return line.replace(/[^\r\n]/g, ' ');
+                  const previousContainer = listContainer;
+                  const content = line.replace(/^ {0,3}(?:> ?)+/, '');
+                  const container = (/^ {0,3}(?:> ?)*/.exec(line)?.[0] ?? '').replace(/[^>]/g, '');
+                  const indentation = columnAfter(/^[ \t]*/.exec(content)?.[0] ?? '');
+                  const blank = line.trim().length === 0;
+                  if (container !== listContainer) {
+                    listContentColumns.length = 0;
+                    listContainer = container;
+                  }
+                  while (!blank && indentation < (listContentColumns.at(-1) ?? 0))
+                    listContentColumns.pop();
+                  if (fence && (container !== fenceContainer || (!blank && indentation < fenceContentColumn)))
                     fence = '';
-                  return line.replace(/[^\r\n]/g, ' ');
-                }
-                if (htmlEnd) {
-                  paragraph = false;
-                  if (htmlEnd.test(line)) htmlEnd = null;
-                  if (!htmlTextVisible) return line.replace(/[^\r\n]/g, ' ');
-                }
-                const contentColumn = listContentColumns.at(-1) ?? 0;
-                let htmlAllowed = indentation >= contentColumn && indentation <= contentColumn + 3;
-                let htmlLine = content;
-                const marker = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/.exec(content);
-                if (
-                  !insideHtml && !inComment && offset >= spanEnd && offset >= linkEnd &&
-                  htmlAllowed && marker &&
-                  (!paragraph || contentColumn > 0 ||
-                    (/^(?:[-*+]|0{0,8}1[.)])$/.test(marker[2]) && /^\S/.test(content.slice(marker[0].length))))
-                ) {
-                  const markerEnd = columnAfter(marker[1] + marker[2]);
-                  const gap = columnAfter(marker[0]) - markerEnd;
-                  listContentColumns.push(markerEnd + (gap > 4 ? 1 : gap));
-                  htmlLine = content.slice(marker[0].length);
-                  htmlAllowed = gap <= 4;
-                  paragraph = false;
-                  paragraphStart = -1;
-                }
-                htmlLine = htmlLine.replace(/^[ \t]*/, '');
-                const rawOpening = /^(`{3,}|~{3,})(.*)\r?$/.exec(htmlLine);
-                if (
-                  !insideHtml && !inComment && offset >= spanEnd && offset >= linkEnd &&
-                  htmlAllowed && rawOpening &&
-                  !(rawOpening[1][0] === '`' && rawOpening[2].includes('`'))
-                ) {
-                  fence = rawOpening[1];
-                  fenceContentColumn = listContentColumns.at(-1) ?? 0;
-                  fenceContainer = container;
-                  paragraph = false;
-                  return line.replace(/[^\r\n]/g, ' ');
-                }
-                if (!inComment && !insideHtml && offset >= spanEnd && offset >= linkEnd && htmlAllowed) {
-                  htmlTextVisible = false;
-                  if (/^<(?:pre|script|style|textarea)(?=[ \t>]|$)/i.test(htmlLine)) {
-                    htmlEnd = /<\/(?:pre|script|style|textarea)>/i;
-                  } else if (/^<\?/.test(htmlLine)) {
-                    htmlEnd = /\?>/;
-                  } else if (/^<![A-Za-z]/.test(htmlLine)) {
-                    htmlEnd = />/;
-                  } else if (/^<!\[CDATA\[/.test(htmlLine)) {
-                    htmlEnd = /\]\]>/;
-                  } else if (
-                    /^<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|\/>|$)/i.test(
-                      htmlLine,
-                    )
-                  ) {
-                    htmlEnd = /^[ \t]*\r?$/;
-                    htmlTextVisible = true;
-                  } else if (
-                    !paragraph &&
-                    /^(?:<(?!pre(?:[ \t/>]|$)|script(?:[ \t/>]|$)|style(?:[ \t/>]|$)|textarea(?:[ \t/>]|$))[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t]*=[ \t]*(?:[^"'=<>`\x00-\x20]+|'[^']*'|"[^"]*"))?)*[ \t]*\/?>|<\/[A-Za-z][A-Za-z0-9-]*[ \t]*>)[ \t]*\r?$/i.test(
-                      htmlLine,
-                    )
-                  ) {
-                    htmlEnd = /^[ \t]*\r?$/;
-                    htmlTextVisible = true;
+                  if (htmlEnd && (container !== htmlContainer || (!blank && indentation < htmlContentColumn)))
+                    htmlEnd = null;
+                  let insideHtml = Boolean(htmlEnd);
+                  if (fence) {
+                    paragraph = false;
+                    const closing = /^(`{3,}|~{3,})[ \t]*\r?$/.exec(content.replace(/^[ \t]*/, ''))?.[1] ?? '';
+                    if (indentation <= fenceContentColumn + 3 && closing[0] === fence[0] && closing.length >= fence.length)
+                      fence = '';
+                    return line.replace(/[^\r\n]/g, ' ');
                   }
                   if (htmlEnd) {
-                    htmlContentColumn = listContentColumns.at(-1) ?? 0;
-                    htmlContainer = container;
-                    insideHtml = true;
                     paragraph = false;
                     if (htmlEnd.test(line)) htmlEnd = null;
                     if (!htmlTextVisible) return line.replace(/[^\r\n]/g, ' ');
                   }
-                }
-                if (!insideHtml && !inComment && offset >= spanEnd && !paragraph && definitions.has(offset)) {
-                  referenceEnd = definitions.get(offset);
-                  return line.replace(/[^\r\n]/g, ' ');
-                }
-                let visible = line;
-                let hasInlineLink = offset < linkEnd;
-                let position = 0;
-                while (position < line.length) {
-                  if (offset + position >= linkStart && offset + position < linkEnd) {
-                    const next = Math.min(line.length, linkEnd - offset);
-                    visible = visible.slice(0, position) + ' '.repeat(next - position) + visible.slice(next);
-                    position = next;
-                    continue;
+                  const contentColumn = listContentColumns.at(-1) ?? 0;
+                  let htmlAllowed = indentation >= contentColumn && indentation <= contentColumn + 3;
+                  let htmlLine = content;
+                  const marker = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/.exec(content);
+                  if (
+                    !insideHtml && !inComment && offset >= spanEnd && offset >= linkEnd &&
+                    htmlAllowed && marker &&
+                    (!paragraph || contentColumn > 0 ||
+                      (/^(?:[-*+]|0{0,8}1[.)])$/.test(marker[2]) && /^\S/.test(content.slice(marker[0].length))))
+                  ) {
+                    const markerEnd = columnAfter(marker[1] + marker[2]);
+                    const gap = columnAfter(marker[0]) - markerEnd;
+                    listContentColumns.push(markerEnd + (gap > 4 ? 1 : gap));
+                    htmlLine = content.slice(marker[0].length);
+                    htmlAllowed = gap <= 4;
+                    paragraph = false;
+                    paragraphStart = -1;
                   }
-                  if (offset + position < spanEnd) {
-                    position = Math.min(line.length, spanEnd - offset);
-                    continue;
+                  htmlLine = htmlLine.replace(/^[ \t]*/, '');
+                  const rawOpening = /^(`{3,}|~{3,})(.*)\r?$/.exec(htmlLine);
+                  if (
+                    !insideHtml && !inComment && offset >= spanEnd && offset >= linkEnd &&
+                    htmlAllowed && rawOpening &&
+                    !(rawOpening[1][0] === '`' && rawOpening[2].includes('`'))
+                  ) {
+                    fence = rawOpening[1];
+                    fenceContentColumn = listContentColumns.at(-1) ?? 0;
+                    fenceContainer = container;
+                    paragraph = false;
+                    return line.replace(/[^\r\n]/g, ' ');
                   }
-                  if (!inComment) {
-                    if (!insideHtml && line[position] === '[') {
-                      let escapes = 0;
-                      for (let before = position - 1; before >= 0 && line[before] === '\\'; before -= 1)
-                        escapes += 1;
-                      const tail = body.slice(offset + position);
-                      let inline = link.exec(tail);
-                      if (escapes % 2 === 0 && inline?.index === 0) {
-                        const target = inline.groups.destination ?? '';
-                        const length = destinationLength(target, true);
-                        if (length >= 0 && length < target.length) {
-                          const start = inline[0].indexOf(target, inline.groups.text.length + 3);
-                          inline = link.exec(tail.slice(0, start + length + 1));
+                  if (!inComment && !insideHtml && offset >= spanEnd && offset >= linkEnd && htmlAllowed) {
+                    htmlTextVisible = false;
+                    if (/^<(?:pre|script|style|textarea)(?=[ \t>]|$)/i.test(htmlLine)) {
+                      htmlEnd = /<\/(?:pre|script|style|textarea)>/i;
+                    } else if (/^<\?/.test(htmlLine)) {
+                      htmlEnd = /\?>/;
+                    } else if (/^<![A-Za-z]/.test(htmlLine)) {
+                      htmlEnd = />/;
+                    } else if (/^<!\[CDATA\[/.test(htmlLine)) {
+                      htmlEnd = /\]\]>/;
+                    } else if (
+                      /^<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|\/>|$)/i.test(
+                        htmlLine,
+                      )
+                    ) {
+                      htmlEnd = /^[ \t]*\r?$/;
+                      htmlTextVisible = true;
+                    } else if (
+                      !paragraph &&
+                      /^(?:<(?!pre(?:[ \t/>]|$)|script(?:[ \t/>]|$)|style(?:[ \t/>]|$)|textarea(?:[ \t/>]|$))[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t]*=[ \t]*(?:[^"'=<>`\x00-\x20]+|'[^']*'|"[^"]*"))?)*[ \t]*\/?>|<\/[A-Za-z][A-Za-z0-9-]*[ \t]*>)[ \t]*\r?$/i.test(
+                        htmlLine,
+                      )
+                    ) {
+                      htmlEnd = /^[ \t]*\r?$/;
+                      htmlTextVisible = true;
+                    }
+                    if (htmlEnd) {
+                      htmlContentColumn = listContentColumns.at(-1) ?? 0;
+                      htmlContainer = container;
+                      insideHtml = true;
+                      paragraph = false;
+                      if (htmlEnd.test(line)) htmlEnd = null;
+                      if (!htmlTextVisible) return line.replace(/[^\r\n]/g, ' ');
+                    }
+                  }
+                  if (!insideHtml && !inComment && offset >= spanEnd && htmlAllowed && (!paragraph || (container && container !== previousContainer)) && definitions.has(offset)) {
+                    referenceEnd = definitions.get(offset);
+                    referenceLabels.add(definitionLabels.get(offset));
+                    return line.replace(/[^\r\n]/g, ' ');
+                  }
+                  let visible = line;
+                  let hasInlineLink = offset < linkEnd;
+                  let position = 0;
+                  while (position < line.length) {
+                    if (offset + position >= linkStart && offset + position < linkEnd) {
+                      const next = Math.min(line.length, linkEnd - offset);
+                      visible = visible.slice(0, position) + ' '.repeat(next - position) + visible.slice(next);
+                      position = next;
+                      continue;
+                    }
+                    if (offset + position < spanEnd) {
+                      position = Math.min(line.length, spanEnd - offset);
+                      continue;
+                    }
+                    if (!inComment) {
+                      if (!insideHtml && line[position] === '[') {
+                        let escapes = 0;
+                        for (let before = position - 1; before >= 0 && line[before] === '\\'; before -= 1)
+                          escapes += 1;
+                        const start = offset + position;
+                        link.lastIndex = start;
+                        let inline = escapes % 2 === 0 ? link.exec(body) : null;
+                        let imageEscapes = 0;
+                        for (let before = position - 2; before >= 0 && line[before] === '\\'; before -= 1)
+                          imageEscapes += 1;
+                        const image = line[position - 1] === '!' && imageEscapes % 2 === 0;
+                        if (inline !== null) {
+                          const target = inline.groups.destination ?? '';
+                          const length = destinationLength(target, true);
+                          if (length >= 0 && length < target.length) {
+                            const start = inline[0].indexOf(target, inline.groups.text.length + 3);
+                            const complete = inline[0].slice(0, start + length + 1);
+                            link.lastIndex = 0;
+                            inline = link.exec(complete);
+                          }
+                          if (
+                            length >= 0 &&
+                            inline !== null &&
+                            destinationLength(inline.groups.destination ?? '') >= 0
+                          ) {
+                            visible = visible.slice(0, position) + ' ' + visible.slice(position + 1);
+                            linkStart = image ? start : start + 1 + inline.groups.text.length;
+                            linkEnd = start + inline[0].length;
+                            hasInlineLink = true;
+                            if (image) continue;
+                          }
                         }
-                        if (
-                          length >= 0 &&
-                          inline?.index === 0 &&
-                          destinationLength(inline.groups.destination ?? '') >= 0
-                        ) {
-                          visible = visible.slice(0, position) + ' ' + visible.slice(position + 1);
-                          linkStart = offset + position + 1 + inline.groups.text.length;
-                          linkEnd = offset + position + inline[0].length;
-                          hasInlineLink = true;
+                        if (image && escapes % 2 === 0) {
+                          referenceImage.lastIndex = start;
+                          const reference = referenceImage.exec(body);
+                          const text = reference?.groups.reference || reference?.groups.text || '';
+                          if (reference && Buffer.byteLength(text.replace(/\r\n/g, '\n'), 'utf8') <= 1000 && referenceLabels.has(normalizeLabel(text))) {
+                            linkStart = start;
+                            linkEnd = referenceImage.lastIndex;
+                            hasInlineLink = true;
+                            continue;
+                          }
                         }
                       }
-                    }
-                    if (!insideHtml && line[position] === '`') {
-                      const tail = body.slice(offset + position);
-                      const span = /^(`+)(?!`)(?:(?!\r?\n[ \t]*\r?\n)[\s\S])*?(?<!`)\1(?!`)/.exec(tail)?.[0];
-                      if (span !== undefined) {
-                        spanEnd = offset + position + span.length;
-                        position = Math.min(line.length, spanEnd - offset);
+                      if (!insideHtml && line[position] === '`') {
+                        const tail = body.slice(offset + position);
+                        const span = /^(`+)(?!`)(?:(?!\r?\n[ \t]*\r?\n)[\s\S])*?(?<!`)\1(?!`)/.exec(tail)?.[0];
+                        if (span !== undefined) {
+                          spanEnd = offset + position + span.length;
+                          position = Math.min(line.length, spanEnd - offset);
+                          continue;
+                        }
+                        position += /^`+/.exec(tail)[0].length;
                         continue;
                       }
-                      position += /^`+/.exec(tail)[0].length;
-                      continue;
+                      if (!line.startsWith('<!--', position)) {
+                        position += 1;
+                        continue;
+                      }
+                      inComment = true;
                     }
-                    if (!line.startsWith('<!--', position)) {
-                      position += 1;
-                      continue;
-                    }
-                    inComment = true;
+                    const end = line.indexOf('-->', position);
+                    const next = end < 0 ? line.length : end + 3;
+                    visible =
+                      visible.slice(0, position) +
+                      line.slice(position, next).replace(/[^\r\n]/g, ' ') +
+                      visible.slice(next);
+                    position = next;
+                    inComment = end < 0;
                   }
-                  const end = line.indexOf('-->', position);
-                  const next = end < 0 ? line.length : end + 3;
-                  visible =
-                    visible.slice(0, position) +
-                    line.slice(position, next).replace(/[^\r\n]/g, ' ') +
-                    visible.slice(next);
-                  position = next;
-                  inComment = end < 0;
+                  const opening = /^ {0,3}(`{3,}|~{3,})(.*)\r?$/.exec(visible);
+                  if (!insideHtml && opening && !(opening[1][0] === '`' && opening[2].includes('`'))) {
+                    fence = opening[1];
+                    fenceContentColumn = listContentColumns.at(-1) ?? 0;
+                    fenceContainer = container;
+                    paragraph = false;
+                    return line.replace(/[^\r\n]/g, ' ');
+                  }
+                  if (insideHtml && /^ {0,3}#{1,6}(?:[ \t]|$)/.test(visible))
+                    visible = line.replace(/[^\r\n]/g, ' ');
+                  if (
+                    setextHeadings && paragraphStart >= 0 && !insideHtml && !inComment &&
+                    offset >= spanEnd && offset >= linkEnd && /^ {0,3}(?:=+|-+)[ \t]*\r?$/.test(line)
+                  ) headings.push(paragraphStart);
+                  const wasParagraph = paragraph;
+                  const equalsUnderline = wasParagraph && /^ {0,3}=+[ \t]*\r?$/.test(line);
+                  paragraph =
+                    !insideHtml &&
+                    !equalsUnderline &&
+                    (hasInlineLink || visible.trim().length > 0) &&
+                    !/^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})\r?$)/.test(
+                      visible,
+                    );
+                  if (
+                    !wasParagraph && paragraph && /^ {0,3}[^ \t\r\n]/.test(line) &&
+                    !/^ {0,3}(?:>|[-+*](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$))/.test(line)
+                  ) paragraphStart = offset;
+                  return visible;
+                });
+                for (const start of headings) {
+                  const newline = visible.indexOf('\n', start);
+                  const end = newline < 0 ? visible.length : newline;
+                  visible = visible.slice(0, start) + '#' + ' '.repeat(end - start - 1) + visible.slice(end);
                 }
-                const opening = /^ {0,3}(`{3,}|~{3,})(.*)\r?$/.exec(visible);
-                if (!insideHtml && opening && !(opening[1][0] === '`' && opening[2].includes('`'))) {
-                  fence = opening[1];
-                  fenceContentColumn = listContentColumns.at(-1) ?? 0;
-                  fenceContainer = container;
-                  paragraph = false;
-                  return line.replace(/[^\r\n]/g, ' ');
-                }
-                if (insideHtml && /^ {0,3}#{1,6}(?:[ \t]|$)/.test(visible))
-                  visible = line.replace(/[^\r\n]/g, ' ');
-                if (
-                  setextHeadings && paragraphStart >= 0 && !insideHtml && !inComment &&
-                  offset >= spanEnd && offset >= linkEnd && /^ {0,3}(?:=+|-+)[ \t]*\r?$/.test(line)
-                ) headings.push(paragraphStart);
-                const wasParagraph = paragraph;
-                const equalsUnderline = wasParagraph && /^ {0,3}=+[ \t]*\r?$/.test(line);
-                paragraph =
-                  !insideHtml &&
-                  !equalsUnderline &&
-                  (hasInlineLink || visible.trim().length > 0) &&
-                  !/^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})\r?$)/.test(
-                    visible,
-                  );
-                if (
-                  !wasParagraph && paragraph && /^ {0,3}[^ \t\r\n]/.test(line) &&
-                  !/^ {0,3}(?:>|[-+*](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$))/.test(line)
-                ) paragraphStart = offset;
-                return visible;
-              });
-              for (const start of headings) {
-                const newline = visible.indexOf('\n', start);
-                const end = newline < 0 ? visible.length : newline;
-                visible = visible.slice(0, start) + '#' + ' '.repeat(end - start - 1) + visible.slice(end);
+                unfinished = Boolean(fence) || inComment || Boolean(htmlEnd && !htmlEnd.test(''));
               }
-              return {
-                visible,
-                unfinished: Boolean(fence) || inComment || Boolean(htmlEnd && !htmlEnd.test('')),
-              };
+              return { visible, unfinished };
             };
             const parsed = maskExamples(existing, true);
             const match = section.exec(parsed.visible);
