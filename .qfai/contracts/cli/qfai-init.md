@@ -133,6 +133,87 @@ Roll back in two moves, by status:
 
 Then read `git diff` separately for the in-place edits the flow makes outside `.qfai/assistant/` (the managed `.gitignore` block, the integration wrappers). The `W-USER-EDIT-PRESERVED` notes printed by the run name the destinations that were left alone.
 
+## Constitution and safety-floor compatibility
+
+The constitution is installed or refreshed only when the complete regular file
+`.agents/rules/minimal-implementation.md` matches the shipped master. Only
+line-ending differences are ignored. Other edits remain protected and require
+a manual merge of the rule and constitution. A matching substring is not
+authorization: Markdown outside § 2 can make the floor non-operative.
+
+A missing, unreadable or non-regular master, including a leaf symlink or linked
+`.agents` / `.agents/rules` parent, cannot
+authorize the upgrade. Init keeps the previous constitution and its receipt,
+and reports that the shipped master could not be verified. A first init in that
+state does not install the constitution or record it as written.
+For an absent constitution, preserve master edits by manually installing and
+reconciling the constitution. Automatic installation requires backing up
+customizations and restoring the exact shipped master before rerunning init.
+An existing constitution requires a manual merge of both files; the note does
+not request a force rewrite of unrelated adopter assets.
+
+The governed writer rechecks the master after the other template copies and
+the destination hash. The generic template copier excludes both governed
+layers; every missing governed asset uses the exclusive staging writer.
+The check is not an atomic filesystem transaction with the write.
+
+A dry run includes the constitution when the same plan would create or update
+its compatible rule master under unlinked parents. A planned write through a
+linked parent cannot authorize the preview. It writes neither file.
+
+Creating missing governed assets, including publication after a forced occupant
+repair, requires hard-link support and permission.
+An uninspectable force-repair candidate stops the run with its original cause
+before copies, migration or repair.
+Init first verifies the complete readable shipped governed set. Failure stops
+before any copy or migration and asks the user to restore or reinstall QFAI.
+Before any asset copy or migration, init probes the nearest existing directory
+for each eligible absent governed path or force-repaired unreadable occupant.
+It removes only its own probe files.
+The creation handle pins the probe's device and inode. Before each removal,
+init rechecks the no-follow identity. A changed or unverifiable occupant is
+preserved and aborts initialization with inspection guidance, not a deletion
+instruction. Metadata verification and removal are not an atomic transaction.
+If removal fails, init attempts the remaining owned cleanup, reports every
+retained probe path and aborts before copying or migrating package assets.
+Restore access and remove only the reported probe files before retrying.
+A failed probe creation or link check aborts with the affected directory,
+write-access and hard-link recovery guidance, and preserves existing assets;
+it never falls back to a partial final-path copy or an overwriting rename.
+Existing readable regular governed files and a constitution deferred by an
+edited safety master need no creation probe. Dry runs perform no probe or writes.
+The check cannot prevent a filesystem or permission change later in the run.
+
+If cleanup fails after exclusive publication, init keeps the complete published
+file and its receipt. It reports the staging path and asks the user to restore
+access, remove only that staging file and rerun init. The published file is not
+removed or rewritten to clean up its hard-link alias.
+If exclusive publication loses a creation race and staging cleanup fails,
+init reports that retained staging path before propagating the original write
+error. Accepting a concurrent destination never hides this cleanup warning.
+
+The exclusive creation handle also pins the publication stage's device and
+inode. It writes complete bytes and applies the shipped permission bits through
+that handle, independently of the creator's umask. The writer verifies the
+stage's no-follow identity before publication and the destination's identity
+immediately after linking. A changed destination follows the protected
+concurrent-content path, not a successful-copy classification. Before recording
+a successful shipped write, init also verifies the destination's canonical bytes.
+Neither check authorizes overwriting concurrent content. The writer closes
+the handle before unlinking the staging name and rechecks ownership immediately
+before cleanup on either outcome. A close failure retains the stage for manual
+cleanup after the handle is closed.
+A changed or unverifiable stage remains untouched and is reported with
+ownership-inspection guidance, never an instruction to delete its replacement.
+When inspection fails, that warning retains the original error reason.
+Identity verification and pathname removal are not an atomic transaction.
+Metadata and close failures remain available. Every created handle has a close
+attempt, and a close failure propagates rather than authorizing unlink.
+Stage-creation failures retain their cause and stop initialization. An occupied
+stage is not evidence that another process created the final governed file.
+Existing canonical governed assets are reported as skipped, including their
+paths under `--verbose`. Their bytes and provenance classification are unchanged.
+
 ## Shipped GitHub Actions workflows
 
 `qfai init` writes the shipped workflow set into `<root>/.github/workflows/`.
