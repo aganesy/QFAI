@@ -194,6 +194,10 @@ A finding outside the reviewing stage's remit is recorded and deferred, never bl
 Article VII excess in the reviewing stage's own artifacts is in scope;
 quality of downstream implementation code is deferred at upstream stages.
 
+Apply this route only where the installed Article VII governs the artifact.
+A retained constitution does not gain newer authority from refreshed cards.
+Report an unsupported Article VII route as advisory and follow the installed constitution.
+
 **Fallback for any stage not listed.** A stage that references this baseline without a row above has, as its remit, the artifacts that stage itself produces; everything upstream of them is out of scope, recorded and deferred. Add the row when a new stage starts routing blocking reviewers, so the in/out split is not re-derived per run.
 
 ### Finding provenance (MUST)

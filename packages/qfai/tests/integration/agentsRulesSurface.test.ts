@@ -371,6 +371,16 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       }
     });
 
+    it.each([
+      "packages/qfai/assets/init/.qfai/assistant/constitution/constitution.md",
+      ".qfai/assistant/constitution/constitution.md",
+    ])("%s names this repository first among the reuse rungs", async (rel) => {
+      const text = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
+      expect(text).toContain(
+        "find what already covers the change, in the order the reuse rungs of `.agents/rules/minimal-implementation.md` give: this repository, including a duplicate or overlapping implementation, then the standard library, the platform, and the dependencies already installed",
+      );
+    });
+
     // The two halves of the marker are one obligation. A ceiling with no
     // lifting condition reads as an oversight, which is the state the marker
     // exists to keep a deliberate shortcut out of — so a master that named only

@@ -1177,6 +1177,8 @@ agents:
         `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
         and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
         `.agents/rules/minimal-implementation.md` § 2.
+        Use this route only where the installed Article VII governs the artifact.
+        Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 
       ## Inputs you must read
 
@@ -1291,6 +1293,8 @@ agents:
         `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
         and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
         `.agents/rules/minimal-implementation.md` § 2.
+        Use this route only where the installed Article VII governs the artifact.
+        Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 
       ## Inputs you must read
 
@@ -1367,6 +1371,8 @@ agents:
         `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
         and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
         `.agents/rules/minimal-implementation.md` § 2.
+        Use this route only where the installed Article VII governs the artifact.
+        Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: ask whether a catalogue covered the need, and whether a language or framework standard was passed over for a hand-rolled one.
 
       ## Inputs you must read
@@ -1449,6 +1455,8 @@ agents:
         `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
         and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
         `.agents/rules/minimal-implementation.md` § 2.
+        Use this route only where the installed Article VII governs the artifact.
+        Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a component written where one could be installed, a standard passed over, and an authored region with no recorded reason.
 
       ## Inputs you must read
@@ -1573,6 +1581,8 @@ agents:
         `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
         and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
         `.agents/rules/minimal-implementation.md` § 2.
+        Use this route only where the installed Article VII governs the artifact.
+        Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
       - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 
@@ -1666,6 +1676,8 @@ agents:
         `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
         and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
         `.agents/rules/minimal-implementation.md` § 2.
+        Use this route only where the installed Article VII governs the artifact.
+        Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 
       ## Ownership boundaries
 

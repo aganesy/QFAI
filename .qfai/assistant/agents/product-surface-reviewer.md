@@ -31,6 +31,8 @@ tools: [Read, Glob, Grep, Bash]
   `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
   and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
   `.agents/rules/minimal-implementation.md` § 2.
+  Use this route only where the installed Article VII governs the artifact.
+  Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
 - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 
