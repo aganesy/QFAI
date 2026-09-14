@@ -252,10 +252,44 @@ export function addReviewPointer(existing: string, template: string | null): str
   const title = String.raw`(?:"(?:[^"\\\r\n]|\\.|${continuation})*"|'(?:[^'\\\r\n]|\\.|${continuation})*'|\((?:[^()\\\r\n]|\\.|${continuation})*\))`;
   const spacing = String.raw`(?:[ \t]+(?:${continuation}[ \t]*)?|[ \t]*${continuation}[ \t]*)`;
   const paragraphInterrupt = new RegExp(String.raw`^${interrupt}`);
-  const htmlSpace = String.raw`(?:[ \t]|${continuation})`;
-  const htmlTag = new RegExp(
-    String.raw`^(?:<[A-Za-z][A-Za-z0-9-]*(?:${htmlSpace}+[A-Za-z_:][A-Za-z0-9:._-]*(?:${htmlSpace}*=${htmlSpace}*(?:[^"'=<>\x60\x00-\x20]+|'(?:[^'\r\n]|${continuation})*'|"(?:[^"\r\n]|${continuation})*"))?)*${htmlSpace}*/?>|</[A-Za-z][A-Za-z0-9-]*${htmlSpace}*>)`,
+  const htmlContinuation = continuation.replace("[cC][dD][aA][tT][aA]", "CDATA");
+  const htmlSpace = new RegExp(String.raw`(?:[ \t]|${htmlContinuation})+`, "y");
+  const htmlName = /<\/?[A-Za-z][A-Za-z0-9-]*/y;
+  const htmlAttribute = /[A-Za-z_:][A-Za-z0-9:._-]*/y;
+  const htmlValue = new RegExp(
+    String.raw`(?:[^"'=<>\x60\x00-\x20]+|'(?:[^'\r\n]|${htmlContinuation})*'|"(?:[^"\r\n]|${htmlContinuation})*")`,
+    "y",
   );
+  const htmlSpaceEnd = (start: number): number => {
+    htmlSpace.lastIndex = start;
+    return htmlSpace.exec(existing) === null ? start : htmlSpace.lastIndex;
+  };
+  const htmlTagEnd = (start: number): number => {
+    htmlName.lastIndex = start;
+    if (htmlName.exec(existing) === null) return start;
+    let cursor = htmlName.lastIndex;
+    if (existing[start + 1] === "/") {
+      cursor = htmlSpaceEnd(cursor);
+      return existing[cursor] === ">" ? cursor + 1 : start;
+    }
+    for (;;) {
+      if (existing[cursor] === ">") return cursor + 1;
+      if (existing.startsWith("/>", cursor)) return cursor + 2;
+      const spaced = htmlSpaceEnd(cursor);
+      if (spaced === cursor) return start;
+      cursor = spaced;
+      if (existing[cursor] === ">") return cursor + 1;
+      if (existing.startsWith("/>", cursor)) return cursor + 2;
+      htmlAttribute.lastIndex = cursor;
+      if (htmlAttribute.exec(existing) === null) return start;
+      cursor = htmlAttribute.lastIndex;
+      const equals = htmlSpaceEnd(cursor);
+      if (existing[equals] !== "=") continue;
+      htmlValue.lastIndex = htmlSpaceEnd(equals + 1);
+      if (htmlValue.exec(existing) === null) return start;
+      cursor = htmlValue.lastIndex;
+    }
+  };
   const link = new RegExp(
     String.raw`^\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\]\([ \t]*(?:${continuation}[ \t]*)?(?:${destination})?(?:${spacing}${title})?[ \t]*(?:${continuation}[ \t]*)?\)`,
     "m",
@@ -455,12 +489,12 @@ export function addReviewPointer(existing: string, template: string | null): str
         index += 4;
         continue;
       }
-      if (raw[index] === "<") {
+      if (raw[index] === "<" && !/^\uFEFF? {0,3}#{1,6}(?:[ \t]|\r?$)/.test(openingLine)) {
         let escapes = 0;
         for (let before = index - 1; before >= 0 && raw[before] === "\\"; before -= 1) escapes += 1;
-        const tag = htmlTag.exec(existing.slice(offset + index))?.[0];
-        if (escapes % 2 === 0 && tag?.includes("\n")) {
-          tagEnd = offset + index + tag.length;
+        const end = escapes % 2 === 0 ? htmlTagEnd(offset + index) : offset + index;
+        if (end > offset + raw.length) {
+          tagEnd = end;
           visible += "\uFFFC";
           continue;
         }

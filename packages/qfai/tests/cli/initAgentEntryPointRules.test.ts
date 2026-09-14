@@ -707,6 +707,53 @@ describe("a hand-wired file this run cannot extend is named", () => {
 });
 
 describe("optional review directive detection", () => {
+  it.each(["\n", "\r\n"])(
+    "adds guidance outside lowercase CDATA-like attribute text with %j",
+    (end) => {
+      const existing = `\uFEFF<span title="${end}<![cdata[${end}${REVIEW_POINTER}${end}">Example</span>${end}`;
+      const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+      expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+    },
+  );
+
+  it.each(["\n", "\r\n"])("retains live guidance after a tag-like ATX heading with %j", (end) => {
+    const existing = `\uFEFF# <span title="${end}${REVIEW_POINTER}${end}">Example</span>${end}`;
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+  });
+
+  it.each(["\n", "\r\n"])("keeps reference-definition continuations quoted with %j", (end) => {
+    const existing = `> [example]: /url${end}${REVIEW_POINTER}${end}`;
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+      `${REVIEW_POINTER}${end}${end}${existing}`,
+    );
+    const live = `> [example]: /url${end}${end}${REVIEW_POINTER}${end}`;
+    expect(addReviewPointer(live, `${REVIEW_POINTER}\n`)).toBe(live);
+  });
+
+  it("does not copy the remaining tail for every malformed multiline tag", () => {
+    const existing = `${'<span a="\n'.repeat(6400)}\n${REVIEW_POINTER}\n`;
+    const originalSlice = String.prototype.slice;
+    let copiedTail = 0;
+    const spy = vi.spyOn(String.prototype, "slice").mockImplementation(function (
+      this: string,
+      start?: number,
+      end?: number,
+    ) {
+      const result = originalSlice.call(this, start, end);
+      if (this === existing) copiedTail += result.length;
+      return result;
+    });
+    let updated: string;
+    try {
+      updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(updated).toBe(existing);
+    expect(copiedTail).toBeLessThanOrEqual(existing.length * 4);
+  });
+
   it.each(
     (
       [
@@ -918,6 +965,8 @@ describe("optional review directive detection", () => {
           `> > Quoted example\n${REVIEW_POINTER}`,
           `<span\ntitle="\n${REVIEW_POINTER}\n">Example</span>`,
           `<span\ntitle='\n${REVIEW_POINTER}\n'>Example</span>`,
+          `<span title="\n<![cdata[\n${REVIEW_POINTER}\n">Example</span>`,
+          `> [example]: /url\n${REVIEW_POINTER}`,
         ]) {
           const originals = templates.map(({ name, text, mode }) => ({
             name,
@@ -935,6 +984,43 @@ describe("optional review directive detection", () => {
             expect(await readEntryPoint(root, name)).toBe(
               `\uFEFF${REVIEW_POINTER}\r\n\r\n${text.slice(1)}`,
             );
+            expect((await stat(path.join(root, name))).mode).toBe(mode);
+          }
+        }
+      });
+    },
+  );
+
+  it.each([false, true])(
+    "keeps live block-boundary directives during init with force=%s",
+    async (force) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const templates = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+            name,
+            text: await readEntryPoint(root, name),
+            mode: (await stat(path.join(root, name))).mode,
+          })),
+        );
+        for (const fragment of [
+          `# <span title="\n${REVIEW_POINTER}\n">Example</span>`,
+          `> [example]: /url\n\n${REVIEW_POINTER}`,
+        ]) {
+          const originals = templates.map(({ name, text, mode }) => ({
+            name,
+            mode,
+            text: `\uFEFF${text.replace(REVIEW_POINTER, fragment)}${PROJECT_TEXT}`.replace(
+              /\n/g,
+              "\r\n",
+            ),
+          }));
+          for (const { name, text } of originals) {
+            await writeFile(path.join(root, name), text, "utf-8");
+          }
+          await runInit({ dir: root, force, dryRun: false, yes: true });
+          for (const { name, text, mode } of originals) {
+            expect(await readEntryPoint(root, name)).toBe(text);
             expect((await stat(path.join(root, name))).mode).toBe(mode);
           }
         }
