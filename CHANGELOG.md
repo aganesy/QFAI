@@ -9,15 +9,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Record observed failures on the test cases that exercise them, preserving
   scenario types and reusing matching behavior/boundary rows (#1801).
 
-- **A failure observed in use has one home: a test-case row** (#1801). An
-  observation is one of the things that can name a failure the code has to
-  handle, and nothing said where it was written down. The coverage depth
-  checklist scores test-case rows, so a failure recorded anywhere else was one
-  it could not see. The `06_Test-Cases.md` template now says such a failure gets
-  a `TC-*` row of its own, of `Type` `error`, whose `AC-Refs` or `EX-Ref`
-  names the behavior that failed and whose `Notes` say where it was seen; the
-  `qfai-sdd` skill sends the author there.
-
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
