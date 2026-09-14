@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Reviewer cards file excess as a blocking code-quality defect** (#1798).
+  All six reviewer roles trace excess to Article VII, require a concrete cut
+  and replacement, and refuse cuts that remove or weaken a referenced
+  safety-floor obligation. The route uses installed Article VII authority;
+  refreshed cards cannot override a retained older constitution.
+
 - **Article VII makes cutting the governing doctrine** (#1794). The least
   that satisfies a requirement is the right amount; additional scope or code
   needs justification. The article ranks above other articles and conflicting
@@ -72,6 +78,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Generated TypeScript review guidance flags dropped promises and preserves
   propagation rather than requiring catches for unnamed failures. The repository
   copy matches the generated block (#1806).
+
+- Completion and implementation review stop conditions now include demonstrated
+  regressions against named constitution or catalog rules (#1799). New upstream
+  product obligations remain advisory.
 
 - Repository async guidance requires awaited or returned promises and points to
   the shared implementation rule for consuming callers, kept failures and
