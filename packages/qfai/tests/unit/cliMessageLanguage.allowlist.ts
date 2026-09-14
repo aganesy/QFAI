@@ -329,8 +329,6 @@ export const SRC_JAPANESE_ALLOWLIST: Readonly<Record<string, readonly string[]>>
     "に少なくとも 件の （または ）を追加してください。",
     "の が空、または未定義です。",
     "セクションを作成し、 と の対応行を追加してください。",
-    "セルが同一ファイルの他 平均の 倍以上です",
-    "つの独立して反証可能なルールです。 セルの半分を削っても残りが完全なルールなら つの に分割してください。",
   ],
   "core/validators/discussMermaid.ts": [
     "ディレクトリ命名は です。新規成果物は を使用してください。",
