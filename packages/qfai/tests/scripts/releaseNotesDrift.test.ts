@@ -307,6 +307,70 @@ describe("the run", () => {
 });
 
 describe("resuming a release pull-request description", () => {
+  it.each(
+    (
+      [
+        ["instruction", "<?aaaa", "?>"],
+        ["CDATA", "<![CDATA[aaaa", "]]>"],
+        ["declaration", "<!DOCTYPE aaaa ", ">"],
+      ] as const
+    ).flatMap(([name, opener, closer]) =>
+      ["absent", "blank", "table"].map((boundary) => [name, opener, closer, boundary] as const),
+    ),
+  )(
+    "bounds unmatched HTML label scans for %s / %s / %s / %s",
+    async (_name, opener, closer, boundary) => {
+      const workflow = await readFile(
+        path.join(REPO_ROOT, ".github/workflows/prepare-release.yml"),
+        "utf-8",
+      );
+      const script = workflow.match(
+        /^\s*node - .* <<'REPAIR_BODY'\r?\n([\s\S]*?)^\s*REPAIR_BODY[ \t]*$/m,
+      )?.[1];
+      if (script === undefined) throw new Error("Release body repair script is absent");
+      const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-release-html-scans-"));
+      tempDirs.push(dir);
+      const existingPath = path.join(dir, "existing.md");
+      const bodyPath = path.join(dir, "generated.md");
+      const instrumented = [
+        "const originalLabelExec = RegExp.prototype.exec;",
+        "let labelHtmlAttempts = 0;",
+        "RegExp.prototype.exec = function (input) {",
+        "  if (this.sticky && this.source.includes('\\\\?>')) labelHtmlAttempts += 1;",
+        "  return originalLabelExec.call(this, input);",
+        "};",
+        script,
+        "process.stdout.write(JSON.stringify({ attempts: labelHtmlAttempts }));",
+      ].join("\n");
+      for (const end of ["\n", "\r\n"]) {
+        const suffix =
+          boundary === "absent"
+            ? ""
+            : boundary === "blank"
+              ? `${end}prefix ${opener}closed${closer}${end}`
+              : `head | detail${end}--- | ---${end}prefix ${opener}closed${closer}${end}`;
+        const existing = `## What this change made unnecessary${end}${end}\uFEFFprefix ${opener.repeat(256)}${end}${suffix}Nothing removed.${end}${end}## Adoption bar${end}${end}Keep all review protections.${end}`;
+        await writeFile(existingPath, existing, "utf-8");
+        await writeFile(
+          bodyPath,
+          "## What this change made unnecessary\n\nSuperseded version.\n",
+          "utf-8",
+        );
+        const result = spawnSync(process.execPath, ["-", existingPath, bodyPath], {
+          input: instrumented,
+          encoding: "utf-8",
+        });
+        if (result.error !== undefined) throw result.error;
+        expect(result.status, result.stderr).toBe(0);
+        expect(await readFile(bodyPath, "utf-8")).toBe(existing);
+        const measurement = JSON.parse(result.stdout) as { attempts: number };
+        expect(measurement.attempts).toBeGreaterThan(0);
+        expect(measurement.attempts).toBeLessThanOrEqual(4);
+        expect(measurement.attempts).toBe(boundary === "absent" ? 2 : 4);
+      }
+    },
+  );
+
   it.each([
     [
       "balanced image interrupted by table",

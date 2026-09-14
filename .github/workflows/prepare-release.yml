@@ -362,6 +362,17 @@ jobs:
                 for (let before = start - 1; before >= 0 && body[before] === '\\'; before -= 1) slashes += 1;
                 return slashes % 2 !== 0;
               };
+              const labelHtmlPrefix = /<(?:(\?)|(!\[CDATA\[)|(![A-Z]+(?=[ \t\r\n])))/y;
+              const failedLabelHtmlEnds = [0, 0, 0];
+              const labelParagraphEnd = (start) => {
+                let newline = body.indexOf('\n', start);
+                while (newline !== -1) {
+                  labelContinuation.lastIndex = newline;
+                  if (labelContinuation.exec(body) === null || crossesTable(newline, newline + 2)) return newline;
+                  newline = body.indexOf('\n', newline + 1);
+                }
+                return body.length;
+              };
               for (let labelIndex = 0; labelIndex < body.length; labelIndex += 1) {
                 const character = body[labelIndex];
                 if (character === '\\' && escapable.test(body[labelIndex + 1] ?? '')) { labelIndex += 1; continue; }
@@ -373,9 +384,15 @@ jobs:
                   if (span !== null && !crossesTable(labelIndex, labelIndex + span[0].length)) { labelIndex += span[0].length - 1; continue; }
                 }
                 if (character === '<') {
-                  labelHtml.lastIndex = labelIndex;
-                  const html = labelHtml.exec(body);
-                  if (html !== null && !crossesTable(labelIndex, labelIndex + html[0].length)) { labelIndex += html[0].length - 1; continue; }
+                  labelHtmlPrefix.lastIndex = labelIndex;
+                  const prefix = labelHtmlPrefix.exec(body);
+                  const family = prefix?.[1] ? 0 : prefix?.[2] ? 1 : prefix?.[3] ? 2 : -1;
+                  if (family < 0 || labelIndex >= failedLabelHtmlEnds[family]) {
+                    labelHtml.lastIndex = labelIndex;
+                    const html = labelHtml.exec(body);
+                    if (html !== null && !crossesTable(labelIndex, labelIndex + html[0].length)) { labelIndex += html[0].length - 1; continue; }
+                    if (family >= 0) failedLabelHtmlEnds[family] = labelParagraphEnd(labelIndex);
+                  }
                 }
                 if (character === '[') labelStack.push(labelIndex);
                 if (character === ']' && labelStack.length > 0) imageLabelEnds.set(labelStack.pop(), labelIndex);

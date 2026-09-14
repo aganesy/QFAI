@@ -805,8 +805,80 @@ describe("optional review directive detection", () => {
     }
   });
 
+  it.each(
+    (
+      [
+        ["instruction", "<?aaaa", "?>"],
+        ["CDATA", "<![CDATA[aaaa", "]]>"],
+        ["declaration", "<!DOCTYPE aaaa ", ">"],
+      ] as const
+    ).flatMap(([name, opener, closer]) =>
+      ["absent", "blank", "table"].map((boundary) => [name, opener, closer, boundary] as const),
+    ),
+  )(
+    "bounds unmatched HTML label scans for %s / %s / %s / %s",
+    (_name, opener, closer, boundary) => {
+      for (const end of ["\n", "\r\n"]) {
+        const suffix =
+          boundary === "absent"
+            ? ""
+            : boundary === "blank"
+              ? `${end}prefix ${opener}closed${closer}${end}`
+              : `head | detail${end}--- | ---${end}prefix ${opener}closed${closer}${end}`;
+        const existing = `\uFEFFprefix ${opener.repeat(256)}${end}${suffix}${REVIEW_POINTER}${end}`;
+        const originalExec = RegExp.prototype.exec;
+        let attempts = 0;
+        let updated: string;
+        const spy = vi.spyOn(RegExp.prototype, "exec").mockImplementation(function (
+          this: RegExp,
+          input: string,
+        ) {
+          if (this.sticky && this.source.includes("\\?>")) attempts += 1;
+          return originalExec.call(this, input);
+        });
+        try {
+          updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+        } finally {
+          spy.mockRestore();
+        }
+        expect(updated).toBe(existing);
+        expect(attempts).toBeGreaterThan(0);
+        expect(attempts).toBeLessThanOrEqual(2);
+        expect(attempts).toBe(boundary === "absent" ? 1 : 2);
+      }
+    },
+  );
+
   it("does not rescan table sets for inline candidates", () => {
     const existing = `${"head | detail\n--- | ---\n\n".repeat(128)}${"[caption](/url)\n".repeat(128)}\n${REVIEW_POINTER}\n`;
+    const tableText = "head | detail\n--- | ---\n\n";
+    const boundaries = Array.from(
+      { length: 128 },
+      (_, index) => index * tableText.length + "head | detail\n".length,
+    );
+    const originalPush = Array.prototype.push;
+    let observedTables = 0;
+    let boundaryReads = 0;
+    Array.prototype.push = function (this: unknown[], ...values: unknown[]): number {
+      const length = originalPush.apply(this, values);
+      if (length !== boundaries.length || values.length !== 1 || values[0] !== boundaries.at(-1))
+        return length;
+      for (let index = 0; index < boundaries.length; index += 1)
+        if (this[index] !== boundaries[index]) return length;
+      observedTables += 1;
+      for (let index = 0; index < boundaries.length; index += 1) {
+        const value = this[index];
+        Object.defineProperty(this, index, {
+          configurable: true,
+          enumerable: true,
+          get: () => {
+            boundaryReads += 1;
+            return value;
+          },
+        });
+      }
+      return length;
+    };
     const spy = vi.spyOn(Set.prototype, Symbol.iterator);
     let calls: number;
     let updated: string;
@@ -814,10 +886,14 @@ describe("optional review directive detection", () => {
       updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
       calls = spy.mock.calls.length;
     } finally {
+      Array.prototype.push = originalPush;
       spy.mockRestore();
     }
     expect(updated).toBe(existing);
     expect(calls).toBe(0);
+    expect(observedTables).toBe(1);
+    expect(boundaryReads).toBeGreaterThan(0);
+    expect(boundaryReads).toBeLessThanOrEqual((128 * 8 + 8) * (Math.ceil(Math.log2(128)) + 1));
   });
 
   it.each([
@@ -1183,6 +1259,48 @@ describe("optional review directive detection", () => {
           `Paragraph\n2. - ~~~\n     ${REVIEW_POINTER}\n     ~~~`,
           `![prefix [nested]\n${REVIEW_POINTER}\nfoo | bar\n--- | ---\n](/image.png)`,
         ]) {
+          for (const end of ["\n", "\r\n"]) {
+            const originals = templates.map(({ name, text, mode }) => ({
+              name,
+              mode,
+              text: `\uFEFF${text.replace(REVIEW_POINTER, source)}${PROJECT_TEXT}`.replace(
+                /\n/g,
+                end,
+              ),
+            }));
+            for (const { name, text } of originals)
+              await writeFile(path.join(root, name), text, "utf-8");
+            for (let run = 0; run < 2; run += 1) {
+              await runInit({ dir: root, force, dryRun: false, yes: true });
+              for (const { name, text, mode } of originals) {
+                expect(await readEntryPoint(root, name)).toBe(text);
+                expect((await stat(path.join(root, name))).mode).toBe(mode);
+              }
+            }
+          }
+        }
+      });
+    },
+  );
+
+  it.each([false, true])(
+    "keeps failed HTML scan repairs byte-preserving with force=%s",
+    async (force) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const templates = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+            name,
+            text: await readEntryPoint(root, name),
+            mode: (await stat(path.join(root, name))).mode,
+          })),
+        );
+        for (const [opener, closer] of [
+          ["<?aaaa", "?>"],
+          ["<![CDATA[aaaa", "]]>"],
+          ["<!DOCTYPE aaaa ", ">"],
+        ] as const) {
+          const source = `prefix ${opener.repeat(256)}\n\nprefix ${opener.repeat(256)}\nhead | detail\n--- | ---\nprefix ${opener}closed${closer}\n${REVIEW_POINTER}`;
           for (const end of ["\n", "\r\n"]) {
             const originals = templates.map(({ name, text, mode }) => ({
               name,

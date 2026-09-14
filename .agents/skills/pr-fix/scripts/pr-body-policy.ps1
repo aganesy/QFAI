@@ -64,6 +64,17 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
     for ($before = $Start - 1; $before -ge 0 -and $Body[$before] -eq '\'; $before -= 1) { $slashes += 1 }
     return $slashes % 2 -ne 0
   }
+  $labelHtmlPrefix = [regex]::new('\G<(?:(\?)|(!\[CDATA\[)|(![A-Z]+(?=[ \t\n])))')
+  $failedLabelHtmlEnds = @(0, 0, 0)
+  $labelParagraphEnd = {
+    param([int]$Start)
+    $newline = $Body.IndexOf("`n", $Start)
+    while ($newline -ge 0) {
+      if (-not $labelContinuation.Match($Body, $newline).Success -or (& $crossesTable $newline ($newline + 2))) { return $newline }
+      $newline = $Body.IndexOf("`n", $newline + 1)
+    }
+    return $Body.Length
+  }
   for ($labelIndex = 0; $labelIndex -lt $Body.Length; $labelIndex += 1) {
     $character = $Body[$labelIndex]
     if ($character -eq '\' -and $labelIndex + 1 -lt $Body.Length -and $Body[$labelIndex + 1] -match '[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]') { $labelIndex += 1; continue }
@@ -73,8 +84,18 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
       if ($span.Success -and -not (& $crossesTable $labelIndex ($labelIndex + $span.Length))) { $labelIndex += $span.Length - 1; continue }
     }
     if ($character -eq '<') {
-      $html = $labelHtml.Match($Body, $labelIndex)
-      if ($html.Success -and -not (& $crossesTable $labelIndex ($labelIndex + $html.Length))) { $labelIndex += $html.Length - 1; continue }
+      $prefix = $labelHtmlPrefix.Match($Body, $labelIndex)
+      $family = -1
+      if ($prefix.Success) {
+        if ($prefix.Groups[1].Success) { $family = 0 }
+        elseif ($prefix.Groups[2].Success) { $family = 1 }
+        else { $family = 2 }
+      }
+      if ($family -lt 0 -or $labelIndex -ge $failedLabelHtmlEnds[$family]) {
+        $html = $labelHtml.Match($Body, $labelIndex)
+        if ($html.Success -and -not (& $crossesTable $labelIndex ($labelIndex + $html.Length))) { $labelIndex += $html.Length - 1; continue }
+        if ($family -ge 0) { $failedLabelHtmlEnds[$family] = & $labelParagraphEnd $labelIndex }
+      }
     }
     if ($character -eq '[') { $labelStack.Push($labelIndex) }
     if ($character -eq ']' -and $labelStack.Count -gt 0) { $imageLabelEnds.Add($labelStack.Pop(), $labelIndex) }

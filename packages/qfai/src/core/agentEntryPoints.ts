@@ -360,6 +360,18 @@ export function addReviewPointer(existing: string, template: string | null): str
     String.raw`(?:<!--(?!>|->)(?:(?!--)[^\r\n]|${continuation})*(?<!-)-->|<\?(?:[^\r\n]|${continuation})*?\?>|<![A-Z]+(?:[ \t]|${continuation})+(?:[^>\r\n]|${continuation})*>|<!\[CDATA\[(?:[^\r\n]|${continuation})*?\]\]>|<(?:[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\x00-\x20<>]*|[A-Za-z0-9.!#$%&'*+/=?^_\x60{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)>)`,
     "y",
   );
+  const labelHtmlPrefix = /<(?:(\?)|(!\[CDATA\[)|(![A-Z]+(?=[ \t\r\n])))/y;
+  const failedLabelHtmlEnds = [0, 0, 0];
+  const labelParagraphEnd = (start: number): number => {
+    let newline = existing.indexOf("\n", start);
+    while (newline !== -1) {
+      labelContinuation.lastIndex = newline;
+      if (labelContinuation.exec(existing) === null || crossesTable(newline, newline + 2))
+        return newline;
+      newline = existing.indexOf("\n", newline + 1);
+    }
+    return existing.length;
+  };
   for (let labelIndex = 0; labelIndex < existing.length; labelIndex += 1) {
     const character = existing[labelIndex];
     if (character === "\\" && escapable.test(existing[labelIndex + 1] ?? "")) {
@@ -383,8 +395,15 @@ export function addReviewPointer(existing: string, template: string | null): str
     if (character === "<") {
       let end = htmlTagEnd(labelIndex);
       if (end === labelIndex) {
-        labelHtml.lastIndex = labelIndex;
-        if (labelHtml.exec(existing) !== null) end = labelHtml.lastIndex;
+        labelHtmlPrefix.lastIndex = labelIndex;
+        const prefix = labelHtmlPrefix.exec(existing);
+        const family = prefix?.[1] ? 0 : prefix?.[2] ? 1 : prefix?.[3] ? 2 : -1;
+        if (family < 0 || labelIndex >= (failedLabelHtmlEnds[family] ?? 0)) {
+          labelHtml.lastIndex = labelIndex;
+          if (labelHtml.exec(existing) !== null) end = labelHtml.lastIndex;
+          if (family >= 0 && (end === labelIndex || crossesTable(labelIndex, end)))
+            failedLabelHtmlEnds[family] = labelParagraphEnd(labelIndex);
+        }
       }
       if (end > labelIndex && !crossesTable(labelIndex, end)) {
         labelIndex = end - 1;

@@ -131,6 +131,57 @@ afterEach(async () => {
  */
 describe("run-pr-merge plan", () => {
   it.each(
+    (
+      [
+        ["instruction", "<?aaaa", "?>"],
+        ["CDATA", "<![CDATA[aaaa", "]]>"],
+        ["declaration", "<!DOCTYPE aaaa ", ">"],
+      ] as const
+    ).flatMap(([name, opener, closer]) =>
+      ["absent", "blank", "table"].map((boundary) => [name, opener, closer, boundary] as const),
+    ),
+  )(
+    "bounds unmatched HTML label scans for %s / %s / %s / %s",
+    async (_name, opener, closer, boundary) => {
+      const policyPath = path.join(repoRoot, ".agents/skills/pr-fix/scripts/pr-body-policy.ps1");
+      for (const end of ["\n", "\r\n"]) {
+        const suffix =
+          boundary === "absent"
+            ? ""
+            : boundary === "blank"
+              ? `${end}prefix ${opener}closed${closer}${end}`
+              : `head | detail${end}--- | ---${end}prefix ${opener}closed${closer}${end}`;
+        const body = `\uFEFF## What this change made unnecessary${end}${end}prefix ${opener.repeat(256)}${end}${suffix}Nothing removed.${end}`;
+        const result = await spawnCommand(
+          "pwsh",
+          [
+            "-NoProfile",
+            "-Command",
+            [
+              "$ErrorActionPreference = 'Stop'",
+              "$policy = [IO.File]::ReadAllText($env:QFAI_TEST_HTML_POLICY)",
+              "$marker = '$html = $labelHtml.Match($Body, $labelIndex)'",
+              "if (($policy.Split($marker).Length - 1) -ne 1) { throw 'Expected one label matcher' }",
+              "$instrumented = $policy.Replace($marker, '$script:labelHtmlAttempts += 1; ' + $marker)",
+              ". ([scriptblock]::Create($instrumented))",
+              "$script:labelHtmlAttempts = 0",
+              "$masked = MaskBodyExamples (NormalizeBody $env:QFAI_TEST_HTML_BODY)",
+              "@{ Attempts = $script:labelHtmlAttempts; KeepsAnswer = $masked.Contains('Nothing removed.') } | ConvertTo-Json -Compress",
+            ].join("; "),
+          ],
+          { ...process.env, QFAI_TEST_HTML_POLICY: policyPath, QFAI_TEST_HTML_BODY: body },
+        );
+        expect(result.code, result.stderr).toBe(0);
+        const measurement = JSON.parse(result.stdout) as { Attempts: number; KeepsAnswer: boolean };
+        expect(measurement.KeepsAnswer).toBe(true);
+        expect(measurement.Attempts).toBeGreaterThan(0);
+        expect(measurement.Attempts).toBeLessThanOrEqual(2);
+        expect(measurement.Attempts).toBe(boundary === "absent" ? 1 : 2);
+      }
+    },
+  );
+
+  it.each(
     ["---", "==="].flatMap((underline) =>
       ["Adoption bar", "Adoption\nbar", "=", "==="].map((title) => [underline, title] as const),
     ),
