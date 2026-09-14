@@ -143,14 +143,16 @@ const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
   },
   {
     name: "qfai-validate.yml",
-    // Two runs in one job. `full` evaluates every gate group except drift, so
-    // on its own the lane cannot fail on a downstream edit to upstream SSOT.
-    // The `drift` profile is that gate alone, and the second run carries it.
+    // Independent full and drift profiles. Full excludes drift; the PR-only
+    // drift profile checks downstream edits to upstream SSOT.
     invocations: [
       { jobId: "validate", invocation: "qfai validate --profile full --fail-on error" },
       { jobId: "validate", invocation: "qfai validate --profile drift --fail-on error" },
     ],
-    lanes: [{ jobId: "validate", kind: "never-inert" }],
+    lanes: [
+      { jobId: "validate", kind: "never-inert" },
+      { jobId: "summary", kind: "aggregate", needs: ["validate"] },
+    ],
   },
   {
     // The document-shape and Mermaid lane. It invokes no QFAI subcommand — the

@@ -137,6 +137,72 @@ describe("E2E: delivered document checks run independently and require a complet
   );
 });
 
+describe("E2E: delivered validation profiles run independently and require a complete result", () => {
+  it("delivers full validation and PR-only drift in isolated native matrix jobs", async () => {
+    const validate = (await jobsOf(VALIDATE))[`${VALIDATE}#validate`];
+    expect(validate?.["name"]).toBe("qfai validate check (${{ matrix.profile }})");
+    expect(validate?.["needs"]).toBeUndefined();
+    expect(validate?.["if"]).toBeUndefined();
+    expect(validate?.["continue-on-error"]).toBeUndefined();
+    const strategy = validate?.["strategy"];
+    if (!isRecord(strategy))
+      throw new Error("the delivered validation workflow has no profile matrix");
+    expect(strategy["fail-fast"]).toBe(false);
+    expect(strategy["max-parallel"]).toBeUndefined();
+    expect(strategy["matrix"]).toEqual({
+      profile:
+        "${{ fromJSON(github.event_name == 'pull_request' && '[\"full\",\"drift\"]' || '[\"full\"]') }}",
+    });
+    const profiles = collectJobSteps(validate ?? {}).filter((step) =>
+      String(step["run"] ?? "").startsWith("npx qfai validate "),
+    );
+    expect(profiles).toHaveLength(2);
+    expect(
+      profiles.map((step) => ({
+        tokens: String(step["run"]).split(" "),
+        if: step["if"],
+      })),
+    ).toEqual([
+      {
+        tokens: ["npx", "qfai", "validate", "--profile", "full", "--fail-on", "error"],
+        if: "matrix.profile == 'full'",
+      },
+      {
+        tokens: ["npx", "qfai", "validate", "--profile", "drift", "--fail-on", "error"],
+        if: "matrix.profile == 'drift' && github.event_name == 'pull_request'",
+      },
+    ]);
+    for (const step of profiles) expect(step["continue-on-error"]).toBeUndefined();
+  });
+
+  it("keeps the existing external validation check as an always-run complete verdict", async () => {
+    const verdict = (await jobsOf(VALIDATE))[`${VALIDATE}#summary`];
+    expect(verdict?.["name"]).toBe("qfai validate (full profile, fail on error)");
+    expect(verdict?.["needs"]).toBe("validate");
+    expect(verdict?.["if"]).toBe("${{ always() }}");
+    expect(verdict?.["permissions"]).toEqual({});
+    expect(verdict?.["continue-on-error"]).toBeUndefined();
+    expect(collectJobSteps(verdict ?? {}).some((step) => step["uses"] !== undefined)).toBe(false);
+  });
+
+  it.each(["success", "failure", "cancelled", "timed_out", "skipped", "unknown", ""])(
+    "executes the delivered validation verdict for profile result %j",
+    async (result) => {
+      const verdict = (await jobsOf(VALIDATE))[`${VALIDATE}#summary`];
+      const step = collectJobSteps(verdict ?? {}).find((entry) =>
+        String(entry["run"] ?? "").includes("PROFILE_RESULT"),
+      );
+      expect(step, "the delivered validation workflow has no executable aggregate").toBeDefined();
+      expect(step?.["env"]).toEqual({ PROFILE_RESULT: "${{ needs.validate.result }}" });
+      const executed = await runStep(String(step?.["run"] ?? ""), await project(), {
+        PROFILE_RESULT: result,
+      });
+      expect(executed.skipped, "bash must execute the delivered validation aggregate").toBe(false);
+      expect(executed.status).toBe(result === "success" ? 0 : 1);
+    },
+  );
+});
+
 async function workflowsDir(): Promise<string> {
   return path.join(await project(), ".github", "workflows");
 }
