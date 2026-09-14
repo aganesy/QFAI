@@ -378,7 +378,7 @@ describe("TC-0003-0037 (TDD-0037): exactly one installing job and zero secret re
     // placeholders, and a placeholder that installed would be paying for a
     // toolchain it never uses.
     expect(installing).toEqual([
-      { file: "qfai-docs.yml", jobId: "docs" },
+      { file: "qfai-docs.yml", jobId: "checks" },
       { file: "qfai-validate.yml", jobId: "validate" },
     ]);
   });

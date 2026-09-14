@@ -67,6 +67,76 @@ afterAll(async () => {
   await removeTempTree(dir);
 });
 
+describe("E2E: delivered document checks run independently and require a complete result", () => {
+  it("delivers both isolated native matrix units without changing checker commands", async () => {
+    const jobs = await jobsOf(DOCS);
+    const checks = jobs[`${DOCS}#checks`];
+    expect(checks, "the delivered docs workflow has no independent check matrix").toBeDefined();
+    expect(checks?.["needs"]).toBeUndefined();
+    expect(checks?.["if"]).toBeUndefined();
+    expect(checks?.["continue-on-error"]).toBeUndefined();
+    const strategy = checks?.["strategy"];
+    expect(isRecord(strategy)).toBe(true);
+    if (!isRecord(strategy)) throw new Error("document checks have no strategy");
+    expect(strategy["fail-fast"]).toBe(false);
+    expect(strategy["max-parallel"]).toBeUndefined();
+    expect(strategy["matrix"]).toEqual({ check: ["shape", "mermaid"] });
+    const checkerSteps = collectJobSteps(checks ?? {}).filter((step) =>
+      /node node_modules\/qfai\/assets\/scripts\/check-(?:mdschema|mermaid)\.mjs/.test(
+        String(step["run"] ?? ""),
+      ),
+    );
+    expect(
+      checkerSteps.map((step) => ({
+        commands: String(step["run"] ?? "")
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter((line) => line.startsWith("node ")),
+        if: step["if"],
+      })),
+    ).toEqual([
+      {
+        commands: [
+          "node node_modules/qfai/assets/scripts/check-mdschema.mjs --scope all --summary",
+        ],
+        if: "matrix.check == 'shape'",
+      },
+      {
+        commands: ["node node_modules/qfai/assets/scripts/check-mermaid.mjs"],
+        if: "matrix.check == 'mermaid'",
+      },
+    ]);
+    for (const step of checkerSteps) expect(step["continue-on-error"]).toBeUndefined();
+  });
+
+  it("keeps the existing external check name and always runs its matrix aggregate", async () => {
+    const docs = (await jobsOf(DOCS))[`${DOCS}#docs`];
+    expect(docs?.["name"]).toBe("qfai docs (document shape and Mermaid syntax)");
+    expect(docs?.["needs"]).toBe("checks");
+    expect(docs?.["if"]).toBe("${{ always() }}");
+    expect(docs?.["permissions"]).toEqual({});
+    expect(docs?.["continue-on-error"]).toBeUndefined();
+    expect(collectJobSteps(docs ?? {}).some((step) => step["uses"] !== undefined)).toBe(false);
+  });
+
+  it.each(["success", "failure", "cancelled", "timed_out", "skipped", "unknown", ""])(
+    "executes the delivered aggregate for matrix result %j",
+    async (result) => {
+      const docs = (await jobsOf(DOCS))[`${DOCS}#docs`];
+      const verdict = collectJobSteps(docs ?? {}).find((step) =>
+        String(step["run"] ?? "").includes("CHECK_RESULT"),
+      );
+      expect(verdict, "the delivered docs workflow has no executable aggregate").toBeDefined();
+      expect(verdict?.["env"]).toEqual({ CHECK_RESULT: "${{ needs.checks.result }}" });
+      const executed = await runStep(String(verdict?.["run"] ?? ""), await project(), {
+        CHECK_RESULT: result,
+      });
+      expect(executed.skipped, "bash must execute the delivered aggregate").toBe(false);
+      expect(executed.status).toBe(result === "success" ? 0 : 1);
+    },
+  );
+});
+
 async function workflowsDir(): Promise<string> {
   return path.join(await project(), ".github", "workflows");
 }

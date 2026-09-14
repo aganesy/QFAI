@@ -114,7 +114,9 @@ type LaneInertness =
    * exactly this, so a shape demanding a gate from every lane would read the
    * shipped set as violating its own contract.
    */
-  | { readonly jobId: string; readonly kind: "never-inert" };
+  | { readonly jobId: string; readonly kind: "never-inert" }
+  /** The result aggregate must run even when a declared dependency fails. */
+  | { readonly jobId: string; readonly kind: "aggregate"; readonly needs: readonly string[] };
 
 interface FileExpectation {
   readonly name: string;
@@ -157,7 +159,10 @@ const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
     // inventing a value for.
     name: "qfai-docs.yml",
     invocations: [],
-    lanes: [{ jobId: "docs", kind: "never-inert" }],
+    lanes: [
+      { jobId: "checks", kind: "never-inert" },
+      { jobId: "docs", kind: "aggregate", needs: ["checks"] },
+    ],
   },
 ];
 
@@ -664,6 +669,11 @@ function laneInertnessPins(): ShapePin[] {
         } no gating if:`,
       );
     }
+    for (const lane of file.lanes) {
+      if (lane.kind === "aggregate") {
+        clauses.push(`${lane.jobId}: always() with needs: ${lane.needs.join(", ")}`);
+      }
+    }
     return filePin(6, file.name, clauses.join("; "), (found) =>
       laneInertnessViolations(file, found).join("; "),
     );
@@ -686,6 +696,21 @@ function laneInertnessViolations(file: FileExpectation, found: WorkflowFile): st
         problems.push(`${lane.jobId}: no if: condition`);
       } else if (!condition.includes(lane.jobId)) {
         problems.push(`${lane.jobId}: if: condition does not name the lane`);
+      }
+      continue;
+    }
+    if (lane.kind === "aggregate") {
+      const normalized = String(condition ?? "")
+        .trim()
+        .replace(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/, "$1")
+        .trim();
+      if (normalized !== "always()") {
+        problems.push(`${lane.jobId}: aggregate does not declare always()`);
+      }
+      const needs = job["needs"];
+      const declared = typeof needs === "string" ? [needs] : Array.isArray(needs) ? needs : [];
+      if (JSON.stringify(declared) !== JSON.stringify(lane.needs)) {
+        problems.push(`${lane.jobId}: aggregate needs: ${JSON.stringify(declared)}`);
       }
       continue;
     }
