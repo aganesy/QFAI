@@ -917,6 +917,7 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
         "Derive the verdict from the serialized needs map",
         ...REQUIRED,
         "Run lint gate",
+        "Run mirror surface shard",
       ]);
   });
 });
@@ -955,7 +956,13 @@ const REQUIRED_CONTEXT_JOB = "build";
  * exempts it by name — it carries the formatter, the Markdown linter, the leakage
  * guard and the pin guard, every one of which a documentation change can break.
  */
-const UNCONDITIONAL_JOBS = [DETECT_JOB, LINT_JOB, REQUIRED_CONTEXT_JOB, VERDICT_JOB] as const;
+const UNCONDITIONAL_JOBS = [
+  DETECT_JOB,
+  LINT_JOB,
+  "lint-mirror",
+  REQUIRED_CONTEXT_JOB,
+  VERDICT_JOB,
+] as const;
 
 /** `needs` normalized to an array; a scalar `needs` is legal YAML. */
 function needsOf(job: Record<string, unknown>): string[] {
@@ -1061,13 +1068,11 @@ function runClassifier(input: {
   }
 }
 
-describe("TC-0017-0006 (TDD-0006): a documentation-only change executes at most four instances", () => {
-  it("leaves exactly four jobs unconditional and derives every other job's condition from detection", () => {
+describe("TC-0017-0006 (TDD-0006): documentation-only CI preserves the unconditional guard set", () => {
+  it("runs every unconditional guard and derives every selected job's condition from detection", () => {
     const jobs = ciJobs();
 
-    // CLAIM 1 — the four that always run are exactly the four `EX-0017-0007` names.
-    // A set equality rather than "at least these", because the ceiling IS the
-    // requirement: a fifth unconditional job breaks it however useful it is.
+    // Mirror checks remain unconditional when their execution moves out of lint.
     // "Unconditional" means the job cannot be prevented from running, which is not
     // the same as carrying no `if`. The verdict carries `if: always()` on purpose —
     // it must run when its needs are SKIPPED, which is precisely the documentation-only
@@ -1092,7 +1097,7 @@ describe("TC-0017-0006 (TDD-0006): a documentation-only change executes at most 
     expect
       .soft(
         unconditional,
-        "a documentation-only run may execute only detection, lint, build and the verdict",
+        "a documentation-only run must execute detection, both lint lanes, build and the verdict",
       )
       .toEqual([...UNCONDITIONAL_JOBS].sort());
 
@@ -1514,6 +1519,14 @@ const CI_CHECK_NAMES = [
   "ci-pass",
   "detect",
   "lint",
+  "lint-mirror (1)",
+  "lint-mirror (2)",
+  "lint-mirror (3)",
+  "lint-mirror (4)",
+  "lint-mirror (5)",
+  "lint-mirror (6)",
+  "lint-mirror (7)",
+  "lint-mirror (8)",
   "node-floor",
   "scanner-coverage",
   "test (cli)",
@@ -1580,8 +1593,74 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
       .map(([id]) => id);
     expect
       .soft(matrixJobs, "the layer split is expressed as the matrix of a single job")
-      .toEqual(["test"]);
+      .toEqual(["lint-mirror", "test"]);
   });
+});
+
+describe("lint mirror sharding preserves coverage and the merge gate", () => {
+  it("partitions the complete lint entry point without removing a command", () => {
+    const manifest: unknown = JSON.parse(
+      readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8"),
+    );
+    if (!isRecord(manifest) || !isRecord(manifest["scripts"])) {
+      throw new Error("the root package has no scripts map");
+    }
+    const scripts = manifest["scripts"];
+    const full = scripts["ci:lint"];
+    const checks = scripts["ci:lint:checks"];
+    expect(typeof full).toBe("string");
+    expect(typeof checks).toBe("string");
+    if (typeof full !== "string" || typeof checks !== "string") return;
+    const mirror = "pnpm -C packages/qfai lint:mirror-surface";
+    const commands = full.split(" && ");
+    expect(commands.filter((command) => command === mirror)).toHaveLength(1);
+    expect(checks.split(" && ")).toEqual(commands.filter((command) => command !== mirror));
+    expect(stepsOf("lint").find((step) => named(step) === "Run lint gate")?.["run"]).toBe(
+      "pnpm ci:lint:checks",
+    );
+  });
+
+  it("runs every mirror shard independently, without fail-fast cancellation", () => {
+    const job = ciJobs()["lint-mirror"];
+    expect(job).toBeDefined();
+    if (job === undefined) return;
+    expect(job["needs"]).toBeUndefined();
+    expect(job["if"]).toBeUndefined();
+    const strategy = job["strategy"];
+    expect(isRecord(strategy) ? strategy["fail-fast"] : undefined).toBe(false);
+    expect(isRecord(strategy) ? strategy["matrix"] : undefined).toEqual({
+      shard: ["1", "2", "3", "4", "5", "6", "7", "8"],
+    });
+    const steps = stepsOf("lint-mirror");
+    const preflight = steps.findIndex(
+      (step) => named(step) === "Verify the toolchain action before running it",
+    );
+    const setup = steps.findIndex((step) => step["uses"] === "./.github/actions/setup");
+    expect(preflight).toBeGreaterThan(-1);
+    expect(setup).toBeGreaterThan(preflight);
+    expect(steps[preflight]?.["run"]).toBe(
+      stepsOf("lint").find(
+        (step) => named(step) === "Verify the toolchain action before running it",
+      )?.["run"],
+    );
+    const shard = steps.find((step) => named(step) === "Run mirror surface shard");
+    expect(shard?.["env"]).toEqual({ SHARD: "${{ matrix.shard }}" });
+    expect(shard?.["run"]).toBe('pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"');
+    expect(shard?.["if"]).toBeUndefined();
+    expect(shard?.["continue-on-error"]).toBeUndefined();
+    expect(verdictNeeds()).toContain("lint-mirror");
+  });
+
+  it.each(["failure", "cancelled", "timed_out", undefined])(
+    "rejects a mirror matrix whose aggregate result is %s",
+    (result) => {
+      const needs: Record<string, { result?: string }> = allNeeds("success");
+      needs["lint-mirror"] = result === undefined ? {} : { result };
+      const run = evaluateVerdict(needs);
+      expect(run.exitCode).toBe(1);
+      expect(run.output).toContain("lint-mirror");
+    },
+  );
 });
 
 /**
@@ -1889,6 +1968,7 @@ const VERIFICATION_SET = [
   // dependency pins only the name and the condition on its own, and nothing about
   // whether the step still does anything.
   "Run lint gate",
+  "Run mirror surface shard",
 ] as const;
 
 /**

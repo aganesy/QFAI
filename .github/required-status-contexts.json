@@ -50,6 +50,7 @@
       "dependencies": [
         "detect",
         "lint",
+        "lint-mirror",
         "check-types",
         "check-types-future",
         "node-floor",
@@ -96,6 +97,7 @@
         "a dependency condition."
       ],
       "dependencyMatrices": {
+        "lint-mirror": { "shard": ["1", "2", "3", "4", "5", "6", "7", "8"] },
         "test": { "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"] }
       },
       "dependencyMatricesNote": [
@@ -320,7 +322,8 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)",
         "QFAI self-validate this repo (dogfooding — full profile)",
         "Run qfai validate gate (fail on error)",
-        "Run lint gate"
+        "Run lint gate",
+        "Run mirror surface shard"
       ],
       "verificationSetNote": [
         "Step names, because a step name is what a reader of the workflow sees and what a",
@@ -376,7 +379,8 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "9efc82ef75f7a622",
         "QFAI self-validate this repo (dogfooding — full profile)": "3537948e49d1d967",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "664367adeba33fb2",
+        "Run lint gate": "15026645a799c7be",
+        "Run mirror surface shard": "47680e1761694883",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor": "b343ba3115022005",

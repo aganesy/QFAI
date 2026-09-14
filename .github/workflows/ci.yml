@@ -334,7 +334,7 @@ jobs:
       # So this one runs with only `actions/checkout` ahead of it, which sets no environment
       # file, and needs nothing the setup action provides — `bash` and `grep`, both on the image.
       - name: Verify the toolchain action before running it
-        run: |
+        run: &verify-toolchain |
           set -euo pipefail
           # The refusal's OWN bytes first, against a digest held HERE rather than in the file it
           # checks. Review finding [101]: everything this step runs comes out of the pull
@@ -388,12 +388,32 @@ jobs:
       # `.github/actions/setup/action.yml`. It stood inline here six times.
       - uses: ./.github/actions/setup
       - name: Run lint gate
-        run: pnpm ci:lint
+        run: pnpm ci:lint:checks
       - name: Sanity grep — no internal spec IDs or version markers leak
         run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh
       - name: Verify branch name version pin matches package.json#version
         run: bash packages/qfai/scripts/check-branch-version-pin.sh
         shell: bash
+
+  lint-mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1", "2", "3", "4", "5", "6", "7", "8"]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - name: Verify the toolchain action before running it
+        run: *verify-toolchain
+        shell: bash
+      - uses: ./.github/actions/setup
+      - name: Run mirror surface shard
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
 
   # ── 2. Type checking (current TypeScript) ────────────────────────
   check-types:
@@ -802,7 +822,17 @@ jobs:
     # nothing verified. Failing OPEN is a decision the classifier makes and records;
     # failing HARD must reach the gate.
     needs:
-      [detect, lint, check-types, check-types-future, node-floor, test, scanner-coverage, build]
+      [
+        detect,
+        lint,
+        lint-mirror,
+        check-types,
+        check-types-future,
+        node-floor,
+        test,
+        scanner-coverage,
+        build,
+      ]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
