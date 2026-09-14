@@ -520,6 +520,23 @@ describe("resuming a release pull-request description", () => {
       `hidden footnote continuation ${JSON.stringify(source)}`,
       `## What this change made unnecessary\n\n${source}`,
     ]),
+    ...[
+      "![Nothing [example]](/image.png)",
+      "![Nothing [example]][image]\n\n[image]: /image.png",
+    ].map((source) => [
+      `balanced image answer ${JSON.stringify(source)}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...["T&#79;DO", "T&#x4f;DO", "N&#111;ne", "Not&#32;applicable", "N&sol;A"].map((source) => [
+      `encoded placeholder ${source}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...["- - ", "1. - ", "- 2. "].flatMap((prefix) =>
+      ["```", "~~~"].map((fence) => [
+        `nested list fence ${prefix}${fence}`,
+        `## What this change made unnecessary\n\n${prefix}${fence}md\n${" ".repeat(prefix.length)}Nothing removed.\n${" ".repeat(prefix.length)}${fence}\n`,
+      ]),
+    ),
     [
       "link-reference definition",
       "## What this change made unnecessary\n\n[Nothing]: https://example.com\n",
@@ -625,6 +642,21 @@ describe("resuming a release pull-request description", () => {
       "authored after footnote block",
       "## What this change made unnecessary\n\n[^1]: Hidden\n### Heading\nNothing removed.\n",
     ],
+    ...[
+      "\\<!--\nNothing removed.\n-->",
+      "\\\\\\<!--\nNothing removed.\n-->",
+      "Nothing&#32;removed.",
+      "`T&#79;DO`",
+      "T\\&#79;DO",
+      "N&SOL;A",
+      "Paragraph\n2. Nothing removed.",
+      "[Nothing [example]](/url)",
+      "\\![Nothing [example]](/image.png)",
+      "![Nothing [example]][missing]",
+    ].map((answer) => [
+      `authored inline boundary ${JSON.stringify(answer)}`,
+      `## What this change made unnecessary\n\n${answer}\n`,
+    ]),
     ...[
       "[Nothing]: https://example.com/a(b\n",
       "[Nothing]: https://example.com/a)b\n",

@@ -245,6 +245,16 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ["quoted definition-like paragraph", "> Paragraph\n> [Nothing]: /url"],
     ["list definition-like paragraph", "- Paragraph\n  [Nothing]: /url"],
     ["image with prose", "![Example](/image.png)\n\nNothing."],
+    ["escaped comment opener", "\\<!--\nNothing removed.\n-->"],
+    ["odd escaped comment opener", "\\\\\\<!--\nNothing removed.\n-->"],
+    ["encoded authored text", "Nothing&#32;removed."],
+    ["literal encoded code text", "`T&#79;DO`"],
+    ["escaped entity text", "T\\&#79;DO"],
+    ["literal uppercase entity", "N&SOL;A"],
+    ["paragraph numbered continuation", "Paragraph\n2. Nothing removed."],
+    ["ordinary balanced link", "[Nothing [example]](/url)"],
+    ["escaped balanced image", "\\![Nothing [example]](/image.png)"],
+    ["unresolved balanced image", "![Nothing [example]][missing]"],
     ["live after footnote dedent", "[^1]: Hidden\n\nNothing removed."],
     ["live after footnote block", "[^1]: Hidden\n### Heading\nNothing removed."],
     ["code-like reference container top level", "    [Nothing]: /url"],
@@ -432,6 +442,23 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       `hidden footnote continuation ${JSON.stringify(source)}`,
       `## What this change made unnecessary\n\n${source}`,
     ]),
+    ...[
+      "![Nothing [example]](/image.png)",
+      "![Nothing [example]][image]\n\n[image]: /image.png",
+    ].map((source) => [
+      `balanced image answer ${JSON.stringify(source)}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...["T&#79;DO", "T&#x4f;DO", "N&#111;ne", "Not&#32;applicable", "N&sol;A"].map((source) => [
+      `encoded placeholder ${source}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...["- - ", "1. - ", "- 2. "].flatMap((prefix) =>
+      ["```", "~~~"].map((fence) => [
+        `nested list fence ${prefix}${fence}`,
+        `## What this change made unnecessary\n\n${prefix}${fence}md\n${" ".repeat(prefix.length)}Nothing removed.\n${" ".repeat(prefix.length)}${fence}\n`,
+      ]),
+    ),
     [
       "link-reference definition",
       "## What this change made unnecessary\n\n[Nothing]: https://example.com\n",

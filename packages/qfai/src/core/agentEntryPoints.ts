@@ -326,6 +326,57 @@ export function addReviewPointer(existing: string, template: string | null): str
     String.raw`\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\](?:\[(?<reference>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\])?`,
     "y",
   );
+  const imageSuffix = new RegExp(
+    String.raw`\]\([ \t]*(?:${continuation}[ \t]*)?(?:${destination})?(?:${spacing}${title})?[ \t]*(?:${continuation}[ \t]*)?\)`,
+    "y",
+  );
+  const imageReference = new RegExp(
+    String.raw`\[(?<reference>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\]`,
+    "y",
+  );
+  const imageLabelEnds = new Map<number, number>();
+  const labelStack: number[] = [];
+  const labelContinuation = new RegExp(continuation, "y");
+  const labelCodeSpan = new RegExp(codeSpan.source.slice(1), "y");
+  const escapable = /[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]/;
+  const isEscaped = (start: number): boolean => {
+    let slashes = 0;
+    for (let before = start - 1; before >= 0 && existing[before] === "\\"; before -= 1)
+      slashes += 1;
+    return slashes % 2 !== 0;
+  };
+  const crossesTable = (start: number, end: number): boolean => {
+    for (const boundary of tableBoundaries) {
+      if (boundary > start && boundary < end) return true;
+    }
+    return false;
+  };
+  for (let labelIndex = 0; labelIndex < existing.length; labelIndex += 1) {
+    const character = existing[labelIndex];
+    if (character === "\\" && escapable.test(existing[labelIndex + 1] ?? "")) {
+      labelIndex += 1;
+      continue;
+    }
+    labelContinuation.lastIndex = labelIndex;
+    if (
+      character === "\n" &&
+      (labelContinuation.exec(existing) === null || tableBoundaries.has(labelIndex + 1))
+    )
+      labelStack.length = 0;
+    if (character === "`") {
+      labelCodeSpan.lastIndex = labelIndex;
+      const span = labelCodeSpan.exec(existing);
+      if (span !== null) {
+        labelIndex += span[0].length - 1;
+        continue;
+      }
+    }
+    if (character === "[") labelStack.push(labelIndex);
+    if (character === "]") {
+      const open = labelStack.pop();
+      if (open !== undefined) imageLabelEnds.set(open, labelIndex);
+    }
+  }
   const destinationLength = (target: string, inline = false): number => {
     if (target.startsWith("<")) return target.length;
     let depth = 0;
@@ -498,10 +549,18 @@ export function addReviewPointer(existing: string, template: string | null): str
           continue;
         }
       }
-      const openingLine = fenceLine(raw);
+      const withoutBom = plain.replace(/^\uFEFF/, "");
+      const openingMarkers =
+        /^(?: {0,3}(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))+/.exec(withoutBom)?.[0] ?? "";
+      const openingLine =
+        openingMarkers === ""
+          ? fenceLine(raw).replace(/^\uFEFF/, "")
+          : withoutBom.slice(openingMarkers.length);
+      if (openingMarkers !== "") listContentColumns.push(columnAfter(openingMarkers));
       const openingPrefix = /^[ \t]*/.exec(openingLine)?.[0] ?? "";
       const openingColumn = columnAfter(openingPrefix);
-      const openingBase = marker === null ? (listContentColumns.at(-1) ?? 0) : 0;
+      const openingBase =
+        openingMarkers !== "" ? 0 : marker === null ? (listContentColumns.at(-1) ?? 0) : 0;
       const opening = /^(`{3,}|~{3,})(.*)$/.exec(openingLine.slice(openingPrefix.length));
       const run = opening?.[1] ?? "";
       const rest = opening?.[2] ?? "";
@@ -617,7 +676,7 @@ export function addReviewPointer(existing: string, template: string | null): str
           index = end + 3;
           continue;
         }
-        if (raw.startsWith("<!--", index)) {
+        if (raw.startsWith("<!--", index) && !isEscaped(offset + index)) {
           comment = true;
           index += 4;
           continue;
@@ -627,7 +686,7 @@ export function addReviewPointer(existing: string, template: string | null): str
           for (let before = index - 1; before >= 0 && raw[before] === "\\"; before -= 1)
             escapes += 1;
           const end = escapes % 2 === 0 ? htmlTagEnd(offset + index) : offset + index;
-          if (end > offset + raw.length) {
+          if (end > offset + raw.length && !crossesTable(offset + index, end)) {
             tagEnd = end;
             visible += "\uFFFC";
             continue;
@@ -640,10 +699,50 @@ export function addReviewPointer(existing: string, template: string | null): str
           const start = offset + index;
           link.lastIndex = start;
           let inline = escapes % 2 === 0 ? link.exec(existing) : null;
+          if (inline !== null && crossesTable(start, start + inline[0].length)) inline = null;
           let imageEscapes = 0;
           for (let before = index - 2; before >= 0 && raw[before] === "\\"; before -= 1)
             imageEscapes += 1;
           const image = raw[index - 1] === "!" && imageEscapes % 2 === 0;
+          const close = imageLabelEnds.get(start);
+          if (image && escapes % 2 === 0 && close !== undefined) {
+            imageSuffix.lastIndex = close;
+            let suffix = imageSuffix.exec(existing);
+            if (suffix !== null && !crossesTable(start, close + suffix[0].length)) {
+              const target = suffix.groups?.destination ?? "";
+              const length = destinationLength(target, true);
+              if (length >= 0 && length < target.length) {
+                const complete = suffix[0].slice(0, suffix[0].indexOf(target, 2) + length + 1);
+                imageSuffix.lastIndex = 0;
+                suffix = imageSuffix.exec(complete);
+              }
+              if (
+                length >= 0 &&
+                suffix !== null &&
+                destinationLength(suffix.groups?.destination ?? "") >= 0
+              ) {
+                linkStart = start;
+                linkEnd = close + suffix[0].length;
+                visible += "\uFFFC";
+                hasInlineLink = true;
+                continue;
+              }
+            }
+            imageReference.lastIndex = close + 1;
+            const reference = imageReference.exec(existing);
+            const text = reference?.groups?.reference || existing.slice(start + 1, close);
+            if (
+              !crossesTable(start, close + 1 + (reference?.[0].length ?? 0)) &&
+              Buffer.byteLength(text.replace(/\r\n/g, "\n"), "utf8") <= 1000 &&
+              referenceLabels.has(normalizeLabel(text))
+            ) {
+              linkStart = start;
+              linkEnd = close + 1 + (reference?.[0].length ?? 0);
+              visible += "\uFFFC";
+              hasInlineLink = true;
+              continue;
+            }
+          }
           if (inline !== null) {
             const target = inline.groups?.destination ?? "";
             const text = inline.groups?.text ?? "";
@@ -673,6 +772,7 @@ export function addReviewPointer(existing: string, template: string | null): str
             const text = reference?.groups?.reference || reference?.groups?.text || "";
             if (
               reference !== null &&
+              !crossesTable(start, start + reference[0].length) &&
               Buffer.byteLength(text.replace(/\r\n/g, "\n"), "utf8") <= 1000 &&
               referenceLabels.has(normalizeLabel(text))
             ) {
@@ -685,6 +785,11 @@ export function addReviewPointer(existing: string, template: string | null): str
           }
         }
         if (raw[index] === "`") {
+          if (isEscaped(offset + index)) {
+            visible += "`";
+            index += 1;
+            continue;
+          }
           const tail = existing.slice(offset + index);
           let span = codeSpan.exec(tail)?.[0];
           if (span !== undefined && tableBoundaries.size > 0) {

@@ -317,6 +317,34 @@ jobs:
                 String.raw`\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\](?:\[(?<reference>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\])?`,
                 'y',
               );
+              const imageSuffix = new RegExp(
+                String.raw`\]\([ \t]*(?:${continuation}[ \t]*)?(?:${destination})?(?:${spacing}${title})?[ \t]*(?:${continuation}[ \t]*)?\)`,
+                'y',
+              );
+              const imageReference = new RegExp(String.raw`\[(?<reference>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\]`, 'y');
+              const imageLabelEnds = new Map();
+              const labelStack = [];
+              const labelContinuation = new RegExp(continuation, 'y');
+              const labelCodeSpan = new RegExp(codeSpan.source.slice(1), 'y');
+              const escapable = /[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]/;
+              const isEscaped = (start) => {
+                let slashes = 0;
+                for (let before = start - 1; before >= 0 && body[before] === '\\'; before -= 1) slashes += 1;
+                return slashes % 2 !== 0;
+              };
+              for (let labelIndex = 0; labelIndex < body.length; labelIndex += 1) {
+                const character = body[labelIndex];
+                if (character === '\\' && escapable.test(body[labelIndex + 1] ?? '')) { labelIndex += 1; continue; }
+                labelContinuation.lastIndex = labelIndex;
+                if (character === '\n' && labelContinuation.exec(body) === null) labelStack.length = 0;
+                if (character === '`') {
+                  labelCodeSpan.lastIndex = labelIndex;
+                  const span = labelCodeSpan.exec(body);
+                  if (span !== null) { labelIndex += span[0].length - 1; continue; }
+                }
+                if (character === '[') labelStack.push(labelIndex);
+                if (character === ']' && labelStack.length > 0) imageLabelEnds.set(labelStack.pop(), labelIndex);
+              }
               const destinationLength = (target, inline = false) => {
                 if (target.startsWith('<')) return target.length;
                 let depth = 0;
@@ -431,6 +459,14 @@ jobs:
                     paragraph = false;
                     paragraphStart = -1;
                   }
+                  while (!insideHtml && !inComment && offset >= spanEnd && offset >= linkEnd && htmlAllowed && listContentColumns.length > 0) {
+                    const nested = /^ {0,3}([-*+]|\d{1,9}[.)])([ \t]{1,4})(?![ \t])/.exec(htmlLine);
+                    if (nested === null) break;
+                    listContentColumns.push(listContentColumns.at(-1) + columnAfter(nested[0]));
+                    htmlLine = htmlLine.slice(nested[0].length);
+                    paragraph = false;
+                    paragraphStart = -1;
+                  }
                   htmlLine = htmlLine.replace(/^[ \t]*/, '');
                   const rawOpening = /^(`{3,}|~{3,})(.*)\r?$/.exec(htmlLine);
                   if (
@@ -518,6 +554,35 @@ jobs:
                         for (let before = position - 2; before >= 0 && line[before] === '\\'; before -= 1)
                           imageEscapes += 1;
                         const image = line[position - 1] === '!' && imageEscapes % 2 === 0;
+                        if (image && escapes % 2 === 0 && imageLabelEnds.has(start)) {
+                          const close = imageLabelEnds.get(start);
+                          imageSuffix.lastIndex = close;
+                          let suffix = imageSuffix.exec(body);
+                          if (suffix !== null) {
+                            const target = suffix.groups.destination ?? '';
+                            const length = destinationLength(target, true);
+                            if (length >= 0 && length < target.length) {
+                              const complete = suffix[0].slice(0, suffix[0].indexOf(target, 2) + length + 1);
+                              imageSuffix.lastIndex = 0;
+                              suffix = imageSuffix.exec(complete);
+                            }
+                            if (length >= 0 && suffix !== null && destinationLength(suffix.groups.destination ?? '') >= 0) {
+                              linkStart = start;
+                              linkEnd = close + suffix[0].length;
+                              hasInlineLink = true;
+                              continue;
+                            }
+                          }
+                          imageReference.lastIndex = close + 1;
+                          const reference = imageReference.exec(body);
+                          const text = reference?.groups.reference || body.slice(start + 1, close);
+                          if (Buffer.byteLength(text.replace(/\r\n/g, '\n'), 'utf8') <= 1000 && referenceLabels.has(normalizeLabel(text))) {
+                            linkStart = start;
+                            linkEnd = close + 1 + (reference?.[0].length ?? 0);
+                            hasInlineLink = true;
+                            continue;
+                          }
+                        }
                         if (inline !== null) {
                           const target = inline.groups.destination ?? '';
                           const length = destinationLength(target, true);
@@ -552,6 +617,7 @@ jobs:
                         }
                       }
                       if (!insideHtml && line[position] === '`') {
+                        if (isEscaped(offset + position)) { position += 1; continue; }
                         const tail = body.slice(offset + position);
                         const span = codeSpan.exec(tail)?.[0];
                         if (span !== undefined) {
@@ -562,7 +628,7 @@ jobs:
                         position += /^`+/.exec(tail)[0].length;
                         continue;
                       }
-                      if (!line.startsWith('<!--', position)) {
+                      if (!line.startsWith('<!--', position) || isEscaped(offset + position)) {
                         position += 1;
                         continue;
                       }
@@ -618,6 +684,9 @@ jobs:
             const parsed = maskExamples(existing, true);
             const match = section.exec(parsed.visible);
             const hasAnswer = (candidate) => {
+              // SIMPLIFIED: other named references remain separators, not a full HTML5 decode.
+              // Lift when: the body readers can share a complete installed entity decoder.
+              const namedEntities = { sol: '/', period: '.', lbrack: '[', rbrack: ']', lsqb: '[', rsqb: ']', nbsp: '\u00a0', Tab: '\t', NewLine: '\n' };
               const answer = (candidate?.[1] ?? '')
                 .replace(/\r\n/g, '\n')
                 .replace(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?/gm, '')
@@ -626,7 +695,13 @@ jobs:
                   /<\/?[A-Za-z][A-Za-z0-9:-]*(?:[ \t\n]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t\n]*=[ \t\n]*(?:[^"'=<>`\x00-\x20]+|'[^']*'|"[^"]*"))?)*[ \t\n]*\/?>/g,
                   '',
                 )
-                .replace(/&(?:#(?:[xX][0-9A-Fa-f]+|\d+)|[A-Za-z][A-Za-z0-9]*);/g, ' ')
+                .replace(/(\\[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]|(`+)(?!`)[\s\S]*?(?<!`)\2(?!`))|&(?<entity>#[xX][0-9A-Fa-f]{1,6}|#\d{1,7}|[A-Za-z][A-Za-z0-9]*);/g, (match, literal, ticks, entity, offset, source, groups) => {
+                  if (literal !== undefined) return literal;
+                  const text = groups.entity;
+                  if (!text.startsWith('#')) return Object.hasOwn(namedEntities, text) ? namedEntities[text] : ' ';
+                  const value = /^[xX]/.test(text[1]) ? Number.parseInt(text.slice(2), 16) : Number.parseInt(text.slice(1), 10);
+                  return value === 0 || value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff) ? '\ufffd' : String.fromCodePoint(value);
+                })
                 .replace(/[`*_]/g, '')
                 .trim();
               return (

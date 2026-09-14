@@ -24,6 +24,29 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
   $link = '(?m)\G\[(?<text>(?:\\.|[^\[\]\\\n]|' + $continuation + ')*)\]\([ \t]*(?:' + $continuation + '[ \t]*)?(?:' + $destination + ')?(?:' + $spacing + $title + ')?[ \t]*(?:' + $continuation + '[ \t]*)?\)'
   $linkPattern = [regex]::new($link)
   $referenceImage = [regex]::new('\G\[(?<text>(?:\\.|[^\[\]\\\n]|' + $continuation + ')*)\](?:\[(?<reference>(?:\\.|[^\[\]\\\n]|' + $continuation + ')*)\])?')
+  $imageSuffix = [regex]::new('\G\]\([ \t]*(?:' + $continuation + '[ \t]*)?(?:' + $destination + ')?(?:' + $spacing + $title + ')?[ \t]*(?:' + $continuation + '[ \t]*)?\)')
+  $imageReference = [regex]::new('\G\[(?<reference>(?:\\.|[^\[\]\\\n]|' + $continuation + ')*)\]')
+  $imageLabelEnds = [System.Collections.Generic.Dictionary[int, int]]::new()
+  $labelStack = [System.Collections.Generic.Stack[int]]::new()
+  $labelContinuation = [regex]::new('\G' + $continuation)
+  $labelCodeSpan = [regex]::new('\G' + $codeSpan.ToString().Substring(1))
+  $isEscaped = {
+    param([int]$Start)
+    $slashes = 0
+    for ($before = $Start - 1; $before -ge 0 -and $Body[$before] -eq '\'; $before -= 1) { $slashes += 1 }
+    return $slashes % 2 -ne 0
+  }
+  for ($labelIndex = 0; $labelIndex -lt $Body.Length; $labelIndex += 1) {
+    $character = $Body[$labelIndex]
+    if ($character -eq '\' -and $labelIndex + 1 -lt $Body.Length -and $Body[$labelIndex + 1] -match '[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]') { $labelIndex += 1; continue }
+    if ($character -eq "`n" -and -not $labelContinuation.Match($Body, $labelIndex).Success) { $labelStack.Clear() }
+    if ($character -eq '`') {
+      $span = $labelCodeSpan.Match($Body, $labelIndex)
+      if ($span.Success) { $labelIndex += $span.Length - 1; continue }
+    }
+    if ($character -eq '[') { $labelStack.Push($labelIndex) }
+    if ($character -eq ']' -and $labelStack.Count -gt 0) { $imageLabelEnds.Add($labelStack.Pop(), $labelIndex) }
+  }
   $destinationLength = {
     param([string]$Target, [bool]$Inline = $false)
     if ($Target.StartsWith('<', [System.StringComparison]::Ordinal)) { return $Target.Length }
@@ -131,6 +154,15 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
         $paragraph = $false
         $paragraphStart = -1
       }
+      while (-not $insideHtml -and -not $inComment -and $offset -ge $spanEnd -and $offset -ge $linkEnd -and $htmlAllowed -and $listContentColumns.Count -gt 0) {
+        $nested = [regex]::Match($htmlLine, '^ {0,3}([-*+]|\d{1,9}[.)])([ \t]{1,4})(?![ \t])')
+        if (-not $nested.Success) { break }
+        $nestedColumn = & $columnAfter $nested.Value
+        $listContentColumns.Push($listContentColumns.Peek() + $nestedColumn)
+        $htmlLine = $htmlLine.Substring($nested.Length)
+        $paragraph = $false
+        $paragraphStart = -1
+      }
       $htmlLine = $htmlLine -replace '^[ \t]*', ''
       $opening = [regex]::Match($htmlLine, '^(`{3,}|~{3,})(.*)$')
       if (-not $insideHtml -and -not $inComment -and $offset -ge $spanEnd -and $offset -ge $linkEnd -and $htmlAllowed -and $opening.Success -and -not ($opening.Groups[1].Value[0] -eq '`' -and $opening.Groups[2].Value.Contains('`'))) {
@@ -212,6 +244,33 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
             $imageEscapes = 0
             for ($before = $position - 2; $before -ge 0 -and $line[$before] -eq '\'; $before -= 1) { $imageEscapes += 1 }
             $image = $position -gt 0 -and $line[$position - 1] -eq '!' -and $imageEscapes % 2 -eq 0
+            if ($image -and $escapes % 2 -eq 0 -and $imageLabelEnds.ContainsKey($start)) {
+              $close = $imageLabelEnds[$start]
+              $suffix = $imageSuffix.Match($Body, $close)
+              if ($suffix.Success) {
+                $target = $suffix.Groups['destination']
+                $length = & $destinationLength $target.Value $true
+                if ($length -ge 0 -and $length -lt $target.Length) {
+                  $complete = $suffix.Value.Substring(0, $target.Index - $suffix.Index + $length + 1)
+                  $suffix = $imageSuffix.Match($complete)
+                }
+                if ($length -ge 0 -and $suffix.Success -and (& $destinationLength $suffix.Groups['destination'].Value) -ge 0) {
+                  $linkStart = $start
+                  $linkEnd = $close + $suffix.Length
+                  $hasInlineLink = $true
+                  continue
+                }
+              }
+              $reference = $imageReference.Match($Body, $close + 1)
+              $text = $reference.Groups['reference'].Value
+              if ($text.Length -eq 0) { $text = $Body.Substring($start + 1, $close - $start - 1) }
+              if ([Text.Encoding]::UTF8.GetByteCount($text) -le 1000 -and $referenceLabels.Contains((& $normalizeLabel $text))) {
+                $linkStart = $start
+                $linkEnd = $close + 1 + $(if ($reference.Success) { $reference.Length } else { 0 })
+                $hasInlineLink = $true
+                continue
+              }
+            }
             if ($escapes % 2 -eq 0 -and $inline.Success) {
               $target = $inline.Groups['destination']
               $length = & $destinationLength $target.Value $true
@@ -240,6 +299,7 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
             }
           }
           if (-not $insideHtml -and $line[$position] -eq '`') {
+            if (& $isEscaped ($offset + $position)) { $position += 1; continue }
             $tail = $Body.Substring($offset + $position)
             $span = $codeSpan.Match($tail)
             if ($span.Success) {
@@ -250,7 +310,7 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
             $position += [regex]::Match($tail, '^`+').Length
             continue
           }
-          if (-not $line.Substring($position).StartsWith('<!--', [System.StringComparison]::Ordinal)) {
+          if (-not $line.Substring($position).StartsWith('<!--', [System.StringComparison]::Ordinal) -or (& $isEscaped ($offset + $position))) {
             $position += 1
             continue
           }
@@ -313,7 +373,23 @@ function RemovalAnswer([string]$Body) {
   $meaningful = [regex]::Replace($answer.Value, '(?m)^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?', '')
   $meaningful = [regex]::Replace($meaningful, '(?m)^[ \t]*>+[ \t]*', '')
   $meaningful = [regex]::Replace($meaningful, '</?[A-Za-z][A-Za-z0-9:-]*(?:[ \t\n]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t\n]*=[ \t\n]*(?:[^"''=<>`\x00-\x20]+|''[^'']*''|"[^"]*"))?)*[ \t\n]*/?>', '')
-  $meaningful = [regex]::Replace($meaningful, '&(?:#(?:[xX][0-9A-Fa-f]+|\d+)|[A-Za-z][A-Za-z0-9]*);', ' ')
+  $entities = [regex]::new('(?<literal>\\[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]|(?<ticks>`+)(?!`)[\s\S]*?(?<!`)\k<ticks>(?!`))|&(?<entity>#[xX][0-9A-Fa-f]{1,6}|#\d{1,7}|[A-Za-z][A-Za-z0-9]*);')
+  # SIMPLIFIED: other named references remain separators, not a full HTML5 decode.
+  # Lift when: the body readers can share a complete installed entity decoder.
+  $namedEntities = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::Ordinal)
+  foreach ($entry in (@{ sol='/'; period='.'; lbrack='['; rbrack=']'; lsqb='['; rsqb=']'; nbsp=[string][char]0xa0; Tab="`t"; NewLine="`n" }).GetEnumerator()) { $namedEntities.Add($entry.Key, [string]$entry.Value) }
+  $meaningful = $entities.Replace($meaningful, [System.Text.RegularExpressions.MatchEvaluator]{
+    param($entityMatch)
+    if ($entityMatch.Groups['literal'].Success) { return $entityMatch.Value }
+    $entity = $entityMatch.Groups['entity'].Value
+    if ($entity.StartsWith('#', [System.StringComparison]::Ordinal)) {
+      $value = if ($entity.Length -gt 1 -and $entity[1] -in @('x', 'X')) { [Convert]::ToInt32($entity.Substring(2), 16) } else { [int]$entity.Substring(1) }
+      if ($value -eq 0 -or $value -gt 0x10ffff -or ($value -ge 0xd800 -and $value -le 0xdfff)) { return [string][char]0xfffd }
+      return [char]::ConvertFromUtf32($value)
+    }
+    if ($namedEntities.ContainsKey($entity)) { return [string]$namedEntities[$entity] }
+    return ' '
+  })
   $meaningful = [regex]::Replace($meaningful, '[`*_]', '').Trim()
   if ($meaningful -notmatch '[\p{L}\p{N}]' -or $meaningful -match '^(?:TBD|TODO|FIXME|HACK)(?:[^\p{L}\p{N}]|$)' -or $meaningful -match '^(?:TBD|TODO|FIXME|HACK|None|N/?A|Not applicable|\[.*\])\.?$') { return "" }
   return [regex]::Replace($raw.Substring($answer.Index, $answer.Length).TrimEnd(), '\A(?:[ \t]*\n)*', '')
