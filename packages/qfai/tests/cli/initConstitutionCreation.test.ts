@@ -44,7 +44,8 @@ vi.mock("node:fs/promises", async () => {
 });
 
 const { replaceGovernedAsset, runInit } = await import("../../src/cli/commands/init.js");
-const { readAssistantAssetsLock } = await import("../../src/core/assistantAssetProvenance.js");
+const { classifyAssistantAsset, hashAssistantAssetFile, readAssistantAssetsLock } =
+  await import("../../src/core/assistantAssetProvenance.js");
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const CONSTITUTION = path.join(".qfai", "assistant", "constitution", "constitution.md");
 const FLOOR = path.join(".agents", "rules", "minimal-implementation.md");
@@ -76,6 +77,224 @@ const init = (root: string): Promise<string> =>
   captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
 
 describe("constitution creation preserves a path it cannot claim", () => {
+  it.each([
+    { published: true, code: "EACCES" },
+    { published: true, code: "EIO" },
+    { published: false, code: "EACCES" },
+    { published: false, code: "EIO" },
+  ])("retains the cleanup inspection reason $code after published=$published", async (scenario) => {
+    await withProject(async (root) => {
+      const source = path.join(ROOT, "packages/qfai/assets/init", CONSTITUTION);
+      const target = path.join(root, "created-policy.md");
+      const adopter = "# Existing adopter policy\n";
+      if (!scenario.published) await writeFile(target, adopter);
+      const cause = Object.assign(new Error(`${scenario.code}: staging metadata unavailable`), {
+        code: scenario.code,
+      });
+      let linked = false;
+      let staging: string | undefined;
+      let inspected = false;
+      linkSpy.mockImplementation(async (actual, ...args) => {
+        staging = String(args[0]);
+        try {
+          await actual.link(...args);
+        } finally {
+          linked = true;
+        }
+      });
+      lstatSpy.mockImplementation((actual, ...args) => {
+        if (linked && String(args[0]) === staging) {
+          inspected = true;
+          return Promise.reject(cause);
+        }
+        return actual.lstat(...args);
+      });
+      let result: string | undefined;
+      let failure: unknown;
+      const output = await captureStdout(async () => {
+        try {
+          result = await replaceGovernedAsset(source, target, undefined, "create-only");
+        } catch (error: unknown) {
+          failure = error;
+        }
+      });
+
+      expect(inspected).toBe(true);
+      expect(output).toContain(cause.message);
+      expect(output).toContain("Do not delete this occupied path");
+      expect((await readFile(String(staging))).equals(await readFile(source))).toBe(true);
+      if (scenario.published) {
+        expect(result).toBe("replaced");
+        expect(failure).toBeUndefined();
+        expect((await readFile(target)).equals(await readFile(source))).toBe(true);
+      } else {
+        expect(failure).toMatchObject({ code: "EEXIST" });
+        expect(await readFile(target, "utf-8")).toBe(adopter);
+      }
+    });
+  });
+
+  it.each([
+    { relative: "constitution/constitution.md", change: "staging before link" },
+    { relative: "catalog/test-layers.md", change: "staging before link" },
+    { relative: "constitution/constitution.md", change: "destination after link" },
+    { relative: "constitution/constitution.md", change: "destination bytes after link" },
+  ])("protects $relative with $change instead of recording a shipped write", async (scenario) => {
+    await withProject(async (root) => {
+      const target = path.join(root, ".qfai", "assistant", ...scenario.relative.split("/"));
+      const replacement = "# Adopter concurrent content\n";
+      let staging: string | undefined;
+      linkSpy.mockImplementation(async (actual, ...args) => {
+        if (String(args[1]) !== target) return actual.link(...args);
+        staging = String(args[0]);
+        if (scenario.change === "staging before link") {
+          await actual.unlink(staging);
+          await actual.writeFile(staging, replacement, { flag: "wx" });
+        }
+        await actual.link(...args);
+        if (scenario.change === "destination after link") {
+          await actual.unlink(target);
+          await actual.writeFile(target, replacement, { flag: "wx" });
+        }
+        if (scenario.change === "destination bytes after link") {
+          await actual.writeFile(target, replacement);
+        }
+      });
+
+      const output = await init(root);
+      expect(staging).toBeDefined();
+      expect(await readFile(target, "utf-8")).toBe(replacement);
+      const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+      expect(lock?.files[scenario.relative]).toBeUndefined();
+      expect(output).toContain("created during initialization");
+      if (scenario.change === "staging before link") {
+        expect(await readFile(String(staging), "utf-8")).toBe(replacement);
+        expect(output).toContain("could not verify staging ownership");
+      } else {
+        await expect(lstat(String(staging))).rejects.toMatchObject({ code: "ENOENT" });
+      }
+
+      passThrough();
+      await init(root);
+      expect(await readFile(target, "utf-8")).toBe(replacement);
+      const retried = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+      const source = path.join(
+        ROOT,
+        "packages/qfai/assets/init/.qfai/assistant",
+        scenario.relative,
+      );
+      expect(
+        classifyAssistantAsset(
+          await hashAssistantAssetFile(target),
+          (await hashAssistantAssetFile(source)) ?? undefined,
+          retried?.files[scenario.relative],
+        ),
+      ).toBe("forked");
+      await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+      expect(await readFile(target, "utf-8")).toBe(replacement);
+    });
+  });
+
+  it("classifies a same-byte substituted staging inode as concurrent rather than its own write", async () => {
+    await withProject(async (root) => {
+      const source = path.join(ROOT, "packages/qfai/assets/init", CONSTITUTION);
+      const target = path.join(root, "created-policy.md");
+      let substituted = false;
+      let staging: string | undefined;
+      linkSpy.mockImplementation(async (actual, ...args) => {
+        if (String(args[1]) === target) {
+          staging = String(args[0]);
+          const complete = await actual.readFile(staging);
+          await actual.unlink(staging);
+          await actual.writeFile(staging, complete, { flag: "wx" });
+          substituted = true;
+        }
+        await actual.link(...args);
+      });
+
+      expect(await replaceGovernedAsset(source, target, undefined, "create-only")).toBe(
+        "target-changed",
+      );
+      expect(substituted).toBe(true);
+      expect((await readFile(target)).equals(await readFile(source))).toBe(true);
+      expect((await readFile(String(staging))).equals(await readFile(source))).toBe(true);
+    });
+  });
+
+  it("closes and removes the owned stage when shipped permissions cannot be applied", async () => {
+    await withProject(async (root) => {
+      const target = path.join(root, CONSTITUTION);
+      const cause = Object.assign(new Error("stage chmod failed"), { code: "EACCES" });
+      let failedHandle: Awaited<ReturnType<FsPromises["open"]>> | undefined;
+      let staging: string | undefined;
+      openSpy.mockImplementation(async (actual, ...args) => {
+        const opened = await actual.open(...args);
+        if (args[1] === "wx" && path.dirname(String(args[0])) === path.dirname(target)) {
+          vi.spyOn(opened, "chmod").mockImplementation(() => {
+            failedHandle = opened;
+            staging = String(args[0]);
+            return Promise.reject(cause);
+          });
+        }
+        return opened;
+      });
+
+      await expect(init(root)).rejects.toBe(cause);
+      if (failedHandle === undefined || staging === undefined) {
+        throw new Error("The creation writer must apply shipped permissions before publication.");
+      }
+      await expect(failedHandle.stat()).rejects.toMatchObject({ code: "EBADF" });
+      await expect(lstat(target)).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(lstat(staging)).rejects.toMatchObject({ code: "ENOENT" });
+    });
+  });
+
+  it("preserves a created governed file's native shipped read-only permissions", async () => {
+    await withProject(async (root) => {
+      const actual = await vi.importActual<FsPromises>("node:fs/promises");
+      const source = path.join(root, "shipped-policy.md");
+      const target = path.join(root, "created-policy.md");
+      await actual.writeFile(source, "# Shipped policy\n");
+      await actual.chmod(source, 0o444);
+      try {
+        const sourceMode = (await actual.stat(source)).mode & 0o7777;
+        expect(await replaceGovernedAsset(source, target, undefined, "create-only")).toBe(
+          "replaced",
+        );
+        expect((await actual.stat(target)).mode & 0o7777).toBe(sourceMode);
+        expect((await actual.readFile(target)).equals(await actual.readFile(source))).toBe(true);
+      } finally {
+        await actual.chmod(source, 0o644);
+        await actual.chmod(target, 0o644).catch((cause: unknown) => {
+          if (!(cause instanceof Error) || !("code" in cause) || cause.code !== "ENOENT") {
+            throw cause;
+          }
+        });
+      }
+    });
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "preserves shipped permission bits under a restrictive POSIX umask",
+    async () => {
+      await withProject(async (root) => {
+        const actual = await vi.importActual<FsPromises>("node:fs/promises");
+        const source = path.join(root, "shipped-policy.md");
+        const target = path.join(root, "created-policy.md");
+        await actual.writeFile(source, "# Shipped policy\n");
+        await actual.chmod(source, 0o644);
+        const previous = process.umask(0o077);
+        try {
+          await replaceGovernedAsset(source, target, undefined, "create-only");
+          expect((await actual.stat(target)).mode & 0o7777).toBe(0o644);
+          expect((await actual.readFile(target)).equals(await actual.readFile(source))).toBe(true);
+        } finally {
+          process.umask(previous);
+        }
+      });
+    },
+  );
+
   it("keeps a published inode refreshable after staging cleanup", async () => {
     await withProject(async (root) => {
       const source = path.join(

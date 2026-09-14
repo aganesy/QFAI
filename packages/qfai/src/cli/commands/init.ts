@@ -901,6 +901,7 @@ async function syncGovernedAssistantAssets(
     }
 
     if (currentHash === shippedHash) {
+      skipped.push(dest);
       recorded[relative] = shippedHash;
       continue;
     }
@@ -1066,8 +1067,8 @@ export async function replaceGovernedAsset(
     let outcome: GovernedWriteOutcome = "replaced";
     let published = false;
     const failures: unknown[] = [];
-    const ownsStaging = async (): Promise<boolean> => {
-      const current = await lstat(staging, { bigint: true });
+    const ownsPath = async (target: string): Promise<boolean> => {
+      const current = await lstat(target, { bigint: true });
       return (
         identity !== undefined &&
         current.isFile() &&
@@ -1078,16 +1079,18 @@ export async function replaceGovernedAsset(
     try {
       identity = await handle.stat({ bigint: true });
       await handle.writeFile(await readFile(source));
+      await handle.chmod((await stat(source)).mode & 0o7777);
       if (expectedHash !== undefined && (await hashAssistantAssetFile(dest)) !== expectedHash) {
         outcome = "target-changed";
       } else {
-        if (!(await ownsStaging())) {
+        if (!(await ownsPath(staging))) {
           throw new Error(
             `qfai init cannot publish ${JSON.stringify(dest)} because staging ownership changed at ${JSON.stringify(staging)}. Inspect ownership before retrying.`,
           );
         }
         await link(staging, dest);
         published = true;
+        if (!(await ownsPath(dest))) outcome = "target-changed";
       }
     } catch (cause: unknown) {
       failures.push(cause);
@@ -1101,14 +1104,16 @@ export async function replaceGovernedAsset(
     }
     let present = true;
     let removable = false;
+    let inspectionNote = "";
     try {
-      removable = await ownsStaging();
+      removable = await ownsPath(staging);
     } catch (cause: unknown) {
       if (isEnoent(cause)) present = false;
+      else inspectionNote = ` Inspection failed: ${JSON.stringify(String(cause))}.`;
     }
     if (present && !removable) {
       warn(
-        `NOTE: qfai init could not verify staging ownership at ${JSON.stringify(staging)}. Do not delete this occupied path. Restore access and inspect ownership before rerunning; keep any existing destination content at ${JSON.stringify(dest)}.`,
+        `NOTE: qfai init could not verify staging ownership at ${JSON.stringify(staging)}.${inspectionNote} Do not delete this occupied path. Restore access and inspect ownership before rerunning; keep any existing destination content at ${JSON.stringify(dest)}.`,
       );
     }
     if (removable && !closed) {
@@ -1304,12 +1309,18 @@ async function restoreUnreadableGovernedAsset(
   const occupied = await pathExists(dest).catch(() => true);
   if (!occupied) {
     if (!options.dryRun) {
+      let concurrent: boolean;
       try {
-        await replaceGovernedAsset(source, dest, undefined, "create-only");
+        const outcome = await replaceGovernedAsset(source, dest, undefined, "create-only");
+        concurrent =
+          outcome === "target-changed" || (await hashAssistantAssetFile(dest)) !== shippedHash;
       } catch (error: unknown) {
         if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST") {
           throw error;
         }
+        concurrent = true;
+      }
+      if (concurrent) {
         out.skipped.push(dest);
         const contained = await hasRealGovernedAssistantParents(
           destRoot,

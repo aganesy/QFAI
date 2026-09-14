@@ -189,17 +189,26 @@ init reports that retained staging path before propagating the original write
 error. Accepting a concurrent destination never hides this cleanup warning.
 
 The exclusive creation handle also pins the publication stage's device and
-inode. The writer verifies its no-follow identity before publication. It closes
+inode. It writes complete bytes and applies the shipped permission bits through
+that handle, independently of the creator's umask. The writer verifies the
+stage's no-follow identity before publication and the destination's identity
+immediately after linking. A changed destination follows the protected
+concurrent-content path, not a successful-copy classification. Before recording
+a successful shipped write, init also verifies the destination's canonical bytes.
+Neither check authorizes overwriting concurrent content. The writer closes
 the handle before unlinking the staging name and rechecks ownership immediately
 before cleanup on either outcome. A close failure retains the stage for manual
 cleanup after the handle is closed.
 A changed or unverifiable stage remains untouched and is reported with
 ownership-inspection guidance, never an instruction to delete its replacement.
+When inspection fails, that warning retains the original error reason.
 Identity verification and pathname removal are not an atomic transaction.
 Metadata and close failures remain available. Every created handle has a close
 attempt, and a close failure propagates rather than authorizing unlink.
 Stage-creation failures retain their cause and stop initialization. An occupied
 stage is not evidence that another process created the final governed file.
+Existing canonical governed assets are reported as skipped, including their
+paths under `--verbose`. Their bytes and provenance classification are unchanged.
 
 ## Shipped GitHub Actions workflows
 

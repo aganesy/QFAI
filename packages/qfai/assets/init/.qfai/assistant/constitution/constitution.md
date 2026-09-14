@@ -297,10 +297,11 @@ must be justified. Apply the ladder in `.agents/rules/minimal-implementation.md`
 to both the behaviours a change carries and the code that implements them.
 If you must expand scope, declare it explicitly in a **Delta** section.
 
-Only the safety floor in `.agents/rules/minimal-implementation.md` § 2 and the
-unnumbered Absolute Rule — Output Language outrank this article. This article
-takes precedence over every other article and over conflicting instructions
-in other constitution documents.
+The safety floor in `.agents/rules/minimal-implementation.md` § 2, the
+unnumbered Absolute Rule — Output Language, and
+mandatory approvals and irreversible-action confirmations outrank this article.
+This article takes precedence over every other article and over conflicting
+instructions in other constitution documents.
 
 The floor's specification clause preserves Article IV. The ladder's first rung
 belongs here while scope is open. Once a spec row is agreed, asking whether it
