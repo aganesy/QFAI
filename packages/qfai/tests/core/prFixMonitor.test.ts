@@ -245,6 +245,8 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ["quoted definition-like paragraph", "> Paragraph\n> [Nothing]: /url"],
     ["list definition-like paragraph", "- Paragraph\n  [Nothing]: /url"],
     ["image with prose", "![Example](/image.png)\n\nNothing."],
+    ["live after footnote dedent", "[^1]: Hidden\n\nNothing removed."],
+    ["live after footnote block", "[^1]: Hidden\n### Heading\nNothing removed."],
     ["code-like reference container top level", "    [Nothing]: /url"],
     ["code-like reference container quote", ">     [Nothing]: /url"],
     ["code-like reference container list", "-     [Nothing]: /url"],
@@ -397,6 +399,10 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ["import-only body", "## Auto-import\n\n"],
     ["thematic break", "## What this change made unnecessary\n\n---\n"],
     ...["---", "==="].map((underline) => [
+      `code span becomes Setext ${underline}`,
+      `## What this change made unnecessary\n\n\`\nNext section\n${underline}\nNothing removed.\n\`\n`,
+    ]),
+    ...["---", "==="].map((underline) => [
       `reference paragraph becomes Setext ${underline}`,
       `## What this change made unnecessary\n\n[Nothing]: /url "Title\n${underline}\nNothing"\n`,
     ]),
@@ -417,6 +423,14 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ].map((source) => [
       `hidden image/container answer ${JSON.stringify(source)}`,
       `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...[
+      "[^1]: Hidden\nNothing removed.\n",
+      "[^1]: Hidden\n    Nothing removed.\n",
+      "[^1]: Hidden\n\n    Nothing removed.\n",
+    ].map((source) => [
+      `hidden footnote continuation ${JSON.stringify(source)}`,
+      `## What this change made unnecessary\n\n${source}`,
     ]),
     [
       "link-reference definition",

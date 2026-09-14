@@ -293,6 +293,14 @@ jobs:
                 );
               const interrupt = String.raw` {0,3}(?:#{1,6}(?:[ \t]|\r?$)|>|~{3,}|\x60{3,}[^\x60\r\n]*\r?$|(?:=+|-+)[ \t]*\r?$|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})\r?$|(?:[-+*]|0{0,8}1[.)])[ \t]+\S|<(?:!--|\?|![A-Za-z]|!\[[cC][dD][aA][tT][aA]\[|(?:[pP][rR][eE]|[sS][cC][rR][iI][pP][tT]|[sS][tT][yY][lL][eE]|[tT][eE][xX][tT][aA][rR][eE][aA])(?=[ \t>]|\r?$)|/?(?:${blockTags})(?=[ \t>]|/>|\r?$)))`;
               const continuation = String.raw`\r?\n(?![ \t]*(?:\r?\n|(?![\s\S])))(?!${interrupt})`;
+              const paragraphInterrupt = new RegExp(`^${interrupt}`);
+              // SIMPLIFIED: closed code spans retain literal comment openers.
+              // Lift when: block parsing and code-span preservation share paragraph boundaries.
+              const codeSpan = new RegExp(
+                '^(`+)(?!`)(?:(?!\\r?\\n[ \\t]*\\r?\\n)(?!\\r?\\n' +
+                  interrupt.replace('!--|', '').replace(/\$/g, '(?=\\r?\\n|$)') +
+                  ')[\\s\\S])*?(?<!`)\\1(?!`)',
+              );
               const label = String.raw`\[(?<label>(?:\\.|[^\[\]\\\r\n]|${continuation})+)\]`;
               const destination = String.raw`(?<destination><(?:\\.|[^<>\\\r\n])*>|(?:\\.|[^\x00-\x20\x7f<>\\])+)`;
               const title = String.raw`(?:"(?:[^"\\\r\n]|\\.|${continuation})*"|'(?:[^'\\\r\n]|\\.|${continuation})*'|\((?:[^()\\\r\n]|\\.|${continuation})*\))`;
@@ -351,6 +359,9 @@ jobs:
                 let htmlContainer = '';
                 const listContentColumns = [];
                 let listContainer = '';
+                let footnoteColumn = null;
+                let footnoteParagraph = false;
+                let footnoteContainer = '';
                 const columnAfter = (prefix) => {
                   let column = 0;
                   for (const character of prefix)
@@ -368,6 +379,17 @@ jobs:
                   const container = (/^ {0,3}(?:> ?)*/.exec(line)?.[0] ?? '').replace(/[^>]/g, '');
                   const indentation = columnAfter(/^[ \t]*/.exec(content)?.[0] ?? '');
                   const blank = line.trim().length === 0;
+                  if (
+                    footnoteColumn !== null && container === footnoteContainer &&
+                    (blank || indentation >= footnoteColumn ||
+                      (footnoteParagraph && !paragraphInterrupt.test(content)))
+                  ) {
+                    footnoteParagraph = !blank && indentation < footnoteColumn + 4 &&
+                      !paragraphInterrupt.test(content.trimStart());
+                    paragraph = false;
+                    return line.replace(/[^\r\n]/g, ' ');
+                  }
+                  footnoteColumn = null;
                   if (container !== listContainer) {
                     listContentColumns.length = 0;
                     listContainer = container;
@@ -457,6 +479,14 @@ jobs:
                       if (!htmlTextVisible) return line.replace(/[^\r\n]/g, ' ');
                     }
                   }
+                  const footnote = /^\[\^[^\]\r\n]+\]:[ \t]*(.*)/.exec(htmlLine);
+                  if (!insideHtml && !inComment && offset >= spanEnd && offset >= linkEnd && htmlAllowed && footnote) {
+                    footnoteColumn = (listContentColumns.at(-1) ?? 0) + 4;
+                    footnoteParagraph = footnote[1].trim().length > 0 && !paragraphInterrupt.test(footnote[1]);
+                    footnoteContainer = container;
+                    paragraph = false;
+                    return line.replace(/[^\r\n]/g, ' ');
+                  }
                   if (!insideHtml && !inComment && offset >= spanEnd && htmlAllowed && (!paragraph || (container && container !== previousContainer)) && definitions.has(offset)) {
                     referenceEnd = definitions.get(offset);
                     referenceLabels.add(definitionLabels.get(offset));
@@ -523,7 +553,7 @@ jobs:
                       }
                       if (!insideHtml && line[position] === '`') {
                         const tail = body.slice(offset + position);
-                        const span = /^(`+)(?!`)(?:(?!\r?\n[ \t]*\r?\n)[\s\S])*?(?<!`)\1(?!`)/.exec(tail)?.[0];
+                        const span = codeSpan.exec(tail)?.[0];
                         if (span !== undefined) {
                           spanEnd = offset + position + span.length;
                           position = Math.min(line.length, spanEnd - offset);

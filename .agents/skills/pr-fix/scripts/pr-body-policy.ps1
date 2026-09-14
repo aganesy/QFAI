@@ -12,6 +12,10 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
   $normalizeLabel = { param([string]$Label); return ($Label -replace '[ \t\n]+', ' ').Trim().ToLowerInvariant().ToUpperInvariant() }
   $interrupt = ' {0,3}(?:#{1,6}(?:[ \t]|$)|>|~{3,}|`{3,}[^`\n]*$|(?:=+|-+)[ \t]*$|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})$|(?:[-+*]|0{0,8}1[.)])[ \t]+\S|(?i:<(?:!--|\?|![A-Za-z]|!\[CDATA\[|(?:pre|script|style|textarea)(?=[ \t>]|$)|/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|/>|$))))'
   $continuation = '\n(?![ \t]*(?:\n|\z))(?!' + $interrupt + ')'
+  $paragraphInterrupt = [regex]::new('^' + $interrupt)
+  # SIMPLIFIED: closed code spans retain literal comment openers.
+  # Lift when: block parsing and code-span preservation share paragraph boundaries.
+  $codeSpan = [regex]::new('^(`+)(?!`)(?:(?!\n[ \t]*\n)(?!\n' + $interrupt.Replace('!--|', '').Replace('$', '(?=\n|$)') + ')[\s\S])*?(?<!`)\1(?!`)')
   $label = '\[(?<label>(?:\\.|[^\[\]\\\n]|' + $continuation + ')+)\]'
   $destination = '(?<destination><(?:\\.|[^<>\\\n])*>|(?:\\.|[^\x00-\x20\x7f<>\\])+)'
   $title = '(?:"(?:[^"\\\n]|\\.|' + $continuation + ')*"|''(?:[^''\\\n]|\\.|' + $continuation + ')*''|\((?:[^()\\\n]|\\.|' + $continuation + ')*\))'
@@ -57,6 +61,9 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
     $htmlContainer = ""
     $listContentColumns = [System.Collections.Generic.Stack[int]]::new()
     $listContainer = ""
+    $footnoteColumn = $null
+    $footnoteParagraph = $false
+    $footnoteContainer = ""
     $columnAfter = {
       param([string]$Prefix)
       $column = 0
@@ -80,6 +87,14 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
       $container = [regex]::Match($line, '^ {0,3}(?:> ?)*').Value -replace '[^>]', ''
       $indentation = & $columnAfter ([regex]::Match($content, '^[ \t]*').Value)
       $blank = [string]::IsNullOrWhiteSpace($line)
+      if ($null -ne $footnoteColumn -and $container -ceq $footnoteContainer -and ($blank -or $indentation -ge $footnoteColumn -or ($footnoteParagraph -and -not $paragraphInterrupt.IsMatch($content)))) {
+        $footnoteParagraph = -not $blank -and $indentation -lt $footnoteColumn + 4 -and -not $paragraphInterrupt.IsMatch($content.TrimStart())
+        $paragraph = $false
+        $line -replace '[^\r\n]', ' '
+        $offset += $line.Length + 1
+        continue
+      }
+      $footnoteColumn = $null
       if ($container -cne $listContainer) { $listContentColumns.Clear(); $listContainer = $container }
       while (-not $blank -and $listContentColumns.Count -gt 0 -and $indentation -lt $listContentColumns.Peek()) { [void]$listContentColumns.Pop() }
       if ($fence.Length -gt 0 -and ($container -cne $fenceContainer -or (-not $blank -and $indentation -lt $fenceContentColumn))) { $fence = "" }
@@ -157,6 +172,16 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
           }
         }
       }
+      $footnote = [regex]::Match($htmlLine, '^\[\^[^\]\r\n]+\]:[ \t]*(.*)')
+      if (-not $insideHtml -and -not $inComment -and $offset -ge $spanEnd -and $offset -ge $linkEnd -and $htmlAllowed -and $footnote.Success) {
+        $footnoteColumn = 4 + $(if ($listContentColumns.Count -gt 0) { $listContentColumns.Peek() } else { 0 })
+        $footnoteParagraph = $footnote.Groups[1].Value.Trim().Length -gt 0 -and -not $paragraphInterrupt.IsMatch($footnote.Groups[1].Value)
+        $footnoteContainer = $container
+        $paragraph = $false
+        $line -replace '[^\r\n]', ' '
+        $offset += $line.Length + 1
+        continue
+      }
       if (-not $insideHtml -and -not $inComment -and $offset -ge $spanEnd -and $htmlAllowed -and (-not $paragraph -or ($container.Length -gt 0 -and $container -cne $previousContainer)) -and $definitions.ContainsKey($offset)) {
         $referenceEnd = $definitions[$offset]
         [void]$referenceLabels.Add($definitionLabels[$offset])
@@ -216,7 +241,7 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
           }
           if (-not $insideHtml -and $line[$position] -eq '`') {
             $tail = $Body.Substring($offset + $position)
-            $span = [regex]::Match($tail, '^(`+)(?!`)(?:(?!\r?\n[ \t]*\r?\n)[\s\S])*?(?<!`)\1(?!`)')
+            $span = $codeSpan.Match($tail)
             if ($span.Success) {
               $spanEnd = $offset + $position + $span.Length
               $position = [Math]::Min($line.Length, $spanEnd - $offset)

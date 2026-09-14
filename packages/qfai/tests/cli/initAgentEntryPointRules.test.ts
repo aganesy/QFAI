@@ -756,6 +756,49 @@ describe("a hand-wired file this run cannot extend is named", () => {
 });
 
 describe("optional review directive detection", () => {
+  it("keeps live guidance after a one-column table delimiter", () => {
+    const existing = `| \`unclosed |\n| --- |\n${REVIEW_POINTER}\n`;
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+  });
+
+  it.each(["- - ", "1. - ", "- 2. "])("reuses visible nested list guidance %j", (prefix) => {
+    for (const end of ["\n", "\r\n"]) {
+      const existing = `\uFEFF${prefix}${REVIEW_POINTER}${end}`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    }
+  });
+
+  it.each(["--- | ---", "| :--- | ---: |"])(
+    "keeps live guidance after a table delimiter %j",
+    (delimiter) => {
+      for (const end of ["\n", "\r\n"]) {
+        const existing = `\uFEFF\`unclosed | head${end}${delimiter}${end}${REVIEW_POINTER}${end}`;
+        expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+      }
+    },
+  );
+
+  it.each(["unclosed", "unclosed | head | extra", "unclosed \\| head"])(
+    "keeps non-table code-span examples masked %j",
+    (header) => {
+      for (const end of ["\n", "\r\n"]) {
+        const existing = `\uFEFF\`\`${header}${end}--- | ---${end}${REVIEW_POINTER}${end}Closing\`\`${end}`;
+        expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+          `\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`,
+        );
+      }
+    },
+  );
+
+  it.each(["- ", "- - ", "1. - "])("masks list-contained footnote guidance %j", (prefix) => {
+    for (const end of ["\n", "\r\n"]) {
+      const existing = `\uFEFF${prefix}[^1]: Hidden${end}${" ".repeat(prefix.length)}${REVIEW_POINTER}${end}`;
+      const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+      expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+    }
+  });
+
   it.each(["- > ", "> - > ", "- > - > "])(
     "resolves reference definitions after alternating containers %j",
     (prefix) => {
@@ -917,6 +960,9 @@ describe("optional review directive detection", () => {
           { text: `![\n${REVIEW_POINTER}\n][image]\n\n- > [image]: /image.png`, hidden: true },
           { text: `[^1]: Hidden note\n    ${REVIEW_POINTER}`, hidden: true },
           { text: `[^1]: Hidden note\n${REVIEW_POINTER}`, hidden: true },
+          { text: `- [^1]: Hidden\n  ${REVIEW_POINTER}`, hidden: true },
+          { text: `\`unclosed | head\n--- | ---\n${REVIEW_POINTER}`, hidden: false },
+          { text: `- - ${REVIEW_POINTER}`, hidden: false },
           { text: `![\n${REVIEW_POINTER}\n][${label}]\n\n[${label}]: /image.png`, hidden: true },
           { text: `\`\`Unclosed\n# Heading\n${REVIEW_POINTER}\nClosing\`\``, hidden: false },
         ]) {

@@ -495,6 +495,10 @@ describe("resuming a release pull-request description", () => {
     ["wrong marker close", "```md\n~~~\n## What this change made unnecessary\n\nNothing.\n````\n"],
     ["commented example", "<!--\n## What this change made unnecessary\n\nNothing.\n-->\n"],
     ["HTML empty block", "## What this change made unnecessary\n\n<div>\n</div>\n"],
+    ...["---", "==="].map((underline) => [
+      `code span becomes Setext ${underline}`,
+      `## What this change made unnecessary\n\n\`\nNext section\n${underline}\nNothing removed.\n\`\n`,
+    ]),
     ...[
       "![Nothing](/image.png)",
       "![Nothing][image]\n\n[image]: /image.png",
@@ -507,6 +511,14 @@ describe("resuming a release pull-request description", () => {
     ].map((source) => [
       `hidden image/container answer ${JSON.stringify(source)}`,
       `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...[
+      "[^1]: Hidden\nNothing removed.\n",
+      "[^1]: Hidden\n    Nothing removed.\n",
+      "[^1]: Hidden\n\n    Nothing removed.\n",
+    ].map((source) => [
+      `hidden footnote continuation ${JSON.stringify(source)}`,
+      `## What this change made unnecessary\n\n${source}`,
     ]),
     [
       "link-reference definition",
@@ -604,6 +616,14 @@ describe("resuming a release pull-request description", () => {
     [
       "authored",
       "## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
+    ],
+    [
+      "authored after footnote dedent",
+      "## What this change made unnecessary\n\n[^1]: Hidden\n\nNothing removed.\n",
+    ],
+    [
+      "authored after footnote block",
+      "## What this change made unnecessary\n\n[^1]: Hidden\n### Heading\nNothing removed.\n",
     ],
     ...[
       "[Nothing]: https://example.com/a(b\n",

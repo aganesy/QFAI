@@ -168,6 +168,10 @@ describe("run-pr-merge plan", () => {
       `## What this change made unnecessary\n\n[Nothing]: /url "Title\n${underline}\nNothing"\n`,
     ]),
     ["None marker", "## What this change made unnecessary\n\nNone.\n"],
+    ...["---", "==="].map((underline) => [
+      `code span becomes Setext ${underline}`,
+      `## What this change made unnecessary\n\n\`\nNext section\n${underline}\nNothing removed.\n\`\n`,
+    ]),
     ["N/A marker", "## What this change made unnecessary\n\nN/A\n"],
     ["named space entity", "## What this change made unnecessary\n\n&nbsp;\n"],
     ["numeric space entity", "## What this change made unnecessary\n\n&#160;\n"],
@@ -188,6 +192,14 @@ describe("run-pr-merge plan", () => {
     ].map((source) => [
       `hidden image/container answer ${JSON.stringify(source)}`,
       `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...[
+      "[^1]: Hidden\nNothing removed.\n",
+      "[^1]: Hidden\n    Nothing removed.\n",
+      "[^1]: Hidden\n\n    Nothing removed.\n",
+    ].map((source) => [
+      `hidden footnote continuation ${JSON.stringify(source)}`,
+      `## What this change made unnecessary\n\n${source}`,
     ]),
     [
       "link-reference definition",
@@ -342,6 +354,8 @@ describe("run-pr-merge plan", () => {
     ["quoted definition-like paragraph", "> Paragraph\n> [Nothing]: /url"],
     ["list definition-like paragraph", "- Paragraph\n  [Nothing]: /url"],
     ["image with prose", "![Example](/image.png)\n\nNothing."],
+    ["live after footnote dedent", "[^1]: Hidden\n\nNothing removed."],
+    ["live after footnote block", "[^1]: Hidden\n### Heading\nNothing removed."],
     ["code-like reference container top level", "    [Nothing]: /url"],
     ["code-like reference container quote", ">     [Nothing]: /url"],
     ["code-like reference container list", "-     [Nothing]: /url"],

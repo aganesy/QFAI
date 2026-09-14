@@ -297,6 +297,27 @@ export function addReviewPointer(existing: string, template: string | null): str
       interrupt.replace("!--|", "").replace(/\$/g, "(?=\\r?\\n|$)") +
       ")[\\s\\S])*?(?<!`)\\1(?!`)",
   );
+  const tableDelimiter = /^ {0,3}\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*\r?$/gm;
+  const tableBoundaries = new Set<number>();
+  const lines = existing.split("\n");
+  let tableOffset = 0;
+  let previousLine = "";
+  for (const line of lines) {
+    tableDelimiter.lastIndex = 0;
+    if (tableDelimiter.test(line) && /^\uFEFF? {0,3}\S/.test(previousLine)) {
+      const header = previousLine.trim().replace(/^\uFEFF/, "");
+      const headerCells = header.replace(/^\||(?<!\\)(?:\\\\)*\|$/g, "");
+      const separator = line.trim().replace(/^\||\|$/g, "");
+      const headerPipes = headerCells.match(/(?<!\\)(?:\\\\)*\|/g)?.length ?? 0;
+      if (
+        /(?<!\\)(?:\\\\)*\|/.test(header) &&
+        headerPipes === (separator.match(/\|/g)?.length ?? 0)
+      )
+        tableBoundaries.add(tableOffset);
+    }
+    previousLine = line;
+    tableOffset += line.length + 1;
+  }
   const definition = new RegExp(
     String.raw`^\uFEFF?(?: {0,3}(?:>[ \t]?|(?:[-*+]|\d{1,9}[.)])[ \t]+))*[ \t]*${label}:[ \t]*(?:${continuation}[ \t]*)?${destination}(?:${spacing}${title})?[ \t]*\r?$`,
     "gm",
@@ -357,12 +378,13 @@ export function addReviewPointer(existing: string, template: string | null): str
     let indentedCode = false;
     let footnoteColumn: number | null = null;
     let footnoteParagraph = false;
+    let footnoteContainer = "";
     let htmlEnd: RegExp | null = null;
     let htmlContentColumn = 0;
     let htmlContainer = "";
     let paragraph = false;
     let quotedParagraph = false;
-    for (const raw of existing.split("\n")) {
+    for (const raw of lines) {
       if (offset < referenceEnd) {
         paragraph = false;
         quotedParagraph = false;
@@ -370,13 +392,15 @@ export function addReviewPointer(existing: string, template: string | null): str
         continue;
       }
       const container = containerOf(raw);
+      const plain = plainLine(raw);
       const blank = raw.trim().length === 0;
       const rawIndentation = columnAfter(/^\uFEFF?([ \t]*)/.exec(raw)?.[1] ?? "");
       if (
         footnoteColumn !== null &&
+        container === footnoteContainer &&
         (blank ||
           rawIndentation >= footnoteColumn ||
-          (footnoteParagraph && !paragraphInterrupt.test(raw)))
+          (footnoteParagraph && !paragraphInterrupt.test(plain)))
       ) {
         footnoteParagraph =
           !blank &&
@@ -388,7 +412,6 @@ export function addReviewPointer(existing: string, template: string | null): str
         continue;
       }
       footnoteColumn = null;
-      const plain = plainLine(raw);
       const wasQuotedParagraph = quotedParagraph;
       const lazyQuote =
         quotedParagraph && container === "" && !blank && !paragraphInterrupt.test(plain);
@@ -437,7 +460,10 @@ export function addReviewPointer(existing: string, template: string | null): str
         continue;
       }
       indentedCode = false;
-      const footnote = /^\uFEFF? {0,3}\[\^[^\]\r\n]+\]:[ \t]*(.*)/.exec(raw);
+      const footnote =
+        /^(\uFEFF?(?: {0,3}(?:>[ \t]?|(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t])))* {0,3})\[\^[^\]\r\n]+\]:[ \t]*(.*)/.exec(
+          raw,
+        );
       if (
         !comment &&
         offset >= spanEnd &&
@@ -445,9 +471,10 @@ export function addReviewPointer(existing: string, template: string | null): str
         offset >= tagEnd &&
         footnote !== null
       ) {
-        footnoteColumn = rawIndentation + 4;
+        footnoteColumn = columnAfter((footnote[1] ?? "").replace(/^\uFEFF/, "")) + 4;
+        footnoteContainer = container;
         footnoteParagraph =
-          (footnote[1] ?? "").trim().length > 0 && !paragraphInterrupt.test(footnote[1] ?? "");
+          (footnote[2] ?? "").trim().length > 0 && !paragraphInterrupt.test(footnote[2] ?? "");
         paragraph = false;
         offset += raw.length + 1;
         continue;
@@ -659,7 +686,15 @@ export function addReviewPointer(existing: string, template: string | null): str
         }
         if (raw[index] === "`") {
           const tail = existing.slice(offset + index);
-          const span = codeSpan.exec(tail)?.[0];
+          let span = codeSpan.exec(tail)?.[0];
+          if (span !== undefined && tableBoundaries.size > 0) {
+            for (const delimiter of span.matchAll(tableDelimiter)) {
+              if (tableBoundaries.has(offset + index + delimiter.index)) {
+                span = undefined;
+                break;
+              }
+            }
+          }
           if (span === "`REVIEW.md`") {
             visible += span;
             index += span.length;
@@ -699,7 +734,7 @@ export function addReviewPointer(existing: string, template: string | null): str
         pass === 1 &&
         container === "" &&
         !lazyQuote &&
-        visible.trim().replace(/^(?:[-*+]|\d{1,9}[.)])[ \t]+/, "") === pointer
+        visible.trim().replace(/^(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))+/, "") === pointer
       )
         return existing;
       offset += raw.length + 1;
