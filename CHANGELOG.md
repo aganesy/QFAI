@@ -120,6 +120,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   release-body repairs hidden by unfinished Markdown blocks.
   Existing list-item directives are reused without rewriting project text.
   A heading that interrupts a paragraph remains visible to description readers.
+  Raw HTML examples do not supply description headings. Top-level indented
+  examples do not supply review guidance. Project bytes and authored answers
+  stay intact.
 
 - **The completion gate recomputes the checkpoint seal over the checkpoint's own
   revision** (#1738). `checkpoint-verification.md` seals the checkpoint command

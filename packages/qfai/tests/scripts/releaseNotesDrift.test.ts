@@ -331,6 +331,31 @@ describe("resuming a release pull-request description", () => {
     ["short close", "````md\n```\n## What this change made unnecessary\n\nNothing.\n````\n"],
     ["wrong marker close", "```md\n~~~\n## What this change made unnecessary\n\nNothing.\n````\n"],
     ["commented example", "<!--\n## What this change made unnecessary\n\nNothing.\n-->\n"],
+    ["HTML empty block", "## What this change made unnecessary\n\n<div>\n</div>\n"],
+    [
+      "HTML comment only",
+      "## What this change made unnecessary\n\n<div>\n<!-- Nothing. -->\n</div>\n",
+    ],
+    ["HTML entity only", "## What this change made unnecessary\n\n<p>&nbsp;</p>\n"],
+    ["HTML placeholder only", "## What this change made unnecessary\n\n<p>TODO</p>\n"],
+    ...["pre", "script", "style", "textarea"].map((tag) => [
+      `literal HTML answer ${tag}`,
+      `## What this change made unnecessary\n\n<${tag}>\nNothing.\n</${tag}>\n`,
+    ]),
+    ...["pre", "script", "style", "textarea", "div", "table"].map((tag) => [
+      `raw HTML ${tag} example`,
+      `<${tag}>\n## What this change made unnecessary\nNothing.\n</${tag}>\n`,
+    ]),
+    [
+      "raw HTML processing instruction",
+      "<?qfai\n## What this change made unnecessary\nNothing.\n?>\n",
+    ],
+    ["raw HTML declaration", "<!DOCTYPE\n## What this change made unnecessary\nNothing.\n>\n"],
+    ["raw HTML CDATA", "<![CDATA[\n## What this change made unnecessary\nNothing.\n]]>\n"],
+    [
+      "raw HTML standalone inline tag",
+      "<span>\n## What this change made unnecessary\nNothing.\n</span>\n",
+    ],
     [
       "authored",
       "## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
@@ -351,6 +376,26 @@ describe("resuming a release pull-request description", () => {
       "authored heading that interrupts a backtick paragraph",
       "`\n## What this change made unnecessary\nNothing.\n`\n",
     ],
+    ...[
+      "<p>Nothing.</p>",
+      "<div>\nNothing.\n</div>",
+      "<span>\nNothing.\n</span>",
+      "<div>\n<!--\n## Example -->\nNothing.\n</div>",
+    ].map((answer) => [
+      `authored HTML answer ${answer}`,
+      `## What this change made unnecessary\n\n${answer}\n`,
+    ]),
+    ...[
+      "<pre>\n<!--\n```md\n</pre>\n",
+      "<div>\nExample\n</div>\n\n",
+      "<pre>Example</pre>\n",
+      "Paragraph text\n<span>\n",
+      "<span title=>\n",
+      "<![cdata[\n",
+    ].map((prefix) => [
+      `authored after raw block ${JSON.stringify(prefix)}`,
+      `${prefix}## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n`,
+    ]),
   ])("preserves other prose when the removal answer is %s", async (name, section) => {
     const workflow = await readFile(
       path.join(REPO_ROOT, ".github/workflows/prepare-release.yml"),
@@ -393,8 +438,14 @@ describe("resuming a release pull-request description", () => {
       expect(updated).toBe(existing);
     } else {
       expect(updated).toContain(answer);
-      const outsideCode = maskFencedCodeBlocks(updated).replace(/<!--[\s\S]*?-->/g, "");
-      expect(outsideCode.match(/^## What this change made unnecessary$/gm)).toHaveLength(1);
+      if (name.startsWith("raw HTML")) {
+        expect(updated).toBe(
+          `${existing.trimEnd()}\n\n## What this change made unnecessary\n\n${answer}\n`,
+        );
+      } else {
+        const outsideCode = maskFencedCodeBlocks(updated).replace(/<!--[\s\S]*?-->/g, "");
+        expect(outsideCode.match(/^## What this change made unnecessary$/gm)).toHaveLength(1);
+      }
     }
   });
 });

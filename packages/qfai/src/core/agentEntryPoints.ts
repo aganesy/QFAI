@@ -233,6 +233,10 @@ export function addReviewPointer(existing: string, template: string | null): str
   let comment = false;
   let spanEnd = 0;
   let offset = 0;
+  let listOpen = false;
+  let indentedCode = false;
+  let htmlEnd: RegExp | null = null;
+  let paragraph = false;
   for (const raw of existing.split("\n")) {
     const container = containerOf(raw);
     if (fence !== null && container !== fence.container) fence = null;
@@ -240,16 +244,70 @@ export function addReviewPointer(existing: string, template: string | null): str
     const run = opening?.[1] ?? "";
     const rest = opening?.[2] ?? "";
     if (fence !== null) {
+      paragraph = false;
       if (run[0] === fence.character && run.length >= fence.length && rest.trim() === "") {
         fence = null;
       }
       offset += raw.length + 1;
       continue;
     }
-    if (!comment && offset >= spanEnd && opening && !(run.startsWith("`") && rest.includes("`"))) {
-      fence = { character: run[0] ?? "`", length: run.length, container };
+    if (htmlEnd !== null) {
+      if (htmlEnd.test(raw)) htmlEnd = null;
+      paragraph = false;
       offset += raw.length + 1;
       continue;
+    }
+    const blank = raw.trim().length === 0;
+    const indented = /^(?: {4}| {0,3}\t)/.test(raw);
+    // SIMPLIFIED: an open list keeps indented content eligible.
+    // Lift when: a nested code example requires the list's content column.
+    if (
+      !comment &&
+      ((indentedCode && (blank || indented)) || (!listOpen && !paragraph && indented))
+    ) {
+      indentedCode = true;
+      paragraph = false;
+      offset += raw.length + 1;
+      continue;
+    }
+    indentedCode = false;
+    if (/^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+/.test(raw)) listOpen = true;
+    else if (!blank && !/^[ \t]/.test(raw)) listOpen = false;
+    if (!comment && offset >= spanEnd && opening && !(run.startsWith("`") && rest.includes("`"))) {
+      fence = { character: run[0] ?? "`", length: run.length, container };
+      paragraph = false;
+      offset += raw.length + 1;
+      continue;
+    }
+    if (!comment) {
+      if (/^ {0,3}<(?:pre|script|style|textarea)(?=[ \t>]|$)/i.test(raw)) {
+        htmlEnd = /<\/(?:pre|script|style|textarea)>/i;
+      } else if (/^ {0,3}<\?/.test(raw)) {
+        htmlEnd = /\?>/;
+      } else if (/^ {0,3}<![A-Za-z]/.test(raw)) {
+        htmlEnd = />/;
+      } else if (/^ {0,3}<!\[CDATA\[/.test(raw)) {
+        htmlEnd = /\]\]>/;
+      } else if (
+        /^ {0,3}<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|\/>|$)/i.test(
+          raw,
+        )
+      ) {
+        htmlEnd = /^[ \t]*\r?$/;
+      } else if (
+        !paragraph &&
+        /^ {0,3}(?:<(?!pre(?:[ \t/>]|$)|script(?:[ \t/>]|$)|style(?:[ \t/>]|$)|textarea(?:[ \t/>]|$))[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t]*=[ \t]*(?:(?:(?!["'=<>`])[\x21-\uFFFF])+|'[^']*'|"[^"]*"))?)*[ \t]*\/?>|<\/[A-Za-z][A-Za-z0-9-]*[ \t]*>)[ \t]*\r?$/i.test(
+          raw,
+        )
+      ) {
+        htmlEnd = /^[ \t]*\r?$/;
+      }
+      if (htmlEnd !== null) {
+        if (htmlEnd.test(raw)) htmlEnd = null;
+        paragraph = false;
+        offset += raw.length + 1;
+        continue;
+      }
     }
 
     let visible = "";
@@ -290,6 +348,11 @@ export function addReviewPointer(existing: string, template: string | null): str
       visible += raw.charAt(index);
       index += 1;
     }
+    paragraph =
+      visible.trim().length > 0 &&
+      !/^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}|=+[ \t]*)\r?$)/.test(
+        visible,
+      );
     if (visible.trim().replace(/^(?:[-*+]|\d{1,9}[.)])[ \t]+/, "") === pointer) return existing;
     offset += raw.length + 1;
   }

@@ -123,6 +123,39 @@ describe("pr-fix wrapper docs", () => {
 });
 
 describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
+  it.each([
+    "<p>Nothing.</p>",
+    "<div>\nNothing.\n</div>",
+    "<span>\nNothing.\n</span>",
+    "<div>\n<!--\n## Example -->\nNothing.\n</div>",
+  ])("preserves a visible authored HTML answer %s", async (answer) => {
+    const body = `## What this change made unnecessary\n\n${answer}\n`;
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+  });
+
+  it("accepts a real heading after a first-line indented HTML example", async () => {
+    const body = "    <pre>\n## What this change made unnecessary\nNothing.\n";
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+  });
+
   it("accepts a visible removal heading that interrupts a backtick paragraph", async () => {
     const section = "`\n## What this change made unnecessary\nNothing.\n`\n";
     const body = compliantPrBody().replace(
@@ -168,11 +201,36 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ["empty link", "## What this change made unnecessary\n\n[]()\n"],
     ["empty link with target", "## What this change made unnecessary\n\n[](https://example.com)\n"],
     ["HTML break", "## What this change made unnecessary\n\n<br>\n"],
+    ["HTML empty block", "## What this change made unnecessary\n\n<div>\n</div>\n"],
+    [
+      "HTML comment only",
+      "## What this change made unnecessary\n\n<div>\n<!-- Nothing. -->\n</div>\n",
+    ],
+    ["HTML entity only", "## What this change made unnecessary\n\n<p>&nbsp;</p>\n"],
+    ["HTML placeholder only", "## What this change made unnecessary\n\n<p>TODO</p>\n"],
+    ...["pre", "script", "style", "textarea"].map((tag) => [
+      `literal HTML answer ${tag}`,
+      `## What this change made unnecessary\n\n<${tag}>\nNothing.\n</${tag}>\n`,
+    ]),
     ["fenced", "```md\n## What this change made unnecessary\n\nNothing.\n```\n"],
     ["longer backtick close", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
     ["longer tilde close", "~~~md\n## What this change made unnecessary\n\nNothing.\n~~~~\n"],
     ["short close", "````md\n```\n## What this change made unnecessary\n\nNothing.\n````\n"],
     ["wrong marker close", "```md\n~~~\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ...["pre", "script", "style", "textarea", "div", "table"].map((tag) => [
+      `raw HTML ${tag}`,
+      `<${tag}>\n## What this change made unnecessary\nNothing.\n</${tag}>\n`,
+    ]),
+    [
+      "raw HTML processing instruction",
+      "<?qfai\n## What this change made unnecessary\nNothing.\n?>\n",
+    ],
+    ["raw HTML declaration", "<!DOCTYPE\n## What this change made unnecessary\nNothing.\n>\n"],
+    ["raw HTML CDATA", "<![CDATA[\n## What this change made unnecessary\nNothing.\n]]>\n"],
+    [
+      "raw HTML standalone inline tag",
+      "<span>\n## What this change made unnecessary\nNothing.\n</span>\n",
+    ],
   ])("blocks a %s removal answer without inventing nothing", async (name, section) => {
     const body =
       name === "import-only body"
@@ -211,6 +269,9 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     "A literal `a\n<!--\nb` appears in code.\n\n",
     "<!-- ` -->\n\n",
     "~~~ <!--\nexample\n~~~\n\n",
+    "<pre>\n<!--\n```md\n</pre>\n\n",
+    "<div>\nExample\n</div>\n\n",
+    "<pre>\n## Auto-import\nImported example only.\n</pre>\n\n",
   ])("preserves an authored removal answer while repairing other metadata", async (prefix) => {
     const answer =
       "A duplicate check. The existing validator stays because it covers malformed inputs.\n\n```sh\nobsolete-check --strict\n## This is command data\n```\n\nThe canonical validator retains that input check.";
@@ -602,7 +663,7 @@ describe("release PR body repair", () => {
     },
   );
 
-  it.each(["~~~\nunfinished sample\n", "<!-- unfinished note\n"])(
+  it.each(["~~~\nunfinished sample\n", "<!-- unfinished note\n", "<pre>\nunfinished sample\n"])(
     "keeps an authored answer when only later Markdown is unfinished",
     async (suffix) => {
       const existing =
@@ -616,6 +677,10 @@ describe("release PR body repair", () => {
   it.each([
     ["fence", "Existing notes.\n\n~~~\nexample\n"],
     ["comment", "Existing notes.\n\n<!-- example\n"],
+    ...["pre", "script", "style", "textarea"].map((tag) => [
+      `literal HTML ${tag}`,
+      `Existing notes.\n\n<${tag}>\nexample\n`,
+    ]),
   ])("refuses a hidden release repair inside an unclosed %s", async (_name, existing) => {
     const result = await repairReleaseBody(existing);
     expect(result.code).not.toBe(0);

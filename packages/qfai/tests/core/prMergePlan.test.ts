@@ -141,7 +141,32 @@ describe("run-pr-merge plan", () => {
     ["TBD prefix", "## What this change made unnecessary\n\nTBD: list the removals\n"],
     ["FIXME prefix", "## What this change made unnecessary\n\nFIXME: list the removals\n"],
     ["HACK placeholder", "## What this change made unnecessary\n\nHACK\n"],
+    ["HTML empty block", "## What this change made unnecessary\n\n<div>\n</div>\n"],
+    [
+      "HTML comment only",
+      "## What this change made unnecessary\n\n<div>\n<!-- Nothing. -->\n</div>\n",
+    ],
+    ["HTML entity only", "## What this change made unnecessary\n\n<p>&nbsp;</p>\n"],
+    ["HTML placeholder only", "## What this change made unnecessary\n\n<p>TODO</p>\n"],
+    ...["pre", "script", "style", "textarea"].map((tag) => [
+      `literal HTML answer ${tag}`,
+      `## What this change made unnecessary\n\n<${tag}>\nNothing.\n</${tag}>\n`,
+    ]),
     ["fenced", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ...["pre", "script", "style", "textarea", "div", "table"].map((tag) => [
+      `raw HTML ${tag}`,
+      `<${tag}>\n## What this change made unnecessary\nNothing.\n</${tag}>\n`,
+    ]),
+    [
+      "raw HTML processing instruction",
+      "<?qfai\n## What this change made unnecessary\nNothing.\n?>\n",
+    ],
+    ["raw HTML declaration", "<!DOCTYPE\n## What this change made unnecessary\nNothing.\n>\n"],
+    ["raw HTML CDATA", "<![CDATA[\n## What this change made unnecessary\nNothing.\n]]>\n"],
+    [
+      "raw HTML standalone inline tag",
+      "<span>\n## What this change made unnecessary\nNothing.\n</span>\n",
+    ],
   ])("blocks a %s removal answer without a handoff or merge", async (_name, body) => {
     const baseline = makeScenario({});
     const result = await runPrMerge({
@@ -172,6 +197,9 @@ describe("run-pr-merge plan", () => {
     ["inline code", "Use `<!--` literally.\n\n"],
     ["fence info", "~~~ <!--\nExample\n~~~\n\n"],
     ["similar ordinary word", ""],
+    ["paragraph inline tag", "Paragraph text\n<span>\n"],
+    ["invalid custom tag", "<span title=>\n"],
+    ["lowercase CDATA lookalike", "<![cdata[\n"],
   ])("allows an authored answer after %s", async (_name, prefix) => {
     const baseline = makeScenario({});
     const body = `${prefix}## What this change made unnecessary\n\nHACKathon-specific duplicate setup is gone.\n`;
@@ -192,6 +220,33 @@ describe("run-pr-merge plan", () => {
     });
     expect(result.code).toBe(0);
     expect(result.ghState.prViewCount).toBe(2);
+    expect(result.ghState.prMergeCount).toBe(1);
+  });
+
+  it.each([
+    "<p>Nothing.</p>",
+    "<div>\nNothing.\n</div>",
+    "<span>\nNothing.\n</span>",
+    "<div>\n<!--\n## Example -->\nNothing.\n</div>",
+  ])("preserves a visible authored HTML answer %s", async (answer) => {
+    const baseline = makeScenario({});
+    const body = `## What this change made unnecessary\n\n${answer}\n`;
+    const result = await runPrMerge({
+      live: true,
+      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prMergeCount).toBe(1);
+  });
+
+  it("accepts a real heading after a first-line indented HTML example", async () => {
+    const baseline = makeScenario({});
+    const body = "    <pre>\n## What this change made unnecessary\nNothing.\n";
+    const result = await runPrMerge({
+      live: true,
+      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+    });
+    expect(result.code).toBe(0);
     expect(result.ghState.prMergeCount).toBe(1);
   });
 

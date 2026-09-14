@@ -707,11 +707,87 @@ describe("a hand-wired file this run cannot extend is named", () => {
 });
 
 describe("optional review directive detection", () => {
+  it.each([
+    ["heading", "# Project rules\n"],
+    ["fence", "~~~\nExample\n~~~\n"],
+    ["literal HTML", "<pre>\nExample\n</pre>\n"],
+  ])("adds guidance outside indented code immediately after a %s block", (_name, prefix) => {
+    const existing = `${prefix}    - ${REVIEW_POINTER}\n`;
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+      `${REVIEW_POINTER}\n\n${existing}`,
+    );
+  });
+
+  it.each(["pre", "script", "style", "textarea", "div", "table", "span"])(
+    "adds a live directive outside a raw HTML %s example",
+    (tag) => {
+      const existing = `# Project rules\n\n<${tag}>\n${REVIEW_POINTER}\n</${tag}>\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `${REVIEW_POINTER}\n\n${existing}`,
+      );
+    },
+  );
+
+  it.each(["    - ", "    1. ", "\t- ", " \t1. ", "    "])(
+    "adds a live directive when %j indents the existing copy as top-level code",
+    (prefix) => {
+      const existing = `\uFEFF# Project rules\r\n\r\n${prefix}${REVIEW_POINTER}\r\n\r\nKeep this text.\r\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `\uFEFF${REVIEW_POINTER}\r\n\r\n${existing.slice(1)}`,
+      );
+    },
+  );
+
+  it.each([
+    ["three-space list item", `# Project rules\n\n   - ${REVIEW_POINTER}\n`],
+    ["nested list item", `- Project rules\n\n    - ${REVIEW_POINTER}\n`],
+    ["indented paragraph continuation", `Paragraph text\n    - ${REVIEW_POINTER}\n`],
+    ["past an indented literal comment", `    <!--\n\n${REVIEW_POINTER}\n`],
+  ])("retains a live directive in %s", (_name, existing) => {
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+  });
+
   it.each(["-", "*", "+", "1.", "2)", "10."])(
     "retains an operative directive in a %s list item byte for byte",
     (marker) => {
       const existing = `\uFEFF# Project rules\r\n\r\n  ${marker}\t${REVIEW_POINTER}\r\nKeep this text.\r\n`;
       expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    },
+  );
+
+  it.each([false, true])(
+    "preserves project bytes when adding guidance outside an example with force=%s",
+    async (force) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const templates = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+            name,
+            text: await readEntryPoint(root, name),
+            mode: (await stat(path.join(root, name))).mode,
+          })),
+        );
+        for (const example of [`    - ${REVIEW_POINTER}`, `<pre>\n${REVIEW_POINTER}\n</pre>`]) {
+          const originals = templates.map(({ name, text, mode }) => ({
+            name,
+            mode,
+            text: `\uFEFF${text.replace(REVIEW_POINTER, example)}${PROJECT_TEXT}`.replace(
+              /\n/g,
+              "\r\n",
+            ),
+          }));
+          for (const { name, text } of originals) {
+            await writeFile(path.join(root, name), text, "utf-8");
+          }
+          await runInit({ dir: root, force, dryRun: false, yes: true });
+          for (const { name, text, mode } of originals) {
+            expect(await readEntryPoint(root, name)).toBe(
+              `\uFEFF${REVIEW_POINTER}\r\n\r\n${text.slice(1)}`,
+            );
+            expect((await stat(path.join(root, name))).mode).toBe(mode);
+          }
+        }
+      });
     },
   );
 
