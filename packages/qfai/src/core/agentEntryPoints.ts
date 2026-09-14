@@ -239,6 +239,7 @@ export function addReviewPointer(existing: string, template: string | null): str
   let spanEnd = 0;
   let linkStart = 0;
   let linkEnd = 0;
+  let tagEnd = 0;
   let offset = 0;
   const blockTags =
     "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul".replace(
@@ -250,6 +251,11 @@ export function addReviewPointer(existing: string, template: string | null): str
   const destination = String.raw`(?<destination><(?:\\.|[^<>\\\r\n])*>|(?:\\.|[^\x00-\x20\x7f<>\\])+)`;
   const title = String.raw`(?:"(?:[^"\\\r\n]|\\.|${continuation})*"|'(?:[^'\\\r\n]|\\.|${continuation})*'|\((?:[^()\\\r\n]|\\.|${continuation})*\))`;
   const spacing = String.raw`(?:[ \t]+(?:${continuation}[ \t]*)?|[ \t]*${continuation}[ \t]*)`;
+  const paragraphInterrupt = new RegExp(String.raw`^${interrupt}`);
+  const htmlSpace = String.raw`(?:[ \t]|${continuation})`;
+  const htmlTag = new RegExp(
+    String.raw`^(?:<[A-Za-z][A-Za-z0-9-]*(?:${htmlSpace}+[A-Za-z_:][A-Za-z0-9:._-]*(?:${htmlSpace}*=${htmlSpace}*(?:[^"'=<>\x60\x00-\x20]+|'(?:[^'\r\n]|${continuation})*'|"(?:[^"\r\n]|${continuation})*"))?)*${htmlSpace}*/?>|</[A-Za-z][A-Za-z0-9-]*${htmlSpace}*>)`,
+  );
   const link = new RegExp(
     String.raw`^\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\]\([ \t]*(?:${continuation}[ \t]*)?(?:${destination})?(?:${spacing}${title})?[ \t]*(?:${continuation}[ \t]*)?\)`,
     "m",
@@ -282,10 +288,15 @@ export function addReviewPointer(existing: string, template: string | null): str
   let htmlContentColumn = 0;
   let htmlContainer = "";
   let paragraph = false;
+  let quotedParagraph = false;
   for (const raw of existing.split("\n")) {
     const container = containerOf(raw);
     const blank = raw.trim().length === 0;
     const plain = plainLine(raw);
+    const wasQuotedParagraph = quotedParagraph;
+    const lazyQuote =
+      quotedParagraph && container === "" && !blank && !paragraphInterrupt.test(plain);
+    quotedParagraph = false;
     const prefix = /^[ \t]*/.exec(plain)?.[0] ?? "";
     const fenceIndentation = columnAfter(prefix);
     if (
@@ -335,6 +346,7 @@ export function addReviewPointer(existing: string, template: string | null): str
       !comment &&
       offset >= spanEnd &&
       offset >= linkEnd &&
+      offset >= tagEnd &&
       marker !== null &&
       indentation <= contentColumn + 3
     ) {
@@ -359,6 +371,7 @@ export function addReviewPointer(existing: string, template: string | null): str
       !comment &&
       offset >= spanEnd &&
       offset >= linkEnd &&
+      offset >= tagEnd &&
       openingColumn >= openingBase &&
       openingColumn <= openingBase + 3 &&
       opening &&
@@ -379,6 +392,7 @@ export function addReviewPointer(existing: string, template: string | null): str
       !comment &&
       offset >= spanEnd &&
       offset >= linkEnd &&
+      offset >= tagEnd &&
       openingColumn >= openingBase &&
       openingColumn <= openingBase + 3
     ) {
@@ -417,6 +431,10 @@ export function addReviewPointer(existing: string, template: string | null): str
     let visible = "";
     let hasInlineLink = offset < linkEnd;
     for (let index = 0; index < raw.length;) {
+      if (offset + index < tagEnd) {
+        index = Math.min(raw.length, tagEnd - offset);
+        continue;
+      }
       if (offset + index >= linkStart && offset + index < linkEnd) {
         index = Math.min(raw.length, linkEnd - offset);
         continue;
@@ -436,6 +454,16 @@ export function addReviewPointer(existing: string, template: string | null): str
         comment = true;
         index += 4;
         continue;
+      }
+      if (raw[index] === "<") {
+        let escapes = 0;
+        for (let before = index - 1; before >= 0 && raw[before] === "\\"; before -= 1) escapes += 1;
+        const tag = htmlTag.exec(existing.slice(offset + index))?.[0];
+        if (escapes % 2 === 0 && tag?.includes("\n")) {
+          tagEnd = offset + index + tag.length;
+          visible += "\uFFFC";
+          continue;
+        }
       }
       if (raw[index] === "[") {
         let escapes = 0;
@@ -483,12 +511,29 @@ export function addReviewPointer(existing: string, template: string | null): str
       visible += raw.charAt(index);
       index += 1;
     }
+    const paragraphText = container === "" ? visible : plainLine(visible);
     paragraph =
-      (hasInlineLink || visible.trim().length > 0) &&
+      (hasInlineLink || paragraphText.trim().length > 0) &&
       !/^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}|=+[ \t]*)\r?$)/.test(
-        visible,
+        paragraphText,
       );
-    if (visible.trim().replace(/^(?:[-*+]|\d{1,9}[.)])[ \t]+/, "") === pointer) return existing;
+    if (container !== "" || lazyQuote) {
+      const quotePrefix = /^[ \t]*/.exec(paragraphText)?.[0] ?? "";
+      const quoteMarker = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/.exec(paragraphText);
+      const quoteGap =
+        quoteMarker === null
+          ? 0
+          : columnAfter(quoteMarker[0]) -
+            columnAfter(`${quoteMarker[1] ?? ""}${quoteMarker[2] ?? ""}`);
+      if ((!wasQuotedParagraph && columnAfter(quotePrefix) >= 4) || quoteGap > 4) paragraph = false;
+      quotedParagraph = paragraph && !paragraphInterrupt.test(fenceLine(visible));
+    }
+    if (
+      container === "" &&
+      !lazyQuote &&
+      visible.trim().replace(/^(?:[-*+]|\d{1,9}[.)])[ \t]+/, "") === pointer
+    )
+      return existing;
     offset += raw.length + 1;
   }
 

@@ -708,6 +708,49 @@ describe("a hand-wired file this run cannot extend is named", () => {
 
 describe("optional review directive detection", () => {
   it.each(
+    (
+      [
+        ["lazy quote", `> Quoted example\n${REVIEW_POINTER}\n`],
+        ["nested lazy quote", `> > Quoted example\n${REVIEW_POINTER}\n`],
+        ["lazy quoted list", `> - Quoted example\n${REVIEW_POINTER}\n`],
+        ["indented lazy quote", `> Quoted example\n    ${REVIEW_POINTER}\n`],
+        ["double-quoted tag", `<span\ntitle="\n${REVIEW_POINTER}\n">Example</span>\n`],
+        ["single-quoted tag", `<span\ntitle='\n${REVIEW_POINTER}\n'>Example</span>\n`],
+        [
+          "inline double-quoted tag",
+          `Paragraph <span title="\n${REVIEW_POINTER}\n">Example</span>\n`,
+        ],
+        [
+          "inline single-quoted tag",
+          `Paragraph <span title='\n${REVIEW_POINTER}\n'>Example</span>\n`,
+        ],
+      ] as const
+    ).flatMap(([name, example]) =>
+      ["\n", "\r\n"].map((end) => [name, example.replace(/\n/g, end), end] as const),
+    ),
+  )("adds guidance outside a lazy quote or multiline HTML tag %s / %j", (_name, example, end) => {
+    const existing = `\uFEFF# Project rules${end}${end}${example}`;
+    const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+    expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+    expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+  });
+
+  it.each([
+    ["blank quote boundary", "> Quoted example\n\n", ""],
+    ["quoted blank boundary", "> Quoted example\n>\n", ""],
+    ["quoted heading", "> # Quoted heading\n", ""],
+    ["quoted indented code", ">     Example only.\n", ""],
+    ["quoted list code", "> -     Example only.\n", ""],
+    ["quoted fence", "> ~~~\n> Example only.\n> ~~~\n", ""],
+    ["quoted literal HTML", "> <pre>\n> Example only.\n> </pre>\n", ""],
+    ["escaped multiline tag", '\\<span\ntitle="\n', '">Example</span>\n'],
+    ["interrupted multiline tag", '<span title="\n# Live heading\n', '">Example</span>\n'],
+  ])("retains live guidance after a quote or tag boundary %s", (_name, prefix, suffix) => {
+    const existing = `${prefix}${REVIEW_POINTER}\n${suffix}`;
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+  });
+
+  it.each(
     ["pre", "div", "span"].flatMap((tag) =>
       ["-", "10.", "   -"].map((marker) => [tag, marker] as const),
     ),
@@ -871,6 +914,10 @@ describe("optional review directive detection", () => {
           `10. Project rules\n\n        ${REVIEW_POINTER}`,
           `- <pre>\n  ${REVIEW_POINTER}\n  </pre>`,
           `[](https://example.com "\n${REVIEW_POINTER}\n")`,
+          `> Quoted example\n${REVIEW_POINTER}`,
+          `> > Quoted example\n${REVIEW_POINTER}`,
+          `<span\ntitle="\n${REVIEW_POINTER}\n">Example</span>`,
+          `<span\ntitle='\n${REVIEW_POINTER}\n'>Example</span>`,
         ]) {
           const originals = templates.map(({ name, text, mode }) => ({
             name,
