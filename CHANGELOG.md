@@ -6,9 +6,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
-- Define a trust boundary by uncontrolled callers and sources, including public
-  library exports and plugin or tenant contexts (#1803).
-
 - **Reviewer cards file excess as a blocking code-quality defect** (#1798).
   All six reviewer roles trace excess to Article VII, require a concrete cut
   and replacement, and refuse cuts that remove or weaken a referenced
@@ -47,6 +44,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   dependencies. Existing repository code can answer the accepted behavior
   without a duplicate implementation. The shipped copy has the same order.
 
+- Define a trust boundary by uncontrolled callers and sources, including public
+  library exports and plugin or tenant contexts (#1803).
+
 - **Retained failures keep unit-level coverage** (#1793). The
   minimal-implementation safety floor protects coverage of the failure paths
   production code retains.
@@ -77,6 +77,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and its severity are unchanged, and its message is now in English.
 
 ### Fixed
+
+- Completion and implementation review stop conditions now include demonstrated
+  regressions against named constitution or catalog rules (#1799). New upstream
+  product obligations remain advisory.
 
 - Repository async guidance requires awaited or returned promises and points to
   the shared implementation rule for consuming callers, kept failures and

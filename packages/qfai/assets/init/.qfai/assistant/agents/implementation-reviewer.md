@@ -85,8 +85,9 @@ which is the one thing the contract says must not happen.
 - The finding would add a product obligation upstream never asked for. Do not raise it as blocking;
   raise it as an advisory finding plus a Change Request proposal per
   `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`. A defect you can
-  demonstrate from the changed artifacts (correctness, security / data integrity, or a repository
-  quality gate) is NOT in this category: it stays blocking and traces to its `defect:*` class.
+  demonstrate from the changed artifacts (correctness, security / data integrity, a repository
+  quality gate, or a regression against a named constitution or catalog rule) is NOT in this category:
+  it stays blocking and traces to its `defect:*` class.
 
 ## Sign-off
 
