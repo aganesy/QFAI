@@ -146,20 +146,24 @@ A missing, unreadable or non-regular master, including a leaf symlink or linked
 authorize the upgrade. Init keeps the previous constitution and its receipt,
 and reports that the shipped master could not be verified. A first init in that
 state does not install the constitution or record it as written.
-For an absent constitution, the note asks for a manual merge of the safety
-master only, then a normal `qfai init` to install it. An existing constitution
-requires a manual merge of both files; the note does not request a force rewrite
-of unrelated adopter assets.
+For an absent constitution, preserve master edits by manually installing and
+reconciling the constitution. Automatic installation requires backing up
+customizations and restoring the exact shipped master before rerunning init.
+An existing constitution requires a manual merge of both files; the note does
+not request a force rewrite of unrelated adopter assets.
 
 The governed writer rechecks the master after the other template copies and
-the destination hash. The create-only template copier never writes this
-constitution. The check is not an atomic filesystem transaction with the write.
+the destination hash. The generic template copier excludes both governed
+layers; every missing governed asset uses the exclusive staging writer.
+The check is not an atomic filesystem transaction with the write.
 
 A dry run includes the constitution when the same plan would create or update
 its compatible rule master under unlinked parents. A planned write through a
 linked parent cannot authorize the preview. It writes neither file.
 
 Creating missing governed assets requires hard-link support and permission.
+Init first verifies the complete readable shipped governed set. Failure stops
+before any copy or migration and asks the user to restore or reinstall QFAI.
 Before any asset copy or migration, init probes the nearest existing directory
 for each eligible absent governed path. It removes only its own probe files.
 The creation handle pins the probe's device and inode. Before each removal,
@@ -183,6 +187,19 @@ removed or rewritten to clean up its hard-link alias.
 If exclusive publication loses a creation race and staging cleanup fails,
 init reports that retained staging path before propagating the original write
 error. Accepting a concurrent destination never hides this cleanup warning.
+
+The exclusive creation handle also pins the publication stage's device and
+inode. The writer verifies its no-follow identity before publication. It closes
+the handle before unlinking the staging name and rechecks ownership immediately
+before cleanup on either outcome. A close failure retains the stage for manual
+cleanup after the handle is closed.
+A changed or unverifiable stage remains untouched and is reported with
+ownership-inspection guidance, never an instruction to delete its replacement.
+Identity verification and pathname removal are not an atomic transaction.
+Metadata and close failures remain available. Every created handle has a close
+attempt, and a close failure propagates rather than authorizing unlink.
+Stage-creation failures retain their cause and stop initialization. An occupied
+stage is not evidence that another process created the final governed file.
 
 ## Shipped GitHub Actions workflows
 

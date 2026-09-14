@@ -12,7 +12,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   constitution instructions, below the referenced safety floor. The absolute
   output-language rule and prototyping scope floor remain unchanged. Required
   traceability, repository gates, and their evidence are protected in the
-  safety floor rather than repeated in the article.
+  safety floor rather than repeated in the article. Every missing governed
+  asset uses exclusive full-byte publication and pinned staging cleanup.
+  An unreadable shipped set stops before copies or migration. Edited masters
+  retain their customizations with manual constitution reconciliation or a
+  backed-up restoration of the exact shipped master for automatic installation.
 
 - **Repository reuse is the second of seven minimal-implementation rungs**
   (#1795). Check the codebase before the standard library, platform and installed

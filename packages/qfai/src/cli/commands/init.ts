@@ -31,6 +31,7 @@ import {
   ADOPTER_OWNED_ASSETS,
   ASSISTANT_ASSETS_LOCK_BASENAME,
   ASSISTANT_STAGING_PREFIX,
+  GOVERNED_ASSISTANT_LAYERS,
   aliasesShippedGovernedAsset,
   buildShippedAssistantHashes,
   hasRealGovernedAssistantParents,
@@ -430,7 +431,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     conflictPolicy: "skip",
     exclude: [
       ...STANDARD_ASSET_PATHS,
-      path.relative(destQfai, joinAssistantLayer(destRoot, "constitution", "constitution.md")),
+      ...GOVERNED_ASSISTANT_LAYERS.map((layer) =>
+        path.relative(destQfai, joinAssistantLayer(destRoot, layer)),
+      ),
     ],
   });
   const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, [...STANDARD_ASSET_PATHS], {
@@ -664,9 +667,11 @@ async function preflightGovernedCreation(
   let shipped: Record<string, string>;
   try {
     shipped = await buildShippedAssistantHashes(assistantAssets);
-  } catch {
-    // The governed sync cannot publish files from an unreadable shipped set.
-    return;
+  } catch (cause: unknown) {
+    throw new Error(
+      `qfai init cannot verify shipped governed assets in ${JSON.stringify(assistantAssets)}. Reinstall QFAI or restore its complete readable package assets, then rerun; no package assets were copied or migrated.`,
+      { cause },
+    );
   }
   const isContained = makeGovernedContainmentGuard(destRoot);
   const probed = new Set<string>();
@@ -887,8 +892,8 @@ async function syncGovernedAssistantAssets(
         currentHash !== null
           ? "A manual merge of the safety master and existing constitution is needed; keep adopter edits protected."
           : (await pathExists(dest).catch(() => true))
-            ? "The constitution path is occupied or unreadable. Restore access to any existing constitution, or remove or relocate the non-file occupant while protecting adopter content. A manual merge of the safety master and any existing constitution is needed; then rerun `qfai init` to install the missing constitution."
-            : "A manual merge of the safety master is needed; then rerun `qfai init` to install the missing constitution.";
+            ? "The constitution path is occupied or unreadable. Restore access to any existing constitution, or remove or relocate the non-file occupant while protecting adopter content. A manual merge of existing policy is needed. Keep master edits by manually installing and reconciling the constitution. To install automatically, back up customizations, restore the exact shipped master, then rerun `qfai init`."
+            : "Keep master edits by manually installing and reconciling the constitution. To install automatically, back up customizations, restore the exact shipped master, then rerun `qfai init`.";
       manualMergeNotes.push(
         `NOTE: ${formatReportPath(dest)} was not installed or refreshed: .agents/rules/minimal-implementation.md could not be verified as the shipped master for the safety floor. ${recovery}`,
       );
@@ -1047,7 +1052,86 @@ export async function replaceGovernedAsset(
   const directory = path.dirname(dest);
   await mkdir(directory, { recursive: true });
   const staging = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
-  let creationStarted = false;
+  if (mode === "create-only") {
+    let handle: FileHandle;
+    try {
+      handle = await open(staging, "wx");
+    } catch (cause: unknown) {
+      throw new Error(
+        `qfai init cannot create staging file ${JSON.stringify(staging)} for ${JSON.stringify(dest)}. Restore write access and inspect ownership before rerunning; preserve any occupied staging path and existing destination content.`,
+        { cause },
+      );
+    }
+    let identity: BigIntStats | undefined;
+    let outcome: GovernedWriteOutcome = "replaced";
+    let published = false;
+    const failures: unknown[] = [];
+    const ownsStaging = async (): Promise<boolean> => {
+      const current = await lstat(staging, { bigint: true });
+      return (
+        identity !== undefined &&
+        current.isFile() &&
+        current.dev === identity.dev &&
+        current.ino === identity.ino
+      );
+    };
+    try {
+      identity = await handle.stat({ bigint: true });
+      await handle.writeFile(await readFile(source));
+      if (expectedHash !== undefined && (await hashAssistantAssetFile(dest)) !== expectedHash) {
+        outcome = "target-changed";
+      } else {
+        if (!(await ownsStaging())) {
+          throw new Error(
+            `qfai init cannot publish ${JSON.stringify(dest)} because staging ownership changed at ${JSON.stringify(staging)}. Inspect ownership before retrying.`,
+          );
+        }
+        await link(staging, dest);
+        published = true;
+      }
+    } catch (cause: unknown) {
+      failures.push(cause);
+    }
+    let closed = true;
+    try {
+      await handle.close();
+    } catch (cause: unknown) {
+      closed = false;
+      failures.push(cause);
+    }
+    let present = true;
+    let removable = false;
+    try {
+      removable = await ownsStaging();
+    } catch (cause: unknown) {
+      if (isEnoent(cause)) present = false;
+    }
+    if (present && !removable) {
+      warn(
+        `NOTE: qfai init could not verify staging ownership at ${JSON.stringify(staging)}. Do not delete this occupied path. Restore access and inspect ownership before rerunning; keep any existing destination content at ${JSON.stringify(dest)}.`,
+      );
+    }
+    if (removable && !closed) {
+      warn(
+        `NOTE: qfai init retained staging file ${JSON.stringify(staging)} because its handle could not be closed. Restore access and close the handle before removing only this verified staging file; keep any existing destination content at ${JSON.stringify(dest)}.`,
+      );
+    }
+    if (removable && closed) {
+      await rm(staging, { force: true }).catch(() => {
+        const result = published ? "created" : "could not create";
+        warn(
+          `NOTE: qfai init ${result} ${JSON.stringify(dest)}, but could not remove staging file ${JSON.stringify(staging)}. Restore access, remove only this staging file, then rerun qfai init; keep any existing destination content.`,
+        );
+      });
+    }
+    if (failures.length > 1) {
+      throw new AggregateError(failures, "Governed asset creation and handle close failed.", {
+        cause: failures.at(-1),
+      });
+    }
+    if (failures.length === 1) throw failures[0];
+    return outcome;
+  }
   try {
     await copyFile(source, staging, constants.COPYFILE_EXCL);
     if (expectedHash !== undefined && (await hashAssistantAssetFile(dest)) !== expectedHash) {
@@ -1056,25 +1140,11 @@ export async function replaceGovernedAsset(
       });
       return "target-changed";
     }
-    if (mode === "create-only") {
-      creationStarted = true;
-      await link(staging, dest);
-      await rm(staging, { force: true }).catch(() => {
-        warn(
-          `NOTE: qfai init created ${JSON.stringify(dest)}, but could not remove staging file ${JSON.stringify(staging)}. Restore access, remove only this staging file, then rerun qfai init; keep the published file.`,
-        );
-      });
-    } else {
-      await rename(staging, dest);
-    }
+    await rename(staging, dest);
     return "replaced";
   } catch (error: unknown) {
     await rm(staging, { force: true }).catch(() => {
-      if (creationStarted) {
-        warn(
-          `NOTE: qfai init could not remove staging file ${JSON.stringify(staging)} after unsuccessful creation at ${JSON.stringify(dest)}. Restore access, remove only this staging file, then rerun qfai init; keep any existing destination content.`,
-        );
-      }
+      // Best effort; preserve the original replacement failure.
     });
     throw error;
   }

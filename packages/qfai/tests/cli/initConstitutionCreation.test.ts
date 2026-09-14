@@ -43,7 +43,7 @@ vi.mock("node:fs/promises", async () => {
   };
 });
 
-const { runInit } = await import("../../src/cli/commands/init.js");
+const { replaceGovernedAsset, runInit } = await import("../../src/cli/commands/init.js");
 const { readAssistantAssetsLock } = await import("../../src/core/assistantAssetProvenance.js");
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const CONSTITUTION = path.join(".qfai", "assistant", "constitution", "constitution.md");
@@ -76,6 +76,309 @@ const init = (root: string): Promise<string> =>
   captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
 
 describe("constitution creation preserves a path it cannot claim", () => {
+  it("keeps a published inode refreshable after staging cleanup", async () => {
+    await withProject(async (root) => {
+      const source = path.join(
+        ROOT,
+        "packages/qfai/assets/init/.qfai/assistant/catalog/test-layers.md",
+      );
+      const target = path.join(root, ".qfai", "assistant", "catalog", "test-layers.md");
+      await replaceGovernedAsset(source, target, undefined, "create-only");
+      await writeFile(target, "# Older release\n", "utf-8");
+
+      expect(await replaceGovernedAsset(source, target)).toBe("replaced");
+      expect((await readFile(target)).equals(await readFile(source))).toBe(true);
+    });
+  });
+
+  it.each(["EEXIST", "EACCES"])(
+    "rejects a %s occupied creation stage without claiming concurrent final publication",
+    async (code) => {
+      await withProject(async (root) => {
+        const target = path.join(root, CONSTITUTION);
+        const replacement = "# Adopter staging content\n";
+        let staging: string | undefined;
+        openSpy.mockImplementation(async (actual, ...args) => {
+          if (
+            staging !== undefined ||
+            args[1] !== "wx" ||
+            path.dirname(String(args[0])) !== path.dirname(target)
+          ) {
+            return actual.open(...args);
+          }
+          staging = String(args[0]);
+          await actual.writeFile(staging, replacement, { flag: "wx" });
+          if (code === "EACCES") {
+            throw Object.assign(new Error("stage access denied"), { code });
+          }
+          return actual.open(...args);
+        });
+
+        const failure = await init(root).then(
+          () => null,
+          (cause: unknown) => cause,
+        );
+        expect(failure).toMatchObject({ cause: { code } });
+        if (!(failure instanceof Error) || staging === undefined) {
+          throw new Error("An unavailable stage must remain protected and stop publication.");
+        }
+        expect(failure.message).toContain(JSON.stringify(staging));
+        expect(failure.message).toContain("preserve any occupied staging path");
+        expect(await readFile(staging, "utf-8")).toBe(replacement);
+        await expect(lstat(target)).rejects.toMatchObject({ code: "ENOENT" });
+      });
+    },
+  );
+  it.each([
+    { name: "regular after publication", published: true, canonical: true, symlink: false },
+    { name: "symlink after publication", published: true, canonical: true, symlink: true },
+    { name: "regular after a canonical race", published: false, canonical: true, symlink: false },
+    { name: "symlink after a canonical race", published: false, canonical: true, symlink: true },
+    { name: "regular after an adopter race", published: false, canonical: false, symlink: false },
+    { name: "symlink after an adopter race", published: false, canonical: false, symlink: true },
+  ])("protects a $name creation stage replaced before cleanup", async (scenario) => {
+    await withProject(async (root) => {
+      const target = path.join(root, CONSTITUTION);
+      const backing = path.join(root, "adopter-staging.md");
+      const replacement = "# Adopter staging content\n";
+      const shipped = await readFile(path.join(ROOT, "packages/qfai/assets/init", CONSTITUTION));
+      const raced = scenario.canonical ? shipped : Buffer.from("# Adopter constitution\n");
+      await writeFile(backing, replacement);
+      let staging: string | undefined;
+      linkSpy.mockImplementation(async (actual, ...args) => {
+        if (String(args[1]) !== target) return actual.link(...args);
+        staging = String(args[0]);
+        if (!scenario.published) await actual.writeFile(target, raced, { flag: "wx" });
+        let failed = false;
+        let publicationCause: unknown;
+        try {
+          await actual.link(...args);
+        } catch (cause: unknown) {
+          failed = true;
+          publicationCause = cause;
+          expect(cause).toMatchObject({ code: "EEXIST" });
+        }
+        await actual.unlink(staging);
+        if (scenario.symlink) await actual.symlink(backing, staging, "file");
+        else await actual.writeFile(staging, replacement, { flag: "wx" });
+        if (failed) throw publicationCause;
+      });
+
+      const output = await init(root);
+      if (staging === undefined) throw new Error("The creation writer must attempt publication.");
+      const retained = await lstat(staging).catch((cause: unknown) => {
+        if (cause instanceof Error && "code" in cause && cause.code === "ENOENT") return null;
+        throw cause;
+      });
+      expect(retained).not.toBeNull();
+      expect(retained?.isSymbolicLink()).toBe(scenario.symlink);
+      expect(await readFile(staging, "utf-8")).toBe(replacement);
+      expect(await readFile(backing, "utf-8")).toBe(replacement);
+      expect((await readFile(target)).equals(raced)).toBe(true);
+      expect(output).toContain("could not verify staging ownership");
+      expect(output).toContain(JSON.stringify(staging));
+      expect(output).toContain("Do not delete this occupied path");
+      const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+      if (scenario.canonical) expect(lock?.files["constitution/constitution.md"]).toBeDefined();
+      else expect(lock?.files["constitution/constitution.md"]).toBeUndefined();
+    });
+  });
+
+  it.each(["catalog/test-layers.md", "constitution/drift-protocol.md"])(
+    "keeps a missing %s unpublished when its staged write fails",
+    async (relative) => {
+      await withProject(async (root) => {
+        const target = path.join(root, ".qfai", "assistant", ...relative.split("/"));
+        const source = path.join(ROOT, "packages/qfai/assets/init/.qfai/assistant", relative);
+        const complete = await readFile(source);
+        const partial = "# Partial governed asset\n";
+        let failed = false;
+        copyFileSpy.mockImplementation(async (actual, ...args) => {
+          if (String(args[0]) !== source) return actual.copyFile(...args);
+          failed = true;
+          await actual.writeFile(args[1], partial);
+          throw Object.assign(new Error("governed copy failed after partial output"), {
+            code: "EIO",
+          });
+        });
+        openSpy.mockImplementation(async (actual, ...args) => {
+          const opened = await actual.open(...args);
+          if (args[1] !== "wx" || path.dirname(String(args[0])) !== path.dirname(target)) {
+            return opened;
+          }
+          const write = opened.writeFile.bind(opened);
+          vi.spyOn(opened, "writeFile").mockImplementation(async (...writeArgs) => {
+            if (!Buffer.isBuffer(writeArgs[0]) || !writeArgs[0].equals(complete)) {
+              return write(...writeArgs);
+            }
+            failed = true;
+            await write(partial, "utf-8");
+            throw Object.assign(new Error("governed write failed after partial output"), {
+              code: "EIO",
+            });
+          });
+          return opened;
+        });
+
+        await expect(init(root)).rejects.toMatchObject({ code: "EIO" });
+        expect(failed).toBe(true);
+        await expect(lstat(target)).rejects.toMatchObject({ code: "ENOENT" });
+        expect(
+          (await readdir(path.dirname(target))).filter((name) => name.startsWith(".qfai-staging-")),
+        ).toEqual([]);
+        const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+        expect(lock?.files[relative]).toBeUndefined();
+
+        passThrough();
+        await init(root);
+        expect((await readFile(target)).equals(await readFile(source))).toBe(true);
+        const recovered = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+        expect(recovered?.files[relative]).toBeDefined();
+      });
+    },
+  );
+
+  it.each(["EACCES", "ENOENT"])(
+    "rejects a %s shipped governed-set failure before copying or migrating assets",
+    async (code) => {
+      await withProject(async (root) => {
+        const instructions = path.join(root, ".qfai", "assistant", "instructions");
+        await mkdir(instructions, { recursive: true });
+        const legacy = path.join(instructions, "quality.md");
+        const legacyText = "# Adopter quality rules\n";
+        const entry = path.join(root, "AGENTS.md");
+        const entryText = "# Adopter instructions\n";
+        await writeFile(legacy, legacyText);
+        await writeFile(entry, entryText);
+        const rootBefore = (await readdir(root)).sort();
+        const assistantBefore = (await readdir(path.dirname(instructions))).sort();
+        const shipped = path.join(ROOT, "packages/qfai/assets/init", CONSTITUTION);
+        let refused = false;
+        openSpy.mockImplementation((actual, ...args) => {
+          if (String(args[0]) !== shipped) return actual.open(...args);
+          refused = true;
+          return Promise.reject(
+            Object.assign(new Error("shipped asset cannot be opened"), { code }),
+          );
+        });
+
+        const failure = await captureStdout(() =>
+          runInit({
+            dir: root,
+            force: true,
+            dryRun: false,
+            yes: true,
+            upgradeAssistantTree: true,
+          }),
+        ).then(
+          () => null,
+          (cause: unknown) => cause,
+        );
+        expect(refused).toBe(true);
+        expect(failure).toBeInstanceOf(Error);
+        if (!(failure instanceof Error))
+          throw new Error("An unverifiable shipped set must stop init.");
+        expect(failure.message).toContain("Reinstall QFAI");
+        expect(failure.message).toContain("no package assets were copied or migrated");
+        expect(failure.cause).toBeInstanceOf(Error);
+        if (!(failure.cause instanceof Error))
+          throw new Error("The shipped-set cause must remain.");
+        expect(failure.cause.message).toContain("constitution/constitution.md");
+        expect((await readdir(root)).sort()).toEqual(rootBefore);
+        expect((await readdir(path.dirname(instructions))).sort()).toEqual(assistantBefore);
+        expect(await readFile(legacy, "utf-8")).toBe(legacyText);
+        expect(await readFile(entry, "utf-8")).toBe(entryText);
+        expect(linkSpy).not.toHaveBeenCalled();
+      });
+    },
+  );
+
+  it.each([
+    { name: "metadata", statFails: true, closeFails: false },
+    { name: "metadata and close", statFails: true, closeFails: true },
+    { name: "close after publication", statFails: false, closeFails: true },
+  ])("closes the creation handle and preserves $name failures", async (scenario) => {
+    await withProject(async (root) => {
+      let staging: string | undefined;
+      let destination: string | undefined;
+      let handle: Awaited<ReturnType<FsPromises["open"]>> | undefined;
+      openSpy.mockImplementation(async (actual, ...args) => {
+        const opened = await actual.open(...args);
+        if (
+          staging !== undefined ||
+          args[1] !== "wx" ||
+          path.dirname(String(args[0])) !== path.dirname(path.join(root, CONSTITUTION))
+        ) {
+          return opened;
+        }
+        staging = String(args[0]);
+        handle = opened;
+        if (scenario.statFails) {
+          vi.spyOn(opened, "stat").mockRejectedValueOnce(
+            Object.assign(new Error("staging metadata unavailable"), { code: "EIO" }),
+          );
+        }
+        const close = opened.close.bind(opened);
+        vi.spyOn(opened, "close").mockImplementation(async () => {
+          await close();
+          if (scenario.closeFails) {
+            throw Object.assign(new Error("staging close failed"), { code: "EBUSY" });
+          }
+        });
+        return opened;
+      });
+      linkSpy.mockImplementation(async (actual, ...args) => {
+        await actual.link(...args);
+        if (String(args[0]) === staging) destination = String(args[1]);
+      });
+
+      const failure = await init(root).then(
+        () => null,
+        (cause: unknown) => cause,
+      );
+      if (staging === undefined || handle === undefined) {
+        throw new Error("A creation stage must be pinned to its exclusive handle.");
+      }
+      if (scenario.statFails && scenario.closeFails) {
+        expect(failure).toBeInstanceOf(AggregateError);
+        if (!(failure instanceof AggregateError)) throw new Error("Both failures must remain.");
+        expect(failure.errors).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ code: "EIO" }),
+            expect.objectContaining({ code: "EBUSY" }),
+          ]),
+        );
+        expect(failure.cause).toMatchObject({ code: "EBUSY" });
+      } else expect(failure).toMatchObject({ code: scenario.statFails ? "EIO" : "EBUSY" });
+      await expect(handle.stat()).rejects.toMatchObject({ code: "EBADF" });
+      if (scenario.statFails) {
+        expect(destination).toBeUndefined();
+        expect((await lstat(staging)).isFile()).toBe(true);
+      } else {
+        if (destination === undefined) throw new Error("The complete asset must remain published.");
+        const source = path.join(
+          ROOT,
+          "packages/qfai/assets/init",
+          path.relative(root, destination),
+        );
+        expect((await readFile(destination)).equals(await readFile(source))).toBe(true);
+        expect((await lstat(staging)).isFile()).toBe(true);
+        passThrough();
+        await rm(staging);
+        await init(root);
+        const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
+        expect(
+          lock?.files[
+            path
+              .relative(path.join(root, ".qfai", "assistant"), destination)
+              .split(path.sep)
+              .join("/")
+          ],
+        ).toBeDefined();
+      }
+    });
+  });
+
   it.each([
     { name: "metadata", closeFails: false },
     { name: "metadata and close", closeFails: true },
@@ -207,19 +510,12 @@ describe("constitution creation preserves a path it cannot claim", () => {
       const shipped = await readFile(path.join(ROOT, "packages/qfai/assets/init", CONSTITUTION));
       const raced = scenario.canonical ? shipped : Buffer.from("# Adopter constitution\n");
       let staging: string | undefined;
-      copyFileSpy.mockImplementation(async (actual, ...args) => {
-        const [source, destination] = args;
-        if (
-          staging === undefined &&
-          typeof source === "string" &&
-          source.endsWith(path.join("constitution", "constitution.md")) &&
-          typeof destination === "string" &&
-          path.dirname(destination) === path.dirname(target)
-        ) {
-          staging = destination;
+      linkSpy.mockImplementation(async (actual, ...args) => {
+        if (staging === undefined && String(args[1]) === target) {
+          staging = String(args[0]);
           await actual.writeFile(target, raced, { flag: "wx" });
         }
-        return actual.copyFile(...args);
+        return actual.link(...args);
       });
       rmSpy.mockImplementation((actual, ...args) => {
         if (String(args[0]) === staging) {
@@ -527,7 +823,7 @@ describe("constitution creation preserves a path it cannot claim", () => {
       );
       const output = await init(root);
       expect(linkSpy).not.toHaveBeenCalled();
-      expect(output).toContain("manual merge of the safety master");
+      expect(output).toContain("manually installing and reconciling the constitution");
       await expect(lstat(path.join(root, CONSTITUTION))).rejects.toMatchObject({ code: "ENOENT" });
     });
   });
@@ -572,24 +868,26 @@ describe("constitution creation preserves a path it cannot claim", () => {
     });
   });
 
-  it("leaves no partial constitution after a failed copy and succeeds on retry", async () => {
+  it("leaves no partial constitution after a failed staged write and succeeds on retry", async () => {
     await withProject(async (root) => {
       const target = path.join(root, CONSTITUTION);
+      const complete = await readFile(path.join(ROOT, "packages/qfai/assets/init", CONSTITUTION));
       let failed = false;
-      copyFileSpy.mockImplementation(async (actual, ...args) => {
-        const [source, destination] = args;
-        if (
-          !failed &&
-          typeof source === "string" &&
-          source.endsWith(path.join("constitution", "constitution.md")) &&
-          typeof destination === "string" &&
-          path.dirname(destination) === path.dirname(target)
-        ) {
-          failed = true;
-          await actual.writeFile(destination, "# Partial constitution\n");
-          throw Object.assign(new Error("copy failed after partial output"), { code: "EIO" });
+      openSpy.mockImplementation(async (actual, ...args) => {
+        const opened = await actual.open(...args);
+        if (args[1] !== "wx" || path.dirname(String(args[0])) !== path.dirname(target)) {
+          return opened;
         }
-        return actual.copyFile(...args);
+        const write = opened.writeFile.bind(opened);
+        vi.spyOn(opened, "writeFile").mockImplementation(async (...writeArgs) => {
+          if (!Buffer.isBuffer(writeArgs[0]) || !writeArgs[0].equals(complete)) {
+            return write(...writeArgs);
+          }
+          failed = true;
+          await write("# Partial constitution\n", "utf-8");
+          throw Object.assign(new Error("write failed after partial output"), { code: "EIO" });
+        });
+        return opened;
       });
 
       await expect(init(root)).rejects.toMatchObject({ code: "EIO" });
@@ -611,19 +909,12 @@ describe("constitution creation preserves a path it cannot claim", () => {
     await withProject(async (root) => {
       const target = path.join(root, CONSTITUTION);
       let inserted = false;
-      copyFileSpy.mockImplementation(async (actual, ...args) => {
-        const [source, destination] = args;
-        if (
-          !inserted &&
-          typeof source === "string" &&
-          source.endsWith(path.join("constitution", "constitution.md")) &&
-          typeof destination === "string" &&
-          path.dirname(destination) === path.dirname(target)
-        ) {
+      linkSpy.mockImplementation(async (actual, ...args) => {
+        if (!inserted && String(args[1]) === target) {
           inserted = true;
-          await writeFile(target, await readFile(source));
+          await actual.writeFile(target, await actual.readFile(args[0]), { flag: "wx" });
         }
-        return actual.copyFile(...args);
+        return actual.link(...args);
       });
       await init(root);
       expect(inserted).toBe(true);
@@ -634,24 +925,17 @@ describe("constitution creation preserves a path it cannot claim", () => {
     });
   });
 
-  it("keeps a constitution created between the absence probe and the copy", async () => {
+  it("keeps a constitution created between the absence probe and publication", async () => {
     await withProject(async (root) => {
       const target = path.join(root, CONSTITUTION);
       const adopterText = "# Adopter constitution\n";
       let inserted = false;
-      copyFileSpy.mockImplementation(async (actual, ...args) => {
-        const [source, destination] = args;
-        if (
-          !inserted &&
-          typeof source === "string" &&
-          source.endsWith(path.join("constitution", "constitution.md")) &&
-          typeof destination === "string" &&
-          path.dirname(destination) === path.dirname(target)
-        ) {
+      linkSpy.mockImplementation(async (actual, ...args) => {
+        if (!inserted && String(args[1]) === target) {
           inserted = true;
-          await writeFile(target, adopterText);
+          await actual.writeFile(target, adopterText, { flag: "wx" });
         }
-        return actual.copyFile(...args);
+        return actual.link(...args);
       });
       const output = await init(root);
       expect(inserted).toBe(true);
