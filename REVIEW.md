@@ -6,6 +6,9 @@ The following categories must ALWAYS be reported as inline PR comments,
 regardless of confidence level or severity.
 Do not suppress any actionable finding.
 
+Await or return every promise. `.agents/rules/minimal-implementation.md`
+§ 2 governs consuming callers, kept failures and callback boundaries.
+
 - Style and formatting inconsistencies
 - Naming improvements (variables, functions, types, files)
 - Minor readability improvements
@@ -16,7 +19,9 @@ Do not suppress any actionable finding.
 - Minor performance improvements
 - Simplification opportunities (see **Findings about excess** below for the shape)
 - Inconsistency with existing codebase patterns
-- Missing error handling or incomplete error messages
+- A promise neither awaited nor returned
+- Failure handling missing where `.agents/rules/minimal-implementation.md` § 2 requires it
+- Incomplete error messages
 - Type safety improvements (e.g., unnecessary `as` assertions)
 - Test coverage gaps (missing edge cases, incomplete assertions)
 - TODO/FIXME/HACK comments without tracking references

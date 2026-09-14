@@ -1,20 +1,4 @@
-/**
- * The instruction files a coding agent loads by itself, and the QFAI-managed
- * section inside them that points at the `.agents/rules/` masters.
- *
- * `qfai init` copies the root templates create-only, so a project that already
- * had an `AGENTS.md` or a `CLAUDE.md` kept its own file untouched — and with it,
- * no reference to the rule masters the same run had just written. The rules the
- * generated instructions call the cross-AI single source of truth then reached
- * every fresh project and none of the ones that already had an agent set up,
- * which is precisely the population most likely to need them.
- *
- * So the section is delimited. It ships inside the templates, so a fresh init
- * already carries it, and the writer appends that same block — lifted from the
- * template, never re-typed here — to a file that predates QFAI. Everything
- * outside the two markers belongs to the project and is never read back or
- * rewritten.
- */
+/** Agent-loaded instructions retain project text and gain template-owned rules and review guidance. */
 
 /**
  * Files an agent reads on its own: Codex loads `AGENTS.md`, Claude Code loads
@@ -236,6 +220,83 @@ function containerOf(line: string | undefined): string {
 /** The terminator `line` carried, so an inserted line keeps its neighbour's. */
 function terminatorOf(line: string | undefined): string {
   return (line ?? "").endsWith("\r") ? "\r" : "";
+}
+
+/** Prepend the template's review directive only when no operative copy exists. */
+export function addReviewPointer(existing: string, template: string | null): string {
+  const pointer = template
+    ?.split(/\r?\n/)
+    .find((line) => line.startsWith("Read `REVIEW.md` before reviewing a pull request"));
+  if (pointer === undefined) return existing;
+
+  let fence: { character: string; length: number; container: string } | null = null;
+  let comment = false;
+  let spanEnd = 0;
+  let offset = 0;
+  for (const raw of existing.split("\n")) {
+    const container = containerOf(raw);
+    if (fence !== null && container !== fence.container) fence = null;
+    const opening = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(fenceLine(raw));
+    const run = opening?.[1] ?? "";
+    const rest = opening?.[2] ?? "";
+    if (fence !== null) {
+      if (run[0] === fence.character && run.length >= fence.length && rest.trim() === "") {
+        fence = null;
+      }
+      offset += raw.length + 1;
+      continue;
+    }
+    if (!comment && offset >= spanEnd && opening && !(run.startsWith("`") && rest.includes("`"))) {
+      fence = { character: run[0] ?? "`", length: run.length, container };
+      offset += raw.length + 1;
+      continue;
+    }
+
+    let visible = "";
+    for (let index = 0; index < raw.length;) {
+      if (offset + index < spanEnd) {
+        index += 1;
+        continue;
+      }
+      if (comment) {
+        const end = raw.indexOf("-->", index);
+        if (end === -1) break;
+        comment = false;
+        index = end + 3;
+        continue;
+      }
+      if (raw.startsWith("<!--", index)) {
+        comment = true;
+        index += 4;
+        continue;
+      }
+      if (raw[index] === "`") {
+        const tail = existing.slice(offset + index);
+        const span = /^(`+)(?!`)(?:(?!\r?\n[ \t]*\r?\n)[\s\S])*?(?<!`)\1(?!`)/.exec(tail)?.[0];
+        if (span === "`REVIEW.md`") {
+          visible += span;
+          index += span.length;
+          continue;
+        }
+        if (span !== undefined) {
+          spanEnd = offset + index + span.length;
+          continue;
+        }
+        const unmatched = /^`+/.exec(tail)?.[0] ?? "`";
+        visible += unmatched;
+        index += unmatched.length;
+        continue;
+      }
+      visible += raw.charAt(index);
+      index += 1;
+    }
+    if (visible.trim() === pointer) return existing;
+    offset += raw.length + 1;
+  }
+
+  const end = /\r\n|\n/.exec(existing)?.[0] ?? "\n";
+  const bom = existing.startsWith("\uFEFF") ? 1 : 0;
+  return `${existing.slice(0, bom)}${pointer}${end}${end}${existing.slice(bom)}`;
 }
 
 /**

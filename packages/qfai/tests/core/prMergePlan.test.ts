@@ -139,6 +139,8 @@ describe("run-pr-merge plan", () => {
     ["numeric space entity", "## What this change made unnecessary\n\n&#160;\n"],
     ["TODO prefix", "## What this change made unnecessary\n\nTODO: fill this in\n"],
     ["TBD prefix", "## What this change made unnecessary\n\nTBD: list the removals\n"],
+    ["FIXME prefix", "## What this change made unnecessary\n\nFIXME: list the removals\n"],
+    ["HACK placeholder", "## What this change made unnecessary\n\nHACK\n"],
     ["fenced", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
   ])("blocks a %s removal answer without a handoff or merge", async (_name, body) => {
     const baseline = makeScenario({});
@@ -163,6 +165,21 @@ describe("run-pr-merge plan", () => {
     const result = await runPrMerge({ live: true, scenario: makeScenario({}) });
     expect(result.code).toBe(0);
     expect(result.ghState.prViewCount).toBe(2);
+    expect(result.ghState.prMergeCount).toBe(1);
+  });
+
+  it.each([
+    ["inline code", "Use `<!--` literally.\n\n"],
+    ["fence info", "~~~ <!--\nExample\n~~~\n\n"],
+    ["similar ordinary word", ""],
+  ])("allows an authored answer after %s", async (_name, prefix) => {
+    const baseline = makeScenario({});
+    const body = `${prefix}## What this change made unnecessary\n\nHACKathon-specific duplicate setup is gone.\n`;
+    const result = await runPrMerge({
+      live: true,
+      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+    });
+    expect(result.code).toBe(0);
     expect(result.ghState.prMergeCount).toBe(1);
   });
 
