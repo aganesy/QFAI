@@ -9,7 +9,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Reviewer cards file excess as a blocking code-quality defect** (#1798).
   All six reviewer roles trace excess to Article VII, require a concrete cut
   and replacement, and refuse cuts that remove or weaken a referenced
-  safety-floor obligation.
+  safety-floor obligation. The route uses installed Article VII authority;
+  refreshed cards cannot override a retained older constitution.
 
 - **Article VII makes cutting the governing doctrine** (#1794). The least
   that satisfies a requirement is the right amount; additional scope or code

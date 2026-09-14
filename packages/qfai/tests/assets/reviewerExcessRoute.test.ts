@@ -32,6 +32,11 @@ describe("reviewer cards give excess a blocking route bounded by the safety floo
         "Article VII excess in the reviewing stage's own artifacts is in scope; " +
           "quality of downstream implementation code is deferred at upstream stages.",
       );
+      expect(remit?.replace(/\s+/g, " ")).toContain(
+        "Apply this route only where the installed Article VII governs the artifact. " +
+          "A retained constitution does not gain newer authority from refreshed cards. " +
+          "Report an unsupported Article VII route as advisory and follow the installed constitution.",
+      );
     },
   );
 
@@ -58,6 +63,10 @@ describe("reviewer cards give excess a blocking route bounded by the safety floo
       );
       expect(excess).not.toContain("cut touches the safety floor");
       expect(excess).toContain("`.agents/rules/minimal-implementation.md` § 2.");
+      expect(excess).toContain(
+        "Use this route only where the installed Article VII governs the artifact. " +
+          "Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.",
+      );
       expect(text).not.toMatch(/Apply `\.agents\/rules\/minimal-implementation\.md`: tag excess/);
     },
   );
