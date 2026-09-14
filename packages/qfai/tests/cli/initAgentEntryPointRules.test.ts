@@ -707,6 +707,48 @@ describe("a hand-wired file this run cannot extend is named", () => {
 });
 
 describe("optional review directive detection", () => {
+  it.each(["-", "*", "+", "1.", "2)", "10."])(
+    "retains an operative directive in a %s list item byte for byte",
+    (marker) => {
+      const existing = `\uFEFF# Project rules\r\n\r\n  ${marker}\t${REVIEW_POINTER}\r\nKeep this text.\r\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    },
+  );
+
+  it.each([false, true])(
+    "keeps existing list directives during init with force=%s",
+    async (force) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const templates = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+            name,
+            text: await readEntryPoint(root, name),
+            mode: (await stat(path.join(root, name))).mode,
+          })),
+        );
+        for (const marker of ["-", "*", "+", "1.", "2)", "10."]) {
+          const originals = templates.map(({ name, text, mode }) => ({
+            name,
+            mode,
+            text: `\uFEFF${text.replace(REVIEW_POINTER, `  ${marker}\t${REVIEW_POINTER}`)}${PROJECT_TEXT}`.replace(
+              /\n/g,
+              "\r\n",
+            ),
+          }));
+          for (const { name, text } of originals) {
+            await writeFile(path.join(root, name), text, "utf-8");
+          }
+          await runInit({ dir: root, force, dryRun: false, yes: true });
+          for (const { name, text, mode } of originals) {
+            expect(await readEntryPoint(root, name), `${name}, marker=${marker}`).toBe(text);
+            expect((await stat(path.join(root, name))).mode).toBe(mode);
+          }
+        }
+      });
+    },
+  );
+
   it.each([
     ["ordinary text", "# Project rules\n\n"],
     ["inline comment marker", "Use `<!--` literally.\n\n"],

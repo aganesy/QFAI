@@ -183,6 +183,18 @@ describe("run-pr-merge plan", () => {
     expect(result.ghState.prMergeCount).toBe(1);
   });
 
+  it("accepts a visible removal heading that interrupts a backtick paragraph", async () => {
+    const baseline = makeScenario({});
+    const body = "`\n## What this change made unnecessary\nNothing.\n`\n";
+    const result = await runPrMerge({
+      live: true,
+      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prViewCount).toBe(2);
+    expect(result.ghState.prMergeCount).toBe(1);
+  });
+
   it("renders pnpm ci:gate when the repo defines a long ci:gate script", async () => {
     const result = await runPrMerge({
       scenario: makeScenario({
