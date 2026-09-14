@@ -65,13 +65,29 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Rejected-B: 無制限にブロッキング FAIL を許可する（無限ループのリスクが許容できない）
   - DO NOT: 連続 FAIL の上限を設けないまま全否定エージェントを運用しない。Temptation: 品質を最大化したい
 
-### DR-0012-002: パターン倍増エージェントの全 skill 共通化
+### DR-0012-002: Optional concrete-pattern review across skills
 
-- Decision: パターン倍増エージェント（pattern-doubler）を全 skill 共通にする（SDD 専用ではない）
-- Context: 当初 SDD スキルの成果物拡充を目的として設計されたが、ID 付き項目の倍増は全 skill で品質向上に寄与する
-- Rationale: 全 skill 共通化によりパターン数の底上げが全工程で機能する。ID 付き項目が存在しない成果物では N/A として無害に通過できる
-- Rejected: SDD 専用のままにする（他 skill での品質向上機会を逃す）
-  - DO NOT: パターン倍増エージェントを特定 skill に限定しない。Temptation: SDD 以外では不要と思う
+- Decision: Keep `pattern-doubler` optional and advisory across skills.
+  Propose missing concrete business-flow, US, AC, EX or TC coverage with a
+  rationale. Do not demand numeric targets or more BR, non-functional floors,
+  policies, decisions or architecture.
+- Context: Concrete coverage gaps can occur in any skill's artifacts. An ID
+  on an abstract item does not make additional abstract items useful.
+- Rationale: Review should identify missing behavior, not produce items to
+  satisfy a count. Return N/A when only abstract artifacts are available.
+  N/A never excuses a missing mandatory pairing. Independently required gates,
+  product obligations and the whole safety floor in
+  `.agents/rules/minimal-implementation.md` § 2 still apply.
+- Authority: `.qfai/assistant/catalog/review-gate.rules.yml` bounds this mode,
+  including targets in preserved `review-profiles.yml` manifests. Init and
+  upgrade continue to protect adopter manifests.
+- Rejected-A: Numeric doubling adds items without identifying a coverage gap.
+  - DO NOT: Treat an item count or a preserved numeric target as a requirement
+    for more work. Temptation: counts make review easy to measure.
+- Rejected-B: SDD-only review leaves concrete coverage gaps in other skills.
+  - DO NOT: Restrict this optional mode to SDD. Temptation: other skills do not
+    always produce concrete artifacts, but those runs can return N/A.
+- Related: `CR-20260913-0007`.
 
 ### DR-0012-003: 新エージェントの実行順序
 

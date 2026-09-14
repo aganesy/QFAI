@@ -71,7 +71,7 @@ describe("TC-0013-0003: Usable-Source Preflight Stop", () => {
   });
 
   it("SKILL.md does not stop on an incomplete, contradictory or OQ-carrying pack", async () => {
-    const content = await readFile(SKILL_PATH, "utf-8");
+    const content = (await readFile(SKILL_PATH, "utf-8")).replace(/\s+/g, " ");
     expect(content).toContain(
       "an incomplete pack, a contradictory one, or a blocking discussion OQ does not by itself stop this stage",
     );
