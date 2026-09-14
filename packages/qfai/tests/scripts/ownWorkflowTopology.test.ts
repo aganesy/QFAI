@@ -1015,6 +1015,7 @@ function extractClassifier(): string {
 interface Classification {
   status: number;
   full: boolean | null;
+  diffVerified: boolean | null;
   reason: string;
   annotations: string[];
   raw: string;
@@ -1024,6 +1025,7 @@ interface Classification {
 function runClassifier(input: {
   paths?: readonly string[] | null;
   diffError?: string;
+  diffStatus?: string;
 }): Classification {
   const dir = mkdtempSync(path.join(tmpdir(), "qfai-detect-"));
   try {
@@ -1038,8 +1040,10 @@ function runClassifier(input: {
     writeFileSync(errFile, input.diffError ?? "", "utf-8");
     const outFile = path.join(dir, "github-output.txt");
     writeFileSync(outFile, "", "utf-8");
+    const statusFile = path.join(dir, "diff-status.txt");
+    writeFileSync(statusFile, input.diffStatus ?? "0", "utf-8");
 
-    const run = spawnSync(process.execPath, [program, pathsFile, errFile], {
+    const run = spawnSync(process.execPath, [program, pathsFile, errFile, statusFile], {
       encoding: "utf-8",
       env: { ...process.env, GITHUB_OUTPUT: outFile },
     });
@@ -1047,9 +1051,11 @@ function runClassifier(input: {
     const written = readFileSync(outFile, "utf-8");
     const full = /^full=(.*)$/m.exec(written);
     const reason = /^reason=(.*)$/m.exec(written);
+    const verified = /^diff_verified=(.*)$/m.exec(written);
     return {
       status: run.status ?? -1,
       full: full === null ? null : group(full, 1).trim() === "true",
+      diffVerified: verified === null ? null : group(verified, 1).trim() === "true",
       reason: reason === null ? "" : group(reason, 1).trim(),
       annotations: raw
         .split(/\r?\n/)
@@ -1489,10 +1495,8 @@ const OWN_WORKFLOW_FILES = [
 /**
  * Every check name the own-CI workflow reports, as literals.
  *
- * Derived once by hand from the job keys and the matrix expansion, and then frozen. No job
- * in this file declares a `name:` override, so each check name is its job key — which is
- * exactly what makes `EX-0017-0004`'s falsifying observation work: "a rename shows as a
- * diff on the job key".
+ * Pinned from job names and matrix expansion. Mirror checks have fixed names on
+ * independently selectable jobs, so skipping them does not collapse a matrix's names.
  *
  * A matrix job reports one check per leg, named `<job> (<value>)`. That is why the seven
  * legs appear here individually: they are seven check names, and removing a leg removes
@@ -1598,6 +1602,17 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
 });
 
 describe("lint mirror sharding preserves coverage and the merge gate", () => {
+  const mirrorJobs = [
+    "lint-mirror-1",
+    "lint-mirror-2",
+    "lint-mirror-3",
+    "lint-mirror-4",
+    "lint-mirror-5",
+    "lint-mirror-6",
+    "lint-mirror-7",
+    "lint-mirror-8",
+  ] as const;
+
   it("uses the same pinned classifier without making lint depend on detection", () => {
     const lint = stepsOf("lint");
     const classify = lint.findIndex((step) => step["id"] === "classify");
@@ -1651,19 +1666,25 @@ describe("lint mirror sharding preserves coverage and the merge gate", () => {
     ]);
     expect(stepsOf("lint").find((step) => named(step) === "Run lint gate")?.["env"]).toEqual({
       FULL_LINT: "${{ steps.classify.outputs.full }}",
+      DIFF_VERIFIED: "${{ steps.classify.outputs.diff_verified }}",
     });
   });
 
   it.each([
-    ["true", "pnpm ci:lint schedule=sharded", 0, 0],
-    ["false", "pnpm ci:lint schedule=inline", 0, 0],
-    ["true", "pnpm ci:lint schedule=sharded", 7, 7],
-    ["false", "pnpm ci:lint schedule=inline", 7, 7],
-    ["", "", 0, 1],
-    ["unknown", "", 0, 1],
+    ["true", "true", "pnpm ci:lint schedule=sharded", 0, 0],
+    ["false", "true", "pnpm ci:lint schedule=inline", 0, 0],
+    ["true", "false", "pnpm ci:lint schedule=inline", 0, 0],
+    ["false", "false", "pnpm ci:lint schedule=inline", 0, 0],
+    ["true", "true", "pnpm ci:lint schedule=sharded", 7, 7],
+    ["false", "true", "pnpm ci:lint schedule=inline", 7, 7],
+    ["true", "false", "pnpm ci:lint schedule=inline", 7, 7],
+    ["", "true", "", 0, 1],
+    ["unknown", "true", "", 0, 1],
+    ["true", "", "", 0, 1],
+    ["true", "unknown", "", 0, 1],
   ] as const)(
-    "executes detection %j through %j with command exit %i and verdict %i",
-    (full, command, commandStatus, status) => {
+    "executes detection %j with verification %j through %j with command exit %i and verdict %i",
+    (full, verified, command, commandStatus, status) => {
       const body = stepsOf("lint").find((step) => named(step) === "Run lint gate")?.["run"];
       expect(typeof body).toBe("string");
       const run = spawnSync(
@@ -1678,7 +1699,12 @@ describe("lint mirror sharding preserves coverage and the merge gate", () => {
         ],
         {
           encoding: "utf-8",
-          env: { ...process.env, FULL_LINT: full, PNPM_STATUS: String(commandStatus) },
+          env: {
+            ...process.env,
+            FULL_LINT: full,
+            DIFF_VERIFIED: verified,
+            PNPM_STATUS: String(commandStatus),
+          },
         },
       );
       expect(run.status).toBe(status);
@@ -1688,6 +1714,19 @@ describe("lint mirror sharding preserves coverage and the merge gate", () => {
       expect(called).toEqual(command === "" ? [] : [command]);
     },
   );
+
+  it.each([
+    { paths: [".codex/skills/anything.md"], verified: true, full: false },
+    { paths: ["packages/qfai/src/index.ts"], verified: true, full: true },
+    { paths: null, verified: false, full: true },
+    { paths: [], verified: false, full: true },
+    { paths: [".codex/skills/anything.md"], diffStatus: "128", verified: false, full: true },
+  ] as const)("certifies sharding only for a complete changed-path list: %j", (input) => {
+    const result = runClassifier(input);
+    expect(result.status).toBe(0);
+    expect(result.full).toBe(input.full);
+    expect(result.diffVerified).toBe(input.verified);
+  });
 
   it.each([
     ["inline", "", 0, 0, true],
@@ -1729,44 +1768,66 @@ describe("lint mirror sharding preserves coverage and the merge gate", () => {
   );
 
   it("runs every selected mirror shard independently, without fail-fast cancellation", () => {
-    const job = ciJobs()["lint-mirror"];
-    expect(job).toBeDefined();
-    if (job === undefined) return;
-    expect(needsOf(job)).toEqual(["detect"]);
-    expect(job["if"]).toBe("${{ needs.detect.outputs.full == 'true' }}");
-    const strategy = job["strategy"];
-    expect(isRecord(strategy) ? strategy["fail-fast"] : undefined).toBe(false);
-    expect(isRecord(strategy) ? strategy["matrix"] : undefined).toEqual({
-      shard: ["1", "2", "3", "4", "5", "6", "7", "8"],
-    });
-    const steps = stepsOf("lint-mirror");
-    const preflight = steps.findIndex(
-      (step) => named(step) === "Verify the toolchain action before running it",
-    );
-    const setup = steps.findIndex((step) => step["uses"] === "./.github/actions/setup");
-    expect(preflight).toBeGreaterThan(-1);
-    expect(setup).toBeGreaterThan(preflight);
-    expect(steps[preflight]?.["run"]).toBe(
-      stepsOf("lint").find(
+    const jobs = ciJobs();
+    expect(Object.keys(jobs).filter((id) => id.startsWith("lint-mirror"))).toEqual([...mirrorJobs]);
+    for (const [index, id] of mirrorJobs.entries()) {
+      const job = jobs[id];
+      expect(job).toBeDefined();
+      if (job === undefined) throw new Error(`missing mirror job ${id}`);
+      expect(job["name"]).toBe(`lint-mirror (${index + 1})`);
+      expect(needsOf(job)).toEqual(["detect"]);
+      expect(job["if"]).toBe("${{ needs.detect.outputs.full == 'true' }}");
+      expect(job["strategy"]).toBeUndefined();
+      expect(job["continue-on-error"]).toBeUndefined();
+      const steps = stepsOf(id);
+      const preflight = steps.findIndex(
         (step) => named(step) === "Verify the toolchain action before running it",
-      )?.["run"],
-    );
-    const shard = steps.find((step) => named(step) === "Run mirror surface shard");
-    expect(shard?.["env"]).toEqual({ SHARD: "${{ matrix.shard }}" });
-    expect(shard?.["run"]).toBe('pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"');
-    expect(shard?.["if"]).toBeUndefined();
-    expect(shard?.["continue-on-error"]).toBeUndefined();
-    expect(verdictNeeds()).toContain("lint-mirror");
+      );
+      const setup = steps.findIndex((step) => step["uses"] === "./.github/actions/setup");
+      expect(preflight).toBeGreaterThan(-1);
+      expect(setup).toBeGreaterThan(preflight);
+      expect(steps[preflight]?.["run"]).toBe(
+        stepsOf("lint").find(
+          (step) => named(step) === "Verify the toolchain action before running it",
+        )?.["run"],
+      );
+      const shard = steps.find((step) => named(step) === `Run mirror surface shard ${index + 1}`);
+      expect(shard?.["env"]).toEqual({ SHARD: String(index + 1) });
+      expect(shard?.["run"]).toBe('pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"');
+      expect(shard?.["if"]).toBeUndefined();
+      expect(shard?.["continue-on-error"]).toBeUndefined();
+      const run = spawnSync(
+        "bash",
+        [
+          "-e",
+          "-o",
+          "pipefail",
+          "-c",
+          'pnpm() { printf "pnpm %s\\n" "$*"; }\n' + String(shard?.["run"]),
+        ],
+        {
+          encoding: "utf-8",
+          env: { ...process.env, SHARD: String(index + 1) },
+        },
+      );
+      expect(run.status).toBe(0);
+      expect(String(run.stdout).trim()).toBe(
+        `pnpm -C packages/qfai lint:mirror-surface --shard=${index + 1}/8`,
+      );
+      expect(verdictNeeds()).toContain(id);
+    }
   });
 
   it.each(["failure", "cancelled", "timed_out", undefined])(
-    "rejects a mirror matrix whose aggregate result is %s",
+    "rejects each mirror shard whose result is %s",
     (result) => {
-      const needs: Record<string, { result?: string }> = allNeeds("success");
-      needs["lint-mirror"] = result === undefined ? {} : { result };
-      const run = evaluateVerdict(needs);
-      expect(run.exitCode).toBe(1);
-      expect(run.output).toContain("lint-mirror");
+      for (const id of mirrorJobs) {
+        const needs: Record<string, { result?: string }> = allNeeds("success");
+        needs[id] = result === undefined ? {} : { result };
+        const run = evaluateVerdict(needs);
+        expect(run.exitCode).toBe(1);
+        expect(run.output).toContain(id);
+      }
     },
   );
 });

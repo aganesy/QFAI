@@ -206,8 +206,9 @@ jobs:
             }
           }
 
-          function emit(full, reason) {
-            const line = "full=" + (full ? "true" : "false") + "\n" + "reason=" + oneLine(reason) + "\n";
+          function emit(full, reason, diffVerified = false) {
+            const line = "full=" + (full ? "true" : "false") + "\n" + "reason=" + oneLine(reason) + "\n" +
+              "diff_verified=" + (diffVerified ? "true" : "false") + "\n";
             const target = process.env.GITHUB_OUTPUT;
             if (typeof target === "string" && target.length > 0) appendFileSync(target, line);
             else process.stdout.write(line);
@@ -296,7 +297,7 @@ jobs:
             }
 
             const verdict = classify(paths);
-            emit(verdict.full, verdict.reason);
+            emit(verdict.full, verdict.reason, true);
           }
 
           main();
@@ -394,13 +395,14 @@ jobs:
       - name: Run lint gate
         env:
           FULL_LINT: ${{ steps.classify.outputs.full }}
+          DIFF_VERIFIED: ${{ steps.classify.outputs.diff_verified }}
         shell: bash
         run: |
-          case "${FULL_LINT}" in
-            true)
+          case "${FULL_LINT}:${DIFF_VERIFIED}" in
+            true:true)
               export QFAI_LINT_MIRROR_SCHEDULE=sharded
               ;;
-            false)
+            true:false|false:true|false:false)
               export QFAI_LINT_MIRROR_SCHEDULE=inline
               ;;
             *)
@@ -415,26 +417,131 @@ jobs:
         run: bash packages/qfai/scripts/check-branch-version-pin.sh
         shell: bash
 
-  lint-mirror:
+  lint-mirror-1:
+    name: lint-mirror (1)
     needs: [detect]
     if: ${{ needs.detect.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: ["1", "2", "3", "4", "5", "6", "7", "8"]
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - &mirror-checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
-      - name: Verify the toolchain action before running it
+      - &mirror-preflight
+        name: Verify the toolchain action before running it
         run: *verify-toolchain
         shell: bash
-      - uses: ./.github/actions/setup
-      - name: Run mirror surface shard
+      - &mirror-setup
+        uses: ./.github/actions/setup
+      - name: Run mirror surface shard 1
         env:
-          SHARD: ${{ matrix.shard }}
+          SHARD: "1"
+        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
+
+  lint-mirror-2:
+    name: lint-mirror (2)
+    needs: [detect]
+    if: ${{ needs.detect.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - *mirror-checkout
+      - *mirror-preflight
+      - *mirror-setup
+      - name: Run mirror surface shard 2
+        env:
+          SHARD: "2"
+        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
+
+  lint-mirror-3:
+    name: lint-mirror (3)
+    needs: [detect]
+    if: ${{ needs.detect.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - *mirror-checkout
+      - *mirror-preflight
+      - *mirror-setup
+      - name: Run mirror surface shard 3
+        env:
+          SHARD: "3"
+        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
+
+  lint-mirror-4:
+    name: lint-mirror (4)
+    needs: [detect]
+    if: ${{ needs.detect.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - *mirror-checkout
+      - *mirror-preflight
+      - *mirror-setup
+      - name: Run mirror surface shard 4
+        env:
+          SHARD: "4"
+        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
+
+  lint-mirror-5:
+    name: lint-mirror (5)
+    needs: [detect]
+    if: ${{ needs.detect.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - *mirror-checkout
+      - *mirror-preflight
+      - *mirror-setup
+      - name: Run mirror surface shard 5
+        env:
+          SHARD: "5"
+        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
+
+  lint-mirror-6:
+    name: lint-mirror (6)
+    needs: [detect]
+    if: ${{ needs.detect.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - *mirror-checkout
+      - *mirror-preflight
+      - *mirror-setup
+      - name: Run mirror surface shard 6
+        env:
+          SHARD: "6"
+        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
+
+  lint-mirror-7:
+    name: lint-mirror (7)
+    needs: [detect]
+    if: ${{ needs.detect.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - *mirror-checkout
+      - *mirror-preflight
+      - *mirror-setup
+      - name: Run mirror surface shard 7
+        env:
+          SHARD: "7"
+        run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
+
+  lint-mirror-8:
+    name: lint-mirror (8)
+    needs: [detect]
+    if: ${{ needs.detect.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - *mirror-checkout
+      - *mirror-preflight
+      - *mirror-setup
+      - name: Run mirror surface shard 8
+        env:
+          SHARD: "8"
         run: pnpm -C packages/qfai lint:mirror-surface --shard="${SHARD}/8"
 
   # ── 2. Type checking (current TypeScript) ────────────────────────
@@ -847,7 +954,14 @@ jobs:
       [
         detect,
         lint,
-        lint-mirror,
+        lint-mirror-1,
+        lint-mirror-2,
+        lint-mirror-3,
+        lint-mirror-4,
+        lint-mirror-5,
+        lint-mirror-6,
+        lint-mirror-7,
+        lint-mirror-8,
         check-types,
         check-types-future,
         node-floor,

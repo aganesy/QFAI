@@ -50,7 +50,14 @@
       "dependencies": [
         "detect",
         "lint",
-        "lint-mirror",
+        "lint-mirror-1",
+        "lint-mirror-2",
+        "lint-mirror-3",
+        "lint-mirror-4",
+        "lint-mirror-5",
+        "lint-mirror-6",
+        "lint-mirror-7",
+        "lint-mirror-8",
         "check-types",
         "check-types-future",
         "node-floor",
@@ -73,7 +80,14 @@
         "Adding a lane is two edits on purpose."
       ],
       "dependencyConditions": {
-        "lint-mirror": "${{ needs.detect.outputs.full == 'true' }}",
+        "lint-mirror-1": "${{ needs.detect.outputs.full == 'true' }}",
+        "lint-mirror-2": "${{ needs.detect.outputs.full == 'true' }}",
+        "lint-mirror-3": "${{ needs.detect.outputs.full == 'true' }}",
+        "lint-mirror-4": "${{ needs.detect.outputs.full == 'true' }}",
+        "lint-mirror-5": "${{ needs.detect.outputs.full == 'true' }}",
+        "lint-mirror-6": "${{ needs.detect.outputs.full == 'true' }}",
+        "lint-mirror-7": "${{ needs.detect.outputs.full == 'true' }}",
+        "lint-mirror-8": "${{ needs.detect.outputs.full == 'true' }}",
         "check-types": "${{ needs.detect.outputs.full == 'true' }}",
         "check-types-future": "${{ needs.detect.outputs.full == 'true' }}",
         "node-floor": "${{ needs.detect.outputs.full == 'true' }}",
@@ -98,7 +112,6 @@
         "a dependency condition."
       ],
       "dependencyMatrices": {
-        "lint-mirror": { "shard": ["1", "2", "3", "4", "5", "6", "7", "8"] },
         "test": { "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"] }
       },
       "dependencyMatricesNote": [
@@ -342,7 +355,14 @@
         "cannot fail the job, so it is not a verification however it is named."
       ],
       "gatedVerifications": {
-        "Run mirror surface shard": "lint-mirror",
+        "Run mirror surface shard 1": "lint-mirror-1",
+        "Run mirror surface shard 2": "lint-mirror-2",
+        "Run mirror surface shard 3": "lint-mirror-3",
+        "Run mirror surface shard 4": "lint-mirror-4",
+        "Run mirror surface shard 5": "lint-mirror-5",
+        "Run mirror surface shard 6": "lint-mirror-6",
+        "Run mirror surface shard 7": "lint-mirror-7",
+        "Run mirror surface shard 8": "lint-mirror-8",
         "Run type check": "check-types",
         "Run future TypeScript compatibility check": "check-types-future",
         "Run the package test suite on the floor": "node-floor",
@@ -373,8 +393,8 @@
         "unconditional verification and joins `verificationSet` with the rest."
       ],
       "verificationBodies": {
-        "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Classify the lint schedule": "ef6e64eb3cba709c",
+        "Classify the change against the enumerated directory lists": "6cbde5a73e30e7a6",
+        "Classify the lint schedule": "6cbde5a73e30e7a6",
         "Verify the toolchain action before running it": "2c85002fe43be3c0",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "e9b6a63cbebe4062",
@@ -383,8 +403,15 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "9efc82ef75f7a622",
         "QFAI self-validate this repo (dogfooding — full profile)": "3537948e49d1d967",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "966ae9fabbda626f",
-        "Run mirror surface shard": "47680e1761694883",
+        "Run lint gate": "4c74c708c065808d",
+        "Run mirror surface shard 1": "49c097ee0ffde0dd",
+        "Run mirror surface shard 2": "c2ae87f92ba61c89",
+        "Run mirror surface shard 3": "8ccbe56dd3afd67e",
+        "Run mirror surface shard 4": "031458c03378d65c",
+        "Run mirror surface shard 5": "ec3f931d4622cb07",
+        "Run mirror surface shard 6": "3aab5eecdafcca17",
+        "Run mirror surface shard 7": "a4d74518cff33570",
+        "Run mirror surface shard 8": "3cbfcc9058649a29",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor": "b343ba3115022005",
