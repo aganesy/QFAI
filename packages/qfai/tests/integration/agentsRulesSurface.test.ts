@@ -8,6 +8,30 @@ import { describe, expect, it } from "vitest";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
 
+describe("the implementation reviewer flags dropped promises, not uncaught propagation", () => {
+  it.each(["packages/qfai/assets/init/.qfai", ".qfai"])(
+    "%s keeps the correctness class",
+    async (tree) => {
+      const card = await readFile(
+        path.join(ROOT, tree, "assistant/agents/implementation-reviewer.md"),
+        "utf-8",
+      );
+      expect(card.replace(/\s+/g, " ")).toContain("a promise that is neither awaited nor returned");
+      expect(card).not.toContain("unhandled async paths");
+      const classification = await readFile(
+        path.join(
+          ROOT,
+          tree,
+          "assistant/skills/qfai-implement/references/finding-classification.md",
+        ),
+        "utf-8",
+      );
+      expect(classification).toContain("defect:correctness");
+      expect(classification).toContain("unhandled rejection");
+    },
+  );
+});
+
 describe("reviewer stop conditions distinguish named-rule defects from new product obligations", () => {
   it.each(
     ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>

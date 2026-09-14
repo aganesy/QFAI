@@ -75,6 +75,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The implementation reviewer flags promises neither awaited nor returned rather
+  than requiring catches on propagated async failures. A dropped rejection keeps
+  its correctness class (#1805).
+
 - Completion and implementation review stop conditions now include demonstrated
   regressions against named constitution or catalog rules (#1799). New upstream
   product obligations remain advisory.
