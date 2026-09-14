@@ -45,13 +45,13 @@ describe("Article VII governs cutting above other articles and below the safety 
       expect(article).not.toContain("is a separate question");
     });
 
-    it(`${tree}: states precedence without displacing the output-language rule or Article IV`, async () => {
+    it(`${tree}: states precedence without displacing facts, output language or Article IV`, async () => {
       const constitution = await read(tree, CONSTITUTION);
       const article = flat(
         constitution.split("## Article VII —")[1]?.split("## Article VIII —")[0] ?? "",
       );
       expect(article).toContain(
-        "The safety floor in `.agents/rules/minimal-implementation.md` § 2, the unnumbered Absolute Rule — Output Language, and mandatory approvals and irreversible-action confirmations outrank this article.",
+        "The safety floor in `.agents/rules/minimal-implementation.md` § 2, the unnumbered Absolute Rule — Output Language, required evidence and fact verification, and mandatory approvals and irreversible-action confirmations outrank this article.",
       );
       expect(article).toContain("takes precedence over every other article");
       expect(article).toContain("conflicting instructions in other constitution documents");

@@ -215,7 +215,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   if (!options.dryRun) {
-    await preflightGovernedCreation(assistantAssets, rootAssets, destRoot);
+    await preflightGovernedCreation(assistantAssets, rootAssets, destRoot, options.force);
   }
 
   // If --upgrade-assistant-tree is supplied, run the migration FIRST.
@@ -663,6 +663,7 @@ async function preflightGovernedCreation(
   assistantAssets: string,
   rootAssets: string,
   destRoot: string,
+  force: boolean,
 ): Promise<void> {
   let shipped: Record<string, string>;
   try {
@@ -678,17 +679,23 @@ async function preflightGovernedCreation(
   for (const relative of Object.keys(shipped)) {
     if (!(await isContained(relative))) continue;
     const dest = path.join(destRoot, ...ASSISTANT_DIR.split("/"), ...relative.split("/"));
-    try {
-      await lstat(dest);
-      continue;
-    } catch (cause: unknown) {
-      if (!isEnoent(cause)) continue;
-    }
     if (
       relative === "constitution/constitution.md" &&
       !(await canPlanConstitutionCreation(rootAssets, destRoot))
     ) {
       continue;
+    }
+    try {
+      await lstat(dest);
+      if (!force || (await hashAssistantAssetFile(dest)) !== null) continue;
+    } catch (cause: unknown) {
+      if (!isEnoent(cause)) {
+        if (!force) continue;
+        throw new Error(
+          `qfai init cannot inspect ${JSON.stringify(dest)} for a force repair. Restore access and rerun; no package assets were copied or migrated.`,
+          { cause },
+        );
+      }
     }
     let directory = path.dirname(dest);
     for (;;) {
@@ -1307,71 +1314,63 @@ async function restoreUnreadableGovernedAsset(
   // parent, say) reads as occupied: what could not be inspected must not be
   // clobbered.
   const occupied = await pathExists(dest).catch(() => true);
-  if (!occupied) {
-    if (!options.dryRun) {
-      let concurrent: boolean;
-      try {
-        const outcome = await replaceGovernedAsset(source, dest, undefined, "create-only");
-        concurrent =
-          outcome === "target-changed" || (await hashAssistantAssetFile(dest)) !== shippedHash;
-      } catch (error: unknown) {
-        if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST") {
-          throw error;
-        }
-        concurrent = true;
+  if (occupied && options.force && !options.dryRun) {
+    // Recheck the displaced occupant before discarding it. A concurrent
+    // readable regular file belongs to the adopter even under --force.
+    const outcome = await displaceUnreadableGovernedAsset(dest);
+    if (outcome !== "displaced") {
+      // This readable regular file is not the occupant the repair may replace.
+      out.skipped.push(dest);
+      if (previousHash !== undefined) {
+        out.recorded[out.relative] = previousHash;
       }
-      if (concurrent) {
-        out.skipped.push(dest);
-        const contained = await hasRealGovernedAssistantParents(
-          destRoot,
-          `${ASSISTANT_DIR}/${out.relative}`,
-        );
-        if (contained && (await hashAssistantAssetFile(dest)) === shippedHash) {
-          out.recorded[out.relative] = shippedHash;
-          return;
-        }
-        if (previousHash !== undefined) out.recorded[out.relative] = previousHash;
-        out.manualMergeNotes.push(
-          `NOTE: ${formatReportPath(dest)} was created during initialization and left unchanged; keep adopter edits protected.`,
-        );
-        return;
-      }
+      out.manualMergeNotes.push(
+        typeof outcome === "object"
+          ? `NOTE: ${dest} was replaced by a regular file just before the repair, so the repair was rolled back; the original content could not be restored and is parked at ${outcome.orphaned}.`
+          : `NOTE: ${dest} was replaced by a regular file just before the repair, so it was left as it is (run \`qfai init --force\` again).`,
+      );
+      return;
     }
-    out.copied.push(dest);
-    out.recorded[out.relative] = shippedHash;
+  }
+
+  if (occupied && !options.force) {
+    out.skipped.push(dest);
+    if (previousHash !== undefined) out.recorded[out.relative] = previousHash;
     return;
   }
 
-  if (options.force) {
-    if (!options.dryRun) {
-      // The occupant is moved aside and re-examined before anything is
-      // destroyed, for the reason the refresh and the retire were given the
-      // same treatment: `rm` acts on a pathname, and a process that put an
-      // ordinary project-owned file there between the probe above and this
-      // line lost it to a deletion justified by an entry nobody re-read. The
-      // rename carries whatever inode is at the path at that instant; the
-      // check then runs against the moved entry, whose name nothing else
-      // knows.
-      const outcome = await displaceUnreadableGovernedAsset(dest);
-      if (outcome !== "displaced") {
-        // It is a readable regular file now. That is not the occupied path
-        // this branch was entered for, and overwriting it here would discard
-        // content this run never inspected.
-        out.skipped.push(dest);
-        if (previousHash !== undefined) {
-          out.recorded[out.relative] = previousHash;
-        }
-        out.manualMergeNotes.push(
-          typeof outcome === "object"
-            ? `NOTE: ${dest} was replaced by a regular file just before the repair, so the repair was rolled back; the original content could not be restored and is parked at ${outcome.orphaned}.`
-            : `NOTE: ${dest} was replaced by a regular file just before the repair, so it was left as it is (run \`qfai init --force\` again).`,
-        );
+  if (!options.dryRun) {
+    let concurrent: boolean;
+    try {
+      const outcome = await replaceGovernedAsset(source, dest, undefined, "create-only");
+      concurrent =
+        outcome === "target-changed" || (await hashAssistantAssetFile(dest)) !== shippedHash;
+    } catch (error: unknown) {
+      if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST") {
+        throw error;
+      }
+      concurrent = true;
+    }
+    if (concurrent) {
+      out.skipped.push(dest);
+      const contained = await hasRealGovernedAssistantParents(
+        destRoot,
+        `${ASSISTANT_DIR}/${out.relative}`,
+      );
+      if (contained && (await hashAssistantAssetFile(dest)) === shippedHash) {
+        out.recorded[out.relative] = shippedHash;
         return;
       }
-      await replaceGovernedAsset(source, dest);
+      if (previousHash !== undefined) out.recorded[out.relative] = previousHash;
+      out.manualMergeNotes.push(
+        `NOTE: ${formatReportPath(dest)} was created during initialization and left unchanged; keep adopter edits protected.`,
+      );
+      return;
     }
-    out.copied.push(dest);
-    out.recorded[out.relative] = shippedHash;
+  }
+  out.copied.push(dest);
+  out.recorded[out.relative] = shippedHash;
+  if (occupied) {
     // Tense follows the run: under `--dry-run` nothing was removed and nothing
     // was written, and an operator who reads only the preview must not come
     // away believing the occupied path has already been repaired.
@@ -1380,12 +1379,6 @@ async function restoreUnreadableGovernedAsset(
         ? `NOTE: ${dest} is occupied by something other than a regular file (a directory, a special file, a broken symlink), so it will be replaced with the shipped file (not done: --dry-run).`
         : `NOTE: ${dest} was occupied by something other than a regular file (a directory, a special file, a broken symlink), so it was replaced with the shipped file.`,
     );
-    return;
-  }
-
-  out.skipped.push(dest);
-  if (previousHash !== undefined) {
-    out.recorded[out.relative] = previousHash;
   }
 }
 
