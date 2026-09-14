@@ -298,7 +298,7 @@ export function addReviewPointer(existing: string, template: string | null): str
       ")[\\s\\S])*?(?<!`)\\1(?!`)",
   );
   const tableDelimiter = /^ {0,3}\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*\r?$/gm;
-  const tableBoundaries = new Set<number>();
+  const tableBoundaries: number[] = [];
   const lines = existing.split("\n");
   let tableOffset = 0;
   let previousLine = "";
@@ -313,7 +313,7 @@ export function addReviewPointer(existing: string, template: string | null): str
         /(?<!\\)(?:\\\\)*\|/.test(header) &&
         headerPipes === (separator.match(/\|/g)?.length ?? 0)
       )
-        tableBoundaries.add(tableOffset);
+        tableBoundaries.push(tableOffset);
     }
     previousLine = line;
     tableOffset += line.length + 1;
@@ -346,11 +346,20 @@ export function addReviewPointer(existing: string, template: string | null): str
     return slashes % 2 !== 0;
   };
   const crossesTable = (start: number, end: number): boolean => {
-    for (const boundary of tableBoundaries) {
-      if (boundary > start && boundary < end) return true;
+    let low = 0;
+    let high = tableBoundaries.length;
+    while (low < high) {
+      const middle = low + Math.floor((high - low) / 2);
+      if ((tableBoundaries[middle] ?? Infinity) <= start) low = middle + 1;
+      else high = middle;
     }
-    return false;
+    const boundary = tableBoundaries[low];
+    return boundary !== undefined && boundary < end;
   };
+  const labelHtml = new RegExp(
+    String.raw`(?:<!--(?!>|->)(?:(?!--)[^\r\n]|${continuation})*(?<!-)-->|<\?(?:[^\r\n]|${continuation})*?\?>|<![A-Z]+(?:[ \t]|${continuation})+(?:[^>\r\n]|${continuation})*>|<!\[CDATA\[(?:[^\r\n]|${continuation})*?\]\]>|<(?:[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\x00-\x20<>]*|[A-Za-z0-9.!#$%&'*+/=?^_\x60{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)>)`,
+    "y",
+  );
   for (let labelIndex = 0; labelIndex < existing.length; labelIndex += 1) {
     const character = existing[labelIndex];
     if (character === "\\" && escapable.test(existing[labelIndex + 1] ?? "")) {
@@ -360,14 +369,25 @@ export function addReviewPointer(existing: string, template: string | null): str
     labelContinuation.lastIndex = labelIndex;
     if (
       character === "\n" &&
-      (labelContinuation.exec(existing) === null || tableBoundaries.has(labelIndex + 1))
+      (labelContinuation.exec(existing) === null || crossesTable(labelIndex, labelIndex + 2))
     )
       labelStack.length = 0;
     if (character === "`") {
       labelCodeSpan.lastIndex = labelIndex;
       const span = labelCodeSpan.exec(existing);
-      if (span !== null) {
+      if (span !== null && !crossesTable(labelIndex, labelIndex + span[0].length)) {
         labelIndex += span[0].length - 1;
+        continue;
+      }
+    }
+    if (character === "<") {
+      let end = htmlTagEnd(labelIndex);
+      if (end === labelIndex) {
+        labelHtml.lastIndex = labelIndex;
+        if (labelHtml.exec(existing) !== null) end = labelHtml.lastIndex;
+      }
+      if (end > labelIndex && !crossesTable(labelIndex, end)) {
+        labelIndex = end - 1;
         continue;
       }
     }
@@ -531,12 +551,14 @@ export function addReviewPointer(existing: string, template: string | null): str
         continue;
       }
       const marker = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/.exec(raw);
+      const markerAllowed = !paragraph || contentColumn > 0 || paragraphInterrupt.test(plain);
       if (
         !comment &&
         offset >= spanEnd &&
         offset >= linkEnd &&
         offset >= tagEnd &&
         marker !== null &&
+        markerAllowed &&
         indentation <= contentColumn + 3
       ) {
         const markerEnd = columnAfter(`${marker[1] ?? ""}${marker[2] ?? ""}`);
@@ -551,7 +573,9 @@ export function addReviewPointer(existing: string, template: string | null): str
       }
       const withoutBom = plain.replace(/^\uFEFF/, "");
       const openingMarkers =
-        /^(?: {0,3}(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))+/.exec(withoutBom)?.[0] ?? "";
+        (markerAllowed
+          ? /^(?: {0,3}(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))+/.exec(withoutBom)?.[0]
+          : undefined) ?? "";
       const openingLine =
         openingMarkers === ""
           ? fenceLine(raw).replace(/^\uFEFF/, "")
@@ -792,14 +816,8 @@ export function addReviewPointer(existing: string, template: string | null): str
           }
           const tail = existing.slice(offset + index);
           let span = codeSpan.exec(tail)?.[0];
-          if (span !== undefined && tableBoundaries.size > 0) {
-            for (const delimiter of span.matchAll(tableDelimiter)) {
-              if (tableBoundaries.has(offset + index + delimiter.index)) {
-                span = undefined;
-                break;
-              }
-            }
-          }
+          if (span !== undefined && crossesTable(offset + index, offset + index + span.length))
+            span = undefined;
           if (span === "`REVIEW.md`") {
             visible += span;
             index += span.length;

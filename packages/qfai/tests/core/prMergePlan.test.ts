@@ -381,6 +381,27 @@ describe("run-pr-merge plan", () => {
     ["ordinary balanced link", "[Nothing [example]](/url)"],
     ["escaped balanced image", "\\![Nothing [example]](/image.png)"],
     ["unresolved balanced image", "![Nothing [example]][missing]"],
+    [
+      "balanced image interrupted by table",
+      "![removed [item] | detail\n--- | ---\nstill present](/image.png) |",
+    ],
+    [
+      "reference image interrupted by table",
+      "![removed [item] | detail\n--- | ---\nstill present][image] |\n\n[image]: /image.png",
+    ],
+    ["image label raw HTML", '![prefix [nested]\nNothing removed.\n<span title="](/image.png)">'],
+    [
+      "image label autolink",
+      "![prefix [nested]\nNothing removed.\n<https://example.com/](/image.png)>",
+    ],
+    [
+      "image label inline comment",
+      "![prefix [nested]\nNothing removed.\nlater <!-- ](/image.png) -->",
+    ],
+    [
+      "image paragraph interrupted by a table",
+      "![prefix [nested]\nNothing removed.\nfoo | bar\n--- | ---\n](/image.png)",
+    ],
     ["live after footnote dedent", "[^1]: Hidden\n\nNothing removed."],
     ["live after footnote block", "[^1]: Hidden\n### Heading\nNothing removed."],
     ["code-like reference container top level", "    [Nothing]: /url"],

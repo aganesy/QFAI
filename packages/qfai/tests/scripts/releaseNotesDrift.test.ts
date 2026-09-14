@@ -307,6 +307,57 @@ describe("the run", () => {
 });
 
 describe("resuming a release pull-request description", () => {
+  it.each([
+    [
+      "balanced image interrupted by table",
+      "![removed [item] | detail\n--- | ---\nstill present](/image.png) |",
+    ],
+    [
+      "reference image interrupted by table",
+      "![removed [item] | detail\n--- | ---\nstill present][image] |\n\n[image]: /image.png",
+    ],
+    ["image label raw HTML", '![prefix [nested]\nNothing removed.\n<span title="](/image.png)">'],
+    [
+      "image label autolink",
+      "![prefix [nested]\nNothing removed.\n<https://example.com/](/image.png)>",
+    ],
+    [
+      "image label inline comment",
+      "![prefix [nested]\nNothing removed.\nlater <!-- ](/image.png) -->",
+    ],
+    [
+      "image paragraph interrupted by a table",
+      "![prefix [nested]\nNothing removed.\nfoo | bar\n--- | ---\n](/image.png)",
+    ],
+  ])("preserves the authored %s release answer", async (_name, answer) => {
+    const workflow = await readFile(
+      path.join(REPO_ROOT, ".github/workflows/prepare-release.yml"),
+      "utf-8",
+    );
+    const script = workflow.match(
+      /^\s*node - .* <<'REPAIR_BODY'\r?\n([\s\S]*?)^\s*REPAIR_BODY[ \t]*$/m,
+    )?.[1];
+    if (script === undefined) throw new Error("Release body repair script is absent");
+    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-release-inline-"));
+    tempDirs.push(dir);
+    const existingPath = path.join(dir, "existing.md");
+    const bodyPath = path.join(dir, "generated.md");
+    const existing = `## What this change made unnecessary\n\n${answer}\n\n## Adoption bar\n\nKeep all review protections.\n`;
+    await writeFile(existingPath, existing, "utf-8");
+    await writeFile(
+      bodyPath,
+      "## What this change made unnecessary\n\nSuperseded version.\n",
+      "utf-8",
+    );
+    const result = spawnSync(process.execPath, ["-", existingPath, bodyPath], {
+      input: script,
+      encoding: "utf-8",
+    });
+    if (result.error !== undefined) throw result.error;
+    expect(result.status, result.stderr).toBe(0);
+    expect(await readFile(bodyPath, "utf-8")).toBe(existing);
+  });
+
   it.each(["changed", "unchanged", "authored"])(
     "checks the %s release-body snapshot before editing",
     async (snapshot) => {

@@ -30,6 +30,34 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
   $labelStack = [System.Collections.Generic.Stack[int]]::new()
   $labelContinuation = [regex]::new('\G' + $continuation)
   $labelCodeSpan = [regex]::new('\G' + $codeSpan.ToString().Substring(1))
+  $tableBoundaries = [System.Collections.Generic.List[int]]::new()
+  $tableDelimiter = [regex]::new('^ {0,3}\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$')
+  $tableOffset = 0
+  $previousLine = ''
+  foreach ($tableLine in ($Body -split "`n")) {
+    if ($tableDelimiter.IsMatch($tableLine) -and $previousLine -match '^ {0,3}\S') {
+      $header = $previousLine.Trim()
+      $headerCells = $header -replace '^\||(?<!\\)(?:\\\\)*\|$', ''
+      $separator = $tableLine.Trim() -replace '^\||\|$', ''
+      if ($header -match '(?<!\\)(?:\\\\)*\|' -and [regex]::Matches($headerCells, '(?<!\\)(?:\\\\)*\|').Count -eq [regex]::Matches($separator, '\|').Count) { $tableBoundaries.Add($tableOffset) }
+    }
+    $previousLine = $tableLine
+    $tableOffset += $tableLine.Length + 1
+  }
+  $crossesTable = {
+    param([int]$Start, [int]$End)
+    $low = 0
+    $high = $tableBoundaries.Count
+    while ($low -lt $high) {
+      $middle = $low + [int][Math]::Floor(($high - $low) / 2)
+      if ($tableBoundaries[$middle] -le $Start) { $low = $middle + 1 } else { $high = $middle }
+    }
+    return $low -lt $tableBoundaries.Count -and $tableBoundaries[$low] -lt $End
+  }
+  $htmlSpace = '(?:[ \t]|' + $continuation + ')'
+  $htmlValue = '(?:[^"''=<>`\x00-\x20]+|''(?:[^''\n]|' + $continuation + ')*''|"(?:[^"\n]|' + $continuation + ')*")'
+  $htmlTag = '(?:<[A-Za-z][A-Za-z0-9-]*(?:' + $htmlSpace + '+[A-Za-z_:][A-Za-z0-9:._-]*(?:' + $htmlSpace + '*=' + $htmlSpace + '*' + $htmlValue + ')?)*' + $htmlSpace + '*/?>|</[A-Za-z][A-Za-z0-9-]*' + $htmlSpace + '*>)'
+  $labelHtml = [regex]::new('\G(?:' + $htmlTag + '|<!--(?!>|->)(?:(?!--)[^\n]|' + $continuation + ')*(?<!-)-->|<\?(?:[^\n]|' + $continuation + ')*?\?>|<![A-Z]+(?:[ \t]|' + $continuation + ')+(?:[^>\n]|' + $continuation + ')*>|<!\[CDATA\[(?:[^\n]|' + $continuation + ')*?\]\]>|<(?:[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\x00-\x20<>]*|[A-Za-z0-9.!#$%&''*+/=?^_\x60{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)>)')
   $isEscaped = {
     param([int]$Start)
     $slashes = 0
@@ -39,10 +67,14 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
   for ($labelIndex = 0; $labelIndex -lt $Body.Length; $labelIndex += 1) {
     $character = $Body[$labelIndex]
     if ($character -eq '\' -and $labelIndex + 1 -lt $Body.Length -and $Body[$labelIndex + 1] -match '[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]') { $labelIndex += 1; continue }
-    if ($character -eq "`n" -and -not $labelContinuation.Match($Body, $labelIndex).Success) { $labelStack.Clear() }
+    if ($character -eq "`n" -and (-not $labelContinuation.Match($Body, $labelIndex).Success -or (& $crossesTable $labelIndex ($labelIndex + 2)))) { $labelStack.Clear() }
     if ($character -eq '`') {
       $span = $labelCodeSpan.Match($Body, $labelIndex)
-      if ($span.Success) { $labelIndex += $span.Length - 1; continue }
+      if ($span.Success -and -not (& $crossesTable $labelIndex ($labelIndex + $span.Length))) { $labelIndex += $span.Length - 1; continue }
+    }
+    if ($character -eq '<') {
+      $html = $labelHtml.Match($Body, $labelIndex)
+      if ($html.Success -and -not (& $crossesTable $labelIndex ($labelIndex + $html.Length))) { $labelIndex += $html.Length - 1; continue }
     }
     if ($character -eq '[') { $labelStack.Push($labelIndex) }
     if ($character -eq ']' -and $labelStack.Count -gt 0) { $imageLabelEnds.Add($labelStack.Pop(), $labelIndex) }
@@ -247,7 +279,7 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
             if ($image -and $escapes % 2 -eq 0 -and $imageLabelEnds.ContainsKey($start)) {
               $close = $imageLabelEnds[$start]
               $suffix = $imageSuffix.Match($Body, $close)
-              if ($suffix.Success) {
+              if ($suffix.Success -and -not (& $crossesTable $start ($close + $suffix.Length))) {
                 $target = $suffix.Groups['destination']
                 $length = & $destinationLength $target.Value $true
                 if ($length -ge 0 -and $length -lt $target.Length) {
@@ -264,14 +296,14 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
               $reference = $imageReference.Match($Body, $close + 1)
               $text = $reference.Groups['reference'].Value
               if ($text.Length -eq 0) { $text = $Body.Substring($start + 1, $close - $start - 1) }
-              if ([Text.Encoding]::UTF8.GetByteCount($text) -le 1000 -and $referenceLabels.Contains((& $normalizeLabel $text))) {
+              if (-not (& $crossesTable $start ($close + 1 + $(if ($reference.Success) { $reference.Length } else { 0 }))) -and [Text.Encoding]::UTF8.GetByteCount($text) -le 1000 -and $referenceLabels.Contains((& $normalizeLabel $text))) {
                 $linkStart = $start
                 $linkEnd = $close + 1 + $(if ($reference.Success) { $reference.Length } else { 0 })
                 $hasInlineLink = $true
                 continue
               }
             }
-            if ($escapes % 2 -eq 0 -and $inline.Success) {
+            if ($escapes % 2 -eq 0 -and $inline.Success -and -not (& $crossesTable $start ($start + $inline.Length))) {
               $target = $inline.Groups['destination']
               $length = & $destinationLength $target.Value $true
               if ($length -ge 0 -and $length -lt $target.Length) {
@@ -290,7 +322,7 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
               $reference = $referenceImage.Match($Body, $start)
               $text = $reference.Groups['reference'].Value
               if ($text.Length -eq 0) { $text = $reference.Groups['text'].Value }
-              if ($reference.Success -and [Text.Encoding]::UTF8.GetByteCount($text) -le 1000 -and $referenceLabels.Contains((& $normalizeLabel $text))) {
+              if ($reference.Success -and -not (& $crossesTable $start ($start + $reference.Length)) -and [Text.Encoding]::UTF8.GetByteCount($text) -le 1000 -and $referenceLabels.Contains((& $normalizeLabel $text))) {
                 $linkStart = $start
                 $linkEnd = $start + $reference.Length
                 $hasInlineLink = $true
@@ -302,7 +334,7 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
             if (& $isEscaped ($offset + $position)) { $position += 1; continue }
             $tail = $Body.Substring($offset + $position)
             $span = $codeSpan.Match($tail)
-            if ($span.Success) {
+            if ($span.Success -and -not (& $crossesTable ($offset + $position) ($offset + $position + $span.Length))) {
               $spanEnd = $offset + $position + $span.Length
               $position = [Math]::Min($line.Length, $spanEnd - $offset)
               continue

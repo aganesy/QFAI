@@ -326,6 +326,36 @@ jobs:
               const labelStack = [];
               const labelContinuation = new RegExp(continuation, 'y');
               const labelCodeSpan = new RegExp(codeSpan.source.slice(1), 'y');
+              const tableBoundaries = [];
+              const tableDelimiter = /^ {0,3}\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*\r?$/;
+              let tableOffset = 0;
+              let previousLine = '';
+              for (const line of body.split('\n')) {
+                if (tableDelimiter.test(line) && /^ {0,3}\S/.test(previousLine)) {
+                  const header = previousLine.trim();
+                  const headerCells = header.replace(/^\||(?<!\\)(?:\\\\)*\|$/g, '');
+                  const separator = line.trim().replace(/^\||\|$/g, '');
+                  if (/(?<!\\)(?:\\\\)*\|/.test(header) &&
+                    (headerCells.match(/(?<!\\)(?:\\\\)*\|/g)?.length ?? 0) ===
+                    (separator.match(/\|/g)?.length ?? 0)) tableBoundaries.push(tableOffset);
+                }
+                previousLine = line;
+                tableOffset += line.length + 1;
+              }
+              const crossesTable = (start, end) => {
+                let low = 0;
+                let high = tableBoundaries.length;
+                while (low < high) {
+                  const middle = low + Math.floor((high - low) / 2);
+                  if (tableBoundaries[middle] <= start) low = middle + 1;
+                  else high = middle;
+                }
+                return low < tableBoundaries.length && tableBoundaries[low] < end;
+              };
+              const htmlSpace = String.raw`(?:[ \t]|${continuation})`;
+              const htmlValue = String.raw`(?:[^"'=<>\x60\x00-\x20]+|'(?:[^'\r\n]|${continuation})*'|"(?:[^"\r\n]|${continuation})*")`;
+              const htmlTag = String.raw`(?:<[A-Za-z][A-Za-z0-9-]*(?:${htmlSpace}+[A-Za-z_:][A-Za-z0-9:._-]*(?:${htmlSpace}*=${htmlSpace}*${htmlValue})?)*${htmlSpace}*/?>|</[A-Za-z][A-Za-z0-9-]*${htmlSpace}*>)`;
+              const labelHtml = new RegExp(String.raw`(?:${htmlTag}|<!--(?!>|->)(?:(?!--)[^\r\n]|${continuation})*(?<!-)-->|<\?(?:[^\r\n]|${continuation})*?\?>|<![A-Z]+(?:[ \t]|${continuation})+(?:[^>\r\n]|${continuation})*>|<!\[CDATA\[(?:[^\r\n]|${continuation})*?\]\]>|<(?:[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\x00-\x20<>]*|[A-Za-z0-9.!#$%&'*+/=?^_\x60{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)>)`, 'y');
               const escapable = /[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]/;
               const isEscaped = (start) => {
                 let slashes = 0;
@@ -336,11 +366,16 @@ jobs:
                 const character = body[labelIndex];
                 if (character === '\\' && escapable.test(body[labelIndex + 1] ?? '')) { labelIndex += 1; continue; }
                 labelContinuation.lastIndex = labelIndex;
-                if (character === '\n' && labelContinuation.exec(body) === null) labelStack.length = 0;
+                if (character === '\n' && (labelContinuation.exec(body) === null || crossesTable(labelIndex, labelIndex + 2))) labelStack.length = 0;
                 if (character === '`') {
                   labelCodeSpan.lastIndex = labelIndex;
                   const span = labelCodeSpan.exec(body);
-                  if (span !== null) { labelIndex += span[0].length - 1; continue; }
+                  if (span !== null && !crossesTable(labelIndex, labelIndex + span[0].length)) { labelIndex += span[0].length - 1; continue; }
+                }
+                if (character === '<') {
+                  labelHtml.lastIndex = labelIndex;
+                  const html = labelHtml.exec(body);
+                  if (html !== null && !crossesTable(labelIndex, labelIndex + html[0].length)) { labelIndex += html[0].length - 1; continue; }
                 }
                 if (character === '[') labelStack.push(labelIndex);
                 if (character === ']' && labelStack.length > 0) imageLabelEnds.set(labelStack.pop(), labelIndex);
@@ -558,7 +593,7 @@ jobs:
                           const close = imageLabelEnds.get(start);
                           imageSuffix.lastIndex = close;
                           let suffix = imageSuffix.exec(body);
-                          if (suffix !== null) {
+                          if (suffix !== null && !crossesTable(start, close + suffix[0].length)) {
                             const target = suffix.groups.destination ?? '';
                             const length = destinationLength(target, true);
                             if (length >= 0 && length < target.length) {
@@ -576,14 +611,14 @@ jobs:
                           imageReference.lastIndex = close + 1;
                           const reference = imageReference.exec(body);
                           const text = reference?.groups.reference || body.slice(start + 1, close);
-                          if (Buffer.byteLength(text.replace(/\r\n/g, '\n'), 'utf8') <= 1000 && referenceLabels.has(normalizeLabel(text))) {
+                          if (!crossesTable(start, close + 1 + (reference?.[0].length ?? 0)) && Buffer.byteLength(text.replace(/\r\n/g, '\n'), 'utf8') <= 1000 && referenceLabels.has(normalizeLabel(text))) {
                             linkStart = start;
                             linkEnd = close + 1 + (reference?.[0].length ?? 0);
                             hasInlineLink = true;
                             continue;
                           }
                         }
-                        if (inline !== null) {
+                        if (inline !== null && !crossesTable(start, start + inline[0].length)) {
                           const target = inline.groups.destination ?? '';
                           const length = destinationLength(target, true);
                           if (length >= 0 && length < target.length) {
@@ -608,7 +643,7 @@ jobs:
                           referenceImage.lastIndex = start;
                           const reference = referenceImage.exec(body);
                           const text = reference?.groups.reference || reference?.groups.text || '';
-                          if (reference && Buffer.byteLength(text.replace(/\r\n/g, '\n'), 'utf8') <= 1000 && referenceLabels.has(normalizeLabel(text))) {
+                          if (reference && !crossesTable(start, start + reference[0].length) && Buffer.byteLength(text.replace(/\r\n/g, '\n'), 'utf8') <= 1000 && referenceLabels.has(normalizeLabel(text))) {
                             linkStart = start;
                             linkEnd = referenceImage.lastIndex;
                             hasInlineLink = true;
@@ -620,7 +655,7 @@ jobs:
                         if (isEscaped(offset + position)) { position += 1; continue; }
                         const tail = body.slice(offset + position);
                         const span = codeSpan.exec(tail)?.[0];
-                        if (span !== undefined) {
+                        if (span !== undefined && !crossesTable(offset + position, offset + position + span.length)) {
                           spanEnd = offset + position + span.length;
                           position = Math.min(line.length, spanEnd - offset);
                           continue;

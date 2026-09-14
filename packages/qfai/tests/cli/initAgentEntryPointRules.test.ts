@@ -756,6 +756,70 @@ describe("a hand-wired file this run cannot extend is named", () => {
 });
 
 describe("optional review directive detection", () => {
+  it.each(["direct", "reference"])("keeps eligible table image guidance %s", (kind) => {
+    for (const end of ["\n", "\r\n"]) {
+      const suffix = kind === "direct" ? "](/image.png) |" : "][image] |\n\n[image]: /image.png";
+      const existing =
+        `\uFEFF![prefix [nested] | head\n--- | ---\n${REVIEW_POINTER}\n${suffix}\n`.replace(
+          /\n/g,
+          end,
+        );
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    }
+  });
+
+  it.each([
+    ["image", "![prefix [nested]", "](/image.png)"],
+    ["link title", '[caption](/url "prefix', '")'],
+    ["code", "``prefix", "``"],
+    ["tag", 'prefix <span title="caption', '">'],
+  ])("keeps guidance before a table-interrupted %s paragraph", (_name, opener, closer) => {
+    for (const end of ["\n", "\r\n"]) {
+      const existing =
+        `\uFEFF${opener}\n${REVIEW_POINTER}\nfoo | bar\n--- | ---\n${closer}\n`.replace(/\n/g, end);
+      const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      expect(updated).toBe(existing);
+      expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+    }
+  });
+
+  it.each([
+    '<span title="](/image.png)">',
+    "<https://example.com/](/image.png)>",
+    "<!-- ](/image.png) -->",
+  ])("keeps live image-label HTML guidance %j", (html) => {
+    for (const end of ["\n", "\r\n"]) {
+      const existing = `\uFEFF![prefix [nested]\n${REVIEW_POINTER}\n${html}\n`.replace(/\n/g, end);
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    }
+  });
+
+  it.each(["2. - ", "02. - "])("keeps noninterrupting nested list guidance %j", (prefix) => {
+    for (const end of ["\n", "\r\n"]) {
+      const existing =
+        `\uFEFFParagraph\n${prefix}~~~\n${" ".repeat(prefix.length)}${REVIEW_POINTER}\n${" ".repeat(prefix.length)}~~~\n`.replace(
+          /\n/g,
+          end,
+        );
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    }
+  });
+
+  it("does not rescan table sets for inline candidates", () => {
+    const existing = `${"head | detail\n--- | ---\n\n".repeat(128)}${"[caption](/url)\n".repeat(128)}\n${REVIEW_POINTER}\n`;
+    const spy = vi.spyOn(Set.prototype, Symbol.iterator);
+    let calls: number;
+    let updated: string;
+    try {
+      updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      calls = spy.mock.calls.length;
+    } finally {
+      spy.mockRestore();
+    }
+    expect(updated).toBe(existing);
+    expect(calls).toBe(0);
+  });
+
   it.each([
     ["tag", '<span title=" | head', '">'],
     ["image", "![Unclosed | head", "](/image.png)"],
@@ -1090,6 +1154,50 @@ describe("optional review directive detection", () => {
                 expect(await readEntryPoint(root, name)).toBe(
                   source.hidden ? `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}` : text,
                 );
+                expect((await stat(path.join(root, name))).mode).toBe(mode);
+              }
+            }
+          }
+        }
+      });
+    },
+  );
+
+  it.each([false, true])(
+    "keeps inline precedence repairs byte-preserving with force=%s",
+    async (force) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const templates = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+            name,
+            text: await readEntryPoint(root, name),
+            mode: (await stat(path.join(root, name))).mode,
+          })),
+        );
+        for (const source of [
+          `![prefix [nested] | head\n--- | ---\n${REVIEW_POINTER}\n](/image.png) |`,
+          `![prefix [nested]\n${REVIEW_POINTER}\n<span title="](/image.png)">`,
+          `![prefix [nested]\n${REVIEW_POINTER}\n<https://example.com/](/image.png)>`,
+          `![prefix [nested]\n${REVIEW_POINTER}\nlater <!-- ](/image.png) -->`,
+          `Paragraph\n2. - ~~~\n     ${REVIEW_POINTER}\n     ~~~`,
+          `![prefix [nested]\n${REVIEW_POINTER}\nfoo | bar\n--- | ---\n](/image.png)`,
+        ]) {
+          for (const end of ["\n", "\r\n"]) {
+            const originals = templates.map(({ name, text, mode }) => ({
+              name,
+              mode,
+              text: `\uFEFF${text.replace(REVIEW_POINTER, source)}${PROJECT_TEXT}`.replace(
+                /\n/g,
+                end,
+              ),
+            }));
+            for (const { name, text } of originals)
+              await writeFile(path.join(root, name), text, "utf-8");
+            for (let run = 0; run < 2; run += 1) {
+              await runInit({ dir: root, force, dryRun: false, yes: true });
+              for (const { name, text, mode } of originals) {
+                expect(await readEntryPoint(root, name)).toBe(text);
                 expect((await stat(path.join(root, name))).mode).toBe(mode);
               }
             }
