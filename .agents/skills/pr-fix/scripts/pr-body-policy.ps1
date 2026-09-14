@@ -6,6 +6,33 @@ function NormalizeBody([string]$Body) {
 }
 
 function MaskBodyExamples([string]$Body) {
+  $definitions = [System.Collections.Generic.Dictionary[int, int]]::new()
+  $label = '\[(?<label>(?:\\.|(?!\n[ \t]*\n)[^\[\]\\])+)\]'
+  $destination = '(?<destination><(?:\\.|[^<>\\\n])*>|(?:\\.|[^\x00-\x20\x7f<>\\])+)'
+  $title = '(?:"(?:(?!\n[ \t]*\n)[^"\\]|\\.)*"|''(?:(?!\n[ \t]*\n)[^''\\]|\\.)*''|\((?:(?!\n[ \t]*\n)[^()\\]|\\.)*\))'
+  $definition = '(?m)^ {0,3}' + $label + ':[ \t]*(?:\n[ \t]*)?' + $destination + '(?:(?:[ \t]+(?:\n[ \t]*)?|[ \t]*\n[ \t]*)' + $title + ')?[ \t]*$'
+  foreach ($reference in [regex]::Matches($Body, $definition)) {
+    $referenceLabel = $reference.Groups['label'].Value
+    $labelCharacters = 0
+    for ($labelIndex = 0; $labelIndex -lt $referenceLabel.Length; $labelIndex += 1) {
+      $labelCharacters += 1
+      if ([char]::IsHighSurrogate($referenceLabel[$labelIndex]) -and $labelIndex + 1 -lt $referenceLabel.Length -and [char]::IsLowSurrogate($referenceLabel[$labelIndex + 1])) { $labelIndex += 1 }
+    }
+    if ($labelCharacters -gt 999 -or $referenceLabel -notmatch '[^ \t\n]') { continue }
+    $target = $reference.Groups['destination'].Value
+    if (-not $target.StartsWith('<', [System.StringComparison]::Ordinal)) {
+      $depth = 0
+      for ($targetIndex = 0; $targetIndex -lt $target.Length; $targetIndex += 1) {
+        if ($target[$targetIndex] -eq '\') { $targetIndex += 1; continue }
+        if ($target[$targetIndex] -eq '(') { $depth += 1 }
+        if ($target[$targetIndex] -eq ')') { $depth -= 1 }
+        if ($depth -lt 0) { break }
+      }
+      if ($depth -ne 0) { continue }
+    }
+    $definitions.Add($reference.Index, $reference.Index + $reference.Length)
+  }
+  $referenceEnd = 0
   $fence = ""
   $inComment = $false
   $spanEnd = 0
@@ -14,6 +41,11 @@ function MaskBodyExamples([string]$Body) {
   $htmlTextVisible = $false
   $paragraph = $false
   $masked = @(foreach ($line in ($Body -split "`n")) {
+    if ($offset -lt $referenceEnd) {
+      $line -replace '[^\r\n]', ' '
+      $offset += $line.Length + 1
+      continue
+    }
     $insideHtml = $htmlEnd.Length -gt 0
     if ($fence.Length -gt 0) {
       $paragraph = $false
@@ -59,6 +91,12 @@ function MaskBodyExamples([string]$Body) {
           continue
         }
       }
+    }
+    if (-not $insideHtml -and -not $inComment -and $offset -ge $spanEnd -and -not $paragraph -and $definitions.ContainsKey($offset)) {
+      $referenceEnd = $definitions[$offset]
+      $line -replace '[^\r\n]', ' '
+      $offset += $line.Length + 1
+      continue
     }
     $opening = [regex]::Match($line, '^[ \t]{0,3}(`{3,}|~{3,})(.*)$')
     if (-not $insideHtml -and -not $inComment -and $offset -ge $spanEnd -and $opening.Success -and -not ($opening.Groups[1].Value[0] -eq '`' -and $opening.Groups[2].Value.Contains('`'))) {
@@ -126,13 +164,13 @@ function StripAutoImport([string]$Body) {
 function RemovalAnswer([string]$Body) {
   $raw = StripAutoImport $Body
   $text = MaskBodyExamples $raw
-  $match = [regex]::Match($text, '(?ms)^## What (?:this|a) change made unnecessary[ \t]*\n(?<answer>.*?)(?=^#{1,2} |\z)')
+  $match = [regex]::Match($text, '(?ms)^## What (?:this|a) change made unnecessary[ \t]*\n(?<answer>.*?)(?=^ {0,3}#{1,2}(?:[ \t]|$)|\z)')
   if (-not $match.Success) { return "" }
   $answer = $match.Groups['answer']
   $meaningful = [regex]::Replace($answer.Value, '(?m)^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?', '')
   $meaningful = [regex]::Replace($meaningful, '(?m)^[ \t]*>+[ \t]*', '')
   $meaningful = [regex]::Replace($meaningful, '\[([^\]]*)\]\([^\)\r\n]*\)', '$1')
-  $meaningful = [regex]::Replace($meaningful, '</?[A-Za-z][A-Za-z0-9:-]*(?:[ \t][^>]*|[ \t]*/?)>', '')
+  $meaningful = [regex]::Replace($meaningful, '</?[A-Za-z][A-Za-z0-9:-]*(?:[ \t\n]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t\n]*=[ \t\n]*(?:[^"''=<>`\x00-\x20]+|''[^'']*''|"[^"]*"))?)*[ \t\n]*/?>', '')
   $meaningful = [regex]::Replace($meaningful, '&(?:#(?:[xX][0-9A-Fa-f]+|\d+)|[A-Za-z][A-Za-z0-9]*);', ' ')
   $meaningful = [regex]::Replace($meaningful, '[`*_]', '').Trim()
   if ($meaningful -notmatch '[\p{L}\p{N}]' -or $meaningful -match '^(?:TBD|TODO|FIXME|HACK)(?:[^\p{L}\p{N}]|$)' -or $meaningful -match '^(?:TBD|TODO|FIXME|HACK|None|N/?A|Not applicable|\[.*\])\.?$') { return "" }

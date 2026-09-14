@@ -84,6 +84,7 @@
     "tests/assets/layoutAntiPatternSpecAlignment.test.ts",
     "tests/assets/ledgerWriteTiming.test.ts",
     "tests/assets/mdschemaSchemas.test.ts",
+    "tests/assets/observedFailureHome.test.ts",
     "tests/assets/openQuestionRouting.test.ts",
     "tests/assets/outputLanguageSingleSource.test.ts",
     "tests/assets/packGateQualifier.test.ts",

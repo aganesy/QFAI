@@ -280,8 +280,34 @@ jobs:
             const existing = readFileSync(existingPath, 'utf8');
             const generated = readFileSync(bodyPath, 'utf8');
             const section =
-              /^## What (?:this|a) change made unnecessary[ \t]*\r?\n([\s\S]*?)(?=^#{1,2} |(?![\s\S]))/m;
+              /^## What (?:this|a) change made unnecessary[ \t]*\r?\n([\s\S]*?)(?=^ {0,3}#{1,2}(?:[ \t]|\r?$)|(?![\s\S]))/m;
             const maskExamples = (body) => {
+              const definitions = new Map();
+              const definition =
+                /^ {0,3}\[(?<label>(?:\\.|(?!\r?\n[ \t]*\r?\n)[^\[\]\\])+)\]:[ \t]*(?:\r?\n[ \t]*)?(?<destination><(?:\\.|[^<>\\\r\n])*>|(?:\\.|[^\x00-\x20\x7f<>\\])+)(?:(?:[ \t]+(?:\r?\n[ \t]*)?|[ \t]*\r?\n[ \t]*)(?:"(?:(?!\r?\n[ \t]*\r?\n)[^"\\]|\\.)*"|'(?:(?!\r?\n[ \t]*\r?\n)[^'\\]|\\.)*'|\((?:(?!\r?\n[ \t]*\r?\n)[^()\\]|\\.)*\)))?[ \t]*\r?$/gm;
+              for (const reference of body.matchAll(definition)) {
+                if (
+                  [...reference.groups.label.replace(/\r\n/g, '\n')].length > 999 ||
+                  !/[^ \t\r\n]/.test(reference.groups.label)
+                )
+                  continue;
+                const target = reference.groups.destination;
+                if (!target.startsWith('<')) {
+                  let depth = 0;
+                  for (let index = 0; index < target.length; index += 1) {
+                    if (target[index] === '\\') {
+                      index += 1;
+                      continue;
+                    }
+                    if (target[index] === '(') depth += 1;
+                    if (target[index] === ')') depth -= 1;
+                    if (depth < 0) break;
+                  }
+                  if (depth !== 0) continue;
+                }
+                definitions.set(reference.index, reference.index + reference[0].length);
+              }
+              let referenceEnd = 0;
               let fence = '';
               let inComment = false;
               let spanEnd = 0;
@@ -289,6 +315,7 @@ jobs:
               let htmlTextVisible = false;
               let paragraph = false;
               const visible = body.replace(/^[^\n]*/gm, (line, offset) => {
+                if (offset < referenceEnd) return line.replace(/[^\r\n]/g, ' ');
                 let insideHtml = Boolean(htmlEnd);
                 if (fence) {
                   paragraph = false;
@@ -311,10 +338,19 @@ jobs:
                     htmlEnd = />/;
                   } else if (/^ {0,3}<!\[CDATA\[/.test(line)) {
                     htmlEnd = /\]\]>/;
-                  } else if (/^ {0,3}<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|\/>|$)/i.test(line)) {
+                  } else if (
+                    /^ {0,3}<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|\/>|$)/i.test(
+                      line,
+                    )
+                  ) {
                     htmlEnd = /^[ \t]*\r?$/;
                     htmlTextVisible = true;
-                  } else if (!paragraph && /^ {0,3}(?:<(?!pre(?:[ \t/>]|$)|script(?:[ \t/>]|$)|style(?:[ \t/>]|$)|textarea(?:[ \t/>]|$))[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t]*=[ \t]*(?:[^"'=<>`\x00-\x20]+|'[^']*'|"[^"]*"))?)*[ \t]*\/?>|<\/[A-Za-z][A-Za-z0-9-]*[ \t]*>)[ \t]*\r?$/i.test(line)) {
+                  } else if (
+                    !paragraph &&
+                    /^ {0,3}(?:<(?!pre(?:[ \t/>]|$)|script(?:[ \t/>]|$)|style(?:[ \t/>]|$)|textarea(?:[ \t/>]|$))[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t]*=[ \t]*(?:[^"'=<>`\x00-\x20]+|'[^']*'|"[^"]*"))?)*[ \t]*\/?>|<\/[A-Za-z][A-Za-z0-9-]*[ \t]*>)[ \t]*\r?$/i.test(
+                      line,
+                    )
+                  ) {
                     htmlEnd = /^[ \t]*\r?$/;
                     htmlTextVisible = true;
                   }
@@ -324,6 +360,10 @@ jobs:
                     if (htmlEnd.test(line)) htmlEnd = null;
                     if (!htmlTextVisible) return line.replace(/[^\r\n]/g, ' ');
                   }
+                }
+                if (!insideHtml && !inComment && offset >= spanEnd && !paragraph && definitions.has(offset)) {
+                  referenceEnd = definitions.get(offset);
+                  return line.replace(/[^\r\n]/g, ' ');
                 }
                 const rawOpening = /^[ \t]{0,3}(`{3,}|~{3,})(.*)\r?$/.exec(line);
                 if (
@@ -377,20 +417,33 @@ jobs:
                   paragraph = false;
                   return line.replace(/[^\r\n]/g, ' ');
                 }
-                if (insideHtml && /^ {0,3}#{1,6}(?:[ \t]|$)/.test(visible)) visible = line.replace(/[^\r\n]/g, ' ');
-                paragraph = !insideHtml && visible.trim().length > 0 && !/^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}|=+[ \t]*)\r?$)/.test(visible);
+                if (insideHtml && /^ {0,3}#{1,6}(?:[ \t]|$)/.test(visible))
+                  visible = line.replace(/[^\r\n]/g, ' ');
+                paragraph =
+                  !insideHtml &&
+                  visible.trim().length > 0 &&
+                  !/^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}|=+[ \t]*)\r?$)/.test(
+                    visible,
+                  );
                 return visible;
               });
-              return { visible, unfinished: Boolean(fence) || inComment || Boolean(htmlEnd && !htmlEnd.test('')) };
+              return {
+                visible,
+                unfinished: Boolean(fence) || inComment || Boolean(htmlEnd && !htmlEnd.test('')),
+              };
             };
             const parsed = maskExamples(existing);
             const match = section.exec(parsed.visible);
             const hasAnswer = (candidate) => {
               const answer = (candidate?.[1] ?? '')
+                .replace(/\r\n/g, '\n')
                 .replace(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?/gm, '')
                 .replace(/^[ \t]*>+[ \t]*/gm, '')
                 .replace(/\[([^\]]*)\]\([^\)\r\n]*\)/g, '$1')
-                .replace(/<\/?[A-Za-z][A-Za-z0-9:-]*(?:[ \t][^>]*|[ \t]*\/?)>/g, '')
+                .replace(
+                  /<\/?[A-Za-z][A-Za-z0-9:-]*(?:[ \t\n]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t\n]*=[ \t\n]*(?:[^"'=<>`\x00-\x20]+|'[^']*'|"[^"]*"))?)*[ \t\n]*\/?>/g,
+                  '',
+                )
                 .replace(/&(?:#(?:[xX][0-9A-Fa-f]+|\d+)|[A-Za-z][A-Za-z0-9]*);/g, ' ')
                 .replace(/[`*_]/g, '')
                 .trim();
@@ -420,6 +473,13 @@ jobs:
             writeFileSync(bodyPath, next, 'utf8');
             REPAIR_BODY
             if ! cmp -s "${existing_body}" "${body_file}"; then
+              latest_body="${existing_body}.latest"
+              trap 'rm -f "${body_file}" "${existing_body}" "${latest_body}"' EXIT
+              gh pr view "${existing_pr}" --json body --jq .body > "${latest_body}"
+              if ! cmp -s "${existing_body}" "${latest_body}"; then
+                echo "prepare-release: pull request body changed; rerun to preserve the latest authored body" >&2
+                exit 1
+              fi
               gh pr edit "${existing_pr}" --body-file "${body_file}"
             fi
             echo "prepare-release: reusing pull request #${existing_pr} for ${RELEASE_BRANCH} with its authored body preserved"

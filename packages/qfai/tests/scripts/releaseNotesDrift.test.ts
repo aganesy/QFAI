@@ -307,6 +307,103 @@ describe("the run", () => {
 });
 
 describe("resuming a release pull-request description", () => {
+  it.each(["changed", "unchanged", "authored"])(
+    "checks the %s release-body snapshot before editing",
+    async (snapshot) => {
+      const workflow = await readFile(
+        path.join(REPO_ROOT, ".github/workflows/prepare-release.yml"),
+        "utf-8",
+      );
+      const update = workflow.match(
+        /^ {12}if ! cmp -s "\$\{existing_body\}" "\$\{body_file\}"; then\r?\n[\s\S]*?^ {12}fi[ \t]*$/m,
+      )?.[0];
+      if (update === undefined) throw new Error("Release body update is absent");
+      const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-release-body-"));
+      tempDirs.push(dir);
+      const existingPath = path.join(dir, "existing.md");
+      const bodyPath = path.join(dir, "repaired.md");
+      const currentPath = path.join(dir, "current.md");
+      const existing = "\uFEFF## What this change made unnecessary\r\n\r\nTODO\r\n";
+      const repaired =
+        "\uFEFF## What this change made unnecessary\r\n\r\nSuperseded version. Notes stay.\r\n";
+      const current =
+        snapshot === "unchanged" ? existing : `${existing}\r\nKeep the maintainer's risk note.\r\n`;
+      await writeFile(existingPath, existing, "utf-8");
+      await writeFile(bodyPath, snapshot === "authored" ? existing : repaired, "utf-8");
+      await writeFile(currentPath, current, "utf-8");
+      const shell = [
+        'existing_body="$1"; body_file="$2"; current_body="$3"; existing_pr=99',
+        "gh() {",
+        '  case "${1-} ${2-}" in',
+        '    "pr view") printf "VIEW\\n" >&2; command cat "${current_body}" ;;',
+        '    "pr edit") printf "EDIT\\n" ;;',
+        "    *) return 2 ;;",
+        "  esac",
+        "}",
+        update,
+      ].join("\n");
+      const result = spawnSync(
+        "bash",
+        [
+          "-e",
+          "-o",
+          "pipefail",
+          "-c",
+          shell,
+          "_",
+          ...[existingPath, bodyPath, currentPath].map((file) => file.replaceAll(path.sep, "/")),
+        ],
+        {
+          cwd: dir,
+          encoding: "utf-8",
+          env: { ...process.env, GITHUB_TOKEN: "", GH_TOKEN: "" },
+        },
+      );
+      if (result.error !== undefined) throw result.error;
+      expect(result.status, result.stderr).toBe(snapshot === "changed" ? 1 : 0);
+      expect(result.stdout).toBe(snapshot === "unchanged" ? "EDIT\n" : "");
+      if (snapshot === "changed") expect(result.stderr).toContain("changed");
+      expect(result.stderr.includes("VIEW")).toBe(snapshot !== "authored");
+      expect(await readFile(currentPath, "utf-8")).toBe(current);
+    },
+  );
+
+  it.each(
+    [1, 2, 3].flatMap((indent) =>
+      ["#", "##"].map((level) => `${" ".repeat(indent)}${level} Adoption bar`),
+    ),
+  )("preserves an indented next heading %j during removal repair", async (heading) => {
+    const workflow = await readFile(
+      path.join(REPO_ROOT, ".github/workflows/prepare-release.yml"),
+      "utf-8",
+    );
+    const script = workflow.match(
+      /^\s*node - .* <<'REPAIR_BODY'\r?\n([\s\S]*?)^\s*REPAIR_BODY[ \t]*$/m,
+    )?.[1];
+    if (script === undefined) throw new Error("Release body repair script is absent");
+    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-release-body-"));
+    tempDirs.push(dir);
+    const existingPath = path.join(dir, "existing.md");
+    const bodyPath = path.join(dir, "generated.md");
+    const prefix = "# Prepared release\n\nKeep the corrected date.\n\n";
+    const suffix = `${heading}\n\nKeep this authored adoption answer.\n\n## Risks\n\nRetain publication approval.\n`;
+    const replacement =
+      "## What this change made unnecessary\n\nSuperseded version. Release notes stay.\n";
+    await writeFile(
+      existingPath,
+      `${prefix}## What this change made unnecessary\n\nTODO\n\n${suffix}`,
+      "utf-8",
+    );
+    await writeFile(bodyPath, replacement, "utf-8");
+    const result = spawnSync(process.execPath, ["-", existingPath, bodyPath], {
+      input: script,
+      encoding: "utf-8",
+    });
+    if (result.error !== undefined) throw result.error;
+    expect(result.status, result.stderr).toBe(0);
+    expect(await readFile(bodyPath, "utf-8")).toBe(`${prefix}${replacement}\n${suffix}`);
+  });
+
   it.each([
     ["missing", ""],
     ["empty", "## What this change made unnecessary\n\n<!-- Answer required. -->\n"],
@@ -332,6 +429,31 @@ describe("resuming a release pull-request description", () => {
     ["wrong marker close", "```md\n~~~\n## What this change made unnecessary\n\nNothing.\n````\n"],
     ["commented example", "<!--\n## What this change made unnecessary\n\nNothing.\n-->\n"],
     ["HTML empty block", "## What this change made unnecessary\n\n<div>\n</div>\n"],
+    [
+      "link-reference definition",
+      "## What this change made unnecessary\n\n[Nothing]: https://example.com\n",
+    ],
+    ...[
+      "[Nothing]:\n   https://example.com\n",
+      '[Nothing]: https://example.com "Title\n## Adoption bar\nNothing"\n',
+      "[Nothing]: <https://example.com/space here>\n",
+      "[Nothing]: https://example.com/a(b)c\n",
+      "[Nothing]: https://example.com\r\n",
+      `[${"😀".repeat(999)}]: https://example.com\n`,
+      `[${"😀".repeat(996)}\r\nok]: https://example.com\r\n`,
+      "[\u00a0]: https://example.com\n",
+    ].map((definition) => [
+      `reference boundary ${JSON.stringify(definition)}`,
+      `## What this change made unnecessary\n\n${definition}`,
+    ]),
+    [
+      "multiline HTML tag",
+      '## What this change made unnecessary\n\n<div\nclass="Nothing">\n</div>\n',
+    ],
+    [
+      "quoted HTML attribute",
+      '## What this change made unnecessary\n\n<span\ntitle="Nothing > never">\n</span>\n',
+    ],
     [
       "HTML comment only",
       "## What this change made unnecessary\n\n<div>\n<!-- Nothing. -->\n</div>\n",
@@ -360,6 +482,15 @@ describe("resuming a release pull-request description", () => {
       "authored",
       "## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
     ],
+    ...[
+      "[Nothing]: https://example.com/a(b\n",
+      "[Nothing]: https://example.com/a)b\n",
+      "[]: https://example.com\n",
+      `[${"😀".repeat(1000)}]: https://example.com\n`,
+    ].map((answer) => [
+      `authored reference-like text ${JSON.stringify(answer)}`,
+      `## What this change made unnecessary\n\n${answer}`,
+    ]),
     [
       "authored after backtick fence",
       "```md\n## What this change made unnecessary\n\nExample only.\n````\n\n## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
@@ -381,6 +512,7 @@ describe("resuming a release pull-request description", () => {
       "<div>\nNothing.\n</div>",
       "<span>\nNothing.\n</span>",
       "<div>\n<!--\n## Example -->\nNothing.\n</div>",
+      "<div>\n[Nothing]: https://example.com\n</div>",
     ].map((answer) => [
       `authored HTML answer ${answer}`,
       `## What this change made unnecessary\n\n${answer}\n`,

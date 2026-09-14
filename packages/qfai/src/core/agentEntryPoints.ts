@@ -229,23 +229,46 @@ export function addReviewPointer(existing: string, template: string | null): str
     .find((line) => line.startsWith("Read `REVIEW.md` before reviewing a pull request"));
   if (pointer === undefined) return existing;
 
-  let fence: { character: string; length: number; container: string } | null = null;
+  let fence: {
+    character: string;
+    length: number;
+    container: string;
+    contentColumn: number;
+  } | null = null;
   let comment = false;
   let spanEnd = 0;
   let offset = 0;
-  let listOpen = false;
+  const listContentColumns: number[] = [];
+  const columnAfter = (prefix: string): number => {
+    let column = 0;
+    for (const character of prefix) {
+      column += character === "\t" ? 4 - (column % 4) : 1;
+    }
+    return column;
+  };
   let indentedCode = false;
   let htmlEnd: RegExp | null = null;
   let paragraph = false;
   for (const raw of existing.split("\n")) {
     const container = containerOf(raw);
-    if (fence !== null && container !== fence.container) fence = null;
-    const opening = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(fenceLine(raw));
-    const run = opening?.[1] ?? "";
-    const rest = opening?.[2] ?? "";
+    const blank = raw.trim().length === 0;
+    const plain = plainLine(raw);
+    const prefix = /^[ \t]*/.exec(plain)?.[0] ?? "";
+    const fenceIndentation = columnAfter(prefix);
+    if (
+      fence !== null &&
+      (container !== fence.container || (!blank && fenceIndentation < fence.contentColumn))
+    ) {
+      fence = null;
+    }
     if (fence !== null) {
       paragraph = false;
-      if (run[0] === fence.character && run.length >= fence.length && rest.trim() === "") {
+      const closing = /^(`{3,}|~{3,})[ \t]*$/.exec(plain.slice(prefix.length))?.[1] ?? "";
+      if (
+        fenceIndentation <= fence.contentColumn + 3 &&
+        closing[0] === fence.character &&
+        closing.length >= fence.length
+      ) {
         fence = null;
       }
       offset += raw.length + 1;
@@ -257,24 +280,50 @@ export function addReviewPointer(existing: string, template: string | null): str
       offset += raw.length + 1;
       continue;
     }
-    const blank = raw.trim().length === 0;
-    const indented = /^(?: {4}| {0,3}\t)/.test(raw);
-    // SIMPLIFIED: an open list keeps indented content eligible.
-    // Lift when: a nested code example requires the list's content column.
-    if (
-      !comment &&
-      ((indentedCode && (blank || indented)) || (!listOpen && !paragraph && indented))
-    ) {
+    const indentation = columnAfter(/^[ \t]*/.exec(raw)?.[0] ?? "");
+    while (!blank && indentation < (listContentColumns.at(-1) ?? 0)) listContentColumns.pop();
+    const contentColumn = listContentColumns.at(-1) ?? 0;
+    const indented = indentation >= contentColumn + 4;
+    if (!comment && ((indentedCode && (blank || indented)) || (!paragraph && indented))) {
       indentedCode = true;
       paragraph = false;
       offset += raw.length + 1;
       continue;
     }
     indentedCode = false;
-    if (/^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+/.test(raw)) listOpen = true;
-    else if (!blank && !/^[ \t]/.test(raw)) listOpen = false;
-    if (!comment && offset >= spanEnd && opening && !(run.startsWith("`") && rest.includes("`"))) {
-      fence = { character: run[0] ?? "`", length: run.length, container };
+    const marker = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/.exec(raw);
+    if (!comment && offset >= spanEnd && marker !== null && indentation <= contentColumn + 3) {
+      const markerEnd = columnAfter(`${marker[1] ?? ""}${marker[2] ?? ""}`);
+      const gap = columnAfter(marker[0]) - markerEnd;
+      listContentColumns.push(markerEnd + (gap > 4 ? 1 : gap));
+      if (gap > 4) {
+        indentedCode = true;
+        paragraph = false;
+        offset += raw.length + 1;
+        continue;
+      }
+    }
+    const openingLine = fenceLine(raw);
+    const openingPrefix = /^[ \t]*/.exec(openingLine)?.[0] ?? "";
+    const openingColumn = columnAfter(openingPrefix);
+    const openingBase = marker === null ? (listContentColumns.at(-1) ?? 0) : 0;
+    const opening = /^(`{3,}|~{3,})(.*)$/.exec(openingLine.slice(openingPrefix.length));
+    const run = opening?.[1] ?? "";
+    const rest = opening?.[2] ?? "";
+    if (
+      !comment &&
+      offset >= spanEnd &&
+      openingColumn >= openingBase &&
+      openingColumn <= openingBase + 3 &&
+      opening &&
+      !(run.startsWith("`") && rest.includes("`"))
+    ) {
+      fence = {
+        character: run[0] ?? "`",
+        length: run.length,
+        container,
+        contentColumn: listContentColumns.at(-1) ?? 0,
+      };
       paragraph = false;
       offset += raw.length + 1;
       continue;

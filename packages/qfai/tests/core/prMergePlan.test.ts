@@ -143,6 +143,35 @@ describe("run-pr-merge plan", () => {
     ["HACK placeholder", "## What this change made unnecessary\n\nHACK\n"],
     ["HTML empty block", "## What this change made unnecessary\n\n<div>\n</div>\n"],
     [
+      "link-reference definition",
+      "## What this change made unnecessary\n\n[Nothing]: https://example.com\n",
+    ],
+    ...[
+      "[Nothing]:\n   https://example.com\n",
+      '[Nothing]: https://example.com "Title\n## Adoption bar\nNothing"\n',
+      "[Nothing]: <https://example.com/space here>\n",
+      "[Nothing]: https://example.com/a(b)c\n",
+      "[Nothing]: https://example.com\r\n",
+      "[\u00a0]: https://example.com\n",
+    ].map((definition) => [
+      `reference boundary ${JSON.stringify(definition)}`,
+      `## What this change made unnecessary\n\n${definition}`,
+    ]),
+    [
+      "multiline HTML tag",
+      '## What this change made unnecessary\n\n<div\nclass="Nothing">\n</div>\n',
+    ],
+    [
+      "quoted HTML attribute",
+      '## What this change made unnecessary\n\n<span\ntitle="Nothing > never">\n</span>\n',
+    ],
+    ...[1, 2, 3].flatMap((indent) =>
+      ["#", "##"].map((level) => [
+        `indented next heading ${indent}/${level}`,
+        `## What this change made unnecessary\n\n${" ".repeat(indent)}${level} Adoption bar\n\nKeep publication approval.\n`,
+      ]),
+    ),
+    [
       "HTML comment only",
       "## What this change made unnecessary\n\n<div>\n<!-- Nothing. -->\n</div>\n",
     ],
@@ -228,6 +257,7 @@ describe("run-pr-merge plan", () => {
     "<div>\nNothing.\n</div>",
     "<span>\nNothing.\n</span>",
     "<div>\n<!--\n## Example -->\nNothing.\n</div>",
+    "<div>\n[Nothing]: https://example.com\n</div>",
   ])("preserves a visible authored HTML answer %s", async (answer) => {
     const baseline = makeScenario({});
     const body = `## What this change made unnecessary\n\n${answer}\n`;

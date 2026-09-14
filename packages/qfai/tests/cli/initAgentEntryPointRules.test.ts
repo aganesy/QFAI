@@ -707,6 +707,72 @@ describe("a hand-wired file this run cannot extend is named", () => {
 });
 
 describe("optional review directive detection", () => {
+  it.each(["```", "~~~"].flatMap((fence) => ["-", "1.", "10)"].map((marker) => [fence, marker])))(
+    "keeps list-like %s fence content with %s inside its real close",
+    (fence, marker) => {
+      const existing = `# Project rules\n\n${fence}md\n${marker} ${fence}\n${REVIEW_POINTER}\n${fence}\n\nKeep this text.\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `${REVIEW_POINTER}\n\n${existing}`,
+      );
+    },
+  );
+
+  it.each([
+    ["bullet", "-", 2],
+    ["ordered", "10.", 4],
+    ["indented", "   -", 5],
+  ] as const)(
+    "keeps a live directive after a real %s list fence close",
+    (_name, marker, indent) => {
+      const padding = " ".repeat(indent);
+      const existing = `${marker} \`\`\`md\n${padding}Example only.\n${padding}\`\`\`\n\n${REVIEW_POINTER}\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    },
+  );
+
+  it.each(["-", "10."])(
+    "adds guidance outside first-line code at the %s list content column",
+    (marker) => {
+      const existing = `# Project rules\n\n${marker}     ${REVIEW_POINTER}\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `${REVIEW_POINTER}\n\n${existing}`,
+      );
+    },
+  );
+
+  it.each([
+    ["bullet", "- Project rules", 6],
+    ["ordered", "10. Project rules", 8],
+    ["tabbed marker", "1.\tProject rules", 8],
+    ["three-space marker", "   - Project rules", 9],
+    ["nested bullet", "- Project rules\n  - Nested rules", 8],
+    ["nested ordered", "- Project rules\n  10. Nested rules", 10],
+    ["outer continuation", "- Project rules\n  - Nested rules\n\n  Outer rules", 6],
+  ] as const)(
+    "adds guidance outside code at the %s list content column",
+    (_name, list, indentation) => {
+      const existing = `\uFEFF# Project rules\r\n\r\n${list.replace(/\n/g, "\r\n")}\r\n\r\n${" ".repeat(indentation)}${REVIEW_POINTER}\r\n\r\nKeep this text.\r\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `\uFEFF${REVIEW_POINTER}\r\n\r\n${existing.slice(1)}`,
+      );
+    },
+  );
+
+  it.each([
+    ["bullet", "- Project rules", 2],
+    ["ordered", "10. Project rules", 4],
+    ["tabbed marker", "1.\tProject rules", 4],
+    ["three-space marker", "   - Project rules", 5],
+    ["nested bullet", "- Project rules\n  - Nested rules", 4],
+    ["nested ordered", "- Project rules\n  10. Nested rules", 6],
+  ] as const)(
+    "keeps a live directive at the %s list content column",
+    (_name, list, indentation) => {
+      const existing = `${list}\n\n${" ".repeat(indentation)}${REVIEW_POINTER}\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    },
+  );
+
   it.each([
     ["heading", "# Project rules\n"],
     ["fence", "~~~\nExample\n~~~\n"],
@@ -767,7 +833,12 @@ describe("optional review directive detection", () => {
             mode: (await stat(path.join(root, name))).mode,
           })),
         );
-        for (const example of [`    - ${REVIEW_POINTER}`, `<pre>\n${REVIEW_POINTER}\n</pre>`]) {
+        for (const example of [
+          `    - ${REVIEW_POINTER}`,
+          `<pre>\n${REVIEW_POINTER}\n</pre>`,
+          `- Project rules\n\n      ${REVIEW_POINTER}`,
+          `10. Project rules\n\n        ${REVIEW_POINTER}`,
+        ]) {
           const originals = templates.map(({ name, text, mode }) => ({
             name,
             mode,
