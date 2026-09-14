@@ -113,6 +113,10 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
     await withProject(async (root) => {
       const pointer =
         "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository.";
+      const pointerFor = (name: string): string =>
+        name === ".github/instructions/code-review.instructions.md"
+          ? "Read `REVIEW.md` if present."
+          : pointer;
       const files = [
         "AGENTS.md",
         "CLAUDE.md",
@@ -121,17 +125,23 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
       ];
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       for (const name of files) {
-        expect(await readEntryPoint(root, name)).toContain(pointer);
+        expect(await readEntryPoint(root, name)).toContain(pointerFor(name));
         const text = await readEntryPoint(root, name);
+        if (name === ".github/instructions/code-review.instructions.md") {
+          expect(text).toContain(`Process:\n\n${pointerFor(name)}\n\n1. Read the PR description`);
+        }
         const next = AGENT_ENTRY_POINT_FILES.some((entry) => entry === name)
           ? text + PROJECT_TEXT
-          : text.replace(pointer, "");
+          : text.replace(pointerFor(name), "");
         await writeFile(path.join(root, name), next, "utf-8");
       }
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
       for (const name of files) {
         const text = await readEntryPoint(root, name);
-        expect(text).toContain(pointer);
+        expect(text).toContain(pointerFor(name));
+        if (name === ".github/instructions/code-review.instructions.md") {
+          expect(text).toContain(`Process:\n\n${pointerFor(name)}\n\n1. Read the PR description`);
+        }
         if (AGENT_ENTRY_POINT_FILES.some((entry) => entry === name)) {
           expect(text.endsWith(PROJECT_TEXT)).toBe(true);
         }

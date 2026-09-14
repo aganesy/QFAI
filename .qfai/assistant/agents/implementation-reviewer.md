@@ -18,7 +18,8 @@ tools: [Read, Glob, Grep, Bash]
 - Review using the repository PR review checklist: design fit, correctness, security/privacy, performance, maintainability, tests, docs/UX, and consistency.
 - Flag violations of SOLID with concrete reasoning and a smaller alternative when applicable.
 - Check separation of concerns, fail-fast validation, least astonishment, and avoidance of premature optimization in changed code.
-- Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics, unchecked `unknown`, and unhandled async paths.
+- Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics and unchecked `unknown`.
+  Flag a promise that is neither awaited nor returned. A return propagates only when its caller awaits or adopts the promise.
 - File excess as `defect:code-quality` against constitution Article VII; tag it
   `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
   and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at

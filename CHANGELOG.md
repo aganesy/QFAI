@@ -44,6 +44,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   dependencies. Existing repository code can answer the accepted behavior
   without a duplicate implementation. The shipped copy has the same order.
 
+- Define a trust boundary by uncontrolled callers and sources, including public
+  library exports and plugin or tenant contexts (#1803).
+
 - **Retained failures keep unit-level coverage** (#1793). The
   minimal-implementation safety floor protects coverage of the failure paths
   production code retains.
@@ -75,9 +78,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The implementation reviewer flags promises neither awaited nor returned rather
+  than requiring catches on propagated async failures. A dropped rejection keeps
+  its correctness class (#1805).
+
 - Completion and implementation review stop conditions now include demonstrated
   regressions against named constitution or catalog rules (#1799). New upstream
   product obligations remain advisory.
+
+- Generated TypeScript review guidance flags dropped promises and preserves
+  propagation rather than requiring catches for unnamed failures. The repository
+  copy matches the generated block (#1806).
 
 - Repository async guidance requires awaited or returned promises and points to
   the shared implementation rule for consuming callers, kept failures and
