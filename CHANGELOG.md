@@ -83,6 +83,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   regressions against named constitution or catalog rules (#1799). New upstream
   product obligations remain advisory.
 
+- Generated TypeScript review guidance flags dropped promises and preserves
+  propagation rather than requiring catches for unnamed failures. The repository
+  copy matches the generated block (#1806).
+
 - Repository async guidance requires awaited or returned promises and points to
   the shared implementation rule for consuming callers, kept failures and
   callback boundaries. Required handling and incomplete error messages remain
