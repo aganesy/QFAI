@@ -141,26 +141,11 @@ function ReviewLanguage([string]$Body) {
   return "en"
 }
 
-function NormalizeBody([string]$Body) {
-  if ($null -eq $Body) { return "" }
-  $text = $Body -replace "^\uFEFF", ""
-  $text = $text -replace "`r`n", "`n"
-  return $text.Trim()
-}
+. (Join-Path $PSScriptRoot "pr-body-policy.ps1")
 
 function CountOf($Value) {
   if ($null -eq $Value) { return 0 }
   return @($Value).Count
-}
-
-function StripAutoImport([string]$Body) {
-  $normalized = NormalizeBody $Body
-  if ([string]::IsNullOrWhiteSpace($normalized)) { return "" }
-  $parts = [regex]::Split($normalized, "(?m)^## Auto-import\s*$", 2)
-  if ((CountOf $parts) -ge 2 -and -not [string]::IsNullOrWhiteSpace($parts[0])) {
-    return $parts[0].Trim()
-  }
-  return $normalized
 }
 
 function Compliance([string]$Body) {
@@ -173,6 +158,7 @@ function Compliance([string]$Body) {
     "tests_section" = "(?m)^## 4\..*Tests.*$"
     "review_focus" = "(?m)^## Review Focus \(auto by type\)\s*$"
     "open_questions" = "(?m)^## Open Questions / Follow-ups(?:.*)?$"
+    "removal_list" = "(?m)^## What (?:this|a) change made unnecessary[ \t]*$"
   }
   $missing = @()
   foreach ($entry in $required.GetEnumerator()) {
@@ -182,13 +168,15 @@ function Compliance([string]$Body) {
   $hasCompat = ($normalized -match "(?s)## Compatibility \(compat\).*?- \[x\] ")
   $hasReviewLang = ($normalized -match "Review Language:\s*\S+")
   $hasTests = ($normalized -match "(?s)## 4\..*Tests.*?- .*?:.*?- .*?:")
+  $hasRemovalAnswer = -not [string]::IsNullOrWhiteSpace((DescriptionAnswer $Body))
   return [pscustomobject]@{
     Missing     = $missing
     ChangeType  = $hasChangeType
     Compat      = $hasCompat
     ReviewLang  = $hasReviewLang
     Tests       = $hasTests
-    IsCompliant = ($missing.Count -eq 0 -and $hasChangeType -and $hasCompat -and $hasReviewLang -and $hasTests)
+    RemovalList = $hasRemovalAnswer
+    IsCompliant = ($missing.Count -eq 0 -and $hasChangeType -and $hasCompat -and $hasReviewLang -and $hasTests -and $hasRemovalAnswer)
   }
 }
 
@@ -234,6 +222,14 @@ function RepairBody([string]$Template, $Pr, [string[]]$ChangedFiles, $Classifica
   $preview = @($ChangedFiles | Select-Object -First 10)
   if ((CountOf $preview) -eq 0) { $preview = @("(no files detected)") }
   $original = StripAutoImport ([string]$Pr.body)
+  foreach ($heading in @('What (?:this|a) change made unnecessary', 'Adoption bar')) {
+    $answer = DescriptionAnswer $original $heading
+    if ([string]::IsNullOrWhiteSpace($answer)) { continue }
+    $body = [regex]::Replace($body, '(?ms)(^## ' + $heading + '[ \t]*\n).*?(?=^#{1,2} |\z)', {
+      param($match)
+      return $match.Groups[1].Value + "`n" + $answer + "`n`n"
+    })
+  }
   if ([string]::IsNullOrWhiteSpace($original)) { $original = "(empty)" }
   $append = @("","## Auto-import","","- Title: $($Pr.title)","- Source PR: $($Pr.url)","- Branch: $($Pr.headRefName) -> $($Pr.baseRefName)","- Repo CI command: ``$CiCommand``","- Changed files:")
   $append += @($preview | ForEach-Object { "  - ``$_``" })
@@ -512,6 +508,10 @@ if (-not $check.IsCompliant) {
   if ((CountOf $check.Missing) -gt 0) {
     Warn ("Missing sections: {0}" -f (($check.Missing -join ", ")))
   }
+  if ([string]::IsNullOrWhiteSpace((DescriptionAnswer $newBody))) {
+    Warn ('Complete the preview, then upload it: gh pr edit {0} --body-file "{1}"' -f $pr.number, $preview)
+    throw "PR body repair needs an authored removal-list answer. Upload the completed preview before rerunning; no empty answer is inferred."
+  }
   if (-not $DryRun) {
     [void](Run "gh" @("pr", "edit", "$($pr.number)", "--body-file", $preview) "Failed to update PR body.")
     Info "PR body updated from the generated preview."
@@ -528,6 +528,16 @@ while ($streak -lt $effectiveRequiredZeroStreak) {
   $firstPoll = $false
 
   $snapshot = RunJson "gh" @("pr", "view", "$targetPrNumber", "--json", "number,title,body,baseRefName,headRefName,statusCheckRollup,url") "Failed to refresh PR details."
+  if (-not $DryRun) {
+    $bodyCheck = Compliance ([string]$snapshot.body)
+    if (-not $bodyCheck.IsCompliant) {
+      $streak = 0
+      $bodyArtifact = "pr-{0}-body-compliance.json" -f $targetPrNumber
+      [void](SaveJson -Root $root -Name $bodyArtifact -Value $bodyCheck)
+      [void](SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_body" -BlockingArtifact $bodyArtifact -NextAction "Restore the required authored PR sections, update the PR body, then rerun the live monitor.")
+      throw "PR body is no longer template-compliant. Update the PR body, then rerun the live monitor."
+    }
+  }
   $threads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $targetPrNumber)
   $checkState = EvaluateChecks $snapshot
 
@@ -574,7 +584,15 @@ if ($DryRun) {
 }
 
 if ((CountOf (GitStatus)) -gt 0) { throw "Working tree is dirty before final verification. Commit or stash changes first." }
-$finalPr = RunJson "gh" @("pr", "view", "$targetPrNumber", "--json", "number,title,headRefName,baseRefName,statusCheckRollup,url") "Failed to refresh PR for final verification."
+$finalPr = RunJson "gh" @("pr", "view", "$targetPrNumber", "--json", "number,title,body,headRefName,baseRefName,statusCheckRollup,url") "Failed to refresh PR for final verification."
+$finalBodyCheck = Compliance ([string]$finalPr.body)
+if (-not $finalBodyCheck.IsCompliant) {
+  $streak = 0
+  $bodyArtifact = "pr-{0}-body-compliance.json" -f $targetPrNumber
+  [void](SaveJson -Root $root -Name $bodyArtifact -Value $finalBodyCheck)
+  [void](SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_body" -BlockingArtifact $bodyArtifact -NextAction "Restore the required authored PR sections, update the PR body, then rerun the live monitor.")
+  throw "PR body is no longer template-compliant at the handoff boundary. Update the PR body, then rerun the live monitor."
+}
 if ((EvaluateChecks $finalPr).State -ne "clean") { throw "CI/CD is no longer green at the handoff boundary." }
 $finalThreads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $targetPrNumber)
 if ((CountOf $finalThreads) -gt 0) { throw "Unresolved review threads reappeared at the handoff boundary." }

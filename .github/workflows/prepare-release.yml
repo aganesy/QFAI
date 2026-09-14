@@ -260,6 +260,10 @@ jobs:
             echo "**The date above is the date this was PREPARED, not the date it ships.** The tag is cut when this pull request merges, so if that is a later day, correct the date in \`CHANGELOG.md\` here — this is the last point at which it can be changed without a second commit to \`main\`."
             echo ""
             echo "Merging this pushes the \`v${RELEASE_VERSION}\` tag automatically, which starts \`release.yml\`. Publishing still waits on the \`release\` environment's required reviewer."
+            echo ""
+            echo "## What this change made unnecessary"
+            echo ""
+            echo "Superseded package version and Unreleased heading. Release notes are retained to describe this release; workflow steps stay to enforce publication approval."
           } > "${body_file}"
 
           # The other half of the resume. A second run against an adopted branch must not try
@@ -267,7 +271,119 @@ jobs:
           # failure would be indistinguishable from the one this whole branch exists to survive.
           existing_pr="$(gh pr list --head "${RELEASE_BRANCH}" --base main --state open --json number --jq '.[0].number // ""')"
           if [ -n "${existing_pr}" ]; then
-            echo "prepare-release: pull request #${existing_pr} is already open for ${RELEASE_BRANCH}; nothing to create"
+            existing_body="tmp/existing-release-pr-body.md"
+            trap 'rm -f "${body_file}" "${existing_body}"' EXIT
+            gh pr view "${existing_pr}" --json body --jq .body > "${existing_body}"
+            node - "${existing_body}" "${body_file}" <<'REPAIR_BODY'
+            const { readFileSync, writeFileSync } = require('node:fs');
+            const [existingPath, bodyPath] = process.argv.slice(2);
+            const existing = readFileSync(existingPath, 'utf8');
+            const generated = readFileSync(bodyPath, 'utf8');
+            const section =
+              /^## What (?:this|a) change made unnecessary[ \t]*\r?\n([\s\S]*?)(?=^#{1,2} |(?![\s\S]))/m;
+            const maskExamples = (body) => {
+              let fence = '';
+              let inComment = false;
+              let spanEnd = 0;
+              const visible = body.replace(/^[^\n]*/gm, (line, offset) => {
+                if (fence) {
+                  const closing = /^[ \t]{0,3}(`{3,}|~{3,})[ \t]*\r?$/.exec(line)?.[1] ?? '';
+                  if (closing[0] === fence[0] && closing.length >= fence.length) fence = '';
+                  return line.replace(/[^\r\n]/g, ' ');
+                }
+                const rawOpening = /^[ \t]{0,3}(`{3,}|~{3,})(.*)\r?$/.exec(line);
+                if (
+                  !inComment &&
+                  offset >= spanEnd &&
+                  rawOpening &&
+                  !(rawOpening[1][0] === '`' && rawOpening[2].includes('`'))
+                ) {
+                  fence = rawOpening[1];
+                  return line.replace(/[^\r\n]/g, ' ');
+                }
+                let visible = line;
+                let position = 0;
+                while (position < line.length) {
+                  if (offset + position < spanEnd) {
+                    position = Math.min(line.length, spanEnd - offset);
+                    continue;
+                  }
+                  if (!inComment) {
+                    if (line[position] === '`') {
+                      const tail = body.slice(offset + position);
+                      const span = /^(`+)(?!`)(?:(?!\r?\n[ \t]*\r?\n)[\s\S])*?(?<!`)\1(?!`)/.exec(tail)?.[0];
+                      if (span !== undefined) {
+                        spanEnd = offset + position + span.length;
+                        position = Math.min(line.length, spanEnd - offset);
+                        continue;
+                      }
+                      position += /^`+/.exec(tail)[0].length;
+                      continue;
+                    }
+                    if (!line.startsWith('<!--', position)) {
+                      position += 1;
+                      continue;
+                    }
+                    inComment = true;
+                  }
+                  const end = line.indexOf('-->', position);
+                  const next = end < 0 ? line.length : end + 3;
+                  visible =
+                    visible.slice(0, position) +
+                    line.slice(position, next).replace(/[^\r\n]/g, ' ') +
+                    visible.slice(next);
+                  position = next;
+                  inComment = end < 0;
+                }
+                const opening = /^[ \t]{0,3}(`{3,}|~{3,})(.*)\r?$/.exec(visible);
+                if (opening && !(opening[1][0] === '`' && opening[2].includes('`'))) {
+                  fence = opening[1];
+                  return line.replace(/[^\r\n]/g, ' ');
+                }
+                return visible;
+              });
+              return { visible, unfinished: Boolean(fence) || inComment };
+            };
+            const parsed = maskExamples(existing);
+            const match = section.exec(parsed.visible);
+            const hasAnswer = (candidate) => {
+              const answer = (candidate?.[1] ?? '')
+                .replace(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?/gm, '')
+                .replace(/^[ \t]*>+[ \t]*/gm, '')
+                .replace(/\[([^\]]*)\]\([^\)\r\n]*\)/g, '$1')
+                .replace(/<\/?[A-Za-z][A-Za-z0-9:-]*(?:[ \t][^>]*|[ \t]*\/?)>/g, '')
+                .replace(/&(?:#(?:[xX][0-9A-Fa-f]+|\d+)|[A-Za-z][A-Za-z0-9]*);/g, ' ')
+                .replace(/[`*_]/g, '')
+                .trim();
+              return (
+                /[\p{L}\p{N}]/u.test(answer) &&
+                !/^(?:TBD|TODO|FIXME|HACK)(?:[^\p{L}\p{N}]|$)/iu.test(answer) &&
+                !/^(?:TBD|TODO|FIXME|HACK|None|N\/?A|Not applicable|\[.*\])\.?$/i.test(answer)
+              );
+            };
+            let next = existing;
+            if (!hasAnswer(match)) {
+              if (parsed.unfinished)
+                throw new Error(
+                  'Existing release PR has an unclosed fenced block or HTML comment; close it before repairing the removal answer',
+                );
+              const replacement = section.exec(generated)?.[0];
+              if (!replacement) throw new Error('Generated release body lacks its removal answer');
+              next = match
+                ? existing.slice(0, match.index) +
+                  replacement.trimEnd() +
+                  '\n\n' +
+                  existing.slice(match.index + match[0].length)
+                : existing.trimEnd() + '\n\n' + replacement;
+            }
+            if (!hasAnswer(section.exec(maskExamples(next).visible)))
+              throw new Error('Release body lacks a visible authored removal answer after repair');
+            writeFileSync(bodyPath, next, 'utf8');
+            REPAIR_BODY
+            if ! cmp -s "${existing_body}" "${body_file}"; then
+              gh pr edit "${existing_pr}" --body-file "${body_file}"
+            fi
+            echo "prepare-release: reusing pull request #${existing_pr} for ${RELEASE_BRANCH} with its authored body preserved"
           else
             gh pr create \
               --base main \

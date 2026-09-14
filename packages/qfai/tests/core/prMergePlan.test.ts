@@ -29,6 +29,7 @@ type FakeCheck = {
 
 type FakePrView = {
   baseRefName: string;
+  body: string;
   headRefName: string;
   isDraft: boolean;
   number: number;
@@ -60,6 +61,7 @@ type FakePageInfo = {
 
 type FakeScenario = {
   branch: string;
+  finalPrBody?: string;
   headSha: string;
   packageScripts: Record<string, string>;
   prView: FakePrView;
@@ -77,6 +79,7 @@ type FakeScenario = {
 
 type RunResult = {
   code: number | null;
+  ghState: Record<string, unknown>;
   repoDir: string;
   stderr: string;
   stdout: string;
@@ -127,6 +130,59 @@ afterEach(async () => {
  * lower it.
  */
 describe("run-pr-merge plan", () => {
+  it.each([
+    ["absent", ""],
+    ["Markdown-only", "## What this change made unnecessary\n\n---\n"],
+    ["None marker", "## What this change made unnecessary\n\nNone.\n"],
+    ["N/A marker", "## What this change made unnecessary\n\nN/A\n"],
+    ["named space entity", "## What this change made unnecessary\n\n&nbsp;\n"],
+    ["numeric space entity", "## What this change made unnecessary\n\n&#160;\n"],
+    ["TODO prefix", "## What this change made unnecessary\n\nTODO: fill this in\n"],
+    ["TBD prefix", "## What this change made unnecessary\n\nTBD: list the removals\n"],
+    ["FIXME prefix", "## What this change made unnecessary\n\nFIXME: list the removals\n"],
+    ["HACK placeholder", "## What this change made unnecessary\n\nHACK\n"],
+    ["fenced", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
+  ])("blocks a %s removal answer without a handoff or merge", async (_name, body) => {
+    const baseline = makeScenario({});
+    const result = await runPrMerge({
+      live: true,
+      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+    });
+    expect(result.code).not.toBe(0);
+    expect(`${result.stdout}${result.stderr}`).toContain("authored removal-list answer");
+    expect(result.ghState.prMergeCount ?? 0).toBe(0);
+  });
+
+  it("rechecks the body immediately before merging without trusting a handoff", async () => {
+    const result = await runPrMerge({ live: true, scenario: makeScenario({ finalPrBody: "" }) });
+    expect(result.code).not.toBe(0);
+    expect(`${result.stdout}${result.stderr}`).toContain("authored removal-list answer");
+    expect(result.ghState.prViewCount).toBe(2);
+    expect(result.ghState.prMergeCount ?? 0).toBe(0);
+  });
+
+  it("allows an authored answer without requiring a handoff", async () => {
+    const result = await runPrMerge({ live: true, scenario: makeScenario({}) });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prViewCount).toBe(2);
+    expect(result.ghState.prMergeCount).toBe(1);
+  });
+
+  it.each([
+    ["inline code", "Use `<!--` literally.\n\n"],
+    ["fence info", "~~~ <!--\nExample\n~~~\n\n"],
+    ["similar ordinary word", ""],
+  ])("allows an authored answer after %s", async (_name, prefix) => {
+    const baseline = makeScenario({});
+    const body = `${prefix}## What this change made unnecessary\n\nHACKathon-specific duplicate setup is gone.\n`;
+    const result = await runPrMerge({
+      live: true,
+      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prMergeCount).toBe(1);
+  });
+
   it("renders pnpm ci:gate when the repo defines a long ci:gate script", async () => {
     const result = await runPrMerge({
       scenario: makeScenario({
@@ -199,6 +255,7 @@ function makeScenario(overrides: Partial<FakeScenario>): FakeScenario {
     packageScripts: { "ci:gate": "pnpm ci:gate" },
     prView: {
       baseRefName: "main",
+      body: "## What this change made unnecessary\n\nNothing.\n",
       headRefName: "feature/pr-merge-plan",
       isDraft: false,
       number: 166,
@@ -251,7 +308,7 @@ function successCheck(): FakeCheck {
   };
 }
 
-async function runPrMerge(options: { scenario: FakeScenario }): Promise<RunResult> {
+async function runPrMerge(options: { live?: boolean; scenario: FakeScenario }): Promise<RunResult> {
   const root = await makeTempDir("qfai-pr-merge-");
   const repoDir = path.join(root, "repo");
   const binDir = path.join(root, "bin");
@@ -268,7 +325,14 @@ async function runPrMerge(options: { scenario: FakeScenario }): Promise<RunResul
 
   const result = await spawnCommand(
     "pwsh",
-    ["-NoProfile", "-File", prMergeScriptPath, "-PrNumber", "166", "-DryRun"],
+    [
+      "-NoProfile",
+      "-File",
+      prMergeScriptPath,
+      "-PrNumber",
+      "166",
+      options.live ? "-NoTag" : "-DryRun",
+    ],
     {
       ...process.env,
       PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}`,
@@ -278,7 +342,7 @@ async function runPrMerge(options: { scenario: FakeScenario }): Promise<RunResul
     },
   );
 
-  return { ...result, repoDir };
+  return { ...result, ghState: await readJson(statePath), repoDir };
 }
 
 async function createMinimalRepo(
@@ -378,7 +442,18 @@ function ghStubScript(): string {
     "}",
     "",
     'if (args[0] === "pr" && args[1] === "view") {',
-    "  process.stdout.write(JSON.stringify(scenario.prView));",
+    "  const final = (state.prViewCount ?? 0) > 0;",
+    "  state.prViewCount = (state.prViewCount ?? 0) + 1;",
+    "  saveState();",
+    "  const prView = { ...scenario.prView, ...(final && scenario.finalPrBody !== undefined ? { body: scenario.finalPrBody } : {}) };",
+    "  const fields = args[args.indexOf('--json') + 1].split(',');",
+    "  process.stdout.write(JSON.stringify(Object.fromEntries(fields.map(field => [field, prView[field]]))));",
+    "  process.exit(0);",
+    "}",
+    "",
+    'if (args[0] === "pr" && args[1] === "merge") {',
+    "  state.prMergeCount = (state.prMergeCount ?? 0) + 1;",
+    "  saveState();",
     "  process.exit(0);",
     "}",
     "",

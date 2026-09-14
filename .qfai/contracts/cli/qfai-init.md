@@ -243,7 +243,8 @@ The obligations that are specific to this command:
   `pruneStaleQfaiWrappers` cover generated wrapper directories QFAI owns
   entirely; `.github/workflows/` is adopter-authored and is not one of them.
 - Running init twice into the same tree writes nothing and changes no
-  provenance entry, **with one exception**: the rule citations below.
+  provenance entry, except for the missing rule citations or review directive
+  described below.
 
 ### Rule citations in an existing entry point
 
@@ -258,7 +259,13 @@ inserted after the last rule bullet — inside the managed markers where the fil
 has them, and anywhere in the list where it does not, because the Copilot file
 is generated whole and carries none.
 
-**What it may not.** Anything else in the file. A bullet the project deleted is
+Init also adds the shipped review directive to `AGENTS.md` and `CLAUDE.md`
+when no operative copy exists. It asks agents to read `REVIEW.md` before
+reviewing or writing a PR description, only when the project has that file.
+Init does not create `REVIEW.md`. The directive is prepended so an unfinished
+example or comment cannot hide it. Existing text and line endings are preserved.
+
+**What it may not.** Replace any other text in the file. A bullet the project deleted is
 not restored, because that master's file is on disk and the copy skips it.
 Prose the project wrote inside the section survives. The heading is never
 duplicated: an existing section is edited in place, and the append path is for a
@@ -269,7 +276,8 @@ masters it does not name go into the list it keeps, one bullet each; the section
 is not appended on top, which would restate every citation the file already has.
 Nothing records a bullet as removed there, so an uncited master is one the file
 never named. Where the citations are not a bullet list a line can be added to —
-prose, a numbered list — the run names the masters to add and writes nothing.
+prose, a numbered list — the run names the masters to add without inserting
+rule bullets. It may still add the missing review directive.
 
 **What it refuses, naming the file and the reason.** A symbolic link at the
 target or at any path component below the destination root, a hard link with

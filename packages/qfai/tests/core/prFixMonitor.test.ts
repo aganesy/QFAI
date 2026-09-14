@@ -84,6 +84,7 @@ type FakePageInfo = {
 
 type RunResult = {
   code: number | null;
+  ghState: Record<string, unknown>;
   repoDir: string;
   stderr: string;
   stdout: string;
@@ -122,6 +123,126 @@ describe("pr-fix wrapper docs", () => {
 });
 
 describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
+  it.each([
+    ["absent", ""],
+    ["empty", "## What this change made unnecessary\n\n"],
+    ["comment only", "## What this change made unnecessary\n\n<!-- Answer required. -->\n"],
+    ["unresolved", "## What this change made unnecessary\n\nTBD\n"],
+    ["empty bullet", "## What this change made unnecessary\n\n-\n"],
+    ["empty task", "## What this change made unnecessary\n\n- [ ]\n"],
+    ["empty lists", "## What this change made unnecessary\n\n- [ ]\n*\n1.\n"],
+    ["listed unresolved", "## What this change made unnecessary\n\n- TBD\n"],
+    ["None marker", "## What this change made unnecessary\n\nNone.\n"],
+    ["N/A marker", "## What this change made unnecessary\n\nN/A\n"],
+    ["named space entity", "## What this change made unnecessary\n\n&nbsp;\n"],
+    ["numeric space entity", "## What this change made unnecessary\n\n&#160;\n"],
+    ["TODO prefix", "## What this change made unnecessary\n\nTODO: fill this in\n"],
+    ["TBD prefix", "## What this change made unnecessary\n\nTBD: list the removals\n"],
+    ["FIXME prefix", "## What this change made unnecessary\n\nFIXME: list the removals\n"],
+    ["HACK placeholder", "## What this change made unnecessary\n\nHACK\n"],
+    ["imported answer", "## Auto-import\n\n## What this change made unnecessary\n\nNothing.\n"],
+    ["import-only body", "## Auto-import\n\n"],
+    ["thematic break", "## What this change made unnecessary\n\n---\n"],
+    ["empty quotation", "## What this change made unnecessary\n\n>\n"],
+    ["empty link", "## What this change made unnecessary\n\n[]()\n"],
+    ["empty link with target", "## What this change made unnecessary\n\n[](https://example.com)\n"],
+    ["HTML break", "## What this change made unnecessary\n\n<br>\n"],
+    ["fenced", "```md\n## What this change made unnecessary\n\nNothing.\n```\n"],
+    ["longer backtick close", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ["longer tilde close", "~~~md\n## What this change made unnecessary\n\nNothing.\n~~~~\n"],
+    ["short close", "````md\n```\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ["wrong marker close", "```md\n~~~\n## What this change made unnecessary\n\nNothing.\n````\n"],
+  ])("blocks a %s removal answer without inventing nothing", async (name, section) => {
+    const body =
+      name === "import-only body"
+        ? section + compliantPrBody()
+        : compliantPrBody().replace(
+            /## What this change made unnecessary\n\nNothing\.\n\n/,
+            section,
+          );
+    const result = await runPrFix({
+      extraArgs: ["-DryRun"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).not.toBe(0);
+    expect(combinedOutput(result)).toContain("authored removal-list answer");
+    const previewPath = path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md");
+    expect(combinedOutput(result)).toContain(`gh pr edit 166 --body-file "${previewPath}"`);
+    const preview = await readFile(
+      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
+      "utf-8",
+    );
+    expect(preview.split("## Auto-import")[0]).not.toContain("Nothing.");
+  });
+
+  it.each([
+    "",
+    "```md\n## What this change made unnecessary\n\nExample only.\n````\n\n",
+    "~~~md\n## What this change made unnecessary\n\nExample only.\n~~~~\n\n",
+    "```md\n## Auto-import\n\n## What this change made unnecessary\n\nExample only.\n````\n\n",
+    "<!--\n```md\n## Auto-import\n\n## What this change made unnecessary\n\nExample only.\n-->\n\n",
+    "A literal `<!--` appears in code.\n\n",
+    "A literal `` `<!--` `` appears in code.\n\n",
+    "A literal `a\n<!--\nb` appears in code.\n\n",
+    "<!-- ` -->\n\n",
+    "~~~ <!--\nexample\n~~~\n\n",
+  ])("preserves an authored removal answer while repairing other metadata", async (prefix) => {
+    const answer =
+      "A duplicate check. The existing validator stays because it covers malformed inputs.\n\n```sh\nobsolete-check --strict\n## This is command data\n```\n\nThe canonical validator retains that input check.";
+    const result = await runPrFix({
+      extraArgs: ["-DryRun"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [
+          makePrView([successCheck()], {
+            body: `${prefix}## What this change made unnecessary\n\n${answer}\n`,
+          }),
+        ],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(combinedOutput(result)).toContain("Dry-run completed.");
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+    expect(result.ghState.threadsCount).toBe(1);
+    const preview = await readFile(
+      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
+      "utf-8",
+    );
+    expect(preview.split("## Auto-import")[0]).toContain(answer);
+    expect(preview.split("## Auto-import")[0]).not.toContain("Example only.");
+  });
+
+  it("keeps an authored adoption bar outside the imported body", async () => {
+    const adoption =
+      "- One-line form: retain the operative clause.\n- Beyond that line: executable preservation checks.\n- Affected safety-floor items: quality gates and their evidence.";
+    const result = await runPrFix({
+      extraArgs: ["-DryRun"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [
+          makePrView([successCheck()], {
+            body: `## Adoption bar\n\n${adoption}\n\n## What this change made unnecessary\n\nNothing.\n`,
+          }),
+        ],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    const preview = await readFile(
+      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
+      "utf-8",
+    );
+    expect(preview.split("## Auto-import")[0]).toContain(adoption);
+    expect(combinedOutput(result)).toContain("Dry-run completed.");
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+    expect(result.ghState.threadsCount).toBe(1);
+  });
+
   it("extracts version markers from non-feature branch prefixes and blocks mismatches", async () => {
     const branch = "topic/v1.8.5";
     const result = await runPrFix({
@@ -340,6 +461,43 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(monitorStatus.EffectiveRequiredZeroStreak).toBe(30);
   });
 
+  it.each(["poll", "final boundary"])(
+    "blocks an answer removed at the %s without emitting a handoff",
+    async (boundary) => {
+      const clean = makePrView([successCheck()]);
+      const missing = makePrView([successCheck()], {
+        body: compliantPrBody().replace(
+          /## What this change made unnecessary\n\nNothing\.\n\n/,
+          "",
+        ),
+      });
+      const result = await runPrFix({
+        mockSleep: true,
+        scenario: makeScenario({
+          prViews:
+            boundary === "poll"
+              ? [clean, missing]
+              : [...Array.from({ length: 31 }, () => clean), missing],
+          threads: [[]],
+        }),
+      });
+      expect(result.code).not.toBe(0);
+      expect(combinedOutput(result)).toContain("PR body is no longer template-compliant");
+      expect(existsSync(path.join(result.repoDir, "tmp", "pr-fix", "pr-166-handoff.json"))).toBe(
+        false,
+      );
+      const status = await readJson(
+        path.join(result.repoDir, "tmp", "pr-fix", "pr-166-monitor-status.json"),
+      );
+      expect(status.State).toBe("action_required_body");
+      expect(status.CurrentStreak).toBe(0);
+      const compliance = await readJson(
+        path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-compliance.json"),
+      );
+      expect(compliance.RemovalList).toBe(false);
+    },
+  );
+
   it("retries transient gh graphql failures during live monitoring", async () => {
     const result = await runPrFix({
       mockSleep: true,
@@ -370,7 +528,8 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).toBe(0);
+    expect(result.code).not.toBe(0);
+    expect(combinedOutput(result)).toContain("authored removal-list answer");
 
     const preview = await readFile(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
@@ -396,7 +555,8 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).toBe(0);
+    expect(result.code).not.toBe(0);
+    expect(combinedOutput(result)).toContain("authored removal-list answer");
 
     const preview = await readFile(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
@@ -431,6 +591,95 @@ describe("run-pr-fix strict monitor pagination", { timeout: 120000 }, () => {
     expect(monitorStatus.State).toBe("action_required_threads");
   });
 });
+
+describe("release PR body repair", () => {
+  it.each(["FIXME: list removals", "HACK"])(
+    "repairs the %s placeholder without replacing adoption text",
+    async (placeholder) => {
+      const adoption = "## Adoption bar\n\nKeep the existing validator.\n";
+      const result = await repairReleaseBody(
+        `Existing notes.\n\n## What this change made unnecessary\n\n${placeholder}\n\n${adoption}`,
+      );
+      expect(result.code).toBe(0);
+      expect(result.body).toContain("Superseded package version and heading.");
+      expect(result.body).toContain(adoption);
+      expect(result.body).not.toContain(placeholder);
+    },
+  );
+
+  it.each(["~~~\nunfinished sample\n", "<!-- unfinished note\n"])(
+    "keeps an authored answer when only later Markdown is unfinished",
+    async (suffix) => {
+      const existing =
+        "## What this change made unnecessary\n\nRemoved the duplicate selector.\n\n" + suffix;
+      const result = await repairReleaseBody(existing);
+      expect(result.code).toBe(0);
+      expect(result.body).toBe(existing);
+    },
+  );
+
+  it.each([
+    ["fence", "Existing notes.\n\n~~~\nexample\n"],
+    ["comment", "Existing notes.\n\n<!-- example\n"],
+  ])("refuses a hidden release repair inside an unclosed %s", async (_name, existing) => {
+    const result = await repairReleaseBody(existing);
+    expect(result.code).not.toBe(0);
+    expect(result.body).toBe(
+      "Release metadata.\n\n## What this change made unnecessary\n\nSuperseded package version and heading.\n",
+    );
+    expect(result.stderr).toContain("unclosed");
+  });
+
+  it.each([
+    ["ordinary", "Release context.\r\n\r\n"],
+    ["inline code", "A literal `<!--` appears in code.\r\n\r\n"],
+    ["multi-backtick span", "A literal `` `<!--` `` appears in code.\r\n\r\n"],
+    ["multiline span", "A literal `a\r\n<!--\r\nb` appears in code.\r\n\r\n"],
+    ["backticks in a real comment", "<!-- ` -->\r\n\r\n"],
+    ["fence info", "~~~ <!--\r\nexample\r\n~~~\r\n\r\n"],
+  ])("preserves raw release answers after %s", async (_name, prefix) => {
+    const existing =
+      prefix +
+      "## What this change made unnecessary\r\n\r\nRemoved the duplicate selector.\r\n\r\n" +
+      "## Adoption bar\r\n\r\nKeep the existing validator.\r\n\r\n" +
+      "## Release metadata\r\n\r\nPrepared date and publication approval stay unchanged.\r\n";
+    const result = await repairReleaseBody(existing);
+    expect(result.code).toBe(0);
+    expect(result.body).toBe(existing);
+  });
+});
+
+async function repairReleaseBody(existing: string): Promise<{
+  body: string;
+  code: number | null;
+  stderr: string;
+  stdout: string;
+}> {
+  const root = await makeTempDir("qfai-release-body-");
+  const scriptPath = path.join(root, "release-repair.cjs");
+  const existingPath = path.join(root, "existing.md");
+  const bodyPath = path.join(root, "generated.md");
+  const workflow = await readFile(
+    path.join(repoRoot, ".github", "workflows", "prepare-release.yml"),
+    "utf-8",
+  );
+  const script = /<<'REPAIR_BODY'\r?\n([\s\S]*?)^ {12}REPAIR_BODY\r?$/m.exec(workflow)?.[1];
+  expect(script).toBeDefined();
+  if (script === undefined) throw new Error("Release repair heredoc is missing");
+  await writeFile(scriptPath, script.replace(/^ {12}/gm, ""), "utf-8");
+  await writeFile(existingPath, existing, "utf-8");
+  await writeFile(
+    bodyPath,
+    "Release metadata.\n\n## What this change made unnecessary\n\nSuperseded package version and heading.\n",
+    "utf-8",
+  );
+  const result = await spawnCommand(
+    process.execPath,
+    [scriptPath, existingPath, bodyPath],
+    process.env,
+  );
+  return { ...result, body: await readFile(bodyPath, "utf-8") };
+}
 
 function normalizeNewlines(text: string): string {
   return text.replace(/\r\n/g, "\n");
@@ -506,6 +755,10 @@ function compliantPrBody(): string {
     "",
     "- Command: `pnpm ci:gate`",
     "- Result: PASS",
+    "",
+    "## What this change made unnecessary",
+    "",
+    "Nothing.",
     "",
     "## Open Questions / Follow-ups",
     "",
@@ -667,7 +920,7 @@ async function runPrFix(options: {
     QFAI_FAKE_STATE_PATH: statePath,
   });
 
-  return { ...result, repoDir };
+  return { ...result, ghState: await readJson(statePath), repoDir };
 }
 
 function toPowerShellToken(value: string): string {
@@ -691,7 +944,8 @@ async function createMinimalRepo(
   await mkdir(path.join(repoDir, "packages", "qfai"), { recursive: true });
   await writeFile(
     path.join(repoDir, ".github", "PULL_REQUEST_TEMPLATE.md"),
-    "# Template\n",
+    compliantPrBody().replace("Nothing.", "<!-- An authored answer is required. -->") +
+      "\n\n## Adoption bar\n\n<!-- Required when a PR adds a rule, skill or gate. -->\n",
     "utf-8",
   );
   await writeFile(path.join(repoDir, ".github", "workflows", "ci.yml"), "name: CI\n", "utf-8");
@@ -792,7 +1046,8 @@ function ghStubScript(): string {
     "",
     'if (args[0] === "pr" && args[1] === "view") {',
     "  const prView = next(scenario.prViews, 'prViewCount', null);",
-    "  process.stdout.write(JSON.stringify(prView));",
+    "  const fields = args[args.indexOf('--json') + 1].split(',');",
+    "  process.stdout.write(JSON.stringify(Object.fromEntries(fields.map(field => [field, prView[field]]))));",
     "  process.exit(0);",
     "}",
     "",
@@ -826,6 +1081,8 @@ function ghStubScript(): string {
     "}",
     "",
     'if (args[0] === "pr" && args[1] === "edit") {',
+    "  state.prEditCount = (state.prEditCount ?? 0) + 1;",
+    "  saveState();",
     "  process.exit(0);",
     "}",
     "",

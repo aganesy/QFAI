@@ -96,6 +96,8 @@ Developer Mode が必要で、無い場合は `.claude/rules/*.md` がパス文�
 テキストファイルになるため、マスタを直接読む。
 Codex は本ファイルを、Copilot は `.github/copilot-instructions.md` を読む。
 
+Read `REVIEW.md` before reviewing a pull request or writing its description.
+
 ## 記述基準 (全 AI 必読)
 
 PR / issue のタイトルと説明、変更差分に含まれるコードコメントと Markdown は、

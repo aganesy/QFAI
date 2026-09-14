@@ -1,20 +1,4 @@
-/**
- * A project that already had an `AGENTS.md` or a `CLAUDE.md` never learned
- * about the rules `qfai init` seeds.
- *
- * The root templates are copied create-only (`force: false`,
- * `conflictPolicy: "skip"`), so in that project the copy skipped both files and
- * wrote `.agents/rules/**` with nothing pointing at it. Codex loads `AGENTS.md`
- * and Claude Code loads `CLAUDE.md`; neither reads a directory it is never told
- * about, so the "where an agent may write" and "who decides a release version"
- * rules reached fresh projects only — not the repositories already running an
- * agent, which are the ones the rules exist for.
- *
- * `ensureAgentEntryPointRules` appends the managed section, lifted from the
- * shipped template, to a file it did not create. The pins below hold the two
- * ways that could over-correct: appending twice, and appending to a project
- * that had already wired the masters in by hand.
- */
+/** Init adds canonical guidance without replacing project text or deleted rule citations. */
 
 import {
   chmod,
@@ -39,6 +23,7 @@ import {
   CROSS_AI_RULES_HEADING,
   addRuleCitations,
   addRuleCitationsToList,
+  addReviewPointer,
   QFAI_AGENT_RULES_BEGIN,
   QFAI_AGENT_RULES_END,
   citedRuleMasters,
@@ -71,6 +56,12 @@ const PROJECT_TEXT = [
   "",
 ].join("\n");
 
+const REVIEW_POINTER =
+  "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository. Read it before writing the PR description as well.";
+
+const withoutAddedReviewPointer = (text: string): string =>
+  text.replace(`${REVIEW_POINTER}\n\n`, "");
+
 const occurrences = (haystack: string, needle: string): number => haystack.split(needle).length - 1;
 
 /** `runInit` with the diagnostics it wrote to stderr. */
@@ -89,6 +80,76 @@ async function initCapturingStderr(root: string): Promise<string> {
 }
 
 describe("qfai init connects a pre-existing agent entry point to the rule masters", () => {
+  it("installs optional review policy into existing entry points", async () => {
+    const pointer =
+      "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository. Read it before writing the PR description as well.";
+    for (const force of [false, true]) {
+      await withProject(async (root) => {
+        const project = "# Project rules\r\n\r\nKeep every original byte.\r\n";
+        for (const name of AGENT_ENTRY_POINT_FILES) {
+          await writeFile(path.join(root, name), project, "utf-8");
+        }
+        await runInit({ dir: root, force, dryRun: false, yes: true });
+        for (const name of AGENT_ENTRY_POINT_FILES) {
+          const first = await readEntryPoint(root, name);
+          expect(first).toContain(pointer);
+          expect(occurrences(first, pointer)).toBe(1);
+          expect(first).toContain(project);
+        }
+        const first = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map((name) => readEntryPoint(root, name)),
+        );
+        await runInit({ dir: root, force, dryRun: false, yes: true });
+        const second = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map((name) => readEntryPoint(root, name)),
+        );
+        expect(second).toEqual(first);
+        await expect(stat(path.join(root, "REVIEW.md"))).rejects.toMatchObject({ code: "ENOENT" });
+      });
+    }
+  });
+
+  it("keeps optional repository review policy in fresh and forced reviewer output", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository.";
+      const pointerFor = (name: string): string =>
+        name === ".github/instructions/code-review.instructions.md"
+          ? "Read `REVIEW.md` if present."
+          : pointer;
+      const files = [
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".github/copilot-instructions.md",
+        ".github/instructions/code-review.instructions.md",
+      ];
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      for (const name of files) {
+        expect(await readEntryPoint(root, name)).toContain(pointerFor(name));
+        const text = await readEntryPoint(root, name);
+        if (name === ".github/instructions/code-review.instructions.md") {
+          expect(text).toContain(`Process:\n\n${pointerFor(name)}\n\n1. Read the PR description`);
+        }
+        const next = AGENT_ENTRY_POINT_FILES.some((entry) => entry === name)
+          ? text + PROJECT_TEXT
+          : text.replace(pointerFor(name), "");
+        await writeFile(path.join(root, name), next, "utf-8");
+      }
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      for (const name of files) {
+        const text = await readEntryPoint(root, name);
+        expect(text).toContain(pointerFor(name));
+        if (name === ".github/instructions/code-review.instructions.md") {
+          expect(text).toContain(`Process:\n\n${pointerFor(name)}\n\n1. Read the PR description`);
+        }
+        if (AGENT_ENTRY_POINT_FILES.some((entry) => entry === name)) {
+          expect(text.endsWith(PROJECT_TEXT)).toBe(true);
+        }
+      }
+      await expect(stat(path.join(root, "REVIEW.md"))).rejects.toMatchObject({ code: "ENOENT" });
+    });
+  });
+
   it("appends the managed section to an AGENTS.md / CLAUDE.md it did not create", async () => {
     await withProject(async (root) => {
       for (const name of AGENT_ENTRY_POINT_FILES) {
@@ -99,8 +160,10 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
 
       for (const name of AGENT_ENTRY_POINT_FILES) {
         const after = await readEntryPoint(root, name);
-        // The project's own instructions are still there, first.
-        expect(after.startsWith(PROJECT_TEXT.trimEnd()), `${name} lost its content`).toBe(true);
+        expect(
+          withoutAddedReviewPointer(after).startsWith(PROJECT_TEXT.trimEnd()),
+          `${name} lost its content`,
+        ).toBe(true);
         expect(after).toContain(QFAI_AGENT_RULES_BEGIN);
         expect(after).toContain(QFAI_AGENT_RULES_END);
 
@@ -145,7 +208,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
     });
   });
 
-  it("pin: a file that already cites every master by hand is left untouched", async () => {
+  it("keeps manual rule wiring when adding review guidance", async () => {
     await withProject(async (root) => {
       const masters = citedRuleMasters(
         extractManagedRulesSection(await readTemplate("CLAUDE.md")) ?? "",
@@ -162,9 +225,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      // No markers bolted on, no duplicated bullets: the rules already reach
-      // the agent, and init has no better wording to impose.
-      expect(await readEntryPoint(root, "CLAUDE.md")).toBe(handWired);
+      expect(await readEntryPoint(root, "CLAUDE.md")).toBe(`${REVIEW_POINTER}\n\n${handWired}`);
     });
   });
 
@@ -251,7 +312,7 @@ describe("a later init cites a rule master it is shipping for the first time", (
       expect(after, "the newly shipped master is not cited").toContain(master);
       // One section, one heading, and the project's own text where it was.
       expect(occurrences(after, QFAI_AGENT_RULES_BEGIN)).toBe(1);
-      expect(after.startsWith(PROJECT_TEXT.trimEnd())).toBe(true);
+      expect(withoutAddedReviewPointer(after).startsWith(PROJECT_TEXT.trimEnd())).toBe(true);
       // The bullet is the template's, not one composed here.
       const templateBullet = (extractManagedRulesSection(await readTemplate("AGENTS.md")) ?? "")
         .split("\n")
@@ -638,10 +699,48 @@ describe("a hand-wired file this run cannot extend is named", () => {
 
       const stderr = await initCapturingStderr(root);
 
-      expect(await readEntryPoint(root, "AGENTS.md")).toBe(prose);
+      expect(await readEntryPoint(root, "AGENTS.md")).toBe(`${REVIEW_POINTER}\n\n${prose}`);
       expect(stderr).toContain("not as a bullet list this run can add a line to");
       expect(stderr).toContain(master);
     });
+  });
+});
+
+describe("optional review directive detection", () => {
+  it.each([
+    ["ordinary text", "# Project rules\n\n"],
+    ["inline comment marker", "Use `<!--` literally.\n\n"],
+    ["multi-backtick span", "Use `` `<!--` `` literally.\n\n"],
+    ["multiline code span", "Use `a\n<!--\nb` literally.\n\n"],
+    ["fence info comment marker", "~~~ <!--\nExample\n~~~\n\n"],
+    ["backticks inside a real comment", "<!-- ` -->\n\n"],
+  ])("retains an operative directive after %s byte for byte", (_name, prefix) => {
+    const existing = `${prefix}${REVIEW_POINTER}\n`;
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+  });
+
+  it.each([
+    ["HTML comment", `<!--\n${REVIEW_POINTER}\n-->\n`],
+    ["fenced block", `~~~\n${REVIEW_POINTER}\n~~~\n`],
+    ["inline code span", `\`\`${REVIEW_POINTER}\`\`\n`],
+    ["unfinished fence", "~~~\nKeep this example.\n"],
+    ["unfinished comment", "<!-- Keep this comment.\n"],
+  ])("adds guidance before a %s without changing existing text", (_name, existing) => {
+    const merged = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+    expect(merged).toBe(`${REVIEW_POINTER}\n\n${existing}`);
+    expect(addReviewPointer(merged, `${REVIEW_POINTER}\n`)).toBe(merged);
+  });
+
+  it("keeps the BOM and CRLF text when prepending guidance", () => {
+    const existing = "\uFEFF# Project rules\r\n\r\nKeep this text.\r\n";
+    const merged = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+    expect(merged).toBe(`\uFEFF${REVIEW_POINTER}\r\n\r\n${existing.slice(1)}`);
+    expect(addReviewPointer(merged, `${REVIEW_POINTER}\n`)).toBe(merged);
+  });
+
+  it("does not invent guidance when the template has none", () => {
+    expect(addReviewPointer(PROJECT_TEXT, null)).toBe(PROJECT_TEXT);
+    expect(addReviewPointer(PROJECT_TEXT, "# Project instructions\n")).toBe(PROJECT_TEXT);
   });
 });
 

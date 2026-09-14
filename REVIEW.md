@@ -54,6 +54,28 @@ to cut nor what would stand in its place.
 Applies to findings about excess only. Correctness, security and performance
 keep the shape the rest of this document describes.
 
+## A pull request that adds a rule, skill or gate
+
+It records three things in its description:
+
+1. **The one-line form**: the proposal reduced to a single line that still
+   carries its operative clause.
+2. **What it adds beyond that line.**
+3. **The safety-floor items it touches**, from
+   `.agents/rules/minimal-implementation.md` § 2.
+
+Where the proposal adds nothing beyond the line, the line is what ships. Where a
+comparable requirement has already been run, the description cites that run's
+review round-trips and change size.
+
+This binds changes to this repository, not what an adopter builds with it.
+
+## What a change made unnecessary
+
+Every pull request lists, in its description, what the change made unnecessary,
+and says why anything on the list was kept. An empty list is a complete answer:
+it is written as "nothing", not left out.
+
 ## Severity Prefixes
 
 Use the following severity prefixes on every comment:

@@ -12,13 +12,14 @@
  * had to cut is allowed to be missing.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { maskFencedCodeBlocks } from "../../src/core/ids.js";
 import {
   TRUNCATION_MARKER,
   entryTitles,
@@ -302,6 +303,95 @@ describe("the run", () => {
     });
 
     expect(asked).toEqual(["v1.1.0"]);
+  });
+});
+
+describe("resuming a release pull-request description", () => {
+  it.each([
+    ["missing", ""],
+    ["empty", "## What this change made unnecessary\n\n<!-- Answer required. -->\n"],
+    ["Markdown-only", "## What this change made unnecessary\n\n- [ ]\n"],
+    ["None marker", "## What this change made unnecessary\n\nNone.\n"],
+    ["N/A marker", "## What this change made unnecessary\n\nN/A\n"],
+    ["named space entity", "## What this change made unnecessary\n\n&nbsp;\n"],
+    ["numeric space entity", "## What this change made unnecessary\n\n&#160;\n"],
+    ["TODO prefix", "## What this change made unnecessary\n\nTODO: fill this in\n"],
+    ["TBD prefix", "## What this change made unnecessary\n\nTBD: list the removals\n"],
+    ["thematic break", "## What this change made unnecessary\n\n---\n"],
+    ["empty quotation", "## What this change made unnecessary\n\n>\n"],
+    ["empty link", "## What this change made unnecessary\n\n[]()\n"],
+    ["empty link with target", "## What this change made unnecessary\n\n[](https://example.com)\n"],
+    ["HTML break", "## What this change made unnecessary\n\n<br>\n"],
+    ["fenced example", "```md\n## What this change made unnecessary\n\nNothing.\n```\n"],
+    ["longer backtick close", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    [
+      "longer tilde close",
+      "~~~md\r\n## What this change made unnecessary\r\n\r\nNothing.\r\n~~~~\r\n",
+    ],
+    ["short close", "````md\n```\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ["wrong marker close", "```md\n~~~\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ["commented example", "<!--\n## What this change made unnecessary\n\nNothing.\n-->\n"],
+    [
+      "authored",
+      "## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
+    ],
+    [
+      "authored after backtick fence",
+      "```md\n## What this change made unnecessary\n\nExample only.\n````\n\n## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
+    ],
+    [
+      "authored after tilde fence",
+      "~~~md\n## What this change made unnecessary\n\nExample only.\n~~~~\n\n## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
+    ],
+    [
+      "authored after commented fence",
+      "<!--\n```md\n## What this change made unnecessary\n\nExample only.\n-->\n\n## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
+    ],
+  ])("preserves other prose when the removal answer is %s", async (name, section) => {
+    const workflow = await readFile(
+      path.join(REPO_ROOT, ".github/workflows/prepare-release.yml"),
+      "utf-8",
+    );
+    const resume = workflow.match(
+      /if \[ -n "\$\{existing_pr\}" \]; then([\s\S]*?)\n\s*else\n\s*gh pr create/,
+    )?.[1];
+    expect(resume).toContain('gh pr view "${existing_pr}" --json body --jq .body');
+    expect(resume).toContain('gh pr edit "${existing_pr}" --body-file "${body_file}"');
+    const script = workflow.match(
+      /^\s*node - .* <<'REPAIR_BODY'\r?\n([\s\S]*?)^\s*REPAIR_BODY[ \t]*$/m,
+    )?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("Release body repair script is absent");
+    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-release-body-"));
+    tempDirs.push(dir);
+    const existingPath = path.join(dir, "existing.md");
+    const bodyPath = path.join(dir, "generated.md");
+    const retained =
+      "# Prepared release\n\nDate corrected to 2026-09-14.\n\nRisk note: retain the publication approval.\n\n";
+    const existing = retained + section;
+    const answer = "Superseded package version and Unreleased heading. Release notes are retained.";
+    await writeFile(existingPath, existing, "utf-8");
+    await writeFile(
+      bodyPath,
+      `Generated prose.\n\n## What this change made unnecessary\n\n${answer}\n`,
+      "utf-8",
+    );
+    const result = spawnSync(process.execPath, ["-", existingPath, bodyPath], {
+      input: script,
+      encoding: "utf-8",
+    });
+    if (result.error !== undefined) throw result.error;
+    expect(result.status, result.stderr).toBe(0);
+    const updated = await readFile(bodyPath, "utf-8");
+    expect(updated.startsWith(retained)).toBe(true);
+    expect(updated).not.toContain("Generated prose.");
+    if (name.startsWith("authored")) {
+      expect(updated).toBe(existing);
+    } else {
+      expect(updated).toContain(answer);
+      const outsideCode = maskFencedCodeBlocks(updated).replace(/<!--[\s\S]*?-->/g, "");
+      expect(outsideCode.match(/^## What this change made unnecessary$/gm)).toHaveLength(1);
+    }
   });
 });
 
