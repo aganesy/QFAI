@@ -22,9 +22,15 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
    material (`.qfai/assistant/constitution/drift-protocol.md#core-rule`), so do NOT repair or
    re-run it to make this gate pass; a correction it implies belongs in the
    SDD-owned artifact, with the discrepancy noted in delta/evidence.
-3. Stop only when there is no usable source at all: no pack, no import-lite
+3. Read the pack's review findings under `.qfai/review/review-*/`, and take in
+   the items a reviewer marked non-normative under
+   `.qfai/assistant/constitution/review-convergence.md#discussion-review-precision`.
+   They are reference-quality facts like the rest of the pack: what this stage
+   does with one is recorded in the SDD-owned artifact it lands in, or nowhere,
+   which says it was read and not adopted. Nothing goes back into the pack.
+4. Stop only when there is no usable source at all: no pack, no import-lite
    input, and no explicit user requirement.
-4. **Report — do not stop —** when `prototyping.yaml` is present in the latest UI-bearing pack
+5. **Report — do not stop —** when `prototyping.yaml` is present in the latest UI-bearing pack
    and does not parse against the schema in
    `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md#prototypingyaml`.
    Record the file and what failed to parse, and continue; `/qfai-prototyping` is where an
