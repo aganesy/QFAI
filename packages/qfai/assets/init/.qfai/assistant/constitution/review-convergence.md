@@ -149,11 +149,19 @@ belong to the stage implementing the change. They may be reported as advice,
 not demanded as extra discussion completion work.
 
 Advice is not a verdict. A reviewer whose vocabulary is `PASS` or `REVISE` alone
-returns `PASS` and records the advice in its findings, and the review pack's
-rule that any feedback returns the pack says the same: an item marked
-non-normative under this section is carried to the implementing stage rather
-than starting a fix-and-rerun cycle. Reported as a demand instead, it makes the
-discussion stage owe work this section has just placed elsewhere.
+returns `PASS` and records the advice in its findings, and the review request's
+rule says the same: an item marked non-normative under this section is carried
+to the implementing stage rather than starting a fix-and-rerun cycle. Reported
+as a demand instead, it makes the discussion stage owe work this section has
+just placed elsewhere.
+
+**Where it goes.** The advice stays in the review pack's findings, under the
+discussion pack the next stage inventories at its Stage 0 as non-normative
+reference material, like every other part of that pack. That stage records what
+it does with the item in its own artifacts — a plan step, a spec row, an open
+question — and nothing is back-propagated into the pack. An item that stage
+records nowhere was read and not adopted, which is a decision it owns rather
+than a demand the discussion stage still carries.
 
 Wrong repository facts, missing decision traceability, scope contradictions and
 defects in the pack's own safety obligations remain in remit. Non-normative
