@@ -482,6 +482,48 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
       ).toEqual([]);
     });
 
+    it.each([
+      ["a code span", "`TBD`"],
+      ["a quoted word", "'TODO'"],
+      ["brackets", "[tbd]"],
+      ["a trailing stop", "TBD."],
+      ["an emphasised word", "**TODO**"],
+      ["a word beside tbd", "TBA"],
+      ["a marker", "XXX"],
+      ["a question", "???"],
+      ["a named decision", "TODO: choose component"],
+      ["a named decision with no space", "TBD:pick one"],
+    ])("reports a placeholder written as %s", async (_name, cell) => {
+      // Read whole, each of these is a value nothing recognises, so the row
+      // passed carrying nothing for the implementer to install.
+      const messages = await seeded([
+        "procurement:",
+        "  procured:",
+        '    - screen: "dashboard"',
+        '      region: "summary cards"',
+        `      item: ${JSON.stringify(cell)}`,
+      ]);
+      expect(messages.join("\n")).toContain("item");
+    });
+
+    it.each([
+      ["a component in angle brackets", "<DataTable>"],
+      ["a component with props", '<DataTable density="compact">'],
+      ["a sentence opening with none", "none of the catalogue items fit the density"],
+      ["a name holding a colon", "ui:DataTable"],
+      ["a quoted component", "`DataTable`"],
+    ])("leaves %s alone", async (_name, cell) => {
+      expect(
+        await seeded([
+          "procurement:",
+          "  procured:",
+          '    - screen: "dashboard"',
+          '      region: "summary cards"',
+          `      item: ${JSON.stringify(cell)}`,
+        ]),
+      ).toEqual([]);
+    });
+
     describe("one realisation per screen region", () => {
       const row = (screen: string, region: string, cell: string, value: string): string[] => [
         `    - screen: "${screen}"`,

@@ -1072,15 +1072,54 @@ export const PROCUREMENT_PLACEHOLDERS: ReadonlySet<string> = new Set([
   "<what was looked for and did not serve>",
 ]);
 
-/** Whether a cell holds something a later reader can act on. */
+/**
+ * The words a cell carries when nobody has decided yet, beyond
+ * {@link PLACEHOLDER_RE}'s. `tba` and `fixme` are the two an author reaches for
+ * where `tbd` and `todo` would do, and `xxx` is the marker left where a value
+ * belongs.
+ */
+const UNDECIDED_WORD = /^(?:tba|fixme|xxx|\?+)$/i;
+
+/**
+ * A cell's text with the decoration around it removed: a code span, a quoted
+ * string, the brackets a template uses.
+ *
+ * A placeholder is written as often with decoration as without —
+ * `` `TBD` ``, `"TODO"`, `[tbd]` — and read whole, each of those is a value
+ * nothing recognises, so the row passed carrying nothing to act on.
+ */
+function undecorated(value: string): string {
+  let text = value.trim();
+  for (;;) {
+    const stripped = text
+      .replace(/^[`"'*_[({]+/, "")
+      .replace(/[`"'*_\])}]+$/, "")
+      .replace(/[.;!]+$/, "")
+      .trim();
+    if (stripped === text) return text;
+    text = stripped;
+  }
+}
+
+/**
+ * Whether a cell holds something a later reader can act on.
+ *
+ * The decoration is removed first, and a value that opens with a placeholder
+ * and a colon — `TODO: choose a component` — is one too: it names the decision
+ * rather than making it, which is the state this check exists to report.
+ */
 function cellIsWritten(value: unknown): boolean {
   if (typeof value !== "string") return false;
   const trimmed = value.trim();
-  return (
-    trimmed.length > 0 &&
-    !PLACEHOLDER_RE.test(trimmed) &&
-    !PROCUREMENT_PLACEHOLDERS.has(trimmed.toLowerCase())
-  );
+  if (trimmed.length === 0) return false;
+  // Angle brackets are not stripped and no shape rule reads them: a component is
+  // named that way — `<DataTable density="compact">` — so the template's own
+  // phrases are the set below and nothing wider.
+  const bare = undecorated(trimmed);
+  if (PLACEHOLDER_RE.test(bare) || UNDECIDED_WORD.test(bare)) return false;
+  const opener = /^([^\s:]+)\s*:/.exec(bare)?.[1] ?? "";
+  if (opener !== "" && (PLACEHOLDER_RE.test(opener) || UNDECIDED_WORD.test(opener))) return false;
+  return !PROCUREMENT_PLACEHOLDERS.has(trimmed.toLowerCase());
 }
 
 /**

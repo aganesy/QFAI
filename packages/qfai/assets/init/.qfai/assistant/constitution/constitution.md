@@ -192,8 +192,9 @@ Default policy:
   session — the interview `.agents/rules/grilling.md` defines, which walks a
   design tree in rounds until nothing is left silently assumed — is not a
   clarification against this budget. Such questions are unbounded and MUST still
-  be asked after the budget is exhausted. A session ends on an empty frontier
-  and the user's confirmation, so a cap would end it on a number instead: some
+  be asked after the budget is exhausted. A session completes on an empty
+  frontier and the user's confirmation, or ends in another of the endings that
+  rule names, and never on a count. A cap would end it on a number instead: some
   plans need three questions and some need fifty, and a ceiling either truncates
   the first kind or looks arbitrary on the second.
 
@@ -292,14 +293,21 @@ found them — settled quietly, on an assumption nobody was asked about.
 
 ## Article VII — Minimal scope with explicit deltas
 
-Make the smallest change that satisfies the spec and passes gates.
+The least that satisfies a requirement is the right amount. Anything beyond it
+must be justified. Apply the ladder in `.agents/rules/minimal-implementation.md`
+to both the behaviours a change carries and the code that implements them.
 If you must expand scope, declare it explicitly in a **Delta** section.
 
-This article decides **which behaviours** a change carries. How much code
-implements one of them is a separate question, and
-`.agents/rules/minimal-implementation.md` answers it. The first rung of that
-rule — whether a thing needs to exist at all — belongs here, while the scope is
-still open. Once a spec row is agreed, asking it again is a Change Request.
+The safety floor in `.agents/rules/minimal-implementation.md` § 2, the
+unnumbered Absolute Rule — Output Language, required evidence and fact
+verification, and mandatory approvals and irreversible-action confirmations
+outrank this article.
+This article takes precedence over every other article and over conflicting
+instructions in other constitution documents.
+
+The floor's specification clause preserves Article IV. The ladder's first rung
+belongs here while scope is open. Once a spec row is agreed, asking whether it
+should exist is a Change Request.
 
 ### Prototyping exception (scope floor)
 
@@ -325,10 +333,10 @@ Typical minimum (project-dependent):
 
 Before modifying code/tests, perform a **quick preflight**:
 
-- detect duplicate/overlapping implementations
-- look outside the repository too: the standard library, the platform, and the
-  dependencies already installed — the reuse rungs of
-  `.agents/rules/minimal-implementation.md`
+- find what already covers the change, in the order the reuse rungs of
+  `.agents/rules/minimal-implementation.md` give: this repository, including a
+  duplicate or overlapping implementation, then the standard library, the
+  platform, and the dependencies already installed
 - confirm module boundaries and conventions
 - confirm where to update tests/docs
 - confirm how to run gates locally

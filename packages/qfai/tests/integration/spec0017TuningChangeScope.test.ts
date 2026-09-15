@@ -26,6 +26,7 @@
 
 import { readFile, readdir } from "node:fs/promises";
 import type { Dirent } from "node:fs";
+import { availableParallelism } from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -141,11 +142,15 @@ describe("at most one runner project is moved off the declared parallelism value
 
     // The value being compared against is the DECLARED one, not whatever the file happens to hold.
     // Without this the rule would follow a quiet edit to `projectKnobs` and report nothing moved.
+    //
+    // Held to the cores the machine has, which is where the declared value lands on a runner that
+    // cannot hold it, and re-derived here rather than imported so the baseline is not read out of
+    // the file under test. The measurement behind the cap sits on the declaration itself.
     expect(
       projectKnobs.maxConcurrency,
       "the comparison baseline must be the declared starting value, or every project moves together " +
         "and the set stays empty",
-    ).toBe(DECLARED_START);
+    ).toBe(Math.min(DECLARED_START, availableParallelism()));
 
     const moved = projects.filter((project) => project.departures.length > 0);
     // AT MOST one, not none. Writing `toEqual([])` here would be stricter than the rule and would
