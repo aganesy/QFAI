@@ -135,16 +135,16 @@ window it names has closed regardless, so both readings arrive at `error`.
 
 ## Blocked downstream items
 
-| Item                                                                          | Kind         | Why it depends on the artifact                                                                           |
-| ----------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------- |
-| `spec-0013/TDD-0025`                                                          | `ledger-row` | Carries `TC-0013-0030`'s population boundary, which item 1 settles                                       |
-| The row `CR-20260913-0009` appends for `TC-0013-0030`'s resolver boundary     | `ledger-row` | Every option restates that boundary                                                                      |
-| `spec-0013/TDD-0026`                                                          | `ledger-row` | Carries `TC-0013-0031`'s boundary for a companion without the frontmatter, whose severity item 2 settles |
-| The row `CR-20260913-0009` appends for `TC-0013-0031`'s no-companion boundary | `ledger-row` | Carries the test case item 2 re-derives                                                                  |
-| `spec-0013` `E2E` rows whose `US-Refs` names `US-0013-0013`                   | `ledger-row` | Seeded by `CR-20260913-0009` over a story every item-1 option restates                                   |
+| Item                                                                         | Kind         | Why it depends on the artifact                                                                           |
+| ---------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------- |
+| `spec-0013/TDD-0025`                                                         | `ledger-row` | Carries `TC-0013-0030`'s population boundary, which item 1 settles                                       |
+| The row the ledger repair appends for `TC-0013-0030`'s resolver boundary     | `ledger-row` | Every option restates that boundary                                                                      |
+| `spec-0013/TDD-0026`                                                         | `ledger-row` | Carries `TC-0013-0031`'s boundary for a companion without the frontmatter, whose severity item 2 settles |
+| The row the ledger repair appends for `TC-0013-0031`'s no-companion boundary | `ledger-row` | Carries the test case item 2 re-derives                                                                  |
+| `spec-0013` `E2E` rows whose `US-Refs` names `US-0013-0013`                  | `ledger-row` | Seeded by the ledger repair over a story every item-1 option restates                                    |
 
 While this record is open, none of these rows is selected or given evidence.
-`CR-20260913-0009` returns `TDD-0025` and `TDD-0026` to `todo` and puts the
+The ledger repair returns `TDD-0025` and `TDD-0026` to `todo` and puts the
 rest there, and evidence recorded against either side of a disagreement this
 record has not settled would fix that side into the record.
 
@@ -152,10 +152,12 @@ record has not settled would fix that side into the record.
   `TC-0013-0025`, `TC-0013-0027` or `US-0013-0011` are blocked by the two
   defect requests instead. `TDD-0016`, the row for the lock write, is about
   which stage writes the lock, which neither item touches.
-- Overlapping open CRs: `CR-20260913-0009` re-derives `spec-0013`'s ledger to
-  its template, seeding the `US-0013-0013` rows above and splitting `TDD-0025`
-  and `TDD-0026`. **It is applied first, and this record assumes it has
-  landed.** `CR-20260913-0007` and `CR-20260913-0008` name files this record
+- Overlapping open CRs: **the `spec-0013` ledger repair is owed and unwritten.**
+  It re-derives that ledger to its template, seeding the `US-0013-0013` rows
+  above and splitting `TDD-0025` and `TDD-0026`. It is written and applied
+  first, and this record is refreshed against the ledger it leaves before either
+  item is approved: until then the rows below name entries no ledger holds, and
+  the prerequisite names no record an operator can open. `CR-20260913-0007` and `CR-20260913-0008` name files this record
   names too — `06_Test-Cases.md`, `09_delta.md` and `tdd/test-list.md`, and
   `CR-20260913-0007` also the other statement files and `10_Plan.md`. **They
   are applied in order**: `CR-20260913-0008`, then `CR-20260913-0007`, then
@@ -257,6 +259,15 @@ ask for.
    `_policies/05_Contracts.md` and `_policies/10_delta.md` that name the
    finding's window record what that change adopted, and are not re-derived.
 
+   **`_policies/05_Contracts.md` is nonetheless in `1b`'s scope, for the other
+   statement it carries.** Its contract index says `surface_type`
+   auto-population is a `/qfai-sdd` step. `1b` re-derives this pack to say that
+   write is not its obligation, so left alone that index is the only active
+   statement owning the behaviour, in a file every pack reads. Under `1b` the
+   index is reconciled with it — naming the helper as the writer, or naming the
+   owner that keeps satisfying it. Under `1c` the index stands, because that
+   option states the stage's write as a requirement chain of this pack's own.
+
 2. `/qfai-sdd spec-0013` rerun, mode `re-derive`, scope by item:
 
    | Item | Statements re-derived                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
@@ -269,7 +280,8 @@ ask for.
    `Upstream artifact`, `Mode`, `Approved by`, `Applied at` — not as a
    `## Triage` row.
 
-   **`CR-20260913-0009` is applied first.** It re-derives `spec-0013`'s ledger
+   **The ledger repair is applied first, and is not yet written.** It re-derives
+   `spec-0013`'s ledger
    to its template: the six columns it lacks, the `Integration` and `E2E` rows
    Phase 2b owes — `US-0013-0013`'s among them, one per boundary its criteria
    name — and the split of all thirteen progressed rows that run several
@@ -285,7 +297,7 @@ ask for.
 
 3. Downstream ledger sweep, per boundary. Phase 2b pairs each re-derived
    boundary of `TC-0013-0030`, `TC-0013-0031` and `US-0013-0013` with the row
-   whose `Boundary` names it. The rows `CR-20260913-0009` seeds or appends are
+   whose `Boundary` names it. The rows the ledger repair seeds or appends are
    named here by their obligation and boundary rather than by a `TDD-ID`, which
    that record allocates.
    - **Re-pointed under `1b` and `1c`: `spec-0013/TDD-0025`, and the
@@ -309,7 +321,7 @@ ask for.
      | The finding for a companion without the frontmatter, to the settled severity | `spec-0013/TDD-0026` and the `US-0013-0013` `E2E` row for it | `2a`, `2b`    |
 
      Any observation recorded on these rows is of a rule being replaced.
-     `CR-20260913-0009` returns `TDD-0025` and `TDD-0026` to `todo` and puts
+     The ledger repair returns `TDD-0025` and `TDD-0026` to `todo` and puts
      the other rows there, and this record's blocked set keeps them
      unselected, so a reset is owed only to a row a run has moved since.
 
@@ -323,7 +335,15 @@ ask for.
      test case never goes on the `E2E` row.
    - No row is retired. Every row keeps an obligation under every option, so
      the retirement branch does not apply and no `TDD-ID` reservation is owed.
-   - Under `2c` nothing moves for item 2.
+   - **Under `2c`, `TDD-0026` is reset by the ledger repair and needs a
+     terminal path of its own.** That repair returns it to `todo`, and action 4
+     then runs `/qfai-atdd` over every unblocked owed row — while the test case
+     requires a warning and the case asserts an error, which `2c` declines to
+     change. The row therefore completes as an `exception`, and `2c` carries
+     the Decision Record that says so in `spec-0013/07_Decisions.md`: the
+     product states the finding at `error`, the pack states it at `warning`,
+     and `2c` is the option that keeps both. Without that record the row has no
+     ending and `2c` is an outcome nothing can execute.
 
 4. **In this order**, once the rerun above has written the ledger:
    1. `/qfai-implement spec-0013` runs its Change Request preflight, which
@@ -343,21 +363,33 @@ ask for.
         helper, which `surfaceTypePopulate.test.ts` and
         `spec0013ActivePointerSurfaceTypeE2E.test.ts` already hold, and the
         header of `surfaceTypePopulate.test.ts` stops calling it the helper
-        `/qfai-sdd` invokes. Under `1c` no test is written for the two
-        appended rows: a test for them could only fail until the stage write
-        `1c` leaves undecided is settled, so they stay at `todo` as the tracked
-        requirement that option records.
+        `/qfai-sdd` invokes. **Under `1c` no test is written for the two
+        appended rows, and they are not left at `todo` without one either.** A
+        test written for them could only fail until the stage write `1c`
+        records as a requirement is implemented, and a failing test is the RED
+        handoff `/qfai-atdd` owes and `/qfai-implement` needs — so leaving them
+        untested stops both stages and neither row ever completes. `1c` marks
+        the new story and test case `x-qfai-status: planned` instead, in
+        `02_User-stories.md` and `06_Test-Cases.md`, which is the declared way
+        to hold an obligation outside the current slice: the rows stay in the
+        ledger, the stage owes them no test yet, and the requirement the option
+        records is what is tracked.
       - **The test-side text.** Each title, message and comment the item 2
         table names is corrected to state what its case asserts. It is owed
         under every outcome, save the titles `2c` leaves below: text stating
         the opposite of the case beneath it is what let both of these sit
-        unreported. Under `2b` the assertions move to the restored window's
-        severity.
+        unreported. **Under `2b` the window has two sides and both are
+        asserted**: a case injecting a version before the release the user
+        named, which expects `warning`, and one at or after it, which expects
+        `error`. Moving the existing assertions to the current severity alone
+        would leave an implementation that returns `warning` for ever passing
+        every case while contradicting the rule `2b` restores. The two are
+        independently observable, so each is its own ledger row.
 
         **Some of those titles are a row's `Selector`.** `TDD-0026` selects on
         `D-SURFACE-TYPE-MISSING warns on companion-without-frontmatter`, the
         `describe` title in `surfaceTypePopulate.test.ts`, and once
-        `CR-20260913-0009` narrows it, on the cases beneath that title, one of
+        the ledger repair narrows it, on the cases beneath that title, one of
         which calls the finding a warning. Under `2a` those titles are renamed
         and the row's `Selector` stops resolving, so the stage records the
         renamed titles in the row's handover entry, and `/qfai-implement`
