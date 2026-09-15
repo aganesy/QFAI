@@ -8,7 +8,7 @@
 # (you can opt out via `validation.testStrategy.forbidTestTodoStubs: false`
 # in qfai.config.yaml).
 #
-# `full` evaluates every gate group except drift, so a second step runs
+# `full` evaluates every gate group except drift, so an independent job runs
 # `qfai validate --profile drift --fail-on error` on pull requests. Without it
 # nothing here could fail on a downstream edit to upstream SSOT.
 #
@@ -42,13 +42,17 @@ concurrency:
 
 jobs:
   validate:
-    name: qfai validate (full profile, fail on error)
+    name: qfai validate check (${{ matrix.profile }})
     runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # Least privilege: the job only checks out the repository and runs the
     # validator; it writes nothing back to GitHub.
     permissions:
       contents: read
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ${{ fromJSON(github.event_name == 'pull_request' && '["full","drift"]' || '["full"]') }}
     steps:
       - name: Checkout via actions/checkout 5.1.0
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -392,16 +396,29 @@ jobs:
             npm install --no-audit --no-fund
           fi
       - name: qfai validate
+        if: matrix.profile == 'full'
         run: npx qfai validate --profile full --fail-on error
-      # The `full` profile above evaluates every gate group except drift, so on
-      # its own this workflow cannot fail on a downstream edit to upstream SSOT
-      # — the one thing the drift protocol calls non-negotiable. The `drift`
-      # profile is that gate on its own; `tdd` carries it too, along with the
-      # completion obligations, which a branch still in flight cannot meet.
-      #
-      # Pull requests only: the gate compares against `baseBranch` from
-      # qfai.config.yaml (default `origin/main`) and says nothing when it cannot
-      # resolve it, so a run without a base branch would pass without checking.
+      # Full validation excludes drift. Its independent PR-only profile checks
+      # downstream edits to upstream SSOT against the configured base branch.
       - name: qfai validate (drift protocol)
-        if: github.event_name == 'pull_request'
+        if: matrix.profile == 'drift' && github.event_name == 'pull_request'
         run: npx qfai validate --profile drift --fail-on error
+
+  summary:
+    name: qfai validate (full profile, fail on error)
+    needs: validate
+    if: ${{ always() }}
+    runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
+    permissions: {}
+    timeout-minutes: 5
+    steps:
+      - name: Require every validation profile to succeed
+        shell: bash
+        env:
+          PROFILE_RESULT: ${{ needs.validate.result }}
+        run: |
+          if [ "${PROFILE_RESULT}" != "success" ]; then
+            echo "::error::qfai validate: validation profiles concluded ${PROFILE_RESULT:-missing}"
+            exit 1
+          fi
+          echo "qfai validate: all validation profiles passed"

@@ -1,7 +1,7 @@
 import path from "node:path";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import type { Dirent, Stats } from "node:fs";
+import type { BigIntStats, Dirent, Stats } from "node:fs";
 import {
   access,
   chmod,
@@ -31,6 +31,7 @@ import {
   ADOPTER_OWNED_ASSETS,
   ASSISTANT_ASSETS_LOCK_BASENAME,
   ASSISTANT_STAGING_PREFIX,
+  GOVERNED_ASSISTANT_LAYERS,
   aliasesShippedGovernedAsset,
   buildShippedAssistantHashes,
   hasRealGovernedAssistantParents,
@@ -211,6 +212,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     info(
       "NOTE: --force regenerates .qfai/assistant/skills/**, assistant/agents/** and the symlink assets (.agents/.claude/.github/.codex), and removes the legacy 10_workflow.md and the old wrappers. It also regenerates the qfai-provided plain files .github/copilot-instructions.md and .github/instructions/** (the code-review / principles review instructions) from the shipped templates, so local edits to those are lost. assistant/constitution/** and assistant/catalog/** are refreshed to the installed release only where the file still matches its .assets.lock.json record (a file this release no longer ships is likewise removed only when it matches the record); a diverged file is left untouched and reported as a manual merge (specs/contracts/steering and assistant/manifest/** are not overwritten — the manifest is user configuration edited by `qfai-configure`). Only agent-routing.yml is merged additively, filling in the skills / phases it is missing (existing phases are not rewritten).",
     );
+  }
+
+  if (!options.dryRun) {
+    await preflightGovernedCreation(assistantAssets, rootAssets, destRoot, options.force);
   }
 
   // If --upgrade-assistant-tree is supplied, run the migration FIRST.
@@ -416,11 +421,20 @@ export async function runInit(options: InitOptions): Promise<void> {
   // After the citation repair, which reads this run's own copy report: a master
   // replaced here was already on disk, so it is not one that pass is looking for.
   const ruleMasterResult = await updateUneditedRuleMasters(rootAssets, destRoot, options.dryRun);
+  const minimumMaster = path.join(destRoot, AGENTS_RULES_DIR_REL, "minimal-implementation.md");
+  const plannedSafetyFloor =
+    options.dryRun &&
+    (rootResult.copied.includes(minimumMaster) || ruleMasterResult.copied.includes(minimumMaster));
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    exclude: [...STANDARD_ASSET_PATHS],
+    exclude: [
+      ...STANDARD_ASSET_PATHS,
+      ...GOVERNED_ASSISTANT_LAYERS.map((layer) =>
+        path.relative(destQfai, joinAssistantLayer(destRoot, layer)),
+      ),
+    ],
   });
   const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, [...STANDARD_ASSET_PATHS], {
     force: options.force,
@@ -434,6 +448,8 @@ export async function runInit(options: InitOptions): Promise<void> {
   const governedResult = await syncGovernedAssistantAssets(assistantAssets, destRoot, {
     force: options.force,
     dryRun: options.dryRun,
+    rootAssets,
+    plannedSafetyFloor,
   });
 
   // The routing manifest is user configuration, so it is never overwritten —
@@ -642,6 +658,170 @@ function withoutPaths(paths: string[], excluded: ReadonlySet<string>): string[] 
   return paths.filter((candidate) => !excluded.has(candidate));
 }
 
+/** Reject unsupported exclusive creation before copying or migrating any assets. */
+async function preflightGovernedCreation(
+  assistantAssets: string,
+  rootAssets: string,
+  destRoot: string,
+  force: boolean,
+): Promise<void> {
+  let shipped: Record<string, string>;
+  try {
+    shipped = await buildShippedAssistantHashes(assistantAssets);
+  } catch (cause: unknown) {
+    throw new Error(
+      `qfai init cannot verify shipped governed assets in ${JSON.stringify(assistantAssets)}. Reinstall QFAI or restore its complete readable package assets, then rerun; no package assets were copied or migrated.`,
+      { cause },
+    );
+  }
+  const isContained = makeGovernedContainmentGuard(destRoot);
+  const probed = new Set<string>();
+  for (const relative of Object.keys(shipped)) {
+    if (!(await isContained(relative))) continue;
+    const dest = path.join(destRoot, ...ASSISTANT_DIR.split("/"), ...relative.split("/"));
+    if (
+      relative === "constitution/constitution.md" &&
+      !(await canPlanConstitutionCreation(rootAssets, destRoot))
+    ) {
+      continue;
+    }
+    try {
+      await lstat(dest);
+      if (!force || (await hashAssistantAssetFile(dest)) !== null) continue;
+    } catch (cause: unknown) {
+      if (!isEnoent(cause)) {
+        if (!force) continue;
+        throw new Error(
+          `qfai init cannot inspect ${JSON.stringify(dest)} for a force repair. Restore access and rerun; no package assets were copied or migrated.`,
+          { cause },
+        );
+      }
+    }
+    let directory = path.dirname(dest);
+    for (;;) {
+      try {
+        await stat(directory);
+        break;
+      } catch (cause: unknown) {
+        if (!isEnoent(cause) || directory === path.dirname(directory)) throw cause;
+        directory = path.dirname(directory);
+      }
+    }
+    if (probed.has(directory)) continue;
+    await probeExclusiveLink(directory);
+    probed.add(directory);
+  }
+}
+
+async function canPlanConstitutionCreation(rootAssets: string, destRoot: string): Promise<boolean> {
+  if (await canSyncConstitution(rootAssets, destRoot, false)) return true;
+  const name = "minimal-implementation.md";
+  const relative = path.join(AGENTS_RULES_DIR_REL, name);
+  if (!(await hasRealGovernedAssistantParents(destRoot, relative.split(path.sep).join("/")))) {
+    return false;
+  }
+  try {
+    await lstat(path.join(destRoot, relative));
+  } catch (cause: unknown) {
+    if (isEnoent(cause)) {
+      return (
+        (await hashAssistantAssetFile(path.join(rootAssets, relative), { allowSymlink: true })) !==
+        null
+      );
+    }
+    return false;
+  }
+  try {
+    const plans = await planRuleMasterUpdates(
+      path.join(rootAssets, AGENTS_RULES_DIR_REL),
+      path.join(destRoot, AGENTS_RULES_DIR_REL),
+    );
+    return plans.some((plan) => plan.name === name && plan.verdict === "update");
+  } catch {
+    return false;
+  }
+}
+
+async function probeExclusiveLink(directory: string): Promise<void> {
+  const source = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  const dest = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  let ownsSource = false;
+  let ownsDest = false;
+  let identity: BigIntStats | undefined;
+  const probeFailures: unknown[] = [];
+  try {
+    const handle = await open(source, "wx");
+    ownsSource = true;
+    try {
+      identity = await handle.stat({ bigint: true });
+    } catch (statCause: unknown) {
+      try {
+        await handle.close();
+      } catch (closeCause: unknown) {
+        throw new AggregateError(
+          [statCause, closeCause],
+          "Creation probe inspection and close failed.",
+          { cause: closeCause },
+        );
+      }
+      throw statCause;
+    }
+    await handle.close();
+    await link(source, dest);
+    ownsDest = true;
+  } catch (cause: unknown) {
+    probeFailures.push(
+      new Error(
+        `qfai init cannot prepare creation probes in ${JSON.stringify(directory)}. Restore write access and ensure the filesystem supports hard links, then rerun; no package assets were copied or migrated.`,
+        { cause },
+      ),
+    );
+  }
+  const cleanupFailures: Error[] = [];
+  const protectedEntries: Error[] = [];
+  for (const file of [ownsDest ? dest : null, ownsSource ? source : null]) {
+    if (file === null) continue;
+    try {
+      const current = await lstat(file, { bigint: true });
+      if (
+        identity === undefined ||
+        !current.isFile() ||
+        current.dev !== identity.dev ||
+        current.ino !== identity.ino
+      ) {
+        protectedEntries.push(new Error(JSON.stringify(file)));
+        continue;
+      }
+    } catch (cause: unknown) {
+      if (isEnoent(cause)) continue;
+      protectedEntries.push(new Error(JSON.stringify(file), { cause }));
+      continue;
+    }
+    try {
+      await rm(file, { force: true });
+    } catch (cause: unknown) {
+      cleanupFailures.push(new Error(JSON.stringify(file), { cause }));
+    }
+  }
+  if (protectedEntries.length > 0) {
+    const cleanupNote =
+      cleanupFailures.length === 0
+        ? ""
+        : ` Other probe cleanup failed at ${cleanupFailures.map((failure) => failure.message).join(", ")}; remove only verified, unchanged probe files before retrying.`;
+    throw new AggregateError(
+      [...probeFailures, ...protectedEntries, ...cleanupFailures],
+      `qfai init could not verify creation probe ownership at ${protectedEntries.map((entry) => entry.message).join(", ")}. Do not delete these occupied paths. Restore access and inspect ownership before rerunning; no package assets were copied or migrated.${cleanupNote}`,
+    );
+  }
+  if (cleanupFailures.length > 0) {
+    throw new AggregateError(
+      [...probeFailures, ...cleanupFailures],
+      `qfai init could not remove creation probes: ${cleanupFailures.map((failure) => failure.message).join(", ")}. Restore access, remove only these probe files, then rerun; no package assets were copied or migrated.`,
+    );
+  }
+  if (probeFailures.length > 0) throw probeFailures[0];
+}
+
 type GovernedAssetsResult = {
   copied: string[];
   skipped: string[];
@@ -667,7 +847,7 @@ type GovernedAssetsResult = {
 async function syncGovernedAssistantAssets(
   assistantAssets: string,
   destRoot: string,
-  options: { force: boolean; dryRun: boolean },
+  options: { force: boolean; dryRun: boolean; rootAssets: string; plannedSafetyFloor: boolean },
 ): Promise<GovernedAssetsResult> {
   // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree segments
   // come from `assistantPaths.ts` in init and in validate alike, so a future
@@ -709,20 +889,46 @@ async function syncGovernedAssistantAssets(
     }
     const currentHash = await hashAssistantAssetFile(dest);
     const previousHash = previous[relative];
+    if (
+      relative === "constitution/constitution.md" &&
+      !(await canSyncConstitution(options.rootAssets, destRoot, options.plannedSafetyFloor))
+    ) {
+      skipped.push(dest);
+      if (previousHash !== undefined) recorded[relative] = previousHash;
+      const recovery =
+        currentHash !== null
+          ? "A manual merge of the safety master and existing constitution is needed; keep adopter edits protected."
+          : (await pathExists(dest).catch(() => true))
+            ? "The constitution path is occupied or unreadable. Restore access to any existing constitution, or remove or relocate the non-file occupant while protecting adopter content. A manual merge of existing policy is needed. Keep master edits by manually installing and reconciling the constitution. To install automatically, back up customizations, restore the exact shipped master, then rerun `qfai init`."
+            : "Keep master edits by manually installing and reconciling the constitution. To install automatically, back up customizations, restore the exact shipped master, then rerun `qfai init`.";
+      manualMergeNotes.push(
+        `NOTE: ${formatReportPath(dest)} was not installed or refreshed: .agents/rules/minimal-implementation.md could not be verified as the shipped master for the safety floor. ${recovery}`,
+      );
+      continue;
+    }
 
     if (currentHash === shippedHash) {
+      skipped.push(dest);
       recorded[relative] = shippedHash;
       continue;
     }
 
     if (currentHash === null) {
-      await restoreUnreadableGovernedAsset(source, dest, shippedHash, previousHash, options, {
-        copied,
-        skipped,
-        recorded,
-        manualMergeNotes,
-        relative,
-      });
+      await restoreUnreadableGovernedAsset(
+        destRoot,
+        source,
+        dest,
+        shippedHash,
+        previousHash,
+        options,
+        {
+          copied,
+          skipped,
+          recorded,
+          manualMergeNotes,
+          relative,
+        },
+      );
       continue;
     }
 
@@ -831,26 +1037,11 @@ function escapedGovernedPathNote(dest: string): string {
 }
 
 /**
- * Writes `source` onto the governed path `dest` atomically.
- *
- * The copy lands on a temporary beside the target first and is then `rename`d
- * over it, so a failure — a full disk, a read fault, a process killed between
- * the two steps — leaves the previous rule in place instead of a hole where a
- * normative file used to be. Deleting first and copying second had exactly
- * that window, and the file it removed was one qfai had already vouched for.
- *
- * `rename` also keeps the property the delete-first version was written for:
- * it replaces the directory entry itself, so a governed path left as a symlink
- * is replaced, never followed to overwrite whatever it points at.
- *
- * `expectedHash`, where the caller has one, is re-read immediately before the
- * `rename`. The refresh decides what to do from a hash taken earlier, and the
- * atomic staging only protects the *old* content from a failed copy — it does
- * nothing about an editor, or a concurrent `init`, that rewrote the target in
- * between, whose work the unconditional `rename` then discarded. Re-reading
- * does not make the swap atomic — POSIX has no conditional `rename` — but it
- * closes the window down to the two syscalls, and a target that moved is
- * reported instead of overwritten.
+ * Copies to a sibling staging file before publishing complete bytes.
+ * Replacement renames the directory entry, never following a target symlink.
+ * An expected hash is rechecked immediately before publication; this narrows,
+ * but cannot eliminate, the race with an editor. Create-only publication uses
+ * an exclusive hard link and never overwrites a path created concurrently.
  */
 export type GovernedWriteOutcome = "replaced" | "target-changed";
 
@@ -864,10 +1055,95 @@ export async function replaceGovernedAsset(
   source: string,
   dest: string,
   expectedHash?: string,
+  mode: "replace" | "create-only" = "replace",
 ): Promise<GovernedWriteOutcome> {
   const directory = path.dirname(dest);
   await mkdir(directory, { recursive: true });
   const staging = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  if (mode === "create-only") {
+    let handle: FileHandle;
+    try {
+      handle = await open(staging, "wx");
+    } catch (cause: unknown) {
+      throw new Error(
+        `qfai init cannot create staging file ${JSON.stringify(staging)} for ${JSON.stringify(dest)}. Restore write access and inspect ownership before rerunning; preserve any occupied staging path and existing destination content.`,
+        { cause },
+      );
+    }
+    let identity: BigIntStats | undefined;
+    let outcome: GovernedWriteOutcome = "replaced";
+    let published = false;
+    const failures: unknown[] = [];
+    const ownsPath = async (target: string): Promise<boolean> => {
+      const current = await lstat(target, { bigint: true });
+      return (
+        identity !== undefined &&
+        current.isFile() &&
+        current.dev === identity.dev &&
+        current.ino === identity.ino
+      );
+    };
+    try {
+      identity = await handle.stat({ bigint: true });
+      await handle.writeFile(await readFile(source));
+      await handle.chmod((await stat(source)).mode & 0o7777);
+      if (expectedHash !== undefined && (await hashAssistantAssetFile(dest)) !== expectedHash) {
+        outcome = "target-changed";
+      } else {
+        if (!(await ownsPath(staging))) {
+          throw new Error(
+            `qfai init cannot publish ${JSON.stringify(dest)} because staging ownership changed at ${JSON.stringify(staging)}. Inspect ownership before retrying.`,
+          );
+        }
+        await link(staging, dest);
+        published = true;
+        if (!(await ownsPath(dest))) outcome = "target-changed";
+      }
+    } catch (cause: unknown) {
+      failures.push(cause);
+    }
+    let closed = true;
+    try {
+      await handle.close();
+    } catch (cause: unknown) {
+      closed = false;
+      failures.push(cause);
+    }
+    let present = true;
+    let removable = false;
+    let inspectionNote = "";
+    try {
+      removable = await ownsPath(staging);
+    } catch (cause: unknown) {
+      if (isEnoent(cause)) present = false;
+      else inspectionNote = ` Inspection failed: ${JSON.stringify(String(cause))}.`;
+    }
+    if (present && !removable) {
+      warn(
+        `NOTE: qfai init could not verify staging ownership at ${JSON.stringify(staging)}.${inspectionNote} Do not delete this occupied path. Restore access and inspect ownership before rerunning; keep any existing destination content at ${JSON.stringify(dest)}.`,
+      );
+    }
+    if (removable && !closed) {
+      warn(
+        `NOTE: qfai init retained staging file ${JSON.stringify(staging)} because its handle could not be closed. Restore access and close the handle before removing only this verified staging file; keep any existing destination content at ${JSON.stringify(dest)}.`,
+      );
+    }
+    if (removable && closed) {
+      await rm(staging, { force: true }).catch(() => {
+        const result = published ? "created" : "could not create";
+        warn(
+          `NOTE: qfai init ${result} ${JSON.stringify(dest)}, but could not remove staging file ${JSON.stringify(staging)}. Restore access, remove only this staging file, then rerun qfai init; keep any existing destination content.`,
+        );
+      });
+    }
+    if (failures.length > 1) {
+      throw new AggregateError(failures, "Governed asset creation and handle close failed.", {
+        cause: failures.at(-1),
+      });
+    }
+    if (failures.length === 1) throw failures[0];
+    return outcome;
+  }
   try {
     await copyFile(source, staging, constants.COPYFILE_EXCL);
     if (expectedHash !== undefined && (await hashAssistantAssetFile(dest)) !== expectedHash) {
@@ -880,7 +1156,7 @@ export async function replaceGovernedAsset(
     return "replaced";
   } catch (error: unknown) {
     await rm(staging, { force: true }).catch(() => {
-      // Best effort: the write fault below is the one worth reporting.
+      // Best effort; preserve the original replacement failure.
     });
     throw error;
   }
@@ -1020,6 +1296,7 @@ const PRESERVED_BODY_HEADING = "## The README that was here before qfai init";
  * put there is not a decision `qfai init` gets to make silently.
  */
 async function restoreUnreadableGovernedAsset(
+  destRoot: string,
   source: string,
   dest: string,
   shippedHash: string,
@@ -1037,45 +1314,63 @@ async function restoreUnreadableGovernedAsset(
   // parent, say) reads as occupied: what could not be inspected must not be
   // clobbered.
   const occupied = await pathExists(dest).catch(() => true);
-  if (!occupied) {
-    if (!options.dryRun) {
-      await replaceGovernedAsset(source, dest);
+  if (occupied && options.force && !options.dryRun) {
+    // Recheck the displaced occupant before discarding it. A concurrent
+    // readable regular file belongs to the adopter even under --force.
+    const outcome = await displaceUnreadableGovernedAsset(dest);
+    if (outcome !== "displaced") {
+      // This readable regular file is not the occupant the repair may replace.
+      out.skipped.push(dest);
+      if (previousHash !== undefined) {
+        out.recorded[out.relative] = previousHash;
+      }
+      out.manualMergeNotes.push(
+        typeof outcome === "object"
+          ? `NOTE: ${dest} was replaced by a regular file just before the repair, so the repair was rolled back; the original content could not be restored and is parked at ${outcome.orphaned}.`
+          : `NOTE: ${dest} was replaced by a regular file just before the repair, so it was left as it is (run \`qfai init --force\` again).`,
+      );
+      return;
     }
-    out.copied.push(dest);
-    out.recorded[out.relative] = shippedHash;
+  }
+
+  if (occupied && !options.force) {
+    out.skipped.push(dest);
+    if (previousHash !== undefined) out.recorded[out.relative] = previousHash;
     return;
   }
 
-  if (options.force) {
-    if (!options.dryRun) {
-      // The occupant is moved aside and re-examined before anything is
-      // destroyed, for the reason the refresh and the retire were given the
-      // same treatment: `rm` acts on a pathname, and a process that put an
-      // ordinary project-owned file there between the probe above and this
-      // line lost it to a deletion justified by an entry nobody re-read. The
-      // rename carries whatever inode is at the path at that instant; the
-      // check then runs against the moved entry, whose name nothing else
-      // knows.
-      const outcome = await displaceUnreadableGovernedAsset(dest);
-      if (outcome !== "displaced") {
-        // It is a readable regular file now. That is not the occupied path
-        // this branch was entered for, and overwriting it here would discard
-        // content this run never inspected.
-        out.skipped.push(dest);
-        if (previousHash !== undefined) {
-          out.recorded[out.relative] = previousHash;
-        }
-        out.manualMergeNotes.push(
-          typeof outcome === "object"
-            ? `NOTE: ${dest} was replaced by a regular file just before the repair, so the repair was rolled back; the original content could not be restored and is parked at ${outcome.orphaned}.`
-            : `NOTE: ${dest} was replaced by a regular file just before the repair, so it was left as it is (run \`qfai init --force\` again).`,
-        );
+  if (!options.dryRun) {
+    let concurrent: boolean;
+    try {
+      const outcome = await replaceGovernedAsset(source, dest, undefined, "create-only");
+      concurrent =
+        outcome === "target-changed" || (await hashAssistantAssetFile(dest)) !== shippedHash;
+    } catch (error: unknown) {
+      if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST") {
+        throw error;
+      }
+      concurrent = true;
+    }
+    if (concurrent) {
+      out.skipped.push(dest);
+      const contained = await hasRealGovernedAssistantParents(
+        destRoot,
+        `${ASSISTANT_DIR}/${out.relative}`,
+      );
+      if (contained && (await hashAssistantAssetFile(dest)) === shippedHash) {
+        out.recorded[out.relative] = shippedHash;
         return;
       }
-      await replaceGovernedAsset(source, dest);
+      if (previousHash !== undefined) out.recorded[out.relative] = previousHash;
+      out.manualMergeNotes.push(
+        `NOTE: ${formatReportPath(dest)} was created during initialization and left unchanged; keep adopter edits protected.`,
+      );
+      return;
     }
-    out.copied.push(dest);
-    out.recorded[out.relative] = shippedHash;
+  }
+  out.copied.push(dest);
+  out.recorded[out.relative] = shippedHash;
+  if (occupied) {
     // Tense follows the run: under `--dry-run` nothing was removed and nothing
     // was written, and an operator who reads only the preview must not come
     // away believing the occupied path has already been repaired.
@@ -1084,12 +1379,6 @@ async function restoreUnreadableGovernedAsset(
         ? `NOTE: ${dest} is occupied by something other than a regular file (a directory, a special file, a broken symlink), so it will be replaced with the shipped file (not done: --dry-run).`
         : `NOTE: ${dest} was occupied by something other than a regular file (a directory, a special file, a broken symlink), so it was replaced with the shipped file.`,
     );
-    return;
-  }
-
-  out.skipped.push(dest);
-  if (previousHash !== undefined) {
-    out.recorded[out.relative] = previousHash;
   }
 }
 
@@ -2924,6 +3213,24 @@ async function ensureLegacyEvidenceIgnoreNegations(
  */
 /** The masters' directory, relative to a project root and to the shipped tree alike. */
 const AGENTS_RULES_DIR_REL = path.join(".agents", "rules");
+
+/** The constitution cannot demote obligations an older or edited floor still omits. */
+async function canSyncConstitution(
+  rootAssets: string,
+  destRoot: string,
+  plannedSafetyFloor: boolean,
+): Promise<boolean> {
+  const relative = path.join(AGENTS_RULES_DIR_REL, "minimal-implementation.md");
+  if (!(await hasRealGovernedAssistantParents(destRoot, relative.split(path.sep).join("/")))) {
+    return false;
+  }
+  if (plannedSafetyFloor) return true;
+  const [shipped, installed] = await Promise.all([
+    hashAssistantAssetFile(path.join(rootAssets, relative), { allowSymlink: true }),
+    hashAssistantAssetFile(path.join(destRoot, relative)),
+  ]);
+  return shipped !== null && shipped === installed;
+}
 
 /**
  * Brings each shipped rule master the project has not edited up to this
