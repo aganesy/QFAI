@@ -1,10 +1,9 @@
 /**
  * The runner projects as the workspace declares them, read as text.
  *
- * Two gates ask the same question of that file — which globs a project
- * collects, and how many test files each names — and a second parser beside the
- * first is two answers to one question: they differed already, one throwing on
- * a glob shape it could not read where the other passed it over.
+ * Two gates ask the same question of that file — which globs a project collects,
+ * and how many test files each names — and they read it here, so the answer is
+ * one answer.
  *
  * `vitest.workspace.ts` carries the two shapes this depends on, and says so in
  * its own comment: every project's `name` is a string literal, and its
