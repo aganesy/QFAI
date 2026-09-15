@@ -20,6 +20,7 @@ import { defaultConfig } from "../../../src/core/config.js";
 import { hashDesignMd } from "../../../src/core/design/designMd.js";
 import { writeDiscussionCurrentId } from "../../../src/core/state.js";
 import {
+  PROCUREMENT_PLACEHOLDERS,
   validatePrototypingDesignContractReadiness,
   validateSddDesignContractReadiness,
 } from "../../../src/core/validators/designContractReadiness.js";
@@ -380,6 +381,315 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(dcon013.some((i) => i.message.includes("missing required field 'finalIterIndex'"))).toBe(
       true,
     );
+  });
+
+  // `procurement` is what `/qfai-implement` installs from rather than
+  // rebuilding, and what the reviewer reads instead of judging a resemblance.
+  // A row a reader cannot act on leaves both doing the thing the manifest
+  // exists to stop.
+  describe("the procurement manifest", () => {
+    /** The seeded handoff with `procurement` set to `body`. */
+    const withProcurement = async (root: string, body: readonly string[]): Promise<void> => {
+      await writeFile(
+        path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+        [
+          "finalIterIndex: 1",
+          'finalArtifact: ".qfai/prototypes/final/index.html"',
+          'designMdPath: "DESIGN.md"',
+          `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
+          'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+          'implementationNotes: "test"',
+          ...body,
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+    };
+
+    const seeded = async (body: readonly string[]): Promise<string[]> => {
+      const root = await newTempDir();
+      await seedUiBearingProject(root);
+      await seedDesignMdAndLock(root);
+      await seedPrototypingDesignYamls(root);
+      await withProcurement(root, body);
+      const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+      return issues.filter((i) => i.code === "QFAI-DCON-013").map((i) => i.message);
+    };
+
+    it("reports a list declared and left empty", async () => {
+      // `procured:` with nothing under it parses as null. That is a declaration
+      // saying nothing, not an omission, and reading the two as one let it past
+      // the shape check — the same distinction the key itself is held to.
+      const messages = await seeded(["procurement:", "  procured:"]);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("'procurement.procured' must be a list");
+    });
+
+    it("reads only the mapping's own keys", async () => {
+      // `key in` reaches the prototype, so `constructor` and `toString` read as
+      // declared lists and the value read back was a function rather than
+      // anything the contract describes.
+      const messages = await seeded(["procurement:", "  constructor:", "    - screen: a"]);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("'constructor'");
+    });
+
+    it("names the placeholders the shipped example writes", async () => {
+      // Two spellings of one placeholder drift in silence: the example keeps
+      // writing its phrase and the check stops recognising it, so an unfilled
+      // copy reads as a manifest somebody wrote.
+      const handoff = await readFile(
+        path.join(
+          getInitAssetsDir(),
+          ".qfai/assistant/skills/qfai-prototyping/references/handoff.md",
+        ),
+        "utf-8",
+      );
+      for (const placeholder of PROCUREMENT_PLACEHOLDERS) {
+        expect(handoff).toContain(placeholder);
+      }
+    });
+
+    for (const item of ["<DataTable>", '<DataTable density="compact">', "<button type='submit'>"]) {
+      it(`leaves a component written as ${item} alone`, async () => {
+        // These columns are free text, and a component is named and invoked in
+        // angle brackets. Any pattern wide enough to cover the example's
+        // phrases covers one of these, and reports a row that was written.
+        expect(
+          await seeded([
+            "procurement:",
+            "  procured:",
+            '    - screen: "dashboard"',
+            '      region: "summary cards"',
+            `      item: "${item.replace(/"/g, '\\"')}"`,
+          ]),
+        ).toEqual([]);
+      });
+    }
+
+    it("leaves a component named in angle brackets alone", async () => {
+      // Every placeholder the shipped example writes is two words or more, and
+      // a one-word angle token is how a component is named. Rejecting it would
+      // report a row somebody wrote.
+      expect(
+        await seeded([
+          "procurement:",
+          "  procured:",
+          '    - screen: "dashboard"',
+          '      region: "summary cards"',
+          '      item: "<DataTable>"',
+        ]),
+      ).toEqual([]);
+    });
+
+    it.each([
+      ["a code span", "`TBD`"],
+      ["a quoted word", "'TODO'"],
+      ["brackets", "[tbd]"],
+      ["a trailing stop", "TBD."],
+      ["an emphasised word", "**TODO**"],
+      ["a word beside tbd", "TBA"],
+      ["a marker", "XXX"],
+      ["a question", "???"],
+      ["a named decision", "TODO: choose component"],
+      ["a named decision with no space", "TBD:pick one"],
+      ["a shipped phrase with a stop", "<screen id>."],
+      ["a shipped phrase in brackets", "[<what part of the screen>]"],
+    ])("reports a placeholder written as %s", async (_name, cell) => {
+      // Read whole, each of these is a value nothing recognises, so the row
+      // passed carrying nothing for the implementer to install.
+      const messages = await seeded([
+        "procurement:",
+        "  procured:",
+        '    - screen: "dashboard"',
+        '      region: "summary cards"',
+        `      item: ${JSON.stringify(cell)}`,
+      ]);
+      expect(messages.join("\n")).toContain("item");
+    });
+
+    it.each([
+      ["a component in angle brackets", "<DataTable>"],
+      ["a component with props", '<DataTable density="compact">'],
+      ["a sentence opening with none", "none of the catalogue items fit the density"],
+      ["a name holding a colon", "ui:DataTable"],
+      ["a quoted component", "`DataTable`"],
+    ])("leaves %s alone", async (_name, cell) => {
+      expect(
+        await seeded([
+          "procurement:",
+          "  procured:",
+          '    - screen: "dashboard"',
+          '      region: "summary cards"',
+          `      item: ${JSON.stringify(cell)}`,
+        ]),
+      ).toEqual([]);
+    });
+
+    describe("one realisation per screen region", () => {
+      const row = (screen: string, region: string, cell: string, value: string): string[] => [
+        `    - screen: "${screen}"`,
+        `      region: "${region}"`,
+        `      ${cell}: "${value}"`,
+      ];
+
+      it("reports a region realised twice in one list", async () => {
+        // The contract says each region names what realises it, singular. Two
+        // rows for one region leave an implementer without an answer to what to
+        // install, and reading rows independently let both pass.
+        const messages = await seeded([
+          "procurement:",
+          "  procured:",
+          ...row("dashboard", "summary cards", "item", "catalogue stat block"),
+          ...row("dashboard", "summary cards", "item", "the project's own card"),
+        ]);
+        expect(messages).toHaveLength(1);
+        expect(messages[0]).toContain("dashboard / summary cards");
+        expect(messages[0]).toContain("procurement.procured[0]");
+        expect(messages[0]).toContain("procurement.procured[1]");
+      });
+
+      it("reports a region that is both procured and authored", async () => {
+        // The contradiction across the two lists is the sharper one: install
+        // this, and it was written because nothing served.
+        const messages = await seeded([
+          "procurement:",
+          "  procured:",
+          ...row("dashboard", "trend sparkline", "item", "catalogue chart"),
+          "  authored:",
+          ...row("dashboard", "trend sparkline", "why", "no catalogue entry plots a series"),
+        ]);
+        expect(messages).toHaveLength(1);
+        expect(messages[0]).toContain("procurement.procured[0]");
+        expect(messages[0]).toContain("procurement.authored[0]");
+      });
+
+      it("says nothing about two regions of one screen", async () => {
+        expect(
+          await seeded([
+            "procurement:",
+            "  procured:",
+            ...row("dashboard", "summary cards", "item", "catalogue stat block"),
+            ...row("dashboard", "trend sparkline", "item", "catalogue chart"),
+          ]),
+        ).toEqual([]);
+      });
+    });
+
+    it("says nothing when the key is absent", async () => {
+      // The handoff contract lets a screen drawn entirely from what the
+      // project already had omit both lists, so absence is legal here.
+      expect(await seeded([])).toEqual([]);
+    });
+
+    it("reports a key present and saying nothing", async () => {
+      // A bare `procurement:` parses as null. The contract permits omitting the
+      // key, not declaring it and leaving it empty, and reading the two as one
+      // let a present declaration past the shape check.
+      const messages = await seeded(["procurement:"]);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("must be a mapping");
+    });
+
+    it("reports the shipped example, copied and filled in with nothing", async () => {
+      // The documented example writes its cells as `<screen id>` and the like,
+      // and the word-form placeholder list knows none of them — so the unfilled
+      // template satisfied the check written to catch it. Read out of the
+      // shipped file rather than restated, so the two cannot drift apart.
+      const handoff = await readFile(
+        path.join(
+          getInitAssetsDir(),
+          ".qfai/assistant/skills/qfai-prototyping/references/handoff.md",
+        ),
+        "utf-8",
+      );
+      const lines = handoff.split(/\r?\n/);
+      const at = lines.findIndex((line) => line.trimEnd() === "procurement:");
+      expect(at, "handoff.md no longer shows a procurement block").toBeGreaterThanOrEqual(0);
+      const block: string[] = [];
+      for (const line of lines.slice(at)) {
+        if (block.length > 0 && /^\S/.test(line)) break;
+        block.push(line);
+      }
+      expect(block.join("\n")).toContain("<screen id>");
+
+      const messages = await seeded(block);
+
+      // Every row of the example, each named for the cells it does not carry.
+      expect(messages.length).toBeGreaterThan(0);
+      for (const message of messages) expect(message).toContain("names no screen, region");
+    });
+
+    it("reports a list name nothing reads", async () => {
+      // A closed key set, as the sibling schema keeps. Misspelled, both known
+      // names are absent, so no row is read and the manifest passes while
+      // exposing nothing to either consumer.
+      const messages = await seeded(["procurement:", "  procurred:", '    - screen: "dashboard"']);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("'procurred'");
+      expect(messages[0]).toContain("which nothing reads");
+    });
+
+    it("says nothing about well-formed rows", async () => {
+      expect(
+        await seeded([
+          "procurement:",
+          "  procured:",
+          '    - screen: "dashboard"',
+          '      region: "summary cards"',
+          '      item: "catalogue stat block"',
+          "  authored:",
+          '    - screen: "dashboard"',
+          '      region: "trend sparkline"',
+          '      why: "no catalogue entry plots a series under 80px"',
+        ]),
+      ).toEqual([]);
+    });
+
+    it("reports an authored region that records no reason", async () => {
+      // Rung 5 is the only rung that has to explain itself. A row with no
+      // reason is what an unexplained rung looks like by the time it reaches
+      // the handoff, and the reviewer's last-resort criterion passes it.
+      const messages = await seeded([
+        "procurement:",
+        "  authored:",
+        '    - screen: "dashboard"',
+        '      region: "trend sparkline"',
+      ]);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("procurement.authored[0]");
+      expect(messages[0]).toContain("names no why");
+    });
+
+    it("reports a procured region that names nothing to install", async () => {
+      const messages = await seeded([
+        "procurement:",
+        "  procured:",
+        '    - screen: "dashboard"',
+        '      region: "summary cards"',
+        '      item: "TBD"',
+      ]);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("procurement.procured[0]");
+      expect(messages[0]).toContain("names no item");
+    });
+
+    it("reports a list that is not a list, and a key that is not a mapping", async () => {
+      expect((await seeded(["procurement:", '  procured: "a card"']))[0]).toContain(
+        "'procurement.procured' must be a list",
+      );
+      expect((await seeded(['procurement: "none"']))[0]).toContain(
+        "field 'procurement' must be a mapping",
+      );
+    });
+
+    it("names every missing cell of a row at once", async () => {
+      // One finding per row rather than one per cell: the fix is to write the
+      // row, and three findings for one row is the same edit read three times.
+      const messages = await seeded(["procurement:", "  procured:", "    - {}"]);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("names no screen, region, item");
+    });
   });
 
   it("non-string handoff field (finalArtifact as object) is rejected with DCON-013", async () => {

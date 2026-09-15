@@ -367,13 +367,139 @@ file, so an entry here is what makes that citation checkable.
   everywhere.
 - Decision, what stays uncapped: the override. A comparison that could not oversubscribe could not
   measure what oversubscribing costs, which is the measurement above. `QFAI_TEST_MAX_WORKERS` is
-  therefore honoured as asked, and a row pins that. The within-file concurrency axis is uncapped
-  too, for a different reason: it bounds concurrent cases inside one process, which are not forks,
-  and no measurement has been taken on it.
+  therefore honoured as asked, and a row pins that.
+- Decision, the scope of this entry: the worker axis. The within-file concurrency axis bounds
+  concurrent cases inside one process rather than forks, so the measurement above does not reach
+  it and this cap does not cover it. That axis now carries a cap of its own, on a sweep of its own:
+  `DR-0017-0013`. Neither axis is uncapped, and neither is unmeasured.
 - Consequences: on four cores the suite runs at four forks rather than ten, and the reported
   collect and test totals stop overstating the work by the time spent waiting. One cost is accepted
   and named: a run on a small machine no longer reproduces the fork count a large one uses, so a
   race that needs ten forks to surface now needs the override to reproduce. The floor lane already
   sets the override to the machine's own count and is unaffected.
 - Related: AC-0017-0026, AC-0017-0028, BR-0017-0030, BR-0017-0048, BR-0017-0049, BR-0017-0051,
-  EX-0017-0049, TC-0017-0061, TC-0017-0065, DR-0017-0009
+  EX-0017-0049, TC-0017-0061, TC-0017-0065, DR-0017-0009, DR-0017-0013
+
+### DR-0017-0011: the engines-floor lane is sliced, and the runner time that costs is accepted
+
+- Status: accepted
+- Context: the `node-floor` lane runs the package test suite on the floor `engines.node` promises,
+  and it ran the whole suite in one process pool. At 312 s it was the longest job in the run and set
+  the wall clock for every other lane, which is the same shape that put the `test` job behind a
+  matrix. The lane now expands over the seven slices the `test` job declares —
+  `core, validators, integration, e2e, cli, unit, scripts` — with `fail-fast: false`, each leg
+  pinning and asserting the floor, and the build running on the `e2e` and `integration` legs only.
+- Decision, the measurement, because `BR-0017-0030` forbids a wall-clock or parallelism claim
+  landing on argument. One full run per side, the last successful run of `main` against the first
+  complete run on the branch:
+  - the floor lane's critical path went from **312 s** to **100 s**, its longest leg;
+  - the run's wall clock went from **328 s** to **128 s**;
+  - runner time went from **1018 s** to **1274 s**.
+    The full per-job tables are in `.qfai/evidence/timing-node-floor-spec-0017.md`, and both totals
+    are derived from them rather than reported beside them.
+- Decision, the regression, recorded as the reason rather than re-measured: runner time rose 256 s,
+  a quarter. The cause is structural — one job became seven, so six further checkouts and toolchain
+  setups are paid and the build runs on two floor legs where it ran on one — so no second comparison
+  would improve it. `AC-0017-0015` makes a measured negative result an accepting outcome precisely
+  so that re-running until the answer agrees is not the cheapest route. The 212 s off the lane's
+  critical path is what that quarter buys.
+- Decision, what was NOT changed: the aggregate verdict. A matrix job contributes one rolled-up
+  result, so the pinned check-name set is untouched — which is the constraint that keeps
+  `TC-0017-0032` open, because a producer job for the build would add a name no agent can configure.
+- Consequences: `lint` now sets the wall clock, at 120 s against 100 s for the longest floor leg.
+  Slicing the floor lane further buys nothing until `lint` is shorter, so the next lane to look at is
+  named by the measurement rather than chosen. A second cost is accepted and named: a failure that
+  only appears while slices contend for one pool is no longer reachable on the floor, because the
+  legs no longer share one.
+- Related: AC-0017-0014, AC-0017-0015, AC-0017-0028, BR-0017-0030, NFR-0001, NFR-0004,
+  `.qfai/evidence/timing-node-floor-spec-0017.md`
+
+### DR-0017-0012: the lint gate runs five lanes, and the grouping is a constraint
+
+- Status: accepted
+- Context: `DR-0017-0011` ends by naming `lint` as the lane that now sets the run's wall clock, at
+  120 s against 100 s for the longest engines-floor leg. The gate ran two lanes: the mirror-surface
+  runner, and one serial chain of eighteen commands beside it. It now starts five, and
+  `packages/qfai/tests/core/prFixMonitor.test.ts` runs its fifteen cases concurrently, which
+  shortens the mirror lane those five contend with.
+- Decision, the measurement, because `BR-0017-0030` forbids a wall-clock or parallelism claim
+  landing on argument. `pnpm ci:lint` end to end, same machine, nothing else running, three runs per
+  shape, the "before" taken by stashing the change on this same branch so both shapes met the same
+  tree:
+  - median wall clock **114.5 s** before, **80.1 s** after — 34.4 s, a 30.0% fall;
+  - the two ranges do not overlap: the slowest run after, 83.6 s, beats the fastest run before,
+    112.6 s, by 29.0 s. That non-overlap is what three runs a side establishes, and it is a stronger
+    claim than the median gap, which carries the variance of six runs.
+  - every run of both shapes exited 0. The per-run tables are in
+    `.qfai/evidence/timing-lint-concurrency-spec-0017.md`.
+- Decision, the grouping, recorded because two of its edges are constraints rather than
+  preferences. The five lanes are `lint:mirror-surface`, `format:check`, `lint`, the document and
+  shipped-surface structure checks, and the eleven repository readers:
+  - **seven of the eleven readers invoke `git`**, and all seven sit in one serial lane, so no two
+    git subprocesses in the chain run concurrently and no index contention is introduced;
+  - **two of the eighteen commands each start a forking test runner**. They share one lane and are
+    kept away from the mirror lane, because oversubscribing forks past the core count is measured —
+    in `DR-0017-0013` below — as both slower and noisier.
+- Decision, what sets the floor now: `format:check`. No regrouping moves the number further; only
+  splitting the formatter itself would, which is a change nobody has asked for.
+- Consequences: peak concurrency is five lanes, sampled every 400 ms on a real run, against four
+  cores on the runner and fourteen on the machine measured. That is more processes than cores there,
+  which is the oversubscription `DR-0017-0013` charges a cost for. The local direction is
+  unambiguous and the CI figure is not: it must be read off the pull-request run rather than
+  inferred, and it is recorded as a limit of this measurement rather than predicted. No wall-clock
+  regression was measured locally, so `AC-0017-0015` has nothing to record here.
+- Related: AC-0017-0014, AC-0017-0015, BR-0017-0030, BR-0017-0031, NFR-0001, NFR-0004,
+  `DR-0017-0011`, `DR-0017-0013`, `.qfai/evidence/timing-lint-concurrency-spec-0017.md`
+
+### DR-0017-0013: the within-file concurrency axis is held to the cores the machine has
+
+- Status: accepted
+- Context: `BR-0017-0048` declares ten on both tunable axes. `DR-0017-0010` held the worker axis to
+  `Math.min(DECLARED_START, availableParallelism())` and left this one open, because it bounds
+  concurrent cases inside one process rather than forks and no measurement had been taken on it.
+  This entry takes that measurement and closes it the same way.
+- Decision, the measurement, because `BR-0017-0030` forbids a parallelism claim landing on argument.
+  `packages/qfai/tests/core/prFixMonitor.test.ts` standalone — fifteen cases, each spawning a shell
+  that runs a script through its poll loop and shelling out once per poll, which makes it the
+  heaviest concurrent file in the suite. One full run per setting, 15 of 15 passing every time,
+  swept at 1, 2, 4, 5, 8, 10 and 15 on two core counts:
+  - **four cores**: fastest is four at **36.1 s**; ten is **47.0 s**, 10.9 s slower, **30.2%** — well
+    outside the ten per cent `EX-0017-0049` allows. A repeated pair on the same core count returned
+    the same verdict three times.
+  - **fourteen cores**: fastest is four at **25.2 s**; the curve is flat from four upward, a 3.5 s
+    band, and ten sits at **27.7 s**, **9.9%** off the fastest and inside the same allowance.
+  - The full sweep is in `.qfai/evidence/timing-lint-concurrency-spec-0017.md`.
+- Decision: `maxConcurrency` is declared as `Math.min(DECLARED_START, availableParallelism())` with
+  its own override, so the runner is handed four on a four-core machine — the fastest measured there
+  — and ten on a fourteen-core one. `EX-0017-0049` asks for a written reason where the adopted value
+  is not the fastest, and the reason for the fourteen-core case is `BR-0017-0051`: ten is the user's
+  declared starting value, and adopting four on the strength of this table is the substitution no
+  agent may make. `EX-0017-0049` is written for the worker axis; the same test is applied here by
+  analogy, because `BR-0017-0048` declares ten on both axes and no example fixes an allowance for
+  the second.
+- Decision, what was NOT done: the declaration was not revised. `DECLARED_START` is still ten, both
+  axes are still overridable, and `QFAI_TEST_MAX_CONCURRENCY` is still honoured as asked — which is
+  the whole of what `BR-0017-0048` requires, and what let this sweep oversubscribe in the first
+  place.
+- Decision, the correctness fix that makes the cap safe to declare: two assertions in
+  `TC-0017-0061` compared each project's `maxConcurrency` against the literal declared start. With
+  the cap in place both would have failed on any machine with fewer than ten cores, the CI runner
+  included, because the configuration would correctly hand back four while the row demanded ten.
+  They now compare against the held value, re-derived from `availableParallelism()` in the test
+  rather than read out of the file under test. The worker axis already had that shape; the
+  concurrency axis carries its own constant, so lifting either cap cannot silently move the row
+  guarding the other.
+- Decision, and what did NOT happen: no re-run loop. The four-core column is a measured "no" for the
+  uncapped ten, and `AC-0017-0015` makes that an accepting outcome while `BR-0017-0031` forbids
+  re-running the comparison until it agrees. Each run changed one variable, and the verdict comes
+  from the differences between them.
+- Consequences: on four cores the file runs four cases at a time rather than ten, and a race that
+  needs ten concurrent cases to surface now needs the override to reproduce — the same residual
+  `DR-0017-0010` accepted on the worker axis, and the same escape hatch. Two limits are named rather
+  than smoothed over: the four-core figures come from a Windows processor-affinity mask, which
+  `availableParallelism()` honours but which constrains this machine's scheduler and not a runner's;
+  and the sweep covers one file, chosen as the heaviest concurrent one, so it does not claim the
+  same curve for a file whose cases are cheap.
+- Related: AC-0017-0026, AC-0017-0028, BR-0017-0030, BR-0017-0031, BR-0017-0048, BR-0017-0049,
+  BR-0017-0051, EX-0017-0049, TC-0017-0060, TC-0017-0061, `DR-0017-0010`, `DR-0017-0012`,
+  `.qfai/evidence/timing-lint-concurrency-spec-0017.md`
