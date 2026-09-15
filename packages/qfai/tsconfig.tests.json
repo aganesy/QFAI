@@ -202,6 +202,7 @@
     "tests/helpers/prototypingGateSurface.ts",
     "tests/helpers/recordProse.ts",
     "tests/helpers/repositoryAttribution.ts",
+    "tests/helpers/runnerProjects.ts",
     "tests/helpers/reviewPayload.ts",
     "tests/helpers/saasPackageCertifyFixture.ts",
     "tests/helpers/shippedLaneCommands.ts",

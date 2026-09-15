@@ -14,8 +14,9 @@ directories the project collects from. A wrong number in this file fails that ro
 ## Which project, and why that one
 
 Largest project: `e2e` (4180 tests). Measured, not assumed — every runner project enumerated on
-the same machine, same commit, with `vitest list --json` (a collection pass, so it counts declared
-cases):
+the same machine, same commit, with `vitest list --json`. That pass lists the cases the runner would
+select, which is the unit every row of the table below is in: a case the suite skips is declared and
+not selected, so the runs further down report fifteen of them beside the 4180:
 
 | project     | tests | files |
 | ----------- | ----- | ----- |
