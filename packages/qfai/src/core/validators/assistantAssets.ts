@@ -1478,21 +1478,28 @@ const BIDIRECTIONAL_CONTROLS: ReadonlySet<number> = new Set([
   0x061c, 0x200e, 0x200f, 0x202a, 0x202b, 0x202c, 0x202d, 0x202e, 0x2066, 0x2067, 0x2068, 0x2069,
 ]);
 
+/** The separators a Unicode-aware renderer starts a new line at. */
+const LINE_SEPARATORS: ReadonlySet<number> = new Set([0x2028, 0x2029]);
+
 /**
  * A value out of a `SKILL.md`, safe to print.
  *
  * The document is a file the run did not write, and the text formatter writes a
  * message straight to the terminal. A name carrying a newline or an escape
- * sequence forges lines in that output, and a bidirectional control reorders
- * the text after it, so every character below ` `, the delete character, the
- * C1 block and those controls are written as their escapes instead.
+ * sequence forges lines in that output, a line separator does the same on a
+ * renderer that reads one, and a bidirectional control reorders the text after
+ * it, so every character below ` `, the delete character, the C1 block, the two
+ * line separators and those controls are written as their escapes instead.
  */
 function printable(value: string): string {
   let out = "";
   for (const character of value) {
     const code = character.codePointAt(0) ?? 0;
     const unprintable =
-      code < 0x20 || (code >= 0x7f && code <= 0x9f) || BIDIRECTIONAL_CONTROLS.has(code);
+      code < 0x20 ||
+      (code >= 0x7f && code <= 0x9f) ||
+      LINE_SEPARATORS.has(code) ||
+      BIDIRECTIONAL_CONTROLS.has(code);
     out += unprintable ? `\\u${code.toString(16).padStart(4, "0")}` : character;
   }
   return out;

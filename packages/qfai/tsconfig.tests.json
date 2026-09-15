@@ -304,6 +304,7 @@
     "tests/unit/core/prototyping/designMdViolationsTransposition.test.ts",
     "tests/unit/core/prototyping/screenSignals.test.ts",
     "tests/unit/issueCatalogHasEmitters.test.ts",
+    "tests/unit/shared/boundedRead.test.ts",
     "tests/unit/shared/provenanceHostileTree.test.ts",
     "tests/unit/shared/text.test.ts",
     "tests/unit/shippedLaneCommands.test.ts",

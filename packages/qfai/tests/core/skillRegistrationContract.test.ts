@@ -580,6 +580,17 @@ describe("the gate reads a skill as the host does", () => {
     expect(finding?.message).not.toContain("\u202e");
   });
 
+  it("escapes a line separator in the name it reports", async () => {
+    // Neither a C0 control nor a bidirectional one, and a renderer that reads
+    // it starts a line there, which forges output the same way a newline does.
+    const root = await projectWithSkillDocument(
+      ["---", 'name: "qfai-\u2028example"', 'description: "Does the thing."', "---", ""].join("\n"),
+    );
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("\\u2028");
+    expect(finding?.message).not.toContain("\u2028");
+  });
+
   it("asks for a rename when the directory is longer than a name may be", async () => {
     // The directory's spelling is legal and its length is not, so the action
     // names the rename rather than a `name:` that fails the same check.

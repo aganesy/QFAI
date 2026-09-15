@@ -16,7 +16,8 @@
  *    blocking the process in `open` itself.
  * 3. `fstat` the DESCRIPTOR, not the path, and require a regular file within the ceiling.
  * 4. Confirm the descriptor is the object `lstat` inspected, by `dev` and `ino`. A path swapped
- *    between the two calls changes them, and a mismatch is refused rather than read.
+ *    between the two calls changes them, and a mismatch is refused rather than read. On a volume
+ *    that reports no inode, the size, mode and times stand in for it — see {@link sameObject}.
  * 5. Read at most `maxBytes + 1`. A file that GREW past the size `fstat` reported is no longer the
  *    file that was measured, and the extra byte is how that is noticed rather than truncated.
  *
@@ -24,6 +25,7 @@
  * record, an unreadable-file finding, a name left un-pruned — because a reader that throws in a
  * diagnostic path converts a hostile tree into a crash.
  */
+import type { Stats } from "node:fs";
 import { constants as fsConstants } from "node:fs";
 import { lstat, open } from "node:fs/promises";
 
@@ -37,6 +39,38 @@ function readOnlyNoFollowFlags(): number {
     flags |= fsConstants.O_NONBLOCK;
   }
   return flags;
+}
+
+/** What both calls measure, and all this module compares them by. */
+export type ObjectIdentity = Pick<
+  Stats,
+  "dev" | "ino" | "size" | "mode" | "mtimeMs" | "ctimeMs" | "birthtimeMs"
+>;
+
+/**
+ * Whether the opened descriptor is the object the path was inspected as.
+ *
+ * `dev` and `ino` settle it wherever the volume reports an inode. Some report
+ * `0` for every file, and there `0 === 0` proves nothing, so what both calls
+ * still measured is compared instead: the size, the mode and the three times.
+ * A swap those all survive is possible; one no check at all survives is
+ * certain.
+ *
+ * Refusing outright where the inode is missing is not the answer — every file
+ * on such a volume would then be reported unreadable — and the `fstat` beside
+ * this call already holds the floor that does not depend on identity: the
+ * descriptor is a regular file within the ceiling, whatever the path now names.
+ */
+export function sameObject(inspected: ObjectIdentity, opened: ObjectIdentity): boolean {
+  if (inspected.dev !== opened.dev) return false;
+  if (inspected.ino !== 0 && opened.ino !== 0) return inspected.ino === opened.ino;
+  return (
+    inspected.size === opened.size &&
+    inspected.mode === opened.mode &&
+    inspected.mtimeMs === opened.mtimeMs &&
+    inspected.ctimeMs === opened.ctimeMs &&
+    inspected.birthtimeMs === opened.birthtimeMs
+  );
 }
 
 /**
@@ -70,7 +104,7 @@ export async function readBoundedRegularFile(
     if (!stats.isFile() || stats.size > maxBytes) {
       return undefined;
     }
-    if (stats.dev !== inspected.dev || stats.ino !== inspected.ino) {
+    if (!sameObject(inspected, stats)) {
       return undefined;
     }
     const ceiling = Math.min(stats.size, maxBytes);
@@ -136,7 +170,7 @@ export async function scanBoundedRegularFile(
   try {
     const stats = await handle.stat();
     if (!stats.isFile()) return "refused";
-    if (stats.dev !== inspected.dev || stats.ino !== inspected.ino) return "refused";
+    if (!sameObject(inspected, stats)) return "refused";
     const buffer = Buffer.alloc(SCAN_CHUNK_BYTES);
     for (;;) {
       const { bytesRead } = await handle.read(buffer, 0, buffer.length, null);
