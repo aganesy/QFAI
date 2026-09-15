@@ -1114,16 +1114,64 @@ function fencedEvidenceValue(lines: readonly string[], startLine: number): strin
 
 interface EvidenceFieldOccurrence {
   round: number | null;
+  /** The `M` of an `(attempt M)` qualifier, on the fields that take it. */
+  attempt: number | null;
   value: string;
 }
 
-function evidenceFieldOccurrences(section: string, field: string): EvidenceFieldOccurrence[] {
+/**
+ * The `(attempt M)` qualifier a round with several review attempts writes
+ * after each field it records once per attempt: `reviewer verdict`, and the
+ * `Review pack` and `Review pack seal` pair (`round-evidence.md`). It is part
+ * of those fields' names, so each is read with or without it.
+ *
+ * No other field takes it. The rest are recorded once per round, so
+ * `Round 1: Revision (attempt 2)` is not a spelling of any of them.
+ */
+const ATTEMPT_QUALIFIER = "(?:[ \\t]*\\(attempt[ \\t]+(?<attempt>\\d+)\\))?";
+const ATTEMPT_QUALIFIER_TAIL = /\s*\(attempt\s+(\d+)\)\s*$/i;
+const ATTEMPT_QUALIFIED_FIELDS = new Set(["reviewer verdict", "review pack", "review pack seal"]);
+
+function takesAttemptQualifier(field: string): boolean {
+  return ATTEMPT_QUALIFIED_FIELDS.has(field.toLowerCase());
+}
+
+/**
+ * A bullet field's inline value with the field name's own markup taken off.
+ *
+ * The bold-colon spelling — `- **Round 1: reviewer verdict:** REVISE` — closes
+ * its emphasis after the colon, so the raw capture begins with `**`, ahead of
+ * the `REVISE` a check reads at the start of the value. Only that closing `**`
+ * is taken off: a value may itself begin with asterisks, as a selector opening
+ * with a globstar does.
+ */
+function inlineFieldValue(captured: string | undefined, closesAfterColon: boolean): string {
+  const raw = captured ?? "";
+  return (closesAfterColon ? raw.replace(/^\*\*/, "") : raw).trim().replace(/^`([^`]*)`$/, "$1");
+}
+
+/**
+ * Every occurrence of `field` in `section`, in document order.
+ *
+ * An occurrence with neither an inline nor a fenced value is left out unless
+ * `includeBlank` is set, in which case it is kept with an empty value. A check
+ * that counts a round's review attempts needs the blank one: dropped, a blank
+ * last attempt leaves the attempt before it looking like the round's close.
+ */
+function evidenceFieldOccurrences(
+  section: string,
+  field: string,
+  includeBlank = false,
+): EvidenceFieldOccurrence[] {
   const normalized = section.replace(/\r\n/g, "\n");
   const originalLines = normalized.split("\n");
   const visibleLines = maskEvidenceRegions(normalized).split("\n");
   const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const qualifier = takesAttemptQualifier(field) ? ATTEMPT_QUALIFIER : "";
+  // `open` is the emphasis opening the label and `close` one closing it before
+  // the colon; an opening with no closing there closes after the colon.
   const bulletPattern = new RegExp(
-    `^\\s*(?:[-*][ \\t]+)?(?:\\*\\*)?(?:Round[ \\t]+(\\d+):[ \\t]*)?${escaped}(?:\\*\\*)?[ \\t]*:[ \\t]*(.*)$`,
+    `^\\s*(?:[-*][ \\t]+)?(?<open>\\*\\*)?(?:Round[ \\t]+(?<round>\\d+):[ \\t]*)?${escaped}${qualifier}(?<close>\\*\\*)?[ \\t]*:[ \\t]*(?<value>.*)$`,
     "i",
   );
   const occurrences: EvidenceFieldOccurrence[] = [];
@@ -1131,30 +1179,49 @@ function evidenceFieldOccurrences(section: string, field: string): EvidenceField
   for (const [lineIndex, visibleLine] of visibleLines.entries()) {
     if (/^\s*\|/.test(visibleLine)) {
       const cells = splitMarkdownRow(visibleLine);
-      for (let cellIndex = 0; cellIndex < cells.length - 1; cellIndex += 1) {
+      // Labels are the even cells, as `hasFieldBesideReviewerAppendedCell` reads
+      // them. Visiting every cell took a value that quotes a field name — the
+      // output of a test asserting on one — for a label, and the label after it
+      // for that field's value, so a row carrying such output acquired a pack or
+      // a verdict nobody wrote and the entry failed completion over it.
+      for (let cellIndex = 0; cellIndex < cells.length - 1; cellIndex += 2) {
         const rawLabel = (cells[cellIndex] ?? "").replace(/^\*\*|\*\*$/g, "").trim();
         const roundMatch = /^Round\s+(\d+):\s*(.*)$/i.exec(rawLabel);
-        const label = (roundMatch?.[2] ?? rawLabel).trim();
+        const roundLabel = roundMatch?.[2] ?? rawLabel;
+        const attemptMatch = takesAttemptQualifier(field)
+          ? ATTEMPT_QUALIFIER_TAIL.exec(roundLabel)
+          : null;
+        const label = (
+          attemptMatch === null ? roundLabel : roundLabel.slice(0, attemptMatch.index)
+        ).trim();
         if (label.toLowerCase() !== field.toLowerCase()) continue;
         const value = (cells[cellIndex + 1] ?? "").trim().replace(/^`([^`]*)`$/, "$1");
         const resolved =
           value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
-        if (resolved !== null) {
+        if (resolved !== null || includeBlank) {
           occurrences.push({
             round: roundMatch?.[1] ? Number(roundMatch[1]) : null,
-            value: resolved,
+            attempt: attemptMatch?.[1] ? Number(attemptMatch[1]) : null,
+            value: resolved ?? "",
           });
         }
       }
       continue;
     }
 
-    const match = bulletPattern.exec(visibleLine);
-    if (!match) continue;
-    const value = (match[2] ?? "").trim().replace(/^`([^`]*)`$/, "$1");
+    const groups = bulletPattern.exec(visibleLine)?.groups;
+    if (groups === undefined) continue;
+    const value = inlineFieldValue(
+      groups.value,
+      groups.open !== undefined && groups.close === undefined,
+    );
     const resolved = value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
-    if (resolved !== null) {
-      occurrences.push({ round: match[1] ? Number(match[1]) : null, value: resolved });
+    if (resolved !== null || includeBlank) {
+      occurrences.push({
+        round: groups.round ? Number(groups.round) : null,
+        attempt: groups.attempt ? Number(groups.attempt) : null,
+        value: resolved ?? "",
+      });
     }
   }
   return occurrences;
@@ -1174,6 +1241,35 @@ function roundEvidenceFieldValue(section: string, round: number, field: string):
       .filter((occurrence) => occurrence.round === round)
       .at(-1)?.value ?? null
   );
+}
+
+/**
+ * The verdict a round's review attempts end on, and whether those attempts are
+ * numbered the way `round-evidence.md` records them.
+ *
+ * Attempts are numbered from 1 in review order, and a round holding a single
+ * attempt may leave the qualifier off. A round whose numbers skip, repeat or
+ * start past 1 has lost an attempt from its audit trail, and the last line
+ * written is then not known to be the attempt the round closed on. A blank
+ * attempt counts as an attempt, and its empty value closes nothing. Every
+ * attempt but the last is a `REVISE`: a later attempt exists only to answer
+ * one, so a `PASS` ahead of it had already closed the review.
+ */
+function roundReviewVerdict(
+  section: string,
+  round: number,
+): { value: string | null; numbered: boolean; revisedBeforeLast: boolean } {
+  const attempts = evidenceFieldOccurrences(section, "reviewer verdict", true).filter(
+    (occurrence) => occurrence.round === round,
+  );
+  const numbered =
+    attempts.length === 1
+      ? attempts[0]?.attempt === null || attempts[0]?.attempt === 1
+      : attempts.every((occurrence, index) => occurrence.attempt === index + 1);
+  const revisedBeforeLast = attempts
+    .slice(0, -1)
+    .every((occurrence) => /^REVISE\b/i.test(occurrence.value.trim()));
+  return { value: attempts.at(-1)?.value ?? null, numbered, revisedBeforeLast };
 }
 
 /**
@@ -1346,10 +1442,14 @@ function bareSha256(value: string): string {
  * a blocking response passed as long as `summary.json` said PASS and the pack
  * seal was recomputed from the doctored contents. Masking is the same one the
  * evidence entries use, so "what the reader sees" means one thing in both.
+ *
+ * `listItem` also reads the line as a list item (`- Producer: implement`), for
+ * a field the layout writes that way.
  */
-function visibleLineFieldValues(content: string, field: string): string[] {
+function visibleLineFieldValues(content: string, field: string, listItem = false): string[] {
   const escapedField = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(`^${escapedField}:[ \\t]*(.*)$`, "i");
+  const marker = listItem ? "(?:[-*+][ \\t]+)?" : "";
+  const pattern = new RegExp(`^${marker}${escapedField}:[ \\t]*(.*)$`, "i");
   return maskEvidenceRegions(content.replace(/\r\n/g, "\n"))
     .split("\n")
     .flatMap((line) => {
@@ -1381,7 +1481,7 @@ function normalizeAuditArtifact(value: string): string {
 }
 
 const GATE_COMPLETED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|revision|seal))(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|seal|revision|note))(?:\*\*)?\s*(?::|\|)/i;
 
 const PHASE_AUTHORED_EVIDENCE_FIELD =
   /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Refactor verify revision|Oracle proof|qa-gatekeeper|Shared-artifact re-verify|Surface artifacts)(?:\*\*)?\s*(?::|\|)/i;
@@ -1421,8 +1521,34 @@ function hasPhaseAuthoredFieldAfterGate(section: string): boolean {
  * opens N+1), so every legitimate review-fix -> Round 2 row disagreed with the
  * hash recomputed here and reported as unresolved.
  */
+// A round with several review attempts qualifies its verdict with
+// `(attempt M)`, and records a `Round N: Review pack` and `Review pack seal`
+// pair beside each attempt (`round-evidence.md`). All of these are written once
+// the review they belong to has run, so none of them is in the subject that
+// review hashes, qualified or not. The pack pair is held instead by
+// recomputing each seal from its pack at completion.
 const REVIEWER_APPENDED_ROUND_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict(?:\*\*)?[ \t]*(?::|\|)[ \t]*(.*)$/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict|Round[ \t]+\d+:[ \t]*Review pack(?:[ \t]+seal)?)(?:[ \t]*\(attempt[ \t]+\d+\))?(?:\*\*)?[ \t]*(?::|\|)[ \t]*(.*)$/i;
+
+/**
+ * What the reviewer wrote on the verdict line itself, with the field name's
+ * markup stripped.
+ *
+ * The bold-colon form this repository already uses —
+ * `- **Round 1: reviewer verdict (attempt 1):**` — closes its emphasis AFTER
+ * the colon, so the capture is `**` rather than nothing. Read as a value, that
+ * line looks answered and the fenced verdict below it stays in the subject the
+ * reviewer who wrote it hashes, which is the one line that cannot be there.
+ */
+function inlineVerdictValue(captured: string | undefined): string {
+  // A table row's value cell ends in its closing `|`, which is all an empty
+  // cell leaves in the capture: read as a value, it would keep the fence below
+  // it in the subject.
+  return (captured ?? "")
+    .replace(/\|\s*$/, "")
+    .replace(/\*+/g, "")
+    .trim();
+}
 
 /**
  * The index of the last line of the fenced value that starts at or after
@@ -1451,6 +1577,34 @@ function fencedEvidenceValueEnd(lines: readonly string[], start: number): number
   return lines.length - 1;
 }
 
+/**
+ * Whether a table row in the region the audited subject is taken from labels a
+ * `reviewer verdict` or `Round N: Review pack` field beside a field of another
+ * kind.
+ *
+ * The subject drops a line that opens with one of those fields, and a table
+ * row is one line, while the field readers take every label and value pair on
+ * it. A phase-authored cell after the reviewer's is then read by the completion
+ * checks and hashed by no reviewer, so it can be edited after the verdict with
+ * nothing moving; one before it keeps the reviewer's own cell in the subject.
+ * A row holding only those fields' labels, each followed by its value, is
+ * dropped whole and hides nothing.
+ *
+ * Labels are the even cells. A value that quotes a reviewer field, as the
+ * output of a test asserting on one does, names no field.
+ */
+function hasFieldBesideReviewerAppendedCell(section: string): boolean {
+  const visibleLines = maskEvidenceRegions(section.replace(/\r\n/g, "\n")).split("\n");
+  const boundary = visibleLines.findIndex((line) => GATE_COMPLETED_EVIDENCE_FIELD.test(line));
+  return visibleLines.slice(0, boundary < 0 ? undefined : boundary).some((line) => {
+    if (!/^\s*\|/.test(line)) return false;
+    const reviewerLabels = splitMarkdownRow(line)
+      .filter((_, index) => index % 2 === 0)
+      .map((label) => REVIEWER_APPENDED_ROUND_FIELD.test(`${label} |`));
+    return reviewerLabels.includes(true) && reviewerLabels.includes(false);
+  });
+}
+
 function phaseAuthoredEvidence(section: string, tddId: string): string {
   const normalized = section.replace(/\r\n/g, "\n");
   const originalLines = normalized.split("\n");
@@ -1464,7 +1618,7 @@ function phaseAuthoredEvidence(section: string, tddId: string): string {
       kept.push(originalLines[index] ?? "");
       continue;
     }
-    if ((verdict[1] ?? "").trim().length === 0) {
+    if (inlineVerdictValue(verdict[1]).length === 0) {
       index = Math.min(fencedEvidenceValueEnd(originalLines, index + 1), end - 1);
     }
   }
@@ -1827,7 +1981,7 @@ async function redTestManifestHash(root: string, manifest: string): Promise<stri
 async function collectReviewPackFiles(
   root: string,
   packPath: string,
-): Promise<Array<{ relativePath: string; content: string }> | null> {
+): Promise<ReviewPackFile[] | null> {
   const safePack = safeRepoRelativePath(packPath);
   if (safePack === null || !safePack.startsWith(".qfai/review/review-")) return null;
   const absolutePack = path.join(root, ...safePack.split("/"));
@@ -1836,7 +1990,7 @@ async function collectReviewPackFiles(
   } catch {
     return null;
   }
-  const files: Array<{ relativePath: string; content: string }> = [];
+  const files: ReviewPackFile[] = [];
   async function walk(directory: string, relativeDirectory: string): Promise<boolean> {
     try {
       for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -1846,7 +2000,8 @@ async function collectReviewPackFiles(
         if (entry.isDirectory()) {
           if (!(await walk(absolute, relative))) return false;
         } else if (entry.isFile()) {
-          files.push({ relativePath: relative, content: await readFile(absolute, "utf8") });
+          const bytes = await readFile(absolute);
+          files.push({ relativePath: relative, content: bytes.toString("utf8"), bytes });
         } else {
           return false;
         }
@@ -1862,16 +2017,134 @@ async function collectReviewPackFiles(
   );
 }
 
-function reviewPackSeal(files: ReadonlyArray<{ relativePath: string; content: string }>): string {
-  const records = files.map(
-    ({ relativePath, content }) => `${relativePath}\0${sha256(normalizeAuditArtifact(content))}`,
-  );
+/**
+ * A review pack's seal, by the audit-hash procedure the pack is sealed with
+ * (`audited-evidence-hash.md`): a `.md` or `.html` record normalized, and every
+ * other record hashed as its raw bytes, so the digest does not depend on how a
+ * reader decodes a non-text file.
+ */
+function reviewPackSeal(files: ReadonlyArray<ReviewPackFile>): string {
+  const records = files.map(({ relativePath, content, bytes }) => {
+    const hashed = /\.(?:md|html)$/.test(relativePath) ? normalizeAuditArtifact(content) : bytes;
+    return `${relativePath}\0${sha256(hashed)}`;
+  });
   return sha256(records.join("\n"));
 }
 
 interface ReviewPackFile {
   relativePath: string;
   content: string;
+  bytes: Buffer;
+}
+
+/**
+ * Whether a request's one visible `TDD-ID` line names this row's review: the
+ * row's own id once, and otherwise only ids of rows it could have been reviewed
+ * with. The line is a list — one id for a row reviewed alone, the members for
+ * a T1 group reviewed in one round (`review-artifact-layout.md`) — so a foreign
+ * id, a repeated one or a word that is no id at all names a different review.
+ */
+function requestNamesReviewUnit(
+  request: string,
+  tddId: string,
+  reviewUnit: ReadonlySet<string>,
+): boolean {
+  const members = requestedTddIds(request);
+  return (
+    members !== null &&
+    members.filter((member) => member === tddId).length === 1 &&
+    new Set(members).size === members.length &&
+    members.every((member) => reviewUnit.has(member))
+  );
+}
+
+/**
+ * The ids a request's one visible `TDD-ID` line lists, in order, or `null` when
+ * the request states that line other than once or lists nothing on it.
+ */
+function requestedTddIds(request: string): string[] | null {
+  const values = visibleLineFieldValues(request, "TDD-ID");
+  if (values.length !== 1) return null;
+  const members = (values[0] ?? "").split(/[\s,]+/).filter((member) => member.length > 0);
+  return members.length === 0 ? null : members;
+}
+
+/**
+ * The ids a pack's responses answer for: the ones its request lists, or this
+ * row alone when the request lists none readably. A request naming the wrong
+ * ids is reported by the check that reads it.
+ */
+function packReviewMembers(
+  files: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  tddId: string,
+): string[] {
+  const request = reviewPackArtifact(files, packPath, "review_request.md");
+  return (request === null ? null : requestedTddIds(request)) ?? [tddId];
+}
+
+/**
+ * A hash line's value read as one sha256 hash, alone or beside one token naming
+ * the id it belongs to, as in `TDD-0001 <hash>`, `TDD-0001: <hash>` or
+ * `<hash> (TDD-0001)`; `null` when it holds more than that.
+ */
+function auditedHashEntry(value: string): { member: string | null; hash: string } | null {
+  const tokens = value.split(/\s+/).filter((token) => token.length > 0);
+  const hashes = tokens.filter((token) => SHA256_VALUE.test(token));
+  const named = tokens.filter((token) => !SHA256_VALUE.test(token));
+  const hash = hashes[0];
+  if (hash === undefined || hashes.length > 1 || named.length > 1) return null;
+  const label = named[0];
+  if (label === undefined) return { member: null, hash };
+  return { member: /^\((.+)\)$/.exec(label)?.[1] ?? label.replace(/:$/, ""), hash };
+}
+
+/**
+ * The `Audited evidence hash` a response gives each id in `members`, or `null`
+ * unless it gives every one of them exactly one visible sha256 hash.
+ *
+ * A request listing one id is answered by the template's one line, which may
+ * name that id. A T1 group's request lists every member, and the shared
+ * response carries one line per member with the hash beside the id it belongs
+ * to (`audited-evidence-hash.md`), so a row's hash is the one on the line
+ * naming it. A line naming no listed id cannot be attributed to any row, and a
+ * second line for one id leaves a reader free to take either hash.
+ */
+function memberAuditedHashes(
+  response: string,
+  members: readonly string[],
+): Map<string, string> | null {
+  const lines = visibleLineFieldValues(response, "Audited evidence hash");
+  if (lines.length !== members.length) return null;
+  const hashes = new Map<string, string>();
+  for (const line of lines) {
+    const entry = auditedHashEntry(line);
+    const member = entry?.member ?? (members.length === 1 ? members[0] : undefined);
+    if (entry === null || member === undefined || !members.includes(member)) return null;
+    if (hashes.has(member)) return null;
+    hashes.set(member, entry.hash);
+  }
+  return hashes;
+}
+
+/**
+ * The ids a row's review may name. A T2 or T3 row is reviewed alone, and so is
+ * a row whose `BR-Ref` is `-` or blank, which opens a group of one. A T1 row is
+ * reviewed with the T1 rows sharing its `BR-Ref`, the coherent-group key
+ * (`volume-policy.md#batched-review`): the members a round held are among
+ * them, and which of them is decided when the group closes, not by this ledger.
+ */
+function reviewUnitOf(ref: LedgerRowRef, rows: readonly LedgerRowRef[]): Set<string> {
+  const tddId = cell(ref, "TDD-ID");
+  const t1 = (row: LedgerRowRef): boolean =>
+    ["", "-", "t1"].includes(cell(row, "Tier").toLowerCase());
+  const key = cell(ref, BR_REF_COLUMN);
+  if (!t1(ref) || key === "" || key === "-") return new Set([tddId]);
+  return new Set(
+    rows
+      .filter((row) => t1(row) && cell(row, BR_REF_COLUMN) === key)
+      .map((row) => cell(row, "TDD-ID")),
+  );
 }
 
 /** The named artifact of a review pack, or `null` when the pack omits it. */
@@ -1895,11 +2168,42 @@ function reviewPackArtifact(
  * reviewer, and the seal recomputes over every file whatever they say. The
  * cardinality is the finding, so the caller is handed all of them.
  */
-function reviewPackResponses(files: ReadonlyArray<ReviewPackFile>, role: string): string[] {
-  const named = new RegExp(`^R\\d{2}_${role.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.md$`);
-  return files
-    .filter(({ relativePath }) => named.test(path.posix.basename(relativePath)))
+function reviewPackResponses(
+  files: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  role: string,
+): string[] {
+  return packResponseFiles(files, packPath)
+    .filter((response) => response.role === role)
     .map(({ content }) => content);
+}
+
+/**
+ * Every response file directly under a review pack's root, with the reviewer
+ * that wrote it, in file order. The layout places reviewer files in the pack
+ * directory itself, so a file of that name in a directory below it is not a
+ * response.
+ *
+ * **The role is the one the response states, and the file name has to agree.**
+ * Read off the name alone, a file called `R01_completion-reviewer.md` whose
+ * body names another reviewer — or names none — satisfied the routed
+ * completion review, and its `Result`, revision and hash closed the row. The
+ * response template requires the role on a visible line for that reason: an
+ * answer with no speaker is not a verdict, and one with the wrong speaker is
+ * another reviewer's. Exactly one such line, so a second cannot be added to
+ * make a response answer for a role it did not.
+ */
+function packResponseFiles(
+  files: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+): Array<{ role: string; content: string }> {
+  return files.flatMap(({ relativePath, content }) => {
+    const named = relativePath.startsWith(`${packPath}/`)
+      ? /^R\d{2}_([^/]+)\.md$/.exec(relativePath.slice(packPath.length + 1))?.[1]
+      : undefined;
+    if (named === undefined || !exactLineField(content, "Reviewer role", named)) return [];
+    return [{ role: named, content }];
+  });
 }
 
 /**
@@ -1979,6 +2283,8 @@ interface CompletedEvidenceExpectation {
   obligationField: "TC-ref" | "US-ref" | "CON-API-ref";
   obligationValue: string;
   preSplit: boolean;
+  /** The ids a review pack's request may name for this row. */
+  reviewUnit: ReadonlySet<string>;
 }
 
 /**
@@ -2049,7 +2355,8 @@ async function completedLedgerExpectation(
 ): Promise<CompletedEvidenceExpectation | null> {
   const specNumber = /-spec-(\d{4})\.md$/i.exec(evidenceFile)?.[1];
   if (specNumber === undefined) return null;
-  for (const ref of checkedLedgerRows(await specLedgerTables(context, specNumber))) {
+  const rows = [...checkedLedgerRows(await specLedgerTables(context, specNumber))];
+  for (const ref of rows) {
     if (cell(ref, "TDD-ID") !== tddId) continue;
     if (cell(ref, "Status").toLowerCase() !== "done") return null;
     const evidence = cell(ref, "Evidence");
@@ -2077,6 +2384,7 @@ async function completedLedgerExpectation(
       obligationField,
       obligationValue: cell(ref, obligationColumn),
       preSplit: usesPreSplitEvidence(layer, evidence),
+      reviewUnit: reviewUnitOf(ref, rows),
     } satisfies CompletedEvidenceExpectation;
   }
   return null;
@@ -2238,7 +2546,7 @@ function stagePackRecordsPass(
 ): boolean {
   const request = reviewPackArtifact(files, packPath, "review_request.md");
   const summary = reviewPackArtifact(files, packPath, "summary.json");
-  const responses = reviewPackResponses(files, STAGE_REVIEWER_ROLE);
+  const responses = reviewPackResponses(files, packPath, STAGE_REVIEWER_ROLE);
   const response = responses[0];
   if (request === null || summary === null || response === undefined) return false;
   if (visibleLineFieldValues(request, "TDD-ID").length > 0) return false;
@@ -2807,6 +3115,11 @@ function missingCompletedEvidenceFields(
   if (hasPhaseAuthoredFieldAfterGate(entrySection)) {
     missing.push("all phase-authored fields before review and checkpoint fields");
   }
+  if (hasFieldBesideReviewerAppendedCell(entrySection)) {
+    missing.push(
+      "reviewer verdict and Round N: Review pack cells on table rows holding no other field",
+    );
+  }
 
   const failureMode = rowEvidenceFieldValue(section, "RED failure mode")?.toLowerCase();
   let latestRevision: string | null = null;
@@ -2913,11 +3226,21 @@ function missingCompletedEvidenceFields(
       }
     }
     if (!validFalsifiability) oracleProofOwed = true;
+    const verdict = roundReviewVerdict(section, round);
+    if (!verdict.numbered) {
+      missing.push(`Round ${round}: reviewer verdict attempts numbered from 1 in review order`);
+    }
+    if (!verdict.revisedBeforeLast) {
+      missing.push(`Round ${round}: every reviewer verdict attempt before the last: REVISE`);
+    }
     if (round < (rounds.at(-1) ?? round)) {
-      const verdict = roundEvidenceFieldValue(section, round, "reviewer verdict");
-      if (verdict === null || !/^REVISE\b/i.test(verdict)) {
+      if (verdict.value === null || !/^REVISE\b/i.test(verdict.value)) {
         missing.push(`Round ${round}: reviewer verdict opening the next round`);
       }
+    } else if (verdict.value !== null && verdict.value.trim() !== "PASS") {
+      // A done row's last round closed on a pass. A REVISE left last is a
+      // review nobody answered, whatever the row-level verdicts say.
+      missing.push(`Round ${round}: reviewer verdict: PASS`);
     }
     latestRevision = revision;
     latestGreenCommand = greenCommand;
@@ -3130,11 +3453,12 @@ async function invalidCompletedEvidenceArtifacts(
     // `R\d\d_<role>.md` answering `REVISE` is an open verdict on the same
     // request, and `summary.json` records one line per reviewer whatever the
     // responses say.
-    const responses = reviewPackResponses(packFiles, expectedRole);
+    const responses = reviewPackResponses(packFiles, packPath, expectedRole);
     const response = responses[0];
+    const members = packReviewMembers(packFiles, packPath, expected.tddId);
     if (
       request === null ||
-      !exactLineField(request, "TDD-ID", expected.tddId) ||
+      !requestNamesReviewUnit(request, expected.tddId, expected.reviewUnit) ||
       response === undefined ||
       responses.length !== 1 ||
       !everyResponsePasses(responses) ||
@@ -3149,12 +3473,45 @@ async function invalidCompletedEvidenceArtifacts(
       ) ||
       !exactLineField(response, "Reviewed revision", recordedRevision) ||
       auditedHash === null ||
-      !exactLineField(response, "Audited evidence hash", auditedHash)
+      memberAuditedHashes(response, members)?.get(expected.tddId) !== auditedHash
     ) {
       invalid.push(
         `${prefix} review pack carrying request, summary, and named reviewer PASS provenance`,
       );
     }
+  }
+
+  // The attempt the last round closed on is the review the row-level verdicts
+  // record, so each routed reviewer answered there once, over the tree and
+  // the audited hash its verdict records.
+  const closing = new Map<string, ClosingVerdict>();
+  for (const [role, prefix] of [
+    ["completion-reviewer", "Spec"],
+    ["implementation-reviewer", "Code quality"],
+    ["product-surface-reviewer", "Prototype parity"],
+  ] as const) {
+    const hash = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
+    if (hash === null) continue;
+    const reviewedRevision = rowEvidenceFieldValue(section, `${prefix} reviewed revision`);
+    closing.set(role, { hash, revision: reviewedRevision });
+  }
+  const namedPacks = new Set<string>();
+  for (const round of rounds) {
+    invalid.push(
+      ...(await invalidRoundReviewPacks(
+        root,
+        section,
+        round,
+        {
+          tddId: expected.tddId,
+          reviewUnit: expected.reviewUnit,
+          specNumber: expected.specNumber,
+          specsRelative: context.specsRelative,
+          closing: round === rounds.at(-1) ? closing : null,
+        },
+        namedPacks,
+      )),
+    );
   }
 
   const checkpointCommand = rowEvidenceFieldValue(section, "Checkpoint verification command");
@@ -3182,6 +3539,407 @@ async function invalidCompletedEvidenceArtifacts(
     );
   }
   return invalid;
+}
+
+/** The only path shape a review pack may have, present or not. */
+const CANONICAL_REVIEW_PACK = /^\.qfai\/review\/review-\d{17}$/;
+
+/**
+ * The review pack pairs a round records, one per review attempt, each
+ * recomputed from the pack it names and read for the review it records
+ * (`record-contract.md`).
+ *
+ * The pair is written after its review has run, so it is left out of every
+ * audited subject, and this is the check that sees a pack edited after its
+ * attempt closed or a pack from another review. A round that records any pair
+ * owes exactly one for every verdict attempt: the last attempt's pack is the
+ * one the round closed on, and a second pair for one attempt would leave the
+ * first unchecked. A pack absent from the checkout is skipped once its path has
+ * the canonical shape, as a row-level pack is, because review packs are
+ * local-only.
+ *
+ * Every review creates a new pack, so no two attempts of a row name one, in
+ * this round or any other: `namedPacks` holds the packs the row's earlier
+ * attempts named, and an attempt naming one of them is a review that left no
+ * artifact of its own. The members of a T1 group name the one pack their shared
+ * attempt wrote, each in its own entry, which is one attempt per row.
+ *
+ * `row.closing` is present for the last round only: the attempt it closed on
+ * is the review the row-level verdicts record, so it holds one response per
+ * routed reviewer, over the tree and the audited hash that reviewer's verdict
+ * records. No earlier attempt's tree is recorded anywhere — a round's
+ * `Revision` is its GREEN, taken before the refactor its review read — so an
+ * earlier pack is bound to the row, the spec and its own verdict, and to one
+ * revision throughout, rather than to a revision this entry holds.
+ */
+async function invalidRoundReviewPacks(
+  root: string,
+  section: string,
+  round: number,
+  row: RoundPackRow,
+  namedPacks: Set<string>,
+): Promise<string[]> {
+  const inRound = (field: string, includeBlank = false): EvidenceFieldOccurrence[] =>
+    evidenceFieldOccurrences(section, field, includeBlank).filter(
+      (occurrence) => occurrence.round === round,
+    );
+  // Blank labels are kept, so a pair written with no values is a pair missing
+  // its values rather than no pair, which would let the row complete unreviewed.
+  const packs = inRound("Review pack", true);
+  const seals = inRound("Review pack seal", true);
+  if (packs.length === 0 && seals.length === 0) return [];
+  const verdicts = inRound("reviewer verdict", true);
+  const closingAttempt = verdicts.at(-1)?.attempt ?? null;
+  const attempts = new Set([...verdicts, ...packs, ...seals].map(({ attempt }) => attempt));
+  const invalid: string[] = [];
+  for (const attempt of attempts) {
+    const label = `Round ${round}: Review pack${attempt === null ? "" : ` (attempt ${attempt})`}`;
+    const count = (occurrences: readonly EvidenceFieldOccurrence[]): number =>
+      occurrences.filter((occurrence) => occurrence.attempt === attempt).length;
+    if (count(packs) > 1 || count(seals) > 1) {
+      invalid.push(`${label} and its seal recorded once`);
+      continue;
+    }
+    const pack = lastAttemptValue(packs, attempt);
+    if (pack !== null && pack !== "" && namedPacks.has(pack)) {
+      invalid.push(`${label} naming a new pack, not an earlier attempt's`);
+      continue;
+    }
+    if (pack !== null && pack !== "") namedPacks.add(pack);
+    invalid.push(
+      ...(await invalidRoundAttemptPack(root, {
+        ...row,
+        round,
+        attempt,
+        pack,
+        seal: lastAttemptValue(seals, attempt),
+        verdict: lastAttemptValue(verdicts, attempt),
+        closing: attempt === closingAttempt ? row.closing : null,
+      })),
+    );
+  }
+  return invalid;
+}
+
+function lastAttemptValue(
+  occurrences: readonly EvidenceFieldOccurrence[],
+  attempt: number | null,
+): string | null {
+  return occurrences.filter((occurrence) => occurrence.attempt === attempt).at(-1)?.value ?? null;
+}
+
+/** What a closing reviewer's row-level verdict records. */
+type ClosingVerdict = { hash: string; revision: string | null };
+
+/** The row every round pack of it answers to. */
+type RoundPackRow = {
+  tddId: string;
+  reviewUnit: ReadonlySet<string>;
+  specNumber: string;
+  specsRelative: string;
+  closing: ReadonlyMap<string, ClosingVerdict> | null;
+};
+
+type RoundAttemptPack = RoundPackRow & {
+  round: number;
+  attempt: number | null;
+  pack: string | null;
+  seal: string | null;
+  verdict: string | null;
+};
+
+/** The outcome an attempt's `reviewer verdict` states, or `null` when it states neither. */
+function attemptOutcome(verdict: string | null): "PASS" | "REVISE" | null {
+  const value = (verdict ?? "").trim();
+  if (/^PASS\b/i.test(value)) return "PASS";
+  return /^REVISE\b/i.test(value) ? "REVISE" : null;
+}
+
+/** What is wrong with one review attempt's pack pair, in the order a repair takes. */
+async function invalidRoundAttemptPack(root: string, entry: RoundAttemptPack): Promise<string[]> {
+  const qualifier = entry.attempt === null ? "" : ` (attempt ${entry.attempt})`;
+  const label = `Round ${entry.round}: Review pack${qualifier}`;
+  if (entry.pack === null) return [`${label} beside that attempt's reviewer verdict`];
+  // A pack absent from the checkout is skipped below, so the attempt's verdict,
+  // which the entry itself records, is read before that absence excuses the pair.
+  if (attemptOutcome(entry.verdict) === null) {
+    return [
+      `Round ${entry.round}: reviewer verdict${qualifier} stating PASS or REVISE beside that attempt's Review pack`,
+    ];
+  }
+  if (entry.seal === null || !SHA256_VALUE.test(entry.seal)) {
+    return [`Round ${entry.round}: Review pack seal${qualifier}: sha256`];
+  }
+  if (!CANONICAL_REVIEW_PACK.test(entry.pack)) {
+    return [`${label}: canonical .qfai/review/review-<17-digit timestamp> path`];
+  }
+  try {
+    await lstat(path.join(root, ...entry.pack.split("/")));
+  } catch (error) {
+    return isEnoent(error) ? [] : [`${label} path readable when present`];
+  }
+  const packFiles = await collectReviewPackFiles(root, entry.pack);
+  if (packFiles === null) return [`${label} resolving to regular files`];
+  return invalidPresentRoundPack(packFiles, { ...entry, pack: entry.pack, seal: entry.seal });
+}
+
+/** What is wrong with the contents of a round attempt's pack present in the checkout. */
+function invalidPresentRoundPack(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  entry: RoundAttemptPack & { pack: string; seal: string },
+): string[] {
+  const qualifier = entry.attempt === null ? "" : ` (attempt ${entry.attempt})`;
+  const label = `Round ${entry.round}: Review pack${qualifier}`;
+  const invalid: string[] = [];
+  if (reviewPackSeal(packFiles) !== bareSha256(entry.seal)) {
+    invalid.push(`Round ${entry.round}: Review pack seal${qualifier} matching pack contents`);
+  }
+  if (!roundPackRecordsVerdict(packFiles, entry.pack, entry)) {
+    invalid.push(`${label} carrying this row's request and responses agreeing with its verdict`);
+  }
+  if (!roundPackSummaryRecordsVerdict(packFiles, entry.pack, entry)) {
+    invalid.push(
+      `${label} with a summary.json whose overall_status and reviewers agree with its verdict and responses`,
+    );
+  }
+  if (!roundPackRecordsSubject(packFiles, entry.pack, entry)) {
+    invalid.push(
+      `${label} reviewing this row's spec at one revision naming ${REVISION_FORM_HINT} under revision_form "content-hash"`,
+    );
+  }
+  if (!roundPackDeclaresImplement(packFiles, entry.pack)) {
+    invalid.push(`${label} declaring producer implement in summary.json and review_request.md`);
+  }
+  if (!roundPackRecordsHashes(packFiles, entry.pack, entry.tddId)) {
+    invalid.push(
+      `${label} holding one sha256 Audited evidence hash per TDD-ID its request lists, in every response`,
+    );
+  }
+  if (
+    entry.closing !== null &&
+    !roundPackRecordsClosing(packFiles, entry.pack, entry.tddId, entry.closing)
+  ) {
+    invalid.push(
+      `${label} holding one response per closing reviewer, at the revision and hash its verdict records`,
+    );
+  }
+  return invalid;
+}
+
+/** Every response a review pack holds at its root, whichever reviewer wrote it. */
+function allReviewPackResponses(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+): string[] {
+  return packResponseFiles(packFiles, packPath).map(({ content }) => content);
+}
+
+/**
+ * Whether a round attempt's pack says the implement stage wrote it: `producer`
+ * in `summary.json` and the one visible `Producer` line of its request, which
+ * the layout writes as a list item, both state `implement`
+ * (`review-artifact-layout.md`). A sealed pack another stage wrote over the same
+ * spec, row, revision and verdicts would otherwise pass as this row's round.
+ */
+function roundPackDeclaresImplement(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+): boolean {
+  const request = reviewPackArtifact(packFiles, packPath, "review_request.md");
+  const declared = request === null ? [] : visibleLineFieldValues(request, "Producer", true);
+  return (
+    reviewPackSummary(packFiles, packPath)?.["producer"] === "implement" &&
+    declared.length === 1 &&
+    declared[0] === "implement"
+  );
+}
+
+/**
+ * Whether every response in a round attempt's pack gives each id its request
+ * lists one visible sha256 `Audited evidence hash` (`review-artifact-layout.md`).
+ * Only the closing attempt's hashes can be recomputed, because no earlier
+ * attempt's subject is recorded anywhere, but a response that omits one, states
+ * it twice or shows it only inside a fence is not a verdict in any attempt.
+ */
+function roundPackRecordsHashes(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  tddId: string,
+): boolean {
+  const members = packReviewMembers(packFiles, packPath, tddId);
+  return allReviewPackResponses(packFiles, packPath).every(
+    (response) => memberAuditedHashes(response, members) !== null,
+  );
+}
+
+/**
+ * Whether a round attempt's pack is that attempt's own: its request names the
+ * row, and its responses say what the attempt's verdict says — every one `PASS`
+ * for a `PASS`, and for a `REVISE` at least one `REVISE`, or no response at all
+ * from a round whose reviewers wrote nothing, which its summary has to declare
+ * ({@link roundPackSummaryRecordsVerdict}). A sealed pack from another row or
+ * another review would otherwise stand in for this one, because the pair is
+ * outside every audited subject.
+ */
+function roundPackRecordsVerdict(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  entry: RoundAttemptPack,
+): boolean {
+  const request = reviewPackArtifact(packFiles, packPath, "review_request.md");
+  if (request === null || !requestNamesReviewUnit(request, entry.tddId, entry.reviewUnit)) {
+    return false;
+  }
+  const statuses = reviewerStatuses(packFiles, packPath);
+  const outcome = attemptOutcome(entry.verdict);
+  if (statuses === null || outcome === null) return false;
+  const recorded = [...statuses.values()];
+  return outcome === "PASS"
+    ? recorded.length > 0 && recorded.every((status) => status === "PASS")
+    : recorded.length === 0 || recorded.includes("FAIL");
+}
+
+/**
+ * The status each reviewer's responses in a pack give it, spelled as
+ * `summary.json` spells it: `FAIL` when any of its responses says `REVISE`, and
+ * `PASS` otherwise. `null` when a response states neither exactly once.
+ */
+function reviewerStatuses(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+): Map<string, "PASS" | "FAIL"> | null {
+  const statuses = new Map<string, "PASS" | "FAIL">();
+  for (const { role, content } of packResponseFiles(packFiles, packPath)) {
+    const passes = exactLineField(content, "Result", "PASS");
+    if (!passes && !exactLineField(content, "Result", "REVISE")) return null;
+    statuses.set(role, passes && statuses.get(role) !== "FAIL" ? "PASS" : "FAIL");
+  }
+  return statuses;
+}
+
+/**
+ * Whether a round attempt's `summary.json` records what its verdict and its
+ * responses record (`review-artifact-layout.md`): `overall_status` is `PASS` for
+ * a `PASS` and `FAIL` for a `REVISE`, and `reviewers[]` gives each reviewer that
+ * responded the one status its responses give it. An entry for a reviewer with
+ * no response states `NA`, and a round whose reviewers wrote nothing declares
+ * `reviewers: []`. No other check a `tdd` run makes reads a round pack's
+ * recorded outcome, so a `PASS` sealed over a `REVISE` attempt would otherwise
+ * stand.
+ */
+function roundPackSummaryRecordsVerdict(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  entry: RoundAttemptPack,
+): boolean {
+  const summary = reviewPackSummary(packFiles, packPath);
+  const reviewers = summary?.["reviewers"];
+  const statuses = reviewerStatuses(packFiles, packPath);
+  const outcome = attemptOutcome(entry.verdict);
+  if (statuses === null || outcome === null || !Array.isArray(reviewers)) return false;
+  if (summary?.["overall_status"] !== (outcome === "PASS" ? "PASS" : "FAIL")) return false;
+  const declared = new Map<string, Set<unknown>>();
+  for (const reviewer of reviewers) {
+    const record = jsonRecord(reviewer);
+    const role = record?.["reviewer"];
+    if (typeof role !== "string") return false;
+    // One entry per reviewer, as the layout requires. Collected into a set, a
+    // role repeated with the same status collapsed to one value and every check
+    // below passed over a malformed pack; repeated with a different status it
+    // was caught, so the two spellings of the same defect answered differently.
+    if (declared.has(role)) return false;
+    declared.set(role, new Set<unknown>([record?.["status"]]));
+  }
+  if (statuses.size === 0 && declared.size > 0) return false;
+  for (const [role, status] of statuses) {
+    const recorded = declared.get(role);
+    if (recorded === undefined || recorded.size !== 1 || !recorded.has(status)) return false;
+  }
+  return [...declared].every(
+    ([role, recorded]) => statuses.has(role) || [...recorded].every((status) => status === "NA"),
+  );
+}
+
+/**
+ * The `summary.json` record of a pack, or `null` when it is absent or not a JSON
+ * object.
+ */
+function reviewPackSummary(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+): Record<string, unknown> | null {
+  const summary = reviewPackArtifact(packFiles, packPath, "summary.json");
+  if (summary === null) return null;
+  try {
+    return jsonRecord(JSON.parse(summary));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether a round attempt's pack reviewed this row's spec, at one revision:
+ * `summary.json` targets the spec the row belongs to, as a row-level pack's
+ * does, and every response names the revision the summary names. `TDD-ID`s are
+ * unique only within a spec, so without the target a sealed pack reviewing
+ * another spec's row of the same id would stand in for this one.
+ *
+ * The revision is a form `evidence-revision.md` defines, under the
+ * `revision_form: "content-hash"` a current pack declares
+ * (`review-artifact-layout.md`). Nothing in the entry records the tree an
+ * earlier attempt reviewed, so its form is all that binds that review to one.
+ */
+function roundPackRecordsSubject(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  entry: RoundAttemptPack,
+): boolean {
+  const summary = reviewPackSummary(packFiles, packPath);
+  const target = jsonRecord(summary?.["target"]);
+  const revision = summary?.["revision"];
+  if (
+    target === null ||
+    target["kind"] !== "spec" ||
+    target["path"] !== `${entry.specsRelative}/spec-${entry.specNumber}` ||
+    typeof revision !== "string" ||
+    !EVIDENCE_REVISION_FORM.test(revision) ||
+    summary?.["revision_form"] !== "content-hash"
+  ) {
+    return false;
+  }
+  return allReviewPackResponses(packFiles, packPath).every((response) =>
+    exactLineField(response, "Reviewed revision", revision),
+  );
+}
+
+/**
+ * Whether the attempt the last round closed on is the review the row-level
+ * verdicts record: one response from each reviewer whose verdict the row
+ * records, over the revision `summary.json` names and that verdict records, and
+ * giving this row that verdict's audited hash — on the line naming the row,
+ * where the request lists a T1 group. A pack answering for one reviewer alone
+ * would otherwise satisfy every other reviewer's hash vacuously.
+ */
+function roundPackRecordsClosing(
+  packFiles: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  tddId: string,
+  closing: ReadonlyMap<string, ClosingVerdict>,
+): boolean {
+  const revision = reviewPackSummary(packFiles, packPath)?.["revision"];
+  const members = packReviewMembers(packFiles, packPath, tddId);
+  for (const [role, verdict] of closing) {
+    const answered = reviewPackResponses(packFiles, packPath, role);
+    if (
+      answered.length !== 1 ||
+      verdict.revision === null ||
+      revision !== verdict.revision ||
+      memberAuditedHashes(answered[0] ?? "", members)?.get(tddId) !== verdict.hash
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /**
@@ -5883,6 +6641,7 @@ async function validateSpecTddList(
           obligationField,
           obligationValue: cell(ref, obligationColumn),
           preSplit: usesPreSplitEvidence(layer, evidence),
+          reviewUnit: reviewUnitOf(ref, [...ledgerRows()]),
         } satisfies CompletedEvidenceExpectation;
         // A backfilled row is exempt from the reviewer-pack fields, and the
         // exemption is reported rather than applied silently. The gate's whole

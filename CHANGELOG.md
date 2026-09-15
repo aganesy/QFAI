@@ -194,6 +194,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   consuming caller. Callback hosts that ignore returns require an explicit
   adapter that adopts the asynchronous result and handles boundary rejections (#1802).
 
+- **A UI contract template name the package does not ship is recorded where the
+  Drift Protocol looks for it** (#1758). Nine statements, eight in `spec-0013`
+  and the shared decision `DR-0267`, name `templates/contracts/ui-spec.yaml` as
+  the file that documents the `primary_tasks` count guidance. No file of that
+  name ships. The UI contract template is `ui-contract.sample.yaml`, which the
+  same pack names elsewhere, and a completed ledger row certifies a test case
+  naming the missing file while its test reads the shipped one.
+
+  `CR-20260913-0010` proposes correcting the file name in each statement, with
+  nothing else in them changing, and resetting that row for the acceptance-test
+  stage to re-execute. It is applied ahead of the record that settles the band
+  itself.
+
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
   from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and
@@ -264,6 +277,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   classify both as committed rather than as regenerable stage logs. A record no
   checkout can see is one the check could only ever report nothing about, and a
   negation alone does not stage a file.
+
+- **A procurement row a reader cannot act on is reported** (#1744).
+  `prototype-handoff.yaml#procurement` is what `/qfai-implement` installs from
+  rather than rebuilding, and what a reviewer reads instead of judging a
+  resemblance. Nothing checked it, so a `procured` row naming no item and an
+  `authored` row recording no reason both passed — the second satisfying the
+  reviewer's last-resort criterion on its face while recording none of what that
+  criterion asks for.
+
+  Each row now carries its cells or is reported, one finding per row. The key
+  itself stays optional: the handoff contract lets a screen drawn entirely from
+  what the project already had omit both lists.
 
 - **The prototyping preflight refuses a screen with no primary task** (#1698).
   The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
@@ -552,6 +577,154 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `--profile tdd` runs no such validator, so there the stub gate
   reports every marked skeleton it reads, and it reads the acceptance
   directories as well as `testFileGlobs`, as the coverage check it runs does.
+
+- **The audited evidence hash says what its extraction produces, not only which
+  fields it reads** (#1616). Naming the fields settled which lines are taken and
+  left open what they become, so two readers taking the same fields computed
+  different digests: the list marker, the `Round N: ` prefix, a field's fenced
+  value, the heading line, the field order and the separator were each
+  undetermined. A recorded value was reproducible only inside the run that wrote
+  it, which is not a check.
+
+  The extraction is a region of the entry rather than a selection out of it: it
+  runs from the row's heading to the first field the subject could not have
+  read, keeps every line inside verbatim including a field's fenced value, drops
+  a reviewer's own verdict line, and synthesizes the heading. That is what
+  `npx qfai validate` gate item 10 computes today, so a second party recomputing
+  a recorded digest gets the recorded digest. A selection would have had to fix
+  an order, a separator and a spelling as well, each a further way to disagree.
+
+  Four values share these words and are not one: three ledger fields carrying
+  three reviewer roles' verdicts by these same four steps — the third is the
+  parity hash a UI-affecting row owes — and the working-tree revision, which
+  addresses a tree rather than a subject. The reference now names all four.
+
+  A round with several review attempts qualifies its verdict field, and the
+  extraction now drops that form too: the contract said every verdict line goes
+  and the code matched only the unqualified one, so a multi-attempt round gave
+  the reviewer and the gate two digests. The `Round N: Review pack` pair written
+  beside each attempt is dropped the same way, and the gate recomputes each
+  attempt's seal from the pack it names instead, so a pack edited after its
+  attempt closed is still reported. A round that records any pair owes one for
+  every verdict attempt, a pair's path must have the canonical pack shape even
+  when the pack is absent, and a present pack must name the row in its request
+  and carry responses that agree with the attempt's verdict. It must also review
+  this row's spec at one revision, and the attempt the last round closed on must
+  hold one response per reviewer the row records, at the tree and audited hash
+  that reviewer's verdict records. A request names the row once and otherwise only T1
+  rows sharing its `BR-Ref`, and each response in a pack states its verdict. Every
+  review pack's seal now hashes Markdown and HTML normalized and every other file
+  as its bytes, as the audit-hash procedure does, so a producer's seal over a
+  `summary.json` with a carriage return recomputes. The completion gate also holds those
+  attempts to the numbering the contract gives them, from 1 in review order,
+  and reads the attempt a round ends on: a round before the last has to end on
+  a `REVISE`, and the last round of a done row on exactly `PASS`. Within a
+  round, every attempt before the last is a `REVISE`. A blank attempt counts as
+  one.
+
+  Every response in a present round pack must state one visible SHA-256
+  `Audited evidence hash` per `TDD-ID` its request lists, and a T1 group
+  member's hash is read from the line naming it, in round and row-level packs
+  alike. No two review attempts of a row may name one pack, and a
+  `reviewer verdict` or `Round N: Review pack` label may not share a table row
+  with another field's label, since the audited subject drops that row whole.
+  A round pack pair needs its attempt's `PASS` or `REVISE` verdict even when
+  the pack is absent, and a present pack's `summary.json` must record that
+  verdict: `overall_status` `PASS` or `FAIL`, and each responding reviewer's
+  status in `reviewers[]`, or `reviewers: []` for a round no reviewer answered.
+  Review pack responses are read only from the pack's own directory, and a
+  round pack must name its revision in a form `evidence-revision.md` defines
+  under `revision_form: "content-hash"` and declare `producer: "implement"` in
+  `summary.json` and `Producer: implement` in its request.
+
+- **The `primary_tasks` band drift is recorded where the Drift Protocol looks
+  for it** (#1621). `QFAI-AUD-020` lost its lower bound as product work, and
+  `spec-0013` still specifies the band: its test case says one task warns and
+  the test pinning it says nothing is emitted, with a `done` ledger row joining
+  the two.
+
+  `CR-20260913-0001` records both sides, blocks the three rows whose
+  obligations the product contradicts — two of one pack and one of another that
+  shares the decision — and says which it leaves alone, and puts the part
+  a rerun cannot settle by following the product: three decision records chose
+  the band, the removal overturned them on the opposite rationale, and whether a
+  reversed decision is rewritten or superseded was left to the user to choose.
+
+- **The prototyping evidence layout is recorded where the Drift Protocol looks
+  for it** (#1626). One acceptance criterion and the test case restating it say
+  the aggregate `screenshots/` and `html/` directories are not accepted as an
+  evidence source. The required-path check reads them first — and the iterate
+  command contract calls them the SSOT for handoff, the shared policy defines
+  the mandatory evidence by those paths, and another spec pack requires the
+  mirror that writes them. A loop reset also leaves the previous loop's copies
+  there, where the check accepts them.
+
+  `CR-20260913-0002` records both sides, blocks the ledger row whose obligation
+  turns on the disputed clause and the contract and policy terms the options
+  reword, and puts the choice: keep the mirror but stop reading it; narrow the
+  criterion to what the check reads, a restarted loop passing on the previous
+  loop's copies included; or withdraw the criterion together with the rule that
+  depends on it. No option stops the mirror.
+
+- **Four spec-0013 rules the product states otherwise are recorded where the
+  Drift Protocol looks for them** (#1629). Two test cases in one pack require
+  opposite things of one value: the UI contract template must ship an empty
+  task list, and the validate lane must fail at error on exactly that value.
+  A legacy-contract rule is written without the sunset condition its business
+  rule carries, three lines below a file comment describing the behaviour that
+  sunset replaced. An obligation naming a stage is covered by a test that
+  drives a helper no code calls. And a finding specified as a warning inside a
+  deprecation window is emitted as an unconditional error, because the
+  version-keyed severity mechanism those layers name was retired.
+
+  Three records hold them. `CR-20260913-0007` and `CR-20260913-0008` are
+  defects the pack shows on its own, each with its one correction: the template
+  slot restated as a key holding authored tasks, and the legacy-contract test
+  case given the sunset its business rule already carries. `CR-20260913-0003`
+  puts the other two to the user with options: the unwired helper, whose
+  resolver half every option restates to the fallback `spec-0012` specifies,
+  and the finding's severity, where restoring a window needs a release only the
+  user can name. Each blocks the ledger rows its items change, and no rule or
+  code changes until it is applied.
+
+- **An unresolved merge in a pinned file is named as one** (#1722). A conflict
+  block changes a pinned file's bytes like any other edit, so the byte guard
+  that opens the lint job failed it as a digest mismatch and named resealing as
+  the repair. The scan that would have named the real cause runs later in the
+  same job, and a job stops at its first failure, so the cause arrived a CI
+  round late, after the operator had followed the wrong advice once.
+
+  The guard now scans the pinned paths for marker lines before comparing
+  digests, and says that resealing is not the repair. The re-pin program
+  refuses the same tree rather than sealing a conflict block as the reviewed
+  bytes. Both read markers as the tracked-file scan does, so a fenced example
+  in a Markdown file is not one.
+
+  One path had no later reader at all: the pinned-bytes list is rewritten from
+  the tree rather than edited, so a conflict inside it was discarded by the
+  reseal and the only trace was a routine-looking re-pin commit. Both checks
+  read that file too, although the list does not name itself, and the two other
+  lists the workflow step pins. That step now scans its pinned inputs before it
+  checks their digests, so a conflict in one of them is named there as well.
+  The re-pin program also scans the files it writes the new digests into, the
+  status-context declaration and the workflow, before it writes anything.
+
+- **An active-pointer state no directory can be in is recorded where the Drift
+  Protocol looks for it** (#1693). A shared decision and both packs that follow
+  it say a recovery error is raised when the pointer resolves to a duplicate
+  pack. The helper and the `discussion list --active` command both take their
+  candidates from one directory listing and match on an exact name, so no two
+  can match, and that has been true since the branch was written: it has never
+  been reachable.
+
+  `CR-20260913-0004`, a defect-class request awaiting approval, proposes
+  removing the duplicate state from the rule, keeping its absent and missing
+  conditions — at the shared decision first, then in both packs — while keeping the command's
+  single-candidate read, and lists both unreachable branches for removal. No
+  rule or code changes until it is applied, after the record that repairs
+  spec-0013's ledger. It blocks the ledger rows whose obligation names the
+  duplicate state, and proposes correcting a completed row's evidence that claims its run
+  covered that state.
 
 - **A skill the gate accepts is one the host accepts** (#1707). Four cases
   parted company with the host `QFAI-SKILLS-015` is modelled on: a description
