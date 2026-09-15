@@ -265,6 +265,26 @@ describe("TC-0012-0479: mutation-log appends a JSONL entry per destructive iter-
     await expect(stat(target)).rejects.toThrow();
   });
 
+  it("refuses a log path that keeps no record", async () => {
+    // A link to a sink answers every append and holds nothing. Treated as a
+    // successful write, the caller would report moves as logged that no entry
+    // names, and would not put them back.
+    const logAbs = path.join(root, MUTATION_LOG_REL);
+    await mkdir(path.dirname(logAbs), { recursive: true });
+    const sink = path.join(root, "sink");
+    await mkdir(sink);
+    try {
+      await symlink(sink, logAbs, "dir");
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+
+    await expect(logEvidenceMoves(root, "iterate", TWO_MOVES)).rejects.toThrow(
+      "keeps no mutation record",
+    );
+  });
+
   it("keeps an entry another writer appended during this write", async () => {
     // Two runs can append to the log at once. Cutting back to the length this
     // one measured would delete the other's entry along with this batch.

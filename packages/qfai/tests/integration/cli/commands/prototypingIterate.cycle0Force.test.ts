@@ -502,6 +502,64 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(stderr.join("")).toContain("came back while the reset ran");
   });
 
+  it("refuses when a capture creates an aggregate directory this run found none to move", async () => {
+    // The evidence root held no mirror when the reset started, so nothing was
+    // moved aside. An overlapping capture creating one afterwards leaves the
+    // canonical path holding the other run's evidence, which the required-path
+    // check would read as this loop's.
+    const root = await newTempDir();
+    await seedProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(path.join(evidenceRoot, "iter-00"), { recursive: true });
+    await writeFile(path.join(evidenceRoot, "iter-00", "old.review.json"), "{}", "utf-8");
+    // What a capture still running does, once the only rename of this reset has
+    // returned: the mirror appears at the canonical path.
+    fault.afterRename = async (from: string) => {
+      if (from.endsWith("iter-00")) await mkdir(path.join(evidenceRoot, "screenshots"));
+    };
+    const stderr = captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      force: true,
+      targetUrl: "http://localhost:5173",
+    });
+
+    expect(exit).toBe(2);
+    expect(stderr.join("")).toContain("came back while the reset ran");
+    // And the backup went home, so the reset left the tree as it found it.
+    expect(await readdir(path.join(evidenceRoot, "iter-00"))).toContain("old.review.json");
+  });
+
+  it("puts the moves back when the evidence root cannot be re-read after them", async () => {
+    // The check that reads the root once more can fail for a reason that is not
+    // an absent directory. Thrown past the reset it left the moves made and
+    // logged, with the previous loop's captures in a backup nothing would move
+    // home.
+    const root = await newTempDir();
+    await seedProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(path.join(evidenceRoot, "screenshots"), { recursive: true });
+    await writeFile(path.join(evidenceRoot, "screenshots", "home.png"), "prior", "utf-8");
+    // Refused only once the move has been made, so the check is what meets it.
+    fault.afterRename = async (from: string) => {
+      if (from.endsWith("screenshots")) fault.unstatable = path.join(evidenceRoot, "screenshots");
+    };
+    const stderr = captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+
+    expect(exit).toBe(2);
+    expect(stderr.join("")).toContain("could not re-read the evidence root");
+    fault.unstatable = null;
+    expect(await readdir(path.join(evidenceRoot, "screenshots"))).toEqual(["home.png"]);
+  });
+
   it("names the iteration directories it had already removed", async () => {
     // The reset puts its own moves back, and nothing puts a removal back, so a
     // clear that stopped part-way leaves a tree the message has to describe.
@@ -553,6 +611,44 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(
       (await readdir(evidenceRoot)).find((entry) => entry.startsWith("aggregate.backup-")),
     ).toBeUndefined();
+  });
+
+  it("keeps the deletion records a partly cleared directory wrote, and answers the moves", async () => {
+    // Clearing records each removal before it makes it, so those records follow
+    // the reset's move batch in the log. Cutting back to before the batch would
+    // take them with it, and leaving the batch alone would claim moves the
+    // rollback has already put back.
+    const root = await newTempDir();
+    await seedProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(path.join(evidenceRoot, "screenshots"), { recursive: true });
+    await writeFile(path.join(evidenceRoot, "screenshots", "home.png"), "prior", "utf-8");
+    const stale = path.join(evidenceRoot, "iter-01");
+    await mkdir(stale, { recursive: true });
+    await writeFile(path.join(stale, "old.review.json"), "{}", "utf-8");
+    fault.unremovable = stale;
+    captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+
+    expect(exit).toBe(2);
+    const entries = (
+      await readFile(path.join(root, ".qfai/evidence/prototyping/mutation-log.jsonl"), "utf-8")
+    )
+      .split(/\r?\n/)
+      .filter((line) => line.length > 0)
+      .map((line) => JSON.parse(line) as { path: string; action: string });
+    // The removal it recorded is still there.
+    expect(entries.some((entry) => entry.action === "delete")).toBe(true);
+    // And the move is answered by the backup path leaving, which is what
+    // putting the capture back did.
+    expect(
+      entries.some((entry) => entry.action === "move" && entry.path.includes("aggregate.backup-")),
+    ).toBe(true);
   });
 
   it("puts back what the reset moved when a later move fails", async () => {

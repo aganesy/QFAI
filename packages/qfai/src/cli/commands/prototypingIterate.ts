@@ -798,11 +798,15 @@ export async function runPrototypingIterate(
     }
     // Taken back only while every move they record is back where it started and
     // they are still the last thing written. A stranded backup is still moved,
-    // so its entry is still true, and anything appended since belongs to
-    // another run — in both cases the lines stand and the operator is told.
+    // so its entry stands. Lines written since this batch belong to the rest of
+    // the reset — the deletions a partly cleared directory recorded are the
+    // case — and cutting back to before them would take those with it, so the
+    // move is answered by a record of the move back instead.
     const unlogged =
       loggedMoves === null ||
-      (stranded.length === 0 && (await unlogMovedFiles(options.root, loggedMoves)));
+      (stranded.length === 0 &&
+        ((await unlogMovedFiles(options.root, loggedMoves)) ||
+          (await logMovesBack(options.root, aggregateMove, backup))));
     error(
       `qfai prototyping iterate --cycle 0: ${what} (${reason}). ` +
         (aggregateMove === null && backup === null
@@ -825,10 +829,22 @@ export async function runPrototypingIterate(
     );
     if (!moved.ok) {
       const reason = moved.cause instanceof Error ? moved.cause.message : String(moved.cause);
+      // A directory the rollback could not put back is still moved, and every
+      // file under it is a mutation the log has to name. Recorded here because
+      // this path returns before the reset's own logging step.
+      const unnamed = await logStrandedMoves(
+        options.root,
+        evidenceRootAbs,
+        moved.backupAbs,
+        moved.stranded,
+      );
       error(
         `qfai prototyping iterate --cycle 0: could not move ${toRootRelative(options.root, moved.failedDir)} aside (${reason}). ` +
           aggregateRollbackReport(options.root, moved.stranded) +
-          "Resolve the filesystem error (Windows file lock / EACCES / EBUSY are common causes) and rerun.",
+          "Resolve the filesystem error (Windows file lock / EACCES / EBUSY are common causes) and rerun." +
+          (unnamed
+            ? " The mutation log does not name the files under the backup this run could not put back."
+            : ""),
       );
       return 2;
     }
@@ -884,26 +900,35 @@ export async function runPrototypingIterate(
       return undoReset("could not record the moves in the mutation log", cause);
     }
     if (aggregateMove !== null) {
-      // A capture still running recreates the directory it was writing into, and
-      // a reset that ends with the previous loop's mirror back in place is a
-      // reset that did nothing. Read once more, after the log: the move is put
-      // back and the operator is told to let the capture finish.
-      //
-      // SIMPLIFIED: a capture writing after this read is not seen. The window is
-      // one check wide, where it was the whole reset.
-      // Lift when: the two commands take a lock on the evidence root.
-      const returned = await presentAggregateDirs(evidenceRootAbs);
-      if (returned.length > 0) {
-        return await undoReset(
-          `${returned.join(" and ")} came back while the reset ran`,
-          new Error("another capture is writing into the evidence root"),
-          " Let the capture finish, then re-run cycle 0.",
-        );
-      }
       info(
         `qfai prototyping iterate --cycle 0: moved ${aggregateMove.names.join(" and ")} aside to ${toRootRelative(options.root, aggregateMove.backupAbs)}.`,
       );
     }
+  }
+  // A capture still running recreates the directory it was writing into, and a
+  // reset that ends with the previous loop's mirror in place is a reset that did
+  // nothing. Read after the log, and on every cycle-0 reset: an overlapping
+  // capture creates the directory whether or not this run found one to move, so
+  // a check made only where one was found is a check the stale evidence walks
+  // past.
+  //
+  // SIMPLIFIED: a capture writing after this read is not seen. The window is one
+  // check wide, where it was the whole reset.
+  // Lift when: the two commands take a lock on the evidence root.
+  let returned: string[];
+  try {
+    returned = await presentAggregateDirs(evidenceRootAbs);
+  } catch (cause) {
+    // The check itself failing leaves the moves made and logged, so it goes
+    // back the way every other failure after them does.
+    return await undoReset("could not re-read the evidence root after the moves", cause);
+  }
+  if (returned.length > 0) {
+    return await undoReset(
+      `${returned.join(" and ")} came back while the reset ran`,
+      new Error("another capture is writing into the evidence root"),
+      " Let the capture finish, then re-run cycle 0.",
+    );
   }
 
   // 4) Persist seed metadata to prototyping.json on cycle 0:
@@ -2556,7 +2581,7 @@ async function moveAggregateDirsAside(
   stamp: string,
 ): Promise<
   | { ok: true; move: AggregateMove }
-  | { ok: false; failedDir: string; cause: unknown; stranded: string[] }
+  | { ok: false; failedDir: string; cause: unknown; stranded: string[]; backupAbs: string }
 > {
   // Nothing is moved that the mutation log could not name. The list this walk
   // builds is discarded: what the log records is read from the backup once the
@@ -2567,7 +2592,7 @@ async function moveAggregateDirsAside(
     try {
       await filesWithSizes(root, dirAbs);
     } catch (cause) {
-      return { ok: false, failedDir: dirAbs, cause, stranded: [] };
+      return { ok: false, failedDir: dirAbs, cause, stranded: [], backupAbs: "" };
     }
   }
   const backupAbs = path.join(evidenceRootAbs, `aggregate.backup-${stamp}`);
@@ -2576,7 +2601,7 @@ async function moveAggregateDirsAside(
   try {
     await mkdir(backupAbs);
   } catch (cause) {
-    return { ok: false, failedDir: backupAbs, cause, stranded: [] };
+    return { ok: false, failedDir: backupAbs, cause, stranded: [], backupAbs };
   }
   const moved: string[] = [];
   for (const name of names) {
@@ -2586,7 +2611,7 @@ async function moveAggregateDirsAside(
       moved.push(name);
     } catch (cause) {
       const stranded = await putAggregateDirsBack(evidenceRootAbs, backupAbs, moved);
-      return { ok: false, failedDir: sourceAbs, cause, stranded };
+      return { ok: false, failedDir: sourceAbs, cause, stranded, backupAbs };
     }
   }
   // Read from the backup, so every entry names a file the move actually took,
@@ -2600,7 +2625,7 @@ async function moveAggregateDirsAside(
       inBackup = await filesWithSizes(root, path.join(backupAbs, name));
     } catch (cause) {
       const stranded = await putAggregateDirsBack(evidenceRootAbs, backupAbs, moved);
-      return { ok: false, failedDir: path.join(backupAbs, name), cause, stranded };
+      return { ok: false, failedDir: path.join(backupAbs, name), cause, stranded, backupAbs };
     }
     for (const entry of inBackup) {
       files.push({ rel: asItStood(entry.rel, backupRel, homeRel), size: entry.size });
@@ -2680,6 +2705,79 @@ async function logMovedFiles(
     "iterate",
     files.map((file) => ({ path: file.rel, priorSize: file.size })),
   );
+}
+
+/**
+ * Record the reverse of one reset's moves, for a rollback whose own entries are
+ * no longer the last thing in the log.
+ *
+ * Cutting back is available only while nothing else has been appended. Where
+ * something has, a `move` naming each file's backup path says the file left
+ * that path, which is what putting it back did, and leaves every line written
+ * since where it is.
+ */
+async function logMovesBack(
+  root: string,
+  aggregate: AggregateMove | null,
+  iter00: { from: string; to: string; files: MovedFile[] } | null,
+): Promise<boolean> {
+  const files: MovedFile[] = [];
+  if (aggregate !== null) {
+    const backupRel = toRootRelative(root, aggregate.backupAbs);
+    const homeRel = toRootRelative(root, path.dirname(aggregate.backupAbs));
+    for (const file of aggregate.files) {
+      files.push({ rel: asItStood(file.rel, homeRel, backupRel), size: file.size });
+    }
+  }
+  if (iter00 !== null) {
+    const backupRel = toRootRelative(root, iter00.to);
+    const homeRel = toRootRelative(root, iter00.from);
+    for (const file of iter00.files) {
+      files.push({ rel: asItStood(file.rel, homeRel, backupRel), size: file.size });
+    }
+  }
+  if (files.length === 0) return true;
+  try {
+    await logMovedFiles(root, files);
+  } catch {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Record the files under each backup path a rollback could not put back.
+ *
+ * Answers `true` when something stayed moved that the log does not name, which
+ * is what the operator is told: the tree holds a mutation with no entry for it.
+ */
+async function logStrandedMoves(
+  root: string,
+  evidenceRootAbs: string,
+  backupAbs: string,
+  stranded: readonly string[],
+): Promise<boolean> {
+  if (stranded.length === 0) return false;
+  const backupRel = toRootRelative(root, backupAbs);
+  const homeRel = toRootRelative(root, evidenceRootAbs);
+  const files: MovedFile[] = [];
+  for (const dirAbs of stranded) {
+    let inBackup: readonly MovedFile[];
+    try {
+      inBackup = await filesWithSizes(root, dirAbs);
+    } catch {
+      return true;
+    }
+    for (const entry of inBackup) {
+      files.push({ rel: asItStood(entry.rel, backupRel, homeRel), size: entry.size });
+    }
+  }
+  try {
+    await logMovedFiles(root, files);
+  } catch {
+    return true;
+  }
+  return false;
 }
 
 /** Take the `move` entries back, for a reset that put the moves back. */

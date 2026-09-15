@@ -198,10 +198,16 @@ async function priorLogState(logAbs: string): Promise<PriorLog | null> {
       throw cause;
     },
   );
-  // A directory or a device takes no append, so a failed one leaves nothing
-  // this call could undo.
+  // A non-regular target takes the append and keeps none of it: a link to the
+  // null device answers every write and holds no record, so a caller told the
+  // write succeeded would treat unrecorded moves as logged. Refused here rather
+  // than after the append, which is the only point at which refusing still
+  // leaves the caller able to put the moves back.
   if (resolved !== null) {
-    return resolved.isFile() ? { kind: "extended", length: resolved.size } : null;
+    if (!resolved.isFile()) {
+      throw new Error(`${logAbs} is not a regular file, so it keeps no mutation record`);
+    }
+    return { kind: "extended", length: resolved.size };
   }
   const created = await firstAbsentInChain(logAbs);
   return created === null ? null : { kind: "created", file: created };
