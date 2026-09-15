@@ -986,7 +986,7 @@ function buildCarrierOnlyIssues(
       "atddCodeTraceability.coverage.carrierOnly",
       refs,
       "change",
-      `Every file referencing these ids is either \`.md\` prose or a file that declares no test (\`it\` / \`test\` / \`describe\`, Gherkin's \`Scenario:\`, \`def test_\` and the like). Move the annotation to a real test under ${dirs.integration} / ${dirs.api} / ${dirs.e2e}, or record the state as a deliberate placeholder. The check reads whether a test is declared, never whether it is skipped. ${ATDD_PACKAGE_SUITE_HINT}`,
+      `Every file referencing these ids is either \`.md\` prose or a file that declares no test (\`it\` / \`test\` / \`describe\`, Gherkin's \`Scenario:\`, \`def test_\` and the like). Move the annotation to a real test under ${dirs.integration} / ${dirs.api} / ${dirs.e2e}, or record the state as a deliberate placeholder. The check reads whether a test is declared, never whether it is skipped.${ATDD_PACKAGE_SUITE_HINT}`,
       { relatedFiles: attribution.relatedFiles },
     ),
   ];
@@ -1047,7 +1047,7 @@ function repoRelative(root: string, file: string): string {
  * tell them not to do.
  */
 const ATDD_PACKAGE_SUITE_HINT =
-  "A package with a suite of its own answers from the same layer directory inside that package's own test root, selected by `validation.traceability.testFileGlobs`. The path above is where a project with one suite writes; do not add a second central suite beside a package that already has one.";
+  " A package with a suite of its own answers from the same layer directory inside that package's own test root, selected by `validation.traceability.testFileGlobs`. The path above is where a project with one suite writes; do not add a second central suite beside a package that already has one.";
 
 function buildMissingTcFix(
   grouped: Map<AtddTestKind, string[]>,
@@ -1056,7 +1056,7 @@ function buildMissingTcFix(
   const perHome = orderedMissingTcGroups(grouped)
     .map(([kind, refs]) => `${dirs[kind]}: ${refs.join(", ")}`)
     .join(" / ");
-  return `Add a \`QFAI:SPEC-XXXX:TC-YYYY\` annotation in the directory each TC's declared Level routes to (L3/Integration -> ${dirs.integration}, L4/API -> ${dirs.api}, L5/E2E -> ${dirs.e2e}, and an undeclared Level -> ${dirs.integration}): ${perHome}. ${ATDD_PACKAGE_SUITE_HINT}`;
+  return `Add a \`QFAI:SPEC-XXXX:TC-YYYY\` annotation in the directory each TC's declared Level routes to (L3/Integration -> ${dirs.integration}, L4/API -> ${dirs.api}, L5/E2E -> ${dirs.e2e}, and an undeclared Level -> ${dirs.integration}): ${perHome}.${ATDD_PACKAGE_SUITE_HINT}`;
 }
 
 function buildUnknownIssues(

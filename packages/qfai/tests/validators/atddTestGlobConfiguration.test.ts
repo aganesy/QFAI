@@ -280,6 +280,32 @@ describe("the stage says when the glob matcher refuses its globs", () => {
     }
   });
 
+  it("records the error code rather than the path the failure names", async () => {
+    // A file-system error's own message embeds the absolute directory, so the
+    // raw text put a checkout path into the summary and into the finding, and
+    // made the same failure read differently on two machines.
+    const root = await projectWithAcceptanceTest();
+    const absolute = "/home/someone/checkout/locked";
+    scanFailure.error = Object.assign(
+      new Error(`EACCES: permission denied, scandir '${absolute}'`),
+      { code: "EACCES" },
+    );
+    scanFailure.when = (globs) => globs.some((glob) => glob.startsWith("locked/"));
+    try {
+      const config = configWith(["tests/**/*.test.ts", "locked/**/*.test.ts"]);
+      const result = await evaluateAtddCodeTraceability(root, config);
+
+      expect(result.scan.unreadable).toEqual(["locked/**/*.test.ts: EACCES"]);
+      const found = await validateAtddCodeTraceability(root, config);
+      for (const finding of found) {
+        expect(JSON.stringify(finding)).not.toContain(absolute);
+      }
+    } finally {
+      scanFailure.error = null;
+      scanFailure.when = () => true;
+    }
+  });
+
   it("sends a refused pattern the project wrote to testFileGlobs, beside generated ones", async () => {
     const root = await projectWithAcceptanceTest();
     const project = `tests/${NUL}/*.ts`;

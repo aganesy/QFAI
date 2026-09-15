@@ -37,6 +37,23 @@ describe("namedTestFileMatcher", () => {
     expect(namedTestFileMatcher([glob])(file)).toBe(true);
   });
 
+  it("reads a wildcard wrapped in group syntax as naming nothing", () => {
+    // The syntax is not a name: `@(*)` selects what `*` selects, and a matcher
+    // that vouched for its basenames read a fixture beside the suite as source.
+    for (const glob of ["packages/*/tests/**/@(*)", "packages/*/tests/**/*(?)", "a/tests/{*,?}"]) {
+      expect(namedTestFileMatcher([glob])("packages/a/tests/data.json"), glob).toBe(false);
+    }
+    // A group naming something still names it.
+    expect(
+      namedTestFileMatcher(["packages/*/tests/**/@(data.json|x.json)"])(
+        "packages/a/tests/data.json",
+      ),
+    ).toBe(true);
+    expect(
+      namedTestFileMatcher(["packages/*/tests/**/*.!(md)"])("packages/a/tests/data.json"),
+    ).toBe(true);
+  });
+
   it("reads a last segment of wildcards as naming nothing, surrounding whitespace included", () => {
     expect(namedTestFileMatcher([" packages/**/* "])("packages/a/tests/data.json")).toBe(false);
     expect(namedTestFileMatcher([" packages/**/*.json "])("packages/a/tests/data.json")).toBe(true);

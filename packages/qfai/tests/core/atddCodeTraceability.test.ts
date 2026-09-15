@@ -1644,6 +1644,31 @@ describe("acceptance tests outside paths.testsDir", () => {
     });
   });
 
+  it("reads a CMake project command inside a bracket comment as no declaration", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // A bracket comment spans lines, so a line-oriented read saw a package
+      // where the file declares none, and dropped the suite below it.
+      const dir = path.join(root, "packages", "tests", "e2e");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(root, "packages", "tests", "CMakeLists.txt"),
+        ["#[[", "project(tests CXX)", "]]", "add_subdirectory(e2e)", ""].join("\n"),
+        "utf-8",
+      );
+      await writeFile(path.join(dir, "client.spec.ts"), "/* QFAI:SPEC-0001:US-0001 */\n", "utf-8");
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/**/*.spec.ts"]),
+      );
+
+      // The directory is a test root, so `e2e/` answers the story.
+      expect(result.missing.us).toEqual([]);
+    });
+  });
+
   it("reads a TOML package table that carries a trailing comment", async () => {
     await withProject(async (root) => {
       await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);

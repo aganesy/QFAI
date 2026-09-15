@@ -115,6 +115,20 @@ export function globExtensions(globs: readonly string[]): string[] {
  * nothing. Matched case-sensitively, as the glob that collected the file was,
  * against a path written with `/`.
  */
+/**
+ * Whether a last segment says anything about the file name.
+ *
+ * The group syntax around a wildcard is not a name: `@(*)` and `*(?)` select
+ * exactly what `*` and `?` select, and a segment read as naming something
+ * vouched for every basename it collected — a `data.json` fixture beside the
+ * suite then read as test source. So the structure is dropped first and the
+ * question asked of what it wrapped.
+ */
+function constrainsTheName(segment: string): boolean {
+  const withoutGroups = segment.replace(/[@?+*!]\(|[(){},|]/g, "");
+  return /[^*?.]/.test(withoutGroups);
+}
+
 export function namedTestFileMatcher(globs: readonly string[]): (filePath: string) => boolean {
   const patterns: RegExp[] = [];
   for (const entry of globs) {
@@ -122,7 +136,7 @@ export function namedTestFileMatcher(globs: readonly string[]): (filePath: strin
     const glob = entry.trim();
     if (isGlobExclusion(glob)) continue;
     const last = glob.split("/").at(-1) ?? "";
-    if (!/[^*?.]/.test(last)) continue;
+    if (!constrainsTheName(last)) continue;
     // SIMPLIFIED: a glob this reader cannot translate — an unclosed group, brace
     // or bracket, or a negated group inside another group — vouches for no file.
     // Lift when: a project names its tests with a glob of that shape.

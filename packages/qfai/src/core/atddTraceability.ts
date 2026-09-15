@@ -825,6 +825,23 @@ export async function evaluateAtddCodeTraceability(
 }
 
 /**
+ * Why a pattern could not be read, in a form the report may carry.
+ *
+ * A file-system error's own message embeds the absolute path the call was made
+ * with, so the raw text put a checkout path — and with it a machine and a user
+ * name — into the summary artifact and into an operator-facing finding, and made
+ * the same failure read differently on two machines. The code is what a reader
+ * acts on; the pattern beside it already says where.
+ */
+function scanFailureReason(failure: unknown): string {
+  if (isFileSystemError(failure) && failure instanceof Error && "code" in failure) {
+    const { code } = failure;
+    if (typeof code === "string") return code;
+  }
+  return failure instanceof Error ? failure.name : "unknown error";
+}
+
+/**
  * The scan, one selecting pattern at a time, after the combined scan met a
  * directory it could not read. The patterns that still read are unioned, and
  * each one that does not is named with its reason, so the missing references
@@ -846,8 +863,7 @@ async function collectReadableTestFiles(
           const scan = await collectTestFiles(root, [glob, ...exclusions], excludeGlobs, filter);
           return { kind: "scanned" as const, scan };
         } catch (failure) {
-          const reason = failure instanceof Error ? failure.message : String(failure);
-          return { kind: "failed" as const, reason: `${glob}: ${reason}` };
+          return { kind: "failed" as const, reason: `${glob}: ${scanFailureReason(failure)}` };
         }
       }),
   );
@@ -2859,9 +2875,26 @@ const CONFIGURABLE_MANIFESTS = new Map<string, (content: string) => boolean>([
   ["pyproject.toml", (content) => /^\s*\[(?:project|tool\.poetry)\]\s*(?:#.*)?$/m.test(content)],
   ["setup.cfg", (content) => /^\s*\[metadata\]\s*(?:[#;].*)?$/m.test(content)],
   // A test directory keeps a `CMakeLists.txt` to add its targets; only a
-  // `project()` command declares a package.
-  ["CMakeLists.txt", (content) => /^\s*project\s*\(/im.test(content)],
+  // `project()` command declares a package — and only an active one, so the
+  // comments go first. A bracket comment spans lines, which a line-oriented
+  // read cannot see, and a directory whose only `project(` sits inside one was
+  // taken for a package, dropping every acceptance file below it.
+  ["CMakeLists.txt", (content) => /^\s*project\s*\(/im.test(withoutCMakeComments(content))],
 ]);
+
+/**
+ * CMake source with its comments blanked, line endings kept.
+ *
+ * A bracket comment opens `#[` followed by any number of `=` and a `[`, and
+ * closes on the matching `]=…=]`; everything from `#` to the end of the line is
+ * a comment otherwise. Blanked rather than removed, so a command the file really
+ * runs keeps the line it is on.
+ */
+function withoutCMakeComments(content: string): string {
+  return content
+    .replace(/#\[(=*)\[[\s\S]*?\]\1\]/g, (comment) => comment.replace(/[^\n]/g, " "))
+    .replace(/#[^\n]*/g, (comment) => " ".repeat(comment.length));
+}
 
 function isPackageManifest(absoluteDir: string, entry: string): boolean {
   const namesPackage = CONFIGURABLE_MANIFESTS.get(entry);
