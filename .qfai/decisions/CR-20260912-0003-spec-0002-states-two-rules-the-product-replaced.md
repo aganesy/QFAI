@@ -136,22 +136,23 @@ to do with. A row whose obligation is unchanged waits on nobody.
   recorded observation covers, so its evidence goes stale the moment the change
   lands. It takes the same in-place repair the other rows take under that
   option, not a reset: its obligation does not move either.
-- Not yet listed: the `E2E` rows the two ledger repairs will seed for
-  `US-0002-0005`, `US-0010-0008` and `US-0010-0009`, and the ones
-  `CR-20260913-0009` seeds for `US-0013-0008` and `US-0013-0009`. They join
-  this set by id when this record is refreshed after those repairs, as approved
-  actions 1 and 5 set out, and before it is approved.
-- Overlapping open CRs: `CR-20260913-0009`, which re-derives `spec-0013`'s
-  ledger to its template with no statement moving: the six columns it lacks,
-  the `Integration` and `E2E` rows Phase 2b owes, and the split of all thirteen
-  progressed rows that run several boundaries behind one `Selector`,
-  `TDD-0019`, `TDD-0021` and `TDD-0022` among them. That record edits
-  `.qfai/specs/spec-0013/tdd/test-list.md` and `.qfai/specs/spec-0013/09_delta.md`,
-  and this one edits both under `2B` and `2a`, the two outcomes that re-derive
-  `spec-0013`, so the two are ordered: this record assumes `CR-20260913-0009`
-  has landed and is applied after it. If `CR-20260913-0009` is rejected, this
-  record is restated or superseded before `2B` or `2a` is approved, never
-  applied as written.
+- Not yet listed: the `E2E` rows the ledger repairs will seed for
+  `US-0002-0005`, `US-0010-0008`, `US-0010-0009`, `US-0013-0008` and
+  `US-0013-0009`. They join this set by id when this record is refreshed after
+  those repairs, as approved actions 1 and 5 set out, and before it is approved.
+- Overlapping open Change Requests: none. **The `spec-0013` ledger repair is
+  owed and unwritten**, like `spec-0002`'s, `spec-0010`'s, `spec-0004`'s and
+  `spec-0012`'s. It re-derives that ledger to its template with no statement
+  moving: the six columns it lacks, the `Integration` and `E2E` rows Phase 2b
+  owes, and the split of all thirteen progressed rows that run several
+  boundaries behind one `Selector`, `TDD-0019`, `TDD-0021` and `TDD-0022` among
+  them. It edits `.qfai/specs/spec-0013/tdd/test-list.md` and
+  `.qfai/specs/spec-0013/09_delta.md`, which this record also edits under `2B`
+  and `2a`, the two outcomes that re-derive `spec-0013`. So the two are ordered:
+  the repair is written and lands first, and this record is refreshed against
+  what it actually wrote before `2B` or `2a` is approved. Until then neither
+  outcome is applicable, because the prerequisite names no record an operator
+  can open.
 
 ## Impact scope
 
@@ -381,7 +382,7 @@ with its own approval; `2B` cannot be approved until it has landed.
   ATDD-owned `spec-0002` row still owed when it starts. Under `2B` and `2a` the
   same pass for `spec-0013` regenerates `.qfai/evidence/atdd-spec-0013.md` and
   `.qfai/evidence/coverage-depth-spec-0013.md`.
-- Product files under `1B`: the optional-artifact sentence in
+- Product files under `1B`: the optional-artifact sentence in `README.md`,
   `packages/qfai/README.md`,
   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md` and
   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md`,
@@ -493,12 +494,15 @@ with its own approval; `2B` cannot be approved until it has landed.
     pins: a visual-surface pack missing the file is reported, a cli-only pack is
     not, a cli-primary pack with a visual secondary surface is, each malformed
     shape above is reported on a visual-surface pack, and a valid file is not.
-  - The three shipped documents carrying the optional-artifact sentence:
-    `packages/qfai/README.md`,
+  - The four shipped documents carrying the optional-artifact sentence:
+    `README.md`, `packages/qfai/README.md`,
     `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md`
     and
     `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md`,
-    the last two with their root mirrors.
+    the last two with their root mirrors. The repository README carries the
+    sentence in its skill list: under `1B` it goes on offering the artifact to a
+    cli-only pack, and under `2B` it calls optional what a visual-surface pack
+    must provide.
   - `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-execution-playbook.md`,
     which says neither an absent nor a malformed `prototyping.yaml` stops
     Stage 0 — the two halves `2B` reverses for a visual-surface pack — and
@@ -516,9 +520,9 @@ with its own approval; `2B` cannot be approved until it has landed.
   `discussionPack.ts`, and `spec-0013/TDD-0023` and `TDD-0024` name that file.
   Their obligations do not move, so every row naming that file that stands at
   `done` when this record is applied takes the in-place re-verification rather
-  than a reset. `CR-20260913-0009`, applied first, resets both rows to `todo`
-  and appends rows beside them whose cases are in the same file; a row still at
-  `todo` then holds no observation to refresh.
+  than a reset. The `spec-0013` ledger repair, applied first, resets both rows
+  to `todo` and appends rows beside them whose cases are in the same file; a row
+  still at `todo` then holds no observation to refresh.
 
   **Under `2A` or `2B` — `spec-0010`'s rows, through the discussion skill.** Both
   statements rewrite the shipped `qfai-discussion/SKILL.md`: `2A` withdraws its
@@ -723,7 +727,8 @@ internally contradictory.
 
 1. **`spec-0010`, under every statement-A outcome.** `/qfai-sdd` re-derives both
    chains that pack owns — the producer (`US-0010-0009` → `AC-0010-0007` →
-   `BR-0010-0007`) against whichever producer statement A settles on, and the
+   `BR-0010-0007` → `EX-0010-0007` → `TC-0010-0007`) against whichever producer
+   statement A settles on, and the
    direction rule (`US-0010-0008` → `AC-0010-0006` → `BR-0010-0006` →
    `EX-0010-0006` → `TC-0010-0006`) against whatever statement A leaves of it.
    The downstream sweep runs from that pack, its ledger included. Mode
@@ -893,13 +898,12 @@ internally contradictory.
    rows for 3 of 16, 19 of 52 and 1 of 14 stories, so a `2a` rerun of them, or a
    `2B` rerun of `spec-0013`, would migrate each table to the template's columns
    and seed the missing rows as well. Their ledger repairs are prerequisites on
-   the same terms. `spec-0013`'s is `CR-20260913-0009`, listed under
-   `## Blocked downstream items` and applied before this record. No such record
-   exists yet for `spec-0002`, `spec-0010`, `spec-0004` or `spec-0012`, so an
-   outcome that re-derives one of those packs is not approved until its repair
+   the same terms, and **none of the five is written** — not `spec-0002`'s,
+   `spec-0010`'s, `spec-0004`'s, `spec-0012`'s or `spec-0013`'s. So an outcome
+   that re-derives one of those packs is not approved until its repair
    is written and has landed. This record is refreshed after each repair to
    name, by id, any seeded row whose story an approved outcome changes, with its
-   disposition. Two are known now: `CR-20260913-0009` seeds the `E2E` rows for
+   disposition. Two are known now: the `spec-0013` repair seeds the `E2E` rows for
    `US-0013-0009`, the lock story, which are reset to `todo` with this `CR-*` in
    `DR-ID` under `2a`, and for `US-0013-0008`, the side-artifact story, reset
    the same way under `2B`. Each is left as it stands under every other
@@ -910,17 +914,17 @@ internally contradictory.
    observable cases behind one `Selector` only under a Change Request naming the
    row, its boundaries and the order of its split
    (`.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`), and
-   this record names no such split. `CR-20260913-0009` names one for each of the
-   thirteen rows of that shape in `spec-0013`, so a `spec-0013` rerun under this
-   plan meets none. No record names one for the other packs, whose ledgers hold
-   these rows today:
+   this record names no such split. The `spec-0013` ledger repair owes one for
+   each of the thirteen rows of that shape in that pack, and it is not written
+   yet, so a `spec-0013` rerun under this plan meets none. No record names one
+   for the other packs either, whose ledgers hold these rows today:
 
-   | Pack        | Progressed rows whose `Selector` runs more than one case                                                                                                                                                                                                                                              | Re-derived under          |
-   | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-   | `spec-0002` | none                                                                                                                                                                                                                                                                                                  | every outcome             |
-   | `spec-0010` | none                                                                                                                                                                                                                                                                                                  | every statement-A outcome |
-   | `spec-0004` | `TDD-0017`, `TDD-0020` and `TDD-0024`, `done` rows running three cases each                                                                                                                                                                                                                           | `2a`                      |
-   | `spec-0012` | twenty-one `done` rows, running from two cases to nineteen: `TDD-0286`, `TDD-0293`, `TDD-0376`, `TDD-0383`, `TDD-0386` to `TDD-0388`, `TDD-0404`, `TDD-0405`, `TDD-0407`, `TDD-0408`, `TDD-0427`, `TDD-0431`, `TDD-0433`, `TDD-0434`, `TDD-0439`, `TDD-0441`, `TDD-0442` and `TDD-0444` to `TDD-0446` | `2a`                      |
+   | Pack        | Progressed rows whose `Selector` runs more than one case                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Re-derived under          |
+   | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+   | `spec-0002` | none                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | every outcome             |
+   | `spec-0010` | none                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | every statement-A outcome |
+   | `spec-0004` | `TDD-0017`, `TDD-0020` and `TDD-0024`, `done` rows running three cases each                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | `2a`                      |
+   | `spec-0012` | twenty-five `done` rows. Twenty-one run from two cases to nineteen behind one `Selector`: `TDD-0286`, `TDD-0293`, `TDD-0376`, `TDD-0383`, `TDD-0386` to `TDD-0388`, `TDD-0404`, `TDD-0405`, `TDD-0407`, `TDD-0408`, `TDD-0427`, `TDD-0431`, `TDD-0433`, `TDD-0434`, `TDD-0439`, `TDD-0441`, `TDD-0442` and `TDD-0444` to `TDD-0446`. Four carry several `TC-Refs` behind one `Selector`, which is the same conflation written in the other column: `TDD-0336` and `TDD-0337` with four obligations each, `TDD-0338` and `TDD-0342` with two | `2a`                      |
 
    Several cases can observe one boundary, so the rerun judges each of these
    rows against the obligation it carries. For a row that conflates boundaries
@@ -1066,10 +1070,10 @@ internally contradictory.
    produce one. Which stage replaces it is a decision rather than a detail, so
    option 2 is offered as two, the same way option 3 is:
 
-   | Option | Who authors `DESIGN.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-   | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | `2a`   | `/qfai-prototyping` gains a direction-selection step and authors the file **and `.qfai/contracts/design/DESIGN.md.lock.yaml`**, with its tests. The prototyping skill lists both among its inputs, and the lock is what freezes the file: `prototyping iterate` refuses a lock that is malformed, unreadable or mismatched. It does not refuse a missing one — a run with no lock proceeds unfrozen — so authoring the file without writing the lock would leave every run unfrozen with nothing reporting it. `2a` keeps that branch as it is: the step that authors the file writes the lock, as `/qfai-sdd` Phase 0 does today. Discussion still chooses nothing, and the contract that has prototyping read it read-only changes with it                                                                                                        |
-   | `2b`   | `/qfai-sdd` Phase 0 authors it from the discussion pack it already reads — the requirements, context and constraints — because Phase 0 runs before a new project has any spec, and no phase order changes. Discussion asks nothing, and on the discussion route no later stage asks either. The requirement is met with no user-facing choice, and whatever a brand needs that the discussion pack does not carry is lost. A spec taken in through import-lite has no pack, so Phase 0 authors its file from the import-lite evidence instead, as the paragraph below the table sets out. **It narrows `US-0002-0005` with the rest of statement A**: that story requires prototyping to remain where the direction is chosen, and `2b` moves the authoring to `/qfai-sdd`, so leaving the story as written would contradict the option settling it |
+   | Option | Who authors `DESIGN.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+   | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `2a`   | `/qfai-prototyping` gains a direction-selection step and authors the file **and `.qfai/contracts/design/DESIGN.md.lock.yaml`**, with its tests. **The new step runs before the existing preconditions, and both artifacts move from the skill's inputs to that step's outputs.** Today the skill lists them under its required inputs and Step 2-A confirms both exist before the loop starts, so on a fresh visual project — where this option leaves `/qfai-sdd` writing neither — the stage would stop before reaching the step meant to create them. The rerun therefore rewrites the input list, Step 2-A and the read-only contract together. The lock is what freezes the file: `prototyping iterate` refuses a lock that is malformed, unreadable or mismatched. It does not refuse a missing one — a run with no lock proceeds unfrozen — so authoring the file without writing the lock would leave every run unfrozen with nothing reporting it. `2a` keeps that branch as it is: the step that authors the file writes the lock, as `/qfai-sdd` Phase 0 does today. Discussion still chooses nothing |
+   | `2b`   | `/qfai-sdd` Phase 0 authors it from the discussion pack it already reads — the requirements, context and constraints — because Phase 0 runs before a new project has any spec, and no phase order changes. Discussion asks nothing, and on the discussion route no later stage asks either. The requirement is met with no user-facing choice, and whatever a brand needs that the discussion pack does not carry is lost. A spec taken in through import-lite has no pack, so Phase 0 authors its file from the import-lite evidence instead, as the paragraph below the table sets out. **It narrows `US-0002-0005` with the rest of statement A**: that story requires prototyping to remain where the direction is chosen, and `2b` moves the authoring to `/qfai-sdd`, so leaving the story as written would contradict the option settling it                                                                                                                                                                                                                                                              |
 
    **`2b` on the import-lite route.** Phase 0 step 1 stops today on an
    import-lite spec with no root `DESIGN.md`, because no pack recorded a

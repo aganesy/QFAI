@@ -177,13 +177,13 @@ record:
 - The ledger repairs of `spec-0004`, `spec-0012` and `spec-0013`, before an
   approval that re-derives them: `2a` reaches all three and `2B` reaches
   `spec-0013`. Their nine-column tables would otherwise be migrated and seeded
-  by the same rerun. `spec-0013`'s is `CR-20260913-0009`, which also splits the
-  thirteen progressed rows there that run several boundaries behind one
-  `Selector`. The repairs of `spec-0004` and `spec-0012` have no record yet,
-  and neither have the two above.
+  by the same rerun. `spec-0013`'s also splits the thirteen progressed rows
+  there that run several boundaries behind one `Selector`. None of the five
+  repairs has a record yet.
 - Under `2a`, the splits of the progressed rows in `spec-0004` and `spec-0012`
-  whose `Selector` runs more than one case: three and twenty-one rows, which the
-  Change Request lists. No record names those splits, so a `2a` rerun raises a
+  whose `Selector` runs more than one case: three and twenty-one rows, and the
+  four `spec-0012` rows that carry several `TC-Refs` behind one `Selector`, all
+  of which the Change Request lists. No record names those splits, so a `2a` rerun raises a
   request for each row that conflates boundaries and waits on its approval.
 - `spec-0013`'s duplicate id. Its `03_Acceptance-Criteria.md` declares
   `AC-0013-0009` twice, so a rerun keyed to that id sweeps whichever of the two
@@ -193,7 +193,7 @@ After each ledger repair an approved outcome reaches, the Change Request is
 refreshed before approval: every seeded `E2E` row whose story that outcome
 changes joins its blocked set by id, with the disposition its approved
 actions give it. The first two repairs seed the rows for `US-0002-0005`,
-`US-0010-0008` and `US-0010-0009`. `CR-20260913-0009` seeds the rows for
+`US-0010-0008` and `US-0010-0009`. The `spec-0013` repair seeds the rows for
 `US-0013-0009`, the lock story, which reset under `2a`, and for
 `US-0013-0008`, the side-artifact story, which reset under `2B`.
 
