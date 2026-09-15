@@ -2146,24 +2146,11 @@ async function findEvidenceNewerThan(
     for (const entry of entries) {
       const absolute = path.join(dir, entry.name);
       // A reset's backups are not sealed, so a change inside one is not a change
-      // to the tree the run judged. Resolved as the digest walk resolves it, so a
-      // backup that is a link to a directory is left out too.
-      if (dir === evidenceRoot && isResetBackupDirectory(entry.name)) {
-        // The listing already says whether it is a directory, so nothing is
-        // asked of `stat` for one. Asked anyway, a backup a listing can read and
-        // a `stat` cannot — a Windows ACL permitting one and denying the other —
-        // answered `null`, and the walk descended into it and reported files the
-        // certificate never seals. `scanEvidenceDigests` leaves such an entry
-        // out, so the two would disagree about the same directory.
-        if (entry.isDirectory()) continue;
-        // A link is resolved, as the digest walk resolves it, so a backup that
-        // is a link to a directory is left out too — and one whose target
-        // cannot be read is left out with it, for the reason above.
-        if (entry.isSymbolicLink()) {
-          const resolved = await stat(absolute).catch(() => null);
-          if (resolved === null || resolved.isDirectory()) continue;
-        }
-      }
+      // to the tree the run judged. Read by name, as the digest walk reads it:
+      // nothing is asked of `stat`, so the two answer the same for a backup a
+      // listing can read and a `stat` cannot, and for a link whatever its
+      // target is.
+      if (dir === evidenceRoot && isResetBackupDirectory(entry.name)) continue;
       if (entry.isDirectory()) {
         await visit(absolute);
         continue;

@@ -2,7 +2,7 @@
  * Tests for completion-certificate build / write / load / check
  * (v1.8.4 Phase 5).
  */
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -216,6 +216,30 @@ describe("checkCompletionCertificate", () => {
     await rm(path.join(evidenceRoot, "aggregate.backup-2026-01-01T00-00-00-000Z"), {
       recursive: true,
     });
+    expect((await checkCompletionCertificate(root)).ok).toBe(true);
+  });
+
+  it("leaves a backup out whatever the entry turns out to be", async () => {
+    // A reset renames the `iter-00` entry whatever it points at, so a backup can
+    // be a link to a regular file. Resolved rather than read by name, the target
+    // was hashed as one of this loop's own files, and a later change to it
+    // failed a check of a loop nothing had touched.
+    const root = await newTempDir();
+    const evidenceRoot = await seedEvidence(root, { "iter-00/home.review.json": "{}\n" });
+    const target = path.join(root, "linked-seed.json");
+    await writeFile(target, "{}\n", "utf-8");
+    try {
+      await symlink(target, path.join(evidenceRoot, "iter-00.backup-2026-01-01T00-00-00-000Z"));
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+
+    const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
+    expect(cert.evidenceDigests.map((entry) => entry.path)).toEqual(["iter-00/home.review.json"]);
+    await writeCompletionCertificate(root, cert);
+
+    await writeFile(target, '{"changed": true}\n', "utf-8");
     expect((await checkCompletionCertificate(root)).ok).toBe(true);
   });
 

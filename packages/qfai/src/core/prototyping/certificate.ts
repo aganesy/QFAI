@@ -409,6 +409,13 @@ async function walk(
     // in a sub-directory is still digested (defense against accidental
     // shadowing of the digest tree).
     if (dir === rootDir && name === "completion-certificate.json") continue;
+    // A cycle-0 reset's backups hold the previous loop's evidence. Sealed into
+    // this loop's certificate, a backup removed once it is no longer needed
+    // would fail `certify --check` although nothing of this loop changed. The
+    // name a reset gives them is the whole test: a backup is left out whatever
+    // it turns out to be — a directory, a link to one, or a link to a file,
+    // which is what a reset writes for an `iter-00` that was a link to a file.
+    if (dir === rootDir && isResetBackupDirectory(name)) continue;
     const full = path.join(dir, name);
     let s: Awaited<ReturnType<typeof stat>>;
     try {
@@ -416,11 +423,6 @@ async function walk(
     } catch {
       continue;
     }
-    // A cycle-0 reset's backups hold the previous loop's evidence. Sealed into
-    // this loop's certificate, a backup removed once it is no longer needed
-    // would fail `certify --check` although nothing of this loop changed. Only
-    // the directories a reset writes are skipped, by the exact name it gives them.
-    if (dir === rootDir && s.isDirectory() && isResetBackupDirectory(name)) continue;
     if (s.isDirectory()) {
       await walk(rootDir, full, out);
     } else if (s.isFile()) {
