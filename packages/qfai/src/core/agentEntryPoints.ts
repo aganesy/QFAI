@@ -441,6 +441,14 @@ const SUPERSEDED_RULE_BULLETS: ReadonlyMap<string, readonly string[]> = new Map(
 export type RefreshedRuleBullets = {
   readonly text: string;
   readonly refreshed: readonly string[];
+  /**
+   * Masters whose bullet is superseded and whose own file this run did not put
+   * at the release's text — the project edited it, or the update could not be
+   * read or applied. Their summaries are left as they are: a bullet describing
+   * a rule the local master does not carry is worse than a stale one, because a
+   * reader has no way to tell which of the two is the rule.
+   */
+  readonly withheld: readonly string[];
 };
 
 /**
@@ -453,10 +461,18 @@ export type RefreshedRuleBullets = {
 export function refreshSupersededRuleBullets(
   existing: string,
   section: string,
+  installed?: ReadonlySet<string>,
 ): RefreshedRuleBullets {
   const { lines, open, begin, end } = managedSection(existing);
-  if (begin === -1 || end === -1) return { text: existing, refreshed: [] };
-  return replaceSupersededBullets(existing, lines, open, { from: begin + 1, to: end }, section);
+  if (begin === -1 || end === -1) return { text: existing, refreshed: [], withheld: [] };
+  return replaceSupersededBullets(
+    existing,
+    lines,
+    open,
+    { from: begin + 1, to: end },
+    section,
+    installed,
+  );
 }
 
 /**
@@ -471,12 +487,13 @@ export function refreshSupersededRuleBullets(
 export function refreshSupersededRuleBulletsInList(
   existing: string,
   section: string,
+  installed?: ReadonlySet<string>,
 ): RefreshedRuleBullets {
   const lines = existing.split("\n");
   const open = outsideFences(lines);
   const range = ruleListRange(lines, open);
-  if (range === null) return { text: existing, refreshed: [] };
-  return replaceSupersededBullets(existing, lines, open, range, section);
+  if (range === null) return { text: existing, refreshed: [], withheld: [] };
+  return replaceSupersededBullets(existing, lines, open, range, section, installed);
 }
 
 /**
@@ -509,6 +526,11 @@ function ruleListHeading(lines: readonly string[], open: readonly boolean[]): nu
  * a heading wherever a line of text sits directly above it: under a list item it
  * is a thematic break instead, and ending the range there only stops it after
  * that item.
+ *
+ * **A heading inside a blockquote ends nothing.** It belongs to the quote, not
+ * to the document, and reading it as a peer closed the range early — so a bullet
+ * below a quoted example kept wording the release had superseded, in the one
+ * file this refresh exists to reach.
  */
 function ruleListRange(
   lines: readonly string[],
@@ -518,11 +540,16 @@ function ruleListRange(
   const level = heading === -1 ? null : atxLevel(plainLine(lines[heading]));
   if (level === null) return null;
   for (let index = heading + 1; index < lines.length; index += 1) {
-    if (open[index] !== true) continue;
+    if (open[index] !== true || isQuoted(lines[index])) continue;
     const found = atxLevel(plainLine(lines[index])) ?? setextLevel(lines, open, index);
     if (found !== null && found <= level) return { from: heading + 1, to: index };
   }
   return { from: heading + 1, to: lines.length };
+}
+
+/** Whether the line opens inside a blockquote, where a heading is the quote's. */
+function isQuoted(line: string | undefined): boolean {
+  return (line ?? "").replace(/\r$/, "").trimStart().startsWith(">");
 }
 
 /** The level of `text` as an ATX heading, or `null` when it is not one. */
@@ -556,8 +583,10 @@ function replaceSupersededBullets(
   open: readonly boolean[],
   range: { from: number; to: number },
   section: string,
+  installed?: ReadonlySet<string>,
 ): RefreshedRuleBullets {
   const refreshed = new Set<string>();
+  const withheld = new Set<string>();
   for (let index = range.from; index < range.to; index += 1) {
     if (open[index] !== true) continue;
     const line = lines[index] ?? "";
@@ -568,11 +597,17 @@ function replaceSupersededBullets(
     // template that no longer summarises the master has nothing to put here.
     const current = bulletFor(section, master)?.replace(/\r$/, "");
     if (current === undefined || current === own) continue;
+    // The summary describes the master, so it moves only where the master did.
+    if (installed !== undefined && !installed.has(master)) {
+      withheld.add(master);
+      continue;
+    }
     lines[index] = `${current}${terminatorOf(line)}`;
     refreshed.add(master);
   }
-  if (refreshed.size === 0) return { text: existing, refreshed: [] };
-  return { text: lines.join("\n"), refreshed: [...refreshed].sort() };
+  const held = [...withheld].sort();
+  if (refreshed.size === 0) return { text: existing, refreshed: [], withheld: held };
+  return { text: lines.join("\n"), refreshed: [...refreshed].sort(), withheld: held };
 }
 
 /** The master `line` is a superseded bullet for, or `null` when it is not one. */

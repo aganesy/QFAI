@@ -1093,6 +1093,25 @@ describe("a later init refreshes a rule summary the project never edited", () =>
     });
   });
 
+  it("keeps the summary where the project edited the master it describes", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+      // The adopter's own master. The update pass keeps it, so a summary moved
+      // to this release's wording would describe a rule this tree does not have.
+      const master = path.join(root, ".agents", "rules", "grilling.md");
+      const theirs = `${await readFile(master, "utf-8")}\n\nOur own addition.\n`;
+      await writeFile(master, theirs, "utf-8");
+
+      const output = await initCapturing(root, { force: false, dryRun: false });
+
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        expect(await readEntryPoint(root, name), name).toBe(seeded.get(name));
+      }
+      expect(await readFile(master, "utf-8")).toBe(theirs);
+      expect(output.stdout).toContain(".agents/rules/grilling.md");
+    });
+  });
+
   it("leaves the same line inside a fenced example as it is", async () => {
     await withProject(async (root) => {
       const seeded = await seedSuperseded(root);
@@ -1337,6 +1356,7 @@ describe("a later init refreshes a rule summary the project never edited", () =>
       expect(refreshSupersededRuleBulletsInList(existing, template)).toEqual({
         text: existing,
         refreshed: [],
+        withheld: [],
       });
     });
 
@@ -1352,7 +1372,28 @@ describe("a later init refreshes a rule summary the project never edited", () =>
       expect(refreshSupersededRuleBulletsInList(existing, template)).toEqual({
         text: existing,
         refreshed: [],
+        withheld: [],
       });
+    });
+
+    it("does not end the rule list at a heading inside a blockquote", () => {
+      // The heading belongs to the quote, not to the document, so the bullet
+      // below it is still in the managed list.
+      const existing = [
+        CROSS_AI_RULES_HEADING,
+        "",
+        "> ## Historical rules",
+        "",
+        superseded,
+        "",
+      ].join("\n");
+
+      const result = refreshSupersededRuleBulletsInList(existing, template);
+
+      const expected = existing.split("\n");
+      expected[4] = current;
+      expect(result.refreshed).toEqual([master]);
+      expect(result.text).toBe(expected.join("\n"));
     });
 
     it("reads the heading with a closing run of hashes and up to three spaces", () => {

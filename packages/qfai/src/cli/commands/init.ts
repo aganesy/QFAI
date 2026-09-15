@@ -413,12 +413,14 @@ export async function runInit(options: InitOptions): Promise<void> {
   // SIMPLIFIED: the window is one operation wide rather than closed.
   // Lift when: init records per-master provenance, which the rule-master upgrade
   // path needs for its own reasons.
+  const newlyWritten = newlyWrittenRuleMasters(rootResult.copied, destRoot);
   const entryPointRulesResult = await ensureAgentEntryPointRules(
     rootAssets,
     destRoot,
     options.dryRun,
     options.force,
-    newlyWrittenRuleMasters(rootResult.copied, destRoot),
+    newlyWritten,
+    await installedRuleMasters(rootAssets, destRoot, newlyWritten),
   );
   // After the citation repair, which reads this run's own copy report: a master
   // replaced here was already on disk, so it is not one that pass is looking for.
@@ -3319,12 +3321,52 @@ async function updateUneditedRuleMasters(
   return { copied, skipped };
 }
 
+/**
+ * The masters whose file in this project carries the release's own text once
+ * this run finishes: the ones the create-only copy just wrote, and the ones the
+ * later update pass will replace because the project never edited them.
+ *
+ * A summary bullet describes its master, so the entry-point files may only be
+ * moved to the release's wording for a master that moves with them. An adopter
+ * who edited `grilling.md` keeps it — and an instruction file rewritten anyway
+ * would assert a rule its own authoritative master does not carry.
+ *
+ * An unreadable tree yields the empty set, which refreshes nothing: with no way
+ * to tell which masters are the release's, no bullet can be shown to describe
+ * the file beside it.
+ */
+async function installedRuleMasters(
+  rootAssets: string,
+  destRoot: string,
+  newlyWritten: readonly string[],
+): Promise<ReadonlySet<string>> {
+  const installed = new Set(newlyWritten);
+  try {
+    const plans = await planRuleMasterUpdates(
+      path.join(rootAssets, AGENTS_RULES_DIR_REL),
+      path.join(destRoot, AGENTS_RULES_DIR_REL),
+    );
+    for (const plan of plans) {
+      // `written` is the copy in this run, `current` is already the release's
+      // text, and `update` is the file this run replaces. `keep` is the edited
+      // one, and the only one whose summary may not move. Spelled with `/`, as
+      // a citation is.
+      if (plan.verdict !== "keep") installed.add(`.agents/rules/${plan.name}`);
+    }
+  } catch {
+    // Reported where the update pass meets the same tree; here the empty set is
+    // the answer, and it withholds every refresh rather than guessing one.
+  }
+  return installed;
+}
+
 async function ensureAgentEntryPointRules(
   rootAssets: string,
   destRoot: string,
   dryRun: boolean,
   force: boolean,
   newlyWritten: readonly string[],
+  installed: ReadonlySet<string>,
 ): Promise<{ copied: string[]; skipped: string[] }> {
   const copied: string[] = [];
   const skipped: string[] = [];
@@ -3335,7 +3377,10 @@ async function ensureAgentEntryPointRules(
   // same source, later in this run. Editing it here first is work thrown away,
   // and its refusals would name a file this run goes on to replace.
   if (!force) {
-    await updateCopilotRuleList(rootAssets, destRoot, dryRun, newlyWritten, { copied, skipped });
+    await updateCopilotRuleList(rootAssets, destRoot, dryRun, newlyWritten, installed, {
+      copied,
+      skipped,
+    });
   }
 
   for (const name of AGENT_ENTRY_POINT_FILES) {
@@ -3384,7 +3429,8 @@ async function ensureAgentEntryPointRules(
       // the project never edited takes the template's wording, as an unedited
       // master takes the release's text. Everything else is left as the project
       // has it, including a bullet it deleted or reworded.
-      const refreshed = refreshSupersededRuleBullets(existing, section);
+      const refreshed = refreshSupersededRuleBullets(existing, section, installed);
+      reportWithheldSummaries(target, refreshed.withheld);
       const merged = addRuleCitations(refreshed.text, section, newlyWritten);
       if (merged === existing) {
         skipped.push(target);
@@ -3508,11 +3554,26 @@ const COPILOT_INSTRUCTIONS_MAX_BYTES = 512 * 1024;
  * bullet in it, a superseded one is replaced where it stands, and the same
  * refusals apply as to the two entry points.
  */
+/**
+ * Names the masters whose summary this run left as it stands, with why.
+ *
+ * Silence here reads as "the summaries are current", which is the state this
+ * withholding exists because the run could not reach.
+ */
+function reportWithheldSummaries(target: string, withheld: readonly string[]): void {
+  if (withheld.length === 0) return;
+  info(
+    `  NOTE: ${formatReportPath(target)} keeps its summary of ${withheld.join(", ")} ` +
+      `(the master here is not this release's, so the bullet describes the file beside it)`,
+  );
+}
+
 async function updateCopilotRuleList(
   rootAssets: string,
   destRoot: string,
   dryRun: boolean,
   newlyWritten: readonly string[],
+  installed: ReadonlySet<string>,
   report: { copied: string[]; skipped: string[] },
 ): Promise<void> {
   const target = path.join(destRoot, ".github", "copilot-instructions.md");
@@ -3525,7 +3586,8 @@ async function updateCopilotRuleList(
 
   const shown = new Set(citedRuleMastersOutsideCode(existing));
   const uncited = newlyWritten.filter((master) => !shown.has(master));
-  const refreshed = refreshSupersededRuleBulletsInList(existing, section);
+  const refreshed = refreshSupersededRuleBulletsInList(existing, section, installed);
+  reportWithheldSummaries(target, refreshed.withheld);
   const merged = addRuleCitationsToList(refreshed.text, section, uncited);
   if (merged === existing) {
     if (uncited.length > 0) {
