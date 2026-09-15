@@ -796,10 +796,13 @@ export async function runPrototypingIterate(
         stranded.push(backup.to);
       });
     }
-    // Taken back only while they are still the last thing written: anything
-    // appended since belongs to another run, and the operator is told the lines
-    // stand rather than having somebody else's record removed for them.
-    const unlogged = loggedMoves === null || (await unlogMovedFiles(options.root, loggedMoves));
+    // Taken back only while every move they record is back where it started and
+    // they are still the last thing written. A stranded backup is still moved,
+    // so its entry is still true, and anything appended since belongs to
+    // another run — in both cases the lines stand and the operator is told.
+    const unlogged =
+      loggedMoves === null ||
+      (stranded.length === 0 && (await unlogMovedFiles(options.root, loggedMoves)));
     error(
       `qfai prototyping iterate --cycle 0: ${what} (${reason}). ` +
         (aggregateMove === null && backup === null

@@ -42,9 +42,14 @@ export type EvidenceMutationPair = {
   readonly logTokens: readonly string[];
 };
 
+/** One space wherever the source has any run of whitespace. */
+function collapseWhitespace(text: string): string {
+  return text.replace(/\s+/g, " ");
+}
+
 /** The single mutation-log write a cycle-0 reset makes for every move it keeps. */
 const RESET_LOG_WRITE =
-  "logMovedFiles(options.root, [...aggregateLogEntries, ...iter00LogEntries])";
+  "logMovedFiles(options.root, [ ...aggregateLogEntries, ...iter00LogEntries, ])";
 
 /**
  * SSOT manifest for paired mutation call-sites. Each entry maps to a
@@ -102,9 +107,15 @@ export async function detectEvidenceMutationUnlogged(root: string): Promise<read
     } catch {
       continue;
     }
-    const hasMutation = pair.mutationTokens.some((token) => text.includes(token));
+    // Read with runs of whitespace collapsed, on both sides. A token spelling a
+    // call the formatter later broke across lines is the same call, and matched
+    // literally it read as the call being gone.
+    const flat = collapseWhitespace(text);
+    const hasMutation = pair.mutationTokens.some((token) =>
+      flat.includes(collapseWhitespace(token)),
+    );
     if (!hasMutation) continue;
-    const hasLog = pair.logTokens.some((token) => text.includes(token));
+    const hasLog = pair.logTokens.some((token) => flat.includes(collapseWhitespace(token)));
     if (hasLog) continue;
     const message =
       `${FINDING_CODE}: ${pair.sourceRel} performs an iter-NN evidence mutation ` +

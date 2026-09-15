@@ -112,10 +112,8 @@ export async function logEvidenceMoves(
     // and cutting to the prior length would delete that entry with this batch.
     const restored =
       prior.kind === "created"
-        ? // Emptied through the descriptor that read it, then removed only while
-          // it is still empty: another run's entry arriving in between leaves
-          // the file holding bytes, and the remove is skipped rather than
-          // taking them with it.
+        ? // Emptied through the descriptor that read it, then taken away while
+          // it is still empty, so a failed first write leaves no log behind.
           (await cutBackToThisWrite(prior.file, 0, payload)) && (await removeIfEmpty(prior.file))
         : await cutBackToThisWrite(logAbs, prior.length, payload);
     if (restored) throw cause;
@@ -151,6 +149,28 @@ export async function revertLoggedMoves(root: string, logged: LoggedMoves): Prom
     return (await cutBackToThisWrite(prior.file, 0, payload)) && (await removeIfEmpty(prior.file));
   }
   return await cutBackToThisWrite(logAbs, prior.length, payload);
+}
+
+/**
+ * Remove `file` while it holds nothing; `true` when it is gone or was never
+ * there.
+ *
+ * SIMPLIFIED: the size is read and the file removed as two operations on the
+ * path, so a record appended between them goes with it. The window is a `stat`
+ * and an `rm` on a file this call had just emptied.
+ * Lift when: the writers take a lock around the append, which would let this
+ * hold it rather than reading under none.
+ */
+async function removeIfEmpty(file: string): Promise<boolean> {
+  const empty = await stat(file).then(
+    (stats) => stats.size === 0,
+    () => false,
+  );
+  if (!empty) return false;
+  return await rm(file, { force: true }).then(
+    () => true,
+    () => false,
+  );
 }
 
 /**
@@ -217,19 +237,6 @@ async function firstAbsentInChain(from: string): Promise<string | null> {
     current = path.resolve(path.dirname(current), target);
   }
   return null;
-}
-
-/** Remove `file` while it holds nothing; `true` when it is gone or was never there. */
-async function removeIfEmpty(file: string): Promise<boolean> {
-  const empty = await stat(file).then(
-    (stats) => stats.size === 0,
-    () => false,
-  );
-  if (!empty) return false;
-  return await rm(file, { force: true }).then(
-    () => true,
-    () => false,
-  );
 }
 
 /** Whether the bytes from `from` on, read through `handle`, are this write's own. */
