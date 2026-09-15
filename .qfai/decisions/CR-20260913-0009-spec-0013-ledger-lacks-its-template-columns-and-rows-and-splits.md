@@ -36,8 +36,8 @@ story and one `API` row per owned `CON-API-*`. Against the pack:
 | Boundaries               | one row per independently observable boundary a test case states; `TC-0013-0028` states two, the pack returned and no file times read | one, `TDD-0023`, whose case covers the first |
 | `API`                    | none: no pack file names a `CON-API-*`                                                                                                | none                                         |
 
-**Rows that run several boundaries.** Thirteen rows past `todo` — eleven at
-`done` and two at `exception` — name a `Selector` that runs more than one
+**Rows that run several boundaries.** Twelve rows past `todo` — eleven at
+`done` and one at `exception` — name a `Selector` that runs more than one
 independently observable boundary of the obligation the row carries. Phase
 2b re-scopes a row past `todo` whatever its status, since Phase Red never
 selects it again, and only under a Change Request naming the row, its
@@ -91,20 +91,20 @@ taken over the whole file, whose proof covers several boundaries, or which
 records no RED at all, keeps the first its test case or story lists among
 them.
 
-| Row        | Obligation     | Boundaries, kept first                                                                                                                                                                  | Why the first is kept                                                                                       |
-| ---------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `TDD-0003` | `TC-0013-0003` | `/qfai-sdd` continues on an incomplete or contradictory pack; it stops only when no usable source exists                                                                                | it records a one-shot GREEN and no RED, so the test case's order decides                                    |
-| `TDD-0019` | `TC-0013-0025` | every screen of the template carries `primary_tasks: []`; the requirements-analyst guide asks for at least one task per screen                                                          | its RED failed both at once, so the test case's order decides                                               |
-| `TDD-0020` | `TC-0013-0026` | the lane fails an empty list at `error`, naming the file, the screen and the rule; the `/qfai-prototyping` preflight refuses it                                                         | its proof names both the lane and the preflight check, so the test case's order decides                     |
-| `TDD-0021` | `TC-0013-0027` | the lane passes a contract whose screens each hold a task; the preflight proceeds on it; a contract from before the slot is informational and non-blocking under the deprecation window | its RED was taken over the whole file                                                                       |
-| `TDD-0022` | `US-0013-0011` | the template's slot; the guide's instruction; the lane fails an empty list; the preflight refuses it; the lane passes a non-empty list                                                  | its RED observed the template-slot case failing                                                             |
-| `TDD-0024` | `TC-0013-0029` | a pointer naming a missing pack is an error; an absent pointer is an error                                                                                                              | its proof is the filter matching the pointer against the packs on disk, which the absent case never reaches |
-| `TDD-0025` | `TC-0013-0030` | `/qfai-sdd` sets `surface_type: ui-bearing` for a spec with a UI companion; `resolveAllUiBearingSpecs()` requires the frontmatter                                                       | its recorded RED names no case, so the test case's order decides                                            |
-| `TDD-0026` | `TC-0013-0031` | the finding is raised at warning severity during the window for a companion without the frontmatter; no finding for a spec with no companion                                            | its recorded RED names no case, so the test case's order decides                                            |
-| `TDD-0027` | `TC-0013-0032` | `templates/contracts/ui-spec.yaml`'s comments state the band; the guide states it; the `QFAI-AUD-020` message names it                                                                  | its RED covered all three at once, so the test case's order decides                                         |
-| `TDD-0028` | `TC-0013-0033` | fewer than three tasks warns; more than seven warns; exactly three does not; exactly seven does not                                                                                     | its RED covered all three at once, so the test case's order decides                                         |
-| `TDD-0029` | `TC-0013-0034` | complete structured items are accepted; string-only items are accepted                                                                                                                  | its proof is the required-key set, which only structured items are measured against                         |
-| `TDD-0030` | `TC-0013-0035` | an item missing `id` is rejected; one missing `label`; one missing `acceptance`; one carrying an extra key                                                                              | its proof reports each missing key, and the test case lists `id` first among them                           |
+| Row        | Obligation     | Boundaries, kept first                                                                                                                                                                        | Why the first is kept                                                                                       |
+| ---------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `TDD-0003` | `TC-0013-0003` | `/qfai-sdd` continues on an incomplete or contradictory pack; it stops only when no usable source exists                                                                                      | it records a one-shot GREEN and no RED, so the test case's order decides                                    |
+| `TDD-0019` | `TC-0013-0025` | every screen of the template carries `primary_tasks: []`; the requirements-analyst guide asks for at least one task per screen                                                                | its RED failed both at once, so the test case's order decides                                               |
+| `TDD-0020` | `TC-0013-0026` | the lane fails an empty list at `error`, naming the file, the screen and the rule; the `/qfai-prototyping` preflight refuses it                                                               | its proof names both the lane and the preflight check, so the test case's order decides                     |
+| `TDD-0021` | `TC-0013-0027` | the lane passes a contract whose screens each hold a task; the preflight proceeds on it; a contract from before the slot is informational and non-blocking under the deprecation window       | its RED was taken over the whole file                                                                       |
+| `TDD-0022` | `US-0013-0011` | the template's slot; the guide's instruction; the lane fails an empty list; the preflight refuses it; the lane passes a non-empty list                                                        | its RED observed the template-slot case failing                                                             |
+| `TDD-0024` | `TC-0013-0029` | a pointer naming a missing pack raises an error naming the candidate `discussion-*` directories and the recovery command `qfai discussion use <id>`; an absent pointer raises that same error | its proof is the filter matching the pointer against the packs on disk, which the absent case never reaches |
+| `TDD-0025` | `TC-0013-0030` | `/qfai-sdd` sets `surface_type: ui-bearing` for a spec with a UI companion; `resolveAllUiBearingSpecs()` requires the frontmatter                                                             | its recorded RED names no case, so the test case's order decides                                            |
+| `TDD-0026` | `TC-0013-0031` | the finding is raised at warning severity during the window for a companion without the frontmatter; no finding for a spec with no companion                                                  | its recorded RED names no case, so the test case's order decides                                            |
+| `TDD-0027` | `TC-0013-0032` | `templates/contracts/ui-spec.yaml`'s comments state the band; the guide states it; the `QFAI-AUD-020` message names it                                                                        | its RED covered all three at once, so the test case's order decides                                         |
+| `TDD-0028` | `TC-0013-0033` | fewer than three tasks warns; more than seven warns; exactly three does not; exactly seven does not                                                                                           | its RED covered all three at once, so the test case's order decides                                         |
+| `TDD-0029` | `TC-0013-0034` | complete structured items are accepted; string-only items are accepted                                                                                                                        | its proof is the required-key set, which only structured items are measured against                         |
+| `TDD-0030` | `TC-0013-0035` | an item missing `id` is rejected; one missing `label`; one missing `acceptance`; one carrying an extra key                                                                                    | its proof reports each missing key, and the test case lists `id` first among them                           |
 
 A case that states no boundary of its row's obligation moves with the boundary
 it exercises:
@@ -342,6 +342,17 @@ at its own granularity, so this record does not decompose it below that.
      case for each of `TC-0013-0020`'s two boundaries, and a new case each for
      `TC-0013-0011` to `TC-0013-0013` and `TC-0013-0021` that exercises the
      obligation its test case states;
+   - **says what becomes of the core cases the repoint leaves behind.** Six
+     rows move from a `tests/core/**` case to a `tests/integration/**` one:
+     `TDD-0014` and `TDD-0015` in `traceabilityIntegrity.test.ts`, `TDD-0023`
+     and `TDD-0024` in `activeDiscussionPack.test.ts`, and `TDD-0025` and
+     `TDD-0026` in `surfaceTypePopulate.test.ts`. No row in any pack names those
+     files once the repoint is written, so each case is removed in the same pass
+     that writes the integration case taking over its obligation. A case
+     observing something no seeded row states is kept instead, with the `TC-` or
+     `TDD-` prefix dropped from its title, so nothing reads as the case of a row
+     that does not own it. Left as they are, they fail with no row and no
+     evidence path answerable for repairing them;
    - writes `TDD-0023`'s case so it tells packs apart: it creates more than one
      pack, points `currentId` at one that is not the newest, and asserts that
      exact pack, since with one pack a resolver ignoring the pointer and
