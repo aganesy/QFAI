@@ -1114,12 +1114,14 @@ function cellIsWritten(value: unknown): boolean {
   if (trimmed.length === 0) return false;
   // Angle brackets are not stripped and no shape rule reads them: a component is
   // named that way — `<DataTable density="compact">` — so the template's own
-  // phrases are the set below and nothing wider.
+  // phrases are the set below and nothing wider. The set is read against the
+  // undecorated text as well, since a shipped phrase is quoted and punctuated
+  // like any other placeholder.
   const bare = undecorated(trimmed);
   if (PLACEHOLDER_RE.test(bare) || UNDECIDED_WORD.test(bare)) return false;
   const opener = /^([^\s:]+)\s*:/.exec(bare)?.[1] ?? "";
   if (opener !== "" && (PLACEHOLDER_RE.test(opener) || UNDECIDED_WORD.test(opener))) return false;
-  return !PROCUREMENT_PLACEHOLDERS.has(trimmed.toLowerCase());
+  return ![trimmed, bare].some((form) => PROCUREMENT_PLACEHOLDERS.has(form.toLowerCase()));
 }
 
 /**

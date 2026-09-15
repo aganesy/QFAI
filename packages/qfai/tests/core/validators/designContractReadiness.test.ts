@@ -493,6 +493,8 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
       ["a question", "???"],
       ["a named decision", "TODO: choose component"],
       ["a named decision with no space", "TBD:pick one"],
+      ["a shipped phrase with a stop", "<screen id>."],
+      ["a shipped phrase in brackets", "[<what part of the screen>]"],
     ])("reports a placeholder written as %s", async (_name, cell) => {
       // Read whole, each of these is a value nothing recognises, so the row
       // passed carrying nothing for the implementer to install.
