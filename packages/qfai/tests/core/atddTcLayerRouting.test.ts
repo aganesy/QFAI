@@ -169,7 +169,8 @@ describe("the TC obligation routes by declared Level", () => {
         const finding = issues.find((entry) => entry.code === "QFAI-ATDD-123");
         expect(finding?.severity).toBe("error");
         expect(finding?.message).toContain("SPEC-0001:TC-0001");
-        expect(finding?.suggested_action).toContain("tests/integration/**");
+        // The fix names the file carrying the leftover reference.
+        expect(finding?.suggested_action).toContain("tests/integration/a.test.ts");
       },
     );
   });
