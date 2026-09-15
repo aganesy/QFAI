@@ -377,12 +377,24 @@ stands.
    stage onward (`qfai-atdd/SKILL.md`), so the refresh goes through that
    stage's reviewer gate.
 
-   **Both passes wait on their pack's `E2E` rows.** `/qfai-atdd` writes a test
-   only for a row the ledger holds, and it reports a missing Phase 2b row
-   rather than seeding one. Neither ledger carries the `E2E` rows its active
-   stories are owed, thirteen short in each pack, and a `confirm-only` rerun
-   seeds none. So each pass runs once its pack's ledger carries those rows,
-   and until then the reset rows stay at `todo` in this record's blocked set.
+   **Both passes wait on their pack's `E2E` rows, and this record schedules the
+   run that seeds them.** `/qfai-atdd` writes a test only for a row the ledger
+   holds, and it reports a missing Phase 2b row rather than seeding one.
+   Neither ledger carries the `E2E` rows its active stories are owed, thirteen
+   short in each pack, and action 1's `confirm-only` rerun seeds none. Left
+   there the plan waits on a run nothing in it performs, so:
+
+   **Action 2b, before the two passes: `/qfai-sdd spec-0013` and
+   `/qfai-sdd spec-0004`, mode `re-derive`, scoped to Phase 2b.** Each seeds
+   its pack's missing `E2E` rows and migrates its ledger to the template's
+   columns; no statement moves, and no other phase writes. It is listed as an
+   approved action of this record rather than assumed, because a Phase 2b
+   re-derivation is a write neither pass may perform and neither option
+   authorises by itself. Both packs' `10_delta.md` and `tdd/test-list.md` join
+   the impact scope with it.
+
+   Until action 2b lands, the reset rows stay at `todo` in this record's
+   blocked set.
 
    **Then `/qfai-implement spec-0013` and `/qfai-implement spec-0004` consume
    the handoffs.** `/qfai-atdd` writes no ledger cell, so under options 1 and

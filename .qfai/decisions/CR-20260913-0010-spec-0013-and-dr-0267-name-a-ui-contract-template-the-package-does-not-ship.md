@@ -163,9 +163,11 @@ No `spec-0004` statement names either file.
   selects — `packages/qfai/tests/integration/primaryTasksBand.test.ts`, re-run
   and not edited, since it already reads the shipped template; and, through the
   `/qfai-atdd spec-0013` pass in action 4, the tests for `TDD-0016` to
-  `TDD-0018` and the new `E2E` tests under `packages/qfai/tests/e2e/**` for
-  `US-0013-0001` to `US-0013-0010`, with `.qfai/evidence/atdd-spec-0013.md`
-  and `.qfai/evidence/coverage-depth-spec-0013.md`
+  `TDD-0018`, with `.qfai/evidence/atdd-spec-0013.md` and
+  `.qfai/evidence/coverage-depth-spec-0013.md`. **No `E2E` test for a story
+  the ledger has no row for**: action 4 writes none, and the thirteen missing
+  rows are recorded there as an open cross-spec obligation, so naming those
+  files here would put an output in the scope that the plan refuses to write
 - Contracts: `none`
 - Schema: `none`
 - Upstream paths edited under this CR:
