@@ -1296,7 +1296,17 @@ function decodeUtf8(bytes: Buffer): string | undefined {
 }
 
 /** What a file's bytes turned out to be, for a file too large to hold. */
-type ScannedEncoding = "utf-8" | "other-encoding" | "unreadable";
+type ScannedEncoding = "utf-8" | "other-encoding" | "unreadable" | "unsettled";
+
+/**
+ * The most of an over-ceiling document whose encoding this run reads.
+ *
+ * SIMPLIFIED: past this the encoding is left unsettled, as what the document
+ * cites already is. Reading further costs the run the I/O of the whole file,
+ * and a file being appended to faster than it is read has no end at all.
+ * Lift when: a skill names a document this large whose tail needs deciding.
+ */
+const ENCODING_SCAN_CEILING = 256 * 1024 * 1024;
 
 /**
  * The encoding of a file read a chunk at a time and kept nowhere.
@@ -1310,11 +1320,13 @@ type ScannedEncoding = "utf-8" | "other-encoding" | "unreadable";
  *
  * A file this run cannot read answers `"unreadable"` rather than either
  * verdict about its bytes. Naming an encoding for bytes nobody read would
- * report the wrong defect, and passing the file over would report none.
+ * report the wrong defect, and passing the file over would report none. A file
+ * whose bytes ran past the scan's budget answers `"unsettled"`: what was read
+ * decoded, and the rest was not read, which is not the same as valid.
  */
 async function scanEncoding(file: string): Promise<ScannedEncoding> {
   const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
-  const outcome = await scanBoundedRegularFile(file, (chunk) => {
+  const outcome = await scanBoundedRegularFile(file, ENCODING_SCAN_CEILING, (chunk) => {
     try {
       decoder.decode(chunk, { stream: true });
       return "continue";
@@ -1324,6 +1336,7 @@ async function scanEncoding(file: string): Promise<ScannedEncoding> {
   });
   if (outcome === "stopped") return "other-encoding";
   if (outcome === "refused") return "unreadable";
+  if (outcome === "unfinished") return "unsettled";
   try {
     decoder.decode();
   } catch {
@@ -1971,7 +1984,10 @@ async function readCitedDocument(file: string): Promise<CitedDocument> {
     // thing this rule can still say about it. What it cites stays unknown,
     // which is what `unread` records.
     const encoding = await scanEncoding(await realpath(file).catch(() => file));
-    if (encoding === "utf-8") return { kind: "unread" };
+    // `unsettled` joins `utf-8` here: the run says nothing about a document it
+    // did not finish reading, as it says nothing about what such a document
+    // cites.
+    if (encoding === "utf-8" || encoding === "unsettled") return { kind: "unread" };
     if (encoding === "unreadable") {
       return unreadable(
         "A document under `skills` that a step names is not an ordinary file this run can read. The host opens it only where a step names it, and a step that does fails there.",

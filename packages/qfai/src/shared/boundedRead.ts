@@ -142,6 +142,13 @@ const SCAN_CHUNK_BYTES = 64 * 1024;
  * to its end for the sake of reading it, and the caller learns which of the two
  * ended the read without keeping its own flag for it.
  *
+ * The read is bounded twice over, because a scan with no end is a command that
+ * does not return. `maxBytes` is the caller's budget, and the size `fstat`
+ * reported at open bounds it again: a file being appended to while the scan
+ * runs is read to the length it had, not chased. Either bound reached before
+ * the end answers `"unfinished"`, and the caller then says nothing about the
+ * part it did not read rather than guessing at it.
+ *
  * `"refused"` covers every reason the bytes were not read in full: absent, a
  * symlink, a FIFO, a device, a directory, an object that changed between the
  * inspection and the open, or a read that failed part-way. A caller cannot tell
@@ -149,8 +156,9 @@ const SCAN_CHUNK_BYTES = 64 * 1024;
  */
 export async function scanBoundedRegularFile(
   filePath: string,
+  maxBytes: number,
   onChunk: (chunk: Buffer) => "continue" | "stop",
-): Promise<"read" | "stopped" | "refused"> {
+): Promise<"read" | "stopped" | "unfinished" | "refused"> {
   let inspected;
   try {
     inspected = await lstat(filePath);
@@ -172,11 +180,18 @@ export async function scanBoundedRegularFile(
     if (!stats.isFile()) return "refused";
     if (!sameObject(inspected, stats)) return "refused";
     const buffer = Buffer.alloc(SCAN_CHUNK_BYTES);
-    for (;;) {
-      const { bytesRead } = await handle.read(buffer, 0, buffer.length, null);
+    const ceiling = Math.min(stats.size, Math.max(0, maxBytes));
+    let scanned = 0;
+    while (scanned < ceiling) {
+      const room = Math.min(buffer.length, ceiling - scanned);
+      const { bytesRead } = await handle.read(buffer, 0, room, null);
+      // Shorter than `fstat` said: the file is what was read, whatever it was
+      // when it was measured.
       if (bytesRead === 0) return "read";
+      scanned += bytesRead;
       if (onChunk(buffer.subarray(0, bytesRead)) === "stop") return "stopped";
     }
+    return ceiling < stats.size ? "unfinished" : "read";
   } catch {
     return "refused";
   } finally {
