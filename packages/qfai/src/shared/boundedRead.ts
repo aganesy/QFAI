@@ -134,8 +134,8 @@ const SCAN_CHUNK_BYTES = 64 * 1024;
  * decision on it.
  *
  * For a file too large to hold whose bytes still have to be judged: nothing is
- * retained beyond one block, and no size ceiling applies, because the size is
- * the reason for reading it this way.
+ * retained beyond one block, so the memory a caller spends does not follow the
+ * file's size. The bytes read still do, and are bounded — see below.
  *
  * `onChunk` answers `"stop"` once it has seen enough, and the read ends there
  * with `"stopped"`. A file whose first block settles the question is not read
