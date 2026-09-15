@@ -957,15 +957,21 @@ describe("a ceiling below the declared testTimeout", () => {
 
 describe("the floor lane bounds its forks by the runner it is on", () => {
   /**
-   * The lane that runs the whole suite in one process pool is the only one that
-   * has exited 1 with every test passing: each fork reports progress to the
-   * single main process over an RPC call with a fixed budget, and a main process
-   * that cannot answer in time turns a healthy run red.
+   * The floor lane exits 1 with every test passing when its forks outnumber the
+   * runner's cores: each fork reports progress to the single main process over an
+   * RPC call with a fixed budget, and a main process that cannot answer in time
+   * turns a healthy run red.
    *
    * The budget is not configurable — `ForksOptions` carries no timeout and the
    * default lives inside the RPC library — so what this pins is the other side:
    * the lane states a fork count taken from the machine instead of inheriting the
    * declared ceiling, which on a four-core runner is 2.5x oversubscribed.
+   *
+   * The override is per leg, not per lane. The oversubscription is the declared
+   * ceiling measured against the runner's cores, and every leg gets its own runner
+   * with the same four, so a leg carries the same 2.5x over fewer tests. One step
+   * states the count for all seven legs, which is why this row insists on exactly
+   * one such step rather than tolerating a second that omits it.
    */
   const floorLaneRun = (): string => {
     const doc: unknown = parseYaml(
@@ -977,6 +983,10 @@ describe("the floor lane bounds its forks by the runner it is on", () => {
     const runs = steps
       .map((step) => (isRecord(step) ? step["run"] : undefined))
       .filter((run): run is string => typeof run === "string")
+      // `test\b` and not `test$`: the lane invokes the per-slice script, so the
+      // command ends in `test:${{ matrix.slice }}` and the boundary sits between the
+      // `t` and the colon. `pnpm -C packages/qfai build`, the other run step, does
+      // not match.
       .filter((run) => /pnpm -C packages\/qfai test\b/.test(run));
     expect(runs, "the floor lane must run the package suite").toHaveLength(1);
     return runs[0] ?? "";

@@ -441,24 +441,38 @@ jobs:
   # including the release gate, and breaks exactly the supported users the range was
   # written for.
   #
-  # One lane, pinned exactly, through the shared action's `node-version` input rather
+  # The floor is pinned exactly, through the shared action's `node-version` input rather
   # than a second inline preamble (`BR-0017-0027`). It runs the package test suite,
   # because a runtime floor is a claim about running code and a type check would not
   # notice a missing runtime API.
   #
+  # Over the SAME slice matrix the `test` job declares, and for the same reason it is
+  # sliced there: one process pool over the whole suite is the longest job in the run and
+  # sets the wall clock for every other lane. The slices partition the suite — the runner
+  # workspace declares exactly these seven projects and every test file lives under one of
+  # them — so the legs together carry the whole floor claim. Each leg asserts the floor for
+  # itself, because a leg running the wrong Node is what that assertion is for and a single
+  # leg checking it would leave the other six unverified.
+  #
   # Conditional on the same detection output as its neighbours, and DECLARED either
-  # way, so its check name persists for branch protection.
+  # way, so its check names persist for branch protection.
   node-floor:
     needs: [detect]
     if: ${{ needs.detect.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        slice: [core, validators, integration, e2e, cli, unit, scripts]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
-          # Same reason as the `test` job's: this lane runs the whole package
-          # suite, `stageEvidenceCounts` included, and that test needs the base
-          # tip's objects to tell an inherited count from this branch's own.
+          # Same reason as the `test` job's: `stageEvidenceCounts` runs in the
+          # `e2e` slice, and that test needs the base tip's objects to tell an
+          # inherited count from this branch's own. Declared for every leg rather
+          # than for that one, because a checkout that differs by leg is a
+          # difference nobody reading a red leg would think to look for.
           fetch-depth: 2
           persist-credentials: false
       # The four-step toolchain preamble, defined once in
@@ -497,37 +511,42 @@ jobs:
       # `dist/` is not committed, and the `e2e` and `integration` slices read it —
       # `tests/integration/cliStartupCost.test.ts` fails with "no shipped bundle was readable" and
       # `tests/e2e/spec0010DiscussionMockAndPointerE2E.test.ts` spawns `dist/cli/index.cjs`. Without
-      # this the floor lane is structurally ALWAYS RED, and an always-red required lane conveys no
-      # differential signal: a genuine Node 20 break and a missing bundle look identical, so the lane
-      # gets un-required or "fixed" by dropping the pin. Same step, same reason, as the `test` job's.
-      - name: Build qfai (the floor lane runs the slices that read dist/)
+      # this those legs are structurally ALWAYS RED, and an always-red leg of a required lane
+      # conveys no differential signal: a genuine Node 20 break and a missing bundle look identical,
+      # so the lane gets un-required or "fixed" by dropping the pin. Same step, same condition, same
+      # reason, as the `test` job's — the other five legs run pure TS through vitest's loader and
+      # would pay for a build nothing in them reads.
+      - name: Build qfai (the floor legs that read dist/)
+        if: matrix.slice == 'e2e' || matrix.slice == 'integration'
         run: pnpm -C packages/qfai build
-      # One process pool, the whole suite, on the slowest lane — and the only lane
-      # that has ever exited 1 with every test passing. The runner reports progress
-      # from each fork to the single main process over an RPC call with a sixty-second
-      # budget; when that call does not come back the worker throws, the throw is
-      # counted as an unhandled error, and the run fails having broken nothing.
+      # The fork count is taken from the runner, not inherited from the declaration.
       #
-      # The budget itself is not reachable: `ForksOptions` carries no timeout,
-      # `createForksRpcOptions` sets none, and the default lives in the RPC library.
-      # So the lever is the contention rather than the deadline. The declared ten
-      # forks are 2.5x the cores of this runner, which is what leaves the main
-      # process unable to answer in time.
+      # Forks that outnumber the runner's cores make this lane exit 1 with every test
+      # passing: each fork reports progress to the single main process over an RPC call with
+      # a sixty-second budget, and a main process too contended to answer in time turns a
+      # healthy run red. The budget is not reachable — `ForksOptions` carries no timeout,
+      # `createForksRpcOptions` sets none, and the default lives in the RPC library — so the
+      # contention is the only lever.
       #
-      # Taking the count from the runner is also faster. Whole suite, four cores:
+      # The measurement, whole suite on four cores:
       #
       #   ten forks    299 s wall   collect 343 s   tests 1972 s
       #   four forks   269 s wall   collect 113 s   tests  743 s
       #
-      # The collect and test figures are summed across forks, so their collapse is
-      # the oversubscription: at ten forks most of each fork's measured time is spent
-      # waiting for a core. Fewer forks is quieter AND quicker, so this buys the
-      # headroom at no cost.
+      # The collect and test figures are summed across forks, so their collapse is the
+      # oversubscription: at ten forks most of each fork's measured time goes to waiting for
+      # a core. That is the declared ceiling measured against the runner's core count, not a
+      # property of how many tests are in the pool, so it holds per leg: each leg gets its
+      # own runner with the same four cores, and the declared ten forks oversubscribe every
+      # one of them the same way.
       #
-      # `QFAI_TEST_MAX_WORKERS` is the override `vitest.knobs.ts` declares for exactly
-      # this. The declared starting value is untouched: this lane states its own.
-      - name: Run the package test suite on the floor
-        run: QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test
+      # `QFAI_TEST_MAX_WORKERS` is the override `vitest.knobs.ts` declares for exactly this.
+      # The declared starting value is untouched: this lane states its own.
+      - name: Run the package test suite on the floor (${{ matrix.slice }})
+        # The per-slice script, not the generic runner with a project name — the
+        # reason the `test` job's step gives, and the reason surface 3 of
+        # `sliceSurfaceAlignment` is load-bearing.
+        run: QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:${{ matrix.slice }}
 
   # ── 4. Tests (matrix: test slices) ──────────────────────────────
   test:

@@ -72,6 +72,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- Run the engines-floor test lane over the same seven slices the resolved-Node
+  lane uses. The slices partition the suite, so the floor claim is unchanged;
+  each leg pins and asserts the floor for itself, and the aggregate verdict still
+  reads one rolled-up result. This lane set the wall clock for the whole run
+  (#1870).
+
 - Run shipped document checks and full/drift validation in independent CI jobs.
   Stable external verdicts require every selected check to succeed. New projects
   receive the workflow assets through `qfai init`; existing workflow ownership
