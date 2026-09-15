@@ -411,6 +411,20 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     expect(requireDialect(["tests/**/*.{p..p}y"]).id).toBe("python");
   });
 
+  it("reads a dot inside a name, and keeps one out of a segment's first character", () => {
+    // fast-glob collects `TC-0000-0000.test.ts` for a group after literal text:
+    // the wildcard there is inside the name, where a dot is an ordinary
+    // character. The guard belongs to the segment's first character, so an
+    // alternative compiled out of a group carries the group's position.
+    expect(requireDialect(["tests/**/TC-0000-0000@(*).ts"]).id).toBe("js-ts");
+  });
+
+  it("derives the extension a range spells behind a list", () => {
+    // A directory list can stand ahead of the range, and reading only the first
+    // group left the extension unread and the run on its JavaScript default.
+    expect(requireDialect(["tests/{unit,integration}/**/*.{p..p}y"]).id).toBe("python");
+  });
+
   it("refuses when an exclude glob holds a range the scan refuses", () => {
     // fast-glob throws while compiling the ignore, and for the whole call, so
     // the scan collects nothing. Read as an exclusion that matches nothing, the

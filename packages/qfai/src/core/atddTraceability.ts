@@ -2471,34 +2471,49 @@ function withRangesExpanded(glob: string): string[] {
     const next: string[] = [];
     let changed = false;
     for (const candidate of expanded) {
-      const open = candidate.indexOf("{");
-      const close = open === -1 ? -1 : candidate.indexOf("}", open);
-      let members: readonly string[] | null = null;
-      if (open !== -1 && close !== -1) {
-        try {
-          members = braceRangeMembers(candidate.slice(open + 1, close));
-        } catch (error) {
-          // A range fast-glob refuses is left as it stands. The pattern selects
-          // nothing, and whoever compiles it says so; dropping it here instead
-          // would leave a configured project looking like one that configured
-          // no glob at all.
-          if (!(error instanceof BraceRangeRefused)) throw error;
-          members = null;
-        }
-      }
-      if (members === null || open === -1 || close === -1) {
+      const written = firstRangeWrittenOut(candidate);
+      if (written === null) {
         next.push(candidate);
         continue;
       }
       changed = true;
-      for (const member of members.slice(0, RANGE_MEMBERS_READ)) {
-        next.push(candidate.slice(0, open) + member + candidate.slice(close + 1));
-      }
+      next.push(...written);
     }
     expanded = next;
     if (!changed) break;
   }
   return expanded;
+}
+
+/**
+ * The candidate with its first brace range written out, or `null` when it holds
+ * none.
+ *
+ * Every group is looked at, not only the first: a directory list can stand
+ * ahead of a range in the extension, as `tests/{unit,integration}/**\/*.{p..p}y`
+ * does, and stopping at the list left the extension unread.
+ *
+ * A range fast-glob refuses is left as it stands. The pattern then selects
+ * nothing, and whoever compiles it says so; dropping it here would leave a
+ * configured project looking like one that configured no glob at all.
+ */
+function firstRangeWrittenOut(candidate: string): string[] | null {
+  for (let open = candidate.indexOf("{"); open !== -1; open = candidate.indexOf("{", open + 1)) {
+    const close = candidate.indexOf("}", open);
+    if (close === -1) return null;
+    let members: readonly string[] | null;
+    try {
+      members = braceRangeMembers(candidate.slice(open + 1, close));
+    } catch (error) {
+      if (!(error instanceof BraceRangeRefused)) throw error;
+      return null;
+    }
+    if (members === null) continue;
+    return members
+      .slice(0, RANGE_MEMBERS_READ)
+      .map((member) => candidate.slice(0, open) + member + candidate.slice(close + 1));
+  }
+  return null;
 }
 
 export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<string> {

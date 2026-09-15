@@ -438,9 +438,17 @@ function expandMetaBrace(pattern: string): string[] | null {
   return null;
 }
 
-/** Whether the character at `index` is the first of its path segment. */
-function opensSegment(pattern: string, index: number): boolean {
-  return index === 0 || pattern[index - 1] === "/";
+/**
+ * Whether the character at `index` is the first of its path segment.
+ *
+ * `atStart` is what the caller knows about the fragment's own position. An
+ * alternative compiled out of a group carries the group's position, since
+ * `@(a|*)` after literal text is inside the segment wherever the alternative
+ * begins; read without it, every alternative looked segment-leading and the
+ * guard refused an ordinary dot in the middle of a name.
+ */
+function opensSegment(pattern: string, index: number, atStart: boolean): boolean {
+  return index === 0 ? atStart : pattern[index - 1] === "/";
 }
 
 /**
@@ -462,12 +470,12 @@ function opensSegment(pattern: string, index: number): boolean {
  * `!(a|b)` uses picomatch's own expansion — a negative lookahead followed by a
  * lazy segment wildcard — so this matcher agrees with fast-glob there too.
  */
-export function compileGlob(pattern: string): string {
+export function compileGlob(pattern: string, atSegmentStart = true): string {
   const expanded = expandMetaBrace(pattern);
   if (expanded !== null) {
     return expanded.length === 0
       ? NEVER_MATCHES
-      : `(?:${expanded.map((one) => compileGlob(one)).join("|")})`;
+      : `(?:${expanded.map((one) => compileGlob(one, atSegmentStart)).join("|")})`;
   }
   let source = "";
   for (let index = 0; index < pattern.length; index += 1) {
@@ -475,8 +483,9 @@ export function compileGlob(pattern: string): string {
     if (pattern[index + 1] === "(" && "@?*+!".includes(char)) {
       const close = findGroupClose(pattern, index + 1, "(", ")");
       if (close !== -1) {
+        const inSegment = opensSegment(pattern, index, atSegmentStart);
         const alternatives = splitGlobAlternatives(pattern.slice(index + 2, close), "|")
-          .map((alternative) => compileGlob(alternative.trim()))
+          .map((alternative) => compileGlob(alternative.trim(), inSegment))
           .join("|");
         source +=
           char === "!"
@@ -508,22 +517,25 @@ export function compileGlob(pattern: string): string {
         index = afterIndex;
         continue;
       }
-      source += `${opensSegment(pattern, index) ? NOT_A_DOT_NAME : ""}[^/]*`;
+      source += `${opensSegment(pattern, index, atSegmentStart) ? NOT_A_DOT_NAME : ""}[^/]*`;
       index = afterIndex - 1;
       continue;
     }
     if (char === "*") {
-      source += `${opensSegment(pattern, index) ? NOT_A_DOT_NAME : ""}[^/]*`;
+      source += `${opensSegment(pattern, index, atSegmentStart) ? NOT_A_DOT_NAME : ""}[^/]*`;
       continue;
     }
     if (char === "?") {
-      source += `${opensSegment(pattern, index) ? NOT_A_DOT_NAME : ""}[^/]`;
+      source += `${opensSegment(pattern, index, atSegmentStart) ? NOT_A_DOT_NAME : ""}[^/]`;
       continue;
     }
     if (char === "{") {
       const close = findGroupClose(pattern, index, "{", "}");
       if (close !== -1) {
-        source += compileBraces(pattern.slice(index + 1, close));
+        source += compileBraces(
+          pattern.slice(index + 1, close),
+          opensSegment(pattern, index, atSegmentStart),
+        );
         index = close;
         continue;
       }
@@ -697,17 +709,20 @@ function compileClassBody(body: string): string {
  *
  * @throws {BraceRangeRefused} for a numeric range fast-glob refuses to expand.
  */
-function compileBraces(body: string): string {
+function compileBraces(body: string, atSegmentStart: boolean): string {
   const alternatives = splitGlobAlternatives(body, ",");
   if (alternatives.length > 1) {
-    return `(?:${alternatives.map((alternative) => compileGlob(alternative.trim())).join("|")})`;
+    return `(?:${alternatives
+      .map((alternative) => compileGlob(alternative.trim(), atSegmentStart))
+      .join("|")})`;
   }
   const members = braceRangeMembers(body);
-  if (members === null) return `\\{${compileGlob(body)}\\}`;
+  // The braces stay as text, so what stands between them is inside the segment.
+  if (members === null) return `\\{${compileGlob(body, false)}\\}`;
   // Expanded first and compiled after, as fast-glob does it, so a member the
   // expansion produces is glob syntax there and here alike: `{*..*}` expands
   // to `*`, which selects every name and not a literal star.
-  const compiled = members.map((member) => compileGlob(member)).join("|");
+  const compiled = members.map((member) => compileGlob(member, atSegmentStart)).join("|");
   return members.length === 0 ? NEVER_MATCHES : `(?:${compiled})`;
 }
 

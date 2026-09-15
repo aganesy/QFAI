@@ -218,7 +218,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   increment, leaves the scan collecting nothing at all, whether the glob is one
   the scan includes or one it ignores, so the scaffold refuses rather than
   writing under it. A member the expansion produces is glob syntax, as it is to
-  fast-glob, which expands a range before it compiles. A list member is text,
+  fast-glob, which expands a range before it compiles, and a range anywhere in
+  the pattern is read when the extension is derived. A wildcard that opens a
+  path segment no longer matches a name beginning with a dot, which is how the
+  scan reads one. A list member is text,
   not a range, and so is a brace body that is neither. Because a range can make
   a glob depend on a test case id's digits, the scaffold checks the file it
   would write for every test case in scope, not a representative one.
