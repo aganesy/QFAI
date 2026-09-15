@@ -19,7 +19,7 @@
  * the live file, and AFTER for the new size on overwrites.
  */
 
-import { appendFile, mkdir, rm, stat, truncate } from "node:fs/promises";
+import { appendFile, lstat, mkdir, rm, stat, truncate } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "../fs/errno.js";
@@ -100,13 +100,22 @@ export async function logEvidenceMoves(
       newSize: 0,
     }),
   );
-  // `null` where there is no log yet. A path that is not a file takes no
-  // append, so there is nothing to cut back there.
+  // `null` where there is no log yet, and `undefined` where the path holds
+  // something an append cannot extend — nothing to cut back either way, and for
+  // `undefined` nothing this call created, so the recovery below leaves it.
   const priorLength = await stat(logAbs).then(
     (stats) => (stats.isFile() ? stats.size : undefined),
-    (cause: unknown) => {
-      if (isEnoent(cause)) return null;
-      throw cause;
+    async (cause: unknown) => {
+      if (!isEnoent(cause)) throw cause;
+      // A link whose target is gone reports the same absence as a path holding
+      // nothing. Removed as though this call had made it, an entry that was
+      // already there is destroyed by a write that failed.
+      return (await lstat(logAbs).then(
+        () => true,
+        () => false,
+      ))
+        ? undefined
+        : null;
     },
   );
   try {

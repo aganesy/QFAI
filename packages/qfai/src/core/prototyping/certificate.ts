@@ -370,10 +370,17 @@ export function isResetBackupDirectory(name: string): boolean {
   return RESET_BACKUP_DIRECTORY.test(name);
 }
 
-/** Whether an evidence path lies inside one of a reset's backup directories. */
+/**
+ * Whether an evidence path is one of a reset's backups, or lies inside one.
+ *
+ * The name on its own counts, not only a path below it. A scanner that followed
+ * a link sealed the backup's own name as a file, and read against a scan that
+ * leaves the entry out, such a certificate reported the backup removed on every
+ * check.
+ */
 function inResetBackup(relPath: string): boolean {
   const slash = relPath.indexOf("/");
-  return slash > 0 && isResetBackupDirectory(relPath.slice(0, slash));
+  return isResetBackupDirectory(slash === -1 ? relPath : relPath.slice(0, slash));
 }
 
 /**

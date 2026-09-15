@@ -9,7 +9,7 @@
  */
 // QFAI:SPEC-0012:TC-0012-0479
 
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -204,6 +204,24 @@ describe("TC-0012-0479: mutation-log appends a JSONL entry per destructive iter-
     await expect(logEvidenceMoves(root, "iterate", TWO_MOVES)).rejects.toThrow(
       "may hold part of this write",
     );
+  });
+
+  it("leaves a log entry it did not create when the write fails", async () => {
+    // A link whose target is gone reports the same absence as a path holding
+    // nothing, and removed as though this call had made it, an entry that was
+    // already there is destroyed by a write that failed.
+    const logAbs = path.join(root, MUTATION_LOG_REL);
+    await mkdir(path.dirname(logAbs), { recursive: true });
+    try {
+      await symlink(path.join(root, "absent-dir", "log.jsonl"), logAbs);
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+
+    await expect(logEvidenceMoves(root, "iterate", TWO_MOVES)).rejects.toThrow();
+
+    expect((await lstat(logAbs)).isSymbolicLink()).toBe(true);
   });
 
   it("appending twice yields two JSONL lines (idempotent append, no rewrite)", async () => {

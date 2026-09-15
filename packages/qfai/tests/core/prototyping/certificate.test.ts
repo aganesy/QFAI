@@ -243,6 +243,25 @@ describe("checkCompletionCertificate", () => {
     expect((await checkCompletionCertificate(root)).ok).toBe(true);
   });
 
+  it("verifies a certificate that lists a backup by its own name", async () => {
+    // A scanner that followed a link sealed the backup's name as a file, with no
+    // path under it. Filtered only as a prefix, that entry read as evidence the
+    // scan no longer holds, and every check of an untouched loop reported it
+    // removed.
+    const root = await newTempDir();
+    const evidenceRoot = await seedEvidence(root, { "iter-00/home.review.json": "{}\n" });
+    const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
+    await writeCompletionCertificate(root, {
+      ...cert,
+      evidenceDigests: [
+        ...cert.evidenceDigests,
+        { path: "iter-00.backup-2026-01-01T00-00-00-000Z", sha256: "0".repeat(64) },
+      ],
+    });
+
+    expect((await checkCompletionCertificate(root)).ok).toBe(true);
+  });
+
   it("verifies a certificate that lists files under a reset's backups", async () => {
     // Such a certificate was sealed with the backups inside its digest tree,
     // and the scan now leaves them out: compared as they stand, every one would
