@@ -772,6 +772,57 @@ describe("the gate reads a skill as the host does", () => {
     expect(codes).toContain("QFAI-SKILLS-014");
   });
 
+  it("reports a named document too large to hold that this run cannot read", async () => {
+    // Stated, so the size ceiling is what sends it down the streaming path, and
+    // then unreadable. Reported as the unreadable file it is, rather than passed
+    // over as one whose bytes were read and found to be UTF-8.
+    if (process.platform === "win32" || process.getuid?.() === 0) return;
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/huge.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references", "tmp"), { recursive: true });
+    const huge = path.join(skillDir, "references", "tmp", "huge.md");
+    await writeFile(huge, "# huge\n", "utf-8");
+    await truncate(huge, 65 * 1024 * 1024);
+    await chmod(huge, 0o000);
+
+    const codes = (await validateAssistantAssets(root, defaultConfig))
+      .filter((item) => item.file === huge)
+      .map((item) => item.code);
+
+    await chmod(huge, 0o600);
+    expect(codes).toContain("QFAI-SKILLS-014");
+  });
+
+  it("reports a name a step gives below an ordinary file", async () => {
+    // `notes.md` is a file, so nothing can sit under it. The host opens the
+    // name the step gives and fails there, which is a path it cannot read
+    // rather than a path nobody wrote.
+    //
+    // Windows reports the same absence for this path as for one nobody wrote,
+    // so there the two cases cannot be told apart and this one does not arise.
+    if (process.platform === "win32") return;
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/notes.md/guide.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    await writeFile(path.join(skillDir, "references", "notes.md"), "# notes\n", "utf-8");
+    const below = path.join(skillDir, "references", "notes.md", "guide.md");
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-014" && item.file === below)).toBe(true);
+  });
+
   it("roots a skill whose entry point links to a document crawled under another name", async () => {
     // The host loads the link as the entry point, so the document is a root and
     // its citations resolve from the skill's directory.

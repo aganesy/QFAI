@@ -1,4 +1,4 @@
-import { constants, createReadStream } from "node:fs";
+import { constants } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
 import { access, lstat, open, readdir, readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
@@ -26,7 +26,7 @@ import { resolvePath } from "../config.js";
 import { parseSkillFrontmatter, skillFrontmatterMapping } from "../agentFrontmatter.js";
 import { collectFiles, DEFAULT_IGNORE_DIRS } from "../fs.js";
 import { hasErrnoCode, isEnoent } from "../fs/errno.js";
-import { readBoundedRegularFile } from "../../shared/boundedRead.js";
+import { readBoundedRegularFile, scanBoundedRegularFile } from "../../shared/boundedRead.js";
 import { parseHeadings } from "../parse/markdown.js";
 import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
 import { escapeRegExp } from "../regex.js";
@@ -1295,28 +1295,41 @@ function decodeUtf8(bytes: Buffer): string | undefined {
   }
 }
 
+/** What a file's bytes turned out to be, for a file too large to hold. */
+type ScannedEncoding = "utf-8" | "other-encoding" | "unreadable";
+
 /**
- * Whether a file holds valid UTF-8, read a chunk at a time and kept nowhere.
+ * The encoding of a file read a chunk at a time and kept nowhere.
  *
  * For a document past {@link CITED_DOCUMENT_READ_CEILING}: the text cannot be
  * held, and its encoding is still a thing the host will fail on. The decoder
  * runs in stream mode so a sequence split across two chunks is not read as
  * invalid, and the final call settles a sequence the last chunk left open.
+ * The first invalid byte ends the read, since nothing after it changes the
+ * answer.
  *
- * An unreadable stream answers `true`: the read failure is the caller's to
- * report, and answering `false` here would name the wrong defect.
+ * A file this run cannot read answers `"unreadable"` rather than either
+ * verdict about its bytes. Naming an encoding for bytes nobody read would
+ * report the wrong defect, and passing the file over would report none.
  */
-async function holdsValidUtf8(file: string): Promise<boolean> {
+async function scanEncoding(file: string): Promise<ScannedEncoding> {
   const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
-  try {
-    for await (const chunk of createReadStream(file)) {
-      decoder.decode(chunk as Uint8Array, { stream: true });
+  const outcome = await scanBoundedRegularFile(file, (chunk) => {
+    try {
+      decoder.decode(chunk, { stream: true });
+      return "continue";
+    } catch {
+      return "stop";
     }
+  });
+  if (outcome === "stopped") return "other-encoding";
+  if (outcome === "refused") return "unreadable";
+  try {
     decoder.decode();
-    return true;
-  } catch (error: unknown) {
-    return !(error instanceof TypeError);
+  } catch {
+    return "other-encoding";
   }
+  return "utf-8";
 }
 
 /**
@@ -1919,7 +1932,7 @@ async function readCitedDocument(file: string): Promise<CitedDocument> {
     (stats): { size: number } | "not-a-file" =>
       stats.isFile() ? { size: stats.size } : "not-a-file",
     async (error: unknown): Promise<"missing" | "not-a-file" | { error: unknown }> => {
-      if (hasErrnoCode(error) && error.code === "ENOTDIR") return "missing";
+      if (hasErrnoCode(error) && error.code === "ENOTDIR") return "not-a-file";
       if (isLinkLoop(error)) return "not-a-file";
       if (!isEnoent(error)) return { error };
       // A link whose target is gone is still a name the host tries to open.
@@ -1934,7 +1947,7 @@ async function readCitedDocument(file: string): Promise<CitedDocument> {
   if (found === "missing") return { kind: "missing" };
   if (found === "not-a-file") {
     return unreadable(
-      "A path under `skills` that a step names is not an ordinary file — a directory, a device, or a link to nothing — so the host cannot open it, and the step that names it fails there.",
+      "A path under `skills` that a step names is not an ordinary file — a directory, a device, a link to nothing, or a name below an ordinary file — so the host cannot open it, and the step that names it fails there.",
       "Put the document the step expects at that path, or stop naming it.",
     );
   }
@@ -1950,12 +1963,18 @@ async function readCitedDocument(file: string): Promise<CitedDocument> {
     // UTF-8 is reported here rather than passed over for its size — the one
     // thing this rule can still say about it. What it cites stays unknown,
     // which is what `unread` records.
-    return (await holdsValidUtf8(await realpath(file).catch(() => file)))
-      ? { kind: "unread" }
-      : unreadable(
-          "A document under `skills` holds bytes that are not valid UTF-8. The host opens it only where a step names it, and a step that does fails there.",
-          "Save the document as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
-        );
+    const encoding = await scanEncoding(await realpath(file).catch(() => file));
+    if (encoding === "utf-8") return { kind: "unread" };
+    if (encoding === "unreadable") {
+      return unreadable(
+        "A document under `skills` that a step names is not an ordinary file this run can read. The host opens it only where a step names it, and a step that does fails there.",
+        "Make the document an ordinary readable file, or stop naming it.",
+      );
+    }
+    return unreadable(
+      "A document under `skills` holds bytes that are not valid UTF-8. The host opens it only where a step names it, and a step that does fails there.",
+      "Save the document as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
+    );
   }
   const bytes = await readBoundedRegularFile(
     await realpath(file).catch(() => file),

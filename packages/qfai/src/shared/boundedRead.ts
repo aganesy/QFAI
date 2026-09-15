@@ -90,3 +90,62 @@ export async function readBoundedRegularFile(
     await handle.close().catch(() => undefined);
   }
 }
+
+/** How much of a streamed file is held at once. */
+const SCAN_CHUNK_BYTES = 64 * 1024;
+
+/**
+ * A regular file's bytes handed to `onChunk` a block at a time, under the same
+ * posture {@link readBoundedRegularFile} takes — one open, one descriptor, every
+ * decision on it.
+ *
+ * For a file too large to hold whose bytes still have to be judged: nothing is
+ * retained beyond one block, and no size ceiling applies, because the size is
+ * the reason for reading it this way.
+ *
+ * `onChunk` answers `"stop"` once it has seen enough, and the read ends there
+ * with `"stopped"`. A file whose first block settles the question is not read
+ * to its end for the sake of reading it, and the caller learns which of the two
+ * ended the read without keeping its own flag for it.
+ *
+ * `"refused"` covers every reason the bytes were not read in full: absent, a
+ * symlink, a FIFO, a device, a directory, an object that changed between the
+ * inspection and the open, or a read that failed part-way. A caller cannot tell
+ * those apart and does not need to — each is a file this run could not read.
+ */
+export async function scanBoundedRegularFile(
+  filePath: string,
+  onChunk: (chunk: Buffer) => "continue" | "stop",
+): Promise<"read" | "stopped" | "refused"> {
+  let inspected;
+  try {
+    inspected = await lstat(filePath);
+  } catch {
+    return "refused";
+  }
+  if (inspected.isSymbolicLink() || !inspected.isFile()) {
+    return "refused";
+  }
+
+  let handle;
+  try {
+    handle = await open(filePath, readOnlyNoFollowFlags());
+  } catch {
+    return "refused";
+  }
+  try {
+    const stats = await handle.stat();
+    if (!stats.isFile()) return "refused";
+    if (stats.dev !== inspected.dev || stats.ino !== inspected.ino) return "refused";
+    const buffer = Buffer.alloc(SCAN_CHUNK_BYTES);
+    for (;;) {
+      const { bytesRead } = await handle.read(buffer, 0, buffer.length, null);
+      if (bytesRead === 0) return "read";
+      if (onChunk(buffer.subarray(0, bytesRead)) === "stop") return "stopped";
+    }
+  } catch {
+    return "refused";
+  } finally {
+    await handle.close().catch(() => undefined);
+  }
+}
