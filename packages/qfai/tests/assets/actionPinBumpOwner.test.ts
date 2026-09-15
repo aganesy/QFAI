@@ -52,11 +52,13 @@
 // QFAI:SPEC-0017:TC-0017-0066
 // QFAI:SPEC-0017:TC-0017-0067
 
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import { declaredIncludeGlobs, testFileCount } from "../helpers/runnerProjects.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
@@ -446,7 +448,7 @@ describe("TC-0017-0065 (TDD-0065): the adopted worker value matches the recorded
 
     // CLAIM 6 — the artifact still describes this project. A comparison is only meaningful for
     // the tree it was run on, so the artifact records the project's test-FILE count and this
-    // claim re-counts it by walking the directory.
+    // claim re-counts it by walking every directory the project collects from.
     //
     // Files and not test cases, deliberately: counting cases needs the runner, and spawning
     // vitest from a test is the cost that put this spec's own integration slice past its
@@ -458,16 +460,17 @@ describe("TC-0017-0065 (TDD-0065): the adopted worker value matches the recorded
     expect(filesMatch, "the artifact must record the project's test-file count").not.toBeNull();
     if (filesMatch === null) return;
 
-    const countTestFiles = (dir: string): number => {
-      let n = 0;
-      for (const entry of readdirSync(dir, { withFileTypes: true })) {
-        const p = path.join(dir, entry.name);
-        if (entry.isDirectory()) n += countTestFiles(p);
-        else if (/\.test\.ts$/.test(entry.name)) n += 1;
-      }
-      return n;
-    };
-    const actual = countTestFiles(path.join(PACKAGE_ROOT, "tests", project));
+    // Every root the project collects from. A project's `include` is not always
+    // its own directory — `e2e` also collects `tests/assets/**`, and
+    // `integration` three trees beside its own — so the count is the sum over
+    // the globs it declares. Read through the same helper the slice-surface row
+    // reads them with, so one file cannot be counted two ways.
+    const globs = declaredIncludeGlobs().filter((entry) => entry.project === project);
+    expect(
+      globs.length,
+      `the workspace must declare the ${project} project's include globs`,
+    ).toBeGreaterThan(0);
+    const actual = globs.reduce((total, entry) => total + testFileCount(entry.glob), 0);
     expect
       .soft(
         Math.abs(actual - Number(group(filesMatch, 1))) / Number(group(filesMatch, 1)),
