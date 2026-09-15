@@ -29,10 +29,10 @@ tools: [Read, Glob, Grep, Bash]
   `.agents/rules/minimal-implementation.md` § 2.
   Use this route only where the installed Article VII governs the artifact.
   Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
-- Count the consumers of an architectural element this change introduces, adds a
-  consumer to while it still has fewer than three, or leaves below three by
-  removing one — a module, a seam, an adapter, a shared helper, a contract, a
-  deployment boundary — as they exist in the tree, against
+- Count the consumers of an architectural element this change introduces or
+  extracts, or leaves below three by removing one — a module, a seam, an
+  adapter, a shared helper, a contract, a deployment boundary — as they exist in
+  the tree, against
   `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`,
   which says what a consumer is for each kind. The Plan's three usages are cited
   before implementation, so a usage nobody has written is not one of them; three
@@ -45,15 +45,27 @@ tools: [Read, Glob, Grep, Bash]
   shared with one. Removing the last consumer but one is the same count reached
   from the other side: the element is inlined back into what still uses it, or
   it keeps the same exception below.
+  **Reusing an element that already exists is never this finding.** A change
+  satisfying an accepted behaviour by calling a helper that is already there is
+  rung 2 of `.agents/rules/minimal-implementation.md`, and a verdict against it
+  leaves the implementer duplicating what the repository already has. The count
+  reads the change that creates the shared element, not every change that later
+  uses it.
   Return REVISE unless the safety floor in
   `.agents/rules/minimal-implementation.md` § 2 requires the element, the target
   `10_Plan.md` records the exception and the obligation requiring it, or the
-  Plan's three usages are cited and the rows delivering them are still open.
-  **The count is taken over the rows that deliver those usages, not over the one
-  under review.** Delivered by separate rows or separate specs, the first
-  consumer to land is one, and a REVISE there stops the rest from ever being
-  selected — a verdict the row cannot satisfy and no later row can lift. Name the
-  open rows, and take the count when the last of them lands.
+  Plan's three usages are cited and every row still to deliver one is **in the
+  confirmed queue of this invocation**.
+  **The count is then taken over those rows, not over the one under review.**
+  Delivered by separate rows, the first consumer to land is one, and a REVISE
+  there stops the rest from ever being selected — a verdict the row cannot
+  satisfy and no later row can lift. Name the open rows, and take the count when
+  the last of them lands.
+  The queue is what bounds that wait. A usage owed by a spec nobody has queued
+  is a usage no run will write, so the element stays local to its one consumer
+  until the spec that needs it is queued beside this one; granting the exception
+  there closes the spec around exactly the under-three tree this count exists to
+  refuse.
   This count reads an element placed where several modules reach it. An
   extraction that stays inside the module holding the repetition is not one, so
   the third-occurrence limit on sharing in
