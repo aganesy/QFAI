@@ -481,7 +481,6 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0322 (alias — input validation shares cycle-0 entry path)
 describe("runPrototypingIterate input validation", () => {
   it("returns 2 when --cycle is negative", async () => {
     const root = await newTempDir();
