@@ -393,7 +393,7 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 - `references/evidence-requirements.md` MUST enumerate the keywords with example markdown structure (SSOT for the keyword set).
 - `iterate --capture` MUST emit an evidence template skeleton that includes the required keywords as placeholders.
 
-## BR-0012-0065: cycle-0 aggregate reset (REQ-0166)
+## BR-0012-0065: cycle-0 aggregate reset (REQ-0174)
 
 - AC-Refs: AC-0012-0082
 - Every `iterate --cycle 0` run MUST move `.qfai/evidence/prototyping/screenshots/` and `html/` into `aggregate.backup-<ISO>/`, whether or not an `iter-00` exists to back up.

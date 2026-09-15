@@ -779,7 +779,7 @@ export async function runPrototypingIterate(
   const evidenceRootAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL);
   let aggregateMove: AggregateMove | null = null;
   let iter00Backup: { from: string; to: string; files: MovedFile[] } | null = null;
-  const undoReset = async (what: string, cause: unknown): Promise<number> => {
+  const undoReset = async (what: string, cause: unknown, note = ""): Promise<number> => {
     const reason = cause instanceof Error ? cause.message : String(cause);
     const stranded =
       aggregateMove === null
@@ -796,7 +796,8 @@ export async function runPrototypingIterate(
         (aggregateMove === null && backup === null
           ? "Aborting before clearing evidence to avoid destroying the prior loop. "
           : aggregateRollbackReport(options.root, stranded)) +
-        "Resolve the filesystem error (Windows file lock / EACCES / EBUSY are common causes) and rerun.",
+        "Resolve the filesystem error (Windows file lock / EACCES / EBUSY are common causes) and rerun." +
+        note,
     );
     return 2;
   };
@@ -868,7 +869,11 @@ export async function runPrototypingIterate(
   //      emit a phantom missing-specsCovered error before the loop
   //      completes.
   if (options.cycle === 0) {
-    await writeSeedMetadata(protoJsonAbs, {
+    // Every step from here to the end of the reset puts the moves back on its
+    // own failure. A run that stopped after them left the previous loop's
+    // captures in a backup directory nothing would move back, so the next run
+    // read an evidence tree neither loop had written.
+    const seeded = await writeSeedMetadata(protoJsonAbs, {
       designMd: { path: ROOT_DESIGN_MD_REL, sha256: currentSha },
       runId: buildRunId(currentSha),
       specsCovered: specs,
@@ -897,7 +902,13 @@ export async function runPrototypingIterate(
       // that could re-baseline mid-run.
       frozenLicenseCatalog: DEFAULT_LICENSE_CATALOG,
       mode: resolvedMode,
-    });
+    }).then(
+      () => null,
+      (cause: unknown) => cause,
+    );
+    if (seeded !== null) {
+      return await undoReset("could not write the seed metadata", seeded);
+    }
     // Defense-in-depth: stale `iter-NN/` directories from a prior loop
     // could otherwise survive on disk and bind certify to evidence the
     // current reviewer gate has not approved. Certify already anchors
@@ -916,15 +927,12 @@ export async function runPrototypingIterate(
       options.root,
     );
     if (!rmResult.ok) {
-      const reason =
-        rmResult.cause instanceof Error ? rmResult.cause.message : String(rmResult.cause);
-      error(
-        `qfai prototyping iterate --cycle 0: could not remove stale evidence at ${rmResult.failedDir} (${reason}). ` +
-          "Clear the lock (Windows file lock / EACCES / EBUSY are common causes) and rerun. " +
-          "certify is anchored to prototyping.json#iterations[]; if surviving files were sealed into a prior " +
+      return await undoReset(
+        `could not remove stale evidence at ${rmResult.failedDir}`,
+        rmResult.cause,
+        " certify is anchored to prototyping.json#iterations[]; if surviving files were sealed into a prior " +
           "completion-certificate.json the new runId will replace it on the next certify pass.",
       );
-      return 2;
     }
     // Stale `completion-certificate.json` from a prior loop will be
     // overwritten on the next `qfai prototyping certify` run (the new

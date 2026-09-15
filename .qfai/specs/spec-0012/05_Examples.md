@@ -617,7 +617,7 @@
 - When `qfai validate` runs,
 - Then `QFAI-CRIT-009` error text names every required keyword (e.g. `cta_visibility`, `four_state_check`) and the expected document section, and `references/evidence-requirements.md` shows the same keywords with example markdown. Running `qfai prototyping iterate --capture` emits a template skeleton containing `## cta_visibility\n<!-- TODO -->\n## four_state_check\n<!-- TODO -->` placeholders for the full keyword set.
 
-## EX-0012-0186: Restarted Loop With No `iter-00` To Back Up (REQ-0166)
+## EX-0012-0186: Restarted Loop With No `iter-00` To Back Up (REQ-0174)
 
 - BR-Ref: BR-0012-0065
 - Given `.qfai/evidence/prototyping/screenshots/home.png` from a previous loop and no `iter-00/`,

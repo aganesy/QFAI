@@ -35,10 +35,16 @@ import { runPrototypingIterate } from "../../../../src/cli/commands/prototypingI
  * cannot size, and a path `rename` cannot move.
  */
 const fault = vi.hoisted(
-  (): { unlistable: string | null; unstatable: string | null; unrenamable: string | null } => ({
+  (): {
+    unlistable: string | null;
+    unstatable: string | null;
+    unrenamable: string | null;
+    unremovable: string | null;
+  } => ({
     unlistable: null,
     unstatable: null,
     unrenamable: null,
+    unremovable: null,
   }),
 );
 
@@ -65,6 +71,12 @@ vi.mock("node:fs/promises", async (importOriginal) => {
         throw Object.assign(new Error("EACCES: permission denied, lstat"), { code: "EACCES" });
       }
       return actual.lstat(...args);
+    },
+    rm: async (...args: Parameters<typeof actual.rm>) => {
+      if (refused(fault.unremovable, args[0])) {
+        throw Object.assign(new Error("EBUSY: resource busy or locked, rm"), { code: "EBUSY" });
+      }
+      return actual.rm(...args);
     },
     rename: async (...args: Parameters<typeof actual.rename>) => {
       if (refused(fault.unrenamable, args[0])) {
@@ -128,6 +140,7 @@ afterEach(async () => {
   fault.unlistable = null;
   fault.unstatable = null;
   fault.unrenamable = null;
+  fault.unremovable = null;
   vi.restoreAllMocks();
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
@@ -427,6 +440,36 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(entries).not.toContain("html");
     const log = await readFile(path.join(evidenceRoot, "mutation-log.jsonl"), "utf-8");
     expect(log).toContain('"path":".qfai/evidence/prototyping/html"');
+  });
+
+  it("puts back what the reset moved when clearing the iteration directories fails", async () => {
+    // The moves stand until the whole reset does. A run that stopped here left
+    // the previous loop's captures in a backup directory nothing would move
+    // back, and the next run read a tree neither loop had written.
+    const root = await newTempDir();
+    await seedProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(path.join(evidenceRoot, "screenshots"), { recursive: true });
+    await writeFile(path.join(evidenceRoot, "screenshots", "home.png"), "prior", "utf-8");
+    const stale = path.join(evidenceRoot, "iter-01");
+    await mkdir(stale, { recursive: true });
+    await writeFile(path.join(stale, "old.review.json"), "{}", "utf-8");
+    fault.unremovable = stale;
+    captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+
+    expect(exit).toBe(2);
+    expect(await readFile(path.join(evidenceRoot, "screenshots", "home.png"), "utf-8")).toBe(
+      "prior",
+    );
+    expect(
+      (await readdir(evidenceRoot)).find((entry) => entry.startsWith("aggregate.backup-")),
+    ).toBeUndefined();
   });
 
   it("puts back what the reset moved when a later move fails", async () => {
