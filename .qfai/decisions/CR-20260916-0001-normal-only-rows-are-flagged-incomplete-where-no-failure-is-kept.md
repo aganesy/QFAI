@@ -32,8 +32,11 @@ qualifier:
   non-normal test case", with "Normal-path-only coverage for an AC is considered
   incomplete".
 - `TC-0013-0013` — verifies that every AC has at least one non-normal case.
+- `US-0008-0006` — "every normal-only suite is incomplete".
+- `EX-0008-0008` — expects an Error-path failure unconditionally.
+- `EX-0013-0008` — requires both a normal and an error case.
 
-A reviewer following the checklist passes a row those six fail, and a reviewer
+A reviewer following the checklist passes a row those nine fail, and a reviewer
 following them demands a case for a failure nothing keeps. Both cannot hold.
 
 ## Reproduction
@@ -62,14 +65,17 @@ changed.
 Qualify the four rows by what the row keeps, leaving the demand in place for
 every row that keeps a failure:
 
-| Row            | Today                                   | Proposed                                                                     |
-| -------------- | --------------------------------------- | ---------------------------------------------------------------------------- |
-| `AC-0008-0009` | any normal-only row is incomplete       | a normal-only row is incomplete where the row keeps a failure                |
-| `BR-0008-0007` | every US/TC owes a non-normal case      | every US/TC owes one for each failure it keeps                               |
-| `TC-0008-0012` | a normal-only row triggers REVISE       | a normal-only row keeping a failure triggers REVISE; one keeping none passes |
-| `AC-0013-0010` | every AC owes a non-normal case         | every AC owes one for each failure it keeps                                  |
-| `BR-0013-0008` | normal-only for an AC is incomplete     | it is incomplete where the AC keeps a failure                                |
-| `TC-0013-0013` | verifies every AC has a non-normal case | verifies every AC has one for each failure it keeps                          |
+| Row            | Today                                   | Proposed                                                                                        |
+| -------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `AC-0008-0009` | any normal-only row is incomplete       | a normal-only row is incomplete where the row keeps a failure                                   |
+| `BR-0008-0007` | every US/TC owes a non-normal case      | every US/TC owes one for each failure it keeps                                                  |
+| `TC-0008-0012` | a normal-only row triggers REVISE       | a normal-only row keeping a failure triggers REVISE; one keeping none passes                    |
+| `AC-0013-0010` | every AC owes a non-normal case         | every AC owes one for each failure it keeps                                                     |
+| `BR-0013-0008` | normal-only for an AC is incomplete     | it is incomplete where the AC keeps a failure                                                   |
+| `TC-0013-0013` | verifies every AC has a non-normal case | verifies every AC has one for each failure it keeps                                             |
+| `US-0008-0006` | every normal-only suite is incomplete   | it is incomplete where the suite keeps a failure or declares a valid boundary it does not cover |
+| `EX-0008-0008` | an Error-path failure, unconditionally  | an Error-path failure for each failure the row keeps                                            |
+| `EX-0013-0008` | a normal case and an error case         | a normal case, and an error case for each failure the row keeps                                 |
 
 What a kept failure is stays where it is defined, in
 `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`, and
@@ -90,9 +96,10 @@ the rows point at it rather than restating it.
 
 ## Impact scope
 
-- Specs: `spec-0008` — `03_Acceptance-Criteria.md`, `04_Business-Rules.md`,
-  `06_Test-Cases.md`; `spec-0013` — `03_Acceptance-Criteria.md`,
-  `04_Business-Rules.md`, `06_Test-Cases.md`
+- Specs: `spec-0008` — `02_User-stories.md`, `03_Acceptance-Criteria.md`,
+  `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`; `spec-0013` —
+  `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`,
+  `06_Test-Cases.md`
 - Plans: `none`
 - Tests: the two ledger rows above, and the checklist suites that read the
   reviewer instructions
@@ -102,14 +109,24 @@ the rows point at it rather than restating it.
   `.qfai/specs/spec-0008/03_Acceptance-Criteria.md`,
   `.qfai/specs/spec-0008/04_Business-Rules.md`,
   `.qfai/specs/spec-0008/06_Test-Cases.md`,
+  `.qfai/specs/spec-0008/02_User-stories.md`,
+  `.qfai/specs/spec-0008/05_Examples.md`,
   `.qfai/specs/spec-0013/03_Acceptance-Criteria.md`,
   `.qfai/specs/spec-0013/04_Business-Rules.md`,
+  `.qfai/specs/spec-0013/05_Examples.md`,
   `.qfai/specs/spec-0013/06_Test-Cases.md`
 
 ## Decision needed from user
 
-Qualify the six rows by the failures a row keeps, so that a row keeping none
-passes with a normal path alone and the matrix marks its failure cells `n/a`?
+Qualify the nine rows by the failures a row keeps, so that a row with no other
+applicable obligation passes with a normal path alone and the matrix marks its
+failure cells `n/a`?
+
+**No other applicable obligation**, not merely no kept failure: a row keeping no
+failure can still declare a valid minimum, maximum or other boundary, and the
+checklist scores those whatever the failure side says. A pass qualified on the
+failures alone would have the specs accept coverage the shipped workflow
+refuses.
 
 The alternative is to withdraw the checklist's kept-failure scoping and go on
 demanding a failure case for every row, including rows whose failures a type or
@@ -119,12 +136,12 @@ nobody can falsify.
 
 ## Approved actions (owner skill rerun plan)
 
-1. `/qfai-sdd spec-0008`, mode `re-derive`, writing the three rows above as the
+1. `/qfai-sdd spec-0008`, mode `re-derive`, writing its five rows above as the
    table states them, and recording this Change Request as one row of
    `09_delta.md`'s `## Change Requests` table.
 
-2. `/qfai-sdd spec-0013`, the same for `AC-0013-0010`, `BR-0013-0008` and
-   `TC-0013-0013`.
+2. `/qfai-sdd spec-0013`, the same for `AC-0013-0010`, `BR-0013-0008`,
+   `EX-0013-0008` and `TC-0013-0013`.
 
 3. Downstream ledger sweep: **reset to `todo`**, recording this Change Request's
    ID in `DR-ID`, `spec-0008/TDD-0012` and `spec-0013/TDD-0013`. Their recorded
