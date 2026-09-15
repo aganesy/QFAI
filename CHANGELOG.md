@@ -55,6 +55,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   scenario types; reuse a row only when behavior, boundary, oracle and layer
   match (#1801).
 
+- Carry answered review demands into the next existing review request, so a
+  repeated demand can close against its recorded response without suppressing reports (#1810).
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can

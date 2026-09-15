@@ -37,6 +37,7 @@
     "tests/assets/agentCardRequiredInputs.test.ts",
     "tests/assets/agentGrillingConvergence.test.ts",
     "tests/assets/agentSelectionReferenceTargets.test.ts",
+    "tests/assets/answeredReviewDemandHome.test.ts",
     "tests/assets/askUserQuestionAutoMode.test.ts",
     "tests/assets/assetOverflowHome.test.ts",
     "tests/assets/assets.test.ts",

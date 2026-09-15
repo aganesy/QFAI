@@ -12,6 +12,18 @@
 - `<path/to/target-file-1>`
 - `<path/to/target-file-2>`
 
+## Answered demands
+
+Carry prior answers and newly answered demands before reviewer dispatch, under
+`.qfai/assistant/constitution/review-convergence.md#answered-demands-must`.
+Replace the example row with actual answers; if there are none, write `None`.
+Record reviewer acceptance or user adjudication in Response and its proof in
+Evidence. An unaccepted reply does not resolve a blocking demand.
+
+| Finding source            | Demand         | Response                                       | Evidence                                            |
+| ------------------------- | -------------- | ---------------------------------------------- | --------------------------------------------------- |
+| `<reviewer-file#finding>` | `<the demand>` | `<accepted answer, authority and disposition>` | `<acceptance proof, artifact, anchor and revision>` |
+
 ## Review Focus
 
 - Correctness against source requirements
@@ -59,6 +71,7 @@
 
 ## RCP Rules (Mandatory)
 
-- Any feedback triggers immediate return (`changes_requested`).
+- Blocking feedback triggers immediate return (`changes_requested`). Reports
+  alone do not reopen an answered demand.
 - After fixes, rerun only failed reviewers and reviewers whose scope changed because of the fix.
 - Set `overall_status: PASS` only when all routed blocking reviewers are `PASS`, and no unresolved `FAIL` remains.
