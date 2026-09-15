@@ -369,10 +369,15 @@ jobs:
           # separator, so a marker in a CRLF file is `=======` to it and `=======` plus a
           # carriage return to grep — whose `$` then sits past the return and matches
           # nothing. The digest check below would fail first, reporting a changed file
-          # where the tree holds an unresolved merge. The returns are dropped per file, so
-          # the message still names the one that carries the block.
+          # where the tree holds an unresolved merge. The return is optional in the
+          # pattern, written as a real byte by `$'…'`.
+          #
+          # One process per file, and no pipe: `grep -q` exits at its first match, and a
+          # producer still writing takes SIGPIPE and returns 141, which `pipefail` then
+          # makes the pipeline's status — so a marker near the start of a file larger than
+          # the pipe buffer read as no marker at all, which is this scan's whole subject.
           for pinned in scripts/check-toolchain-action.sh .github/pinned-bytes.txt .github/lifecycle-manifests.txt .github/command-files.txt; do
-            if tr -d '\r' < "$pinned" | grep -qE '^(<{7}|={7}|>{7}|\|{7})( |$)'; then
+            if grep -qE $'^(<{7}|={7}|>{7}|\\|{7})( |\r?$)' "$pinned"; then
               echo "::error::$pinned carries merge conflict markers. Resolve the merge; do not reseal."
               exit 1
             fi
