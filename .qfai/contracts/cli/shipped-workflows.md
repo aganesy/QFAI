@@ -211,9 +211,11 @@ Dimension 5 has a subject in exactly one shipped file: `qfai-validate.yml`,
 whose lane carries both invocations of the validate subcommand — the wide scan,
 and the drift gate the wide scan does not evaluate. Each invocation runs in its
 own matrix leg, selected by profile, and the drift leg exists on pull requests
-only. What this dimension pins is the invocations the lane carries, in order, so an
-invocation added, removed or reordered is drift whichever one it is. Which leg
-runs an invocation, and which event selects that leg, are pinned by
+only. What this dimension pins is the list of invocations the lane carries, in the
+order the file declares them, so an invocation added, removed or reordered is
+drift whichever one it is. It says nothing about the order they run in, and two
+invocations in separate legs run concurrently. Which leg runs an invocation, and
+which event selects that leg, are pinned by
 `ALLOWED_JOB_SHAPE` and `ALLOWED_STEP_SHAPE` in
 `packages/qfai/tests/helpers/shippedLaneCommands.ts` rather than here.
 Those values are asserted today as ad-hoc strings in
