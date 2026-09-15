@@ -86,8 +86,8 @@ export async function logEvidenceMoves(
   root: string,
   caller: string,
   moves: readonly { readonly path: string; readonly priorSize: number }[],
-): Promise<void> {
-  if (moves.length === 0) return;
+): Promise<LoggedMoves | null> {
+  if (moves.length === 0) return null;
   const logAbs = path.join(root, MUTATION_LOG_REL);
   await mkdir(path.dirname(logAbs), { recursive: true });
   const ts = new Date().toISOString();
@@ -110,14 +110,13 @@ export async function logEvidenceMoves(
     // Only what this write put there is taken back. Another run appending a
     // valid entry between the two reads leaves bytes this one did not write,
     // and cutting to the prior length would delete that entry with this batch.
-    const written = prior.kind === "created" ? prior.file : logAbs;
     const restored =
       prior.kind === "created"
-        ? (await holdsOnlyThisWrite(written, 0, payload)) &&
-          (await rm(prior.file, { force: true }).then(
-            () => true,
-            () => false,
-          ))
+        ? // Emptied through the descriptor that read it, then removed only while
+          // it is still empty: another run's entry arriving in between leaves
+          // the file holding bytes, and the remove is skipped rather than
+          // taking them with it.
+          (await cutBackToThisWrite(prior.file, 0, payload)) && (await removeIfEmpty(prior.file))
         : await cutBackToThisWrite(logAbs, prior.length, payload);
     if (restored) throw cause;
     const reason = cause instanceof Error ? cause.message : String(cause);
@@ -126,6 +125,32 @@ export async function logEvidenceMoves(
       { cause },
     );
   }
+  return { prior, payload };
+}
+
+/**
+ * What one batch of `move` entries wrote, enough to take it back.
+ *
+ * A reset logs its moves and then goes on: a later step failing puts the moves
+ * back, and entries claiming moves that no longer stand would outlive them.
+ */
+export type LoggedMoves = { readonly prior: PriorLog; readonly payload: string };
+
+/**
+ * Take back the entries {@link logEvidenceMoves} wrote, while they are still
+ * the last thing in the log.
+ *
+ * Answers `false` where anything else has been appended since, which is another
+ * run's record and not this one's to remove. The caller reports what it could
+ * not take back rather than deleting somebody else's line.
+ */
+export async function revertLoggedMoves(root: string, logged: LoggedMoves): Promise<boolean> {
+  const logAbs = path.join(root, MUTATION_LOG_REL);
+  const { prior, payload } = logged;
+  if (prior.kind === "created") {
+    return (await cutBackToThisWrite(prior.file, 0, payload)) && (await removeIfEmpty(prior.file));
+  }
+  return await cutBackToThisWrite(logAbs, prior.length, payload);
 }
 
 /**
@@ -194,25 +219,17 @@ async function firstAbsentInChain(from: string): Promise<string | null> {
   return null;
 }
 
-/**
- * Whether the bytes from `from` on are this write's own and nothing else's.
- *
- * The log is opened by name, so two runs can append to it at once. What sits
- * past the length this one measured is its own partial write, or another run's
- * entry, or both — and only the first may be taken back. Read as a prefix of
- * what this call tried to write: anything else, including bytes beyond it, is
- * someone else's and stays.
- */
-async function holdsOnlyThisWrite(file: string, from: number, payload: string): Promise<boolean> {
-  const handle = await open(file, "r").catch(() => null);
-  if (handle === null) return false;
-  try {
-    return await tailIsThisWrite(handle, from, payload);
-  } catch {
-    return false;
-  } finally {
-    await handle.close().catch(() => undefined);
-  }
+/** Remove `file` while it holds nothing; `true` when it is gone or was never there. */
+async function removeIfEmpty(file: string): Promise<boolean> {
+  const empty = await stat(file).then(
+    (stats) => stats.size === 0,
+    () => false,
+  );
+  if (!empty) return false;
+  return await rm(file, { force: true }).then(
+    () => true,
+    () => false,
+  );
 }
 
 /** Whether the bytes from `from` on, read through `handle`, are this write's own. */

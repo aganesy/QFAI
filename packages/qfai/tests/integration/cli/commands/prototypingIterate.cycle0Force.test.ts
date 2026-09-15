@@ -40,11 +40,13 @@ const fault = vi.hoisted(
     unstatable: string | null;
     unrenamable: string | null;
     unremovable: string | null;
+    afterRename: ((from: string) => Promise<void>) | null;
   } => ({
     unlistable: null,
     unstatable: null,
     unrenamable: null,
     unremovable: null,
+    afterRename: null,
   }),
 );
 
@@ -84,7 +86,11 @@ vi.mock("node:fs/promises", async (importOriginal) => {
           code: "EBUSY",
         });
       }
-      return actual.rename(...args);
+      const renamed = await actual.rename(...args);
+      // What another process writing into the evidence root does between the
+      // rename and the next read.
+      await fault.afterRename?.(path.resolve(String(args[0])));
+      return renamed;
     },
   };
 });
@@ -141,6 +147,7 @@ afterEach(async () => {
   fault.unstatable = null;
   fault.unrenamable = null;
   fault.unremovable = null;
+  fault.afterRename = null;
   vi.restoreAllMocks();
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
@@ -440,6 +447,59 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(entries).not.toContain("html");
     const log = await readFile(path.join(evidenceRoot, "mutation-log.jsonl"), "utf-8");
     expect(log).toContain('"path":".qfai/evidence/prototyping/html"');
+  });
+
+  it("takes the move entries back when the reset is undone", async () => {
+    // A `move` line for a file that is back where it started claims a mutation
+    // the tree does not hold.
+    const root = await newTempDir();
+    await seedProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(path.join(evidenceRoot, "screenshots"), { recursive: true });
+    await writeFile(path.join(evidenceRoot, "screenshots", "home.png"), "prior", "utf-8");
+    // Empty, so the clear logs no deletion of its own before it fails: entries
+    // for files it did remove are true and stay, and the move entries are the
+    // only ones this undo may take back.
+    const stale = path.join(evidenceRoot, "iter-01");
+    await mkdir(stale, { recursive: true });
+    fault.unremovable = stale;
+    captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+
+    expect(exit).toBe(2);
+    const log = path.join(evidenceRoot, "mutation-log.jsonl");
+    const held = await readFile(log, "utf-8").catch(() => "");
+    expect(held).not.toContain("screenshots/home.png");
+  });
+
+  it("refuses when a capture puts an aggregate directory back during the reset", async () => {
+    // A reset that ends with the previous loop's mirror in place did nothing,
+    // and the required-path check would read that capture as this loop's.
+    const root = await newTempDir();
+    await seedProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(path.join(evidenceRoot, "screenshots"), { recursive: true });
+    await writeFile(path.join(evidenceRoot, "screenshots", "home.png"), "prior", "utf-8");
+    // What a capture still running does: the directory is back the moment the
+    // rename returns.
+    fault.afterRename = async (from: string) => {
+      if (from.endsWith("screenshots")) await mkdir(from, { recursive: true });
+    };
+    const stderr = captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+
+    expect(exit).toBe(2);
+    expect(stderr.join("")).toContain("came back while the reset ran");
   });
 
   it("names the iteration directories it had already removed", async () => {

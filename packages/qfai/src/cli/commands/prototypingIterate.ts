@@ -53,6 +53,7 @@ import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/de
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { COMPLETION_CERTIFICATE_REL_PATH } from "../../core/prototyping/certificate.js";
+import type { LoggedMoves } from "../../core/prototyping/mutationLog.js";
 import {
   findDesignMdViolations,
   type DesignMdViolation,
@@ -779,6 +780,10 @@ export async function runPrototypingIterate(
   const evidenceRootAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL);
   let aggregateMove: AggregateMove | null = null;
   let iter00Backup: { from: string; to: string; files: MovedFile[] } | null = null;
+  // What the log holds for those moves, so a reset that puts them back takes the
+  // entries with it: a `move` line for a file that is where it started claims a
+  // mutation the tree does not hold.
+  let loggedMoves: LoggedMoves | null = null;
   const undoReset = async (what: string, cause: unknown, note = ""): Promise<number> => {
     const reason = cause instanceof Error ? cause.message : String(cause);
     const stranded =
@@ -791,12 +796,19 @@ export async function runPrototypingIterate(
         stranded.push(backup.to);
       });
     }
+    // Taken back only while they are still the last thing written: anything
+    // appended since belongs to another run, and the operator is told the lines
+    // stand rather than having somebody else's record removed for them.
+    const unlogged = loggedMoves === null || (await unlogMovedFiles(options.root, loggedMoves));
     error(
       `qfai prototyping iterate --cycle 0: ${what} (${reason}). ` +
         (aggregateMove === null && backup === null
           ? "Aborting before clearing evidence to avoid destroying the prior loop. "
           : aggregateRollbackReport(options.root, stranded)) +
         "Resolve the filesystem error (Windows file lock / EACCES / EBUSY are common causes) and rerun." +
+        (unlogged
+          ? ""
+          : " The mutation log still holds this reset's move entries, which describe moves that were put back.") +
         note,
     );
     return 2;
@@ -861,11 +873,30 @@ export async function runPrototypingIterate(
     const aggregateLogEntries = aggregateMove?.files ?? [];
     const iter00LogEntries = iter00Backup?.files ?? [];
     try {
-      await logMovedFiles(options.root, [...aggregateLogEntries, ...iter00LogEntries]);
+      loggedMoves = await logMovedFiles(options.root, [
+        ...aggregateLogEntries,
+        ...iter00LogEntries,
+      ]);
     } catch (cause) {
       return undoReset("could not record the moves in the mutation log", cause);
     }
     if (aggregateMove !== null) {
+      // A capture still running recreates the directory it was writing into, and
+      // a reset that ends with the previous loop's mirror back in place is a
+      // reset that did nothing. Read once more, after the log: the move is put
+      // back and the operator is told to let the capture finish.
+      //
+      // SIMPLIFIED: a capture writing after this read is not seen. The window is
+      // one check wide, where it was the whole reset.
+      // Lift when: the two commands take a lock on the evidence root.
+      const returned = await presentAggregateDirs(evidenceRootAbs);
+      if (returned.length > 0) {
+        return await undoReset(
+          `${returned.join(" and ")} came back while the reset ran`,
+          new Error("another capture is writing into the evidence root"),
+          " Let the capture finish, then re-run cycle 0.",
+        );
+      }
       info(
         `qfai prototyping iterate --cycle 0: moved ${aggregateMove.names.join(" and ")} aside to ${toRootRelative(options.root, aggregateMove.backupAbs)}.`,
       );
@@ -2636,13 +2667,22 @@ type MovedFile = { rel: string; size: number };
  * Record every moved file in the mutation log, in one write. Rejects when the
  * write fails, and the caller then puts the moves back.
  */
-async function logMovedFiles(root: string, files: readonly MovedFile[]): Promise<void> {
+async function logMovedFiles(
+  root: string,
+  files: readonly MovedFile[],
+): Promise<LoggedMoves | null> {
   const { logEvidenceMoves } = await import("../../core/prototyping/mutationLog.js");
-  await logEvidenceMoves(
+  return await logEvidenceMoves(
     root,
     "iterate",
     files.map((file) => ({ path: file.rel, priorSize: file.size })),
   );
+}
+
+/** Take the `move` entries back, for a reset that put the moves back. */
+async function unlogMovedFiles(root: string, logged: LoggedMoves): Promise<boolean> {
+  const { revertLoggedMoves } = await import("../../core/prototyping/mutationLog.js");
+  return await revertLoggedMoves(root, logged);
 }
 
 async function clearEvidenceIterDirs(
@@ -2677,7 +2717,9 @@ async function clearEvidenceIterDirs(
   // moving the backups home, and a removal is not a move: the caller says so
   // rather than reporting a tree it left whole.
   const removed: string[] = [];
-  for (const name of entries) {
+  // Sorted, so a run that stops part-way removed the same directories on every
+  // filesystem and the refusal names them in an order a reader can follow.
+  for (const name of [...entries].sort()) {
     if (!/^iter-\d{2,}$/.test(name)) continue;
     const abs = path.join(evidenceRootAbs, name);
     // Restrict the cleanup to actual directories: a stray `iter-NN`
