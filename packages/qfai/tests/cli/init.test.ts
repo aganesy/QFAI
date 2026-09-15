@@ -2472,7 +2472,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0013
   it("--force replaces an instructions symlink instead of writing through it", async () => {
     // `writeFile` follows a symlink, so refreshing without unlinking first
     // would rewrite the link's target — a file outside the project that init
@@ -2689,7 +2688,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0011
   it("Directory auto-creation for instructions", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
