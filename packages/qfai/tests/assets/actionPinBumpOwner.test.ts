@@ -467,7 +467,25 @@ describe("TC-0017-0065 (TDD-0065): the adopted worker value matches the recorded
       }
       return n;
     };
-    const actual = countTestFiles(path.join(PACKAGE_ROOT, "tests", project));
+    // Every directory the project collects from, not `tests/<project>` alone. A
+    // project's `include` is not always its own directory — `e2e` also collects
+    // `tests/assets/**`, and `integration` three trees beside its own — so that
+    // walk measured a seventh of the project the artifact describes, and drift
+    // anywhere else in it was invisible. Read as text from the workspace file,
+    // whose own comment fixes the two shapes this depends on: every project's
+    // `name` is a string literal, and its `include` follows the name.
+    const workspace = readFileSync(path.join(PACKAGE_ROOT, "vitest.workspace.ts"), "utf-8");
+    const named = workspace.indexOf(`name: "${project}"`);
+    const globs = /include:\s*\[([^\]]*)\]/.exec(named === -1 ? "" : workspace.slice(named));
+    const roots = [...(globs?.[1] ?? "").matchAll(/"([^"]+)"/g)].flatMap((glob) => {
+      const shape = /^(.+?)[/][*][*][/][*][.]test[.]ts$/.exec(glob[1] ?? "");
+      return shape === null ? [] : [path.join(PACKAGE_ROOT, ...(shape[1] ?? "").split("/"))];
+    });
+    expect(
+      roots.length,
+      `the workspace must name the ${project} project's include globs in the shape this counts`,
+    ).toBeGreaterThan(0);
+    const actual = roots.reduce((total, dir) => total + countTestFiles(dir), 0);
     expect
       .soft(
         Math.abs(actual - Number(group(filesMatch, 1))) / Number(group(filesMatch, 1)),
