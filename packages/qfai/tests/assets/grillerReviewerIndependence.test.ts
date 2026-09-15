@@ -91,7 +91,10 @@ describe("a griller's recommendations and reviewer independence", () => {
       // indistinguishable in the row the reviewer is told to rely on.
       const content = await read(tree);
       expectPhrase(content, "**`<where>` is the stage's own name for where the session ran**");
-      expectPhrase(content, "**`<adjudication>` is `user` or `agents`**");
+      // `withdrawn` is the third: the user's answer dropped the item, which
+      // settles the decision by removing what it was about. A gate requires the
+      // row, so a vocabulary without it cannot be both written and schema-valid.
+      expectPhrase(content, "**`<adjudication>` is one of `user`, `agents` and `withdrawn`**");
       // A row that cannot be assigned to a place is one an omission elsewhere
       // can be counted against.
       expectPhrase(content, "a row that cannot be assigned to a place");

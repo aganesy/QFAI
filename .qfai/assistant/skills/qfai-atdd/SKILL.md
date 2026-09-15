@@ -45,18 +45,24 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-s
 
 When unsure, read inputs in this order:
 
-- P1: `.qfai/assistant/constitution/*`
-- P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
-- P3: `.qfai/specs/<spec-id>/01_Spec.md` (Primary SSOT / Consumer View). **Read its lifecycle before anything else and stop on a retired spec.** A spec is retired by a **complete** declaration in that header block: a top-level `Status: superseded` whose `Superseded-by:` names a spec that exists and itself declares `Status: active`, or `Status: deprecated` / `Status: removed` with a `Deprecated-at:` that is a real calendar date — the same resolution `validate` performs. Its `test-list.md` rows below are history, not obligations: `npx qfai validate` and `npx qfai report` have already dropped them, and `/qfai-implement` refuses the handoff for a retired spec, so writing acceptance tests from them produces work nobody owes and a handoff nobody will take. Report the declared `Status:` (and, for `superseded`, its successor) and ask for a row in the inheritor's ledger instead. An **incomplete** declaration is not a retirement and does not stop this run: the ledger still gates, so proceed and report the incomplete declaration
+- P1: `.qfai/assistant/constitution/*`, and `.qfai/assistant/skills/qfai-grilling/SKILL.md` before the preflight round (see Grilling)
+- P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies
+  mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
+- P3: `.qfai/specs/<spec-id>/01_Spec.md` (Primary SSOT / Consumer View). **Read its lifecycle before anything else and stop on a retired spec.** A spec is retired by a **complete** declaration in that header block: a top-level `Status: superseded` whose `Superseded-by:` names a spec that exists and itself declares `Status: active`, or `Status: deprecated` / `Status: removed` with a
+  `Deprecated-at:` that is a real calendar date — the same resolution `validate` performs. Its `test-list.md` rows below are history, not obligations: `npx qfai validate` and `npx qfai report` have already dropped them, and `/qfai-implement` refuses the handoff for a retired spec, so writing acceptance tests from them produces work nobody owes and a handoff nobody will take. Report the
+  declared `Status:` (and, for `superseded`, its successor) and ask for a row in the inheritor's ledger instead. An **incomplete** declaration is not a retirement and does not stop this run: the ledger still gates, so proceed and report the incomplete declaration
 - P4: specs/contracts obligations
   - `.qfai/specs/<spec-id>/02_User-stories.md` (US)
   - `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md` (AC)
   - `.qfai/specs/<spec-id>/05_Examples.md` (EX)
   - `.qfai/specs/<spec-id>/06_Test-Cases.md` (TC)
-  - `.qfai/specs/<spec-id>/tdd/test-list.md` (the execution ledger — enumerate the `Layer = E2E` / `Layer = API` / `Layer = Integration` rows this run owes evidence for, with their `TDD-ID`, obligation column and `Selector`; an `Integration` row whose `TC-Refs` name only `L1` / `L2` TCs is outside the ATDD-owned set and is not enumerated — `## Execution Ledger: the rows this skill feeds`)
+  - `.qfai/specs/<spec-id>/tdd/test-list.md` (the execution ledger — enumerate the `Layer = E2E` / `Layer = API` / `Layer = Integration` rows this run owes evidence for, with their `TDD-ID`, obligation column and `Selector`; an `Integration` row whose `TC-Refs` name only `L1` / `L2` TCs is outside the ATDD-owned set and is not enumerated —
+    `## Execution Ledger: the rows this skill feeds`)
   - `.qfai/contracts/api/**` (CON-API) and `.qfai/contracts/db/**` (CON-DB)
   - `.qfai/contracts/ui/**` and `.qfai/contracts/design/**` when the target spec is UI-bearing
-  - `qfai.config.yaml` — resolve `paths.specsDir` / `paths.contractsDir` **first** (`.qfai/specs` / `.qfai/contracts` are only the defaults; the resolver scans the configured trees, so an override moves every path in this bullet), then `prototyping.primarySpecId`, **every** `<contractsDir>/ui/**` (`.qfai/contracts/ui/**` by default) file as its **path relative to `<contractsDir>/ui/`, not its basename** (a surface declared only as `spec-<spec-id>/screens/home.yaml` is matched on its `spec-<spec-id>/` ancestor directory; the basename carries no spec id), and every sibling `<specsDir>/*/01_Spec.md` frontmatter **and body — the legacy `# … prototyping …` heading counts as the same opt-in**, so a heading-only sibling flips it too — always, even for a spec with no surface of its own: the `US-*` narrowing is the project-wide opt-in above, so a sibling's declaration alone decides whether this spec owes E2E references
+  - `qfai.config.yaml` — resolve `paths.specsDir` / `paths.contractsDir` **first** (`.qfai/specs` / `.qfai/contracts` are only the defaults; the resolver scans the configured trees, so an override moves every path in this bullet), then `prototyping.primarySpecId`, **every** `<contractsDir>/ui/**` (`.qfai/contracts/ui/**` by default) file as its **path relative to `<contractsDir>/ui/`,
+    not its basename** (a surface declared only as `spec-<spec-id>/screens/home.yaml` is matched on its `spec-<spec-id>/` ancestor directory; the basename carries no spec id), and every sibling `<specsDir>/*/01_Spec.md` frontmatter **and body — the legacy `# … prototyping …` heading counts as the same opt-in**, so a heading-only sibling flips it too — always, even for a spec with no
+    surface of its own: the `US-*` narrowing is the project-wide opt-in above, so a sibling's declaration alone decides whether this spec owes E2E references
 - P5: `.qfai/specs/<spec-id>/07_Decisions.md` + `.qfai/specs/_policies/08_Decisions.md` (Decision Records, `DR-*`; if no spec yet, state "not applicable")
 - P6: legacy artifacts (optional only)
   - `.qfai/specs/<spec-id>/scenario.feature`
@@ -71,14 +77,20 @@ Do not read discussion-pack UI/UX sidecars. UI-bearing acceptance tests consume 
   - `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
   - `.qfai/specs/<spec-id>/05_Examples.md`
   - `.qfai/specs/<spec-id>/06_Test-Cases.md`
-  - `qfai.config.yaml` (`paths.specsDir` / `paths.contractsDir` first — `.qfai/specs` / `.qfai/contracts` are defaults an override replaces, and the two scans below follow the configured trees), then `<contractsDir>/ui/**` (`.qfai/contracts/ui/**` by default), keeping each hit's path relative to `<contractsDir>/ui/`, not just the basename — a `spec-<spec-id>/` ancestor directory is itself a match signal, so a basename-only reading drops it — and every sibling `<specsDir>/*/01_Spec.md` frontmatter **and body**, the legacy `# … prototyping …` heading being an equal opt-in signal — the project-wide surface opt-in that decides this spec's `US-*` obligation. Resolve it **before** the Test Volume Estimate; leaving it to the closing `npx qfai validate` turns a known row count into a late `QFAI-ATDD-111`.
-  - `.qfai/specs/<spec-id>/tdd/test-list.md` — read, never written. A seeded row's `Test file` and `Selector` are still `-` there, because Phase 2b seeds them before any test exists: record the path and selector of the test **this run authored** as the handoff entry's row identity rather than copying that placeholder, since this stage is where they first exist and `/qfai-implement` Phase Red step 3b is the step that writes them into the ledger. A run that does not enumerate its `Layer = E2E` / `Layer = API` / `Layer = Integration` rows produces no `## Ledger rows advanced` entry for them, and `/qfai-implement` Phase Red step 3b then stops on a missing handoff. The carved-out `Integration` row — `TC-Refs` naming only `L1` / `L2` TCs — is the exception at both ends: it is not enumerated here and step 3b never receives it, because `/qfai-implement` writes its test itself (`## Execution Ledger: the rows this skill feeds`).
+  - `qfai.config.yaml` (`paths.specsDir` / `paths.contractsDir` first — `.qfai/specs` / `.qfai/contracts` are defaults an override replaces, and the two scans below follow the configured trees), then `<contractsDir>/ui/**` (`.qfai/contracts/ui/**` by default), keeping each hit's path relative to `<contractsDir>/ui/`, not just the basename — a `spec-<spec-id>/` ancestor directory is
+    itself a match signal, so a basename-only reading drops it — and every sibling `<specsDir>/*/01_Spec.md` frontmatter **and body**, the legacy `# … prototyping …` heading being an equal opt-in signal — the project-wide surface opt-in that decides this spec's `US-*` obligation. Resolve it **before** the Test Volume Estimate; leaving it to the closing `npx qfai validate` turns a known
+    row count into a late `QFAI-ATDD-111`.
+  - `.qfai/specs/<spec-id>/tdd/test-list.md` — read, never written. A seeded row's `Test file` and `Selector` are still `-` there, because Phase 2b seeds them before any test exists: record the path and selector of the test **this run authored** as the handoff entry's row identity rather than copying that placeholder, since this stage is where they first exist and `/qfai-implement` Phase
+    Red step 3b is the step that writes them into the ledger. A run that does not enumerate its `Layer = E2E` / `Layer = API` / `Layer = Integration` rows produces no `## Ledger rows advanced` entry for them, and `/qfai-implement` Phase Red step 3b then stops on a missing handoff. The carved-out `Integration` row — `TC-Refs` naming only `L1` / `L2` TCs — is the exception at both ends: it
+    is not enumerated here and step 3b never receives it, because `/qfai-implement` writes its test itself (`## Execution Ledger: the rows this skill feeds`).
   - `.qfai/contracts/api/**` (`CON-API`) and `.qfai/contracts/db/**` (`CON-DB`) — what `QFAI-ATDD-113` / `QFAI-ATDD-115` grade this stage on. Both are attributed to `.qfai/contracts/**` and survive `--spec`, so a run that never opens them cannot know which contracts it owes, and cannot reach the `-- x-qfai-status: planned` deferral either.
 - Escalation Mode:
   - allowed only when `01_Spec.md` Escalation Hook signals ambiguity / conflict / missing constraint / trade-off
   - read only `.qfai/specs/_policies/01_Objective.md` and `.qfai/specs/_policies/08_Decisions.md`
 - Default Mode is a floor, not a closed set — Inputs Priority P4 governs what else this stage may open — but do not read `_policies/**` by default.
-- Do not read `_policies/**` by default. **One narrow exception**, and only when the scoped gate exits 1 on a residual `QFAI-ATDD-113` / `-115` — whether it is a sibling's, this spec's own or an orphan's is what this read _decides_, so the exception fires on the unresolved finding, not on an ownership you cannot yet have: the `Owning spec` field cannot be filled from the finding, so read the generated Contract → Spec map (`npx qfai report --in` the scoped gate's `validate.spec-<id>.json`, whose path is derived from `output.validateJsonPath` and not from `paths.outDir`; never `--run-validate`, which re-runs the full profile unscoped and advances every spec's scaffold-placeholder counters) **and** merge into it the `Contract-Refs` column of `.qfai/specs/*/04_Business-Rules.md` — always, not only when the map answers `(none)`, since the map misses specs that bind a contract in the rule table alone, and misses the ones that write the short `API-NNNN` / `DB-NNNN` form its keys never match — that column only, nothing written back (`references/cross-spec-obligations.md#resolving-the-owning-spec`).
+- Do not read `_policies/**` by default. **One narrow exception**, and only when the scoped gate exits 1 on a residual `QFAI-ATDD-113` / `-115` — whether it is a sibling's, this spec's own or an orphan's is what this read _decides_, so the exception fires on the unresolved finding, not on an ownership you cannot yet have: the `Owning spec` field cannot be filled from the finding, so read
+  the generated Contract → Spec map (`npx qfai report --in` the scoped gate's `validate.spec-<id>.json`, whose path is derived from `output.validateJsonPath` and not from `paths.outDir`; never `--run-validate`, which re-runs the full profile unscoped and advances every spec's scaffold-placeholder counters) **and** merge into it the `Contract-Refs` column of
+  `.qfai/specs/*/04_Business-Rules.md` — always, not only when the map answers `(none)`, since the map misses specs that bind a contract in the rule table alone, and misses the ones that write the short `API-NNNN` / `DB-NNNN` form its keys never match — that column only, nothing written back (`references/cross-spec-obligations.md#resolving-the-owning-spec`).
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -115,11 +127,75 @@ Use the shared schema.
 ### Reviewer Gate (MUST)
 
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
+- The stage evidence's `## Grilling Session` section carries `Run started`,
+  `Preflight`, a row for every session detection opened, and — when `Preflight`
+  says `session opened` — one for the preflight session, all of them inside this run's own block — **except a session the user stopped**, which is reported in the stage's output rather than written, as the table below sets out, so its absence is not a `REVISE`. **`Preflight` is `session opened` or `confidence high`**, and any other value is a `REVISE`: those two say whether a preflight
+  row is owed, and a third value says neither. **No two rows share a `Session`**, and the keys run `S1`, `S2`, … with none skipped: the lines under the table are reconciled by that key, so one key on two rows lets a single quoted answer, open line or escalation stand for both. **And every `Ended at` is at or after the one on the row before it.** The keys are assigned in opening order and
+  a stage opens no session while one is running, so a later key ending earlier is a history that cannot have happened — and the chronology is the whole of what the two times are recorded for. Every `Ended` is one of the four endings the rule master
+  names, every row's `Ended at` is at or after the run-started time on
+  a `### /qfai-atdd — run started` block
+  whose heading — the time to the millisecond, and a host run identifier beside
+  it where there is one — equals what this run's work order states, and which no
+  other `/qfai-atdd` block in the file carries,
+  and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it**, **and its `Decisions` count matches the `grilling(<Session>@<run key>/<adjudication>)` rows the Work Orders Summary carries under that `Session` and this run's start** — a count checked against nothing lets a row claim `0` over
+  decisions that never reached the user. **And the other way: every `grilling(<Session>@<run key>/<adjudication>)` row the summary carries for this run names a `Session` exactly one row of this block holds.** Counted only from the rows inward, a summary row keyed to a session the block never opened is checked by nothing, so the record can claim a decision for a session that did not exist
+  — and, beside the run's `none` marker, claim in the same breath that the run settled none. **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as
+  the record requires, and a blank or any other value is
+  a `REVISE`: it is the one field saying which tree the session ended against.
+  **Every row's `Subject` is non-blank, and when `Preflight` says `session opened` exactly one row's is `preflight`, and when it says `confidence high` none is**: it is the one cell saying what a
+  session was about, and a session that settled everything leaves no register
+  line to say it. **Every line under the table — a confirmation, a closure, an
+  open node, an escalation — names a `Session` a row of this block carries**: a
+  line keyed to no row is an open node no count reconciles. **An escalation line
+  recording the user's answer is one of that `Session`'s counted decisions**,
+  and the decision it states is the one a `grilling(<Session>@<run key>/user)` row states, or a `grilling(<Session>@<run key>/withdrawn)` row where the answer dropped the item: the answer settled it either way, and only the row records who recommended it or that it left the artifact. **A run whose rows count no decision carries
+  `grilling(-@<run key>/none): none`** in the Work Orders Summary, keyed to this run's key as the decision rows are, because that summary holds every invocation's rows.
+  **A run whose rows count a decision carries no such marker**: the marker says
+  the run settled none, so beside a decision row the summary would claim both,
+  and the pair is a `REVISE`.
+  **A row whose ending lets the work go on, and after which the stage wrote,
+  carries a `Work resumed` later than its own `Ended at`** — that ordering is
+  the whole reason both times are recorded, and an earlier one is a session
+  recorded after the edit it was meant to precede. **A run that did not resume
+  writes `none — <why>` instead**, which the gate accepts on those three
+  endings and on no other: a session that was the run's last activity has no
+  later time to carry, and requiring one would have the stage invent it. A
+  blank is neither, and is a `REVISE` — **except on a `stopped` row**, where empty is the value that ending requires and `none — <why>` would claim a decision the stop forecloses. A run that skipped a session leaves the same tree as one
+  that ran it, and an evidence file is updated in place, so these are what tell
+  a fresh session from an absent one and from last week's.
+- **Each ending carries its own condition, and the name alone is not one.** A
+  malformed row labelled `confirmed` passes an enum check and fails the rule it
+  claims to have met.
+
+  | `Ended`       | What the row must also show                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+  | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `confirmed`   | `Frontier` empty, `Lookups` none in flight, `Open` 0, **and the confirming answer quoted under the table beside that row's `Session`**. Those are the rule master's two completing conditions, and tree state is only the first: a session that closed its own tree and never asked satisfies every count while the user has said nothing                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+  | `user-closed` | `Lookups` none in flight, every open node assumable, **and every one of them carrying its labelled assumption in the register**, **and the closing answer quoted under the table beside that row's `Session`** — the ending is an act of the user's, and a register alone cannot show it happened. The closure covers the tree as it finally stands, so a lookup still running can raise a node after it — and a row accepted while one was in flight is a verdict taken over a register that was not yet complete. A decision some document requires the user to make and record, and an input declared undefaultable, are not assumable — the rule master says the closure does not reach them, so a row carrying one is a `REVISE`. A node listed without the value the stage went on to use is the other half of the same failure: the assumption is then unread, which the rule master calls a decision nobody took wearing the face of one somebody did |
+  | `no-question` | `Frontier` empty, `Lookups` none in flight and `Open` 0. Article X, rule 6: the stage cannot complete over a decision nobody took, and nobody was asked. **Nor does any line under the table record a reply from the user under that row's `Session`**: no confirming or closing answer, and no escalation marked answered. The mode reached nobody, so a reply recorded under it is one nobody gave, and an escalation it raised is still waiting, which makes it an open line that `Open` 0 already refuses                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+  | `stopped`     | `Work resumed` empty. The user ended the session, so the stage reports every open node rather than resuming — a `stopped` row with work after it is a `REVISE` whatever it counts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+
+  **A stopped session is reported, not written.** Article X ends a stopped
+  invocation with no further work or file changes, and a row is a file change —
+  so the gate requires no row for it, and the stage names the stopped session
+  and its open nodes in its own output instead. Where a row for one does exist,
+  because the stop arrived after the section was already written, it is held to
+  the line above. That is the one place the record is weaker than the tree it
+  describes, and it is weaker on purpose: the alternative is an instruction to
+  edit a file the user just stopped.
+
+  A `user-closed` row with open nodes otherwise **passes**: the user saw them and
+  closed the asking, and the method records each as a labelled assumption.
+
 - Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - ATDD-specific reviewer checks:
-  - coverage obligations met: E2E covers `US`, API covers `CON-API`, Integration covers every declared `CON-DB` (`QFAI-ATDD-115`) — a contract **this spec owns** but outside the current slice deferred with `-- x-qfai-status: planned` on a line of its own, never silently uncovered — and every `TC` **whose `Level` routes to an ATDD home** — `L3`/`L4`/`L5`, no `Level`, an unreadable spelling, or `system` / `acceptance` — is covered from the directory that `Level` routes to. A **sibling spec's** uncovered `CON-DB` is not that case, and the reviewer must not ask for that edit: `QFAI-ATDD-115` is filed against `.qfai/contracts/**` and survives `--spec`, so it reaches this gate without becoming this run's work — record it as a cross-spec obligation and leave the contract file alone (CRITICAL CONSTRAINTS), because marking it `planned` defers the owning spec's DB test and hides a real gap. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;
-  - Coverage Depth Matrix and its business rule coverage table are reviewed and no unjustified `❌` cells remain in either; that table is reconciled against the spec's `04_Business-Rules.md`, which the reviewer work order MUST carry as an input — every active `BR-ID` it declares owns a row, whether the declaration is a Rule Table row or a `BR-*` heading carrying no retiring `Status:`, and a table of only `✅` rows that drops a declared rule is a REVISE, not a PASS (a spec declaring no active `BR-*` states the omission instead of carrying the table);
-  - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` reached one of its **two** passing states — exit 0, or `PASS with cross-spec obligations`: every finding this spec owns is clean, and each residual `QFAI-ATDD-113` / `-115` / `QFAI-TEST-001` is recorded one row per obligation under `## Cross-spec obligations` with a named sibling owner — a contract per row for the first two, a stub file per row for the third. Exit 1 alone is not `REVISE` here; residue that is unrecorded, unattributable, or attributed to this spec is (`references/cross-spec-obligations.md`);
+  - coverage obligations met: E2E covers `US`, API covers `CON-API`, Integration covers every declared `CON-DB` (`QFAI-ATDD-115`) — a contract **this spec owns** but outside the current slice deferred with `-- x-qfai-status: planned` on a line of its own, never silently uncovered — and every `TC` **whose `Level` routes to an ATDD home** — `L3`/`L4`/`L5`, no `Level`, an unreadable
+    spelling, or `system` / `acceptance` — is covered from the directory that `Level` routes to. A **sibling spec's** uncovered `CON-DB` is not that case, and the reviewer must not ask for that edit: `QFAI-ATDD-115` is filed against `.qfai/contracts/**` and survives `--spec`, so it reaches this gate without becoming this run's work — record it as a cross-spec obligation and leave the
+    contract file alone (CRITICAL CONSTRAINTS), because marking it `planned` defers the owning spec's DB test and hides a real gap. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one
+    to be added, and do not require an existing one to be removed;
+  - Coverage Depth Matrix and its business rule coverage table are reviewed and no unjustified `❌` cells remain in either; that table is reconciled against the spec's `04_Business-Rules.md`, which the reviewer work order MUST carry as an input — every active `BR-ID` it declares owns a row, whether the declaration is a Rule Table row or a `BR-*` heading carrying no retiring `Status:`,
+    and a table of only `✅` rows that drops a declared rule is a REVISE, not a PASS (a spec declaring no active `BR-*` states the omission instead of carrying the table);
+  - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` reached one of its **two** passing states — exit 0, or `PASS with cross-spec obligations`: every finding this spec owns is clean, and each residual `QFAI-ATDD-113` / `-115` / `QFAI-TEST-001` is recorded one row per obligation under `## Cross-spec obligations` with a named sibling owner
+    — a contract per row for the first two, a stub file per row for the third. Exit 1 alone is not `REVISE` here; residue that is unrecorded, unattributable, or attributed to this spec is (`references/cross-spec-obligations.md`);
   - Drift Protocol is enforced;
   - test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`;
   - coverage floors and ratios are signals, not gates;
@@ -151,73 +227,223 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 ## Grilling (MANDATORY)
 
-Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions
-this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is
-restated here.
+Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is restated here.
 
-- **At the preflight.** A session over what the confidence check left uncertain,
-  and nothing else. The bound is on the subject: the spec and the ledger are
-  settled input, and re-interrogating them each run would stop the cycle and
-  invite the drift this stage avoids.
-- **On detection.** A contradiction in the spec, an unconsidered case or a
-  technical obstacle surfacing mid-run stops the work and opens a session over
-  what was detected, rather than being decided alone.
-- **Neither session changes settled input.** Where one concludes that settled
-  input must change, `.qfai/assistant/constitution/drift-protocol.md` governs:
-  stop the dependent work, raise the Change Request, wait for approval. Where it
-  concludes the obstacle is this run's to solve, the run solves it — nothing
-  upstream changes, so there is nothing to approve.
+- **At the preflight.** A session over what the confidence check left uncertain, and nothing else. The bound is on the subject: the spec and the ledger are settled input, and re-interrogating them each run would stop the cycle and invite the drift this stage avoids.
+- **On detection.** A contradiction in the spec, an unconsidered case or a technical obstacle surfacing mid-run stops the work and opens a session over what was detected, rather than being decided alone.
+- **What this stage's session holds, and what it does not.** The decisions of
+  this invocation: what a case's oracle must observe, and what a fixture has to
+  construct for it. **Not an obligation's home** — that is routed
+  deterministically from its `Level`, including every unreadable spelling, and
+  an answer that moved one would put the test where the coverage contract does
+  not look.
+- **Neither session changes settled input.** Where one concludes that settled input must change, `.qfai/assistant/constitution/drift-protocol.md` governs: stop the dependent work, raise the Change Request, wait for approval. Where it concludes the obstacle is this run's to solve, the run solves it — nothing upstream changes, so there is nothing to approve.
+
+- **Record both sessions where the gate reads them.** The method writes no
+  artifact of its own, so a run that grilled and a run that skipped it leave the
+  same tree. `.qfai/evidence/atdd-<spec-id>.md` carries a `## Grilling Session`
+  section holding one row per session the user did not stop, under two lines the run writes before it
+  opens any:
+
+  ```text
+  ### /qfai-atdd — run started 2026-01-01T09:02:00.417Z
+
+  Preflight: session opened
+
+  | Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+  | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+  | S1 | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 2 | 0 | 0 |
+  | S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | the stored state a criterion's case starts from | empty | none in flight | 1 | 1 | 0 |
+
+  Confirmed S1: "Yes — that is the understanding."
+
+  Closed S2: "proceed"
+
+  Open S2: how the fixture builds that state — assumed: <the value the stage used>
+  ```
+
+  The three decisions those rows count are three rows in the stage's Work Orders
+  Summary, each keyed to its session and this run:
+
+  ```text
+  | Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+  | ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+  | 2 | <role> | <instance> | grilling(S1@2026-01-01T09:02:00.417Z/user): <a decision S1 settled> | <refs> | <refs> | PASS |
+  | 3 | <role> | <instance> | grilling(S1@2026-01-01T09:02:00.417Z/user): <another decision S1 settled> | <refs> | <refs> | PASS |
+  | 6 | <role> | <instance> | grilling(S2@2026-01-01T09:02:00.417Z/user): <the decision S2 settled> | <refs> | <refs> | PASS |
+  ```
+
+  The shape `/qfai-discussion` already writes, with `Subject` in place of that
+  stage's lone `Authoring began`: this stage holds more than one session, so a row says which, and the preflight session's says `preflight`. `Work resumed` is when the stage next wrote — the first acceptance test for the preflight session,
+  the first edit made after a detected one.
+
+  **Both times, and the second later than the first.** A row holding only the
+  ending reads the same whether the session ran before the work or after it,
+  because it is written at the end either way. What the pair records is the
+  order, which is the part a later reader has no other way to recover. It still
+  cannot prove a session happened: the agent writes its own record.
+
+  **The `### <command> — run started <time>` heading is what bounds the
+  invocation, and it is one block per stage-invocation.** An evidence file is
+  updated in place, so a row left by an earlier run has a valid ending, an
+  `Ended at` before its own `Work resumed`, and a consistent count; and a rerun
+  over an unchanged tree produces the same `Revision`, because that address is a
+  tree address and excludes `.qfai/evidence/**`. Only a value that moves every
+  invocation separates the two.
+
+  **To the millisecond, because a retry is immediate.** A run that failed and
+  was re-run at once shares a second with the one before it, and two blocks
+  carrying the same heading let the earlier one pass as current — which is the
+  staleness this heading replaced a revision to fix. Where the host mints a run identifier of its own, the heading carries it **beside** the time, never in place of it: the gate compares every `Ended at` against that time, and an identifier gives it nothing to compare. What neither may be is a value two invocations can share.
+
+  **The run's start goes to the reviewer in its work order, not only into the
+  file.** A block carries its own heading, so a gate reading the heading alone
+  checks the record against itself: a rerun that wrote no block leaves an
+  earlier one internally consistent, and its reviewer has nothing to contradict
+  it with.
+  The orchestrator states this invocation's start, with the host run identifier
+  where the heading carries one, in every reviewer work order it opens, and the
+  gate requires the block heading to carry exactly those values.
+  An artifact cannot prove its own freshness, and the one value
+  that settles it has to arrive from outside the artifact.
+
+  **One block per stage as well as per run**, because two stages share an
+  evidence file: an `E2E` / `API` / `Integration` row's proof lives in
+  `atdd-<spec-id>.md`, which `/qfai-atdd` wrote its own sessions into and
+  `/qfai-implement` later writes to. One table for both would have each stage's
+  gate rejecting the other's rows for a start time they never claimed. The gate
+  reads this stage's own block and leaves every other block alone, so both
+  histories stay in the file and stay valid.
+
+  `Revision` stays beside it, written in the notation
+  `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md`
+  defines — a git rev, or `working-tree+<hash>` for an uncommitted tree. It says
+  which tree the session ended against, which is what a later reader needs to
+  reconstruct what was being decided.
+
+  **`Preflight` says whether the confidence check opened a session.** Article IX
+  asks its targeted questions _if confidence is low_, so a run that found none
+  owes no preflight row — and an absent row and a skipped session look alike
+  without a line saying which. It takes `session opened` or `confidence high`,
+  and the second is a disposition the reviewer reads rather than an omission it
+  cannot see.
+
+  `Ended` is `confirmed`, `user-closed`, `no-question` or `stopped` — the four
+  endings `.agents/rules/grilling.md` names — and only the first three let the
+  work go on.
+
+  **`Decisions` counts what the session settled, and each has a row that
+  names who recommended it.** A decision the user answered counts, and so does
+  one the agents settled; an open node and an unanswered escalation do not.
+  Each counted decision is a `grilling(<where>/<adjudication>): <the decision>`
+  row in the stage's Work Orders Summary
+  (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md`), so the
+  count can be checked against records rather than taken as written.
+  **`<where>` is `<Session>@<run key>`**: the row's `Session`, then this run's key — the time on its heading, followed by the host run identifier where the heading carries one, as the heading writes them. The keys restart at `S1` every invocation, and
+  the Work Orders Summary sits outside the run's block, so a row keyed by `Session` alone is counted again by every later run that reuses the key.
+  A run that settled no decision writes the shared schema's marker the same way,
+  `grilling(-@<run key>/none): none`, so an earlier run's marker does not
+  answer for it.
+
+- **The confirming answer goes under that table too**, one line per
+  `confirmed` row, quoting what the user replied and naming the `Session` it
+  closed. A `confirmed` label is a claim about the user rather than about the
+  tree, and nothing else in the record can be checked against them.
+- **The closing answer goes under that table too**, one line per
+  `user-closed` row, quoting the `proceed`, `done` or reply to that effect and
+  naming the `Session` it closed. `user-closed` is a claim about the user as
+  much as `confirmed` is, and a row carrying it over no reply would pass the
+  agent's own assumptions off as a closure the user made.
+- **The escalated decisions go under that table too.** One line per decision
+  a session between agents sent to the user, naming the `Session` it came from
+  and what the user answered, or that no answer has come yet — **and a decision
+  still waiting is an open line under that `Session` as well**, because an
+  escalation nobody answered is a decision nobody took. A decision the
+  agents agreed on is among them: agreement between agents settles nothing, so
+  it reaches the user like one left open. `Escalated` counts these lines, and
+  the gate reconciles the two the way it reconciles `Open` with the register.
+- **A free-form cell is one line, with `|` written `\|`.** `Subject` and a
+  `none — <why>` disposition are the author's own words, and a pipe or a line
+  break in them adds cells to the row, so `Open` and `Escalated` land under the
+  wrong headings and the gate reads a valid row as malformed.
+- **The open questions go under that table, in the same section.** One line per
+  **node** left open — a decision, or a fact only the user holds — naming the
+  `Session` it belongs to and carrying the labelled assumption written
+  in its place where a document required a value. That is the register this
+  stage's gate reads, and it is here so a reader finds the count and the
+  questions it counts in one place.
+
+  **Nodes, not decisions.** `.agents/rules/grilling.md` puts a user-held fact on
+  the frontier because nothing else can settle it, and a register of decisions
+  alone lets a run with one unanswered fact write `Open = 0` and complete.
+  `Open` counts the lines.
+
+  **And each line names its session by `Session`**, not by `Subject`. Two rows may
+  each carry `Open = 1`, and an unkeyed register satisfies both with one
+  question; `Subject` does not fix that either, because a recurring obstacle
+  reopens a session under the same description. `Session` is `S1`, `S2`, … in
+  the order the sessions opened, and it is unique by construction.
 
 ## CRITICAL CONSTRAINTS (Read First)
+
+- Coverage obligations stay layer-pinned for US, CON-API and CON-DB: tests/e2e/\*\* must cover all required US; tests/api/\*\* all required CON-API; tests/integration/\*\* all required CON-DB (QFAI-ATDD-115 — defer an out-of-slice contract **this spec owns** with `-- x-qfai-status: planned` on a line of its own, never appended after a statement, and never leave it uncovered; a sibling
+  spec's uncovered contract is recorded as a cross-spec obligation and its file left alone, because marking it defers that spec's test and hides a real gap). "Required" narrows differently per ID kind — US by surface type (a project-wide opt-in: active only once some spec declares a user-facing surface, project-wide before that), TC by declared Level, CON-API by active-vs-deferred,
+  counted per declared QFAI-CONTRACT-ID (one per file) and never per OpenAPI operation (x-qfai-status: planned defers that whole contract file, as a top-level key or as a column-0 comment; under an operation it is ignored). Resolving the US opt-in needs qfai.config.yaml (paths.specsDir / paths.contractsDir first, then prototyping.primarySpecId), every ui contract path relative to
+  <contractsDir>/ui/ — not just the basename, since a spec-<spec-id>/ ancestor directory is itself the match — and every sibling 01_Spec.md frontmatter or legacy "# … prototyping …" heading, read before the Volume Estimate. Each TC whose Level routes to an ATDD home is covered from the directory that Level routes to (L3/Integration -> tests/integration/\*\*, L4/API -> tests/api/\*\*,
+  L5/E2E -> tests/e2e/\*\*; everything else that is not Unit/Component — no declared Level, an unreadable spelling, and system / acceptance -> tests/integration/\*\*). L1/Unit and L2/Component owe no ATDD annotation — tdd/test-list.md covers them. An existing one in tests/integration/\*\* is neither counted nor flagged, so do not require adding or removing it.
 
 - Do NOT declare completion based on unit/component tests.
 - `10_Plan.md` is the primary How SSOT for execution phases.
 - If `10_Plan.md` is missing, stop and run owner planning flow before proceeding.
-- Completion gate is validation with zero errors **for this spec**: `npx qfai validate --profile atdd --fail-on error --spec <spec-id>`. The scope flag is not optional bookkeeping. This skill runs one spec per invocation, and unscoped it reports every other spec's `QFAI-ATDD-111` / `-112` obligations — findings this run cannot act on and must not be blocked by. A `--spec` run also writes `<report>/validate.spec-<id>.json` rather than the shared `validate.json`, so the JSON gate artifact is per spec, and an unknown or unparseable value fails the run (`QFAI-SCOPE-001` / `QFAI-SCOPE-002`) instead of silently widening back to the whole repository. **That is not the same as being parallel-safe.** `<report>/validate.log` and the run-log pointer are shared by every run, scoped or not, and nothing serializes them — so two stages running at once can leave that pointer naming the other one's run. Cite the per-run `<report>/run-*/` directory, or this spec's `validate.spec-<id>.json`, as the Validate Hard Gate evidence; do not cite `validate.log` from a run you shared with another stage.
-- **`--spec` scopes the spec-owned rules only, and the gate still fails on the rest.** Every rule whose finding names a spec is scoped: `QFAI-ATDD-111` (US) and `QFAI-ATDD-112` (TC) by the specs they name, `QFAI-ATDD-101` / `-102` by the spec in the unknown token, `QFAI-ATDD-121` / `-122` / `-123` by the specs whose TCs are misplaced, and `D-SCAFFOLD-PLACEHOLDER` by the spec its skeleton belongs to. A scoped run reports all of those for the requested spec and drops a sibling's. What cannot be scoped **does** fail a scoped gate — `QFAI-ATDD-113` (`CON-API`) and `QFAI-ATDD-115` (`CON-DB`), attributed to `.qfai/contracts/**`, which has no spec owner in the model, and the repo-level cases beside them: `references/cross-spec-obligations.md#what-the-scope-flag-cannot-narrow` enumerates all of them.
+- Completion gate is validation with zero errors **for this spec**: `npx qfai validate --profile atdd --fail-on error --spec <spec-id>`. The scope flag is not optional bookkeeping. This skill runs one spec per invocation, and unscoped it reports every other spec's `QFAI-ATDD-111` / `-112` obligations — findings this run cannot act on and must not be blocked by. A `--spec` run also writes
+  `<report>/validate.spec-<id>.json` rather than the shared `validate.json`, so the JSON gate artifact is per spec, and an unknown or unparseable value fails the run (`QFAI-SCOPE-001` / `QFAI-SCOPE-002`) instead of silently widening back to the whole repository. **That is not the same as being parallel-safe.** `<report>/validate.log` and the run-log pointer are shared by every run,
+  scoped or not, and nothing serializes them — so two stages running at once can leave that pointer naming the other one's run. Cite the per-run `<report>/run-*/` directory, or this spec's `validate.spec-<id>.json`, as the Validate Hard Gate evidence; do not cite `validate.log` from a run you shared with another stage.
+- **`--spec` scopes the spec-owned rules only, and the gate still fails on the rest.** Every rule whose finding names a spec is scoped: `QFAI-ATDD-111` (US) and `QFAI-ATDD-112` (TC) by the specs they name, `QFAI-ATDD-101` / `-102` by the spec in the unknown token, `QFAI-ATDD-121` / `-122` / `-123` by the specs whose TCs are misplaced, and `D-SCAFFOLD-PLACEHOLDER` by the spec its skeleton
+  belongs to. A scoped run reports all of those for the requested spec and drops a sibling's. What cannot be scoped **does** fail a scoped gate — `QFAI-ATDD-113` (`CON-API`) and `QFAI-ATDD-115` (`CON-DB`), attributed to `.qfai/contracts/**`, which has no spec owner in the model, and the repo-level cases beside them: `references/cross-spec-obligations.md#what-the-scope-flag-cannot-narrow`
+  enumerates all of them.
 
-  So a sibling spec's uncovered contract exits 1 on this spec's gate. That is a real limit, not a formality. When it happens: record the finding, its owning spec and why it is not this stage's work as a cross-spec obligation in this stage's evidence, under `## Cross-spec obligations`, and say so in the completion report — do **not** claim the gate passed, weaken the profile, lower `--fail-on`, or waive it. Closing them is the owning spec's next `/qfai-atdd` run. The repo-wide run belongs to `/qfai-verify`, at the end of the stage. **That record is a terminal state, not a deferral of one**: a run whose every residual finding is attributed to a named sibling spec completes as **`PASS with cross-spec obligations`** (`#success-criteria-definition-of-done`), and the repo-wide `/qfai-verify` run settles the residue. Unnamed, that state is unreachable — the owning spec's run hits this same block from the other side, so every spec waits for every other one and the four moves just forbidden are the only exits left. It is not free: a finding you cannot attribute to a named sibling spec is **this** spec's, and it fails.
+  So a sibling spec's uncovered contract exits 1 on this spec's gate. That is a real limit, not a formality. When it happens: record the finding, its owning spec and why it is not this stage's work as a cross-spec obligation in this stage's evidence, under `## Cross-spec obligations`, and say so in the completion report — do **not** claim the gate passed, weaken the profile, lower
+  `--fail-on`, or waive it. Closing them is the owning spec's next `/qfai-atdd` run. The repo-wide run belongs to `/qfai-verify`, at the end of the stage. **That record is a terminal state, not a deferral of one**: a run whose every residual finding is attributed to a named sibling spec completes as **`PASS with cross-spec obligations`** (`#success-criteria-definition-of-done`), and the
+  repo-wide `/qfai-verify` run settles the residue. Unnamed, that state is unreachable — the owning spec's run hits this same block from the other side, so every spec waits for every other one and the four moves just forbidden are the only exits left. It is not free: a finding you cannot attribute to a named sibling spec is **this** spec's, and it fails.
 
 - Coverage obligations are mandatory : , and **`required` narrows on a different mechanism for each ID kind — `US-*` by surface type, `TC-*` by its declared `Level`, `CON-API-*` by active-vs-deferred. They share a word, not a rule; never carry one kind's over to another**:
-  - `tests/e2e/**` must cover all required `US-*`. A story outside the current slice is deferred in `02_User-stories.md` with a `- x-qfai-status: planned` meta line in its own `US-XXXX` block (a `##`-or-deeper heading, or its catalog list entry) — the same token both contract kinds use — and is named at `info` by `QFAI-ATDD-118`. It is not left uncovered, and it is not covered by a test that asserts nothing. `exception` is not the alternative here: that branch belongs to a ledger row, and a `US-*` owns none (`references/red-provenance.md#a-spec-with-no-atdd-owned-rows`). **Required** here = every declared `US-*` of a **user-facing** spec, "user-facing" being the same surface union `/qfai-prototyping` resolves — frontmatter `surface_type: ui-bearing` in `01_Spec.md`, a matching UI contract in `.qfai/contracts/ui/` (the resolver accepts these names and no others: `<spec-id>.yaml`, `spec-<spec-id>.yaml`, `ui-<spec-id>.yaml`, `ui-<spec-id>-<slug>.yaml`, or any `*.yaml` at any depth under a `spec-<spec-id>/` subdirectory — a basename that merely contains the id, such as `0002-orders.yaml`, is not one, and a `.yml` extension never is), a legacy `# … prototyping …` heading, or the spec pinned by `qfai.config.yaml#prototyping.primarySpecId`; any one signal is enough. **That narrowing is a project-wide, all-or-nothing opt-in**: it turns on the moment any one spec in the repository declares a user-facing surface, and until then it is off repo-wide. So a spec with no user-facing surface owes no E2E reference once the project has opted in, and before that owes one for every declared `US-*` — the obligation on the spec in front of you can change because a **different** spec added a surface declaration, with nothing in this stage's inputs to show it. On a resolution failure `qfai` names the reason on stderr and keeps the obligation project-wide, so read stderr before treating an unexpectedly wide `QFAI-ATDD-111` as a spec error (`catalog/test-layers.md#atdd-annotation-hard-gate`).
-  - Every `TC-*` must be covered from the directory its declared `Level` routes
-    to: `L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
-    `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. Every other `Level` routes to
-    `tests/integration/**` — blank, a spelling that names no layer, and `system` / `acceptance`. Route by the annotation's destination, not by whether the word is familiar: those last two are in the layer vocabulary, so a list phrased the other way drops them (`references/red-provenance.md`).
-  - **`L1`/`Unit` and `L2`/`Component` owe nothing here** — out of this skill's
-    scope, excluded from `QFAI-ATDD-112`, gated by `tdd/test-list.md` under
-    `/qfai-implement`, and named on every run by `QFAI-ATDD-117` (`info`). Do
-    not duplicate an L1/L2 annotation into `tests/integration/**` to quiet a
-    gate: that is the all-integration collapse `catalog/test-layers.md` lists as
-    an anti-pattern.
-  - `tests/api/**` must cover all required `CON-API-*`. **An ID carried by a file that declares no test is not coverage**: the scan reads markdown too, and a `.test.ts` holding only the annotation is the same ledger renamed. `QFAI-ATDD-119` (`info`) names them, and coverage is `missing` **and** `coveredByCarrierOnly` in `summary.json`, never `missing` alone. This skill runs one spec, so gate on the narrowed `QFAI-ATDD-119` in `<report>/validate.spec-<id>.json`: `summary.json` stays repo-wide under every scope, and a sibling spec's placeholder would keep its arrays non-empty forever. **Required** here = every **active** declared `CON-API-*` **id** — the unit is the `QFAI-CONTRACT-ID` a contract file declares (one per file; a second is `QFAI-CONTRACT-011`), **never the OpenAPI operation**: one annotation covers that id however many operations the document describes, so counting per operation overstates both the estimate and the DoD. An id deferred with `x-qfai-status: planned` is declared but not owed. **That marker is read as a top-level key of the contract document — or, when the document does not parse or declares no such top-level key, as a column-0 comment (`# x-qfai-status: planned`, unindented; the comment form is accepted precisely because column 0 cannot be an operation-level key) — and either form defers the whole file**, i.e. the id that file declares. Written under an OpenAPI operation, commented or not, it is ignored: the contract stays active and `QFAI-ATDD-113` fires for its uncovered id, so slice a partially-planned contract into its own file (with its own id) rather than marking the operation. Surface typing does not touch this obligation.
-  - `tests/integration/**` must cover all required `CON-DB-*` (`QFAI-ATDD-115`). **Required** here = every **active** declared `CON-DB-*` id — a contract this spec owns but outside the current slice is deferred with `-- x-qfai-status: planned` **on a line of its own** — leading whitespace is allowed, trailing SQL is not, so a marker appended after a statement leaves the contract active — and the marker defers the whole file it sits in. Never left uncovered. The rule is repo-attributed like `QFAI-ATDD-113`, so it survives `--spec`: a **sibling's** uncovered contract is recorded as a cross-spec obligation, not marked `planned`.
-- Forbidden references (a TC annotation outside its declared home):
-  `tests/api/**` and `tests/e2e/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY`
-  unless that TC declares `Level` `L4`/`API` or `L5`/`E2E` respectively.
+  - `tests/e2e/**` must cover all required `US-*`. A story outside the current slice is deferred in `02_User-stories.md` with a `- x-qfai-status: planned` meta line in its own `US-XXXX` block (a `##`-or-deeper heading, or its catalog list entry) — the same token both contract kinds use — and is named at `info` by `QFAI-ATDD-118`. It is not left uncovered, and it is not covered by a test
+    that asserts nothing. `exception` is not the alternative here: that branch belongs to a ledger row, and a `US-*` owns none (`references/red-provenance.md#a-spec-with-no-atdd-owned-rows`). **Required** here = every declared `US-*` of a **user-facing** spec, "user-facing" being the same surface union `/qfai-prototyping` resolves — frontmatter `surface_type: ui-bearing` in `01_Spec.md`,
+    a matching UI contract in `.qfai/contracts/ui/` (the resolver accepts these names and no others: `<spec-id>.yaml`, `spec-<spec-id>.yaml`, `ui-<spec-id>.yaml`, `ui-<spec-id>-<slug>.yaml`, or any `*.yaml` at any depth under a `spec-<spec-id>/` subdirectory — a basename that merely contains the id, such as `0002-orders.yaml`, is not one, and a `.yml` extension never is), a legacy
+    `# … prototyping …` heading, or the spec pinned by `qfai.config.yaml#prototyping.primarySpecId`; any one signal is enough. **That narrowing is a project-wide, all-or-nothing opt-in**: it turns on the moment any one spec in the repository declares a user-facing surface, and until then it is off repo-wide. So a spec with no user-facing surface owes no E2E reference once the project has
+    opted in, and before that owes one for every declared `US-*` — the obligation on the spec in front of you can change because a **different** spec added a surface declaration, with nothing in this stage's inputs to show it. On a resolution failure `qfai` names the reason on stderr and keeps the obligation project-wide, so read stderr before treating an unexpectedly wide
+    `QFAI-ATDD-111` as a spec error (`catalog/test-layers.md#atdd-annotation-hard-gate`).
+  - Every `TC-*` must be covered from the directory its declared `Level` routes to: `L3`/`Integration` -> `tests/integration/**`, `L4`/`API` -> `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. Every other `Level` routes to `tests/integration/**` — blank, a spelling that names no layer, and `system` / `acceptance`. Route by the annotation's destination, not by whether the word is familiar:
+    those last two are in the layer vocabulary, so a list phrased the other way drops them (`references/red-provenance.md`).
+  - **`tests/` above is `<testsDir>`, and it is not the only place those three directories may sit.** The scan also reads the project's own `validation.traceability.testFileGlobs` (minus `testFileExcludeGlobs`), and a file collected that way is answered by the layer directory inside its own test root — the segment after the deepest `tests` / `test` / `__tests__` or the configured
+    `paths.testsDir` basename, because a package may legitimately be called `api`. A path carrying no such segment answers no layer, and a directory carrying a package manifest is a package rather than a test root whatever it is called. The manifests are those the catalog table lists for each ecosystem, and a runner settings file among them (`package.json`, `deno.json`, `deno.jsonc`,
+    `pyproject.toml`, `setup.cfg`) counts only when it names a package. **The configured root itself needs no segment**: with `paths.testsDir` at the repository root, `e2e/**` is answered by containment in the configured layer directory, and it is an _extra_ suite beside it that needs a named root — so in a repository with one suite per package, `packages/<name>/tests/integration/**`
+    answers an `L3` obligation just as `<testsDir>/integration/**` does. Write new tests where that package's suite already lives; do not move a package's tests to satisfy the gate (`catalog/test-layers.md#annotation-routing`).
+  - **`L1`/`Unit` and `L2`/`Component` owe nothing here** — out of this skill's scope, excluded from `QFAI-ATDD-112`, gated by `tdd/test-list.md` under `/qfai-implement`, and named on every run by `QFAI-ATDD-117` (`info`). Do not duplicate an L1/L2 annotation into `tests/integration/**` to quiet a gate: that is the all-integration collapse `catalog/test-layers.md` lists as an
+    anti-pattern.
+  - `tests/api/**` must cover all required `CON-API-*`. **An ID carried by a file that declares no test is not coverage**: the scan reads markdown too, and a `.test.ts` holding only the annotation is the same ledger renamed. `QFAI-ATDD-119` (`info`) names them, and coverage is `missing` **and** `coveredByCarrierOnly` in `summary.json`, never `missing` alone. This skill runs one spec, so
+    gate on the narrowed `QFAI-ATDD-119` in `<report>/validate.spec-<id>.json`: `summary.json` stays repo-wide under every scope, and a sibling spec's placeholder would keep its arrays non-empty forever. **Required** here = every **active** declared `CON-API-*` **id** — the unit is the `QFAI-CONTRACT-ID` a contract file declares (one per file; a second is `QFAI-CONTRACT-011`), **never
+    the OpenAPI operation**: one annotation covers that id however many operations the document describes, so counting per operation overstates both the estimate and the DoD. An id deferred with `x-qfai-status: planned` is declared but not owed. **That marker is read as a top-level key of the contract document — or, when the document does not parse or declares no such top-level key, as a
+    column-0 comment (`# x-qfai-status: planned`, unindented; the comment form is accepted precisely because column 0 cannot be an operation-level key) — and either form defers the whole file**, i.e. the id that file declares. Written under an OpenAPI operation, commented or not, it is ignored: the contract stays active and `QFAI-ATDD-113` fires for its uncovered id, so slice a
+    partially-planned contract into its own file (with its own id) rather than marking the operation. Surface typing does not touch this obligation.
+  - `tests/integration/**` must cover all required `CON-DB-*` (`QFAI-ATDD-115`). **Required** here = every **active** declared `CON-DB-*` id — a contract this spec owns but outside the current slice is deferred with `-- x-qfai-status: planned` **on a line of its own** — leading whitespace is allowed, trailing SQL is not, so a marker appended after a statement leaves the contract active —
+    and the marker defers the whole file it sits in. Never left uncovered. The rule is repo-attributed like `QFAI-ATDD-113`, so it survives `--spec`: a **sibling's** uncovered contract is recorded as a cross-spec obligation, not marked `planned`.
+- Forbidden references (a TC annotation outside its declared home): `tests/api/**` and `tests/e2e/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY` unless that TC declares `Level` `L4`/`API` or `L5`/`E2E` respectively.
 - Unknown references (`US/TC/CON-API/CON-DB` not declared) must be treated as errors.
 - **The E2E/API ledger rows this stage feeds are bound by `/qfai-implement`'s lifecycle.** See "Execution Ledger" below: a row advanced on none of the three RED-provenance forms is a lifecycle violation.
 - Floors/ratios are planning signals only, not gates.
 - Legacy `scenario.feature` or coverage ledgers may exist but are not mandatory inputs for completion.
-- The per-item evidence file `.qfai/evidence/atdd-<spec-id>.md` is required and
-  committed. Ledger `Evidence` cells point to its anchors, and validation must
-  resolve them on a fresh clone. The managed `.gitignore` block re-includes it,
-  alongside `.qfai/evidence/implement-<spec-id>.md`. **Governance records also
-  stay in version control**: Change Requests (`.qfai/decisions/CR-*.md`),
-  durable decision records (`.qfai/evidence/decisions/*.json`), the **Coverage
-  Depth Matrix** (`.qfai/evidence/coverage-depth-<spec-id>.md`) and **this
-  stage's own `.qfai/evidence/atdd-<spec-id>.md`**, whose RED provenance is taken
-  before the passing code exists and so cannot be regenerated. A negation does
-  not stage a file — commit it
+- The per-item evidence file `.qfai/evidence/atdd-<spec-id>.md` is required and committed. Ledger `Evidence` cells point to its anchors, and validation must resolve them on a fresh clone. The managed `.gitignore` block re-includes it, alongside `.qfai/evidence/implement-<spec-id>.md`. **Governance records also stay in version control**: Change Requests (`.qfai/decisions/CR-*.md`),
+  durable decision records (`.qfai/evidence/decisions/*.json`), the **Coverage Depth Matrix** (`.qfai/evidence/coverage-depth-<spec-id>.md`) and **this stage's own `.qfai/evidence/atdd-<spec-id>.md`**, whose RED provenance is taken before the passing code exists and so cannot be regenerated. A negation does not stage a file — commit it
   (`.qfai/assistant/constitution/drift-protocol.md#which-evidence-is-committed`).
-- **The matrix is a governance record, not a log**, so it is committed:
-  `.qfai/evidence/coverage-depth-<spec-id>.md`, one justification per `❌`
-  (`references/test-case-depth-checklist.md#where-the-matrix-lives`).
+- **The matrix is a governance record, not a log**, so it is committed: `.qfai/evidence/coverage-depth-<spec-id>.md`, one justification per `❌` (`references/test-case-depth-checklist.md#where-the-matrix-lives`).
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the acceptance tests **this run created or changed** — every `tests/e2e/**`, `tests/api/**` and `tests/integration/**` file you wrote or edited, filled-in scaffolds among them — executed with the runner from `catalog/tech.md#standard-commands-copy-paste`, reaching a red/green verdict rather than a collection or import error. Not "the tests you just scaffolded": `scaffold` emits the Integration-owned `TC`s only, so an E2E/API-only run has no scaffold output at all and would have had nothing to execute. A run that wrote no test file still has a target — a spec whose obligations were already satisfied and only re-verified — and it is the spec's existing acceptance suite: the files carrying this spec's `US` / `TC` / `CON-API` / `CON-DB` annotations, in the directories those obligations route to, run the same way. A spec whose integration work is contract-driven has `QFAI:CON-DB-*` and no `TC-*` in `tests/integration/**`, and a selection stopping at `CON-API` runs none of it. A run that never reached the assertions is UNRUN, not a pass.
-Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the acceptance tests **this run created or changed** — every `tests/e2e/**`, `tests/api/**` and `tests/integration/**` file you wrote or edited, filled-in scaffolds among them — executed with the runner from
+`catalog/tech.md#standard-commands-copy-paste`, reaching a red/green verdict rather than a collection or import error. Not "the tests you just scaffolded": `scaffold` emits the Integration-owned `TC`s only, so an E2E/API-only run has no scaffold output at all and would have had nothing to execute. A run that wrote no test file still has a target — a spec whose obligations were already
+satisfied and only re-verified — and it is the spec's existing acceptance suite: the files carrying this spec's `US` / `TC` / `CON-API` / `CON-DB` annotations, in the directories those obligations route to, run the same way. A spec whose integration work is contract-driven has `QFAI:CON-DB-*` and no `TC-*` in `tests/integration/**`, and a selection stopping at `CON-API` runs none of it.
+A run that never reached the assertions is UNRUN, not a pass. Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ## Goal
 
@@ -225,35 +451,29 @@ Turn specs/contracts obligations (`US` / `TC` / `CON-API` / `CON-DB`) into runna
 
 ## Execution Ledger: the rows this skill feeds
 
-`.qfai/specs/<spec-id>/tdd/test-list.md` is `/qfai-implement`'s execution
-ledger, and `qfai-implement/SKILL.md` states the split: **`Layer = E2E`,
-`Layer = API` and `Layer = Integration` rows are tracked there, but their tests
-are authored here.** Integration is there because this skill's scope puts it
-there: `QFAI-ATDD-112` covers every `L3` TC, and every TC with no declared
-`Level`, from `tests/integration/**`, and P4 writes those tests. Self-owned,
-they had `/qfai-implement` demand a fresh RED for a test already green here. **One `Integration` row is outside the set: one whose `TC-Refs` name only TCs that declare `Level` `L1` / `L2`.** `QFAI-ATDD-112` excludes those levels — CRITICAL CONSTRAINTS above says `L1`/`Unit` and `L2`/`Component` owe nothing here — so this stage authors no test for that row and requires no annotation for it, while the validator reports the `Layer` / `Level` contradiction as a **warning** only (`TDDLIST_COVERAGE_LAYER_MISMATCH`), so such a ledger passes `--fail-on error` and the row exists today. `qfai-implement/SKILL.md` Non-goals states the same carve-out from the other side and keeps the row owned there: that skill writes its test in its own Phase Red and keeps its evidence, anchor, checkpoint and cross-spec entries in `implement-<spec-id>.md`. **Every rule in this file and its references that names the ATDD-owned set excludes it** — this stage enumerates no such row, chooses no branch for it, writes no `## Ledger rows advanced` entry for it and hands it over to nobody. Demanding a branch and a handoff for a test this skill is forbidden to write is what left the row refused by both stages and stranded at `todo`; correcting the row's `Layer`, or the TC's `Level`, upstream is the durable fix.
+`.qfai/specs/<spec-id>/tdd/test-list.md` is `/qfai-implement`'s execution ledger, and `qfai-implement/SKILL.md` states the split: **`Layer = E2E`, `Layer = API` and `Layer = Integration` rows are tracked there, but their tests are authored here.** Integration is there because this skill's scope puts it there: `QFAI-ATDD-112` covers every `L3` TC, and every TC with no declared `Level`,
+from `tests/integration/**`, and P4 writes those tests. Self-owned, they had `/qfai-implement` demand a fresh RED for a test already green here. **One `Integration` row is outside the set: one whose `TC-Refs` name only TCs that declare `Level` `L1` / `L2`.** `QFAI-ATDD-112` excludes those levels — CRITICAL CONSTRAINTS above says `L1`/`Unit` and `L2`/`Component` owe nothing here — so this
+stage authors no test for that row and requires no annotation for it, while the validator reports the `Layer` / `Level` contradiction as a **warning** only (`TDDLIST_COVERAGE_LAYER_MISMATCH`), so such a ledger passes `--fail-on error` and the row exists today. `qfai-implement/SKILL.md` Non-goals states the same carve-out from the other side and keeps the row owned there: that skill
+writes its test in its own Phase Red and keeps its evidence, anchor, checkpoint and cross-spec entries in `implement-<spec-id>.md`. **Every rule in this file and its references that names the ATDD-owned set excludes it** — this stage enumerates no such row, chooses no branch for it, writes no `## Ledger rows advanced` entry for it and hands it over to nobody. Demanding a branch and a
+handoff for a test this skill is forbidden to write is what left the row refused by both stages and stranded at `todo`; correcting the row's `Layer`, or the TC's `Level`, upstream is the durable fix.
 
 - **This skill does not write the ledger.** `/qfai-implement` owns the `Status` / `DR-ID` / `Evidence` cells of every row — one writer, as `.qfai/assistant/constitution/drift-protocol.md` grants. This stage owes the **evidence those cells point at**, in `.qfai/evidence/atdd-<spec-id>.md`.
 - **The lifecycle is `../qfai-implement/references/execution-ledger.md#allowed-transitions`**: forward-only from `todo`, and `todo -> red` requires an **admissible RED** observed before the code that makes it pass exists.
-- **`/qfai-sdd` Phase 2b seeds one `Layer = E2E` row per active `US-*` and one `Layer = API` row per active `CON-API-*` the spec owns — the lowest-numbered spec naming that contract; this stage still cannot create them.** A spec with an active obligation **of its own** therefore normally arrives with rows here — enumerate them and build the handoff from them. Zero is legitimate when every obligation is exempt **and** every active `CON-API-*` the spec references is owned by another spec, and even then is not "nothing to do"; a row missing for an **active** obligation this spec owns is an incomplete Phase 2b — report it, never write it. Do not demand an API row for a contract another spec owns: that row must not exist twice. `references/red-provenance.md#a-spec-with-no-atdd-owned-rows`.
-- **A fresh spec may already carry `Layer = Integration` rows, and this stage cannot create those either.** `/qfai-sdd` Phase 2b seeds one per integration-level TC — every `Level` whose annotation routes to `tests/integration/**`: `L3`, `integration`, a blank cell, a spelling that names no layer (`smoke`), and `system` / `acceptance`; the same routing `QFAI-ATDD-112` uses — so on a spec whose TCs are all `L3` the rows are there at `todo` and enumerating them at P1b is this run's work: without their RED provenance `/qfai-implement` Phase Red step 3b finds no handoff and leaves each one at `todo`. Zero `E2E` / `API` rows beside them is the legitimate count, not "nothing to do": `references/red-provenance.md#a-spec-with-no-atdd-owned-rows`.
+- **`/qfai-sdd` Phase 2b seeds one `Layer = E2E` row per active `US-*` and one `Layer = API` row per active `CON-API-*` the spec owns — the lowest-numbered spec naming that contract; this stage still cannot create them.** A spec with an active obligation **of its own** therefore normally arrives with rows here — enumerate them and build the handoff from them. Zero is legitimate when
+  every obligation is exempt **and** every active `CON-API-*` the spec references is owned by another spec, and even then is not "nothing to do"; a row missing for an **active** obligation this spec owns is an incomplete Phase 2b — report it, never write it. Do not demand an API row for a contract another spec owns: that row must not exist twice.
+  `references/red-provenance.md#a-spec-with-no-atdd-owned-rows`.
+- **A fresh spec may already carry `Layer = Integration` rows, and this stage cannot create those either.** `/qfai-sdd` Phase 2b seeds one per integration-level TC — every `Level` whose annotation routes to `tests/integration/**`: `L3`, `integration`, a blank cell, a spelling that names no layer (`smoke`), and `system` / `acceptance`; the same routing `QFAI-ATDD-112` uses — so on a spec
+  whose TCs are all `L3` the rows are there at `todo` and enumerating them at P1b is this run's work: without their RED provenance `/qfai-implement` Phase Red step 3b finds no handoff and leaves each one at `todo`. Zero `E2E` / `API` rows beside them is the legitimate count, not "nothing to do": `references/red-provenance.md#a-spec-with-no-atdd-owned-rows`.
 - **The stage order makes that a real question**: Work Orders build the surfaces a journey needs (P3, P4), so a journey written after them passes first run — an anomaly bound for `exception`, which then becomes the only reachable terminal state.
 
 ### RED provenance for an ATDD-owned row (MUST)
 
-**Read `references/red-provenance.md` before advancing any row.** It defines
-three branches, in order — observed RED (stage gate **P1b**, before P2-P4 build
-any surface), falsifiability when the surface is already there, and `exception`
-with a `DR-*` when neither is available. Take the first that applies, record
-which one, and put the evidence in `.qfai/evidence/atdd-<spec-id>.md` under
-`## Ledger rows advanced` — `/qfai-implement` consumes that entry rather than
-re-observing a RED. Branch 3 is the last resort: a stage that routes every row
-to `exception` has recorded that it did not try branches 1 and 2.
+**Read `references/red-provenance.md` before advancing any row.** It defines three branches, in order — observed RED (stage gate **P1b**, before P2-P4 build any surface), falsifiability when the surface is already there, and `exception` with a `DR-*` when neither is available. Take the first that applies, record which one, and put the evidence in `.qfai/evidence/atdd-<spec-id>.md` under
+`## Ledger rows advanced` — `/qfai-implement` consumes that entry rather than re-observing a RED. Branch 3 is the last resort: a stage that routes every row to `exception` has recorded that it did not try branches 1 and 2.
 
 ## Scope (ATDD only)
 
-In scope: E2E, API, Integration. Out of scope: Unit and Component
-(`/qfai-implement`). Tests that must sign in: `references/credential-reuse.md`.
+In scope: E2E, API, Integration. Out of scope: Unit and Component (`/qfai-implement`). Tests that must sign in: `references/credential-reuse.md`.
 
 ## Non-goals
 
@@ -270,9 +490,11 @@ In scope: E2E, API, Integration. Out of scope: Unit and Component
 
 ## Volume Signals (mandatory, not gates)
 
-Every row counts this spec's own obligations: E2E = required `US-*`, API = required `CON-API-*`, meaning the `CON-API-*` this spec references that are not deferred, Integration = required `TC-*` routing to `tests/integration/**` (`L3` or no `Level`) plus the **active** `CON-DB-*` this spec references — active meaning the contract declares no `-- x-qfai-status: planned` **on a line of its own** (leading whitespace is allowed, trailing SQL is not — a marker appended after a statement is not read). A contract that does declare it is deferred: it owes no `QFAI-ATDD-115` coverage in this slice, so it is not counted here. `L1`/`L2` owe nothing here; an `L4`/`L5` TC counts in the row its `Level` routes it to. `#TC` is the whole Integration numerator: `references/volume-signals.md` defines it as those `TC-*` **plus** the active `CON-DB-*`, so the row's Raw count is `#TC` alone and adding the contracts again would count each of them twice. Read `required` per ID kind from Coverage obligations — the `US-*` row is surface-scoped, and the contract rows drop every deferred contract: `x-qfai-status: planned` in an OpenAPI document for a `CON-API-*`, the SQL comment `-- x-qfai-status: planned` for a `CON-DB-*`. Filling either in from "every declared" overstates the Raw count before a single test is written.
-Contract references come from the SSOT the spec carries — `Contract-Refs` in `04_Business-Rules.md`, plus a `QFAI-CONTRACT-REF` line in `01_Spec.md` when there is one — never the ledger; a contract deferred with `x-qfai-status: planned` — `-- x-qfai-status: planned` for a `CON-DB-*` — owes no test, so exclude it from the count and name it in `Notes`.
-`E2E_s` / `API_s` / `INT_s`, their bands, and what a low or high one obliges: **`references/volume-signals.md`**. A `Signal` cell is never a copy of its `Raw count`; never fail on a signal value alone.
+Every row counts this spec's own obligations: E2E = required `US-*`, API = required `CON-API-*`, meaning the `CON-API-*` this spec references that are not deferred, Integration = required `TC-*` routing to `tests/integration/**` (`L3` or no `Level`) plus the **active** `CON-DB-*` this spec references — active meaning the contract declares no `-- x-qfai-status: planned` **on a line of its
+own** (leading whitespace is allowed, trailing SQL is not — a marker appended after a statement is not read). A contract that does declare it is deferred: it owes no `QFAI-ATDD-115` coverage in this slice, so it is not counted here. `L1`/`L2` owe nothing here; an `L4`/`L5` TC counts in the row its `Level` routes it to. `#TC` is the whole Integration numerator:
+`references/volume-signals.md` defines it as those `TC-*` **plus** the active `CON-DB-*`, so the row's Raw count is `#TC` alone and adding the contracts again would count each of them twice. Read `required` per ID kind from Coverage obligations — the `US-*` row is surface-scoped, and the contract rows drop every deferred contract: `x-qfai-status: planned` in an OpenAPI document for a
+`CON-API-*`, the SQL comment `-- x-qfai-status: planned` for a `CON-DB-*`. Filling either in from "every declared" overstates the Raw count before a single test is written. Contract references come from the SSOT the spec carries — `Contract-Refs` in `04_Business-Rules.md`, plus a `QFAI-CONTRACT-REF` line in `01_Spec.md` when there is one — never the ledger; a contract deferred with
+`x-qfai-status: planned` — `-- x-qfai-status: planned` for a `CON-DB-*` — owes no test, so exclude it from the count and name it in `Notes`. `E2E_s` / `API_s` / `INT_s`, their bands, and what a low or high one obliges: **`references/volume-signals.md`**. A `Signal` cell is never a copy of its `Raw count`; never fail on a signal value alone.
 
 ### Estimator output table (required)
 
@@ -284,7 +506,8 @@ Contract references come from the SSOT the spec carries — `Contract-Refs` in `
 
 ## Scaffolding
 
-`npx qfai atdd scaffold --spec <spec-id>` bulk-emits one placeholder test per `TC-*` **this skill owns**, each carrying its `QFAI:SPEC-XXXX:TC-YYYY` annotation, into `tests/integration/<spec-id>/` — the directory `QFAI-ATDD-112` scans. It is idempotent. `L1`/`L2` and `L4`/`L5` TCs are skipped and named on stderr, and a skeleton left in placeholder shape escalates: `references/scaffolding.md`.
+`npx qfai atdd scaffold --spec <spec-id>` bulk-emits one placeholder test per `TC-*` **this skill owns**, each carrying its `QFAI:SPEC-XXXX:TC-YYYY` annotation, into `tests/integration/<spec-id>/` — the directory `QFAI-ATDD-112` scans. It is idempotent. `L1`/`L2` and `L4`/`L5` TCs are skipped and named on stderr, and a skeleton left in placeholder shape escalates:
+`references/scaffolding.md`.
 
 ## Annotation obligations (mandatory)
 
@@ -293,8 +516,7 @@ Every generated ATDD test MUST include QFAI annotations by layer:
 - `tests/e2e/**`: `QFAI:SPEC-XXXX:US-YYYY` (plus `QFAI:SPEC-XXXX:TC-YYYY` for a TC that declares `Level` `L5`/`E2E`)
 - `tests/integration/**`: `QFAI:SPEC-XXXX:TC-YYYY` (TCs declaring `L3`/`Integration`, and TCs with no declared `Level`)
 - `tests/api/**`: `QFAI:CON-API-XXXX` (plus `QFAI:SPEC-XXXX:TC-YYYY` for a TC that declares `Level` `L4`/`API`)
-- `tests/integration/**` also carries `QFAI:CON-DB-XXXX` for every declared DB
-  contract the slice exercises
+- `tests/integration/**` also carries `QFAI:CON-DB-XXXX` for every declared DB contract the slice exercises
 
 Notes:
 
@@ -304,31 +526,32 @@ Notes:
 
 ## Success Criteria (Definition of Done)
 
-- All required `US` are covered by E2E tests (`QFAI-ATDD-111`); a story outside the current slice is deferred with `- x-qfai-status: planned` in its `02_User-stories.md` block and reported by `QFAI-ATDD-118` (`info`), not left uncovered. — `required` as defined under Coverage obligations (every declared `US-*`, narrowed to user-facing specs once any one spec in the project declares a surface, project-wide before that). The DoD and the obligation read from that one definition; do not re-derive it here.
-- All required `TC` are covered from the directory their declared `Level` routes
-  to (`L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
-  `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`, no declared `Level` ->
-  `tests/integration/**`). **`L1`/`Unit` and `L2`/`Component` are outside this
-  obligation** — the ledger covers them — so a spec whose TCs are all L1/L2 is
-  done here with no ATDD annotation at all. Duplicating a TC into a second layer
-  is a not-done condition, not extra credit.
-- All required `CON-API` **this spec owns** are covered by API tests. Ownership is the merge in `references/cross-spec-obligations.md#resolving-the-owning-spec`, not membership in the finding: a contract a named sibling spec declares, recorded one row per ID under `## Cross-spec obligations`, is that spec's to cover and does not hold this bullet open. Residue that is unrecorded, attributable to no named sibling, or attributed to a spec this one co-owns the contract with does hold it open. `required` as defined under Coverage obligations (active contract **ids**, one per contract file, never per OpenAPI operation; `x-qfai-status: planned` defers the whole file).
-- All required `CON-DB` **this spec owns** are covered by integration tests (`QFAI-ATDD-115`); a contract
-  outside the current slice is deferred with `-- x-qfai-status: planned`, not left uncovered. Sibling-owned residue is read exactly as in the `CON-API` bullet above — recorded and attributed, it is that spec's; otherwise it is this run's.
-- Validation passes for this spec in the two parts the scope model implies: (1) **no finding this spec owns remains**; and (2) **every residual finding is attributed and recorded**. Both parts met is **`PASS with cross-spec obligations`**; residue attributable to no named sibling spec is this spec's own and still FAILs (`references/cross-spec-obligations.md#the-validation-the-definition-of-done-asks-for`).
+- All required `US` are covered by E2E tests (`QFAI-ATDD-111`); a story outside the current slice is deferred with `- x-qfai-status: planned` in its `02_User-stories.md` block and reported by `QFAI-ATDD-118` (`info`), not left uncovered. — `required` as defined under Coverage obligations (every declared `US-*`, narrowed to user-facing specs once any one spec in the project declares a
+  surface, project-wide before that). The DoD and the obligation read from that one definition; do not re-derive it here.
+- All required `TC` are covered from the directory their declared `Level` routes to (`L3`/`Integration` -> `tests/integration/**`, `L4`/`API` -> `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`, no declared `Level` -> `tests/integration/**`). **`L1`/`Unit` and `L2`/`Component` are outside this obligation** — the ledger covers them — so a spec whose TCs are all L1/L2 is done here with no ATDD
+  annotation at all. Duplicating a TC into a second layer is a not-done condition, not extra credit.
+- All required `CON-API` **this spec owns** are covered by API tests. Ownership is the merge in `references/cross-spec-obligations.md#resolving-the-owning-spec`, not membership in the finding: a contract a named sibling spec declares, recorded one row per ID under `## Cross-spec obligations`, is that spec's to cover and does not hold this bullet open. Residue that is unrecorded,
+  attributable to no named sibling, or attributed to a spec this one co-owns the contract with does hold it open. `required` as defined under Coverage obligations (active contract **ids**, one per contract file, never per OpenAPI operation; `x-qfai-status: planned` defers the whole file).
+- All required `CON-DB` **this spec owns** are covered by integration tests (`QFAI-ATDD-115`); a contract outside the current slice is deferred with `-- x-qfai-status: planned`, not left uncovered. Sibling-owned residue is read exactly as in the `CON-API` bullet above — recorded and attributed, it is that spec's; otherwise it is this run's.
+- Validation passes for this spec in the two parts the scope model implies: (1) **no finding this spec owns remains**; and (2) **every residual finding is attributed and recorded**. Both parts met is **`PASS with cross-spec obligations`**; residue attributable to no named sibling spec is this spec's own and still FAILs
+  (`references/cross-spec-obligations.md#the-validation-the-definition-of-done-asks-for`).
 - Repository quality gates (format/lint/type/tests, and pack/verify if distributed) pass with evidence.
 - Evidence file exists and includes work orders + reviewer notes.
-- Every ledger row this cycle advanced carries one of the three RED-provenance forms — an observed RED pair with its `Oracle proof`, the `Satisfied-by` + falsifiability trio, or a `DR-*` recording why neither was available — and `qa-gatekeeper` has accepted it. The third form is a valid _branch_, and it is **not a completion**: `exception` is a blocking output and needs a user-approved `TDDLIST-001` waiver, or the row is parked and the spec stays open (`references/red-provenance.md#branch-3-does-not-close-a-spec-on-its-own`).
+- Every ledger row this cycle advanced carries one of the three RED-provenance forms — an observed RED pair with its `Oracle proof`, the `Satisfied-by` + falsifiability trio, or a `DR-*` recording why neither was available — and `qa-gatekeeper` has accepted it. The third form is a valid _branch_, and it is **not a completion**: `exception` is a blocking output and needs a user-approved
+  `TDDLIST-001` waiver, or the row is parked and the spec stays open (`references/red-provenance.md#branch-3-does-not-close-a-spec-on-its-own`).
 - Completion is approved by a reviewer who did not implement tests.
 - **The P8 reviewer's `Audited evidence hash` is recomputed before completion is declared**, from the current stage evidence file and Coverage Depth Matrix — a mismatch means the evidence moved after the verdict (`references/pack-seal.md#recompute-the-p8-audit-hash-before-declaring-completion`).
-- **The P8 review pack is sealed, and its seal is re-checked at completion against the recorded value** — `Review pack:` and `Review pack seal:` in the stage evidence file's `## Final status`, recorded before this stage writes its verdict (`references/pack-seal.md#seal-the-p8-pack`) and recomputed against that recorded value at completion (`references/pack-seal.md#recompute-the-seal-at-completion-against-the-recorded-value`).
+- **The P8 review pack is sealed, and its seal is re-checked at completion against the recorded value** — `Review pack:` and `Review pack seal:` in the stage evidence file's `## Final status`, recorded before this stage writes its verdict (`references/pack-seal.md#seal-the-p8-pack`) and recomputed against that recorded value at completion
+  (`references/pack-seal.md#recompute-the-seal-at-completion-against-the-recorded-value`).
 
 ## Not-done criteria
 
-- Any required `US` / `TC` remains uncovered, or any required `CON-API` / `CON-DB` **this spec owns** does. A residual contract attributed to a named sibling spec and recorded under `## Cross-spec obligations` is **not** this criterion — that is the terminal state, and reading it back as "required and uncovered" restores from this line the deadlock the two-part DoD removes. Unrecorded, unattributable, or self-attributed residue is still this criterion. Reading `required` per ID kind from Coverage obligations (`US` by surface type, `TC` by declared `Level`, `CON-API` by active-vs-deferred).
+- Any required `US` / `TC` remains uncovered, or any required `CON-API` / `CON-DB` **this spec owns** does. A residual contract attributed to a named sibling spec and recorded under `## Cross-spec obligations` is **not** this criterion — that is the terminal state, and reading it back as "required and uncovered" restores from this line the deadlock the two-part DoD removes. Unrecorded,
+  unattributable, or self-attributed residue is still this criterion. Reading `required` per ID kind from Coverage obligations (`US` by surface type, `TC` by declared `Level`, `CON-API` by active-vs-deferred).
 - Forbidden references remain.
 - Tests exist but were never executed.
-- Validation evidence is missing, or failing on a finding this spec owns. **A residual `QFAI-ATDD-113` / `-115` attributed to a named sibling spec and recorded under `## Cross-spec obligations` is not this criterion** — it blocks _that_ spec's completion, not this one, and `/qfai-verify` settles the repo-wide residue at the end of the stage. Unrecorded residue is, and so is an entry that names no owning spec, names **this** spec as the owner, or omits the contract ID the finding cites.
+- Validation evidence is missing, or failing on a finding this spec owns. **A residual `QFAI-ATDD-113` / `-115` attributed to a named sibling spec and recorded under `## Cross-spec obligations` is not this criterion** — it blocks _that_ spec's completion, not this one, and `/qfai-verify` settles the repo-wide residue at the end of the stage. Unrecorded residue is, and so is an entry that
+  names no owning spec, names **this** spec as the owner, or omits the contract ID the finding cites.
 - Coverage Depth Matrix is missing, omits the business rule coverage table on a spec that declares an active `BR-*`, or contains unjustified ❌ cells in either table, or that table drops an active `BR-ID` declared in `04_Business-Rules.md` (normal-path-only coverage is incomplete).
 - A ledger row was advanced past `todo` with none of the three forms — no observed RED, no falsifiability evidence, and no `DR-*`.
 - A row was sent to `exception` without a `DR-*` recording why **both** branches were unavailable. "The surface was built earlier in this cycle" is not such a reason.
@@ -342,20 +565,21 @@ Notes:
 
 Create and update: `.qfai/evidence/atdd-<spec-id>.md`
 
-Required sections: the template below is the list. Four of them carry a contract
-the heading cannot:
+Required sections: the template below is the list. Five of them carry a contract the heading cannot:
 
-- **Ledger rows advanced** — an index table plus one `### TDD-NNNN` section per
-  row (`references/red-provenance.md#evidence-shape`). Exactly one form per row,
-  never both and never neither; the cell is an anchor and the payload goes in
-  the section. A rework round is a `#### Round N` block nested **inside that
-  row's section**, not a section of its own: the list is closed, and nesting
+- **Ledger rows advanced** — an index table plus one `### TDD-NNNN` section per row (`references/red-provenance.md#evidence-shape`). Exactly one form per row, never both and never neither; the cell is an anchor and the payload goes in the section. A rework round is a `#### Round N` block nested **inside that row's section**, not a section of its own: the list is closed, and nesting
   attributes it to a row (`references/review-fix-rounds.md`).
-- **Coverage Depth Matrix** — a link to
-  `.qfai/evidence/coverage-depth-<spec-id>.md` and the `✅`/`⚠️`/`❌` totals.
-  The matrix and its per-`❌` justifications live in that committed file;
-  restating them here would lose them.
-- **Cross-spec obligations** — one row per uncovered contract ID the scoped gate still exits 1 on, never one per finding: `QFAI-ATDD-113` / `-115` aggregate every uncovered contract into one finding's `refs`, so split them into a row each. `None` when the run exited 0. It is what a completion reviewer reads to tell `PASS with cross-spec obligations` from an ordinary FAIL. Fields, worked example and the FAIL cases: `references/cross-spec-obligations.md#the-evidence-entry`.
+- **Grilling Session** — one `### /qfai-atdd — run started <time>` block per
+  invocation, one row per session inside it, and the open questions listed under
+  the table. Each row is written when that session ends. **The block heading is
+  what says the rows are this invocation's**; `Revision` says which tree the
+  session ended against and nothing more, because that address excludes
+  `.qfai/evidence/**` and so repeats across two runs over an unchanged source
+  tree. The two times order the session against the work. The Reviewer Gate
+  reads this stage's own block (`## Grilling (MANDATORY)`).
+- **Coverage Depth Matrix** — a link to `.qfai/evidence/coverage-depth-<spec-id>.md` and the `✅`/`⚠️`/`❌` totals. The matrix and its per-`❌` justifications live in that committed file; restating them here would lose them.
+- **Cross-spec obligations** — one row per uncovered contract ID the scoped gate still exits 1 on, never one per finding: `QFAI-ATDD-113` / `-115` aggregate every uncovered contract into one finding's `refs`, so split them into a row each. `None` when the run exited 0. It is what a completion reviewer reads to tell `PASS with cross-spec obligations` from an ordinary FAIL. Fields, worked
+  example and the FAIL cases: `references/cross-spec-obligations.md#the-evidence-entry`.
 - **Final status** — the verdict and its confirmer, plus `Review pack:` and `Review pack seal:` for the P8 pack this stage opened (`references/pack-seal.md#seal-the-p8-pack`). This section is excluded from the P8 audit subject, which is why the seal can be written here without making the verdict stale.
 
 Template:
@@ -368,6 +592,20 @@ Template:
 ## Inputs reviewed (files/paths)
 
 ## Decisions made (with rationale)
+
+## Grilling Session
+
+<!-- One `### /qfai-atdd — run started <time>` block per invocation, one row
+     per session inside it, written when each session ends. See this skill's
+     `## Grilling (MANDATORY)` section; the open questions go under the
+     table. -->
+
+### /qfai-atdd — run started 2026-01-01T09:02:00.417Z
+
+Preflight: session opened
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
 
 ## Work performed (what changed, where)
 
@@ -418,27 +656,18 @@ Review pack seal: <sha256>
 
 - P0: Plan and obligations checklist prepared. A project whose routing has no `red` phase predates it: `references/red-provenance.md#a-project-without-the-red-phase`.
 - P1: Layer assignment validated against `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
-- P1a: **`Phase: Skeleton` is discharged before any RED is taken.** Invoke `/qfai-implement` for that phase alone, for **every in-scope entrypoint**, and record each run in `.qfai/evidence/skeleton.md`. **Enumerating zero entrypoints is an answer, not a skip**: a library or an Integration-only spec set still invokes the phase once, so the phase itself writes the `not applicable` verdict its `## (no entrypoint)` record requires. Left to an empty loop, that record is never written and this item passes with nothing behind it. Not only when the program fails to start: the phase itself decides between a first run, a re-run of a recorded pass, and `not applicable`, and an entrypoint the evidence file has no section for is unproven for this invocation whatever the program does today (`../qfai-implement/references/walking-skeleton.md#evidence`). Here, not "before P5": P1c takes the first RED before P2-P4 build anything, and against a system that cannot start that RED is a collection error, which is a missing seam and not a RED (`references/red-provenance.md#a-project-whose-program-does-not-start-yet`).
-- P1b: **A branch is chosen for every row this stage owns**, provisional until its handoff. The ATDD-owned set is the one `## Execution Ledger: the rows this skill feeds` defines, so an `Integration` row whose `TC-Refs` name only `L1` / `L2` TCs gets no branch and no handoff here: this stage may not write its test, and requiring either of a row `/qfai-implement` owns left this gate unpassable.
-- P1c: **A branch 1 row is discharged in that loop** — write the test, take the
-  RED, `qa-gatekeeper` PASS, hand it to `/qfai-implement`, GREEN, checkpoint —
-  before the next branch-1 row's failing test is written, and before P2-P4 build
-  any surface. One loop per `TDD-ID`; the nested run is an item cycle, not a
-  completion gate (`references/red-provenance.md#what-the-nested-run-owes`).
-- P1d: **Branch 3 rows are judged here, then handed over.** Route
-  `qa-gatekeeper` on the `DR-*` — the claim is that the obligation genuinely
-  cannot be observed — and hand the row over **with that PASS recorded**. P1b's
-  gatekeeper judges branch 1 only and `/qfai-implement`'s exception path writes
-  `todo -> exception` and stops, so without this a correct branch-3 row reached
-  a terminal status judged by nobody. `/qfai-implement` is the only writer of
-  `Status` / `DR-ID` / `Evidence`, so every branch needs a handoff; which goes
-  when: `references/red-provenance.md#which-stage-hands-a-row-over`.
+- P1a: **`Phase: Skeleton` is discharged before any RED is taken.** Invoke `/qfai-implement` for that phase alone, for **every in-scope entrypoint**, and record each run in `.qfai/evidence/skeleton.md`. **Enumerating zero entrypoints is an answer, not a skip**: a library or an Integration-only spec set still invokes the phase once, so the phase itself writes the `not applicable` verdict
+  its `## (no entrypoint)` record requires. Left to an empty loop, that record is never written and this item passes with nothing behind it. Not only when the program fails to start: the phase itself decides between a first run, a re-run of a recorded pass, and `not applicable`, and an entrypoint the evidence file has no section for is unproven for this invocation whatever the program
+  does today (`../qfai-implement/references/walking-skeleton.md#evidence`). Here, not "before P5": P1c takes the first RED before P2-P4 build anything, and against a system that cannot start that RED is a collection error, which is a missing seam and not a RED (`references/red-provenance.md#a-project-whose-program-does-not-start-yet`).
+- P1b: **A branch is chosen for every row this stage owns**, provisional until its handoff. The ATDD-owned set is the one `## Execution Ledger: the rows this skill feeds` defines, so an `Integration` row whose `TC-Refs` name only `L1` / `L2` TCs gets no branch and no handoff here: this stage may not write its test, and requiring either of a row `/qfai-implement` owns left this gate
+  unpassable.
+- P1c: **A branch 1 row is discharged in that loop** — write the test, take the RED, `qa-gatekeeper` PASS, hand it to `/qfai-implement`, GREEN, checkpoint — before the next branch-1 row's failing test is written, and before P2-P4 build any surface. One loop per `TDD-ID`; the nested run is an item cycle, not a completion gate (`references/red-provenance.md#what-the-nested-run-owes`).
+- P1d: **Branch 3 rows are judged here, then handed over.** Route `qa-gatekeeper` on the `DR-*` — the claim is that the obligation genuinely cannot be observed — and hand the row over **with that PASS recorded**. P1b's gatekeeper judges branch 1 only and `/qfai-implement`'s exception path writes `todo -> exception` and stops, so without this a correct branch-3 row reached a terminal
+  status judged by nobody. `/qfai-implement` is the only writer of `Status` / `DR-ID` / `Evidence`, so every branch needs a handoff; which goes when: `references/red-provenance.md#which-stage-hands-a-row-over`.
 - P2: E2E implementation completed.
 - P3: API implementation completed.
 - P4: Integration implementation completed.
-- P4b: **Branch 2 rows are handed over**, after P4 and before P6 — their mutation
-  needs the surface P2-P4 build, the trio is the row's RED payload, and that nested
-  run is an item cycle like P1c's (`references/red-provenance.md#what-the-nested-run-owes`).
+- P4b: **Branch 2 rows are handed over**, after P4 and before P6 — their mutation needs the surface P2-P4 build, the trio is the row's RED payload, and that nested run is an item cycle like P1c's (`references/red-provenance.md#what-the-nested-run-owes`).
 - P5: Validation gate passed.
 - P6: Runtime evidence captured.
 - P7: Repo quality gates passed.
@@ -455,9 +684,7 @@ Before declaring completion:
    npx qfai validate --profile atdd --fail-on error --spec <spec-id>
    ```
 
-   `--spec` scopes the gate to the spec this invocation owns. Omitting it makes
-   the gate report obligations belonging to specs this run never touched, which
-   is how a spec with every obligation discharged still fails to close.
+   `--spec` scopes the gate to the spec this invocation owns. Omitting it makes the gate report obligations belonging to specs this run never touched, which is how a spec with every obligation discharged still fails to close.
 
 3. Run repository standard gates:
    - format check
@@ -478,9 +705,7 @@ If commands cannot be run due to environment limits, request user execution and 
 
 ## DONE Declaration (Mandatory Output)
 
-Include the referenced inputs (instructions/steering and spec delta), the DR-IDs
-referenced (or "none"), and confirmation that no rejected options were
-reintroduced (or the RE-OPEN DR-IDs).
+Include the referenced inputs (instructions/steering and spec delta), the DR-IDs referenced (or "none"), and confirmation that no rejected options were reintroduced (or the RE-OPEN DR-IDs).
 
 ## FINAL CHECKLIST (Check Last)
 
@@ -502,10 +727,8 @@ reintroduced (or the RE-OPEN DR-IDs).
 
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
-- Proceed (recommended): `/qfai-implement`.
-  Action: run unified TDD micro-cycle (Red/Green/Refactor) one test at a time from test-list.md.
-- Acceptance tests need fixes: rerun `/qfai-atdd`.
-  Action: close uncovered `US` / `TC` / `CON-API` / `CON-DB` obligations and rerun validation.
+- Proceed (recommended): `/qfai-implement`. Action: run unified TDD micro-cycle (Red/Green/Refactor) one test at a time from test-list.md.
+- Acceptance tests need fixes: rerun `/qfai-atdd`. Action: close uncovered `US` / `TC` / `CON-API` / `CON-DB` obligations and rerun validation.
 
 ## Default Autopilot Policy
 
@@ -525,16 +748,25 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - brand intent
   - `primarySpecId` (when absent from inputs)
 
-A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
-MAY instantiate a category entry — `approval-required governance operations` — with the
-operations its own run cannot authorize for itself. `hard-required` also takes the
-undefaultable inputs this skill itself consumes, declared per skill and checked against
-that declaration; the bucket is what a run cannot proceed without, and no prototype can
-enumerate that for a skill it does not know. Otherwise a skill MUST NOT introduce an
-entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
+A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry — `approval-required governance operations` — with the operations its own run cannot authorize for itself. `hard-required` also takes the undefaultable inputs this skill itself consumes, declared per skill and checked against that declaration; the bucket is what a run
+cannot proceed without, and no prototype can enumerate that for a skill it does not know. Otherwise a skill MUST NOT introduce an entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 project_memory:
 
-- Coverage obligations stay layer-pinned for US, CON-API and CON-DB: tests/e2e/\*\* must cover all required US; tests/api/\*\* all required CON-API; tests/integration/\*\* all required CON-DB (QFAI-ATDD-115 — defer an out-of-slice contract **this spec owns** with `-- x-qfai-status: planned` on a line of its own, never appended after a statement, and never leave it uncovered; a sibling spec's uncovered contract is recorded as a cross-spec obligation and its file left alone, because marking it defers that spec's test and hides a real gap). "Required" narrows differently per ID kind — US by surface type (a project-wide opt-in: active only once some spec declares a user-facing surface, project-wide before that), TC by declared Level, CON-API by active-vs-deferred, counted per declared QFAI-CONTRACT-ID (one per file) and never per OpenAPI operation (x-qfai-status: planned defers that whole contract file, as a top-level key or as a column-0 comment; under an operation it is ignored). Resolving the US opt-in needs qfai.config.yaml (paths.specsDir / paths.contractsDir first, then prototyping.primarySpecId), every ui contract path relative to <contractsDir>/ui/ — not just the basename, since a spec-<spec-id>/ ancestor directory is itself the match — and every sibling 01_Spec.md frontmatter or legacy "# … prototyping …" heading, read before the Volume Estimate. Each TC whose Level routes to an ATDD home is covered from the directory that Level routes to (L3/Integration -> tests/integration/\*\*, L4/API -> tests/api/\*\*, L5/E2E -> tests/e2e/\*\*; everything else that is not Unit/Component — no declared Level, an unreadable spelling, and system / acceptance -> tests/integration/\*\*). L1/Unit and L2/Component owe no ATDD annotation — tdd/test-list.md covers them. An existing one in tests/integration/\*\* is neither counted nor flagged, so do not require adding or removing it.
-- Forbidden references guard the test-layer policy: a TC annotation outside its declared home is rejected — tests/api/** must not carry QFAI:SPEC-XXXX:TC-YYYY unless that TC declares L4/API, and tests/e2e/** likewise unless it declares L5/E2E.
+- `tests/e2e/**` must cover all required US; `tests/api/**` all active CON-API; `tests/integration/**` all active CON-DB. Surface narrowing never defers a contract ID.
+- L1/Unit and L2/Component owe no ATDD annotation; `tdd/test-list.md` covers them. Existing Integration annotations for them are neither counted nor flagged, so do not require adding or removing one.
+- A TC declared L3/Integration is covered from `tests/integration/**`.
+- A TC declared L4/API is covered from `tests/api/**`; one declared L5/E2E is covered from `tests/e2e/**`.
+- Every other non-Unit/Component TC Level — blank, unreadable, and system / acceptance — routes to `tests/integration/**`.
+- CON-API coverage is counted per declared QFAI-CONTRACT-ID, one per file, never per OpenAPI operation.
+- API `x-qfai-status: planned` defers the whole contract file, never an operation. Read its top-level key or, when absent or unreadable, an unindented column-0 comment. An operation-level marker is ignored.
+- A CON-DB planned marker is a standalone SQL comment, `-- x-qfai-status: planned`; leading whitespace is allowed, trailing SQL is not. It defers the whole file.
+- Only an out-of-slice CON-DB owned by the current spec may receive that marker; in-slice coverage remains required.
+- A sibling's uncovered contract is recorded as a cross-spec obligation, never marked planned by this spec's run.
+- US surface narrowing is a project-wide, all-or-nothing opt-in. With no declared user-facing surface it is off and every non-planned US remains required; after opt-in, a spec without one owes no E2E reference.
+- A US with `- x-qfai-status: planned` in its own story block is deferred, not covered by an annotation-only test. Read US status independently of the surface opt-in.
+- Resolve surface scope before the Volume Estimate: read `qfai.config.yaml` paths.specsDir / paths.contractsDir and prototyping.primarySpecId, every UI contract's relative path, and every sibling `01_Spec.md` frontmatter or legacy prototyping heading.
+- UI contract matches are `<spec-id>.yaml`, `spec-<spec-id>.yaml`, `ui-<spec-id>.yaml`, `ui-<spec-id>-<slug>.yaml`, or any `*.yaml` below a `spec-<spec-id>/` directory at any depth. A basename merely containing the id and every `.yml` file are not matches.
+- A matching UI contract, `surface_type: ui-bearing`, a legacy prototyping heading or the pinned primary spec is sufficient. On resolution failure, read stderr and keep US coverage project-wide.
+- Forbidden references guard the test-layer policy: a TC annotation outside its declared home is rejected — `tests/api/**` must not carry QFAI:SPEC-XXXX:TC-YYYY unless that TC declares L4/API, and `tests/e2e/**` likewise unless it declares L5/E2E.
 - Floor / ratio signals are planning hints, never gates; legacy scenario.feature / coverage ledger files remain optional inputs.
