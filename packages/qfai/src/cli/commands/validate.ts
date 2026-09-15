@@ -1677,7 +1677,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-BRREF-003":
     "A declared `BR-Ref` is the key the row's own `TC-Refs` derive: `TC` -> `EX-Ref` -> `05_Examples.md`'s `BR-Ref` (`AC-Refs` only for a TC with no `EX-Ref`), lowest of the union.",
   "QFAI-DENSITY-005":
-    "A `Rule` cell at least 400 chars AND at least 3x the mean of the other `BR` rows in the same file is a granularity signal (warning). Files with fewer than 3 `BR-ID`/`Rule` rows are not checked.",
+    "A `Rule` cell at least 400 chars AND at least 3x the mean of the other `BR` rows in the same file is a size signal (warning): the cell may carry more than its rule. Files with fewer than 3 `BR-ID`/`Rule` rows are not checked.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
   "QFAI-COV-202": "Every BR must be referenced by at least one EX (`BR-Ref`).",
   "QFAI-COV-203": "Every EX must be referenced by at least one TC (`EX-Ref`).",
@@ -1728,7 +1728,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-ATDD-133":
     "`## Coverage Depth Matrix` in `.qfai/evidence/atdd-<spec-id>.md` exists and is a link plus counted totals.",
   "QFAI-ATDD-134":
-    "The glob matcher accepts every pattern in `validation.traceability.testFileGlobs`.",
+    "The ATDD scan reads every test its globs select: the glob matcher accepts every pattern, every directory the patterns reach is readable, and the selection fits under the file limit.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-BFLOW-005":
