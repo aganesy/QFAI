@@ -17,6 +17,9 @@ describe("braceRangeMembers", () => {
     ["-01..2", ["-01", "000", "001", "002"]],
     ["1..10..3", ["1", "4", "7", "10"]],
     ["1..3..", ["1", "2", "3"]],
+    // Measured against the expander: `1e3` is a thousand and `1.0` is one.
+    ["1e3..1e3", ["1000"]],
+    ["1.0..3", ["1", "2", "3"]],
     ["a..e..2", ["a", "c", "e"]],
   ])("expands %s", (body, members) => {
     expect(braceRangeMembers(body)).toEqual(members);
@@ -30,7 +33,7 @@ describe("braceRangeMembers", () => {
     expect(braceRangeMembers("01..+3")).toEqual(["01", "02", "03"]);
   });
 
-  it.each(["a", "1..", "..3", "a..zz", "1.5..3", "1..3..x"])("reads %s as no range", (body) => {
+  it.each(["a", "1..", "..3", "a..zz", "0x10..0x10", "1..3..x"])("reads %s as no range", (body) => {
     expect(braceRangeMembers(body)).toBeNull();
   });
 

@@ -420,6 +420,16 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     expect(requireDialect(["tests/**/TC-0000-0000@(*).ts"]).id).toBe("js-ts");
   });
 
+  it("expands a range whose member carries a separator", () => {
+    // `{/../}` writes out to `/`, which moves the boundary the segments either
+    // side are read against, so the pattern names a directory deeper.
+    expect(
+      resolveScaffoldDialect(["tests{/../}**/TC-0000-0000.test.ts"], {
+        scaffoldDir: "tests/integration/spec-0001",
+      }).outcome,
+    ).toBe("resolved");
+  });
+
   it("expands a range inside a bracket expression", () => {
     // fast-glob writes the brace out first, so this is three classes and none
     // of them admits `9`. Left as text, `0-{` was a range over every digit.

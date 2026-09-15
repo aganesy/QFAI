@@ -37,7 +37,9 @@ export function braceRangeMembers(body: string): readonly string[] | null {
   const [from = "", to = "", increment = ""] = parts;
   if (!/^[+-]?\d*$/.test(increment)) return null;
   const step = Math.max(1, Math.abs(Number(increment)));
-  const integer = /^[+-]?\d+$/;
+  // The forms the expander reads as numbers, measured: `1e3` expands as 1000
+  // and `1.0` as 1, while `0x10` expands as nothing at all.
+  const integer = /^[+-]?(?:\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)$/;
   if (integer.test(from) && integer.test(to)) {
     return numericRangeMembers(from, to, increment, step);
   }
