@@ -142,7 +142,20 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
             .join("")
             .split("\n")
             .find((entry) => /(?:would update|updated): .*AGENTS[.]md \(/.test(entry));
-          expect(line).toContain("(agent instructions");
+          // What the run says it did is what it did. A file already carrying
+          // every citation and lacking only the directive is a directive
+          // update, and reporting it as a citation update told an operator
+          // whose rewrite was refused to add citations already there.
+          if (pointerOnly) {
+            expect(line).toContain("the review directive");
+            expect(line).not.toContain("rule masters");
+          } else if (handWired) {
+            // Rules cited by hand, with no managed section to describe a
+            // change to: the whole file is reported as the instructions it is.
+            expect(line).toContain("(agent instructions");
+          } else {
+            expect(line).toContain("the newly shipped rule masters");
+          }
           expect(line).not.toContain("review policy and rule citations");
           const after = await readEntryPoint(root, "AGENTS.md");
           if (dryRun) expect(after).toBe(before);

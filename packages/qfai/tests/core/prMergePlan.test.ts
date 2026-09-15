@@ -263,6 +263,30 @@ describe("run-pr-merge plan", () => {
       `encoded placeholder ${source}`,
       `## What this change made unnecessary\n\n${source}\n`,
     ]),
+    ...[
+      // A container opened inside a list item: the line-leading pass reads only
+      // the quote markers standing before the list marker, so the fence behind
+      // one was never seen as an opener and the prose inside it read as an
+      // authored answer.
+      ["list then quote", "- > ~~~md\n  > Nothing removed.\n  > ~~~\n"],
+      ["quote then list", "> - ~~~md\n>   Nothing removed.\n>   ~~~\n"],
+    ].map(([name, source]) => [
+      `interleaved container fence ${name}`,
+      `## What this change made unnecessary\n\n${source}`,
+    ]),
+    [
+      // A linked image shows no prose. The flat link pattern cannot read a
+      // label whose brackets nest, so the destination stayed visible and
+      // satisfied the check on its own.
+      "image-only linked answer",
+      "## What this change made unnecessary\n\n[![Nothing](/image.png)](/target)\n",
+    ],
+    ...["~~TODO~~", "### TODO", "> TBD", "~~N/A~~"].map((source) => [
+      // Emphasis, strikethrough and a leading marker are formatting, not text,
+      // so what renders is the placeholder alone.
+      `formatted placeholder ${source}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
     ...["- - ", "1. - ", "- 2. "].flatMap((prefix) =>
       ["```", "~~~"].map((fence) => [
         `nested list fence ${prefix}${fence}`,

@@ -3434,17 +3434,19 @@ async function ensureAgentEntryPointRules(
       reportWithheldSummaries(target, refreshed.withheld);
       // The review directive goes in beside the citations; the project's own
       // text and the bullets it deleted are left as they are.
-      const merged = addReviewPointer(
-        addRuleCitations(refreshed.text, section, newlyWritten),
-        template,
-      );
+      const cited = addRuleCitations(refreshed.text, section, newlyWritten);
+      const merged = addReviewPointer(cited, template);
       if (merged === existing) {
         skipped.push(target);
         continue;
       }
       const shown = new Set(citedRuleMastersOutsideCode(existing));
+      // Read from the citation step alone. Compared against the text the
+      // pointer was added to as well, a run that only added the pointer
+      // reported citing masters it had not cited, and told an operator whose
+      // rewrite was refused to add citations that were already there.
       const update = {
-        ...describeRuleListUpdate(merged !== refreshed.text, refreshed.refreshed),
+        ...describeRuleListUpdate(cited !== refreshed.text, merged !== cited, refreshed.refreshed),
         pending: newlyWritten.filter((master) => !shown.has(master)),
       };
       if (await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun)) {
@@ -3615,7 +3617,7 @@ async function updateCopilotRuleList(
     return;
   }
   const update = {
-    ...describeRuleListUpdate(merged !== refreshed.text, refreshed.refreshed),
+    ...describeRuleListUpdate(merged !== refreshed.text, false, refreshed.refreshed),
     pending: uncited,
   };
   if (await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun)) {
@@ -3681,7 +3683,11 @@ type RuleListUpdate = {
  * The report names every edit the write makes, so the "nothing else changed" it
  * closes with stays true.
  */
-function describeRuleListUpdate(cited: boolean, refreshed: readonly string[]): RuleListUpdate {
+function describeRuleListUpdate(
+  cited: boolean,
+  pointed: boolean,
+  refreshed: readonly string[],
+): RuleListUpdate {
   const planned: string[] = [];
   const done: string[] = [];
   const byHand: string[] = [];
@@ -3689,6 +3695,11 @@ function describeRuleListUpdate(cited: boolean, refreshed: readonly string[]): R
     planned.push("cite the newly shipped rule masters");
     done.push("cited the newly shipped rule masters");
     byHand.push("add the rule citations");
+  }
+  if (pointed) {
+    planned.push("add the review directive");
+    done.push("added the review directive");
+    byHand.push("add the review directive");
   }
   if (refreshed.length > 0) {
     const summaries = `${refreshed.length === 1 ? "summary" : "summaries"} of ${quoteList(refreshed)}`;

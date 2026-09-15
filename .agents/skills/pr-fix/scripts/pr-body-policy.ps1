@@ -124,6 +124,11 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
   for ($pass = 0; $pass -lt 2; $pass += 1) {
     $referenceEnd = 0
     $linkStart = 0
+    # The destination of a link whose label holds another one. Kept apart
+    # from the pair above because the scan walks into that label and the
+    # inner link overwrites them, which would drop the outer destination.
+    $labelLinkStart = 0
+    $labelLinkEnd = 0
     $linkEnd = 0
     $fence = ""
     $fenceContentColumn = 0
@@ -207,7 +212,25 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
         $paragraph = $false
         $paragraphStart = -1
       }
+      # A container opened inside a list item is stripped here, not by the
+      # line-leading pass above: that pass reads quote markers standing before
+      # the list marker, so a fence behind one was never seen as an opener.
+      # List markers and quote markers alternate freely, so both are consumed
+      # in one loop until neither matches.
       while (-not $insideHtml -and -not $inComment -and $offset -ge $spanEnd -and $offset -ge $linkEnd -and $htmlAllowed -and $listContentColumns.Count -gt 0) {
+        $quoted = [regex]::Match($htmlLine, '^ {0,3}(?:> ?)+')
+        if ($quoted.Success) {
+          $container += ($quoted.Value -replace '[^>]', '')
+          # Zero, not an addition: the line-leading pass strips each later
+          # line's own quote prefix, so its content is measured from after the
+          # marker, and a column counting the marker would read that content as
+          # dedented out of the block it is inside.
+          $listContentColumns.Push(0)
+          $htmlLine = $htmlLine.Substring($quoted.Length)
+          $paragraph = $false
+          $paragraphStart = -1
+          continue
+        }
         $nested = [regex]::Match($htmlLine, '^ {0,3}([-*+]|\d{1,9}[.)])([ \t]{1,4})(?![ \t])')
         if (-not $nested.Success) { break }
         $nestedColumn = & $columnAfter $nested.Value
@@ -275,11 +298,16 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
         continue
       }
       $visible = $line
-      $hasInlineLink = $offset -lt $linkEnd
+      $hasInlineLink = $offset -lt [Math]::Max($linkEnd, $labelLinkEnd)
       $position = 0
       while ($position -lt $line.Length) {
-        if ($offset + $position -ge $linkStart -and $offset + $position -lt $linkEnd) {
-          $next = [Math]::Min($line.Length, $linkEnd - $offset)
+        $inLink = $offset + $position -ge $linkStart -and $offset + $position -lt $linkEnd
+        $inLabelLink = $offset + $position -ge $labelLinkStart -and $offset + $position -lt $labelLinkEnd
+        if ($inLink -or $inLabelLink) {
+          $reach = 0
+          if ($inLink) { $reach = $linkEnd }
+          if ($inLabelLink -and $labelLinkEnd -gt $reach) { $reach = $labelLinkEnd }
+          $next = [Math]::Min($line.Length, $reach - $offset)
           $visible = $visible.Remove($position, $next - $position).Insert($position, (' ' * ($next - $position)))
           $position = $next
           continue
@@ -297,6 +325,7 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
             $imageEscapes = 0
             for ($before = $position - 2; $before -ge 0 -and $line[$before] -eq '\'; $before -= 1) { $imageEscapes += 1 }
             $image = $position -gt 0 -and $line[$position - 1] -eq '!' -and $imageEscapes % 2 -eq 0
+            $flatLink = $false
             if ($image -and $escapes % 2 -eq 0 -and $imageLabelEnds.ContainsKey($start)) {
               $close = $imageLabelEnds[$start]
               $suffix = $imageSuffix.Match($Body, $close)
@@ -324,7 +353,32 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
                 continue
               }
             }
-            if ($escapes % 2 -eq 0 -and $inline.Success -and -not (& $crossesTable $start ($start + $inline.Length))) {
+            # A link whose label holds an image is one the flat pattern cannot
+            # read: its brackets nest. Read the label off the balanced map the
+            # scan already builds, so the destination is masked rather than
+            # left standing as the only text an image-only answer shows.
+            if (-not $image -and $escapes % 2 -eq 0 -and $imageLabelEnds.ContainsKey($start)) {
+              $close = $imageLabelEnds[$start]
+              $suffix = $imageSuffix.Match($Body, $close)
+              if ($suffix.Success -and -not (& $crossesTable $start ($close + $suffix.Length))) {
+                $target = $suffix.Groups['destination']
+                $length = & $destinationLength $target.Value $true
+                if ($length -ge 0 -and $length -lt $target.Length) {
+                  $complete = $suffix.Value.Substring(0, $target.Index - $suffix.Index + $length + 1)
+                  $suffix = $imageSuffix.Match($complete)
+                }
+                if ($length -ge 0 -and $suffix.Success -and (& $destinationLength $suffix.Groups['destination'].Value) -ge 0) {
+                  $visible = $visible.Remove($position, 1).Insert($position, ' ')
+                  # The label itself stays scanned: an image inside it is
+                  # masked by its own branch, and prose inside it is visible.
+                  $labelLinkStart = $close
+                  $labelLinkEnd = $close + $suffix.Length
+                  $hasInlineLink = $true
+                  $flatLink = $true
+                }
+              }
+            }
+            if (-not $flatLink -and $escapes % 2 -eq 0 -and $inline.Success -and -not (& $crossesTable $start ($start + $inline.Length))) {
               $target = $inline.Groups['destination']
               $length = & $destinationLength $target.Value $true
               if ($length -ge 0 -and $length -lt $target.Length) {
@@ -336,6 +390,7 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
                 $linkStart = if ($image) { $start } else { $start + 1 + $inline.Groups['text'].Length }
                 $linkEnd = $start + $inline.Length
                 $hasInlineLink = $true
+                $flatLink = $true
                 if ($image) { continue }
               }
             }
@@ -443,7 +498,10 @@ function RemovalAnswer([string]$Body) {
     if ($namedEntities.ContainsKey($entity)) { return [string]$namedEntities[$entity] }
     return ' '
   })
-  $meaningful = [regex]::Replace($meaningful, '[`*_]', '').Trim()
+  # Emphasis, strikethrough and a leading heading marker render as formatting,
+  # not as text, so a placeholder wearing one still reads as the placeholder.
+  $meaningful = [regex]::Replace($meaningful, '[`*_]|~~', '').Trim()
+  $meaningful = [regex]::Replace($meaningful, '^(?:#{1,6}[ 	]+|>[ 	]*)+', '').Trim()
   if ($meaningful -notmatch '[\p{L}\p{N}]' -or $meaningful -match '^(?:TBD|TODO|FIXME|HACK)(?:[^\p{L}\p{N}]|$)' -or $meaningful -match '^(?:TBD|TODO|FIXME|HACK|None|N/?A|Not applicable|\[.*\])\.?$') { return "" }
   return [regex]::Replace($raw.Substring($answer.Index, $answer.Length).TrimEnd(), '\A(?:[ \t]*\n)*', '')
 }

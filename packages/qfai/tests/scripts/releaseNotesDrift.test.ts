@@ -628,6 +628,18 @@ describe("resuming a release pull-request description", () => {
       `## What this change made unnecessary\n\n${source}\n`,
     ]),
     ...[
+      // A container opened inside a list item, a linked image showing no prose,
+      // and placeholders wearing formatting: each renders as no authored answer
+      // while the text the reader measured said otherwise.
+      "- > ~~~md\n  > Nothing removed.\n  > ~~~",
+      "> - ~~~md\n>   Nothing removed.\n>   ~~~",
+      "[![Nothing](/image.png)](/target)",
+      "~~TODO~~",
+    ].map((source) => [
+      `hidden or formatted answer ${JSON.stringify(source)}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...[
       "[^1]: Hidden\nNothing removed.\n",
       "[^1]: Hidden\n    Nothing removed.\n",
       "[^1]: Hidden\n\n    Nothing removed.\n",
