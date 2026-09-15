@@ -419,6 +419,24 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     expect(requireDialect(["tests/**/TC-0000-0000@(*).ts"]).id).toBe("js-ts");
   });
 
+  it("derives an extension a range spells inside a list", () => {
+    // `{{p..p}y,rb}` is a list of `py` and `rb` once the range is written out,
+    // and the list is unreadable before that.
+    expect(requireDialect(["tests/**/*.{{p..p}y,rb}"]).id).toBe("python");
+  });
+
+  it("derives the extension past a range the scan refuses", () => {
+    // Read as the whole pattern, the refused range stopped the group that
+    // spells the extension from being expanded at all, and the run fell back to
+    // its JavaScript default on a Python project. The pattern still selects
+    // nothing, which the whole-path resolution says.
+    const globs = ["tests/{0000..9999}/**/*.{p..p}y"];
+    expect(requireDialect(globs).id).toBe("python");
+    expect(
+      resolveScaffoldDialect(globs, { scaffoldDir: "tests/integration/spec-0001" }).outcome,
+    ).toBe("naming-mismatch");
+  });
+
   it("derives the extension a range spells behind a list", () => {
     // A directory list can stand ahead of the range, and reading only the first
     // group left the extension unread and the run on its JavaScript default.

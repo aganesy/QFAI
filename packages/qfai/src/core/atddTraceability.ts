@@ -2493,9 +2493,10 @@ function withRangesExpanded(glob: string): string[] {
  * ahead of a range in the extension, as `tests/{unit,integration}/**\/*.{p..p}y`
  * does, and stopping at the list left the extension unread.
  *
- * A range fast-glob refuses is left as it stands. The pattern then selects
- * nothing, and whoever compiles it says so; dropping it here would leave a
- * configured project looking like one that configured no glob at all.
+ * A range fast-glob refuses is left as it stands, and the groups after it are
+ * read all the same. The pattern then selects nothing, and whoever compiles it
+ * says so; dropping it here would leave a configured project looking like one
+ * that configured no glob at all.
  */
 function firstRangeWrittenOut(candidate: string): string[] | null {
   for (let open = candidate.indexOf("{"); open !== -1; open = candidate.indexOf("{", open + 1)) {
@@ -2505,8 +2506,11 @@ function firstRangeWrittenOut(candidate: string): string[] | null {
     try {
       members = braceRangeMembers(candidate.slice(open + 1, close));
     } catch (error) {
+      // A range fast-glob refuses stays as it stands, and the groups after it
+      // are still read: the pattern selects nothing either way, and the one
+      // that spells the extension is what the stage needs from it.
       if (!(error instanceof BraceRangeRefused)) throw error;
-      return null;
+      continue;
     }
     if (members === null) continue;
     return members
@@ -2526,19 +2530,21 @@ export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<
     // to what the stage scans. `!(` opens a negated extglob instead, which
     // selects: `!(fixtures)/**/*.py` is a Python selector, as fast-glob reads it.
     if (isGlobExclusion(glob)) continue;
-    for (const match of glob.matchAll(/\.\{([^}]+)\}$/g)) {
-      for (const ext of (match[1] ?? "").split(",")) {
-        // A member is copied into the generated scan pattern whole, wildcards
-        // included, since the matcher reads `test-*.js` there as it does here.
-        // One the matcher cannot use is left out: a NUL byte copied in made the
-        // scan throw before any finding was reported.
-        const trimmed = ext.trim();
-        if (trimmed.length > 0 && unusableGlobReason(trimmed) === null) extensions.add(trimmed);
-      }
-    }
-    // Read off the pattern fast-glob matches with, which is the pattern with its
-    // ranges written out.
+    // Read off the patterns fast-glob matches with, which are the pattern with
+    // its ranges written out. Both shapes are read from each of them: a range
+    // inside a list — `*.{{p..p}y,rb}` — is a list only once the range is
+    // written out, and the list pattern cannot parse it before that.
     for (const candidate of withRangesExpanded(glob)) {
+      for (const match of candidate.matchAll(/\.\{([^}]+)\}$/g)) {
+        for (const ext of (match[1] ?? "").split(",")) {
+          // A member is copied into the generated scan pattern whole, wildcards
+          // included, since the matcher reads `test-*.js` there as it does here.
+          // One the matcher cannot use is left out: a NUL byte copied in made the
+          // scan throw before any finding was reported.
+          const trimmed = ext.trim();
+          if (trimmed.length > 0 && unusableGlobReason(trimmed) === null) extensions.add(trimmed);
+        }
+      }
       const single = /\.([A-Za-z0-9]+)$/.exec(candidate);
       if (single?.[1]) {
         extensions.add(single[1]);
