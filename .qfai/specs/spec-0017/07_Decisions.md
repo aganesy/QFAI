@@ -352,7 +352,7 @@ file, so an entry here is what makes that citation checkable.
     time was spent waiting rather than working. Summed test time falls to a third while the same
     11 338 cases run with the same outcomes. On the wall clock ten is 21.5% slower, outside the ten
     percent `EX-0017-0049` allows — where the fourteen-core comparison in
-    `.qfai/evidence/timing-workers-spec-0017.md` put it at 3.48%, inside it. An independent pair on
+    `.qfai/evidence/timing-workers-spec-0017.md` puts it at 6.01%, inside it. An independent pair on
     the same core count gave 299 s and 269 s, an 11.2% spread and the same verdict. The sign of that
     verdict flipping on the core count is the fact this entry rests on.
 - Decision, what was NOT done: the declared value was not revised. `BR-0017-0051` reserves that

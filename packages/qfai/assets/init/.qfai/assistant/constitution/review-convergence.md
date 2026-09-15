@@ -120,6 +120,27 @@ which owns the delegation rules these sit beside.
   the escalation exit in the round budget withholds _Accept as Open Question_
   for this same class, so a user choice cannot supersede it either.
 
+### Answered demands (MUST)
+
+A demand already answered MUST NOT be re-raised under another wording. Close a
+repeat by citing its recorded answer. This bounds what a reviewer may require,
+not what a reviewer may report.
+
+A demand is answered only after the authoritative reviewer accepts the fix or a
+reasoned decline, or the user adjudicates it. Record that disposition and its
+evidence in the existing Response and Evidence cells. A producer's reply alone
+does not close a demand. An unresolved blocking demand remains REVISE when
+repeated; cite its prior finding and unresolved disposition instead of requiring
+new work under another wording.
+
+Carry prior answers forward, alongside newly answered demands, into the next
+cycle's `review_request.md` before dispatching reviewers. Each entry names the
+original finding source, demand, response and evidence supporting the response.
+When there are no answered demands, write `None`.
+
+A report of a new defect or evidence that an answer no longer applies must
+state what changed. The existing severity floor and escalation rules still apply.
+
 ### Discussion review precision
 
 A discussion review judges what the planning stage decides, not implementation
