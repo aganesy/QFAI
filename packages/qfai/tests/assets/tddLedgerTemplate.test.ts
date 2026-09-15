@@ -268,7 +268,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(checklists).toContain("Seed each row's `Tier` alongside its `Layer`");
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
-      expect(skill).toContain("**Seed `Tier` with the\n   row**");
+      expect(unwrap(skill)).toContain("**Seed `Tier` with the row**");
     });
 
     it(`${tree}: the ledger FORMAT SSOT carries Tier so Phase 2b cannot drop it`, async () => {
@@ -828,8 +828,8 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(preconditions).toContain("**one `Layer = Integration` row per integration-level TC**");
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
-      expect(skill).toContain(
-        "**one `Layer = Integration` row per integration-level TC** from the same file\n   (every `Level` whose ATDD annotation routes to",
+      expect(unwrap(skill)).toContain(
+        "**one `Layer = Integration` row per integration-level TC** from the same file (every `Level` whose ATDD annotation routes to",
       );
 
       const checklists = await read(
@@ -1156,9 +1156,10 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         // not know the row was its work, and Phase Red step 3b found no handoff.
         ["assistant/skills/qfai-atdd/SKILL.md", "and `system` / `acceptance`"],
       ] as const) {
-        expect(await read(tree, file), `${file} does not route system / acceptance`).toContain(
-          needle,
-        );
+        expect(
+          unwrap(await read(tree, file)),
+          `${file} does not route system / acceptance`,
+        ).toContain(unwrap(needle));
       }
     });
 
@@ -1311,7 +1312,9 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(template).toContain("Reseeding is a **delta**, never a regeneration");
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
-      expect(skill).toContain("**Seeding is a delta,\n   not a regeneration, in both directions**");
+      expect(unwrap(skill)).toContain(
+        "**Seeding is a delta, not a regeneration, in both directions**",
+      );
 
       const checklists = await read(
         tree,

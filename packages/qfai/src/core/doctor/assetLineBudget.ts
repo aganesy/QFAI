@@ -88,7 +88,7 @@ export const LINE_BUDGET_EXEMPT: ReadonlyMap<string, string> = new Map([
 /**
  * Per-file width ceilings for the tree as it stands, which may only shrink.
  *
- * Twenty files carry a line wider than {@link ASSISTANT_ASSET_MAX_LINE_CHARS}.
+ * Remaining files carry a line wider than {@link ASSISTANT_ASSET_MAX_LINE_CHARS}.
  * Reflowing them is a separate pass — it rewrites prose across the highest-churn
  * files in the tree — and holding the rule back until then would leave the
  * evasion open in the meantime, which is the state this rule exists to end.
@@ -122,22 +122,17 @@ export const LINE_BUDGET_EXEMPT: ReadonlyMap<string, string> = new Map([
 export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
   ["assistant/catalog/test-layers.md", 921],
   ["assistant/constitution/references/audited-evidence-hash.md", 1406],
-  ["assistant/constitution/shared-skill-delegation-baseline.md", 692],
-  ["assistant/constitution/shared-skill-operating-baseline.md", 581],
-  ["assistant/skills/qfai-atdd/SKILL.md", 1897],
   ["assistant/skills/qfai-atdd/references/red-provenance.md", 460],
   ["assistant/skills/qfai-configure/SKILL.md", 2267],
-  ["assistant/skills/qfai-discussion/SKILL.md", 490],
   ["assistant/skills/qfai-discussion/templates/01_Context.md", 405],
   ["assistant/skills/qfai-implement/SKILL.md", 9104],
   ["assistant/skills/qfai-implement/references/cross-spec-ownership.md", 616],
   ["assistant/skills/qfai-prototyping/SKILL.md", 541],
-  ["assistant/skills/qfai-sdd/SKILL.md", 2460],
   ["assistant/skills/qfai-sdd/references/design-md-brand-catalog.md", 533],
   ["assistant/skills/qfai-sdd/references/sdd-phase-checklists.md", 3763],
   ["assistant/skills/qfai-sdd/references/spec-traceability-rules.md", 790],
   ["assistant/skills/qfai-sdd/templates/report/preflight_summary.md", 425],
-  ["assistant/skills/qfai-verify/SKILL.md", 950],
+  ["assistant/skills/qfai-verify/SKILL.md", 899],
   ["assistant/skills/qfai-verify/references/articles.md", 413],
   ["assistant/skills/qfai-verify/references/verify-output-contract.md", 840],
 ]);
@@ -155,17 +150,12 @@ export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
 export const WIDTH_BACKLOG_PATHS: readonly string[] = [
   "assistant/catalog/test-layers.md",
   "assistant/constitution/references/audited-evidence-hash.md",
-  "assistant/constitution/shared-skill-delegation-baseline.md",
-  "assistant/constitution/shared-skill-operating-baseline.md",
-  "assistant/skills/qfai-atdd/SKILL.md",
   "assistant/skills/qfai-atdd/references/red-provenance.md",
   "assistant/skills/qfai-configure/SKILL.md",
-  "assistant/skills/qfai-discussion/SKILL.md",
   "assistant/skills/qfai-discussion/templates/01_Context.md",
   "assistant/skills/qfai-implement/SKILL.md",
   "assistant/skills/qfai-implement/references/cross-spec-ownership.md",
   "assistant/skills/qfai-prototyping/SKILL.md",
-  "assistant/skills/qfai-sdd/SKILL.md",
   "assistant/skills/qfai-sdd/references/design-md-brand-catalog.md",
   "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
   "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",

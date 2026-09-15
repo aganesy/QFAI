@@ -36,12 +36,17 @@ describe("a grilling session between agents has an end", () => {
       // another round instead.
       const content = await read(path.join(tree, CONVERGENCE));
       expectPhrase(content, "**Two rounds**, the same budget a reviewer has.");
-      // Every decision still open, not "the round settled nothing". Partial
-      // progress is the ordinary outcome, so that condition would be false
-      // almost always and leave the rest of the frontier to an unauthorised
-      // third round.
-      expectPhrase(content, "**Every decision still open after the second round escalates**");
-      expectPhrase(content, "whether or not that round settled others");
+      // Every decision the user has not settled, not "the round settled
+      // nothing". Partial progress is the ordinary outcome, so that condition
+      // would be false almost always and leave the rest of the frontier to an
+      // unauthorised third round. And not only the open ones: a decision the
+      // agents agreed on is still one nobody took.
+      expectPhrase(
+        content,
+        "**Every decision the user has not settled escalates after the second round**",
+      );
+      expectPhrase(content, "the ones the agents agreed on");
+      expectPhrase(content, "whether or not the agents agreed on others in that round");
       expectPhrase(content, "Escalating is not failure");
     });
 
@@ -69,6 +74,8 @@ describe("a grilling session between agents has an end", () => {
       // reads, rather than a decision taken by default.
       const content = await read(path.join(tree, CONVERGENCE));
       expectPhrase(content, "the escalation has nobody to reach");
+      // And the session still ends: the register write is its ending there.
+      expectPhrase(content, "the register write below ends it `no-question`");
       expectPhrase(content, "so the stage cannot\ncomplete over it");
       expectPhrase(content, "Article X,\nrule 6");
     });
@@ -79,13 +86,19 @@ describe("a grilling session between agents has an end", () => {
     async (rel) => {
       // Two halves. If the rule stopped requiring the user's confirmation, the
       // convergence rules would answer a problem that no longer exists and
-      // nothing would notice. And a rule saying a session never ends on a count,
-      // beside a rule ending one at two rounds, is two mandatory instructions an
-      // agent has to choose between — so the master carries the exception.
+      // nothing would notice. And the master has to say what the two-round
+      // budget does to a session, because a rule saying every session ends in
+      // one of four ways, beside a rule ending one at a count, is two mandatory
+      // instructions an agent has to choose between.
+      //
+      // What it says is that the budget bounds the rounds and is not an ending:
+      // an exception would have been the other resolution, and it is the one
+      // that let an agent close a session the user was never asked to close.
       const content = await read(rel);
       expectPhrase(content, "The user confirms the understanding is shared.");
       expectPhrase(content, "### A session between agents");
-      expectPhrase(content, "the one place a session ends on a count");
+      expectPhrase(content, "the count bounds the rounds between agents and nothing else");
+      expectPhrase(content, "It is not a\nfifth ending");
       expectPhrase(content, "review-convergence.md");
     },
   );

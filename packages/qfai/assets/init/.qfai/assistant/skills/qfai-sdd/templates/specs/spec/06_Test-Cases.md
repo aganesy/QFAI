@@ -145,6 +145,21 @@ is not the answer either.
 - `boundary` — Boundary value (min, max, just-outside-range).
 - `edge` — Edge case (null, empty, concurrent, timing, max payload, etc.).
 
+### A failure observed in use
+
+A failure someone saw happen — in production, in a report, in a log — is
+recorded in a test-case row. Reuse a row when its behavior, boundary, oracle
+and layer all match; strengthen its steps, expected result and observation
+notes. Add a new `TC-*` row only for a distinct behavior, boundary, oracle or layer.
+
+- `Type` follows the scenario in the legend above, not the observation's origin.
+- `AC-Refs` or `EX-Ref` names the behavior that failed.
+- `Notes` says where it was seen, so the next reader can find the observation.
+
+That row is where the observation is recorded. The coverage depth checklist
+scores test-case rows, so a failure kept only in a decision or a note is one it
+never sees.
+
 ## Quality depth guideline
 
 Each AC should have at minimum:
