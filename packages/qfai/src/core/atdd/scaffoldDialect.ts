@@ -475,12 +475,29 @@ function opensSegment(pattern: string, index: number, atStart: boolean): boolean
  * `!(a|b)` uses picomatch's own expansion — a negative lookahead followed by a
  * lazy segment wildcard — so this matcher agrees with fast-glob there too.
  */
-export function compileGlob(pattern: string, atSegmentStart = true): string {
+/**
+ * What a wildcard may match, which is not the same question for every caller.
+ *
+ * The scan this matcher stands in for runs fast-glob at its default, where a
+ * wildcard passes over a name beginning with a dot. A caller reading a record's
+ * citations wants the other reading — it matches the hidden name and reports it
+ * separately — so the dialect is the caller's to state, and a caller that says
+ * nothing gets the permissive one.
+ */
+export type GlobDialect = { readonly dot: boolean };
+
+const MATCHES_HIDDEN_NAMES: GlobDialect = { dot: true };
+
+export function compileGlob(
+  pattern: string,
+  dialect: GlobDialect = MATCHES_HIDDEN_NAMES,
+  atSegmentStart = true,
+): string {
   const expanded = expandMetaBrace(pattern);
   if (expanded !== null) {
     return expanded.length === 0
       ? NEVER_MATCHES
-      : `(?:${expanded.map((one) => compileGlob(one, atSegmentStart)).join("|")})`;
+      : `(?:${expanded.map((one) => compileGlob(one, dialect, atSegmentStart)).join("|")})`;
   }
   let source = "";
   for (let index = 0; index < pattern.length; index += 1) {
@@ -490,7 +507,7 @@ export function compileGlob(pattern: string, atSegmentStart = true): string {
       if (close !== -1) {
         const inSegment = opensSegment(pattern, index, atSegmentStart);
         const alternatives = splitGlobAlternatives(pattern.slice(index + 2, close), "|")
-          .map((alternative) => compileGlob(alternative.trim(), inSegment))
+          .map((alternative) => compileGlob(alternative.trim(), dialect, inSegment))
           .join("|");
         source +=
           char === "!"
@@ -508,30 +525,36 @@ export function compileGlob(pattern: string, atSegmentStart = true): string {
       // A globstar written next to another matches no more than one does, and
       // two quantified groups side by side try every split of the segments
       // between them: ten in a row took seconds against one deep path.
-      const followsGlobstar = source.endsWith(SEGMENTS_GLOBSTAR);
+      // Compared against the spelling THIS dialect emits. Read against the
+      // other one, an adjacent globstar was not recognised as one, and two
+      // quantified groups side by side tried every split of the segments
+      // between them — measured at two minutes on one deep path.
+      const wholeSegments = dialect.dot ? SEGMENTS_ANY : SEGMENTS_GLOBSTAR;
+      const followsGlobstar = source.endsWith(wholeSegments);
       if (precededByBoundary && afterIndex >= pattern.length) {
-        const segments = `${NOT_A_DOT_NAME}[^/]*(?:/${NOT_A_DOT_NAME}[^/]*)*`;
-        source = `${followsGlobstar ? source.slice(0, -SEGMENTS_GLOBSTAR.length) : source}${segments}`;
+        const guard = dialect.dot ? "" : NOT_A_DOT_NAME;
+        const segments = `${guard}[^/]*(?:/${guard}[^/]*)*`;
+        source = `${followsGlobstar ? source.slice(0, -wholeSegments.length) : source}${segments}`;
         index = afterIndex - 1;
         continue;
       }
       if (precededByBoundary && pattern[afterIndex] === "/") {
         // `**/` matches zero or more whole segments, so `tests/**\/*.py` still
         // matches `tests/a.py`.
-        if (!followsGlobstar) source += SEGMENTS_GLOBSTAR;
+        if (!followsGlobstar) source += wholeSegments;
         index = afterIndex;
         continue;
       }
-      source += `${opensSegment(pattern, index, atSegmentStart) ? NOT_A_DOT_NAME : ""}[^/]*`;
+      source += `${!dialect.dot && opensSegment(pattern, index, atSegmentStart) ? NOT_A_DOT_NAME : ""}[^/]*`;
       index = afterIndex - 1;
       continue;
     }
     if (char === "*") {
-      source += `${opensSegment(pattern, index, atSegmentStart) ? NOT_A_DOT_NAME : ""}[^/]*`;
+      source += `${!dialect.dot && opensSegment(pattern, index, atSegmentStart) ? NOT_A_DOT_NAME : ""}[^/]*`;
       continue;
     }
     if (char === "?") {
-      source += `${opensSegment(pattern, index, atSegmentStart) ? NOT_A_DOT_NAME : ""}[^/]`;
+      source += `${!dialect.dot && opensSegment(pattern, index, atSegmentStart) ? NOT_A_DOT_NAME : ""}[^/]`;
       continue;
     }
     if (char === "{") {
@@ -588,6 +611,9 @@ const NOT_A_DOT_NAME = "(?!\\.)";
 
 /** What `**\/` compiles to: zero or more whole segments, none of them hidden. */
 const SEGMENTS_GLOBSTAR = `(?:${NOT_A_DOT_NAME}[^/]*/)*`;
+
+/** The same, for a caller whose wildcards read a hidden name like any other. */
+const SEGMENTS_ANY = "(?:[^/]*/)*";
 
 /** An expression that matches nothing, for a class the author wrote wrongly. */
 const NEVER_MATCHES = "(?!)";
@@ -714,20 +740,20 @@ function compileClassBody(body: string): string {
  *
  * @throws {BraceRangeRefused} for a numeric range fast-glob refuses to expand.
  */
-function compileBraces(body: string, atSegmentStart: boolean): string {
+function compileBraces(body: string, dialect: GlobDialect, atSegmentStart: boolean): string {
   const alternatives = splitGlobAlternatives(body, ",");
   if (alternatives.length > 1) {
     return `(?:${alternatives
-      .map((alternative) => compileGlob(alternative.trim(), atSegmentStart))
+      .map((alternative) => compileGlob(alternative.trim(), dialect, atSegmentStart))
       .join("|")})`;
   }
   const members = braceRangeMembers(body);
   // The braces stay as text, so what stands between them is inside the segment.
-  if (members === null) return `\\{${compileGlob(body, false)}\\}`;
+  if (members === null) return `\\{${compileGlob(body, dialect, false)}\\}`;
   // Expanded first and compiled after, as fast-glob does it, so a member the
   // expansion produces is glob syntax there and here alike: `{*..*}` expands
   // to `*`, which selects every name and not a literal star.
-  const compiled = members.map((member) => compileGlob(member, atSegmentStart)).join("|");
+  const compiled = members.map((member) => compileGlob(member, dialect, atSegmentStart)).join("|");
   return members.length === 0 ? NEVER_MATCHES : `(?:${compiled})`;
 }
 
@@ -798,7 +824,7 @@ function compileGlobMatchers(patterns: readonly string[], matchWholePath: boolea
     if (normalized === "") continue;
     const source = matchWholePath ? normalized : globBasename(normalized);
     try {
-      matchers.push(new RegExp(`^${compileGlob(source)}$`));
+      matchers.push(new RegExp(`^${compileGlob(source, { dot: false })}$`));
     } catch (error) {
       if (!(error instanceof BraceRangeRefused)) throw error;
       refused = true;
