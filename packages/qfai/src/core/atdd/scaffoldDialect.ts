@@ -389,6 +389,60 @@ function splitGlobAlternatives(inner: string, separator: "|" | ","): string[] {
   return parts;
 }
 
+/** The characters that mean something to a matcher rather than naming themselves. */
+const GLOB_SYNTAX = /[*?[\]{}]/;
+
+/**
+ * The pattern with one brace group written out, when a member of it carries
+ * glob syntax; `null` when no group does.
+ *
+ * fast-glob expands a brace before it compiles anything, so a member and what
+ * stands beside it are read together: `tests/{*..*}*\/x` expands to
+ * `tests/**\/x`, whose globstar crosses directories. Compiled group by group,
+ * the same two stars are two segment-local wildcards, and the path the
+ * globstar admits is refused.
+ *
+ * Only such a group is written out. A range of digits or letters carries no
+ * syntax to combine with anything, and expanding it here would multiply the
+ * pattern by a thousand for nothing.
+ *
+ * @throws {BraceRangeRefused} for a numeric range fast-glob refuses to expand.
+ */
+function expandMetaBrace(pattern: string): string[] | null {
+  for (let index = 0; index < pattern.length; index += 1) {
+    const char = pattern[index] ?? "";
+    if (char === "[") {
+      const classClose = findClassClose(pattern, index);
+      if (classClose !== -1) {
+        index = classClose;
+        continue;
+      }
+    }
+    if (char !== "{") continue;
+    const close = findGroupClose(pattern, index, "{", "}");
+    if (close === -1) continue;
+    const body = pattern.slice(index + 1, close);
+    const alternatives = splitGlobAlternatives(body, ",");
+    const members =
+      alternatives.length > 1
+        ? alternatives.map((alternative) => alternative.trim())
+        : (braceRangeMembers(body) ?? null);
+    if (members === null || !members.some((member) => GLOB_SYNTAX.test(member))) {
+      index = close;
+      continue;
+    }
+    const head = pattern.slice(0, index);
+    const tail = pattern.slice(close + 1);
+    return members.map((member) => `${head}${member}${tail}`);
+  }
+  return null;
+}
+
+/** Whether the character at `index` is the first of its path segment. */
+function opensSegment(pattern: string, index: number): boolean {
+  return index === 0 || pattern[index - 1] === "/";
+}
+
 /**
  * Compile one glob into regex source.
  *
@@ -409,6 +463,12 @@ function splitGlobAlternatives(inner: string, separator: "|" | ","): string[] {
  * lazy segment wildcard — so this matcher agrees with fast-glob there too.
  */
 export function compileGlob(pattern: string): string {
+  const expanded = expandMetaBrace(pattern);
+  if (expanded !== null) {
+    return expanded.length === 0
+      ? NEVER_MATCHES
+      : `(?:${expanded.map((one) => compileGlob(one)).join("|")})`;
+  }
   let source = "";
   for (let index = 0; index < pattern.length; index += 1) {
     const char = pattern[index] ?? "";
@@ -436,7 +496,8 @@ export function compileGlob(pattern: string): string {
       // between them: ten in a row took seconds against one deep path.
       const followsGlobstar = source.endsWith(SEGMENTS_GLOBSTAR);
       if (precededByBoundary && afterIndex >= pattern.length) {
-        source = `${followsGlobstar ? source.slice(0, -SEGMENTS_GLOBSTAR.length) : source}[^/]*(?:/[^/]*)*`;
+        const segments = `${NOT_A_DOT_NAME}[^/]*(?:/${NOT_A_DOT_NAME}[^/]*)*`;
+        source = `${followsGlobstar ? source.slice(0, -SEGMENTS_GLOBSTAR.length) : source}${segments}`;
         index = afterIndex - 1;
         continue;
       }
@@ -447,16 +508,16 @@ export function compileGlob(pattern: string): string {
         index = afterIndex;
         continue;
       }
-      source += "[^/]*";
+      source += `${opensSegment(pattern, index) ? NOT_A_DOT_NAME : ""}[^/]*`;
       index = afterIndex - 1;
       continue;
     }
     if (char === "*") {
-      source += "[^/]*";
+      source += `${opensSegment(pattern, index) ? NOT_A_DOT_NAME : ""}[^/]*`;
       continue;
     }
     if (char === "?") {
-      source += "[^/]";
+      source += `${opensSegment(pattern, index) ? NOT_A_DOT_NAME : ""}[^/]`;
       continue;
     }
     if (char === "{") {
@@ -497,8 +558,19 @@ export function compileGlob(pattern: string): string {
   return source;
 }
 
-/** What `**\/` compiles to: zero or more whole segments. */
-const SEGMENTS_GLOBSTAR = "(?:[^/]*/)*";
+/**
+ * What stands before a wildcard that opens a segment.
+ *
+ * The scan runs fast-glob with its default `dot: false`, where a wildcard does
+ * not match a name beginning with a dot — measured: `*\/**\/*.test.ts` collects
+ * nothing under `.tests`, while the pattern naming `.tests` itself does. Without
+ * this the matcher admitted a destination under a dot directory that the
+ * project's own scan never reads.
+ */
+const NOT_A_DOT_NAME = "(?!\\.)";
+
+/** What `**\/` compiles to: zero or more whole segments, none of them hidden. */
+const SEGMENTS_GLOBSTAR = `(?:${NOT_A_DOT_NAME}[^/]*/)*`;
 
 /** An expression that matches nothing, for a class the author wrote wrongly. */
 const NEVER_MATCHES = "(?!)";

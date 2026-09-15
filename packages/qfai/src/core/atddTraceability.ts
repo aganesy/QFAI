@@ -16,6 +16,7 @@ import {
   unusableGlobReason,
   type CollectFilesByGlobsResult,
 } from "./fs.js";
+import { braceRangeMembers, BraceRangeRefused } from "./globBraceRange.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { resolveSurfaceUnion } from "./prototyping/specResolution.js";
 import {
@@ -2442,6 +2443,64 @@ function isAnnotationOnlyCarrier(
  * tests and the scan that CONSUMES them must read this config key identically,
  * or the writer emits an extension the scan never opens.
  */
+/**
+ * The most members of one brace range this reads while looking for an extension.
+ *
+ * SIMPLIFIED: a range in the middle of a path gives every member the same tail,
+ * so the first few answer for all of them; only a range inside the extension
+ * itself makes the members differ, and those are short.
+ * Lift when: a project writes a range of more than this many distinct
+ * extensions.
+ */
+const RANGE_MEMBERS_READ = 16;
+
+/**
+ * The glob with its brace ranges written out, as fast-glob expands them before
+ * it matches anything.
+ *
+ * `tests/**\/*.{p..p}y` names Python files, and read as text it names an
+ * extension nothing recognises, so the stage fell back to its JavaScript
+ * default and scanned a tree the project does not keep its tests in.
+ *
+ * Lists are left alone: the caller reads `.{a,b}` itself, keeping a member's
+ * wildcards, which expansion here would lose.
+ */
+function withRangesExpanded(glob: string): string[] {
+  let expanded = [glob];
+  for (let round = 0; round < 4; round += 1) {
+    const next: string[] = [];
+    let changed = false;
+    for (const candidate of expanded) {
+      const open = candidate.indexOf("{");
+      const close = open === -1 ? -1 : candidate.indexOf("}", open);
+      let members: readonly string[] | null = null;
+      if (open !== -1 && close !== -1) {
+        try {
+          members = braceRangeMembers(candidate.slice(open + 1, close));
+        } catch (error) {
+          // A range fast-glob refuses is left as it stands. The pattern selects
+          // nothing, and whoever compiles it says so; dropping it here instead
+          // would leave a configured project looking like one that configured
+          // no glob at all.
+          if (!(error instanceof BraceRangeRefused)) throw error;
+          members = null;
+        }
+      }
+      if (members === null || open === -1 || close === -1) {
+        next.push(candidate);
+        continue;
+      }
+      changed = true;
+      for (const member of members.slice(0, RANGE_MEMBERS_READ)) {
+        next.push(candidate.slice(0, open) + member + candidate.slice(close + 1));
+      }
+    }
+    expanded = next;
+    if (!changed) break;
+  }
+  return expanded;
+}
+
 export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<string> {
   const extensions = new Set<string>();
   for (const entry of testFileGlobs) {
@@ -2462,9 +2521,13 @@ export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<
         if (trimmed.length > 0 && unusableGlobReason(trimmed) === null) extensions.add(trimmed);
       }
     }
-    const single = /\.([A-Za-z0-9]+)$/.exec(glob);
-    if (single?.[1]) {
-      extensions.add(single[1]);
+    // Read off the pattern fast-glob matches with, which is the pattern with its
+    // ranges written out.
+    for (const candidate of withRangesExpanded(glob)) {
+      const single = /\.([A-Za-z0-9]+)$/.exec(candidate);
+      if (single?.[1]) {
+        extensions.add(single[1]);
+      }
     }
   }
   return extensions;

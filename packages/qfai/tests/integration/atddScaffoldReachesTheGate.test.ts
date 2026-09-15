@@ -374,6 +374,43 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     );
   });
 
+  it("reads a member the expansion produces beside what stands next to it", () => {
+    // fast-glob expands the brace before it compiles anything, so the star the
+    // range produces and the star after it are one globstar and cross
+    // directories. Compiled group by group they were two segment-local
+    // wildcards, and the path the globstar admits was refused.
+    expect(
+      resolveScaffoldDialect(["tests/{*..*}*/TC-0000-0000.test.ts"], {
+        scaffoldDir: "tests/integration/spec-0001",
+      }).outcome,
+    ).toBe("resolved");
+  });
+
+  it("keeps a wildcard out of a hidden directory, generated or written", () => {
+    // The scan runs fast-glob with its default `dot: false`: measured, neither
+    // `*` nor the star a range produces collects anything under `.tests`, while
+    // a pattern naming `.tests` does. Admitted here, the destination would be
+    // one the project's own scan never reads.
+    for (const glob of ["*/**/*.test.ts", "{*..*}/**/*.test.ts"]) {
+      expect(
+        resolveScaffoldDialect([glob], { scaffoldDir: ".tests/integration/spec-0001" }).outcome,
+        glob,
+      ).toBe("naming-mismatch");
+    }
+    expect(
+      resolveScaffoldDialect([".tests/**/*.test.ts"], {
+        scaffoldDir: ".tests/integration/spec-0001",
+      }).outcome,
+    ).toBe("resolved");
+  });
+
+  it("derives the extension a range spells", () => {
+    // `{p..p}y` is `.py` to fast-glob. Read as text it named no extension the
+    // stage knows, so the run fell back to its JavaScript default and wrote a
+    // skeleton the project's scan does not collect.
+    expect(requireDialect(["tests/**/*.{p..p}y"]).id).toBe("python");
+  });
+
   it("refuses when an exclude glob holds a range the scan refuses", () => {
     // fast-glob throws while compiling the ignore, and for the whole call, so
     // the scan collects nothing. Read as an exclusion that matches nothing, the
