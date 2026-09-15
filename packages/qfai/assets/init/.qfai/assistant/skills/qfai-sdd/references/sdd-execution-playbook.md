@@ -25,11 +25,15 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
    material (`.qfai/assistant/constitution/drift-protocol.md#core-rule`), so do NOT repair or
    re-run it to make this gate pass; a correction it implies belongs in the
    SDD-owned artifact, with the discrepancy noted in delta/evidence.
-3. Read the review findings for the pack step 1 selected, from its LATEST
-   review — the `.qfai/review/review-*/` directory whose
-   `summary.json#target.path` names that pack, or whose in-flight request does,
-   with the newest stamp among them. The path matched is the selected one, not
-   the newest pack on disk.
+3. Read the review findings for the pack step 1 selected, from its latest
+   COMPLETED review — the `.qfai/review/review-*/` directory whose
+   `summary.json#target.path` names that pack, with the newest stamp among
+   those. The path matched is the selected one, not the newest pack on disk.
+   A newer directory holding only an in-flight request is a cycle that was
+   interrupted; taking it for the latest review returns no findings and hides
+   the completed cycle's advice, which still applies. Read the in-flight one
+   too, where it is newer, and take both; it carries no findings of its own
+   until it closes, so it adds nothing where nothing has been written.
    An earlier cycle's advice was answered by the fix that closed it, and reading
    it again re-raises work the pack has already done. Take in the items a
    reviewer marked non-normative under
