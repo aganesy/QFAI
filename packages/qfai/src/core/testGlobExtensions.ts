@@ -116,17 +116,118 @@ export function globExtensions(globs: readonly string[]): string[] {
  * against a path written with `/`.
  */
 /**
- * Whether a last segment says anything about the file name.
+ * Whether a last segment says anything about the file name, **whichever
+ * alternative it takes**.
  *
  * The group syntax around a wildcard is not a name: `@(*)` and `*(?)` select
- * exactly what `*` and `?` select, and a segment read as naming something
- * vouched for every basename it collected — a `data.json` fixture beside the
- * suite then read as test source. So the structure is dropped first and the
- * question asked of what it wrapped.
+ * exactly what `*` and `?` select. Nor is a group that merely holds one:
+ * `@(test_*|*)` selects every basename through its second branch, and a segment
+ * read as naming something vouched for all of them — a `data.json` fixture
+ * beside the suite then read as test source. So each alternative is asked on its
+ * own, and one that constrains nothing makes the segment broad.
+ *
+ * SIMPLIFIED: past {@link MAX_NAME_ALTERNATIVES} the segment counts as broad,
+ * which is the answer that vouches for nothing. Lift when: a project names its
+ * tests with a segment of that shape.
  */
 function constrainsTheName(segment: string): boolean {
-  const withoutGroups = segment.replace(/[@?+*!]\(|[(){},|]/g, "");
-  return /[^*?.]/.test(withoutGroups);
+  const alternatives = nameAlternatives(segment);
+  return alternatives !== null && alternatives.every((name) => /[^*?.]/.test(name));
+}
+
+/** The most alternatives a segment is expanded to before it counts as broad. */
+const MAX_NAME_ALTERNATIVES = 64;
+
+/**
+ * Every name a segment's groups can produce, with the group syntax gone, or
+ * `null` past {@link MAX_NAME_ALTERNATIVES}. A bracket expression is one
+ * character wherever it stands, so it is carried through whole.
+ */
+function nameAlternatives(segment: string): string[] | null {
+  const opened = firstGroup(segment);
+  if (opened === null) return [segment];
+  const { start, bodyFrom, close, optional } = opened;
+  const before = segment.slice(0, start);
+  const after = segment.slice(close + 1);
+  const members = [...groupMembers(segment.slice(bodyFrom, close)), ...(optional ? [""] : [])];
+  const names: string[] = [];
+  for (const member of members) {
+    const expanded = nameAlternatives(`${before}${member}${after}`);
+    if (expanded === null) return null;
+    names.push(...expanded);
+    if (names.length > MAX_NAME_ALTERNATIVES) return null;
+  }
+  return names;
+}
+
+/** The first brace or extended group outside a bracket expression, or `null`. */
+function firstGroup(
+  segment: string,
+): { start: number; bodyFrom: number; close: number; optional: boolean } | null {
+  for (const index of outsideBrackets(segment)) {
+    const character = segment[index] ?? "";
+    const introduced = "@?+*!".includes(character) && segment[index + 1] === "(";
+    if (!introduced && character !== "{") continue;
+    const close = groupEnd(segment, introduced ? index + 1 : index);
+    if (close === -1) return null;
+    return {
+      start: index,
+      bodyFrom: introduced ? index + 2 : index + 1,
+      close,
+      // `?(…)` and `*(…)` match nothing as well as a member.
+      optional: introduced && (character === "?" || character === "*"),
+    };
+  }
+  return null;
+}
+
+/** The index closing the group opened at `open`, or `-1`. */
+function groupEnd(segment: string, open: number): number {
+  const closer = segment[open] === "{" ? "}" : ")";
+  let depth = 0;
+  for (const index of outsideBrackets(segment, open)) {
+    const character = segment[index] ?? "";
+    if (character === "(" || character === "{") depth += 1;
+    else if (character === ")" || character === "}") {
+      depth -= 1;
+      if (depth === 0) return character === closer ? index : -1;
+    }
+  }
+  return -1;
+}
+
+/** A group body's members, split at each separator outside a nested group. */
+function groupMembers(body: string): string[] {
+  const members: string[] = [];
+  let from = 0;
+  let depth = 0;
+  for (const index of outsideBrackets(body)) {
+    const character = body[index] ?? "";
+    if (character === "(" || character === "{") depth += 1;
+    else if (character === ")" || character === "}") depth -= 1;
+    else if ((character === "|" || character === ",") && depth === 0) {
+      members.push(body.slice(from, index));
+      from = index + 1;
+    }
+  }
+  members.push(body.slice(from));
+  return members;
+}
+
+/** Each index of `text` from `start` that lies outside a bracket expression. */
+function outsideBrackets(text: string, start = 0): number[] {
+  const indices: number[] = [];
+  for (let index = start; index < text.length; index += 1) {
+    if (text[index] === "[") {
+      const close = text.indexOf("]", index + 2);
+      if (close !== -1) {
+        index = close;
+        continue;
+      }
+    }
+    indices.push(index);
+  }
+  return indices;
 }
 
 export function namedTestFileMatcher(globs: readonly string[]): (filePath: string) => boolean {

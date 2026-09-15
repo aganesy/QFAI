@@ -43,6 +43,15 @@ describe("namedTestFileMatcher", () => {
     for (const glob of ["packages/*/tests/**/@(*)", "packages/*/tests/**/*(?)", "a/tests/{*,?}"]) {
       expect(namedTestFileMatcher([glob])("packages/a/tests/data.json"), glob).toBe(false);
     }
+    // A branch that constrains nothing makes the whole segment broad, however
+    // specific its siblings are.
+    for (const glob of [
+      "packages/*/tests/**/@(test_*|*)",
+      "packages/*/tests/**/{test_*,*}",
+      "packages/*/tests/**/@(a|@(b|*))",
+    ]) {
+      expect(namedTestFileMatcher([glob])("packages/a/tests/data.json"), glob).toBe(false);
+    }
     // A group naming something still names it.
     expect(
       namedTestFileMatcher(["packages/*/tests/**/@(data.json|x.json)"])(
