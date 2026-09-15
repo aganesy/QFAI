@@ -169,8 +169,7 @@ describe("reviewer rejection/re-approval cycle", () => {
 // spec-0010: Canonical template generation / deprecation
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0010:TC-0010-0001
-describe("TC-0010-0001: canonical template generation", () => {
+describe("canonical templates ship with the UI-bearing family", () => {
   it("verifies UI-bearing UIX templates exist after init", async () => {
     const files = await readdir(uiuxTemplateDir);
     // Brand-level inputs moved to root DESIGN.md; only screen-level

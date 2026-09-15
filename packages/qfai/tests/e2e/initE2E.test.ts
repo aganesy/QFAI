@@ -257,12 +257,18 @@ describe("E2E: agent wrapper symlink (US-0003-0006)", () => {
       const claudeAgentsDir = path.join(tmpDir, ".claude", "agents");
       const githubAgentsDir = path.join(tmpDir, ".github", "agents");
 
+      // Both directories are what the story asks for, and every assertion below
+      // stands behind a check that the directory is there. Without this, a run
+      // that wrote neither passed every one of them.
+      expect(await pathExists(claudeAgentsDir), claudeAgentsDir).toBe(true);
+      expect(await pathExists(githubAgentsDir), githubAgentsDir).toBe(true);
+
       if (await pathExists(claudeAgentsDir)) {
         const entries = await (
           await import("node:fs/promises")
         ).readdir(claudeAgentsDir, { withFileTypes: true });
         const mdFiles = entries.filter((e) => e.name.endsWith(".md") && e.name !== "README.md");
-        // Agent symlinks should exist (if canonical agents are defined)
+        expect(mdFiles.length).toBeGreaterThan(0);
         for (const entry of mdFiles) {
           const stat = await lstat(path.join(claudeAgentsDir, entry.name));
           expect(stat.isSymbolicLink()).toBe(true);
@@ -274,6 +280,7 @@ describe("E2E: agent wrapper symlink (US-0003-0006)", () => {
           await import("node:fs/promises")
         ).readdir(githubAgentsDir, { withFileTypes: true });
         const agentFiles = entries.filter((e) => e.name.endsWith(".agent.md"));
+        expect(agentFiles.length).toBeGreaterThan(0);
         for (const entry of agentFiles) {
           const stat = await lstat(path.join(githubAgentsDir, entry.name));
           expect(stat.isSymbolicLink()).toBe(true);
