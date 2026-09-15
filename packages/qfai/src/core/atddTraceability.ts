@@ -2853,8 +2853,11 @@ const CONFIGURABLE_MANIFESTS = new Map<string, (content: string) => boolean>([
   ["package.json", declaresName],
   ["deno.json", declaresName],
   ["deno.jsonc", (content) => declaresName(withoutJsoncSyntax(content))],
-  ["pyproject.toml", (content) => /^\s*\[(?:project|tool\.poetry)\]\s*$/m.test(content)],
-  ["setup.cfg", (content) => /^\s*\[metadata\]\s*$/m.test(content)],
+  // A TOML or INI table header may carry a trailing comment, so the line is
+  // read to the comment rather than to its end: `[project] # package metadata`
+  // declares a package as plainly as `[project]` does.
+  ["pyproject.toml", (content) => /^\s*\[(?:project|tool\.poetry)\]\s*(?:#.*)?$/m.test(content)],
+  ["setup.cfg", (content) => /^\s*\[metadata\]\s*(?:[#;].*)?$/m.test(content)],
   // A test directory keeps a `CMakeLists.txt` to add its targets; only a
   // `project()` command declares a package.
   ["CMakeLists.txt", (content) => /^\s*project\s*\(/im.test(content)],
@@ -2866,8 +2869,13 @@ function isPackageManifest(absoluteDir: string, entry: string): boolean {
     try {
       return namesPackage(readFileSync(path.join(absoluteDir, entry), "utf-8"));
     } catch {
-      // A manifest that cannot be read says nothing about a package.
-      return false;
+      // A manifest that cannot be read leaves the question open, and the two
+      // answers are not equally safe. Read as no package, the directory becomes
+      // a test root, and a source under its `api`, `e2e` or `integration`
+      // subdirectory then satisfies an obligation it was never written for —
+      // a silent pass. Read as a package, the path answers no layer and the
+      // obligation stays reported. So an unreadable manifest counts as one.
+      return true;
     }
   }
   return (

@@ -41,6 +41,32 @@ describe("namedTestFileMatcher", () => {
     expect(namedTestFileMatcher([" packages/**/* "])("packages/a/tests/data.json")).toBe(false);
     expect(namedTestFileMatcher([" packages/**/*.json "])("packages/a/tests/data.json")).toBe(true);
   });
+
+  it.each([
+    ["packages/*/tests/**/test_[[:digit:]].*", "packages/a/tests/test_1.zig", true],
+    ["packages/*/tests/**/test_[[:digit:]].*", "packages/a/tests/test_x.zig", false],
+    ["packages/*/tests/**/test_[[:alpha:]].*", "packages/a/tests/test_x.zig", true],
+    ["packages/*/tests/**/test_[![:digit:]].*", "packages/a/tests/test_x.zig", true],
+    ["packages/*/tests/**/test_[![:digit:]].*", "packages/a/tests/test_1.zig", false],
+  ])("reads the POSIX class in %s as the collector does: %s is %s", (glob, file, matches) => {
+    expect(namedTestFileMatcher([glob])(file)).toBe(matches);
+  });
+
+  it("vouches for no file where a bracket expression names something it cannot read", () => {
+    // A collating element and an equivalence class select names this reader
+    // does not derive, so the glob is refused rather than read as its letters.
+    expect(namedTestFileMatcher(["a/tests/test_[[.a.]].zig"])("a/tests/test_a.zig")).toBe(false);
+    expect(namedTestFileMatcher(["a/tests/test_[[=a=]].zig"])("a/tests/test_a.zig")).toBe(false);
+    expect(namedTestFileMatcher(["a/tests/test_[[:bogus:]].zig"])("a/tests/test_a.zig")).toBe(
+      false,
+    );
+  });
+
+  it("keeps a closing bracket written as the first member a member", () => {
+    expect(namedTestFileMatcher(["a/tests/test_[]x].zig"])("a/tests/test_].zig")).toBe(true);
+    expect(namedTestFileMatcher(["a/tests/test_[]x].zig"])("a/tests/test_x.zig")).toBe(true);
+    expect(namedTestFileMatcher(["a/tests/test_[]x].zig"])("a/tests/test_y.zig")).toBe(false);
+  });
 });
 
 describe("globExtensions", () => {

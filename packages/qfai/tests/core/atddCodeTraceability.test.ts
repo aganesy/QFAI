@@ -1,4 +1,5 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -17,6 +18,34 @@ import { validateAtddCodeTraceability } from "../../src/core/validators/atddCode
  * zero, and text tooling reads such a file as binary.
  */
 const INVALID_GLOB = `a${String.fromCharCode(0)}b`;
+
+/**
+ * Whether this platform refuses a read the file's mode forbids.
+ *
+ * Windows does not carry the POSIX mode, so `chmod` there leaves the file
+ * readable and a test resting on the refusal would assert nothing. Probed
+ * rather than keyed to a platform name: a POSIX file system mounted without
+ * permissions behaves the same way, and so does a run as root.
+ */
+function enforcesFileMode(): boolean {
+  const probe = path.join(mkdtempSync(path.join(os.tmpdir(), "qfai-mode-")), "probe");
+  try {
+    writeFileSync(probe, "x", "utf-8");
+    chmodSync(probe, 0o000);
+    readFileSync(probe, "utf-8");
+    return false;
+  } catch {
+    return true;
+  } finally {
+    try {
+      chmodSync(probe, 0o600);
+      rmSync(path.dirname(probe), { recursive: true, force: true });
+    } catch {
+      // A probe left behind is the operating system's temporary directory to
+      // clear; failing here would fail every test in this file.
+    }
+  }
+}
 
 describe("validateAtddCodeTraceability", () => {
   it("passes when US/TC/CON-API are fully referenced in required test layers", async () => {
@@ -1614,6 +1643,78 @@ describe("acceptance tests outside paths.testsDir", () => {
       expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
     });
   });
+
+  it("reads a TOML package table that carries a trailing comment", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      // A comment after the closing bracket is ordinary TOML. Read to the end
+      // of the line instead, the table is missed and `api/` becomes a layer.
+      const dir = path.join(root, "packages", "tests", "api");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(root, "packages", "tests", "pyproject.toml"),
+        ["[project] # package metadata", 'name = "tests"', ""].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(dir, "client.spec.ts"),
+        [
+          "/* QFAI:SPEC-0001:US-0001 */",
+          "describe('client', () => {",
+          "  it('runs', () => {});",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await evaluateAtddCodeTraceability(
+        root,
+        withProjectGlobs(["packages/*/**/*.spec.ts"]),
+      );
+
+      expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+    });
+  });
+
+  it.skipIf(!enforcesFileMode())(
+    "reads a manifest it cannot open as a package rather than as a test root",
+    async () => {
+      await withProject(async (root) => {
+        await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+        await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+        // The package answer is indeterminate, and the two readings are not
+        // equally safe: as a test root, the file below satisfies the story
+        // silently; as a package, the story stays reported.
+        const dir = path.join(root, "packages", "tests", "api");
+        await mkdir(dir, { recursive: true });
+        const manifest = path.join(root, "packages", "tests", "pyproject.toml");
+        await writeFile(manifest, ["[project]", 'name = "tests"', ""].join("\n"), "utf-8");
+        await writeFile(
+          path.join(dir, "client.spec.ts"),
+          [
+            "/* QFAI:SPEC-0001:US-0001 */",
+            "describe('client', () => {",
+            "  it('runs', () => {});",
+            "});",
+            "",
+          ].join("\n"),
+          "utf-8",
+        );
+        await chmod(manifest, 0o000);
+
+        const result = await evaluateAtddCodeTraceability(
+          root,
+          withProjectGlobs(["packages/*/**/*.spec.ts"]),
+        );
+
+        expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);
+        // Restored so the harness can remove the tree on every platform.
+        await chmod(manifest, 0o600);
+      });
+    },
+  );
 
   it("reads a deno.jsonc package name through its comments", async () => {
     await withProject(async (root) => {

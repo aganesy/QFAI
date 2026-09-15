@@ -187,6 +187,85 @@ function globPathPattern(glob: string): string | null {
  * member joined to the rest of the segment, so `{,.}*` matches `.generated`
  * through its second member only.
  */
+/**
+ * The index of the `]` closing the bracket expression opened at `open`, or `-1`.
+ *
+ * A `]` in the first member position is a member, and a POSIX class carries one
+ * of its own — `[[:digit:]]` closes at the second. Stopping at the first `]`
+ * built a class over the class's own spelling, so `test_[[:digit:]].*` matched
+ * nothing the matcher was asked about while fast-glob collected `test_1.zig`.
+ */
+function classClose(segment: string, open: number): number {
+  let index = open + 1;
+  if (segment[index] === "!" || segment[index] === "^") index += 1;
+  if (segment[index] === "]") index += 1;
+  while (index < segment.length) {
+    const kind = segment[index] === "[" ? (segment[index + 1] ?? "") : "";
+    if (":.=".includes(kind) && kind !== "") {
+      const end = segment.indexOf(`${kind}]`, index + 2);
+      if (end === -1) return -1;
+      index = end + 2;
+      continue;
+    }
+    if (segment[index] === "]") return index;
+    index += 1;
+  }
+  return -1;
+}
+
+/**
+ * The characters each POSIX class names, written as a regular-expression class
+ * body. The engine has no `[:name:]` of its own, so the members are spelled.
+ */
+const POSIX_CLASS_MEMBERS: Readonly<Record<string, string>> = {
+  alnum: "0-9A-Za-z",
+  alpha: "A-Za-z",
+  ascii: "\\x00-\\x7f",
+  blank: " \\t",
+  cntrl: "\\x00-\\x1f\\x7f",
+  digit: "0-9",
+  graph: "\\x21-\\x7e",
+  lower: "a-z",
+  print: "\\x20-\\x7e",
+  punct: "!-/:-@\\[-`{-~",
+  space: " \\t\\n\\v\\f\\r",
+  upper: "A-Z",
+  word: "0-9A-Za-z_",
+  xdigit: "0-9A-Fa-f",
+};
+
+/**
+ * A bracket expression's members as a regular-expression class body, or `null`
+ * where it names something this reader does not translate.
+ *
+ * A collating element (`[.ch.]`) or an equivalence class (`[=a=]`) is refused
+ * rather than read as its own characters, which would select names the glob
+ * does not. A leading `!` negates, as the dialect spells it.
+ */
+function classBody(body: string): string | null {
+  let source = "";
+  let index = 0;
+  if (/^[!^]/.test(body)) {
+    source = "^";
+    index = 1;
+  }
+  while (index < body.length) {
+    const named = /^\[:([a-z]+):\]/.exec(body.slice(index));
+    if (named) {
+      const members = POSIX_CLASS_MEMBERS[named[1] ?? ""];
+      if (members === undefined) return null;
+      source += members;
+      index += named[0].length;
+      continue;
+    }
+    if (/^\[[.=]/.test(body.slice(index))) return null;
+    const char = body[index] ?? "";
+    source += "\\]^".includes(char) ? `\\${char}` : char;
+    index += 1;
+  }
+  return source;
+}
+
 function segmentPattern(segment: string, nested = false, start = true): string | null {
   let source = "";
   for (let index = 0; index < segment.length; index += 1) {
@@ -220,10 +299,11 @@ function segmentPattern(segment: string, nested = false, start = true): string |
       source += group;
       index = close;
     } else if (char === "[") {
-      const close = segment.indexOf("]", index + 2);
+      const close = classClose(segment, index);
       if (close < 0) return null;
-      const members = segment.slice(index + 1, close).replaceAll("\\", "\\\\");
-      source += `[${members.replace(/^[!^]/, "^")}]`;
+      const members = classBody(segment.slice(index + 1, close));
+      if (members === null) return null;
+      source += `[${members}]`;
       index = close;
     } else if (char === "*") {
       source += start && index === 0 ? "(?!\\.)[^/]*" : "[^/]*";

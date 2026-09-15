@@ -528,7 +528,7 @@ export async function validateAtddCodeTraceability(
         // that have not opted in — while the unscoped reading must not become
         // "annotate every US in the repository", which is the annotation-only
         // E2E tree `catalog/test-layers.md` forbids.
-        "tests/e2e/** に `QFAI:SPEC-XXXX:US-YYYY` 注釈を追加し、上記の US を少なくとも1回参照してください。surface typing を宣言している場合、対象は user-facing surface の spec のみです。どの spec も宣言していない場合は全 spec が対象のままです（`.qfai/assistant/catalog/test-layers.md#atdd-annotation-hard-gate`）。" +
+        "Add a `QFAI:SPEC-XXXX:US-YYYY` annotation under `tests/e2e/**` referencing each user story above at least once. Where any spec declares a user-facing surface, the obligation covers user-facing specs only; where none does, it covers every spec (`.qfai/assistant/catalog/test-layers.md#atdd-annotation-hard-gate`)." +
           ATDD_PACKAGE_SUITE_HINT,
         { relatedFiles: usAttribution.relatedFiles },
       ),
@@ -547,7 +547,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.usDeferred",
         deferred,
         "canonical",
-        `スライス実装時に \`- ${PLANNED_CONTRACT_KEY}: planned\` を外し、${dirs.e2e} で \`QFAI:SPEC-XXXX:US-YYYY\` 注釈を追加してください。${ATDD_PACKAGE_SUITE_HINT}`,
+        `When the slice is implemented, remove \`- ${PLANNED_CONTRACT_KEY}: planned\` and add a \`QFAI:SPEC-XXXX:US-YYYY\` annotation under ${dirs.e2e}.${ATDD_PACKAGE_SUITE_HINT}`,
         { relatedFiles: deferredHome.relatedFiles },
       ),
     );
@@ -757,7 +757,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.conApiDeferred",
         deferred,
         "canonical",
-        `スライス実装時に \`x-qfai-status\` を planned 以外へ戻し、tests/api/** で参照してください。${ATDD_PACKAGE_SUITE_HINT}`,
+        `When the slice is implemented, set \`x-qfai-status\` to something other than planned and reference the contract under tests/api/**.${ATDD_PACKAGE_SUITE_HINT}`,
       ),
     );
   }
@@ -772,7 +772,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.conApiToApiTests",
         result.missing.conApi,
         "change",
-        "tests/api/** に `QFAI:CON-API-XXXX` 注釈を追加し、`.qfai/contracts/api` の宣言済み CON-API を全件参照してください。" +
+        "Add a `QFAI:CON-API-XXXX` annotation under `tests/api/**` referencing every CON-API declared in `.qfai/contracts/api`." +
           ATDD_PACKAGE_SUITE_HINT,
       ),
     );
@@ -812,7 +812,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.conDbDeferred",
         deferred,
         "canonical",
-        `スライス実装時に \`-- x-qfai-status: planned\` を外し、${dirs.integration} で参照してください。${ATDD_PACKAGE_SUITE_HINT}`,
+        `When the slice is implemented, remove \`-- x-qfai-status: planned\` and reference the contract under ${dirs.integration}.${ATDD_PACKAGE_SUITE_HINT}`,
       ),
     );
   }
@@ -827,7 +827,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.conDbToIntegrationTests",
         result.missing.conDb,
         "change",
-        `${dirs.integration} に \`QFAI:CON-DB-XXXX\` 注釈を追加し、\`.qfai/contracts/db\` の宣言済み CON-DB を全件参照してください。まだスライスに含まれない契約は \`-- x-qfai-status: planned\` で延期できます。${ATDD_PACKAGE_SUITE_HINT}`,
+        `Add a \`QFAI:CON-DB-XXXX\` annotation under ${dirs.integration} referencing every CON-DB declared in \`.qfai/contracts/db\`. A contract outside the current slice is deferred with \`-- x-qfai-status: planned\`.${ATDD_PACKAGE_SUITE_HINT}`,
       ),
     );
   }
@@ -842,7 +842,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.forbidden.tcInApi",
         forbidden.ids,
         "change",
-        `${repoRelative(root, forbidden.file)} から TC 参照を削除して契約ID（\`QFAI:CON-API-XXXX\`）を使うか、その TC の \`Level\` を \`L4\`/\`API\` に修正してください。`,
+        `Remove the TC reference from ${repoRelative(root, forbidden.file)} and use the contract id (\`QFAI:CON-API-XXXX\`), or set that TC's \`Level\` to \`L4\`/\`API\`.`,
         // Attributed to the specs the misplaced ids name. `file` stays the
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
@@ -870,7 +870,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.forbidden.tcInE2e",
         forbidden.ids,
         "change",
-        `${repoRelative(root, forbidden.file)} から TC 参照を削除して US 参照（\`QFAI:SPEC-XXXX:US-YYYY\`）を使うか、その TC の \`Level\` を \`L5\`/\`E2E\` に修正してください。`,
+        `Remove the TC reference from ${repoRelative(root, forbidden.file)} and use a US reference (\`QFAI:SPEC-XXXX:US-YYYY\`), or set that TC's \`Level\` to \`L5\`/\`E2E\`.`,
         // Attributed to the specs the misplaced ids name. `file` stays the
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
@@ -898,7 +898,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.forbidden.tcInIntegration",
         forbidden.ids,
         "change",
-        `TC 注釈は宣言 Level が指す1ディレクトリだけに置きます。${repoRelative(root, forbidden.file)} に残存する TC 参照を削除するか、その TC の \`Level\` を \`L3\`/\`Integration\` に戻してください。`,
+        `A TC annotation belongs in the one directory its declared \`Level\` routes to. Remove the TC reference left in ${repoRelative(root, forbidden.file)}, or set that TC's \`Level\` back to \`L3\`/\`Integration\`.`,
         // Attributed to the specs the misplaced ids name. `file` stays the
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
@@ -986,7 +986,7 @@ function buildCarrierOnlyIssues(
       "atddCodeTraceability.coverage.carrierOnly",
       refs,
       "change",
-      `これらの ID を参照しているファイルは、\`.md\` の散文か、テスト宣言（\`it\` / \`test\` / \`describe\`、Gherkin の \`Scenario:\`、\`def test_\` 等）を含まないファイルだけです。${dirs.integration} / ${dirs.api} / ${dirs.e2e} の実際のテストへ注釈を移すか、その状態を意図的な placeholder として記録してください。判定するのは「テストが宣言されているか」までで、skip されているかまでは見ません。 ${ATDD_PACKAGE_SUITE_HINT}`,
+      `Every file referencing these ids is either \`.md\` prose or a file that declares no test (\`it\` / \`test\` / \`describe\`, Gherkin's \`Scenario:\`, \`def test_\` and the like). Move the annotation to a real test under ${dirs.integration} / ${dirs.api} / ${dirs.e2e}, or record the state as a deliberate placeholder. The check reads whether a test is declared, never whether it is skipped. ${ATDD_PACKAGE_SUITE_HINT}`,
       { relatedFiles: attribution.relatedFiles },
     ),
   ];
@@ -1056,7 +1056,7 @@ function buildMissingTcFix(
   const perHome = orderedMissingTcGroups(grouped)
     .map(([kind, refs]) => `${dirs[kind]}: ${refs.join(", ")}`)
     .join(" / ");
-  return `各 TC の宣言 Level が指すディレクトリに \`QFAI:SPEC-XXXX:TC-YYYY\` 注釈を追加してください（L3/Integration -> ${dirs.integration}、L4/API -> ${dirs.api}、L5/E2E -> ${dirs.e2e}、Level 未宣言は ${dirs.integration}）: ${perHome}. ${ATDD_PACKAGE_SUITE_HINT}`;
+  return `Add a \`QFAI:SPEC-XXXX:TC-YYYY\` annotation in the directory each TC's declared Level routes to (L3/Integration -> ${dirs.integration}, L4/API -> ${dirs.api}, L5/E2E -> ${dirs.e2e}, and an undeclared Level -> ${dirs.integration}): ${perHome}. ${ATDD_PACKAGE_SUITE_HINT}`;
 }
 
 function buildUnknownIssues(
