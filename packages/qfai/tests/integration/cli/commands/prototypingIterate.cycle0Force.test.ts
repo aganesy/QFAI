@@ -9,9 +9,13 @@
  *   (b) With `--force`: iter-00 is RENAMED to
  *       `iter-00.backup-<ISO>` BEFORE clearEvidenceIterDirs runs;
  *       backup byte-equivalence is preserved.
+ *   (c) The aggregate capture mirrors are moved aside on every cycle-0
+ *       run, logged file by file, and put back when a later step of the
+ *       same reset fails (REQ-0166).
  */
 
 // QFAI:SPEC-0012:TC-0012-0449
+// QFAI:SPEC-0012:TC-0012-0481
 
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";

@@ -1371,6 +1371,14 @@
 - Test file: `packages/qfai/tests/unit/core/validators/evidenceMutationUnlogged.test.ts`
 - Verify REQ-0165 error path: a code path mutating iter-NN evidence without a mutation-log call surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (severity error).
 
+## TC-0012-0481
+
+- EX-Ref: EX-0012-0186
+- AC-Refs: AC-0012-0082
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.cycle0Force.test.ts`
+- Verify REQ-0166: a cycle-0 run with and without `--force` moves `screenshots/` and `html/` into `aggregate.backup-<ISO>/` before clearing, logs each moved file, puts them back when a later step fails, and leaves the backups out of the certificate's digests and freshness scan.
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

@@ -557,6 +557,14 @@
 - When the path does not call the mutation-log writer,
 - Then Reviewer Gate MUST emit `R-EVIDENCE-MUTATION-UNLOGGED` (severity error).
 
+## AC-0012-0082: Cycle-0 reset moves the aggregate capture mirrors aside (REQ-0166)
+
+- US-Refs: US-0012-0143
+- REQ-Refs: REQ-0166
+- Given a prototyping evidence tree holding `screenshots/` or `html/` from a previous loop,
+- When `qfai prototyping iterate --cycle 0` runs, with or without `--force`,
+- Then both directories MUST be moved into `aggregate.backup-<ISO>/` before any iteration directory is cleared, each moved file MUST appear in `mutation-log.jsonl`, and the backups MUST be left out of the completion certificate's evidence digests and of its freshness scan.
+
 ## Completion Gate
 
 - `/qfai-prototyping` completion requires `qfai validate --fail-on error` pass.
