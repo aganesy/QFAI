@@ -26,7 +26,19 @@
 
 ## Feedback
 
+For each finding, declare `Severity: blocking|advisory` and `Traces to:` an
+authoritative requirement or concrete defect class. Use `none` only for advisory
+proposals.
+
 - (none)
+
+## Required Fixes
+
+- (none)
+
+Unresolved blocking findings require REVISE. Advisory reports alone do not
+require rework. Resolve prior demands only with the accepted disposition in the
+request's Answered demands table.
 
 ## Decision
 
