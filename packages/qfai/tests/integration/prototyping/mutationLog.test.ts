@@ -33,19 +33,25 @@ import {
  * half its data and then fails the way a full disk does, and a log that cannot
  * be truncated.
  */
-const fault = vi.hoisted((): { partialAppend: boolean; untruncatable: boolean } => ({
-  partialAppend: false,
-  untruncatable: false,
-}));
+const fault = vi.hoisted(
+  (): { partialAppend: boolean; untruncatable: boolean; appendThenAppend: string | null } => ({
+    partialAppend: false,
+    untruncatable: false,
+    appendThenAppend: null,
+  }),
+);
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof FsPromises>();
   return {
     ...actual,
     appendFile: async (...args: Parameters<typeof actual.appendFile>) => {
-      if (!fault.partialAppend) return actual.appendFile(...args);
+      const other = fault.appendThenAppend;
+      if (!fault.partialAppend && other === null) return actual.appendFile(...args);
       const text = String(args[1]);
       await actual.appendFile(args[0], text.slice(0, Math.floor(text.length / 2)), "utf-8");
+      // What a second run appending at the same time leaves behind this one.
+      if (other !== null) await actual.appendFile(args[0], other, "utf-8");
       throw Object.assign(new Error("ENOSPC: no space left on device, write"), {
         code: "ENOSPC",
       });
@@ -68,6 +74,7 @@ beforeEach(async () => {
 afterEach(async () => {
   fault.partialAppend = false;
   fault.untruncatable = false;
+  fault.appendThenAppend = null;
   await rm(root, { recursive: true, force: true });
 });
 
@@ -242,6 +249,48 @@ describe("TC-0012-0479: mutation-log appends a JSONL entry per destructive iter-
     await expect(logEvidenceMoves(root, "iterate", TWO_MOVES)).rejects.toThrow("ENOSPC");
 
     expect((await lstat(logAbs)).isSymbolicLink()).toBe(true);
+    await expect(stat(target)).rejects.toThrow();
+  });
+
+  it("keeps an entry another writer appended during this write", async () => {
+    // Two runs can append to the log at once. Cutting back to the length this
+    // one measured would delete the other's entry along with this batch.
+    await logEvidenceMove(root, "iterate", ".qfai/evidence/prototyping/iter-00/a.json", 3);
+    const logAbs = path.join(root, MUTATION_LOG_REL);
+    const before = await readFile(logAbs, "utf-8");
+    const other =
+      '{"ts":"2026-01-01T00:00:00.000Z","caller":"certify","path":"x","action":"move"}\n';
+    fault.appendThenAppend = other;
+
+    await expect(logEvidenceMoves(root, "iterate", TWO_MOVES)).rejects.toThrow(
+      "may hold part of this write",
+    );
+
+    const after = await readFile(logAbs, "utf-8");
+    expect(after.startsWith(before)).toBe(true);
+    expect(after).toContain(other.trim());
+  });
+
+  it("removes the file the write created behind a chain of links", async () => {
+    // Followed one hop, the intermediate link was taken for the created file:
+    // the recovery removed a link that was already there and left the file the
+    // write had made.
+    const logAbs = path.join(root, MUTATION_LOG_REL);
+    await mkdir(path.dirname(logAbs), { recursive: true });
+    const middle = path.join(root, "middle-log.jsonl");
+    const target = path.join(root, "final-log.jsonl");
+    try {
+      await symlink(middle, logAbs);
+      await symlink(target, middle);
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+    fault.partialAppend = true;
+
+    await expect(logEvidenceMoves(root, "iterate", TWO_MOVES)).rejects.toThrow("ENOSPC");
+
+    expect((await lstat(middle)).isSymbolicLink()).toBe(true);
     await expect(stat(target)).rejects.toThrow();
   });
 
