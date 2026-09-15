@@ -97,6 +97,25 @@ describe("where an annotation may sit", () => {
     ],
     ["Rust", "pay.rs", `const CASES: &[&str] = &["${ID}"];\n#[test]\nfn pays() {}\n`],
     [
+      // A verbatim string spans lines, and the single-line scanner stopped
+      // at the first newline and left the rest visible.
+      "a C# verbatim fixture",
+      "PayTests.cs",
+      `class PayTests {\n  const string F = @"first\n${ID}";\n  [Fact] public void Pays() {}\n}\n`,
+    ],
+    [
+      "a C# raw fixture",
+      "PayTests.cs",
+      `class PayTests {\n  const string F = """\n  ${ID}\n  """;\n  [Fact] public void Pays() {}\n}\n`,
+    ],
+    [
+      // A typed percent literal names itself wherever it stands, including
+      // as a command argument, where an identifier precedes it.
+      "a Ruby percent literal after an expression",
+      "pay_spec.rb",
+      `logger.debug %q{${ID}}\nit "pays" do\nend\n`,
+    ],
+    [
       // `%q{}` and a heredoc are each one literal. A lexer knowing only
       // quoted strings walks past them and leaves the id visible.
       "a Ruby percent literal",
@@ -126,6 +145,37 @@ describe("where an annotation may sit", () => {
       "a JUnit display name",
       "PayTest.java",
       `class PayTest {\n  @Test\n  @DisplayName("${ID} pays")\n  void pays() {}\n}\n`,
+    ],
+    [
+      // Floor division, not a comment. Read as one, the rest of the line
+      // went unscanned and the quoted value after it stayed visible.
+      "a Python comment after floor division",
+      "test_pay.py",
+      `HALF = 4 // 2  # ${ID}\ndef test_pay():\n    assert pay()\n`,
+    ],
+    [
+      // A raw string ends at the next backtick whatever stands before it.
+      "a Go comment after a raw string ending in a backslash",
+      "pay_test.go",
+      `const path = \`C:\\\`\n// ${ID}\nfunc TestPay(t *testing.T) {}\n`,
+    ],
+    [
+      // `name` need not be the first argument of the annotation.
+      "a JUnit name after another argument",
+      "PayTest.java",
+      `class PayTest {\n  @ParameterizedTest(autoCloseArguments = false, name = "${ID} pays")\n  void pays(int n) {}\n}\n`,
+    ],
+    [
+      // An apostrophe inside a block comment is not a string opener.
+      "an F# annotation in a block comment",
+      "PayTests.fs",
+      `(* this test\u0027s coverage: ${ID} *)\nlet tests = testCase "pays" <| fun _ -> ()\n`,
+    ],
+    [
+      // The attribute is code; the name inside it is the annotation.
+      "a PHPUnit TestDox name",
+      "PayTest.php",
+      `<?php\nclass PayTest {\n  #[TestDox(\u0027${ID} pays\u0027)]\n  public function testPays() {}\n}\n`,
     ],
     [
       // Expecto names a test in its own call, so masking `.fs` without

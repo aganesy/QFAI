@@ -104,10 +104,20 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
       [["ts", "tsx", "mts", "cts", "js", "jsx", "mjs", "cjs"], { comments: false }, [JS_TEST_NAME]],
       // A test's name is its identifier, and a docstring is a literal: the
       // stage counts an annotation in a comment or a test's name, not in one.
-      [["py"], { comments: false, hashComments: true, tripleQuoted: true }, []],
+      [
+        ["py"],
+        {
+          comments: false,
+          hashComments: true,
+          tripleQuoted: true,
+          slashComments: false,
+          regexLiterals: false,
+        },
+        [],
+      ],
       [
         ["rb"],
-        { comments: false, hashComments: true, percentLiterals: true },
+        { comments: false, hashComments: true, percentLiterals: true, regexLiterals: false },
         [
           namePattern(
             String.raw`\b(?<anchor>it|test|describe|context|specify|example|scenario|feature)\s*\(?\s*(?<name>${QUOTED})`,
@@ -116,7 +126,7 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
       ],
       [
         ["go"],
-        { comments: false },
+        { comments: false, rawBacktick: true, regexLiterals: false },
         [
           namePattern(
             String.raw`\.\s*(?<anchor>Run)\s*\(\s*(?<name>${DOUBLE_QUOTED}|` + "`[^`]*`)",
@@ -125,11 +135,11 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
       ],
       [
         ["java", "kt", "kts", "groovy"],
-        { comments: false, tripleQuoted: true },
+        { comments: false, tripleQuoted: true, regexLiterals: false },
         [
           namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${DOUBLE_QUOTED})`),
           namePattern(
-            String.raw`(?<anchor>@ParameterizedTest)\s*\(\s*name\s*=\s*(?<name>${DOUBLE_QUOTED})`,
+            String.raw`(?<anchor>@ParameterizedTest)\s*\([^)]*?\bname\s*=\s*(?<name>${DOUBLE_QUOTED})`,
           ),
           namePattern(
             String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${QUOTED})`,
@@ -146,7 +156,7 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         // Kotlin, so reading `"…" in ids` there as a test name put a data
         // string back into the source and cleared an obligation nothing covers.
         ["scala"],
-        { comments: false, tripleQuoted: true },
+        { comments: false, tripleQuoted: true, regexLiterals: false },
         [
           namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${DOUBLE_QUOTED})`),
           namePattern(
@@ -159,7 +169,7 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
       ],
       [
         ["cs"],
-        { comments: false },
+        { comments: false, verbatimStrings: true, regexLiterals: false },
         [
           namePattern(
             String.raw`\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${DOUBLE_QUOTED})`,
@@ -171,7 +181,7 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         // either. Masked without the first, a real annotation in a test's own
         // name disappeared and the obligation read as uncovered.
         ["fs"],
-        { comments: false },
+        { comments: false, verbatimStrings: true, parenStarComments: true, regexLiterals: false },
         [
           namePattern(
             String.raw`\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${DOUBLE_QUOTED})`,
@@ -183,11 +193,16 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
       ],
       // Rust's apostrophe opens a lifetime as often as a character, and paired
       // as a quote it swallowed the trailing comment an annotation sits in.
-      [["rs"], { comments: false, lifetimes: true }, []],
+      [["rs"], { comments: false, lifetimes: true, regexLiterals: false }, []],
       [
         ["php"],
-        { comments: false, hashComments: true },
-        [namePattern(String.raw`\b(?<anchor>it|test|describe)\s*\(\s*(?<name>${QUOTED})`)],
+        { comments: false, hashComments: true, regexLiterals: false },
+        [
+          namePattern(String.raw`\b(?<anchor>it|test|describe)\s*\(\s*(?<name>${QUOTED})`),
+          // PHPUnit names a test in an attribute, which the hash-comment rule
+          // leaves as code while the literal inside it is masked.
+          namePattern(String.raw`(?<anchor>TestDox|DataProvider)\s*\(\s*(?<name>${QUOTED})`),
+        ],
       ],
     ] satisfies [string[], JsMaskOptions, RegExp[]][]
   ).flatMap(([extensions, mask, names]) =>

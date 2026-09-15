@@ -261,6 +261,55 @@ function endOfCharLiteral(source: string, start: number): number {
   return literal === null ? -1 : start + literal[0].length;
 }
 
+/**
+ * The end of a C# verbatim or raw string beginning at `start`, or `-1` where
+ * neither opens there.
+ *
+ * A verbatim string ends at a quote that is not doubled; a raw string ends at a
+ * run of quotes at least as long as the one that opened it.
+ */
+function endOfVerbatimString(source: string, start: number): number {
+  if (source.startsWith('"""', start)) {
+    const open = /^"{3,}/.exec(source.slice(start))?.[0] ?? '"""';
+    const close = source.indexOf(open, start + open.length);
+    return close === -1 ? source.length : close + open.length;
+  }
+  if (!source.startsWith('@"', start)) return -1;
+  for (let index = start + 2; index < source.length; index += 1) {
+    if (source[index] !== '"') continue;
+    if (source[index + 1] === '"') {
+      index += 1;
+      continue;
+    }
+    return index + 1;
+  }
+  return source.length;
+}
+
+/** The end of a `(* … *)` comment beginning at `start`, counting nesting. */
+function endOfParenStarComment(source: string, start: number): number {
+  let depth = 0;
+  for (let index = start; index < source.length; index += 1) {
+    if (source.startsWith("(*", index)) {
+      depth += 1;
+      index += 1;
+      continue;
+    }
+    if (source.startsWith("*)", index)) {
+      depth -= 1;
+      if (depth === 0) return index + 2;
+      index += 1;
+    }
+  }
+  return source.length;
+}
+
+/** The end of a raw backtick span, which no escape can extend. */
+function endOfRawBacktick(source: string, start: number): number {
+  const close = source.indexOf("`", start + 1);
+  return close === -1 ? source.length : close + 1;
+}
+
 function endOfTripleQuoted(source: string, start: number, fence: string): number {
   const close = source.indexOf(fence, start + fence.length);
   return close === -1 ? source.length : close + fence.length;
@@ -317,6 +366,52 @@ export type JsMaskOptions = {
    * comment an annotation sits in included.
    */
   readonly lifetimes?: boolean;
+
+  /**
+   * Read `//` as a line comment. Default `true`.
+   *
+   * `false` for Python, where `//` is floor division. Read as a comment, the
+   * rest of the line goes unscanned and a quoted id after it stays visible to a
+   * caller that keeps comments.
+   */
+  readonly slashComments?: boolean;
+
+  /**
+   * Recognise C#'s verbatim (`@"…"`) and raw (`\"\"\"…\"\"\"`) strings. Default
+   * `false`.
+   *
+   * Both span lines, and the single-line scanner stops at the first newline: an
+   * id after that point stays visible while the literal around it is masked.
+   */
+  readonly verbatimStrings?: boolean;
+
+  /**
+   * Recognise `(* … *)` block comments, which nest. Default `false`.
+   *
+   * `true` for F#, where the generic quote rule reads an apostrophe inside one
+   * as a string opener and blanks the comment's remainder — the annotation a
+   * comment is a valid place for included.
+   */
+  readonly parenStarComments?: boolean;
+
+  /**
+   * Read a backtick span as raw, with no escapes. Default `false`.
+   *
+   * `true` for Go, whose raw string ends at the next backtick whatever stands
+   * before it. Read with JavaScript's escaping, a trailing backslash consumed
+   * the closer and the mask ran on to the next one.
+   */
+  readonly rawBacktick?: boolean;
+
+  /**
+   * Read an unexpected `/` as opening a regular expression. Default `true`.
+   *
+   * `false` for every language that has no such literal. There a `/` is
+   * division, and `4 // 2` put the lexer in front of a second slash where a
+   * value had not just ended — read as a regex opener, it blanked the rest of
+   * the line and took a trailing comment with it.
+   */
+  readonly regexLiterals?: boolean;
 };
 
 export function maskJsNonCode(source: string, options: JsMaskOptions = {}): string {
@@ -325,6 +420,11 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
   const tripleQuoted = options.tripleQuoted ?? false;
   const percentLiterals = options.percentLiterals ?? false;
   const lifetimes = options.lifetimes ?? false;
+  const slashComments = options.slashComments ?? true;
+  const verbatimStrings = options.verbatimStrings ?? false;
+  const parenStarComments = options.parenStarComments ?? false;
+  const rawBacktick = options.rawBacktick ?? false;
+  const regexLiterals = options.regexLiterals ?? true;
   const out = source.split("");
   // Whether the token just read closes an expression. It is the whole
   // regex-vs-division test: `a / b` divides, `= /re/` does not. Comments leave
@@ -349,13 +449,32 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
       i = blank(out, i, endOfTripleQuoted(source, i, ch.repeat(3)));
       endsExpression = true;
       lastWord = "";
-    } else if (ch === "/" && next === "/") {
+    } else if (parenStarComments && ch === "(" && next === "*") {
+      const end = endOfParenStarComment(source, i);
+      i = blankComments ? blank(out, i, end) : end;
+    } else if (
+      verbatimStrings &&
+      (ch === "@" || ch === '"') &&
+      endOfVerbatimString(source, i) !== -1
+    ) {
+      i = blank(out, i, endOfVerbatimString(source, i));
+      endsExpression = true;
+      lastWord = "";
+    } else if (slashComments && ch === "/" && next === "/") {
       const end = endOfLineComment(source, i);
       i = blankComments ? blank(out, i, end) : end;
     } else if (ch === "/" && next === "*") {
       const end = endOfBlockComment(source, i);
       i = blankComments ? blank(out, i, end) : end;
-    } else if (percentLiterals && ch === "%" && !endsExpression) {
+    } else if (
+      percentLiterals &&
+      ch === "%" &&
+      // A typed literal names itself: `%q{…}` is one wherever it stands, and a
+      // command argument such as `logger.debug %q{…}` follows an identifier. The
+      // bare form is the ambiguous one, and only it waits for a position where a
+      // modulo operator cannot be.
+      (/[A-Za-z]/.test(next) || !endsExpression)
+    ) {
       const end = endOfPercentLiteral(source, i);
       if (end === -1) {
         i += 1;
@@ -393,10 +512,10 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
       endsExpression = true;
       lastWord = "";
     } else if (ch === "`") {
-      i = blank(out, i, endOfTemplate(source, i));
+      i = blank(out, i, rawBacktick ? endOfRawBacktick(source, i) : endOfTemplate(source, i));
       endsExpression = true;
       lastWord = "";
-    } else if (ch === "/" && !endsExpression) {
+    } else if (regexLiterals && ch === "/" && !endsExpression) {
       i = blank(out, i, endOfRegexLiteral(source, i));
       endsExpression = true;
       lastWord = "";
