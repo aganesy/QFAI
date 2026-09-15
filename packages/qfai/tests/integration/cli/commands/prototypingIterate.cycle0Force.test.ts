@@ -982,6 +982,38 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(await readFile(protoJsonPath, "utf-8")).toBe(before);
   });
 
+  it("lets a later cycle run with the aggregate mirrors its own captures wrote", async () => {
+    // Those directories are what a capturing loop writes on purpose from cycle
+    // 1 onward. Read as an overlapping capture, they stopped every captured
+    // loop at its second cycle.
+    const root = await newTempDir();
+    await seedProject(root);
+    const seeded = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(seeded).toBe(0);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    for (const name of ["screenshots", "html"]) {
+      await mkdir(path.join(evidenceRoot, name), { recursive: true });
+      await writeFile(path.join(evidenceRoot, name, "home.txt"), "this loop", "utf-8");
+    }
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 1,
+      targetUrl: "http://localhost:5173",
+      dryRun: true,
+    });
+
+    expect(exit).toBe(0);
+    // And they are still there: no later cycle moves them aside.
+    expect(await readFile(path.join(evidenceRoot, "screenshots", "home.txt"), "utf-8")).toBe(
+      "this loop",
+    );
+  });
+
   // A cycle >= 1 run with nothing frozen refuses, and the preview reports that
   // refusal rather than exiting 0 past it.
   it("--cycle 1 --dry-run reports the same refusal as the real run", async () => {

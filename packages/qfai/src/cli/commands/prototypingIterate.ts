@@ -802,6 +802,12 @@ export async function runPrototypingIterate(
     // the reset — the deletions a partly cleared directory recorded are the
     // case — and cutting back to before them would take those with it, so the
     // move is answered by a record of the move back instead.
+    // A rollback that stranded something before the batch was written has no
+    // entries to take back and a tree that holds moves: those are recorded
+    // here, since nothing later reaches this path.
+    if (loggedMoves === null && stranded.length > 0 && aggregateMove !== null) {
+      await logStrandedMoves(options.root, evidenceRootAbs, aggregateMove.backupAbs, stranded);
+    }
     const unlogged =
       loggedMoves === null ||
       (stranded.length === 0 &&
@@ -907,28 +913,33 @@ export async function runPrototypingIterate(
   }
   // A capture still running recreates the directory it was writing into, and a
   // reset that ends with the previous loop's mirror in place is a reset that did
-  // nothing. Read after the log, and on every cycle-0 reset: an overlapping
-  // capture creates the directory whether or not this run found one to move, so
-  // a check made only where one was found is a check the stale evidence walks
-  // past.
+  // nothing. Read after the log, and whether or not this run found a directory
+  // to move: an overlapping capture creates one either way, so a check made only
+  // where one was found is a check the stale evidence walks past.
+  //
+  // Cycle 0 only. A later cycle's own `--capture` run writes those same
+  // directories on purpose, and reading them there would stop every captured
+  // loop at its second cycle.
   //
   // SIMPLIFIED: a capture writing after this read is not seen. The window is one
   // check wide, where it was the whole reset.
   // Lift when: the two commands take a lock on the evidence root.
-  let returned: string[];
-  try {
-    returned = await presentAggregateDirs(evidenceRootAbs);
-  } catch (cause) {
-    // The check itself failing leaves the moves made and logged, so it goes
-    // back the way every other failure after them does.
-    return await undoReset("could not re-read the evidence root after the moves", cause);
-  }
-  if (returned.length > 0) {
-    return await undoReset(
-      `${returned.join(" and ")} came back while the reset ran`,
-      new Error("another capture is writing into the evidence root"),
-      " Let the capture finish, then re-run cycle 0.",
-    );
+  if (options.cycle === 0) {
+    let returned: string[];
+    try {
+      returned = await presentAggregateDirs(evidenceRootAbs);
+    } catch (cause) {
+      // The check itself failing leaves the moves made and logged, so it goes
+      // back the way every other failure after them does.
+      return await undoReset("could not re-read the evidence root after the moves", cause);
+    }
+    if (returned.length > 0) {
+      return await undoReset(
+        `${returned.join(" and ")} came back while the reset ran`,
+        new Error("another capture is writing into the evidence root"),
+        " Let the capture finish, then re-run cycle 0.",
+      );
+    }
   }
 
   // 4) Persist seed metadata to prototyping.json on cycle 0:
