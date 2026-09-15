@@ -331,11 +331,21 @@ describe("the lint job's pre-flight step", () => {
 
   it("reads a marker in a CRLF file, as the scanner does", async () => {
     // The scanner splits on the line separator, so the carriage return is gone
-    // before it matches; grep's end-of-line would sit past it. The step drops
-    // the returns per file, which keeps the two answering the same way.
+    // before it matches; grep's end-of-line would sit past it. The pattern makes
+    // the return optional, which keeps the two answering the same way.
     const workflow = await readFile(path.join(repoRoot, ".github/workflows/ci.yml"), "utf-8");
     const scan = workflow.split("\n").find((line) => line.includes("grep -qE"));
     expect(scan).toBeDefined();
-    expect(scan).toContain("tr -d '\\r'");
+    expect(scan).toContain("\\r?$");
+  });
+
+  it("scans each file in one process, with no pipe", async () => {
+    // `grep -q` exits at its first match, so a producer still writing takes
+    // SIGPIPE and returns 141 — which `pipefail` makes the pipeline's status.
+    // A marker near the start of a file larger than the pipe buffer then read
+    // as no marker, which is the whole subject of this scan.
+    const workflow = await readFile(path.join(repoRoot, ".github/workflows/ci.yml"), "utf-8");
+    const scan = workflow.split("\n").find((line) => line.includes("grep -qE")) ?? "";
+    expect(scan.slice(0, scan.indexOf("grep -qE"))).not.toContain("|");
   });
 });
