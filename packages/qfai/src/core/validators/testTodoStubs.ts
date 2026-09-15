@@ -14,8 +14,10 @@
  * implemented, while a `.skip` keeps its body and the fix is to drop the
  * modifier.
  *
- * A file still carrying {@link SCAFFOLD_PLACEHOLDER_MARKER} is exempt from
- * `QFAI-TEST-003`. `qfai atdd scaffold` writes its skeletons as `it.skip`, and
+ * A file `D-SCAFFOLD-PLACEHOLDER` will report — an unfilled skeleton, carrying
+ * the scaffold sentinel beside a per-test-case TODO line, in a directory that
+ * validator scans, for a test case that owes an ATDD annotation — is exempt
+ * from `QFAI-TEST-003`. `qfai atdd scaffold` writes its skeletons as `it.skip`, and
  * `D-SCAFFOLD-PLACEHOLDER` already owns an unfilled scaffold — with a
  * deliberate ladder that stays a warning for `atdd.scaffoldEscalateCycles`
  * validate runs before it becomes an error. Reporting the same block here as
@@ -40,7 +42,6 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
 import {
   collectFilesByGlobs,
   DEFAULT_GLOB_FILE_LIMIT,
@@ -48,6 +49,7 @@ import {
   unusableGlobReason,
   type CollectFilesByGlobsResult,
 } from "../fs.js";
+import { globExtensions, isGlobExclusion, namedTestFileMatcher } from "../testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { maskJsNonCode } from "./jsSourceMask.js";
@@ -716,13 +718,20 @@ function collectStubIssues(
   content: string,
   dialect: StubDialect,
   skippedTestSeverity: IssueSeverity,
+  placeholderReported: (relativePath: string, content: string) => boolean,
 ): Issue[] {
   const issues: Issue[] = [];
   // An unfilled scaffold is `D-SCAFFOLD-PLACEHOLDER`'s, and its `it.skip` is
   // what this scan would otherwise read as a parked suite. The marker is the
   // scaffold's own, so it is gone the moment the block is authored — after
   // which a `.skip` left behind is a hand-written one and is reported.
-  const scaffolded = content.includes(SCAFFOLD_PLACEHOLDER_MARKER);
+  //
+  // The marker alone is not enough to hand it over. That validator scans four
+  // directories under `paths.testsDir`, reports a sentinel only beside a per-TC
+  // `TODO: implement assertion for` line, and passes over a TC whose `Level`
+  // owes no ATDD annotation. A file failing any of those is reported by nothing
+  // there, so it stays this gate's. The caller's predicate asks all of it.
+  const scaffolded = placeholderReported(relFile, content);
   // Offsets and line breaks survive both passes, so a match position in the
   // scanned text is still a position in the file the finding names.
   const masked = dialect.mask(content);
@@ -827,14 +836,30 @@ const UNDIALECTED_TEST_SOURCE_EXTENSIONS: readonly string[] = [
  * `QFAI-TEST-001` for the extensions with a dialect, `QFAI-TEST-002` for the
  * ones without.
  */
-export const STUB_SOURCE_FILE_PATTERN = `**/*.{${Array.from(
+const STUB_SOURCE_EXTENSIONS: readonly string[] = Array.from(
   new Set([
     ...STUB_DIALECTS.flatMap((dialect) => dialect.extensions.map((ext) => ext.slice(1))),
     ...UNDIALECTED_TEST_SOURCE_EXTENSIONS,
   ]),
-)
-  .sort()
-  .join(",")}}`;
+).sort();
+
+export const STUB_SOURCE_FILE_PATTERN = `**/*.{${STUB_SOURCE_EXTENSIONS.join(",")}}`;
+
+/**
+ * The same pattern widened by the extensions a project's own globs name.
+ *
+ * A caller builds its canonical `<testsDir>` globs from this, and an extension
+ * named only by a package glob reaches a path under the configured root through
+ * those globs alone, because the package glob does not match there. The
+ * post-collection filter cannot recover a file nothing collected.
+ */
+export function stubSourceFilePattern(projectGlobs: readonly string[]): string {
+  const extensions = new Set([
+    ...STUB_SOURCE_EXTENSIONS,
+    ...globExtensions(projectGlobs).map((ext) => ext.slice(1)),
+  ]);
+  return `**/*.{${[...extensions].sort().join(",")}}`;
+}
 
 /**
  * Blanks every comment and string-literal span, keeping offsets and line
@@ -1254,6 +1279,34 @@ export type TestTodoStubOptions = {
    * the gate scanned nothing at all on a freshly initialised repository.
    */
   globs?: readonly string[];
+  /**
+   * The entries of `globs` that are the project's own `testFileGlobs`, used as
+   * written. A diagnostic about one of them names that setting, which is the
+   * one that can fix it, rather than the directories the caller generated.
+   */
+  projectGlobs?: readonly string[];
+  /**
+   * Narrows the collected set to the files this caller owns.
+   *
+   * Globs alone cannot express it: the ATDD scan reads the project's own test
+   * globs, which match a package's unit suite as well as its acceptance one,
+   * and a unit test's stub must not block a gate that owns none of it. The
+   * predicate takes a repository-relative, posix-slashed path.
+   */
+  fileFilter?: (relativePath: string) => boolean;
+  /**
+   * Whether `D-SCAFFOLD-PLACEHOLDER` reports this file.
+   *
+   * A file carrying the scaffold marker is exempt from `QFAI-TEST-003` only
+   * where that validator reports it instead. It scans four directories under
+   * `paths.testsDir` and nothing else, so a marked skeleton anywhere else — a
+   * package-local acceptance suite, which this gate does read — stays this
+   * gate's to report. Absent, no file is exempt: a run without that validator,
+   * as `--profile tdd` is, has nothing else to report a skeleton whose tests
+   * never run. The predicate takes a repository-relative, posix-slashed path
+   * and the file's content.
+   */
+  placeholderReported?: (relativePath: string, content: string) => boolean;
 };
 
 /**
@@ -1307,16 +1360,22 @@ function reportEmptyTestFileGlobs(): Issue {
  * how many more would have matched. Saying "matched" claimed a total the scan
  * had not measured.
  */
-function reportTruncatedScan(limit: number, callerGlobs: boolean): Issue {
-  const key = callerGlobs
-    ? "validation.traceability.testFileExcludeGlobs"
-    : "validation.traceability.testFileGlobs";
-  const selection = callerGlobs
-    ? "the acceptance directories this gate scans"
-    : "`validation.traceability.testFileGlobs`";
-  const remedy = callerGlobs
-    ? "Widen `validation.traceability.testFileExcludeGlobs` in qfai.config.yaml so the selection fits under the limit and every acceptance test is actually read."
-    : "Narrow `validation.traceability.testFileGlobs`, or widen `validation.traceability.testFileExcludeGlobs`, so the selection fits under the limit and every acceptance test is actually read.";
+function reportTruncatedScan(
+  limit: number,
+  selected: { callerDirectories: boolean; projectGlobs: boolean },
+): Issue {
+  // Narrowing `testFileGlobs` shrinks only a selection it contributed to.
+  const key = selected.projectGlobs
+    ? "validation.traceability.testFileGlobs"
+    : "validation.traceability.testFileExcludeGlobs";
+  const selection = !selected.callerDirectories
+    ? "`validation.traceability.testFileGlobs`"
+    : selected.projectGlobs
+      ? "the acceptance directories this gate scans and `validation.traceability.testFileGlobs`"
+      : "the acceptance directories this gate scans";
+  const remedy = selected.projectGlobs
+    ? "Narrow `validation.traceability.testFileGlobs`, or widen `validation.traceability.testFileExcludeGlobs`, so the selection fits under the limit and every acceptance test is actually read."
+    : "Widen `validation.traceability.testFileExcludeGlobs` in qfai.config.yaml so the selection fits under the limit and every acceptance test is actually read.";
   return issue(
     "QFAI-TEST-002",
     `The stub scan read the first ${limit} files of ${selection} and stopped at that limit, so the rest were never opened. A clean result is not evidence that they hold no stub.`,
@@ -1380,7 +1439,10 @@ export async function validateTestTodoStubs(
   const excludeGlobs = Array.from(
     new Set([
       ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
-      ...config.validation.traceability.testFileExcludeGlobs,
+      // The includes are normalised above; the excludes are the same list's
+      // other half, and a padded entry that the traceability scan honours but
+      // this one does not makes the two gates read different files.
+      ...normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
     ]),
   );
 
@@ -1388,12 +1450,54 @@ export async function validateTestTodoStubs(
   // scanned: refusing the whole batch dropped the stubs a readable pattern
   // would have reported.
   const callerGlobs = options.globs !== undefined;
+  const projectGlobs = new Set(normalizeGlobs(options.projectGlobs ?? []));
+  // Whether a pattern is one the caller generated, and so answers to
+  // `paths.testsDir`, rather than one the project wrote.
+  const generated = (glob: string): boolean => callerGlobs && !projectGlobs.has(glob);
   const accepted = globs.filter((glob) => unusableGlobReason(glob) === null);
   const issues: Issue[] = globs.flatMap((glob) => {
     const reason = unusableGlobReason(glob);
-    return reason === null ? [] : [reportRefusedScan(reason, callerGlobs, accepted.length > 0)];
+    return reason === null ? [] : [reportRefusedScan(reason, generated(glob), accepted.length > 0)];
   });
   if (accepted.length === 0) return issues;
+
+  // A caller that supplied globs also supplied the pattern it wants, and the
+  // ATDD gate's set is that pattern **plus the project's own `testFileGlobs`,
+  // used as written**. An extension-broad project glob therefore reaches a
+  // fixture — `tests/integration/data.json` — which no dialect owns and which
+  // is then reported as an unscanned language. The intersection belongs here
+  // rather than in the glob, because slicing a project glob is the defect that
+  // list exists to avoid.
+  const sourceExtensions =
+    options.globs === undefined ? null : new Set(STUB_SOURCE_EXTENSIONS.map((ext) => `.${ext}`));
+  // A glob naming its files selects them whatever this validator knows about
+  // their extension: `*.zig` by extension, `*.test.*` by name, `test_pay`
+  // whole. A file one matches is kept, because dropped it never reaches
+  // `unscannedExtensions`, and a suite in a language with no dialect reads as a
+  // clean scan rather than an unscannable one. Each glob is read against the
+  // whole path, so an extension one package's glob names does not keep a file
+  // only another package's broad glob swept in.
+  const namedTestFile = options.globs === undefined ? null : namedTestFileMatcher(accepted);
+  const wanted = (absolutePath: string): boolean => {
+    const relative = path.relative(root, absolutePath).replace(/\\/g, "/");
+    // The generated globs are absolute where the tests directory sits outside
+    // the root, so the path is offered both ways.
+    const named =
+      namedTestFile !== null &&
+      (namedTestFile(relative) || namedTestFile(absolutePath.replace(/\\/g, "/")));
+    if (
+      sourceExtensions &&
+      !sourceExtensions.has(path.extname(absolutePath).toLowerCase()) &&
+      !named
+    ) {
+      return false;
+    }
+    return options.fileFilter ? options.fileFilter(relative) : true;
+  };
+  // In the stream, not after it. A caller's globs may match a whole monorepo,
+  // and files this gate does not own would otherwise spend the limit before its
+  // own reach it — reported as an `info`, which `--fail-on error` passes.
+  const filterOption = options.fileFilter || sourceExtensions ? { filter: wanted } : {};
 
   let scan: CollectFilesByGlobsResult;
   try {
@@ -1401,6 +1505,7 @@ export async function validateTestTodoStubs(
       globs: accepted,
       ignore: excludeGlobs,
       limit: DEFAULT_GLOB_FILE_LIMIT,
+      ...filterOption,
     });
   } catch (error) {
     // A directory one pattern reaches failing the combined scan does not stop
@@ -1408,30 +1513,32 @@ export async function validateTestTodoStubs(
     // reported beside the stubs the rest select.
     // A negative entry excludes from every pattern, so each scan carries all of
     // them; scanned on its own it would select nothing.
-    const isExclusion = (glob: string): boolean => glob.startsWith("!") && !glob.startsWith("!(");
-    const exclusions = accepted.filter(isExclusion);
+    const exclusions = accepted.filter(isGlobExclusion);
     const separate = await Promise.all(
       accepted
-        .filter((glob) => !isExclusion(glob))
+        .filter((glob) => !isGlobExclusion(glob))
         .map(async (glob) => {
           try {
             const alone = await collectFilesByGlobs(root, {
               globs: [glob, ...exclusions],
               ignore: excludeGlobs,
               limit: DEFAULT_GLOB_FILE_LIMIT,
+              ...filterOption,
             });
             return { kind: "scanned" as const, scan: alone };
           } catch (failure) {
-            return { kind: "failed" as const, failure };
+            return { kind: "failed" as const, glob, failure };
           }
         }),
     );
     const scanned = separate.flatMap((entry) => (entry.kind === "scanned" ? [entry.scan] : []));
-    const failures = separate.flatMap((entry) => (entry.kind === "failed" ? [entry.failure] : []));
+    const failures = separate.flatMap((entry) => (entry.kind === "failed" ? [entry] : []));
     issues.push(
-      ...(failures.length === 0 ? [error] : failures).map((failure) =>
-        reportRefusedScan(failure, callerGlobs, scanned.length > 0),
-      ),
+      ...(failures.length === 0
+        ? [reportRefusedScan(error, callerGlobs && projectGlobs.size === 0, scanned.length > 0)]
+        : failures.map(({ glob, failure }) =>
+            reportRefusedScan(failure, generated(glob), scanned.length > 0),
+          )),
     );
     if (scanned.length === 0) return issues;
     const union = [...new Set(scanned.flatMap((entry) => entry.files))];
@@ -1464,12 +1571,25 @@ export async function validateTestTodoStubs(
       continue;
     }
 
-    issues.push(...collectStubIssues(relFile, content, dialect, skippedTestSeverity));
+    issues.push(
+      ...collectStubIssues(
+        relFile,
+        content,
+        dialect,
+        skippedTestSeverity,
+        options.placeholderReported ?? (() => false),
+      ),
+    );
   }
 
   if (truncated) {
     // The third state a clean result can mean.
-    issues.push(reportTruncatedScan(limit, options.globs !== undefined));
+    issues.push(
+      reportTruncatedScan(limit, {
+        callerDirectories: callerGlobs,
+        projectGlobs: !callerGlobs || projectGlobs.size > 0,
+      }),
+    );
   }
 
   if (unscannedExtensions.size > 0) {

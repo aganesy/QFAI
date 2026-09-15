@@ -259,13 +259,24 @@ inserted after the last rule bullet — inside the managed markers where the fil
 has them, and anywhere in the list where it does not, because the Copilot file
 is generated whole and carries none.
 
+It may also replace a rule summary a release wrote that a later template
+rewords. The line qualifies only when its own text, less a trailing CR, is
+exactly a spelling that shipped; it takes the template's bullet for the same
+master and keeps its terminator. It applies inside the markers, and in the
+Copilot file only under its `## Cross-AI rules (master)` heading, up to the next
+heading of the same or a higher level; elsewhere in that file a matching line is
+the project's. The master a summary describes is refreshed wherever the project
+has not edited it, and a summary left at the older wording would contradict it.
+A line with any other text — reworded, indented, quoted — is the project's. Both
+edits land in one write, and the report names each.
+
 Init also adds the shipped review directive to `AGENTS.md` and `CLAUDE.md`
 when no operative copy exists. It asks agents to read `REVIEW.md` before
 reviewing or writing a PR description, only when the project has that file.
 Init does not create `REVIEW.md`. The directive is prepended so an unfinished
 example or comment cannot hide it. Existing text and line endings are preserved.
 
-**What it may not.** Replace any other text in the file. A bullet the project deleted is
+**What it may not.** Anything else in the file. A bullet the project deleted is
 not restored, because that master's file is on disk and the copy skips it.
 Prose the project wrote inside the section survives. The heading is never
 duplicated: an existing section is edited in place, and the append path is for a
@@ -324,20 +335,24 @@ about to rename.
 
 **What it reads.** The Copilot file belongs to the adopter, so it is opened
 once, refused unless it is an ordinary file, and read to a ceiling. A larger one
-is reported and left alone rather than buffered and decoded whole for the sake of
-one line. A file carrying no rule list to add a line to — a project that wrote
-its own instructions — is reported too, naming the masters: the wrapper sync
-skips an existing file, so nothing else will carry them.
+is left alone rather than buffered and decoded whole for the sake of one line,
+and is reported when the run has a citation to add. With none, only a summary
+could be out of date, and a warning on every run about a file that may need
+nothing is noise. A file carrying no rule list to add a line to — a project that
+wrote its own instructions — is reported too, naming the masters: the wrapper
+sync skips an existing file, so nothing else will carry them.
 
 **Under `--force` the Copilot file belongs to the wrapper sync**, which writes it
-whole from the same source later in the run. Nothing is added to it here, and no
-refusal is reported for it, because a refusal would name a file this run goes on
-to replace.
+whole from the same source later in the run. Nothing is added to it or replaced
+in it here, and no refusal is reported for it, because a refusal would name a
+file this run goes on to replace.
 
 **What a refusal does not do.** Queue the citation for later. A master this run
 copied is one no later run offers again, because the file is on disk and the
 next copy skips it. The refusal names the masters that stayed uncited, and
-repairing the file does not bring them with it.
+repairing the file does not bring them with it. An out-of-date summary is
+different: it is still in the file, so the next run finds it again. Where the
+refusal asks for an edit by hand, it names the edit it refused.
 
 **What the signal cannot tell.** A project that deleted both the bullet and the
 master gets both back: the same run writes the file again, so the citation

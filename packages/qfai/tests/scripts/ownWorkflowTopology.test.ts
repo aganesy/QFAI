@@ -1490,10 +1490,9 @@ const OWN_WORKFLOW_FILES = [
  * exactly what makes `EX-0017-0004`'s falsifying observation work: "a rename shows as a
  * diff on the job key".
  *
- * A matrix job reports one check per leg, named `<job> (<value>)`. That is why the seven
- * legs appear here individually: they are seven check names, and removing a leg removes
- * one — the thing `BR-0017-0006` forbids and `TC-0017-0007` also guards from the matrix
- * side.
+ * A matrix job reports one check per leg, named `<job> (<value>)`. That is why the legs
+ * appear here individually: each is a check name, and removing a leg removes one — the
+ * thing `BR-0017-0006` forbids and `TC-0017-0007` also guards from the matrix side.
  *
  * `node-floor` was added deliberately, which is what this pin is for: it made the addition a
  * failing test naming the new member rather than a diff to interpret. Every toolchain job
@@ -1502,10 +1501,15 @@ const OWN_WORKFLOW_FILES = [
  * promises; an API present in Node 24 and absent in 20.19 passes every gate and breaks
  * exactly the supported users.
  *
- * Creating a check name is normally a repository-settings problem. It is not one here: only
- * `ci-pass` is required, the verdict is derived from its `needs` map, and `node-floor` is in
- * that map — so the new lane is gated by the context that already exists, and no setting has
- * to change for it to block a merge.
+ * It is sliced over the same seven values as `test`, so it reports seven check names and no
+ * bare `node-floor`: no job produces that name, and pinning it would hold this list against
+ * a check that cannot appear.
+ *
+ * Creating a check name is normally a repository-settings problem. It is not one here, which
+ * is what lets a required lane be sliced without a settings change: only `ci-pass` is
+ * required, the verdict is derived from its `needs` map, and a matrix job contributes ONE
+ * rolled-up `result` to that map however many legs it expands to. So the seven legs are
+ * gated by the context that already exists.
  */
 const CI_CHECK_NAMES = [
   "build",
@@ -1514,7 +1518,13 @@ const CI_CHECK_NAMES = [
   "ci-pass",
   "detect",
   "lint",
-  "node-floor",
+  "node-floor (cli)",
+  "node-floor (core)",
+  "node-floor (e2e)",
+  "node-floor (integration)",
+  "node-floor (scripts)",
+  "node-floor (unit)",
+  "node-floor (validators)",
   "scanner-coverage",
   "test (cli)",
   "test (core)",
@@ -1568,19 +1578,41 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
       .soft(ownWorkflowFiles(), "layer separation may not add a workflow file")
       .toEqual([...OWN_WORKFLOW_FILES]);
 
-    // CLAIM 2 — the layers are legs of ONE job, not one job each. Seven jobs would satisfy
+    // CLAIM 2 — the layers are legs of a job, not one job each. Seven jobs would satisfy
     // "inside the existing file" and still create six new check names, so the shape is
     // asserted and not just the location.
+    //
+    // Two jobs express the split: `test`, and `node-floor` running the same slices on the
+    // engines floor. That is the same shape applied twice rather than an exception to it —
+    // what `AC-0017-0018` rejects is a layer becoming a job of its own, and each lane is
+    // ONE job whose legs are the layers. Expressing either lane as seven jobs would create
+    // seven check names the same way, and the axis claim below is what refuses it.
+    //
+    // A LITERAL list, so a third sliced lane arrives as a failing test naming the new member
+    // rather than as a diff to interpret — the reason `CI_CHECK_NAMES` is a literal too.
     const jobs = ciJobs();
     const matrixJobs = Object.entries(jobs)
       .filter(([, job]) => {
         const strategy = job["strategy"];
         return isRecord(strategy) && isRecord(strategy["matrix"]);
       })
-      .map(([id]) => id);
+      .map(([id]) => id)
+      .sort();
     expect
-      .soft(matrixJobs, "the layer split is expressed as the matrix of a single job")
-      .toEqual(["test"]);
+      .soft(matrixJobs, "the layer split is expressed as the matrix of a job, in these lanes only")
+      .toEqual(["node-floor", "test"]);
+
+    // CLAIM 3 — and each of those matrices carries exactly one axis, the slice. A second axis
+    // multiplies the legs, and a matrix keyed on something other than the layer is no longer
+    // the layer split at all: either way the check names stop being one per layer, which is
+    // the count CLAIM 2 exists to hold.
+    for (const id of matrixJobs) {
+      const strategy = jobs[id]?.["strategy"];
+      const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
+      expect
+        .soft(Object.keys(isRecord(matrix) ? matrix : {}), `${id} must expand over the slice alone`)
+        .toEqual(["slice"]);
+    }
   });
 });
 
@@ -1717,17 +1749,41 @@ describe("one lane runs on the floor `engines.node` declares", () => {
       "the floor lane must ASK for the floor; without this input it is an ordinary lane wearing " +
         "the name of a floor lane",
     ).toBe("true");
+
+    // And EVERY leg does both, which is what the matrix puts at risk. The setup call and the
+    // assertion that reads `node --version` back are steps in one list, so a condition on
+    // either leaves the remaining legs running whatever `setup-node` resolved while still
+    // reporting under the floor lane's name — a green check for a claim nothing tested,
+    // reachable one leg at a time.
+    const confirms = steps.find(
+      (step) => typeof step["run"] === "string" && step["run"].includes("engines.node"),
+    );
+    expect(confirms, "and assert at runtime that it got it").toBeDefined();
+    for (const [label, step] of [
+      ["the setup call", setup],
+      ["the floor assertion", confirms],
+    ] as const) {
+      expect(step?.["if"], `${label} must run on every leg, not on a chosen one`).toBeUndefined();
+    }
   });
 
   it("builds before it tests, or the lane is red for a reason that is not the floor", () => {
     // `dist/` is not committed and two slices read it — `cliStartupCost.test.ts` fails with "no
     // shipped bundle was readable" and `spec0010DiscussionMockAndPointerE2E.test.ts` spawns
-    // `dist/cli/index.cjs`. Without a build the floor lane is structurally ALWAYS RED, and an
-    // always-red required lane conveys no differential signal: a genuine Node 20 break and a
-    // missing bundle look identical, so the lane gets un-required or "fixed" by dropping the pin.
+    // `dist/cli/index.cjs`. Without a build those legs are structurally ALWAYS RED, and an
+    // always-red leg of a required lane conveys no differential signal: a genuine Node 20 break
+    // and a missing bundle look identical, so the lane gets un-required or "fixed" by dropping
+    // the pin.
     //
     // The ORDER is asserted, not just the presence: a build after the test step is a build that
     // ran too late.
+    //
+    // And the CONDITION. The build runs on two of seven legs, so "a build step exists" does not
+    // imply that the legs reading `dist/` get one: a condition narrowed to one slice, or widened
+    // to a slice that reads nothing, is invisible to the order claim. It is asserted against the
+    // `test` job's rather than restated, because the two jobs run the same slices over the same
+    // workspace and a build gated differently in one of them is a difference with no reason
+    // behind it.
     const jobs = ciJobs();
     const steps = Array.isArray(jobs["node-floor"]?.["steps"])
       ? jobs["node-floor"]["steps"].filter(isRecord)
@@ -1745,6 +1801,50 @@ describe("one lane runs on the floor `engines.node` declares", () => {
       "the build must come first, or the slices that read `dist/` fail for a reason that has " +
         "nothing to do with the Node version this lane exists to exercise",
     ).toBe(true);
+
+    const testSteps = Array.isArray(jobs["test"]?.["steps"])
+      ? jobs["test"]["steps"].filter(isRecord)
+      : [];
+    const testBuild = testSteps.find(
+      (step) => typeof step["run"] === "string" && /\bbuild\b/.test(step["run"]),
+    );
+    expect(testBuild, "the `test` job must build for its dist-reading slices").toBeDefined();
+    expect(
+      steps[builds]?.["if"],
+      "the floor lane must gate its build on the same slices the `test` job does",
+    ).toBe(testBuild?.["if"]);
+  });
+
+  it("runs one slice per leg, over the set the `test` job declares", () => {
+    // The lane's claim is about the WHOLE package suite on the engines floor. Slicing it keeps
+    // that claim only while the legs partition the suite, and the seven names are the partition
+    // `sliceSurfaceAlignment` holds against the runner workspace. A value dropped here stops a
+    // slice being exercised on the floor while the `test` job still runs it on the resolved
+    // release, and every remaining leg reports green.
+    //
+    // Read from the `test` job rather than written out, for the reason the build condition is:
+    // two lists of the same seven names drift one edit at a time, and the drift is silent.
+    const jobs = ciJobs();
+    const sliceList = (job: unknown): unknown => {
+      const strategy = isRecord(job) ? job["strategy"] : undefined;
+      const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
+      return isRecord(matrix) ? matrix["slice"] : undefined;
+    };
+
+    const floorSlices = sliceList(jobs["node-floor"]);
+    expect(floorSlices, "the floor lane must expand over a slice matrix").toBeInstanceOf(Array);
+    expect(floorSlices, "over exactly the slices the `test` job runs").toEqual(
+      sliceList(jobs["test"]),
+    );
+
+    // And every leg reports, rather than the first failure cancelling the rest. A cancelled leg
+    // is indistinguishable from one that would have passed, so a single Node 20 break would hide
+    // however many others sit behind it — the whole reason to know which slices fail on the floor.
+    const strategy = isRecord(jobs["node-floor"]) ? jobs["node-floor"]["strategy"] : undefined;
+    expect(
+      isRecord(strategy) ? strategy["fail-fast"] : undefined,
+      "one failing leg must not cancel the others",
+    ).toBe(false);
   });
 
   it("derives the expected version from engines.node rather than restating it", () => {

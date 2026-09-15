@@ -145,9 +145,7 @@ export function addRuleCitationsToList(
   if (insertAfter === -1) {
     // Every bullet deleted. The heading is the one place left that a reader
     // reads as the rule list, so the bullets go under it as their own block.
-    const heading = lines.findIndex(
-      (line, index) => open[index] === true && plainLine(line).startsWith(CROSS_AI_RULES_HEADING),
-    );
+    const heading = ruleListHeading(lines, open);
     if (heading === -1) return existing;
     const end = terminatorOf(lines[heading]);
     lines.splice(heading + 1, 0, end, ...bullets.map((bullet) => `${bullet}${end}`));
@@ -1065,4 +1063,207 @@ export function addRuleCitations(
   const terminator = terminatorOf(lines[insertAfter]);
   lines.splice(at, 0, ...bullets.map((bullet) => `${bullet}${terminator}`));
   return lines.join("\n");
+}
+
+/**
+ * Every spelling of a rule bullet a release wrote and a later template rewords,
+ * keyed by the master the bullet cites.
+ *
+ * The section is written once and left to the project, while the master it
+ * summarises is refreshed wherever the project has not edited it. A reworded
+ * summary would therefore reach fresh projects only, and an agent in any other
+ * project would read a summary the refreshed rule contradicts. A line that is
+ * exactly one of these is text a release wrote and nobody changed, so it takes
+ * the template's wording; any other text in its place is the project's.
+ *
+ * A project can skip releases, so every spelling that shipped stays listed.
+ */
+const SUPERSEDED_RULE_BULLETS: ReadonlyMap<string, readonly string[]> = new Map([
+  [
+    ".agents/rules/grilling.md",
+    [
+      "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.",
+    ],
+  ],
+]);
+
+/** A document after its superseded bullets are refreshed, and the masters they cite. */
+export type RefreshedRuleBullets = {
+  readonly text: string;
+  readonly refreshed: readonly string[];
+  /**
+   * Masters whose bullet is superseded and whose own file this run did not put
+   * at the release's text — the project edited it, or the update could not be
+   * read or applied. Their summaries are left as they are: a bullet describing
+   * a rule the local master does not carry is worse than a stale one, because a
+   * reader has no way to tell which of the two is the rule.
+   */
+  readonly withheld: readonly string[];
+};
+
+/**
+ * `existing` with every superseded bullet inside its managed section replaced by
+ * the template's bullet for the same master.
+ *
+ * Returns `existing` unchanged when the file has no complete marker pair: outside
+ * the markers, a line matching a shipped bullet is still the project's.
+ */
+export function refreshSupersededRuleBullets(
+  existing: string,
+  section: string,
+  installed?: ReadonlySet<string>,
+): RefreshedRuleBullets {
+  const { lines, open, begin, end } = managedSection(existing);
+  if (begin === -1 || end === -1) return { text: existing, refreshed: [], withheld: [] };
+  return replaceSupersededBullets(
+    existing,
+    lines,
+    open,
+    { from: begin + 1, to: end },
+    section,
+    installed,
+  );
+}
+
+/**
+ * The same refresh for a file the run generates whole rather than delimits,
+ * bounded to the rule list under `CROSS_AI_RULES_HEADING`.
+ *
+ * With no markers, that heading is what marks the list as qfai's. Anywhere else
+ * in the file — a note the project wrote, a quote of an older rule — a line
+ * matching a shipped bullet is the project's text, so a file without the heading
+ * is returned unchanged.
+ */
+export function refreshSupersededRuleBulletsInList(
+  existing: string,
+  section: string,
+  installed?: ReadonlySet<string>,
+): RefreshedRuleBullets {
+  const lines = existing.split("\n");
+  const open = outsideFences(lines);
+  const range = ruleListRange(lines, open);
+  if (range === null) return { text: existing, refreshed: [], withheld: [] };
+  return replaceSupersededBullets(existing, lines, open, range, section, installed);
+}
+
+/**
+ * Whether the line is `CROSS_AI_RULES_HEADING` itself: the exact heading, at the
+ * top level, in no blockquote.
+ *
+ * With no markers that heading is the only thing marking the list as this tool's,
+ * so anything less than an exact match hands the refresh a list the project
+ * wrote. A prefix match took a project heading that merely opens with the same
+ * words, and `plainLine` strips a blockquote prefix, so a file quoting an older
+ * rule set read as carrying the managed list. Up to three leading spaces still
+ * open an ATX heading, and a closing run of `#` belongs to the same heading.
+ */
+function isRuleListHeading(line: string | undefined): boolean {
+  const text = (line ?? "").replace(/\r$/, "");
+  if (text.trimStart().startsWith(">")) return false;
+  return text.replace(/^ {0,3}/, "").replace(/(?:\s+#+)?\s*$/, "") === CROSS_AI_RULES_HEADING;
+}
+
+/** Where `CROSS_AI_RULES_HEADING` stands outside every fenced block, or -1. */
+function ruleListHeading(lines: readonly string[], open: readonly boolean[]): number {
+  return lines.findIndex((line, index) => open[index] === true && isRuleListHeading(line));
+}
+
+/**
+ * The lines under `CROSS_AI_RULES_HEADING`, up to the next heading of the same
+ * or a higher level, or `null` when the file has no such heading.
+ *
+ * A deeper heading stays inside the list's section. A setext underline counts as
+ * a heading wherever a line of text sits directly above it: under a list item it
+ * is a thematic break instead, and ending the range there only stops it after
+ * that item.
+ *
+ * **A heading inside a blockquote ends nothing.** It belongs to the quote, not
+ * to the document, and reading it as a peer closed the range early — so a bullet
+ * below a quoted example kept wording the release had superseded, in the one
+ * file this refresh exists to reach.
+ */
+function ruleListRange(
+  lines: readonly string[],
+  open: readonly boolean[],
+): { from: number; to: number } | null {
+  const heading = ruleListHeading(lines, open);
+  const level = heading === -1 ? null : atxLevel(plainLine(lines[heading]));
+  if (level === null) return null;
+  for (let index = heading + 1; index < lines.length; index += 1) {
+    if (open[index] !== true || isQuoted(lines[index])) continue;
+    const found = atxLevel(plainLine(lines[index])) ?? setextLevel(lines, open, index);
+    if (found !== null && found <= level) return { from: heading + 1, to: index };
+  }
+  return { from: heading + 1, to: lines.length };
+}
+
+/** Whether the line opens inside a blockquote, where a heading is the quote's. */
+function isQuoted(line: string | undefined): boolean {
+  return (line ?? "").replace(/\r$/, "").trimStart().startsWith(">");
+}
+
+/** The level of `text` as an ATX heading, or `null` when it is not one. */
+function atxLevel(text: string): number | null {
+  return /^ {0,3}(#{1,6})(?:[ \t]|$)/.exec(text)?.[1]?.length ?? null;
+}
+
+/** The level of the setext heading underlined by the line at `index`, or `null`. */
+function setextLevel(
+  lines: readonly string[],
+  open: readonly boolean[],
+  index: number,
+): number | null {
+  const underline = /^ {0,3}(=+|-+)[ \t]*$/.exec(plainLine(lines[index]));
+  if (underline === null || open[index - 1] !== true) return null;
+  if (plainLine(lines[index - 1]).trim() === "") return null;
+  return underline[1]?.startsWith("=") === true ? 1 : 2;
+}
+
+/**
+ * Replaces, within `range`, each line whose own text is exactly a superseded
+ * bullet.
+ *
+ * The comparison ignores a trailing CR and nothing else, and the line keeps its
+ * terminator. A bullet the project reworded, indented or quoted therefore stays,
+ * and so does a line in a fenced block: that is an example of a bullet, not one.
+ */
+function replaceSupersededBullets(
+  existing: string,
+  lines: string[],
+  open: readonly boolean[],
+  range: { from: number; to: number },
+  section: string,
+  installed?: ReadonlySet<string>,
+): RefreshedRuleBullets {
+  const refreshed = new Set<string>();
+  const withheld = new Set<string>();
+  for (let index = range.from; index < range.to; index += 1) {
+    if (open[index] !== true) continue;
+    const line = lines[index] ?? "";
+    const own = line.replace(/\r$/, "");
+    const master = supersededMasterOf(own);
+    if (master === null) continue;
+    // Without a CR of its own, since the line keeps the terminator it has. A
+    // template that no longer summarises the master has nothing to put here.
+    const current = bulletFor(section, master)?.replace(/\r$/, "");
+    if (current === undefined || current === own) continue;
+    // The summary describes the master, so it moves only where the master did.
+    if (installed !== undefined && !installed.has(master)) {
+      withheld.add(master);
+      continue;
+    }
+    lines[index] = `${current}${terminatorOf(line)}`;
+    refreshed.add(master);
+  }
+  const held = [...withheld].sort();
+  if (refreshed.size === 0) return { text: existing, refreshed: [], withheld: held };
+  return { text: lines.join("\n"), refreshed: [...refreshed].sort(), withheld: held };
+}
+
+/** The master `line` is a superseded bullet for, or `null` when it is not one. */
+function supersededMasterOf(line: string): string | null {
+  for (const [master, spellings] of SUPERSEDED_RULE_BULLETS) {
+    if (spellings.includes(line)) return master;
+  }
+  return null;
 }

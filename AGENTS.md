@@ -84,8 +84,8 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
 - `interface-clarity.md` (what may appear on a screen or in terminal output,
   and what a sentence there says about the control under it)
 - `grilling.md` (interview the decision tree in rounds before a design is
-  fixed; a session ends on an empty frontier and the user's confirmation,
-  never at a question count)
+  fixed; a session ends in one of four named endings, never at a question
+  count)
 - `user-questions.md` (every question to the user arrives in the shape its
   answer has — a structured choice where a listable set of candidates exists, or a
   plain request where none does; where the host's tool cannot carry it, the
