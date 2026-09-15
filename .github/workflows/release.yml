@@ -225,7 +225,20 @@ jobs:
         # suite: SSOT sync, format, lint, types and pack verification. The suite
         # runs beside this job, sliced, so the two halves take the wall clock of
         # the longer rather than the sum.
-        run: pnpm ci:gate:checks
+        #
+        # The workspace here is the TAG's tree, and a tag cut before the split
+        # carries `ci:gate` alone. Re-publishing one then runs the aggregate,
+        # suite included, which is what that tag always cost; the sliced lane
+        # beside this job runs the suite again there and the publish is gated on
+        # both. Naming the newer script alone would fail every such re-publish
+        # before a check had run.
+        shell: bash
+        run: |
+          if node -e "process.exit(require('./package.json').scripts['ci:gate:checks'] ? 0 : 1)"; then
+            pnpm ci:gate:checks
+          else
+            pnpm ci:gate
+          fi
         env:
           # The branch-name pin is a PR-time guard; a tag has no branch to read,
           # and `verify` already checked the stronger claim
