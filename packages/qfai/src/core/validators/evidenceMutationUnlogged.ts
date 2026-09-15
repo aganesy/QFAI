@@ -101,12 +101,11 @@ export async function detectEvidenceMutationUnlogged(root: string): Promise<read
   for (const pair of EVIDENCE_MUTATION_PAIRS) {
     const abs = path.join(root, pair.sourceRel);
     if (!(await exists(abs))) continue;
-    let text = "";
-    try {
-      text = await readFile(abs, "utf-8");
-    } catch {
-      continue;
-    }
+    const text = await readFile(abs, "utf-8").then(
+      (read) => read,
+      () => null,
+    );
+    if (text === null) continue;
     // Read with runs of whitespace collapsed, on both sides. A token spelling a
     // call the formatter later broke across lines is the same call, and matched
     // literally it read as the call being gone.

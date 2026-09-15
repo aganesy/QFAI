@@ -132,7 +132,7 @@ export async function logEvidenceMoves(
  * A reset logs its moves and then goes on: a later step failing puts the moves
  * back, and entries claiming moves that no longer stand would outlive them.
  */
-export type LoggedMoves = { readonly prior: PriorLog; readonly payload: string };
+export type LoggedMoves = { readonly prior: PriorLog | null; readonly payload: string };
 
 /**
  * Take back the entries {@link logEvidenceMoves} wrote, while they are still
@@ -145,6 +145,9 @@ export type LoggedMoves = { readonly prior: PriorLog; readonly payload: string }
 export async function revertLoggedMoves(root: string, logged: LoggedMoves): Promise<boolean> {
   const logAbs = path.join(root, MUTATION_LOG_REL);
   const { prior, payload } = logged;
+  // Nothing this call could cut back to: the path took no append that left a
+  // prior length, so there is no state to restore and no claim to take back.
+  if (prior === null) return false;
   if (prior.kind === "created") {
     return (await cutBackToThisWrite(prior.file, 0, payload)) && (await removeIfEmpty(prior.file));
   }
