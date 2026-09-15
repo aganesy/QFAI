@@ -233,6 +233,16 @@ function roundSummary(
 const DEFAULT_REVISION = "abc1230000000000000000000000000000000000";
 
 /** The line a request written by the implement stage opens with. */
+/**
+ * A response body with the `Reviewer role` line a pack's response carries.
+ *
+ * The validator reads the role off that line and requires the file name to
+ * agree, so a fixture without it is not a response at all.
+ */
+function withReviewerRole(role: string, body: string): string {
+  return /^Reviewer role:/m.test(body) ? body : `Reviewer role: ${role}\n${body}`;
+}
+
 const IMPLEMENT_PRODUCER = "- Producer: implement\n";
 
 /**
@@ -252,7 +262,7 @@ async function writeRoundPack(
   await writeFile(path.join(root, pack, "review_request.md"), `${IMPLEMENT_PRODUCER}${request}`);
   const statuses: Record<string, string> = {};
   for (const [role, body] of Object.entries(responses)) {
-    await writeFile(path.join(root, pack, `R01_${role}.md`), body);
+    await writeFile(path.join(root, pack, `R01_${role}.md`), withReviewerRole(role, body));
     statuses[role] = /^Result: PASS$/m.test(body) ? "PASS" : "FAIL";
   }
   await writeFile(path.join(root, pack, "summary.json"), roundSummary(revision, statuses));
@@ -357,13 +367,19 @@ async function writeStagePack(root: string, options: EvidenceOptions): Promise<v
       : `Audited evidence hash: ${"c".repeat(64)}\n`;
   await writeFile(
     path.join(packDir, `R01_completion-reviewer.md`),
-    `Result: ${options.stagePackDefect === "revise" ? "REVISE" : "PASS"}\nReviewed revision: ${revision}\n${auditedHash}`,
+    withReviewerRole(
+      "completion-reviewer",
+      `Result: ${options.stagePackDefect === "revise" ? "REVISE" : "PASS"}\nReviewed revision: ${revision}\n${auditedHash}`,
+    ),
     "utf-8",
   );
   if (options.stagePackDefect === "second-response-revise") {
     await writeFile(
       path.join(packDir, `R02_completion-reviewer.md`),
-      `Result: REVISE\nReviewed revision: ${revision}\n${auditedHash}`,
+      withReviewerRole(
+        "completion-reviewer",
+        `Result: REVISE\nReviewed revision: ${revision}\n${auditedHash}`,
+      ),
       "utf-8",
     );
   }
@@ -482,13 +498,16 @@ async function materializeEvidence(
     await mkdir(responseDir, { recursive: true });
     await writeFile(
       path.join(responseDir, `R01_${role}.md`),
-      responseBody(role, passRecord, options),
+      withReviewerRole(role, responseBody(role, passRecord, options)),
       "utf8",
     );
     if (options.secondResponseRole === role) {
       await writeFile(
         path.join(packDir, `R02_${role}.md`),
-        `Result: REVISE\nReviewed revision: ${revision}\nAudited evidence hash: ${packAuditHash}\n`,
+        withReviewerRole(
+          role,
+          `Result: REVISE\nReviewed revision: ${revision}\nAudited evidence hash: ${packAuditHash}\n`,
+        ),
         "utf8",
       );
     }
@@ -2129,7 +2148,10 @@ describe("QFAI-TDDLIST-008", () => {
       const pack = ".qfai/review/review-20260101000000000";
       await mkdir(path.join(root, pack), { recursive: true });
       await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
-      await writeFile(path.join(root, pack, "R01_completion-reviewer.md"), "Result: REVISE\n");
+      await writeFile(
+        path.join(root, pack, "R01_completion-reviewer.md"),
+        withReviewerRole("completion-reviewer", "Result: REVISE\n"),
+      );
       const evidence = completeEntry("Unit").replace(
         "- Refactor verify command: npm test",
         [
@@ -2279,6 +2301,44 @@ describe("QFAI-TDDLIST-008", () => {
     }
   });
 
+  it("reads the role a response states, not the one its file name claims", async () => {
+    // A file named for the routed reviewer whose body names another — or names
+    // none — is not that reviewer's verdict, and its `Result`, revision and hash
+    // may not close the row on its behalf.
+    for (const body of ["", "Reviewer role: implementation-reviewer\n"]) {
+      await withProject(async (root) => {
+        const pack = ".qfai/review/review-20260101000000000";
+        await mkdir(path.join(root, pack), { recursive: true });
+        await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
+        await writeFile(
+          path.join(root, pack, "R01_completion-reviewer.md"),
+          `${body}Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: sha256:${"c".repeat(64)}\n`,
+        );
+        await writeFile(
+          path.join(root, pack, "summary.json"),
+          roundSummary(DEFAULT_REVISION, { "completion-reviewer": "PASS" }),
+        );
+        const evidence = completeEntry("Unit").replace(
+          "- Refactor verify command: npm test",
+          [
+            "- Round 1: reviewer verdict (attempt 1): PASS",
+            `- Round 1: Review pack (attempt 1): ${pack}`,
+            `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, pack)}`,
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        );
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+          { ".qfai/evidence/implement-spec-0001.md": evidence },
+        );
+        expect(issues.map((issue) => issue.message).join("\n"), JSON.stringify(body)).toContain(
+          "responses agreeing with its verdict",
+        );
+      });
+    }
+  });
+
   it("refuses a REVISE pack holding a response that states no verdict", async () => {
     // Each response states its `Result` once, visibly; one `REVISE` beside a
     // response with none is not a pack the attempt could have closed on.
@@ -2288,11 +2348,14 @@ describe("QFAI-TDDLIST-008", () => {
       await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
       await writeFile(
         path.join(root, pack, "R01_completion-reviewer.md"),
-        `Result: REVISE\nReviewed revision: ${DEFAULT_REVISION}\n`,
+        withReviewerRole(
+          "completion-reviewer",
+          `Result: REVISE\nReviewed revision: ${DEFAULT_REVISION}\n`,
+        ),
       );
       await writeFile(
         path.join(root, pack, "R01_implementation-reviewer.md"),
-        `Reviewed revision: ${DEFAULT_REVISION}\n`,
+        withReviewerRole("implementation-reviewer", `Reviewed revision: ${DEFAULT_REVISION}\n`),
       );
       await writeFile(
         path.join(root, pack, "summary.json"),
@@ -2401,7 +2464,10 @@ describe("QFAI-TDDLIST-008", () => {
       await writeFile(path.join(root, closing, "review_request.md"), "TDD-ID: TDD-0001\n");
       await writeFile(
         path.join(root, closing, "R01_completion-reviewer.md"),
-        `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: sha256:${"c".repeat(64)}\n`,
+        withReviewerRole(
+          "completion-reviewer",
+          `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: sha256:${"c".repeat(64)}\n`,
+        ),
       );
       await writeFile(
         path.join(root, closing, "summary.json"),
@@ -2981,7 +3047,10 @@ describe("QFAI-TDDLIST-008", () => {
         const response = `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: ${phaseAuditHash(evidenceFile, entry)}\n`;
         await mkdir(path.join(root, closing, directory), { recursive: true });
         for (const role of ["completion-reviewer", "implementation-reviewer"]) {
-          await writeFile(path.join(root, closing, directory, `R01_${role}.md`), response);
+          await writeFile(
+            path.join(root, closing, directory, `R01_${role}.md`),
+            withReviewerRole(role, response),
+          );
         }
         await writeFile(
           path.join(root, closing, "summary.json"),

@@ -2175,19 +2175,29 @@ function reviewPackResponses(
 
 /**
  * Every response file directly under a review pack's root, with the reviewer
- * its name names, in file order. The layout places reviewer files in the pack
+ * that wrote it, in file order. The layout places reviewer files in the pack
  * directory itself, so a file of that name in a directory below it is not a
  * response.
+ *
+ * **The role is the one the response states, and the file name has to agree.**
+ * Read off the name alone, a file called `R01_completion-reviewer.md` whose
+ * body names another reviewer — or names none — satisfied the routed
+ * completion review, and its `Result`, revision and hash closed the row. The
+ * response template requires the role on a visible line for that reason: an
+ * answer with no speaker is not a verdict, and one with the wrong speaker is
+ * another reviewer's. Exactly one such line, so a second cannot be added to
+ * make a response answer for a role it did not.
  */
 function packResponseFiles(
   files: ReadonlyArray<ReviewPackFile>,
   packPath: string,
 ): Array<{ role: string; content: string }> {
   return files.flatMap(({ relativePath, content }) => {
-    const role = relativePath.startsWith(`${packPath}/`)
+    const named = relativePath.startsWith(`${packPath}/`)
       ? /^R\d{2}_([^/]+)\.md$/.exec(relativePath.slice(packPath.length + 1))?.[1]
       : undefined;
-    return role === undefined ? [] : [{ role, content }];
+    if (named === undefined || !exactLineField(content, "Reviewer role", named)) return [];
+    return [{ role: named, content }];
   });
 }
 
