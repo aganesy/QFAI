@@ -702,9 +702,10 @@ describe("the gate reads a skill as the host does", () => {
     expect(codes).toContain("QFAI-SKILLS-014");
   });
 
-  it("reads a document a step names under an uncrawled tree whatever its size", async () => {
-    // The host sets no size limit on a document, so a large one is not a
-    // document the host fails to open.
+  it("reads a document a step names under an uncrawled tree up to the ceiling", async () => {
+    // A document under the ceiling is read however large it is within it, so a
+    // file of several mebibytes is still judged rather than passed over. The
+    // case above it holds what happens past the ceiling.
     const root = await projectWithSkill(['description: "Does the thing."']);
     const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
     const entryPoint = path.join(skillDir, "SKILL.md");
@@ -746,6 +747,29 @@ describe("the gate reads a skill as the host does", () => {
       (item) => item.code === "QFAI-SKILLS-014" || item.code === "QFAI-SKILLS-013",
     );
     expect(findings).toEqual([]);
+  });
+
+  it("reports a named document too large to hold whose bytes are not UTF-8", async () => {
+    // Its text cannot be held, and its encoding is still what the host fails
+    // on, so the stream is decoded a chunk at a time and kept nowhere.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/huge.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references", "tmp"), { recursive: true });
+    const huge = path.join(skillDir, "references", "tmp", "huge.md");
+    // A lone continuation byte is valid in no sequence, wherever it sits.
+    await writeFile(huge, Buffer.from([0x23, 0x20, 0x68, 0x75, 0x67, 0x65, 0x0a, 0x80]));
+    await truncate(huge, 65 * 1024 * 1024);
+
+    const codes = (await validateAssistantAssets(root, defaultConfig))
+      .filter((item) => item.file === huge)
+      .map((item) => item.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
   });
 
   it("roots a skill whose entry point links to a document crawled under another name", async () => {

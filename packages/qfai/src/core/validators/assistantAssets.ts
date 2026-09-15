@@ -1,4 +1,4 @@
-import { constants } from "node:fs";
+import { constants, createReadStream } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
 import { access, lstat, open, readdir, readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
@@ -253,17 +253,23 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   issues.push(...(await collectRegeneratedLayerIssues(root, assistantDir)));
   issues.push(...(await collectSteeringPlaceholderIssues(root, assistantDir)));
 
-  // Every skill-tree document is read once, here, and both the per-`SKILL.md`
-  // checks below and the reference graph work from that one map.
+  // The crawl reads the skill tree once, here, and every later check works from
+  // the map it returns. A document is read a second time by nothing: the
+  // per-`SKILL.md` checks below and the reference graph share these bytes, so
+  // they can never disagree about a file's contents, and an unreadable
+  // `SKILL.md` is reported as `QFAI-SKILLS-014` rather than rejecting the whole
+  // validator before the rule could speak about it — which is what an unguarded
+  // `readFile` in the loop below would do, running first.
   //
-  // Reading `SKILL.md` twice — once by an unguarded `readFile` in the loop
-  // below, and again by the graph — would let the unguarded read run first, so
-  // an unreadable `SKILL.md` would reject this whole validator before
-  // `QFAI-SKILLS-014` could report it: the entry point would be the one file
-  // the rule could never speak about. Reading once also means the marker
-  // checks and the citation graph can never disagree about a file's bytes.
-  // Reported after the reference graph below: a document under a hidden skill
-  // directory counts only where a registered skill reaches it.
+  // **The crawl is not the whole graph.** It skips a hidden directory and the
+  // trees excluded by default, because a document there is a document only where
+  // a registered skill reaches it. Such a document is added later, one at a
+  // time, by `readCitedDocument` as the reference graph resolves the citations
+  // that reach it, and an entry point outside the crawl is probed on its own.
+  // The map therefore grows while the graph is built; what does not change is
+  // that each document enters it once and every check reads it from there.
+  // Reported after the reference graph below, for the same reason the crawl
+  // skips those trees.
   const { documents, unreadable, unreadableDirectories } = await readSkillDocuments(skillsDir);
 
   const skillFiles = await collectSkillFiles([skillsDir]);
@@ -1290,6 +1296,30 @@ function decodeUtf8(bytes: Buffer): string | undefined {
 }
 
 /**
+ * Whether a file holds valid UTF-8, read a chunk at a time and kept nowhere.
+ *
+ * For a document past {@link CITED_DOCUMENT_READ_CEILING}: the text cannot be
+ * held, and its encoding is still a thing the host will fail on. The decoder
+ * runs in stream mode so a sequence split across two chunks is not read as
+ * invalid, and the final call settles a sequence the last chunk left open.
+ *
+ * An unreadable stream answers `true`: the read failure is the caller's to
+ * report, and answering `false` here would name the wrong defect.
+ */
+async function holdsValidUtf8(file: string): Promise<boolean> {
+  const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+  try {
+    for await (const chunk of createReadStream(file)) {
+      decoder.decode(chunk as Uint8Array, { stream: true });
+    }
+    decoder.decode();
+    return true;
+  } catch (error: unknown) {
+    return !(error instanceof TypeError);
+  }
+}
+
+/**
  * The `SKILL.md` of every direct subdirectory of `skillsDir`, the entry points
  * a host loads.
  *
@@ -1914,7 +1944,19 @@ async function readCitedDocument(file: string): Promise<CitedDocument> {
       "Make the document, and each directory above it, readable to the account running `qfai validate`, or stop naming it.",
     );
   }
-  if (found.size > CITED_DOCUMENT_READ_CEILING) return { kind: "unread" };
+  if (found.size > CITED_DOCUMENT_READ_CEILING) {
+    // Too large to hold, and still a document the host opens. Its encoding is
+    // read off the stream, a chunk at a time, so a file of bytes that are not
+    // UTF-8 is reported here rather than passed over for its size — the one
+    // thing this rule can still say about it. What it cites stays unknown,
+    // which is what `unread` records.
+    return (await holdsValidUtf8(await realpath(file).catch(() => file)))
+      ? { kind: "unread" }
+      : unreadable(
+          "A document under `skills` holds bytes that are not valid UTF-8. The host opens it only where a step names it, and a step that does fails there.",
+          "Save the document as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
+        );
+  }
   const bytes = await readBoundedRegularFile(
     await realpath(file).catch(() => file),
     CITED_DOCUMENT_READ_CEILING,
