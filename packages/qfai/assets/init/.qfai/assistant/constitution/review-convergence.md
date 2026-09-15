@@ -155,6 +155,21 @@ to the implementing stage rather than starting a fix-and-rerun cycle. Reported
 as a demand instead, it makes the discussion stage owe work this section has
 just placed elsewhere.
 
+**How it is written.** In the shape every finding takes
+(`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`):
+`Severity: advisory`, and `Traces to: none` where the item names no obligation
+the pack carries — which is the usual case here, since the subject is how a
+later stage implements something already agreed. An advisory tracing to `none`
+takes the Change Request path only where it proposes a new obligation; advice
+about implementing an existing one proposes nothing and needs no record beyond
+the disposition the next stage gives it.
+
+**A cycle that reruns one reviewer keeps the others' findings.** The pack is the
+cycle's record, not the rerun's: a reviewer that passed is not re-run, its
+verdict stands, and its advice stands in the same pack the next stage reads.
+A rerun that dropped it would lose the advice of every reviewer who found
+nothing blocking.
+
 **Where it goes.** The advice stays in the review pack's findings, under the
 discussion pack the next stage inventories at its Stage 0 as non-normative
 reference material, like every other part of that pack. That stage gives each
