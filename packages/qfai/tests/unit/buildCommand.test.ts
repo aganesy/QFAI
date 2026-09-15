@@ -2003,6 +2003,10 @@ describe("the real workflow trees", () => {
         // `dist/`. The entry is per OCCURRENCE, so deleting either lane's build step fails this row.
         "build::release.yml::pnpm -C packages/qfai build",
         'build::release.yml::pnpm -C packages/qfai pack --pack-destination "$PWD/tmp"',
+        // The aggregate, which the gate runs where the tagged tree predates the split. It reaches
+        // a build for the same reason the line below does — `check-types` is inside it — and it
+        // is listed because the gate's step names both.
+        "build::release.yml::pnpm ci:gate",
         // `ci:gate:checks` runs `check-types`, whose `tsc -b` emits into `dist`. It was `heuristic`
         // here for three rounds because the chain was read as far as a script NAME and no further.
         "build::release.yml::pnpm ci:gate:checks",
