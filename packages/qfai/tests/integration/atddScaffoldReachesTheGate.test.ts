@@ -471,10 +471,36 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     expect(requireDialect(["tests/**/TC-0000-0000{@..@}(.test).ts"]).id).toBe("js-ts");
   });
 
+  it("writes out a range that generates the other half of an extglob", () => {
+    // A range spelling `(` closes a group the `@` beside it opened, so fast-glob
+    // reads the pair before it compiles anything. Left as text, `@(` named
+    // itself and the pattern selected a name holding those two characters.
+    expect(requireDialect(["tests/**/TC-0000-0000@{(..(}.test).ts"]).id).toBe("js-ts");
+  });
+
   it("expands every range a pattern holds, not the first few", () => {
     // Each round writes out one range per candidate, so a pattern with four
     // ranges before the one that spells the extension needs five.
     expect(requireDialect(["{t..t}{e..e}{s..s}{t..t}s/**/*.{p..p}y"]).id).toBe("python");
+  });
+
+  it("expands past any number of ranges standing ahead of the extension", () => {
+    // Sixteen groups spell the two directory names, and the range that spells
+    // the extension is the seventeenth. Stopping after a fixed number of rounds
+    // left it as text, and the run took its JavaScript default while fast-glob
+    // selected only Python.
+    expect(
+      requireDialect([
+        "{t..t}{e..e}{s..s}{t..t}{s..s}/{i..i}{n..n}{t..t}{e..e}{g..g}{r..r}{a..a}{t..t}{i..i}{o..o}{n..n}/**/*.{p..p}y",
+      ]).id,
+    ).toBe("python");
+  });
+
+  it("names no extension for a glob larger than the expansion bound", () => {
+    // Four ranges of the whole alphabet in the last segment are more strings
+    // than there is reason to write out. A set read from part of that expansion
+    // would name extensions the matcher does not select.
+    expect([...deriveTestFileExtensions(["tests/**/*.{a..z}{a..z}{a..z}{a..z}"])]).toEqual([]);
   });
 
   it("derives an extension a range spells inside a list", () => {

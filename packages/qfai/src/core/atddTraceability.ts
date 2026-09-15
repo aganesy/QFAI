@@ -2444,25 +2444,15 @@ function isAnnotationOnlyCarrier(
  * or the writer emits an extension the scan never opens.
  */
 /**
- * The most members of one brace range this reads while looking for an extension.
+ * The most candidates one glob may expand into.
  *
- * A range in the middle of a path gives every member the same tail, so the first
- * few answer for all of them. A range in the last segment does not: `*.t{a..z}`
- * names `.ts` at its nineteenth member, and a project whose tests are
- * TypeScript would have been read as one whose extension nothing supports. Such
- * a range is read whole.
+ * Ranges multiply, so a ceiling on how many are read is what keeps a pattern
+ * from expanding into more strings than there is reason to hold. A glob past it
+ * yields no extension at all: a set read from part of an expansion names
+ * extensions the matcher does not select, which is the mistake reading the
+ * ranges exists to avoid.
  */
-const RANGE_MEMBERS_READ = 16;
-
-/**
- * How many brace ranges deep this reads.
- *
- * A round writes out the first range of each candidate, so a pattern needs as
- * many rounds as it holds ranges. Four stopped one round short of
- * `{t..t}{e..e}{s..s}{t..t}s/**\/*.{p..p}y`, whose fifth range is the one that
- * spells the extension.
- */
-const RANGE_ROUNDS = 16;
+const RANGE_CANDIDATES = 4096;
 
 /**
  * The glob with its brace ranges written out, as fast-glob expands them before
@@ -2475,13 +2465,14 @@ const RANGE_ROUNDS = 16;
  * Lists are left alone: the caller reads `.{a,b}` itself, keeping a member's
  * wildcards, which expansion here would lose.
  */
-function withRangesExpanded(glob: string): string[] {
+function withRangesExpanded(glob: string): string[] | null {
   let expanded = [glob];
-  // One round writes out one range per candidate, so the bound is the number of
-  // ranges a pattern can hold, not a guess at how many it usually does. A
-  // pattern with more groups than this leaves the rest as text, which reads as
-  // the extension it spells not being found.
-  for (let round = 0; round < RANGE_ROUNDS; round += 1) {
+  // Each round writes out one range per candidate, so a candidate holding a
+  // range still holds one fewer afterwards and the loop reaches a pattern with
+  // none. Stopping at a fixed number of rounds instead left the ranges past it
+  // as text, and a pattern whose extension is spelled by the last of them read
+  // as one whose extension nothing supports.
+  for (;;) {
     const next: string[] = [];
     let changed = false;
     for (const candidate of expanded) {
@@ -2493,6 +2484,7 @@ function withRangesExpanded(glob: string): string[] {
       changed = true;
       next.push(...written);
     }
+    if (next.length > RANGE_CANDIDATES) return null;
     expanded = next;
     if (!changed) break;
   }
@@ -2528,9 +2520,11 @@ function firstRangeWrittenOut(candidate: string): string[] | null {
     }
     if (members === null) continue;
     // A group in the last segment decides the extension, so every member of it
-    // is read; one further up gives every member the same tail.
+    // is read. One further up gives every member the same tail, so one member
+    // answers for all of them — and reading more multiplies the candidates a
+    // pattern expands into without reaching a different extension.
     const inLastSegment = !candidate.slice(open).includes("/");
-    const read = inLastSegment ? members : members.slice(0, RANGE_MEMBERS_READ);
+    const read = inLastSegment ? members : members.slice(0, 1);
     return read.map((member) => candidate.slice(0, open) + member + candidate.slice(close + 1));
   }
   return null;
@@ -2550,7 +2544,11 @@ export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<
     // its ranges written out. Both shapes are read from each of them: a range
     // inside a list — `*.{{p..p}y,rb}` — is a list only once the range is
     // written out, and the list pattern cannot parse it before that.
-    for (const candidate of withRangesExpanded(glob)) {
+    // A glob too large to write out yields nothing: what a partial expansion
+    // names is not what the matcher selects.
+    const candidates = withRangesExpanded(glob);
+    if (candidates === null) continue;
+    for (const candidate of candidates) {
       for (const match of candidate.matchAll(/\.\{([^}]+)\}$/g)) {
         for (const ext of (match[1] ?? "").split(",")) {
           // A member is copied into the generated scan pattern whole, wildcards

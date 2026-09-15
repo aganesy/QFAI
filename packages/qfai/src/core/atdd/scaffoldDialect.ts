@@ -392,12 +392,12 @@ function splitGlobAlternatives(inner: string, separator: "|" | ","): string[] {
 /**
  * The characters that mean something to a matcher rather than naming themselves.
  *
- * `@`, `+` and `!` are here because each opens an extglob before a `(`: a range
- * expanding to one of them leaves a group the matcher reads, not a literal. So
- * is `/`: a member carrying one moves the boundary the segments either side are
- * read against.
+ * `@`, `+` and `!` are here because each opens an extglob before a `(`, and `(`
+ * for the other side of the same pair: a range expanding to either half leaves
+ * a group the matcher reads, not a literal. So is `/`: a member carrying one
+ * moves the boundary the segments either side are read against.
  */
-const GLOB_SYNTAX = /[*?[\]{}@+!/]/;
+const GLOB_SYNTAX = /[*?[\]{}@+!()/]/;
 
 /**
  * The pattern with one brace group written out, when a member of it carries

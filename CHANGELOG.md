@@ -195,6 +195,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Read a brace range that generates either half of an extglob, and write out
+  every range a pattern holds rather than a fixed number of them, so the
+  scaffold names a file the project's own runner collects.
+
 - Excess tags cover code, controls, settings and explanatory copy in both the
   review definitions and shipped reviewer cards. `delete` also covers reuse of
   code already present (#1800).
