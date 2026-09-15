@@ -353,6 +353,55 @@ describe("citation tokens", () => {
       "references/%E8%A8%AD.md",
     ]);
   });
+
+  it("reads the tokens the citation pattern reads, over generated text", () => {
+    // The pattern the scan is defined by. Each generated text is read both ways.
+    const segment = String.raw`(?:[\p{L}\p{N}\p{M}._~-]|%[0-9A-Fa-f]{2})+`;
+    const pattern = new RegExp(
+      String.raw`(?:[A-Za-z]:)?[\\/]?${segment}(?:[\\/]${segment})*\.(?:md|ya?ml)\b`,
+      "giu",
+    );
+    const pieces = [
+      ...["a", "C", "x", "m", "d", "M", "D", "y", "Y", "l", "L", "4", "F", "f", "g", "0"],
+      ...[".", ".", "/", "\\", ":", "%", "~", "-", "_", " ", "`", "!", "(", "]"],
+      ...["é", "ſ", "K", "\u{1D400}", "́", "設", "\uD800", "\uDC00"],
+      ...[".md", ".yml", ".yaml", ".MD", ".Yaml", "%E8", "C:", "/.md", "..", "//"],
+    ];
+    let seed = 1;
+    const next = (): number => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    };
+    const disagreements: string[] = [];
+    for (let round = 0; round < 20_000; round += 1) {
+      let text = "";
+      const length = Math.floor(next() * 32);
+      for (let piece = 0; piece < length; piece += 1) {
+        text += pieces[Math.floor(next() * pieces.length)] ?? "";
+      }
+      const expected = [...text.matchAll(pattern)].map((match) => match[0]);
+      if (JSON.stringify(citationTokensIn(text)) !== JSON.stringify(expected)) {
+        disagreements.push(text);
+      }
+    }
+    expect(disagreements).toEqual([]);
+  });
+
+  it("reads a long run of name characters in one pass", () => {
+    // Read from every position of the run to its end, this run takes minutes.
+    const run = "x".repeat(200_000);
+    const started = performance.now();
+    expect(citationTokensIn(run)).toEqual([]);
+    expect(citationTokensIn(`${run} references/guide.md`)).toEqual(["references/guide.md"]);
+    expect(performance.now() - started).toBeLessThan(5_000);
+  });
+
+  it("reads a token of several mebibytes without exhausting the stack", () => {
+    const token = `${"x".repeat(9 * 1024 * 1024)}.md`;
+    const tokens = citationTokensIn(token);
+    expect(tokens).toHaveLength(1);
+    expect(tokens[0]?.length).toBe(token.length);
+  });
 });
 
 describe("skill reference reachability", () => {
@@ -366,6 +415,24 @@ describe("skill reference reachability", () => {
       expect(issues[0]?.file).toBe(path.join(referencesDir, "orphan.md"));
       expect(issues[0]?.severity).toBe("error");
       expect(issues[0]?.suggested_action ?? "").not.toBe("");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("validates a skill document holding a line of several mebibytes", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-long-line-"));
+    try {
+      const referencesDir = await writeSkillFixture(root);
+      // An embedded `data:` URI or a minified sample is one unbroken token.
+      await writeFile(
+        path.join(referencesDir, "two-hop.md"),
+        `# Two hop\n\n${"x".repeat(9 * 1024 * 1024)}\n`,
+        "utf-8",
+      );
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
