@@ -45,11 +45,36 @@ const GENERATED_ROOTS = [
  * line below it.
  */
 function normalizeCitation(cited: string, delimited = false): string {
-  return (delimited ? cited : cited.replace(/[.,;:]+$/, "")).replace(/\/+$/, "");
+  const posix = toPosixSeparators(cited);
+  return (delimited ? posix : posix.replace(/[.,;:]+$/, "")).replace(/\/+$/, "");
 }
 
-/** Where a citation can start: the root, which is the only fixed part. */
-const CITED_GENERATED_ROOT = /\.qfai\/(?:review|review_archive|report|discussion|output)\//g;
+/**
+ * A citation's separators as this tree spells them.
+ *
+ * A record written on Windows spells the same path with `\`, and every path the
+ * index holds is POSIX, so the two have to be one string before anything
+ * resolves against the other. Only outside a bracket expression: there a
+ * backslash escapes the member after it, and rewriting it would change the set
+ * the class names.
+ */
+function toPosixSeparators(cited: string): string {
+  const characters = cited.split("");
+  for (const index of outsideClasses(cited)) {
+    if (characters[index] === "\\") characters[index] = "/";
+  }
+  return characters.join("");
+}
+
+/**
+ * Where a citation can start: the root, which is the only fixed part.
+ *
+ * Either separator spelling. A record written on Windows spells the same path
+ * `.qfai\report\missing.json`, and a root that admits only `/` matched nothing
+ * there — so the absent artifact reached neither the resolution nor the census.
+ * The token is canonicalized to `/` where it is captured.
+ */
+const CITED_GENERATED_ROOT = /\.qfai[\\/](?:review|review_archive|report|discussion|output)[\\/]/g;
 
 /** The characters a citation carries outside a group. */
 const CITATION_CHARACTER = /[A-Za-z0-9._/*?+-]/;
@@ -168,6 +193,9 @@ function citationsIn(line: string, spans: readonly CodeSpan[] = codeSpanRanges(l
     const span = spans.find(([spanStart, spanEnd]) => from >= spanStart && from < spanEnd);
     let index = from + start[0].length;
     const closers: string[] = [];
+    // Whether each open group was introduced by the dialect: `@(`, `?(`, `+(`,
+    // `*(` and `!(` open one, and a bare opener is a character a name holds.
+    const dialect: boolean[] = [];
     let usable = true;
     while (index < line.length) {
       // The run that opened the citation closes it: a path written in emphasis
@@ -195,6 +223,7 @@ function citationsIn(line: string, spans: readonly CodeSpan[] = codeSpanRanges(l
       const closer = GROUP_CLOSERS[character];
       if (closer !== undefined) {
         closers.push(closer);
+        dialect.push(character === "(" && "@?+*!".includes(line[index - 1] ?? ""));
       } else if (character === ")" || character === "}" || character === "]") {
         // A closer with no opener inside the token belongs to the text around
         // it — a Markdown link's `)`, a parenthesis the sentence opened before
@@ -219,6 +248,7 @@ function citationsIn(line: string, spans: readonly CodeSpan[] = codeSpanRanges(l
           break;
         }
         closers.pop();
+        dialect.pop();
       } else if (CITATION_CHARACTER.test(character)) {
         // An ordinary path character, inside a group or out.
       } else if (closers.length > 0 && IN_GROUP_CHARACTER.test(character)) {
@@ -236,6 +266,10 @@ function citationsIn(line: string, spans: readonly CodeSpan[] = codeSpanRanges(l
         // A character a file name holds and the dialect gives no meaning, such as
         // the `@` of `@missing.md` or a letter outside ASCII. Stopping before it
         // measured the prefix, which resolved against its directory.
+      } else if (character === "\\" && NAME_CHARACTER.test(line[index + 1] ?? "")) {
+        // A separator in a Windows-spelled path, canonicalized where the token
+        // is recorded. Inside a bracket expression the backslash is an escape,
+        // and the class branch above has already consumed it.
       } else {
         // Inside a code span a quote the name runs on past is part of a name the
         // scan cannot read, and the prefix before it names a different path.
@@ -252,7 +286,15 @@ function citationsIn(line: string, spans: readonly CodeSpan[] = codeSpanRanges(l
       }
       index += 1;
     }
-    if (!usable || closers.length > 0) continue;
+    // A group the dialect opened and never closed is not a path: the token is
+    // malformed, and the text before the group is a prefix nothing has. A bare
+    // opener is a different thing — `compileGlob` reads it as literal text, and
+    // such a character is legal in a file name — so where a code span delimits
+    // the token it stays part of the name, and the citation resolves or enters
+    // the census rather than doing neither.
+    const bareOpeners = closers.length > 0 && !dialect.includes(true);
+    const delimitedToken = span !== undefined && index <= span[1];
+    if (!usable || (closers.length > 0 && !(bareOpeners && delimitedToken))) continue;
     // A code span closing right after the name delimits it, punctuation and all.
     const delimited = span !== undefined && index === span[1] && line[index] === "`";
     const cited = normalizeCitation(line.slice(from, index), delimited);
@@ -1440,11 +1482,17 @@ function resolves(cited: string, paths: ReturnType<typeof trackedPaths> = tracke
     // read the way the exact form is, for the same reason: `.qfai/report/*.json`
     // claims a machine-readable file, and a directory of that name is not one.
     const pattern = globToRegExp(cited);
-    const candidates = NAMES_A_FILE.test(cited)
+    const candidates = namesAFile(cited)
       ? [...paths.files]
       : [...paths.files, ...paths.directories];
     for (const candidate of candidates) {
-      if (pattern.test(candidate) && !hidesADotName(cited, candidate)) return true;
+      // The bounded matcher first. It settles each position once, while the
+      // compiled expression retries every way of splitting the candidate
+      // between the pattern's globstars — four of them against a three-hundred
+      // segment path it does not match runs for tens of seconds. A candidate
+      // the alignment refuses never reaches it, and one it admits matches
+      // without searching.
+      if (!hidesADotName(cited, candidate) && pattern.test(candidate)) return true;
     }
     return false;
   }
@@ -1469,11 +1517,31 @@ function resolves(cited: string, paths: ReturnType<typeof trackedPaths> = tracke
  */
 function namesTrackedPath(cited: string, paths: ReturnType<typeof trackedPaths>): boolean {
   if (paths.files.has(cited)) return true;
-  return !NAMES_A_FILE.test(cited) && paths.directories.has(cited);
+  return !namesAFile(cited) && paths.directories.has(cited);
 }
 
 /** A last segment carrying an extension, which no pack directory is written with. */
 const NAMES_A_FILE = /\.[A-Za-z0-9]+$/;
+
+/**
+ * Whether the citation's last segment names a file.
+ *
+ * Read off the alternatives rather than the raw text, because a group holds the
+ * extension inside it: `@(validate.json|missing.json)` ends in `)`, so the raw
+ * pattern answered "not a file" and a tracked directory of that name answered
+ * the citation. Every alternative has to name one — a group naming a file and a
+ * pack claims both, and the looser answer is the safe one there.
+ *
+ * SIMPLIFIED: past the alternative limit nothing is listed, and the citation is
+ * read as it is spelled. Lift when: a record cites such a pattern and the
+ * distinction changes its answer.
+ */
+function namesAFile(cited: string): boolean {
+  const last = patternSegments(cited).at(-1) ?? "";
+  const alternatives = topLevelAlternativesOf(last);
+  if (alternatives === null || alternatives.length === 0) return NAMES_A_FILE.test(last);
+  return alternatives.every((alternative) => NAMES_A_FILE.test(alternative));
+}
 
 const key = ([file, cited, occurrence]: Citation): string => `${file} -> ${cited} #${occurrence}`;
 
@@ -1550,6 +1618,41 @@ describe("a committed record cites what the repository has", () => {
     expect(resolves(".qfai/discussion/discussion-*", paths)).toBe(true);
   });
 
+  it("reads a citation a record spelled with the other separator", () => {
+    const listing = [
+      "100644 0000000000000000000000000000000000000000 0\t.qfai/report/a/b.json",
+      "",
+    ].join("\0");
+    const paths = trackedPaths(listing);
+    expect(citationsIn("see `.qfai\\report\\a\\b.json` here")).toEqual([".qfai/report/a/b.json"]);
+    expect(resolves(".qfai/report/a/b.json", paths)).toBe(true);
+    // The absent one now reaches the census instead of being dropped at the root.
+    expect(citationsIn("see `.qfai\\report\\missing.json` here")).toEqual([
+      ".qfai/report/missing.json",
+    ]);
+    // Mixed spellings name the same path.
+    expect(citationsIn("see `.qfai/report\\a\\b.json` here")).toEqual([".qfai/report/a/b.json"]);
+    // A backslash inside a class is the escape it is there, not a separator.
+    expect(citationsIn("see `.qfai/report/[\\]]b.json` here")).toEqual([
+      ".qfai/report/[\\]]b.json",
+    ]);
+  });
+
+  it("answers a file-shaped extended group with a file", () => {
+    const listing = [
+      "100644 0000000000000000000000000000000000000000 0\t.qfai/report/validate.json/summary.txt",
+      "",
+    ].join("\0");
+    const paths = trackedPaths(listing);
+    // The group holds the extension, so the raw pattern ends in `)` and read as
+    // naming no file; the tracked directory then answered a citation of two
+    // JSON files the tree does not have.
+    expect(resolves(".qfai/report/@(validate.json|missing.json)", paths)).toBe(false);
+    // A group naming a file and a pack claims both, and the looser answer is the
+    // safe one: the directories are read as well.
+    expect(resolves(".qfai/report/@(validate.json|summary)", paths)).toBe(true);
+  });
+
   it("leaves a citation unresolved where its globstars would backtrack past any bound", () => {
     // Each globstar is the whole of its segment, so the per-segment budget
     // counts one part and passes; what costs is how many there are.
@@ -1559,6 +1662,19 @@ describe("a committed record cites what the repository has", () => {
     // Adjacent globstars are one, as the compiler reads them.
     expect(withinMatchBudget(`.qfai/report/${"**/".repeat(8)}z`)).toBe(true);
     expect(withinMatchBudget(`.qfai/report/${"**/a/".repeat(4)}z`)).toBe(true);
+  });
+
+  it("matches a deep candidate through the bounded alignment, not the expression", () => {
+    // Four globstars are inside the budget, and against a three-hundred segment
+    // path the compiled expression alone retries every split between them.
+    const deep = `.qfai/report/${Array.from({ length: 300 }, () => "a").join("/")}/x.md`;
+    const listing = [`100644 0000000000000000000000000000000000000000 0\t${deep}`, ""].join("\0");
+    const paths = trackedPaths(listing);
+    const started = performance.now();
+    expect(resolves(`.qfai/report/${"**/a/".repeat(4)}z.json`, paths)).toBe(false);
+    expect(performance.now() - started).toBeLessThan(2000);
+    // And the citation the tree does answer still resolves.
+    expect(resolves(`.qfai/report/${"**/a/".repeat(4)}x.md`, paths)).toBe(true);
   });
 
   it("names no artifact the committed tree does not carry", async () => {
@@ -1720,6 +1836,19 @@ describe("what the scan counts as a citation", () => {
     // Cut at the first `)`, what is left is a prefix nothing has.
     const cited = ".qfai/review/@(review-a|+(review-b|review-c))/summary.json";
     expect(matches("- `" + cited + "`")).toEqual([cited]);
+  });
+
+  it("keeps a bare opener a code span delimits as part of the name", () => {
+    // `compileGlob` reads it as literal text and a file name may hold one, so
+    // discarding the token let an absent artifact reach neither the resolution
+    // nor the census.
+    expect(matches("- `.qfai/report/run-(missing.json`")).toEqual([
+      ".qfai/report/run-(missing.json",
+    ]);
+    expect(resolves(".qfai/report/run-(missing.json")).toBe(false);
+    // Outside a code span nothing delimits the name, so the token ends where the
+    // sentence does and the prefix before the opener is not recorded.
+    expect(matches("see .qfai/report/run-(missing.json here")).toEqual([]);
   });
 
   it("drops a group that never closes", () => {
