@@ -29,11 +29,13 @@ tools: [Read, Glob, Grep, Bash]
   `.agents/rules/minimal-implementation.md` § 2.
   Use this route only where the installed Article VII governs the artifact.
   Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
-- Count the callers of an architectural element the change introduces — a module,
-  a seam, an adapter, a shared helper — as they exist in the tree, against
+- Count the call sites of an architectural element the change introduces — a
+  module, a seam, an adapter, a shared helper — as they exist in the tree,
+  against
   `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`.
-  The Plan's three usages are cited before implementation, so an element whose
-  three arrive with it has one caller. Return REVISE unless the safety floor in
+  The Plan's three usages are cited before implementation, so a usage nobody has
+  written is not one of them; three call sites this change itself wires are.
+  Return REVISE unless the safety floor in
   `.agents/rules/minimal-implementation.md` § 2 requires the element.
 - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a component written where one could be installed, a standard passed over, and an authored region with no recorded reason.
 

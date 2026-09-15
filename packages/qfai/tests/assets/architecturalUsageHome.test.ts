@@ -31,7 +31,7 @@ describe("architectural elements have concrete usage references before implement
       // What the count is of, and what an element is, so a reviewer blocking on
       // it reads the same rule the author did.
       expect(plan).toContain("a thing this plan introduces for other things to");
-      expect(plan).toContain("The count is of callers that exist when the element does");
+      expect(plan).toContain("The count is of call sites that exist when the element does");
     });
 
     it(`${tree}: SDD reports failed document checks before implementation`, async () => {
@@ -55,7 +55,7 @@ describe("architectural elements have concrete usage references before implement
       // The Plan's usages are cited before implementation, so nothing downstream
       // would have re-read them against the tree the element lands in.
       const card = await read(tree, "assistant/agents/implementation-reviewer.md");
-      expect(card).toContain("Count the callers of an architectural element");
+      expect(card).toContain("Count the call sites of an architectural element");
       expect(card).toContain("as they exist in the tree");
       expect(card).toContain("10_Plan.md#implementation-approach");
     });
@@ -65,9 +65,9 @@ describe("architectural elements have concrete usage references before implement
       expect(card).toContain("10_Plan.md#implementation-approach");
       expect(card).toContain("return REVISE for missing or insufficient usage references");
       expect(card).toContain("unless the documented safety-floor exception applies");
-      expect(card).toContain(
-        "On spec-scoped SDD cycles that finalize a Plan, read `.qfai/specs/spec-*/10_Plan.md` and its referenced usages",
-      );
+      // The targets of this cycle, not every pack in the tree.
+      expect(card).toContain("read the `10_Plan.md` of each spec that");
+      expect(card).toContain("A Plan no target of this run finalizes is not this");
       expect(card.includes("In contract-scoped SDD, do not apply this Plan gate")).toBe(true);
       expect(
         card.includes(

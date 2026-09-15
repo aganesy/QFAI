@@ -44,7 +44,10 @@ tools: [Read, Glob, Grep, Bash]
   context; when the two differ the card is the role contract and wins. See
   `.qfai/assistant/constitution/constitution.md` Article III.)
 - .qfai/assistant/catalog/test-layers.md
-- On spec-scoped SDD cycles that finalize a Plan, read `.qfai/specs/spec-*/10_Plan.md` and its referenced usages.
+- On an SDD cycle that finalizes a Plan, read the `10_Plan.md` of each spec that
+  cycle targets — the one named, or each capability a no-argument batch covers —
+  and its referenced usages. A Plan no target of this run finalizes is not this
+  review's to judge.
 - .qfai/specs/spec-\*/09_delta.md
 - Validation evidence and gate results
 - `.qfai/specs/<spec-id>/tdd/test-list.md` — the ledger, for the row under review

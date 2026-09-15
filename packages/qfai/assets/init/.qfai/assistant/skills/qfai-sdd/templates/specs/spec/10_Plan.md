@@ -28,10 +28,11 @@ never cut the obligation to clear the count. Subject to the same floor, shared
 code still waits for its third actual caller; documentation references do not
 prove three callers.
 
-The count is of callers that exist when the element does. An element whose three
-usages are all written by the same change that introduces it has one caller and
-two plans for one, so the implementing stage checks the callers again against
-this section before the element lands.
+The count is of call sites that exist when the element does, wherever they came
+from: one change wiring three modules to a new adapter leaves three callers. What
+does not count is a usage nobody has written — a plan, a comment, a document —
+so the implementing stage counts the call sites again against this section
+before the element lands.
 
 ## Test approach
 
