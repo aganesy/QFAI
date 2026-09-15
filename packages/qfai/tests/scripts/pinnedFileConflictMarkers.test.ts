@@ -308,14 +308,16 @@ describe("the lint job's pre-flight step", () => {
     // scan reports a conflict in these inputs as a mismatch and the scan never runs.
     const workflow = await readFile(path.join(repoRoot, ".github/workflows/ci.yml"), "utf-8");
     const lines = workflow.split("\n");
-    const scan = lines.findIndex(
-      (line) => line.includes("grep -lE") && line.includes(".github/command-files.txt"),
+    const inputs = lines.findIndex(
+      (line) => line.includes("for pinned in") && line.includes(".github/command-files.txt"),
     );
+    const scan = lines.findIndex((line) => line.includes("grep -qE"));
     const digests = lines.findIndex((line) =>
       line.includes("sha256sum -c --quiet <<'PINNED_INPUTS'"),
     );
 
-    expect(scan).toBeGreaterThan(-1);
+    expect(inputs).toBeGreaterThan(-1);
+    expect(scan).toBeGreaterThan(inputs);
     expect(scan).toBeLessThan(digests);
     for (const input of [
       "scripts/check-toolchain-action.sh",
@@ -323,7 +325,17 @@ describe("the lint job's pre-flight step", () => {
       ".github/lifecycle-manifests.txt",
       ".github/command-files.txt",
     ]) {
-      expect(lines[scan]).toContain(input);
+      expect(lines[inputs]).toContain(input);
     }
+  });
+
+  it("reads a marker in a CRLF file, as the scanner does", async () => {
+    // The scanner splits on the line separator, so the carriage return is gone
+    // before it matches; grep's end-of-line would sit past it. The step drops
+    // the returns per file, which keeps the two answering the same way.
+    const workflow = await readFile(path.join(repoRoot, ".github/workflows/ci.yml"), "utf-8");
+    const scan = workflow.split("\n").find((line) => line.includes("grep -qE"));
+    expect(scan).toBeDefined();
+    expect(scan).toContain("tr -d '\\r'");
   });
 });
