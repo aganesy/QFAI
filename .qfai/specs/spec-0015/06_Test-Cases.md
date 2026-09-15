@@ -34,13 +34,17 @@
 
 - EX-Ref: EX-0015-0004
 - AC-Refs: AC-0015-0006
-- Verify each proposed pattern includes rationale.
+- Verify optional pattern review remains advisory and each proposed addition concerns concrete business-flow, US, AC, EX or TC coverage with a rationale.
+- Verify the shipped profile has no numeric target and does not demand more abstract rules.
+- Negative control: making rationale optional, assigning a numeric target or demanding additional abstract items fails the oracle.
 
 ## TC-0015-0007: Pattern-Doubler N/A Default
 
 - EX-Ref: EX-0015-0004
-- AC-Refs: AC-0015-0007
-- Verify N/A returned when no ID-bearing items exist.
+- AC-Refs: AC-0015-0007, AC-0015-0009
+- Boundary `abstract-only-na`: verify empty and abstract-only artifacts return N/A even when BR, NFR, policy, decision or architectural items carry IDs. Concrete proposals remain eligible for advisory review. Missing mandatory pairings, independently required product obligations and blocking gates remain required.
+- Boundary `legacy-profile-preservation`: run real init and seed a legacy numeric `default_target` and adopter description. Verify normal reinit preserves the manifest and current catalog bytes. Seed an older catalog without the bound and its matching prior asset receipt; normal reinit preserves it, while forced reinit refreshes its bound. Verify both paths preserve the adopter manifest and the refreshed catalog ignores numeric targets without waiving mandatory pairings or independently required obligations and gates.
+- Negative controls: removing the abstract-only N/A rule, applying the preserved numeric target or overwriting either adopter field fails the corresponding oracle. A mismatching prior catalog receipt prevents forced refresh and fails the updated-bound assertion.
 
 ## TC-0015-0008: All-Reviewer FAIL Obligation
 

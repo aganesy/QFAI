@@ -4213,6 +4213,37 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
 `;
   }
 
+  it("accepts stage status fields copied from each shipped ATDD evidence template", async () => {
+    for (const skillPath of [
+      "assets/init/.qfai/assistant/skills/qfai-atdd/SKILL.md",
+      "../../.qfai/assistant/skills/qfai-atdd/SKILL.md",
+    ]) {
+      const skill = await readFile(path.resolve(process.cwd(), skillPath), "utf-8");
+      const template = skill.match(/```md\r?\n(# ATDD Evidence:[\s\S]*?)\r?\n```/)?.[1];
+      expect(template, skillPath).toBeDefined();
+      const fields = template?.split(/^## Final status.*$/m)[1]?.trim();
+      expect(fields, skillPath).toBeDefined();
+      const status = (fields ?? "")
+        .replace(".qfai/review/review-<timestamp>/", STAGE_PACK_PATH)
+        .replace("<sha256>", "{{STAGE_PACK_SEAL}}");
+      await withProject(async (root) => {
+        const codes = await runOn(
+          root,
+          ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+          {
+            [COVERAGE_DEPTH_PATH]: stageEvidence().replace(
+              /## Final status[\s\S]*$/,
+              `## Final status\n\n${status}\n`,
+            ),
+            ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry(),
+          },
+          { stagePack: "present" },
+        );
+        expect(codes, skillPath).not.toContain("QFAI-TDDLIST-008");
+      });
+    }
+  });
+
   it("accepts a shared-artifact re-verify a sealed stage status carries", async () => {
     await withProject(async (root) => {
       const codes = await runOn(
