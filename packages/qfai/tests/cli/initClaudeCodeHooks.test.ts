@@ -21,6 +21,7 @@ import {
   GRILLING_DELEGATION_HOOK_MARKER,
   GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
   GRILLING_PLAN_HOOK_MARKER,
+  MINIMAL_IMPLEMENTATION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
 import { captureStderr } from "../helpers/stderr.js";
 import { captureStdout } from "../helpers/stdout.js";
@@ -48,11 +49,11 @@ function readPreToolUse(settings: unknown): unknown[] {
 }
 
 /** One `qfai init` run with its console output swallowed; returns what it wrote to stderr. */
-async function initInto(root: string): Promise<string> {
+async function initInto(root: string, force = false): Promise<string> {
   let stderr = "";
   await captureStdout(async () => {
     stderr = await captureStderr(async () => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInit({ dir: root, force, dryRun: false, yes: true });
     });
   });
   return stderr;
@@ -157,6 +158,45 @@ describe("qfai init and the reminder hooks", () => {
 
       expect(afterSecond).toBe(afterFirst);
       expect(afterSecond.split(DOCUMENTATION_CLARITY_HOOK_MARKER)).toHaveLength(4);
+    });
+  });
+
+  it("keeps older same-marker implementation text on normal and forced reinit", async () => {
+    await withTempRoot(async (root) => {
+      const own = { matcher: "Bash", hooks: [{ type: "command", command: "./own.sh" }] };
+      const older = {
+        matcher: "Edit",
+        customSetting: "keep",
+        hooks: [
+          {
+            type: "command",
+            statusMessage: MINIMAL_IMPLEMENTATION_HOOK_MARKER,
+            command: "project-node",
+            args: ["-e", "console.log('older implementation reminder')"],
+          },
+        ],
+      };
+      await seedSettings(root, {
+        permissions: { allow: ["Bash(git status)"] },
+        hooks: { PostToolUse: [own, older] },
+      });
+
+      let previousText: string | undefined;
+      for (const force of [false, true, false]) {
+        await initInto(root, force);
+        const settings = await readSettings(root);
+        const hooks: unknown = settings.hooks;
+        if (typeof hooks !== "object" || hooks === null) throw new Error("missing hooks");
+        const groups: unknown = Reflect.get(hooks, "PostToolUse");
+        if (!Array.isArray(groups)) throw new Error("missing PostToolUse groups");
+        expect(groups).toHaveLength(3);
+        expect(groups.slice(0, 2)).toEqual([own, older]);
+        expect(JSON.stringify(groups).split(MINIMAL_IMPLEMENTATION_HOOK_MARKER)).toHaveLength(2);
+        expect(settings.permissions).toEqual({ allow: ["Bash(git status)"] });
+        const text = await readFile(path.join(root, SETTINGS), "utf-8");
+        if (previousText !== undefined) expect(text).toBe(previousText);
+        previousText = text;
+      }
     });
   });
 

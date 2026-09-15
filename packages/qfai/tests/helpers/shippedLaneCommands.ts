@@ -1175,8 +1175,12 @@ export const ALLOWED_WORKFLOW_SHAPE: ReadonlyMap<string, string> = new Map([
 
 export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   [
+    "qfai-docs.yml#checks",
+    '{"name":"qfai docs check (${{ matrix.check }})","strategy":{"fail-fast":false,"matrix":{"check":["shape","mermaid"]}},"runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":15}',
+  ],
+  [
     "qfai-docs.yml#docs",
-    '{"name":"qfai docs (document shape and Mermaid syntax)","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":15}',
+    '{"name":"qfai docs (document shape and Mermaid syntax)","needs":"checks","if":"${{ always() }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -1208,7 +1212,11 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"qfai validate (full profile, fail on error)","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10}',
+    '{"name":"qfai validate check (${{ matrix.profile }})","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10,"strategy":{"fail-fast":false,"matrix":{"profile":"${{ fromJSON(github.event_name == \'pull_request\' && \'[\\"full\\",\\"drift\\"]\' || \'[\\"full\\"]\') }}"}}}',
+  ],
+  [
+    "qfai-validate.yml#summary",
+    '{"name":"qfai validate (full profile, fail on error)","needs":"validate","if":"${{ always() }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
 ]);
 
@@ -1232,11 +1240,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
+  ["qfai-docs.yml", "ee8967d86820163e7cba03165bec9cf4b9290bea2d5df1e4cca6d318ae7d904c"],
   ["qfai-tests.yml", "e3d534f0e816fdc42db85265b56e4a77343d3679bb8944d3b441bffe5c874345"],
-  // Re-pinned when the lane gained the drift gate and the conditional checkout
-  // depth that gate needs.
-  ["qfai-validate.yml", "d4968abdb0951ff7210fc400aaecb3bea8cb52e3a46f4bbb23941b55f6a6df37"],
-  ["qfai-docs.yml", "43c5d722c44a9d5fc24cd65477782a66ca143293c2074ed698718494d1262d5d"],
+  ["qfai-validate.yml", "2f3ff776c510fe2b3d4dd736b5d6dc4413bfdd0409b8239a9c26841cf9c8d159"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1882,44 +1888,48 @@ export function initMustNotShip(
  */
 export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false}}',
   ],
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Resolve the package manager (pnpm route fails closed)","id":"package-manager","shell":"bash","run":"<body 40fe24c29a485dc5d462406646b7643a05f5ab2227b9c60a559c9d997b42e7a7>"}',
   ],
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Set up pnpm via pnpm/action-setup 4.4.0 (if project uses pnpm)","if":"${{ hashFiles(\'pnpm-lock.yaml\') != \'\' }}","uses":"pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320"}',
   ],
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Resolve the Node version (adopter file wins, else fall open)","id":"node-version","shell":"bash","run":"<body ef4d36759a58da6e28134d1f67caf0596e88d7509a7d340a1602fa8bb40140d8>"}',
   ],
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Choose a package-manager cache setup-node can actually resolve","id":"node-cache","shell":"bash","run":"<body 8531578b6eba24fc357402381471266984ad26a65f864cb15d4a1f17c7054e1f>"}',
   ],
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Set up Node via actions/setup-node 5.0.0","uses":"actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Install dependencies (lockfile-aware)","shell":"bash","run":"<body a01a22aea86949331e27fdf13eef7fcfddeada4edfeda0b10af48c1e674dfd02>"}',
   ],
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body b761d8e879323adfa7ac7e179e70eaca46078c9768673fd7e850d4d331296d29>"}',
   ],
   [
-    "qfai-docs.yml#docs",
-    '{"name":"Check SDD document shape","shell":"bash","run":"<body 34a9e3456d446848663e72cd3d055a826e9b817e9e027722a461ed682955178e>"}',
+    "qfai-docs.yml#checks",
+    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body 34a9e3456d446848663e72cd3d055a826e9b817e9e027722a461ed682955178e>"}',
+  ],
+  [
+    "qfai-docs.yml#checks",
+    '{"name":"Check Mermaid diagram syntax","if":"matrix.check == \'mermaid\'","shell":"bash","run":"<body 1255663d291ad8e0951cdc1eeba102fcd20f9fa27a484a52c55b196cb033d517>"}',
   ],
   [
     "qfai-docs.yml#docs",
-    '{"name":"Check Mermaid diagram syntax","shell":"bash","run":"<body 1255663d291ad8e0951cdc1eeba102fcd20f9fa27a484a52c55b196cb033d517>"}',
+    '{"name":"Require every document check to succeed","env":{"CHECK_RESULT":"${{ needs.checks.result }}"},"shell":"bash","run":"<body 8e8c3a23f87d1f0cbe19cf75d718fee8047e478cd11a4cc88a581a7696666c8a>"}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -1958,10 +1968,6 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
     '{"name":"Aggregate lane results (green on skip)","env":{"QFAI_NEEDS_JSON":"${{ toJSON(needs) }}"},"shell":"bash","run":"<body 7ee82953e37be82d81440045826adfa89282355c973d6e7dacf80bc0ed381fe8>"}',
   ],
   [
-    // Re-pinned when the drift gate below was added. The checkout asks for full
-    // history on a pull request, because the gate compares this branch against
-    // its base and a shallow clone has no merge base to compare from. A push
-    // keeps the shallow fetch, where the gate does not run.
     "qfai-validate.yml#validate",
     '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":"${{ github.event_name == \'pull_request\' && \'0\' || \'1\' }}"}}',
   ],
@@ -1991,15 +1997,15 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"qfai validate","run":"<body cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9>"}',
+    '{"name":"qfai validate","if":"matrix.profile == \'full\'","run":"<body cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9>"}',
   ],
   [
-    // The `full` profile above evaluates every gate group except drift, so on
-    // its own the lane cannot fail on a downstream edit to upstream SSOT. Pull
-    // requests only: the gate compares against a base branch and says nothing
-    // when it cannot resolve one.
     "qfai-validate.yml#validate",
-    '{"name":"qfai validate (drift protocol)","if":"github.event_name == \'pull_request\'","run":"<body 995eb7509a0aa6e91297702f51ec1bdd4f4f5b3cfac4c354edcfa9b28b2303cc>"}',
+    '{"name":"qfai validate (drift protocol)","if":"matrix.profile == \'drift\' && github.event_name == \'pull_request\'","run":"<body 995eb7509a0aa6e91297702f51ec1bdd4f4f5b3cfac4c354edcfa9b28b2303cc>"}',
+  ],
+  [
+    "qfai-validate.yml#summary",
+    '{"name":"Require every validation profile to succeed","shell":"bash","env":{"PROFILE_RESULT":"${{ needs.validate.result }}"},"run":"<body b00785d5001b9e242eb84c75e9e2dc866ead1b1adafe804c8a752ee379347043>"}',
   ],
 ];
 
@@ -2032,6 +2038,7 @@ export const ALLOWED_JOB_KEYS: ReadonlySet<string> = new Set([
   "permissions",
   "runs-on",
   "steps",
+  "strategy",
   "timeout-minutes",
 ]);
 
@@ -2239,6 +2246,8 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
  * a variable nobody wrote down is refused whether or not anyone has worked out what it would do.
  */
 export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
+  ["CHECK_RESULT", "${{ needs.checks.result }}"],
+  ["PROFILE_RESULT", "${{ needs.validate.result }}"],
   ["QFAI_BASE_REF", "${{ github.event.pull_request.base.sha || github.event.before }}"],
   // Which event started the run, so the detection body can take a two-dot diff on a push and a
   // three-dot one on a pull request. Its value comes from `github.event_name`, a closed set
