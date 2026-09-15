@@ -395,12 +395,18 @@ jobs:
         # outnumbering the cores turn a healthy run red on an RPC timeout the declaration cannot
         # reach.
         # The workspace is the TAG's tree, and a tag cut before the suite was sliced carries no
-        # per-slice script. The gate beside this job runs the aggregate there, suite included, so
-        # this leg has nothing left to run and says so rather than failing on a missing script.
+        # per-slice script. Nothing else runs the suite on the floor — the gate beside this lane
+        # runs on the newest Node — so one leg runs it whole there and the rest say why they did
+        # not, rather than seven legs running the same suite or the floor going unchecked.
         shell: bash
         run: |
           if ! node -e "process.exit(require('./packages/qfai/package.json').scripts['test:${{ matrix.slice }}'] ? 0 : 1)"; then
-            echo "This tag predates the sliced suite; the release gate ran it whole."
+            if [ "${{ matrix.slice }}" != "core" ]; then
+              echo "This tag predates the sliced suite; the core leg runs it whole on the floor."
+              exit 0
+            fi
+            echo "This tag predates the sliced suite; running it whole on the floor."
+            QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test
             exit 0
           fi
           QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:${{ matrix.slice }}
