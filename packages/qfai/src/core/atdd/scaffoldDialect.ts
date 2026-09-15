@@ -632,7 +632,11 @@ function compileBraces(body: string): string {
   }
   const members = braceRangeMembers(body);
   if (members === null) return `\\{${compileGlob(body)}\\}`;
-  return members.length === 0 ? NEVER_MATCHES : `(?:${members.map(escapeRegExp).join("|")})`;
+  // Expanded first and compiled after, as fast-glob does it, so a member the
+  // expansion produces is glob syntax there and here alike: `{*..*}` expands
+  // to `*`, which selects every name and not a literal star.
+  const compiled = members.map((member) => compileGlob(member)).join("|");
+  return members.length === 0 ? NEVER_MATCHES : `(?:${compiled})`;
 }
 
 /** `./tests/**\/*.py` -> `tests/**\/*.py`; backslashes folded to POSIX. */
@@ -679,8 +683,24 @@ function normalizeGlobPath(value: string): string {
  * Blank entries are dropped exactly as `normalizeGlobs` drops them for the
  * scan, so both sides agree on which globs are configured at all.
  */
-function compileGlobMatchers(patterns: readonly string[], matchWholePath: boolean): RegExp[] {
+/** A compiled matcher for a pattern that selects nothing. */
+const NEVER_MATCHES_PATTERN = /(?!)/;
+
+/** One list of configured globs, compiled. */
+type CompiledGlobs = {
+  readonly matchers: readonly RegExp[];
+  /**
+   * One of the globs holds a brace range fast-glob refuses to expand. It throws
+   * while compiling, for the whole call rather than for that pattern, so the
+   * scan collects no file at all — which is what the glob being an include or
+   * an exclude both come to. The caller admits no destination either way.
+   */
+  readonly refused: boolean;
+};
+
+function compileGlobMatchers(patterns: readonly string[], matchWholePath: boolean): CompiledGlobs {
   const matchers: RegExp[] = [];
+  let refused = false;
   for (const pattern of patterns) {
     const normalized = normalizeGlobPath(pattern.trim());
     if (normalized === "") continue;
@@ -688,13 +708,12 @@ function compileGlobMatchers(patterns: readonly string[], matchWholePath: boolea
     try {
       matchers.push(new RegExp(`^${compileGlob(source)}$`));
     } catch (error) {
-      // fast-glob refuses the whole pattern when one range in it is refused, so
-      // the pattern selects nothing, whatever its other alternatives name.
       if (!(error instanceof BraceRangeRefused)) throw error;
-      matchers.push(/(?!)/);
+      refused = true;
+      matchers.push(NEVER_MATCHES_PATTERN);
     }
   }
-  return matchers;
+  return { matchers, refused };
 }
 
 /**
@@ -706,7 +725,7 @@ function compileGlobMatchers(patterns: readonly string[], matchWholePath: boolea
  * directory half is the caller's own containment check.
  */
 export function scaffoldPlaceholderBasenameMatchers(): RegExp[] {
-  return compileGlobMatchers(SCAFFOLD_PLACEHOLDER_GLOBS, false);
+  return [...compileGlobMatchers(SCAFFOLD_PLACEHOLDER_GLOBS, false).matchers];
 }
 
 /** Where the writer will put the skeleton, when the caller knows it. */
@@ -814,10 +833,17 @@ export function resolveScaffoldDialect(
         [...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, ...(options.excludeGlobs ?? [])],
         true,
       )
-    : [];
+    : { matchers: [], refused: false };
+  // A refused range stops fast-glob compiling the call it is in, so the
+  // project's scan collects nothing and no destination this writer could
+  // choose is one that scan reads. An exclude holding one is the case a matcher
+  // that excludes nothing read as an exclusion that does not apply, and the
+  // skeleton was written under an include the same refusal had already stopped.
+  const scannable = !includes.refused && !excludes.refused;
   const admits = (candidate: string): boolean =>
-    includes.some((matcher) => matcher.test(candidate)) &&
-    !excludes.some((matcher) => matcher.test(candidate));
+    scannable &&
+    includes.matchers.some((matcher) => matcher.test(candidate)) &&
+    !excludes.matchers.some((matcher) => matcher.test(candidate));
   const tcIds =
     options.tcIds !== undefined && options.tcIds.length > 0 ? options.tcIds : [PROBE_TC_ID];
   const chosen = candidates.find(({ naming }) =>

@@ -215,7 +215,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   or descending, and a single-character range now match the members fast-glob
   expands them to, padded to the widest part, the increment included. A range
   fast-glob refuses, one of a thousand steps or more written without an
-  increment, leaves the whole pattern selecting nothing. A list member is text,
+  increment, leaves the scan collecting nothing at all, whether the glob is one
+  the scan includes or one it ignores, so the scaffold refuses rather than
+  writing under it. A member the expansion produces is glob syntax, as it is to
+  fast-glob, which expands a range before it compiles. A list member is text,
   not a range, and so is a brace body that is neither. Because a range can make
   a glob depend on a test case id's digits, the scaffold checks the file it
   would write for every test case in scope, not a representative one.

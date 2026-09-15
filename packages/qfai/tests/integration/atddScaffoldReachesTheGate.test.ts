@@ -374,6 +374,25 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     );
   });
 
+  it("refuses when an exclude glob holds a range the scan refuses", () => {
+    // fast-glob throws while compiling the ignore, and for the whole call, so
+    // the scan collects nothing. Read as an exclusion that matches nothing, the
+    // writer emitted a skeleton under an include the same refusal had stopped.
+    expect(
+      resolveScaffoldDialect(["tests/**/*.test.ts"], {
+        scaffoldDir: "tests/integration/spec-0001",
+        excludeGlobs: ["tests/**/TC-{{0000..9999},0000}-0000.test.ts"],
+      }).outcome,
+    ).toBe("naming-mismatch");
+  });
+
+  it("reads a member the expansion produces as glob syntax", () => {
+    // fast-glob expands the range first and compiles each member after, so the
+    // `*` that `{*..*}` expands to selects every name. Escaped as a literal
+    // star it selected only a file whose name holds one.
+    expect(requireDialect(["tests/**/TC-0000-000{*..*}.test.ts"]).id).toBe("js-ts");
+  });
+
   it("admits a naming only when every test case the run writes is inside the range", () => {
     const globs = ["tests/**/TC-0001-{0001..0009}.test.ts"];
     expect(resolveScaffoldDialect(globs, { tcIds: ["TC-0001-0001", "TC-0001-0009"] }).outcome).toBe(
