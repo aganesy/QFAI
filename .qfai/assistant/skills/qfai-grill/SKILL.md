@@ -135,6 +135,11 @@ records the same thing from the reviewer's side: there is no artifact to review.
 
 What the user is shown at the end:
 
+- **the ending the session reached**, named: `confirmed`, `user-closed`,
+  `no-question` or `stopped`. It is the one thing the rest cannot be read off:
+  a confirmed session and a closed session that left nothing open produce the
+  same three lists, and only the first says the user agreed the understanding
+  was shared;
 - every decision they answered, and what they answered;
 - every node left open, labelled as an assumption or as unasked — decisions and
   facts only the user holds alike, because a fact no lookup reached is exactly
