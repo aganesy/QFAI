@@ -299,9 +299,18 @@ function escapeRegExp(value: string): string {
 
 /** Last path segment of a glob — the basename convention it prescribes. */
 function globBasename(glob: string): string {
-  const normalized = glob.replace(/\\/g, "/");
-  const lastSlash = normalized.lastIndexOf("/");
-  return lastSlash === -1 ? normalized : normalized.slice(lastSlash + 1);
+  // Separators are already folded; a `/` or a backslash inside a bracket
+  // expression is a member, not a boundary.
+  let lastSlash = -1;
+  for (let index = 0; index < glob.length; index += 1) {
+    const close = glob[index] === "[" ? findClassClose(glob, index) : -1;
+    if (close !== -1) {
+      index = close;
+      continue;
+    }
+    if (glob[index] === "/") lastSlash = index;
+  }
+  return lastSlash === -1 ? glob : glob.slice(lastSlash + 1);
 }
 
 /**
@@ -321,6 +330,16 @@ function findGroupClose(pattern: string, open: number, opener: string, closer: s
   let depth = 0;
   for (let index = open; index < pattern.length; index += 1) {
     const char = pattern[index];
+    // A bracket expression is skipped whole: a `)` or a `}` written inside one
+    // is a member of the class, and read as a closer it ended the group early
+    // and rejected a candidate the project's own scan collects.
+    if (char === "[") {
+      const classClose = findClassClose(pattern, index);
+      if (classClose !== -1) {
+        index = classClose;
+        continue;
+      }
+    }
     if (char === opener) {
       depth += 1;
     } else if (char === closer) {
@@ -332,20 +351,32 @@ function findGroupClose(pattern: string, open: number, opener: string, closer: s
 }
 
 /**
- * Split a group's interior on its top-level separators. `,` (braces) and `|`
- * (extglob) are both accepted in both group kinds: no real glob relies on the
- * other one being a literal, and conflating them keeps one splitter.
+ * Split a group's interior on its top-level separator: `,` in a brace list and
+ * `|` in an extended group. Each is a literal in the other kind, so
+ * `@(a.md,b.md)` names one file with a comma in its name.
  */
-function splitGlobAlternatives(inner: string): string[] {
+function splitGlobAlternatives(inner: string, separator: "|" | ","): string[] {
   const parts: string[] = [];
   let depth = 0;
   let current = "";
-  for (const char of inner) {
+  for (let index = 0; index < inner.length; index += 1) {
+    const char = inner[index] ?? "";
+    // A bracket expression is copied whole: a `,` or a `|` inside one is a
+    // member of the class, and split on it the alternatives came apart into
+    // fragments that match nothing.
+    if (char === "[") {
+      const classClose = findClassClose(inner, index);
+      if (classClose !== -1) {
+        current += inner.slice(index, classClose + 1);
+        index = classClose;
+        continue;
+      }
+    }
     if (char === "(" || char === "{") {
       depth += 1;
     } else if (char === ")" || char === "}") {
       depth -= 1;
-    } else if ((char === "," || char === "|") && depth === 0) {
+    } else if (char === separator && depth === 0) {
       parts.push(current);
       current = "";
       continue;
@@ -374,14 +405,14 @@ function splitGlobAlternatives(inner: string): string[] {
  * `!(a|b)` uses picomatch's own expansion — a negative lookahead followed by a
  * lazy segment wildcard — so this matcher agrees with fast-glob there too.
  */
-function compileGlob(pattern: string): string {
+export function compileGlob(pattern: string): string {
   let source = "";
   for (let index = 0; index < pattern.length; index += 1) {
     const char = pattern[index] ?? "";
     if (pattern[index + 1] === "(" && "@?*+!".includes(char)) {
       const close = findGroupClose(pattern, index + 1, "(", ")");
       if (close !== -1) {
-        const alternatives = splitGlobAlternatives(pattern.slice(index + 2, close))
+        const alternatives = splitGlobAlternatives(pattern.slice(index + 2, close), "|")
           .map((alternative) => compileGlob(alternative.trim()))
           .join("|");
         source +=
@@ -397,15 +428,19 @@ function compileGlob(pattern: string): string {
       // `a**b` to a single `*`, and so does this.
       const precededByBoundary = index === 0 || pattern[index - 1] === "/";
       const afterIndex = index + 2;
+      // A globstar written next to another matches no more than one does, and
+      // two quantified groups side by side try every split of the segments
+      // between them: ten in a row took seconds against one deep path.
+      const followsGlobstar = source.endsWith(SEGMENTS_GLOBSTAR);
       if (precededByBoundary && afterIndex >= pattern.length) {
-        source += "[^/]*(?:/[^/]*)*";
+        source = `${followsGlobstar ? source.slice(0, -SEGMENTS_GLOBSTAR.length) : source}[^/]*(?:/[^/]*)*`;
         index = afterIndex - 1;
         continue;
       }
       if (precededByBoundary && pattern[afterIndex] === "/") {
         // `**/` matches zero or more whole segments, so `tests/**\/*.py` still
         // matches `tests/a.py`.
-        source += "(?:[^/]*/)*";
+        if (!followsGlobstar) source += SEGMENTS_GLOBSTAR;
         index = afterIndex;
         continue;
       }
@@ -424,10 +459,35 @@ function compileGlob(pattern: string): string {
     if (char === "{") {
       const close = findGroupClose(pattern, index, "{", "}");
       if (close !== -1) {
-        const alternatives = splitGlobAlternatives(pattern.slice(index + 1, close))
+        const alternatives = splitGlobAlternatives(pattern.slice(index + 1, close), ",")
           .map((alternative) => compileGlob(alternative.trim()))
           .join("|");
         source += `(?:${alternatives})`;
+        index = close;
+        continue;
+      }
+    }
+    if (char === "[") {
+      // A bracket class, which fast-glob supports and an escape-everything
+      // matcher reads as four literal characters. `[!a-z]` is the glob spelling
+      // of a negated class; a regular expression spells it `[^a-z]`.
+      const close = findClassClose(pattern, index);
+      if (close !== -1) {
+        const body = pattern.slice(index + 1, close);
+        const negated = body.startsWith("!") || body.startsWith("^");
+        // A class never reaches across a separator, whatever it spells. A
+        // range holding `/` — `[.-9]` does — otherwise matched the separator
+        // itself, and a destination the project's own scan cannot reach was
+        // accepted as one it could. A lookahead holds it out in both forms:
+        // written into a negated class beside the members, it made a range with
+        // a leading hyphen, and `[!-a-z]` excluded every capital letter.
+        const members = compileClassBody(body.slice(negated ? 1 : 0));
+        const compiled = `(?!/)[${negated ? "^" : ""}${members}]`;
+        // A class the author wrote wrongly — a descending range, say — matches
+        // nothing, which is what the project's own scan does with it. Left to
+        // build a regular expression it threw instead, out of a command whose
+        // answer for a pattern nothing matches is a refusal.
+        source += isUsableExpression(compiled) ? compiled : NEVER_MATCHES;
         index = close;
         continue;
       }
@@ -437,9 +497,140 @@ function compileGlob(pattern: string): string {
   return source;
 }
 
+/** What `**\/` compiles to: zero or more whole segments. */
+const SEGMENTS_GLOBSTAR = "(?:[^/]*/)*";
+
+/** An expression that matches nothing, for a class the author wrote wrongly. */
+const NEVER_MATCHES = "(?!)";
+
+/** Whether a fragment is one a regular expression can be built from. */
+function isUsableExpression(source: string): boolean {
+  try {
+    new RegExp(source);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Where the bracket expression opened at `open` ends, or `-1`.
+ *
+ * Two things make a `]` something other than the terminator: one written first
+ * in the class, where it is an ordinary member, and the `]` that closes a named
+ * class. A scan for the first `]` stops inside `[[:digit:]]` and compiles a
+ * class over the characters of the word `digit`, which matches none of the names
+ * the pattern was written for.
+ *
+ * A named class is the only element the matcher reads inside a class: `[:`, a
+ * name its table carries, and `:]`. Every other `[` is a member, so `[[.T]`
+ * holds `[`, `.` and `T` and ends at its own `]`, however far a later `.]` is.
+ */
+export function findClassClose(pattern: string, open: number): number {
+  let index = open + 1;
+  if (pattern[index] === "!" || pattern[index] === "^") index += 1;
+  if (pattern[index] === "]") index += 1;
+  while (index < pattern.length) {
+    const char = pattern[index];
+    // An escaped member is a member, `]` included.
+    if (char === "\\") {
+      index += 2;
+      continue;
+    }
+    if (char === "]") return index;
+    index = namedClassAt(pattern, index)?.end ?? index + 1;
+  }
+  return -1;
+}
+
+/**
+ * The named classes the matcher accepts, as regular-expression members.
+ *
+ * A regular expression has no POSIX class, so each is written out. Left as it
+ * stands, `[[:digit:]]` compiles to a class of `[`, `:` and the letters of
+ * `digit`.
+ *
+ * Written exactly as the matcher's own table writes them, order included: a
+ * member beside a named class can join its first range, so `[T-[:alpha:]]` is
+ * the valid `[T-a-zA-Z]` there, and with the ranges swapped it was the
+ * descending `T-A`, a class that matches nothing.
+ */
+const POSIX_CLASS_MEMBERS: Readonly<Record<string, string>> = {
+  alnum: "a-zA-Z0-9",
+  alpha: "a-zA-Z",
+  ascii: "\\x00-\\x7F",
+  blank: " \\t",
+  cntrl: "\\x00-\\x1F\\x7F",
+  digit: "0-9",
+  graph: "\\x21-\\x7E",
+  lower: "a-z",
+  print: "\\x20-\\x7E ",
+  punct: "\\-!\"#$%&'()\\*+,./:;<=>?@[\\]^_`{|}~",
+  space: " \\t\\r\\n\\v\\f",
+  upper: "A-Z",
+  word: "A-Za-z0-9_",
+  xdigit: "A-Fa-f0-9",
+};
+
+/** The named class written at `index`, when the matcher's table carries the name. */
+function namedClassAt(text: string, index: number): { members: string; end: number } | null {
+  const named = /\[:([a-z]+):\]/y;
+  named.lastIndex = index;
+  const name = named.exec(text)?.[1];
+  if (name === undefined || !Object.hasOwn(POSIX_CLASS_MEMBERS, name)) return null;
+  return { members: POSIX_CLASS_MEMBERS[name] ?? "", end: named.lastIndex };
+}
+
+/**
+ * One bracket expression's members, as a regular expression writes them.
+ *
+ * Ranges pass through — `a-z` means the same on both sides — and only the two
+ * characters that would end the class early are escaped. A named class is
+ * written out from the table. Any other `[` is a member, as it is to the
+ * matcher: `[[:TC:]]` is a class of `[`, `:`, `T` and `C` followed by a literal
+ * `]`, and so is never the `TC-` a skeleton name starts with.
+ */
+function compileClassBody(body: string): string {
+  let source = "";
+  let index = 0;
+  while (index < body.length) {
+    const named = namedClassAt(body, index);
+    if (named !== null) {
+      source += named.members;
+      index = named.end;
+      continue;
+    }
+    const char = body[index] ?? "";
+    // The matcher reads a backslash as escaping the member after it, so `[\-T]`
+    // names a hyphen and `T`. Copied as a backslash member, it made a range
+    // no expression accepts, and the class matched nothing.
+    if (char === "\\" && index + 1 < body.length) {
+      const member = body[index + 1] ?? "";
+      source += /[\\\][^-]/.test(member) ? `\\${member}` : member;
+      index += 2;
+      continue;
+    }
+    source += char === "\\" || char === "]" ? `\\${char}` : char;
+    index += 1;
+  }
+  return source;
+}
+
 /** `./tests/**\/*.py` -> `tests/**\/*.py`; backslashes folded to POSIX. */
 function normalizeGlobPath(value: string): string {
-  return value.replace(/\\/g, "/").replace(/^\.\//, "");
+  // A backslash inside a bracket expression escapes a member, as `[\]T]` does;
+  // outside one it is a Windows separator.
+  let folded = "";
+  for (let index = 0; index < value.length; index += 1) {
+    const close = value[index] === "[" ? findClassClose(value, index) : -1;
+    if (close !== -1) {
+      folded += value.slice(index, close + 1);
+      index = close;
+      continue;
+    }
+    folded += value[index] === "\\" ? "/" : (value[index] ?? "");
+  }
+  return folded.replace(/^\.\//, "");
 }
 
 /**
