@@ -445,7 +445,7 @@ describe("full pipeline — custom baseBranch via options", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Group 3: traceabilityIntegrity (TC-0013-0011..0012)
+// Group 3: traceabilityIntegrity
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("spec BR changed + impl unchanged → QFAI-TRACE-001", () => {
@@ -486,9 +486,7 @@ describe("spec BR changed + impl unchanged → QFAI-TRACE-001", () => {
   });
 });
 
-// TC-0013-0011
-// QFAI:SPEC-0013:TC-0013-0011
-describe("TC-0013-0011: spec BR changed + impl changed → PASS", () => {
+describe("spec BR changed + impl changed → PASS", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -529,9 +527,7 @@ describe("TC-0013-0011: spec BR changed + impl changed → PASS", () => {
   });
 });
 
-// TC-0013-0012
-// QFAI:SPEC-0013:TC-0013-0012
-describe("TC-0013-0012: missing traceability ledger → QFAI-TRACE-002 warning", () => {
+describe("missing traceability ledger → QFAI-TRACE-002 warning", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {

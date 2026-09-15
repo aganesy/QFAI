@@ -112,7 +112,6 @@ describe("item completion blocked: no GREEN evidence", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0006
 describe("item completion blocked: reviewer not run", () => {
   it("prohibits completion when completion-reviewer has not been run", async () => {
     const c = await loadContent();

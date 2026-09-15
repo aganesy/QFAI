@@ -2538,7 +2538,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0013
   it("--force does not delete a real directory standing where an instructions file goes", async () => {
     // `rename` cannot replace a populated directory, and the recovery for that
     // failure is meant for a *symlink* — which `lstat` reports as a link, not
