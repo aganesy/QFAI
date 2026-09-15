@@ -4,24 +4,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-### Changed
-
-- **The worker-setting comparison is re-measured, on the project that is now the
-  largest** (#1887). The artifact recorded `core` at 145 test files against a tree
-  holding 174 — the twenty-percent bound exactly — so the next core test file any
-  branch added failed the row that re-counts it, and with it three CI jobs on
-  every open pull request. Re-measuring found more than a count out of date:
-  `e2e` is now the largest project, and where the old table had four workers
-  fastest and fourteen worst, the new one runs the other way. The adopted value
-  is unchanged at ten, 6.01% behind the fastest measured and inside the ten
-  percent the rule allows.
-
-- **The size check counts the files a project collects** (#1887). A project's
-  `include` is not always its own directory: `e2e` also collects
-  `tests/assets/**`, and `integration` three trees beside its own. Walking
-  `tests/<project>` alone measured a seventh of `e2e`, so drift anywhere else in
-  it was invisible.
-
 ### Added
 
 - **Reviewer cards file excess as a blocking code-quality defect** (#1798).
@@ -89,6 +71,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the SDD profile hears it, since the columns are that stage's to write.
 
 ### Changed
+
+- **The worker-setting comparison is re-measured, on the project that is now the
+  largest** (#1887). The artifact recorded `core` at 145 test files against a tree
+  holding 174 — the twenty-percent bound exactly — so the next core test file any
+  branch added failed the row that re-counts it, and with it three CI jobs on
+  every open pull request. Re-measuring found more than a count out of date:
+  `e2e` is now the largest project, and where the old table had four workers
+  fastest and fourteen worst, the new one runs the other way. The adopted value
+  is unchanged at ten, 6.01% behind the fastest measured and inside the ten
+  percent the rule allows.
+
+- **The size check counts the files a project collects** (#1887). A project's
+  `include` is not always its own directory: `e2e` also collects
+  `tests/assets/**`, and `integration` three trees beside its own. Walking
+  `tests/<project>` alone measured a seventh of `e2e`, so drift anywhere else in
+  it was invisible.
 
 - Start the lint gate's independent commands as five concurrent lanes instead of
   two. Every command still runs, exactly once, and a failure in any lane reaches
