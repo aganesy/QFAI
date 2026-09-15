@@ -55,6 +55,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   scenario types; reuse a row only when behavior, boundary, oracle and layer
   match (#1801).
 
+- Carry answered review demands into the next existing review request, so a
+  repeated demand can close against its recorded response without suppressing reports (#1810).
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
@@ -71,6 +74,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the SDD profile hears it, since the columns are that stage's to write.
 
 ### Changed
+
+- **The worker-setting comparison is re-measured, on the project that is now the
+  largest** (#1887). The artifact recorded `core` at 145 test files against a tree
+  holding 174 — the twenty-percent bound exactly — so the next core test file any
+  branch added failed the row that re-counts it, and with it three CI jobs on
+  every open pull request. Re-measuring found more than a count out of date:
+  `e2e` is now the largest project, and where the old table had four workers
+  fastest and fourteen worst, the new one runs the other way. The adopted value
+  is unchanged at ten, 6.01% behind the fastest measured and inside the ten
+  percent the rule allows.
+
+- **The size check counts the files a project collects** (#1887). A project's
+  `include` is not always its own directory: `e2e` also collects
+  `tests/assets/**`, and `integration` three trees beside its own. Walking
+  `tests/<project>` alone measured a seventh of `e2e`, so drift anywhere else in
+  it was invisible.
 
 - Start the lint gate's independent commands as five concurrent lanes instead of
   two. Every command still runs, exactly once, and a failure in any lane reaches
@@ -170,6 +189,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the project edited as it is.
 
 ### Fixed
+
+- Excess tags cover code, controls, settings and explanatory copy in both the
+  review definitions and shipped reviewer cards. `delete` also covers reuse of
+  code already present (#1800).
 
 - The implementation reviewer flags promises neither awaited nor returned rather
   than requiring catches on propagated async failures. A dropped rejection keeps
@@ -277,6 +300,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   classify both as committed rather than as regenerable stage logs. A record no
   checkout can see is one the check could only ever report nothing about, and a
   negation alone does not stage a file.
+
+- **A procurement row a reader cannot act on is reported** (#1744).
+  `prototype-handoff.yaml#procurement` is what `/qfai-implement` installs from
+  rather than rebuilding, and what a reviewer reads instead of judging a
+  resemblance. Nothing checked it, so a `procured` row naming no item and an
+  `authored` row recording no reason both passed — the second satisfying the
+  reviewer's last-resort criterion on its face while recording none of what that
+  criterion asks for.
+
+  Each row now carries its cells or is reported, one finding per row. The key
+  itself stays optional: the handoff contract lets a screen drawn entirely from
+  what the project already had omit both lists.
 
 - **The prototyping preflight refuses a screen with no primary task** (#1698).
   The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
