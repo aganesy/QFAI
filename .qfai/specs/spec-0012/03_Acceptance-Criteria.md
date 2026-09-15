@@ -559,7 +559,7 @@
 
 ## AC-0012-0082: Cycle-0 reset moves the aggregate capture mirrors aside (REQ-0166)
 
-- US-Refs: US-0012-0143
+- US-Refs: US-0012-0131
 - REQ-Refs: REQ-0166
 - Given a prototyping evidence tree holding `screenshots/` or `html/` from a previous loop,
 - When `qfai prototyping iterate --cycle 0` runs, with or without `--force`,

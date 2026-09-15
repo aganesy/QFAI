@@ -54,7 +54,6 @@
 - US-0012-0140: a `prototyping.mode` discriminator (`convergence` | `exploration`) settable via `qfai.config.yaml#prototyping.…
 - US-0012-0141: `QFAI-CRIT-009` error text to name every required keyword (`cta_visibility`, `four_state_check`, and any other…
 - US-0012-0142: `iterate` and `certify` to append a `.qfai/evidence/prototyping/mutation-log.jsonl` JSON-Lines entry shaped `{…
-- US-0012-0143: every `qfai prototyping iterate --cycle 0` run to move the aggregate `screenshots/` and `html/` directories into `aggregate.backup-<ISO>/` before clearing, so a restarted loop holds no capture evidence until it captures again. (REQ-0166)
 
 ## Active User Stories
 
@@ -222,7 +221,7 @@ As a maintainer, I want accepted-iter content mirrored to `.qfai/evidence/protot
 
 ## US-0012-0131
 
-As an operator, I want `qfai prototyping iterate --cycle 0` to refuse a destructive re-run unless `--force` is passed AND to move existing `iter-00/` to `iter-00.backup-<ISO>/` before clearing, so that mistaken re-seeds remain recoverable. (REQ-0012-0067)
+As an operator, I want `qfai prototyping iterate --cycle 0` to refuse a destructive re-run unless `--force` is passed AND to move existing `iter-00/` to `iter-00.backup-<ISO>/` before clearing, so that mistaken re-seeds remain recoverable; and every cycle-0 run to move the aggregate `screenshots/` and `html/` directories into `aggregate.backup-<ISO>/` as well, so that a restarted loop holds no capture the previous loop left. (REQ-0012-0067, REQ-0166)
 
 ## US-0012-0132
 
@@ -267,10 +266,6 @@ As a reviewer authoring `taskFidelity` evidence, I want `QFAI-CRIT-009` error te
 ## US-0012-0142
 
 As a maintainer auditing evidence churn, I want `iterate` and `certify` to append a `.qfai/evidence/prototyping/mutation-log.jsonl` JSON-Lines entry shaped `{ ts, caller, path, action, priorSize, newSize }` for every destructive mutation (delete / overwrite) under `iter-NN/*` (including each file moved by `--cycle 0 --force`), git-ignored by default, so that iter-NN evidence disappearance becomes forensically reproducible; a code path mutating iter-NN without a mutation-log call surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (error). (REQ-0165)
-
-## US-0012-0143
-
-As a maintainer restarting a prototyping loop, I want every `qfai prototyping iterate --cycle 0` run to move the aggregate `screenshots/` and `html/` directories into `aggregate.backup-<ISO>/` and log each moved file, so that the required-path check reads no capture the previous loop left, and `qfai validate` cannot pass on evidence the new loop has not produced. (REQ-0166)
 
 ## Legacy Coverage Continuity
 
