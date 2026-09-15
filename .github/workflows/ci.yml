@@ -365,10 +365,18 @@ jobs:
           # body, which `verificationBodies` pins and a reviewer reads in the diff.
           # A conflict block in one of these inputs is an unresolved merge, not an edit, and the
           # digest check below would stop this step before the script's own marker scan could say so.
-          if grep -lE '^(<{7}|={7}|>{7}|\|{7})( |$)' scripts/check-toolchain-action.sh .github/pinned-bytes.txt .github/lifecycle-manifests.txt .github/command-files.txt; then
-            echo "::error::The files named above carry merge conflict markers. Resolve the merge; do not reseal."
-            exit 1
-          fi
+          # Read the way `markersIn` reads it. That scanner splits its input on the line
+          # separator, so a marker in a CRLF file is `=======` to it and `=======` plus a
+          # carriage return to grep — whose `$` then sits past the return and matches
+          # nothing. The digest check below would fail first, reporting a changed file
+          # where the tree holds an unresolved merge. The returns are dropped per file, so
+          # the message still names the one that carries the block.
+          for pinned in scripts/check-toolchain-action.sh .github/pinned-bytes.txt .github/lifecycle-manifests.txt .github/command-files.txt; do
+            if tr -d '\r' < "$pinned" | grep -qE '^(<{7}|={7}|>{7}|\|{7})( |$)'; then
+              echo "::error::$pinned carries merge conflict markers. Resolve the merge; do not reseal."
+              exit 1
+            fi
+          done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
           c5b209c235dc00ae7fea860b99c436b7f4757b9ae1656b73855fe279820c18ed  .github/pinned-bytes.txt
