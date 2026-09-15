@@ -227,6 +227,69 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(entries).toContain("iter-00");
   });
 
+  it("moves aside an iter-00 link whose target is gone", async () => {
+    // Read through the link, the entry is absent, the reset moves the aggregates
+    // and then fails to create iter-00 over the link still sitting there. The
+    // entry is what the reset moves, so the entry is what it reads.
+    const root = await newTempDir();
+    await seedProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(evidenceRoot, { recursive: true });
+    const gone = path.join(root, "gone-seed");
+    await mkdir(gone, { recursive: true });
+    try {
+      await symlink(gone, path.join(evidenceRoot, "iter-00"), "junction");
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+    await rm(gone, { recursive: true, force: true });
+    await mkdir(path.join(evidenceRoot, "screenshots"), { recursive: true });
+    await writeFile(path.join(evidenceRoot, "screenshots", "home.png"), "prior", "utf-8");
+    captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      force: true,
+    });
+
+    expect(exit).toBe(0);
+    const entries = await readdir(evidenceRoot);
+    expect(entries.find((entry) => entry.startsWith("iter-00.backup-"))).toBeDefined();
+    expect(entries).toContain("iter-00");
+    const log = await readFile(path.join(evidenceRoot, "mutation-log.jsonl"), "utf-8");
+    expect(log).toContain('"path":".qfai/evidence/prototyping/iter-00"');
+  });
+
+  it("refuses without --force when iter-00 is a link whose target is gone", async () => {
+    // The link is what a re-seed would overwrite, so it is what the gate reads.
+    const root = await newTempDir();
+    await seedProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(evidenceRoot, { recursive: true });
+    const gone = path.join(root, "gone-seed");
+    await mkdir(gone, { recursive: true });
+    try {
+      await symlink(gone, path.join(evidenceRoot, "iter-00"), "junction");
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+    await rm(gone, { recursive: true, force: true });
+    const stderr = captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+
+    expect(exit).toBe(2);
+    expect(stderr.join("")).toMatch(/--force/);
+  });
+
   it("moves the captures a prior loop mirrored aside, with or without an iter-00 to back up", async () => {
     // The required-path check reads the aggregate directories first, so a
     // restarted loop left them passing it on the previous loop's captures.

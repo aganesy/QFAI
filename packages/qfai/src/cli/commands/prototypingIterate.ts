@@ -732,13 +732,13 @@ export async function runPrototypingIterate(
   if (options.cycle === 0) {
     const evidenceRootAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL);
     const iter00Abs = path.join(evidenceRootAbs, "iter-00");
-    if (await dirExists(iter00Abs)) {
+    if (await entryExists(iter00Abs)) {
       if (!options.force) {
         error(
-          "qfai prototyping iterate --cycle 0: an existing iter-00 directory was found at " +
+          "qfai prototyping iterate --cycle 0: an existing iter-00 was found at " +
             `${PROTOTYPING_EVIDENCE_REL}/iter-00. Re-running cycle 0 will overwrite the prior loop's seed. ` +
             "Re-invoke with `--force` to back up iter-00 to iter-00.backup-<ISO> before clearing, " +
-            "or delete the directory manually if the prior loop is no longer needed.",
+            "or delete it manually if the prior loop is no longer needed.",
         );
         return 2;
       }
@@ -2386,19 +2386,21 @@ type ClearEvidenceIterDirsResult = { ok: true } | { ok: false; failedDir: string
  * not unified yet.
  */
 /**
- * Lightweight directory-existence check that distinguishes
- * "does not exist" (returns false) from other I/O failures (re-thrown
- * so the caller fails closed). Used by the cycle-0 `--force` backup
- * gate to decide whether a destructive re-run is in play.
+ * Whether an entry is present at `absPath`, read as the entry itself rather
+ * than as what it points at.
+ *
+ * A link counts, dangling or not, as aggregate discovery already counts one:
+ * the cycle-0 reset moves the entry aside and then creates the directory, so an
+ * entry left in place is one the create fails on, after the reset has already
+ * moved the aggregates. Distinguishes absence (false) from other I/O failures
+ * (re-thrown, so the caller fails closed).
  */
-async function dirExists(absPath: string): Promise<boolean> {
-  try {
-    const s = await stat(absPath);
-    return s.isDirectory();
-  } catch (err) {
-    if (isEnoent(err)) return false;
-    throw err;
-  }
+async function entryExists(absPath: string): Promise<boolean> {
+  const entry = await lstat(absPath).catch((cause: unknown) => {
+    if (isEnoent(cause)) return null;
+    throw cause;
+  });
+  return entry !== null;
 }
 
 /**

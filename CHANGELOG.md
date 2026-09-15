@@ -726,6 +726,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   because the same reset removes the iteration directories they were copied
   from.
 
+  The gate that decides whether a reset is destructive reads the `iter-00`
+  entry itself rather than what it points at, so a link there is backed up like
+  a directory. Read through the link, a dangling one looked like an absent
+  `iter-00`: the reset moved the aggregates and then failed to create `iter-00`
+  over the link still sitting in its place.
+
   Both backups a reset writes, this one and the `iter-00` backup, are left out
   of the completion certificate's evidence digests. They hold the previous
   loop's evidence, and sealed into the next certificate, removing one failed
