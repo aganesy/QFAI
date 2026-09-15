@@ -23,6 +23,7 @@ import { describe, expect, it } from "vitest";
 import { defaultConfig, loadConfig } from "../../src/core/config.js";
 import { runAtddScaffold } from "../../src/cli/commands/atddScaffold.js";
 import { scaffoldDestPath } from "../../src/core/atdd/scaffold.js";
+import { deriveTestFileExtensions } from "../../src/core/atddTraceability.js";
 import {
   resolveScaffoldDialect,
   type ScaffoldDialect,
@@ -419,6 +420,41 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     expect(requireDialect(["tests/**/TC-0000-0000@(*).ts"]).id).toBe("js-ts");
   });
 
+  it("expands a range inside a bracket expression", () => {
+    // fast-glob writes the brace out first, so this is three classes and none
+    // of them admits `9`. Left as text, `0-{` was a range over every digit.
+    expect(
+      resolveScaffoldDialect(["tests/**/TC-0000-000[0-{1..3}].test.ts"], {
+        tcIds: ["TC-0000-0009"],
+      }).outcome,
+    ).toBe("naming-mismatch");
+    expect(requireDialect(["tests/**/TC-0000-000[0-{1..3}].test.ts"]).id).toBe("js-ts");
+  });
+
+  it("expands a range inside an extglob before the quantifier applies", () => {
+    // fast-glob writes it out into `*(0)` and `*(1)`, neither of which collects
+    // a name mixing the two. Compiled as one group, `(?:0|1)*` did.
+    expect(
+      resolveScaffoldDialect(["tests/**/TC-0000-*({0..1}).test.ts"], {
+        tcIds: ["TC-0000-0101"],
+      }).outcome,
+    ).toBe("naming-mismatch");
+  });
+
+  it("refuses a pattern whose refused range leaves no extension to read", () => {
+    // The glob names no extension once the refused range is passed over, and
+    // read as a project that configured nothing it took the default skeleton.
+    expect(resolveScaffoldDialect(["tests/{{0000..9999},integration}/**/*"]).outcome).toBe(
+      "naming-mismatch",
+    );
+  });
+
+  it("reads every member of a range that spells the extension", () => {
+    // `.ts` is the nineteenth member of `t{a..z}`, and a slice of the first
+    // sixteen made a TypeScript project look like one nothing supports.
+    expect(requireDialect(["tests/**/*.t{a..z}"]).id).toBe("js-ts");
+  });
+
   it("expands a range that opens an extglob", () => {
     // `{@..@}(` is a group once the range is written out, and the matcher reads
     // it as one. Left as text, the pattern selected only a name holding `@(`.
@@ -439,11 +475,13 @@ describe("the scaffold writes a name the project's own runner collects", () => {
 
   it("derives the extension past a range the scan refuses", () => {
     // Read as the whole pattern, the refused range stopped the group that
-    // spells the extension from being expanded at all, and the run fell back to
-    // its JavaScript default on a Python project. The pattern still selects
-    // nothing, which the whole-path resolution says.
+    // spells the extension from being expanded at all. The pattern selects
+    // nothing either way, which the resolution says with or without a
+    // destination; what the derivation must not do is lose the extension and
+    // leave the project looking like one that configured no glob.
     const globs = ["tests/{0000..9999}/**/*.{p..p}y"];
-    expect(requireDialect(globs).id).toBe("python");
+    expect([...deriveTestFileExtensions(globs)]).toContain("py");
+    expect(resolveScaffoldDialect(globs).outcome).toBe("naming-mismatch");
     expect(
       resolveScaffoldDialect(globs, { scaffoldDir: "tests/integration/spec-0001" }).outcome,
     ).toBe("naming-mismatch");

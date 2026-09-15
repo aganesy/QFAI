@@ -416,31 +416,77 @@ const GLOB_SYNTAX = /[*?[\]{}@+!]/;
 function expandMetaBrace(pattern: string): string[] | null {
   for (let index = 0; index < pattern.length; index += 1) {
     const char = pattern[index] ?? "";
+    // A group inside a bracket expression or an extglob is written out whatever
+    // its members are. fast-glob expands the brace first and compiles what
+    // comes out, so `[0-{1..3}]` is three classes and `*({0..1})` is two
+    // quantified groups — neither of which the one pattern they were read as
+    // says: `[0-{` admits every digit, and `(?:0|1)*` admits the mixtures the
+    // two separate patterns exclude.
     if (char === "[") {
       const classClose = findClassClose(pattern, index);
       if (classClose !== -1) {
+        const written = writeOutFirstBrace(pattern, index + 1, classClose);
+        if (written !== null) return written;
         index = classClose;
+        continue;
+      }
+    }
+    if (pattern[index + 1] === "(" && "@?*+!".includes(char)) {
+      const groupClose = findGroupClose(pattern, index + 1, "(", ")");
+      if (groupClose !== -1) {
+        const written = writeOutFirstBrace(pattern, index + 2, groupClose);
+        if (written !== null) return written;
+        index = groupClose;
         continue;
       }
     }
     if (char !== "{") continue;
     const close = findGroupClose(pattern, index, "{", "}");
     if (close === -1) continue;
-    const body = pattern.slice(index + 1, close);
-    const alternatives = splitGlobAlternatives(body, ",");
-    const members =
-      alternatives.length > 1
-        ? alternatives.map((alternative) => alternative.trim())
-        : (braceRangeMembers(body) ?? null);
+    const members = braceMembers(pattern.slice(index + 1, close));
+    // A group standing on its own is written out only where a member carries
+    // syntax to combine with what stands beside it. A range of digits or
+    // letters carries none, and expanding it here would multiply the pattern by
+    // a thousand for nothing.
     if (members === null || !members.some((member) => GLOB_SYNTAX.test(member))) {
       index = close;
       continue;
     }
-    const head = pattern.slice(0, index);
-    const tail = pattern.slice(close + 1);
-    return members.map((member) => `${head}${member}${tail}`);
+    return substituted(pattern, index, close, members);
   }
   return null;
+}
+
+/** The first brace group between `from` and `until`, written out; `null` for none. */
+function writeOutFirstBrace(pattern: string, from: number, until: number): string[] | null {
+  for (let index = from; index < until; index += 1) {
+    if (pattern[index] !== "{") continue;
+    const close = findGroupClose(pattern, index, "{", "}");
+    if (close === -1 || close > until) continue;
+    const members = braceMembers(pattern.slice(index + 1, close));
+    if (members === null) continue;
+    return substituted(pattern, index, close, members);
+  }
+  return null;
+}
+
+/** A brace body's members: a list's alternatives, or a range's values. */
+function braceMembers(body: string): readonly string[] | null {
+  const alternatives = splitGlobAlternatives(body, ",");
+  if (alternatives.length > 1) return alternatives.map((alternative) => alternative.trim());
+  return braceRangeMembers(body);
+}
+
+/** The pattern with the group between `open` and `close` replaced by each member. */
+function substituted(
+  pattern: string,
+  open: number,
+  close: number,
+  members: readonly string[],
+): string[] {
+  const head = pattern.slice(0, open);
+  const tail = pattern.slice(close + 1);
+  return members.map((member) => `${head}${member}${tail}`);
 }
 
 /**
@@ -930,7 +976,25 @@ export function resolveScaffoldDialect(
   /** The path the writer would produce for `fileName`, as the globs see it. */
   const candidatePath = (fileName: string): string =>
     scaffoldDir === undefined || scaffoldDir === "" ? fileName : `${scaffoldDir}/${fileName}`;
+  // Compiled before the extensions are read, because a glob the scan cannot
+  // compile is one that collects nothing whatever extension it names — and a
+  // pattern whose refused range hides the rest of it names none at all, which
+  // the unconfigured-project fallback below would read as a project that
+  // configured nothing.
+  const includes = compileGlobMatchers(testFileGlobs, matchWholePath);
+  // Read over the whole glob whether or not the destination is known: a refused
+  // range in the directory half is what stops the scan, and a basename-only
+  // compile never sees it.
+  const scannable = matchWholePath
+    ? !includes.refused
+    : !compileGlobMatchers(testFileGlobs, true).refused;
   const extensions = deriveTestFileExtensions(testFileGlobs);
+  if (!scannable) {
+    return {
+      outcome: "naming-mismatch",
+      shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_TC_ID))],
+    };
+  }
   if (extensions.size === 0) {
     // Same fallback the scan takes (`DEFAULT_TEST_FILE_GLOB`), so an
     // unconfigured project still gets the vitest skeleton the scan reads.
@@ -940,7 +1004,6 @@ export function resolveScaffoldDialect(
   if (candidates.length === 0) {
     return { outcome: "unsupported-stack" };
   }
-  const includes = compileGlobMatchers(testFileGlobs, matchWholePath);
   // The defaults are unioned in because BOTH scans apply them
   // (`collectScTestReferences` and the ATDD scan itself), so a scaffold
   // directory under `dist/` or `out/` is invisible to every reader of it.
@@ -957,9 +1020,8 @@ export function resolveScaffoldDialect(
   // choose is one that scan reads. An exclude holding one is the case a matcher
   // that excludes nothing read as an exclusion that does not apply, and the
   // skeleton was written under an include the same refusal had already stopped.
-  const scannable = !includes.refused && !excludes.refused;
   const admits = (candidate: string): boolean =>
-    scannable &&
+    !excludes.refused &&
     includes.matchers.some((matcher) => matcher.test(candidate)) &&
     !excludes.matchers.some((matcher) => matcher.test(candidate));
   const tcIds =

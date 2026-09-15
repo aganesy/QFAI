@@ -2446,11 +2446,11 @@ function isAnnotationOnlyCarrier(
 /**
  * The most members of one brace range this reads while looking for an extension.
  *
- * SIMPLIFIED: a range in the middle of a path gives every member the same tail,
- * so the first few answer for all of them; only a range inside the extension
- * itself makes the members differ, and those are short.
- * Lift when: a project writes a range of more than this many distinct
- * extensions.
+ * A range in the middle of a path gives every member the same tail, so the first
+ * few answer for all of them. A range in the last segment does not: `*.t{a..z}`
+ * names `.ts` at its nineteenth member, and a project whose tests are
+ * TypeScript would have been read as one whose extension nothing supports. Such
+ * a range is read whole.
  */
 const RANGE_MEMBERS_READ = 16;
 
@@ -2527,9 +2527,11 @@ function firstRangeWrittenOut(candidate: string): string[] | null {
       continue;
     }
     if (members === null) continue;
-    return members
-      .slice(0, RANGE_MEMBERS_READ)
-      .map((member) => candidate.slice(0, open) + member + candidate.slice(close + 1));
+    // A group in the last segment decides the extension, so every member of it
+    // is read; one further up gives every member the same tail.
+    const inLastSegment = !candidate.slice(open).includes("/");
+    const read = inLastSegment ? members : members.slice(0, RANGE_MEMBERS_READ);
+    return read.map((member) => candidate.slice(0, open) + member + candidate.slice(close + 1));
   }
   return null;
 }
