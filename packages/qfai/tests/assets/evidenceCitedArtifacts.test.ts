@@ -71,8 +71,13 @@ const CODE_SPAN_PUNCTUATION: ReadonlySet<string> = new Set([",", ";", "!", ":"])
  * around a path as often as inside a name: `".qfai/report/*"` is a quoted glob,
  * `<pack>` a placeholder and `a.md|b.md` two names. One of them followed by more
  * of the name makes the token unreadable.
+ *
+ * A backtick is here for the same reason. It reaches a span's content only where
+ * a longer run delimits the span, and there it is an ordinary name character the
+ * scan cannot read — so stopping at it measured the prefix before it, and the
+ * prefix is a tracked file.
  */
-const CODE_SPAN_QUOTE = /['"<>|]/;
+const CODE_SPAN_QUOTE = /['"<>|`]/;
 
 /** What closes each kind of group a citation can open. */
 const GROUP_CLOSERS: Readonly<Record<string, string>> = { "(": ")", "{": "}", "[": "]" };
@@ -511,6 +516,55 @@ const INITIAL_CENSUS: ReadonlyArray<Citation> = [
  * that grows.
  */
 const CLEARED: ReadonlyArray<Citation> = [];
+
+/**
+ * How many citations entered the tree between the census and this branch's
+ * merge, and the digest of their keys.
+ *
+ * The census is frozen against a tree that no longer exists: records written
+ * while this guard was in review cite packs of their own, and neither the
+ * records nor the packs can be reached from here. A census entry cannot hold
+ * them — a list that absorbs whatever the base branch adds is the ceiling the
+ * census was written to refuse — so they are recorded beside it, under the same
+ * two rules: an exact length and a digest over the keys, so a repair cannot pay
+ * for a new record and a substitution cannot hide in the length.
+ *
+ * This list does not reopen on the next merge. A record written after it is a
+ * record written against a guard that was already in the tree, and the answer
+ * there is the one the failure names: commit the artifact, or write what the
+ * reader needs instead of a path.
+ */
+const SINCE_CENSUS_SIZE = 17;
+const SINCE_CENSUS_DIGEST = "39ceb754b8e57b54b37ca767d9c6ca9c3bfb63a366355c71cb55868c09a8cc2b";
+
+/** Those citations. **Append nothing here**, for the reason above. */
+const SINCE_CENSUS: ReadonlyArray<Citation> = [
+  [".qfai/evidence/sdd-spec-0003.md", ".qfai/discussion/discussion-20260913135257933", 1],
+  [
+    ".qfai/evidence/sdd-spec-0003.md",
+    ".qfai/report/preflight/run-20260915133056355/preflight_summary.md",
+    1,
+  ],
+  [".qfai/evidence/sdd-spec-0003.md", ".qfai/report/run-20260915152200259", 1],
+  [".qfai/evidence/sdd-spec-0003.md", ".qfai/report/specs-coverage/spec-0003.md", 1],
+  [".qfai/evidence/sdd-spec-0003.md", ".qfai/report/validate.log", 1],
+  [
+    ".qfai/evidence/sdd-spec-0015.md",
+    ".qfai/report/preflight/run-20260913233536479/preflight_summary.md",
+    1,
+  ],
+  [".qfai/evidence/sdd-spec-0015.md", ".qfai/report/run-20260913234628207/summary.md", 1],
+  [".qfai/evidence/sdd-spec-0015.md", ".qfai/report/run-20260913234645842/summary.md", 1],
+  [".qfai/evidence/sdd-spec-0015.md", ".qfai/report/run-20260914001125022/summary.md", 1],
+  [".qfai/evidence/sdd-spec-0015.md", ".qfai/report/run-20260914001126669/summary.md", 1],
+  [".qfai/evidence/sdd-spec-0015.md", ".qfai/report/run-20260914001402839/summary.md", 1],
+  [".qfai/evidence/sdd-spec-0015.md", ".qfai/report/run-20260914004835925/summary.md", 1],
+  [".qfai/evidence/sdd-spec-0015.md", ".qfai/report/run-20260914004837695/summary.md", 1],
+  [".qfai/evidence/sdd-spec-0015.md", ".qfai/report/run-20260914004842675/summary.md", 1],
+  [".qfai/evidence/sdd-spec-0015.md", ".qfai/review/review-20260913154239034", 1],
+  [".qfai/evidence/sdd-spec-0015.md", ".qfai/review/review-20260913154239035", 1],
+  [".qfai/evidence/sdd-spec-0015.md", ".qfai/review/review-20260913155129301", 1],
+];
 
 /**
  * Every path git tracks, and every directory one of them lies under, read from
@@ -1105,7 +1159,41 @@ function namesASet(cited: string): boolean {
  * so `.qfai/report/.*` still resolves and a plain wildcard does not.
  */
 function hidesADotName(cited: string, candidate: string): boolean {
-  return !alignsWithDotPolicy(patternSegments(cited), candidate.split("/"));
+  const segments = candidate.split("/");
+  return !separatorFreeAlternatives(cited).some((pattern) =>
+    alignsWithDotPolicy(patternSegments(pattern), segments),
+  );
+}
+
+/**
+ * The patterns to align against the candidate, one per alternative that holds a
+ * separator of its own.
+ *
+ * A group can cross a directory: `.qfai/report/@(run-1/a.json|run-2/b.json)`
+ * compiles to a matcher that resolves either tracked file. Split at every `/`,
+ * that citation became five fragments to align against four candidate segments,
+ * and committed provenance read as unresolved. Each alternative is therefore
+ * listed first, so the alignment sees a pattern whose separators are its own.
+ *
+ * Only where a separator really sits inside a group: elsewhere the citation is
+ * its own single alternative, and listing the rest would expand every group the
+ * alignment already opens a segment at a time.
+ *
+ * SIMPLIFIED: past the alternative limit nothing is listed, and the citation is
+ * reported unresolved, as {@link segmentAdmits} reports a name past the same
+ * limit. Lift when: a record cites such a pattern and needs it resolved.
+ */
+function separatorFreeAlternatives(cited: string): string[] {
+  let depth = 0;
+  let crosses = false;
+  for (const index of outsideClasses(cited)) {
+    const character = cited[index];
+    if (character === "(") depth += 1;
+    else if (character === ")") depth = Math.max(0, depth - 1);
+    else if (character === "/" && depth > 0) crosses = true;
+  }
+  if (!crosses) return [cited];
+  return topLevelAlternativesOf(cited) ?? [];
 }
 
 /** A pattern's segments, split at each `/` outside a bracket expression. */
@@ -1321,7 +1409,7 @@ function resolves(cited: string, paths: ReturnType<typeof trackedPaths> = tracke
   // as a list. Nothing the tree tracks is spelled with them, so the citation
   // is unresolved rather than matched against the name inside them.
   if (outsideClasses(cited).some((index) => cited[index] === "{")) {
-    return paths.files.has(cited) || paths.directories.has(cited);
+    return namesTrackedPath(cited, paths);
   }
   if (namesASet(cited)) {
     if (!withinMatchBudget(cited)) return false;
@@ -1335,15 +1423,40 @@ function resolves(cited: string, paths: ReturnType<typeof trackedPaths> = tracke
     }
     return false;
   }
-  return paths.files.has(cited) || paths.directories.has(cited);
+  return namesTrackedPath(cited, paths);
 }
+
+/**
+ * Whether an exact citation names something the tree tracks, in the form the
+ * citation is written in.
+ *
+ * A pack is a directory and a report is a file, and the census carries both, so
+ * a tracked directory answers a citation as a tracked file does. What it may not
+ * answer is a citation that names a file: `.qfai/report/validate.json` is a
+ * machine-readable file a reader opens, and a tree tracking
+ * `.qfai/report/validate.json/summary.txt` would otherwise resolve the name
+ * while nothing at it can be opened.
+ *
+ * The citation's own last segment says which it is: a name carrying an extension
+ * is a file, and one without may be either. That is how the records spell them —
+ * `review-<digits>` and `discussion-<digits>` for the packs, `validate.json` and
+ * `preflight_summary.md` for the files.
+ */
+function namesTrackedPath(cited: string, paths: ReturnType<typeof trackedPaths>): boolean {
+  if (paths.files.has(cited)) return true;
+  return !NAMES_A_FILE.test(cited) && paths.directories.has(cited);
+}
+
+/** A last segment carrying an extension, which no pack directory is written with. */
+const NAMES_A_FILE = /\.[A-Za-z0-9]+$/;
 
 const key = ([file, cited, occurrence]: Citation): string => `${file} -> ${cited} #${occurrence}`;
 
 /** The census, minus what has been repaired since. */
-const UNRESOLVED_CITATION_BACKLOG: ReadonlyArray<Citation> = INITIAL_CENSUS.filter(
-  (entry) => !new Set(CLEARED.map(key)).has(key(entry)),
-);
+const UNRESOLVED_CITATION_BACKLOG: ReadonlyArray<Citation> = [
+  ...INITIAL_CENSUS,
+  ...SINCE_CENSUS,
+].filter((entry) => !new Set(CLEARED.map(key)).has(key(entry)));
 
 describe("a committed record cites what the repository has", () => {
   it("reads the evidence the repository carries", async () => {
@@ -1383,6 +1496,21 @@ describe("a committed record cites what the repository has", () => {
     expect(directories.has(".qfai/review/review-2")).toBe(true);
   });
 
+  it("answers a citation that names a file with a file", () => {
+    const listing = [
+      "100644 0000000000000000000000000000000000000000 0\t.qfai/report/validate.json/summary.txt",
+      "100644 0000000000000000000000000000000000000000 0\t.qfai/review/review-1/summary.json",
+      "",
+    ].join("\0");
+    const paths = trackedPaths(listing);
+    // A reader opens the machine-readable file, and a directory of that name is
+    // not one, however much the tree holds below it.
+    expect(resolves(".qfai/report/validate.json", paths)).toBe(false);
+    expect(resolves(".qfai/report/validate.json/summary.txt", paths)).toBe(true);
+    // A pack is a directory, and its citation is still answered by one.
+    expect(resolves(".qfai/review/review-1", paths)).toBe(true);
+  });
+
   it("names no artifact the committed tree does not carry", async () => {
     // A name that resolves nowhere still reads as provenance, and it costs a
     // reader a search to find out otherwise. The backlog is the exception, and
@@ -1414,6 +1542,28 @@ describe("a committed record cites what the repository has", () => {
       "the census holds a key it was not measured with. Swapping one entry for another keeps the " +
         "length and hands a new citation a retired slot, which is what this digest refuses",
     ).toBe(INITIAL_CENSUS_DIGEST);
+  });
+
+  it("keeps the addendum at what the merge measured", () => {
+    // The census's two rules, over the list beside it. Without them the addendum
+    // is the ceiling the census refuses, one merge at a time.
+    expect(
+      SINCE_CENSUS.length,
+      "the addendum is not the size the merge measured. A record written after this guard entered " +
+        "the tree does not belong in it: commit the artifact, or write what the reader needs",
+    ).toBe(SINCE_CENSUS_SIZE);
+    expect(
+      createHash("sha256").update(SINCE_CENSUS.map(key).sort().join("|")).digest("hex"),
+      "the addendum holds a key the merge did not measure. Swapping one entry for another keeps " +
+        "the length and hands a new citation a retired slot, which is what this digest refuses",
+    ).toBe(SINCE_CENSUS_DIGEST);
+  });
+
+  it("holds one backlog entry per key", () => {
+    // The two lists are recorded apart and read as one. A key in both would
+    // survive its own repair, since `CLEARED` removes the entry it matches.
+    const keys = UNRESOLVED_CITATION_BACKLOG.map(key);
+    expect([...keys].sort()).toEqual([...new Set(keys)].sort());
   });
 
   it("clears only what is really repaired", async () => {
@@ -1856,6 +2006,16 @@ describe("a glob is a claim about a set", () => {
     expect(hidesADotName(`${pack}/[0/]1_Context.md`, `${pack}/01_Context.md`)).toBe(false);
   });
 
+  it("keeps a separator inside an extended group inside its alternative", () => {
+    const cited = ".qfai/report/@(run-1/a.json|run-2/b.json)";
+    expect(hidesADotName(cited, ".qfai/report/run-1/a.json")).toBe(false);
+    expect(hidesADotName(cited, ".qfai/report/run-2/b.json")).toBe(false);
+    // The dot policy still holds inside the alternative the group names.
+    expect(
+      hidesADotName(".qfai/report/@(run-1/*|run-2/b.json)", ".qfai/report/run-1/.hidden"),
+    ).toBe(true);
+  });
+
   it("keeps punctuation a code span closes right after", () => {
     const pack = ".qfai/discussion/discussion-20260328212829687";
     expect(citationsIn(`see \`${pack}/01_Context.md,\` here`)).toEqual([`${pack}/01_Context.md,`]);
@@ -2197,6 +2357,15 @@ describe("a glob is a claim about a set", () => {
     // Inside a group a pipe separates alternatives.
     expect(citationsIn("see `.qfai/report/@(a|b).json` here")).toEqual([
       ".qfai/report/@(a|b).json",
+    ]);
+  });
+
+  it("reads no prefix of a name a longer code span continues past a backtick", () => {
+    // A single-backtick span cannot hold one, so this is the run that reaches it.
+    expect(citationsIn("see ``.qfai/report/preflight_summary.md`missing`` here")).toEqual([]);
+    // The same run around a name the scan can read still yields it whole.
+    expect(citationsIn("see ``.qfai/report/preflight_summary.md`` here")).toEqual([
+      ".qfai/report/preflight_summary.md",
     ]);
   });
 
