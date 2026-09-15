@@ -16,15 +16,20 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 
 ## Stage 0: Preflight
 
-1. Identify the latest discussion-pack, if there is one.
+1. Identify the pack this run reads, if there is one: the preflight result's
+   `selectedInputPath`. That is the newest pack by default and an older one once
+   `npx qfai discussion use <id>` has pinned it, so recomputing the newest here
+   would source requirements from one pack and advice from another.
 2. Note which of its files are missing, and any blocking OQ, as reference-quality
    facts — they are recorded, not blocking. A pack is non-normative reference
    material (`.qfai/assistant/constitution/drift-protocol.md#core-rule`), so do NOT repair or
    re-run it to make this gate pass; a correction it implies belongs in the
    SDD-owned artifact, with the discrepancy noted in delta/evidence.
-3. Read the review findings for THIS pack, from its LATEST review — the
-   `.qfai/review/review-*/` directory whose `summary.json#target.path` names the
-   pack, or whose in-flight request does, with the newest stamp among them.
+3. Read the review findings for the pack step 1 selected, from its LATEST
+   review — the `.qfai/review/review-*/` directory whose
+   `summary.json#target.path` names that pack, or whose in-flight request does,
+   with the newest stamp among them. The path matched is the selected one, not
+   the newest pack on disk.
    An earlier cycle's advice was answered by the fix that closed it, and reading
    it again re-raises work the pack has already done. Take in the items a
    reviewer marked non-normative under
