@@ -293,7 +293,7 @@ describe("reviewer finding provenance", () => {
     // Wrap-tolerant: the sentence is the rule, its wrap column is not.
     expect(drift.replace(/\s+/g, " ")).toContain("of the role that issued the verdict");
     expect(drift).toMatch(/spends no round|costs no round/);
-    expect(baseline).toMatch(/re-attested in a new pack where a reviewer hashed it/);
+    expect(baseline).toMatch(wrapTolerant("re-attested in a new pack where a reviewer hashed it"));
   });
 
   it("re-attests in a new pack instead of rewriting the sealed one", async () => {

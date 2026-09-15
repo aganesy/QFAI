@@ -1,7 +1,7 @@
 # Change Request
 
 - ID: `CR-20260913-0009`
-- Title: `spec-0013's ledger lacks the columns and rows Phase 2b owes, and thirteen rows past todo run several boundaries behind one selector`
+- Title: `spec-0013's ledger lacks the columns and rows Phase 2b owes, and twelve rows past todo run several boundaries behind one selector`
 - Raised by: `qfai-sdd`
 - Raised at: `2026-09-13T09:30:00Z`
 - Class: `defect`
@@ -47,7 +47,7 @@ of them.
 
 Every `re-derive` rerun of `spec-0013` runs Phase 2b, so a rerun raised for any
 other reason would perform the column and row writes above without a record
-authorising them, and would stop at the thirteen rows. This record makes those
+authorising them, and would stop at the twelve rows. This record makes those
 writes on their own, with nothing else in the pack moving.
 
 ## Reproduction
@@ -65,11 +65,10 @@ The template header,
 | TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module | Blocked-By | BR-Ref | Boundary |
 ```
 
-The cases each of the thirteen selectors runs, from their test files:
+The cases each of the twelve selectors runs, from their test files:
 
 ```text
 sddSkillSpec0013.test.ts             TC-0013-0003 describe: 2 cases
-traceabilityIntegrity.test.ts        TDD-0015 describe: 2 cases
 sddUiTemplate.test.ts                TC-0013-0025 describe: 2 cases
 sddPrimaryTasksLane.test.ts          TC-0013-0026 describe: 2 cases; TC-0013-0027 describe: 3 cases
 spec0013UiContractPrimaryTasksE2E    US-0013-0011 describe: 3 cases
@@ -82,7 +81,7 @@ primaryTasksStructured.test.ts       TC-0013-0034 describe: 2 cases; TC-0013-003
 ## Proposed change
 
 Re-derive the ledger to its template, with no statement of the pack moving.
-The thirteen rows are split in the order below. Each keeps its `TDD-ID` on the
+The twelve rows are split in the order below. Each keeps its `TDD-ID` on the
 first boundary listed, with its `Selector` narrowed to that boundary's cases,
 and one row is appended at `todo` for each boundary after it.
 
@@ -92,21 +91,20 @@ taken over the whole file, whose proof covers several boundaries, or which
 records no RED at all, keeps the first its test case or story lists among
 them.
 
-| Row        | Obligation     | Boundaries, kept first                                                                                                                                           | Why the first is kept                                                                                       |
-| ---------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `TDD-0003` | `TC-0013-0003` | `/qfai-sdd` continues on an incomplete or contradictory pack; it stops only when no usable source exists                                                         | it records a one-shot GREEN and no RED, so the test case's order decides                                    |
-| `TDD-0015` | `TC-0013-0020` | `validateTraceabilityIntegrity` is exported from the validators index; `validate.ts` imports it and calls it in the pipeline                                     | it records no RED, so the test case's order decides                                                         |
-| `TDD-0019` | `TC-0013-0025` | every screen of the template carries `primary_tasks: []`; the requirements-analyst guide asks for at least one task per screen                                   | its RED failed both at once, so the test case's order decides                                               |
-| `TDD-0020` | `TC-0013-0026` | the lane fails an empty list at `error`, naming the file, the screen and the rule; the `/qfai-prototyping` preflight refuses it                                  | its proof names both the lane and the preflight check, so the test case's order decides                     |
-| `TDD-0021` | `TC-0013-0027` | the lane passes a contract whose screens each hold a task; the preflight proceeds on it; a contract from before the slot is treated under the deprecation window | its RED was taken over the whole file                                                                       |
-| `TDD-0022` | `US-0013-0011` | the template's slot; the guide's instruction; the lane fails an empty list; the preflight refuses it; the lane passes a non-empty list                           | its RED observed the template-slot case failing                                                             |
-| `TDD-0024` | `TC-0013-0029` | a pointer naming a missing pack is an error; an absent pointer is an error                                                                                       | its proof is the filter matching the pointer against the packs on disk, which the absent case never reaches |
-| `TDD-0025` | `TC-0013-0030` | `/qfai-sdd` sets `surface_type: ui-bearing` for a spec with a UI companion; `resolveAllUiBearingSpecs()` requires the frontmatter                                | its recorded RED names no case, so the test case's order decides                                            |
-| `TDD-0026` | `TC-0013-0031` | the finding is raised for a companion without the frontmatter; no finding for a spec with no companion                                                           | its recorded RED names no case, so the test case's order decides                                            |
-| `TDD-0027` | `TC-0013-0032` | the template's comments state the band; the guide states it; the `QFAI-AUD-020` message names it                                                                 | its RED covered all three at once, so the test case's order decides                                         |
-| `TDD-0028` | `TC-0013-0033` | fewer than three tasks warns; more than seven warns; three and seven do not                                                                                      | its RED covered all three at once, so the test case's order decides                                         |
-| `TDD-0029` | `TC-0013-0034` | complete structured items are accepted; string-only items are accepted                                                                                           | its proof is the required-key set, which only structured items are measured against                         |
-| `TDD-0030` | `TC-0013-0035` | an item missing `id` is rejected; one missing `label`; one missing `acceptance`; one carrying an extra key                                                       | its proof reports each missing key, and the test case lists `id` first among them                           |
+| Row        | Obligation     | Boundaries, kept first                                                                                                                                                                  | Why the first is kept                                                                                       |
+| ---------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `TDD-0003` | `TC-0013-0003` | `/qfai-sdd` continues on an incomplete or contradictory pack; it stops only when no usable source exists                                                                                | it records a one-shot GREEN and no RED, so the test case's order decides                                    |
+| `TDD-0019` | `TC-0013-0025` | every screen of the template carries `primary_tasks: []`; the requirements-analyst guide asks for at least one task per screen                                                          | its RED failed both at once, so the test case's order decides                                               |
+| `TDD-0020` | `TC-0013-0026` | the lane fails an empty list at `error`, naming the file, the screen and the rule; the `/qfai-prototyping` preflight refuses it                                                         | its proof names both the lane and the preflight check, so the test case's order decides                     |
+| `TDD-0021` | `TC-0013-0027` | the lane passes a contract whose screens each hold a task; the preflight proceeds on it; a contract from before the slot is informational and non-blocking under the deprecation window | its RED was taken over the whole file                                                                       |
+| `TDD-0022` | `US-0013-0011` | the template's slot; the guide's instruction; the lane fails an empty list; the preflight refuses it; the lane passes a non-empty list                                                  | its RED observed the template-slot case failing                                                             |
+| `TDD-0024` | `TC-0013-0029` | a pointer naming a missing pack is an error; an absent pointer is an error                                                                                                              | its proof is the filter matching the pointer against the packs on disk, which the absent case never reaches |
+| `TDD-0025` | `TC-0013-0030` | `/qfai-sdd` sets `surface_type: ui-bearing` for a spec with a UI companion; `resolveAllUiBearingSpecs()` requires the frontmatter                                                       | its recorded RED names no case, so the test case's order decides                                            |
+| `TDD-0026` | `TC-0013-0031` | the finding is raised at warning severity during the window for a companion without the frontmatter; no finding for a spec with no companion                                            | its recorded RED names no case, so the test case's order decides                                            |
+| `TDD-0027` | `TC-0013-0032` | `templates/contracts/ui-spec.yaml`'s comments state the band; the guide states it; the `QFAI-AUD-020` message names it                                                                  | its RED covered all three at once, so the test case's order decides                                         |
+| `TDD-0028` | `TC-0013-0033` | fewer than three tasks warns; more than seven warns; exactly three does not; exactly seven does not                                                                                     | its RED covered all three at once, so the test case's order decides                                         |
+| `TDD-0029` | `TC-0013-0034` | complete structured items are accepted; string-only items are accepted                                                                                                                  | its proof is the required-key set, which only structured items are measured against                         |
+| `TDD-0030` | `TC-0013-0035` | an item missing `id` is rejected; one missing `label`; one missing `acceptance`; one carrying an extra key                                                                              | its proof reports each missing key, and the test case lists `id` first among them                           |
 
 A case that states no boundary of its row's obligation moves with the boundary
 it exercises:
@@ -168,7 +166,7 @@ and `Selector` back to `-` too.
 | `spec-0013/TDD-0012` | `ledger-row` | Its `Test file` and `Selector` go back to `-`: its selector matches no test |
 | `spec-0013/TDD-0013` | `ledger-row` | Its `Test file` and `Selector` go back to `-`: its selector matches no test |
 | `spec-0013/TDD-0014` | `ledger-row` | Its `Test file` and `Selector` go back to `-` for its integration test      |
-| `spec-0013/TDD-0015` | `ledger-row` | Its `Test file` and `Selector` go back to `-` for the export case           |
+| `spec-0013/TDD-0015` | `ledger-row` | Its `Test file` and `Selector` go back to `-` for its integration test      |
 | `spec-0013/TDD-0019` | `ledger-row` | Its `Selector` is narrowed to the template slot's case                      |
 | `spec-0013/TDD-0020` | `ledger-row` | Its `Selector` is narrowed to the lane's failing case                       |
 | `spec-0013/TDD-0021` | `ledger-row` | Its `Selector` is narrowed to the passing contract's case                   |
@@ -225,8 +223,19 @@ and `Selector` back to `-` too.
 ## Decision needed from user
 
 Re-derive `spec-0013`'s ledger to its template — the six columns it lacks, the
-rows Phase 2b owes, and the thirteen splits in the table — and reset the
-thirteen kept rows, `TDD-0011` to `TDD-0014` and `TDD-0023` to `todo`?
+rows Phase 2b owes, and the twelve splits in the table — and reset these
+seventeen rows to `todo`, discarding the evidence and reviewer hashes recorded
+against each?
+
+- The twelve kept rows of the splits: `TDD-0003`, `TDD-0019`, `TDD-0020`,
+  `TDD-0021`, `TDD-0022`, `TDD-0024`, `TDD-0025`, `TDD-0026`, `TDD-0027`,
+  `TDD-0028`, `TDD-0029` and `TDD-0030`.
+- The five rows whose `Test file` and `Selector` go back to `-`: `TDD-0011`,
+  `TDD-0012`, `TDD-0013`, `TDD-0014` and `TDD-0023`.
+
+`TDD-0015` is reset with them for its test-path correction and is **not** split:
+`AC-0013-0014` keeps the two halves of validator registration one failure mode
+at its own granularity, so this record does not decompose it below that.
 
 ## Approved actions (owner skill rerun plan)
 
@@ -259,7 +268,7 @@ thirteen kept rows, `TDD-0011` to `TDD-0014` and `TDD-0023` to `todo`?
    - at `todo`, the `E2E` rows the thirteen stories without one are owed. That
      count is a floor rather than the number of rows: the phase seeds one row
      per independently observable boundary a story's criteria name;
-   - the thirteen splits under `## Proposed change`, each appended row at `todo`
+   - the twelve splits under `## Proposed change`, each appended row at `todo`
      with its `Boundary` and no `DR-ID`, since no reset reaches a row that did
      not exist;
    - `-` in the `Test file` and `Selector` of `TDD-0011` to `TDD-0015` and
@@ -270,16 +279,22 @@ thirteen kept rows, `TDD-0011` to `TDD-0014` and `TDD-0023` to `todo`?
    `Mode`, `Approved by`, `Applied at` — not as a `## Triage` row.
 
 2. Downstream ledger sweep: **reset to `todo`**, recording this Change Request's
-   ID in `DR-ID`, the thirteen kept rows — `spec-0013/TDD-0003`, `TDD-0015`,
+   ID in `DR-ID`, the twelve kept rows — `spec-0013/TDD-0003`,
    `TDD-0019`, `TDD-0020`, `TDD-0021`, `TDD-0022`, `TDD-0024`, `TDD-0025`,
    `TDD-0026`, `TDD-0027`, `TDD-0028`, `TDD-0029` and `TDD-0030` — and
-   `spec-0013/TDD-0011`, `TDD-0012`, `TDD-0013`, `TDD-0014` and `TDD-0023`. A
+   `spec-0013/TDD-0011`, `TDD-0012`, `TDD-0013`, `TDD-0014`, `TDD-0015` and
+   `TDD-0023`. A
    narrowed `Selector`, or one written back to `-`, changes the row's identity, so
    the evidence and the reviewer hashes recorded against the old one no longer
    describe it, and a split row is re-executed whether or not its recorded
-   observation would still hold. `TDD-0023` keeps its `Selector`, but the row
-   appended beside it gives it a `Boundary`, and once its test case holds two
-   rows that cell is part of the row's identity. The `exception` rows among
+   observation would still hold. **`TDD-0023`'s `Selector` goes back to `-`**, as
+   action 1 writes it, and the row appended beside it gives it a `Boundary` as
+   well; once its test case holds two rows that cell is part of the row's
+   identity too. **`TDD-0015` is reset for its test-path correction and is not
+   split**: `AC-0013-0014` states that partial wiring is one failure mode at its
+   granularity and keeps the export and the invocation below it, so a record
+   that split the row would decompose an obligation the criterion deliberately
+   holds together. The `exception` rows among
    them, `TDD-0003` and `TDD-0011` to `TDD-0015`, keep the Decision Records their
    `DR-ID` already holds, beside this Change Request's ID. `/qfai-implement`'s Change Request preflight writes the reset.
 
@@ -287,6 +302,35 @@ thirteen kept rows, `TDD-0011` to `TDD-0014` and `TDD-0023` to `todo`?
    touches is an `Integration` or `E2E` row, whose tests that stage writes and
    `/qfai-implement` does not. That pass:
    - removes `TDD-0021`'s case for an authored but empty list;
+   - **strengthens the two template-slot cases of the kept rows.**
+     `TDD-0019` and `TDD-0022` are kept rows, so nothing above rewrites them,
+     and their cases in `sddUiTemplate.test.ts` and
+     `spec0013UiContractPrimaryTasksE2E.test.ts` assert that the property is
+     present and an array. Both obligations require the literal
+     `primary_tasks: []`, which a populated template satisfies on those
+     assertions, so each case asserts the empty value before its row is
+     re-executed;
+   - **gives `TC-0013-0030` a case that runs `/qfai-sdd`.** The case in
+     `spec0013ActivePointerSurfaceType.test.ts` imports
+     `populateSurfaceTypeIfUiCompanion` and calls it, and no production caller
+     invokes it — every call under `packages/qfai` is a test's. So that case
+     passes over a path the stage does not take, and the test case is about the
+     stage. The row's case reaches the `/qfai-sdd` execution path; where no such
+     path exists, the RED that produces is the finding, and it enters the Drift
+     Protocol rather than being covered by the helper;
+   - **holds `TDD-0027` to the artifact its test case names.**
+     `TC-0013-0032` requires the band in `templates/contracts/ui-spec.yaml`, and
+     the existing case reads `ui-contract.sample.yaml`. No `ui-spec.yaml` exists
+     under `packages/qfai/assets`, so the substitute passes while the named
+     artifact is absent. The case reads the named path, and its RED is the
+     finding;
+   - **drops from each retained selector the case that exercises another
+     boundary.** `TDD-0025`'s kept boundary requires a companion and a
+     frontmatter write, so its no-companion case moves to the row whose boundary
+     states it; and `TDD-0030`'s missing-`id` case also asserts the empty-list
+     `QFAI-AUD-001` outcome, which is a different obligation, so that assertion
+     goes. Either would let an unrelated failure red a row whose own boundary
+     still holds, which is the isolation the split is for;
    - fills each `Test file` and `Selector` written back to `-` with a
      `tests/integration/**` case for its boundary: the cases in
      `spec0013ActivePointerSurfaceType.test.ts`, split one per boundary, for

@@ -633,9 +633,8 @@ reason each stops short of `✅` is the same one that puts its `Status` at `❌`
 
 ### TC-0014-0034 — full-harness block drop on cycle 0
 
-`Status = done` under `DR-0014-0001`. Discharged by
-`it("re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate / fullHarness / executionPlan on cycle 0")`
-in `prototypingIterate.test.ts`, with the five sibling cases in the same `describe` as its context.
+`Status = done` under `DR-0014-0001`. Discharged by `it("cycle 0 deletes fullHarness")` in
+`prototypingIterate.test.ts`, with the other cases in the same `describe` as its context.
 This row has **three `❌` depth cells** and no `❌` in `Status`.
 
 - **Error path** — the rule is a deletion, and its error direction is a cycle-0 run that cannot
