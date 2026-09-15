@@ -15,7 +15,6 @@
  * the certificate to the run by content digest is the stronger form and is a
  * separate decision. These rows pin that the relation exists at all.
  */
-// QFAI:SPEC-0012:TC-0012-0445
 
 import { mkdir, mkdtemp, readdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";

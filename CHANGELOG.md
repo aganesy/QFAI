@@ -248,6 +248,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   citations, which a test checks against the previous pattern over generated
   text.
 
+- **Test annotations that name a different test's obligation are re-pointed or
+  removed** (#1736). An annotation can name an obligation that exists while it
+  sits on a test about something else, and resolving the identifier cannot tell
+  the two apart. In the package suite, 28 annotations now name the obligation
+  that states their test's subject, and 114 were removed because no declared
+  obligation states it. The identifiers in the test titles and section comments
+  beside them changed the same way. Whole files were affected: the codex agent
+  profile checks carried `qfai init` cases, and the navigation-flow and
+  design-fidelity validator tests carried discussion-pack cases. Annotations
+  that a TDD ledger, an evidence record, the E2E annotation ledger or another
+  test depends on are unchanged. No check was added: whether a test is about
+  what its obligation says is a comparison of two texts, and no validator can
+  make that judgment reliably.
+
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
   from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and

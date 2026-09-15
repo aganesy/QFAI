@@ -209,8 +209,8 @@ describe.each(TREES)("%s — the layer catalog errors on an undeclared CON-DB to
  * next `QFAI-ATDD-115` run stops the stage.
  *
  * The codex TOML mirror is not re-checked here: `tests/codex/agents.test.ts`
- * (TC-0003-0003) already pins `developer_instructions` to the canonical MD
- * body byte for byte, so these assertions propagate to it.
+ * already pins `developer_instructions` to the canonical MD body byte for
+ * byte, so these assertions propagate to it.
  */
 describe.each(TREES)("%s — the ATDD delegate is contracted to cover CON-DB", (tree) => {
   const assertContract = (doc: string): void => {
