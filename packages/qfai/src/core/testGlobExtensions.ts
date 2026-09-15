@@ -101,21 +101,6 @@ export function globExtensions(globs: readonly string[]): string[] {
 }
 
 /**
- * A predicate for a file path that a glob naming its files selects: a glob
- * whose last segment names something besides wildcards, whether an extension
- * as `*.json` does, a name as `*.test.*` and `test_[0-9].*` do, or a whole file
- * name as `test_pay` does.
- *
- * Such a glob vouches for what it selects, so a file it matches is a source
- * whatever extensions the caller reads by default. A negated group names what
- * it leaves out, so `*.!(json)` selects `pay.zig` this way. Each glob is read
- * against the whole path it would select, so what one package's glob names
- * does not vouch for a file only another package's broad glob collected. A
- * last segment of wildcards alone names nothing, and a negative entry selects
- * nothing. Matched case-sensitively, as the glob that collected the file was,
- * against a path written with `/`.
- */
-/**
  * Whether a last segment says anything about the file name, **whichever
  * alternative it takes**.
  *
@@ -230,6 +215,21 @@ function outsideBrackets(text: string, start = 0): number[] {
   return indices;
 }
 
+/**
+ * A predicate for a file path that a glob naming its files selects: a glob
+ * whose last segment names something besides wildcards, whether an extension
+ * as `*.json` does, a name as `*.test.*` and `test_[0-9].*` do, or a whole file
+ * name as `test_pay` does.
+ *
+ * Such a glob vouches for what it selects, so a file it matches is a source
+ * whatever extensions the caller reads by default. A negated group names what
+ * it leaves out, so `*.!(json)` selects `pay.zig` this way. Each glob is read
+ * against the whole path it would select, so what one package's glob names
+ * does not vouch for a file only another package's broad glob collected. A
+ * last segment of wildcards alone names nothing, and a negative entry selects
+ * nothing. Matched case-sensitively, as the glob that collected the file was,
+ * against a path written with `/`.
+ */
 export function namedTestFileMatcher(globs: readonly string[]): (filePath: string) => boolean {
   const patterns: RegExp[] = [];
   for (const entry of globs) {
