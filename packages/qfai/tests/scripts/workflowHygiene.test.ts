@@ -2089,6 +2089,38 @@ const WORKFLOW_SCOPE = "Rules run over both workflow trees:";
 const DECLARATION_SCOPE = "Rules run over the required-status-context declaration:";
 
 /**
+ * Breaks the `fail-fast: false` of ONE named job, and answers with that job.
+ *
+ * Anchored on the job key rather than on the occurrence, because two jobs declare a slice
+ * matrix. A replace that takes the first occurrence breaks whichever block sits earlier in
+ * the file, so the job a row expects would follow block order; breaking every occurrence
+ * instead satisfies a row naming either job while the other matrix goes unchecked. One row
+ * per job, each planting its own declaration, is what keeps each matrix falsifiable on its
+ * own.
+ */
+function breakFailFast(dir: string, job: string): string {
+  editWorkflow(dir, "ci.yml", (text) => {
+    const jobs = text.indexOf("\njobs:\n");
+    const start = jobs < 0 ? -1 : text.indexOf(`\n  ${job}:\n`, jobs);
+    if (start < 0) {
+      throw new Error(`ci.yml declares no \`${job}\` job — the needle is stale`);
+    }
+    // To the next job key. Inside `jobs:` nothing but a job sits at this indent, so the
+    // slice is exactly one job and the edit cannot reach into its neighbour.
+    const from = start + `\n  ${job}:`.length;
+    const next = /\n {2}[A-Za-z_][\w-]*:/.exec(text.slice(from));
+    const end = next === null ? text.length : from + next.index;
+    const block = text.slice(start, end);
+    const broken = block.replace("fail-fast: false", "fail-fast: true");
+    if (broken === block) {
+      throw new Error(`the \`${job}\` job disables no fail-fast — the needle is stale`);
+    }
+    return `${text.slice(0, start)}${broken}${text.slice(end)}`;
+  });
+  return job;
+}
+
+/**
  * One plantable violation per workflow-tree rule.
  *
  * The plants are the fixtures `BR-0017-0039` requires, and they live here rather than in a
@@ -2153,14 +2185,20 @@ const PLANTS: {
       return "detect";
     },
   },
+  // One row per sliced matrix. A single row covering both would pass against a lane that
+  // reads one of them: the surviving finding supplies the rule, the file and a job name,
+  // and the matrix nobody checked is the one the row was supposed to be about.
   {
     rule: "matrix-fail-fast",
-    label: "a matrix stops disabling fail-fast",
+    label: "the `test` matrix stops disabling fail-fast",
     file: "ci.yml",
-    plant: (dir) => {
-      editWorkflow(dir, "ci.yml", (text) => text.replace("fail-fast: false", "fail-fast: true"));
-      return "test";
-    },
+    plant: (dir) => breakFailFast(dir, "test"),
+  },
+  {
+    rule: "matrix-fail-fast",
+    label: "the `node-floor` matrix stops disabling fail-fast",
+    file: "ci.yml",
+    plant: (dir) => breakFailFast(dir, "node-floor"),
   },
   {
     rule: "secret-inheritance",
