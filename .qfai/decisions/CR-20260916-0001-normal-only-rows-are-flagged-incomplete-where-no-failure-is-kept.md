@@ -28,8 +28,12 @@ qualifier:
   error/boundary/edge test case".
 - `TC-0008-0012` — verifies that such a row "triggers REVISE".
 - `AC-0013-0010` — "each AC has at minimum one non-normal type test case".
+- `BR-0013-0008` — "Each AC MUST have at minimum one `normal` test case AND one
+  non-normal test case", with "Normal-path-only coverage for an AC is considered
+  incomplete".
+- `TC-0013-0013` — verifies that every AC has at least one non-normal case.
 
-A reviewer following the checklist passes a row those four fail, and a reviewer
+A reviewer following the checklist passes a row those six fail, and a reviewer
 following them demands a case for a failure nothing keeps. Both cannot hold.
 
 ## Reproduction
@@ -58,12 +62,14 @@ changed.
 Qualify the four rows by what the row keeps, leaving the demand in place for
 every row that keeps a failure:
 
-| Row            | Today                              | Proposed                                                                     |
-| -------------- | ---------------------------------- | ---------------------------------------------------------------------------- |
-| `AC-0008-0009` | any normal-only row is incomplete  | a normal-only row is incomplete where the row keeps a failure                |
-| `BR-0008-0007` | every US/TC owes a non-normal case | every US/TC owes one for each failure it keeps                               |
-| `TC-0008-0012` | a normal-only row triggers REVISE  | a normal-only row keeping a failure triggers REVISE; one keeping none passes |
-| `AC-0013-0010` | every AC owes a non-normal case    | every AC owes one for each failure it keeps                                  |
+| Row            | Today                                   | Proposed                                                                     |
+| -------------- | --------------------------------------- | ---------------------------------------------------------------------------- |
+| `AC-0008-0009` | any normal-only row is incomplete       | a normal-only row is incomplete where the row keeps a failure                |
+| `BR-0008-0007` | every US/TC owes a non-normal case      | every US/TC owes one for each failure it keeps                               |
+| `TC-0008-0012` | a normal-only row triggers REVISE       | a normal-only row keeping a failure triggers REVISE; one keeping none passes |
+| `AC-0013-0010` | every AC owes a non-normal case         | every AC owes one for each failure it keeps                                  |
+| `BR-0013-0008` | normal-only for an AC is incomplete     | it is incomplete where the AC keeps a failure                                |
+| `TC-0013-0013` | verifies every AC has a non-normal case | verifies every AC has one for each failure it keeps                          |
 
 What a kept failure is stays where it is defined, in
 `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`, and
@@ -71,19 +77,22 @@ the rows point at it rather than restating it.
 
 ## Blocked downstream items
 
-| Item                 | Kind         | Why it depends on the artifact                                |
-| -------------------- | ------------ | ------------------------------------------------------------- |
-| `spec-0008/TDD-0012` | `ledger-row` | Its test case is one of the four rows this record changes     |
-| `spec-0013/TDD-0013` | `ledger-row` | Its test case reads `AC-0013-0010`, which this record changes |
+| Item                 | Kind         | Why it depends on the artifact                            |
+| -------------------- | ------------ | --------------------------------------------------------- |
+| `spec-0008/TDD-0012` | `ledger-row` | Its test case is one of the four rows this record changes |
+| `spec-0013/TDD-0013` | `ledger-row` | Its test case is one of the six rows this record changes  |
 
-- Not blocked: every other row of either pack. The change is to what these four
-  rows demand of a row keeping no failure, and no other row states that demand.
+- Not blocked: every other row of either pack. The change is to what these six
+  rows demand of a row keeping no failure. The rule table entry and the case
+  that verifies it are included because either one left as it stands re-states
+  the demand its acceptance criterion no longer makes.
 - Overlapping open CRs: `none`.
 
 ## Impact scope
 
 - Specs: `spec-0008` — `03_Acceptance-Criteria.md`, `04_Business-Rules.md`,
-  `06_Test-Cases.md`; `spec-0013` — `03_Acceptance-Criteria.md`
+  `06_Test-Cases.md`; `spec-0013` — `03_Acceptance-Criteria.md`,
+  `04_Business-Rules.md`, `06_Test-Cases.md`
 - Plans: `none`
 - Tests: the two ledger rows above, and the checklist suites that read the
   reviewer instructions
@@ -93,11 +102,13 @@ the rows point at it rather than restating it.
   `.qfai/specs/spec-0008/03_Acceptance-Criteria.md`,
   `.qfai/specs/spec-0008/04_Business-Rules.md`,
   `.qfai/specs/spec-0008/06_Test-Cases.md`,
-  `.qfai/specs/spec-0013/03_Acceptance-Criteria.md`
+  `.qfai/specs/spec-0013/03_Acceptance-Criteria.md`,
+  `.qfai/specs/spec-0013/04_Business-Rules.md`,
+  `.qfai/specs/spec-0013/06_Test-Cases.md`
 
 ## Decision needed from user
 
-Qualify the four rows by the failures a row keeps, so that a row keeping none
+Qualify the six rows by the failures a row keeps, so that a row keeping none
 passes with a normal path alone and the matrix marks its failure cells `n/a`?
 
 The alternative is to withdraw the checklist's kept-failure scoping and go on
@@ -112,7 +123,8 @@ nobody can falsify.
    table states them, and recording this Change Request as one row of
    `09_delta.md`'s `## Change Requests` table.
 
-2. `/qfai-sdd spec-0013`, the same for `AC-0013-0010`.
+2. `/qfai-sdd spec-0013`, the same for `AC-0013-0010`, `BR-0013-0008` and
+   `TC-0013-0013`.
 
 3. Downstream ledger sweep: **reset to `todo`**, recording this Change Request's
    ID in `DR-ID`, `spec-0008/TDD-0012` and `spec-0013/TDD-0013`. Their recorded

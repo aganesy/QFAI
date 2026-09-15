@@ -7,14 +7,19 @@ Reviewers MUST use this checklist when evaluating test case completeness during 
 
 A **kept failure** is one of:
 
-- A failure named by a specification, unless a type or schema excludes it.
+- A failure named by a specification.
 - A failure actually observed, whatever a type or schema says: the observation
   happened, so a schema claiming it cannot is a contradiction the Drift Protocol
   settles rather than a reason to drop the row.
-- A failure declared by an active CON-API or CON-DB owned by the reviewed spec,
-  unless a type or schema excludes it.
+- A failure declared by an active CON-API or CON-DB owned by the reviewed spec.
 - A failure required by the safety floor in
   `.agents/rules/minimal-implementation.md` § 2.
+
+A declared failure stays kept whatever a type or schema says. Excluding it here
+would let the same conflict be dropped from the matrix by one rule while the
+paragraph below routes it as DRIFT, and the analyst choosing the first
+instruction erases an obligation nobody upstream retired. What a type or schema
+settles is where the failure is handled, not whether it is scored.
 
 Score every kept failure whether or not handling code exists yet. Declared
 valid behavior always remains scored; failure-side bullets apply only to kept failures.

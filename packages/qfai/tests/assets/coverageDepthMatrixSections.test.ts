@@ -232,7 +232,11 @@ describe.each(TREES)("%s", (tree) => {
     }
     const checklist = flat(await read(tree, CHECKLIST));
     for (const clause of [
-      "A failure named by a specification, unless a type or schema excludes it",
+      // A declared failure is kept whatever a type or schema says: excluded
+      // here, the same conflict would be dropped from the matrix by one rule
+      // while the paragraph below it routes the conflict as drift.
+      "A failure named by a specification.",
+      "A declared failure stays kept whatever a type or schema says",
       // An observation is never excluded by a schema: the failure happened.
       "A failure actually observed, whatever a type or schema says",
       "A failure declared by an active CON-API or CON-DB owned by the reviewed spec",
