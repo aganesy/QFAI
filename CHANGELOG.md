@@ -72,6 +72,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- Start the lint gate's independent commands as five concurrent lanes instead of
+  two. Every command still runs, exactly once, and a failure in any lane reaches
+  the gate's result. Workflow hygiene still runs first. The formatter is now the
+  gate's floor (#1877).
+
+- Bound how many cases run at once inside one test file, at the smaller of the
+  declared start and the machine's parallelism. Above the core count a run is
+  slower and noisier, which the worker axis already showed and this axis now
+  measures (#1877).
+
 - Run the engines-floor test lane over the same seven slices the resolved-Node
   lane uses. The slices partition the suite, so the floor claim is unchanged;
   each leg pins and asserts the floor for itself, and the aggregate verdict still

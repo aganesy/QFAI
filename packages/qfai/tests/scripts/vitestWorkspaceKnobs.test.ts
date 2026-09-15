@@ -54,6 +54,12 @@
  * measurement-gated adoption of a FINAL value is `TC-0017-0065`, a later change with a
  * timing artifact behind it.
  *
+ * Each axis is then held to the cores the machine has, on a measurement of its own. That is
+ * not the revision `BR-0017-0051` reserves: the declared value is still ten and both
+ * overrides are still honoured as asked, so what the cap changes is the number handed to a
+ * machine that could not have run ten anyway. The rows below therefore compare against the
+ * held value, re-derived from this machine rather than read out of the file under test.
+ *
  * The override is what lets those two rules coexist. A measurement can be taken at any
  * value without editing a declaration, so taking one never looks like adopting one.
  *
@@ -111,6 +117,16 @@ const DECLARED_START = 10;
  * asserting four would pass on the runner and fail on a developer's laptop.
  */
 const DECLARED_WORKERS = Math.min(DECLARED_START, availableParallelism());
+
+/**
+ * The within-file concurrency ceiling the declaration resolves to on this machine.
+ *
+ * The same expression as the worker ceiling and deliberately not the same constant: the two
+ * axes are held to the machine on separate measurements, one over forks and one over
+ * concurrent cases inside a process, so lifting either cap must not silently move the row
+ * guarding the other.
+ */
+const DECLARED_CONCURRENCY = Math.min(DECLARED_START, availableParallelism());
 
 /**
  * The options this runner refuses to scope to a project.
@@ -253,7 +269,7 @@ describe("TC-0017-0060 (TDD-0060): every runner project declares the full knob s
 });
 
 describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both axes", () => {
-  it("defaults both tunable axes to ten, with the worker axis held to the machine", async () => {
+  it("defaults both tunable axes to ten, with each held to the machine", async () => {
     const { projects, root } = await load();
 
     const offAxis: string[] = [];
@@ -263,8 +279,11 @@ describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both ax
       );
     }
     for (const project of projects) {
-      if (project["maxConcurrency"] !== DECLARED_START) {
-        offAxis.push(`${nameOf(project)}: maxConcurrency is ${String(project["maxConcurrency"])}`);
+      if (project["maxConcurrency"] !== DECLARED_CONCURRENCY) {
+        offAxis.push(
+          `${nameOf(project)}: maxConcurrency is ${String(project["maxConcurrency"])}, ` +
+            `expected ${String(DECLARED_CONCURRENCY)}`,
+        );
       }
     }
     expect
@@ -327,7 +346,7 @@ describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both ax
         wrong.push(`root: ${JSON.stringify(bad)} gave ${String(root["maxWorkers"])}`);
       }
       for (const project of projects) {
-        if (project["maxConcurrency"] !== DECLARED_START) {
+        if (project["maxConcurrency"] !== DECLARED_CONCURRENCY) {
           wrong.push(
             `${nameOf(project)}: ${JSON.stringify(bad)} gave ${String(project["maxConcurrency"])}`,
           );
@@ -337,7 +356,7 @@ describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both ax
         .soft(
           wrong,
           `an override of ${JSON.stringify(bad)} must fall back to the declared value — ` +
-            `${DECLARED_WORKERS} workers, ${DECLARED_START} concurrent`,
+            `${DECLARED_WORKERS} workers, ${DECLARED_CONCURRENCY} concurrent`,
         )
         .toEqual([]);
     }
