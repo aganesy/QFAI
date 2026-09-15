@@ -365,7 +365,7 @@ jobs:
           # body, which `verificationBodies` pins and a reviewer reads in the diff.
           sha256sum -c --quiet <<'PINNED_INPUTS'
           fff07d335dc0d74e7c2e6eca7683abd21ae87f7b68e2e39e83467647cc89e180  scripts/check-toolchain-action.sh
-          1ea950400bd197f70c9083400383f1e35c4c372c285066ca8e2d3c9d1383c977  .github/pinned-bytes.txt
+          12532b41f9ef3337bc5dcc0c3eed8fab48f0af678925a5218a68ec526549c9a6  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
