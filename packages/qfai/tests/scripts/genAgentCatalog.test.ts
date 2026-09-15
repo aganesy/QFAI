@@ -13,6 +13,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { invokedScriptBodies } from "../../../../scripts/check-workflow-hygiene.mjs";
+
 // tests/scripts/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const SCRIPT = path.join(repoRoot, "scripts", "gen-agent-catalog.mjs");
@@ -415,14 +417,17 @@ describe("gen-agent-catalog", () => {
     // regenerated body left that diff empty — the repair landed in the assets
     // tree, which the scoped diff did not look at — so the gate passed while
     // the file that actually ships stayed stale in the index.
+    //
+    // Resolved through the chain rather than read off the `ci:gate` string: the
+    // aggregate delegates, and a diff inside the script it calls is inside the
+    // gate exactly as one written in the aggregate itself would be.
     const scripts = await readRootScripts();
     if (!("ci:gate" in scripts)) {
       throw new Error("root package.json has no ci:gate script");
     }
-    const gate: unknown = scripts["ci:gate"];
-    if (typeof gate !== "string") {
-      throw new Error("root package.json ci:gate is not a string");
-    }
+    const gate = invokedScriptBodies("pnpm ci:gate", repoRoot)
+      .map(([, body]) => body ?? "")
+      .join(" && ");
     const paths = diffPaths(gate);
     const target = path.relative(repoRoot, CATALOG).split(path.sep).join("/");
 
