@@ -65,6 +65,7 @@ jobs:
       version: ${{ steps.pin.outputs.version }}
       tag: ${{ steps.pin.outputs.tag }}
       sha: ${{ steps.pin.outputs.sha }}
+      suite-shape: ${{ steps.shape.outputs.suite-shape }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -154,11 +155,135 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
         shell: bash
 
+      # ── Which gate the tag's tree can actually run ──────────────────────────────────
+      # Every job below checks out the TAG's tree and runs package scripts from it, and the
+      # `workflow_dispatch` path this workflow opens with exists to re-publish a tag that already
+      # exists. So the scripts a job may name are whatever that tag declares, and a tag cut before
+      # the gate was split declares a different set from this one.
+      #
+      # Two shapes, and the decision between them is made ONCE, here. Made per job instead, the
+      # gate could read the tag as old, run the aggregate — suite included — while the sliced lane
+      # beside it read the same tag as new and ran the suite a second time. One output, four
+      # consumers, so the halves cannot disagree.
+      #
+      # It belongs to `verify` rather than to a job of its own: `verify` already resolves the tag,
+      # already holds the tree at full depth, already publishes the outputs every other job reads,
+      # and every other job already waits for it. A job-level `if:` on a matrix job is evaluated
+      # before the matrix expands, which is what lets `gate-tests` and `gate-floor` skip whole
+      # rather than leg by leg.
+      - name: Read which gate shape the tag's tree declares
+        id: shape
+        env:
+          RELEASE_SHA: ${{ steps.pin.outputs.sha }}
+          # The slice set, declared once and checked in full. Six of the seven is not the new
+          # shape: the seventh leg would find no script, and a leg with nothing to run is a green
+          # check over nothing.
+          SUITE_SLICES: core validators integration e2e cli unit scripts
+        run: |
+          set -euo pipefail
+          # The tag's manifests, read as DATA. `git show` puts each one in a variable and the
+          # program below parses it out of the environment — nothing the tag carries reaches a
+          # command position, nothing is evaluated, and no manifest value is echoed back into the
+          # log where a workflow command could be read out of it.
+          #
+          # Assigned on their own lines, not as a prefix to `node`: a command substitution that
+          # fails in an assignment PREFIX leaves the command's own exit status behind, so a
+          # missing manifest would arrive as an empty string instead of stopping the job.
+          ROOT_MANIFEST="$(git show "${RELEASE_SHA}:package.json")"
+          PACKAGE_MANIFEST="$(git show "${RELEASE_SHA}:packages/qfai/package.json")"
+          export ROOT_MANIFEST PACKAGE_MANIFEST
+          node - <<'SHAPE'
+          const { appendFileSync } = require("node:fs");
+
+          const fail = (message) => {
+            console.log(`::error::${message}`);
+            process.exit(1);
+          };
+
+          // Parsed, never evaluated. A parse failure names the manifest and not the text it
+          // choked on, because the text is the dispatcher's to choose.
+          const manifest = (label, text) => {
+            let value;
+            try {
+              value = JSON.parse(text);
+            } catch {
+              fail(`${label} is not valid JSON, so which gate this tag can run is undecidable`);
+            }
+            if (value === null || typeof value !== "object" || Array.isArray(value)) {
+              fail(`${label} is not a JSON object, so which gate this tag can run is undecidable`);
+            }
+            return value;
+          };
+
+          // A script is declared when the lookup yields a string. The type check is what makes a
+          // lookup on a parsed object safe: an inherited member answers to a key the manifest
+          // never set, and none of them is a string.
+          const declares = (parsed, name) => {
+            const scripts = parsed.scripts;
+            if (scripts === null || typeof scripts !== "object") return false;
+            return typeof scripts[name] === "string";
+          };
+
+          const root = manifest("the tag's root package.json", process.env.ROOT_MANIFEST ?? "");
+          const pkg = manifest(
+            "the tag's packages/qfai/package.json",
+            process.env.PACKAGE_MANIFEST ?? "",
+          );
+
+          const slices = (process.env.SUITE_SLICES ?? "").trim().split(/\s+/).filter(Boolean);
+          if (slices.length === 0) {
+            fail("SUITE_SLICES named no slices, so no slice set was checked for");
+          }
+
+          // Only names from the list above ever appear here, so reporting them says nothing the
+          // tag chose.
+          const absent = slices.filter((slice) => !declares(pkg, `test:${slice}`));
+
+          const emit = (shape, why) => {
+            console.log(`release gate shape: ${shape} — ${why}`);
+            appendFileSync(process.env.GITHUB_OUTPUT, `suite-shape=${shape}\n`);
+            process.exit(0);
+          };
+
+          if (declares(root, "ci:gate:checks") && absent.length === 0) {
+            emit(
+              "sliced",
+              "the tree declares ci:gate:checks and a script for all " +
+                `${slices.length} slices, so the checks and the suite run as separate jobs`,
+            );
+          }
+
+          if (declares(root, "ci:gate") && declares(pkg, "test")) {
+            emit(
+              "whole",
+              "the tree predates the split, so the gate runs the ci:gate aggregate — suite " +
+                "included — and the sliced jobs stand down",
+            );
+          }
+
+          // Neither shape is runnable, and there is no third. Refused rather than guessed at: a
+          // shape nothing can classify is exactly the case where a skipped job would report as a
+          // gate that passed.
+          fail(
+            "this tag declares neither gate shape, so nothing can validate it: " +
+              `ci:gate:checks ${declares(root, "ci:gate:checks") ? "present" : "absent"}, ` +
+              `ci:gate ${declares(root, "ci:gate") ? "present" : "absent"}, ` +
+              `the package's test script ${declares(pkg, "test") ? "present" : "absent"}, ` +
+              `slice scripts absent: ${absent.length === 0 ? "none" : absent.join(" ")}`,
+          );
+          SHAPE
+        shell: bash
+
   # ── 2. The gate main is held to, re-run on the tagged tree ───────
   gate:
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # The branch-name pin is a PR-time guard; a tag has no branch to read, and `verify` already
+      # checked the stronger claim (tag == package.json == CHANGELOG). Declared for the job
+      # because either of the two gate steps below may be the one that runs.
+      VERSION_PIN_SKIP: "1"
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -220,30 +345,24 @@ jobs:
       # passed `ci.yml`, whose `node-floor` lane runs the package suite on the floor. Seven lanes on
       # the newest, one on the floor, and this gate re-runs the aggregate on the newest.
       - uses: ./.ci-actions/.github/actions/setup
-      - name: Run the release gate
-        # Everything in the aggregate `main` is held to except the package
-        # suite: SSOT sync, format, lint, types and pack verification. The suite
-        # runs beside this job, sliced, so the two halves take the wall clock of
-        # the longer rather than the sum.
-        #
-        # The workspace here is the TAG's tree, and a tag cut before the split
-        # carries `ci:gate` alone. Re-publishing one then runs the aggregate,
-        # suite included, which is what that tag always cost; the sliced lane
-        # beside this job runs the suite again there and the publish is gated on
-        # both. Naming the newer script alone would fail every such re-publish
-        # before a check had run.
+      # Exactly one of the next two steps runs, and which one is `verify`'s answer rather than
+      # this job's. Two steps and not one branching script: the step that ran is the step a reader
+      # of the run sees, so the path a release took is legible from the log without reading the
+      # workflow, and no value from the tag's manifest reaches a shell here at all.
+      - name: Run the release gate's checks
+        # Everything in the aggregate `main` is held to except the package suite: SSOT sync,
+        # format, lint, types and pack verification. The suite runs beside this job, sliced, so
+        # the two halves take the wall clock of the longer rather than the sum.
+        if: needs.verify.outputs.suite-shape == 'sliced'
+        run: pnpm ci:gate:checks
         shell: bash
-        run: |
-          if node -e "process.exit(require('./package.json').scripts['ci:gate:checks'] ? 0 : 1)"; then
-            pnpm ci:gate:checks
-          else
-            pnpm ci:gate
-          fi
-        env:
-          # The branch-name pin is a PR-time guard; a tag has no branch to read,
-          # and `verify` already checked the stronger claim
-          # (tag == package.json == CHANGELOG).
-          VERSION_PIN_SKIP: "1"
+      - name: Run the whole release gate, suite included
+        # A tag cut before the split carries `ci:gate` alone, and that aggregate is the whole of
+        # what such a tag was ever held to. It runs here in full, and the sliced jobs beside this
+        # one stand down, so the suite runs once either way.
+        if: needs.verify.outputs.suite-shape == 'whole'
+        run: pnpm ci:gate
+        shell: bash
       - name: Sanity grep — no internal spec IDs or version markers leak (post-build)
         # `ci:gate` builds but does not re-run this; CI runs it after the build
         # because some identifiers only appear in `dist/`. Without it here, a
@@ -261,8 +380,14 @@ jobs:
   # The same seven values `ci.yml` declares, for the same reason it declares them: the slices
   # partition the suite, so the legs together carry the whole claim. `fail-fast: false`, so one red
   # leg does not hide which of the others would also have failed.
+  #
+  # Only for a tag whose tree declares the sliced shape. On any other tag the aggregate in `gate`
+  # runs the suite whole, so these seven legs would be a second run of the same tests — and the
+  # condition sits on the JOB, where it is evaluated before the matrix expands, rather than inside
+  # each leg where seven legs would report green having run nothing.
   gate-tests:
     needs: verify
+    if: needs.verify.outputs.suite-shape == 'sliced'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -300,17 +425,9 @@ jobs:
       - name: Run the package test suite (${{ matrix.slice }})
         # The per-slice script, not the generic runner with a project name — the reason `ci.yml`'s
         # test step gives: a slice with no script of its own would still run, so nothing would
-        # demand the script exist.
-        # The workspace is the TAG's tree, and a tag cut before the suite was sliced carries no
-        # per-slice script. The gate beside this job runs the aggregate there, suite included, so
-        # this leg has nothing left to run and says so rather than failing on a missing script.
+        # demand the script exist. The job's condition is what guarantees the tag declares one.
         shell: bash
-        run: |
-          if ! node -e "process.exit(require('./packages/qfai/package.json').scripts['test:${{ matrix.slice }}'] ? 0 : 1)"; then
-            echo "This tag predates the sliced suite; the release gate ran it whole."
-            exit 0
-          fi
-          pnpm -C packages/qfai test:${{ matrix.slice }}
+        run: pnpm -C packages/qfai test:${{ matrix.slice }}
 
   # ── 2b. The same tree, on the floor `engines.node` promises ──────
   # Review finding [56]. The gate above resolves the RANGE — the newest Node satisfying
@@ -331,8 +448,12 @@ jobs:
   # floor lane: one process pool over the whole suite sets the wall clock for the release. Each leg
   # asserts the floor for itself, because a leg running the wrong Node is what that assertion is for
   # and a single leg checking it would leave the other six unverified.
+  #
+  # Only for a tag whose tree declares the sliced shape. A tag that predates it has no per-slice
+  # script for these legs to run, and the floor is covered for it by `gate-floor-whole` below.
   gate-floor:
     needs: verify
+    if: needs.verify.outputs.suite-shape == 'sliced'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -394,27 +515,86 @@ jobs:
         # The fork count comes from the runner, for the reason `ci.yml`'s floor lane records: forks
         # outnumbering the cores turn a healthy run red on an RPC timeout the declaration cannot
         # reach.
-        # The workspace is the TAG's tree, and a tag cut before the suite was sliced carries no
-        # per-slice script. Nothing else runs the suite on the floor — the gate beside this lane
-        # runs on the newest Node — so one leg runs it whole there and the rest say why they did
-        # not, rather than seven legs running the same suite or the floor going unchecked.
+        shell: bash
+        run: QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:${{ matrix.slice }}
+
+  # ── 2c. The floor, for a tree that predates the slices ───────────
+  # The lane above needs a `test:<slice>` script per leg, and a tag cut before the split carries
+  # none — so for such a tag the floor is exercised here instead, by the one script it does
+  # declare. This is what that tag's floor lane always was, before the suite was sliced.
+  #
+  # Its own job rather than an eighth leg of the lane above. The two are mutually exclusive on
+  # `verify`'s answer, and a matrix leg cannot be that: the matrix expands after the job's
+  # condition is read, so an "everything" leg would have to decide inside the shell, where the
+  # other seven legs skip themselves and report green.
+  #
+  # Nothing else runs the suite on the floor — `gate` beside it resolves the newest Node
+  # satisfying the range — so this is the whole of the floor claim for such a tag.
+  gate-floor-whole:
+    needs: verify
+    if: needs.verify.outputs.suite-shape == 'whole'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+          ref: ${{ needs.verify.outputs.sha }}
+      # The composite action from THIS workflow's revision, for the reason the gate documents: a tag
+      # cut before the action existed has no `./.github/actions/setup` in its tree.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .ci-actions
+          clean: false
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+      - uses: ./.ci-actions/.github/actions/setup
+        with:
+          pin-engines-floor: "true"
+          # The PACKAGE's manifest, which is where the promise to adopters lives. In this tree it
+          # agrees with the root's; on a re-published tag it need not.
+          engines-manifest: "./packages/qfai/package.json"
+      - name: Confirm the pinned floor is what is running
+        # The same assertion the sliced lane makes, for the same reason: `setup-node` silently
+        # ignores an empty `node-version`, so a wiring mistake would leave this job running the
+        # newest release while still reporting as the floor lane.
         shell: bash
         run: |
-          if ! node -e "process.exit(require('./packages/qfai/package.json').scripts['test:${{ matrix.slice }}'] ? 0 : 1)"; then
-            if [ "${{ matrix.slice }}" != "core" ]; then
-              echo "This tag predates the sliced suite; the core leg runs it whole on the floor."
-              exit 0
-            fi
-            echo "This tag predates the sliced suite; running it whole on the floor."
-            QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test
-            exit 0
+          set -euo pipefail
+          range="$(node -p "require('./packages/qfai/package.json').engines.node")"
+          expected="v${range#>=}"
+          actual="$(node --version)"
+          echo "gate-floor-whole: engines floor ${expected}, running ${actual}"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::gate-floor-whole expected ${expected} but is running ${actual}; pin-engines-floor did not take effect"
+            exit 1
           fi
-          QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:${{ matrix.slice }}
+      # Unconditionally, unlike the sliced lane: that one builds for the two slices that read
+      # `dist/`, and the whole suite contains both of them.
+      - name: Build qfai on the floor
+        run: pnpm -C packages/qfai build
+      - name: Run the package test suite on the floor
+        # The aggregate script, which is the one such a tag declares. No worker-count override:
+        # the trees that reach this job do not read one, so setting it would be a knob with
+        # nothing behind it.
+        run: pnpm -C packages/qfai test
 
   # ── 3. GitHub Release, on the tag push ───────────────────────────
   github-release:
-    if: github.event_name == 'push'
-    needs: [verify, gate, gate-tests, gate-floor]
+    # Every gate job, both paths. Three of the four are conditional and exactly two of those three
+    # run for any one tag, so the default rule — a job whose dependency skipped skips too — would
+    # stop the release on whichever path it was not written for. `!cancelled()` replaces that rule
+    # and the two `contains` put back what it was doing: `skipped` is accepted, `failure` and
+    # `cancelled` are not. Without them this job would treat a red gate as a green one, which is
+    # the whole of what it is here to prevent.
+    if: >-
+      ${{ github.event_name == 'push'
+      && !cancelled()
+      && !contains(needs.*.result, 'failure')
+      && !contains(needs.*.result, 'cancelled') }}
+    needs: [verify, gate, gate-tests, gate-floor, gate-floor-whole]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -500,7 +680,14 @@ jobs:
   #   - the `release` environment carries a required reviewer, which is what
   #     keeps tagging and publishing separate decisions.
   publish:
-    needs: [verify, gate, gate-tests, gate-floor]
+    # Every gate job, both paths, on the same condition `github-release` carries and for the same
+    # reason. A publication is irreversible, so the one thing this must never do is read a gate
+    # that was skipped by the path the tag did not take as a gate that passed.
+    if: >-
+      ${{ !cancelled()
+      && !contains(needs.*.result, 'failure')
+      && !contains(needs.*.result, 'cancelled') }}
+    needs: [verify, gate, gate-tests, gate-floor, gate-floor-whole]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: release
