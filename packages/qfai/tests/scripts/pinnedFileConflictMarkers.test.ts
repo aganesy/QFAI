@@ -5,7 +5,7 @@
  * fenced example in a Markdown file is not one.
  */
 import { execFile } from "node:child_process";
-import { appendFile, cp, mkdir, mkdtemp, readFile } from "node:fs/promises";
+import { appendFile, cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,6 +27,9 @@ const LIST_REL = ".github/pinned-bytes.txt";
 const PINNED_DATA_REL = "scripts/dogfood-backlog.json";
 
 let staged: string;
+
+/** Trees the pre-flight scan ran in, removed when the test that made them ends. */
+const sandboxes: string[] = [];
 
 /** Everything both programs read. A copy that fails part-way is removed before the error surfaces. */
 async function stageTree(): Promise<string> {
@@ -53,9 +56,9 @@ function fieldOf(cause: unknown, key: "code" | "stdout" | "stderr"): unknown {
     : undefined;
 }
 
-async function run(command: string, args: string[]): Promise<Run> {
+async function run(command: string, args: string[], cwd: string = repoRoot): Promise<Run> {
   try {
-    const { stdout, stderr } = await execFileP(command, args, { cwd: repoRoot });
+    const { stdout, stderr } = await execFileP(command, args, { cwd });
     return { status: 0, output: `${stdout}${stderr}` };
   } catch (cause) {
     return {
@@ -85,6 +88,10 @@ beforeEach(async () => {
 
 afterEach(async () => {
   if (staged !== "") await removeTempTree(staged);
+  while (sandboxes.length > 0) {
+    const dir = sandboxes.pop();
+    if (dir !== undefined) await removeTempTree(dir);
+  }
 });
 
 describe("the byte guard, on a pinned file carrying conflict markers", () => {
@@ -329,23 +336,89 @@ describe("the lint job's pre-flight step", () => {
     }
   });
 
+  /**
+   * The step's own scan, lifted out of the workflow and dedented so a shell can
+   * run it. Asserting on how the line is spelled leaves every way of writing it
+   * wrongly that still contains the right characters.
+   */
+  function preflightScan(workflow: string): string {
+    const lines = workflow.split("\n");
+    const first = lines.findIndex(
+      (line) => line.includes("for pinned in") && line.includes(".github/command-files.txt"),
+    );
+    const last = lines.findIndex((line, index) => index > first && line.trim() === "done");
+    expect(first).toBeGreaterThan(-1);
+    expect(last).toBeGreaterThan(first);
+    const body = lines.slice(first, last + 1);
+    const opening = body[0] ?? "";
+    const indent = opening.length - opening.trimStart().length;
+    // `-eo pipefail` is what the workflow's `shell: bash` runs the step under.
+    return ["set -eo pipefail", ...body.map((line) => line.slice(indent))].join("\n");
+  }
+
+  /** A tree holding the four files the scan reads, and nothing else. */
+  async function sandbox(files: Record<string, string>): Promise<string> {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-scan-"));
+    sandboxes.push(dir);
+    for (const [relative, body] of Object.entries(files)) {
+      await mkdir(path.dirname(path.join(dir, relative)), { recursive: true });
+      await writeFile(path.join(dir, relative), body, "utf-8");
+    }
+    return dir;
+  }
+
+  const CLEAN: Record<string, string> = {
+    "scripts/check-toolchain-action.sh": "#!/bin/bash\nexit 0\n",
+    ".github/pinned-bytes.txt": "scripts/check-toolchain-action.sh\n",
+    ".github/lifecycle-manifests.txt": ".github/workflows/ci.yml\n",
+    ".github/command-files.txt": ".claude/commands/qfai-sdd.md\n",
+  };
+
+  async function scanIn(files: Record<string, string>): Promise<Run> {
+    const workflow = await readFile(path.join(repoRoot, ".github/workflows/ci.yml"), "utf-8");
+    return run("bash", ["-c", preflightScan(workflow)], await sandbox(files));
+  }
+
+  it("passes pinned files that carry no marker", async () => {
+    // Without this, a scan that refused everything would satisfy the two below.
+    const result = await scanIn(CLEAN);
+
+    expect(result.status).toBe(0);
+    expect(result.output).not.toContain("merge conflict markers");
+  });
+
   it("reads a marker in a CRLF file, as the scanner does", async () => {
     // The scanner splits on the line separator, so the carriage return is gone
     // before it matches; grep's end-of-line would sit past it. The pattern makes
-    // the return optional, which keeps the two answering the same way.
+    // the return optional, and only quoting that writes a real carriage return
+    // into it keeps the two answering the same way.
+    const result = await scanIn({
+      ...CLEAN,
+      ".github/lifecycle-manifests.txt": ".github/workflows/ci.yml\r\n=======\r\n",
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain("merge conflict markers");
+    expect(result.output).toContain(".github/lifecycle-manifests.txt");
+    // Some grep builds end a line at CRLF and answer the same way whatever the
+    // pattern holds, so the quoting that writes the byte is asserted as well as
+    // run.
     const workflow = await readFile(path.join(repoRoot, ".github/workflows/ci.yml"), "utf-8");
-    const scan = workflow.split("\n").find((line) => line.includes("grep -qE"));
-    expect(scan).toBeDefined();
-    expect(scan).toContain("\\r?$");
+    expect(preflightScan(workflow)).toContain("grep -qE $'");
   });
 
-  it("scans each file in one process, with no pipe", async () => {
+  it("finds a marker at the head of a file larger than a pipe buffer", async () => {
     // `grep -q` exits at its first match, so a producer still writing takes
     // SIGPIPE and returns 141 — which `pipefail` makes the pipeline's status.
-    // A marker near the start of a file larger than the pipe buffer then read
-    // as no marker, which is the whole subject of this scan.
-    const workflow = await readFile(path.join(repoRoot, ".github/workflows/ci.yml"), "utf-8");
-    const scan = workflow.split("\n").find((line) => line.includes("grep -qE")) ?? "";
-    expect(scan.slice(0, scan.indexOf("grep -qE"))).not.toContain("|");
+    // A marker near the start of a file this size then reads as no marker,
+    // which is the whole subject of this scan.
+    const result = await scanIn({
+      ...CLEAN,
+      ".github/command-files.txt": `=======\n${".claude/commands/qfai-sdd.md\n".repeat(60_000)}`,
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain("merge conflict markers");
+    expect(result.output).toContain(".github/command-files.txt");
   });
 });
