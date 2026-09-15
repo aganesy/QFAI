@@ -157,11 +157,12 @@ just placed elsewhere.
 
 **Where it goes.** The advice stays in the review pack's findings, under the
 discussion pack the next stage inventories at its Stage 0 as non-normative
-reference material, like every other part of that pack. That stage records what
-it does with the item in its own artifacts — a plan step, a spec row, an open
-question — and nothing is back-propagated into the pack. An item that stage
-records nowhere was read and not adopted, which is a decision it owns rather
-than a demand the discussion stage still carries.
+reference material, like every other part of that pack. That stage gives each
+item a disposition in its own artifacts — a plan step, a spec row, an open
+question, or a line in its evidence saying it was read and not adopted — and
+nothing is back-propagated into the pack. What it may not do is leave an item
+unmentioned: a decision nobody wrote down cannot be told from an item nobody
+read.
 
 Wrong repository facts, missing decision traceability, scope contradictions and
 defects in the pack's own safety obligations remain in remit. Non-normative
