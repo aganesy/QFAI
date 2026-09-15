@@ -131,10 +131,13 @@ const MAX_NAME_ALTERNATIVES = 64;
 function nameAlternatives(segment: string): string[] | null {
   const opened = firstGroup(segment);
   if (opened === null) return [segment];
-  const { start, bodyFrom, close, optional } = opened;
+  const { start, bodyFrom, close, optional, separators } = opened;
   const before = segment.slice(0, start);
   const after = segment.slice(close + 1);
-  const members = [...groupMembers(segment.slice(bodyFrom, close)), ...(optional ? [""] : [])];
+  const members = [
+    ...groupMembers(segment.slice(bodyFrom, close), separators),
+    ...(optional ? [""] : []),
+  ];
   const names: string[] = [];
   for (const member of members) {
     const expanded = nameAlternatives(`${before}${member}${after}`);
@@ -146,9 +149,13 @@ function nameAlternatives(segment: string): string[] | null {
 }
 
 /** The first brace or extended group outside a bracket expression, or `null`. */
-function firstGroup(
-  segment: string,
-): { start: number; bodyFrom: number; close: number; optional: boolean } | null {
+function firstGroup(segment: string): {
+  start: number;
+  bodyFrom: number;
+  close: number;
+  optional: boolean;
+  separators: string;
+} | null {
   for (const index of outsideBrackets(segment)) {
     const character = segment[index] ?? "";
     const introduced = "@?+*!".includes(character) && segment[index + 1] === "(";
@@ -161,6 +168,7 @@ function firstGroup(
       close,
       // `?(…)` and `*(…)` match nothing as well as a member.
       optional: introduced && (character === "?" || character === "*"),
+      separators: introduced ? "|" : ",",
     };
   }
   return null;
@@ -181,8 +189,15 @@ function groupEnd(segment: string, open: number): number {
   return -1;
 }
 
-/** A group body's members, split at each separator outside a nested group. */
-function groupMembers(body: string): string[] {
+/**
+ * A group body's members, split at each separator outside a nested group.
+ *
+ * `separators` is the group's own: a brace list separates on `,` and an extended
+ * group on `|`, and each character is an ordinary member of the other kind.
+ * Reading both in both places would split `@(a,b|c)` into three members where
+ * the matcher sees two.
+ */
+function groupMembers(body: string, separators = "|,"): string[] {
   const members: string[] = [];
   let from = 0;
   let depth = 0;
@@ -190,7 +205,7 @@ function groupMembers(body: string): string[] {
     const character = body[index] ?? "";
     if (character === "(" || character === "{") depth += 1;
     else if (character === ")" || character === "}") depth -= 1;
-    else if ((character === "|" || character === ",") && depth === 0) {
+    else if (separators.includes(character) && depth === 0) {
       members.push(body.slice(from, index));
       from = index + 1;
     }
@@ -360,7 +375,10 @@ const POSIX_CLASS_MEMBERS: Readonly<Record<string, string>> = {
 function classBody(body: string): string | null {
   let source = "";
   let index = 0;
-  if (/^[!^]/.test(body)) {
+  // Only `^` negates. The matcher reads a leading `!` as an ordinary member —
+  // `test_[!0-9]` selects `test_1` and not `test_x` — so rewriting it inverted
+  // the set, and a file the collector never selected was vouched for.
+  if (body.startsWith("^")) {
     source = "^";
     index = 1;
   }
@@ -386,9 +404,12 @@ function segmentPattern(segment: string, nested = false, start = true): string |
   for (let index = 0; index < segment.length; index += 1) {
     const char = segment[index] ?? "";
     if ("@?+*!".includes(char) && segment[index + 1] === "(") {
-      const close = segment.indexOf(")", index + 2);
+      // Balanced, so a nested group's own `)` does not close the outer one:
+      // `@(test_@(a|b)|spec_*)` is a pattern the collector resolves, and taking
+      // the inner close refused it here.
+      const close = groupEnd(segment, index + 1);
       if (close < 0) return null;
-      const group = alternation(segment.slice(index + 2, close).split("|"));
+      const group = alternation(groupMembers(segment.slice(index + 2, close), "|"));
       if (group === null) return null;
       if (char === "!") {
         const rest = nested ? null : segmentPattern(segment.slice(close + 1), false, false);

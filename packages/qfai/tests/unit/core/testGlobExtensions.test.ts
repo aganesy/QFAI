@@ -72,8 +72,15 @@ describe("namedTestFileMatcher", () => {
     ["packages/*/tests/**/test_[[:digit:]].*", "packages/a/tests/test_1.zig", true],
     ["packages/*/tests/**/test_[[:digit:]].*", "packages/a/tests/test_x.zig", false],
     ["packages/*/tests/**/test_[[:alpha:]].*", "packages/a/tests/test_x.zig", true],
-    ["packages/*/tests/**/test_[![:digit:]].*", "packages/a/tests/test_x.zig", true],
-    ["packages/*/tests/**/test_[![:digit:]].*", "packages/a/tests/test_1.zig", false],
+    // `!` is an ordinary member and only `^` negates, as the collector reads it.
+    ["packages/*/tests/**/test_[![:digit:]].*", "packages/a/tests/test_x.zig", false],
+    ["packages/*/tests/**/test_[![:digit:]].*", "packages/a/tests/test_1.zig", true],
+    ["packages/*/tests/**/test_[!x].*", "packages/a/tests/test_!.zig", true],
+    ["packages/*/tests/**/test_[^[:digit:]].*", "packages/a/tests/test_x.zig", true],
+    ["packages/*/tests/**/test_[^[:digit:]].*", "packages/a/tests/test_1.zig", false],
+    // A nested group closes at its own bracket, not at the inner one's.
+    ["packages/*/tests/**/@(test_@(a|b)|spec_*).*", "packages/a/tests/test_a.zig", true],
+    ["packages/*/tests/**/@(test_@(a|b)|spec_*).*", "packages/a/tests/test_c.zig", false],
   ])("reads the POSIX class in %s as the collector does: %s is %s", (glob, file, matches) => {
     expect(namedTestFileMatcher([glob])(file)).toBe(matches);
   });
