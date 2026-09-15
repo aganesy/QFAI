@@ -246,16 +246,29 @@ the ledger rows that carry those statements?
    correction does not authorise a Phase 2b re-derivation, and `/qfai-atdd`
    reads `test-list.md` and never writes it — so a pass told to cover those
    stories would have to author rows it may not write, and would stop instead.
-   The cross-spec obligation is recorded and left open. **A full pass over all
-   fourteen stories is available only after a separately approved
-   `/qfai-sdd spec-0013` Phase 2b seeds those rows**, which is the request
-   `CR-20260913-0001` and this record both name as owed and neither authorises.
+
+   **So this pass waits on the ledger repair rather than passing over what it
+   cannot cover.** Every story of this pack is active, and an uncovered one is
+   this spec's own `QFAI-ATDD-111`, not another spec's — the stage admits
+   `PASS with cross-spec obligations` only for attributable `QFAI-ATDD-113`,
+   `QFAI-ATDD-115` or `QFAI-TEST-001` residue, so recording these as a
+   cross-spec obligation would ask the reviewer gate to pass something it may
+   not. The repair is the record `CR-20260913-0001` and this one both name as
+   owed and neither authorises: a `/qfai-sdd` Phase 2b re-derivation that seeds
+   the missing `Integration` and `E2E` rows and splits the progressed rows it
+   stops at. Action 4 runs after it lands, over the ledger it leaves.
 
 5. **`/qfai-implement spec-0013`, last.** It advances each reset row from the
    handoff that pass recorded.
 
-`TDD-0027` is in `CR-20260913-0001`'s blocked set too, so actions 4 and 5 take
-it only once both records have released it.
+**Actions 1 and 2 do not wait on anything.** The file-name correction and the
+two delta rows touch no ledger and no blocked row, so this record is applied —
+`Applied at` written — as soon as they land. Actions 3 to 5 are the shared
+downstream execution both records order, and they belong to whichever record
+resolves second: `TDD-0027` sits in both blocked sets, so it is released only
+once both are resolved, and a record that held its own `Applied at` open
+waiting for them would keep its claim in the union and stop the release it is
+waiting for.
 
 ## Resolution
 

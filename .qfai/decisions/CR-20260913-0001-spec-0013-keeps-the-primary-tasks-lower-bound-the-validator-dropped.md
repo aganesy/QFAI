@@ -189,7 +189,9 @@ because what they were rejected against is still written where they are.
   `.qfai/specs/spec-0004/09_delta.md` and `.qfai/specs/_policies/10_delta.md`.
   That option restores the floor in the
   product and leaves every band statement standing, so approving it
-  authorises no other upstream edit. The section is reduced to
+  authorises no other upstream edit. **Neither `tdd/test-list.md` is here under
+  any option**, and none is owed: the ledger repair that migrates and seeds them
+  is a record of its own, and its own scope is what authorises those writes. The section is reduced to
   the approved outcome before `Status: approved` is written, because
   `QFAI-DRIFT-001` reads a path here and not the condition beside it.
 
@@ -368,10 +370,15 @@ stands.
    Options 1 and 2 remove that premise from the cases, and option 3 restores
    the floor, so each outcome changes what both files describe, and both are
    re-reviewed. Like the `spec-0004` pass, the invocation is a full pass. It
-   takes up the ATDD-owned rows still owed, `TDD-0016` to `TDD-0018`, and
-   writes an `E2E` test for each of the ten stories no test annotates,
-   `US-0013-0001` to `US-0013-0010`, once their rows exist, since all fourteen
-   of the pack's stories are active. Under option 3 the refresh runs after
+   takes up the ATDD-owned rows still owed. That is `TDD-0016` to `TDD-0018`
+   today, **and the rows the ledger repair adds before it**: `spec-0013`
+   declares `TC-0013-0014` to `TC-0013-0019` and carries a row for none of
+   them, and an undeclared `Level` routes each to `Integration` — four have
+   an integration test already and still owe a handoff and evidence, and
+   `TC-0013-0018` and `TC-0013-0019` owe a test as well. The pass runs over the
+   ledger that repair leaves, so it takes those rows too, and writes an `E2E`
+   test for each of the ten stories no test annotates, `US-0013-0001` to
+   `US-0013-0010`, since all fourteen of the pack's stories are active. Under option 3 the refresh runs after
    action 4, so it scores the restored floor rather than the ceiling it
    replaces. The matrix is owned from the ATDD
    stage onward (`qfai-atdd/SKILL.md`), so the refresh goes through that
@@ -384,17 +391,25 @@ stands.
    short in each pack, and action 1's `confirm-only` rerun seeds none. Left
    there the plan waits on a run nothing in it performs, so:
 
-   **Action 2b, before the two passes: `/qfai-sdd spec-0013` and
-   `/qfai-sdd spec-0004`, mode `re-derive`, scoped to Phase 2b.** Each seeds
-   its pack's missing `E2E` rows and migrates its ledger to the template's
-   columns; no statement moves, and no other phase writes. It is listed as an
-   approved action of this record rather than assumed, because a Phase 2b
-   re-derivation is a write neither pass may perform and neither option
-   authorises by itself. Both packs' `10_delta.md` and `tdd/test-list.md` join
-   the impact scope with it.
+   **The run that seeds them is a separate Change Request, and this record
+   waits on it.** It re-derives each pack's ledger to the template's columns and
+   seeds the `Integration` and `E2E` rows its active stories are owed — for
+   `spec-0013` the six `TC-0013-0014` to `TC-0013-0019` rows its ledger has no
+   entry for as well as the thirteen `E2E` rows — and it splits the progressed
+   rows a Phase 2b rerun stops at, `spec-0013/TDD-0028` and `spec-0004/TDD-0050`
+   among them, naming each one's boundaries and authorising its reset.
 
-   Until action 2b lands, the reset rows stay at `todo` in this record's
-   blocked set.
+   **It is a record of its own rather than an action here, for three reasons the
+   shape of this one makes unavoidable.** A delta table carries one row per
+   approved Change Request with one `Mode`, and action 1 already spends this
+   record's row on `confirm-only`; the ledger paths a Phase 2b rerun writes are
+   not in any option's impact scope, and `QFAI-DRIFT-001` reads authorisation
+   from that scope alone; and a progressed-row split is a reset, which option 3
+   refuses for every row it names. Each is a thing this record cannot grant
+   without contradicting a part of itself.
+
+   Until that record lands, the reset rows stay at `todo` in this record's
+   blocked set, and neither full pass runs.
 
    **Then `/qfai-implement spec-0013` and `/qfai-implement spec-0004` consume
    the handoffs.** `/qfai-atdd` writes no ledger cell, so under options 1 and

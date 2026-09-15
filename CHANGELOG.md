@@ -105,6 +105,70 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is two rules that can each be falsified on their own. The warning, its threshold
   and its severity are unchanged, and its message is now in English.
 
+- **Every grilling session leaves a record, and the stage's gate reads it**
+  (#1601). A run that held the session and a run that skipped it produced the
+  same spec, the same ledger and the same code, so a reviewer could only block
+  every run or accept a claim it could not check.
+
+  `/qfai-implement`, `/qfai-atdd` and `/qfai-verify` now write a
+  `## Grilling Session` section into their stage evidence, one row per session:
+  the preflight one and any that detection opened. It is the shape
+  `/qfai-discussion` already writes, with a `Subject` column in place of that
+  stage's single `Authoring began`, because these stages hold more than one
+  session. The open questions go under the same table, so the count and the
+  questions it counts are in one place.
+
+  The section opens with `Run started`, and every row ends at or after it. That
+  is what bounds the invocation: an evidence file is updated in place, and a
+  rerun over an unchanged tree produces the same `Revision`, because that
+  address excludes `.qfai/evidence/**`. A line under the heading, `Preflight`, says whether
+  the confidence check opened a session at all, so a run that needed none is
+  distinguishable from one that skipped it.
+
+  One block per stage as well as per run, because two stages share an evidence
+  file: an `E2E` / `API` / `Integration` row's proof lives in the ATDD evidence,
+  which `/qfai-atdd` wrote its own sessions into and `/qfai-implement` later
+  writes to. One table for both would have each stage's gate rejecting the
+  other's rows.
+
+  A row carries both times — when the session ended, and when the stage next
+  wrote — and this run's `Revision` beside them. A row holding only the ending
+  reads the same whether the session ran before the work or after it, because it
+  is written at the end either way; and the times alone bound no invocation,
+  since an evidence file is updated in place and last week's row satisfies them
+  too. It still cannot prove a session happened; the agent writes its own record.
+
+  `.agents/rules/grilling.md` names the four endings a row may hold, so a gate
+  and a record share one vocabulary.
+
+  | Ending        | The work may proceed                                     |
+  | ------------- | -------------------------------------------------------- |
+  | `confirmed`   | Yes                                                      |
+  | `user-closed` | Yes                                                      |
+  | `no-question` | Yes, and whatever gates the work reports those questions |
+  | `stopped`     | No. Report every open decision as open                   |
+
+  Each stage's Reviewer Gate reads the rows and gives each ending a verdict: a
+  `no-question` row with an open decision is a REVISE, because nobody was asked;
+  the same count under `user-closed` passes, because the user saw them and
+  closed the asking.
+  The gate also refuses a `Preflight` that is neither `session opened` nor
+  `confidence high`, and two rows sharing one `Session` key. It checks each
+  row's `Decisions` against the Work Orders Summary rows keyed to that session
+  and this run, and refuses a reply from the user recorded under a `no-question`
+  row. A mutation-only `/qfai-implement` run writes no block, since that branch writes nothing to its
+  rows' evidence, and reports its sessions in its output.
+
+  A session between agents reaches none of the four on its own. Its budget ends
+  the rounds between agents, and every decision the user has not settled goes to
+  the user, the ones the agents agreed on included, and the user ends it — which the primitive said the other way round, so an agent could
+  terminate a session before the user saw what it escalated.
+
+  `qfai init` also brings the one-line summary of this rule up to date in an
+  existing `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md`. It
+  replaces the line only while it is exactly what 1.12.0 wrote, and leaves a line
+  the project edited as it is.
+
 ### Fixed
 
 - The implementation reviewer flags promises neither awaited nor returned rather
@@ -387,6 +451,120 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   as the members a regular expression takes — so a project whose test glob uses
   one is no longer told the file it generated does not match it. A backslash in
   a class escapes the member after it, so `[\-T]` names a hyphen and `T`.
+
+- **The ATDD traceability scan reads every package's acceptance tests, not only
+  the one under `paths.testsDir`** (#1588, #1745). That setting holds a single path, so
+  a repository whose suites live one per package could name at most one of them.
+  The three globs the scan built from it matched whatever was under the
+  configured root, and in this repository that was two prose annotation carriers
+  and no test at all. Every obligation was then satisfied by a list of IDs, and
+  `QFAI-ATDD-111` and `-112` could not report a coverage gap.
+
+  The scan now also collects from the project's own
+  `validation.traceability.testFileGlobs`, minus its `testFileExcludeGlobs` and
+  any negative entry in the list itself, which the scan used to read anyway, and
+  a file collected that way is answered by the segment **inside its test
+  root** — `<package>/tests/<layer>/**`. Read from any ancestor instead, every
+  test of a package called `api` lands in the API layer, including its unit
+  suite. The globs are used as written: a base is
+  never derived by slicing one, because a glob whose directory part carries a
+  wildcard slices to a base with the wildcard still in it, and a layer glob
+  synthesized under that base addresses a directory the project never
+  configured.
+
+  Measured on this repository: obligations covered by an annotation carrier
+  alone fall from 781 to 384 — 93 user stories and 304 test cases move to a test
+  that exists and runs — with no new finding at any severity.
+
+  A collected file in none of the three directories answers nothing and is not
+  reported as misplaced. A unit suite owes ATDD nothing wherever it sits, so
+  `QFAI-ATDD-105` keeps its subject: a file under `paths.testsDir` that no layer
+  owns. It skips a file the project withdrew, whether through
+  `testFileExcludeGlobs` or a negative `testFileGlobs` entry.
+
+  The stub gate collects the extensions its own pattern names, plus any a
+  project glob names outright — and those reach the layer globs it generates
+  under `paths.testsDir` as well, so an extension named only by a package glob
+  is collected from the configured root too. A glob used as written may be extension-broad, so
+  a fixture beside the suite — `tests/integration/data.json` — reached a scan
+  that had nothing to say about it and was reported as an unscanned language;
+  and a glob naming `.zig` selects a language with no dialect on purpose, which
+  is what that report is for. The same holds for a glob naming a file with no
+  extension, such as `tests/integration/test_pay`, or an extension through a
+  short character class, such as `*.[z]ig`, or a glob that names the file itself
+  and leaves the extension open, such as `*.test.*`, `*.{test,spec}.*` or
+  `test_[0-9].*`. A negative entry names no extension, either for the stub gate
+  or for the scan's own file pattern; one opening a negated extglob, such as
+  `!(fixtures)/**/*.zig`, selects, and names its extension to both. A negated
+  group in the file name, as in `*.!(json)`, keeps every file it selects. A glob
+  that names the file or its extension, such as `*.test.*` or `*.zig`, is read
+  against the whole path it selects, so a file only another package's broad
+  glob collected passes on neither. A numeric or character brace range in such
+  a glob, as in `test_{1..3}.*`, selects the names fast-glob expands it to.
+  Its wildcards skip a name that starts with a dot, as the scan's do, so
+  `packages/*/tests/**/*.test.*` names nothing under `.generated/`. Each glob is
+  trimmed before its extension is read.
+
+  The coverage scan reads a collected file the same way: a data file an
+  extension-broad glob sweeps into an acceptance layer is not a source, so an
+  annotation-shaped fixture value in `tests/integration/data.json` discharges
+  nothing, even where another package's glob names `.json`.
+
+  A file in no acceptance layer is dropped while the stream runs, before it is
+  counted against the collection limit. A project glob may match a whole
+  monorepo, and files no acceptance rule reads would otherwise spend the limit
+  on the first packages and never reach the later ones — reported only as an
+  `info`, which `--fail-on error` passes. `scan.matchedFileCount` therefore
+  counts acceptance files rather than glob matches.
+
+  A `validation.traceability.testFileGlobs` entry naming a range no pattern
+  engine compiles, such as `test_[z-a].*`, no longer ends the run. It selects
+  nothing, and every other glob is still read. A directory one of the globs
+  reaches that cannot be read no longer empties the ATDD scan either: the other
+  patterns are read, and `QFAI-ATDD-134` names each pattern it could not read.
+  A scan that stops at the file limit is an error under the same code, where it
+  was only a flag in the summary artifact. A partly unreadable scan claims no
+  obligation is covered by a carrier alone, as a truncated one does, and the
+  summary artifact lists the globs it could not read.
+  A stub-scan notice about a project glob names
+  `validation.traceability.testFileGlobs` rather than `paths.testsDir`.
+
+  A misplaced test-case reference is fixed in the file that carries it, and the
+  remediation now names that file, whichever package's suite it sits in. Every
+  remediation that names a layer directory, the missing-coverage ones and
+  the deferral notices alike, names the package's own suite as well as
+  `paths.testsDir`, so an author following the canonical fix does not build a
+  parallel central suite the shipped skill tells them not to build.
+
+  A collected file answers a layer only from inside a test root — a directory
+  named `tests`, `test` or `__tests__`, or the one `paths.testsDir` points at,
+  and in either case one that carries no package manifest, since a workspace
+  package named `tests` is a package rather than a suite root. The manifest is
+  read for the ecosystems a workspace declares packages in, not Node's alone: a
+  Python or Go workspace can name a package that way too. Only a file counts as
+  a manifest, so a fixture directory called `go.mod` does not. A file a
+  suite also keeps for its runner — `package.json`, `deno.json`, `deno.jsonc`,
+  `pyproject.toml`, `setup.cfg`, `CMakeLists.txt` — counts only when it names a
+  package, as a CMake `project()` command does, and
+  `deno.jsonc` is parsed with its comments and trailing commas, so a `name`
+  nested in another object or left in a comment names nothing.
+  The glob `qfai init` derives reaches colocated sources, so reading the file's
+  own parent instead would have made every `src/api/client.spec.ts` an API
+  acceptance test: its annotation could then discharge an obligation, and an
+  unfilled stub in it could block a gate that owns no unit test. A suite kept
+  outside those roots is reported as uncovered until its root is named, which
+  is the safe direction of the two.
+
+  The scaffold marker still hands an unfilled skeleton to
+  `D-SCAFFOLD-PLACEHOLDER`, but only where that validator looks — both halves of
+  its scan, the four directories under `paths.testsDir` and the writer's own
+  basename patterns. A marked skeleton outside either was exempt from this gate
+  and uncollected by that one, leaving the ATDD gate green over a suite that
+  does not run. A skeleton naming only test cases at `L1` or `L2` stays this
+  gate's too, since that validator reports nothing for them.
+  `--profile tdd` runs no such validator, so there the stub gate
+  reports every marked skeleton it reads, and it reads the acceptance
+  directories as well as `testFileGlobs`, as the coverage check it runs does.
 
 - **The `primary_tasks` band drift is recorded where the Drift Protocol looks
   for it** (#1621). `QFAI-AUD-020` lost its lower bound as product work, and
