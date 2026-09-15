@@ -27,9 +27,6 @@ cases):
 | unit        |   850 |    77 |
 | scripts     |   741 |    36 |
 
-The largest has changed since this file was last measured, when `core` held 2439 cases against
-`e2e`'s 1531. `core` is second now.
-
 The two units are used for different things: case count is what "largest" is judged on, and file
 count is what the row re-checks, because a directory walk costs milliseconds and spawning the
 runner from a test is the cost that put this spec's own integration slice past its timeout.
@@ -44,8 +41,8 @@ test files: 198
 
 ## The comparison
 
-Machine: 14 logical CPUs. Command: `QFAI_TEST_MAX_WORKERS=<n> npx vitest run --project e2e`, one
-full run per setting, `Duration` as vitest reports it.
+Machine: 14 logical CPUs. Command: `QFAI_TEST_MAX_WORKERS=<n> pnpm -C packages/qfai test:e2e`,
+one full run per setting, `Duration` as vitest reports it.
 
 | workers | duration | vs fastest | tests                                |
 | ------- | -------- | ---------- | ------------------------------------ |
@@ -72,13 +69,10 @@ than the number that exposes it. `DR-0017-0009` records that episode, including 
 lower the value and its refusal; `BR-0017-0051` reserves the choice of starting value to the user in
 the first place, so adopting 14 on the strength of this table is not a decision this row may take.
 
-**What the curve does now.** On the project this table measures, the setting and the wall clock move
-together in the other direction from the last measurement: 4 is the slowest and 14 the fastest, over
-a 14.64-second spread on a 73-second run. The previous table, taken on `core`, had 4 fastest and 14
-worst by 18%. So neither shape is a property of the repository; each is a property of the project
-measured and of the tree at the time. What the two have in common is the margin at ten: 3.48% then,
-6.01% now, both inside the allowance. That is what the case for 10 rests on, and it is worth
-re-reading this table before anyone lowers the allowance.
+**What the curve says.** On this project the wall clock falls as the setting rises, over a
+14.64-second spread on a 73-second run, so the shape is a property of the project measured rather
+than of the repository. The case for ten rests on the instruction and on the margin — 6.01%, 4.39
+seconds — and anyone lowering the ten-percent allowance should read this table first.
 
 ## The same question on four cores
 
@@ -95,9 +89,8 @@ The collect and test figures are summed across forks, and their collapse is what
 understates: at ten forks on four cores most of each fork's measured time is spent waiting for a
 core rather than working. Summed test time falls to a third while the same 11 338 cases run with
 the same outcomes. The suite is not ten-way parallel on that machine; it only reports as though it
-were. On the wall clock ten is 21.5% slower, well outside the ten percent `EX-0017-0049` allows —
-where on fourteen cores it has stayed inside, at 3.48% against the table this file used to carry and
-6.01% against the one above.
+were. On the wall clock ten is 21.5% slower, well outside the ten percent `EX-0017-0049` allows,
+where on fourteen cores it is 6.01%, inside it.
 
 An independent pair of runs on the same core count gave 299 s and 269 s, a 11.2% spread. Both pairs
 put ten outside the allowance and four ahead, so the conclusion does not rest on either one alone.
@@ -124,11 +117,3 @@ One run per setting, not a best-of-three. Recorded as a limitation rather than s
 shown elsewhere in this spec's evidence, so this data does not establish that 14 beats 10 — only
 that the two are close, which is the fact the reason above rests on. The 4-worker row is outside
 that band. A best-of-three is the obvious improvement if the margin ever approaches ten percent.
-
-**Why this file was re-measured.** `main` reached 174 `core` test files against the 145 recorded
-here — exactly the row's twenty-percent tolerance, so the next core test file any branch landed
-reddened `TC-0017-0065`, and with it `test (e2e)`, `node-floor` and `ci-pass`. The row's stated
-reason is that "beyond twenty percent the comparison describes a different project", and again it
-was right for more than the count: the largest project is no longer the one the previous table was
-run on, and the curve on the new one runs the other way. Re-typing the count would have left the
-comparison describing a project this file no longer names.
