@@ -224,7 +224,7 @@ and `Selector` back to `-` too.
 
 Re-derive `spec-0013`'s ledger to its template — the six columns it lacks, the
 rows Phase 2b owes, and the twelve splits in the table — and reset these
-seventeen rows to `todo`, discarding the evidence and reviewer hashes recorded
+eighteen rows to `todo`, discarding the evidence and reviewer hashes recorded
 against each?
 
 - The twelve kept rows of the splits: `TDD-0003`, `TDD-0019`, `TDD-0020`,
@@ -326,8 +326,12 @@ at its own granularity, so this record does not decompose it below that.
      finding;
    - **drops from each retained selector the case that exercises another
      boundary.** `TDD-0025`'s kept boundary requires a companion and a
-     frontmatter write, so its no-companion case moves to the row whose boundary
-     states it; and `TDD-0030`'s missing-`id` case also asserts the empty-list
+     frontmatter write, so its no-companion case is removed: no boundary in the
+     table above owns it — `TC-0013-0030`'s two are the companion-driven write
+     and the resolver's strict reading, and `TDD-0026`'s no-companion clause is
+     about a different subject, the validator raising no finding — so moving it
+     would put it on a row it does not belong to. It returns when an upstream
+     obligation states it and a row is seeded for it; and `TDD-0030`'s missing-`id` case also asserts the empty-list
      `QFAI-AUD-001` outcome, which is a different obligation, so that assertion
      goes. Either would let an unrelated failure red a row whose own boundary
      still holds, which is the isolation the split is for;

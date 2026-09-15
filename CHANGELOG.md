@@ -675,6 +675,45 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   user can name. Each blocks the ledger rows its items change, and no rule or
   code changes until it is applied.
 
+- **An unresolved merge in a pinned file is named as one** (#1722). A conflict
+  block changes a pinned file's bytes like any other edit, so the byte guard
+  that opens the lint job failed it as a digest mismatch and named resealing as
+  the repair. The scan that would have named the real cause runs later in the
+  same job, and a job stops at its first failure, so the cause arrived a CI
+  round late, after the operator had followed the wrong advice once.
+
+  The guard now scans the pinned paths for marker lines before comparing
+  digests, and says that resealing is not the repair. The re-pin program
+  refuses the same tree rather than sealing a conflict block as the reviewed
+  bytes. Both read markers as the tracked-file scan does, so a fenced example
+  in a Markdown file is not one.
+
+  One path had no later reader at all: the pinned-bytes list is rewritten from
+  the tree rather than edited, so a conflict inside it was discarded by the
+  reseal and the only trace was a routine-looking re-pin commit. Both checks
+  read that file too, although the list does not name itself, and the two other
+  lists the workflow step pins. That step now scans its pinned inputs before it
+  checks their digests, so a conflict in one of them is named there as well.
+  The re-pin program also scans the files it writes the new digests into, the
+  status-context declaration and the workflow, before it writes anything.
+
+- **An active-pointer state no directory can be in is recorded where the Drift
+  Protocol looks for it** (#1693). A shared decision and both packs that follow
+  it say a recovery error is raised when the pointer resolves to a duplicate
+  pack. The helper and the `discussion list --active` command both take their
+  candidates from one directory listing and match on an exact name, so no two
+  can match, and that has been true since the branch was written: it has never
+  been reachable.
+
+  `CR-20260913-0004`, a defect-class request awaiting approval, proposes
+  removing the duplicate state from the rule, keeping its absent and missing
+  conditions — at the shared decision first, then in both packs — while keeping the command's
+  single-candidate read, and lists both unreachable branches for removal. No
+  rule or code changes until it is applied, after the record that repairs
+  spec-0013's ledger. It blocks the ledger rows whose obligation names the
+  duplicate state, and proposes correcting a completed row's evidence that claims its run
+  covered that state.
+
 - **spec-0013's ledger repair is recorded where the Drift Protocol looks for it**
   (#1750). The ledger has nine of the template's fifteen columns, no row for six
   integration-level test cases, one for fourteen stories, and thirteen rows past
