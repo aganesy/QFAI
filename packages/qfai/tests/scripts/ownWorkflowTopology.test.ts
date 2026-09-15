@@ -86,6 +86,8 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
+import { invokedScriptBodies } from "../../../../scripts/check-workflow-hygiene.mjs";
+
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -3380,5 +3382,750 @@ describe("release automation performs decisions rather than making them", () => 
         "the filter must drop a missing value rather than print it as `null`",
       ).toContain("// empty");
     });
+  });
+});
+
+/**
+ * The release gate against a tag whose tree declares a different set of scripts from this one.
+ *
+ * `release.yml` checks out the TAG's tree and runs package scripts out of it, and on
+ * `workflow_dispatch` the workflow file comes from the default branch while the tree comes from
+ * the tag. That path exists to re-publish a tag that already exists, so the scripts a gate job
+ * may name are whatever that tag declares — and the tags in this repository declare three
+ * different sets:
+ *
+ * | script                                  | v1.12.0 | v1.10.0 | v1.8.0  |
+ * | --------------------------------------- | ------- | ------- | ------- |
+ * | `ci:gate:checks`, root                  | absent  | absent  | absent  |
+ * | `ci:gate`, root                         | present | present | present |
+ * | `test`, package                         | present | present | present |
+ * | `test:unit`, `test:scripts`, package    | present | absent  | absent  |
+ * | the other five `test:<slice>`, package  | present | present | present |
+ *
+ * A gate that names a script the tag does not declare fails before a check has run, and since
+ * publication waits on the gate, such a tag cannot be re-published at all.
+ *
+ * ## Three failures, and why a set is not enough to catch them
+ *
+ * The middle column is the one that decides the shape. A tag can carry SOME of the slice scripts,
+ * so "does this slice have a script" answered per leg reads v1.10.0 as sliced for five legs and
+ * as old for two — which means the aggregate runs the suite whole in `gate` while five legs run
+ * it again beside it, and the two legs with no script report green having run nothing. The suite
+ * runs twice for five slices and not at all for two, in one release.
+ *
+ * So the rows below assert a MULTISET, not a set: every package test script the gate jobs would
+ * invoke for one tag, counted, must be exactly one cover of the suite — `test` alone, or the
+ * seven slices. A second copy of `test` shows up as a duplicate, a dropped slice as a short list,
+ * and a mixed run as neither.
+ *
+ * ## Executed, not pattern-matched
+ *
+ * The classifier is a Node program inside a quoted heredoc in `release.yml`, extracted here and
+ * run. A row asserting the shape of its `if` statements agrees with whatever is written there,
+ * which is how per-leg detection survived review in the first place.
+ *
+ * ## Where the manifests come from
+ *
+ * The program reads two manifests and looks up script keys, so the script key set is the whole of
+ * what a manifest is to it. Each tag's sets are recorded below, read off the tags themselves, and
+ * a tag is immutable — so these are a record rather than an approximation. They are recorded
+ * because the job that runs this file checks out at depth 2 and fetches no tags, and a row that
+ * needs `git show v1.10.0:package.json` would be skipped in exactly the place it has to run. The
+ * last row re-derives them from the tags wherever the tags are reachable.
+ */
+describe("the release gate runs what the tag's tree declares, and runs the suite once", () => {
+  const RELEASE_WORKFLOW = path.join(WORKFLOWS_DIR, "release.yml");
+
+  /**
+   * The script key sets three real tags declare, and the body of the aggregate each one carries.
+   *
+   * Three and not all of them: these are the three shapes. Every tag from `v1.11.0` on matches
+   * `v1.12.0`, the `v1.9.x` and `v1.10.x` line matches `v1.10.0`, and everything before matches
+   * `v1.8.0`.
+   */
+  const TAGGED_MANIFESTS = {
+    "v1.12.0": {
+      root: [
+        "preinstall",
+        "build",
+        "sync:ssot",
+        "ci:gate",
+        "ci:lint",
+        "ci:build-verify",
+        "ci:coverage",
+        "lint",
+        "lint:md",
+        "lint:mermaid",
+        "lint:mdschema",
+        "lint:doc-clarity",
+        "format",
+        "format:check",
+        "check-types",
+        "check-types:future",
+        "test:assets",
+        "verify:pack",
+        "prepack",
+      ],
+      package: [
+        "build",
+        "prepack",
+        "lint",
+        "lint:branch-version",
+        "lint:shipping",
+        "lint:workflow-shape",
+        "lint:mirror-surface",
+        "generate:rule-codes",
+        "generate:governed-manifest",
+        "check-types",
+        "test",
+        "test:coverage",
+        "test:core",
+        "test:validators",
+        "test:integration",
+        "test:e2e",
+        "test:cli",
+        "test:unit",
+        "test:scripts",
+        "test:assets",
+        "self-validate",
+      ],
+    },
+    "v1.10.0": {
+      root: [
+        "preinstall",
+        "build",
+        "sync:ssot",
+        "ci:gate",
+        "ci:lint",
+        "ci:build-verify",
+        "ci:coverage",
+        "lint",
+        "lint:md",
+        "format",
+        "format:check",
+        "check-types",
+        "check-types:future",
+        "test:assets",
+        "verify:pack",
+        "prepack",
+      ],
+      package: [
+        "build",
+        "prepack",
+        "lint",
+        "lint:branch-version",
+        "lint:shipping",
+        "check-types",
+        "test",
+        "test:coverage",
+        "test:core",
+        "test:validators",
+        "test:integration",
+        "test:e2e",
+        "test:cli",
+        "test:assets",
+        "self-validate",
+      ],
+    },
+    "v1.8.0": {
+      root: [
+        "build",
+        "sync:ssot",
+        "ci:gate",
+        "ci:lint",
+        "ci:build-verify",
+        "lint",
+        "lint:md",
+        "format",
+        "format:check",
+        "check-types",
+        "check-types:future",
+        "test:assets",
+        "verify:pack",
+        "prepack",
+      ],
+      package: [
+        "build",
+        "prepack",
+        "lint",
+        "check-types",
+        "test",
+        "test:core",
+        "test:validators",
+        "test:integration",
+        "test:e2e",
+        "test:cli",
+        "test:assets",
+      ],
+    },
+  } as const;
+
+  /** The tag keys, narrowed once so every row below indexes the record rather than a string. */
+  const TAGS = Object.keys(TAGGED_MANIFESTS) as Array<keyof typeof TAGGED_MANIFESTS>;
+
+  /**
+   * A manifest carrying exactly these script keys.
+   *
+   * The bodies are a placeholder because the classifier never reads one: it asks whether the
+   * lookup yields a string. Writing the real bodies here would record something no row checks and
+   * invite a reader to trust it.
+   */
+  const manifestWith = (keys: readonly string[]): string =>
+    JSON.stringify({ scripts: Object.fromEntries(keys.map((key) => [key, "…"])) });
+
+  const releaseDocument = (): Record<string, unknown> => {
+    const parsed: unknown = parseYaml(readFileSync(RELEASE_WORKFLOW, "utf-8"));
+    if (!isRecord(parsed)) throw new Error("release.yml did not parse to a mapping");
+    return parsed;
+  };
+
+  const releaseJobs = (): Record<string, Record<string, unknown>> => {
+    const jobs = releaseDocument()["jobs"];
+    if (!isRecord(jobs)) throw new Error("release.yml declares no jobs");
+    const out: Record<string, Record<string, unknown>> = {};
+    for (const [id, job] of Object.entries(jobs)) {
+      if (!isRecord(job)) throw new Error(`release.yml's ${id} job did not parse to a mapping`);
+      out[id] = job;
+    }
+    return out;
+  };
+
+  const steps = (job: Record<string, unknown>): Array<Record<string, unknown>> => {
+    const value = job["steps"];
+    if (!Array.isArray(value)) return [];
+    return value.filter((step): step is Record<string, unknown> => isRecord(step));
+  };
+
+  /** The `verify` step that decides, identified by the id its output expression names. */
+  const shapeStep = (): Record<string, unknown> => {
+    const verify = releaseJobs()["verify"];
+    if (verify === undefined) throw new Error("release.yml declares no verify job");
+    const step = steps(verify).find((candidate) => candidate["id"] === "shape");
+    if (step === undefined) throw new Error("release.yml's verify job declares no `shape` step");
+    return step;
+  };
+
+  /** The slice list the decision is made against, read off the step rather than restated here. */
+  const declaredSlices = (): string[] => {
+    const env = shapeStep()["env"];
+    const value = isRecord(env) ? env["SUITE_SLICES"] : undefined;
+    if (typeof value !== "string") throw new Error("the shape step declares no SUITE_SLICES");
+    return value.trim().split(/\s+/).filter(Boolean);
+  };
+
+  /**
+   * The classifier, out of its quoted heredoc.
+   *
+   * Quoted is what makes the extraction sound: bash expands nothing inside `<<'SHAPE'`, so the
+   * bytes the runner executes and the bytes below are the same bytes. Exactly one well-ordered
+   * delimiter pair is accepted — a silent zero-match would hand every row an empty program, and
+   * `node ""` exits 0, so every row that expects a refusal would fail and every row that expects
+   * a classification would fail for the wrong reason.
+   */
+  const classifierProgram = (): string => {
+    const body = shapeStep()["run"];
+    if (typeof body !== "string") throw new Error("the shape step has no run body");
+    const lines = body.split(/\r?\n/);
+    const opens = lines.flatMap((line, index) => (line === "node - <<'SHAPE'" ? [index] : []));
+    const closes = lines.flatMap((line, index) => (line === "SHAPE" ? [index] : []));
+    if (opens.length !== 1 || closes.length !== 1) {
+      throw new Error(
+        `the shape step must hold exactly one quoted SHAPE heredoc; found ${opens.length} ` +
+          `openings and ${closes.length} terminators`,
+      );
+    }
+    const [open] = opens;
+    const [close] = closes;
+    if (open === undefined || close === undefined || close <= open + 1) {
+      throw new Error("the shape step's SHAPE heredoc is empty or its delimiters are out of order");
+    }
+    return `${lines.slice(open + 1, close).join("\n")}\n`;
+  };
+
+  type Classification = { status: number; shape: string; output: string };
+
+  /**
+   * The classifier, run against two manifests.
+   *
+   * `.cjs`, because the workflow feeds it to `node -` on stdin, which Node reads as CommonJS.
+   * A `.js` file in a directory with no manifest is read the same way today; naming the module
+   * system is what keeps the two from drifting apart on a future Node.
+   */
+  const classify = (
+    root: string,
+    pkg: string,
+    slices: string[] = declaredSlices(),
+  ): Classification => {
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-gate-shape-"));
+    try {
+      const program = path.join(dir, "classify.cjs");
+      const outputFile = path.join(dir, "github-output");
+      writeFileSync(program, classifierProgram(), "utf-8");
+      writeFileSync(outputFile, "", "utf-8");
+      const run = spawnSync("node", [program], {
+        encoding: "utf-8",
+        env: {
+          ...process.env,
+          ROOT_MANIFEST: root,
+          PACKAGE_MANIFEST: pkg,
+          SUITE_SLICES: slices.join(" "),
+          GITHUB_OUTPUT: outputFile,
+        },
+      });
+      if (run.error !== undefined) throw run.error;
+      const written = readFileSync(outputFile, "utf-8");
+      const match = /^suite-shape=(.*)$/m.exec(written);
+      return {
+        status: run.status ?? -1,
+        shape: match?.[1] ?? "",
+        output: `${run.stdout ?? ""}${run.stderr ?? ""}`,
+      };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  const classifyTag = (tag: keyof typeof TAGGED_MANIFESTS): Classification =>
+    classify(manifestWith(TAGGED_MANIFESTS[tag].root), manifestWith(TAGGED_MANIFESTS[tag].package));
+
+  /** This tree's own manifests, which are the sliced shape by construction. */
+  const currentRoot = (): string => readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8");
+  const currentPackage = (): string =>
+    readFileSync(path.join(REPO_ROOT, "packages", "qfai", "package.json"), "utf-8");
+
+  const scriptKeys = (manifest: string): string[] => {
+    const parsed: unknown = JSON.parse(manifest);
+    if (!isRecord(parsed) || !isRecord(parsed["scripts"])) {
+      throw new Error("a manifest under test declares no scripts");
+    }
+    return Object.keys(parsed["scripts"]);
+  };
+
+  /**
+   * Which shape a job or a step runs under.
+   *
+   * A condition that never mentions the decision is orthogonal to it — the two build steps select
+   * on `matrix.slice` — and counts as running under both. A condition that DOES mention it must
+   * be one of the two forms, and throws otherwise: a shape condition rewritten into something
+   * this reader does not understand is exactly when the rows below would silently start agreeing
+   * with whatever it now means.
+   */
+  const SHAPE_CONDITION = /^needs\.verify\.outputs\.suite-shape == '(sliced|whole)'$/;
+
+  const runsUnder = (owner: Record<string, unknown>, where: string, shape: string): boolean => {
+    const condition = owner["if"];
+    if (condition === undefined) return true;
+    if (typeof condition !== "string") throw new Error(`${where} carries a non-string condition`);
+    const text = condition.trim();
+    if (!text.includes("suite-shape")) return true;
+    const match = SHAPE_CONDITION.exec(text);
+    if (match === null) {
+      throw new Error(`${where} selects on the shape in a form this row cannot classify: ${text}`);
+    }
+    return match[1] === shape;
+  };
+
+  /** The gate jobs, discovered by prefix and held at the four this workflow declares. */
+  const gateJobs = (): Record<string, Record<string, unknown>> =>
+    Object.fromEntries(Object.entries(releaseJobs()).filter(([id]) => id.startsWith("gate")));
+
+  const matrixSlices = (job: Record<string, unknown>): string[] => {
+    const strategy = job["strategy"];
+    const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
+    const slices = isRecord(matrix) ? matrix["slice"] : undefined;
+    if (slices === undefined) return [""];
+    if (!Array.isArray(slices) || !slices.every((s) => typeof s === "string")) {
+      throw new Error("a gate job declares a matrix.slice that is not a list of strings");
+    }
+    return slices;
+  };
+
+  /** Whether a job resolves the engines floor, read off the setup step's inputs. */
+  const pinsFloor = (job: Record<string, unknown>): boolean =>
+    steps(job).some((step) => {
+      const inputs = step["with"];
+      return isRecord(inputs) && inputs["pin-engines-floor"] === "true";
+    });
+
+  type Invocation = { jobId: string; where: string; manifest: "root" | "package"; script: string };
+
+  /**
+   * Every script a gate job would invoke for a tag of this shape.
+   *
+   * `pnpm <name>` reads from the root manifest and `pnpm -C packages/qfai <name>` from the
+   * package's. No gate step calls a pnpm built-in, so every match is a script that has to exist;
+   * a `-C` naming any other directory throws rather than being dropped.
+   */
+  const invocations = (shape: string): Invocation[] => {
+    const out: Invocation[] = [];
+    for (const [jobId, job] of Object.entries(gateJobs())) {
+      if (!runsUnder(job, `release.yml#${jobId}`, shape)) continue;
+      for (const step of steps(job)) {
+        const name = String(step["name"] ?? "(unnamed)");
+        const where = `release.yml#${jobId}: ${name}`;
+        if (!runsUnder(step, where, shape)) continue;
+        const body = step["run"];
+        if (typeof body !== "string") continue;
+        for (const slice of matrixSlices(job)) {
+          const text = body.split("${{ matrix.slice }}").join(slice);
+          for (const match of text.matchAll(/\bpnpm (?:-C (\S+) )?([A-Za-z][\w:.-]*)/g)) {
+            const directory = match[1];
+            const script = match[2];
+            if (script === undefined) continue;
+            if (directory !== undefined && directory !== "packages/qfai") {
+              throw new Error(`${where} runs pnpm -C ${directory}, which this row cannot resolve`);
+            }
+            out.push({
+              jobId,
+              where,
+              manifest: directory === undefined ? "root" : "package",
+              script,
+            });
+          }
+        }
+      }
+    }
+    return out;
+  };
+
+  /**
+   * The suite call every tag's `ci:gate` ends in.
+   *
+   * Recorded rather than read, because the rows that need it run where the tags are not fetched.
+   * The last row in this block re-derives it from the tags themselves wherever they are
+   * reachable, and all three carry this call verbatim.
+   */
+  const TAGGED_AGGREGATE_BODY = "pnpm -C packages/qfai test";
+
+  /**
+   * What the root aggregate a gate step names would itself run.
+   *
+   * On the old path it is the tag's own `ci:gate`, recorded above. On the sliced path the gate
+   * names `ci:gate:checks`, which is THIS tree's script, so it is resolved transitively by the
+   * reader the hygiene lane already uses: a checks script that started reaching the suite through
+   * something it calls would make the sliced path a double run, and one hop would not see it.
+   */
+  const aggregateBody = (shape: string): string => {
+    if (shape === "whole") return TAGGED_AGGREGATE_BODY;
+    const resolved: unknown = invokedScriptBodies("pnpm ci:gate:checks", REPO_ROOT);
+    if (!Array.isArray(resolved)) {
+      throw new Error("the script reader returned no list for pnpm ci:gate:checks");
+    }
+    return resolved.map((entry) => (Array.isArray(entry) ? String(entry[1] ?? "") : "")).join("\n");
+  };
+
+  /**
+   * The package test scripts one tag's gate would run, counted, on one Node resolution.
+   *
+   * A root script contributes what IT runs: on the old path the gate runs `ci:gate`, whose body
+   * ends in `pnpm -C packages/qfai test`, so the aggregate's suite run is counted here as one.
+   * That is the whole reason a count is taken rather than the job list read — the aggregate's
+   * suite and a sliced leg are the same suite arriving by two routes, and a set would swallow the
+   * second.
+   */
+  const suiteRuns = (shape: string, floor: boolean): string[] => {
+    const onFloor = new Set(
+      Object.entries(gateJobs())
+        .filter(([, job]) => pinsFloor(job) === floor)
+        .map(([id]) => id),
+    );
+    const runs: string[] = [];
+    for (const invocation of invocations(shape)) {
+      if (!onFloor.has(invocation.jobId)) continue;
+      if (invocation.manifest === "package") {
+        if (invocation.script === "test" || invocation.script.startsWith("test:")) {
+          runs.push(invocation.script);
+        }
+        continue;
+      }
+      if (!invocation.script.startsWith("ci:gate")) continue;
+      for (const match of aggregateBody(shape).matchAll(
+        /\bpnpm -C packages\/qfai (test(?::[\w-]+)?)\b/g,
+      )) {
+        const script = match[1];
+        if (script !== undefined) runs.push(script);
+      }
+    }
+    return runs.sort();
+  };
+
+  it("reads every existing tag as the shape its tree can actually run", () => {
+    const seen = new Map<string, string>();
+    for (const tag of TAGS) {
+      const result = classifyTag(tag);
+      expect.soft(result.status, `${tag}: ${result.output}`).toBe(0);
+      seen.set(tag, result.shape);
+    }
+    // Every tag cut so far predates `ci:gate:checks`, so all three read as the old shape. The
+    // current tree is the other one, and asserting it here is what keeps the row from passing on
+    // a classifier that answers `whole` to everything.
+    expect(
+      Object.fromEntries(seen),
+      "an existing tag must read as the shape its tree carries",
+    ).toEqual({ "v1.12.0": "whole", "v1.10.0": "whole", "v1.8.0": "whole" });
+    expect(
+      classify(currentRoot(), currentPackage()).shape,
+      "this tree declares ci:gate:checks and all seven slices, so it is the sliced shape",
+    ).toBe("sliced");
+  });
+
+  /**
+   * Every tree the gate has to work against: the three tagged shapes, and this one.
+   *
+   * This tree is in the list because it is the only tree that takes the sliced path — no tag has
+   * been cut on it yet — so without it the sliced half of the workflow is walked by nothing and
+   * both rows below would pass on a sliced path that named scripts nobody declares.
+   */
+  const subjects = (): Array<{
+    label: string;
+    shape: string;
+    root: string[];
+    package: string[];
+  }> => [
+    ...TAGS.map((tag) => ({
+      label: tag,
+      shape: classifyTag(tag).shape,
+      root: [...TAGGED_MANIFESTS[tag].root],
+      package: [...TAGGED_MANIFESTS[tag].package],
+    })),
+    {
+      label: "this tree",
+      shape: classify(currentRoot(), currentPackage()).shape,
+      root: scriptKeys(currentRoot()),
+      package: scriptKeys(currentPackage()),
+    },
+  ];
+
+  it("never names a script the tree it runs against does not declare", () => {
+    const shapes = new Set<string>();
+    for (const subject of subjects()) {
+      shapes.add(subject.shape);
+      const declared = {
+        root: new Set<string>(subject.root),
+        package: new Set<string>(subject.package),
+      };
+      const found = invocations(subject.shape);
+      expect(
+        found.length,
+        `${subject.label} takes the ${subject.shape} path and runs no pnpm script`,
+      ).toBeGreaterThan(0);
+      for (const { where, manifest, script } of found) {
+        expect
+          .soft(
+            declared[manifest].has(script),
+            `${subject.label} takes the ${subject.shape} path, where ${where} runs \`${script}\` ` +
+              `— a script that tree's ${manifest} manifest does not declare, so the job fails ` +
+              "before a check runs",
+          )
+          .toBe(true);
+      }
+    }
+    expect(
+      [...shapes].sort(),
+      "both paths must be walked, or half the workflow is checked by nothing",
+    ).toEqual(["sliced", "whole"]);
+  });
+
+  it("runs the suite exactly once for one tree, on the range and on the floor", () => {
+    const slices = [...declaredSlices()].map((slice) => `test:${slice}`).sort();
+    const covers = [["test"], slices];
+    for (const { label: tag, shape } of subjects()) {
+      for (const floor of [false, true]) {
+        const runs = suiteRuns(shape, floor);
+        const isCover = covers.some(
+          (cover) => cover.length === runs.length && cover.every((s, i) => s === runs[i]),
+        );
+        expect
+          .soft(
+            isCover,
+            `${tag} takes the ${shape} path and its ${floor ? "floor" : "range"} jobs run the ` +
+              `suite as [${runs.join(", ")}] — one cover is the whole suite exactly once, either ` +
+              "`test` or the seven slices, so this is a double run, a partial one, or none at all",
+          )
+          .toBe(true);
+      }
+    }
+  });
+
+  it("refuses a slice set that is present but incomplete, rather than reading it as sliced", () => {
+    const slices = declaredSlices();
+    expect(
+      slices.length,
+      "the slice set must have members for this row to remove one",
+    ).toBeGreaterThan(1);
+    const root = scriptKeys(currentRoot());
+    const pkg = scriptKeys(currentPackage());
+    expect(
+      classify(manifestWith(root), manifestWith(pkg)).shape,
+      "with every slice present this must be the sliced shape, or the row below is vacuous",
+    ).toBe("sliced");
+    for (const dropped of slices) {
+      const thinned = pkg.filter((key) => key !== `test:${dropped}`);
+      expect(thinned, `test:${dropped} must be present to be dropped`).not.toEqual(pkg);
+      const result = classify(manifestWith(root), manifestWith(thinned));
+      expect
+        .soft(
+          result.shape,
+          `a tree with no test:${dropped} cannot take the sliced path: that leg would find no ` +
+            "script, and a leg with nothing to run reports green over nothing",
+        )
+        .toBe("whole");
+    }
+  });
+
+  it("refuses rather than passing when it can classify the tree as neither shape", () => {
+    const slices = declaredSlices();
+    const allSlices = slices.map((slice) => `test:${slice}`);
+    const rows: Array<[string, string, string]> = [
+      ["neither aggregate", manifestWith(["build", "lint"]), manifestWith(["test", ...allSlices])],
+      [
+        "the sliced aggregate, a slice short, and no fallback aggregate",
+        manifestWith(["ci:gate:checks"]),
+        manifestWith(["test", ...allSlices.slice(1)]),
+      ],
+      [
+        "the old aggregate with no package test script behind it",
+        manifestWith(["ci:gate"]),
+        manifestWith(allSlices.slice(1)),
+      ],
+      ["a root manifest that is not JSON", "{", manifestWith(["test", ...allSlices])],
+      ["a package manifest that is not JSON", manifestWith(["ci:gate"]), "not json at all"],
+      ["a root manifest that is a JSON array", "[]", manifestWith(["test", ...allSlices])],
+      ["a root manifest with no scripts", "{}", manifestWith(["test", ...allSlices])],
+      [
+        "a slice script whose value is not a string",
+        manifestWith(["ci:gate:checks"]),
+        JSON.stringify({
+          scripts: Object.fromEntries(allSlices.map((key, index) => [key, index === 0 ? 1 : "…"])),
+        }),
+      ],
+    ];
+    for (const [why, root, pkg] of rows) {
+      const result = classify(root, pkg);
+      expect
+        .soft(
+          result.status,
+          `${why}: a tree nothing can classify must stop the release, not hand the gate a shape ` +
+            `it then reports green on (it wrote suite-shape=${result.shape || "nothing"})`,
+        )
+        .not.toBe(0);
+      expect.soft(result.shape, `${why}: nothing may be published as the decision`).toBe("");
+    }
+  });
+
+  it("decides once, where every gate job reads the same answer", () => {
+    const jobs = releaseJobs();
+    const verify = jobs["verify"];
+    if (verify === undefined) throw new Error("release.yml declares no verify job");
+    const outputs = verify["outputs"];
+    expect(
+      isRecord(outputs) ? outputs["suite-shape"] : undefined,
+      "the decision must be published by `verify`, which every other job already waits for",
+    ).toBe("${{ steps.shape.outputs.suite-shape }}");
+
+    // Exactly the four gate jobs, and each one's path stated on the job or on its steps. A fifth
+    // gate job, or one whose condition stopped naming a shape, reaches `runsUnder` and throws.
+    const gates = Object.keys(gateJobs()).sort();
+    expect(
+      gates,
+      "the gate jobs are a closed set; a fifth is a change someone should read",
+    ).toEqual(["gate", "gate-floor", "gate-floor-whole", "gate-tests"]);
+    for (const shape of ["sliced", "whole"]) {
+      const running = gates.filter((id) => {
+        const job = jobs[id];
+        if (job === undefined) throw new Error(`release.yml lost its ${id} job`);
+        return runsUnder(job, `release.yml#${id}`, shape);
+      });
+      expect
+        .soft(running, `the ${shape} path must run a gate on the range and a gate on the floor`)
+        .toEqual(
+          shape === "sliced" ? ["gate", "gate-floor", "gate-tests"] : ["gate", "gate-floor-whole"],
+        );
+    }
+
+    // Publication waits on all four whichever path ran. Without a condition that accepts a
+    // skipped dependency, the jobs the other path skipped would skip these too and no tag could
+    // be published at all; with `always()` instead of these terms, a RED gate would be published
+    // over.
+    for (const id of ["github-release", "publish"]) {
+      const job = jobs[id];
+      if (job === undefined) throw new Error(`release.yml declares no ${id} job`);
+      const needs = job["needs"];
+      expect
+        .soft([...(Array.isArray(needs) ? needs : [])].sort(), `${id} must wait on every gate`)
+        .toEqual(["gate", "gate-floor", "gate-floor-whole", "gate-tests", "verify"]);
+      const condition = String(job["if"] ?? "");
+      expect
+        .soft(condition, `${id} must run when a gate the other path owns was skipped`)
+        .toContain("!cancelled()");
+      expect
+        .soft(condition, `${id} must not treat a failed gate as a passed one`)
+        .toContain("!contains(needs.*.result, 'failure')");
+      expect
+        .soft(condition, `${id} must not treat a cancelled gate as a passed one`)
+        .toContain("!contains(needs.*.result, 'cancelled')");
+      expect.soft(condition, `${id} must not publish over a red gate`).not.toContain("always()");
+    }
+  });
+
+  it("checks the same slice set the sliced jobs expand over", () => {
+    const declared = declaredSlices();
+    expect(declared.length, "the decision must name the slices it checks for").toBeGreaterThan(0);
+    for (const [id, job] of Object.entries(gateJobs())) {
+      const slices = matrixSlices(job);
+      if (slices.length === 1 && slices[0] === "") continue;
+      expect
+        .soft(
+          slices,
+          `${id} expands over a set the decision does not check for, so a tag could take the ` +
+            "sliced path with a leg that has no script",
+        )
+        .toEqual(declared);
+    }
+  });
+
+  // The tags are fetched at depth 0 or not at all, and the job that runs this file takes neither.
+  // Where they ARE reachable the record above is re-derived from them, so a transcription error
+  // is caught by the first person to run this suite against a full clone.
+  const tagsReachable = TAGS.every(
+    (tag) =>
+      spawnSync("git", ["rev-parse", "--quiet", "--verify", `${tag}^{commit}`], {
+        cwd: REPO_ROOT,
+        encoding: "utf-8",
+      }).status === 0,
+  );
+
+  it.skipIf(!tagsReachable)("records what the tags actually declare", () => {
+    for (const tag of TAGS) {
+      for (const [which, file] of [
+        ["root", "package.json"],
+        ["package", "packages/qfai/package.json"],
+      ] as const) {
+        const shown = spawnSync("git", ["show", `${tag}:${file}`], {
+          cwd: REPO_ROOT,
+          encoding: "utf-8",
+          maxBuffer: 16 * 1024 * 1024,
+        });
+        expect(shown.status, `git show ${tag}:${file} failed: ${shown.stderr}`).toBe(0);
+        expect
+          .soft(scriptKeys(shown.stdout), `${tag}'s ${which} manifest, as recorded above`)
+          .toEqual([...TAGGED_MANIFESTS[tag][which]]);
+      }
+      const shownRoot = spawnSync("git", ["show", `${tag}:package.json`], {
+        cwd: REPO_ROOT,
+        encoding: "utf-8",
+        maxBuffer: 16 * 1024 * 1024,
+      });
+      const parsed: unknown = JSON.parse(shownRoot.stdout);
+      const scripts = isRecord(parsed) ? parsed["scripts"] : undefined;
+      const aggregate = isRecord(scripts) ? scripts["ci:gate"] : undefined;
+      expect
+        .soft(
+          typeof aggregate === "string" ? aggregate : "",
+          `${tag}'s aggregate must end in the package suite, which is what makes the old path a ` +
+            "complete run and what the suite count above assumes",
+        )
+        .toContain("pnpm -C packages/qfai test");
+    }
   });
 });
