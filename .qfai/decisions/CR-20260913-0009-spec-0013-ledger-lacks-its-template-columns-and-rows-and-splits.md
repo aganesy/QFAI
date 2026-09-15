@@ -65,18 +65,79 @@ The template header,
 | TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module | Blocked-By | BR-Ref | Boundary |
 ```
 
-The cases each of the twelve selectors runs, from their test files:
+Every test case the ledger's `TC-Refs` column names, read off the table:
 
 ```text
-sddSkillSpec0013.test.ts             TC-0013-0003 describe: 2 cases
-sddUiTemplate.test.ts                TC-0013-0025 describe: 2 cases
-sddPrimaryTasksLane.test.ts          TC-0013-0026 describe: 2 cases; TC-0013-0027 describe: 3 cases
-spec0013UiContractPrimaryTasksE2E    US-0013-0011 describe: 3 cases
-activeDiscussionPack.test.ts         TC-0013-0029 describe: 3 cases
-surfaceTypePopulate.test.ts          TC-0013-0030 describe: 3 cases; TC-0013-0031 describe: 3 cases
-primaryTasksBand.test.ts             TC-0013-0032 describe: 3 cases; TC-0013-0033 describe: 3 cases
-primaryTasksStructured.test.ts       TC-0013-0034 describe: 2 cases; TC-0013-0035 describe: 5 cases
+$ awk -F'|' '/^\\| TDD-/ { gsub(/ /, "", $3); print $3 }' \
+  .qfai/specs/spec-0013/tdd/test-list.md | sort -u | tr '\n' ' '
+- TC-0013-0001 TC-0013-0002 TC-0013-0003 TC-0013-0004 TC-0013-0005 TC-0013-0006
+TC-0013-0007 TC-0013-0008 TC-0013-0009 TC-0013-0010 TC-0013-0011 TC-0013-0012
+TC-0013-0013 TC-0013-0020 TC-0013-0021 TC-0013-0022 TC-0013-0023 TC-0013-0024
+TC-0013-0025 TC-0013-0026 TC-0013-0027 TC-0013-0028 TC-0013-0029 TC-0013-0030
+TC-0013-0031 TC-0013-0032 TC-0013-0033 TC-0013-0034 TC-0013-0035 TC-Refs
 ```
+
+The list steps from `TC-0013-0013` to `TC-0013-0020`, so no row names
+`TC-0013-0014` to `TC-0013-0019`, each of which `06_Test-Cases.md` declares.
+`TC-Refs` at the end is the column header the pattern also matches.
+
+The cases each selector runs, counted per `describe` in its own file:
+
+```text
+$ for f in <the eight files the selectors name>; do
+  awk -v f="$(basename "$f")" '/^describe\(/ { t=$0; sub(/^describe\("/, "", t); sub(/".*/, "", t); next }
+                              /^  it\(/ { n[t]++ }
+                              END { for (k in n) printf "%s  %s  %d\n", f, k, n[k] }' "$f"
+done | sort
+
+activeDiscussionPack.test.ts  TC-0013-0028: active pack resolved from state.json#discussion.currentId  1
+activeDiscussionPack.test.ts  TC-0013-0029: ambiguous/absent active pointer raises a recovery error  3
+primaryTasksBand.test.ts  TC-0013-0032: the primary_tasks ceiling is documented and named in the warning  3
+primaryTasksBand.test.ts  TC-0013-0033: primary_tasks above 7 warns; 1 through 7 do not  3
+primaryTasksBand.test.ts  the shipped ui-contract.sample.yaml sits under its own ceiling  2
+primaryTasksStructured.test.ts  TC-0013-0034: structured primary_tasks accepted  2
+primaryTasksStructured.test.ts  TC-0013-0035: incomplete / open structured primary_tasks rejected  5
+sddPrimaryTasksLane.test.ts  TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is empty  2
+sddPrimaryTasksLane.test.ts  TC-0013-0027: QFAI-AUD-001 aligned lane passes when primary_tasks is non-empty  3
+sddSkillSpec0013.test.ts  TC-0013-0001: Phase Order Enforcement  1
+sddSkillSpec0013.test.ts  TC-0013-0002: Contract Index Alignment  1
+sddSkillSpec0013.test.ts  TC-0013-0003: Usable-Source Preflight Stop  2
+sddSkillSpec0013.test.ts  TC-0013-0004: Slice Gate US->AC->BR->EX->TC  1
+sddSkillSpec0013.test.ts  TC-0013-0005: Plan After Slice Gate  1
+sddSkillSpec0013.test.ts  TC-0013-0006: Reference Direction Enforcement  1
+sddSkillSpec0013.test.ts  TC-0013-0007: Validate Gate error=0  1
+sddSkillSpec0013.test.ts  TC-0013-0008: Business Flow Mermaid  1
+sddSkillSpec0013.test.ts  TC-0013-0009: Delta Rejected Guardrails  1
+sddSkillSpec0013.test.ts  TC-0013-0010: Coverage Placeholder for EX-0013-0005  1
+sddUiTemplate.test.ts  TC-0013-0025: shipped ui-contract.sample.yaml carries a primary_tasks list per screen  2
+spec0013UiContractPrimaryTasksE2E.test.ts  US-0013-0011: UI contract primary_tasks slot + QFAI-AUD-001 aligned validate lane  3
+surfaceTypePopulate.test.ts  TC-0013-0030: populateSurfaceTypeIfUiCompanion auto-populates frontmatter  3
+surfaceTypePopulate.test.ts  TC-0013-0031: D-SURFACE-TYPE-MISSING warns on companion-without-frontmatter  3
+```
+
+A test case stating two independently observable outcomes, against the one row
+that carries it:
+
+```text
+$ grep -n '^## TC-0013-0022' -A 6 .qfai/specs/spec-0013/06_Test-Cases.md
+147:## TC-0013-0022: DESIGN.md sha256 Lock Written at Phase 0
+148-
+149-- EX-Ref: EX-0013-0012
+150-- AC-Refs: AC-0013-0015
+151-- Type: normal
+152-- Verify `/qfai-sdd` Phase 0 produces `.qfai/contracts/design/DESIGN.md.lock.yaml` with
+   `sha256` matching `sha256(DESIGN.md bytes)` and a `lockedAt` ISO 8601 timestamp; absence
+   of root `DESIGN.md` halts Phase 0 with an error-severity finding routed through the
+   design contract validator family owned by spec-0004.
+
+$ grep -n '^| TDD-0016 ' .qfai/specs/spec-0013/tdd/test-list.md
+20:| TDD-0016 | TC-0013-0022 | - | integration | — |
+   TC-0013-0022: DESIGN.md sha256 Lock Written at Phase 0 | todo | DR-NOTE-3 | pending — ...
+```
+
+The last two lines of each excerpt are wrapped for width; nothing else is
+changed. The lock write and the halt on a missing `DESIGN.md` are two outcomes a
+test observes separately, and one row carries both.
 
 ## Proposed change
 
@@ -221,14 +282,17 @@ and `Selector` back to `-` too.
 - Contracts: `none`
 - Schema: `none`
 - Upstream paths edited under this CR: `.qfai/specs/spec-0013/tdd/test-list.md`,
-  `.qfai/specs/spec-0013/09_delta.md`
+  `.qfai/specs/spec-0013/09_delta.md`, `.qfai/specs/spec-0013/02_User-stories.md`
 
 ## Decision needed from user
 
 Re-derive `spec-0013`'s ledger to its template — the six columns it lacks, the
 rows Phase 2b owes, and the twelve splits in the table — and reset these
 eighteen rows to `todo`, so that the credit each holds and its reviewer verdicts
-are re-earned rather than carried?
+are re-earned rather than carried? And, in `02_User-stories.md`, bring
+`US-0013-0003`'s statement to what its own criteria say: the stage continues on
+an incomplete or contradictory pack and stops only where no usable source
+exists.
 
 The rounds already written stay where they are. A reset returns a row to `todo`
 with its earlier rounds retained, and this record's ID goes in each row's
