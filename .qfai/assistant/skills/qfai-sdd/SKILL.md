@@ -294,8 +294,11 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
     `templates/specs/spec/10_Plan.md#implementation-approach`. Report missing or
     insufficient usage references as findings and stop before implementation
     until the references are fixed or the template's safety-floor exception is justified.
-    A batch checks each target's Plan, and one target failing the check stops
-    that target rather than the batch.
+    A batch checks each target's Plan as that Plan is finalized, before the
+    target is integrated, so a failing target is held there with its findings
+    rather than carried to the tail. The tail gates read every target together,
+    so the batch waits for the held target to be corrected instead of declaring
+    the batch done without it.
     Contract-scoped runs do not apply this Plan gate: they finalize no Plan. If a
     contract change requires a Plan update, report the mismatch and halt to widen
     the Change Request to a spec-scoped run; do not write the Plan in
