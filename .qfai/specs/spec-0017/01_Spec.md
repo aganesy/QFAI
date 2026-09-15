@@ -38,8 +38,8 @@ is why the internal-version-leakage guard has no jurisdiction here.
   it reads.
 - Test-runner configuration: `packages/qfai/vitest.config.ts`, `packages/qfai/vitest.workspace.ts`,
   and the per-project pool / worker / concurrency / file-parallelism / hook-timeout knobs.
-- Slice-surface alignment: the vitest project set, the CI matrix slice list, and the
-  `test:<slice>` script set held to one shared name set.
+- Slice-surface alignment: the vitest project set, the `test:<slice>` script set, and the matrix
+  slice list of every CI job that expands over the slice set, held to one shared name set.
 - The layer-to-CI-lane mapping document, authored under
   `packages/qfai/assets/init/.qfai/assistant/catalog/` so the SSOT mirror gate stays satisfied.
 - Retirement of the repository's own duplicate of the shipped validate workflow, and the fold
@@ -243,8 +243,9 @@ this spec owns the own-CI half only.
   (upstream: `discussion-20260804173914356#REQ-0010`, `own-CI`, must)
 - REQ-0011: Slice-surface alignment — delete the vitest project that matches zero files, is
   absent from the CI matrix, and would fail on an unfiltered run; add the two missing per-slice
-  scripts, so the vitest project set, the CI matrix slice list and the per-slice script set hold
-  the same names as each other — seven once the dead project is deleted, not three.
+  scripts, so the vitest project set, the per-slice script set and the matrix slice list of every
+  CI job that expands over the slice set hold the same names as each other — seven once the dead
+  project is deleted, not three. A CI job sliced later is one more surface, held to the same set.
   (upstream: `discussion-20260804173914356#REQ-0011`, `own-CI`, must)
 - REQ-0012: Workflow-hygiene lint lane over own workflows — a repository script, run from the
   lint aggregate that pull requests actually execute, asserts over `.github/workflows/**`: every

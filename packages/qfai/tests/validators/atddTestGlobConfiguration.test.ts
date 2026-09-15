@@ -7,7 +7,7 @@
  * profiles.
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -31,16 +31,19 @@ const scanFailure = vi.hoisted(
     when: () => true,
   }),
 );
+// Whether every scan reports itself cut at the file limit, while a case sets it.
+const scanTruncation = vi.hoisted((): { on: boolean } => ({ on: false }));
 vi.mock("../../src/core/fs.js", async () => {
   const actual = await vi.importActual<typeof fsModule>("../../src/core/fs.js");
   return {
     ...actual,
-    collectFilesByGlobs: (...args: Parameters<typeof actual.collectFilesByGlobs>) => {
+    collectFilesByGlobs: async (...args: Parameters<typeof actual.collectFilesByGlobs>) => {
       scanCalls.push(args[1]);
       if (scanFailure.error !== null && scanFailure.when(args[1].globs)) {
-        return Promise.reject(scanFailure.error);
+        throw scanFailure.error;
       }
-      return actual.collectFilesByGlobs(...args);
+      const scan = await actual.collectFilesByGlobs(...args);
+      return scanTruncation.on ? { ...scan, truncated: true } : scan;
     },
   };
 });
@@ -197,6 +200,147 @@ describe("the stage says when the glob matcher refuses its globs", () => {
       scanFailure.error = null;
       scanFailure.when = () => true;
     }
+  });
+
+  it("finishes the stage beside a glob holding a range no pattern engine compiles", async () => {
+    // Read for the file names it selects, the reversed range threw before
+    // either scan ran, and took every other finding of the run with it.
+    const root = await projectWithAcceptanceTest();
+    const found = await codes(root, ["tests/**/test_[z-a].*", "tests/**/*.ts"]);
+    expect(Array.isArray(found)).toBe(true);
+  });
+
+  it("claims nothing is carrier-only when part of the scan could not be read, and records why", async () => {
+    // The runnable test that references an obligation may sit under the glob
+    // that failed, so a prose carrier found elsewhere proves nothing.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-unreadable-"));
+    tempDirs.push(root);
+    const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
+    await writeFile(
+      path.join(specDir, "06_Test-Cases.md"),
+      "# 06 Test cases\n\n## TC-0001: title\n- Parent: EX-0001\n",
+      "utf-8",
+    );
+    await mkdir(path.join(root, "tests", "integration"), { recursive: true });
+    await writeFile(
+      path.join(root, "tests", "integration", "notes.md"),
+      "QFAI:SPEC-0001:TC-0001\n",
+      "utf-8",
+    );
+    const denied = Object.assign(new Error("EACCES: permission denied, scandir 'locked'"), {
+      code: "EACCES",
+    });
+    scanFailure.error = denied;
+    scanFailure.when = (globs) => globs.some((glob) => glob.startsWith("locked/"));
+    try {
+      const config = configWith(["locked/**/*.test.ts"]);
+      const result = await evaluateAtddCodeTraceability(root, config);
+      expect(result.scan.unreadable).not.toEqual([]);
+      expect(result.coveredByCarrierOnly.tc).toEqual([]);
+
+      await validateAtddCodeTraceability(root, config);
+      const reportDir = path.join(root, ".qfai", "report", "atdd-traceability");
+      const summary = JSON.parse(await readFile(path.join(reportDir, "summary.json"), "utf-8"));
+      expect(summary.scan.unreadable.join("\n")).toContain("locked/**/*.test.ts: EACCES");
+      const markdown = await readFile(path.join(reportDir, "summary.md"), "utf-8");
+      expect(markdown).toContain("Part of the test globs could not be read");
+      expect(markdown).toContain("  - locked/**/*.test.ts: EACCES");
+    } finally {
+      scanFailure.error = null;
+      scanFailure.when = () => true;
+    }
+  });
+
+  it("names each test glob the ATDD scan could not read, and still counts the rest", async () => {
+    // The stage scans the project's own globs, so a directory one of them
+    // reaches that cannot be read leaves references unfound, and the finding
+    // says which pattern and why rather than leaving the gap unexplained.
+    const root = await projectWithAcceptanceTest();
+    const denied = Object.assign(new Error("EACCES: permission denied, scandir 'locked'"), {
+      code: "EACCES",
+    });
+    scanFailure.error = denied;
+    scanFailure.when = (globs) => globs.some((glob) => glob.startsWith("locked/"));
+    try {
+      const found = await validateAtddCodeTraceability(
+        root,
+        configWith(["tests/**/*.test.ts", "locked/**/*.test.ts"]),
+      );
+      const unreadable = found.find(
+        (finding) =>
+          finding.code === "QFAI-ATDD-134" && finding.message.includes("could not read part of"),
+      );
+      expect(unreadable?.message).toContain("locked/**/*.test.ts: EACCES");
+      expect(unreadable?.suggested_action).toContain("testFileExcludeGlobs");
+    } finally {
+      scanFailure.error = null;
+      scanFailure.when = () => true;
+    }
+  });
+
+  it("records the error code rather than the path the failure names", async () => {
+    // A file-system error's own message embeds the absolute directory, so the
+    // raw text put a checkout path into the summary and into the finding, and
+    // made the same failure read differently on two machines.
+    const root = await projectWithAcceptanceTest();
+    const absolute = "/home/someone/checkout/locked";
+    scanFailure.error = Object.assign(
+      new Error(`EACCES: permission denied, scandir '${absolute}'`),
+      { code: "EACCES" },
+    );
+    scanFailure.when = (globs) => globs.some((glob) => glob.startsWith("locked/"));
+    try {
+      const config = configWith(["tests/**/*.test.ts", "locked/**/*.test.ts"]);
+      const result = await evaluateAtddCodeTraceability(root, config);
+
+      expect(result.scan.unreadable).toEqual(["locked/**/*.test.ts: EACCES"]);
+      const found = await validateAtddCodeTraceability(root, config);
+      for (const finding of found) {
+        expect(JSON.stringify(finding)).not.toContain(absolute);
+      }
+    } finally {
+      scanFailure.error = null;
+      scanFailure.when = () => true;
+    }
+  });
+
+  it("sends a refused pattern the project wrote to testFileGlobs, beside generated ones", async () => {
+    const root = await projectWithAcceptanceTest();
+    const project = `tests/${NUL}/*.ts`;
+    const found = await validateTestTodoStubs(root, configWith([project]), {
+      globs: ["tests/e2e/**/*.ts", project],
+      projectGlobs: [project],
+    });
+    const refused = found.find((finding) => finding.code === "QFAI-TEST-002");
+    expect(refused?.refs).toEqual(["validation.traceability.testFileGlobs"]);
+  });
+
+  it("reports a scan cut at the file limit as an error naming the setting that narrows it", async () => {
+    // References past the limit are never read, so a clean result there is
+    // not evidence of coverage, and `--fail-on error` must not pass it.
+    const root = await projectWithAcceptanceTest();
+    const truncation = (found: Awaited<ReturnType<typeof validateAtddCodeTraceability>>) =>
+      found.find(
+        (finding) =>
+          finding.code === "QFAI-ATDD-134" && finding.message.includes("stopped at that limit"),
+      );
+    scanTruncation.on = true;
+    try {
+      const configured = truncation(
+        await validateAtddCodeTraceability(root, configWith(["tests/**/*.test.ts"])),
+      );
+      expect(configured?.severity).toBe("error");
+      expect(configured?.refs).toEqual(["validation.traceability.testFileGlobs"]);
+
+      // With no project glob, only the exclusions can shrink the selection.
+      const shipped = truncation(await validateAtddCodeTraceability(root, configWith([])));
+      expect(shipped?.refs).toEqual(["validation.traceability.testFileExcludeGlobs"]);
+    } finally {
+      scanTruncation.on = false;
+    }
+    expect(truncation(await validateAtddCodeTraceability(root, configWith([])))).toBeUndefined();
   });
 
   it("says nothing about a broad glob", async () => {

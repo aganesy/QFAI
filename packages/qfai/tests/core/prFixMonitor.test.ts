@@ -1,10 +1,30 @@
+/**
+ * Every test here spawns one `pwsh` running the real `run-pr-fix.ps1` through its poll loop,
+ * and each poll shells out to the `git` and `gh` stubs written into that test's own `bin`
+ * directory. The cost is process startup rather than sleeping, so the suites are concurrent
+ * and the runner's `maxConcurrency` bounds how many of those processes exist at once.
+ *
+ * Two consequences of the concurrency, both load-bearing:
+ *
+ * - A temporary tree is removed by the test that created it, through the context's
+ *   `onTestFinished`. The imported hook of that name resolves against a module-level current
+ *   test, which under concurrency is whichever test started last.
+ * - Assertions use the `expect` from the test context, so a failure is attributed to the test
+ *   that produced it.
+ *
+ * The tests share nothing: each gets its own temporary root, its own directory of stubs, and
+ * its own scenario and state files named by environment variable. The repository files they
+ * read — the script under test and the four skill documents — are read-only.
+ */
+
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { chmod, mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
+import type { TaskContext } from "vitest";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -89,20 +109,8 @@ type RunResult = {
   stdout: string;
 };
 
-const tempDirs: string[] = [];
-
-afterEach(async () => {
-  while (tempDirs.length > 0) {
-    const dir = tempDirs.pop();
-    if (!dir) {
-      continue;
-    }
-    await removeTempTree(dir);
-  }
-});
-
-describe("pr-fix wrapper docs", () => {
-  it("keeps pr-fix skill docs aligned across integrations", async () => {
+describe.concurrent("pr-fix wrapper docs", () => {
+  it("keeps pr-fix skill docs aligned across integrations", async ({ expect }) => {
     const [claudeSkill, agentsSkill, codexSkill, githubSkill] = await Promise.all([
       readFile(claudeSkillPath, "utf-8"),
       readFile(agentsSkillPath, "utf-8"),
@@ -121,11 +129,15 @@ describe("pr-fix wrapper docs", () => {
   });
 });
 
-describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
-  it("extracts version markers from non-feature branch prefixes and blocks mismatches", async () => {
+describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
+  it("extracts version markers from non-feature branch prefixes and blocks mismatches", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const branch = "topic/v1.8.5";
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         branch,
         packageVersion: "1.8.4",
@@ -148,10 +160,11 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(versionCheck.ChangelogSectionPresent).toBe(false);
   });
 
-  it("accepts aligned topic/vX.Y.Z branches", async () => {
+  it("accepts aligned topic/vX.Y.Z branches", async ({ expect, onTestFinished }) => {
     const branch = "topic/v1.8.5";
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         branch,
         changelog: changelogWithVersion("1.8.5"),
@@ -166,10 +179,14 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     );
   });
 
-  it("ignores non-version work suffixes after branch version markers", async () => {
+  it("ignores non-version work suffixes after branch version markers", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const branch = "feature/v1.8.5-dds-validator";
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         branch,
         changelog: changelogWithVersion("1.8.5"),
@@ -189,9 +206,13 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(versionCheck.ExpectedVersion).toBe("1.8.5");
   });
 
-  it("rejects live overrides for SleepSeconds and RequiredZeroStreak", async () => {
+  it("rejects live overrides for SleepSeconds and RequiredZeroStreak", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrFix({
       extraArgs: ["-SleepSeconds", "5", "-RequiredZeroStreak", "2"],
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[]],
@@ -204,8 +225,9 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     );
   });
 
-  it("writes CI failure artifacts and exits non-zero", async () => {
+  it("writes CI failure artifacts and exits non-zero", async ({ expect, onTestFinished }) => {
     const result = await runPrFix({
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([failureCheck()])],
         threads: [[]],
@@ -225,8 +247,12 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(existsSync(checksPath)).toBe(true);
   });
 
-  it("writes unresolved-thread artifacts and exits non-zero", async () => {
+  it("writes unresolved-thread artifacts and exits non-zero", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrFix({
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[makeThread()]],
@@ -246,10 +272,11 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(existsSync(threadsPath)).toBe(true);
   });
 
-  it("detects outdated but unresolved threads", async () => {
+  it("detects outdated but unresolved threads", async ({ expect, onTestFinished }) => {
     const outdatedThread = makeThread();
     outdatedThread.isOutdated = true;
     const result = await runPrFix({
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[outdatedThread]],
@@ -265,9 +292,10 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(monitorStatus.State).toBe("action_required_threads");
   });
 
-  it("treats empty status checks as waiting, not clean", async () => {
+  it("treats empty status checks as waiting, not clean", async ({ expect, onTestFinished }) => {
     const result = await runPrFix({
       mockSleep: true,
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([]), makePrView([]), makePrView([successCheck()])],
         threads: [[], [makeThread()]],
@@ -283,12 +311,13 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(existsSync(handoffPath)).toBe(false);
   });
 
-  it("resets the streak when CI is pending/in-progress", async () => {
+  it("resets the streak when CI is pending/in-progress", async ({ expect, onTestFinished }) => {
     const cleanView = makePrView([successCheck()]);
     const pendingView = makePrView([pendingCheck()]);
     const emptyThreads = Array.from({ length: 31 }, () => []);
     const result = await runPrFix({
       mockSleep: true,
+      onTestFinished,
       scenario: makeScenario({
         prViews: [
           cleanView,
@@ -311,9 +340,13 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(existsSync(handoffPath)).toBe(false);
   });
 
-  it("produces handoff only after 30 consecutive clean polls", async () => {
+  it("produces handoff only after 30 consecutive clean polls", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrFix({
       mockSleep: true,
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[]],
@@ -340,9 +373,13 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(monitorStatus.EffectiveRequiredZeroStreak).toBe(30);
   });
 
-  it("retries transient gh graphql failures during live monitoring", async () => {
+  it("retries transient gh graphql failures during live monitoring", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrFix({
       mockSleep: true,
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[]],
@@ -355,9 +392,13 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(combinedOutput(result)).toContain("PR handoff ready for PR #166");
   });
 
-  it("prefers ci:local when ci:gate is absent during PR body repair", async () => {
+  it("prefers ci:local when ci:gate is absent during PR body repair", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         changedFiles: ["README.md"],
         packageScripts: { "ci:local": "pnpm ci:local" },
@@ -379,9 +420,13 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(preview).toContain("- Repo CI command: `pnpm ci:local`");
   });
 
-  it("renders pnpm ci:gate when the repo defines a long ci:gate script", async () => {
+  it("renders pnpm ci:gate when the repo defines a long ci:gate script", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         changedFiles: ["README.md"],
         packageScripts: {
@@ -407,11 +452,15 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
   });
 });
 
-describe("run-pr-fix strict monitor pagination", { timeout: 120000 }, () => {
-  it("detects unresolved threads across paginated GraphQL responses within a single poll", async () => {
+describe.concurrent("run-pr-fix strict monitor pagination", { timeout: 120000 }, () => {
+  it("detects unresolved threads across paginated GraphQL responses within a single poll", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const thread1 = makeThread();
     const thread2: FakeThread = { ...makeThread(), id: "PRRT_kwDOQuL-page2" };
     const result = await runPrFix({
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[thread1], [thread2]],
@@ -622,9 +671,10 @@ function makeThread(): FakeThread {
 async function runPrFix(options: {
   extraArgs?: string[];
   mockSleep?: boolean;
+  onTestFinished: TaskContext["onTestFinished"];
   scenario: FakeScenario;
 }): Promise<RunResult> {
-  const root = await makeTempDir("qfai-pr-fix-");
+  const root = await makeTempDir("qfai-pr-fix-", options.onTestFinished);
   const repoDir = path.join(root, "repo");
   const binDir = path.join(root, "bin");
   const scenarioPath = path.join(root, "scenario.json");
@@ -867,8 +917,13 @@ async function readJson(filePath: string): Promise<Record<string, unknown>> {
   return JSON.parse(raw.replace(/^\uFEFF/, "")) as Record<string, unknown>;
 }
 
-async function makeTempDir(prefix: string): Promise<string> {
+async function makeTempDir(
+  prefix: string,
+  onTestFinished: TaskContext["onTestFinished"],
+): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), prefix));
-  tempDirs.push(dir);
+  onTestFinished(async () => {
+    await removeTempTree(dir);
+  });
   return dir;
 }

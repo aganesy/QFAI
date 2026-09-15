@@ -17,7 +17,14 @@ import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../src/core/atdd/scaffold.js";
-import { validateScaffoldPlaceholder } from "../../src/core/validators/scaffoldPlaceholder.js";
+import {
+  scaffoldPlaceholderReportedFilter,
+  validateScaffoldPlaceholder,
+} from "../../src/core/validators/scaffoldPlaceholder.js";
+import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.js";
+
+/** Split so this file does not trip the stub gate when qfai validates its own repository. */
+const SKIP = ".skip";
 
 async function withSkeletons(
   levels: Record<string, string>,
@@ -81,6 +88,39 @@ describe("D-SCAFFOLD-PLACEHOLDER follows the same Level exclusion as QFAI-ATDD-1
       const reported = refs(await validateScaffoldPlaceholder(root, defaultConfig));
       expect(reported).toContain("TC-0001-0004");
       expect(reported).not.toContain("TC-0001-0003");
+    });
+  });
+});
+
+describe("the stub gate stands aside only for a skeleton this rule reports", () => {
+  const skippedCases = async (root: string, body: string): Promise<number> => {
+    const file = path.join(root, "tests", "integration", "spec-0001", "skeleton.test.ts");
+    await writeFile(file, body, "utf-8");
+    const issues = await validateTestTodoStubs(root, defaultConfig, {
+      globs: ["tests/integration/**/*.test.ts"],
+      placeholderReported: scaffoldPlaceholderReportedFilter(root, defaultConfig),
+    });
+    return issues.filter((entry) => entry.code === "QFAI-TEST-003").length;
+  };
+  const skeleton = (...ids: string[]): string =>
+    [
+      `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
+      ...ids.flatMap((id) => [
+        `// TODO: implement assertion for ${id}`,
+        `it${SKIP}("${id}", () => {});`,
+      ]),
+      "",
+    ].join("\n");
+
+  it("reports the skipped case of a skeleton naming only an L1 or L2 TC", async () => {
+    await withSkeletons({ "TC-0001-0001": "L1", "TC-0001-0002": "L2" }, async (root) => {
+      expect(await skippedCases(root, skeleton("TC-0001-0001", "TC-0001-0002"))).toBe(2);
+    });
+  });
+
+  it("leaves a skeleton naming an owed TC to this rule", async () => {
+    await withSkeletons({ "TC-0001-0003": "L2", "TC-0001-0004": "L3" }, async (root) => {
+      expect(await skippedCases(root, skeleton("TC-0001-0003", "TC-0001-0004"))).toBe(0);
     });
   });
 });

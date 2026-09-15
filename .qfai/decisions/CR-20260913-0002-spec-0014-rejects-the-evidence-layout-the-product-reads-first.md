@@ -134,6 +134,15 @@ test case, and its Phase 2b migrates the pack's eight nine-column ledger tables
 to the template's columns. It seeds `E2E` rows at `todo` for the 33 of the
 pack's 52 stories that have none, a floor for the reason above, and a row for
 each of the twelve test cases that have none and whose `Level` Phase 2b seeds.
+**That rerun refreshes `spec-0012/16_Traceability-ledger.md` with it.** The
+owner guidance has an existing ledger brought up to the `BR` / `AC` it links,
+and that file's `TDD-0394` row still describes `TC-0012-0377` as "iter-dir tree
+contains only `spec-NNNN/<screen>.review.json`" — the statement option 1
+re-derives. Left alone it would be a second, contradicting description of the
+same test case, in the file a reader goes to for the mapping. The rerun
+re-points that row to the test case as re-derived, or retires it where the
+re-derivation leaves it describing nothing.
+
 The approval covers those writes and no other row change. A row that rerun
 would split, reset or retire beyond `TDD-0384` waits on an approved Change
 Request of its own, which the rerun raises: every sibling row there names its
@@ -245,6 +254,7 @@ produced it.
   | `.qfai/specs/spec-0012/06_Test-Cases.md`          | option 1        |
   | `.qfai/specs/spec-0012/09_delta.md`               | option 1        |
   | `.qfai/specs/spec-0012/tdd/test-list.md`          | option 1        |
+  | `.qfai/specs/spec-0012/16_Traceability-ledger.md` | option 1        |
   | `.qfai/specs/spec-0004/tdd/test-list.md`          | option 1        |
   | `.qfai/specs/spec-0004/09_delta.md`               | option 1        |
   | `.qfai/specs/_policies/06_Glossary.md`            | option 1        |
@@ -263,12 +273,18 @@ produced it.
 
   **Product paths**, listed so an approval says what it covers, under option 1
   only: `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts`,
-  `packages/qfai/src/cli/commands/validate.ts`, and
-  `packages/qfai/tests/validators/uiEvidenceArtifacts.test.ts`. Options 2 and 3
-  edit no product path.
-  `packages/qfai/src/core/validators/skill/prototypingSkill.ts` is not among
-  them under any option: the skill-text check already accepts the `iter-NN/`
-  pair.
+  `packages/qfai/src/cli/commands/validate.ts`,
+  `packages/qfai/tests/validators/uiEvidenceArtifacts.test.ts`,
+  **`packages/qfai/src/core/validators/skill/prototypingSkill.ts` and its
+  test**. Options 2 and 3 edit no product path.
+
+  The skill-text check accepts the `iter-NN/` pair **or** the aggregate pair, so
+  under option 1 it would keep passing a skill whose text tells an operator to
+  write the files the required-path gate has just started rejecting — an older
+  skill, or one edited locally. Option 1 drops that branch, and the test gains a
+  case proving aggregate-only guidance fails. **Under options 2 and 3 it
+  stays**: both leave the aggregate directories a readable evidence source, so a
+  skill naming them describes what the product does.
 
   `spec-0014/01_Spec.md` is **not** here under any option. Its Scope.In line
   holds under every reading, so no approved action edits it. Nor is
@@ -382,6 +398,17 @@ its layout obligation altogether (option 3)?
    `iter-NN/<screen-id>.<ext>` is not evidence — from the three places a stale
    copy can sit, so one row carries them. `TDD-0033` is a `unit` row, so the
    cases are this stage's to write.
+
+   **The cases assert the guidance, not only the verdict.** A run that dropped
+   the aggregate lookup while still telling an operator to create the aggregate
+   files would satisfy every accept-or-reject case above, so each of
+   `QFAI-UIE-001` and `QFAI-UIE-002` is asserted on its `Issue.file`, its exact
+   `suggested_action`, and the expectation text `resolveIssueExpected` returns
+   for it — each naming `iter-NN/<screen-id>.png` and
+   `iter-NN/<screen-id>.html`. The existing custom-directory case matches the
+   `workspace/evidence/prototyping/` prefix alone, which is why it does not
+   cover this. `prototypingSkill.ts` is this action's for the reason the impact
+   scope gives, and its suite gains a case over aggregate-only text.
 
    **`spec-0004`'s three rows are made re-runnable before they are
    re-verified.** Their selectors — `missing screenshot`, `missing html` and

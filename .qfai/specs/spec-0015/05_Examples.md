@@ -21,12 +21,22 @@
 - When demotion check runs
 - Then advisory demotion: blocking power lost, progression allowed
 
-## EX-0015-0004: Pattern-Doubler N/A on Empty
+## EX-0015-0004: Optional Concrete-Pattern Review
 
 - BR-Ref: BR-0015-0005
-- Given `07_Decisions.md` with 0 ID-bearing items
-- When pattern-doubler evaluates
-- Then returns N/A (no patterns to double)
+- AC-Refs: AC-0015-0006, AC-0015-0007, AC-0015-0009
+- Given concrete business-flow, US, AC, EX or TC coverage
+- When the optional advisory mode proposes additions
+- Then each proposal includes a rationale and has no numeric growth target
+- Given an empty artifact or only BR, NFR, policy, decision or architectural items, even with IDs
+- When the mode evaluates the artifact
+- Then it returns N/A without demanding more abstract items; missing mandatory pairings, independently required product obligations and blocking gates remain required
+- Given a preserved adopter `review-profiles.yml` with a numeric `default_target`
+- When init runs again against the current catalog without force
+- Then both files remain unchanged and the catalog makes that numeric target ineffective without waiving mandatory pairings or independently required obligations and gates
+- Given an older review-gate catalog without that bound and a matching prior asset receipt
+- When init runs without force, then with force
+- Then the first run preserves the older catalog; the forced run refreshes its bound while both runs preserve the adopter manifest bytes
 
 ## EX-0015-0005: Delegation Failure Hard Stop Reporting
 

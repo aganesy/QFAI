@@ -84,8 +84,8 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
 - `interface-clarity.md` (what may appear on a screen or in terminal output,
   and what a sentence there says about the control under it)
 - `grilling.md` (interview the decision tree in rounds before a design is
-  fixed; a session ends on an empty frontier and the user's confirmation,
-  never at a question count)
+  fixed; a session ends in one of four named endings, never at a question
+  count)
 - `user-questions.md` (every question to the user arrives in the shape its
   answer has — a structured choice where a listable set of candidates exists, or a
   plain request where none does; where the host's tool cannot carry it, the
@@ -153,6 +153,8 @@ Planテンプレート:
 - Try solutions in the order `.agents/rules/minimal-implementation.md` sets
   out, and mark a deliberate shortcut with its ceiling and the condition
   that lifts it.
+- TypeScript: await or return every promise. `.agents/rules/minimal-implementation.md`
+  § 2 governs consuming callers, kept failures and callback boundaries.
 - 型安全を徹底し `any`・型無効化（`@ts-ignore`等）を原則禁止する。
 - 入力は型とバリデーションで検証し、失敗パスを先に書く。
 - 早期 return でネストを浅くし、読みやすさと責務を守る。
