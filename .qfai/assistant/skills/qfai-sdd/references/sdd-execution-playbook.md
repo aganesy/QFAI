@@ -22,9 +22,12 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
    material (`.qfai/assistant/constitution/drift-protocol.md#core-rule`), so do NOT repair or
    re-run it to make this gate pass; a correction it implies belongs in the
    SDD-owned artifact, with the discrepancy noted in delta/evidence.
-3. Read the review findings for THIS pack — a `.qfai/review/review-*/` directory
-   whose `summary.json#target.path` names it, or whose in-flight request does —
-   and take in the items a reviewer marked non-normative under
+3. Read the review findings for THIS pack, from its LATEST review — the
+   `.qfai/review/review-*/` directory whose `summary.json#target.path` names the
+   pack, or whose in-flight request does, with the newest stamp among them.
+   An earlier cycle's advice was answered by the fix that closed it, and reading
+   it again re-raises work the pack has already done. Take in the items a
+   reviewer marked non-normative under
    `.qfai/assistant/constitution/review-convergence.md#discussion-review-precision`.
    A review of another pack, or of an SDD or implementation cycle, is not this
    run's input. They are reference-quality facts like the rest of the pack, and
