@@ -34,8 +34,10 @@ tools: [Read, Glob, Grep, Bash]
   against
   `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`.
   The Plan's three usages are cited before implementation, so a usage nobody has
-  written is not one of them; three call sites this change itself wires are.
-  Return REVISE unless the safety floor in
+  written is not one of them; three call sites this change itself wires are. A
+  test, a fixture or a generated caller is not one either — they exercise the
+  element rather than depend on it, and a helper with one production consumer is
+  shared with one. Return REVISE unless the safety floor in
   `.agents/rules/minimal-implementation.md` § 2 requires the element.
 - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a component written where one could be installed, a standard passed over, and an authored region with no recorded reason.
 

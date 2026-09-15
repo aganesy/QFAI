@@ -31,7 +31,8 @@ describe("architectural elements have concrete usage references before implement
       // What the count is of, and what an element is, so a reviewer blocking on
       // it reads the same rule the author did.
       expect(plan).toContain("a thing this plan introduces for other things to");
-      expect(plan).toContain("The count is of call sites that exist when the element does");
+      expect(plan).toContain("The count is of consumers that exist when the element does");
+      expect(plan).toContain("is whatever uses the element in the way the element is used");
     });
 
     it(`${tree}: SDD reports failed document checks before implementation`, async () => {

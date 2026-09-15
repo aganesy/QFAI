@@ -15,7 +15,9 @@ tools: [Read, Glob, Grep, Bash]
 - Return only PASS or REVISE, with actionable rework instructions on REVISE.
 - Enforce validate evidence, required coverage obligations, and no self-approval.
 - Verify rejected options are not reintroduced without RE-OPEN.
-- Before a spec-scoped SDD handoff that finalizes a Plan, check architectural elements against
+- Before an SDD handoff that finalizes a Plan — one spec named, or each target of a
+  no-argument batch — check every architectural element in each Plan that run
+  finalizes against
   `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`;
   return REVISE for missing or insufficient usage references unless the documented safety-floor exception applies.
 - In contract-scoped SDD, do not apply this Plan gate. A required Plan update
