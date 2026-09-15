@@ -115,9 +115,11 @@ it exercises:
   `TC-0013-0028`'s second boundary, and becomes the case of the row appended
   for it.
 - `TDD-0025`'s cases for a second run changing nothing and for a spec with no
-  companion exercise the boundary `TDD-0025` keeps, and stay in its
-  `Selector`. So does `TDD-0026`'s case for a spec that already declares the
-  frontmatter, and `TDD-0030`'s case for a list whose every entry is malformed.
+  companion state no boundary of what the row keeps, which is the stage writing
+  the frontmatter for a spec that has a companion. Both leave the `Selector`,
+  under the rule the ATDD pass applies below. `TDD-0026`'s case for a spec that
+  already declares the frontmatter, and `TDD-0030`'s case for a list whose every
+  entry is malformed, do exercise the boundary their rows keep and stay.
 
 Where the product answers a boundary differently from the test case — the
 floor `TC-0013-0033` states, or the resolver half of `TC-0013-0030` — the row
@@ -224,8 +226,14 @@ and `Selector` back to `-` too.
 
 Re-derive `spec-0013`'s ledger to its template — the six columns it lacks, the
 rows Phase 2b owes, and the twelve splits in the table — and reset these
-eighteen rows to `todo`, discarding the evidence and reviewer hashes recorded
-against each?
+eighteen rows to `todo`, so that the credit each holds and its reviewer verdicts
+are re-earned rather than carried?
+
+The rounds already written stay where they are. A reset returns a row to `todo`
+with its earlier rounds retained, and this record's ID goes in each row's
+`DR-ID`, so what stands there reads as history that no longer counts toward
+completion. Discarding it would delete the audit trail and break the numbering
+the re-execution continues from.
 
 - The twelve kept rows of the splits: `TDD-0003`, `TDD-0019`, `TDD-0020`,
   `TDD-0021`, `TDD-0022`, `TDD-0024`, `TDD-0025`, `TDD-0026`, `TDD-0027`,
@@ -265,9 +273,18 @@ at its own granularity, so this record does not decompose it below that.
        `\n`, collapsing to a single space;
      - `TC-0013-0019`: one row, a plain ASCII cell round-tripping unchanged;
    - at `todo`, a row for `TC-0013-0028`'s second boundary;
-   - at `todo`, the `E2E` rows the thirteen stories without one are owed. That
-     count is a floor rather than the number of rows: the phase seeds one row
-     per independently observable boundary a story's criteria name;
+   - at `todo`, the `E2E` rows the thirteen stories without one are owed, less
+     `US-0013-0003`. That count is a floor rather than the number of rows: the
+     phase seeds one row per independently observable boundary a story's
+     criteria name;
+   - **and nothing for `US-0013-0003` until its story is corrected.** The story
+     still asks the stage to stop for an incomplete pack or a blocking open
+     question, where `AC-0013-0003` and `TC-0013-0003` — as the record that
+     changed them left them — ask it to continue and to stop only where no
+     usable source exists. A row seeded from the story could not be satisfied
+     without contradicting the integration row this record resets. The
+     correction belongs to the story, so it goes in a record of its own, and
+     this one seeds no `E2E` row for that story;
    - the twelve splits under `## Proposed change`, each appended row at `todo`
      with its `Boundary` and no `DR-ID`, since no reset reaches a row that did
      not exist;
@@ -326,12 +343,14 @@ at its own granularity, so this record does not decompose it below that.
      finding;
    - **drops from each retained selector the case that exercises another
      boundary.** `TDD-0025`'s kept boundary requires a companion and a
-     frontmatter write, so its no-companion case is removed: no boundary in the
-     table above owns it — `TC-0013-0030`'s two are the companion-driven write
-     and the resolver's strict reading, and `TDD-0026`'s no-companion clause is
-     about a different subject, the validator raising no finding — so moving it
-     would put it on a row it does not belong to. It returns when an upstream
-     obligation states it and a row is seeded for it; and `TDD-0030`'s missing-`id` case also asserts the empty-list
+     frontmatter write, so its no-companion case and its case for a second run
+     changing nothing are both removed: no boundary in the table above owns
+     either — `TC-0013-0030`'s two are the companion-driven write and the
+     resolver's strict reading, `TDD-0026`'s no-companion clause is about a
+     different subject, the validator raising no finding, and the helper running
+     twice is a property no criterion states at all — so moving one would put it
+     on a row it does not belong to. Each returns when an upstream obligation
+     states it and a row is seeded for it; and `TDD-0030`'s missing-`id` case also asserts the empty-list
      `QFAI-AUD-001` outcome, which is a different obligation, so that assertion
      goes. Either would let an unrelated failure red a row whose own boundary
      still holds, which is the isolation the split is for;
@@ -342,17 +361,21 @@ at its own granularity, so this record does not decompose it below that.
      case for each of `TC-0013-0020`'s two boundaries, and a new case each for
      `TC-0013-0011` to `TC-0013-0013` and `TC-0013-0021` that exercises the
      obligation its test case states;
-   - **says what becomes of the core cases the repoint leaves behind.** Six
-     rows move from a `tests/core/**` case to a `tests/integration/**` one:
-     `TDD-0014` and `TDD-0015` in `traceabilityIntegrity.test.ts`, `TDD-0023`
-     and `TDD-0024` in `activeDiscussionPack.test.ts`, and `TDD-0025` and
-     `TDD-0026` in `surfaceTypePopulate.test.ts`. No row in any pack names those
-     files once the repoint is written, so each case is removed in the same pass
-     that writes the integration case taking over its obligation. A case
-     observing something no seeded row states is kept instead, with the `TC-` or
-     `TDD-` prefix dropped from its title, so nothing reads as the case of a row
-     that does not own it. Left as they are, they fail with no row and no
-     evidence path answerable for repairing them;
+   - **says what becomes of every case a repoint leaves behind.** Each row
+     whose case moves to a `tests/integration/**` one leaves the case it had:
+     the three in `specAutoDiscovery.test.ts` annotated `TC-0013-0011` to
+     `TC-0013-0013`, `TDD-0014` and `TDD-0015` in `traceabilityIntegrity.test.ts`,
+     `TDD-0023` and `TDD-0024` in `activeDiscussionPack.test.ts`, `TDD-0025` and
+     `TDD-0026` in `surfaceTypePopulate.test.ts`, and the two in
+     `sddTriage.test.ts` annotated `TC-0013-0018` and `TC-0013-0019`, whose rows
+     are seeded with their authoritative cases under `tests/integration/**`. No
+     row in any pack names those cases once the repoint is written, so each is
+     removed in the same pass that writes the case taking over its obligation. A
+     case observing something no seeded row states is kept instead, with its
+     `QFAI:SPEC-0013:TC-*` annotation and the `TC-` or `TDD-` prefix in its title
+     dropped, so nothing reads as the case of a row that does not own it. Left as
+     they are, they run in the full suite as duplicates, and a failure in one has
+     no row and no evidence path answerable for repairing it;
    - writes `TDD-0023`'s case so it tells packs apart: it creates more than one
      pack, points `currentId` at one that is not the newest, and asserts that
      exact pack, since with one pack a resolver ignoring the pointer and
@@ -361,6 +384,10 @@ at its own granularity, so this record does not decompose it below that.
      writing one where none exists. The `E2E` cases for `US-0013-0012` to
      `US-0013-0014` in `spec0013ActivePointerSurfaceTypeE2E.test.ts` are split
      one per boundary, and `US-0013-0001` to `US-0013-0010` take new cases.
+     `US-0013-0013`'s population case reaches the `/qfai-sdd` execution path,
+     for the reason `TC-0013-0030`'s does: the case there invokes
+     `populateSurfaceTypeIfUiCompanion` itself, and split as it stands it would
+     go green while the stage still never calls the helper.
 
    The pass is not limited to those rows: it takes up every ATDD-owned
    `spec-0013` row still owed, `TDD-0016` to `TDD-0018` among them. It then
