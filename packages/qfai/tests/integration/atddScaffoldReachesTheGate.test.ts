@@ -520,6 +520,13 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     ).toBe("naming-mismatch");
   });
 
+  it("reads a brace range whose endpoints are quoted", () => {
+    // The expander takes the quotes off before it reads the range, so the
+    // pattern selects Python files. Read with them on, it named no member,
+    // the extension went unrecovered and the writer took its default.
+    expect(requireDialect(["tests/**/*.{'p'..'p'}y"]).id).toBe("python");
+  });
+
   it("writes out a range that generates the extglob's closing parenthesis", () => {
     // The `)` between the braces is not the group's close: the expansion puts
     // one after `.test`. Read as the close, the group ended where the pattern

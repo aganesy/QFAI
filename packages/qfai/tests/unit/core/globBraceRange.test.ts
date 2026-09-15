@@ -25,6 +25,13 @@ describe("braceRangeMembers", () => {
     // it and this reads no member out of it.
     ["1.5..3", null],
     ["1..2.5", null],
+    // Measured against the expander: the quotes come off each endpoint before
+    // the range is read, and an endpoint of more than one character after
+    // that is no character range.
+    ["'p'..'p'", ["p"]],
+    ['"a".."c"', ["a", "b", "c"]],
+    ["'1'..'3'", ["1", "2", "3"]],
+    ["'ab'..'c'", null],
     ["a..e..2", ["a", "c", "e"]],
   ])("expands %s", (body, members) => {
     expect(braceRangeMembers(body)).toEqual(members);

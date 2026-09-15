@@ -31,10 +31,28 @@ export class BraceRangeRefused extends Error {}
  *
  * @throws {BraceRangeRefused} for a numeric range fast-glob refuses to expand.
  */
+/**
+ * An endpoint with its quotes taken off, as the expander takes them.
+ *
+ * Measured: `{'p'..'p'}` expands to `p`, and so do the double-quoted and
+ * backtick forms, while `{'ab'..'c'}` expands to nothing — the quotes come off
+ * each endpoint before the range is read, and only a single character is left
+ * standing for a character range. An endpoint read with its quotes still on
+ * matched neither branch below, so a pattern the scan expands read as one
+ * naming no member.
+ */
+function unquoted(endpoint: string): string {
+  const quote = endpoint[0] ?? "";
+  if (!"'\"`".includes(quote)) return endpoint;
+  return endpoint.length >= 2 && endpoint.endsWith(quote) ? endpoint.slice(1, -1) : endpoint;
+}
+
 export function braceRangeMembers(body: string): readonly string[] | null {
   const parts = body.split("..");
   if (parts.length < 2 || parts.length > 3) return null;
-  const [from = "", to = "", increment = ""] = parts;
+  const [rawFrom = "", rawTo = "", increment = ""] = parts;
+  const from = unquoted(rawFrom);
+  const to = unquoted(rawTo);
   if (!/^[+-]?\d*$/.test(increment)) return null;
   const step = Math.max(1, Math.abs(Number(increment)));
   // The forms the expander reads as numbers, measured: `1e3` expands as 1000
