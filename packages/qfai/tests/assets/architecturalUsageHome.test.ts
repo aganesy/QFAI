@@ -56,7 +56,8 @@ describe("architectural elements have concrete usage references before implement
       // The Plan's usages are cited before implementation, so nothing downstream
       // would have re-read them against the tree the element lands in.
       const card = await read(tree, "assistant/agents/implementation-reviewer.md");
-      expect(card).toContain("Count the call sites of an architectural element");
+      expect(card).toContain("Count the consumers of an architectural element");
+      expect(card).toContain("Count independent consumers, not call sites");
       expect(card).toContain("as they exist in the tree");
       expect(card).toContain("10_Plan.md#implementation-approach");
     });

@@ -29,15 +29,17 @@ tools: [Read, Glob, Grep, Bash]
   `.agents/rules/minimal-implementation.md` § 2.
   Use this route only where the installed Article VII governs the artifact.
   Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
-- Count the call sites of an architectural element the change introduces — a
-  module, a seam, an adapter, a shared helper — as they exist in the tree,
-  against
-  `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`.
-  The Plan's three usages are cited before implementation, so a usage nobody has
-  written is not one of them; three call sites this change itself wires are. A
-  test, a fixture or a generated caller is not one either — they exercise the
-  element rather than depend on it, and a helper with one production consumer is
-  shared with one. Return REVISE unless the safety floor in
+- Count the consumers of an architectural element the change introduces — a
+  module, a seam, an adapter, a shared helper, a contract, a deployment boundary
+  — as they exist in the tree, against
+  `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`,
+  which says what a consumer is for each kind. The Plan's three usages are cited
+  before implementation, so a usage nobody has written is not one of them; three
+  this change itself wires are. Count independent consumers, not call sites: one
+  module calling a helper in three places is one, and a generated route, client
+  or binding that ships is one. A test or a fixture is not — it exercises the
+  element rather than depends on it, and a helper with one production consumer
+  is shared with one. Return REVISE unless the safety floor in
   `.agents/rules/minimal-implementation.md` § 2 requires the element.
 - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a component written where one could be installed, a standard passed over, and an authored region with no recorded reason.
 

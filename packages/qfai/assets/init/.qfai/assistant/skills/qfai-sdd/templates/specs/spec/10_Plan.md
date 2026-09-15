@@ -30,8 +30,9 @@ prove three callers.
 
 The count is of consumers that exist when the element does, wherever they came
 from: one change wiring three modules to a new adapter leaves three. A consumer
-is whatever uses the element in the way the element is used — a call site for
-code, a declared dependant for a contract, a deploying service for a boundary —
+is whatever uses the element in the way the element is used — a module for code,
+a declared dependant for a contract, a deploying service for a boundary — and it
+is counted once however many times it calls,
 and a usage nobody has written is not one, whatever the element is: a plan, a
 comment, a document. The implementing stage counts them again before the element
 lands.

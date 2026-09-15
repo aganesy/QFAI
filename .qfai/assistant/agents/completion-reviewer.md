@@ -48,8 +48,9 @@ tools: [Read, Glob, Grep, Bash]
 - .qfai/assistant/catalog/test-layers.md
 - On an SDD cycle that finalizes a Plan, read the `10_Plan.md` of each spec that
   cycle targets — the one named, or each capability a no-argument batch covers —
-  and its referenced usages. A Plan no target of this run finalizes is not this
-  review's to judge.
+  and its referenced usages, under the specs directory `qfai.config.yaml`
+  declares in `paths.specsDir` (`.qfai/specs` where it declares none). A Plan no
+  target of this run finalizes is not this review's to judge.
 - .qfai/specs/spec-\*/09_delta.md
 - Validation evidence and gate results
 - `.qfai/specs/<spec-id>/tdd/test-list.md` — the ledger, for the row under review
