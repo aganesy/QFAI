@@ -94,6 +94,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `tests/<project>` alone measured a seventh of `e2e`, so drift anywhere else in
   it was invisible.
 
+- Run the release gate's checks and its test suite as separate jobs, each over
+  the slices the pull-request lanes already use. Every check that ran before a
+  publication still runs before one. The engines-floor job now asserts that the
+  pinned floor is the runtime it is using, which it did not (#1870).
+
 - Start the lint gate's independent commands as five concurrent lanes instead of
   two. Every command still runs, exactly once, and a failure in any lane reaches
   the gate's result. Workflow hygiene still runs first. The formatter is now the
@@ -232,6 +237,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing else in them changing, and resetting that row for the acceptance-test
   stage to re-execute. It is applied ahead of the record that settles the band
   itself.
+
+- **The skill citation scan reads a document in one pass** (#1788). It read a
+  run of path characters with no `.md`, `.yml` or `.yaml` ending once from every
+  position in the run, so the time grew with the square of the run's length: a
+  100 000-character token took half a minute. A single line of about nine
+  mebibytes, such as an embedded `data:` URI, stopped `qfai validate` with
+  `RangeError: Maximum call stack size exceeded`. The scan now reads each run
+  once and skips it whole when it holds no citation. It finds the same
+  citations, which a test checks against the previous pattern over generated
+  text.
 
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
@@ -751,6 +766,41 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   spec-0013's ledger. It blocks the ledger rows whose obligation names the
   duplicate state, and proposes correcting a completed row's evidence that claims its run
   covered that state.
+
+- **spec-0013's ledger repair is recorded where the Drift Protocol looks for it**
+  (#1750). The ledger has nine of the template's fifteen columns, no row for six
+  integration-level test cases, one for fourteen stories, and twelve rows past
+  `todo` whose selector runs several boundaries, which Phase 2b splits only under
+  an approved Change Request. Every rerun that re-derives the pack runs that
+  phase, so any of them would make those writes unrecorded and stop at those
+  rows.
+
+  `CR-20260913-0009` proposes re-deriving the ledger with no statement of the
+  pack moving: the columns filled, the owed rows seeded at `todo`, the twelve
+  rows split with each keeping the boundary its evidence observed, and the kept
+  rows reset. The ledger is unchanged until it is applied.
+
+- **A skill the gate accepts is one the host accepts** (#1707). Four cases
+  parted company with the host `QFAI-SKILLS-015` is modelled on: a description
+  past 1024 characters, a skill directory whose own name is not a legal one, a
+  dot-prefixed directory the host does not list, and an entry point holding a
+  byte that is not valid UTF-8. Each is now decided the way the host decides
+  it — reported where the host refuses the skill, and passed over where the
+  host never loads it. A description is measured trimmed and in characters, and
+  one holding `<` or `>` is refused, as the host's validator refuses it.
+
+  A directory that has to be renamed gets an action that can be followed: no
+  value in `name:` clears both the form and the directory match, so the rename
+  comes first.
+
+  A fifth case was not a host disagreement. A value read out of a `SKILL.md` now
+  reaches an operator-facing message with its control characters escaped. The
+  document is a file the run did not write, and the text formatter prints a
+  message straight to the terminal.
+
+  The check still does not walk a hidden skill directory or a dependency or
+  build tree. A document in one that a step names is now read, because the host
+  opens it, so a step naming one that cannot be read is reported.
 
 ## [1.12.0] - 2026-09-12
 

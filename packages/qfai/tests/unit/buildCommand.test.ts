@@ -1992,16 +1992,24 @@ describe("the real workflow trees", () => {
         // the own tree has a THIRD lane that builds. `check-types` runs `tsc -b`, which emits into
         // `dist`, so the type-check lane and the build lane compile the same package twice.
         "build::ci.yml::pnpm check-types",
-        // `release.yml`'s floor gate builds for the reason `node-floor` does: it runs the whole
+        // `release.yml`'s floor gate builds for the reason `node-floor` does: it runs the
         // package suite on the floor `packages/qfai/package.json#engines.node` promises, and
         // `dist/` is not committed. A tag re-published
         // through `workflow_dispatch` may predate `node-floor` entirely, so the floor is exercised
         // on the tagged tree at release time rather than assumed from its ancestry.
         "build::release.yml::pnpm -C packages/qfai build",
+        // TWICE here as well, and for the reason the `ci.yml` duplicate above records: the release
+        // suite and the floor suite are sliced, and each builds for the two slices that read
+        // `dist/`. The entry is per OCCURRENCE, so deleting either lane's build step fails this row.
+        "build::release.yml::pnpm -C packages/qfai build",
         'build::release.yml::pnpm -C packages/qfai pack --pack-destination "$PWD/tmp"',
-        // `ci:gate` runs `check-types`, whose `tsc -b` emits into `dist`. It was `heuristic` here for
-        // three rounds because the chain was read as far as a script NAME and no further.
+        // The aggregate, which the gate runs where the tagged tree predates the split. It reaches
+        // a build for the same reason the line below does — `check-types` is inside it — and it
+        // is listed because the gate's step names both.
         "build::release.yml::pnpm ci:gate",
+        // `ci:gate:checks` runs `check-types`, whose `tsc -b` emits into `dist`. It was `heuristic`
+        // here for three rounds because the chain was read as far as a script NAME and no further.
+        "build::release.yml::pnpm ci:gate:checks",
         "heuristic::ci.yml::pnpm ci:build-verify",
       ]);
   });
