@@ -153,45 +153,46 @@ Scenario: レガシー管理ブロックからの自動移行
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                             | Notes      | Priority |
-| ------------ | --------------------------------- | ---------- | -------- |
-| AC-0003-0001 | 空ディレクトリ初期化              | Happy path | P1       |
-| AC-0003-0002 | 冪等な初期化                      | NFR-0012   | P1       |
-| AC-0003-0003 | --force スキル上書き              | REQ-0003   | P1       |
-| AC-0003-0004 | --dry-run プレビュー              | REQ-0004   | P1       |
-| AC-0003-0005 | skill symlink 統合                | REQ-0008   | P1       |
-| AC-0003-0006 | agent symlink 統合                | REQ-0009   | P1       |
-| AC-0003-0007 | レガシーファイル削除              | REQ-0006   | P1       |
-| AC-0003-0008 | 旧ラッパー prune                  | REQ-0007   | P1       |
-| AC-0003-0009 | git config 設定                   | REQ-0010   | P1       |
-| AC-0003-0010 | Windows EPERM エラー              | REQ-0015   | P1       |
-| AC-0003-0011 | instructions 新規配置             | REQ-0012   | P1       |
-| AC-0003-0012 | instructions 既存保護             | REQ-0013   | P1       |
-| AC-0003-0013 | --force instructions 更新         | REQ-0013   | P1       |
-| AC-0003-0014 | instructions アクティベーション   | REQ-0014   | P2       |
-| AC-0003-0015 | gitignore 管理ブロック追記        | REQ-0016   | P1       |
-| AC-0003-0016 | レガシーブロック自動移行          | REQ-0017   | P1       |
-| AC-0003-0017 | 4-layer asset-tree seed           | REQ-0018   | P1       |
-| AC-0003-0018 | project-root steering seed        | REQ-0019   | P1       |
-| AC-0003-0019 | --upgrade-assistant-tree flag     | REQ-0020   | P1       |
-| AC-0003-0020 | W-USER-EDIT-PRESERVED 出力        | REQ-0020   | P1       |
-| AC-0003-0021 | migration memo authoring          | REQ-0021   | P1       |
-| AC-0003-0022 | assistantPaths.ts SSOT 経由       | REQ-0022   | P1       |
-| AC-0003-0023 | 旧 layout 読取 backward compat    | REQ-0023   | P1       |
-| AC-0003-0024 | D-DEPRECATED-PATH sunset 明示     | REQ-0023   | P1       |
-| AC-0003-0025 | 配布 workflow bounding + 権限     | REQ-0024   | P1       |
-| AC-0003-0026 | 配布 install 経路の保持           | REQ-0024   | P1       |
-| AC-0003-0027 | 配布 action SHA pin + 可読 name   | REQ-0025   | P1       |
-| AC-0003-0028 | leakage guard breadth 維持        | REQ-0025   | P1       |
-| AC-0003-0029 | 配布 set の命名と topology        | REQ-0026   | P1       |
-| AC-0003-0030 | 配布 set の inertness と無 secret | REQ-0026   | P1       |
-| AC-0003-0031 | 配布 detection と green-on-skip   | REQ-0027   | P1       |
-| AC-0003-0032 | runner label 間接化 + header 表   | REQ-0028   | P1       |
-| AC-0003-0033 | portability の degrade 方向       | REQ-0029   | P1       |
-| AC-0003-0034 | 配布 workflow 所有権コントラクト  | REQ-0030   | P1       |
-| AC-0003-0035 | 配布 set structural contract gate | REQ-0031   | P1       |
-| AC-0003-0036 | declined name の copy 前除外      | REQ-0030   | P1       |
-| AC-0003-0037 | Codex agent profile 生成          | REQ-0009   | P1       |
+| AC-ID        | Title                                                       | Notes      | Priority |
+| ------------ | ----------------------------------------------------------- | ---------- | -------- |
+| AC-0003-0001 | 空ディレクトリ初期化                                        | Happy path | P1       |
+| AC-0003-0002 | 冪等な初期化                                                | NFR-0012   | P1       |
+| AC-0003-0003 | --force スキル上書き                                        | REQ-0003   | P1       |
+| AC-0003-0004 | --dry-run プレビュー                                        | REQ-0004   | P1       |
+| AC-0003-0005 | skill symlink 統合                                          | REQ-0008   | P1       |
+| AC-0003-0006 | agent symlink 統合                                          | REQ-0009   | P1       |
+| AC-0003-0007 | レガシーファイル削除                                        | REQ-0006   | P1       |
+| AC-0003-0008 | 旧ラッパー prune                                            | REQ-0007   | P1       |
+| AC-0003-0009 | git config 設定                                             | REQ-0010   | P1       |
+| AC-0003-0010 | Windows EPERM エラー                                        | REQ-0015   | P1       |
+| AC-0003-0011 | instructions 新規配置                                       | REQ-0012   | P1       |
+| AC-0003-0012 | instructions 既存保護                                       | REQ-0013   | P1       |
+| AC-0003-0013 | --force instructions 更新                                   | REQ-0013   | P1       |
+| AC-0003-0014 | instructions アクティベーション                             | REQ-0014   | P2       |
+| AC-0003-0015 | gitignore 管理ブロック追記                                  | REQ-0016   | P1       |
+| AC-0003-0016 | レガシーブロック自動移行                                    | REQ-0017   | P1       |
+| AC-0003-0017 | 4-layer asset-tree seed                                     | REQ-0018   | P1       |
+| AC-0003-0018 | project-root steering seed                                  | REQ-0019   | P1       |
+| AC-0003-0019 | --upgrade-assistant-tree flag                               | REQ-0020   | P1       |
+| AC-0003-0020 | W-USER-EDIT-PRESERVED 出力                                  | REQ-0020   | P1       |
+| AC-0003-0021 | migration memo authoring                                    | REQ-0021   | P1       |
+| AC-0003-0022 | assistantPaths.ts SSOT 経由                                 | REQ-0022   | P1       |
+| AC-0003-0023 | 旧 layout 読取 backward compat                              | REQ-0023   | P1       |
+| AC-0003-0024 | D-DEPRECATED-PATH sunset 明示                               | REQ-0023   | P1       |
+| AC-0003-0025 | 配布 workflow bounding + 権限                               | REQ-0024   | P1       |
+| AC-0003-0026 | 配布 install 経路の保持                                     | REQ-0024   | P1       |
+| AC-0003-0027 | 配布 action SHA pin + 可読 name                             | REQ-0025   | P1       |
+| AC-0003-0028 | leakage guard breadth 維持                                  | REQ-0025   | P1       |
+| AC-0003-0029 | 配布 set の命名と topology                                  | REQ-0026   | P1       |
+| AC-0003-0030 | 配布 set の inertness と無 secret                           | REQ-0026   | P1       |
+| AC-0003-0031 | 配布 detection と green-on-skip                             | REQ-0027   | P1       |
+| AC-0003-0032 | runner label 間接化 + header 表                             | REQ-0028   | P1       |
+| AC-0003-0033 | portability の degrade 方向                                 | REQ-0029   | P1       |
+| AC-0003-0034 | 配布 workflow 所有権コントラクト                            | REQ-0030   | P1       |
+| AC-0003-0035 | 配布 set structural contract gate                           | REQ-0031   | P1       |
+| AC-0003-0036 | declined name の copy 前除外                                | REQ-0030   | P1       |
+| AC-0003-0037 | Codex agent profile 生成                                    | REQ-0009   | P1       |
+| AC-0003-0038 | Independent shipped checks and a complete aggregate verdict | REQ-0026   | P1       |
 
 ## AC-0003-0017: 4-layer asset-tree seed
 
@@ -289,7 +290,7 @@ Scenario: レガシー管理ブロックからの自動移行
 - US-Refs: US-0003-0023
 - Given optional な layer 名テストスクリプトを 1 つも宣言していない新規 adopter プロジェクト
 - When `qfai init` を temp ディレクトリに実行し、配布された workflow set を静的に評価する
-- Then 実行される test lane は 0 件（各 lane は宣言済みだが対応スクリプト不在の false 条件で skip される）、dependency install を行う job は validate lane の 1 件のみ（orchestrator の detection / verdict job は install しない）、set 全体で secret 宣言 / secret context 参照 / `secrets: inherit` が 0 件である
+- Then no test lane executes: each is declared, and each skips on the false condition of an absent script. Exactly two shipped jobs declare a dependency install — the document-check job and the validation job. The orchestrator's detection and verdict jobs install nothing, and so does each file's aggregate job. Counted as executing job instances after matrix expansion, the installs run four times on a pull request and three times on a push. Across the whole set there is no secret declaration, no secret-context reference and no `secrets: inherit`
 
 ## AC-0003-0031: 配布 detection と green-on-skip
 
@@ -324,7 +325,7 @@ Scenario: レガシー管理ブロックからの自動移行
 - US-Refs: US-0003-0028
 - Given テストスイート内に 1 箇所だけ保持された配布 set の宣言された期待形状（値の SSOT はそこであり、spec も contract も値を再記載しない）
 - When 配布 set を clean な状態で gate に掛け、続いて profile 値と failure threshold を planted divergence させて `pnpm ci:lint` を走らせる
-- Then clean では exit 0、planted では exit 1 となり failure code は `R-SHIPPED-WORKFLOW-SHAPE-DRIFT`。期待形状は `CLI-WFSET` §5 が closed set として定める 9 dimension（file set / header block / job 単位の permission・timeout・runner selector / matrix の `fail-fast: false` / lane の subcommand・profile・fail-on threshold / lane の inert 化条件 / third-party allow-list / zero-secret / 配布ファイル間参照ゼロ）をすべて pin しており、1 つでも欠落していれば contract 違反として扱われる。gate の invocation path は `pnpm ci:lint` に現れ、`pnpm ci:gate` には現れない。既存 asset test の ad-hoc 配布 workflow string assertion は subsume して置き換えられ、その test-case 参照は保持または再登録されている
+- Then clean では exit 0、planted では exit 1 となり failure code は `R-SHIPPED-WORKFLOW-SHAPE-DRIFT`。期待形状は `CLI-WFSET` §5 が closed set として定める 9 dimension（file set / header block / job 単位の permission・timeout・runner selector / matrix の `fail-fast: false` / lane の subcommand・profile・fail-on threshold / the condition that governs whether a lane runs — its inertness condition and, for an aggregate lane, its always-run condition and exact `needs` list / third-party allow-list / zero-secret / 配布ファイル間参照ゼロ）をすべて pin しており、1 つでも欠落していれば contract 違反として扱われる。gate の invocation path は `pnpm ci:lint` に現れ、`pnpm ci:gate` には現れない。既存 asset test の ad-hoc 配布 workflow string assertion は subsume して置き換えられ、その test-case 参照は保持または再登録されている
 
 ## AC-0003-0036: declined name の copy 前除外
 
@@ -340,3 +341,10 @@ Scenario: レガシー管理ブロックからの自動移行
 - When `qfai init` を実行する
 - Then `.codex/agents/<name>.toml` が canonical frontmatter (`name` / `description`) とカノニカル body から生成され、`kind: reviewer` の agent は `sandbox_mode = "read-only"` を持つ
 - And 既存 profile は plain run では保持され、`--force` で再生成される。`kind` を判定できない agent は生成せず、その旨を出力する
+
+## AC-0003-0038: Independent shipped checks and a complete aggregate verdict
+
+- US-Refs: US-0003-0023
+- Given the workflow set `qfai init` delivers into a fresh adopter project
+- When the delivered document and validation workflows are evaluated statically for a pull request and for a push, and each aggregate job's body is evaluated against every result its dependency can conclude with
+- Then the independent checks of each file are declared as matrix legs of one job carrying `fail-fast: false`, so a failing leg cancels no other leg. Each checker command and each validation profile is unchanged and appears in exactly one leg, and the drift profile is selected on pull requests only. Each file's existing external check name belongs to a job that runs whatever its dependency concluded and succeeds only when that dependency's rolled-up result is `success`; a failed, cancelled, skipped or missing result fails it

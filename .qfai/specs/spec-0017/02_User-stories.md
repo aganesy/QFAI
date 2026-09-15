@@ -135,9 +135,10 @@
 - Parent: CAP-0017
 - Source: discussion-20260804173914356#DUS-006
 - Goal: As a maintainer tuning a 415-file suite I want each vitest project to carry explicit pool,
-  worker, concurrency, file-parallelism and hook-timeout settings, and I want the three slice
-  surfaces — vitest project names, the CI matrix slice list, and the per-slice scripts — to hold
-  the same names as each other, so a slice is tunable and addressable by one name everywhere
+  worker, concurrency, file-parallelism and hook-timeout settings, and I want every slice surface —
+  vitest project names, the per-slice scripts, and the matrix slice list of every CI job that expands
+  over the slice set — to hold the same names as each other, so a slice is tunable and addressable by
+  one name everywhere
 - Non-goals: copying the source repository's numbers, which are justified as network-bound and so
   do not transfer to this filesystem- and subprocess-bound suite; introducing a retry setting;
   tuning several projects in one pull request; treating the declared starting value as final

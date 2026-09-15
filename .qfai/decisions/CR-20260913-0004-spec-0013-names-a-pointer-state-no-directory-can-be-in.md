@@ -146,14 +146,14 @@ uncovered, when the uncovered third is a state no test can construct.
 
 ## Blocked downstream items
 
-| Item                                                                               | Kind         | Why it depends on the artifact                                                                                     |
-| ---------------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `spec-0013/TDD-0024`                                                               | `ledger-row` | Carries `TC-0013-0029`, whose obligation names the duplicate state. Its evidence cannot discharge a third it names |
-| The `spec-0013` row `CR-20260913-0009` appends for `TC-0013-0029`'s absent pointer | `ledger-row` | The same obligation, narrowed                                                                                      |
-| The `spec-0013` `E2E` rows whose `US-Refs` names `US-0013-0012`                    | `ledger-row` | The story's absent-pointer outcome becomes Stage 0's newest-pack fallback                                          |
+| Item                                                                              | Kind         | Why it depends on the artifact                                                                                     |
+| --------------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `spec-0013/TDD-0024`                                                              | `ledger-row` | Carries `TC-0013-0029`, whose obligation names the duplicate state. Its evidence cannot discharge a third it names |
+| The `spec-0013` row the ledger repair appends for `TC-0013-0029`'s absent pointer | `ledger-row` | The same obligation, narrowed                                                                                      |
+| The `spec-0013` `E2E` rows whose `US-Refs` names `US-0013-0012`                   | `ledger-row` | The story's absent-pointer outcome becomes Stage 0's newest-pack fallback                                          |
 
 - Not blocked by this CR: every other `spec-0013` row. `TDD-0023` and the row
-  appended beside it for the file-time case are `CR-20260913-0009`'s: that
+  appended beside it for the file-time case are the ledger repair's: that
   record moves the case under `TC-0013-0028` and resets `TDD-0023`, and this one
   leaves both alone. `TC-0013-0028` is not edited: it tests the set-pointer path
   the narrowed `AC-0013-0020` keeps. The test for `TC-0013-0029`,
@@ -164,7 +164,7 @@ uncovered, when the uncovered third is a state no test can construct.
   so its obligation does not move when the criterion above it narrows. Its
   `Evidence` cell does name a duplicate pointer its run never covered, and
   action 2 files that record defect and repairs it without re-running the row.
-- Overlapping open CRs: `CR-20260913-0009`, which re-derives `spec-0013`'s ledger
+- Overlapping open CRs: **the `spec-0013` ledger repair is owed and unwritten.** It re-derives that ledger
   to its template: its columns, its seeded rows, and the split of every
   progressed row that runs several boundaries, `TDD-0024` and `TDD-0023` among
   them. It is applied first (action 3).
@@ -173,7 +173,7 @@ uncovered, when the uncovered third is a state no test can construct.
 
 - Specs: `spec-0010`, `spec-0013`, and `_policies` for `DR-0266`
 - Plans: `.qfai/specs/spec-0010/10_Plan.md`, `.qfai/specs/spec-0013/10_Plan.md`
-- Tests: `spec-0013/TDD-0024`, the row `CR-20260913-0009` appends for
+- Tests: `spec-0013/TDD-0024`, the row the ledger repair appends for
   `TC-0013-0029`'s absent pointer, and the `E2E` rows for `US-0013-0012` —
   `packages/qfai/tests/core/activeDiscussionPack.test.ts`, whose header and
   `describe` name the duplicate state;
@@ -252,23 +252,37 @@ duplicate state its run never covered?
    row in that pack's `09_delta.md` `## Change Requests` table.
    `TC-0010-0013` is not edited: it names no duplicate state.
 
-   **`spec-0010/TDD-0017`'s `Evidence` cell is corrected, not its row.** It says
+   **`spec-0010/TDD-0017` says more than its run covered.** Its `Evidence` cell says
    the run covered `absent/duplicate currentId + multi-candidate`, and its test,
    `discussion.test.ts:111-155`, exercises an absent pointer and a pointer
    naming a missing pack, each beside several candidates.
-   `/qfai-implement spec-0010`, which writes that cell, repairs it in place under
-   this approval to what the run covered — `absent or missing currentId + multi-candidate` —
-   keeping its date, commit and reviewer attestation. The row is not re-run, its
-   `Status` does not change, and its `DR-ID` keeps `DR-0010-0006` alone, since
-   no reset happens. The defect is filed as one entry of `spec-0010`'s
-   record-defect queue, `## Record defects` in
-   `.qfai/evidence/atdd-spec-0010.md`, and this repair closes it, as the drift
-   protocol's drain closes an entry. The pack has no
-   `.qfai/evidence/implement-spec-0010.md`, so the queue lives in the ATDD file,
-   which the repair creates.
+   **That is a blocking defect, not an advisory record repair.** An evidence
+   cell claiming coverage the run did not perform is
+   `defect:code-quality` under the Drift Protocol, which forbids filing that
+   shape as a `record:*` entry — so the advisory queue is the wrong place for it
+   and an in-place repair with the row left `done` is the wrong ending. The row
+   returns to `todo` with this Change Request's ID in `DR-ID`, and it is re-run.
+
+   **And the row is an aggregate, so the repair is a split rather than a
+   rewording.** Its selector matches the `describe` block at
+   `discussion.test.ts:111-155`, which runs one case for an absent pointer and
+   one for a pointer naming a missing pack — independently observable rejection
+   reasons — while `TC-0010-0013` names only the absent-pointer case. One
+   boundary per row is what `selector-granularity.md` asks for, and it is the
+   same shape this plan already splits for `TDD-0024`. So the ledger repair that
+   precedes this record splits `TDD-0017` too: the absent-pointer boundary keeps
+   the row and `TC-0010-0013`, and the missing-pack boundary takes an appended
+   row with the test case that names it. Both are reset, and
+   `/qfai-implement spec-0010` advances each from its own case.
+
+   **The invocation names its rows.** `/qfai-implement spec-0010` with no row
+   given selects the first unblocked `todo` row, and that ledger holds
+   `TDD-0009` to `TDD-0012` at `todo` today — rows this record does not reach.
+   So the run is invoked for the two rows above by id, and any other `todo` row
+   it would otherwise take stays where it is.
 
    **`confirm-only`
-   because no `spec-0010` row changes identity**: a `re-derive` would run
+   because no `spec-0010` statement changes identity**: a `re-derive` would run
    Phase 2b over a ledger that lacks the template's columns, `Tier` among them,
    and every story's `E2E` row, and would migrate it, derive every row's tier
    and seed rows this record does not reach.
@@ -300,12 +314,15 @@ duplicate state its run never covered?
    test case keeps both of the boundaries its rows own, so a `re-derive` would
    run Phase 2b with nothing to write.
 
-   **`CR-20260913-0009` is applied first.** It re-derives `spec-0013`'s ledger
-   to its template and splits `TDD-0024` into the missing-pack and
-   absent-pointer boundaries, seeding no row for the duplicate state, which no
-   test can construct. It also seeds the `E2E` rows for `US-0013-0012`. This
-   record's resets name the rows it leaves, and this record authorises no
-   other ledger write.
+   **The `spec-0013` ledger repair is applied first, and is not yet written.**
+   It re-derives that ledger to its template and splits `TDD-0024` into the
+   missing-pack and absent-pointer boundaries, seeding no row for the duplicate
+   state, which no test can construct. It also seeds the `E2E` rows for
+   `US-0013-0012`. Until it is written and has landed, the rows this record's
+   resets name do not exist, so neither this record's actions 3 to 5 nor its
+   approval can proceed: the prerequisite names no record an operator can open.
+   This record's resets name the rows that repair leaves, and this record
+   authorises no other ledger write.
 
 4. Downstream ledger sweep for `TC-0013-0029` and `US-0013-0012`. **Reset to
    `todo`**, with this CR's ID in `DR-ID`, each of these rows wherever it has
@@ -318,7 +335,7 @@ duplicate state its run never covered?
      story's absent-pointer outcome becomes Stage 0's newest-pack fallback.
 
    Those rows are named by the rule each line gives rather than by a `TDD-ID`,
-   which `CR-20260913-0009` allocates. No row is retired: every obligation
+   which the ledger repair allocates. No row is retired: every obligation
    survives, narrowed.
 
 5. **In this order**, once the rerun above has written the ledger:
@@ -338,7 +355,7 @@ duplicate state its run never covered?
       rejected. The helper's own suites keep passing unchanged, because neither
       exercises a duplicate — no test could construct one. **That invocation is not limited to these rows**: it takes
       up every ATDD-owned `spec-0013` row still owed when it runs — today
-      `TDD-0016` to `TDD-0018`, and any row `CR-20260913-0009` seeded that its
+      `TDD-0016` to `TDD-0018`, and any row the ledger repair seeded that its
       own pass left open — as that stage's ordinary forward work. It writes
       their tests under `packages/qfai/tests/integration/**` and
       `packages/qfai/tests/e2e/**`, their entries in
