@@ -116,6 +116,14 @@ describe.each(TREES)("%s", (tree) => {
     expect(checklist).toContain("an unconditional `BR-*` has no branches to cover");
     expect(checklist).toContain("templated value of `Conditional branches`");
     expect(checklist).toContain("Mark applicable cells: ✅ covered, ⚠️ partial, ❌ missing");
+    // The conditional sections carry `n/a` in the template too, so an analyst
+    // with no state machine has a cell to write rather than a gap to invent.
+    expect(checklist).toContain("Sections 5 and 6");
+    for (const row of ["US-0001", "TC-0001"]) {
+      const conditional = headerCells(await read(tree, CHECKLIST), row);
+      expect(conditional[7]).toBe("✅/⚠️/❌/n/a");
+      expect(conditional[8]).toBe("✅/⚠️/❌/n/a");
+    }
     for (const row of ["US-0001", "TC-0001"]) {
       const cells = headerCells(await read(tree, CHECKLIST), row);
       expect(cells[3]).toBe("✅/⚠️/❌/n/a");
@@ -209,7 +217,9 @@ describe.each(TREES)("%s", (tree) => {
     }
     const checklist = flat(await read(tree, CHECKLIST));
     for (const clause of [
-      "A failure named by a specification or an actual observation, unless a type or schema excludes it",
+      "A failure named by a specification, unless a type or schema excludes it",
+      // An observation is never excluded by a schema: the failure happened.
+      "A failure actually observed, whatever a type or schema says",
       "A failure declared by an active CON-API or CON-DB owned by the reviewed spec",
       "A failure required by the safety floor in `.agents/rules/minimal-implementation.md` § 2",
       "whether or not handling code exists yet",
@@ -228,7 +238,7 @@ describe.each(TREES)("%s", (tree) => {
       expect(checklist.includes(clause), clause).toBe(true);
     }
     for (const clause of [
-      "At least one error/failure path test case exists only for kept failures",
+      "A test case exists for each kept failure — every one, not one of them",
       "Just below minimum (invalid) tested only for kept failures",
       "Just above maximum (invalid) tested only for kept failures",
       "Invalid partitions identified with at least one representative test case each, only for kept failures",

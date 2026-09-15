@@ -841,6 +841,9 @@ agents:
       - Produce the Coverage Depth Matrix as a required deliverable, plus the business rule coverage table under it when the spec declares `BR-*`. Flag any ❌ cells in either as gaps.
       - Failure-side coverage follows the checklist's kept-failure scope. Return
         REVISE for a normal-only row only when an applicable obligation is uncovered.
+        Where a pack's own criteria still demand a failure case for every row, the
+        criteria are the authority until the Change Request that qualifies them is
+        applied: report the conflict rather than passing the row against them.
 
       Exception — `qfai-implement`'s `plan` phase:
 

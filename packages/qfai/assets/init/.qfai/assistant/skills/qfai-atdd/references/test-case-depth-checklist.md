@@ -7,8 +7,10 @@ Reviewers MUST use this checklist when evaluating test case completeness during 
 
 A **kept failure** is one of:
 
-- A failure named by a specification or an actual observation,
-  unless a type or schema excludes it.
+- A failure named by a specification, unless a type or schema excludes it.
+- A failure actually observed, whatever a type or schema says: the observation
+  happened, so a schema claiming it cannot is a contradiction the Drift Protocol
+  settles rather than a reason to drop the row.
 - A failure declared by an active CON-API or CON-DB owned by the reviewed spec,
   unless a type or schema excludes it.
 - A failure required by the safety floor in
@@ -88,7 +90,7 @@ unscored on a row whose normal and error cells are ✅.
 For each US or TC:
 
 - [ ] At least one normal (happy) path test case exists.
-- [ ] At least one error/failure path test case exists only for kept failures (invalid input, missing data, unauthorized access).
+- [ ] A test case exists for each kept failure — every one, not one of them (invalid input, missing data, unauthorized access). The `Error path` cell is ✅ only when none is left over.
 - [ ] Valid edge cases identified and tested (concurrent access, timing, empty collections, maximum payload).
 - [ ] Failure edge cases tested only for kept failures (concurrent access, timing, empty collections, payload limits).
 
@@ -151,8 +153,10 @@ case's assertion can fail. A test that cannot fail satisfies every category.
 
 Reviewers and test-design-analysts MUST produce this matrix for each spec under review.
 Mark applicable cells: ✅ covered, ⚠️ partial, ❌ missing. Use `n/a` only where
-the obligation is absent, including an Error path or Negative case with no kept
-failure; an uncovered obligation remains ❌.
+the obligation is absent — a row with no kept failure, no state machine, no
+interacting conditions — and an uncovered obligation remains ❌. Sections 5 and 6
+are the conditional ones beside the failure cells, so their columns carry `n/a`
+too; the rest are owed by every row.
 
 **Every section above is scored.** Sections 1–6 and 8 are matrix columns;
 section 7 is the business rule table that follows the matrix. A section with no
@@ -168,8 +172,8 @@ evidence.
 
 | US/TC ID | Equivalence partitions | Normal path | Error path   | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
 | -------- | ---------------------- | ----------- | ------------ | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
-| US-0001  | ✅/⚠️/❌               | ✅/⚠️/❌    | ✅/⚠️/❌/n/a | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
-| TC-0001  | ✅/⚠️/❌               | ✅/⚠️/❌    | ✅/⚠️/❌/n/a | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
+| US-0001  | ✅/⚠️/❌               | ✅/⚠️/❌    | ✅/⚠️/❌/n/a | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌/n/a      | ✅/⚠️/❌/n/a  | ✅/⚠️/❌        | —      |
+| TC-0001  | ✅/⚠️/❌               | ✅/⚠️/❌    | ✅/⚠️/❌/n/a | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌/n/a      | ✅/⚠️/❌/n/a  | ✅/⚠️/❌        | —      |
 
 ### Business rule coverage (§7)
 
