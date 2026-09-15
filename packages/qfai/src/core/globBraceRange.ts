@@ -38,9 +38,13 @@ export function braceRangeMembers(body: string): readonly string[] | null {
   if (!/^[+-]?\d*$/.test(increment)) return null;
   const step = Math.max(1, Math.abs(Number(increment)));
   // The forms the expander reads as numbers, measured: `1e3` expands as 1000
-  // and `1.0` as 1, while `0x10` expands as nothing at all.
+  // and `1.0` as 1, while `0x10` expands as nothing at all. The value has to be
+  // a whole number as well as written like one — `1.5` is left as text, so a
+  // range holding it names no member and the pattern matches itself.
   const integer = /^[+-]?(?:\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)$/;
-  if (integer.test(from) && integer.test(to)) {
+  const whole = (endpoint: string): boolean =>
+    integer.test(endpoint) && Number.isInteger(Number(endpoint));
+  if (whole(from) && whole(to)) {
     return numericRangeMembers(from, to, increment, step);
   }
   if (Array.from(from).length === 1 && Array.from(to).length === 1) {

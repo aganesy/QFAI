@@ -2530,7 +2530,23 @@ function firstRangeWrittenOut(candidate: string): string[] | null {
   return null;
 }
 
-export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<string> {
+/**
+ * The extensions a set of globs names, and whether any of them was too large to
+ * write out.
+ *
+ * The two are reported apart because they call for opposite answers. A project
+ * that configured nothing has no extension and takes the default; a glob whose
+ * expansion passed the bound has extensions this read could not recover, and a
+ * caller that treats it as the first writes a file the project's own scan will
+ * not collect.
+ */
+export type TestFileExtensions = {
+  readonly extensions: Set<string>;
+  readonly overBound: boolean;
+};
+
+export function readTestFileExtensions(testFileGlobs: readonly string[]): TestFileExtensions {
+  let overBound = false;
   const extensions = new Set<string>();
   for (const entry of testFileGlobs) {
     // Trimmed as the scan trims it, or a trailing space hides the extension.
@@ -2544,10 +2560,14 @@ export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<
     // its ranges written out. Both shapes are read from each of them: a range
     // inside a list — `*.{{p..p}y,rb}` — is a list only once the range is
     // written out, and the list pattern cannot parse it before that.
-    // A glob too large to write out yields nothing: what a partial expansion
-    // names is not what the matcher selects.
+    // A glob too large to write out yields nothing, and says so: what a partial
+    // expansion names is not what the matcher selects, and an empty answer on
+    // its own reads as a project that configured nothing.
     const candidates = withRangesExpanded(glob);
-    if (candidates === null) continue;
+    if (candidates === null) {
+      overBound = true;
+      continue;
+    }
     for (const candidate of candidates) {
       for (const match of candidate.matchAll(/\.\{([^}]+)\}$/g)) {
         for (const ext of (match[1] ?? "").split(",")) {
@@ -2565,7 +2585,16 @@ export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<
       }
     }
   }
-  return extensions;
+  return { extensions, overBound };
+}
+
+/**
+ * The extensions alone, for a caller whose answer to an unreadable glob is the
+ * same as its answer to no glob at all: the scan's own pattern, which widens
+ * rather than narrows and so reads more files rather than fewer.
+ */
+export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<string> {
+  return readTestFileExtensions(testFileGlobs).extensions;
 }
 
 /**

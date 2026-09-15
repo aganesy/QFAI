@@ -35,7 +35,7 @@
  * the caller refuses rather than emitting a test nothing executes.
  */
 
-import { deriveTestFileExtensions } from "../atddTraceability.js";
+import { readTestFileExtensions } from "../atddTraceability.js";
 import { BraceRangeRefused, braceRangeMembers } from "../globBraceRange.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
 
@@ -339,6 +339,18 @@ function findGroupClose(pattern: string, open: number, opener: string, closer: s
       const classClose = findClassClose(pattern, index);
       if (classClose !== -1) {
         index = classClose;
+        continue;
+      }
+    }
+    // A brace group is skipped whole for the same reason, and for one more: a
+    // member of it can spell the closer. `@(.test{)..)}.ts` expands to
+    // `@(.test).ts` before anything is compiled, so the `)` between the braces
+    // is not this group's close — read as one it ended the group at a place the
+    // expansion never puts it.
+    if (opener !== "{" && char === "{") {
+      const braceClose = findGroupClose(pattern, index, "{", "}");
+      if (braceClose !== -1) {
+        index = braceClose;
         continue;
       }
     }
@@ -991,8 +1003,39 @@ export function resolveScaffoldDialect(
   const scannable = matchWholePath
     ? !includes.refused
     : !compileGlobMatchers(testFileGlobs, true).refused;
-  const extensions = deriveTestFileExtensions(testFileGlobs);
+  const { extensions, overBound } = readTestFileExtensions(testFileGlobs);
   if (!scannable) {
+    return {
+      outcome: "naming-mismatch",
+      shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_TC_ID))],
+    };
+  }
+  // The defaults are unioned in because BOTH scans apply them
+  // (`collectScTestReferences` and the ATDD scan itself), so a scaffold
+  // directory under `dist/` or `out/` is invisible to every reader of it.
+  // Excludes are skipped entirely without a destination: an exclude glob names
+  // a location, and matching one by basename would reject on `**` alone.
+  //
+  // Compiled before the fallback below, not after: an exclude fast-glob refuses
+  // stops the call it is in, so the project's scan collects nothing, and an
+  // include set naming no extension would otherwise have taken the default and
+  // written a file that scan never opens.
+  const excludes = matchWholePath
+    ? compileGlobMatchers(
+        [...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, ...(options.excludeGlobs ?? [])],
+        true,
+      )
+    : { matchers: [], refused: false };
+  if (excludes.refused) {
+    return {
+      outcome: "naming-mismatch",
+      shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_TC_ID))],
+    };
+  }
+  if (overBound) {
+    // Extensions this read could not recover. Taking the default here writes a
+    // skeleton under an extension the project's own globs may not select, and
+    // the refusal names the shape it would have written.
     return {
       outcome: "naming-mismatch",
       shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_TC_ID))],
@@ -1007,24 +1050,12 @@ export function resolveScaffoldDialect(
   if (candidates.length === 0) {
     return { outcome: "unsupported-stack" };
   }
-  // The defaults are unioned in because BOTH scans apply them
-  // (`collectScTestReferences` and the ATDD scan itself), so a scaffold
-  // directory under `dist/` or `out/` is invisible to every reader of it.
-  // Excludes are skipped entirely without a destination: an exclude glob names
-  // a location, and matching one by basename would reject on `**` alone.
-  const excludes = matchWholePath
-    ? compileGlobMatchers(
-        [...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, ...(options.excludeGlobs ?? [])],
-        true,
-      )
-    : { matchers: [], refused: false };
   // A refused range stops fast-glob compiling the call it is in, so the
   // project's scan collects nothing and no destination this writer could
   // choose is one that scan reads. An exclude holding one is the case a matcher
   // that excludes nothing read as an exclusion that does not apply, and the
   // skeleton was written under an include the same refusal had already stopped.
   const admits = (candidate: string): boolean =>
-    !excludes.refused &&
     includes.matchers.some((matcher) => matcher.test(candidate)) &&
     !excludes.matchers.some((matcher) => matcher.test(candidate));
   const tcIds =

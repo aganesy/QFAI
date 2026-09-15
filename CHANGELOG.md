@@ -195,6 +195,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Refuse a scaffold destination where the extensions could not be read, where
+  an exclude glob's range stops the scan, or where a brace range's endpoints
+  are not whole numbers, rather than writing a file the project's own runner
+  does not collect.
+
 - Read a brace range that generates either half of an extglob, and write out
   every range a pattern holds rather than a fixed number of them, so the
   scaffold names a file the project's own runner collects.

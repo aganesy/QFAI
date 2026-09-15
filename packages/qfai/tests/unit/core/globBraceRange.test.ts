@@ -20,6 +20,11 @@ describe("braceRangeMembers", () => {
     // Measured against the expander: `1e3` is a thousand and `1.0` is one.
     ["1e3..1e3", ["1000"]],
     ["1.0..3", ["1", "2", "3"]],
+    // Written like a number and not a whole one: the expander leaves the
+    // range as text, so the pattern names a file spelled with the braces in
+    // it and this reads no member out of it.
+    ["1.5..3", null],
+    ["1..2.5", null],
     ["a..e..2", ["a", "c", "e"]],
   ])("expands %s", (body, members) => {
     expect(braceRangeMembers(body)).toEqual(members);

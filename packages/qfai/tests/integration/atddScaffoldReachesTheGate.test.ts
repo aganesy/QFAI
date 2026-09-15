@@ -500,7 +500,31 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     // Four ranges of the whole alphabet in the last segment are more strings
     // than there is reason to write out. A set read from part of that expansion
     // would name extensions the matcher does not select.
-    expect([...deriveTestFileExtensions(["tests/**/*.{a..z}{a..z}{a..z}{a..z}"])]).toEqual([]);
+    const globs = ["tests/**/*.{a..z}{a..z}{a..z}{a..z}"];
+    expect([...deriveTestFileExtensions(globs)]).toEqual([]);
+    // And the writer refuses rather than taking the default: an empty answer
+    // here is not the empty answer an unconfigured project gives.
+    expect(resolveScaffoldDialect(globs).outcome).toBe("naming-mismatch");
+  });
+
+  it("refuses when an exclude glob's range stops the scan and no extension is named", () => {
+    // fast-glob compiles the ignore in the same call, so the scan collects
+    // nothing. Read after the include set's own empty answer, the run took the
+    // default and wrote a skeleton under an include that refusal had stopped.
+    const globs = ["tests/**/*"];
+    expect(
+      resolveScaffoldDialect(globs, {
+        scaffoldDir: "tests/integration/spec-0001",
+        excludeGlobs: ["tests/{0000..9999}/**/*"],
+      }).outcome,
+    ).toBe("naming-mismatch");
+  });
+
+  it("writes out a range that generates the extglob's closing parenthesis", () => {
+    // The `)` between the braces is not the group's close: the expansion puts
+    // one after `.test`. Read as the close, the group ended where the pattern
+    // never ends and the whole brace was never written out.
+    expect(requireDialect(["tests/**/TC-0000-0000@(.test{)..)}.ts"]).id).toBe("js-ts");
   });
 
   it("derives an extension a range spells inside a list", () => {
