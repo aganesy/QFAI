@@ -171,6 +171,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Excess tags cover code, controls, settings and explanatory copy in both the
+  review definitions and shipped reviewer cards. `delete` also covers reuse of
+  code already present (#1800).
+
 - The implementation reviewer flags promises neither awaited nor returned rather
   than requiring catches on propagated async failures. A dropped rejection keeps
   its correctness class (#1805).
