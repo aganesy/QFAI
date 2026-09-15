@@ -553,6 +553,65 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reports every marked skeleton it reads, and it reads the acceptance
   directories as well as `testFileGlobs`, as the coverage check it runs does.
 
+- **The audited evidence hash says what its extraction produces, not only which
+  fields it reads** (#1616). Naming the fields settled which lines are taken and
+  left open what they become, so two readers taking the same fields computed
+  different digests: the list marker, the `Round N: ` prefix, a field's fenced
+  value, the heading line, the field order and the separator were each
+  undetermined. A recorded value was reproducible only inside the run that wrote
+  it, which is not a check.
+
+  The extraction is a region of the entry rather than a selection out of it: it
+  runs from the row's heading to the first field the subject could not have
+  read, keeps every line inside verbatim including a field's fenced value, drops
+  a reviewer's own verdict line, and synthesizes the heading. That is what
+  `npx qfai validate` gate item 10 computes today, so a second party recomputing
+  a recorded digest gets the recorded digest. A selection would have had to fix
+  an order, a separator and a spelling as well, each a further way to disagree.
+
+  Four values share these words and are not one: three ledger fields carrying
+  three reviewer roles' verdicts by these same four steps — the third is the
+  parity hash a UI-affecting row owes — and the working-tree revision, which
+  addresses a tree rather than a subject. The reference now names all four.
+
+  A round with several review attempts qualifies its verdict field, and the
+  extraction now drops that form too: the contract said every verdict line goes
+  and the code matched only the unqualified one, so a multi-attempt round gave
+  the reviewer and the gate two digests. The `Round N: Review pack` pair written
+  beside each attempt is dropped the same way, and the gate recomputes each
+  attempt's seal from the pack it names instead, so a pack edited after its
+  attempt closed is still reported. A round that records any pair owes one for
+  every verdict attempt, a pair's path must have the canonical pack shape even
+  when the pack is absent, and a present pack must name the row in its request
+  and carry responses that agree with the attempt's verdict. It must also review
+  this row's spec at one revision, and the attempt the last round closed on must
+  hold one response per reviewer the row records, at the tree and audited hash
+  that reviewer's verdict records. A request names the row once and otherwise only T1
+  rows sharing its `BR-Ref`, and each response in a pack states its verdict. Every
+  review pack's seal now hashes Markdown and HTML normalized and every other file
+  as its bytes, as the audit-hash procedure does, so a producer's seal over a
+  `summary.json` with a carriage return recomputes. The completion gate also holds those
+  attempts to the numbering the contract gives them, from 1 in review order,
+  and reads the attempt a round ends on: a round before the last has to end on
+  a `REVISE`, and the last round of a done row on exactly `PASS`. Within a
+  round, every attempt before the last is a `REVISE`. A blank attempt counts as
+  one.
+
+  Every response in a present round pack must state one visible SHA-256
+  `Audited evidence hash` per `TDD-ID` its request lists, and a T1 group
+  member's hash is read from the line naming it, in round and row-level packs
+  alike. No two review attempts of a row may name one pack, and a
+  `reviewer verdict` or `Round N: Review pack` label may not share a table row
+  with another field's label, since the audited subject drops that row whole.
+  A round pack pair needs its attempt's `PASS` or `REVISE` verdict even when
+  the pack is absent, and a present pack's `summary.json` must record that
+  verdict: `overall_status` `PASS` or `FAIL`, and each responding reviewer's
+  status in `reviewers[]`, or `reviewers: []` for a round no reviewer answered.
+  Review pack responses are read only from the pack's own directory, and a
+  round pack must name its revision in a form `evidence-revision.md` defines
+  under `revision_form: "content-hash"` and declare `producer: "implement"` in
+  `summary.json` and `Producer: implement` in its request.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

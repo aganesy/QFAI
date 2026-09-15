@@ -51,22 +51,33 @@ function normalizeArtifact(value: string): string {
 }
 
 /**
- * The subject minus `Round N: reviewer verdict` — the one field the completion
- * reviewers write inside a round block, after they have read it, so what they
- * hashed never contained it. A fenced verdict owns its fence lines too.
+ * The subject minus `Round N: reviewer verdict` and the `Round N: Review pack`
+ * pair beside each attempt — the fields the completion reviewers write inside a
+ * round block, after they have read it, so what they hashed never contained
+ * them. A fenced value owns its fence lines too.
  */
 function withoutReviewerVerdicts(text: string): string {
   const lines = text.split("\n");
   const kept: string[] = [];
   for (let index = 0; index < lines.length; index += 1) {
-    const verdict = /^\s*(?:- )?(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict[ \t]*:[ \t]*(.*)$/i.exec(
-      lines[index] ?? "",
-    );
+    // A table row `| <label> | <value> |` is the same field as `<label>: <value>`.
+    const line = lines[index] ?? "";
+    const tableRow = /^\s*\|([^|]*)\|([^|]*)\|\s*$/.exec(line);
+    const asField = tableRow
+      ? `${(tableRow[1] ?? "").trim()}: ${(tableRow[2] ?? "").trim()}`
+      : line;
+    const verdict =
+      /^\s*(?:- )?(?:\*\*)?(?:(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict|Round[ \t]+\d+:[ \t]*Review pack(?:[ \t]+seal)?)(?:[ \t]*\(attempt[ \t]+\d+\))?(?:\*\*)?[ \t]*:[ \t]*(.*)$/i.exec(
+        asField,
+      );
     if (verdict === null) {
       kept.push(lines[index] ?? "");
       continue;
     }
-    if ((verdict[1] ?? "").trim().length > 0) continue;
+    // Bold emphasis closes AFTER the colon in the form this repository writes,
+    // so the capture is the markup rather than a value. Stripping it first is
+    // what makes an empty value read as empty.
+    if ((verdict[1] ?? "").replace(/\*+/g, "").trim().length > 0) continue;
     let cursor = index + 1;
     while (cursor < lines.length && (lines[cursor] ?? "").trim().length === 0) cursor += 1;
     if (!/^\s*```/.test(lines[cursor] ?? "")) continue;
@@ -187,10 +198,7 @@ async function packSeal(root: string, packPath: string): Promise<string> {
       const entryPath = path.join(directory, entry.name);
       const relativePath = `${relativeDirectory}/${entry.name}`;
       if (entry.isDirectory()) await walk(entryPath, relativePath);
-      else
-        records.push(
-          `${relativePath}\0${digest(normalizeArtifact(await readFile(entryPath, "utf8")))}`,
-        );
+      else records.push(surfaceRecord(relativePath, await readFile(entryPath)));
     }
   }
   await walk(absolute, packPath);
@@ -198,12 +206,79 @@ async function packSeal(root: string, packPath: string): Promise<string> {
   return digest(records.join("\n"));
 }
 
+/**
+ * A round pack's `summary.json` as the implement stage writes it, reviewing
+ * `specPath` at `revision`: one `reviewers[]` entry per reviewer in `statuses`,
+ * and the overall status they add up to, which is `PASS` only when some
+ * reviewer answered and all passed.
+ */
+function roundSummary(
+  revision: string,
+  statuses: Readonly<Record<string, string>>,
+  specPath = ".qfai/specs/spec-0001",
+): string {
+  const reviewers = Object.entries(statuses).map(([reviewer, status]) => ({ reviewer, status }));
+  const passed = reviewers.length > 0 && reviewers.every(({ status }) => status === "PASS");
+  return `${JSON.stringify({
+    producer: "implement",
+    overall_status: passed ? "PASS" : "FAIL",
+    reviewers,
+    revision_form: "content-hash",
+    revision,
+    target: { kind: "spec", path: specPath },
+  })}\n`;
+}
+
 /** A full-length git rev: the form `evidence-revision.md` asks for. */
 const DEFAULT_REVISION = "abc1230000000000000000000000000000000000";
+
+/** The line a request written by the implement stage opens with. */
+/**
+ * A response body with the `Reviewer role` line a pack's response carries.
+ *
+ * The validator reads the role off that line and requires the file name to
+ * agree, so a fixture without it is not a response at all.
+ */
+function withReviewerRole(role: string, body: string): string {
+  return /^Reviewer role:/m.test(body) ? body : `Reviewer role: ${role}\n${body}`;
+}
+
+const IMPLEMENT_PRODUCER = "- Producer: implement\n";
+
+/**
+ * A round attempt's pack as the implement stage writes it: `request` after its
+ * `Producer` line, one `R01_<role>.md` per entry of `responses`, and a summary
+ * reviewing spec-0001 at `revision` that gives each reviewer the status its
+ * response states.
+ */
+async function writeRoundPack(
+  root: string,
+  pack: string,
+  request: string,
+  responses: Readonly<Record<string, string>>,
+  revision = DEFAULT_REVISION,
+): Promise<void> {
+  await mkdir(path.join(root, pack), { recursive: true });
+  await writeFile(path.join(root, pack, "review_request.md"), `${IMPLEMENT_PRODUCER}${request}`);
+  const statuses: Record<string, string> = {};
+  for (const [role, body] of Object.entries(responses)) {
+    await writeFile(path.join(root, pack, `R01_${role}.md`), withReviewerRole(role, body));
+    statuses[role] = /^Result: PASS$/m.test(body) ? "PASS" : "FAIL";
+  }
+  await writeFile(path.join(root, pack, "summary.json"), roundSummary(revision, statuses));
+}
 
 interface EvidenceOptions {
   requestOnlyPassRole?: string;
   reviewRequestTddId?: string;
+  /**
+   * The `Audited evidence hash` lines each review pack response carries, given
+   * the row's own hash. Omitted, a response carries the one bare line of a row
+   * reviewed alone.
+   */
+  auditedHashLines?: (auditHash: string) => string;
+  /** A directory below each review pack's root to write its responses into. */
+  responseDirectory?: string;
   summaryTargetPath?: string;
   omitReviewPacks?: boolean;
   revision?: string;
@@ -292,13 +367,19 @@ async function writeStagePack(root: string, options: EvidenceOptions): Promise<v
       : `Audited evidence hash: ${"c".repeat(64)}\n`;
   await writeFile(
     path.join(packDir, `R01_completion-reviewer.md`),
-    `Result: ${options.stagePackDefect === "revise" ? "REVISE" : "PASS"}\nReviewed revision: ${revision}\n${auditedHash}`,
+    withReviewerRole(
+      "completion-reviewer",
+      `Result: ${options.stagePackDefect === "revise" ? "REVISE" : "PASS"}\nReviewed revision: ${revision}\n${auditedHash}`,
+    ),
     "utf-8",
   );
   if (options.stagePackDefect === "second-response-revise") {
     await writeFile(
       path.join(packDir, `R02_completion-reviewer.md`),
-      `Result: REVISE\nReviewed revision: ${revision}\n${auditedHash}`,
+      withReviewerRole(
+        "completion-reviewer",
+        `Result: REVISE\nReviewed revision: ${revision}\n${auditedHash}`,
+      ),
       "utf-8",
     );
   }
@@ -403,7 +484,9 @@ async function materializeEvidence(
     const packPath = `.qfai/review/review-${name}`;
     const packDir = path.join(root, packPath);
     await mkdir(packDir, { recursive: true });
-    const passRecord = `Result: PASS\nReviewed revision: ${revision}\nAudited evidence hash: ${packAuditHash}\n`;
+    const hashLines =
+      options.auditedHashLines?.(packAuditHash) ?? `Audited evidence hash: ${packAuditHash}\n`;
+    const passRecord = `Result: PASS\nReviewed revision: ${revision}\n${hashLines}`;
     await writeFile(
       path.join(packDir, "review_request.md"),
       options.requestOnlyPassRole === role
@@ -411,15 +494,20 @@ async function materializeEvidence(
         : `TDD-ID: ${options.reviewRequestTddId ?? "TDD-0001"}\n`,
       "utf8",
     );
+    const responseDir = path.join(packDir, options.responseDirectory ?? "");
+    await mkdir(responseDir, { recursive: true });
     await writeFile(
-      path.join(packDir, `R01_${role}.md`),
-      responseBody(role, passRecord, options),
+      path.join(responseDir, `R01_${role}.md`),
+      withReviewerRole(role, responseBody(role, passRecord, options)),
       "utf8",
     );
     if (options.secondResponseRole === role) {
       await writeFile(
         path.join(packDir, `R02_${role}.md`),
-        `Result: REVISE\nReviewed revision: ${revision}\nAudited evidence hash: ${packAuditHash}\n`,
+        withReviewerRole(
+          role,
+          `Result: REVISE\nReviewed revision: ${revision}\nAudited evidence hash: ${packAuditHash}\n`,
+        ),
         "utf8",
       );
     }
@@ -481,6 +569,19 @@ function ledger(rows: Row[]): string {
     })
     .join("\n");
   return `${HEADER}\n${body}\n`;
+}
+
+/** `ledgerText` with a `BR-Ref` column holding `key` on every row. */
+function withBrRef(ledgerText: string, key: string): string {
+  return ledgerText
+    .split("\n")
+    .map((line) => {
+      if (line.startsWith("| TDD-ID ")) return `${line} BR-Ref |`;
+      if (line.startsWith("| ------ ")) return `${line} ------ |`;
+      if (line.startsWith("| TDD-")) return `${line} ${key} |`;
+      return line;
+    })
+    .join("\n");
 }
 
 async function withProject(fn: (root: string) => Promise<void>): Promise<void> {
@@ -1553,6 +1654,38 @@ describe("QFAI-TDDLIST-008", () => {
     });
   });
 
+  it("drops a bold-colon verdict and its fence, as the contract says to", async () => {
+    await withProject(async (root) => {
+      // The form this repository writes: emphasis closing AFTER the colon, and
+      // the `(attempt M)` qualifier a round with several review attempts
+      // records. Read naively the capture is `**` rather than nothing, so the
+      // label is dropped and the fence beneath it is not — leaving the
+      // reviewer's own answer in the subject that reviewer hashes.
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- **Round 1: reviewer verdict (attempt 1):**",
+          "```text",
+          "REVISE — the assertion names no boundary",
+          "```",
+          "- **Round 1: reviewer verdict (attempt 2):**",
+          "```text",
+          "PASS",
+          "```",
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+
+      // The hashes in `completeEntry` are computed over the subject the
+      // contract defines, so the row completes only if the validator drops
+      // both lines the same way.
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
   it("does not count a field label embedded inside fenced output", async () => {
     await withProject(async (root) => {
       const evidence = completeEntry("Unit")
@@ -1672,6 +1805,1585 @@ describe("QFAI-TDDLIST-008", () => {
       expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
+
+  it("reads a qualified REVISE as the verdict that opens the next round", async () => {
+    // The `(attempt M)` qualifier is part of the field name a multi-attempt
+    // round writes, so a qualified verdict is the round's verdict and the
+    // `REVISE` on its last attempt is what opens the next round.
+    await withProject(async (root) => {
+      const secondRoundRevision = "bcd1230000000000000000000000000000000000";
+      const evidence = completeEntry("Unit")
+        .replace(
+          "- Refactor verify command: npm test",
+          [
+            "- Round 1: reviewer verdict (attempt 1): REVISE — re-reviewed in this round",
+            "- Round 1: reviewer verdict (attempt 2): REVISE — needs new production behaviour",
+            "- Round 2: Revision: " + secondRoundRevision,
+            "- Round 2: RED revision: def7890000000000000000000000000000000000",
+            "- Round 2: RED command: npm test",
+            "- Round 2: RED result: 1 failed",
+            "- Round 2: GREEN command: npm test",
+            "- Round 2: GREEN result: 1 passed",
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        )
+        .replaceAll(
+          "reviewed revision: abc1230000000000000000000000000000000000",
+          `reviewed revision: ${secondRoundRevision}`,
+        );
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+        { revision: secondRoundRevision },
+      );
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it("reads a bold-colon REVISE as the verdict that opens the next round", async () => {
+    // The emphasis closes after the colon, so the raw value began with `**` and a
+    // check for `REVISE` at its start never matched.
+    await withProject(async (root) => {
+      const secondRoundRevision = "bcd1230000000000000000000000000000000000";
+      const evidence = completeEntry("Unit")
+        .replace(
+          "- Refactor verify command: npm test",
+          [
+            "- **Round 1: reviewer verdict:** REVISE — needs new production behaviour",
+            "- Round 2: Revision: " + secondRoundRevision,
+            "- Round 2: RED revision: def7890000000000000000000000000000000000",
+            "- Round 2: RED command: npm test",
+            "- Round 2: RED result: 1 failed",
+            "- Round 2: GREEN command: npm test",
+            "- Round 2: GREEN result: 1 passed",
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        )
+        .replaceAll(
+          "reviewed revision: abc1230000000000000000000000000000000000",
+          `reviewed revision: ${secondRoundRevision}`,
+        );
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+        { revision: secondRoundRevision },
+      );
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it.each([
+    ["an attempt 2 with no attempt 1", ["(attempt 2): REVISE — needs new production behaviour"]],
+    ["an attempt 0", ["(attempt 0): REVISE — needs new production behaviour"]],
+    [
+      "a repeated number",
+      [
+        "(attempt 1): REVISE — re-reviewed in this round",
+        "(attempt 1): REVISE — needs new production behaviour",
+      ],
+    ],
+    [
+      "numbers out of review order",
+      [
+        "(attempt 2): REVISE — re-reviewed in this round",
+        "(attempt 1): REVISE — needs new production behaviour",
+      ],
+    ],
+    [
+      "an unqualified attempt beside a qualified one",
+      [
+        ": REVISE — re-reviewed in this round",
+        "(attempt 2): REVISE — needs new production behaviour",
+      ],
+    ],
+  ])("rejects a round whose review attempts show %s", async (_shape, attempts) => {
+    // Attempts count from 1 in review order. A gap, a repeat or a reordering is
+    // an attempt missing from the audit trail, and the line written last is then
+    // not known to be the one the round closed on.
+    await withProject(async (root) => {
+      const secondRoundRevision = "bcd1230000000000000000000000000000000000";
+      const evidence = completeEntry("Unit")
+        .replace(
+          "- Refactor verify command: npm test",
+          [
+            ...attempts.map((attempt) =>
+              attempt.startsWith(":")
+                ? `- Round 1: reviewer verdict${attempt}`
+                : `- Round 1: reviewer verdict ${attempt}`,
+            ),
+            "- Round 2: Revision: " + secondRoundRevision,
+            "- Round 2: RED revision: def7890000000000000000000000000000000000",
+            "- Round 2: RED command: npm test",
+            "- Round 2: RED result: 1 failed",
+            "- Round 2: GREEN command: npm test",
+            "- Round 2: GREEN result: 1 passed",
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        )
+        .replaceAll(
+          "reviewed revision: abc1230000000000000000000000000000000000",
+          `reviewed revision: ${secondRoundRevision}`,
+        );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+        { revision: secondRoundRevision },
+      );
+      const finding = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
+      expect(finding?.message).toContain(
+        "Round 1: reviewer verdict attempts numbered from 1 in review order",
+      );
+    });
+  });
+
+  it("rejects a done row whose last round ends on a REVISE", async () => {
+    // A REVISE closes a round only by opening another or by a later attempt in
+    // the same round. Left last, it is a review nobody answered, whatever the
+    // row-level verdicts say.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- **Round 1: reviewer verdict (attempt 1):**",
+          "```text",
+          "REVISE — the assertion names no boundary",
+          "```",
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      const finding = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
+      expect(finding?.message).toContain("Round 1: reviewer verdict: PASS");
+    });
+  });
+
+  it.each([
+    [
+      "a PASS with more text after it",
+      ["- Round 1: reviewer verdict: PASS but verification is still pending"],
+    ],
+    [
+      "a blank last attempt",
+      ["- Round 1: reviewer verdict (attempt 1): PASS", "- Round 1: reviewer verdict (attempt 2):"],
+    ],
+  ])("rejects a last round that closes on %s", async (_shape, verdictLines) => {
+    // The closing verdict is `PASS` exactly. A blank attempt is still an
+    // attempt, so it cannot leave the one before it standing as the close.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [...verdictLines, "- Refactor verify command: npm test"].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      const finding = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
+      expect(finding?.message).toContain("Round 1: reviewer verdict: PASS");
+    });
+  });
+
+  it("drops each attempt's review pack pair from the subject", async () => {
+    // Each review creates its own pack, and the pair naming it is written once
+    // that review has run. Left in the region, it put bytes the reviewer never
+    // read into what the reviewer hashed, and the recorded digest failed.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          "- Round 1: Review pack (attempt 1): .qfai/review/review-20260101000000000",
+          `- Round 1: Review pack seal (attempt 1): sha256:${"a".repeat(64)}`,
+          "- Round 1: reviewer verdict (attempt 2): PASS",
+          "- Round 1: Review pack (attempt 2): .qfai/review/review-20260101010000000",
+          `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+
+      // `completeEntry`'s hashes are taken over the subject without these lines,
+      // so the row completes only if the validator drops them the same way.
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it("recomputes each attempt's round review pack seal from the pack it names", async () => {
+    // The pair is left out of every audited subject, so recomputing the seal is
+    // the only thing that sees a pack edited after its attempt closed.
+    await withProject(async (root) => {
+      const first = ".qfai/review/review-20260101000000000";
+      const second = ".qfai/review/review-20260101010000000";
+      for (const [pack, verdict] of [
+        [first, "REVISE"],
+        [second, "PASS"],
+      ] as const) {
+        await mkdir(path.join(root, pack), { recursive: true });
+        await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
+        await writeFile(
+          path.join(root, pack, "R01_completion-reviewer.md"),
+          `Result: ${verdict}\nReviewed revision: abc1230000000000000000000000000000000000\n`,
+        );
+        await writeFile(
+          path.join(root, pack, "summary.json"),
+          roundSummary("abc1230000000000000000000000000000000000", {
+            "completion-reviewer": verdict === "PASS" ? "PASS" : "FAIL",
+          }),
+        );
+      }
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          `- Round 1: Review pack (attempt 1): ${first}`,
+          `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, first)}`,
+          "- Round 1: reviewer verdict (attempt 2): PASS",
+          `- Round 1: Review pack (attempt 2): ${second}`,
+          `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      const messages = issues.map((issue) => issue.message).join("\n");
+      expect(messages).toContain("Round 1: Review pack seal (attempt 2) matching pack contents");
+      expect(messages).not.toContain(
+        "Round 1: Review pack seal (attempt 1) matching pack contents",
+      );
+      // The earlier attempt's pack is its own: this row, its verdict, this round.
+      expect(messages).not.toContain("Round 1: Review pack (attempt 1) carrying");
+      expect(messages).not.toContain("Round 1: Review pack (attempt 1) reviewing");
+    });
+  });
+
+  it("requires a pack pair for every verdict attempt once a round records one", async () => {
+    // The last attempt's pack is the one the round closed on, so a round that
+    // recorded the first attempt's pair and not the closing one's is missing
+    // the review it rests on.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          "- Round 1: Review pack (attempt 1): .qfai/review/review-20260101000000000",
+          `- Round 1: Review pack seal (attempt 1): sha256:${"a".repeat(64)}`,
+          "- Round 1: reviewer verdict (attempt 2): PASS",
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: Review pack (attempt 2) beside that attempt's reviewer verdict",
+      );
+    });
+  });
+
+  it("reads a round pack pair written with no values as a pair missing its values", async () => {
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict: PASS",
+          "- Round 1: Review pack:",
+          "- Round 1: Review pack seal:",
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: Review pack seal: sha256",
+      );
+    });
+  });
+
+  it("refuses a round pack path of the wrong shape even when nothing is there", async () => {
+    // Packs are skipped when absent, so a path that could never name one would
+    // otherwise pass on every fresh clone.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict: PASS",
+          "- Round 1: Review pack: .qfai/review/not-a-pack",
+          `- Round 1: Review pack seal: sha256:${"a".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: Review pack: canonical .qfai/review/review-<17-digit timestamp> path",
+      );
+    });
+  });
+
+  it("binds a present round pack to this row and to the verdict it records", async () => {
+    // A sealed pack from another review keeps every hash unchanged, because the
+    // pair is outside the audited subject, so its contents are what can refuse it.
+    await withProject(async (root) => {
+      const pack = ".qfai/review/review-20260101000000000";
+      await mkdir(path.join(root, pack), { recursive: true });
+      await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
+      await writeFile(
+        path.join(root, pack, "R01_completion-reviewer.md"),
+        withReviewerRole("completion-reviewer", "Result: REVISE\n"),
+      );
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict: PASS",
+          `- Round 1: Review pack: ${pack}`,
+          `- Round 1: Review pack seal: sha256:${await packSeal(root, pack)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      const messages = issues.map((issue) => issue.message).join("\n");
+      expect(messages).toContain(
+        "Round 1: Review pack carrying this row's request and responses agreeing with its verdict",
+      );
+      expect(messages).not.toContain("Round 1: Review pack seal matching pack contents");
+    });
+  });
+
+  it("requires every review attempt before the last to be a REVISE", async () => {
+    // A later attempt exists only to answer a REVISE, so a PASS ahead of it had
+    // already closed the review.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): PASS",
+          "- Round 1: reviewer verdict (attempt 2): PASS",
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: every reviewer verdict attempt before the last: REVISE",
+      );
+    });
+  });
+
+  it("binds a round pack to this row's spec, not to the round's GREEN revision", async () => {
+    // Ids are unique only within a spec, so a sealed pack reviewing another spec's
+    // row of the same id would otherwise stand in for this one. The round's
+    // `Revision` is its GREEN, taken before the refactor a review reads, so an
+    // earlier pack naming a later tree is not refused for it.
+    await withProject(async (root) => {
+      const foreign = ".qfai/review/review-20260101000000000";
+      const later = ".qfai/review/review-20260101010000000";
+      for (const [pack, specPath] of [
+        [foreign, ".qfai/specs/spec-0002"],
+        [later, ".qfai/specs/spec-0001"],
+      ] as const) {
+        await mkdir(path.join(root, pack), { recursive: true });
+        await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
+        await writeFile(
+          path.join(root, pack, "R01_completion-reviewer.md"),
+          `Result: REVISE\nReviewed revision: ${"d".repeat(40)}\n`,
+        );
+        await writeFile(
+          path.join(root, pack, "summary.json"),
+          roundSummary("d".repeat(40), { "completion-reviewer": "FAIL" }, specPath),
+        );
+      }
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          `- Round 1: Review pack (attempt 1): ${foreign}`,
+          `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, foreign)}`,
+          "- Round 1: reviewer verdict (attempt 2): REVISE — the boundary is still unnamed",
+          `- Round 1: Review pack (attempt 2): ${later}`,
+          `- Round 1: Review pack seal (attempt 2): sha256:${await packSeal(root, later)}`,
+          "- Round 1: reviewer verdict (attempt 3): PASS",
+          "- Round 1: Review pack (attempt 3): .qfai/review/review-20260101020000000",
+          `- Round 1: Review pack seal (attempt 3): sha256:${"b".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      const messages = issues.map((issue) => issue.message).join("\n");
+      expect(messages).toContain(
+        "Round 1: Review pack (attempt 1) reviewing this row's spec at one revision",
+      );
+      expect(messages).not.toContain("Round 1: Review pack (attempt 2) reviewing");
+    });
+  });
+
+  it("reads a round pack's request as the list of ids its review covered", async () => {
+    // A T1 group is reviewed in one round, and its request lists members that
+    // share the row's `BR-Ref`. A repeated id, a row outside that group or a word
+    // that is no id names a different review.
+    for (const [request, accepted] of [
+      ["TDD-ID: TDD-0001, TDD-0002\n", true],
+      ["TDD-ID: TDD-0001, TDD-0001\n", false],
+      ["TDD-ID: TDD-0001, TDD-9999\n", false],
+      ["TDD-ID: TDD-0001 garbage\n", false],
+    ] as const) {
+      await withProject(async (root) => {
+        const pack = ".qfai/review/review-20260101000000000";
+        await mkdir(path.join(root, pack), { recursive: true });
+        await writeFile(path.join(root, pack, "review_request.md"), request);
+        await writeFile(
+          path.join(root, pack, "R01_completion-reviewer.md"),
+          `Result: REVISE\nReviewed revision: ${DEFAULT_REVISION}\n`,
+        );
+        await writeFile(
+          path.join(root, pack, "summary.json"),
+          roundSummary(DEFAULT_REVISION, { "completion-reviewer": "FAIL" }),
+        );
+        const evidence = completeEntry("Unit").replace(
+          "- Refactor verify command: npm test",
+          [
+            "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+            `- Round 1: Review pack (attempt 1): ${pack}`,
+            `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, pack)}`,
+            "- Round 1: reviewer verdict (attempt 2): PASS",
+            "- Round 1: Review pack (attempt 2): .qfai/review/review-20260101010000000",
+            `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        );
+        const issues = await runIssuesOn(
+          root,
+          withBrRef(
+            ledger([
+              { status: "done", evidence: IMPLEMENT_POINTER },
+              { status: "todo", evidence: "-" },
+            ]),
+            "BR-0001",
+          ),
+          { ".qfai/evidence/implement-spec-0001.md": evidence },
+        );
+        const carrying = issues.some((issue) =>
+          issue.message.includes("Round 1: Review pack (attempt 1) carrying this row's request"),
+        );
+        expect(carrying, request).toBe(!accepted);
+      });
+    }
+  });
+
+  it("refuses a summary that records one reviewer twice", async () => {
+    // One entry per reviewer. Collected into a set, a role repeated with the
+    // same status collapsed to one value and every later check passed.
+    await withProject(async (root) => {
+      const pack = ".qfai/review/review-20260101000000000";
+      await mkdir(path.join(root, pack), { recursive: true });
+      await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
+      await writeFile(
+        path.join(root, pack, "R01_completion-reviewer.md"),
+        withReviewerRole(
+          "completion-reviewer",
+          `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: sha256:${"c".repeat(64)}\n`,
+        ),
+      );
+      await writeFile(
+        path.join(root, pack, "summary.json"),
+        `${JSON.stringify({
+          producer: "implement",
+          overall_status: "PASS",
+          reviewers: [
+            { reviewer: "completion-reviewer", status: "PASS" },
+            { reviewer: "completion-reviewer", status: "PASS" },
+          ],
+          revision_form: "content-hash",
+          revision: DEFAULT_REVISION,
+          target: { kind: "spec", path: ".qfai/specs/spec-0001" },
+        })}\n`,
+      );
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): PASS",
+          `- Round 1: Review pack (attempt 1): ${pack}`,
+          `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, pack)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "summary.json whose overall_status and reviewers agree",
+      );
+    });
+  });
+
+  it("reads the role a response states, not the one its file name claims", async () => {
+    // A file named for the routed reviewer whose body names another — or names
+    // none — is not that reviewer's verdict, and its `Result`, revision and hash
+    // may not close the row on its behalf.
+    for (const body of ["", "Reviewer role: implementation-reviewer\n"]) {
+      await withProject(async (root) => {
+        const pack = ".qfai/review/review-20260101000000000";
+        await mkdir(path.join(root, pack), { recursive: true });
+        await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
+        await writeFile(
+          path.join(root, pack, "R01_completion-reviewer.md"),
+          `${body}Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: sha256:${"c".repeat(64)}\n`,
+        );
+        await writeFile(
+          path.join(root, pack, "summary.json"),
+          roundSummary(DEFAULT_REVISION, { "completion-reviewer": "PASS" }),
+        );
+        const evidence = completeEntry("Unit").replace(
+          "- Refactor verify command: npm test",
+          [
+            "- Round 1: reviewer verdict (attempt 1): PASS",
+            `- Round 1: Review pack (attempt 1): ${pack}`,
+            `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, pack)}`,
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        );
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+          { ".qfai/evidence/implement-spec-0001.md": evidence },
+        );
+        expect(issues.map((issue) => issue.message).join("\n"), JSON.stringify(body)).toContain(
+          "responses agreeing with its verdict",
+        );
+      });
+    }
+  });
+
+  it("refuses a REVISE pack holding a response that states no verdict", async () => {
+    // Each response states its `Result` once, visibly; one `REVISE` beside a
+    // response with none is not a pack the attempt could have closed on.
+    await withProject(async (root) => {
+      const pack = ".qfai/review/review-20260101000000000";
+      await mkdir(path.join(root, pack), { recursive: true });
+      await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
+      await writeFile(
+        path.join(root, pack, "R01_completion-reviewer.md"),
+        withReviewerRole(
+          "completion-reviewer",
+          `Result: REVISE\nReviewed revision: ${DEFAULT_REVISION}\n`,
+        ),
+      );
+      await writeFile(
+        path.join(root, pack, "R01_implementation-reviewer.md"),
+        withReviewerRole("implementation-reviewer", `Reviewed revision: ${DEFAULT_REVISION}\n`),
+      );
+      await writeFile(
+        path.join(root, pack, "summary.json"),
+        roundSummary(DEFAULT_REVISION, {
+          "completion-reviewer": "FAIL",
+          "implementation-reviewer": "FAIL",
+        }),
+      );
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          `- Round 1: Review pack (attempt 1): ${pack}`,
+          `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, pack)}`,
+          "- Round 1: reviewer verdict (attempt 2): PASS",
+          "- Round 1: Review pack (attempt 2): .qfai/review/review-20260101010000000",
+          `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: Review pack (attempt 1) carrying this row's request and responses agreeing with its verdict",
+      );
+    });
+  });
+
+  it("seals a round pack's JSON as the bytes on disk", async () => {
+    // The pack is sealed by the audit-hash procedure, which normalizes Markdown
+    // and HTML only. A summary carrying a carriage return is sealed as it is.
+    await withProject(async (root) => {
+      const pack = ".qfai/review/review-20260101000000000";
+      await mkdir(path.join(root, pack), { recursive: true });
+      await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
+      await writeFile(
+        path.join(root, pack, "R01_completion-reviewer.md"),
+        `Result: REVISE\nReviewed revision: ${DEFAULT_REVISION}\n`,
+      );
+      await writeFile(
+        path.join(root, pack, "summary.json"),
+        roundSummary(DEFAULT_REVISION, { "completion-reviewer": "FAIL" }).replace(
+          "\n",
+          "\r\n  \r\n",
+        ),
+      );
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          `- Round 1: Review pack (attempt 1): ${pack}`,
+          `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, pack)}`,
+          "- Round 1: reviewer verdict (attempt 2): PASS",
+          "- Round 1: Review pack (attempt 2): .qfai/review/review-20260101010000000",
+          `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).not.toContain(
+        "Round 1: Review pack seal (attempt 1) matching pack contents",
+      );
+    });
+  });
+  it("reports a review attempt that records its pack pair twice", async () => {
+    // Only one pair per attempt is read, so a second would leave the first
+    // outside every check while both are dropped from the audited subject.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict: PASS",
+          "- Round 1: Review pack: .qfai/review/review-20260101000000000",
+          `- Round 1: Review pack seal: sha256:${"a".repeat(64)}`,
+          "- Round 1: Review pack: .qfai/review/review-20260101010000000",
+          `- Round 1: Review pack seal: sha256:${"b".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: Review pack and its seal recorded once",
+      );
+    });
+  });
+
+  it("requires the closing attempt to answer for every reviewer the row records", async () => {
+    // The attempt the last round closed on is the review the row-level verdicts
+    // record. A pack answering for one reviewer would satisfy the other's hash
+    // vacuously, so each routed reviewer answers there once, at its verdict's
+    // tree and hash.
+    await withProject(async (root) => {
+      const closing = ".qfai/review/review-20260101010000000";
+      await mkdir(path.join(root, closing), { recursive: true });
+      await writeFile(path.join(root, closing, "review_request.md"), "TDD-ID: TDD-0001\n");
+      await writeFile(
+        path.join(root, closing, "R01_completion-reviewer.md"),
+        withReviewerRole(
+          "completion-reviewer",
+          `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: sha256:${"c".repeat(64)}\n`,
+        ),
+      );
+      await writeFile(
+        path.join(root, closing, "summary.json"),
+        roundSummary(DEFAULT_REVISION, { "completion-reviewer": "PASS" }),
+      );
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          "- Round 1: Review pack (attempt 1): .qfai/review/review-20260101000000000",
+          `- Round 1: Review pack seal (attempt 1): sha256:${"a".repeat(64)}`,
+          "- Round 1: reviewer verdict (attempt 2): PASS",
+          `- Round 1: Review pack (attempt 2): ${closing}`,
+          `- Round 1: Review pack seal (attempt 2): sha256:${await packSeal(root, closing)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      const messages = issues.map((issue) => issue.message).join("\n");
+      expect(messages).toContain(
+        "Round 1: Review pack (attempt 2) holding one response per closing reviewer, at the revision and hash its verdict records",
+      );
+      expect(messages).not.toContain("Round 1: Review pack (attempt 2) reviewing");
+      expect(messages).not.toContain("Round 1: Review pack (attempt 2) carrying");
+    });
+  });
+
+  /** TDD-0001 done and TDD-0002 still to do, both T1 rows keyed `BR-0001`. */
+  const GROUP_LEDGER = withBrRef(
+    ledger([
+      { status: "done", evidence: IMPLEMENT_POINTER },
+      { status: "todo", evidence: "-" },
+    ]),
+    "BR-0001",
+  );
+  const HASH_LINE = `Audited evidence hash: sha256:${"c".repeat(64)}\n`;
+
+  it.each([
+    ["omits it", "TDD-ID: TDD-0001\n", "", false],
+    ["states it twice", "TDD-ID: TDD-0001\n", HASH_LINE.repeat(2), false],
+    [
+      "shows it only inside a fence",
+      "TDD-ID: TDD-0001\n",
+      `\`\`\`text\n${HASH_LINE}\`\`\`\n`,
+      false,
+    ],
+    [
+      "states a value that is not sha256",
+      "TDD-ID: TDD-0001\n",
+      "Audited evidence hash: TBD\n",
+      false,
+    ],
+    [
+      "gives one line to a request listing two ids",
+      "TDD-ID: TDD-0001, TDD-0002\n",
+      `Audited evidence hash: TDD-0001 sha256:${"c".repeat(64)}\n`,
+      false,
+    ],
+    [
+      "names an id its request does not list",
+      "TDD-ID: TDD-0001, TDD-0002\n",
+      `Audited evidence hash: TDD-0001 sha256:${"c".repeat(64)}\nAudited evidence hash: TDD-0003 sha256:${"d".repeat(64)}\n`,
+      false,
+    ],
+    ["states one visible sha256 hash", "TDD-ID: TDD-0001\n", HASH_LINE, true],
+    [
+      "gives each id its request lists a line of its own",
+      "TDD-ID: TDD-0001, TDD-0002\n",
+      `Audited evidence hash: TDD-0001: sha256:${"c".repeat(64)}\nAudited evidence hash: TDD-0002: sha256:${"d".repeat(64)}\n`,
+      true,
+    ],
+  ])(
+    "reads the audited hash of an earlier attempt's response that %s",
+    async (_shape, request, hashLines, conforming) => {
+      // No subject remains to recompute an earlier attempt's hash against, and
+      // its response still states one visible sha256 hash per id its request
+      // lists, as every response in a pack does.
+      await withProject(async (root) => {
+        const pack = ".qfai/review/review-20260101000000000";
+        await writeRoundPack(root, pack, request, {
+          "completion-reviewer": `Result: REVISE\nReviewed revision: ${DEFAULT_REVISION}\n${hashLines}`,
+        });
+        const evidence = completeEntry("Unit").replace(
+          "- Refactor verify command: npm test",
+          [
+            "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+            `- Round 1: Review pack (attempt 1): ${pack}`,
+            `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, pack)}`,
+            "- Round 1: reviewer verdict (attempt 2): PASS",
+            "- Round 1: Review pack (attempt 2): .qfai/review/review-20260101010000000",
+            `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        );
+        const issues = await runIssuesOn(root, GROUP_LEDGER, {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        });
+        const messages = issues.map((issue) => issue.message).join("\n");
+        expect(
+          messages.includes(
+            "Round 1: Review pack (attempt 1) holding one sha256 Audited evidence hash per TDD-ID its request lists, in every response",
+          ),
+        ).toBe(!conforming);
+        expect(messages).not.toContain("Round 1: Review pack seal (attempt 1)");
+        expect(messages).not.toContain("Round 1: Review pack (attempt 1) carrying");
+        expect(messages).not.toContain("Round 1: Review pack (attempt 1) reviewing");
+        expect(messages).not.toContain("Round 1: Review pack (attempt 1) declaring");
+      });
+    },
+  );
+
+  it.each([
+    [
+      "from the line naming it",
+      (own: string, other: string) =>
+        `Audited evidence hash: TDD-0001 ${own}\nAudited evidence hash: TDD-0002 ${other}\n`,
+      true,
+    ],
+    [
+      "from the line naming it after the hash",
+      (own: string, other: string) =>
+        `Audited evidence hash: ${own} (TDD-0001)\nAudited evidence hash: ${other} (TDD-0002)\n`,
+      true,
+    ],
+    [
+      "never from a line naming another member",
+      (own: string, other: string) =>
+        `Audited evidence hash: TDD-0001 ${other}\nAudited evidence hash: TDD-0002 ${own}\n`,
+      false,
+    ],
+    [
+      "never from one line answering two members",
+      (own: string, _other: string) => `Audited evidence hash: ${own}\n`,
+      false,
+    ],
+  ])("takes a T1 group response's hash for this row %s", async (_source, hashLines, completes) => {
+    // A group's shared response carries one hash line per member, and a row's
+    // hash is the one on the line naming it, in the closing round pack and in
+    // the row's own review packs alike.
+    await withProject(async (root) => {
+      const evidenceFile = ".qfai/evidence/implement-spec-0001.md";
+      const closing = ".qfai/review/review-20260101010000000";
+      const entry = completeEntry("Unit")
+        .replace("{{RED_TEST_HASH}}", "e".repeat(64))
+        .replace(
+          "- Refactor verify command: npm test",
+          [
+            "- Round 1: reviewer verdict: PASS",
+            `- Round 1: Review pack: ${closing}`,
+            "- Round 1: Review pack seal: {{ROUND_PACK_SEAL}}",
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        );
+      const lines = (own: string): string => hashLines(own, "d".repeat(64));
+      const response = `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\n${lines(phaseAuditHash(evidenceFile, entry))}`;
+      await writeRoundPack(root, closing, "TDD-ID: TDD-0001, TDD-0002\n", {
+        "completion-reviewer": response,
+        "implementation-reviewer": response,
+      });
+      const seal = `sha256:${await packSeal(root, closing)}`;
+      const codes = await runOn(
+        root,
+        GROUP_LEDGER,
+        { [evidenceFile]: entry.replace("{{ROUND_PACK_SEAL}}", seal) },
+        { reviewRequestTddId: "TDD-0001, TDD-0002", auditedHashLines: lines },
+      );
+      expect(codes.includes("QFAI-TDDLIST-008")).toBe(!completes);
+    });
+  });
+
+  it("completes both members of a T1 group that name the round pack they shared", async () => {
+    // A group's review writes one pack and each member's entry names it. The
+    // pack a row may not name again is one an earlier attempt of its own named.
+    await withProject(async (root) => {
+      const evidenceFile = ".qfai/evidence/implement-spec-0001.md";
+      const shared = ".qfai/review/review-20260101010000000";
+      const member = (tddId: string, auditHash: string): string =>
+        completeEntry("Unit")
+          .replace("# Evidence\n\n", "")
+          .replaceAll("TDD-0001", tddId)
+          .replaceAll("{{AUDIT_HASH}}", auditHash)
+          .replace("{{RED_TEST_HASH}}", "e".repeat(64))
+          .replace(
+            "- Refactor verify command: npm test",
+            [
+              "- Round 1: reviewer verdict: PASS",
+              `- Round 1: Review pack: ${shared}`,
+              "- Round 1: Review pack seal: {{ROUND_PACK_SEAL}}",
+              "- Refactor verify command: npm test",
+            ].join("\n"),
+          );
+      const content = `# Evidence\n\n${member("TDD-0001", "{{AUDIT_HASH}}")}\n${member("TDD-0002", "{{EDITING_AUDIT_HASH}}")}`;
+      const lines = `Audited evidence hash: TDD-0001 ${phaseAuditHash(evidenceFile, content)}\nAudited evidence hash: TDD-0002 ${phaseAuditHash(evidenceFile, content, "TDD-0002")}\n`;
+      const response = `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\n${lines}`;
+      await writeRoundPack(root, shared, "TDD-ID: TDD-0001, TDD-0002\n", {
+        "completion-reviewer": response,
+        "implementation-reviewer": response,
+      });
+      const seal = `sha256:${await packSeal(root, shared)}`;
+      const codes = await runOn(
+        root,
+        withBrRef(
+          ledger([
+            { status: "done", evidence: IMPLEMENT_POINTER },
+            { status: "done", evidence: IMPLEMENT_POINTER.replace("#tdd-0001", "#tdd-0002") },
+          ]),
+          "BR-0001",
+        ),
+        { [evidenceFile]: content.replaceAll("{{ROUND_PACK_SEAL}}", seal) },
+        { reviewRequestTddId: "TDD-0001, TDD-0002", auditedHashLines: () => lines },
+      );
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it("refuses a round pack two review attempts of a round both name", async () => {
+    // Each review creates its own pack. Two REVISE attempts naming one sealed
+    // pack each pass the per-attempt checks, and only the row's record of the
+    // packs its attempts named shows one artifact standing behind two reviews.
+    await withProject(async (root) => {
+      const pack = ".qfai/review/review-20260101000000000";
+      await writeRoundPack(root, pack, "TDD-ID: TDD-0001\n", {
+        "completion-reviewer": `Result: REVISE\nReviewed revision: ${DEFAULT_REVISION}\n${HASH_LINE}`,
+      });
+      const seal = `sha256:${await packSeal(root, pack)}`;
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          `- Round 1: Review pack (attempt 1): ${pack}`,
+          `- Round 1: Review pack seal (attempt 1): ${seal}`,
+          "- Round 1: reviewer verdict (attempt 2): REVISE — the boundary is still unnamed",
+          `- Round 1: Review pack (attempt 2): ${pack}`,
+          `- Round 1: Review pack seal (attempt 2): ${seal}`,
+          "- Round 1: reviewer verdict (attempt 3): PASS",
+          "- Round 1: Review pack (attempt 3): .qfai/review/review-20260101020000000",
+          `- Round 1: Review pack seal (attempt 3): sha256:${"b".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      const messages = issues.map((issue) => issue.message).join("\n");
+      expect(messages).toContain(
+        "Round 1: Review pack (attempt 2) naming a new pack, not an earlier attempt's",
+      );
+      expect(messages).not.toContain("Round 1: Review pack (attempt 1) naming");
+    });
+  });
+
+  it("refuses a round pack a later round names again, whether or not it is present", async () => {
+    // A pack is identified by its path, so the reuse shows on a fresh clone too.
+    await withProject(async (root) => {
+      const secondRoundRevision = "bcd1230000000000000000000000000000000000";
+      const pack = ".qfai/review/review-20260101000000000";
+      const evidence = completeEntry("Unit")
+        .replace(
+          "- Refactor verify command: npm test",
+          [
+            "- Round 1: reviewer verdict: REVISE — needs new production behaviour",
+            `- Round 1: Review pack: ${pack}`,
+            `- Round 1: Review pack seal: sha256:${"a".repeat(64)}`,
+            "- Round 2: Revision: " + secondRoundRevision,
+            "- Round 2: RED revision: def7890000000000000000000000000000000000",
+            "- Round 2: RED command: npm test",
+            "- Round 2: RED result: 1 failed",
+            "- Round 2: GREEN command: npm test",
+            "- Round 2: GREEN result: 1 passed",
+            "- Round 2: reviewer verdict: PASS",
+            `- Round 2: Review pack: ${pack}`,
+            `- Round 2: Review pack seal: sha256:${"a".repeat(64)}`,
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        )
+        .replaceAll(
+          "reviewed revision: abc1230000000000000000000000000000000000",
+          `reviewed revision: ${secondRoundRevision}`,
+        );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+        { revision: secondRoundRevision },
+      );
+      const messages = issues.map((issue) => issue.message).join("\n");
+      expect(messages).toContain(
+        "Round 2: Review pack naming a new pack, not an earlier attempt's",
+      );
+      expect(messages).not.toContain("Round 1: Review pack naming");
+    });
+  });
+
+  it.each([
+    [
+      "after a review pack cell, where the subject drops the row",
+      "| Round 1: Review pack | .qfai/review/review-20260101000000000 | Round 1: GREEN result | 1 passed |",
+      "| Round 1: Review pack | .qfai/review/review-20260101000000000 |",
+    ],
+    [
+      "before a review pack cell, where the subject keeps the pack",
+      "| Round 1: GREEN result | 1 passed | Round 1: Review pack | .qfai/review/review-20260101000000000 |",
+      "| Round 1: GREEN result | 1 passed | Round 1: Review pack | .qfai/review/review-20260101000000000 |",
+    ],
+  ])("refuses a phase-authored table cell %s", async (_where, row, subjectRow) => {
+    // The subject drops a line that opens with a reviewer's field whole, while
+    // the readers take every pair on a table row: a GREEN result after the pack
+    // cell would satisfy completion with no reviewer's hash covering it.
+    // `subjectRow` is the row as the recorded hashes read it, so they agree
+    // with the gate and the row's shape is all that refuses it.
+    await withProject(async (root) => {
+      const evidenceFile = ".qfai/evidence/implement-spec-0001.md";
+      const entry = (packRow: string): string =>
+        completeEntry("Unit")
+          .replace("{{RED_TEST_HASH}}", "e".repeat(64))
+          .replace(
+            "- Round 1: GREEN result: 1 passed",
+            [
+              packRow,
+              `| Round 1: Review pack seal | sha256:${"a".repeat(64)} |`,
+              "- Round 1: reviewer verdict: PASS",
+            ].join("\n"),
+          );
+      const evidence = entry(row).replaceAll(
+        "{{AUDIT_HASH}}",
+        phaseAuditHash(evidenceFile, entry(subjectRow)),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { [evidenceFile]: evidence },
+        { omitReviewPacks: true },
+      );
+      const finding = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
+      expect(finding?.message).toMatch(
+        /missing completed evidence fields: reviewer verdict and Round N: Review pack cells on table rows holding no other field\.$/,
+      );
+    });
+  });
+
+  it.each([
+    [
+      "no reviewer verdict",
+      [
+        "- Round 1: Review pack: .qfai/review/review-20260101000000000",
+        `- Round 1: Review pack seal: sha256:${"a".repeat(64)}`,
+      ],
+      "Round 1: reviewer verdict stating PASS or REVISE beside that attempt's Review pack",
+    ],
+    [
+      "a blank reviewer verdict",
+      [
+        "- Round 1: reviewer verdict:",
+        "- Round 1: Review pack: .qfai/review/review-20260101000000000",
+        `- Round 1: Review pack seal: sha256:${"a".repeat(64)}`,
+      ],
+      "Round 1: reviewer verdict stating PASS or REVISE beside that attempt's Review pack",
+    ],
+    [
+      "no verdict for the attempt its pair names",
+      [
+        "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+        "- Round 1: Review pack (attempt 1): .qfai/review/review-20260101000000000",
+        `- Round 1: Review pack seal (attempt 1): sha256:${"a".repeat(64)}`,
+        "- Round 1: reviewer verdict (attempt 2): PASS",
+        "- Round 1: Review pack (attempt 2): .qfai/review/review-20260101010000000",
+        `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
+        "- Round 1: Review pack (attempt 3): .qfai/review/review-20260101020000000",
+        `- Round 1: Review pack seal (attempt 3): sha256:${"c".repeat(64)}`,
+      ],
+      "Round 1: reviewer verdict (attempt 3) stating PASS or REVISE beside that attempt's Review pack",
+    ],
+  ])("refuses an absent round pack recorded with %s", async (_shape, lines, message) => {
+    // An absent pack is skipped, because packs are local-only. The verdict its
+    // attempt records is committed with the entry, so it is read either way.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [...lines, "- Refactor verify command: npm test"].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(message);
+    });
+  });
+
+  const SUMMARY_MESSAGE =
+    "with a summary.json whose overall_status and reviewers agree with its verdict and responses";
+
+  it.each([
+    [
+      "an overall PASS and a PASS reviewer over its REVISE",
+      { "completion-reviewer": "REVISE" },
+      { overall_status: "PASS", reviewers: [{ reviewer: "completion-reviewer", status: "PASS" }] },
+      false,
+    ],
+    [
+      "a PASS entry for the reviewer that said REVISE",
+      { "completion-reviewer": "REVISE" },
+      { overall_status: "FAIL", reviewers: [{ reviewer: "completion-reviewer", status: "PASS" }] },
+      false,
+    ],
+    [
+      "no entry for the reviewer that responded",
+      { "completion-reviewer": "REVISE" },
+      {
+        overall_status: "FAIL",
+        reviewers: [{ reviewer: "implementation-reviewer", status: "FAIL" }],
+      },
+      false,
+    ],
+    [
+      "a PASS entry for a reviewer that did not respond",
+      { "completion-reviewer": "REVISE" },
+      {
+        overall_status: "FAIL",
+        reviewers: [
+          { reviewer: "completion-reviewer", status: "FAIL" },
+          { reviewer: "implementation-reviewer", status: "PASS" },
+        ],
+      },
+      false,
+    ],
+    [
+      "reviewers: [] beside a response",
+      { "completion-reviewer": "REVISE" },
+      { overall_status: "FAIL", reviewers: [] },
+      false,
+    ],
+    [
+      "an overall PASS for a round no reviewer answered",
+      {},
+      { overall_status: "PASS", reviewers: [] },
+      false,
+    ],
+    [
+      "a FAIL entry for the reviewer that said REVISE",
+      { "completion-reviewer": "REVISE" },
+      { overall_status: "FAIL", reviewers: [{ reviewer: "completion-reviewer", status: "FAIL" }] },
+      true,
+    ],
+    [
+      "an NA entry for a reviewer that did not respond",
+      { "completion-reviewer": "REVISE" },
+      {
+        overall_status: "FAIL",
+        reviewers: [
+          { reviewer: "completion-reviewer", status: "FAIL" },
+          { reviewer: "product-surface-reviewer", status: "NA" },
+        ],
+      },
+      true,
+    ],
+    [
+      "reviewers: [] for a round no reviewer answered",
+      {},
+      { overall_status: "FAIL", reviewers: [] },
+      true,
+    ],
+  ])(
+    "reads an earlier REVISE attempt's summary.json recording %s",
+    async (_shape, results: Readonly<Record<string, string>>, summary, conforming) => {
+      // The summary is sealed with the rest of the pack, so it states what the
+      // attempt's verdict and responses state, with a REVISE written as FAIL
+      // and a round no reviewer answered declared as `reviewers: []`.
+      await withProject(async (root) => {
+        const pack = ".qfai/review/review-20260101000000000";
+        const responses = Object.fromEntries(
+          Object.entries(results).map(([role, result]) => [
+            role,
+            `Result: ${result}\nReviewed revision: ${DEFAULT_REVISION}\n${HASH_LINE}`,
+          ]),
+        );
+        await writeRoundPack(root, pack, "TDD-ID: TDD-0001\n", responses);
+        await writeFile(
+          path.join(root, pack, "summary.json"),
+          `${JSON.stringify({
+            ...summary,
+            producer: "implement",
+            revision_form: "content-hash",
+            revision: DEFAULT_REVISION,
+            target: { kind: "spec", path: ".qfai/specs/spec-0001" },
+          })}\n`,
+        );
+        const evidence = completeEntry("Unit").replace(
+          "- Refactor verify command: npm test",
+          [
+            "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+            `- Round 1: Review pack (attempt 1): ${pack}`,
+            `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, pack)}`,
+            "- Round 1: reviewer verdict (attempt 2): PASS",
+            "- Round 1: Review pack (attempt 2): .qfai/review/review-20260101010000000",
+            `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        );
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+          { ".qfai/evidence/implement-spec-0001.md": evidence },
+        );
+        const messages = issues.map((issue) => issue.message).join("\n");
+        expect(messages.includes(`Round 1: Review pack (attempt 1) ${SUMMARY_MESSAGE}`)).toBe(
+          !conforming,
+        );
+        expect(messages).not.toContain("Round 1: Review pack seal (attempt 1)");
+        expect(messages).not.toContain("Round 1: Review pack (attempt 1) carrying");
+        expect(messages).not.toContain("Round 1: Review pack (attempt 1) reviewing");
+        expect(messages).not.toContain("Round 1: Review pack (attempt 1) holding");
+        expect(messages).not.toContain("Round 1: Review pack (attempt 1) declaring");
+      });
+    },
+  );
+
+  it("refuses a PASS attempt's round pack whose summary.json records a FAIL", async () => {
+    await withProject(async (root) => {
+      const pack = ".qfai/review/review-20260101000000000";
+      await writeRoundPack(root, pack, "TDD-ID: TDD-0001\n", {
+        "completion-reviewer": `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\n${HASH_LINE}`,
+      });
+      await writeFile(
+        path.join(root, pack, "summary.json"),
+        roundSummary(DEFAULT_REVISION, { "completion-reviewer": "FAIL" }),
+      );
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict: PASS",
+          `- Round 1: Review pack: ${pack}`,
+          `- Round 1: Review pack seal: sha256:${await packSeal(root, pack)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        `Round 1: Review pack ${SUMMARY_MESSAGE}`,
+      );
+    });
+  });
+
+  it.each([
+    ["directly under the pack", "", true],
+    ["in a directory below the pack", "responses", false],
+  ])(
+    "reads the closing round pack's responses only when they sit %s",
+    async (_where, directory, completes) => {
+      // The layout places reviewer files in the pack directory itself, so a
+      // response file further down answers for no reviewer.
+      await withProject(async (root) => {
+        const evidenceFile = ".qfai/evidence/implement-spec-0001.md";
+        const closing = ".qfai/review/review-20260101010000000";
+        const entry = completeEntry("Unit")
+          .replace("{{RED_TEST_HASH}}", "e".repeat(64))
+          .replace(
+            "- Refactor verify command: npm test",
+            [
+              "- Round 1: reviewer verdict: PASS",
+              `- Round 1: Review pack: ${closing}`,
+              "- Round 1: Review pack seal: {{ROUND_PACK_SEAL}}",
+              "- Refactor verify command: npm test",
+            ].join("\n"),
+          );
+        await writeRoundPack(root, closing, "TDD-ID: TDD-0001\n", {});
+        const response = `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: ${phaseAuditHash(evidenceFile, entry)}\n`;
+        await mkdir(path.join(root, closing, directory), { recursive: true });
+        for (const role of ["completion-reviewer", "implementation-reviewer"]) {
+          await writeFile(
+            path.join(root, closing, directory, `R01_${role}.md`),
+            withReviewerRole(role, response),
+          );
+        }
+        await writeFile(
+          path.join(root, closing, "summary.json"),
+          roundSummary(DEFAULT_REVISION, {
+            "completion-reviewer": "PASS",
+            "implementation-reviewer": "PASS",
+          }),
+        );
+        const seal = `sha256:${await packSeal(root, closing)}`;
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          [evidenceFile]: entry.replace("{{ROUND_PACK_SEAL}}", seal),
+        });
+        expect(codes.includes("QFAI-TDDLIST-008")).toBe(!completes);
+      });
+    },
+  );
+
+  it("reads a row-level review pack's responses only from directly under the pack", async () => {
+    await withProject(async (root) => {
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
+        { responseDirectory: "responses" },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Spec review pack carrying request, summary, and named reviewer PASS provenance",
+      );
+    });
+  });
+
+  it.each([
+    ["an empty revision", "", "content-hash", false],
+    ["a revision that names no tree", "not-a-revision", "content-hash", false],
+    ["no revision_form", DEFAULT_REVISION, undefined, false],
+    ["revision_form legacy", DEFAULT_REVISION, "legacy", false],
+    ["a git rev under revision_form content-hash", DEFAULT_REVISION, "content-hash", true],
+    [
+      "a working-tree content hash under revision_form content-hash",
+      `working-tree+${"a".repeat(64)}`,
+      "content-hash",
+      true,
+    ],
+  ])(
+    "reads an earlier attempt's round pack reviewing %s",
+    async (_shape, revision, revisionForm, conforming) => {
+      // Nothing in the entry records the tree an earlier attempt reviewed, so
+      // the pack's own revision names one, in a form the current contract reads.
+      await withProject(async (root) => {
+        const pack = ".qfai/review/review-20260101000000000";
+        await writeRoundPack(root, pack, "TDD-ID: TDD-0001\n", {
+          "completion-reviewer": `Result: REVISE\nReviewed revision: ${revision}\n${HASH_LINE}`,
+        });
+        await writeFile(
+          path.join(root, pack, "summary.json"),
+          `${JSON.stringify({
+            producer: "implement",
+            overall_status: "FAIL",
+            reviewers: [{ reviewer: "completion-reviewer", status: "FAIL" }],
+            revision_form: revisionForm,
+            revision,
+            target: { kind: "spec", path: ".qfai/specs/spec-0001" },
+          })}\n`,
+        );
+        const messages = await earlierAttemptMessages(root, pack);
+        expect(
+          messages.includes("Round 1: Review pack (attempt 1) reviewing this row's spec"),
+        ).toBe(!conforming);
+        expect(messages).not.toContain("Round 1: Review pack (attempt 1) carrying");
+        expect(messages).not.toContain("Round 1: Review pack (attempt 1) with a summary.json");
+        expect(messages).not.toContain("Round 1: Review pack (attempt 1) declaring");
+      });
+    },
+  );
+
+  it.each([
+    ["producer sdd in summary.json", "sdd", IMPLEMENT_PRODUCER, false],
+    ["no producer in summary.json", undefined, IMPLEMENT_PRODUCER, false],
+    ["Producer sdd in review_request.md", "implement", "- Producer: sdd\n", false],
+    ["no Producer line in review_request.md", "implement", "", false],
+    [
+      "its request's Producer line only inside a fence",
+      "implement",
+      "```text\nProducer: implement\n```\n",
+      false,
+    ],
+    [
+      "two Producer lines in review_request.md",
+      "implement",
+      `${IMPLEMENT_PRODUCER}- Producer: sdd\n`,
+      false,
+    ],
+    ["implement in both", "implement", IMPLEMENT_PRODUCER, true],
+    [
+      "implement in both, its request's line not a list item",
+      "implement",
+      "Producer: implement\n",
+      true,
+    ],
+  ])(
+    "reads the stage an earlier attempt's round pack declares with %s",
+    async (_shape, producer, producerLines, conforming) => {
+      // A sealed pack another stage wrote can carry this row's spec, ids,
+      // revision, hashes and verdicts, so the stage it names is what tells an
+      // implementation round from it.
+      await withProject(async (root) => {
+        const pack = ".qfai/review/review-20260101000000000";
+        await writeRoundPack(root, pack, "TDD-ID: TDD-0001\n", {
+          "completion-reviewer": `Result: REVISE\nReviewed revision: ${DEFAULT_REVISION}\n${HASH_LINE}`,
+        });
+        await writeFile(
+          path.join(root, pack, "review_request.md"),
+          `${producerLines}TDD-ID: TDD-0001\n`,
+        );
+        await writeFile(
+          path.join(root, pack, "summary.json"),
+          `${JSON.stringify({
+            ...JSON.parse(roundSummary(DEFAULT_REVISION, { "completion-reviewer": "FAIL" })),
+            producer,
+          })}\n`,
+        );
+        const messages = await earlierAttemptMessages(root, pack);
+        expect(
+          messages.includes(
+            "Round 1: Review pack (attempt 1) declaring producer implement in summary.json and review_request.md",
+          ),
+        ).toBe(!conforming);
+        expect(messages).not.toContain("Round 1: Review pack (attempt 1) carrying");
+        expect(messages).not.toContain("Round 1: Review pack (attempt 1) reviewing");
+      });
+    },
+  );
+
+  /**
+   * The messages a done row reports when its round 1 closes on a second attempt
+   * whose pack is absent, after a REVISE attempt whose pack is `pack`.
+   */
+  async function earlierAttemptMessages(root: string, pack: string): Promise<string> {
+    const evidence = completeEntry("Unit").replace(
+      "- Refactor verify command: npm test",
+      [
+        "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+        `- Round 1: Review pack (attempt 1): ${pack}`,
+        `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, pack)}`,
+        "- Round 1: reviewer verdict (attempt 2): PASS",
+        "- Round 1: Review pack (attempt 2): .qfai/review/review-20260101010000000",
+        `- Round 1: Review pack seal (attempt 2): sha256:${"b".repeat(64)}`,
+        "- Refactor verify command: npm test",
+      ].join("\n"),
+    );
+    const issues = await runIssuesOn(
+      root,
+      ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+      { ".qfai/evidence/implement-spec-0001.md": evidence },
+    );
+    return issues.map((issue) => issue.message).join("\n");
+  }
+
+  it("reads a table value quoting a reviewer field as a value", async () => {
+    // Labels are the even cells, so test output asserting on a reviewer field
+    // leaves its row an ordinary phase-authored field.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Round 1: GREEN result: 1 passed",
+        "| Round 1: GREEN result | reviewer verdict: PASS parsed — 1 passed |",
+      );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it("reports a round review pack recorded without its seal", async () => {
+    // Without the seal nothing says whether the pack still holds what was
+    // reviewed, and the pair is outside every audited subject.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict: PASS",
+          "- Round 1: Review pack: .qfai/review/review-20260101000000000",
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: Review pack seal: sha256",
+      );
+    });
+  });
+
+  it("drops a table verdict with an empty cell and its fence from the subject", async () => {
+    // An empty value cell leaves only its closing `|` in the capture. Read as a
+    // value, it kept the fence below in the hash the gate computes, while the
+    // reviewer following the contract dropped it.
+    await withProject(async (root) => {
+      const secondRoundRevision = "bcd1230000000000000000000000000000000000";
+      const evidence = completeEntry("Unit")
+        .replace(
+          "- Refactor verify command: npm test",
+          [
+            "| Round 1: reviewer verdict | |",
+            "```text",
+            "REVISE — needs new production behaviour",
+            "```",
+            "- Round 2: Revision: " + secondRoundRevision,
+            "- Round 2: RED revision: def7890000000000000000000000000000000000",
+            "- Round 2: RED command: npm test",
+            "- Round 2: RED result: 1 failed",
+            "- Round 2: GREEN command: npm test",
+            "- Round 2: GREEN result: 1 passed",
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        )
+        .replaceAll(
+          "reviewed revision: abc1230000000000000000000000000000000000",
+          `reviewed revision: ${secondRoundRevision}`,
+        );
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+        { revision: secondRoundRevision },
+      );
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it("reads a selector that begins with a globstar as written", async () => {
+    // Taking every leading asterisk off a value, as the bold-colon spelling's
+    // closing emphasis needed, turned `**/sample` into `/sample`, and the row
+    // then disagreed with its own ledger selector.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace("- Selector: sample", "- Selector: **/sample");
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER, selector: "**/sample" }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).not.toContain(
+        "Selector matching ledger value",
+      );
+    });
+  });
+
+  it("does not read the attempt qualifier on a field that records one value per round", async () => {
+    // `(attempt M)` belongs to the reviewer verdict. Read on every field, a
+    // malformed `Round 1: Revision (attempt 2)` satisfied the round's revision.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Round 1: Revision: abc1230000000000000000000000000000000000",
+        "- Round 1: Revision (attempt 2): abc1230000000000000000000000000000000000",
+      );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+      expect(codes).toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  for (const sibling of [
+    "- Prototype parity reviewed revision: abc1230000000000000000000000000000000000",
+    "- Checkpoint verification revision: abc1230000000000000000000000000000000000",
+  ]) {
+    it(`ends the audited subject at ${sibling.slice(2, sibling.indexOf(":"))} when it comes first`, async () => {
+      // The region ends at the first stage-completion field or labelled
+      // sibling. A sibling the gate did not recognise stayed in the subject it
+      // computed, and the reviewer's digest over the documented region failed.
+      await withProject(async (root) => {
+        const evidence = completeEntry("Unit").replace(
+          "- qa-gatekeeper: PASS",
+          `- qa-gatekeeper: PASS\n${sibling}`,
+        );
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        });
+        expect(codes).not.toContain("QFAI-TDDLIST-008");
+      });
+    });
+  }
 
   it("keeps a fenced reviewer verdict out of the audited subject", async () => {
     await withProject(async (root) => {
