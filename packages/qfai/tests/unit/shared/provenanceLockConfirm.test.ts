@@ -24,7 +24,6 @@
  * the window is exactly what a test cannot schedule reliably — which is the
  * defect's own point.
  */
-// QFAI:SPEC-0010:TC-0010-0012
 
 import { createHash } from "node:crypto";
 import type * as FsPromises from "node:fs/promises";
@@ -139,7 +138,7 @@ async function write(root: string, name: string): Promise<void> {
   }));
 }
 
-describe("TC-0010-0012: confirming a freshly published provenance lock", () => {
+describe("confirming a freshly published provenance lock", () => {
   it("writes with no forgery in play (control)", async () => {
     const root = await tempRoot();
 
