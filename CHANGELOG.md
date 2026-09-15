@@ -72,6 +72,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- Run the release gate's checks and its test suite as separate jobs, each over
+  the slices the pull-request lanes already use. Every check that ran before a
+  publication still runs before one. The engines-floor job now asserts that the
+  pinned floor is the runtime it is using, which it did not (#1870).
+
 - Start the lint gate's independent commands as five concurrent lanes instead of
   two. Every command still runs, exactly once, and a failure in any lane reaches
   the gate's result. Workflow hygiene still runs first. The formatter is now the

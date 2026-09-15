@@ -228,7 +228,7 @@
         "scripts/pin-guard-bytes.mjs": "672f5c8c410c9fc31852b07721a89b7ed3fb68c5277f546bdaec0dc2556dc1cb",
         "scripts/pin-stage-evidence-counts.mjs": "9cf2034c8ce05387e50b7b22c0cd33f2e5ff4544f3e5913e469786044a201099",
         "scripts/pin-verification-bodies.mjs": "ada370be9bd4d331a705d5a02e01ba4d4f378c862ddc62680af9ad831eb881cf",
-        "scripts/run-lint-checks.sh": "c707d4e2e2c143a887a940af3eb8345479178bad03fba003a45f9bf6906a006b",
+        "scripts/run-lint-checks.sh": "9d58c7ef0a179450657a0839b8ea3a760d28bef6d0b9d1c0b9cde2cc6fb0f8fb",
         "scripts/sync-init-to-root.mjs": "f25f4410273d41085119c50cf0f439564e300ae25fb8f83bae869c763be29e6c",
         "scripts/verify-pack.mjs": "98fe8d88a5b7a130737a0870393d5c69b6a5fe7136903cfc79fd6c9092e62b40"
       },
@@ -379,7 +379,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "91dcf5b81b2c7661",
+        "Verify the toolchain action before running it": "c5b07ef42e8ba3a3",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "e9b6a63cbebe4062",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "abe312b8d2c8fc6f",
@@ -387,7 +387,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "9efc82ef75f7a622",
         "QFAI self-validate this repo (dogfooding — full profile)": "3537948e49d1d967",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "b32fccc50c0a06ab",
+        "Run lint gate": "df29c160562f02c2",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",
