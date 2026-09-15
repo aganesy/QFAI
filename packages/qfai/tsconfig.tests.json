@@ -32,6 +32,7 @@
     "vitest.config.ts",
     "vitest.knobs.ts",
     "vitest.workspace.ts",
+    "tests/assets/bandDriftChangeRequest.test.ts",
     "tests/assets/actionPinBumpOwner.test.ts",
     "tests/assets/agentCardRequiredInputs.test.ts",
     "tests/assets/agentGrillingConvergence.test.ts",

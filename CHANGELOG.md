@@ -194,6 +194,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   consuming caller. Callback hosts that ignore returns require an explicit
   adapter that adopts the asynchronous result and handles boundary rejections (#1802).
 
+- **A UI contract template name the package does not ship is recorded where the
+  Drift Protocol looks for it** (#1758). Nine statements, eight in `spec-0013`
+  and the shared decision `DR-0267`, name `templates/contracts/ui-spec.yaml` as
+  the file that documents the `primary_tasks` count guidance. No file of that
+  name ships. The UI contract template is `ui-contract.sample.yaml`, which the
+  same pack names elsewhere, and a completed ledger row certifies a test case
+  naming the missing file while its test reads the shipped one.
+
+  `CR-20260913-0010` proposes correcting the file name in each statement, with
+  nothing else in them changing, and resetting that row for the acceptance-test
+  stage to re-execute. It is applied ahead of the record that settles the band
+  itself.
+
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
   from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and
@@ -611,6 +624,56 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   round pack must name its revision in a form `evidence-revision.md` defines
   under `revision_form: "content-hash"` and declare `producer: "implement"` in
   `summary.json` and `Producer: implement` in its request.
+
+- **The `primary_tasks` band drift is recorded where the Drift Protocol looks
+  for it** (#1621). `QFAI-AUD-020` lost its lower bound as product work, and
+  `spec-0013` still specifies the band: its test case says one task warns and
+  the test pinning it says nothing is emitted, with a `done` ledger row joining
+  the two.
+
+  `CR-20260913-0001` records both sides, blocks the three rows whose
+  obligations the product contradicts — two of one pack and one of another that
+  shares the decision — and says which it leaves alone, and puts the part
+  a rerun cannot settle by following the product: three decision records chose
+  the band, the removal overturned them on the opposite rationale, and whether a
+  reversed decision is rewritten or superseded was left to the user to choose.
+
+- **The prototyping evidence layout is recorded where the Drift Protocol looks
+  for it** (#1626). One acceptance criterion and the test case restating it say
+  the aggregate `screenshots/` and `html/` directories are not accepted as an
+  evidence source. The required-path check reads them first — and the iterate
+  command contract calls them the SSOT for handoff, the shared policy defines
+  the mandatory evidence by those paths, and another spec pack requires the
+  mirror that writes them. A loop reset also leaves the previous loop's copies
+  there, where the check accepts them.
+
+  `CR-20260913-0002` records both sides, blocks the ledger row whose obligation
+  turns on the disputed clause and the contract and policy terms the options
+  reword, and puts the choice: keep the mirror but stop reading it; narrow the
+  criterion to what the check reads, a restarted loop passing on the previous
+  loop's copies included; or withdraw the criterion together with the rule that
+  depends on it. No option stops the mirror.
+
+- **Four spec-0013 rules the product states otherwise are recorded where the
+  Drift Protocol looks for them** (#1629). Two test cases in one pack require
+  opposite things of one value: the UI contract template must ship an empty
+  task list, and the validate lane must fail at error on exactly that value.
+  A legacy-contract rule is written without the sunset condition its business
+  rule carries, three lines below a file comment describing the behaviour that
+  sunset replaced. An obligation naming a stage is covered by a test that
+  drives a helper no code calls. And a finding specified as a warning inside a
+  deprecation window is emitted as an unconditional error, because the
+  version-keyed severity mechanism those layers name was retired.
+
+  Three records hold them. `CR-20260913-0007` and `CR-20260913-0008` are
+  defects the pack shows on its own, each with its one correction: the template
+  slot restated as a key holding authored tasks, and the legacy-contract test
+  case given the sunset its business rule already carries. `CR-20260913-0003`
+  puts the other two to the user with options: the unwired helper, whose
+  resolver half every option restates to the fallback `spec-0012` specifies,
+  and the finding's severity, where restoring a window needs a release only the
+  user can name. Each blocks the ledger rows its items change, and no rule or
+  code changes until it is applied.
 
 - **An unresolved merge in a pinned file is named as one** (#1722). A conflict
   block changes a pinned file's bytes like any other edit, so the byte guard
