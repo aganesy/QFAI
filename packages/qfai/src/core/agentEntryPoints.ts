@@ -479,11 +479,26 @@ export function refreshSupersededRuleBulletsInList(
   return replaceSupersededBullets(existing, lines, open, range, section);
 }
 
+/**
+ * Whether the line is `CROSS_AI_RULES_HEADING` itself: the exact heading, at the
+ * top level, in no blockquote.
+ *
+ * With no markers that heading is the only thing marking the list as this tool's,
+ * so anything less than an exact match hands the refresh a list the project
+ * wrote. A prefix match took a project heading that merely opens with the same
+ * words, and `plainLine` strips a blockquote prefix, so a file quoting an older
+ * rule set read as carrying the managed list. Up to three leading spaces still
+ * open an ATX heading, and a closing run of `#` belongs to the same heading.
+ */
+function isRuleListHeading(line: string | undefined): boolean {
+  const text = (line ?? "").replace(/\r$/, "");
+  if (text.trimStart().startsWith(">")) return false;
+  return text.replace(/^ {0,3}/, "").replace(/(?:\s+#+)?\s*$/, "") === CROSS_AI_RULES_HEADING;
+}
+
 /** Where `CROSS_AI_RULES_HEADING` stands outside every fenced block, or -1. */
 function ruleListHeading(lines: readonly string[], open: readonly boolean[]): number {
-  return lines.findIndex(
-    (line, index) => open[index] === true && plainLine(line).startsWith(CROSS_AI_RULES_HEADING),
-  );
+  return lines.findIndex((line, index) => open[index] === true && isRuleListHeading(line));
 }
 
 /**

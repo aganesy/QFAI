@@ -137,7 +137,9 @@ Use the shared schema.
   it where there is one — equals what this run's work order states, and which no
   other `/qfai-atdd` block in the file carries,
   and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it**, **and its `Decisions` count matches the `grilling(<Session>@<run key>/<adjudication>)` rows the Work Orders Summary carries under that `Session` and this run's start** — a count checked against nothing lets a row claim `0` over
-  decisions that never reached the user. **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as the record requires, and a blank or any other value is
+  decisions that never reached the user. **And the other way: every `grilling(<Session>@<run key>/<adjudication>)` row the summary carries for this run names a `Session` exactly one row of this block holds.** Counted only from the rows inward, a summary row keyed to a session the block never opened is checked by nothing, so the record can claim a decision for a session that did not exist
+  — and, beside the run's `none` marker, claim in the same breath that the run settled none. **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as
+  the record requires, and a blank or any other value is
   a `REVISE`: it is the one field saying which tree the session ended against.
   **Every row's `Subject` is non-blank, and when `Preflight` says `session opened` exactly one row's is `preflight`, and when it says `confidence high` none is**: it is the one cell saying what a
   session was about, and a session that settled everything leaves no register

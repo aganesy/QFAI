@@ -1339,5 +1339,33 @@ describe("a later init refreshes a rule summary the project never edited", () =>
         refreshed: [],
       });
     });
+
+    it.each([
+      ["a quoted heading", `> ${CROSS_AI_RULES_HEADING}`],
+      ["a heading that only begins with it", `${CROSS_AI_RULES_HEADING} — project notes`],
+      ["a deeper heading of the same words", `### ${CROSS_AI_RULES_HEADING.replace("## ", "")}`],
+    ])("refreshes nothing under %s", (_name, heading) => {
+      // Without markers the heading is the only thing marking the list as this
+      // tool's, so anything but the heading itself is the project's own text.
+      const existing = ["# House instructions", "", heading, "", superseded, ""].join("\n");
+
+      expect(refreshSupersededRuleBulletsInList(existing, template)).toEqual({
+        text: existing,
+        refreshed: [],
+      });
+    });
+
+    it("reads the heading with a closing run of hashes and up to three spaces", () => {
+      for (const heading of [`${CROSS_AI_RULES_HEADING} ##`, `   ${CROSS_AI_RULES_HEADING}`]) {
+        const existing = ["# House instructions", "", heading, "", superseded, ""].join("\n");
+
+        const result = refreshSupersededRuleBulletsInList(existing, template);
+
+        const expected = existing.split("\n");
+        expected[4] = current;
+        expect(result.refreshed, heading).toEqual([master]);
+        expect(result.text, heading).toBe(expected.join("\n"));
+      }
+    });
   });
 });
