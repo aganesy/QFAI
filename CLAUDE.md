@@ -7,7 +7,8 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - Follow existing code conventions and patterns in the repository.
 - All source changes must have corresponding test coverage.
 - TypeScript: avoid bare `as` type assertions; prefer type narrowing.
-- TypeScript: every async path must have explicit error handling.
+- TypeScript: await or return every promise. `.agents/rules/minimal-implementation.md`
+  § 2 governs consuming callers, kept failures and callback boundaries.
 - Keep functions focused; extract when a function exceeds ~50 lines.
 - Try solutions in the order `.claude/rules/minimal-implementation.md`
   (master: `.agents/rules/minimal-implementation.md`) sets out, and mark a
@@ -18,8 +19,8 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   is a defect report against that control.
 - Interview the decision tree before a design is fixed, in the rounds
   `.claude/rules/grilling.md` (master: `.agents/rules/grilling.md`) sets out. A
-  session ends on an empty frontier and the user's confirmation, never at a
-  question count.
+  session ends in one of the four endings that rule names, and completes only
+  on an empty frontier and the user's confirmation — never at a question count.
 - Every question to the user arrives in the shape its answer has, in the form
   `.claude/rules/user-questions.md` (master: `.agents/rules/user-questions.md`)
   sets out: a structured choice where a listable set of candidates exists, or a
