@@ -1180,8 +1180,11 @@ agents:
       - Enforce validate evidence, required coverage obligations, and no self-approval.
       - Verify rejected options are not reintroduced without RE-OPEN.
       - File excess as `defect:code-quality` against constitution Article VII; tag it
-        `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
-        and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
+        settings and explanatory copy. Admit it only when it names what to cut
+        and what replaces it. `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Refuse it when the cut removes or weakens an obligation in the safety floor at
         `.agents/rules/minimal-implementation.md` § 2.
         Use this route only where the installed Article VII governs the artifact.
         Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
@@ -1296,8 +1299,11 @@ agents:
       - Review OQ candidates for completeness, neutrality, and safe deferral.
       - Ensure unresolved requirement ambiguity is explicit and actionable.
       - File excess as `defect:code-quality` against constitution Article VII; tag it
-        `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
-        and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
+        settings and explanatory copy. Admit it only when it names what to cut
+        and what replaces it. `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Refuse it when the cut removes or weakens an obligation in the safety floor at
         `.agents/rules/minimal-implementation.md` § 2.
         Use this route only where the installed Article VII governs the artifact.
         Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
@@ -1374,8 +1380,11 @@ agents:
       - Verify contracts, module boundaries, and public interfaces obey least astonishment and design-by-contract expectations.
       - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
       - File excess as `defect:code-quality` against constitution Article VII; tag it
-        `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
-        and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
+        settings and explanatory copy. Admit it only when it names what to cut
+        and what replaces it. `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Refuse it when the cut removes or weakens an obligation in the safety floor at
         `.agents/rules/minimal-implementation.md` § 2.
         Use this route only where the installed Article VII governs the artifact.
         Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
@@ -1459,8 +1468,11 @@ agents:
       - Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics and unchecked `unknown`.
         Flag a promise that is neither awaited nor returned. A return propagates only when its caller awaits or adopts the promise.
       - File excess as `defect:code-quality` against constitution Article VII; tag it
-        `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
-        and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
+        settings and explanatory copy. Admit it only when it names what to cut
+        and what replaces it. `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Refuse it when the cut removes or weakens an obligation in the safety floor at
         `.agents/rules/minimal-implementation.md` § 2.
         Use this route only where the installed Article VII governs the artifact.
         Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
@@ -1585,8 +1597,11 @@ agents:
       - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
       - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
       - File excess as `defect:code-quality` against constitution Article VII; tag it
-        `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
-        and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
+        settings and explanatory copy. Admit it only when it names what to cut
+        and what replaces it. `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Refuse it when the cut removes or weakens an obligation in the safety floor at
         `.agents/rules/minimal-implementation.md` § 2.
         Use this route only where the installed Article VII governs the artifact.
         Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
@@ -1680,8 +1695,11 @@ agents:
       - Verify test-case quality depth using the Coverage Depth Matrix (see below).
       - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
       - File excess as `defect:code-quality` against constitution Article VII; tag it
-        `delete`, `stdlib`, `native`, `yagni` or `shrink`. Admit it only when it names what to cut
-        and what replaces it. Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
+        settings and explanatory copy. Admit it only when it names what to cut
+        and what replaces it. `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Refuse it when the cut removes or weakens an obligation in the safety floor at
         `.agents/rules/minimal-implementation.md` § 2.
         Use this route only where the installed Article VII governs the artifact.
         Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
