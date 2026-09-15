@@ -26,14 +26,36 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
    re-run it to make this gate pass; a correction it implies belongs in the
    SDD-owned artifact, with the discrepancy noted in delta/evidence.
 3. Read the review findings for the pack step 1 selected, from its latest
-   COMPLETED review — the `.qfai/review/review-*/` directory whose
-   `summary.json#target.path` names that pack, with the newest stamp among
-   those. The path matched is the selected one, not the newest pack on disk.
-   A newer directory holding only an in-flight request is a cycle that was
-   interrupted; taking it for the latest review returns no findings and hides
-   the completed cycle's advice, which still applies. Read the in-flight one
-   too, where it is newer, and take both; it carries no findings of its own
-   until it closes, so it adds nothing where nothing has been written.
+   COMPLETED review — the directory whose `summary.json#target.path` names that
+   pack, with the newest stamp among those. The path matched is the selected
+   one, not the newest pack on disk.
+
+   Three things bound that lookup.
+
+   | Bound                        | Why                                                                         |
+   | ---------------------------- | --------------------------------------------------------------------------- |
+   | Completed only               | A directory with no `summary.json` is a cycle that was interrupted          |
+   | Archived directories too     | An older pack's review is moved out of the top level after its time to live |
+   | The revision the review read | Verdicts describe the state the pack was in, not the state it is in         |
+
+   A directory with no `summary.json` is skipped whatever its stamp. Reviewers
+   are dispatched before the summary is written, so such a directory can hold
+   `Rxx_*.md` responses — unsealed, unreconciled, and possibly superseded by the
+   completed cycle beside them. Taking the newest directory rather than the
+   newest completed one hides advice that still applies, and taking its
+   responses carries advice nobody signed.
+
+   Look in `.qfai/review/_archive/review-*/` as well as `.qfai/review/review-*/`.
+   `npx qfai doctor --clean` moves an eligible review there once it is older than
+   the configured time to live, so a pack selected by `npx qfai discussion use <id>`
+   is exactly the case whose review has most likely been archived, and a lookup
+   over the top level alone reports it as a pack nobody reviewed.
+
+   Compare `summary.json#revision` with the selected pack's current revision. The
+   verdicts describe the state that field names, so where the pack has been
+   edited since, read them as advice about an earlier state: disposition what
+   still applies and record the ones the edit answered as answered, rather than
+   carrying them forward as open findings about text that no longer exists.
    An earlier cycle's advice was answered by the fix that closed it, and reading
    it again re-raises work the pack has already done. Take in the items a
    reviewer marked non-normative under
@@ -44,6 +66,7 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
    question it became, or a line in this run's evidence saying it was read and
    not adopted, with why. Silence is not a disposition — it cannot be told from
    never having read the item. Nothing goes back into the pack.
+
 4. Stop only when there is no usable source at all: no pack, no import-lite
    input, and no explicit user requirement.
 5. **Report — do not stop —** when `prototyping.yaml` is present in the latest UI-bearing pack
