@@ -72,6 +72,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- Run shipped document checks and full/drift validation in independent CI jobs.
+  Stable external verdicts require every selected check to succeed. New projects
+  receive the workflow assets through `qfai init`; existing workflow ownership
+  and package-manager, Node and lockfile handling are unchanged (#1870).
+
 - Run static lint checks and the complete mirror surface concurrently in the
   existing lint runner. Both checks must succeed. Required check names, test
   coverage and the documentation-only runner ceiling are unchanged (#1870).

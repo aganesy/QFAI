@@ -245,6 +245,11 @@ const DIMENSION_PLANTS: readonly DimensionPlant[] = [
     plant: async (root) => {
       const file = await orchestratorFile(root);
       const body = await readWorkflow(root, file);
+      const withoutFailFast = body.replace(/^[ \t]*fail-fast:[ \t]*false[ \t]*\r?\n/m, "");
+      if (withoutFailFast !== body) {
+        await writeWorkflow(root, file, withoutFailFast);
+        return;
+      }
       let planted = false;
       const lines = body.split("\n").flatMap((line) => {
         const indent = /^(\s*)timeout-minutes\s*:/.exec(line)?.[1];
