@@ -2455,6 +2455,16 @@ function isAnnotationOnlyCarrier(
 const RANGE_MEMBERS_READ = 16;
 
 /**
+ * How many brace ranges deep this reads.
+ *
+ * A round writes out the first range of each candidate, so a pattern needs as
+ * many rounds as it holds ranges. Four stopped one round short of
+ * `{t..t}{e..e}{s..s}{t..t}s/**\/*.{p..p}y`, whose fifth range is the one that
+ * spells the extension.
+ */
+const RANGE_ROUNDS = 16;
+
+/**
  * The glob with its brace ranges written out, as fast-glob expands them before
  * it matches anything.
  *
@@ -2467,7 +2477,11 @@ const RANGE_MEMBERS_READ = 16;
  */
 function withRangesExpanded(glob: string): string[] {
   let expanded = [glob];
-  for (let round = 0; round < 4; round += 1) {
+  // One round writes out one range per candidate, so the bound is the number of
+  // ranges a pattern can hold, not a guess at how many it usually does. A
+  // pattern with more groups than this leaves the rest as text, which reads as
+  // the extension it spells not being found.
+  for (let round = 0; round < RANGE_ROUNDS; round += 1) {
     const next: string[] = [];
     let changed = false;
     for (const candidate of expanded) {

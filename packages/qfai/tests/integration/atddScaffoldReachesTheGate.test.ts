@@ -419,6 +419,18 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     expect(requireDialect(["tests/**/TC-0000-0000@(*).ts"]).id).toBe("js-ts");
   });
 
+  it("expands a range that opens an extglob", () => {
+    // `{@..@}(` is a group once the range is written out, and the matcher reads
+    // it as one. Left as text, the pattern selected only a name holding `@(`.
+    expect(requireDialect(["tests/**/TC-0000-0000{@..@}(.test).ts"]).id).toBe("js-ts");
+  });
+
+  it("expands every range a pattern holds, not the first few", () => {
+    // Each round writes out one range per candidate, so a pattern with four
+    // ranges before the one that spells the extension needs five.
+    expect(requireDialect(["{t..t}{e..e}{s..s}{t..t}s/**/*.{p..p}y"]).id).toBe("python");
+  });
+
   it("derives an extension a range spells inside a list", () => {
     // `{{p..p}y,rb}` is a list of `py` and `rb` once the range is written out,
     // and the list is unreadable before that.

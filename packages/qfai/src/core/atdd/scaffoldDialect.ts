@@ -389,8 +389,13 @@ function splitGlobAlternatives(inner: string, separator: "|" | ","): string[] {
   return parts;
 }
 
-/** The characters that mean something to a matcher rather than naming themselves. */
-const GLOB_SYNTAX = /[*?[\]{}]/;
+/**
+ * The characters that mean something to a matcher rather than naming themselves.
+ *
+ * `@`, `+` and `!` are here because each opens an extglob before a `(`: a range
+ * expanding to one of them leaves a group the matcher reads, not a literal.
+ */
+const GLOB_SYNTAX = /[*?[\]{}@+!]/;
 
 /**
  * The pattern with one brace group written out, when a member of it carries
