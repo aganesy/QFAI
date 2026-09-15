@@ -301,7 +301,16 @@ jobs:
         # The per-slice script, not the generic runner with a project name — the reason `ci.yml`'s
         # test step gives: a slice with no script of its own would still run, so nothing would
         # demand the script exist.
-        run: pnpm -C packages/qfai test:${{ matrix.slice }}
+        # The workspace is the TAG's tree, and a tag cut before the suite was sliced carries no
+        # per-slice script. The gate beside this job runs the aggregate there, suite included, so
+        # this leg has nothing left to run and says so rather than failing on a missing script.
+        shell: bash
+        run: |
+          if ! node -e "process.exit(require('./packages/qfai/package.json').scripts['test:${{ matrix.slice }}'] ? 0 : 1)"; then
+            echo "This tag predates the sliced suite; the release gate ran it whole."
+            exit 0
+          fi
+          pnpm -C packages/qfai test:${{ matrix.slice }}
 
   # ── 2b. The same tree, on the floor `engines.node` promises ──────
   # Review finding [56]. The gate above resolves the RANGE — the newest Node satisfying
@@ -385,7 +394,16 @@ jobs:
         # The fork count comes from the runner, for the reason `ci.yml`'s floor lane records: forks
         # outnumbering the cores turn a healthy run red on an RPC timeout the declaration cannot
         # reach.
-        run: QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:${{ matrix.slice }}
+        # The workspace is the TAG's tree, and a tag cut before the suite was sliced carries no
+        # per-slice script. The gate beside this job runs the aggregate there, suite included, so
+        # this leg has nothing left to run and says so rather than failing on a missing script.
+        shell: bash
+        run: |
+          if ! node -e "process.exit(require('./packages/qfai/package.json').scripts['test:${{ matrix.slice }}'] ? 0 : 1)"; then
+            echo "This tag predates the sliced suite; the release gate ran it whole."
+            exit 0
+          fi
+          QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:${{ matrix.slice }}
 
   # ── 3. GitHub Release, on the tag push ───────────────────────────
   github-release:
