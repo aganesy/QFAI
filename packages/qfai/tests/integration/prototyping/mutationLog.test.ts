@@ -62,6 +62,19 @@ vi.mock("node:fs/promises", async (importOriginal) => {
       }
       return actual.truncate(...args);
     },
+    // The recovery cuts back through the descriptor it read the tail with, so
+    // the fault has to reach that handle rather than the path-level call.
+    open: async (...args: Parameters<typeof actual.open>) => {
+      const handle = await actual.open(...args);
+      if (!fault.untruncatable) return handle;
+      return Object.assign(handle, {
+        truncate: async () => {
+          throw Object.assign(new Error("EBUSY: resource busy or locked, ftruncate"), {
+            code: "EBUSY",
+          });
+        },
+      });
+    },
   };
 });
 

@@ -19,7 +19,8 @@
  * the live file, and AFTER for the new size on overwrites.
  */
 
-import { appendFile, lstat, mkdir, open, readlink, rm, stat, truncate } from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
+import { appendFile, lstat, mkdir, open, readlink, rm, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "../fs/errno.js";
@@ -110,21 +111,14 @@ export async function logEvidenceMoves(
     // valid entry between the two reads leaves bytes this one did not write,
     // and cutting to the prior length would delete that entry with this batch.
     const written = prior.kind === "created" ? prior.file : logAbs;
-    const ours = await holdsOnlyThisWrite(
-      written,
-      prior.kind === "created" ? 0 : prior.length,
-      payload,
-    );
-    const restored = ours
-      ? await (
-          prior.kind === "created"
-            ? rm(prior.file, { force: true })
-            : truncate(logAbs, prior.length)
-        ).then(
-          () => true,
-          () => false,
-        )
-      : false;
+    const restored =
+      prior.kind === "created"
+        ? (await holdsOnlyThisWrite(written, 0, payload)) &&
+          (await rm(prior.file, { force: true }).then(
+            () => true,
+            () => false,
+          ))
+        : await cutBackToThisWrite(logAbs, prior.length, payload);
     if (restored) throw cause;
     const reason = cause instanceof Error ? cause.message : String(cause);
     throw new Error(
@@ -210,16 +204,52 @@ async function firstAbsentInChain(from: string): Promise<string | null> {
  * someone else's and stays.
  */
 async function holdsOnlyThisWrite(file: string, from: number, payload: string): Promise<boolean> {
-  const expected = Buffer.from(payload, "utf-8");
   const handle = await open(file, "r").catch(() => null);
   if (handle === null) return false;
   try {
-    const buffer = Buffer.alloc(expected.length + 1);
-    const { bytesRead } = await handle.read(buffer, 0, buffer.length, from);
-    return (
-      bytesRead <= expected.length &&
-      expected.subarray(0, bytesRead).equals(buffer.subarray(0, bytesRead))
-    );
+    return await tailIsThisWrite(handle, from, payload);
+  } catch {
+    return false;
+  } finally {
+    await handle.close().catch(() => undefined);
+  }
+}
+
+/** Whether the bytes from `from` on, read through `handle`, are this write's own. */
+async function tailIsThisWrite(
+  handle: FileHandle,
+  from: number,
+  payload: string,
+): Promise<boolean> {
+  const expected = Buffer.from(payload, "utf-8");
+  const buffer = Buffer.alloc(expected.length + 1);
+  const { bytesRead } = await handle.read(buffer, 0, buffer.length, from);
+  return (
+    bytesRead <= expected.length &&
+    expected.subarray(0, bytesRead).equals(buffer.subarray(0, bytesRead))
+  );
+}
+
+/**
+ * Cut the log back to `from`, and only while what stands past it is this write's
+ * own.
+ *
+ * The read and the cut go through one descriptor, so nothing reopens the path
+ * between them.
+ *
+ * SIMPLIFIED: an append landing between the read and the cut is still cut away.
+ * The two calls are consecutive, where the gap this replaced spanned the whole
+ * failed write.
+ * Lift when: the writers take a lock around the append, which would let the
+ * recovery hold it rather than re-reading under one.
+ */
+async function cutBackToThisWrite(file: string, from: number, payload: string): Promise<boolean> {
+  const handle = await open(file, "r+").catch(() => null);
+  if (handle === null) return false;
+  try {
+    if (!(await tailIsThisWrite(handle, from, payload))) return false;
+    await handle.truncate(from);
+    return true;
   } catch {
     return false;
   } finally {
