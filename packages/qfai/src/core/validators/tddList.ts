@@ -1179,7 +1179,12 @@ function evidenceFieldOccurrences(
   for (const [lineIndex, visibleLine] of visibleLines.entries()) {
     if (/^\s*\|/.test(visibleLine)) {
       const cells = splitMarkdownRow(visibleLine);
-      for (let cellIndex = 0; cellIndex < cells.length - 1; cellIndex += 1) {
+      // Labels are the even cells, as `hasFieldBesideReviewerAppendedCell` reads
+      // them. Visiting every cell took a value that quotes a field name — the
+      // output of a test asserting on one — for a label, and the label after it
+      // for that field's value, so a row carrying such output acquired a pack or
+      // a verdict nobody wrote and the entry failed completion over it.
+      for (let cellIndex = 0; cellIndex < cells.length - 1; cellIndex += 2) {
         const rawLabel = (cells[cellIndex] ?? "").replace(/^\*\*|\*\*$/g, "").trim();
         const roundMatch = /^Round\s+(\d+):\s*(.*)$/i.exec(rawLabel);
         const roundLabel = roundMatch?.[2] ?? rawLabel;
@@ -3838,7 +3843,12 @@ function roundPackSummaryRecordsVerdict(
     const record = jsonRecord(reviewer);
     const role = record?.["reviewer"];
     if (typeof role !== "string") return false;
-    declared.set(role, (declared.get(role) ?? new Set<unknown>()).add(record?.["status"]));
+    // One entry per reviewer, as the layout requires. Collected into a set, a
+    // role repeated with the same status collapsed to one value and every check
+    // below passed over a malformed pack; repeated with a different status it
+    // was caught, so the two spellings of the same defect answered differently.
+    if (declared.has(role)) return false;
+    declared.set(role, new Set<unknown>([record?.["status"]]));
   }
   if (statuses.size === 0 && declared.size > 0) return false;
   for (const [role, status] of statuses) {

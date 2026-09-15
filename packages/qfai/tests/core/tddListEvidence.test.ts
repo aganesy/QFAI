@@ -1807,9 +1807,9 @@ describe("QFAI-TDDLIST-008", () => {
   });
 
   it("reads a qualified REVISE as the verdict that opens the next round", async () => {
-    // The `(attempt M)` qualifier is part of the field name a multi-attempt round
-    // writes. The round check read only the bare name, so it found no verdict
-    // here and reported round 2 as opened by nothing.
+    // The `(attempt M)` qualifier is part of the field name a multi-attempt
+    // round writes, so a qualified verdict is the round's verdict and the
+    // `REVISE` on its last attempt is what opens the next round.
     await withProject(async (root) => {
       const secondRoundRevision = "bcd1230000000000000000000000000000000000";
       const evidence = completeEntry("Unit")
@@ -2299,6 +2299,54 @@ describe("QFAI-TDDLIST-008", () => {
         expect(carrying, request).toBe(!accepted);
       });
     }
+  });
+
+  it("refuses a summary that records one reviewer twice", async () => {
+    // One entry per reviewer. Collected into a set, a role repeated with the
+    // same status collapsed to one value and every later check passed.
+    await withProject(async (root) => {
+      const pack = ".qfai/review/review-20260101000000000";
+      await mkdir(path.join(root, pack), { recursive: true });
+      await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
+      await writeFile(
+        path.join(root, pack, "R01_completion-reviewer.md"),
+        withReviewerRole(
+          "completion-reviewer",
+          `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: sha256:${"c".repeat(64)}\n`,
+        ),
+      );
+      await writeFile(
+        path.join(root, pack, "summary.json"),
+        `${JSON.stringify({
+          producer: "implement",
+          overall_status: "PASS",
+          reviewers: [
+            { reviewer: "completion-reviewer", status: "PASS" },
+            { reviewer: "completion-reviewer", status: "PASS" },
+          ],
+          revision_form: "content-hash",
+          revision: DEFAULT_REVISION,
+          target: { kind: "spec", path: ".qfai/specs/spec-0001" },
+        })}\n`,
+      );
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): PASS",
+          `- Round 1: Review pack (attempt 1): ${pack}`,
+          `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, pack)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "summary.json whose overall_status and reviewers agree",
+      );
+    });
   });
 
   it("reads the role a response states, not the one its file name claims", async () => {
