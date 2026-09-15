@@ -197,8 +197,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - The release-notes drift check reads up to eight published bodies at once
   instead of one, so the time each request may take no longer shrinks with
-  every release. The report still reads in changelog order, the exit codes are
-  unchanged, and a failed read still ends the run at that section.
+  every release. It sends no more than half the published allowance for a
+  minute, and a failed read stops the reads still open below it rather than
+  waiting for them. The report still reads in changelog order, the exit codes
+  are unchanged, and a failed read still ends the run at that section.
 
 - Excess tags cover code, controls, settings and explanatory copy in both the
   review definitions and shipped reviewer cards. `delete` also covers reuse of

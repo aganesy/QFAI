@@ -44,7 +44,7 @@
  *
  * Exit codes: 0 clean, 1 drift, 2 the comparison could not be made.
  */
-/* global console, process, fetch */
+/* global console, process, fetch, AbortController, setTimeout */
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
@@ -63,11 +63,34 @@ const RELEASED_HEADING_RE = /^## \[(\d+\.\d+\.\d+)\][ \t]+-[ \t]+\d{4}-\d{2}-\d{
  * cap of 100 requests in flight from one caller, and a run that put every
  * section against that cap would fail whole rather than run slowly. Eight stays
  * an order of magnitude below it and multiplies the time each request may take
- * by eight. The budgets that count requests rather than connections are out of
- * reach at any pool size: one request per section, against an hourly allowance
- * of a thousand and a per-minute one larger still.
+ * by eight.
+ *
+ * How many are in flight says nothing about how many are sent in a minute.
+ * Eight refilled as each answers is a rate of its own, and `READS_A_MINUTE` is
+ * what bounds that.
  */
 export const READS_AT_ONCE = 8;
+
+/**
+ * How many bodies may be read in any one minute.
+ *
+ * GitHub's secondary limit for REST is 900 points a minute, and a GET costs one
+ * point, so 900 reads a minute is the published ceiling. Half of it is what
+ * this run takes. The allowance belongs to the token rather than to this run,
+ * so a bound set at the ceiling leaves nothing for anything else holding the
+ * same token in that minute, and half costs this run nothing it needs: one
+ * request per released section is inside the allowance until the changelog
+ * holds more sections than the allowance holds requests, and until then no read
+ * waits at all.
+ *
+ * Counted over a sliding minute rather than spaced evenly. The published limit
+ * is a count in a window; a fixed gap between requests would instead slow every
+ * run, including each one that never comes near it.
+ */
+export const READS_A_MINUTE = 450;
+
+/** The window `READS_A_MINUTE` is counted over. */
+const A_MINUTE = 60_000;
 
 /** The sentence `release.yml` appends when it had to cut the section. */
 export const TRUNCATION_MARKER = "**These notes are not the whole section.**";
@@ -159,9 +182,17 @@ export function missingEntries(sectionBody, releaseBody) {
   return wanted.slice(0, covered + 1).filter((title) => !published.has(title));
 }
 
-/** Reads a release body by tag, or `null` when there is no such release. */
-async function fetchReleaseBody(repository, tag, token) {
+/**
+ * Reads a release body by tag, or `null` when there is no such release.
+ *
+ * `signal` is how the run stops a request it no longer has a use for. Without
+ * one, a request that never answers keeps its connection open until the job's
+ * own budget ends the run, which reports nothing and carries no exit code of
+ * its own.
+ */
+async function fetchReleaseBody(repository, tag, token, signal) {
   const response = await fetch(`https://api.github.com/repos/${repository}/releases/tags/${tag}`, {
+    signal,
     headers: {
       accept: "application/vnd.github+json",
       authorization: `Bearer ${token}`,
@@ -179,7 +210,33 @@ async function fetchReleaseBody(repository, tag, token) {
 }
 
 /**
- * Every section's published body, read at most `READS_AT_ONCE` at a time.
+ * A gate that admits `READS_A_MINUTE` reads in any minute and holds the rest.
+ *
+ * Each caller drops the starts that have left the window, takes a place if one
+ * is free, and otherwise waits for the oldest start to leave and asks again.
+ */
+function rateGate() {
+  /** When each read still inside the window started, oldest first. */
+  const starts = [];
+  return async () => {
+    for (;;) {
+      const now = Date.now();
+      while (starts.length > 0 && now - starts[0] >= A_MINUTE) starts.shift();
+      if (starts.length < READS_A_MINUTE) {
+        starts.push(now);
+        return;
+      }
+      await new Promise((admit) => setTimeout(admit, A_MINUTE - (now - starts[0])));
+    }
+  };
+}
+
+/** What a read the run gave up on settles with, in place of never settling. */
+const ABANDONED = Symbol("abandoned");
+
+/**
+ * Every section's published body, read at most `READS_AT_ONCE` at a time and no
+ * more than `READS_A_MINUTE` in a minute.
  *
  * The answer is indexed by the section's own position, so what the caller reads
  * is in changelog order whatever order the responses arrived in.
@@ -188,6 +245,13 @@ async function fetchReleaseBody(repository, tag, token) {
  * failure carried back is the lowest section that failed rather than the first
  * one to answer. Both are what reading them one at a time did: the run ended at
  * that section, and the sections below it were never asked for.
+ *
+ * A read still open for a section BELOW that one is stopped and stops being
+ * waited for. The run has already failed, its answer cannot change what is
+ * reported, and a request that never answers would otherwise hold the failure
+ * unprinted until the job's own budget ended the run. A read for a section
+ * above it is still awaited: the report covers those sections, and a failure
+ * among them outranks this one.
  */
 async function readBodies(sections, read) {
   /** Indexed by section, and holding only the sections a worker claimed. */
@@ -195,6 +259,19 @@ async function readBodies(sections, read) {
   /** `{ index, tag, cause }` for the lowest section that failed, or `null`. */
   let failure = null;
   let next = 0;
+  /** The reads in flight, by section: what stops each, and what releases it. */
+  const inFlight = new Map();
+  const admit = rateGate();
+
+  /** Stops every read below `index`, whose answer the run can no longer use. */
+  const giveUpBelow = (index) => {
+    for (const [at, pending] of inFlight) {
+      if (at <= index) continue;
+      inFlight.delete(at);
+      pending.controller.abort();
+      pending.abandon(ABANDONED);
+    }
+  };
 
   const worker = async () => {
     while (failure === null) {
@@ -202,12 +279,27 @@ async function readBodies(sections, read) {
       const section = sections[index];
       if (section === undefined) return;
       next = index + 1;
+      await admit();
+      if (failure !== null && index > failure.index) return;
       const tag = `v${section.version}`;
+      const controller = new AbortController();
+      const abandoned = new Promise((abandon) => {
+        inFlight.set(index, { controller, abandon });
+      });
       try {
-        bodies[index] = await read(tag);
+        const body = await Promise.race([read(tag, controller.signal), abandoned]);
+        if (body === ABANDONED) return;
+        bodies[index] = body;
       } catch (cause) {
-        if (failure === null || index < failure.index) failure = { index, tag, cause };
+        // A read the run gave up on rejects because it was stopped. That is the
+        // failure above it ending the run, not a second finding.
+        if (inFlight.has(index) && (failure === null || index < failure.index)) {
+          failure = { index, tag, cause };
+          giveUpBelow(index);
+        }
         return;
+      } finally {
+        inFlight.delete(index);
       }
     }
   };
@@ -273,7 +365,9 @@ export async function run(options = {}) {
     return 2;
   }
 
-  const { bodies, failure } = await readBodies(sections, (tag) => readBody(repository, tag, token));
+  const { bodies, failure } = await readBodies(sections, (tag, signal) =>
+    readBody(repository, tag, token, signal),
+  );
 
   // Counted and reported here rather than as the responses land, so the two
   // counters have one writer and the report reads in changelog order. It stops

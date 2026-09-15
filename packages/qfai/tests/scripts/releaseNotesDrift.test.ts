@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  READS_A_MINUTE,
   READS_AT_ONCE,
   TRUNCATION_MARKER,
   entryTitles,
@@ -444,6 +445,128 @@ describe("reading the bodies at once", () => {
     // A refused token is refused for every section. Asking all forty would
     // spend the budget the bound exists to protect.
     expect(asked.length).toBeLessThanOrEqual(READS_AT_ONCE);
+  });
+
+  it("returns without waiting for a read below the one that failed", async () => {
+    const file = await changelogWith(changelogOf(2));
+    let stalledAnswered = false;
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readBody: async (_repo: string, tag: string) => {
+        if (tag === "v1.2.0") {
+          await after(5);
+          throw new Error("GitHub answered 403");
+        }
+        // The section below it never answers. Waited for, it would hold the
+        // run until the job's own budget ended it, with the failure above it
+        // unprinted and no exit code of the run's own.
+        await new Promise(() => {});
+        stalledAnswered = true;
+        return "";
+      },
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("v1.2.0: GitHub answered 403");
+    expect(stalledAnswered).toBe(false);
+  });
+
+  it("stops the reads it gave up on, rather than only ignoring their answers", async () => {
+    const file = await changelogWith(changelogOf(3));
+    const signals = new Map<string, AbortSignal>();
+
+    const { status } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readBody: async (_repo: string, tag: string, _token: string, signal: AbortSignal) => {
+        signals.set(tag, signal);
+        // The section below the failure is still outstanding when it fails.
+        await after(tag === "v1.1.0" ? 50 : 5);
+        if (tag === "v1.2.0") throw new Error("GitHub answered 403");
+        return "";
+      },
+    });
+
+    expect(status).toBe(2);
+    expect(signals.get("v1.1.0")?.aborted).toBe(true);
+    // Neither the failure's own read nor the section above it: one has
+    // answered, and the other's answer is what the report is made of.
+    expect(signals.get("v1.2.0")?.aborted).toBe(false);
+    expect(signals.get("v1.3.0")?.aborted).toBe(false);
+  });
+
+  it("does not report a read it stopped as a second finding", async () => {
+    const file = await changelogWith(changelogOf(3));
+    let wasStopped = false;
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readBody: async (_repo: string, tag: string, _token: string, signal: AbortSignal) => {
+        if (tag === "v1.2.0") {
+          await after(5);
+          throw new Error("GitHub answered 403");
+        }
+        if (tag === "v1.1.0") {
+          // A request answers when it is stopped, and does so by rejecting.
+          // That rejection is the run already failing above this section, not
+          // a finding of its own.
+          await new Promise((_answer, stopped) => {
+            signal.addEventListener("abort", () => {
+              wasStopped = true;
+              stopped(new Error("the read was stopped"));
+            });
+          });
+        }
+        return "";
+      },
+    });
+
+    // Without the stop there is no rejection to mistake for a finding, so the
+    // leg below would hold against a run that stopped nothing.
+    expect(wasStopped).toBe(true);
+    expect(status).toBe(2);
+    expect(output).toContain("v1.2.0: GitHub answered 403");
+    expect(output).not.toContain("the read was stopped");
+  });
+
+  it("starts no more reads in a minute than the published limit leaves it", async () => {
+    // Longer than the bound on purpose: a run shorter than it waits for
+    // nothing, which is what counting over a window rather than spacing the
+    // starts is for.
+    const count = READS_A_MINUTE + 20;
+    const file = await changelogWith(changelogOf(count));
+    const starts: number[] = [];
+
+    vi.useFakeTimers();
+    try {
+      const settled = capture({
+        changelogPath: file,
+        repository: "owner/repo",
+        token: "t",
+        readBody: (_repo: string, tag: string) => {
+          starts.push(Date.now());
+          return Promise.resolve(`- **Entry for ${tag.slice(1)}**`);
+        },
+      });
+      // The window is a minute; two is enough for the whole run.
+      await vi.advanceTimersByTimeAsync(2 * 60_000);
+      const { status } = await settled;
+
+      expect(status).toBe(0);
+      expect(starts).toHaveLength(count);
+      const busiest = Math.max(
+        ...starts.map((at) => starts.filter((other) => other >= at && other < at + 60_000).length),
+      );
+      expect(busiest).toBe(READS_A_MINUTE);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("counts every section it compared, with the reads overlapping", async () => {
