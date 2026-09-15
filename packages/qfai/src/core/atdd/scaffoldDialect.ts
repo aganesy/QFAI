@@ -610,6 +610,7 @@ export function compileGlob(
       if (close !== -1) {
         source += compileBraces(
           pattern.slice(index + 1, close),
+          dialect,
           opensSegment(pattern, index, atSegmentStart),
         );
         index = close;
