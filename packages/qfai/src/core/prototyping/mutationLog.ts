@@ -19,7 +19,7 @@
  * the live file, and AFTER for the new size on overwrites.
  */
 
-import { appendFile, lstat, mkdir, rm, stat, truncate } from "node:fs/promises";
+import { appendFile, lstat, mkdir, readlink, rm, stat, truncate } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "../fs/errno.js";
@@ -100,30 +100,13 @@ export async function logEvidenceMoves(
       newSize: 0,
     }),
   );
-  // `null` where there is no log yet, and `undefined` where the path holds
-  // something an append cannot extend — nothing to cut back either way, and for
-  // `undefined` nothing this call created, so the recovery below leaves it.
-  const priorLength = await stat(logAbs).then(
-    (stats) => (stats.isFile() ? stats.size : undefined),
-    async (cause: unknown) => {
-      if (!isEnoent(cause)) throw cause;
-      // A link whose target is gone reports the same absence as a path holding
-      // nothing. Removed as though this call had made it, an entry that was
-      // already there is destroyed by a write that failed.
-      return (await lstat(logAbs).then(
-        () => true,
-        () => false,
-      ))
-        ? undefined
-        : null;
-    },
-  );
+  const prior = await priorLogState(logAbs);
   try {
     await appendFile(logAbs, `${lines.join("\n")}\n`, "utf-8");
   } catch (cause) {
-    if (priorLength === undefined) throw cause;
+    if (prior === null) throw cause;
     const restored = await (
-      priorLength === null ? rm(logAbs, { force: true }) : truncate(logAbs, priorLength)
+      prior.kind === "created" ? rm(prior.file, { force: true }) : truncate(logAbs, prior.length)
     ).then(
       () => true,
       () => false,
@@ -135,6 +118,47 @@ export async function logEvidenceMoves(
       { cause },
     );
   }
+}
+
+/**
+ * What an append to the log would do to what is already there, and `null` where
+ * a failed append leaves nothing to undo.
+ *
+ * `created` names the file the append brings into existence, which is not always
+ * the log's own path: a link whose target is gone is an entry this call did not
+ * make, and the append creates the target behind it. Removing the link there
+ * destroys an entry that was already present, and removing nothing leaves a
+ * part-written file behind it.
+ */
+type PriorLog =
+  | { readonly kind: "created"; readonly file: string }
+  | { readonly kind: "extended"; readonly length: number };
+
+async function priorLogState(logAbs: string): Promise<PriorLog | null> {
+  const resolved = await stat(logAbs).then(
+    (stats) => stats,
+    (cause: unknown) => {
+      if (isEnoent(cause)) return null;
+      throw cause;
+    },
+  );
+  // A directory or a device takes no append, so a failed one leaves nothing
+  // this call could undo.
+  if (resolved !== null) {
+    return resolved.isFile() ? { kind: "extended", length: resolved.size } : null;
+  }
+  const link = await lstat(logAbs).then(
+    (stats) => stats.isSymbolicLink(),
+    () => false,
+  );
+  if (!link) return { kind: "created", file: logAbs };
+  const target = await readlink(logAbs).then(
+    (value) => value,
+    () => null,
+  );
+  return target === null
+    ? null
+    : { kind: "created", file: path.resolve(path.dirname(logAbs), target) };
 }
 
 /**

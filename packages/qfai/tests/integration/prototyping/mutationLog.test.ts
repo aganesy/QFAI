@@ -224,6 +224,27 @@ describe("TC-0012-0479: mutation-log appends a JSONL entry per destructive iter-
     expect((await lstat(logAbs)).isSymbolicLink()).toBe(true);
   });
 
+  it("removes a target the write created behind a link, and keeps the link", async () => {
+    // The append follows the link and makes the target, so a write that then
+    // fails part-way leaves a file holding entries for moves the caller is
+    // about to put back. The link was already there and stays.
+    const logAbs = path.join(root, MUTATION_LOG_REL);
+    await mkdir(path.dirname(logAbs), { recursive: true });
+    const target = path.join(root, "elsewhere-log.jsonl");
+    try {
+      await symlink(target, logAbs);
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+    fault.partialAppend = true;
+
+    await expect(logEvidenceMoves(root, "iterate", TWO_MOVES)).rejects.toThrow("ENOSPC");
+
+    expect((await lstat(logAbs)).isSymbolicLink()).toBe(true);
+    await expect(stat(target)).rejects.toThrow();
+  });
+
   it("appending twice yields two JSONL lines (idempotent append, no rewrite)", async () => {
     await logEvidenceDelete(root, "iterate", ".qfai/evidence/prototyping/iter-01/a.json", 1);
     await logEvidenceDelete(root, "certify", ".qfai/evidence/prototyping/iter-02/b.json", 2);
