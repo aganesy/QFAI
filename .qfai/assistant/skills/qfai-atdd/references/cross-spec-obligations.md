@@ -163,6 +163,14 @@ source answered.
    here rather than becoming residue. This is the one narrow exception to
    Default Mode: that column only, no other content of a sibling pack, and
    nothing is written back.
+3. **Every other place a spec binds a contract — the rest of its own pack.**
+   Read the reviewed spec's `01..10` and `16_*` Markdown files and merge in any
+   that names the ID, in either form. A spec whose only binding sits in
+   `06_Test-Cases.md` is an owner as surely as one that wrote a
+   `QFAI-CONTRACT-REF:` line, and a procedure reading two files treats it as an
+   orphan here while the matrix built from the full scan treats it as owned —
+   the same contract with two verdicts in one run. Sibling packs stay out of
+   this step: Default Mode admits only step 2's column from them.
 
 `.qfai/specs/_policies/05_Contracts.md` does **not** answer this. It is the
 contract index — short ID, file, purpose — and has no spec column at all.

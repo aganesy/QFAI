@@ -153,10 +153,15 @@ case's assertion can fail. A test that cannot fail satisfies every category.
 
 Reviewers and test-design-analysts MUST produce this matrix for each spec under review.
 Mark applicable cells: ✅ covered, ⚠️ partial, ❌ missing. Use `n/a` only where
-the obligation is absent — a row with no kept failure, no state machine, no
-interacting conditions — and an uncovered obligation remains ❌. Sections 5 and 6
-are the conditional ones beside the failure cells, so their columns carry `n/a`
-too; the rest are owed by every row.
+the category's own obligation is absent for this row — no kept failure, no
+ordered or sized domain to have boundaries, no special value the input admits,
+no state machine, no interacting conditions — and an uncovered obligation
+remains ❌. Every column may carry `n/a` on the row whose obligation it names,
+because a category that does not exist cannot be covered and demanding a mark
+for it would have an analyst invent coverage or record a blocking gap for
+nothing. Normal path and Oracle strength are the two that never do: every row
+has a normal path, and every case it holds has an assertion that either can
+fail or cannot.
 
 **Every section above is scored.** Sections 1–6 and 8 are matrix columns;
 section 7 is the business rule table that follows the matrix. A section with no
@@ -170,10 +175,10 @@ ledger's evidence payload, not the matrix artifact that the PASS/REVISE criteria
 below read. Write the matrix once, in its own file, and link it from the stage
 evidence.
 
-| US/TC ID | Equivalence partitions | Normal path | Error path   | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
-| -------- | ---------------------- | ----------- | ------------ | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
-| US-0001  | ✅/⚠️/❌               | ✅/⚠️/❌    | ✅/⚠️/❌/n/a | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌/n/a      | ✅/⚠️/❌/n/a  | ✅/⚠️/❌        | —      |
-| TC-0001  | ✅/⚠️/❌               | ✅/⚠️/❌    | ✅/⚠️/❌/n/a | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌/n/a      | ✅/⚠️/❌/n/a  | ✅/⚠️/❌        | —      |
+| US/TC ID | Equivalence partitions | Normal path | Error path   | Edge cases   | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
+| -------- | ---------------------- | ----------- | ------------ | ------------ | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
+| US-0001  | ✅/⚠️/❌/n/a           | ✅/⚠️/❌    | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a    | ✅/⚠️/❌/n/a   | ✅/⚠️/❌/n/a      | ✅/⚠️/❌/n/a  | ✅/⚠️/❌        | —      |
+| TC-0001  | ✅/⚠️/❌/n/a           | ✅/⚠️/❌    | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a    | ✅/⚠️/❌/n/a   | ✅/⚠️/❌/n/a      | ✅/⚠️/❌/n/a  | ✅/⚠️/❌        | —      |
 
 ### Business rule coverage (§7)
 
@@ -207,6 +212,14 @@ path` or `Negative case` cell may have no kept failures — and is the
   templated value of `Conditional branches`; it is not a coverage gap and never
   needs a justification. Use it only where the obligation is absent, not where
   it is unmet: an uncovered category is ❌.
+- **A safety-floor failure is not waivable.** Where a cell's kept failures
+  include one required by the safety floor in
+  `.agents/rules/minimal-implementation.md` § 2 — validation of input crossing a
+  trust boundary, error handling that prevents data loss, security,
+  accessibility — that cell is ✅ or the row is a REVISE. Neither `⚠️` with a
+  rationale nor `❌` with a Decision Record discharges it: the floor is what the
+  ladder never removes, and a gate that a written reason can open is not a
+  floor.
 - **Oracle strength is not waivable by category coverage.** A row whose eight
   category cells are ✅ and whose Oracle strength cell is ❌ is a REVISE: it has
   cases in every category and no evidence that any of them can fail.

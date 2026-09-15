@@ -3,7 +3,7 @@
 - ID: `CR-20260916-0001`
 - Title: `spec-0008 and spec-0013 flag a normal-only row incomplete where the row keeps no failure`
 - Raised by: `qfai-atdd`
-- Raised at: `2026-09-16T00:00:00Z`
+- Raised at: `2026-09-15T17:44:12Z`
 - Class: `defect`
 - Status: `open`
 - Approved by: `-`

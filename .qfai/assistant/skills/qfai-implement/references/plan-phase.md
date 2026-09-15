@@ -101,6 +101,11 @@ Returns **coverage and layer-ownership findings**:
 - an in-scope **coverage-target `TC-*`** or integration-level `TC-*` with no TC row,
   an active `US-*` with no E2E row, or an active, owned `CON-API-*` with no API row.
   `/qfai-sdd` Phase 2b seeds all four groups; zero E2E/API rows is valid only when those obligations are exempt or absent.
+  A story deferred on its own — a `- x-qfai-status: planned` meta line in its `US-XXXX` block of
+  `02_User-stories.md` — owes no E2E test (`catalog/test-layers.md`), so it owes no E2E row either
+  and is not counted here. Whole-spec surface scoping is the other exemption, and
+  `references/ledger-preconditions.md` owns it; a census reading only that one hands back a row for
+  a test the acceptance stage forbids writing.
   TC rows carry `TC-Refs`, E2E rows carry `US-Refs`, and API rows carry `CON-API-Refs`.
   The API row belongs only to the lowest-numbered owning spec; another owner's row is a cross-spec
   obligation, not a missing local row. `QFAI-ATDD-111` / `113` still check the acceptance annotations;

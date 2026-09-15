@@ -116,21 +116,36 @@ describe.each(TREES)("%s", (tree) => {
     expect(checklist).toContain("an unconditional `BR-*` has no branches to cover");
     expect(checklist).toContain("templated value of `Conditional branches`");
     expect(checklist).toContain("Mark applicable cells: ✅ covered, ⚠️ partial, ❌ missing");
-    // The conditional sections carry `n/a` in the template too, so an analyst
-    // with no state machine has a cell to write rather than a gap to invent.
-    expect(checklist).toContain("Sections 5 and 6");
-    for (const row of ["US-0001", "TC-0001"]) {
-      const conditional = headerCells(await read(tree, CHECKLIST), row);
-      expect(conditional[7]).toBe("✅/⚠️/❌/n/a");
-      expect(conditional[8]).toBe("✅/⚠️/❌/n/a");
-    }
+    // Every category whose obligation a row can lack carries `n/a` in the
+    // template, so an analyst with no ordered domain, no special value, no
+    // state machine and no interacting conditions has a cell to write rather
+    // than coverage to invent or a blocking gap to record.
+    expect(checklist).toContain(
+      "Every column may carry `n/a` on the row whose obligation it names",
+    );
     for (const row of ["US-0001", "TC-0001"]) {
       const cells = headerCells(await read(tree, CHECKLIST), row);
-      expect(cells[3]).toBe("✅/⚠️/❌/n/a");
+      for (const index of [1, 3, 4, 5, 6, 7, 8]) {
+        expect(cells[index]).toBe("✅/⚠️/❌/n/a");
+      }
+      // The two that always apply: every row has a normal path, and every case
+      // it holds has an assertion that either can fail or cannot.
       expect(cells[2]).toBe("✅/⚠️/❌");
-      expect(cells[4]).toBe("✅/⚠️/❌");
+      expect(cells[9]).toBe("✅/⚠️/❌");
     }
     expect(headerCells(await read(tree, CHECKLIST), "BR-0001")[2]).toBe("✅/⚠️/❌/n/a");
+  });
+
+  it("refuses a written reason on a safety-floor failure", async () => {
+    // A rationale beside a partial mark, and a decision record beside a missing
+    // one, both discharge an ordinary gap. Neither may discharge an obligation
+    // the ladder never removes, or the floor is a default rather than a floor.
+    const checklist = flat(await read(tree, CHECKLIST));
+    expect(checklist).toContain("**A safety-floor failure is not waivable.**");
+    expect(checklist).toContain("that cell is ✅ or the row is a REVISE");
+    expect(checklist).toContain(
+      "Neither `⚠️` with a rationale nor `❌` with a Decision Record discharges it",
+    );
   });
 
   it("scopes the business rule table to active declarations", async () => {
