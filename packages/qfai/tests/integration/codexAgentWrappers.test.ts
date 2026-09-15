@@ -689,6 +689,58 @@ describe("the TOML renderer", () => {
 // hand-maintained tree: an edit that lands in the canonical markdown and not
 // here (or the reverse) fails this.
 describe("this repository's own Codex profiles", () => {
+  it("preserves first-rung scope and repository-first reuse across all agent copies", async () => {
+    const firstRungRoles = [
+      "architecture-reviewer",
+      "delivery-planner",
+      "discovery-analyst",
+      "product-experience-architect",
+      "orchestrator",
+      "requirements-analyst",
+      "solution-architect",
+    ];
+    const reuseRoles = ["backend-engineer", "frontend-engineer", "devops-ci-engineer"];
+    const firstRungMeaning =
+      /the first rung is this stage's — whether the thing needs to exist\.\s+After a spec row is agreed, that question is a Change Request\./;
+    const reuseMeaning =
+      /check this codebase before the\s+standard library, native platform features and installed dependencies\.\s+Mark\s+a deliberate shortcut with its ceiling and the condition that lifts it\./;
+    const catalogs: unknown[] = await Promise.all(
+      [templateCatalogPath, projectCatalogPath(repoRoot)].map(async (catalogPath) =>
+        parseYaml(await readFile(catalogPath, "utf-8")),
+      ),
+    );
+
+    for (const [roles, meaning] of [
+      [firstRungRoles, firstRungMeaning],
+      [reuseRoles, reuseMeaning],
+    ] as const) {
+      for (const role of roles) {
+        for (const directory of [
+          templateAgentsDir,
+          path.join(repoRoot, ".qfai", "assistant", "agents"),
+        ]) {
+          expect(await readFile(path.join(directory, `${role}.md`), "utf-8"), role).toMatch(
+            meaning,
+          );
+        }
+        const profile = parseTomlDocument(await readFile(codexAgentPath(repoRoot, role), "utf-8"));
+        expect(profile["developer_instructions"], `${role}.toml`).toEqual(
+          expect.stringMatching(meaning),
+        );
+        for (const catalog of catalogs) {
+          expect(catalog, `${role} catalog entry`).toMatchObject({
+            agents: expect.arrayContaining([
+              expect.objectContaining({
+                id: role,
+                developer_instructions: expect.stringMatching(meaning),
+              }),
+            ]),
+          });
+        }
+      }
+    }
+  });
+
   it("match what the generator produces from the canonical agents", async () => {
     const kinds = parseAgentCatalogKinds(
       await readFile(

@@ -5,16 +5,19 @@
 1. Agent catalog: document 19 consolidated agents with standard contract structure in `.qfai/assistant/agents/*.md`
 2. Orchestrator Protocol: define delegation rules, phase gates, and review handoff rules
 3. Work Orders schema: define table format used across all skills
-4. Review profiles: move devils-advocate and pattern-doubler into optional advisory modes
+4. Review profiles: keep devils-advocate and pattern-doubler optional and advisory; require rationale for concrete pattern proposals without a numeric target
 5. Agent routing: define mandatory, conditional, blocking, and parallel agents per skill phase
 6. Skill integration: update all SKILL.md files to reference routing-driven delegation
 7. RCP footer: update skill-specific footers for targeted rerun policy
-8. Gate rules: update `review-gate.rules.yml` for routing-based reviewer gates
+8. Gate rules: retain routing-based gates and bound pattern proposals to business-flow, US, AC, EX and TC coverage in the existing catalog
+
+Use existing `review-profiles.yml` and `review-gate.rules.yml` data only; add no runtime reader, validator, role or framework. Empty and abstract-only artifacts return N/A, but missing mandatory pairings, independently required gates and product obligations, and the whole safety floor in `.agents/rules/minimal-implementation.md` § 2 remain required.
 
 ## Test approach
 
 - Unit tests: agent contract structure validation, routing/profile integrity, gate rule parsing
 - Integration tests: skill-agent integration, RCP footer consistency, Codex TOML parity
+- Concrete-pattern integration: reuse `packages/qfai/tests/integration/agentDelegationSpec0015.test.ts` for rationale, concrete scope, N/A and catalog authority; real init must preserve legacy profile bytes without force and with force
 - Asset tests: required/forbidden phrase guardrails across docs, wrappers, and skill files
 
 ## Dependencies
@@ -26,6 +29,8 @@
 
 - Routing drift between SKILL.md and steering SSOT can break delegation
 - Mitigation: central routing files become the only dispatch SSOT; tests validate Codex/init parity
+- Adoption: preserved numeric targets are ineffective once the current catalog is adopted. Init's manifest-preservation behavior is unchanged; a project retaining an older catalog still needs the current catalog to receive this bound.
+- Execution: reset only the two approved changed ledger rows and preserve their old evidence as history. Newly seeded rows remain todo until the executing owner supplies actual test identities and evidence; package regression success is not whole-workflow completion.
 
 ## CHG-005 (2026-05-24) — qfai-prototyping defect remediation
 
