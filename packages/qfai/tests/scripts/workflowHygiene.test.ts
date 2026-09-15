@@ -2158,8 +2158,13 @@ const PLANTS: {
     label: "a matrix stops disabling fail-fast",
     file: "ci.yml",
     plant: (dir) => {
-      editWorkflow(dir, "ci.yml", (text) => text.replace("fail-fast: false", "fail-fast: true"));
-      return "test";
+      // EVERY occurrence, now that two jobs are sliced. A single-occurrence replace hits
+      // whichever matrix is declared first, so the job this row expects would be decided by
+      // the order of two blocks in a file nobody edits for that reason — and the row would
+      // fail on a reordering that broke nothing. Breaking all of them makes the expected
+      // name true whatever the order.
+      editWorkflow(dir, "ci.yml", (text) => text.replaceAll("fail-fast: false", "fail-fast: true"));
+      return "node-floor";
     },
   },
   {

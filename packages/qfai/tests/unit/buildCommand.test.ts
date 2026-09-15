@@ -1981,12 +1981,12 @@ describe("the real workflow trees", () => {
       )
       .toEqual([
         "build::ci.yml::pnpm -C packages/qfai build",
-        // TWICE, and the duplicate is the point rather than an accident of the format: the `test`
-        // job builds for its `e2e` / `integration` slices, and `node-floor` builds for the same
-        // reason — it runs the whole suite on the engines floor, and `dist/` is not committed.
-        // without it that lane is structurally always red, and an always-red
-        // required lane carries no differential Node-20 signal. The entry is per OCCURRENCE, so
-        // deleting either lane's build step fails this row.
+        // TWICE, and the duplicate is the point rather than an accident of the format: both the
+        // `test` job and `node-floor` build for their `e2e` and `integration` slices, which read
+        // `dist/` and are the two slices `dist/` is not committed for. Without it those legs are
+        // structurally always red, and an always-red leg of a required lane carries no
+        // differential Node-20 signal. The entry is per OCCURRENCE, so deleting either lane's
+        // build step fails this row.
         "build::ci.yml::pnpm -C packages/qfai build",
         // This one is new, and it is a fact about the repository rather than about the predicate:
         // the own tree has a THIRD lane that builds. `check-types` runs `tsc -b`, which emits into
