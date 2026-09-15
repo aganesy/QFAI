@@ -1489,9 +1489,9 @@ agents:
         `.agents/rules/minimal-implementation.md` § 2.
         Use this route only where the installed Article VII governs the artifact.
         Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
-      - Count the consumers of an architectural element the change introduces — a
-        module, a seam, an adapter, a shared helper, a contract, a deployment boundary
-        — as they exist in the tree, against
+      - Count the consumers of an architectural element this change introduces or
+        first gives consumers to — a module, a seam, an adapter, a shared helper, a
+        contract, a deployment boundary — as they exist in the tree, against
         `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`,
         which says what a consumer is for each kind. The Plan's three usages are cited
         before implementation, so a usage nobody has written is not one of them; three
