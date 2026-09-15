@@ -91,6 +91,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `tests/<project>` alone measured a seventh of `e2e`, so drift anywhere else in
   it was invisible.
 
+- Run the release gate's checks and its test suite as separate jobs, each over
+  the slices the pull-request lanes already use. Every check that ran before a
+  publication still runs before one. The engines-floor job now asserts that the
+  pinned floor is the runtime it is using, which it did not (#1870).
+
 - Start the lint gate's independent commands as five concurrent lanes instead of
   two. Every command still runs, exactly once, and a failure in any lane reaches
   the gate's result. Workflow hygiene still runs first. The formatter is now the
@@ -229,6 +234,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing else in them changing, and resetting that row for the acceptance-test
   stage to re-execute. It is applied ahead of the record that settles the band
   itself.
+
+- **The skill citation scan reads a document in one pass** (#1788). It read a
+  run of path characters with no `.md`, `.yml` or `.yaml` ending once from every
+  position in the run, so the time grew with the square of the run's length: a
+  100 000-character token took half a minute. A single line of about nine
+  mebibytes, such as an embedded `data:` URI, stopped `qfai validate` with
+  `RangeError: Maximum call stack size exceeded`. The scan now reads each run
+  once and skips it whole when it holds no citation. It finds the same
+  citations, which a test checks against the previous pattern over generated
+  text.
 
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
