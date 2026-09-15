@@ -28,6 +28,10 @@ describe("architectural elements have concrete usage references before implement
         "Subject to the same floor, shared code still waits for its third actual caller",
       );
       expect(plan).toContain("documentation references do not prove three callers");
+      // What the count is of, and what an element is, so a reviewer blocking on
+      // it reads the same rule the author did.
+      expect(plan).toContain("a thing this plan introduces for other things to");
+      expect(plan).toContain("The count is of callers that exist when the element does");
     });
 
     it(`${tree}: SDD reports failed document checks before implementation`, async () => {
@@ -35,13 +39,25 @@ describe("architectural elements have concrete usage references before implement
       expect(skill).toContain("templates/specs/spec/10_Plan.md#implementation-approach");
       expect(skill).toContain("Report missing or insufficient usage references as findings");
       expect(skill).toContain("stop before implementation");
-      expect(skill.includes("in a spec-scoped run that finalizes `10_Plan.md`")).toBe(true);
+      // Every run that finalizes a Plan, which is one named spec or each target
+      // of a no-argument batch. A batch finalizes them too.
+      expect(skill.includes("in any run that finalizes a `10_Plan.md`")).toBe(true);
+      expect(skill.includes("or every capability under a no-argument batch")).toBe(true);
       expect(skill.includes("Contract-scoped runs do not apply this Plan gate")).toBe(true);
       expect(
         skill.includes(
           "halt to widen the Change Request to a spec-scoped run; do not write the Plan",
         ),
       ).toBe(true);
+    });
+
+    it(`${tree}: the implementation reviewer counts the callers that exist`, async () => {
+      // The Plan's usages are cited before implementation, so nothing downstream
+      // would have re-read them against the tree the element lands in.
+      const card = await read(tree, "assistant/agents/implementation-reviewer.md");
+      expect(card).toContain("Count the callers of an architectural element");
+      expect(card).toContain("as they exist in the tree");
+      expect(card).toContain("10_Plan.md#implementation-approach");
     });
 
     it(`${tree}: the required completion reviewer reads and enforces the check`, async () => {

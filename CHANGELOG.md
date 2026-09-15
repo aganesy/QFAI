@@ -59,7 +59,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   repeated demand can close against its recorded response without suppressing reports (#1810).
 
 - Require architectural elements to cite concrete usages before SDD sign-off,
-  preserving safety-floor obligations and the actual third-caller sharing limit (#1807).
+  preserving safety-floor obligations and the actual third-caller sharing limit
+  (#1807). The plan template says what an architectural element is — a thing the
+  plan introduces for other things to go through — and the gate covers every run
+  that finalizes a plan, a no-argument batch included. Because the usages are
+  cited before implementation, the implementation reviewer counts the callers
+  again as they exist when the element lands.
 
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the

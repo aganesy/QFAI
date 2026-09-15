@@ -14,6 +14,11 @@ judgement nowhere in the spec pack.
 - `<the shape of the change: which modules, which seams, in what order>`
 - `<the alternative considered and why this one>`
 
+An **architectural element** is a thing this plan introduces for other things to
+use: a module, a seam, an adapter, a shared helper, a contract, a deployment
+boundary. What makes it one is that something else is meant to go through it. A
+change entirely inside one caller is not one, however large.
+
 For each architectural element, cite at least three distinct concrete usages
 (case, example, contract or interaction references). Planned future usage and
 three links to one usage do not count. If the safety floor in
@@ -22,6 +27,11 @@ usages, cite the necessary usages and the obligation that requires that element;
 never cut the obligation to clear the count. Subject to the same floor, shared
 code still waits for its third actual caller; documentation references do not
 prove three callers.
+
+The count is of callers that exist when the element does. An element whose three
+usages are all written by the same change that introduces it has one caller and
+two plans for one, so the implementing stage checks the callers again against
+this section before the element lands.
 
 ## Test approach
 
