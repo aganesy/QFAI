@@ -381,6 +381,11 @@ describe("TC-0013-0014: full pipeline — all options, verify result structure",
 
     const result = await detectSpecChanges(tmpRoot, stubConfig);
 
+    // The seeded change is what the shape below is a shape of. Without this, a
+    // detector returning two empty arrays satisfies every assertion here.
+    expect(result.entries.map((entry) => entry.specId)).toContain("spec-0001");
+    expect(result.allSpecs).toContain("spec-0001");
+
     // Verify SpecDiffResult structure
     expect(result).toHaveProperty("entries");
     expect(result).toHaveProperty("allSpecs");

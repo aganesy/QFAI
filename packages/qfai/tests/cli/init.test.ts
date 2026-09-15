@@ -2507,7 +2507,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0013
   it("--force does not overwrite instructions reached through a symlinked ancestor", async () => {
     // `lstat` only answers about the last path component, so with
     // `.github/instructions` pointing at a shared directory the destination

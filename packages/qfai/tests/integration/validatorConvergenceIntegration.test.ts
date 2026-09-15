@@ -76,11 +76,10 @@ async function createNonUiPack(root: string): Promise<void> {
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
 // ---------------------------------------------------------------------------
-// TC-0004-0002: Canonical UIX aggregator path verification
+// The aggregator validate.ts calls, read from its source
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0004:TC-0004-0002
-describe("TC-0004-0002: Canonical UIX aggregator path verification", () => {
+describe("the canonical UIX aggregator is the one validate.ts names", () => {
   it("validate.ts calls runCanonicalUixValidators (not a legacy wrapper)", async () => {
     const validateSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -148,11 +147,10 @@ describe("Old 4-axis format is error", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0002-0010: Non-UI pack UIX skip
+// A non-UI pack raises no UIX finding from the three-layer validator
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0002:TC-0002-0010
-describe("TC-0002-0010: Non-UI pack UIX skip", () => {
+describe("a non-UI pack raises no UIX finding from threeLayer", () => {
   it("non-UI pack produces zero UIX-VAL issues from threeLayer", async () => {
     const root = await newTempDir();
     await createNonUiPack(root);

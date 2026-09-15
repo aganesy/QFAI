@@ -234,7 +234,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   removed** (#1736). An annotation can name an obligation that exists while it
   sits on a test about something else, and resolving the identifier cannot tell
   the two apart. In the package suite, 28 annotations now name the obligation
-  that states their test's subject, and 103 were removed because no declared
+  that states their test's subject, and 107 were removed because no declared
   obligation states it. The identifiers in the test titles and section comments
   beside them changed the same way. Whole files were affected: the codex agent
   profile checks carried `qfai init` cases, and the navigation-flow and
