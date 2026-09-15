@@ -118,7 +118,6 @@ describe("qa-gatekeeper is sole observation authority", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0001
 describe("watch-it-fail enforcement and resubmission", () => {
   let content: string | undefined;
 

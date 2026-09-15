@@ -194,8 +194,7 @@ describe("00_index.md references canonical family", () => {
   });
 });
 
-// QFAI:SPEC-0010:TC-0010-0008
-describe("TC-0010-0008: old template deprecation marking", () => {
+describe("old template deprecation marking", () => {
   it("canonical templates use exploration-first naming, not deprecated evaluation-axis files", async () => {
     const files = await readdir(uiuxTemplateDir);
     expect(files).not.toContain("30_option_comparison.md");
