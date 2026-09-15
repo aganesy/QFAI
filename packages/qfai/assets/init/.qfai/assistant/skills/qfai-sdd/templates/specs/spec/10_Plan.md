@@ -34,8 +34,11 @@ is whatever uses the element in the way the element is used — a module for cod
 a declared dependant for a contract, a deploying service for a boundary — and it
 is counted once however many times it calls,
 and a usage nobody has written is not one, whatever the element is: a plan, a
-comment, a document. The implementing stage counts them again before the element
-lands.
+comment, a document that says the element will be used. A declaration that
+stands in the running system is not such a claim — a dependant named in an API
+manifest and a service named in a deployment configuration each instantiate the
+usage the line above counts, and they are counted. The implementing stage counts
+them again before the element lands.
 
 ## Test approach
 

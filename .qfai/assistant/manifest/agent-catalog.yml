@@ -1489,9 +1489,10 @@ agents:
         `.agents/rules/minimal-implementation.md` § 2.
         Use this route only where the installed Article VII governs the artifact.
         Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
-      - Count the consumers of an architectural element this change introduces or
-        first gives consumers to — a module, a seam, an adapter, a shared helper, a
-        contract, a deployment boundary — as they exist in the tree, against
+      - Count the consumers of an architectural element this change introduces, or
+        adds a consumer to while it still has fewer than three — a module, a seam, an
+        adapter, a shared helper, a contract, a deployment boundary — as they exist in
+        the tree, against
         `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`,
         which says what a consumer is for each kind. The Plan's three usages are cited
         before implementation, so a usage nobody has written is not one of them; three
@@ -1502,7 +1503,8 @@ agents:
         while independent test modules are what a test-only helper or fixture is built
         for and are counted as its consumers. A helper with one production consumer is
         shared with one. Return REVISE unless the safety floor in
-        `.agents/rules/minimal-implementation.md` § 2 requires the element.
+        `.agents/rules/minimal-implementation.md` § 2 requires the element, or the
+        target `10_Plan.md` records the exception and the obligation requiring it.
         This count reads an element placed where several modules reach it. An
         extraction that stays inside the module holding the repetition is not one, so
         the third-occurrence limit on sharing in
@@ -1527,7 +1529,18 @@ agents:
       - .github/instructions/code-review.instructions.md
       - .github/instructions/principles.instructions.md
       - Diff of changed files
-      - `.qfai/contracts/api/**` and `.qfai/contracts/db/**`
+      - The contracts under the configured `paths.contractsDir` whose kind the change
+        touches — `api/**` and `db/**` always, and `ui/**` or `design/**` where the
+        change gives one of those consumers. A contract this change does not alter
+        does not appear in the diff, so the consumer count above cannot be made
+        without reading it.
+      - `qfai.config.yaml`, for `paths.specsDir` and `paths.contractsDir`: the
+        defaults below are defaults, and a project that moved either keeps the same
+        obligations at the path it configured.
+      - `<paths.specsDir>/<spec-id>/10_Plan.md` — the target Plan, where the usage
+        references are cited and where an exception under the safety floor records the
+        obligation requiring it. The template is the contract for the shape; this is
+        the document under review.
       - `.qfai/specs/<spec-id>/tdd/test-list.md` — the ledger, for the row under review
       - The per-item evidence file that row's `Layer` owns: `.qfai/evidence/implement-<spec-id>.md`,
         or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row
