@@ -107,7 +107,7 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
       [["py"], { comments: false, hashComments: true, tripleQuoted: true }, []],
       [
         ["rb"],
-        { comments: false, hashComments: true },
+        { comments: false, hashComments: true, percentLiterals: true },
         [
           namePattern(
             String.raw`\b(?<anchor>it|test|describe|context|specify|example|scenario|feature)\s*\(?\s*(?<name>${QUOTED})`,
@@ -124,7 +124,7 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         ],
       ],
       [
-        ["java", "kt", "kts", "groovy", "scala"],
+        ["java", "kt", "kts", "groovy"],
         { comments: false, tripleQuoted: true },
         [
           namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${DOUBLE_QUOTED})`),
@@ -137,14 +137,28 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
           // Kotlin names a function in backticks, and Spock a method in quotes.
           namePattern(String.raw`\b(?<anchor>fun)\s+(?<name>` + "`[^`\\n]+`)"),
           namePattern(String.raw`\b(?<anchor>def)\s+(?<name>${QUOTED})\s*\(`),
-          // Kotest's string specs and ScalaTest's word specs put the name first.
+          // Kotest's string spec opens a block, which no membership test does.
+          namePattern(String.raw`(?<name>${DOUBLE_QUOTED})\s*(?<anchor>\{)`),
+        ],
+      ],
+      [
+        // Scala keeps the word-spec forms. `in` is a membership operator in
+        // Kotlin, so reading `"…" in ids` there as a test name put a data
+        // string back into the source and cleared an obligation nothing covers.
+        ["scala"],
+        { comments: false, tripleQuoted: true },
+        [
+          namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${DOUBLE_QUOTED})`),
+          namePattern(
+            String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${QUOTED})`,
+          ),
           namePattern(
             String.raw`(?<name>${DOUBLE_QUOTED})\s*(?<anchor>\{|\b(?:in|should|must|can|when)\b)`,
           ),
         ],
       ],
       [
-        ["cs", "fs"],
+        ["cs"],
         { comments: false },
         [
           namePattern(
@@ -152,7 +166,24 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
           ),
         ],
       ],
-      [["rs"], { comments: false }, []],
+      [
+        // Expecto and the attribute form both, since an F# suite may use
+        // either. Masked without the first, a real annotation in a test's own
+        // name disappeared and the obligation read as uncovered.
+        ["fs"],
+        { comments: false },
+        [
+          namePattern(
+            String.raw`\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${DOUBLE_QUOTED})`,
+          ),
+          namePattern(
+            String.raw`\b(?<anchor>testCase|testCaseAsync|ftestCase|ptestCase|testList|testProperty|testTheory)\s+(?<name>${DOUBLE_QUOTED})`,
+          ),
+        ],
+      ],
+      // Rust's apostrophe opens a lifetime as often as a character, and paired
+      // as a quote it swallowed the trailing comment an annotation sits in.
+      [["rs"], { comments: false, lifetimes: true }, []],
       [
         ["php"],
         { comments: false, hashComments: true },

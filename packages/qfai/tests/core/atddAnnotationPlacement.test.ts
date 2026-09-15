@@ -96,6 +96,20 @@ describe("where an annotation may sit", () => {
       `class PayTests {\n  string id = "${ID}";\n  [Fact] public void Pays() {}\n}\n`,
     ],
     ["Rust", "pay.rs", `const CASES: &[&str] = &["${ID}"];\n#[test]\nfn pays() {}\n`],
+    [
+      // `%q{}` and a heredoc are each one literal. A lexer knowing only
+      // quoted strings walks past them and leaves the id visible.
+      "a Ruby percent literal",
+      "pay_spec.rb",
+      `CASES = [%q{${ID}}]\nit "pays" do\nend\n`,
+    ],
+    ["a Ruby heredoc", "pay_spec.rb", `FIXTURE = <<~IDS\n  ${ID}\nIDS\nit "pays" do\nend\n`],
+    [
+      // `in` is a membership operator in Kotlin, not a word-spec anchor.
+      "a Kotlin membership test",
+      "PayTest.kt",
+      `class PayTest {\n  val present = "${ID}" in fixtureIds\n  @Test fun pays() {}\n}\n`,
+    ],
   ])("does not count an id a %s test holds as data", async (_language, fileName, body) => {
     expect(await codesFor(body, fileName)).toContain("QFAI-ATDD-112");
   });
@@ -112,6 +126,20 @@ describe("where an annotation may sit", () => {
       "a JUnit display name",
       "PayTest.java",
       `class PayTest {\n  @Test\n  @DisplayName("${ID} pays")\n  void pays() {}\n}\n`,
+    ],
+    [
+      // Expecto names a test in its own call, so masking `.fs` without
+      // reading that form made a real annotation disappear.
+      "an Expecto test-case name",
+      "PayTests.fs",
+      `let tests = testCase "${ID} pays" <| fun _ -> ()\n`,
+    ],
+    [
+      // An odd number of apostrophes on the line: paired as quotes they
+      // swallowed the comment the annotation sits in.
+      "a Rust comment after a lifetime",
+      "pay.rs",
+      `fn compare<'a>(x: &'a str, y: &'a str) -> bool { x == y } // ${ID}\n#[test]\nfn pays() {}\n`,
     ],
     [
       "a Kotlin function name",

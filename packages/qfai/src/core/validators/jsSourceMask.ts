@@ -179,6 +179,88 @@ function endOfRegexLiteral(source: string, start: number): number {
 }
 
 /** End of a `"""` / `\'\'\'` docstring, or end of file when it is never closed. */
+/** The closing delimiter for a `%` literal's opening one. */
+const PERCENT_PAIRS: ReadonlyMap<string, string> = new Map([
+  ["(", ")"],
+  ["[", "]"],
+  ["{", "}"],
+  ["<", ">"],
+]);
+
+/**
+ * The end of a Ruby `%` literal beginning at `start`, or `-1` where what stands
+ * there is a modulo operator rather than a literal.
+ *
+ * The delimiter is whatever follows the optional type letter, and a bracketing
+ * pair nests: `%w[a [b] c]` is one literal, not two.
+ */
+function endOfPercentLiteral(source: string, start: number): number {
+  const letter = source[start + 1] ?? "";
+  const opens = /[A-Za-z]/.test(letter) ? start + 2 : start + 1;
+  const open = source[opens] ?? "";
+  if (open === "" || /[A-Za-z0-9\s]/.test(open)) return -1;
+  if (/[A-Za-z]/.test(letter) && !"qQwWiIrsx".includes(letter)) return -1;
+  const close = PERCENT_PAIRS.get(open) ?? open;
+  let depth = 1;
+  for (let index = opens + 1; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "\\") {
+      index += 1;
+      continue;
+    }
+    if (close !== open && char === open) depth += 1;
+    else if (char === close) {
+      depth -= 1;
+      if (depth === 0) return index + 1;
+    }
+  }
+  return source.length;
+}
+
+/**
+ * The end of a Ruby heredoc whose header begins at `start`, or `-1` where `<<`
+ * there is a shift or an append rather than a header.
+ *
+ * The body runs from the next line to the line holding the terminator alone.
+ * The header itself is left in place: it is code, and only what it opens is a
+ * literal.
+ */
+function endOfHeredoc(source: string, start: number): number {
+  const header = /^<<([~-]?)(?:(["'])([A-Za-z_][A-Za-z0-9_]*)\2|([A-Z_][A-Z0-9_]*))/.exec(
+    source.slice(start),
+  );
+  if (header === null) return -1;
+  const terminator = header[3] ?? header[4] ?? "";
+  if (terminator === "") return -1;
+  const bodyStart = source.indexOf("\n", start + header[0].length);
+  if (bodyStart === -1) return source.length;
+  const indented = header[1] !== "";
+  const closer = new RegExp(`^${indented ? "[ \\t]*" : ""}${terminator}[ \\t]*\\r?$`);
+  let index = bodyStart + 1;
+  while (index <= source.length) {
+    const lineEnd = source.indexOf("\n", index);
+    const line = source.slice(index, lineEnd === -1 ? source.length : lineEnd);
+    if (closer.test(line)) return lineEnd === -1 ? source.length : lineEnd;
+    if (lineEnd === -1) return source.length;
+    index = lineEnd + 1;
+  }
+  return source.length;
+}
+
+/**
+ * The end of a Rust character literal beginning at `start`, or `-1` where the
+ * apostrophe opens a lifetime instead.
+ *
+ * A lifetime is an apostrophe and a name with no closing one, so it is told
+ * from a literal by what closes rather than by what follows.
+ */
+function endOfCharLiteral(source: string, start: number): number {
+  const literal = /^'(?:\\(?:u\{[0-9A-Fa-f]{1,6}\}|x[0-9A-Fa-f]{2}|.)|[^\\'])'/.exec(
+    source.slice(start),
+  );
+  return literal === null ? -1 : start + literal[0].length;
+}
+
 function endOfTripleQuoted(source: string, start: number, fence: string): number {
   const close = source.indexOf(fence, start + fence.length);
   return close === -1 ? source.length : close + fence.length;
@@ -215,12 +297,34 @@ export type JsMaskOptions = {
    * reading it as three empty strings leaves its body as code.
    */
   readonly tripleQuoted?: boolean;
+
+  /**
+   * Recognise Ruby's `%` literals and heredocs. Default `false`.
+   *
+   * `true` for a Ruby suite. `%q{...}`, `%w[...]` and `<<~SQL ... SQL` are each
+   * one literal, and a lexer that knows only quoted strings walks straight past
+   * them: an id written in one stays visible, and a scan counting visible ids
+   * reads data as an annotation.
+   */
+  readonly percentLiterals?: boolean;
+
+  /**
+   * Read `'` as a lifetime where it does not open a character literal. Default
+   * `false`.
+   *
+   * `true` for Rust. `fn f<'a>(x: &'a str)` holds an odd number of apostrophes,
+   * and paired as quotes they swallow the rest of the line — the trailing
+   * comment an annotation sits in included.
+   */
+  readonly lifetimes?: boolean;
 };
 
 export function maskJsNonCode(source: string, options: JsMaskOptions = {}): string {
   const blankComments = options.comments ?? true;
   const hashComments = options.hashComments ?? false;
   const tripleQuoted = options.tripleQuoted ?? false;
+  const percentLiterals = options.percentLiterals ?? false;
+  const lifetimes = options.lifetimes ?? false;
   const out = source.split("");
   // Whether the token just read closes an expression. It is the whole
   // regex-vs-division test: `a / b` divides, `= /re/` does not. Comments leave
@@ -251,6 +355,39 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
     } else if (ch === "/" && next === "*") {
       const end = endOfBlockComment(source, i);
       i = blankComments ? blank(out, i, end) : end;
+    } else if (percentLiterals && ch === "%" && !endsExpression) {
+      const end = endOfPercentLiteral(source, i);
+      if (end === -1) {
+        i += 1;
+        endsExpression = false;
+      } else {
+        i = blank(out, i, end);
+        endsExpression = true;
+        lastWord = "";
+      }
+    } else if (percentLiterals && ch === "<" && next === "<") {
+      const end = endOfHeredoc(source, i);
+      if (end === -1) {
+        i += 2;
+        endsExpression = false;
+      } else {
+        // The header stays: it is code, and only the body it opens is a literal.
+        const bodyStart = source.indexOf("\n", i);
+        i = bodyStart === -1 ? end : blank(out, bodyStart, end);
+        endsExpression = true;
+        lastWord = "";
+      }
+    } else if (lifetimes && ch === "'") {
+      const end = endOfCharLiteral(source, i);
+      if (end === -1) {
+        // A lifetime, so the apostrophe names nothing and closes nothing.
+        i += 1;
+        endsExpression = true;
+      } else {
+        i = blank(out, i, end);
+        endsExpression = true;
+        lastWord = "";
+      }
     } else if (ch === "'" || ch === '"') {
       i = blank(out, i, endOfQuoted(source, i, ch));
       endsExpression = true;
