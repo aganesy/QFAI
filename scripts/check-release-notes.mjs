@@ -51,6 +51,24 @@ import { pathToFileURL } from "node:url";
 /** `## [1.11.0] - 2026-09-07` — a released section, as opposed to `[Unreleased]`. */
 const RELEASED_HEADING_RE = /^## \[(\d+\.\d+\.\d+)\][ \t]+-[ \t]+\d{4}-\d{2}-\d{2}[ \t]*$/;
 
+/**
+ * How many bodies are read at once.
+ *
+ * One request per released section, and the count only grows: one more with
+ * every release. Read one at a time, the job's ten-minute budget is divided by
+ * that count, so the time each request may take shrinks as the changelog grows
+ * and the lane starts failing on a slow API with nothing having changed.
+ *
+ * Eight, and not all of them at once. The limit a fan-out would meet is the
+ * cap of 100 requests in flight from one caller, and a run that put every
+ * section against that cap would fail whole rather than run slowly. Eight stays
+ * an order of magnitude below it and multiplies the time each request may take
+ * by eight. The budgets that count requests rather than connections are out of
+ * reach at any pool size: one request per section, against an hourly allowance
+ * of a thousand and a per-minute one larger still.
+ */
+export const READS_AT_ONCE = 8;
+
 /** The sentence `release.yml` appends when it had to cut the section. */
 export const TRUNCATION_MARKER = "**These notes are not the whole section.**";
 
@@ -160,6 +178,64 @@ async function fetchReleaseBody(repository, tag, token) {
   return typeof payload?.body === "string" ? payload.body : "";
 }
 
+/**
+ * Every section's published body, read at most `READS_AT_ONCE` at a time.
+ *
+ * The answer is indexed by the section's own position, so what the caller reads
+ * is in changelog order whatever order the responses arrived in.
+ *
+ * A read that fails stops the workers claiming any further section, and the
+ * failure carried back is the lowest section that failed rather than the first
+ * one to answer. Both are what reading them one at a time did: the run ended at
+ * that section, and the sections below it were never asked for.
+ */
+async function readBodies(sections, read) {
+  /** Indexed by section, and holding only the sections a worker claimed. */
+  const bodies = [];
+  /** `{ index, tag, cause }` for the lowest section that failed, or `null`. */
+  let failure = null;
+  let next = 0;
+
+  const worker = async () => {
+    while (failure === null) {
+      const index = next;
+      const section = sections[index];
+      if (section === undefined) return;
+      next = index + 1;
+      const tag = `v${section.version}`;
+      try {
+        bodies[index] = await read(tag);
+      } catch (cause) {
+        if (failure === null || index < failure.index) failure = { index, tag, cause };
+        return;
+      }
+    }
+  };
+
+  const workers = [];
+  for (let started = 0; started < Math.min(READS_AT_ONCE, sections.length); started++) {
+    workers.push(worker());
+  }
+  await Promise.all(workers);
+  return { bodies, failure };
+}
+
+/**
+ * Reports what a section's published body does not carry, and says whether it
+ * was missing anything.
+ */
+function reportSection(tag, section, body) {
+  const missing = missingEntries(section.body, body);
+  if (missing.length === 0) {
+    return false;
+  }
+  console.error(`${tag}: ${String(missing.length)} entr(y|ies) the published body does not carry:`);
+  for (const title of missing) {
+    console.error(`  ${title}`);
+  }
+  return true;
+}
+
 /** Compares every released section against its published body. */
 export async function run(options = {}) {
   const {
@@ -197,36 +273,31 @@ export async function run(options = {}) {
     return 2;
   }
 
+  const { bodies, failure } = await readBodies(sections, (tag) => readBody(repository, tag, token));
+
+  // Counted and reported here rather than as the responses land, so the two
+  // counters have one writer and the report reads in changelog order. It stops
+  // at a failed read, which is where reading one at a time stopped.
   let drifted = 0;
   let compared = 0;
-  for (const section of sections) {
-    const tag = `v${section.version}`;
-    let body;
-    try {
-      body = await readBody(repository, tag, token);
-    } catch (cause) {
-      console.error(
-        `check-release-notes: ${tag}: ${cause instanceof Error ? cause.message : String(cause)}`,
-      );
-      return 2;
-    }
+  const reported = failure === null ? sections : sections.slice(0, failure.index);
+  for (const [index, section] of reported.entries()) {
+    const body = bodies[index];
     if (body === null) {
       // A section with no release is an ordinary state: a version tagged but
       // not released, or a changelog that predates the workflow.
       continue;
     }
     compared += 1;
-    const missing = missingEntries(section.body, body);
-    if (missing.length === 0) {
-      continue;
-    }
-    drifted += 1;
+    if (reportSection(`v${section.version}`, section, body)) drifted += 1;
+  }
+
+  if (failure !== null) {
+    const { tag, cause } = failure;
     console.error(
-      `${tag}: ${String(missing.length)} entr(y|ies) the published body does not carry:`,
+      `check-release-notes: ${tag}: ${cause instanceof Error ? cause.message : String(cause)}`,
     );
-    for (const title of missing) {
-      console.error(`  ${title}`);
-    }
+    return 2;
   }
 
   if (drifted > 0) {

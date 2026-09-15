@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  READS_AT_ONCE,
   TRUNCATION_MARKER,
   entryTitles,
   missingEntries,
@@ -302,6 +303,166 @@ describe("the run", () => {
     });
 
     expect(asked).toEqual(["v1.1.0"]);
+  });
+});
+
+describe("reading the bodies at once", () => {
+  /**
+   * A changelog of `count` released sections, newest first, each with one entry.
+   *
+   * The version's minor is the section's distance from the bottom, so a case can
+   * say which section it means by tag alone.
+   */
+  const changelogOf = (count: number): string => {
+    const lines = ["# Changelog", ""];
+    for (let minor = count; minor >= 1; minor -= 1) {
+      lines.push(
+        `## [1.${String(minor)}.0] - 2026-01-02`,
+        "",
+        `- **Entry for 1.${String(minor)}.0**`,
+        "",
+      );
+    }
+    return lines.join("\n");
+  };
+
+  /** Resolves after `ms`, so a case chooses the order the responses arrive in. */
+  const after = (ms: number): Promise<void> =>
+    new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+
+  /** The tags the report named, in the order it named them. */
+  const reportedTags = (output: string): string[] =>
+    output.split("\n").flatMap((line) => {
+      const match = /^(v\d+\.\d+\.\d+): \d+ entr/.exec(line);
+      return match === null ? [] : [match[1] ?? ""];
+    });
+
+  it("reports in changelog order when the responses arrive in the reverse of it", async () => {
+    const file = await changelogWith(changelogOf(3));
+    const arrived: string[] = [];
+    // The newest section answers last. Read one at a time, that order cannot
+    // occur at all: the second is not asked for until the first has answered.
+    const delay: Record<string, number> = { "v1.3.0": 60, "v1.2.0": 40, "v1.1.0": 20 };
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readBody: async (_repo: string, tag: string) => {
+        await after(delay[tag] ?? 0);
+        arrived.push(tag);
+        // Empty, so every section drifts and every one of them is reported.
+        return "";
+      },
+    });
+
+    expect(arrived).toEqual(["v1.1.0", "v1.2.0", "v1.3.0"]);
+    expect(reportedTags(output)).toEqual(["v1.3.0", "v1.2.0", "v1.1.0"]);
+    expect(status).toBe(1);
+  });
+
+  it("holds its bound, and reaches it", async () => {
+    const file = await changelogWith(changelogOf(40));
+    let inFlight = 0;
+    let peak = 0;
+
+    const { status } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readBody: async (_repo: string, tag: string) => {
+        inFlight += 1;
+        peak = Math.max(peak, inFlight);
+        await after(5);
+        inFlight -= 1;
+        return `- **Entry for ${tag.slice(1)}**`;
+      },
+    });
+
+    expect(status).toBe(0);
+    expect(peak).toBe(READS_AT_ONCE);
+  });
+
+  it("stops the report at the section that failed, and exits 2 over the drift above it", async () => {
+    const file = await changelogWith(changelogOf(3));
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readBody: async (_repo: string, tag: string) => {
+        await after(5);
+        if (tag === "v1.2.0") throw new Error("GitHub answered 403");
+        return "";
+      },
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("v1.2.0: GitHub answered 403");
+    // The section below the failure is reached only because the reads overlap.
+    // A run that read one at a time never asked for it, so it is not reported.
+    expect(reportedTags(output)).toEqual(["v1.3.0"]);
+  });
+
+  it("names the failed section nearest the top of the changelog, not the one that failed first", async () => {
+    const file = await changelogWith(changelogOf(2));
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readBody: async (_repo: string, tag: string) => {
+        await after(tag === "v1.1.0" ? 10 : 50);
+        throw new Error(`GitHub answered ${tag === "v1.1.0" ? "403" : "500"}`);
+      },
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("v1.2.0: GitHub answered 500");
+    expect(output).not.toContain("403");
+  });
+
+  it("asks for no more sections than its bound once one has failed", async () => {
+    const file = await changelogWith(changelogOf(40));
+    const asked: string[] = [];
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readBody: async (_repo: string, tag: string) => {
+        asked.push(tag);
+        await after(5);
+        throw new Error("GitHub answered 401");
+      },
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("v1.40.0: GitHub answered 401");
+    // A refused token is refused for every section. Asking all forty would
+    // spend the budget the bound exists to protect.
+    expect(asked.length).toBeLessThanOrEqual(READS_AT_ONCE);
+  });
+
+  it("counts every section it compared, with the reads overlapping", async () => {
+    const file = await changelogWith(changelogOf(20));
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readBody: async (_repo: string, tag: string) => {
+        const minor = Number(tag.split(".")[1] ?? "0");
+        await after(minor % 4);
+        // Every fourth section has no release, which is not a comparison.
+        return minor % 4 === 0 ? null : `- **Entry for ${tag.slice(1)}**`;
+      },
+    });
+
+    expect(status).toBe(0);
+    expect(output).toContain("15 compared");
   });
 });
 
