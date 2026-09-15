@@ -140,7 +140,17 @@ to do with. A row whose obligation is unchanged waits on nobody.
   `US-0002-0005`, `US-0010-0008`, `US-0010-0009`, `US-0013-0008` and
   `US-0013-0009`. They join this set by id when this record is refreshed after
   those repairs, as approved actions 1 and 5 set out, and before it is approved.
-- Overlapping open Change Requests: none. **The `spec-0013` ledger repair is
+- Overlapping open Change Requests: two, both over `spec-0014` rows this record
+  re-verifies in place.
+  `CR-20260913-0005` holds `spec-0014/TDD-0009`, whose `Test file` and
+  `Selector` it corrects, and `2A` re-verifies that row through the winner
+  validator. `CR-20260913-0006` holds `spec-0014/TDD-0034`, and `2a` re-verifies
+  it through the iterate command. In both cases the row cannot be re-verified as
+  this record describes, because what it names is what the other request
+  changes — so each is a prerequisite: it lands first, and the disposition here
+  is refreshed against the row as it then reads. `TDD-0033`, `TDD-0018` and
+  `TDD-0019` are held by neither and keep their in-place terms.
+- **The `spec-0013` ledger repair is
   owed and unwritten**, like `spec-0002`'s, `spec-0010`'s, `spec-0004`'s and
   `spec-0012`'s. It re-derives that ledger to its template with no statement
   moving: the six columns it lacks, the `Integration` and `E2E` rows Phase 2b
@@ -590,7 +600,12 @@ offered stays in `## Options` and in `## Decision needed from user`.
   report against the control.
 - Product paths under `2a`:
   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/**` and its
-  root mirror, for the direction-selection step and the authoring it performs;
+  root mirror, for the direction-selection step and the authoring it performs,
+  including where that step sits: the pre-loop grilling session carries the
+  question, the step runs after it, and both come before the preconditions that
+  confirm the artifacts exist;
+  **`packages/qfai/tests/assets/prototypingGrilling.test.ts`**, which pins that
+  session's rules and gains the case holding the direction with the user;
   **`packages/qfai/assets/init/.qfai/assistant/catalog/ui-definition-protocol.md`**
   and its root mirror, whose missing-definition table sends a missing
   pre-prototyping design contract back to `/qfai-sdd` — a stage that under this
@@ -617,11 +632,17 @@ offered stays in `## Options` and in `## Decision needed from user`.
   block names that file for its direction case and the `2B` block for its
   sentence cases, and neither covers this one;
   `packages/qfai/src/cli/commands/prototypingIterate.ts`
-  with its tests, whose hash-mismatch recovery tells the user to "re-run
-  `/qfai-sdd` Phase 0 to refreeze" — a stage that under this sub-option no longer
-  owns the write, so following the diagnostic repeats something that cannot
-  repair the mismatch, and the completed `spec-0012` rows naming that command
-  take the in-place re-verification with it; **and
+  with its tests, in **two** recovery paths, not one. The hash-mismatch
+  diagnostic tells the user to "re-run `/qfai-sdd` Phase 0 to refreeze"; the
+  malformed-lock branch beside it — a lock present whose `designMdSha256` is
+  missing or is not 64 hex characters — tells them to "re-run `/qfai-sdd` Phase 0
+  to regenerate the lock". Both name a stage that under this sub-option no longer
+  owns the write, so following either repeats something that cannot repair the
+  state. The suite asserts neither today: its nearest case reads an unreadable
+  lock and asserts only that it could not be read, so a malformed-lock case that
+  asserts the message names the authoring step is part of this scope. The
+  completed `spec-0012` rows naming that command take the in-place
+  re-verification with it; **and
   `packages/qfai/src/cli/commands/prototypingCertify.ts` with
   `packages/qfai/tests/cli/prototypingCertify.test.ts`**, which tells a user
   whose lock is malformed to "re-run `/qfai-sdd` Phase 0 to regenerate the lock
@@ -646,6 +667,23 @@ offered stays in `## Options` and in `## Decision needed from user`.
   has to learn that a pack which has not reached prototyping owes neither
   artifact yet — which is a product change, and an option that does not name it
   authorises a rerun that cannot finish.
+
+  **The exemption is only half of that file.** It settles what the gate reports
+  before prototyping; the four actions it prints once the exemption ends each
+  send the operator to `/qfai-sdd` Phase 0, and under `2a` that stage can repair
+  none of them.
+
+  | Finding           | What the action says today                                       |
+  | ----------------- | ---------------------------------------------------------------- |
+  | Root file missing | Create it, or run `/qfai-sdd`, whose Phase 0 authors it          |
+  | Lock missing      | Run `/qfai-sdd` Phase 0 to validate the file and freeze its hash |
+  | Lock malformed    | Re-run `/qfai-sdd` Phase 0 to regenerate the lock                |
+  | Hash mismatch     | Re-run `/qfai-sdd` Phase 0, or restart prototyping, to refreeze  |
+
+  All four are rewritten to name the authoring step, and
+  `packages/qfai/tests/core/validators/designContractReadiness.test.ts` gains an
+  assertion on each message. Without the assertions a suite that only counts
+  findings stays green over four recoveries that lead nowhere.
 
   **And every source comment naming the old producer**, because a comment
   shipped in `dist` is documentation a consumer reads:
@@ -1070,10 +1108,10 @@ internally contradictory.
    produce one. Which stage replaces it is a decision rather than a detail, so
    option 2 is offered as two, the same way option 3 is:
 
-   | Option | Who authors `DESIGN.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-   | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | `2a`   | `/qfai-prototyping` gains a direction-selection step and authors the file **and `.qfai/contracts/design/DESIGN.md.lock.yaml`**, with its tests. **The new step runs before the existing preconditions, and both artifacts move from the skill's inputs to that step's outputs.** Today the skill lists them under its required inputs and Step 2-A confirms both exist before the loop starts, so on a fresh visual project — where this option leaves `/qfai-sdd` writing neither — the stage would stop before reaching the step meant to create them. The rerun therefore rewrites the input list, Step 2-A and the read-only contract together. The lock is what freezes the file: `prototyping iterate` refuses a lock that is malformed, unreadable or mismatched. It does not refuse a missing one — a run with no lock proceeds unfrozen — so authoring the file without writing the lock would leave every run unfrozen with nothing reporting it. `2a` keeps that branch as it is: the step that authors the file writes the lock, as `/qfai-sdd` Phase 0 does today. Discussion still chooses nothing |
-   | `2b`   | `/qfai-sdd` Phase 0 authors it from the discussion pack it already reads — the requirements, context and constraints — because Phase 0 runs before a new project has any spec, and no phase order changes. Discussion asks nothing, and on the discussion route no later stage asks either. The requirement is met with no user-facing choice, and whatever a brand needs that the discussion pack does not carry is lost. A spec taken in through import-lite has no pack, so Phase 0 authors its file from the import-lite evidence instead, as the paragraph below the table sets out. **It narrows `US-0002-0005` with the rest of statement A**: that story requires prototyping to remain where the direction is chosen, and `2b` moves the authoring to `/qfai-sdd`, so leaving the story as written would contradict the option settling it                                                                                                                                                                                                                                                              |
+   | Option | Who authors `DESIGN.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+   | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `2a`   | `/qfai-prototyping` gains a direction-selection step and authors the file **and `.qfai/contracts/design/DESIGN.md.lock.yaml`**, with its tests. **The direction is the user's, and it is asked in the session that already runs before the loop.** A brand direction is an unfixed design decision, so `.agents/rules/grilling.md` governs it: it belongs on that session's frontier, is recorded under `## Session` in `.qfai/evidence/prototyping/grilling.md`, and is answered before the authoring step runs. An option that adds a step without saying whose choice it carries permits the assistant to pick the brand, which is the behaviour this request opened on. `packages/qfai/tests/assets/prototypingGrilling.test.ts` pins the session's rules and gains the case that the direction is a user-owned decision on the pre-loop frontier. **The new step runs before the existing preconditions, and both artifacts move from the skill's inputs to that step's outputs.** Today the skill lists them under its required inputs and Step 2-A confirms both exist before the loop starts, so on a fresh visual project — where this option leaves `/qfai-sdd` writing neither — the stage would stop before reaching the step meant to create them. The rerun therefore rewrites the input list, Step 2-A and the read-only contract together. The lock is what freezes the file: `prototyping iterate` refuses a lock that is malformed, unreadable or mismatched. It does not refuse a missing one — a run with no lock proceeds unfrozen — so authoring the file without writing the lock would leave every run unfrozen with nothing reporting it. `2a` keeps that branch as it is: the step that authors the file writes the lock, as `/qfai-sdd` Phase 0 does today. Discussion still chooses nothing |
+   | `2b`   | `/qfai-sdd` Phase 0 authors it from the discussion pack it already reads — the requirements, context and constraints — because Phase 0 runs before a new project has any spec, and no phase order changes. Discussion asks nothing, and on the discussion route no later stage asks either. The requirement is met with no user-facing choice, and whatever a brand needs that the discussion pack does not carry is lost. A spec taken in through import-lite has no pack, so Phase 0 authors its file from the import-lite evidence instead, as the paragraph below the table sets out. **It narrows `US-0002-0005` with the rest of statement A**: that story requires prototyping to remain where the direction is chosen, and `2b` moves the authoring to `/qfai-sdd`, so leaving the story as written would contradict the option settling it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
    **`2b` on the import-lite route.** Phase 0 step 1 stops today on an
    import-lite spec with no root `DESIGN.md`, because no pack recorded a
