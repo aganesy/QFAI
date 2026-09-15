@@ -2750,7 +2750,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0004
   it("--dry-run does not write instructions files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2767,7 +2766,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0002
   it("Instructions idempotency (3 consecutive runs)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2882,7 +2880,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0001
   it("current init outputs remain stable after additive instruction assets", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
