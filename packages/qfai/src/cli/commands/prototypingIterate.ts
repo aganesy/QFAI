@@ -804,9 +804,21 @@ export async function runPrototypingIterate(
     // move is answered by a record of the move back instead.
     // A rollback that stranded something before the batch was written has no
     // entries to take back and a tree that holds moves: those are recorded
-    // here, since nothing later reaches this path.
-    if (loggedMoves === null && stranded.length > 0 && aggregateMove !== null) {
-      await logStrandedMoves(options.root, evidenceRootAbs, aggregateMove.backupAbs, stranded);
+    // here, since nothing later reaches this path. Each backup is read against
+    // its own pair of roots — the aggregate's under the evidence root, iter-00's
+    // under its own home — or an entry names the path the file sits at rather
+    // than the one it left.
+    if (loggedMoves === null && stranded.length > 0) {
+      const moved = aggregateMove;
+      if (moved !== null) {
+        const aggregateStranded = stranded.filter((dir) => dir.startsWith(moved.backupAbs));
+        if (aggregateStranded.length > 0) {
+          await logStrandedMoves(options.root, evidenceRootAbs, moved.backupAbs, aggregateStranded);
+        }
+      }
+      if (backup !== null && stranded.includes(backup.to)) {
+        await logStrandedMoves(options.root, backup.from, backup.to, [backup.to]);
+      }
     }
     const unlogged =
       loggedMoves === null ||
@@ -2339,22 +2351,29 @@ function reportIterateDryRun(input: {
       `over ${String(input.specCount)} spec(s)` +
       (input.targetUrl === undefined ? "." : ` against ${input.targetUrl}.`),
   ];
+  // In the order the reset performs them: the aggregate mirrors move first, then
+  // iter-00 is backed up, then one log write covers both, then the iteration
+  // directories are cleared. An operator authorizing a destructive run reads
+  // this as the sequence, so a preview in another order describes a run that
+  // does not happen.
+  if (input.aggregateDirs.length > 0) {
+    const names = input.aggregateDirs.map((name) => `${PROTOTYPING_EVIDENCE_REL}/${name}`);
+    lines.push(
+      `  would MOVE ${names.join(" and ")} into ${PROTOTYPING_EVIDENCE_REL}/aggregate.backup-<ISO>.`,
+    );
+  }
   if (input.reset !== null) {
     const iterRel = path.relative(input.root, input.reset.iter00Abs).replace(/\\/g, "/");
-    lines.push(
-      `  would MOVE ${iterRel} to ${iterRel}.backup-<ISO> and log every file in it to ` +
-        `${PROTOTYPING_EVIDENCE_REL}/mutation-log.jsonl, then clear the evidence iteration dirs.`,
-    );
+    lines.push(`  would MOVE ${iterRel} to ${iterRel}.backup-<ISO>.`);
   } else if (input.cycle === 0) {
     lines.push(
       `  no existing ${PROTOTYPING_EVIDENCE_REL}/iter-00 to back up; the cycle-0 reset would create it fresh.`,
     );
   }
-  if (input.aggregateDirs.length > 0) {
-    const names = input.aggregateDirs.map((name) => `${PROTOTYPING_EVIDENCE_REL}/${name}`);
+  if (input.aggregateDirs.length > 0 || input.reset !== null) {
     lines.push(
-      `  would MOVE ${names.join(" and ")} into ${PROTOTYPING_EVIDENCE_REL}/aggregate.backup-<ISO> ` +
-        "and log every file in them.",
+      `  would log every file those moves take to ${PROTOTYPING_EVIDENCE_REL}/mutation-log.jsonl, ` +
+        "then clear the evidence iteration dirs.",
     );
   }
   lines.push(
@@ -2764,13 +2783,13 @@ async function logMovesBack(
  */
 async function logStrandedMoves(
   root: string,
-  evidenceRootAbs: string,
+  homeAbs: string,
   backupAbs: string,
   stranded: readonly string[],
 ): Promise<boolean> {
   if (stranded.length === 0) return false;
   const backupRel = toRootRelative(root, backupAbs);
-  const homeRel = toRootRelative(root, evidenceRootAbs);
+  const homeRel = toRootRelative(root, homeAbs);
   const files: MovedFile[] = [];
   for (const dirAbs of stranded) {
     let inBackup: readonly MovedFile[];

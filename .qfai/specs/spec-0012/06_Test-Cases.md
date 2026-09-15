@@ -1377,7 +1377,23 @@
 - AC-Refs: AC-0012-0082
 - Type: integration
 - Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.cycle0Force.test.ts`
-- Verify REQ-0174: a cycle-0 run with and without `--force` moves `screenshots/` and `html/` into `aggregate.backup-<ISO>/` before clearing, logs each moved file, puts them back when a later step fails, and leaves the backups out of the certificate's digests and freshness scan.
+- Verify REQ-0174: a cycle-0 run with and without `--force` moves `screenshots/` and `html/` into `aggregate.backup-<ISO>/` before clearing, logs each moved file, and puts them back when a later step fails.
+
+## TC-0012-0482
+
+- EX-Ref: EX-0012-0186
+- AC-Refs: AC-0012-0082
+- Type: integration
+- Test file: `packages/qfai/tests/core/prototyping/certificate.test.ts`
+- Verify REQ-0174: the completion certificate's digest tree leaves a cycle-0 reset's backups out, so removing one after the certificate is written does not read as this loop's evidence changing.
+
+## TC-0012-0483
+
+- EX-Ref: EX-0012-0186
+- AC-Refs: AC-0012-0082
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingCertify.validateFreshness.test.ts`
+- Verify REQ-0174: the freshness scan skips a cycle-0 reset's backups, so a file inside one that is newer than the run still seals.
 
 ## Legacy Coverage Continuity
 
