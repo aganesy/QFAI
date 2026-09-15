@@ -1093,6 +1093,21 @@ const CITATION_LENGTH_LIMIT = 4096;
 const MATCH_PART_LIMIT = 4;
 
 /**
+ * The most globstars a matched citation may hold, over the whole path.
+ *
+ * A `**` is a variable-width part like any other, and the one the per-segment
+ * budget cannot see: it is the whole of its segment, so each one is a segment
+ * holding one part and every count stays under the limit. What costs is their
+ * number across the path — the compiled expression retries every way of
+ * splitting the candidate between them, so eight separated globstars ran for
+ * seconds against a forty-segment path they do not match, which is long enough
+ * to stall the job that runs the census.
+ *
+ * Adjacent globstars are one, as the compiler reads them.
+ */
+const MATCH_GLOBSTAR_LIMIT = 4;
+
+/**
  * Whether the guard can match a citation without the expression it compiles to
  * backtracking for longer than a test can wait.
  *
@@ -1108,7 +1123,12 @@ const MATCH_PART_LIMIT = 4;
  * Lift when: a record cites such a pattern and needs it resolved.
  */
 function withinMatchBudget(cited: string): boolean {
-  return patternSegments(cited).every((segment) => {
+  const segments = patternSegments(cited);
+  const globstars = segments.filter(
+    (segment, index) => segment === "**" && segments[index - 1] !== "**",
+  );
+  if (globstars.length > MATCH_GLOBSTAR_LIMIT) return false;
+  return segments.every((segment) => {
     if (segment === "**") return true;
     let parts = 0;
     let lastStar = -2;
@@ -1416,9 +1436,14 @@ function resolves(cited: string, paths: ReturnType<typeof trackedPaths> = tracke
     // Directories as well as files: `.qfai/discussion/discussion-*` names a set
     // of packs, and an anchored pattern matches no file below one of them — so
     // reading files alone reports a citation unresolved while the tree holds
-    // every pack it names.
+    // every pack it names. A pattern whose own last segment names a file is
+    // read the way the exact form is, for the same reason: `.qfai/report/*.json`
+    // claims a machine-readable file, and a directory of that name is not one.
     const pattern = globToRegExp(cited);
-    for (const candidate of [...paths.files, ...paths.directories]) {
+    const candidates = NAMES_A_FILE.test(cited)
+      ? [...paths.files]
+      : [...paths.files, ...paths.directories];
+    for (const candidate of candidates) {
       if (pattern.test(candidate) && !hidesADotName(cited, candidate)) return true;
     }
     return false;
@@ -1509,6 +1534,31 @@ describe("a committed record cites what the repository has", () => {
     expect(resolves(".qfai/report/validate.json/summary.txt", paths)).toBe(true);
     // A pack is a directory, and its citation is still answered by one.
     expect(resolves(".qfai/review/review-1", paths)).toBe(true);
+  });
+
+  it("answers a file-shaped glob with a file", () => {
+    const listing = [
+      "100644 0000000000000000000000000000000000000000 0\t.qfai/report/validate.json/summary.txt",
+      "100644 0000000000000000000000000000000000000000 0\t.qfai/discussion/discussion-1/01.md",
+      "",
+    ].join("\0");
+    const paths = trackedPaths(listing);
+    // The directory matches the pattern and holds no JSON file, so the citation
+    // claims something the tree does not have.
+    expect(resolves(".qfai/report/*.json", paths)).toBe(false);
+    // A pattern naming a set of packs is still answered by the directories.
+    expect(resolves(".qfai/discussion/discussion-*", paths)).toBe(true);
+  });
+
+  it("leaves a citation unresolved where its globstars would backtrack past any bound", () => {
+    // Each globstar is the whole of its segment, so the per-segment budget
+    // counts one part and passes; what costs is how many there are.
+    const started = performance.now();
+    expect(resolves(`.qfai/report/${"**/a/".repeat(8)}z`)).toBe(false);
+    expect(performance.now() - started).toBeLessThan(1000);
+    // Adjacent globstars are one, as the compiler reads them.
+    expect(withinMatchBudget(`.qfai/report/${"**/".repeat(8)}z`)).toBe(true);
+    expect(withinMatchBudget(`.qfai/report/${"**/a/".repeat(4)}z`)).toBe(true);
   });
 
   it("names no artifact the committed tree does not carry", async () => {

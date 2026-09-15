@@ -280,6 +280,12 @@ and records nothing the gate does not already say.
 The layer gap is real and is the subject of its own issue; it is recorded here as the condition
 every row sits under rather than as a mark on each of them.
 
+**The summary below is regenerated, not opened.** `.qfai/report/` is not committed, so the file the
+second command reads is not in a clone — the first command is what writes it, and the two together
+are the whole of what a reader needs. The numbers this section rests on are quoted in full beneath
+them, so the claim can be checked against a fresh run rather than against an artifact nobody has.
+That is why the path below is a step in a transcript rather than a citation.
+
 <!-- qfai:not-a-citation ./.qfai/report/atdd-traceability/summary.json -->
 ```text
 $ node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on never
