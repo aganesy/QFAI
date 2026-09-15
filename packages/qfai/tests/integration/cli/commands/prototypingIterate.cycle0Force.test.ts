@@ -442,6 +442,29 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(log).toContain('"path":".qfai/evidence/prototyping/html"');
   });
 
+  it("names the iteration directories it had already removed", async () => {
+    // The reset puts its own moves back, and nothing puts a removal back, so a
+    // clear that stopped part-way leaves a tree the message has to describe.
+    const root = await newTempDir();
+    await seedProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    for (const name of ["iter-01", "iter-02"]) {
+      await mkdir(path.join(evidenceRoot, name), { recursive: true });
+      await writeFile(path.join(evidenceRoot, name, "old.review.json"), "{}", "utf-8");
+    }
+    fault.unremovable = path.join(evidenceRoot, "iter-02");
+    const stderr = captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+
+    expect(exit).toBe(2);
+    expect(stderr.join("")).toContain("iter-01 was removed before this failed");
+  });
+
   it("puts back what the reset moved when clearing the iteration directories fails", async () => {
     // The moves stand until the whole reset does. A run that stopped here left
     // the previous loop's captures in a backup directory nothing would move
