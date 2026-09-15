@@ -127,6 +127,13 @@ precision. Exact code-line edits, generated-copy updates and merge mechanics
 belong to the stage implementing the change. They may be reported as advice,
 not demanded as extra discussion completion work.
 
+Advice is not a verdict. A reviewer whose vocabulary is `PASS` or `REVISE` alone
+returns `PASS` and records the advice in its findings, and the review pack's
+rule that any feedback returns the pack says the same: an item marked
+non-normative under this section is carried to the implementing stage rather
+than starting a fix-and-rerun cycle. Reported as a demand instead, it makes the
+discussion stage owe work this section has just placed elsewhere.
+
 Wrong repository facts, missing decision traceability, scope contradictions and
 defects in the pack's own safety obligations remain in remit. Non-normative
 status is not permission to pass those.

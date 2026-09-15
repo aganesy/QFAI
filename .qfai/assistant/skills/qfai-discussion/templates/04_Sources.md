@@ -3,7 +3,9 @@
 ## Source Registry
 
 Repository facts follow `.qfai/assistant/skills/qfai-discussion/SKILL.md#reviewer-gate-must`.
-Name the lookup location in the fact's existing note or Source Registry row.
+Each fact names where it was read, beside the fact itself or by the `SRC-ID` of
+the row that holds it. A row nobody cites leaves the reader to work out which
+fact it backs, which is the check this registry exists for.
 
 | SRC-ID   | Title | Type    | URL / Path | Retrieved  | Notes |
 | -------- | ----- | ------- | ---------- | ---------- | ----- |

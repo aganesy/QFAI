@@ -63,6 +63,10 @@
 
 ## RCP Rules (Mandatory)
 
-- Any feedback triggers immediate return (`changes_requested`).
+- Any feedback triggers immediate return (`changes_requested`), except advice a
+  reviewer marks non-normative under
+  `.qfai/assistant/constitution/review-convergence.md#discussion-review-precision`.
+  Such an item is recorded and carried to the stage that implements the change; it
+  does not make the verdict `REVISE`, since the reviewer has no verdict for advice.
 - After fixes, rerun only failed reviewers and reviewers whose scope changed because of the fix.
 - Set `overall_status: PASS` only when all routed blocking reviewers are `PASS`, and no unresolved `FAIL` remains.
