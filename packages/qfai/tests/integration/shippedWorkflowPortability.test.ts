@@ -245,7 +245,7 @@ async function aggregateFailureViolations(
   return violations;
 }
 
-describe("aggregate failure protection", () => {
+describe("TC-0003-0058: aggregate failure protection", () => {
   async function documentAggregate(): Promise<ShippedJob> {
     const job = (await shippedJobs()).find(
       (entry) => entry.file === "qfai-docs.yml" && entry.jobId === "docs",
@@ -255,7 +255,7 @@ describe("aggregate failure protection", () => {
     return job;
   }
 
-  it("rejects a planted green aggregate while accepting its unmodified body", async () => {
+  it("TC-0003-0058 (TDD-0062): rejects a planted green aggregate while accepting its unmodified body", async () => {
     const job = await documentAggregate();
     expect(await aggregateFailureViolations(job, ["checks"])).toEqual([]);
     const step = job.steps[0];
@@ -267,7 +267,7 @@ describe("aggregate failure protection", () => {
     expect(await aggregateFailureViolations(job, ["checks"])).toHaveLength(6);
   });
 
-  it("rejects a result binding removed from the shipped aggregate", async () => {
+  it("TC-0003-0058 (TDD-0063): rejects a result binding removed from the shipped aggregate", async () => {
     const job = await documentAggregate();
     const step = job.steps[0];
     if (step === undefined) throw new Error("the aggregate has no step");

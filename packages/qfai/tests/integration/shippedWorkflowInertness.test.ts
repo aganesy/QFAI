@@ -297,17 +297,18 @@ describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing
   });
 });
 
-describe("TC-0003-0037 (TDD-0037): exactly one installing job and zero secret references", () => {
+describe("TC-0003-0037 (TDD-0037): two installing job declarations, four and three executing instances, zero secret references", () => {
   // Setup is TC-0003-0036's init output tree (the scriptless adopter);
   // every count below is taken over EVERY workflow file init wrote.
   // Scope notes, disclosed:
   // - The five test lanes ship install-less by the skeleton's staging
   //   design (their bodies land with later revisions of the file), so
-  //   the installing-job count is exactly 1 — the validate lane —
-  //   today. The oracle counts install-bearing jobs, so it names any
-  //   job the moment one gains an install step; whether an enabled
-  //   lane's future body may install is that revision's scoping call,
-  //   judged then against this AC's count.
+  //   the installing declarations are the document checks and the
+  //   validation profiles today. The oracle names install-bearing jobs
+  //   rather than counting them, so it reports any job the moment one
+  //   gains an install step; whether an enabled lane's future body may
+  //   install is that revision's scoping call, judged then against this
+  //   AC's counts.
   // - Born-green disclosure: all three its pass first-run — the set
   //   never carried a secret, and detection/verdict shipped with
   //   timeouts and without installs. The falsifiability path is taken
@@ -316,6 +317,57 @@ describe("TC-0003-0037 (TDD-0037): exactly one installing job and zero secret re
 
   /** A run body that invokes a package-manager dependency install. */
   const INSTALL_RUN_RE = /\b(?:pnpm|yarn|npm)\s+(?:install|ci)\b/;
+
+  /**
+   * How many values one matrix axis takes for `event`.
+   *
+   * Two shapes are interpreted, and they are the two the shipped set uses: a
+   * literal list, and the `fromJSON(github.event_name == '<event>' && '<json>'
+   * || '<json>')` selection the validation profiles are chosen by. Anything
+   * else throws rather than scoring 1 — a matrix this cannot read must fail the
+   * count, not quietly shrink it.
+   */
+  function matrixAxisLength(key: string, value: unknown, event: string): number {
+    if (Array.isArray(value)) {
+      return value.length;
+    }
+    if (typeof value !== "string") {
+      throw new Error(`matrix axis "${key}" is neither a list nor an expression`);
+    }
+    const selection =
+      /^\$\{\{\s*fromJSON\(\s*github\.event_name\s*==\s*'([^']+)'\s*&&\s*'(.+?)'\s*\|\|\s*'(.+?)'\s*\)\s*\}\}$/.exec(
+        value.trim(),
+      );
+    if (selection === null) {
+      throw new Error(`matrix axis "${key}" uses an expression this count cannot read: ${value}`);
+    }
+    const chosen = (event === selection[1] ? selection[2] : selection[3]) ?? "";
+    const parsed: unknown = JSON.parse(chosen);
+    if (!Array.isArray(parsed)) {
+      throw new Error(`matrix axis "${key}" selects a non-list for ${event}`);
+    }
+    return parsed.length;
+  }
+
+  /** How many instances one job declaration expands to for `event`. */
+  function matrixInstances(job: Record<string, unknown>, event: string): number {
+    const strategy = job["strategy"];
+    if (!isRecord(strategy)) {
+      return 1;
+    }
+    const matrix = strategy["matrix"];
+    if (matrix === undefined) {
+      return 1;
+    }
+    if (!isRecord(matrix)) {
+      throw new Error("a shipped strategy declares a matrix that is not a mapping");
+    }
+    let instances = 1;
+    for (const [key, value] of Object.entries(matrix)) {
+      instances *= matrixAxisLength(key, value, event);
+    }
+    return instances;
+  }
 
   /** Every workflow file the init run wrote, as `[name, body]` sorted. */
   async function initWorkflowSet(): Promise<Array<[string, string]>> {
@@ -349,13 +401,13 @@ describe("TC-0003-0037 (TDD-0037): exactly one installing job and zero secret re
     return count;
   }
 
-  it("the init-written jobs that install dependencies are exactly the validate and docs lanes", async () => {
+  it("the init-written jobs that install dependencies are exactly the docs and validate lanes, four instances on a pull request and three on a push", async () => {
     const files = await initWorkflowSet();
     // Non-vacuity: the whole multi-file set is what is being counted.
     expect(files.length, "the init-written set must have two or more files").toBeGreaterThanOrEqual(
       2,
     );
-    const installing: Array<{ file: string; jobId: string }> = [];
+    const installing: Array<{ file: string; jobId: string; job: Record<string, unknown> }> = [];
     for (const [name, body] of files) {
       for (const { jobId, job } of collectWorkflowJobs(parse(body))) {
         const installs = collectJobSteps(job).some((step) => {
@@ -363,7 +415,7 @@ describe("TC-0003-0037 (TDD-0037): exactly one installing job and zero secret re
           return typeof run === "string" && INSTALL_RUN_RE.test(run);
         });
         if (installs) {
-          installing.push({ file: name, jobId });
+          installing.push({ file: name, jobId, job });
         }
       }
     }
@@ -377,10 +429,20 @@ describe("TC-0003-0037 (TDD-0037): exactly one installing job and zero secret re
     // to be there first. The test lanes still install nothing — they are
     // placeholders, and a placeholder that installed would be paying for a
     // toolchain it never uses.
-    expect(installing).toEqual([
+    expect(installing.map(({ file, jobId }) => ({ file, jobId }))).toEqual([
       { file: "qfai-docs.yml", jobId: "checks" },
       { file: "qfai-validate.yml", jobId: "validate" },
     ]);
+
+    // The declaration count is not the run count. Both installing jobs are
+    // matrix jobs, and the validation profiles are selected by the event, so
+    // what an adopter's runner actually starts is the expansion — four
+    // installs on a pull request, three on a push. A declaration count alone
+    // reads a leg that stopped expanding as unchanged.
+    const instances = (event: string): number =>
+      installing.reduce((total, entry) => total + matrixInstances(entry.job, event), 0);
+    expect(instances("pull_request"), "a pull request does not expand to four installs").toBe(4);
+    expect(instances("push"), "a push does not expand to three installs").toBe(3);
   });
 
   it("zero secret declarations, secret-context references and secrets: inherit across the set", async () => {

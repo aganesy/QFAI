@@ -68,7 +68,7 @@ afterAll(async () => {
 });
 
 describe("E2E: delivered document checks run independently and require a complete result", () => {
-  it("delivers both isolated native matrix units without changing checker commands", async () => {
+  it("TC-0003-0056 (TDD-0058): delivers both isolated native matrix units without changing checker commands", async () => {
     const jobs = await jobsOf(DOCS);
     const checks = jobs[`${DOCS}#checks`];
     expect(checks, "the delivered docs workflow has no independent check matrix").toBeDefined();
@@ -109,7 +109,7 @@ describe("E2E: delivered document checks run independently and require a complet
     for (const step of checkerSteps) expect(step["continue-on-error"]).toBeUndefined();
   });
 
-  it("keeps the existing external check name and always runs its matrix aggregate", async () => {
+  it("TC-0003-0056 (TDD-0059): keeps the existing external check name and always runs its matrix aggregate", async () => {
     const docs = (await jobsOf(DOCS))[`${DOCS}#docs`];
     expect(docs?.["name"]).toBe("qfai docs (document shape and Mermaid syntax)");
     expect(docs?.["needs"]).toBe("checks");
@@ -138,7 +138,7 @@ describe("E2E: delivered document checks run independently and require a complet
 });
 
 describe("E2E: delivered validation profiles run independently and require a complete result", () => {
-  it("delivers full validation and PR-only drift in isolated native matrix jobs", async () => {
+  it("TC-0003-0057 (TDD-0060): delivers full validation and PR-only drift in isolated native matrix jobs", async () => {
     const validate = (await jobsOf(VALIDATE))[`${VALIDATE}#validate`];
     expect(validate?.["name"]).toBe("qfai validate check (${{ matrix.profile }})");
     expect(validate?.["needs"]).toBeUndefined();
@@ -175,7 +175,7 @@ describe("E2E: delivered validation profiles run independently and require a com
     for (const step of profiles) expect(step["continue-on-error"]).toBeUndefined();
   });
 
-  it("keeps the existing external validation check as an always-run complete verdict", async () => {
+  it("TC-0003-0057 (TDD-0061): keeps the existing external validation check as an always-run complete verdict", async () => {
     const verdict = (await jobsOf(VALIDATE))[`${VALIDATE}#summary`];
     expect(verdict?.["name"]).toBe("qfai validate (full profile, fail on error)");
     expect(verdict?.["needs"]).toBe("validate");

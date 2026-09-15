@@ -869,7 +869,11 @@ const DIMENSIONS: ReadonlyArray<{
       "Per lane that invokes QFAI: the subcommand, the --profile value and the --fail-on threshold",
     pins: laneInvocationPins,
   },
-  { id: 6, title: "Per lane: what makes it inert", pins: laneInertnessPins },
+  {
+    id: 6,
+    title: "Per lane: the condition that governs whether it runs",
+    pins: laneInertnessPins,
+  },
   {
     id: 7,
     title: "The third-party uses: set, as an allow-list against the closed sanctioned set",
