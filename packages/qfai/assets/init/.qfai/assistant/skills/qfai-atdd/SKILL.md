@@ -560,7 +560,7 @@ Notes:
 
 Create and update: `.qfai/evidence/atdd-<spec-id>.md`
 
-Required sections: the template below is the list. Five of them carry a contract
+Required sections: the template below is the list. Five of them carry a contract the heading cannot:
 
 - **Ledger rows advanced** — an index table plus one `### TDD-NNNN` section per row (`references/red-provenance.md#evidence-shape`). Exactly one form per row, never both and never neither; the cell is an anchor and the payload goes in the section. A rework round is a `#### Round N` block nested **inside that row's section**, not a section of its own: the list is closed, and nesting
   attributes it to a row (`references/review-fix-rounds.md`).
