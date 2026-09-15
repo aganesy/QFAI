@@ -377,3 +377,37 @@ file, so an entry here is what makes that citation checkable.
   sets the override to the machine's own count and is unaffected.
 - Related: AC-0017-0026, AC-0017-0028, BR-0017-0030, BR-0017-0048, BR-0017-0049, BR-0017-0051,
   EX-0017-0049, TC-0017-0061, TC-0017-0065, DR-0017-0009
+
+### DR-0017-0011: the engines-floor lane is sliced, and the runner time that costs is accepted
+
+- Status: accepted
+- Context: the `node-floor` lane runs the package test suite on the floor `engines.node` promises,
+  and it ran the whole suite in one process pool. At 312 s it was the longest job in the run and set
+  the wall clock for every other lane, which is the same shape that put the `test` job behind a
+  matrix. The lane now expands over the seven slices the `test` job declares —
+  `core, validators, integration, e2e, cli, unit, scripts` — with `fail-fast: false`, each leg
+  pinning and asserting the floor, and the build running on the `e2e` and `integration` legs only.
+- Decision, the measurement, because `BR-0017-0030` forbids a wall-clock or parallelism claim
+  landing on argument. One full run per side, the last successful run of `main` against the first
+  complete run on the branch:
+  - the floor lane's critical path went from **312 s** to **100 s**, its longest leg;
+  - the run's wall clock went from **328 s** to **128 s**;
+  - runner time went from **1018 s** to **1274 s**.
+    The full per-job tables are in `.qfai/evidence/timing-node-floor-spec-0017.md`, and both totals
+    are derived from them rather than reported beside them.
+- Decision, the regression, recorded as the reason rather than re-measured: runner time rose 256 s,
+  a quarter. The cause is structural — one job became seven, so six further checkouts and toolchain
+  setups are paid and the build runs on two floor legs where it ran on one — so no second comparison
+  would improve it. `AC-0017-0015` makes a measured negative result an accepting outcome precisely
+  so that re-running until the answer agrees is not the cheapest route. The 212 s off the lane's
+  critical path is what that quarter buys.
+- Decision, what was NOT changed: the aggregate verdict. A matrix job contributes one rolled-up
+  result, so the pinned check-name set is untouched — which is the constraint that keeps
+  `TC-0017-0032` open, because a producer job for the build would add a name no agent can configure.
+- Consequences: `lint` now sets the wall clock, at 120 s against 100 s for the longest floor leg.
+  Slicing the floor lane further buys nothing until `lint` is shorter, so the next lane to look at is
+  named by the measurement rather than chosen. A second cost is accepted and named: a failure that
+  only appears while slices contend for one pool is no longer reachable on the floor, because the
+  legs no longer share one.
+- Related: AC-0017-0014, AC-0017-0015, AC-0017-0028, BR-0017-0030, NFR-0001, NFR-0004,
+  `.qfai/evidence/timing-node-floor-spec-0017.md`

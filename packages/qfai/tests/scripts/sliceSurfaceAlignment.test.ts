@@ -20,9 +20,9 @@
  * ## Why the second sliced job is its own surface
  *
  * `node-floor` runs the same suite on the floor `engines.node` promises, and it
- * was sliced for the reason the `test` job was: as one pool over the whole suite
- * it was the longest job in the run and set the wall clock for every other lane.
- * Its claim is about the WHOLE suite, and slicing keeps that claim only while its
+ * is sliced for the reason the `test` job is: one pool over the whole suite is
+ * the longest job in the run and sets the wall clock for every other lane. Its
+ * claim is about the WHOLE suite, and the slicing keeps that claim only while its
  * legs partition the suite — which is the very property claims 1 to 3 establish
  * for the other list.
  *
@@ -401,10 +401,10 @@ describe("TC-0017-0064 (TDD-0064): the two missing per-slice scripts exist and a
     // explains why the old form was abandoned, because the comment quotes it. The
     // obligation is about what the matrix RUNS.
     //
-    // For every sliced job. The generic-runner form is what let a matrix entry with
-    // no script of its own still run, and a second sliced lane can reintroduce it
-    // on its own — at which point surface 3 stops being load-bearing for that lane
-    // and the alignment claim above goes back to describing nothing.
+    // For every sliced job. The generic-runner form lets a matrix entry with no
+    // script of its own still run, and either sliced lane can reintroduce it on its
+    // own — at which point surface 3 stops being load-bearing for that lane and the
+    // alignment claim above describes nothing.
     for (const job of SLICED_JOBS) {
       const runValues = jobSteps(job)
         .map((step) => step["run"])

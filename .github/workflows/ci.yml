@@ -446,13 +446,13 @@ jobs:
   # because a runtime floor is a claim about running code and a type check would not
   # notice a missing runtime API.
   #
-  # Over the SAME slice matrix the `test` job declares, and for the same reason the suite
-  # was sliced there: the whole suite in one process pool was the longest job in the run
-  # and set the wall clock for every other lane. The slices partition the suite — the
-  # runner workspace declares exactly these seven projects and every test file lives under
-  # one of them — so the floor claim is unchanged and only its shape is. Each leg asserts
-  # the floor for itself, because a leg running the wrong Node is what that assertion is
-  # for and a single leg checking it would leave the other six unverified.
+  # Over the SAME slice matrix the `test` job declares, and for the same reason it is
+  # sliced there: one process pool over the whole suite is the longest job in the run and
+  # sets the wall clock for every other lane. The slices partition the suite — the runner
+  # workspace declares exactly these seven projects and every test file lives under one of
+  # them — so the legs together carry the whole floor claim. Each leg asserts the floor for
+  # itself, because a leg running the wrong Node is what that assertion is for and a single
+  # leg checking it would leave the other six unverified.
   #
   # Conditional on the same detection output as its neighbours, and DECLARED either
   # way, so its check names persist for branch protection.
@@ -521,24 +521,24 @@ jobs:
         run: pnpm -C packages/qfai build
       # The fork count is taken from the runner, not inherited from the declaration.
       #
-      # This lane once ran the whole suite in a single pool, and it was the only lane that
-      # has ever exited 1 with every test passing: the runner reports progress from each
-      # fork to the single main process over an RPC call with a sixty-second budget, and a
-      # main process too contended to answer in time turns a healthy run red. The budget is
-      # not reachable — `ForksOptions` carries no timeout, `createForksRpcOptions` sets none,
-      # and the default lives in the RPC library — so the lever is the contention.
+      # Forks that outnumber the runner's cores make this lane exit 1 with every test
+      # passing: each fork reports progress to the single main process over an RPC call with
+      # a sixty-second budget, and a main process too contended to answer in time turns a
+      # healthy run red. The budget is not reachable — `ForksOptions` carries no timeout,
+      # `createForksRpcOptions` sets none, and the default lives in the RPC library — so the
+      # contention is the only lever.
       #
-      # What the measurement says. Whole suite, four cores:
+      # The measurement, whole suite on four cores:
       #
       #   ten forks    299 s wall   collect 343 s   tests 1972 s
       #   four forks   269 s wall   collect 113 s   tests  743 s
       #
       # The collect and test figures are summed across forks, so their collapse is the
-      # oversubscription: at ten forks most of each fork's measured time was spent waiting
-      # for a core. That is a property of the runner's core count against the declared
-      # ceiling, not of how many tests were in the pool, so it holds for a leg exactly as it
-      # held for the whole suite. Each leg gets its own runner and its own four cores, and
-      # the declared ten forks would oversubscribe every one of them the same way.
+      # oversubscription: at ten forks most of each fork's measured time goes to waiting for
+      # a core. That is the declared ceiling measured against the runner's core count, not a
+      # property of how many tests are in the pool, so it holds per leg: each leg gets its
+      # own runner with the same four cores, and the declared ten forks oversubscribe every
+      # one of them the same way.
       #
       # `QFAI_TEST_MAX_WORKERS` is the override `vitest.knobs.ts` declares for exactly this.
       # The declared starting value is untouched: this lane states its own.

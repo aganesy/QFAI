@@ -1501,15 +1501,15 @@ const OWN_WORKFLOW_FILES = [
  * promises; an API present in Node 24 and absent in 20.19 passes every gate and breaks
  * exactly the supported users.
  *
- * It is sliced over the same seven values as `test`, so it now reports seven check names
- * where it reported one. The bare `node-floor` is gone from this list on purpose: no job
- * reports it any more, and leaving it would pin a name nothing produces.
+ * It is sliced over the same seven values as `test`, so it reports seven check names and no
+ * bare `node-floor`: no job produces that name, and pinning it would hold this list against
+ * a check that cannot appear.
  *
- * Creating a check name is normally a repository-settings problem. It is not one here, and
- * that is what let a required lane split its check name without a settings change: only
- * `ci-pass` is required, the verdict is derived from its `needs` map, and a matrix job
- * contributes ONE rolled-up `result` to that map however many legs it expands to. So the
- * seven legs are gated by the context that already exists.
+ * Creating a check name is normally a repository-settings problem. It is not one here, which
+ * is what lets a required lane be sliced without a settings change: only `ci-pass` is
+ * required, the verdict is derived from its `needs` map, and a matrix job contributes ONE
+ * rolled-up `result` to that map however many legs it expands to. So the seven legs are
+ * gated by the context that already exists.
  */
 const CI_CHECK_NAMES = [
   "build",
@@ -1582,12 +1582,11 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
     // "inside the existing file" and still create six new check names, so the shape is
     // asserted and not just the location.
     //
-    // Two jobs express the split now, not one: `node-floor` runs the same slices on the
+    // Two jobs express the split: `test`, and `node-floor` running the same slices on the
     // engines floor. That is the same shape applied twice rather than an exception to it —
-    // what `AC-0017-0018` rejects is a layer becoming a job of its own, and each lane here
-    // is still ONE job whose legs are the layers. Expressing the second lane as seven jobs
-    // would have created seven check names the same way, and the axis claim below is what
-    // refuses it.
+    // what `AC-0017-0018` rejects is a layer becoming a job of its own, and each lane is
+    // ONE job whose legs are the layers. Expressing either lane as seven jobs would create
+    // seven check names the same way, and the axis claim below is what refuses it.
     //
     // A LITERAL list, so a third sliced lane arrives as a failing test naming the new member
     // rather than as a diff to interpret — the reason `CI_CHECK_NAMES` is a literal too.
@@ -1751,11 +1750,11 @@ describe("one lane runs on the floor `engines.node` declares", () => {
         "the name of a floor lane",
     ).toBe("true");
 
-    // And EVERY leg does both, which is what the matrix put at risk. The setup call and the
+    // And EVERY leg does both, which is what the matrix puts at risk. The setup call and the
     // assertion that reads `node --version` back are steps in one list, so a condition on
-    // either would leave the remaining legs running whatever `setup-node` resolved while
-    // still reporting under the floor lane's name — the same green check for a claim nothing
-    // tested that the assertion was written to catch, now reachable one leg at a time.
+    // either leaves the remaining legs running whatever `setup-node` resolved while still
+    // reporting under the floor lane's name — a green check for a claim nothing tested,
+    // reachable one leg at a time.
     const confirms = steps.find(
       (step) => typeof step["run"] === "string" && step["run"].includes("engines.node"),
     );
@@ -1779,12 +1778,12 @@ describe("one lane runs on the floor `engines.node` declares", () => {
     // The ORDER is asserted, not just the presence: a build after the test step is a build that
     // ran too late.
     //
-    // And the CONDITION, which the slicing introduced. The build now runs on two of seven legs,
-    // so "a build step exists" no longer implies the legs that read `dist/` get one: a condition
-    // narrowed to one slice, or widened to a slice that reads nothing, is invisible to the order
-    // claim. It is asserted against the `test` job's rather than restated, because the two jobs
-    // run the same slices over the same workspace and a build gated differently in one of them
-    // is a difference with no reason behind it.
+    // And the CONDITION. The build runs on two of seven legs, so "a build step exists" does not
+    // imply that the legs reading `dist/` get one: a condition narrowed to one slice, or widened
+    // to a slice that reads nothing, is invisible to the order claim. It is asserted against the
+    // `test` job's rather than restated, because the two jobs run the same slices over the same
+    // workspace and a build gated differently in one of them is a difference with no reason
+    // behind it.
     const jobs = ciJobs();
     const steps = Array.isArray(jobs["node-floor"]?.["steps"])
       ? jobs["node-floor"]["steps"].filter(isRecord)
