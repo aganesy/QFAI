@@ -230,16 +230,24 @@ the ledger rows that carry those statements?
    the cell under the Drift Protocol's whitelist, so neither rerun writes a row
    cell.
 
-4. **`/qfai-atdd spec-0013`, after the sweep.** `TDD-0027`'s test is an
-   ATDD-owned `Integration` test, so that stage writes the evidence for
-   re-executing it, in `.qfai/evidence/atdd-spec-0013.md`. The test needs no
-   edit. The invocation is a full pass rather than a repair of one row. It
-   takes up the ATDD-owned rows still owed, `TDD-0016` to `TDD-0018` today,
-   and writes an `E2E` test for each story no test annotates, `US-0013-0001`
-   to `US-0013-0010`, since all fourteen of the pack's stories are active. It
-   refreshes `.qfai/evidence/atdd-spec-0013.md` and
-   `.qfai/evidence/coverage-depth-spec-0013.md`, whose findings name the
-   missing file, through that stage's reviewer gate.
+4. **`/qfai-atdd spec-0013`, after the sweep, over the rows the ledger holds.**
+   `TDD-0027`'s test is an ATDD-owned `Integration` test, so that stage writes
+   the evidence for re-executing it, in `.qfai/evidence/atdd-spec-0013.md`. The
+   test needs no edit. The pass takes up the ATDD-owned rows the ledger carries
+   and still owes — `TDD-0016` to `TDD-0018` today — and refreshes
+   `.qfai/evidence/atdd-spec-0013.md` and
+   `.qfai/evidence/coverage-depth-spec-0013.md`, whose findings name the missing
+   file, through that stage's reviewer gate.
+
+   **It writes no `E2E` test for a story the ledger has no row for.** Action 2
+   leaves the thirteen missing `E2E` rows unseeded, because a file-name
+   correction does not authorise a Phase 2b re-derivation, and `/qfai-atdd`
+   reads `test-list.md` and never writes it — so a pass told to cover those
+   stories would have to author rows it may not write, and would stop instead.
+   The cross-spec obligation is recorded and left open. **A full pass over all
+   fourteen stories is available only after a separately approved
+   `/qfai-sdd spec-0013` Phase 2b seeds those rows**, which is the request
+   `CR-20260913-0001` and this record both name as owed and neither authorises.
 
 5. **`/qfai-implement spec-0013`, last.** It advances each reset row from the
    handoff that pass recorded.

@@ -112,7 +112,9 @@ describe("the primary_tasks band drift has a Change Request", () => {
   );
 
   it("states both sides of the contradiction by artifact", async () => {
-    await expectPhrase("`QFAI-AUD-020` is a ceiling today");
+    // The condition the request was raised over, so the record stays true
+    // after the option that restores the lower bound is applied.
+    await expectPhrase("When this request was raised, `QFAI-AUD-020` was a ceiling");
     await expectPhrase("count == 1 emits nothing");
     await expectPhrase("fewer than 3 or more than 7");
   });

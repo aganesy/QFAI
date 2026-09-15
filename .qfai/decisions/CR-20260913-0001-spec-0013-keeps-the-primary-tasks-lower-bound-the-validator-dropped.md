@@ -14,7 +14,11 @@
 
 ## Context
 
-`QFAI-AUD-020` is a ceiling today. `packages/qfai/src/core/validators/designAudit.ts`
+**When this request was raised, `QFAI-AUD-020` was a ceiling.** The record keeps that wording
+after an option restores the lower bound: it states the condition the request was raised over,
+not the tree as it stands once the request is applied — a permanent record that re-reads itself
+against a later tree stops being a record of anything.
+`packages/qfai/src/core/validators/designAudit.ts`
 raises it when a screen's `primary_tasks` count is **over** the recommended
 maximum and at no other count, and
 `packages/qfai/tests/integration/primaryTasksBand.test.ts` pins that with a case
@@ -146,7 +150,19 @@ because what they were rejected against is still written where they are.
   `.qfai/specs/_policies/10_delta.md`
 - Plans: `.qfai/specs/spec-0013/10_Plan.md` and `.qfai/specs/spec-0004/10_Plan.md`
   — the item describing the band in each, and nothing else in either file
-- Tests: `spec-0013/TDD-0027`, `spec-0013/TDD-0028`, `spec-0004/TDD-0050`; and
+- Tests: `spec-0013/TDD-0027`, `spec-0013/TDD-0028`, `spec-0004/TDD-0050`; under
+  option 3, the five `done` rows action 3 re-verifies in place over the restored
+  floor, with the suites they run and the evidence that records them —
+  `spec-0013/TDD-0020` and `TDD-0021`
+  (`packages/qfai/tests/integration/sddPrimaryTasksLane.test.ts`), `TDD-0029` and
+  `TDD-0030` (`packages/qfai/tests/integration/primaryTasksStructured.test.ts`),
+  `spec-0004/TDD-0049`
+  (`packages/qfai/tests/unit/core/validators/auditProfileDualShape.test.ts`),
+  and `.qfai/evidence/implement-spec-0013.md` and
+  `.qfai/evidence/implement-spec-0004.md`, which carry the per-row
+  `## Shared-artifact re-verify` lines. The detection step decides the full set at
+  run time, so a row it adds joins this scope by id before the request is applied;
+  and
   under options 1 and 2
   `packages/qfai/tests/integration/spec0004SaasPackageAndPackLocation.test.ts`
   and `packages/qfai/tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts`,
