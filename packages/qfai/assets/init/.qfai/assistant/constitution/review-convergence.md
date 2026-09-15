@@ -120,15 +120,42 @@ which owns the delegation rules these sit beside.
   the escalation exit in the round budget withholds _Accept as Open Question_
   for this same class, so a user choice cannot supersede it either.
 
+### Answered demands (MUST)
+
+A demand already answered MUST NOT be re-raised under another wording. Close a
+repeat by citing its recorded answer. This bounds what a reviewer may require,
+not what a reviewer may report.
+
+A demand is answered only after the authoritative reviewer accepts the fix or a
+reasoned decline, or the user adjudicates it. Record that disposition and its
+evidence in the existing Response and Evidence cells. A producer's reply alone
+does not close a demand. An unresolved blocking demand remains REVISE when
+repeated; cite its prior finding and unresolved disposition instead of requiring
+new work under another wording.
+
+Carry prior answers forward, alongside newly answered demands, into the next
+cycle's `review_request.md` before dispatching reviewers. Each entry names the
+original finding source, demand, response and evidence supporting the response.
+When there are no answered demands, write `None`.
+
+A report of a new defect or evidence that an answer no longer applies must
+state what changed. The existing severity floor and escalation rules still apply.
+
 ### Agent-to-agent grilling (MUST)
 
 A grilling session between agents has no user answering its questions, so the
 end condition the session rule states — an empty frontier and the user's
 confirmation — cannot be reached from inside it. Two agents can also agree on a
-wrong premise with nobody watching. These rules give such a session an end.
+wrong premise with nobody watching. These rules bound the **rounds** such a
+session may take before every decision the user has not settled goes to the user.
 
-**Two rounds**, the same budget a reviewer has. **Every decision still open
-after the second round escalates**, whether or not that round settled others:
+**They do not end the session.** It ends where every session ends, in one of the
+four the session rule names: with a user present, the user ends it; under a
+no-question mode, where the escalation has nobody to reach, the register write
+below ends it `no-question`. An agent that
+treated the budget as an ending closed a session nobody was asked to close.
+
+**Two rounds**, the same budget a reviewer has. **Every decision the user has not settled escalates after the second round** — the ones still open and the ones the agents agreed on, since an agent-adopted recommendation is a decision nobody took — whether or not the agents agreed on others in that round:
 partial progress is the ordinary outcome, and a condition reading "the round
 settled nothing" would be false almost always, leaving the rest of the frontier
 to a third round nobody authorised.

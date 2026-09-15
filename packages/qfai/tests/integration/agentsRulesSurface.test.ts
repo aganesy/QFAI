@@ -8,6 +8,56 @@ import { describe, expect, it } from "vitest";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
 
+describe("excess vocabulary covers code and product surface without adding tags", () => {
+  const TAGS = ["delete", "stdlib", "native", "yagni", "shrink"];
+
+  it("the repository definitions cover controls, settings, copy and repository reuse", async () => {
+    const text = await readFile(path.join(ROOT, "REVIEW.md"), "utf-8");
+    const excess = text.split("## Findings about excess")[1]?.split(/^## /m)[0];
+    expect(excess).toBeDefined();
+    const tags = Array.from(excess?.matchAll(/^\|\s*`([^`]+)`\s*\|/gm) ?? [], (match) => match[1]);
+    expect(tags).toEqual(TAGS);
+    expect(excess?.replace(/\s+/g, " ")).toContain("code, controls, settings and explanatory copy");
+    expect(excess).toContain("code already present");
+    expect(excess).toContain(".agents/rules/interface-clarity.md");
+    expect(excess).toContain("§ 2");
+  });
+
+  it.each(
+    ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>
+      [
+        "architecture-reviewer",
+        "completion-reviewer",
+        "implementation-reviewer",
+        "product-surface-reviewer",
+        "qa-gatekeeper",
+        "requirements-reviewer",
+      ].map((role) => ({ tree, role })),
+    ),
+  )("$tree/$role ships the same vocabulary and product scope", async ({ tree, role }) => {
+    const text = await readFile(path.join(ROOT, tree, "assistant/agents", `${role}.md`), "utf-8");
+    const routes = text.match(/^- File excess .*(?:\r?\n {2}.+)*/gm);
+    expect(routes).toHaveLength(1);
+    const excess = routes?.[0]?.replace(/\s+/g, " ");
+    expect(excess).toBeDefined();
+    for (const tag of TAGS) expect(excess).toContain("`" + tag + "`");
+    expect(excess).toContain("code, controls, settings and explanatory copy");
+    expect(excess).toContain("`delete` also covers replacement by code already present.");
+    expect(excess).toContain(".agents/rules/interface-clarity.md");
+    expect(excess).toContain("§ 2");
+    expect(excess).toContain("`defect:code-quality` against constitution Article VII");
+    expect(excess).toContain("Admit it only when it names what to cut and what replaces it.");
+    expect(excess).toContain(
+      "Refuse it when the cut removes or weakens an obligation in the safety floor",
+    );
+    expect(excess).toContain(
+      "Use this route only where the installed Article VII governs the artifact.",
+    );
+    expect(excess).toContain("Otherwise report unsupported Article VII excess as advisory");
+    expect(text).not.toMatch(/^- Apply .*tag excess/m);
+  });
+});
+
 describe("the implementation reviewer flags dropped promises, not uncaught propagation", () => {
   it.each(["packages/qfai/assets/init/.qfai", ".qfai"])(
     "%s keeps the correctness class",

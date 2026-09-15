@@ -132,7 +132,7 @@ export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
   ["assistant/skills/qfai-sdd/references/sdd-phase-checklists.md", 3763],
   ["assistant/skills/qfai-sdd/references/spec-traceability-rules.md", 790],
   ["assistant/skills/qfai-sdd/templates/report/preflight_summary.md", 425],
-  ["assistant/skills/qfai-verify/SKILL.md", 950],
+  ["assistant/skills/qfai-verify/SKILL.md", 899],
   ["assistant/skills/qfai-verify/references/articles.md", 413],
   ["assistant/skills/qfai-verify/references/verify-output-contract.md", 840],
 ]);

@@ -363,9 +363,28 @@ jobs:
           #
           # So the root of trust for everything that runs before the hygiene lane is this step's
           # body, which `verificationBodies` pins and a reviewer reads in the diff.
+          # A conflict block in one of these inputs is an unresolved merge, not an edit, and the
+          # digest check below would stop this step before the script's own marker scan could say so.
+          # Read the way `markersIn` reads it. That scanner splits its input on the line
+          # separator, so a marker in a CRLF file is `=======` to it and `=======` plus a
+          # carriage return to grep — whose `$` then sits past the return and matches
+          # nothing. The digest check below would fail first, reporting a changed file
+          # where the tree holds an unresolved merge. The return is optional in the
+          # pattern, written as a real byte by `$'…'`.
+          #
+          # One process per file, and no pipe: `grep -q` exits at its first match, and a
+          # producer still writing takes SIGPIPE and returns 141, which `pipefail` then
+          # makes the pipeline's status — so a marker near the start of a file larger than
+          # the pipe buffer read as no marker at all, which is this scan's whole subject.
+          for pinned in scripts/check-toolchain-action.sh .github/pinned-bytes.txt .github/lifecycle-manifests.txt .github/command-files.txt; do
+            if grep -qE $'^(<{7}|={7}|>{7}|\\|{7})( |\r?$)' "$pinned"; then
+              echo "::error::$pinned carries merge conflict markers. Resolve the merge; do not reseal."
+              exit 1
+            fi
+          done
           sha256sum -c --quiet <<'PINNED_INPUTS'
-          fff07d335dc0d74e7c2e6eca7683abd21ae87f7b68e2e39e83467647cc89e180  scripts/check-toolchain-action.sh
-          19885b58dc57f2d136273f7bdc40dc3e0991f04e5a17ae06e5c00ae45ff0b6de  .github/pinned-bytes.txt
+          8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
+          72c4603ff84b46c78ef6e9dc62c917641a1dde3044b8b3d7920bd75ba9119e1e  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS

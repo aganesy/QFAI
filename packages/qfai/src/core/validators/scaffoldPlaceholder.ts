@@ -45,11 +45,15 @@
  */
 import fg from "fast-glob";
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
-import { SCAFFOLD_PLACEHOLDER_GLOBS } from "../atdd/scaffoldDialect.js";
+import {
+  SCAFFOLD_PLACEHOLDER_GLOBS,
+  scaffoldPlaceholderBasenameMatchers,
+} from "../atdd/scaffoldDialect.js";
 import { atddTestKindDirs, collectTcLevels, isOutsideAtddObligation } from "../atddTraceability.js";
 import {
   listValidateCycleKeys,
@@ -78,12 +82,140 @@ import { issue } from "./utils.js";
 const TODO_MARKER_RE = /(?:\/\/|#)\s*TODO:\s*implement assertion for\s+(TC-\d{4}-\d{4})\b/g;
 
 /**
+ * Whether `D-SCAFFOLD-PLACEHOLDER` reports this file's body.
+ *
+ * Both halves are required, and the second is the one a caller forgets: a
+ * skeleton whose TODO lines have been written out but whose sentinel survives
+ * is progressed, and this validator says nothing about it. A gate that hands
+ * its own finding over on the sentinel alone therefore suppresses itself over a
+ * file nothing else reports — which is a skipped test discharging an obligation
+ * with no one watching.
+ *
+ * Exported so the hand-off in `testTodoStubs.ts` asks this question rather than
+ * a weaker one. The scan path is the caller's to decide; this is the content.
+ */
+export function scaffoldPlaceholderReportsBody(body: string): boolean {
+  if (!body.includes(SCAFFOLD_PLACEHOLDER_MARKER)) {
+    return false;
+  }
+  // `matchAll` on a `g` regex starts from `lastIndex`, so the shared literal
+  // is consumed rather than queried. `some` on a fresh iterator is the cheap
+  // form of "at least one".
+  TODO_MARKER_RE.lastIndex = 0;
+  return TODO_MARKER_RE.test(body);
+}
+
+/**
  * Declared `Level` values whose home is a directory this writer does not emit
  * into. Kept in step with `atddScaffold.ts`'s own set: the command stopped
  * generating these, and this validator has to stop gating the ones it already
  * generated.
  */
 const SCAFFOLD_FOREIGN_LEVELS = new Set(["l4", "api", "l5", "e2e"]);
+
+/**
+ * The directories this validator scans for placeholders, under a resolved
+ * `paths.testsDir`.
+ *
+ * Exported because the stub gate exempts a file carrying the scaffold marker on
+ * the grounds that this validator owns it, and an exemption granted where the
+ * scan does not reach leaves a placeholder reported by neither.
+ */
+export function scaffoldPlaceholderScanDirs(testsDir: string): string[] {
+  return [
+    path.join(testsDir, "integration"),
+    path.join(testsDir, "atdd"),
+    path.join(testsDir, "api"),
+    path.join(testsDir, "e2e"),
+  ];
+}
+
+/**
+ * Whether this validator reports a file, given its repository-relative path and
+ * its body.
+ *
+ * Every part of that decision, because any one alone is wrong. The directories
+ * are the four above; the basenames are the writer's own dialect patterns, which
+ * is what the scan globs with. A marked file in one of those directories whose
+ * name the writer would never emit — `pay.ts` beside `pay.test.ts` — is not
+ * collected there, so a caller standing aside for it leaves it reported by
+ * nobody.
+ *
+ * The same holds for a path with a dot-prefixed segment below a scan
+ * directory. The scan globs with `dot: false`, so
+ * `tests/integration/.generated/pay.test.ts` is collected by nothing here even
+ * though its directory and basename both match — while a project glob that
+ * names the dot directory explicitly still reads it elsewhere.
+ *
+ * The body has to be one {@link scaffoldPlaceholderReportsBody} accepts, and at
+ * least one TC it names has to owe an ATDD annotation. The scan passes over a
+ * TC whose declared `Level` owes none, so a skeleton naming only such TCs is
+ * reported by nothing here. The levels come from the catalogue of the spec the
+ * path names, read as the scan reads it.
+ */
+export function scaffoldPlaceholderReportedFilter(
+  root: string,
+  config: QfaiConfig,
+): (relativePath: string, body: string) => boolean {
+  const scanned = scaffoldPlaceholderScanDirs(resolvePath(root, config, "testsDir")).map((dir) =>
+    path.resolve(dir),
+  );
+  const basenames = scaffoldPlaceholderBasenameMatchers();
+  const specsRoot = resolvePath(root, config, "specsDir");
+  const levelCache = new Map<string, Map<string, string>>();
+  const levelsFor = (specId: string): Map<string, string> => {
+    const cached = levelCache.get(specId);
+    if (cached) return cached;
+    let text = "";
+    try {
+      text = readFileSync(path.join(specsRoot, specId, "06_Test-Cases.md"), "utf-8");
+    } catch {
+      // No catalogue declares no level, which is how the scan reads it too.
+    }
+    const levels = collectTcLevels(text);
+    levelCache.set(specId, levels);
+    return levels;
+  };
+  return (relativePath: string, body: string): boolean => {
+    if (!scaffoldPlaceholderReportsBody(body)) {
+      return false;
+    }
+    if (!basenames.some((matcher) => matcher.test(path.basename(relativePath)))) {
+      return false;
+    }
+    const absolute = path.resolve(root, relativePath);
+    const owningDir = scanned.find((dir) => {
+      const inside = path.relative(dir, absolute);
+      if (inside.length === 0 || inside.startsWith("..") || path.isAbsolute(inside)) {
+        return false;
+      }
+      // Only the part the scan's wildcards match: a dot inside the configured
+      // directory's own path is a literal segment of the pattern, and `dot`
+      // does not apply to it.
+      return !inside.split(path.sep).some((segment) => segment.startsWith("."));
+    });
+    if (owningDir === undefined) {
+      return false;
+    }
+    const specId = extractSpecIdFromScaffoldPath(owningDir, absolute);
+    const levels = specId === null ? new Map<string, string>() : levelsFor(specId);
+    return placeholderTcIds(body).some(
+      (tcId) => !isOutsideAtddObligation(levels.get(tcId.toUpperCase())),
+    );
+  };
+}
+
+/** The TCs a placeholder body names on its TODO lines, each once. */
+function placeholderTcIds(body: string): string[] {
+  TODO_MARKER_RE.lastIndex = 0;
+  return Array.from(
+    new Set(
+      Array.from(body.matchAll(TODO_MARKER_RE), (match) => match[1]).filter(
+        (id): id is string => typeof id === "string",
+      ),
+    ),
+  );
+}
 
 /** The scanned root a `Level` routes to. */
 function scaffoldHomeForLevel(level: string | undefined): "api" | "e2e" | "integration" {
@@ -180,12 +312,7 @@ export async function validateScaffoldPlaceholder(
   // literally turned a reported placeholder into a silent one. Only a file
   // carrying the scaffold sentinel is reported, so a hand-written test in those
   // directories is untouched.
-  const scaffoldDirs = [
-    path.join(testsDir, "integration"),
-    path.join(testsDir, "atdd"),
-    path.join(testsDir, "api"),
-    path.join(testsDir, "e2e"),
-  ];
+  const scaffoldDirs = scaffoldPlaceholderScanDirs(testsDir);
   const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);
   // Number -> the directory `collectSpecEntries` enumerated. The scaffold's
   // own `spec-NNNN` comes from a *test* directory name, so joining it onto the
@@ -246,16 +373,10 @@ export async function validateScaffoldPlaceholder(
     // sentinel AND the per-TC TODO marker. Mirrors the
     // `isStillPlaceholder` logic in `core/atdd/scaffold.ts` so the
     // emit-side and validate-side agree on the same definition.
-    if (!body.includes(SCAFFOLD_PLACEHOLDER_MARKER)) {
+    if (!scaffoldPlaceholderReportsBody(body)) {
       continue;
     }
-    const matches = Array.from(body.matchAll(TODO_MARKER_RE));
-    if (matches.length === 0) {
-      continue;
-    }
-    const allTcIds = Array.from(
-      new Set(matches.map((m) => m[1]).filter((id): id is string => typeof id === "string")),
-    );
+    const allTcIds = placeholderTcIds(body);
     const relPath = path.relative(root, file).replace(/\\/g, "/");
     // Resolved against whichever scaffold root actually contains the file.
     const owningDir = scaffoldDirs.find((dir) => path.resolve(file).startsWith(path.resolve(dir)));
