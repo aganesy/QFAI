@@ -5,10 +5,10 @@
 - Raised by: `qfai-atdd`
 - Raised at: `2026-09-15T17:44:12Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
+- Status: `approved`
+- Approved by: `user`
+- Approved at: `2026-09-16T03:38:53Z`
+- Approved option: `A`
 - Applied at: `-`
 - Superseded by: `-`
 

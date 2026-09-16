@@ -44,8 +44,13 @@ project's surface typing says. Read per story, not only per spec: a ledger that
 is header-only because every story is deferred is complete, and a run reading
 only the whole-spec form asks for a row whose test the acceptance stage forbids
 writing. Ownership of an API row
-is the lowest-numbered spec whose own `spec-*/01..10` / `16_*` files name that
-`CON-API-*`.
+is the lowest-numbered spec whose own `spec-*/01..10` / `16_*` files **bind** that
+`CON-API-*` — a contract-ref line, a `Contract-Refs` value or a `CON-API-Refs`
+cell, never a mention in an annotation example, a migration note or a removal
+record. Every spec that binds it is an owner; the lowest-numbered of them holds
+the single row and each other records the cross-spec obligation, which is the
+same reading `.qfai/assistant/skills/qfai-atdd/references/cross-spec-obligations.md`
+gives — one row, and no owner allowed to hand its contract to a co-owner.
 
 The last three groups are **ATDD-owned rows**
 (`execution-ledger.md#atdd-owned-rows`): their tests are authored by
