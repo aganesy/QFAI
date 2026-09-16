@@ -199,6 +199,11 @@ routing phase's mandatory agents run inside its span, and its blocking agents MU
 - Delegate Slice in parallel per spec.
 - Parallel delegation here is bound by the stage-independent Concurrency rules in `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory`: worktree separation, or the declared degraded mode, plus mandatory commit scoping (`git add <paths>`; never `git add -A` / `git add .` / `git commit -a`).
 - Validate gate and Review gate run once at batch tail after all target specs are integrated.
+- The Plan gate is the exception, and runs per target: each target's Plan is checked against
+  `templates/specs/spec/10_Plan.md#implementation-approach` as that Plan is finalized, before the
+  target is integrated. The tail gates read every target together, so a check that waited for them
+  would report a deficient Plan only after the batch had taken it in, and there is no reviewer
+  invocation at the tail able to hold one target while releasing the rest.
 
 ## Work Orders Summary
 

@@ -58,37 +58,22 @@ tools: [Read, Glob, Grep, Bash]
   themselves. Nothing else would ever count them. So a change giving one its
   first concrete consumers is counted, once — on the later change that adds a
   fourth dependant there is code to reuse, and the clause above applies again.
-  Return REVISE unless one of exactly two things holds.
+  Return REVISE unless the safety floor in
+  `.agents/rules/minimal-implementation.md` § 2 requires the element **and** the
+  owning `10_Plan.md` records that exception together with the obligation
+  requiring it. Both halves, not either: the floor requiring an element is not a
+  record anyone can review, and a Plan claiming an exception no obligation
+  requires is a claim about nothing. The template asks for the two together, so a
+  PASS on one alone accepts half of what it asks.
 
-  1. The safety floor in `.agents/rules/minimal-implementation.md` § 2 requires
-     the element **and** the owning `10_Plan.md` records that exception together
-     with the obligation requiring it. Both halves, not either: the floor
-     requiring an element is not a record anyone can review, and a Plan claiming
-     an exception no obligation requires is a claim about nothing. The template
-     asks for the two together, so a PASS on one alone accepts half of what it
-     asks.
-  2. The Plan's three usages are cited, every row still to deliver one is **in
-     the confirmed queue of this invocation**, and the owning `10_Plan.md`
-     records those rows as the outstanding usages. **The count is then taken
-     over those rows, not over the one under review.** Delivered by separate
-     rows, the first consumer to land is one, and a REVISE there stops the rest
-     from ever being selected — a verdict the row cannot satisfy and no later
-     row can lift. Name the open rows, and take the count when the last of them
-     lands.
-
-  Two things bound the second.
-  The queue is one: a usage owed by a spec nobody has queued is a usage no run
-  will write, so the element stays local to its one consumer until the spec that
-  needs it is queued beside this one.
-  The Plan's record is the other, and it is what survives the invocation. A queue
-  can be interrupted, and a later row can be blocked for its own reasons; without
-  a record, the next invocation meets an element that was neither introduced nor
-  extracted by the change in front of it and never counts it again. With one, the
-  count is owed until the last delivery row lands, whichever invocation lands it
-  — and the Plan is where it goes because this reviewer already reads it, while
-  `Blocked-By` belongs to a `blocked` row and a blocked row is never selected, so
-  writing the outstanding rows there would stop them delivering what the record
-  is waiting for.
+  **There is no exception for usages a later row will deliver.** Three consumers
+  cited in a Plan and delivered by separate rows land one at a time, and the rule
+  for the first of them is the same as for any other element with one consumer:
+  it stays local to that consumer. The extraction happens when the third lands,
+  which is the change this count reads. An exception waiting on the others needs
+  a record nothing authors, survives no interrupted queue, and asks a reviewer to
+  hold a verdict open across invocations; each of those is a way for an
+  under-three element to become permanent with nobody deciding it should.
 
   **The Plan read is the one that owns the element**, resolved through the same
   `paths.specsDir`. For a change removing a consumer the element usually belongs

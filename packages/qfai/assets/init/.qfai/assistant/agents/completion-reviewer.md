@@ -52,6 +52,12 @@ tools: [Read, Glob, Grep, Bash]
   declares in `paths.specsDir` (`.qfai/specs` where it declares none). A Plan no
   target of this run finalizes is not this review's to judge.
 - .qfai/specs/spec-\*/09_delta.md
+- The contracts a Plan's usages cite, under the configured `paths.contractsDir`
+  — **conditional**: required wherever a usage names a `CON-API-*` or `CON-DB-*`.
+  A contract usage is concrete because the contract declares the dependant, so a
+  reviewer that never opens the declaration either rejects a valid usage as
+  unresolved or counts one it has not read. Resolve the directory from
+  `qfai.config.yaml`; `.qfai/contracts` is only the default.
 - Validation evidence and gate results
 - `.qfai/specs/<spec-id>/tdd/test-list.md` — the ledger, for the row under review
 - The per-item evidence file that row's `Layer` owns: `.qfai/evidence/implement-<spec-id>.md`,
