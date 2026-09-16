@@ -520,6 +520,22 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     ).toBe("naming-mismatch");
   });
 
+  it("reads one member of a range that cannot reach the extension", () => {
+    // Two numeric groups in a basename leave every member the same tail, so
+    // reading them whole multiplied the candidates for nothing and reported a
+    // project whose extension is plainly TypeScript as one this read could not
+    // recover.
+    expect(requireDialect(["tests/**/TC-{0000..0064}-{0000..0064}.test.ts"]).id).toBe("js-ts");
+  });
+
+  it("keeps an extension another include named when one glob is too large", () => {
+    // Includes are unioned, so a glob this read cannot write out does not make
+    // a destination another glob admits unsafe.
+    expect(requireDialect(["tests/**/*.test.ts", "tests/**/*.{a..q}{a..q}{a..q}"]).id).toBe(
+      "js-ts",
+    );
+  });
+
   it("reads a brace range whose endpoints are quoted", () => {
     // The expander takes the quotes off before it reads the range, so the
     // pattern selects Python files. Read with them on, it named no member,

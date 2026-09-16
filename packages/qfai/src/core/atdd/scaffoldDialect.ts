@@ -1042,10 +1042,13 @@ export function resolveScaffoldDialect(
       shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_TC_ID))],
     };
   }
-  if (overBound) {
-    // Extensions this read could not recover. Taking the default here writes a
-    // skeleton under an extension the project's own globs may not select, and
-    // the refusal names the shape it would have written.
+  if (overBound && extensions.size === 0) {
+    // Extensions this read could not recover, and no other include named one.
+    // Taking the default here writes a skeleton under an extension the project's
+    // own globs may not select, and the refusal names the shape it would have
+    // written. Where another include did name one, that one is read: includes
+    // are unioned, so a glob this read could not write out cannot make a
+    // destination another glob admits unsafe.
     return {
       outcome: "naming-mismatch",
       shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_TC_ID))],

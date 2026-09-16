@@ -2504,6 +2504,22 @@ function withRangesExpanded(glob: string): string[] | null {
  * says so; dropping it here would leave a configured project looking like one
  * that configured no glob at all.
  */
+/**
+ * Whether `tail` holds a dot that is not inside a brace group.
+ *
+ * A range writes its separator with two dots, so a scan counting those reads
+ * every group as carrying an extension and every group before one as not.
+ */
+function dotOutsideGroups(tail: string): boolean {
+  let depth = 0;
+  for (const char of tail) {
+    if (char === "{") depth += 1;
+    else if (char === "}") depth = Math.max(0, depth - 1);
+    else if (char === "." && depth === 0) return true;
+  }
+  return false;
+}
+
 function firstRangeWrittenOut(candidate: string): string[] | null {
   for (let open = candidate.indexOf("{"); open !== -1; open = candidate.indexOf("{", open + 1)) {
     const close = candidate.indexOf("}", open);
@@ -2519,12 +2535,23 @@ function firstRangeWrittenOut(candidate: string): string[] | null {
       continue;
     }
     if (members === null) continue;
-    // A group in the last segment decides the extension, so every member of it
-    // is read. One further up gives every member the same tail, so one member
-    // answers for all of them — and reading more multiplies the candidates a
-    // pattern expands into without reaching a different extension.
-    const inLastSegment = !candidate.slice(open).includes("/");
-    const read = inLastSegment ? members : members.slice(0, 1);
+    // Every member is read only where the group can reach the extension: it
+    // stands after the last dot of the last segment, or it holds a dot of its
+    // own. Anywhere else every member leaves the same tail, so one answers for
+    // all of them — and reading more multiplies the candidates a pattern
+    // expands into without reaching a different extension. A pair of numeric
+    // groups in a basename is the ordinary case, and read whole it passed the
+    // bound and reported a project whose extension is plainly `.ts` as one this
+    // read could not recover.
+    const lastSegment = !candidate.slice(open).includes("/");
+    // The extension is what follows the last dot, so a group reaches it when no
+    // dot stands after it — outside a group, since a range's own separator is
+    // written with two — or when a member holds one.
+    const spellsExtension =
+      lastSegment &&
+      (!dotOutsideGroups(candidate.slice(close + 1)) ||
+        members.some((member) => member.includes(".")));
+    const read = spellsExtension ? members : members.slice(0, 1);
     return read.map((member) => candidate.slice(0, open) + member + candidate.slice(close + 1));
   }
   return null;
