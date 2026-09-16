@@ -1998,9 +1998,14 @@ describe("the real workflow trees", () => {
         // through `workflow_dispatch` may predate `node-floor` entirely, so the floor is exercised
         // on the tagged tree at release time rather than assumed from its ancestry.
         "build::release.yml::pnpm -C packages/qfai build",
-        // TWICE here as well, and for the reason the `ci.yml` duplicate above records: the release
-        // suite and the floor suite are sliced, and each builds for the two slices that read
-        // `dist/`. The entry is per OCCURRENCE, so deleting either lane's build step fails this row.
+        // Repeated here as well, for the reason the `ci.yml` duplicate above records: the release
+        // suite and the sliced floor suite each build for the two slices that read `dist/`. The
+        // entry is per OCCURRENCE, so deleting either lane's build step fails this row.
+        "build::release.yml::pnpm -C packages/qfai build",
+        // And once more for the floor lane that runs the suite whole. A tag whose tree predates
+        // the sliced scripts takes that lane instead of the sliced one, and the whole suite
+        // contains both of the slices that read `dist/`, so it builds unconditionally rather than
+        // for a slice.
         "build::release.yml::pnpm -C packages/qfai build",
         'build::release.yml::pnpm -C packages/qfai pack --pack-destination "$PWD/tmp"',
         // The aggregate, which the gate runs where the tagged tree predates the split. It reaches

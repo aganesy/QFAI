@@ -31,17 +31,48 @@ export class BraceRangeRefused extends Error {}
  *
  * @throws {BraceRangeRefused} for a numeric range fast-glob refuses to expand.
  */
+/**
+ * An endpoint with its quotes taken off, as the expander takes them.
+ *
+ * Measured: `{'p'..'p'}` expands to `p`, and so do the double-quoted and
+ * backtick forms, while `{'ab'..'c'}` expands to nothing — the quotes come off
+ * each endpoint before the range is read, and only a single character is left
+ * standing for a character range. An endpoint read with its quotes still on
+ * matched neither branch below, so a pattern the scan expands read as one
+ * naming no member.
+ */
+function unquoted(endpoint: string): string {
+  const quote = endpoint[0] ?? "";
+  if (!"'\"`".includes(quote)) return endpoint;
+  return endpoint.length >= 2 && endpoint.endsWith(quote) ? endpoint.slice(1, -1) : endpoint;
+}
+
 export function braceRangeMembers(body: string): readonly string[] | null {
   const parts = body.split("..");
   if (parts.length < 2 || parts.length > 3) return null;
-  const [from = "", to = "", increment = ""] = parts;
+  const [rawFrom = "", rawTo = "", rawIncrement = ""] = parts;
+  const from = unquoted(rawFrom);
+  const to = unquoted(rawTo);
+  // The increment loses its quotes with the endpoints: `{p..p..'1'}` expands to
+  // `p`, measured. Validated with them on, the whole range read as text.
+  const increment = unquoted(rawIncrement);
   if (!/^[+-]?\d*$/.test(increment)) return null;
   const step = Math.max(1, Math.abs(Number(increment)));
-  const integer = /^[+-]?\d+$/;
-  if (integer.test(from) && integer.test(to)) {
+  // The forms the expander reads as numbers, measured: `1e3` expands as 1000
+  // and `1.0` as 1, while `0x10` expands as nothing at all. The value has to be
+  // a whole number as well as written like one — `1.5` is left as text, so a
+  // range holding it names no member and the pattern matches itself.
+  const integer = /^[+-]?(?:\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)$/;
+  const whole = (endpoint: string): boolean =>
+    integer.test(endpoint) && Number.isInteger(Number(endpoint));
+  if (whole(from) && whole(to)) {
     return numericRangeMembers(from, to, increment, step);
   }
-  if (Array.from(from).length === 1 && Array.from(to).length === 1) {
+  // Measured: the expander reads a character endpoint by its UTF-16 length, so
+  // `{😀..😁}` is left as text. Counted by code point instead, this expanded a
+  // range the matcher never expands, and the writer chose a name under a
+  // directory the scan does not reach.
+  if (from.length === 1 && to.length === 1) {
     return characterRangeMembers(from, to, step);
   }
   return null;

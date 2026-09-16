@@ -1,30 +1,10 @@
-/**
- * Every test here spawns one `pwsh` running the real `run-pr-fix.ps1` through its poll loop,
- * and each poll shells out to the `git` and `gh` stubs written into that test's own `bin`
- * directory. The cost is process startup rather than sleeping, so the suites are concurrent
- * and the runner's `maxConcurrency` bounds how many of those processes exist at once.
- *
- * Two consequences of the concurrency, both load-bearing:
- *
- * - A temporary tree is removed by the test that created it, through the context's
- *   `onTestFinished`. The imported hook of that name resolves against a module-level current
- *   test, which under concurrency is whichever test started last.
- * - Assertions use the `expect` from the test context, so a failure is attributed to the test
- *   that produced it.
- *
- * The tests share nothing: each gets its own temporary root, its own directory of stubs, and
- * its own scenario and state files named by environment variable. The repository files they
- * read — the script under test and the four skill documents — are read-only.
- */
-
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { chmod, mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, it } from "vitest";
-import type { TaskContext } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -104,13 +84,26 @@ type FakePageInfo = {
 
 type RunResult = {
   code: number | null;
+  ghState: Record<string, unknown>;
   repoDir: string;
   stderr: string;
   stdout: string;
 };
 
-describe.concurrent("pr-fix wrapper docs", () => {
-  it("keeps pr-fix skill docs aligned across integrations", async ({ expect }) => {
+const tempDirs: string[] = [];
+
+afterEach(async () => {
+  while (tempDirs.length > 0) {
+    const dir = tempDirs.pop();
+    if (!dir) {
+      continue;
+    }
+    await removeTempTree(dir);
+  }
+});
+
+describe("pr-fix wrapper docs", () => {
+  it("keeps pr-fix skill docs aligned across integrations", async () => {
     const [claudeSkill, agentsSkill, codexSkill, githubSkill] = await Promise.all([
       readFile(claudeSkillPath, "utf-8"),
       readFile(agentsSkillPath, "utf-8"),
@@ -129,15 +122,588 @@ describe.concurrent("pr-fix wrapper docs", () => {
   });
 });
 
-describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
-  it("extracts version markers from non-feature branch prefixes and blocks mismatches", async ({
-    expect,
-    onTestFinished,
-  }) => {
+describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
+  it.each(
+    (
+      [
+        ["instruction", "<?aaaa", "?>"],
+        ["CDATA", "<![CDATA[aaaa", "]]>"],
+        ["declaration", "<!DOCTYPE aaaa ", ">"],
+      ] as const
+    ).flatMap(([name, opener, closer]) =>
+      ["absent", "blank", "table"].map((boundary) => [name, opener, closer, boundary] as const),
+    ),
+  )(
+    "bounds unmatched HTML label scans for %s / %s / %s / %s",
+    async (_name, opener, closer, boundary) => {
+      const policyPath = path.join(repoRoot, ".agents/skills/pr-fix/scripts/pr-body-policy.ps1");
+      for (const end of ["\n", "\r\n"]) {
+        const suffix =
+          boundary === "absent"
+            ? ""
+            : boundary === "blank"
+              ? `${end}prefix ${opener}closed${closer}${end}`
+              : `head | detail${end}--- | ---${end}prefix ${opener}closed${closer}${end}`;
+        const body = `\uFEFF## What this change made unnecessary${end}${end}prefix ${opener.repeat(256)}${end}${suffix}Nothing removed.${end}`;
+        const result = await spawnCommand(
+          "pwsh",
+          [
+            "-NoProfile",
+            "-Command",
+            [
+              "$ErrorActionPreference = 'Stop'",
+              "$policy = [IO.File]::ReadAllText($env:QFAI_TEST_HTML_POLICY)",
+              "$marker = '$html = $labelHtml.Match($Body, $labelIndex)'",
+              "if (($policy.Split($marker).Length - 1) -ne 1) { throw 'Expected one label matcher' }",
+              "$instrumented = $policy.Replace($marker, '$script:labelHtmlAttempts += 1; ' + $marker)",
+              ". ([scriptblock]::Create($instrumented))",
+              "$script:labelHtmlAttempts = 0",
+              "$masked = MaskBodyExamples (NormalizeBody $env:QFAI_TEST_HTML_BODY)",
+              "@{ Attempts = $script:labelHtmlAttempts; KeepsAnswer = $masked.Contains('Nothing removed.') } | ConvertTo-Json -Compress",
+            ].join("; "),
+          ],
+          { ...process.env, QFAI_TEST_HTML_POLICY: policyPath, QFAI_TEST_HTML_BODY: body },
+        );
+        expect(result.code, result.stderr).toBe(0);
+        const measurement = JSON.parse(result.stdout) as { Attempts: number; KeepsAnswer: boolean };
+        expect(measurement.KeepsAnswer).toBe(true);
+        expect(measurement.Attempts).toBeGreaterThan(0);
+        expect(measurement.Attempts).toBeLessThanOrEqual(2);
+        expect(measurement.Attempts).toBe(boundary === "absent" ? 1 : 2);
+      }
+    },
+  );
+
+  it("matches malformed link candidates without allocating each remaining tail", async () => {
+    const policyPath = path.join(repoRoot, ".agents/skills/pr-fix/scripts/pr-body-policy.ps1");
+    const policy = await readFile(policyPath, "utf-8");
+    const branch = policy
+      .split("if (-not $insideHtml -and $line[$position] -eq '[')")[1]
+      ?.split("if (-not $insideHtml -and $line[$position] -eq '`')")[0];
+    expect(branch).toBeDefined();
+    expect(branch).not.toContain("$Body.Substring($offset + $position)");
+    const result = await spawnCommand(
+      "pwsh",
+      [
+        "-NoProfile",
+        "-Command",
+        `. '${policyPath.replace(/'/g, "''")}'; $body = '## What this change made unnecessary' + [Environment]::NewLine + ('[ ' + [Environment]::NewLine) * 640 + 'Nothing.'; if ([string]::IsNullOrWhiteSpace((RemovalAnswer $body))) { exit 1 }`,
+      ],
+      process.env,
+    );
+    expect(result.code).toBe(0);
+  });
+
+  it.each(["removed", "comment only"])(
+    "rejects a changed dry-run removal answer: %s",
+    async (change) => {
+      const clean = makePrView([successCheck()]);
+      const body = compliantPrBody().replace(
+        /## What this change made unnecessary\n\nNothing\.\n\n/,
+        change === "removed" ? "" : "## What this change made unnecessary\n\n<!-- Nothing. -->\n\n",
+      );
+      const result = await runPrFix({
+        extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+        scenario: makeScenario({
+          prViews: [clean, makePrView([successCheck()], { body })],
+          threads: [[]],
+        }),
+      });
+      expect(result.code).not.toBe(0);
+      expect(combinedOutput(result)).toContain("PR body is no longer template-compliant");
+      expect(combinedOutput(result)).not.toContain("Dry-run completed.");
+      expect(result.ghState.prEditCount ?? 0).toBe(0);
+      expect(existsSync(path.join(result.repoDir, "tmp", "pr-fix", "pr-166-handoff.json"))).toBe(
+        false,
+      );
+      const status = await readJson(
+        path.join(result.repoDir, "tmp", "pr-fix", "pr-166-monitor-status.json"),
+      );
+      expect(status.State).toBe("action_required_body");
+      expect(status.CurrentStreak).toBe(0);
+    },
+  );
+
+  it.each([
+    "   ## What this change made unnecessary",
+    "## What this change made unnecessary ##",
+    "  ## What this change made unnecessary ###  ",
+  ])("preserves valid authored removal heading %s", async (heading) => {
+    const body = `${compliantPrBody().replace("## What this change made unnecessary", heading)}\n\n## Adoption bar\n\nKeep the complete safety floor.\n`;
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+    expect(existsSync(path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"))).toBe(
+      false,
+    );
+    expect(combinedOutput(result)).toContain("Dry-run completed.");
+  });
+
+  it.each([
+    "<p>Nothing.</p>",
+    "<div>\nNothing.\n</div>",
+    "<span>\nNothing.\n</span>",
+    "<div>\n<!--\n## Example -->\nNothing.\n</div>",
+    "<div>\n[Nothing]: https://example.com\n</div>",
+  ])("preserves a visible authored HTML answer %s", async (answer) => {
+    const body = `## What this change made unnecessary\n\n${answer}\n`;
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+  });
+
+  it.each([
+    ...[
+      "## Adoption bar",
+      "~~~",
+      "> Nothing",
+      "- Nothing",
+      "01. Nothing",
+      "<![cdata[",
+      "<div>",
+    ].map((block) => [
+      `title interrupted by ${block}`,
+      `[Nothing]: /url "Title\n${block}\nNothing"\n`,
+    ]),
+    ["label interrupted by a heading", "[Nothing\n## Adoption bar\nNothing]: /url\n"],
+    ["destination interrupted by HTML", "[Nothing]:\n<div>\n"],
+    ["1001 ASCII bytes", `[${"a".repeat(1001)}]: /url\n`],
+    ["1004 emoji bytes", `[${"😀".repeat(251)}]: /url\n`],
+    ["1002 accented bytes", `[${"é".repeat(501)}]: /url\n`],
+    ["33 nested parentheses", `[Nothing]: /${"(".repeat(33)}a${")".repeat(33)}\n`],
+    ["empty anchor then a literal reference", "[](/url)\n[Nothing]: /target\n"],
+    ["escaped multiline link", '\\[](https://example.com "\nNothing\n")\n'],
+    ["literal HTML link", "<div>\n[](https://example.com)\n</div>\n"],
+    ["literal inline code link", "`[](https://example.com)`\n"],
+    ["escaped single-line link", "\\[](https://example.com)\n"],
+    ["ordinary link text", "[Nothing](/url)"],
+    ["escaped image", "\\![Nothing](/image.png)"],
+    ["unresolved image", "![Nothing][missing]"],
+    ["quoted definition-like paragraph", "> Paragraph\n> [Nothing]: /url"],
+    ["list definition-like paragraph", "- Paragraph\n  [Nothing]: /url"],
+    ["image with prose", "![Example](/image.png)\n\nNothing."],
+    ["escaped comment opener", "\\<!--\nNothing removed.\n-->"],
+    ["odd escaped comment opener", "\\\\\\<!--\nNothing removed.\n-->"],
+    ["encoded authored text", "Nothing&#32;removed."],
+    ["literal encoded code text", "`T&#79;DO`"],
+    ["escaped entity text", "T\\&#79;DO"],
+    ["literal uppercase entity", "N&SOL;A"],
+    ["paragraph numbered continuation", "Paragraph\n2. Nothing removed."],
+    ["ordinary balanced link", "[Nothing [example]](/url)"],
+    ["escaped balanced image", "\\![Nothing [example]](/image.png)"],
+    ["unresolved balanced image", "![Nothing [example]][missing]"],
+    [
+      "balanced image interrupted by table",
+      "![removed [item] | detail\n--- | ---\nstill present](/image.png) |",
+    ],
+    [
+      "reference image interrupted by table",
+      "![removed [item] | detail\n--- | ---\nstill present][image] |\n\n[image]: /image.png",
+    ],
+    ["image label raw HTML", '![prefix [nested]\nNothing removed.\n<span title="](/image.png)">'],
+    [
+      "image label autolink",
+      "![prefix [nested]\nNothing removed.\n<https://example.com/](/image.png)>",
+    ],
+    [
+      "image label inline comment",
+      "![prefix [nested]\nNothing removed.\nlater <!-- ](/image.png) -->",
+    ],
+    [
+      "image paragraph interrupted by a table",
+      "![prefix [nested]\nNothing removed.\nfoo | bar\n--- | ---\n](/image.png)",
+    ],
+    ["live after footnote dedent", "[^1]: Hidden\n\nNothing removed."],
+    ["live after footnote block", "[^1]: Hidden\n### Heading\nNothing removed."],
+    ["code-like reference container top level", "    [Nothing]: /url"],
+    ["code-like reference container quote", ">     [Nothing]: /url"],
+    ["code-like reference container list", "-     [Nothing]: /url"],
+  ])("preserves visible reference-like text: %s", async (_name, answer) => {
+    const body = `## What this change made unnecessary\n\n${answer}`;
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+    if (_name.startsWith("code-like reference container")) {
+      const preview = await readFile(
+        path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
+        "utf-8",
+      );
+      expect(preview).toContain(`## What this change made unnecessary\n\n${answer}`);
+    }
+  });
+
+  it.each([
+    ...[
+      "## What this change made unnecessary ##",
+      " ## What this change made unnecessary",
+      "  ## What a change made unnecessary ###",
+      "   ## What this change made unnecessary",
+    ].map((heading) => [heading, `${heading}\n\nA removed pin.\n`]),
+    ...["\t", " \t"].flatMap((indent) =>
+      ["```", "~~~", "<pre>"].map((opener) => [
+        `indented code ${JSON.stringify(indent + opener)}`,
+        `${indent}${opener}\n## What this change made unnecessary\n\nA removed pin.\n`,
+      ]),
+    ),
+    ["multiline visible link", '[A removed pin](https://example.com "\nNothing\n")\n'],
+    ["literal link with a blank title line", '[](https://example.com "\n\nNothing\n")\n'],
+    ["literal link with an unquoted title", "[](https://example.com \nNothing\n)\n"],
+  ])("accepts rendered Markdown: %s", async (_name, section) => {
+    const body = section.includes("## What")
+      ? section
+      : `## What this change made unnecessary\n\n${section}`;
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+  });
+
+  it.each(
+    ["---", "==="].flatMap((underline) =>
+      ["Adoption bar", "Adoption\nbar", "=", "==="].map((title) => [underline, title] as const),
+    ),
+  )("blocks an empty removal answer before Setext %s / %j", async (underline, title) => {
+    const body = `## What this change made unnecessary\n\n${title}\n${underline}\nKeep publication approval.\n`;
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).not.toBe(0);
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+  });
+
+  it("accepts a real heading after a first-line indented HTML example", async () => {
+    const body = "    <pre>\n## What this change made unnecessary\nNothing.\n";
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+  });
+
+  it.each(
+    ["- ", "1. ", "  - "].flatMap((marker) =>
+      ["<pre>", "```", "~~~"].map((opening) => [marker, opening] as const),
+    ),
+  )("accepts a real removal section dedented from a container %j / %s", async (marker, opening) => {
+    const body = `${marker}${opening}\n${" ".repeat(marker.length)}Example\n## What this change made unnecessary\nNothing.\n`;
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+  });
+
+  it("accepts a visible removal heading that interrupts a backtick paragraph", async () => {
+    const section = "`\n## What this change made unnecessary\nNothing.\n`\n";
+    const body = compliantPrBody().replace(
+      /## What this change made unnecessary\n\nNothing\.\n\n/,
+      `${section}\n`,
+    );
+    expect(body).toContain(section);
+    const result = await runPrFix({
+      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(combinedOutput(result)).toContain("Dry-run completed.");
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+    expect(result.ghState.threadsCount).toBe(1);
+  });
+
+  it.each([
+    ["absent", ""],
+    ["empty", "## What this change made unnecessary\n\n"],
+    ["comment only", "## What this change made unnecessary\n\n<!-- Answer required. -->\n"],
+    ["unresolved", "## What this change made unnecessary\n\nTBD\n"],
+    ["empty bullet", "## What this change made unnecessary\n\n-\n"],
+    ["empty task", "## What this change made unnecessary\n\n- [ ]\n"],
+    ["empty lists", "## What this change made unnecessary\n\n- [ ]\n*\n1.\n"],
+    ["listed unresolved", "## What this change made unnecessary\n\n- TBD\n"],
+    ["None marker", "## What this change made unnecessary\n\nNone.\n"],
+    ["N/A marker", "## What this change made unnecessary\n\nN/A\n"],
+    ["named space entity", "## What this change made unnecessary\n\n&nbsp;\n"],
+    ["numeric space entity", "## What this change made unnecessary\n\n&#160;\n"],
+    ["TODO prefix", "## What this change made unnecessary\n\nTODO: fill this in\n"],
+    ["TBD prefix", "## What this change made unnecessary\n\nTBD: list the removals\n"],
+    ["FIXME prefix", "## What this change made unnecessary\n\nFIXME: list the removals\n"],
+    ["HACK placeholder", "## What this change made unnecessary\n\nHACK\n"],
+    ["imported answer", "## Auto-import\n\n## What this change made unnecessary\n\nNothing.\n"],
+    [
+      "imported ATX answer",
+      "   ## Auto-import ##\n\n ## What this change made unnecessary ###\n\nNothing.\n",
+    ],
+    ["import-only body", "## Auto-import\n\n"],
+    ["thematic break", "## What this change made unnecessary\n\n---\n"],
+    ...["---", "==="].map((underline) => [
+      `code span becomes Setext ${underline}`,
+      `## What this change made unnecessary\n\n\`\nNext section\n${underline}\nNothing removed.\n\`\n`,
+    ]),
+    ...["---", "==="].map((underline) => [
+      `reference paragraph becomes Setext ${underline}`,
+      `## What this change made unnecessary\n\n[Nothing]: /url "Title\n${underline}\nNothing"\n`,
+    ]),
+    ["empty quotation", "## What this change made unnecessary\n\n>\n"],
+    ["empty link", "## What this change made unnecessary\n\n[]()\n"],
+    ["empty link with target", "## What this change made unnecessary\n\n[](https://example.com)\n"],
+    ["HTML break", "## What this change made unnecessary\n\n<br>\n"],
+    ["HTML empty block", "## What this change made unnecessary\n\n<div>\n</div>\n"],
+    ...[
+      "![Nothing](/image.png)",
+      "![Nothing][image]\n\n[image]: /image.png",
+      "![Nothing][]\n\n[Nothing]: /image.png",
+      "![Nothing]\n\n[Nothing]: /image.png",
+      "> [Nothing]: /url",
+      "- [Nothing]: /url",
+      "- > [Nothing]: /url",
+      "> - > [Nothing]: /url",
+    ].map((source) => [
+      `hidden image/container answer ${JSON.stringify(source)}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...[
+      "[^1]: Hidden\nNothing removed.\n",
+      "[^1]: Hidden\n    Nothing removed.\n",
+      "[^1]: Hidden\n\n    Nothing removed.\n",
+    ].map((source) => [
+      `hidden footnote continuation ${JSON.stringify(source)}`,
+      `## What this change made unnecessary\n\n${source}`,
+    ]),
+    ...[
+      "![Nothing [example]](/image.png)",
+      "![Nothing [example]][image]\n\n[image]: /image.png",
+    ].map((source) => [
+      `balanced image answer ${JSON.stringify(source)}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...["T&#79;DO", "T&#x4f;DO", "N&#111;ne", "Not&#32;applicable", "N&sol;A"].map((source) => [
+      `encoded placeholder ${source}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...["- - ", "1. - ", "- 2. "].flatMap((prefix) =>
+      ["```", "~~~"].map((fence) => [
+        `nested list fence ${prefix}${fence}`,
+        `## What this change made unnecessary\n\n${prefix}${fence}md\n${" ".repeat(prefix.length)}Nothing removed.\n${" ".repeat(prefix.length)}${fence}\n`,
+      ]),
+    ),
+    [
+      "link-reference definition",
+      "## What this change made unnecessary\n\n[Nothing]: https://example.com\n",
+    ],
+    ...[
+      "[Nothing]:\n   https://example.com\n",
+      '[Nothing]: https://example.com "Title\nwith a line break"\n',
+      "[Nothing]: <https://example.com/space here>\n",
+      "[Nothing]: https://example.com/a(b)c\n",
+      "[Nothing]: https://example.com\r\n",
+      "[\u00a0]: https://example.com\n",
+    ].map((definition) => [
+      `reference boundary ${JSON.stringify(definition)}`,
+      `## What this change made unnecessary\n\n${definition}`,
+    ]),
+    ...[
+      ["1000 ASCII bytes", `[${"a".repeat(1000)}]: /url\n`],
+      ["1000 emoji bytes", `[${"😀".repeat(250)}]: /url\n`],
+      ["1000 accented bytes", `[${"é".repeat(500)}]: /url\n`],
+      ["CRLF label", `[${"a".repeat(996)}\r\nok]: /url\r\n`],
+      ["32 nested parentheses", `[Nothing]: /${"(".repeat(32)}a${")".repeat(32)}\n`],
+      ["optional title before a heading", '[Nothing]: /url\n"\n## Adoption bar\nNothing"\n'],
+      ...["+", "2. Nothing", "<span>", "    ## Adoption bar"].map((line) => [
+        `non-interrupting title line ${line}`,
+        `[Nothing]: /url "Title\n${line}\nNothing"\n`,
+      ]),
+    ].map(([name, definition]) => [
+      `hidden reference ${name}`,
+      `## What this change made unnecessary\n\n${definition}`,
+    ]),
+    ...[
+      '[](https://example.com "\nNothing\n")',
+      "[](https://example.com '\nNothing\n')",
+      "[](https://example.com (\nNothing\n))",
+      '[ ](https://example.com "\nNothing\n")',
+      '[](<https://example.com> "\nNothing\n")',
+      '[](https://example.com/a(b)c "\nNothing\n")',
+    ].map((link) => [
+      `empty multiline link ${JSON.stringify(link)}`,
+      `## What this change made unnecessary\n\n${link}\n`,
+    ]),
+    ["tab-indented fence closer", "~~~\n\t~~~\n## What this change made unnecessary\n\nNothing.\n"],
+    ...["[](/url))", "[](/url(a)))", "[]())"].map((link) => [
+      `empty link with trailing parenthesis ${link}`,
+      `## What this change made unnecessary\n\n${link}\n`,
+    ]),
+    [
+      "multiline HTML tag",
+      '## What this change made unnecessary\n\n<div\nclass="Nothing">\n</div>\n',
+    ],
+    [
+      "quoted HTML attribute",
+      '## What this change made unnecessary\n\n<span\ntitle="Nothing > never">\n</span>\n',
+    ],
+    ...[1, 2, 3].flatMap((indent) =>
+      ["#", "##"].map((level) => [
+        `indented next heading ${indent}/${level}`,
+        `## What this change made unnecessary\n\n${" ".repeat(indent)}${level} Adoption bar\n\nKeep publication approval.\n`,
+      ]),
+    ),
+    [
+      "HTML comment only",
+      "## What this change made unnecessary\n\n<div>\n<!-- Nothing. -->\n</div>\n",
+    ],
+    ["HTML entity only", "## What this change made unnecessary\n\n<p>&nbsp;</p>\n"],
+    ["HTML placeholder only", "## What this change made unnecessary\n\n<p>TODO</p>\n"],
+    ...["pre", "script", "style", "textarea"].map((tag) => [
+      `literal HTML answer ${tag}`,
+      `## What this change made unnecessary\n\n<${tag}>\nNothing.\n</${tag}>\n`,
+    ]),
+    ["fenced", "```md\n## What this change made unnecessary\n\nNothing.\n```\n"],
+    ["longer backtick close", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ["longer tilde close", "~~~md\n## What this change made unnecessary\n\nNothing.\n~~~~\n"],
+    ["short close", "````md\n```\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ["wrong marker close", "```md\n~~~\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ...["pre", "script", "style", "textarea", "div", "table"].map((tag) => [
+      `raw HTML ${tag}`,
+      `<${tag}>\n## What this change made unnecessary\nNothing.\n</${tag}>\n`,
+    ]),
+    ...["- ", "1. ", "  - "].flatMap((marker) =>
+      ["pre", "div", "span"].map((tag) => [
+        `raw HTML list-contained ${JSON.stringify(marker)} ${tag}`,
+        `${marker}<${tag}>\n${" ".repeat(marker.length)}## What this change made unnecessary\n${" ".repeat(marker.length)}Nothing.\n${" ".repeat(marker.length)}</${tag}>\n`,
+      ]),
+    ),
+    ...["- ", "1. ", "  - "].flatMap((marker) =>
+      ["```", "~~~"].map((fence) => [
+        `list-contained fence ${JSON.stringify(marker)} ${fence}`,
+        `${marker}${fence}\n${" ".repeat(marker.length)}## What this change made unnecessary\n${" ".repeat(marker.length)}Nothing.\n${" ".repeat(marker.length)}${fence}\n`,
+      ]),
+    ),
+    [
+      "raw HTML processing instruction",
+      "<?qfai\n## What this change made unnecessary\nNothing.\n?>\n",
+    ],
+    ["raw HTML declaration", "<!DOCTYPE\n## What this change made unnecessary\nNothing.\n>\n"],
+    ["raw HTML CDATA", "<![CDATA[\n## What this change made unnecessary\nNothing.\n]]>\n"],
+    [
+      "raw HTML standalone inline tag",
+      "<span>\n## What this change made unnecessary\nNothing.\n</span>\n",
+    ],
+  ])("blocks a %s removal answer without inventing nothing", async (name, section) => {
+    const body =
+      name === "import-only body"
+        ? section + compliantPrBody()
+        : compliantPrBody().replace(
+            /## What this change made unnecessary\n\nNothing\.\n\n/,
+            section,
+          );
+    const result = await runPrFix({
+      extraArgs: ["-DryRun"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [makePrView([successCheck()], { body })],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).not.toBe(0);
+    expect(combinedOutput(result)).toContain("authored removal-list answer");
+    const previewPath = path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md");
+    expect(combinedOutput(result)).toContain(`gh pr edit 166 --body-file "${previewPath}"`);
+    const preview = await readFile(
+      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
+      "utf-8",
+    );
+    expect(preview.split("## Auto-import")[0]).not.toContain("Nothing.");
+  });
+
+  it.each([
+    "",
+    "```md\n## What this change made unnecessary\n\nExample only.\n````\n\n",
+    "~~~md\n## What this change made unnecessary\n\nExample only.\n~~~~\n\n",
+    "```md\n## Auto-import\n\n## What this change made unnecessary\n\nExample only.\n````\n\n",
+    "<!--\n```md\n## Auto-import\n\n## What this change made unnecessary\n\nExample only.\n-->\n\n",
+    "A literal `<!--` appears in code.\n\n",
+    "A literal `` `<!--` `` appears in code.\n\n",
+    "A literal `a\n<!--\nb` appears in code.\n\n",
+    "<!-- ` -->\n\n",
+    "~~~ <!--\nexample\n~~~\n\n",
+    "<pre>\n<!--\n```md\n</pre>\n\n",
+    "<div>\nExample\n</div>\n\n",
+    "<pre>\n## Auto-import\nImported example only.\n</pre>\n\n",
+  ])("preserves an authored removal answer while repairing other metadata", async (prefix) => {
+    const answer =
+      "A duplicate check. The existing validator stays because it covers malformed inputs.\n\n```sh\nobsolete-check --strict\n## This is command data\n```\n\nThe canonical validator retains that input check.";
+    const result = await runPrFix({
+      extraArgs: ["-DryRun"],
+      scenario: makeScenario({
+        changedFiles: ["REVIEW.md"],
+        prViews: [
+          makePrView([successCheck()], {
+            body: `${prefix}## What this change made unnecessary\n\n${answer}\n`,
+          }),
+        ],
+        threads: [[]],
+      }),
+    });
+    expect(result.code).toBe(0);
+    expect(combinedOutput(result)).toContain("Dry-run completed.");
+    expect(result.ghState.prEditCount ?? 0).toBe(0);
+    expect(result.ghState.threadsCount).toBe(1);
+    const preview = await readFile(
+      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
+      "utf-8",
+    );
+    expect(preview.split("## Auto-import")[0]).toContain(answer);
+    expect(preview.split("## Auto-import")[0]).not.toContain("Example only.");
+  });
+
+  it("extracts version markers from non-feature branch prefixes and blocks mismatches", async () => {
     const branch = "topic/v1.8.5";
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
-      onTestFinished,
       scenario: makeScenario({
         branch,
         packageVersion: "1.8.4",
@@ -160,11 +726,10 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(versionCheck.ChangelogSectionPresent).toBe(false);
   });
 
-  it("accepts aligned topic/vX.Y.Z branches", async ({ expect, onTestFinished }) => {
+  it("accepts aligned topic/vX.Y.Z branches", async () => {
     const branch = "topic/v1.8.5";
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
-      onTestFinished,
       scenario: makeScenario({
         branch,
         changelog: changelogWithVersion("1.8.5"),
@@ -179,14 +744,10 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     );
   });
 
-  it("ignores non-version work suffixes after branch version markers", async ({
-    expect,
-    onTestFinished,
-  }) => {
+  it("ignores non-version work suffixes after branch version markers", async () => {
     const branch = "feature/v1.8.5-dds-validator";
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
-      onTestFinished,
       scenario: makeScenario({
         branch,
         changelog: changelogWithVersion("1.8.5"),
@@ -206,13 +767,9 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(versionCheck.ExpectedVersion).toBe("1.8.5");
   });
 
-  it("rejects live overrides for SleepSeconds and RequiredZeroStreak", async ({
-    expect,
-    onTestFinished,
-  }) => {
+  it("rejects live overrides for SleepSeconds and RequiredZeroStreak", async () => {
     const result = await runPrFix({
       extraArgs: ["-SleepSeconds", "5", "-RequiredZeroStreak", "2"],
-      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[]],
@@ -225,9 +782,8 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     );
   });
 
-  it("writes CI failure artifacts and exits non-zero", async ({ expect, onTestFinished }) => {
+  it("writes CI failure artifacts and exits non-zero", async () => {
     const result = await runPrFix({
-      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([failureCheck()])],
         threads: [[]],
@@ -247,12 +803,8 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(existsSync(checksPath)).toBe(true);
   });
 
-  it("writes unresolved-thread artifacts and exits non-zero", async ({
-    expect,
-    onTestFinished,
-  }) => {
+  it("writes unresolved-thread artifacts and exits non-zero", async () => {
     const result = await runPrFix({
-      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[makeThread()]],
@@ -272,11 +824,10 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(existsSync(threadsPath)).toBe(true);
   });
 
-  it("detects outdated but unresolved threads", async ({ expect, onTestFinished }) => {
+  it("detects outdated but unresolved threads", async () => {
     const outdatedThread = makeThread();
     outdatedThread.isOutdated = true;
     const result = await runPrFix({
-      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[outdatedThread]],
@@ -292,10 +843,9 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(monitorStatus.State).toBe("action_required_threads");
   });
 
-  it("treats empty status checks as waiting, not clean", async ({ expect, onTestFinished }) => {
+  it("treats empty status checks as waiting, not clean", async () => {
     const result = await runPrFix({
       mockSleep: true,
-      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([]), makePrView([]), makePrView([successCheck()])],
         threads: [[], [makeThread()]],
@@ -311,13 +861,12 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(existsSync(handoffPath)).toBe(false);
   });
 
-  it("resets the streak when CI is pending/in-progress", async ({ expect, onTestFinished }) => {
+  it("resets the streak when CI is pending/in-progress", async () => {
     const cleanView = makePrView([successCheck()]);
     const pendingView = makePrView([pendingCheck()]);
     const emptyThreads = Array.from({ length: 31 }, () => []);
     const result = await runPrFix({
       mockSleep: true,
-      onTestFinished,
       scenario: makeScenario({
         prViews: [
           cleanView,
@@ -340,13 +889,9 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(existsSync(handoffPath)).toBe(false);
   });
 
-  it("produces handoff only after 30 consecutive clean polls", async ({
-    expect,
-    onTestFinished,
-  }) => {
+  it("produces handoff only after 30 consecutive clean polls", async () => {
     const result = await runPrFix({
       mockSleep: true,
-      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[]],
@@ -373,13 +918,46 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(monitorStatus.EffectiveRequiredZeroStreak).toBe(30);
   });
 
-  it("retries transient gh graphql failures during live monitoring", async ({
-    expect,
-    onTestFinished,
-  }) => {
+  it.each(["poll", "final boundary"])(
+    "blocks an answer removed at the %s without emitting a handoff",
+    async (boundary) => {
+      const clean = makePrView([successCheck()]);
+      const missing = makePrView([successCheck()], {
+        body: compliantPrBody().replace(
+          /## What this change made unnecessary\n\nNothing\.\n\n/,
+          "",
+        ),
+      });
+      const result = await runPrFix({
+        mockSleep: true,
+        scenario: makeScenario({
+          prViews:
+            boundary === "poll"
+              ? [clean, missing]
+              : [...Array.from({ length: 31 }, () => clean), missing],
+          threads: [[]],
+        }),
+      });
+      expect(result.code).not.toBe(0);
+      expect(combinedOutput(result)).toContain("PR body is no longer template-compliant");
+      expect(existsSync(path.join(result.repoDir, "tmp", "pr-fix", "pr-166-handoff.json"))).toBe(
+        false,
+      );
+      const status = await readJson(
+        path.join(result.repoDir, "tmp", "pr-fix", "pr-166-monitor-status.json"),
+      );
+      expect(status.State).toBe("action_required_body");
+      expect(status.CurrentStreak).toBe(0);
+      const compliance = await readJson(
+        path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-compliance.json"),
+      );
+      expect(compliance.RemovalList).toBe(false);
+    },
+  );
+
+  it("retries transient gh graphql failures during live monitoring", async () => {
     const result = await runPrFix({
       mockSleep: true,
-      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[]],
@@ -392,13 +970,9 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(combinedOutput(result)).toContain("PR handoff ready for PR #166");
   });
 
-  it("prefers ci:local when ci:gate is absent during PR body repair", async ({
-    expect,
-    onTestFinished,
-  }) => {
+  it("prefers ci:local when ci:gate is absent during PR body repair", async () => {
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
-      onTestFinished,
       scenario: makeScenario({
         changedFiles: ["README.md"],
         packageScripts: { "ci:local": "pnpm ci:local" },
@@ -411,7 +985,8 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).toBe(0);
+    expect(result.code).not.toBe(0);
+    expect(combinedOutput(result)).toContain("authored removal-list answer");
 
     const preview = await readFile(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
@@ -420,13 +995,9 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(preview).toContain("- Repo CI command: `pnpm ci:local`");
   });
 
-  it("renders pnpm ci:gate when the repo defines a long ci:gate script", async ({
-    expect,
-    onTestFinished,
-  }) => {
+  it("renders pnpm ci:gate when the repo defines a long ci:gate script", async () => {
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
-      onTestFinished,
       scenario: makeScenario({
         changedFiles: ["README.md"],
         packageScripts: {
@@ -441,7 +1012,8 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).toBe(0);
+    expect(result.code).not.toBe(0);
+    expect(combinedOutput(result)).toContain("authored removal-list answer");
 
     const preview = await readFile(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
@@ -452,15 +1024,11 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
   });
 });
 
-describe.concurrent("run-pr-fix strict monitor pagination", { timeout: 120000 }, () => {
-  it("detects unresolved threads across paginated GraphQL responses within a single poll", async ({
-    expect,
-    onTestFinished,
-  }) => {
+describe("run-pr-fix strict monitor pagination", { timeout: 120000 }, () => {
+  it("detects unresolved threads across paginated GraphQL responses within a single poll", async () => {
     const thread1 = makeThread();
     const thread2: FakeThread = { ...makeThread(), id: "PRRT_kwDOQuL-page2" };
     const result = await runPrFix({
-      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[thread1], [thread2]],
@@ -480,6 +1048,99 @@ describe.concurrent("run-pr-fix strict monitor pagination", { timeout: 120000 },
     expect(monitorStatus.State).toBe("action_required_threads");
   });
 });
+
+describe("release PR body repair", () => {
+  it.each(["FIXME: list removals", "HACK"])(
+    "repairs the %s placeholder without replacing adoption text",
+    async (placeholder) => {
+      const adoption = "## Adoption bar\n\nKeep the existing validator.\n";
+      const result = await repairReleaseBody(
+        `Existing notes.\n\n## What this change made unnecessary\n\n${placeholder}\n\n${adoption}`,
+      );
+      expect(result.code).toBe(0);
+      expect(result.body).toContain("Superseded package version and heading.");
+      expect(result.body).toContain(adoption);
+      expect(result.body).not.toContain(placeholder);
+    },
+  );
+
+  it.each(["~~~\nunfinished sample\n", "<!-- unfinished note\n", "<pre>\nunfinished sample\n"])(
+    "keeps an authored answer when only later Markdown is unfinished",
+    async (suffix) => {
+      const existing =
+        "## What this change made unnecessary\n\nRemoved the duplicate selector.\n\n" + suffix;
+      const result = await repairReleaseBody(existing);
+      expect(result.code).toBe(0);
+      expect(result.body).toBe(existing);
+    },
+  );
+
+  it.each([
+    ["fence", "Existing notes.\n\n~~~\nexample\n"],
+    ["comment", "Existing notes.\n\n<!-- example\n"],
+    ...["pre", "script", "style", "textarea"].map((tag) => [
+      `literal HTML ${tag}`,
+      `Existing notes.\n\n<${tag}>\nexample\n`,
+    ]),
+  ])("refuses a hidden release repair inside an unclosed %s", async (_name, existing) => {
+    const result = await repairReleaseBody(existing);
+    expect(result.code).not.toBe(0);
+    expect(result.body).toBe(
+      "Release metadata.\n\n## What this change made unnecessary\n\nSuperseded package version and heading.\n",
+    );
+    expect(result.stderr).toContain("unclosed");
+  });
+
+  it.each([
+    ["ordinary", "Release context.\r\n\r\n"],
+    ["inline code", "A literal `<!--` appears in code.\r\n\r\n"],
+    ["multi-backtick span", "A literal `` `<!--` `` appears in code.\r\n\r\n"],
+    ["multiline span", "A literal `a\r\n<!--\r\nb` appears in code.\r\n\r\n"],
+    ["backticks in a real comment", "<!-- ` -->\r\n\r\n"],
+    ["fence info", "~~~ <!--\r\nexample\r\n~~~\r\n\r\n"],
+  ])("preserves raw release answers after %s", async (_name, prefix) => {
+    const existing =
+      prefix +
+      "## What this change made unnecessary\r\n\r\nRemoved the duplicate selector.\r\n\r\n" +
+      "## Adoption bar\r\n\r\nKeep the existing validator.\r\n\r\n" +
+      "## Release metadata\r\n\r\nPrepared date and publication approval stay unchanged.\r\n";
+    const result = await repairReleaseBody(existing);
+    expect(result.code).toBe(0);
+    expect(result.body).toBe(existing);
+  });
+});
+
+async function repairReleaseBody(existing: string): Promise<{
+  body: string;
+  code: number | null;
+  stderr: string;
+  stdout: string;
+}> {
+  const root = await makeTempDir("qfai-release-body-");
+  const scriptPath = path.join(root, "release-repair.cjs");
+  const existingPath = path.join(root, "existing.md");
+  const bodyPath = path.join(root, "generated.md");
+  const workflow = await readFile(
+    path.join(repoRoot, ".github", "workflows", "prepare-release.yml"),
+    "utf-8",
+  );
+  const script = /<<'REPAIR_BODY'\r?\n([\s\S]*?)^ {12}REPAIR_BODY\r?$/m.exec(workflow)?.[1];
+  expect(script).toBeDefined();
+  if (script === undefined) throw new Error("Release repair heredoc is missing");
+  await writeFile(scriptPath, script.replace(/^ {12}/gm, ""), "utf-8");
+  await writeFile(existingPath, existing, "utf-8");
+  await writeFile(
+    bodyPath,
+    "Release metadata.\n\n## What this change made unnecessary\n\nSuperseded package version and heading.\n",
+    "utf-8",
+  );
+  const result = await spawnCommand(
+    process.execPath,
+    [scriptPath, existingPath, bodyPath],
+    process.env,
+  );
+  return { ...result, body: await readFile(bodyPath, "utf-8") };
+}
 
 function normalizeNewlines(text: string): string {
   return text.replace(/\r\n/g, "\n");
@@ -555,6 +1216,10 @@ function compliantPrBody(): string {
     "",
     "- Command: `pnpm ci:gate`",
     "- Result: PASS",
+    "",
+    "## What this change made unnecessary",
+    "",
+    "Nothing.",
     "",
     "## Open Questions / Follow-ups",
     "",
@@ -671,10 +1336,9 @@ function makeThread(): FakeThread {
 async function runPrFix(options: {
   extraArgs?: string[];
   mockSleep?: boolean;
-  onTestFinished: TaskContext["onTestFinished"];
   scenario: FakeScenario;
 }): Promise<RunResult> {
-  const root = await makeTempDir("qfai-pr-fix-", options.onTestFinished);
+  const root = await makeTempDir("qfai-pr-fix-");
   const repoDir = path.join(root, "repo");
   const binDir = path.join(root, "bin");
   const scenarioPath = path.join(root, "scenario.json");
@@ -717,7 +1381,7 @@ async function runPrFix(options: {
     QFAI_FAKE_STATE_PATH: statePath,
   });
 
-  return { ...result, repoDir };
+  return { ...result, ghState: await readJson(statePath), repoDir };
 }
 
 function toPowerShellToken(value: string): string {
@@ -741,7 +1405,7 @@ async function createMinimalRepo(
   await mkdir(path.join(repoDir, "packages", "qfai"), { recursive: true });
   await writeFile(
     path.join(repoDir, ".github", "PULL_REQUEST_TEMPLATE.md"),
-    "# Template\n",
+    compliantPrBody().replace("Nothing.", "<!-- An authored answer is required. -->"),
     "utf-8",
   );
   await writeFile(path.join(repoDir, ".github", "workflows", "ci.yml"), "name: CI\n", "utf-8");
@@ -842,7 +1506,8 @@ function ghStubScript(): string {
     "",
     'if (args[0] === "pr" && args[1] === "view") {',
     "  const prView = next(scenario.prViews, 'prViewCount', null);",
-    "  process.stdout.write(JSON.stringify(prView));",
+    "  const fields = args[args.indexOf('--json') + 1].split(',');",
+    "  process.stdout.write(JSON.stringify(Object.fromEntries(fields.map(field => [field, prView[field]]))));",
     "  process.exit(0);",
     "}",
     "",
@@ -876,6 +1541,8 @@ function ghStubScript(): string {
     "}",
     "",
     'if (args[0] === "pr" && args[1] === "edit") {',
+    "  state.prEditCount = (state.prEditCount ?? 0) + 1;",
+    "  saveState();",
     "  process.exit(0);",
     "}",
     "",
@@ -917,13 +1584,8 @@ async function readJson(filePath: string): Promise<Record<string, unknown>> {
   return JSON.parse(raw.replace(/^\uFEFF/, "")) as Record<string, unknown>;
 }
 
-async function makeTempDir(
-  prefix: string,
-  onTestFinished: TaskContext["onTestFinished"],
-): Promise<string> {
+async function makeTempDir(prefix: string): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), prefix));
-  onTestFinished(async () => {
-    await removeTempTree(dir);
-  });
+  tempDirs.push(dir);
   return dir;
 }

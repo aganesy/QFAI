@@ -16,6 +16,7 @@ import {
   unusableGlobReason,
   type CollectFilesByGlobsResult,
 } from "./fs.js";
+import { braceRangeMembers, BraceRangeRefused } from "./globBraceRange.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { resolveSurfaceUnion } from "./prototyping/specResolution.js";
 import {
@@ -2637,7 +2638,110 @@ function isAnnotationOnlyCarrier(
  * tests and the scan that CONSUMES them must read this config key identically,
  * or the writer emits an extension the scan never opens.
  */
-export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<string> {
+/**
+ * The most candidates one glob may expand into.
+ *
+ * Ranges multiply, so a ceiling on how many are read is what keeps a pattern
+ * from expanding into more strings than there is reason to hold. A glob past it
+ * yields no extension at all: a set read from part of an expansion names
+ * extensions the matcher does not select, which is the mistake reading the
+ * ranges exists to avoid.
+ */
+const RANGE_CANDIDATES = 4096;
+
+/**
+ * The glob with its brace ranges written out, as fast-glob expands them before
+ * it matches anything.
+ *
+ * `tests/**\/*.{p..p}y` names Python files, and read as text it names an
+ * extension nothing recognises, so the stage fell back to its JavaScript
+ * default and scanned a tree the project does not keep its tests in.
+ *
+ * Lists are left alone: the caller reads `.{a,b}` itself, keeping a member's
+ * wildcards, which expansion here would lose.
+ */
+function withRangesExpanded(glob: string): string[] | null {
+  let expanded = [glob];
+  // Each round writes out one range per candidate, so a candidate holding a
+  // range still holds one fewer afterwards and the loop reaches a pattern with
+  // none. Stopping at a fixed number of rounds instead left the ranges past it
+  // as text, and a pattern whose extension is spelled by the last of them read
+  // as one whose extension nothing supports.
+  for (;;) {
+    const next: string[] = [];
+    let changed = false;
+    for (const candidate of expanded) {
+      const written = firstRangeWrittenOut(candidate);
+      if (written === null) {
+        next.push(candidate);
+        continue;
+      }
+      changed = true;
+      next.push(...written);
+    }
+    if (next.length > RANGE_CANDIDATES) return null;
+    expanded = next;
+    if (!changed) break;
+  }
+  return expanded;
+}
+
+/**
+ * The candidate with its first brace range written out, or `null` when it holds
+ * none.
+ *
+ * Every group is looked at, not only the first: a directory list can stand
+ * ahead of a range in the extension, as `tests/{unit,integration}/**\/*.{p..p}y`
+ * does, and stopping at the list left the extension unread.
+ *
+ * A range fast-glob refuses is left as it stands, and the groups after it are
+ * read all the same. The pattern then selects nothing, and whoever compiles it
+ * says so; dropping it here would leave a configured project looking like one
+ * that configured no glob at all.
+ */
+function firstRangeWrittenOut(candidate: string): string[] | null {
+  for (let open = candidate.indexOf("{"); open !== -1; open = candidate.indexOf("{", open + 1)) {
+    const close = candidate.indexOf("}", open);
+    if (close === -1) return null;
+    let members: readonly string[] | null;
+    try {
+      members = braceRangeMembers(candidate.slice(open + 1, close));
+    } catch (error) {
+      // A range fast-glob refuses stays as it stands, and the groups after it
+      // are still read: the pattern selects nothing either way, and the one
+      // that spells the extension is what the stage needs from it.
+      if (!(error instanceof BraceRangeRefused)) throw error;
+      continue;
+    }
+    if (members === null) continue;
+    // A group in the last segment decides the extension, so every member of it
+    // is read. One further up gives every member the same tail, so one member
+    // answers for all of them — and reading more multiplies the candidates a
+    // pattern expands into without reaching a different extension.
+    const inLastSegment = !candidate.slice(open).includes("/");
+    const read = inLastSegment ? members : members.slice(0, 1);
+    return read.map((member) => candidate.slice(0, open) + member + candidate.slice(close + 1));
+  }
+  return null;
+}
+
+/**
+ * The extensions a set of globs names, and whether any of them was too large to
+ * write out.
+ *
+ * The two are reported apart because they call for opposite answers. A project
+ * that configured nothing has no extension and takes the default; a glob whose
+ * expansion passed the bound has extensions this read could not recover, and a
+ * caller that treats it as the first writes a file the project's own scan will
+ * not collect.
+ */
+export type TestFileExtensions = {
+  readonly extensions: Set<string>;
+  readonly overBound: boolean;
+};
+
+export function readTestFileExtensions(testFileGlobs: readonly string[]): TestFileExtensions {
+  let overBound = false;
   const extensions = new Set<string>();
   for (const entry of testFileGlobs) {
     // Trimmed as the scan trims it, or a trailing space hides the extension.
@@ -2647,22 +2751,45 @@ export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<
     // to what the stage scans. `!(` opens a negated extglob instead, which
     // selects: `!(fixtures)/**/*.py` is a Python selector, as fast-glob reads it.
     if (isGlobExclusion(glob)) continue;
-    for (const match of glob.matchAll(/\.\{([^}]+)\}$/g)) {
-      for (const ext of (match[1] ?? "").split(",")) {
-        // A member is copied into the generated scan pattern whole, wildcards
-        // included, since the matcher reads `test-*.js` there as it does here.
-        // One the matcher cannot use is left out: a NUL byte copied in made the
-        // scan throw before any finding was reported.
-        const trimmed = ext.trim();
-        if (trimmed.length > 0 && unusableGlobReason(trimmed) === null) extensions.add(trimmed);
+    // Read off the patterns fast-glob matches with, which are the pattern with
+    // its ranges written out. Both shapes are read from each of them: a range
+    // inside a list — `*.{{p..p}y,rb}` — is a list only once the range is
+    // written out, and the list pattern cannot parse it before that.
+    // A glob too large to write out yields nothing, and says so: what a partial
+    // expansion names is not what the matcher selects, and an empty answer on
+    // its own reads as a project that configured nothing.
+    const candidates = withRangesExpanded(glob);
+    if (candidates === null) {
+      overBound = true;
+      continue;
+    }
+    for (const candidate of candidates) {
+      for (const match of candidate.matchAll(/\.\{([^}]+)\}$/g)) {
+        for (const ext of (match[1] ?? "").split(",")) {
+          // A member is copied into the generated scan pattern whole, wildcards
+          // included, since the matcher reads `test-*.js` there as it does here.
+          // One the matcher cannot use is left out: a NUL byte copied in made the
+          // scan throw before any finding was reported.
+          const trimmed = ext.trim();
+          if (trimmed.length > 0 && unusableGlobReason(trimmed) === null) extensions.add(trimmed);
+        }
+      }
+      const single = /\.([A-Za-z0-9]+)$/.exec(candidate);
+      if (single?.[1]) {
+        extensions.add(single[1]);
       }
     }
-    const single = /\.([A-Za-z0-9]+)$/.exec(glob);
-    if (single?.[1]) {
-      extensions.add(single[1]);
-    }
   }
-  return extensions;
+  return { extensions, overBound };
+}
+
+/**
+ * The extensions alone, for a caller whose answer to an unreadable glob is the
+ * same as its answer to no glob at all: the scan's own pattern, which widens
+ * rather than narrows and so reads more files rather than fewer.
+ */
+export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<string> {
+  return readTestFileExtensions(testFileGlobs).extensions;
 }
 
 /**

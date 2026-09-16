@@ -71,6 +71,7 @@ import {
   QFAI_AGENT_RULES_END,
   addRuleCitations,
   addRuleCitationsToList,
+  addReviewPointer,
   citedRuleMasters,
   citedRuleMastersOutsideCode,
   hasUnclosedRulesSection,
@@ -3431,14 +3432,21 @@ async function ensureAgentEntryPointRules(
       // has it, including a bullet it deleted or reworded.
       const refreshed = refreshSupersededRuleBullets(existing, section, installed);
       reportWithheldSummaries(target, refreshed.withheld);
-      const merged = addRuleCitations(refreshed.text, section, newlyWritten);
+      // The review directive goes in beside the citations; the project's own
+      // text and the bullets it deleted are left as they are.
+      const cited = addRuleCitations(refreshed.text, section, newlyWritten);
+      const merged = addReviewPointer(cited, template);
       if (merged === existing) {
         skipped.push(target);
         continue;
       }
       const shown = new Set(citedRuleMastersOutsideCode(existing));
+      // Read from the citation step alone. Compared against the text the
+      // pointer was added to as well, a run that only added the pointer
+      // reported citing masters it had not cited, and told an operator whose
+      // rewrite was refused to add citations that were already there.
       const update = {
-        ...describeRuleListUpdate(merged !== refreshed.text, refreshed.refreshed),
+        ...describeRuleListUpdate(cited !== refreshed.text, merged !== cited, refreshed.refreshed),
         pending: newlyWritten.filter((master) => !shown.has(master)),
       };
       if (await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun)) {
@@ -3457,16 +3465,18 @@ async function ensureAgentEntryPointRules(
     if (citedRuleMastersOutsideCode(existing).length > 0) {
       const cited = new Set(citedRuleMastersOutsideCode(existing));
       const uncited = citedRuleMasters(section).filter((master) => !cited.has(master));
-      const merged = addRuleCitationsToList(existing, section, uncited);
-      if (merged === existing) {
+      const rulesAdded = addRuleCitationsToList(existing, section, uncited);
+      const merged = addReviewPointer(rulesAdded, template);
+      if (rulesAdded === existing && uncited.length > 0) {
         // The file cites rules somewhere this run cannot extend — in prose, a
-        // numbered list, an indented bullet. Appending the whole section would
-        // restate what it already says, which is what this branch exists to
-        // avoid, so the run names the lines instead of writing them.
+        // numbered list, an indented bullet. Name the missing masters instead
+        // of restating existing citations. Review guidance can still be added.
         error(
-          `  WARNING: ${formatReportPath(target)} was left unchanged. It cites rule masters, but not as a ` +
+          `  WARNING: ${formatReportPath(target)} cites rule masters, but not as a ` +
             `bullet list this run can add a line to, so add ${quoteList(uncited)} to it by hand.`,
         );
+      }
+      if (merged === existing) {
         skipped.push(target);
         continue;
       }
@@ -3480,7 +3490,7 @@ async function ensureAgentEntryPointRules(
         continue;
       }
       if (dryRun) {
-        info(`  would update: ${formatReportPath(target)} (cite the uncited rule masters)`);
+        info(`  would update: ${formatReportPath(target)} (agent instructions)`);
       } else {
         const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
         if (wrote !== null) {
@@ -3488,9 +3498,7 @@ async function ensureAgentEntryPointRules(
           skipped.push(target);
           continue;
         }
-        info(
-          `  updated: ${formatReportPath(target)} (cited the uncited rule masters; nothing else changed)`,
-        );
+        info(`  updated: ${formatReportPath(target)} (agent instructions; existing content kept)`);
       }
       copied.push(target);
       continue;
@@ -3511,13 +3519,17 @@ async function ensureAgentEntryPointRules(
       continue;
     }
 
-    // Exactly one blank line between the project's last line and the section,
-    // whatever the file happened to end with.
-    const body = existing.replace(/\s*$/, "");
-    const separator = body.length === 0 ? "" : "\n\n";
+    // Keep every project byte; add only the separator the new section needs.
+    const end = /\r\n|\n/.exec(existing)?.[0] ?? "\n";
+    const separator =
+      existing.length === 0 || existing.endsWith(`${end}${end}`)
+        ? ""
+        : existing.endsWith(end)
+          ? end
+          : `${end}${end}`;
     const wrote = await replaceEntryPointFile(
       target,
-      `${body}${separator}${section}\n`,
+      addReviewPointer(`${existing}${separator}${section}${end}`, template),
       destRoot,
       existing,
     );
@@ -3605,7 +3617,7 @@ async function updateCopilotRuleList(
     return;
   }
   const update = {
-    ...describeRuleListUpdate(merged !== refreshed.text, refreshed.refreshed),
+    ...describeRuleListUpdate(merged !== refreshed.text, false, refreshed.refreshed),
     pending: uncited,
   };
   if (await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun)) {
@@ -3671,7 +3683,11 @@ type RuleListUpdate = {
  * The report names every edit the write makes, so the "nothing else changed" it
  * closes with stays true.
  */
-function describeRuleListUpdate(cited: boolean, refreshed: readonly string[]): RuleListUpdate {
+function describeRuleListUpdate(
+  cited: boolean,
+  pointed: boolean,
+  refreshed: readonly string[],
+): RuleListUpdate {
   const planned: string[] = [];
   const done: string[] = [];
   const byHand: string[] = [];
@@ -3679,6 +3695,11 @@ function describeRuleListUpdate(cited: boolean, refreshed: readonly string[]): R
     planned.push("cite the newly shipped rule masters");
     done.push("cited the newly shipped rule masters");
     byHand.push("add the rule citations");
+  }
+  if (pointed) {
+    planned.push("add the review directive");
+    done.push("added the review directive");
+    byHand.push("add the review directive");
   }
   if (refreshed.length > 0) {
     const summaries = `${refreshed.length === 1 ? "summary" : "summaries"} of ${quoteList(refreshed)}`;
@@ -7959,6 +7980,7 @@ function buildCopilotInstructions(): string {
     "",
     "## Golden rules",
     "",
+    "- Read `REVIEW.md` before reviewing a pull request when that file exists in this repository. Read it before writing the PR description as well.",
     "- Always match the user's language in your outputs.",
     "- Treat `.qfai/` as the canonical source of truth for the QFAI workflow:",
     "  - Skills (SSOT): `.qfai/assistant/skills/`",

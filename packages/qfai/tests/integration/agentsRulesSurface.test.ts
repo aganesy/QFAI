@@ -1051,6 +1051,41 @@ describe("a no-question run opens every node, on every surface that says so", ()
   });
 });
 
+describe("this repository's pull-request description", () => {
+  it("names removals, explains retained items and states an empty list explicitly", async () => {
+    const policy = await readFile(path.join(ROOT, "REVIEW.md"), "utf-8");
+    const removalSection = policy.split(/^## What a change made unnecessary\r?\n/m)[1];
+    expect(removalSection, "the existing review policy has no removal obligation").toBeDefined();
+    const obligation = removalSection?.split(/^## /m)[0]?.replace(/\s+/g, " ").trim();
+    expect(obligation).toBe(
+      'Every pull request lists, in its description, what the change made unnecessary, and says why anything on the list was kept. An empty list is a complete answer: it is written as "nothing", not left out.',
+    );
+    const template = await readFile(path.join(ROOT, ".github/PULL_REQUEST_TEMPLATE.md"), "utf-8");
+    expect(template).toContain("## What this change made unnecessary");
+    expect(template).toContain('write "nothing" for an empty list');
+    for (const relative of [
+      "AGENTS.md",
+      ".github/copilot-instructions.md",
+      ".github/instructions/code-review.instructions.md",
+    ]) {
+      const entry = await readFile(path.join(ROOT, relative), "utf-8");
+      if (relative === ".github/instructions/code-review.instructions.md") {
+        expect(entry).toContain(
+          "Process:\n\nRead `REVIEW.md` if present.\n\n1. Read the PR description",
+        );
+      } else {
+        expect(entry, relative).toContain("Read `REVIEW.md` before reviewing a pull request");
+      }
+    }
+    const release = await readFile(
+      path.join(ROOT, ".github/workflows/prepare-release.yml"),
+      "utf-8",
+    );
+    expect(release).toContain('echo "## What this change made unnecessary"');
+    expect(release).toContain("Superseded package version and Unreleased heading");
+  });
+});
+
 describe("an open fact survives the surfaces that report a session", () => {
   // The wrapper is the only output a `/qfai-grill` run has, and the register is
   // where a stage's unanswered questions land. A fact only the user holds
