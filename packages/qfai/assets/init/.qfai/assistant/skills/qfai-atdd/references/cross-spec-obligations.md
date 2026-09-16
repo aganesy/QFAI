@@ -163,17 +163,32 @@ source answered.
    here rather than becoming residue. This is the one narrow exception to
    Default Mode: that column only, no other content of a sibling pack, and
    nothing is written back.
-3. **Every other place a spec binds a contract — every pack's `01..10` and
-   `16_*` Markdown files, this run's and its siblings'.** Merge in any that names
-   the ID, in either form. A spec whose only binding sits in `06_Test-Cases.md`
-   is an owner as surely as one that wrote a `QFAI-CONTRACT-REF:` line, and a
-   procedure reading two files treats the contract as an orphan while the matrix
-   built from the full scan treats it as owned — the same contract with two
-   verdicts in one run, and a run blocked on an orphan that has an owner.
+3. **Every other place a spec BINDS a contract — every pack's `01..10` and
+   `16_*` Markdown files, this run's and its siblings'.** A spec whose only
+   binding sits in `06_Test-Cases.md` is an owner as surely as one that wrote a
+   `QFAI-CONTRACT-REF:` line, and a procedure reading two files treats the
+   contract as an orphan while the matrix built from the full scan treats it as
+   owned — the same contract with two verdicts in one run, and a run blocked on
+   an orphan that has an owner.
+
+   **Bound, not mentioned.** The ID has to stand in a field that declares the
+   dependency, in either reference form:
+
+   | Binding                                            | Where                 |
+   | -------------------------------------------------- | --------------------- |
+   | `QFAI-CONTRACT-REF:`                               | `01_Spec.md`          |
+   | A `Contract-Refs` value                            | any file that has one |
+   | A `CON-API-Refs` / `CON-DB-Refs` cell or meta line | any file that has one |
+
+   Everything else that happens to carry the ID is prose about a contract, not a
+   binding to one: an annotation example, a migration note, and above all a
+   `09_delta.md` row recording that the spec REMOVED the contract. Counting
+   those makes a spec the owner of a contract it dropped, forever, and points the
+   obligation at a pack whose gate then fails for a row it must not carry.
 
    This widens Default Mode's sibling exception from step 2's column to the same
    scan the reviewer cards already require for shared ownership. The bound is
-   unchanged in the part that matters: contract references only, no other content
+   unchanged in the part that matters: contract bindings only, no other content
    is acted on, and nothing is written back to a sibling pack.
 
 `.qfai/specs/_policies/05_Contracts.md` does **not** answer this. It is the
