@@ -97,6 +97,50 @@ describe("where an annotation may sit", () => {
     ],
     ["Rust", "pay.rs", `const CASES: &[&str] = &["${ID}"];\n#[test]\nfn pays() {}\n`],
     [
+      // An escaped quote keeps the string open, so the fence it reaches is
+      // not the closer.
+      "a Python docstring past an escaped fence",
+      "test_pay.py",
+      `F = """one \\""" ${ID}"""\ndef test_pay():\n    assert pay()\n`,
+    ],
+    [
+      // An unquoted heredoc label is an identifier, whatever its case.
+      "a lowercase Ruby heredoc",
+      "pay_spec.rb",
+      `F = <<foo\n${ID}\nfoo\nit "pays" do\nend\n`,
+    ],
+    [
+      // The interpolated verbatim prefix is written either way round.
+      "a C# interpolated verbatim fixture",
+      "PayTests.cs",
+      `class PayTests {\n  string F = @$"first\n${ID}";\n  [Fact] public void Pays() {}\n}\n`,
+    ],
+    [
+      // Groovy writes a slashy string, and a dollar-slashy one.
+      "a Groovy dollar-slashy string",
+      "PaySpec.groovy",
+      `def id = $/${ID}/$\ndef "pays"() { expect: pay() }\n`,
+    ],
+    [
+      // `test` is not a declaration in Java; its tests are named by
+      // annotations, so a call to an ordinary helper is data.
+      "a Java helper call",
+      "PayTest.java",
+      `class PayTest {\n  void setUp() { test("${ID}"); }\n  @Test void pays() {}\n}\n`,
+    ],
+    [
+      // An assignment named DisplayName outside a test attribute is data.
+      "a C# fixture field named DisplayName",
+      "PayTests.cs",
+      `class PayTests {\n  var c = new Case { DisplayName = "${ID}" };\n  [Fact] public void Pays() {}\n}\n`,
+    ],
+    [
+      // An ordinary list named ids, with no parametrize marker beside it.
+      "a Python list named ids",
+      "test_pay.py",
+      `ids = ["${ID}"]\ndef test_pay():\n    assert pay()\n`,
+    ],
+    [
       // Ruby writes a regex between slashes, as JavaScript does.
       "a Ruby regex literal",
       "pay_spec.rb",
@@ -164,6 +208,50 @@ describe("where an annotation may sit", () => {
       "a JUnit display name",
       "PayTest.java",
       `class PayTest {\n  @Test\n  @DisplayName("${ID} pays")\n  void pays() {}\n}\n`,
+    ],
+    [
+      // Java's block comments do not nest, so the first close ends the
+      // comment and what follows is code again.
+      "a Java annotation before a nested-looking comment",
+      "PayTest.java",
+      `/* ${ID} */\nclass PayTest {\n  @Test void pays() {}\n}\n`,
+    ],
+    [
+      // Rust's block comments nest, so an inner close does not expose the
+      // quote after it.
+      "a Rust annotation in a nested comment",
+      "pay.rs",
+      `/* outer /* inner */ quote \\" then ${ID} */\n#[test]\nfn pays() {}\n`,
+    ],
+    [
+      // An apostrophe in a Ruby block comment is not a string opener.
+      "a Ruby annotation in a block comment",
+      "pay_spec.rb",
+      `=begin\nthis test\u0027s coverage: ${ID}\n=end\nit "pays" do\nend\n`,
+    ],
+    [
+      // Every `#` opens a comment in Python, `#[` included.
+      "a Python comment opening with a bracket",
+      "test_pay.py",
+      `#[ this test\u0027s coverage: ${ID} ]\ndef test_pay():\n    assert pay()\n`,
+    ],
+    [
+      // `'T` is a type parameter, with no closing apostrophe after it.
+      "an F# annotation after a type parameter",
+      "PayTests.fs",
+      `let isNull (value: \u0027T) = false // ${ID}\nlet tests = testCase "pays" <| fun _ -> ()\n`,
+    ],
+    [
+      // The sole element may be spelled out, and written as a text block.
+      "a JUnit display name spelled with value",
+      "PayTest.java",
+      `class PayTest {\n  @Test\n  @DisplayName(value = "${ID} pays")\n  void pays() {}\n}\n`,
+    ],
+    [
+      // ScalaTest takes a triple-quoted name.
+      "a ScalaTest triple-quoted name",
+      "PaySpec.scala",
+      `class PaySpec { test("""${ID} pays""") { pay() } }\n`,
     ],
     [
       // A display name is written in whichever literal form the author

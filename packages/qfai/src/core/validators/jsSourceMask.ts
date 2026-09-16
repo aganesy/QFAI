@@ -226,7 +226,7 @@ function endOfPercentLiteral(source: string, start: number): number {
  * literal.
  */
 function endOfHeredoc(source: string, start: number): number {
-  const header = /^<<([~-]?)(?:(["'])([A-Za-z_][A-Za-z0-9_]*)\2|([A-Z_][A-Z0-9_]*))/.exec(
+  const header = /^<<([~-]?)(?:(["'])([A-Za-z_][A-Za-z0-9_]*)\2|([A-Za-z_][A-Za-z0-9_]*))/.exec(
     source.slice(start),
   );
   if (header === null) return -1;
@@ -274,8 +274,10 @@ function endOfVerbatimString(source: string, start: number): number {
     const close = source.indexOf(open, start + open.length);
     return close === -1 ? source.length : close + open.length;
   }
-  if (!source.startsWith('@"', start)) return -1;
-  for (let index = start + 2; index < source.length; index += 1) {
+  // `@"`, and the interpolated forms in either ordering: `$@"` and `@$"`.
+  const opener = ['@"', '$@"', '@$"'].find((prefix) => source.startsWith(prefix, start));
+  if (opener === undefined) return -1;
+  for (let index = start + opener.length; index < source.length; index += 1) {
     if (source[index] !== '"') continue;
     if (source[index + 1] === '"') {
       index += 1;
@@ -363,6 +365,27 @@ function endOfNestedBlockComment(source: string, start: number): number {
   return source.length;
 }
 
+/**
+ * The end of a `=begin` / `=end` comment beginning at `start`, or `-1` where the
+ * line does not open one.
+ *
+ * Both markers stand at column zero, which is what tells them from an ordinary
+ * assignment.
+ */
+function endOfEqualsBlockComment(source: string, start: number): number {
+  if (start !== 0 && source[start - 1] !== "\n") return -1;
+  if (!/^=begin\b/.test(source.slice(start))) return -1;
+  const close = /\n=end\b[^\n]*/.exec(source.slice(start));
+  return close === null ? source.length : start + close.index + close[0].length;
+}
+
+/** The end of a `$/…/$` string beginning at `start`, or `-1` where none does. */
+function endOfDollarSlashy(source: string, start: number): number {
+  if (!source.startsWith("$/", start)) return -1;
+  const close = source.indexOf("/$", start + 2);
+  return close === -1 ? source.length : close + 2;
+}
+
 /** The end of a raw backtick span, which no escape can extend. */
 function endOfRawBacktick(source: string, start: number): number {
   const close = source.indexOf("`", start + 1);
@@ -370,8 +393,16 @@ function endOfRawBacktick(source: string, start: number): number {
 }
 
 function endOfTripleQuoted(source: string, start: number, fence: string): number {
-  const close = source.indexOf(fence, start + fence.length);
-  return close === -1 ? source.length : close + fence.length;
+  // An escaped quote keeps the string open, so a fence the backslash reaches is
+  // not the closer. Stopped there, the rest of the literal was read as code.
+  for (let index = start + fence.length; index < source.length; index += 1) {
+    if (source[index] === "\\") {
+      index += 1;
+      continue;
+    }
+    if (source.startsWith(fence, index)) return index + fence.length;
+  }
+  return source.length;
 }
 
 /** Which span kinds {@link maskJsNonCode} blanks. */
@@ -497,6 +528,33 @@ export type JsMaskOptions = {
    * code — an apostrophe in it as a quote, taking the annotation after it.
    */
   readonly nestedBlockComments?: boolean;
+
+  /**
+   * Read `#[` as a comment like any other `#`. Default `false`.
+   *
+   * `true` for Python, where every `#` opens one. PHP and Rust write an
+   * attribute that way, so the shared rule leaves `#[` as code — and a Python
+   * comment beginning with it was then scanned, its apostrophe opening a span
+   * that took the annotation after it.
+   */
+  readonly hashBracketComments?: boolean;
+
+  /**
+   * Recognise `=begin` / `=end` block comments. Default `false`.
+   *
+   * `true` for Ruby. Unrecognised, the lines between them are read as code, and
+   * an apostrophe in one opens a span over the annotation beside it.
+   */
+  readonly equalsBlockComments?: boolean;
+
+  /**
+   * Recognise Groovy's slashy and dollar-slashy strings. Default `false`.
+   *
+   * `/…/` and `$/…/$` are literals there wherever a value may stand, so an id
+   * written in one is data. Groovy keeps the slash rule for that reason, and
+   * this adds the dollar form the regex rule does not reach.
+   */
+  readonly dollarSlashyStrings?: boolean;
 };
 
 export function maskJsNonCode(source: string, options: JsMaskOptions = {}): string {
@@ -513,6 +571,9 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
   const phpHeredocs = options.phpHeredocs ?? false;
   const rustRawStrings = options.rustRawStrings ?? false;
   const nestedBlockComments = options.nestedBlockComments ?? false;
+  const hashBracketComments = options.hashBracketComments ?? false;
+  const equalsBlockComments = options.equalsBlockComments ?? false;
+  const dollarSlashyStrings = options.dollarSlashyStrings ?? false;
   const out = source.split("");
   // Whether the token just read closes an expression. It is the whole
   // regex-vs-division test: `a / b` divides, `= /re/` does not. Comments leave
@@ -530,7 +591,19 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
   while (i < source.length) {
     const ch = source[i] ?? "";
     const next = source[i + 1] ?? "";
-    if (hashComments && ch === "#" && next !== "[" && next !== "!") {
+    if (equalsBlockComments && ch === "=" && endOfEqualsBlockComment(source, i) !== -1) {
+      const end = endOfEqualsBlockComment(source, i);
+      i = blankComments ? blank(out, i, end) : end;
+    } else if (dollarSlashyStrings && ch === "$" && endOfDollarSlashy(source, i) !== -1) {
+      i = blank(out, i, endOfDollarSlashy(source, i));
+      endsExpression = true;
+      lastWord = "";
+    } else if (
+      hashComments &&
+      ch === "#" &&
+      (hashBracketComments || next !== "[") &&
+      next !== "!"
+    ) {
       const end = endOfLineComment(source, i);
       i = blankComments ? blank(out, i, end) : end;
     } else if (tripleQuoted && (ch === '"' || ch === "'") && source.startsWith(ch.repeat(3), i)) {

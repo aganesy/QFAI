@@ -68,6 +68,12 @@ const QUOTED = String.raw`${DOUBLE_QUOTED}|'(?:[^'\\\n]|\\.)*'`;
  */
 const CSHARP_QUOTED = String.raw`@"(?:[^"]|"")*"|"""[\s\S]*?"""|${DOUBLE_QUOTED}`;
 
+/** A Java string literal: one line, or a text block. */
+const JAVA_QUOTED = String.raw`"""[\s\S]*?"""|${DOUBLE_QUOTED}`;
+
+/** A Scala string literal: one line, or triple-quoted. */
+const SCALA_QUOTED = String.raw`"""[\s\S]*?"""|${QUOTED}`;
+
 /**
  * Where a language's tests carry a name written as a literal.
  *
@@ -121,11 +127,14 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
           tripleQuoted: true,
           slashComments: false,
           regexLiterals: false,
+          hashBracketComments: true,
         },
         [
           // A parameterized case takes its collected name from the id, so a
           // reference there is the test's name and not fixture data.
-          namePattern(String.raw`\b(?<anchor>ids)\s*=\s*\[[^\]]*?(?<name>${QUOTED})`),
+          namePattern(
+            String.raw`(?<anchor>parametrize)\s*\([^)]*?\bids\s*=\s*\[[^\]]*?(?<name>${QUOTED})`,
+          ),
           namePattern(String.raw`(?<anchor>pytest\.param)\s*\([^)]*?\bid\s*=\s*(?<name>${QUOTED})`),
         ],
       ],
@@ -133,7 +142,7 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         ["rb"],
         // Ruby writes a regex between slashes as JavaScript does, and `%r{…}`
         // is one of its percent literals, so both forms are read.
-        { comments: false, hashComments: true, percentLiterals: true },
+        { comments: false, hashComments: true, percentLiterals: true, equalsBlockComments: true },
         [
           namePattern(
             String.raw`\b(?<anchor>it|test|describe|context|specify|example|scenario|feature)\s*\(?\s*(?<name>${QUOTED})`,
@@ -150,8 +159,29 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         ],
       ],
       [
-        ["java", "kt", "kts", "groovy"],
-        { comments: false, tripleQuoted: true, regexLiterals: false, nestedBlockComments: true },
+        // Java's block comments do not nest, and `test` / `describe` / `should`
+        // are not declarations there — its tests are named by annotations.
+        ["java"],
+        { comments: false, tripleQuoted: true, regexLiterals: false },
+        [
+          namePattern(
+            String.raw`(?<anchor>@DisplayName)\s*\(\s*(?:value\s*=\s*)?(?<name>${JAVA_QUOTED})`,
+          ),
+          namePattern(
+            String.raw`(?<anchor>@ParameterizedTest)\s*\([^)]*?\bname\s*=\s*(?<name>${JAVA_QUOTED})`,
+          ),
+        ],
+      ],
+      [
+        // Groovy keeps the slash rule for its slashy strings, and the dollar
+        // form beside it.
+        ["kt", "kts", "groovy"],
+        {
+          comments: false,
+          tripleQuoted: true,
+          nestedBlockComments: true,
+          dollarSlashyStrings: true,
+        },
         [
           namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${DOUBLE_QUOTED})`),
           namePattern(
@@ -176,10 +206,10 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         [
           namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${DOUBLE_QUOTED})`),
           namePattern(
-            String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${QUOTED})`,
+            String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${SCALA_QUOTED})`,
           ),
           namePattern(
-            String.raw`(?<name>${DOUBLE_QUOTED})\s*(?<anchor>\{|\b(?:in|should|must|can|when)\b)`,
+            String.raw`(?<name>${SCALA_QUOTED})\s*(?<anchor>\{|\b(?:in|should|must|can|when)\b)`,
           ),
         ],
       ],
@@ -188,7 +218,7 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         { comments: false, verbatimStrings: true, regexLiterals: false },
         [
           namePattern(
-            String.raw`\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${CSHARP_QUOTED})`,
+            String.raw`\[(?:Fact|Theory|Test|TestCase|TestMethod|DataTestMethod|Description)[^\]]*?\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${CSHARP_QUOTED})`,
           ),
         ],
       ],
@@ -197,10 +227,17 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         // either. Masked without the first, a real annotation in a test's own
         // name disappeared and the obligation read as uncovered.
         ["fs"],
-        { comments: false, verbatimStrings: true, parenStarComments: true, regexLiterals: false },
+        {
+          comments: false,
+          verbatimStrings: true,
+          parenStarComments: true,
+          regexLiterals: false,
+          // `'T` is a type parameter, and no closing apostrophe follows it.
+          lifetimes: true,
+        },
         [
           namePattern(
-            String.raw`\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${CSHARP_QUOTED})`,
+            String.raw`\[(?:Fact|Theory|Test|TestCase|TestMethod|DataTestMethod|Description)[^\]]*?\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${CSHARP_QUOTED})`,
           ),
           namePattern(
             String.raw`\b(?<anchor>testCase|testCaseAsync|ftestCase|ptestCase|testList|testProperty|testTheory)\s+(?<name>${CSHARP_QUOTED})`,
@@ -211,7 +248,13 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
       // as a quote it swallowed the trailing comment an annotation sits in.
       [
         ["rs"],
-        { comments: false, lifetimes: true, regexLiterals: false, rustRawStrings: true },
+        {
+          comments: false,
+          lifetimes: true,
+          regexLiterals: false,
+          rustRawStrings: true,
+          nestedBlockComments: true,
+        },
         [],
       ],
       [
