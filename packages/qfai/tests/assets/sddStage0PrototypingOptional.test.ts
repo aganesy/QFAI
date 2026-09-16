@@ -61,7 +61,10 @@ describe("Stage 0 treats prototyping.yaml as optional for UI-bearing packs", () 
         "Stop if `prototyping.yaml` is present in the latest UI-bearing pack and does not parse against the schema in",
       );
       expect(playbook).toContain(
-        "**Report — do not stop —** when `prototyping.yaml` is present in the latest UI-bearing pack and does not parse against the schema in",
+        // The pack this run consumes, not the latest on disk: an older one
+        // pinned by `discussion use` is the case the two differ in.
+        "**Report — do not stop —** when `prototyping.yaml` is present in the pack step 1 selected —",
+        "the one this run consumes, not the latest UI-bearing pack on disk",
       );
       expect(playbook).toContain("A malformed optional artifact is **not** a Stage 0 blocker");
       expect(playbook).toContain(RULES_CITATION);

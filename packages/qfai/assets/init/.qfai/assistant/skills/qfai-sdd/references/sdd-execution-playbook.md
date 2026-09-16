@@ -84,7 +84,7 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
    | A git rev, pack ignored       | Nothing: git holds no earlier content to compare        |
    | `working-tree+<content hash>` | Nothing: the prior contents are not recoverable from it |
 
-   **The middle row is the ordinary case.** `qfai init` writes
+   **The middle row is the ordinary case.** `npx qfai init` writes
    `.qfai/discussion/*` into the managed ignore block, so a pack is usually
    untracked and `git diff` — which compares tracked content — reports nothing
    about it whatever revision it is given. Check with `git check-ignore` or
