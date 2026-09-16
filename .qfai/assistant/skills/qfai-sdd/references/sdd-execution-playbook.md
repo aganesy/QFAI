@@ -30,6 +30,12 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
    pack, with the newest stamp among those. The path matched is the selected
    one, not the newest pack on disk.
 
+   **Compare the two as resolved paths.** The preflight reports an absolute
+   `selectedInputPath` while a summary records its target relative to the
+   project root, so a direct string comparison matches nothing: resolve the
+   summary's path against the root before comparing, or every review of the
+   pack reads as a review of another one.
+
    Three things bound that lookup.
 
    | Bound                        | Why                                                                         |
@@ -66,8 +72,13 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 
    | The review's `revision`       | Ask                                                     |
    | ----------------------------- | ------------------------------------------------------- |
-   | A git rev                     | `git diff --name-only <rev> HEAD -- <pack path>`        |
+   | A git rev                     | `git diff --name-only <rev> -- <pack path>`             |
    | `working-tree+<content hash>` | Nothing: the prior contents are not recoverable from it |
+
+   One revision, not two. `git diff <rev> HEAD` compares two commits and reports
+   nothing about a pack edited but not committed, which is the ordinary state of
+   a pack a review just ran against; the one-revision form compares that revision
+   with the working tree.
 
    Where the diff is empty the verdicts describe the pack as it stands. Where it
    is not, and where the revision is a working-tree hash, they may describe an
