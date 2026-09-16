@@ -32,6 +32,11 @@ describe("braceRangeMembers", () => {
     ['"a".."c"', ["a", "b", "c"]],
     ["'1'..'3'", ["1", "2", "3"]],
     ["'ab'..'c'", null],
+    // The increment loses its quotes with the endpoints.
+    ["p..p..'1'", ["p"]],
+    // The expander reads a character endpoint by its UTF-16 length, so a
+    // symbol outside the basic plane leaves the range as text.
+    ["\u{1F600}..\u{1F601}", null],
     ["a..e..2", ["a", "c", "e"]],
   ])("expands %s", (body, members) => {
     expect(braceRangeMembers(body)).toEqual(members);

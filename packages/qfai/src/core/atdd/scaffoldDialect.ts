@@ -407,9 +407,11 @@ function splitGlobAlternatives(inner: string, separator: "|" | ","): string[] {
  * `@`, `+` and `!` are here because each opens an extglob before a `(`, and `(`
  * for the other side of the same pair: a range expanding to either half leaves
  * a group the matcher reads, not a literal. So is `/`: a member carrying one
- * moves the boundary the segments either side are read against.
+ * moves the boundary the segments either side are read against. And so is a
+ * backslash, which escapes whatever follows it — `{Z..^}` produces one, and
+ * the character after the group stops meaning itself.
  */
-const GLOB_SYNTAX = /[*?[\]{}@+!()/]/;
+const GLOB_SYNTAX = /[*?[\]{}@+!()/\\]/;
 
 /**
  * The pattern with one brace group written out, when a member of it carries
@@ -562,6 +564,14 @@ export function compileGlob(
   let source = "";
   for (let index = 0; index < pattern.length; index += 1) {
     const char = pattern[index] ?? "";
+    // A backslash takes the next character's meaning away, so an escaped star
+    // is a star and an escaped dot a dot. A range can produce one — `{Z..^}` does — and the
+    // character it then escapes belongs to the pattern around the group.
+    if (char === "\\" && index + 1 < pattern.length) {
+      source += escapeRegExp(pattern[index + 1] ?? "");
+      index += 1;
+      continue;
+    }
     if (pattern[index + 1] === "(" && "@?*+!".includes(char)) {
       const close = findGroupClose(pattern, index + 1, "(", ")");
       if (close !== -1) {

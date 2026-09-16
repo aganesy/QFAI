@@ -50,9 +50,12 @@ function unquoted(endpoint: string): string {
 export function braceRangeMembers(body: string): readonly string[] | null {
   const parts = body.split("..");
   if (parts.length < 2 || parts.length > 3) return null;
-  const [rawFrom = "", rawTo = "", increment = ""] = parts;
+  const [rawFrom = "", rawTo = "", rawIncrement = ""] = parts;
   const from = unquoted(rawFrom);
   const to = unquoted(rawTo);
+  // The increment loses its quotes with the endpoints: `{p..p..'1'}` expands to
+  // `p`, measured. Validated with them on, the whole range read as text.
+  const increment = unquoted(rawIncrement);
   if (!/^[+-]?\d*$/.test(increment)) return null;
   const step = Math.max(1, Math.abs(Number(increment)));
   // The forms the expander reads as numbers, measured: `1e3` expands as 1000
@@ -65,7 +68,11 @@ export function braceRangeMembers(body: string): readonly string[] | null {
   if (whole(from) && whole(to)) {
     return numericRangeMembers(from, to, increment, step);
   }
-  if (Array.from(from).length === 1 && Array.from(to).length === 1) {
+  // Measured: the expander reads a character endpoint by its UTF-16 length, so
+  // `{😀..😁}` is left as text. Counted by code point instead, this expanded a
+  // range the matcher never expands, and the writer chose a name under a
+  // directory the scan does not reach.
+  if (from.length === 1 && to.length === 1) {
     return characterRangeMembers(from, to, step);
   }
   return null;
