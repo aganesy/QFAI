@@ -55,6 +55,7 @@ const LINT_PROFILE: Profile = {
     "pnpm format:check",
     "pnpm lint",
     "pnpm lint:md",
+    "pnpm -C packages/qfai lint:md:shipped",
     "pnpm lint:mermaid",
     "pnpm lint:mdschema",
     "pnpm -C packages/qfai lint:shipping",
@@ -77,6 +78,7 @@ const LINT_PROFILE: Profile = {
     ["pnpm lint"],
     [
       "pnpm lint:md",
+      "pnpm -C packages/qfai lint:md:shipped",
       "pnpm lint:mermaid",
       "pnpm lint:mdschema",
       "pnpm -C packages/qfai lint:shipping",
@@ -117,6 +119,7 @@ const GATE_PROFILE: Profile = {
     "pnpm format:check",
     "pnpm lint",
     "pnpm lint:md",
+    "pnpm -C packages/qfai lint:md:shipped",
     "pnpm lint:mermaid",
     "pnpm lint:mdschema",
     "node ./scripts/check-bidi.mjs",
@@ -126,7 +129,12 @@ const GATE_PROFILE: Profile = {
   groups: [
     ["pnpm format:check"],
     ["pnpm lint"],
-    ["pnpm lint:md", "pnpm lint:mermaid", "pnpm lint:mdschema"],
+    [
+      "pnpm lint:md",
+      "pnpm -C packages/qfai lint:md:shipped",
+      "pnpm lint:mermaid",
+      "pnpm lint:mdschema",
+    ],
     [
       "node ./scripts/check-bidi.mjs",
       "node ./scripts/check-readme-alignment.mjs",
