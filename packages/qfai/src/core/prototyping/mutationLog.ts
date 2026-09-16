@@ -248,13 +248,21 @@ async function firstAbsentInChain(from: string): Promise<string | null> {
   // The budget bounds the links followed, and the entry after the last of them
   // is still the one an append would create. Returning null there left a failed
   // first write with no file to take away.
-  return await lstat(current).then(
-    () => null,
+  const beyond = await lstat(current).then(
+    (stats) => stats,
     (cause: unknown) => {
-      if (isEnoent(cause)) return current;
+      if (isEnoent(cause)) return null;
       throw cause;
     },
   );
+  if (beyond === null) return current;
+  // Another link past the budget: this cannot say what an append would create,
+  // and the system may well create it. Refused rather than reported as a path
+  // with nothing to undo, which would have skipped the cleanup a failed first
+  // write needs.
+  if (beyond.isSymbolicLink())
+    throw new Error(`${from} resolves through more than ${LINK_HOPS} links`);
+  return null;
 }
 
 /** Whether the bytes from `from` on, read through `handle`, are this write's own. */
