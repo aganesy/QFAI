@@ -128,9 +128,12 @@ describe.each(TREES)("%s", (tree) => {
       for (const index of [1, 3, 4, 5, 6, 7, 8]) {
         expect(cells[index]).toBe("✅/⚠️/❌/n/a");
       }
-      // The two that always apply: every row has a normal path, and every case
-      // it holds has an assertion that either can fail or cannot.
-      expect(cells[2]).toBe("✅/⚠️/❌");
+      // A US row always owes a normal path; a TC row declaring a non-normal
+      // Type is one non-normal scenario, and the template puts the normal one
+      // in a sibling case.
+      expect(cells[2]).toBe(row === "US-0001" ? "✅/⚠️/❌" : "✅/⚠️/❌/n/a");
+      // Oracle strength always applies: every case has an assertion that
+      // either can fail or cannot.
       expect(cells[9]).toBe("✅/⚠️/❌");
     }
     expect(headerCells(await read(tree, CHECKLIST), "BR-0001")[2]).toBe("✅/⚠️/❌/n/a");

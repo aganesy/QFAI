@@ -198,12 +198,14 @@ Use the shared schema.
     — a contract per row for the first two, a stub file per row for the third. Exit 1 alone is not `REVISE` here; residue that is unrecorded, unattributable, or attributed to this spec is (`references/cross-spec-obligations.md`);
   - Matrix production and review carry governing US/AC/BR/TC sections,
     referenced contracts and relevant types/schemas for kept-failure judgments.
-    Map each owned contract failure to a scored existing US/TC row. In the
-    `coverage` phase the mapping names the row and the assertion the later phase
-    will write, since no acceptance test exists yet there; the assertion itself
-    is read at the completion review, after `red` and `implementation` have
-    created it, and a mapping that names no row at either point is upstream
-    DRIFT rather than a clean matrix. Preserve declared valid coverage and all
+    Map each owned contract failure to the row that covers it: a scored US/TC
+    row where one owns the obligation, and otherwise the contract's own API or
+    Integration row, which a contract with no user story has and which this
+    stage seeds directly. In the `coverage` phase the mapping names the row and
+    the assertion the later phase will write, since no acceptance test exists yet
+    there; the assertion itself is read at the completion review, after `red` and
+    `implementation` have created it, and a failure no row of either kind covers
+    is upstream DRIFT rather than a clean matrix. Preserve declared valid coverage and all
     oracle checks;
   - Drift Protocol is enforced;
   - test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`;

@@ -170,9 +170,14 @@ no state machine, no interacting conditions — and an uncovered obligation
 remains ❌. Every column may carry `n/a` on the row whose obligation it names,
 because a category that does not exist cannot be covered and demanding a mark
 for it would have an analyst invent coverage or record a blocking gap for
-nothing. Normal path and Oracle strength are the two that never do: every row
-has a normal path, and every case it holds has an assertion that either can
-fail or cannot.
+nothing. Oracle strength is the one that never does: every case a row holds has
+an assertion that either can fail or cannot.
+
+`Normal path` is owed by every `US-*` row and by a `TC-*` row whose declared
+`Type` is `normal`. A `TC-*` declaring `error`, `boundary` or `edge` **is** one
+non-normal scenario, and the template puts the normal one in a sibling case, so
+that row marks `Normal path` `n/a` and the sibling carries it. Demanding both of
+one row asks the analyst to write a case the schema puts somewhere else.
 
 **Every section above is scored.** Sections 1–6 and 8 are matrix columns;
 section 7 is the business rule table that follows the matrix. A section with no
@@ -186,10 +191,10 @@ ledger's evidence payload, not the matrix artifact that the PASS/REVISE criteria
 below read. Write the matrix once, in its own file, and link it from the stage
 evidence.
 
-| US/TC ID | Equivalence partitions | Normal path | Error path   | Edge cases   | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
-| -------- | ---------------------- | ----------- | ------------ | ------------ | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
-| US-0001  | ✅/⚠️/❌/n/a           | ✅/⚠️/❌    | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a    | ✅/⚠️/❌/n/a   | ✅/⚠️/❌/n/a      | ✅/⚠️/❌/n/a  | ✅/⚠️/❌        | —      |
-| TC-0001  | ✅/⚠️/❌/n/a           | ✅/⚠️/❌    | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a    | ✅/⚠️/❌/n/a   | ✅/⚠️/❌/n/a      | ✅/⚠️/❌/n/a  | ✅/⚠️/❌        | —      |
+| US/TC ID | Equivalence partitions | Normal path  | Error path   | Edge cases   | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
+| -------- | ---------------------- | ------------ | ------------ | ------------ | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
+| US-0001  | ✅/⚠️/❌/n/a           | ✅/⚠️/❌     | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a    | ✅/⚠️/❌/n/a   | ✅/⚠️/❌/n/a      | ✅/⚠️/❌/n/a  | ✅/⚠️/❌        | —      |
+| TC-0001  | ✅/⚠️/❌/n/a           | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a    | ✅/⚠️/❌/n/a   | ✅/⚠️/❌/n/a      | ✅/⚠️/❌/n/a  | ✅/⚠️/❌        | —      |
 
 ### Business rule coverage (§7)
 

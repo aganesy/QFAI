@@ -67,7 +67,7 @@ changed.
 
 ## Proposed change
 
-Qualify the four rows by what the row keeps, leaving the demand in place for
+Qualify the nine rows by what the row keeps, leaving the demand in place for
 every row that keeps a failure:
 
 | Row            | Today                                   | Proposed                                                                                        |
@@ -90,11 +90,12 @@ the rows point at it rather than restating it.
 
 | Item                 | Kind         | Why it depends on the artifact                            |
 | -------------------- | ------------ | --------------------------------------------------------- |
-| `spec-0008/TDD-0012` | `ledger-row` | Its test case is one of the four rows this record changes |
-| `spec-0013/TDD-0013` | `ledger-row` | Its test case is one of the six rows this record changes  |
+| `spec-0008/TDD-0012` | `ledger-row` | Its test case is one of the nine rows this record changes |
+| `spec-0013/TDD-0013` | `ledger-row` | Its test case is one of the nine rows this record changes |
 
-- Not blocked: every other row of either pack. The change is to what these six
-  rows demand of a row keeping no failure. The rule table entry and the case
+- Not blocked: every other row of either pack. The change is to what these nine
+  rows demand of a row keeping no failure — five in spec-0008 and four in
+  spec-0013. The rule table entry and the case
   that verifies it are included because either one left as it stands re-states
   the demand its acceptance criterion no longer makes.
 - Overlapping open CRs: `none`.
