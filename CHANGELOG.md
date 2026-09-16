@@ -853,6 +853,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   build tree. A document in one that a step names is now read, because the host
   opens it, so a step naming one that cannot be read is reported.
 
+- **A loop restarted at cycle 0 holds no evidence until it captures again**
+  (#1765). The cycle-0 reset backed up `iter-00` and removed the other
+  iteration directories, but left the aggregate `screenshots/` and `html/`
+  directories a capture pass mirrors into. The required-path check reads those
+  first, so after `iterate --cycle 0 --force` without `--capture`, and after a
+  cycle 0 in a project holding only aggregate files, `qfai validate` passed on
+  the previous loop's captures. Every cycle-0 reset now moves the two directories
+  into `aggregate.backup-<ISO>/`, beside the `iter-00` backup, and logs each
+  moved file to `mutation-log.jsonl`. They are moved rather than deleted
+  because the same reset removes the iteration directories they were copied
+  from.
+
+  The gate that decides whether a reset is destructive reads the `iter-00`
+  entry itself rather than what it points at, so a link there is backed up like
+  a directory. Read through the link, a dangling one looked like an absent
+  `iter-00`: the reset moved the aggregates and then failed to create `iter-00`
+  over the link still sitting in its place.
+
+  Both backups a reset writes, this one and the `iter-00` backup, are left out
+  of the completion certificate's evidence digests. They hold the previous
+  loop's evidence, and sealed into the next certificate, removing one failed
+  `certify --check` although nothing of the new loop had changed.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
