@@ -141,6 +141,48 @@ When there are no answered demands, write `None`.
 A report of a new defect or evidence that an answer no longer applies must
 state what changed. The existing severity floor and escalation rules still apply.
 
+### Discussion review precision
+
+A discussion review judges what the planning stage decides, not implementation
+precision. Exact code-line edits, generated-copy updates and merge mechanics
+belong to the stage implementing the change. They may be reported as advice,
+not demanded as extra discussion completion work.
+
+Advice is not a verdict. A reviewer whose vocabulary is `PASS` or `REVISE` alone
+returns `PASS` and records the advice in its findings, and the review request's
+rule says the same: an item marked non-normative under this section is carried
+to the implementing stage rather than starting a fix-and-rerun cycle. Reported
+as a demand instead, it makes the discussion stage owe work this section has
+just placed elsewhere.
+
+**How it is written.** In the shape every finding takes
+(`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`):
+`Severity: advisory`, and `Traces to: none` where the item names no obligation
+the pack carries — which is the usual case here, since the subject is how a
+later stage implements something already agreed. An advisory tracing to `none`
+takes the Change Request path only where it proposes a new obligation; advice
+about implementing an existing one proposes nothing and needs no record beyond
+the disposition the next stage gives it.
+
+**A cycle that reruns one reviewer keeps the others' findings.** The pack is the
+cycle's record, not the rerun's: a reviewer that passed is not re-run, its
+verdict stands, and its advice stands in the same pack the next stage reads.
+A rerun that dropped it would lose the advice of every reviewer who found
+nothing blocking.
+
+**Where it goes.** The advice stays in the review pack's findings, under the
+discussion pack the next stage inventories at its Stage 0 as non-normative
+reference material, like every other part of that pack. That stage gives each
+item a disposition in its own artifacts — a plan step, a spec row, an open
+question, or a line in its evidence saying it was read and not adopted — and
+nothing is back-propagated into the pack. What it may not do is leave an item
+unmentioned: a decision nobody wrote down cannot be told from an item nobody
+read.
+
+Wrong repository facts, missing decision traceability, scope contradictions and
+defects in the pack's own safety obligations remain in remit. Non-normative
+status is not permission to pass those.
+
 ### Agent-to-agent grilling (MUST)
 
 A grilling session between agents has no user answering its questions, so the

@@ -16,16 +16,109 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 
 ## Stage 0: Preflight
 
-1. Identify the latest discussion-pack, if there is one.
+1. Identify the input this run reads, if there is one: the preflight result's
+   `selectedInputPath`, which is the newest pack by default and an older one once
+   `npx qfai discussion use <id>` has pinned it — so recomputing the newest here
+   would source requirements from one pack and advice from another.
+
+   **Read `source` beside it.** An import-lite run reports `import-lite` and
+   points that path at an `.qfai/evidence/import-lite-*.md` file, not a pack
+   directory. Steps 2, 3 and the `prototyping.yaml` step below are about a pack;
+   on an import-lite input they have nothing to inventory and no review to match,
+   and running them anyway searches for discussion reviews of an evidence file.
+
 2. Note which of its files are missing, and any blocking OQ, as reference-quality
    facts — they are recorded, not blocking. A pack is non-normative reference
    material (`.qfai/assistant/constitution/drift-protocol.md#core-rule`), so do NOT repair or
    re-run it to make this gate pass; a correction it implies belongs in the
    SDD-owned artifact, with the discrepancy noted in delta/evidence.
-3. Stop only when there is no usable source at all: no pack, no import-lite
+3. Read the review findings for the pack step 1 selected, from its COMPLETED
+   reviews — the directories whose `summary.json#target.path` names that pack.
+   The path matched is the selected one, not the newest pack on disk, and the
+   reviews read are all of them rather than the newest alone; what that means for
+   each is below.
+
+   **Compare the two as resolved paths.** The preflight reports an absolute
+   `selectedInputPath` while a summary records its target relative to the
+   project root, so a direct string comparison matches nothing: resolve the
+   summary's path against the root before comparing, or every review of the
+   pack reads as a review of another one.
+
+   Three things bound that lookup.
+
+   | Bound                        | Why                                                                         |
+   | ---------------------------- | --------------------------------------------------------------------------- |
+   | Completed only               | A directory with no `summary.json` is a cycle that was interrupted          |
+   | Archived directories too     | An older pack's review is moved out of the top level after its time to live |
+   | The revision the review read | Verdicts describe the state the pack was in, not the state it is in         |
+
+   A directory with no `summary.json` is skipped whatever its stamp. Reviewers
+   are dispatched before the summary is written, so such a directory can hold
+   `Rxx_*.md` responses — unsealed, unreconciled, and possibly superseded by the
+   completed cycle beside them. Taking the newest directory rather than the
+   newest completed one hides advice that still applies, and taking its
+   responses carries advice nobody signed.
+
+   **Read every completed review of the pack, newest first, not only the newest
+   one.** A blocking finding starts a fix-and-rerun cycle, so the next completed
+   review is evidence it was answered. Non-normative advice starts no cycle and a
+   later review is not required to repeat it, so an item the newest review does
+   not mention is not thereby closed. Carry forward each one no later review
+   answers, and take the newest review's wording where two describe the same
+   thing.
+
+   Look in `.qfai/review/_archive/review-*/` as well as `.qfai/review/review-*/`.
+   `npx qfai doctor --clean` moves an eligible review there once it is older than
+   the configured time to live, so a pack selected by `npx qfai discussion use <id>`
+   is exactly the case whose review has most likely been archived, and a lookup
+   over the top level alone reports it as a pack nobody reviewed.
+
+   Ask whether the pack changed after the review, and read the verdicts against
+   the answer. `summary.json#revision` addresses a whole tree — a git rev, or
+   `working-tree+<content hash>` for an uncommitted one — never the pack alone,
+   so it is the input to that question and not the answer to it.
+
+   | The review's `revision`       | Ask                                                     |
+   | ----------------------------- | ------------------------------------------------------- |
+   | A git rev, pack tracked       | `git diff --name-only <rev> -- <pack path>`             |
+   | A git rev, pack ignored       | Nothing: git holds no earlier content to compare        |
+   | `working-tree+<content hash>` | Nothing: the prior contents are not recoverable from it |
+
+   **The middle row is the ordinary case.** `qfai init` writes
+   `.qfai/discussion/*` into the managed ignore block, so a pack is usually
+   untracked and `git diff` — which compares tracked content — reports nothing
+   about it whatever revision it is given. Check with `git check-ignore` or
+   `git ls-files` before reading an empty diff as an unchanged pack.
+
+   One revision, not two. `git diff <rev> HEAD` compares two commits and reports
+   nothing about a pack edited but not committed, which is the ordinary state of
+   a pack a review just ran against; the one-revision form compares that revision
+   with the working tree.
+
+   Where the diff is empty the verdicts describe the pack as it stands. Where it
+   is not, and where the revision is a working-tree hash, they may describe an
+   earlier state: disposition what still applies, and record the ones an edit
+   answered as answered rather than carrying them forward as open findings about
+   text that no longer exists. Unrelated repository content moving does not make
+   a finding stale, which is why the question is asked over the pack's own paths
+   and not over the revision value.
+   An earlier cycle's advice was answered by the fix that closed it, and reading
+   it again re-raises work the pack has already done. Take in the items a
+   reviewer marked non-normative under
+   `.qfai/assistant/constitution/review-convergence.md#discussion-review-precision`.
+   A review of another pack, or of an SDD or implementation cycle, is not this
+   run's input. They are reference-quality facts like the rest of the pack, and
+   each one gets a disposition in an SDD-owned artifact: the row, step or open
+   question it became, or a line in this run's evidence saying it was read and
+   not adopted, with why. Silence is not a disposition — it cannot be told from
+   never having read the item. Nothing goes back into the pack.
+
+4. Stop only when there is no usable source at all: no pack, no import-lite
    input, and no explicit user requirement.
-4. **Report — do not stop —** when `prototyping.yaml` is present in the latest UI-bearing pack
-   and does not parse against the schema in
+5. **Report — do not stop —** when `prototyping.yaml` is present in the pack step 1 selected —
+   the one this run consumes, not the latest UI-bearing pack on disk, or the report names a
+   side artifact belonging to a discussion nobody here reads — and does not parse against the
+   schema in
    `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md#prototypingyaml`.
    Record the file and what failed to parse, and continue; `/qfai-prototyping` is where an
    unusable recommendation actually bites, and it re-reads the file.
