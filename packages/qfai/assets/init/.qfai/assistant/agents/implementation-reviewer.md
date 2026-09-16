@@ -68,23 +68,27 @@ tools: [Read, Glob, Grep, Bash]
      asks for the two together, so a PASS on one alone accepts half of what it
      asks.
   2. The Plan's three usages are cited, every row still to deliver one is **in
-     the confirmed queue of this invocation**, and each of those rows carries a
-     `Blocked-By` naming this count. **The count is then taken over those rows,
-     not over the one under review.** Delivered by separate rows, the first
-     consumer to land is one, and a REVISE there stops the rest from ever being
-     selected — a verdict the row cannot satisfy and no later row can lift. Name
-     the open rows, and take the count when the last of them lands.
+     the confirmed queue of this invocation**, and the owning `10_Plan.md`
+     records those rows as the outstanding usages. **The count is then taken
+     over those rows, not over the one under review.** Delivered by separate
+     rows, the first consumer to land is one, and a REVISE there stops the rest
+     from ever being selected — a verdict the row cannot satisfy and no later
+     row can lift. Name the open rows, and take the count when the last of them
+     lands.
 
   Two things bound the second.
   The queue is one: a usage owed by a spec nobody has queued is a usage no run
   will write, so the element stays local to its one consumer until the spec that
   needs it is queued beside this one.
-  The recorded `Blocked-By` is the other, and it is what survives the invocation.
-  A queue can be interrupted, and a later row can be blocked for its own reasons;
-  without a record, the next invocation meets an element that was neither
-  introduced nor extracted by the change in front of it and never counts it
-  again. With one, the count is owed until the last delivery row lands, whichever
-  invocation lands it.
+  The Plan's record is the other, and it is what survives the invocation. A queue
+  can be interrupted, and a later row can be blocked for its own reasons; without
+  a record, the next invocation meets an element that was neither introduced nor
+  extracted by the change in front of it and never counts it again. With one, the
+  count is owed until the last delivery row lands, whichever invocation lands it
+  — and the Plan is where it goes because this reviewer already reads it, while
+  `Blocked-By` belongs to a `blocked` row and a blocked row is never selected, so
+  writing the outstanding rows there would stop them delivering what the record
+  is waiting for.
 
   **The Plan read is the one that owns the element**, resolved through the same
   `paths.specsDir`. For a change removing a consumer the element usually belongs
