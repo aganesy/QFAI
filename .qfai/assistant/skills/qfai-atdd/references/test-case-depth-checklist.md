@@ -1,7 +1,61 @@
 # Test Case Depth Checklist
 
-This checklist ensures test cases cover not only happy paths but also boundary values, error paths, edge cases, and combinatorial scenarios.
+This checklist covers declared behavior, boundaries, combinations and kept failures.
 Reviewers MUST use this checklist when evaluating test case completeness during ATDD and SDD review gates.
+
+## Scoring scope
+
+A **kept failure** is one of:
+
+- A failure named by a specification.
+- A failure actually observed, whatever a type or schema says: the observation
+  happened, so a schema claiming it cannot is a contradiction the Drift Protocol
+  settles rather than a reason to drop the row.
+- A failure declared by an active CON-API or CON-DB owned by the reviewed spec.
+- A failure required by the safety floor in
+  `.agents/rules/minimal-implementation.md` § 2.
+
+A declared failure stays kept whatever a type or schema says. Excluding it here
+would let the same conflict be dropped from the matrix by one rule while the
+paragraph below routes it as DRIFT, and the analyst choosing the first
+instruction erases an obligation nobody upstream retired. What a type or schema
+settles is where the failure is handled, not whether it is scored.
+
+Score every kept failure whether or not handling code exists yet. Declared
+valid behavior always remains scored; failure-side bullets apply only to kept failures.
+
+Contract-derived failures are scored only for active, owned whole contracts;
+a planned contract contributes no contract-derived failure obligation in this
+slice. Read API `x-qfai-status: planned` at the document root or, when absent or
+unreadable, in a column-0 comment, never an API operation. A DB marker is a
+standalone SQL comment, `-- x-qfai-status: planned`; leading whitespace is
+allowed, trailing SQL is not. Explicit specification failures and actual
+observations remain kept even when a contract is deferred, as do safety-floor
+failures. Sibling ownership follows
+`.qfai/assistant/skills/qfai-atdd/references/cross-spec-obligations.md`.
+
+A type or schema excludes a failure only after the value has passed that type
+or schema's validation. Untrusted input still requires boundary validation and
+rejection under the safety floor. If a specification or contract names a failure
+that conflicts with a type or schema, record DRIFT and route it to the upstream
+owner. Do not erase the declared obligation or mark it n/a while that conflict
+is unresolved.
+
+Map every kept CON-API or CON-DB failure to the row that covers it: a US/TC row
+of the matrix where one owns the obligation, and otherwise the contract's own
+row — `CON-API-*` is carried by an API row and `CON-DB-*` by an Integration one,
+which the constitution routes directly and `/qfai-sdd` seeds directly. Name the
+contract ID and the failure clause. **A contract with no US/TC is an ordinary
+API-only or contract-only flow, not drift**; what is drift is a failure no row of
+either kind covers.
+
+Cite the API or Integration assertion **where the test exists**. In the blocking
+`coverage` phase none does, so the mapping names the row and the assertion a
+later phase will write; the assertion itself is read at the completion review,
+after `red` and `implementation` have created it. Happy-path annotations alone do
+not cover the failure at either point. No additional table or column is required.
+Sibling obligations follow the existing cross-spec ownership rule; do not invent
+a local US/TC row to discharge them.
 
 ## Where the matrix lives
 
@@ -24,8 +78,9 @@ Scored as the `Equivalence partitions` cell of the matrix below.
 For each input parameter or condition:
 
 - [ ] Valid partitions identified with at least one representative test case each.
-- [ ] Invalid partitions identified with at least one representative test case each.
-- [ ] Special value partitions identified (null, empty, zero, default) with test cases.
+- [ ] Invalid partitions identified with at least one representative test case each, only for kept failures.
+- [ ] Valid special-value partitions (null, empty, zero, default) identified with test cases.
+- [ ] Invalid special-value partitions (null, empty, zero, default) tested only for kept failures.
 
 ## 2. Boundary Value Analysis (境界値分析)
 
@@ -33,35 +88,40 @@ For each numeric, date, string-length, or ordered domain:
 
 - [ ] Minimum valid value tested.
 - [ ] Maximum valid value tested.
-- [ ] Just below minimum (invalid) tested.
-- [ ] Just above maximum (invalid) tested.
-- [ ] Off-by-one boundaries tested where applicable.
+- [ ] Just below minimum (invalid) tested only for kept failures.
+- [ ] Just above maximum (invalid) tested only for kept failures.
+- [ ] Off-by-one boundaries within the declared valid domain tested where applicable.
 
 ## 3. Normal / Error / Edge Path Coverage (正常系・異常系・エッジケース)
 
 Scored as the `Normal path`, `Error path` and `Edge cases` cells of the matrix
-below — one cell per bullet, so the edge-case bullet cannot pass unscored on a
-row whose normal and error cells are ✅.
+below. Both edge-case bullets belong to `Edge cases`; neither can pass
+unscored on a row whose normal and error cells are ✅.
 
 For each US or TC:
 
 - [ ] At least one normal (happy) path test case exists.
-- [ ] At least one error/failure path test case exists (invalid input, missing data, unauthorized access, etc.).
-- [ ] Edge cases identified and tested (concurrent access, timing, empty collections, maximum payload, etc.).
+- [ ] A test case exists for each kept failure — every one, not one of them (invalid input, missing data, unauthorized access). The `Error path` cell is ✅ only when none is left over.
+- [ ] Valid edge cases identified and tested (concurrent access, timing, empty collections, maximum payload).
+- [ ] Failure edge cases tested only for kept failures (concurrent access, timing, empty collections, payload limits).
 
 ## 4. Special Values (特殊値)
 
-- [ ] Null / undefined / missing values handled.
-- [ ] Empty strings, empty arrays, empty objects handled.
-- [ ] Maximum-length strings or maximum-size payloads handled.
-- [ ] Special characters (Unicode, control characters, SQL injection patterns) considered where applicable.
+- [ ] Null / undefined / missing values tested where valid.
+- [ ] Invalid null / undefined / missing values tested only for kept failures.
+- [ ] Empty strings, empty arrays, empty objects tested where valid.
+- [ ] Invalid empty strings, arrays or objects tested only for kept failures.
+- [ ] Maximum-length strings and maximum-size payloads tested where valid.
+- [ ] Length or payload-limit failures tested only for kept failures.
+- [ ] Special characters tested where valid (Unicode, control characters, literal SQL-like text).
+- [ ] Special-character failures tested only for kept failures (Unicode, control characters, SQL injection patterns).
 
 ## 5. State Transitions (状態遷移)
 
 For business flows with state machines or multi-step processes:
 
 - [ ] All valid state transitions have test cases.
-- [ ] Invalid state transitions are tested and rejected.
+- [ ] Invalid state transitions tested and rejected only for kept failures.
 - [ ] Terminal / end states are reachable and verified.
 
 ## 6. Combinatorial Coverage (組み合わせ)
@@ -69,7 +129,7 @@ For business flows with state machines or multi-step processes:
 When multiple conditions interact:
 
 - [ ] Key condition combinations tested (at minimum pairwise for high-risk interactions).
-- [ ] Conflicting or contradictory input combinations tested.
+- [ ] Conflicting or contradictory input combinations tested only for kept failures.
 
 ## 7. Business Rule Coverage (ビジネスルール網羅)
 
@@ -78,7 +138,8 @@ Scored in the **Business rule coverage** table below the matrix, one row per
 spans several `TC`s and one `TC` realizes several `BR-*`, so it has no matrix
 row to sit in and gets its own table in the same file.
 
-- [ ] Every active BR-\* declared in 04_Business-Rules.md has at least one positive and one negative test case.
+- [ ] Every active BR-\* declared in 04_Business-Rules.md has at least one positive test case.
+- [ ] Negative business-rule cases tested only for kept failures.
 - [ ] Conditional business rules have test cases for each branch.
 
 ## 8. Oracle Strength (オラクル強度)
@@ -102,7 +163,21 @@ case's assertion can fail. A test that cannot fail satisfies every category.
 ## Coverage Depth Matrix (テンプレート)
 
 Reviewers and test-design-analysts MUST produce this matrix for each spec under review.
-Mark each cell: ✅ covered, ⚠️ partial, ❌ missing.
+Mark applicable cells: ✅ covered, ⚠️ partial, ❌ missing. Use `n/a` only where
+the category's own obligation is absent for this row — no kept failure, no
+ordered or sized domain to have boundaries, no special value the input admits,
+no state machine, no interacting conditions — and an uncovered obligation
+remains ❌. Every column may carry `n/a` on the row whose obligation it names,
+because a category that does not exist cannot be covered and demanding a mark
+for it would have an analyst invent coverage or record a blocking gap for
+nothing. Oracle strength is the one that never does: every case a row holds has
+an assertion that either can fail or cannot.
+
+`Normal path` is owed by every `US-*` row and by a `TC-*` row whose declared
+`Type` is `normal`. A `TC-*` declaring `error`, `boundary` or `edge` **is** one
+non-normal scenario, and the template puts the normal one in a sibling case, so
+that row marks `Normal path` `n/a` and the sibling carries it. Demanding both of
+one row asks the analyst to write a case the schema puts somewhere else.
 
 **Every section above is scored.** Sections 1–6 and 8 are matrix columns;
 section 7 is the business rule table that follows the matrix. A section with no
@@ -116,10 +191,10 @@ ledger's evidence payload, not the matrix artifact that the PASS/REVISE criteria
 below read. Write the matrix once, in its own file, and link it from the stage
 evidence.
 
-| US/TC ID | Equivalence partitions | Normal path | Error path | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
-| -------- | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
-| US-0001  | ✅/⚠️/❌               | ✅/⚠️/❌    | ✅/⚠️/❌   | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
-| TC-0001  | ✅/⚠️/❌               | ✅/⚠️/❌    | ✅/⚠️/❌   | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
+| US/TC ID | Equivalence partitions | Normal path  | Error path   | Edge cases   | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
+| -------- | ---------------------- | ------------ | ------------ | ------------ | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
+| US-0001  | ✅/⚠️/❌/n/a           | ✅/⚠️/❌     | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a    | ✅/⚠️/❌/n/a   | ✅/⚠️/❌/n/a      | ✅/⚠️/❌/n/a  | ✅/⚠️/❌        | —      |
+| TC-0001  | ✅/⚠️/❌/n/a           | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a | ✅/⚠️/❌/n/a    | ✅/⚠️/❌/n/a   | ✅/⚠️/❌/n/a      | ✅/⚠️/❌/n/a  | ✅/⚠️/❌        | —      |
 
 ### Business rule coverage (§7)
 
@@ -136,7 +211,7 @@ an unjustified ❌ here is the same REVISE.
 
 | BR ID   | Positive case | Negative case | Conditional branches | Covering TC | Status |
 | ------- | ------------- | ------------- | -------------------- | ----------- | ------ |
-| BR-0001 | ✅/⚠️/❌      | ✅/⚠️/❌      | ✅/⚠️/❌/n/a         | TC-0001     | —      |
+| BR-0001 | ✅/⚠️/❌      | ✅/⚠️/❌/n/a  | ✅/⚠️/❌/n/a         | TC-0001     | —      |
 
 ### Evaluation criteria
 
@@ -148,10 +223,19 @@ an unjustified ❌ here is the same REVISE.
   a missing ✅, or no row filled in as templated could ever pass.
 - **PASS**: All scored cells in both tables are ✅, ⚠️ with documented rationale
   for partial coverage, or `n/a`. `n/a` says the category does not exist for
-  this row — an unconditional `BR-*` has no branches to cover — and is the
+  this row — an unconditional `BR-*` has no branches to cover, and an `Error
+path` or `Negative case` cell may have no kept failures — and is the
   templated value of `Conditional branches`; it is not a coverage gap and never
   needs a justification. Use it only where the obligation is absent, not where
   it is unmet: an uncovered category is ❌.
+- **A safety-floor failure is not waivable.** Where a cell's kept failures
+  include one required by the safety floor in
+  `.agents/rules/minimal-implementation.md` § 2 — validation of input crossing a
+  trust boundary, error handling that prevents data loss, security,
+  accessibility — that cell is ✅ or the row is a REVISE. Neither `⚠️` with a
+  rationale nor `❌` with a Decision Record discharges it: the floor is what the
+  ladder never removes, and a gate that a written reason can open is not a
+  floor.
 - **Oracle strength is not waivable by category coverage.** A row whose eight
   category cells are ✅ and whose Oracle strength cell is ❌ is a REVISE: it has
   cases in every category and no evidence that any of them can fail.

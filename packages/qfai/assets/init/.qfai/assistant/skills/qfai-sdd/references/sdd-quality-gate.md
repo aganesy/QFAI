@@ -66,7 +66,9 @@ Phase 0 is a mandatory output of this skill, so its own artifacts belong on this
   pack that has specs is a finding, not a tool limitation.
 - `05_Examples.md` includes `EX-ID` and `BR-Ref`.
 - `06_Test-Cases.md` includes `TC-ID`, `Level`, `EX-Ref`, `AC-Refs`, and `Type`. `Level` holds exactly one code from `.qfai/assistant/catalog/test-layers.md#layer-definitions`, which defines all five (`L1`-`L5`); the template's list is a reading aid pointing back at it.
-- Error or boundary coverage is present, not only normal-path coverage.
+- Require normal path and declared valid boundaries per AC; require failures only
+  for kept failures, as defined in
+  `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`.
 - **The chain does not terminate at `TC`.** Every `BR` / `AC` names the contract that realizes it,
   and every persisted attribute it names resolves to a column, field or enum member in that
   contract — directly or by a stated join. Phase 0 authors contracts before these obligations

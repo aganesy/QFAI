@@ -283,7 +283,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    - Phase 0 must also reconcile paired contracts against each other, not only validate each file: every terminal state, status enum value, and error code an API contract mandates must be representable in the paired DB contract. See `references/contract-artifact-rules.md#cross-contract-reconciliation-must`. The reviewer gate checks the pairing before sign-off.
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
 6. `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
-7. `06_Test-Cases.md` must include `TC-ID`, `Level`, `EX-Ref`, `AC-Refs`, and `Type`, with normal-path plus error/boundary coverage. `Level` gates `TDDLIST_TC_NOT_COVERED` at `error`, so it is required, not optional.
+7. `06_Test-Cases.md` must include `TC-ID`, `Level`, `EX-Ref`, `AC-Refs`, and `Type`. Require normal path and declared valid boundaries per AC; require failures only for kept failures, as defined in `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`. `Level` gates `TDDLIST_TC_NOT_COVERED` at `error`, so it is required, not optional.
    Record a failure observed in use in its matching test-case row, as the template's _A failure observed in use_ says.
 8. A `TC` whose assertion reads the **content** of an upstream artifact — a decision record in `07_Decisions.md`, a contract, another spec file — must not be written before that artifact exists. `/qfai-implement` may not write upstream SSOT, so a row routed to it first has no lawful move, and the agent that meets it must choose between three prohibited things. Produce the artifact in
    this stage, or do not write the case yet.

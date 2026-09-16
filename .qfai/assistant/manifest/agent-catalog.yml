@@ -834,9 +834,16 @@ agents:
 
       From the ATDD stage onward:
 
-      - For each US/TC, verify that test cases exist for: equivalence partitions, normal path, error path, edge cases, boundary values, special values, state transitions, and combinatorial scenarios.
+      - For each US/TC, verify applicable coverage for: equivalence partitions, normal
+        path, error path, edge cases, boundary values, special values, state transitions,
+        and combinatorial scenarios. Declared valid cases remain required;
+        failure-side categories apply only to kept failures.
       - Produce the Coverage Depth Matrix as a required deliverable, plus the business rule coverage table under it when the spec declares `BR-*`. Flag any ❌ cells in either as gaps.
-      - Test cases covering only normal (happy) paths are INCOMPLETE. Return REVISE with specific missing scenarios.
+      - Failure-side coverage follows the checklist's kept-failure scope. Return
+        REVISE for a normal-only row only when an applicable obligation is uncovered.
+        Where a pack's own criteria still demand a failure case for every row, the
+        criteria are the authority until the Change Request that qualifies them is
+        applied: report the conflict rather than passing the row against them.
 
       Exception — `qfai-implement`'s `plan` phase:
 
@@ -848,13 +855,15 @@ agents:
 
       During SDD:
 
-      - Require normal path plus error/boundary coverage per AC, read directly from `06_Test-Cases.md`.
+      - Require normal path and declared valid boundaries per AC; require error/boundary
+        failures only for kept failures. Read directly from `06_Test-Cases.md`.
       - Record any further depth gap (special values, state transitions, combinatorial) as a finding.
       - Do NOT produce the matrix, and do NOT return REVISE solely because the matrix is absent or because
         special / state-transition / combinatorial cases are not yet enumerated.
 
-      At both stages: when business rules (BR-\*) exist, verify each BR has at least one positive and one
-      negative test case. From the ATDD stage onward that verdict is recorded per BR in the business rule
+      At both stages: when business rules (BR-\*) exist, verify each BR has at least one
+      positive test case and negative cases only for kept failures. From the ATDD stage
+      onward that verdict is recorded per BR in the business rule
       coverage table under the Coverage Depth Matrix, which has one row per rule — a `US/TC` row cannot
       carry it.
 
@@ -879,23 +888,35 @@ agents:
       - .qfai/specs/spec-\*/06_Test-Cases.md
       - .qfai/contracts/api/\*\* (CON-API) — **conditional**, see below: only where the spec under review references `CON-API-*`
       - .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; where it does not, absence is not a gap
+      - Relevant types and schemas governing the reviewed values — **conditional**:
+        required for coverage judgments that depend on a type or schema. Include the
+        actual validation boundary, not a type assertion alone.
 
-      A spec references a contract from either of two places: `Contract-Refs` in
-      `04_Business-Rules.md`, and a `QFAI-CONTRACT-REF` line in `01_Spec.md`. Read
-      both before deciding a conditional input does not apply. A spec that names a
-      `CON-DB-*` only in `01_Spec.md` reads as having none if the second place is
-      skipped, and the estimate then omits the Integration work that contract carries.
+      Resolve `paths.specsDir` and `paths.contractsDir` from `qfai.config.yaml` first.
+      Before reporting no referenced contract, read all existing `01..10` and `16_*`
+      Markdown files of the reviewed spec, including `Contract-Refs` in
+      `04_Business-Rules.md`, and a `QFAI-CONTRACT-REF` line in `01_Spec.md`.
+      Use the same full scan for shared ownership, including sibling specs, under
+      `.qfai/assistant/skills/qfai-atdd/references/cross-spec-obligations.md`.
+      Normalize short API-NNNN and DB-NNNN references under that rule; do not invent
+      a local row for a sibling's obligation. Conditional absence follows the full
+      scan, not only the two named files.
 
       Read `06_Test-Cases.md` and `02_User-stories.md` as the obligation set in full — `TC-*` and `US-*` — independently of whichever
       rows an execution ledger happens to hold: a coverage-target `TC-*` whose row was dropped is invisible to a check that starts from
-      the rows. `US-*` seeds no ledger row, so its absence from one is never a missing-row finding — it is read for layer ownership, and
-      discharged by the acceptance tests' annotations.
+      the rows. An active `US-*` has an E2E row carrying `US-Refs`; an active, owned
+      `CON-API-*` has an API row carrying `CON-API-Refs`. Read their declared scope
+      before judging missing rows. Seeded E2E/API rows keep Test file and Selector at
+      `-` until `/qfai-implement` fills them from the ATDD handoff; do not invent a
+      test identity before the test exists.
 
-      `.qfai/contracts/api/\*\*` joins that obligation set **only where it applies**: in `qfai-implement`'s `plan` phase, and there only
-      for a spec whose `CON-API-*` an `API` row's `CON-API-Refs` can cite. It is not a required input of this card in general. A spec
-      with no API surface is normal, and a fresh install ships no `.qfai/contracts/api/` at all, so its absence is **not** a missing
-      required source artifact and must not trip the Stop condition below — not here, and not in `qfai-sdd`'s `design` phase or
-      `qfai-atdd`'s blocking `coverage` phase, where this same card is routed against specs that may have no API contract at all.
+      `.qfai/contracts/api/**` joins that obligation set **only where it applies**:
+      in `qfai-implement`'s `plan` phase, SDD and `qfai-atdd`'s blocking `coverage` phase
+      when the spec references `CON-API-*`, including matrix production and review.
+      Read referenced contracts under configured `paths.contractsDir`. A spec with no
+      API surface is normal; its absence is **not** a missing required source artifact
+      when there is no referenced API obligation. Such an absent input must not trip
+      the Stop condition.
 
       ## Deliverables
 
@@ -1989,8 +2010,9 @@ agents:
         Missing matrix: REVISE from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note.
         A matrix that exists only inside `.qfai/evidence/atdd-<spec-id>.md` is a **missing** matrix: that committed file is the
         ledger's per-item evidence payload, not the dedicated matrix artifact whose justifications this gate reads.
-      - Check that each US/TC has test cases for at minimum: normal path AND error/failure path.
-      - Flag any US/TC that has only normal-path test cases as a coverage gap.
+      - Check each US/TC's normal path and applicable checklist categories.
+      - Failure-side coverage follows the checklist's kept-failure scope. Normal-only
+        cases are gaps only where an applicable obligation remains uncovered.
       - Reference: `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
       - Which verdict applies depends on the review cycle, per the scope note below.
         On an **SDD** cycle this check is a review signal, not a hard gate that blocks validation.
@@ -2011,8 +2033,9 @@ agents:
         the matrix under both Mandatory Outputs and Not-done criteria. A missing matrix is a REVISE there,
         and so is one whose ❌ cells are unjustified.
       - Do NOT evaluate it against an SDD spec pack that has no tests yet. On an SDD review cycle,
-        assess depth directly from `06_Test-Cases.md` (normal path plus error/boundary coverage per
-        AC) and record any gap as a finding, without requiring the matrix format.
+        assess depth directly from `06_Test-Cases.md` (normal path and declared valid
+        boundaries per AC, plus failures only for kept failures) and record any gap as
+        a finding, without requiring the matrix format.
 
       ## Inputs you must read
 
@@ -2028,6 +2051,21 @@ agents:
         `.qfai/assistant/constitution/constitution.md` Article III.)
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
+      - Governing `01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`,
+        `04_Business-Rules.md`, `05_Examples.md` and `06_Test-Cases.md` —
+        **conditional**: required for coverage review, not an unrelated item
+        observation or Skeleton gate. The examples are in that list because a failure
+        the specification names is a kept failure wherever it names it, and an `EX-*`
+        is one of the places it does: read without them, a row whose only declared
+        failure sits in an example reads as a row keeping none, and its `Error path`
+        cell is accepted as `n/a`.
+      - Referenced CON-API and CON-DB contracts under configured `paths.contractsDir`
+        — **conditional**: required for coverage review when the reviewed spec's
+        full ownership scan names them. Unreferenced contracts are not missing
+        required inputs.
+      - Relevant types and schemas governing the reviewed values — **conditional**:
+        required for a kept-failure or n/a judgment that depends on them. Read the
+        actual validation boundary; a type assertion does not prove validation.
       - `.qfai/specs/spec-*/tdd/test-list.md` — the ledger row under review
       - **The per-item RED/GREEN evidence for the row under review — in the file its
         `Layer` owns, and only that one.** `.qfai/evidence/atdd-<spec-id>.md`, under
@@ -2070,6 +2108,16 @@ agents:
         sibling's success reads as this spec's PASS
       - `.qfai/report/specs-coverage/spec-*.md`
       - Runtime evidence and prototyping evidence artifacts
+
+      For coverage review, resolve `paths.specsDir` and `paths.contractsDir` from
+      `qfai.config.yaml` first. Before reporting no referenced contract, read all
+      existing `01..10` and `16_*` Markdown files of the reviewed spec, including
+      `Contract-Refs` in `04_Business-Rules.md` and `QFAI-CONTRACT-REF` in `01_Spec.md`.
+      Use the same full scan for shared ownership, including sibling specs, under
+      `.qfai/assistant/skills/qfai-atdd/references/cross-spec-obligations.md`.
+      Normalize short API-NNNN and DB-NNNN references under that rule; preserve
+      cross-spec obligations rather than inventing local coverage. Conditional
+      absence follows the full scan, not only the two named files.
 
       **Branch 3 gets its own verdict.** The observation gate admits an observed RED
       or a falsifiability trio and calls anything else "never neither" — but a genuine

@@ -27,11 +27,18 @@ skills write.
 - **one `Layer = API` row per active `CON-API-*`** the spec owns, the obligation
   in `CON-API-Refs`.
 
-"Active" is the `.qfai/assistant/catalog/test-layers.md` exemption: a contract at
-`x-qfai-status: planned` owes no API row, and a spec with no user-facing surface
-owes no `US-*` row — the latter **only in a project that declares at least one
-UI-bearing spec**. Where surface typing is unused `QFAI-ATDD-111` stays
-project-wide, so every `US-*` is active and owes a row. Ownership of an API row
+"Active" is the `.qfai/assistant/catalog/test-layers.md` exemption, and it has
+three forms. A contract at `x-qfai-status: planned` owes no API row. A spec with
+no user-facing surface owes no `US-*` row — **only in a project that declares
+at least one UI-bearing spec**; where surface typing is unused
+`QFAI-ATDD-111` stays
+project-wide, so every `US-*` is active on that count. And a story deferred on
+its own — a `- x-qfai-status: planned` meta line in its `US-XXXX` block of
+`02_User-stories.md` — owes no E2E test, so it owes no E2E row, whatever the
+project's surface typing says. Read per story, not only per spec: a ledger that
+is header-only because every story is deferred is complete, and a run reading
+only the whole-spec form asks for a row whose test the acceptance stage forbids
+writing. Ownership of an API row
 is the lowest-numbered spec whose own `spec-*/01..10` / `16_*` files name that
 `CON-API-*`.
 
@@ -136,7 +143,7 @@ Do **not** proceed with an absent ledger, and do **not** invent rows that no
 E2E / API row — those two are backed by their `US-*` / `CON-API-*` instead, and
 carry `-` in `TC-Refs` because `catalog/test-layers.md` forbids a `TC-*` there.
 
-## An empty ledger is a fault only when `06_Test-Cases.md` disagrees
+## Check all four obligation sources before an empty-ledger exit
 
 A header-only table has very different causes and they need opposite responses,
 so never treat "no rows" as "nothing to do" on its own.
