@@ -808,16 +808,24 @@ export async function runPrototypingIterate(
     // its own pair of roots — the aggregate's under the evidence root, iter-00's
     // under its own home — or an entry names the path the file sits at rather
     // than the one it left.
+    let unnamed = false;
     if (loggedMoves === null && stranded.length > 0) {
       const moved = aggregateMove;
       if (moved !== null) {
         const aggregateStranded = stranded.filter((dir) => dir.startsWith(moved.backupAbs));
         if (aggregateStranded.length > 0) {
-          await logStrandedMoves(options.root, evidenceRootAbs, moved.backupAbs, aggregateStranded);
+          unnamed =
+            (await logStrandedMoves(
+              options.root,
+              evidenceRootAbs,
+              moved.backupAbs,
+              aggregateStranded,
+            )) || unnamed;
         }
       }
       if (backup !== null && stranded.includes(backup.to)) {
-        await logStrandedMoves(options.root, backup.from, backup.to, [backup.to]);
+        unnamed =
+          (await logStrandedMoves(options.root, backup.from, backup.to, [backup.to])) || unnamed;
       }
     }
     const unlogged =
@@ -834,6 +842,9 @@ export async function runPrototypingIterate(
         (unlogged
           ? ""
           : " The mutation log still holds this reset's move entries, which describe moves that were put back.") +
+        (unnamed
+          ? " The mutation log does not name the files under the backup this run could not put back."
+          : "") +
         note,
     );
     return 2;
@@ -2372,12 +2383,12 @@ function reportIterateDryRun(input: {
   }
   if (input.aggregateDirs.length > 0 || input.reset !== null) {
     lines.push(
-      `  would log every file those moves take to ${PROTOTYPING_EVIDENCE_REL}/mutation-log.jsonl, ` +
-        "then clear the evidence iteration dirs.",
+      `  would log every file those moves take to ${PROTOTYPING_EVIDENCE_REL}/mutation-log.jsonl.`,
     );
   }
   lines.push(
-    `  would write ${PROTOTYPING_JSON_REL} (seed metadata) and ${iterationDir(input.cycle)}/iterate-plan.json.`,
+    `  would write ${PROTOTYPING_JSON_REL} (seed metadata), clear the evidence iteration dirs, ` +
+      `and write ${iterationDir(input.cycle)}/iterate-plan.json.`,
     "  wrote nothing. This preview covers the writes this command makes, not the outcome of the " +
       "capture, license-verify and validate steps that follow them.",
   );

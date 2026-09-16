@@ -245,7 +245,16 @@ async function firstAbsentInChain(from: string): Promise<string | null> {
     if (target === null) return null;
     current = path.resolve(path.dirname(current), target);
   }
-  return null;
+  // The budget bounds the links followed, and the entry after the last of them
+  // is still the one an append would create. Returning null there left a failed
+  // first write with no file to take away.
+  return await lstat(current).then(
+    () => null,
+    (cause: unknown) => {
+      if (isEnoent(cause)) return current;
+      throw cause;
+    },
+  );
 }
 
 /** Whether the bytes from `from` on, read through `handle`, are this write's own. */
@@ -254,6 +263,11 @@ async function tailIsThisWrite(
   from: number,
   payload: string,
 ): Promise<boolean> {
+  // A file shorter than `from` is not this write's to cut: another recovery has
+  // replaced or truncated it. Read as an empty tail the prefix test passed, and
+  // truncating to `from` then extended that file with zero bytes.
+  const { size } = await handle.stat();
+  if (size < from) return false;
   const expected = Buffer.from(payload, "utf-8");
   const buffer = Buffer.alloc(expected.length + 1);
   const { bytesRead } = await handle.read(buffer, 0, buffer.length, from);

@@ -34,10 +34,16 @@ import {
  * be truncated.
  */
 const fault = vi.hoisted(
-  (): { partialAppend: boolean; untruncatable: boolean; appendThenAppend: string | null } => ({
+  (): {
+    partialAppend: boolean;
+    untruncatable: boolean;
+    appendThenAppend: string | null;
+    appendThenShorten: boolean;
+  } => ({
     partialAppend: false,
     untruncatable: false,
     appendThenAppend: null,
+    appendThenShorten: false,
   }),
 );
 
@@ -47,11 +53,15 @@ vi.mock("node:fs/promises", async (importOriginal) => {
     ...actual,
     appendFile: async (...args: Parameters<typeof actual.appendFile>) => {
       const other = fault.appendThenAppend;
-      if (!fault.partialAppend && other === null) return actual.appendFile(...args);
+      if (!fault.partialAppend && other === null && !fault.appendThenShorten)
+        return actual.appendFile(...args);
       const text = String(args[1]);
       await actual.appendFile(args[0], text.slice(0, Math.floor(text.length / 2)), "utf-8");
       // What a second run appending at the same time leaves behind this one.
       if (other !== null) await actual.appendFile(args[0], other, "utf-8");
+      // What another recovery replacing the log leaves behind this one: a file
+      // shorter than the length this write measured before it.
+      if (fault.appendThenShorten) await actual.writeFile(args[0], "", "utf-8");
       throw Object.assign(new Error("ENOSPC: no space left on device, write"), {
         code: "ENOSPC",
       });
@@ -88,6 +98,7 @@ afterEach(async () => {
   fault.partialAppend = false;
   fault.untruncatable = false;
   fault.appendThenAppend = null;
+  fault.appendThenShorten = false;
   await rm(root, { recursive: true, force: true });
 });
 
@@ -283,6 +294,24 @@ describe("TC-0012-0479: mutation-log appends a JSONL entry per destructive iter-
     await expect(logEvidenceMoves(root, "iterate", TWO_MOVES)).rejects.toThrow(
       "keeps no mutation record",
     );
+  });
+
+  it("leaves a log another recovery shortened alone", async () => {
+    // Read as an empty tail, the prefix test passed and truncating to the
+    // prior length extended the shortened file with zero bytes — corrupting
+    // an audit log this run no longer owns.
+    await logEvidenceMove(root, "iterate", ".qfai/evidence/prototyping/iter-00/a.json", 3);
+    const logAbs = path.join(root, MUTATION_LOG_REL);
+    const before = (await readFile(logAbs, "utf-8")).length;
+    fault.appendThenShorten = true;
+
+    await expect(logEvidenceMoves(root, "iterate", TWO_MOVES)).rejects.toThrow(
+      "may hold part of this write",
+    );
+
+    // Left as the other recovery wrote it, rather than extended back to the
+    // length this write had measured.
+    expect((await readFile(logAbs, "utf-8")).length).toBeLessThan(before);
   });
 
   it("keeps an entry another writer appended during this write", async () => {
