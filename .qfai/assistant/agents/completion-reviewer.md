@@ -52,6 +52,13 @@ tools: [Read, Glob, Grep, Bash]
   declares in `paths.specsDir` (`.qfai/specs` where it declares none). A Plan no
   target of this run finalizes is not this review's to judge.
 - .qfai/specs/spec-\*/09_delta.md
+- **Count the concrete consumers of each contract and deployment boundary the
+  spec's Plan cites**, once its rows are done. Those are authored before anything
+  implements them, and their dependants arrive across rows the implementation
+  review sees one at a time, so this is the first read that sees all of them. A
+  count below three is a finding unless the safety floor in
+  `.agents/rules/minimal-implementation.md` § 2 requires the element and the
+  Plan records that exception with the obligation requiring it.
 - The declarations a Plan's usages name outside the specs tree — **conditional**:
   required wherever a usage names one. A deployment boundary counts the services
   a deployment configuration instantiates, and an API manifest names a

@@ -205,6 +205,10 @@ routing phase's mandatory agents run inside its span, and its blocking agents MU
   span, where `review` runs once per invocation after Phase 4 — so a reviewer cannot hold one target
   while the batch releases the rest, and a check that waited for one would report a deficient Plan
   only after the batch had taken it in. The terminal review still reads what this step recorded.
+  A usage this Plan cites in a sibling target of the same batch is read from that target's own
+  worktree, which the concurrency rules give each writer; delegated in parallel, the sibling's output
+  is not yet integrated, and a check reading the integration point alone would report every
+  cross-target usage as unwritten.
 
 ## Work Orders Summary
 

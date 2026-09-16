@@ -30,9 +30,9 @@ tools: [Read, Glob, Grep, Bash]
   Use this route only where the installed Article VII governs the artifact.
   Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 - Count the consumers of an architectural element this change introduces or
-  extracts, first gives concrete consumers to, or leaves below three by removing
-  one — a module, a seam, an adapter, a shared helper, a contract, a deployment
-  boundary — as they exist in the tree, against
+  extracts, or leaves below three by removing one — a module, a seam, an
+  adapter, a shared helper, a contract, a deployment boundary — as they exist in
+  the tree, against
   `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`,
   which says what a consumer is for each kind. The Plan's three usages are cited
   before implementation, so a usage nobody has written is not one of them; three
@@ -51,13 +51,11 @@ tools: [Read, Glob, Grep, Bash]
   leaves the implementer duplicating what the repository already has. The count
   reads the change that creates the shared element, not every change that later
   uses it.
-  **A contract or a deployment boundary is the exception to that exception.**
-  Those are authored by `/qfai-sdd` before anything implements them, so the
-  change that wires their first dependants neither introduces nor extracts them,
-  and the Plan gate before it read references rather than the dependants
-  themselves. Nothing else would ever count them. So a change giving one its
-  first concrete consumers is counted, once — on the later change that adds a
-  fourth dependant there is code to reuse, and the clause above applies again.
+  **A contract and a deployment boundary are counted elsewhere.** Those are
+  authored before anything implements them, and their dependants arrive across
+  rows this review sees one at a time — so a verdict here falls on whichever row
+  landed first, which is the row least able to answer it. `completion-reviewer`
+  reads the whole spec once its rows are done, and counts them there.
   Return REVISE unless the safety floor in
   `.agents/rules/minimal-implementation.md` § 2 requires the element **and** the
   owning `10_Plan.md` records that exception together with the obligation
@@ -110,11 +108,12 @@ tools: [Read, Glob, Grep, Bash]
 - .github/instructions/code-review.instructions.md
 - .github/instructions/principles.instructions.md
 - Diff of changed files
-- The contracts under the configured `paths.contractsDir` whose kind the change
-  touches — `api/**` and `db/**` always, and `ui/**` or `design/**` where the
-  change gives one of those consumers. A contract this change does not alter
-  does not appear in the diff, so the consumer count above cannot be made
-  without reading it.
+- The contracts under the configured `paths.contractsDir` whose kind this
+  change's count reads — `api/**` and `db/**` always, and `ui/**` or `design/**`
+  wherever the change adds or removes one of their consumers. A contract this
+  change does not alter does not appear in the diff, so the count above cannot be
+  made without reading it, and a removal is exactly the case where the contract
+  is unchanged.
 - `qfai.config.yaml`, for `paths.specsDir` and `paths.contractsDir`: the
   defaults below are defaults, and a project that moved either keeps the same
   obligations at the path it configured.
