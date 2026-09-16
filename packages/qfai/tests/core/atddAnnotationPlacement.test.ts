@@ -97,13 +97,6 @@ describe("where an annotation may sit", () => {
     ],
     ["Rust", "pay.rs", `const CASES: &[&str] = &["${ID}"];\n#[test]\nfn pays() {}\n`],
     [
-      // A raw triple-quoted string takes no escape, so a trailing backslash
-      // is a character of the value and the fence after it closes.
-      "a Kotlin raw string ending in a backslash",
-      "PayTest.kt",
-      `val path = """C:\\\\"""\n// ${ID}\nclass PayTest { @Test fun pays() {} }\n`,
-    ],
-    [
       // One expression can open two heredocs; the first body is not the
       // end of the header.
       "a second Ruby heredoc on one line",
@@ -270,6 +263,13 @@ describe("where an annotation may sit", () => {
       "an RSpec percent-literal name",
       "pay_spec.rb",
       `it %q{${ID} pays} do\nend\n`,
+    ],
+    [
+      // A raw triple-quoted string takes no escape, so the fence after a
+      // trailing backslash closes and the comment beyond it is visible.
+      "a Kotlin raw string ending in a backslash",
+      "PayTest.kt",
+      `val path = """C:\\\\"""\n// ${ID}\nclass PayTest { @Test fun pays() {} }\n`,
     ],
     [
       // Java's block comments do not nest, so the first close ends the
