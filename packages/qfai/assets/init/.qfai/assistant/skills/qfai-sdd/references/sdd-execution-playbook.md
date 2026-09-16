@@ -45,17 +45,37 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
    newest completed one hides advice that still applies, and taking its
    responses carries advice nobody signed.
 
+   **Read every completed review of the pack, newest first, not only the newest
+   one.** A blocking finding starts a fix-and-rerun cycle, so the next completed
+   review is evidence it was answered. Non-normative advice starts no cycle and a
+   later review is not required to repeat it, so an item the newest review does
+   not mention is not thereby closed. Carry forward each one no later review
+   answers, and take the newest review's wording where two describe the same
+   thing.
+
    Look in `.qfai/review/_archive/review-*/` as well as `.qfai/review/review-*/`.
    `npx qfai doctor --clean` moves an eligible review there once it is older than
    the configured time to live, so a pack selected by `npx qfai discussion use <id>`
    is exactly the case whose review has most likely been archived, and a lookup
    over the top level alone reports it as a pack nobody reviewed.
 
-   Compare `summary.json#revision` with the selected pack's current revision. The
-   verdicts describe the state that field names, so where the pack has been
-   edited since, read them as advice about an earlier state: disposition what
-   still applies and record the ones the edit answered as answered, rather than
-   carrying them forward as open findings about text that no longer exists.
+   Ask whether the pack changed after the review, and read the verdicts against
+   the answer. `summary.json#revision` addresses a whole tree — a git rev, or
+   `working-tree+<content hash>` for an uncommitted one — never the pack alone,
+   so it is the input to that question and not the answer to it.
+
+   | The review's `revision`       | Ask                                                     |
+   | ----------------------------- | ------------------------------------------------------- |
+   | A git rev                     | `git diff --name-only <rev> HEAD -- <pack path>`        |
+   | `working-tree+<content hash>` | Nothing: the prior contents are not recoverable from it |
+
+   Where the diff is empty the verdicts describe the pack as it stands. Where it
+   is not, and where the revision is a working-tree hash, they may describe an
+   earlier state: disposition what still applies, and record the ones an edit
+   answered as answered rather than carrying them forward as open findings about
+   text that no longer exists. Unrelated repository content moving does not make
+   a finding stale, which is why the question is asked over the pack's own paths
+   and not over the revision value.
    An earlier cycle's advice was answered by the fix that closed it, and reading
    it again re-raises work the pack has already done. Take in the items a
    reviewer marked non-normative under
