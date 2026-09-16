@@ -199,6 +199,11 @@ routing phase's mandatory agents run inside its span, and its blocking agents MU
 - Delegate Slice in parallel per spec.
 - Parallel delegation here is bound by the stage-independent Concurrency rules in `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory`: worktree separation, or the declared degraded mode, plus mandatory commit scoping (`git add <paths>`; never `git add -A` / `git add .` / `git commit -a`).
 - Validate gate and Review gate run once at batch tail after all target specs are integrated.
+- The Plan gate is the exception, and runs per target: each target's Plan is checked against
+  `templates/specs/spec/10_Plan.md#implementation-approach` as that Plan is finalized, before the
+  target is integrated. The tail gates read every target together, so a check that waited for them
+  would report a deficient Plan only after the batch had taken it in, and there is no reviewer
+  invocation at the tail able to hold one target while releasing the rest.
 
 ## Work Orders Summary
 
@@ -288,6 +293,21 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 8. A `TC` whose assertion reads the **content** of an upstream artifact — a decision record in `07_Decisions.md`, a contract, another spec file — must not be written before that artifact exists. `/qfai-implement` may not write upstream SSOT, so a row routed to it first has no lawful move, and the agent that meets it must choose between three prohibited things. Produce the artifact in
    this stage, or do not write the case yet.
 9. Stop only when `npx qfai validate --profile sdd --fail-on error --format github` exits with `error=0`.
+10. Before sign-off in any run that finalizes a `10_Plan.md` — one spec named,
+    or every capability under a no-argument batch — check every architectural
+    element against
+    `templates/specs/spec/10_Plan.md#implementation-approach`. Report missing or
+    insufficient usage references as findings and stop before implementation
+    until the references are fixed or the template's safety-floor exception is justified.
+    A batch checks each target's Plan as that Plan is finalized, before the
+    target is integrated, so a failing target is held there with its findings
+    rather than carried to the tail. The tail gates read every target together,
+    so the batch waits for the held target to be corrected instead of declaring
+    the batch done without it.
+    Contract-scoped runs do not apply this Plan gate: they finalize no Plan. If a
+    contract change requires a Plan update, report the mismatch and halt to widen
+    the Change Request to a spec-scoped run; do not write the Plan in
+    contract-scoped mode.
 
 ## Required Process
 

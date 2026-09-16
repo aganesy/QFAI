@@ -15,6 +15,14 @@ tools: [Read, Glob, Grep, Bash]
 - Return only PASS or REVISE, with actionable rework instructions on REVISE.
 - Enforce validate evidence, required coverage obligations, and no self-approval.
 - Verify rejected options are not reintroduced without RE-OPEN.
+- Before an SDD handoff that finalizes a Plan — one spec named, or each target of a
+  no-argument batch — check every architectural element in each Plan that run
+  finalizes against
+  `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`;
+  return REVISE for missing or insufficient usage references unless the documented safety-floor exception applies.
+- In contract-scoped SDD, do not apply this Plan gate. A required Plan update
+  is a mismatch: report it and halt to widen the Change Request to a spec-scoped
+  run; do not authorize Plan writes.
 - File excess as `defect:code-quality` against constitution Article VII; tag it
   `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
   settings and explanatory copy. Admit it only when it names what to cut
@@ -38,7 +46,18 @@ tools: [Read, Glob, Grep, Bash]
   context; when the two differ the card is the role contract and wins. See
   `.qfai/assistant/constitution/constitution.md` Article III.)
 - .qfai/assistant/catalog/test-layers.md
+- On an SDD cycle that finalizes a Plan, read the `10_Plan.md` of each spec that
+  cycle targets — the one named, or each capability a no-argument batch covers —
+  and its referenced usages, under the specs directory `qfai.config.yaml`
+  declares in `paths.specsDir` (`.qfai/specs` where it declares none). A Plan no
+  target of this run finalizes is not this review's to judge.
 - .qfai/specs/spec-\*/09_delta.md
+- The contracts a Plan's usages cite, under the configured `paths.contractsDir`
+  — **conditional**: required wherever a usage names a `CON-API-*` or `CON-DB-*`.
+  A contract usage is concrete because the contract declares the dependant, so a
+  reviewer that never opens the declaration either rejects a valid usage as
+  unresolved or counts one it has not read. Resolve the directory from
+  `qfai.config.yaml`; `.qfai/contracts` is only the default.
 - Validation evidence and gate results
 - `.qfai/specs/<spec-id>/tdd/test-list.md` — the ledger, for the row under review
 - The per-item evidence file that row's `Layer` owns: `.qfai/evidence/implement-<spec-id>.md`,
