@@ -304,6 +304,65 @@ function endOfParenStarComment(source: string, start: number): number {
   return source.length;
 }
 
+/**
+ * The end of a PHP heredoc or nowdoc whose header begins at `start`, or `-1`
+ * where `<<<` there opens neither.
+ *
+ * The body runs to the line holding the terminator, which may carry indentation
+ * and may be followed by a separator. The header stays: it is code.
+ */
+function endOfPhpHeredoc(source: string, start: number): number {
+  const header =
+    /^<<<[ \t]*(?:(["'])([A-Za-z_][A-Za-z0-9_]*)\1|([A-Za-z_][A-Za-z0-9_]*))[ \t]*\r?\n/.exec(
+      source.slice(start),
+    );
+  if (header === null) return -1;
+  const terminator = header[2] ?? header[3] ?? "";
+  if (terminator === "") return -1;
+  const closer = new RegExp(`^[ \\t]*${terminator}\\b`);
+  let index = start + header[0].length;
+  while (index <= source.length) {
+    const lineEnd = source.indexOf("\n", index);
+    const line = source.slice(index, lineEnd === -1 ? source.length : lineEnd);
+    if (closer.test(line)) return lineEnd === -1 ? source.length : lineEnd;
+    if (lineEnd === -1) return source.length;
+    index = lineEnd + 1;
+  }
+  return source.length;
+}
+
+/**
+ * The end of a Rust raw string beginning at `start`, or `-1` where none does.
+ *
+ * `r`, an optional `b`, then the hashes that decide the closer: the span ends at
+ * a quote followed by that many hashes and at no earlier quote.
+ */
+function endOfRustRawString(source: string, start: number): number {
+  const header = /^b?r(#*)"/.exec(source.slice(start));
+  if (header === null) return -1;
+  const closer = `"${header[1] ?? ""}`;
+  const close = source.indexOf(closer, start + header[0].length);
+  return close === -1 ? source.length : close + closer.length;
+}
+
+/** The end of a `/* … *\/` comment beginning at `start`, counting nesting. */
+function endOfNestedBlockComment(source: string, start: number): number {
+  let depth = 0;
+  for (let index = start; index < source.length; index += 1) {
+    if (source.startsWith("/*", index)) {
+      depth += 1;
+      index += 1;
+      continue;
+    }
+    if (source.startsWith("*/", index)) {
+      depth -= 1;
+      if (depth === 0) return index + 2;
+      index += 1;
+    }
+  }
+  return source.length;
+}
+
 /** The end of a raw backtick span, which no escape can extend. */
 function endOfRawBacktick(source: string, start: number): number {
   const close = source.indexOf("`", start + 1);
@@ -412,6 +471,32 @@ export type JsMaskOptions = {
    * the line and took a trailing comment with it.
    */
   readonly regexLiterals?: boolean;
+
+  /**
+   * Recognise PHP's `<<<ID` heredocs and `<<<'ID'` nowdocs. Default `false`.
+   *
+   * Three angle brackets, where Ruby writes two. The body spans lines and no
+   * other rule consumes it, so an id written in one stayed visible.
+   */
+  readonly phpHeredocs?: boolean;
+
+  /**
+   * Recognise Rust's raw strings, `r#"…"#` and `br##"…"##`. Default `false`.
+   *
+   * A raw string takes no escapes and ends only at a quote followed by as many
+   * hashes as opened it, so the quotes inside a JSON fixture are ordinary
+   * characters. Read as a plain quoted span, the first of them ended it.
+   */
+  readonly rustRawStrings?: boolean;
+
+  /**
+   * Read `/* … *\/` as nesting. Default `false`.
+   *
+   * `true` for Kotlin and Scala, where an inner close does not end the outer
+   * comment. Stopped at the first one, the rest of the comment was read as
+   * code — an apostrophe in it as a quote, taking the annotation after it.
+   */
+  readonly nestedBlockComments?: boolean;
 };
 
 export function maskJsNonCode(source: string, options: JsMaskOptions = {}): string {
@@ -425,6 +510,9 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
   const parenStarComments = options.parenStarComments ?? false;
   const rawBacktick = options.rawBacktick ?? false;
   const regexLiterals = options.regexLiterals ?? true;
+  const phpHeredocs = options.phpHeredocs ?? false;
+  const rustRawStrings = options.rustRawStrings ?? false;
+  const nestedBlockComments = options.nestedBlockComments ?? false;
   const out = source.split("");
   // Whether the token just read closes an expression. It is the whole
   // regex-vs-division test: `a / b` divides, `= /re/` does not. Comments leave
@@ -464,7 +552,9 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
       const end = endOfLineComment(source, i);
       i = blankComments ? blank(out, i, end) : end;
     } else if (ch === "/" && next === "*") {
-      const end = endOfBlockComment(source, i);
+      const end = nestedBlockComments
+        ? endOfNestedBlockComment(source, i)
+        : endOfBlockComment(source, i);
       i = blankComments ? blank(out, i, end) : end;
     } else if (
       percentLiterals &&
@@ -484,6 +574,22 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
         endsExpression = true;
         lastWord = "";
       }
+    } else if (phpHeredocs && ch === "<" && next === "<" && endOfPhpHeredoc(source, i) !== -1) {
+      const end = endOfPhpHeredoc(source, i);
+      // The header stays: it is code, and only the body it opens is a literal.
+      const bodyStart = source.indexOf("\n", i);
+      i = bodyStart === -1 ? end : blank(out, bodyStart, end);
+      endsExpression = true;
+      lastWord = "";
+    } else if (
+      rustRawStrings &&
+      (ch === "r" || ch === "b") &&
+      endOfRustRawString(source, i) !== -1 &&
+      !WORD.test(source[i - 1] ?? "")
+    ) {
+      i = blank(out, i, endOfRustRawString(source, i));
+      endsExpression = true;
+      lastWord = "";
     } else if (percentLiterals && ch === "<" && next === "<") {
       const end = endOfHeredoc(source, i);
       if (end === -1) {

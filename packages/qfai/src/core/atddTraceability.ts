@@ -60,6 +60,15 @@ const DOUBLE_QUOTED = String.raw`"(?:[^"\\\n]|\\.)*"`;
 const QUOTED = String.raw`${DOUBLE_QUOTED}|'(?:[^'\\\n]|\\.)*'`;
 
 /**
+ * A C# string literal in any of its three forms: ordinary, verbatim, and raw.
+ *
+ * A display name is written in whichever the author reached for, and the
+ * masking reads all three — so a restoration pattern reading only the first
+ * loses the annotation in the other two.
+ */
+const CSHARP_QUOTED = String.raw`@"(?:[^"]|"")*"|"""[\s\S]*?"""|${DOUBLE_QUOTED}`;
+
+/**
  * Where a language's tests carry a name written as a literal.
  *
  * Each pattern has two named groups: `name`, the literal, and `anchor`, the
@@ -113,11 +122,18 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
           slashComments: false,
           regexLiterals: false,
         },
-        [],
+        [
+          // A parameterized case takes its collected name from the id, so a
+          // reference there is the test's name and not fixture data.
+          namePattern(String.raw`\b(?<anchor>ids)\s*=\s*\[[^\]]*?(?<name>${QUOTED})`),
+          namePattern(String.raw`(?<anchor>pytest\.param)\s*\([^)]*?\bid\s*=\s*(?<name>${QUOTED})`),
+        ],
       ],
       [
         ["rb"],
-        { comments: false, hashComments: true, percentLiterals: true, regexLiterals: false },
+        // Ruby writes a regex between slashes as JavaScript does, and `%r{…}`
+        // is one of its percent literals, so both forms are read.
+        { comments: false, hashComments: true, percentLiterals: true },
         [
           namePattern(
             String.raw`\b(?<anchor>it|test|describe|context|specify|example|scenario|feature)\s*\(?\s*(?<name>${QUOTED})`,
@@ -135,7 +151,7 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
       ],
       [
         ["java", "kt", "kts", "groovy"],
-        { comments: false, tripleQuoted: true, regexLiterals: false },
+        { comments: false, tripleQuoted: true, regexLiterals: false, nestedBlockComments: true },
         [
           namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${DOUBLE_QUOTED})`),
           namePattern(
@@ -156,7 +172,7 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         // Kotlin, so reading `"…" in ids` there as a test name put a data
         // string back into the source and cleared an obligation nothing covers.
         ["scala"],
-        { comments: false, tripleQuoted: true, regexLiterals: false },
+        { comments: false, tripleQuoted: true, regexLiterals: false, nestedBlockComments: true },
         [
           namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${DOUBLE_QUOTED})`),
           namePattern(
@@ -172,7 +188,7 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         { comments: false, verbatimStrings: true, regexLiterals: false },
         [
           namePattern(
-            String.raw`\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${DOUBLE_QUOTED})`,
+            String.raw`\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${CSHARP_QUOTED})`,
           ),
         ],
       ],
@@ -184,19 +200,23 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         { comments: false, verbatimStrings: true, parenStarComments: true, regexLiterals: false },
         [
           namePattern(
-            String.raw`\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${DOUBLE_QUOTED})`,
+            String.raw`\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${CSHARP_QUOTED})`,
           ),
           namePattern(
-            String.raw`\b(?<anchor>testCase|testCaseAsync|ftestCase|ptestCase|testList|testProperty|testTheory)\s+(?<name>${DOUBLE_QUOTED})`,
+            String.raw`\b(?<anchor>testCase|testCaseAsync|ftestCase|ptestCase|testList|testProperty|testTheory)\s+(?<name>${CSHARP_QUOTED})`,
           ),
         ],
       ],
       // Rust's apostrophe opens a lifetime as often as a character, and paired
       // as a quote it swallowed the trailing comment an annotation sits in.
-      [["rs"], { comments: false, lifetimes: true, regexLiterals: false }, []],
+      [
+        ["rs"],
+        { comments: false, lifetimes: true, regexLiterals: false, rustRawStrings: true },
+        [],
+      ],
       [
         ["php"],
-        { comments: false, hashComments: true, regexLiterals: false },
+        { comments: false, hashComments: true, regexLiterals: false, phpHeredocs: true },
         [
           namePattern(String.raw`\b(?<anchor>it|test|describe)\s*\(\s*(?<name>${QUOTED})`),
           // PHPUnit names a test in an attribute, which the hash-comment rule

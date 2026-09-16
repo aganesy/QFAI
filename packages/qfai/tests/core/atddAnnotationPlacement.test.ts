@@ -97,6 +97,25 @@ describe("where an annotation may sit", () => {
     ],
     ["Rust", "pay.rs", `const CASES: &[&str] = &["${ID}"];\n#[test]\nfn pays() {}\n`],
     [
+      // Ruby writes a regex between slashes, as JavaScript does.
+      "a Ruby regex literal",
+      "pay_spec.rb",
+      `PATTERN = /${ID}/\nit "pays" do\nend\n`,
+    ],
+    [
+      // A raw string takes no escapes, so the quotes inside a fixture are
+      // ordinary characters and the first of them ends nothing.
+      "a Rust raw string",
+      "pay.rs",
+      `const F: &str = r#"{\\"reference\\":\\"${ID}\\"}"#;\n#[test]\nfn pays() {}\n`,
+    ],
+    [
+      // A heredoc body spans lines and no other rule consumes it.
+      "a PHP heredoc",
+      "PayTest.php",
+      `<?php\n$fixture = <<<TXT\n${ID}\nTXT;\nclass PayTest { public function testPays() {} }\n`,
+    ],
+    [
       // A verbatim string spans lines, and the single-line scanner stopped
       // at the first newline and left the rest visible.
       "a C# verbatim fixture",
@@ -145,6 +164,26 @@ describe("where an annotation may sit", () => {
       "a JUnit display name",
       "PayTest.java",
       `class PayTest {\n  @Test\n  @DisplayName("${ID} pays")\n  void pays() {}\n}\n`,
+    ],
+    [
+      // A display name is written in whichever literal form the author
+      // reached for, and the masking reads all three.
+      "an xUnit display name in a verbatim string",
+      "PayTests.cs",
+      `class PayTests {\n  [Fact(DisplayName = @"${ID} pays")]\n  public void Pays() {}\n}\n`,
+    ],
+    [
+      // Kotlin nests its block comments, so an inner close does not end the
+      // outer one and the apostrophe after it is still inside a comment.
+      "a Kotlin annotation in a nested comment",
+      "PayTest.kt",
+      `/* outer /* inner */ this test\u0027s coverage: ${ID} */\nclass PayTest {\n  @Test fun pays() {}\n}\n`,
+    ],
+    [
+      // A parameterized case takes its collected name from the id.
+      "a pytest parameter id",
+      "test_pay.py",
+      `import pytest\n\n@pytest.mark.parametrize("n", [1], ids=["${ID} pays"])\ndef test_pay(n):\n    assert pay(n)\n`,
     ],
     [
       // Floor division, not a comment. Read as one, the rest of the line
