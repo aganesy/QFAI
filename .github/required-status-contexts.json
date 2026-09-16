@@ -230,7 +230,7 @@
         "scripts/pin-stage-evidence-counts.mjs": "9cf2034c8ce05387e50b7b22c0cd33f2e5ff4544f3e5913e469786044a201099",
         "scripts/pin-verification-bodies.mjs": "ada370be9bd4d331a705d5a02e01ba4d4f378c862ddc62680af9ad831eb881cf",
         "scripts/run-lint-checks.sh": "9d58c7ef0a179450657a0839b8ea3a760d28bef6d0b9d1c0b9cde2cc6fb0f8fb",
-        "scripts/sync-init-to-root.mjs": "f8dddd84763ba5a01d7ff82ea89eae31d78ab7e2715f95186d490ed36d8fc251",
+        "scripts/sync-init-to-root.mjs": "85d60eb4d45aa437ec1fc3b87eb74a2261e5675baf1ba2f7b01aa4f14c715f38",
         "scripts/verify-pack.mjs": "98fe8d88a5b7a130737a0870393d5c69b6a5fe7136903cfc79fd6c9092e62b40"
       },
       "pinnedBytesNote": [
@@ -380,7 +380,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "f700fee470c69c88",
+        "Verify the toolchain action before running it": "411678c38c47ec57",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "e9b6a63cbebe4062",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "abe312b8d2c8fc6f",
