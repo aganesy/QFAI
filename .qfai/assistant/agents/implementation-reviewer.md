@@ -76,7 +76,11 @@ tools: [Read, Glob, Grep, Bash]
   under-three element to become permanent with nobody deciding it should.
 
   **The Plan read is the one that owns the element**, resolved through the same
-  `paths.specsDir`. For a change removing a consumer the element usually belongs
+  `paths.specsDir`. Where that spec was deleted its Plan is gone with it, and a
+  missing Plan there is not a missing required input: the change that removed the
+  spec removed the record too, so count the consumers the tree still holds and say
+  in the finding that the exception could not be read because the owning pack is
+  gone. For a change removing a consumer the element usually belongs
   to another spec, and that spec's Plan is where its exception and the obligation
   requiring it are recorded — read only the row's own Plan, the reviewer cannot
   tell a justified security or data-loss element from an unjustified two-consumer
