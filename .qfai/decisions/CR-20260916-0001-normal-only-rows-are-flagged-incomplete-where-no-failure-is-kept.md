@@ -4,7 +4,7 @@
 - Title: `spec-0008 and spec-0013 flag a normal-only row incomplete where the row keeps no failure`
 - Raised by: `qfai-atdd`
 - Raised at: `2026-09-15T17:44:12Z`
-- Class: `defect`
+- Class: `intent`
 - Status: `open`
 - Approved by: `-`
 - Approved at: `-`
@@ -38,6 +38,11 @@ qualifier:
 
 A reviewer following the checklist passes a row those nine fail, and a reviewer
 following them demands a case for a failure nothing keeps. Both cannot hold.
+
+**The nine rows are consistent with one another.** What changed is the policy
+this checklist states, so this record is intent drift rather than a defect:
+nothing upstream is internally inconsistent or unreachable, and the repair is a
+decision about which policy holds rather than one mandatory correction.
 
 ## Reproduction
 

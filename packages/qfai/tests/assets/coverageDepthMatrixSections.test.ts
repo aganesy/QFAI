@@ -292,12 +292,20 @@ describe.each(TREES)("%s", (tree) => {
 
   it("maps every kept contract failure to an existing scored row and failure assertion", async () => {
     const checklist = flat(await read(tree, CHECKLIST));
-    expect(checklist).toContain("Map every kept CON-API or CON-DB failure to a covering US/TC row");
-    expect(checklist).toContain("name the contract ID and failure clause");
-    expect(checklist).toContain("API or Integration assertion and evidence");
+    expect(checklist).toContain(
+      "Map every kept CON-API or CON-DB failure to the row that covers it",
+    );
+    // A contract with no US/TC is an API-only or contract-only flow, which the
+    // constitution routes to a row of its own; drift is a failure no row covers.
+    expect(checklist).toContain("otherwise the contract's own row");
+    expect(checklist).toContain("is an ordinary API-only or contract-only flow, not drift");
+    expect(checklist).toContain("what is drift is a failure no row of either kind covers");
+    expect(checklist).toContain("Name the contract ID and the failure clause");
+    // The assertion is read where the test exists: the coverage phase runs
+    // before any acceptance test is written.
+    expect(checklist).toContain("Cite the API or Integration assertion **where the test exists**");
+    expect(checklist).toContain("the assertion itself is read at the completion review");
     expect(checklist).toContain("Happy-path annotations alone do not cover the failure");
-    expect(checklist).toContain("If no existing US/TC row owns it, record DRIFT");
-    expect(checklist).toContain("before a clean coverage verdict");
     expect(checklist).toContain(
       "Contract-derived failures are scored only for active, owned whole contracts",
     );

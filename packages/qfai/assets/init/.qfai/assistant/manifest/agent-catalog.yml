@@ -2052,8 +2052,13 @@ agents:
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - Governing `01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`,
-        `04_Business-Rules.md` and `06_Test-Cases.md` — **conditional**: required for
-        coverage review, not an unrelated item observation or Skeleton gate.
+        `04_Business-Rules.md`, `05_Examples.md` and `06_Test-Cases.md` —
+        **conditional**: required for coverage review, not an unrelated item
+        observation or Skeleton gate. The examples are in that list because a failure
+        the specification names is a kept failure wherever it names it, and an `EX-*`
+        is one of the places it does: read without them, a row whose only declared
+        failure sits in an example reads as a row keeping none, and its `Error path`
+        cell is accepted as `n/a`.
       - Referenced CON-API and CON-DB contracts under configured `paths.contractsDir`
         — **conditional**: required for coverage review when the reviewed spec's
         full ownership scan names them. Unreferenced contracts are not missing

@@ -41,13 +41,19 @@ that conflicts with a type or schema, record DRIFT and route it to the upstream
 owner. Do not erase the declared obligation or mark it n/a while that conflict
 is unresolved.
 
-Map every kept CON-API or CON-DB failure to a covering US/TC row in the existing
-matrix for the spec's owned obligations: name the contract ID and failure clause,
-and cite the appropriate API
-or Integration assertion and evidence in that row or its accompanying notes.
-Happy-path annotations alone do not cover the failure. If no existing US/TC row
-owns it, record DRIFT and route it to the upstream spec or contract owner before
-a clean coverage verdict. No additional table or column is required.
+Map every kept CON-API or CON-DB failure to the row that covers it: a US/TC row
+of the matrix where one owns the obligation, and otherwise the contract's own
+row — `CON-API-*` is carried by an API row and `CON-DB-*` by an Integration one,
+which the constitution routes directly and `/qfai-sdd` seeds directly. Name the
+contract ID and the failure clause. **A contract with no US/TC is an ordinary
+API-only or contract-only flow, not drift**; what is drift is a failure no row of
+either kind covers.
+
+Cite the API or Integration assertion **where the test exists**. In the blocking
+`coverage` phase none does, so the mapping names the row and the assertion a
+later phase will write; the assertion itself is read at the completion review,
+after `red` and `implementation` have created it. Happy-path annotations alone do
+not cover the failure at either point. No additional table or column is required.
 Sibling obligations follow the existing cross-spec ownership rule; do not invent
 a local US/TC row to discharge them.
 
