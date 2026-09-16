@@ -195,6 +195,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The release-notes drift check reads up to eight published bodies at once
+  instead of one, so the time each request may take no longer shrinks with
+  every release. It sends no more than half the published allowance for a
+  minute, and a failed read stops the reads still open below it — and releases
+  the ones still waiting for a slot — rather than waiting for them. Each section
+  is reported as soon as it and every section above it has answered, so one slow
+  read no longer keeps the whole report off the output. The report still reads
+  in changelog order, the exit codes are unchanged, and a failed read still ends
+  the run at that section.
+
 - Refuse a scaffold destination where the extensions could not be read, where
   an exclude glob's range stops the scan, or where a brace range's endpoints
   are not whole numbers, rather than writing a file the project's own runner
