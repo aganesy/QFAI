@@ -157,12 +157,13 @@ just placed elsewhere.
 
 **How it is written.** In the shape every finding takes
 (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`):
-`Severity: advisory`, and `Traces to: none` where the item names no obligation
-the pack carries — which is the usual case here, since the subject is how a
-later stage implements something already agreed. An advisory tracing to `none`
-takes the Change Request path only where it proposes a new obligation; advice
-about implementing an existing one proposes nothing and needs no record beyond
-the disposition the next stage gives it.
+`Severity: advisory`, and `Traces to:` **the obligation whose implementation the
+advice is about** — which the pack carries, since the subject is how a later
+stage implements something already agreed. Never `none`: that value means
+reviewer-originated scope, takes the Change Request path and reaches no
+implementer, and advice about an agreed obligation proposes no new one. Where an
+item genuinely names nothing the pack carries it is reviewer-originated scope,
+and the baseline's `none` path is the right one for it.
 
 **A cycle that reruns one reviewer keeps the others' findings.** The pack is the
 cycle's record, not the rerun's: a reviewer that passed is not re-run, its
