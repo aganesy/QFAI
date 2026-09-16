@@ -26,6 +26,31 @@ describe("discussion review checks read facts and planning decisions with target
       expect(request).toContain("qfai-discussion/SKILL.md#reviewer-gate-must");
     });
 
+    it(`${tree}: Stage 0 reads every completed review of the pack it selected`, async () => {
+      const playbook = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-execution-playbook.md",
+      );
+      // The pack is the one the preflight selected, compared as resolved paths.
+      expect(playbook).toContain("the preflight result's `selectedInputPath`");
+      expect(playbook).toContain("**Compare the two as resolved paths.**");
+      // Completed reviews only, and every one of them.
+      expect(playbook).toContain(
+        "A directory with no `summary.json` is skipped whatever its stamp",
+      );
+      expect(playbook).toContain(
+        "**Read every completed review of the pack, newest first, not only the newest one.**",
+      );
+      expect(playbook).toContain("Carry forward each one no later review answers");
+      // Including the ones the archive holds.
+      expect(playbook).toContain("Look in `.qfai/review/_archive/review-*/`");
+      // And the verdicts are read against what the pack looked like then.
+      expect(playbook).toContain("git diff --name-only <rev> -- <pack path>");
+      expect(playbook).toContain("One revision, not two.");
+      // Every item taken gets a disposition in an SDD-owned artifact.
+      expect(playbook).toContain("Silence is not a disposition");
+    });
+
     it(`${tree}: implementation detail is advice, but wrong pack facts remain in remit`, async () => {
       const rule = await read(tree, "assistant/constitution/review-convergence.md");
       for (const clause of [
