@@ -4,7 +4,7 @@ How a review round ends, and what may follow it. Referenced from
 `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#round-budget-and-convergence-must`,
 which owns the delegation rules these sit beside.
 
-### Round budget (MUST)
+## Round budget (MUST)
 
 - **Two rounds per reviewer per artifact.** Round 1 is the initial review;
   round 2 reviews the fixes. **The budget is spent the moment round 2 returns
@@ -99,7 +99,7 @@ which owns the delegation rules these sit beside.
 - The round number MUST be recorded on each reviewer response
   (`Round:` in the shared response template).
 
-### Convergence (MUST)
+## Convergence (MUST)
 
 - A finding first raised in round N > 1 MUST state why it was not raisable in
   round N-1 — the fix introduced it, or the fix exposed it. A finding that was
@@ -120,7 +120,7 @@ which owns the delegation rules these sit beside.
   the escalation exit in the round budget withholds _Accept as Open Question_
   for this same class, so a user choice cannot supersede it either.
 
-### Answered demands (MUST)
+## Answered demands (MUST)
 
 A demand already answered MUST NOT be re-raised under another wording. Close a
 repeat by citing its recorded answer. This bounds what a reviewer may require,
@@ -141,7 +141,7 @@ When there are no answered demands, write `None`.
 A report of a new defect or evidence that an answer no longer applies must
 state what changed. The existing severity floor and escalation rules still apply.
 
-### Agent-to-agent grilling (MUST)
+## Agent-to-agent grilling (MUST)
 
 A grilling session between agents has no user answering its questions, so the
 end condition the session rule states — an empty frontier and the user's

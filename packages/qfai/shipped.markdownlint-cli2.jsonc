@@ -1,0 +1,27 @@
+// Rule set for the documents the package ships (`assets/**`).
+//
+// These are instructions an agent reads, not prose a person scans in a column,
+// and four rules read them as the wrong kind of document:
+//
+//   MD013  line length — reflowing an instruction moves where its meaning breaks
+//   MD033  inline HTML — the skill bodies and templates use it deliberately
+//   MD038  spaces in code spans — a quoted output prefix such as `[warn] `
+//          carries its trailing space as part of what is quoted
+//   MD028  blank line in blockquote — stacked callouts are the house style here
+//   MD029  ordered list prefix — numbers that other documents cite ("steps 3, 4
+//          and 5 below") survive a list the prose interrupts
+//
+// MD024 is configured rather than disabled: a template repeats `Entry 1` under
+// each distinct category heading, which is correct under every parent.
+{
+  "config": {
+    "default": true,
+    "MD013": false,
+    "MD024": { "siblings_only": true },
+    "MD028": false,
+    "MD029": false,
+    "MD033": false,
+    "MD038": false,
+    "MD041": true,
+  },
+}

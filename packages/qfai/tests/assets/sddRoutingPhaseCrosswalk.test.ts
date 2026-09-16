@@ -29,11 +29,11 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const CROSSWALK_HEADING = "### Routing Phase Crosswalk (Normative)";
+const CROSSWALK_HEADING = "## Routing Phase Crosswalk (Normative)";
 // The crosswalk's own terminator, in the topic file that owns it. It used
 // to be the heading that happened to follow the section inside `SKILL.md`,
 // which stopped meaning anything once the section moved.
-const NEXT_HEADING = "### Crosswalk sources";
+const NEXT_HEADING = "## Crosswalk sources";
 const FIXED_ORDER_HEADING = "## Stage and Phase Order (Fixed)";
 
 /**
@@ -106,7 +106,7 @@ const cells = (row: string): string[] =>
 function fixedOrder(skill: string): string[] {
   const start = skill.indexOf(FIXED_ORDER_HEADING);
   expect(start, `heading not found: ${FIXED_ORDER_HEADING}`).toBeGreaterThan(-1);
-  const fenced = /```\r?\n([\s\S]*?)```/.exec(skill.slice(start));
+  const fenced = /```[^\r\n]*\r?\n([\s\S]*?)```/.exec(skill.slice(start));
   expect(fenced?.[1], `no fenced block under ${FIXED_ORDER_HEADING}`).toBeTruthy();
   const entries = (fenced?.[1] ?? "")
     .split("->")
@@ -302,6 +302,6 @@ describe.each(QFAI_TREES)("%s — qfai-sdd routing phases resolve to fixed-order
 
   it("points the manifest back at the crosswalk", async () => {
     const routing = (await read(tree, "assistant/manifest/agent-routing.yml")).replace(/\s+/g, " ");
-    expect(routing).toContain("### Routing Phase Crosswalk (Normative)");
+    expect(routing).toContain("## Routing Phase Crosswalk (Normative)");
   });
 });

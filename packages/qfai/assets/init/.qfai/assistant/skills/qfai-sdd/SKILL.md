@@ -34,7 +34,7 @@ QFAI Skill Body (SSOT)
 
 ## Stage and Phase Order (Fixed)
 
-```
+```text
 Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
                   -> Phase 1 Outline -> Phase 2 Slice (per spec)
                   -> Phase 2b Seed tdd/test-list.md (per spec)
@@ -465,7 +465,7 @@ project_memory:
 - Before re-execution or the downstream reset, narrow the kept matrix row's `Selector` to the chosen boundary; appended rows cover only the remaining boundaries.
 - An existing ledger's columns are migrated to the template's (Blocked-By on an eight-column ledger) so a downstream blocked row never has to add one.
 - E2E/API rows split one row per independently observable boundary from their US-Refs / CON-API-Refs source, not from TC-Refs.
-- Migrate an eight-column ledger by adding US-Refs / CON-API-Refs and moving US-* / CON-API-* from E2E/API TC-Refs into the column their Layer owns.
+- Migrate an eight-column ledger by adding US-Refs / CON-API-Refs and moving US-\* / CON-API-\* from E2E/API TC-Refs into the column their Layer owns.
 - Which boundary is kept follows what the row actually observed, and an observation is never invented: a natural RED keeps the first failing assert's boundary.
 - A blocked row selected before RED and a falsifiability row at red or beyond have no first failing assert at all, so the kept boundary is the one the driving CR-\* names first, in the order that row's obligation source lists them when the CR gives an unordered set.
 - On a falsifiability row, keep the boundary the predicate its Satisfied-by names covers, falling back to that same order.
