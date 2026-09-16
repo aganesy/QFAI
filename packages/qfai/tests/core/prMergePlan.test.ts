@@ -281,6 +281,24 @@ describe("run-pr-merge plan", () => {
       "image-only linked answer",
       "## What this change made unnecessary\n\n[![Nothing](/image.png)](/target)\n",
     ],
+    ...[
+      // A quote and a list marker interleave, and one pass per kind left the
+      // nested one in place, so the anchored placeholder test matched neither.
+      "> - TODO",
+      "- - TODO",
+      "1. > FIXME",
+      // A backslash escape renders as the punctuation alone.
+      "N\\/A",
+    ].map((source) => [
+      `nested or escaped placeholder ${source}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    [
+      // A linked image written as a reference shows no prose either, and the
+      // label letters are not it.
+      "image-only reference-linked answer",
+      "## What this change made unnecessary\n\n[![Nothing](/image.png)][target]!\n\n[target]: /url\n",
+    ],
     ...["~~TODO~~", "### TODO", "> TBD", "~~N/A~~"].map((source) => [
       // Emphasis, strikethrough and a leading marker are formatting, not text,
       // so what renders is the placeholder alone.

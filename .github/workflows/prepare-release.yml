@@ -691,6 +691,23 @@ jobs:
                               flatLink = true;
                             }
                           }
+                          // And the reference forms of the same link: full,
+                          // collapsed and shortcut. Read only for the inline
+                          // form, a linked image written any of those three ways
+                          // left its label letters standing as the only text.
+                          if (!flatLink) {
+                            imageReference.lastIndex = close + 1;
+                            const reference = imageReference.exec(body);
+                            const text = reference?.groups.reference || body.slice(start + 1, close);
+                            const referenceLength = reference?.[0].length ?? 0;
+                            if (!crossesTable(start, close + 1 + referenceLength) && Buffer.byteLength(text.replace(/\r\n/g, '\n'), 'utf8') <= 1000 && referenceLabels.has(normalizeLabel(text))) {
+                              visible = visible.slice(0, position) + ' ' + visible.slice(position + 1);
+                              labelLinkStart = close;
+                              labelLinkEnd = close + 1 + referenceLength;
+                              hasInlineLink = true;
+                              flatLink = true;
+                            }
+                          }
                         }
                         if (!flatLink && inline !== null && !crossesTable(start, start + inline[0].length)) {
                           const target = inline.groups.destination ?? '';
@@ -799,8 +816,9 @@ jobs:
               const namedEntities = { sol: '/', period: '.', lbrack: '[', rbrack: ']', lsqb: '[', rsqb: ']', nbsp: '\u00a0', Tab: '\t', NewLine: '\n' };
               const answer = (candidate?.[1] ?? '')
                 .replace(/\r\n/g, '\n')
-                .replace(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?/gm, '')
-                .replace(/^[ \t]*>+[ \t]*/gm, '')
+                // A quote and a list marker interleave, and one pass per kind
+                // left the nested one in place.
+                .replace(/^(?:[ \t]*(?:>+|(?:[-*+]|\d+[.)])(?:[ \t]*\[[ xX-]?\])?)[ \t]*)+/gm, '')
                 .replace(
                   /<\/?[A-Za-z][A-Za-z0-9:-]*(?:[ \t\n]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t\n]*=[ \t\n]*(?:[^"'=<>`\x00-\x20]+|'[^']*'|"[^"]*"))?)*[ \t\n]*\/?>/g,
                   '',
@@ -814,8 +832,13 @@ jobs:
                 })
                 // Emphasis, strikethrough and a leading heading marker render as
                 // formatting, not as text, so a placeholder wearing one still reads
-                // as the placeholder.
+                // as the placeholder. A backslash escape renders as the punctuation
+                // alone, so an escaped `N/A` reads as the placeholder it is.
+                .replace(/\\([\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e])/g, '$1')
                 .replace(/[`*_]|~~/g, '')
+                .trim()
+                // Trimmed first: the captured section opens with a newline, so a
+                // marker anchored at the start never met the one after it.
                 .replace(/^(?:#{1,6}[ \t]+|>[ \t]*)+/, '')
                 .trim();
               return (

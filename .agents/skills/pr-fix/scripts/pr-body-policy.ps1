@@ -377,6 +377,24 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
                   $flatLink = $true
                 }
               }
+              # And the reference forms of the same link: full `][label]`,
+              # collapsed `][]`, and shortcut, where the label alone carries the
+              # reference. Read only for the inline form, a linked image written
+              # any of those three ways left its label letters standing as the
+              # only text the answer showed.
+              if (-not $flatLink) {
+                $reference = $imageReference.Match($Body, $close + 1)
+                $text = $reference.Groups['reference'].Value
+                if ($text.Length -eq 0) { $text = $Body.Substring($start + 1, $close - $start - 1) }
+                $referenceLength = if ($reference.Success) { $reference.Length } else { 0 }
+                if (-not (& $crossesTable $start ($close + 1 + $referenceLength)) -and [Text.Encoding]::UTF8.GetByteCount($text) -le 1000 -and $referenceLabels.Contains((& $normalizeLabel $text))) {
+                  $visible = $visible.Remove($position, 1).Insert($position, ' ')
+                  $labelLinkStart = $close
+                  $labelLinkEnd = $close + 1 + $referenceLength
+                  $hasInlineLink = $true
+                  $flatLink = $true
+                }
+              }
             }
             if (-not $flatLink -and $escapes % 2 -eq 0 -and $inline.Success -and -not (& $crossesTable $start ($start + $inline.Length))) {
               $target = $inline.Groups['destination']
@@ -478,8 +496,10 @@ function RemovalAnswer([string]$Body) {
   $match = [regex]::Match($text, '(?ms)^ {0,3}## What (?:this|a) change made unnecessary(?:[ \t]+#+)?[ \t]*\n(?<answer>.*?)(?=^ {0,3}#{1,2}(?:[ \t]|$)|\z)')
   if (-not $match.Success) { return "" }
   $answer = $match.Groups['answer']
-  $meaningful = [regex]::Replace($answer.Value, '(?m)^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?', '')
-  $meaningful = [regex]::Replace($meaningful, '(?m)^[ \t]*>+[ \t]*', '')
+  # A quote and a list marker interleave, and one pass per kind left the
+  # nested one in place: `> - TODO` kept its list marker and `- - TODO` its
+  # second, so the anchored placeholder test matched neither.
+  $meaningful = [regex]::Replace($answer.Value, '(?m)^(?:[ \t]*(?:>+|(?:[-*+]|\d+[.)])(?:[ \t]*\[[ xX-]?\])?)[ \t]*)+', '')
   $meaningful = [regex]::Replace($meaningful, '</?[A-Za-z][A-Za-z0-9:-]*(?:[ \t\n]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t\n]*=[ \t\n]*(?:[^"''=<>`\x00-\x20]+|''[^'']*''|"[^"]*"))?)*[ \t\n]*/?>', '')
   $entities = [regex]::new('(?<literal>\\[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]|(?<ticks>`+)(?!`)[\s\S]*?(?<!`)\k<ticks>(?!`))|&(?<entity>#[xX][0-9A-Fa-f]{1,6}|#\d{1,7}|[A-Za-z][A-Za-z0-9]*);')
   # SIMPLIFIED: other named references remain separators, not a full HTML5 decode.
@@ -500,6 +520,9 @@ function RemovalAnswer([string]$Body) {
   })
   # Emphasis, strikethrough and a leading heading marker render as formatting,
   # not as text, so a placeholder wearing one still reads as the placeholder.
+  # A backslash escape renders as the punctuation alone, so `N\/A` reads as the
+  # placeholder it is.
+  $meaningful = [regex]::Replace($meaningful, '\\([\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e])', '$1')
   $meaningful = [regex]::Replace($meaningful, '[`*_]|~~', '').Trim()
   $meaningful = [regex]::Replace($meaningful, '^(?:#{1,6}[ 	]+|>[ 	]*)+', '').Trim()
   if ($meaningful -notmatch '[\p{L}\p{N}]' -or $meaningful -match '^(?:TBD|TODO|FIXME|HACK)(?:[^\p{L}\p{N}]|$)' -or $meaningful -match '^(?:TBD|TODO|FIXME|HACK|None|N/?A|Not applicable|\[.*\])\.?$') { return "" }

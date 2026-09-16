@@ -634,6 +634,10 @@ describe("resuming a release pull-request description", () => {
       "- > ~~~md\n  > Nothing removed.\n  > ~~~",
       "> - ~~~md\n>   Nothing removed.\n>   ~~~",
       "[![Nothing](/image.png)](/target)",
+      "[![Nothing](/image.png)][target]\n\n[target]: /url",
+      "> - TODO",
+      "- - TODO",
+      "N\\/A",
       "~~TODO~~",
     ].map((source) => [
       `hidden or formatted answer ${JSON.stringify(source)}`,
