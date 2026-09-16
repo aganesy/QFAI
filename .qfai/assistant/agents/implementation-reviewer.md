@@ -30,9 +30,9 @@ tools: [Read, Glob, Grep, Bash]
   Use this route only where the installed Article VII governs the artifact.
   Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 - Count the consumers of an architectural element this change introduces or
-  extracts, or leaves below three by removing one — a module, a seam, an
-  adapter, a shared helper, a contract, a deployment boundary — as they exist in
-  the tree, against
+  extracts, first gives concrete consumers to, or leaves below three by removing
+  one — a module, a seam, an adapter, a shared helper, a contract, a deployment
+  boundary — as they exist in the tree, against
   `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`,
   which says what a consumer is for each kind. The Plan's three usages are cited
   before implementation, so a usage nobody has written is not one of them; three
@@ -45,32 +45,59 @@ tools: [Read, Glob, Grep, Bash]
   shared with one. Removing the last consumer but one is the same count reached
   from the other side: the element is inlined back into what still uses it, or
   it keeps the same exception below.
-  **Reusing an element that already exists is never this finding.** A change
+  **Reusing code that already exists is never this finding.** A change
   satisfying an accepted behaviour by calling a helper that is already there is
   rung 2 of `.agents/rules/minimal-implementation.md`, and a verdict against it
   leaves the implementer duplicating what the repository already has. The count
   reads the change that creates the shared element, not every change that later
   uses it.
-  Return REVISE unless the safety floor in
-  `.agents/rules/minimal-implementation.md` § 2 requires the element, the target
-  `10_Plan.md` records the exception and the obligation requiring it, or the
-  Plan's three usages are cited and every row still to deliver one is **in the
-  confirmed queue of this invocation**.
-  **The count is then taken over those rows, not over the one under review.**
-  Delivered by separate rows, the first consumer to land is one, and a REVISE
-  there stops the rest from ever being selected — a verdict the row cannot
-  satisfy and no later row can lift. Name the open rows, and take the count when
-  the last of them lands.
-  The queue is what bounds that wait. A usage owed by a spec nobody has queued
-  is a usage no run will write, so the element stays local to its one consumer
-  until the spec that needs it is queued beside this one; granting the exception
-  there closes the spec around exactly the under-three tree this count exists to
-  refuse.
+  **A contract or a deployment boundary is the exception to that exception.**
+  Those are authored by `/qfai-sdd` before anything implements them, so the
+  change that wires their first dependants neither introduces nor extracts them,
+  and the Plan gate before it read references rather than the dependants
+  themselves. Nothing else would ever count them. So a change giving one its
+  first concrete consumers is counted, once — on the later change that adds a
+  fourth dependant there is code to reuse, and the clause above applies again.
+  Return REVISE unless one of exactly two things holds.
+
+  1. The safety floor in `.agents/rules/minimal-implementation.md` § 2 requires
+     the element **and** the owning `10_Plan.md` records that exception together
+     with the obligation requiring it. Both halves, not either: the floor
+     requiring an element is not a record anyone can review, and a Plan claiming
+     an exception no obligation requires is a claim about nothing. The template
+     asks for the two together, so a PASS on one alone accepts half of what it
+     asks.
+  2. The Plan's three usages are cited, every row still to deliver one is **in
+     the confirmed queue of this invocation**, and each of those rows carries a
+     `Blocked-By` naming this count. **The count is then taken over those rows,
+     not over the one under review.** Delivered by separate rows, the first
+     consumer to land is one, and a REVISE there stops the rest from ever being
+     selected — a verdict the row cannot satisfy and no later row can lift. Name
+     the open rows, and take the count when the last of them lands.
+
+  Two things bound the second.
+  The queue is one: a usage owed by a spec nobody has queued is a usage no run
+  will write, so the element stays local to its one consumer until the spec that
+  needs it is queued beside this one.
+  The recorded `Blocked-By` is the other, and it is what survives the invocation.
+  A queue can be interrupted, and a later row can be blocked for its own reasons;
+  without a record, the next invocation meets an element that was neither
+  introduced nor extracted by the change in front of it and never counts it
+  again. With one, the count is owed until the last delivery row lands, whichever
+  invocation lands it.
+
+  **The Plan read is the one that owns the element**, resolved through the same
+  `paths.specsDir`. For a change removing a consumer the element usually belongs
+  to another spec, and that spec's Plan is where its exception and the obligation
+  requiring it are recorded — read only the row's own Plan, the reviewer cannot
+  tell a justified security or data-loss element from an unjustified two-consumer
+  abstraction, and demands the inlining of something the floor requires.
   This count reads an element placed where several modules reach it. An
   extraction that stays inside the module holding the repetition is not one, so
   the third-occurrence limit on sharing in
   `.github/instructions/principles.instructions.md` and this count never ask for
   opposite things about the same code.
+
 - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a component written where one could be installed, a standard passed over, and an authored region with no recorded reason.
 
 ## Inputs you must read
@@ -101,7 +128,10 @@ tools: [Read, Glob, Grep, Bash]
 - `<paths.specsDir>/<spec-id>/10_Plan.md` — the target Plan, where the usage
   references are cited and where an exception under the safety floor records the
   obligation requiring it. The template is the contract for the shape; this is
-  the document under review.
+  the document under review. **And the Plan of whichever spec owns an element
+  this change recounts**, which for a removal is usually not the target: the
+  exception that justifies its consumer count is recorded there and nowhere
+  else.
 - `.qfai/specs/<spec-id>/tdd/test-list.md` — the ledger, for the row under review
 - The per-item evidence file that row's `Layer` owns: `.qfai/evidence/implement-<spec-id>.md`,
   or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row
