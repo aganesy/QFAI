@@ -44,7 +44,7 @@
  *
  * Exit codes: 0 clean, 1 drift, 2 the comparison could not be made.
  */
-/* global console, process, fetch, AbortController, setTimeout */
+/* global console, process, fetch, AbortController, setTimeout, clearTimeout */
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
@@ -209,67 +209,106 @@ async function fetchReleaseBody(repository, tag, token, signal) {
   return typeof payload?.body === "string" ? payload.body : "";
 }
 
+/** What a read the run gave up on settles with, in place of never settling. */
+const ABANDONED = Symbol("abandoned");
+
 /**
  * A gate that admits `READS_A_MINUTE` reads in any minute and holds the rest.
  *
  * Each caller drops the starts that have left the window, takes a place if one
  * is free, and otherwise waits for the oldest start to leave and asks again.
+ *
+ * A caller waits here on a timer rather than on a response, so the run's giving
+ * up has to reach this wait as well as the read itself: a caller whose
+ * `abandoned` settles first leaves without taking a place and is told so, and
+ * starts no read. Left out, a failure the run already knows about would go
+ * unprinted until the window turned, which is up to a minute and can be longer
+ * than the job has left.
  */
 function rateGate() {
   /** When each read still inside the window started, oldest first. */
   const starts = [];
-  return async () => {
+  /** Whether the caller may start its read, or was given up on while waiting. */
+  return async (abandoned) => {
     for (;;) {
       const now = Date.now();
       while (starts.length > 0 && now - starts[0] >= A_MINUTE) starts.shift();
       if (starts.length < READS_A_MINUTE) {
         starts.push(now);
-        return;
+        return true;
       }
-      await new Promise((admit) => setTimeout(admit, A_MINUTE - (now - starts[0])));
+      let timer;
+      const turned = new Promise((admit) => {
+        timer = setTimeout(admit, A_MINUTE - (now - starts[0]));
+      });
+      try {
+        if ((await Promise.race([turned, abandoned])) === ABANDONED) return false;
+      } finally {
+        // Dropped rather than left to fire into nothing: a timer of up to a
+        // minute holds the process open for the rest of the window.
+        clearTimeout(timer);
+      }
     }
   };
 }
 
-/** What a read the run gave up on settles with, in place of never settling. */
-const ABANDONED = Symbol("abandoned");
-
 /**
  * Every section's published body, read at most `READS_AT_ONCE` at a time and no
- * more than `READS_A_MINUTE` in a minute.
+ * more than `READS_A_MINUTE` in a minute, and handed to `deliver` in changelog
+ * order.
  *
- * The answer is indexed by the section's own position, so what the caller reads
- * is in changelog order whatever order the responses arrived in.
+ * A section is delivered as soon as it and every section above it has answered,
+ * rather than once the whole set has. Nothing sets a per-request timeout, so a
+ * report built at the end is one a single stalled read keeps off the output
+ * entirely, and the job's own budget can end a run that has printed nothing. A
+ * section still outstanding holds back the sections below it and no more, which
+ * is what keeps the report in changelog order whatever order the responses
+ * arrived in.
  *
  * A read that fails stops the workers claiming any further section, and the
  * failure carried back is the lowest section that failed rather than the first
  * one to answer. Both are what reading them one at a time did: the run ended at
- * that section, and the sections below it were never asked for.
+ * that section, and the sections below it were never asked for. A failed
+ * section never answers, so the delivery stops there of its own accord.
  *
  * A read still open for a section BELOW that one is stopped and stops being
  * waited for. The run has already failed, its answer cannot change what is
  * reported, and a request that never answers would otherwise hold the failure
- * unprinted until the job's own budget ended the run. A read for a section
- * above it is still awaited: the report covers those sections, and a failure
+ * unprinted until the job's own budget ended the run. A worker held at the rate
+ * gate is released the same way and starts no read. A read for a section above
+ * the failure is still awaited: the report covers those sections, and a failure
  * among them outranks this one.
  */
-async function readBodies(sections, read) {
-  /** Indexed by section, and holding only the sections a worker claimed. */
-  const bodies = [];
+async function readBodies(sections, read, deliver) {
   /** `{ index, tag, cause }` for the lowest section that failed, or `null`. */
   let failure = null;
   let next = 0;
-  /** The reads in flight, by section: what stops each, and what releases it. */
-  const inFlight = new Map();
+  /** Bodies that have answered and are waiting for the sections above them. */
+  const answered = new Map();
+  /** The next section to deliver. Everything above it has been delivered. */
+  let delivering = 0;
+  /** The sections a worker holds: what stops each read, and what releases it. */
+  const outstanding = new Map();
   const admit = rateGate();
 
   /** Stops every read below `index`, whose answer the run can no longer use. */
   const giveUpBelow = (index) => {
-    for (const [at, pending] of inFlight) {
+    for (const [at, held] of outstanding) {
       if (at <= index) continue;
-      inFlight.delete(at);
-      pending.controller.abort();
-      pending.abandon(ABANDONED);
+      outstanding.delete(at);
+      held.controller.abort();
+      held.abandon(ABANDONED);
+    }
+  };
+
+  /** Delivers as far down the changelog as the answers now reach. */
+  const deliverInOrder = () => {
+    let landed = answered.get(delivering);
+    while (landed !== undefined) {
+      answered.delete(delivering);
+      delivering += 1;
+      deliver(landed.section, landed.body);
+      landed = answered.get(delivering);
     }
   };
 
@@ -279,27 +318,28 @@ async function readBodies(sections, read) {
       const section = sections[index];
       if (section === undefined) return;
       next = index + 1;
-      await admit();
-      if (failure !== null && index > failure.index) return;
       const tag = `v${section.version}`;
       const controller = new AbortController();
       const abandoned = new Promise((abandon) => {
-        inFlight.set(index, { controller, abandon });
+        outstanding.set(index, { controller, abandon });
       });
       try {
+        if (!(await admit(abandoned))) return;
+        if (failure !== null && index > failure.index) return;
         const body = await Promise.race([read(tag, controller.signal), abandoned]);
         if (body === ABANDONED) return;
-        bodies[index] = body;
+        answered.set(index, { section, body });
       } catch (cause) {
         // A read the run gave up on rejects because it was stopped. That is the
         // failure above it ending the run, not a second finding.
-        if (inFlight.has(index) && (failure === null || index < failure.index)) {
+        if (outstanding.has(index) && (failure === null || index < failure.index)) {
           failure = { index, tag, cause };
           giveUpBelow(index);
         }
         return;
       } finally {
-        inFlight.delete(index);
+        outstanding.delete(index);
+        deliverInOrder();
       }
     }
   };
@@ -309,7 +349,7 @@ async function readBodies(sections, read) {
     workers.push(worker());
   }
   await Promise.all(workers);
-  return { bodies, failure };
+  return failure;
 }
 
 /**
@@ -365,26 +405,25 @@ export async function run(options = {}) {
     return 2;
   }
 
-  const { bodies, failure } = await readBodies(sections, (tag, signal) =>
-    readBody(repository, tag, token, signal),
-  );
-
-  // Counted and reported here rather than as the responses land, so the two
-  // counters have one writer and the report reads in changelog order. It stops
-  // at a failed read, which is where reading one at a time stopped.
+  // Counted and reported as each section's turn comes rather than once every
+  // read has answered, which is what reading them one at a time did: the run
+  // printed a section before asking for the next. The delivery is in changelog
+  // order and one section at a time, so the two counters still have one writer.
   let drifted = 0;
   let compared = 0;
-  const reported = failure === null ? sections : sections.slice(0, failure.index);
-  for (const [index, section] of reported.entries()) {
-    const body = bodies[index];
-    if (body === null) {
-      // A section with no release is an ordinary state: a version tagged but
-      // not released, or a changelog that predates the workflow.
-      continue;
-    }
-    compared += 1;
-    if (reportSection(`v${section.version}`, section, body)) drifted += 1;
-  }
+  const failure = await readBodies(
+    sections,
+    (tag, signal) => readBody(repository, tag, token, signal),
+    (section, body) => {
+      if (body === null) {
+        // A section with no release is an ordinary state: a version tagged but
+        // not released, or a changelog that predates the workflow.
+        return;
+      }
+      compared += 1;
+      if (reportSection(`v${section.version}`, section, body)) drifted += 1;
+    },
+  );
 
   if (failure !== null) {
     const { tag, cause } = failure;

@@ -43,22 +43,36 @@ async function changelogWith(text: string): Promise<string> {
   return file;
 }
 
+/**
+ * A run in progress: the lines it has written so far, and what it settles to.
+ *
+ * `lines` is the live array, so a case can read the report before the run ends.
+ * That is how the cases below tell a section reported as soon as its turn came
+ * from one reported once every section had answered.
+ */
+function capturing(options: Parameters<typeof run>[0]): {
+  lines: string[];
+  settled: Promise<number>;
+} {
+  const lines: string[] = [];
+  const collect = (...args: unknown[]): void => {
+    lines.push(args.map((arg) => String(arg)).join(" "));
+  };
+  const log = vi.spyOn(console, "log").mockImplementation(collect);
+  const error = vi.spyOn(console, "error").mockImplementation(collect);
+  const settled = run(options).finally(() => {
+    log.mockRestore();
+    error.mockRestore();
+  });
+  return { lines, settled };
+}
+
 /** Captures what a run wrote, so the cases read the report rather than a code alone. */
 async function capture(
   options: Parameters<typeof run>[0],
 ): Promise<{ status: number; output: string }> {
-  const chunks: string[] = [];
-  const collect = (...args: unknown[]): void => {
-    chunks.push(args.map((arg) => String(arg)).join(" "));
-  };
-  const log = vi.spyOn(console, "log").mockImplementation(collect);
-  const error = vi.spyOn(console, "error").mockImplementation(collect);
-  try {
-    return { status: await run(options), output: chunks.join("\n") };
-  } finally {
-    log.mockRestore();
-    error.mockRestore();
-  }
+  const { lines, settled } = capturing(options);
+  return { status: await settled, output: lines.join("\n") };
 }
 
 afterEach(async () => {
@@ -567,6 +581,156 @@ describe("reading the bodies at once", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  /**
+   * A changelog long enough to engage the rate gate, and the tags either side
+   * of it: the section that fails, and the first section left waiting.
+   *
+   * The failure sits well inside the window, so by the time it is recorded the
+   * bound has been reached and the workers past it are waiting on the gate's
+   * timer rather than on a response.
+   */
+  const pastTheBound = (): { count: number; failing: string; waiting: string } => {
+    const count = READS_A_MINUTE + 20;
+    return {
+      count,
+      // `changelogOf` numbers the sections downwards, so a section's minor is
+      // the count less its position: the hundredth section, and the first one
+      // the gate holds.
+      failing: `v1.${String(count - 100)}.0`,
+      waiting: `v1.${String(count - READS_A_MINUTE)}.0`,
+    };
+  };
+
+  it("releases a worker waiting at the rate gate when a failure is recorded, and it reads nothing", async () => {
+    const { count, failing, waiting } = pastTheBound();
+    const file = await changelogWith(changelogOf(count));
+    const asked: string[] = [];
+
+    vi.useFakeTimers();
+    try {
+      const { settled } = capturing({
+        changelogPath: file,
+        repository: "owner/repo",
+        token: "t",
+        readBody: async (_repo: string, tag: string) => {
+          asked.push(tag);
+          if (tag === failing) {
+            await after(50);
+            throw new Error("GitHub answered 403");
+          }
+          return `- **Entry for ${tag.slice(1)}**`;
+        },
+      });
+      const finished: number[] = [];
+      const watched = settled.then((status) => {
+        finished.push(status);
+        return status;
+      });
+
+      // Far short of the window, so a worker still waiting on the gate's own
+      // timer would not have been released yet.
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      expect(finished).toEqual([2]);
+      // The window's worth of reads and no more: the workers released at the
+      // gate were given up on, and a read they then started would be one the
+      // run has no use for and the bound did not count.
+      expect(asked).toHaveLength(READS_A_MINUTE);
+      expect(asked).not.toContain(waiting);
+      expect(await watched).toBe(2);
+    } finally {
+      // Lets a run that was still waiting finish, so its spies are restored.
+      await vi.advanceTimersByTimeAsync(2 * 60_000);
+      vi.useRealTimers();
+    }
+  });
+
+  it("reports a failure without waiting out the rate window", async () => {
+    const { count, failing } = pastTheBound();
+    const file = await changelogWith(changelogOf(count));
+
+    vi.useFakeTimers();
+    try {
+      const { lines, settled } = capturing({
+        changelogPath: file,
+        repository: "owner/repo",
+        token: "t",
+        readBody: async (_repo: string, tag: string) => {
+          if (tag === failing) {
+            await after(50);
+            throw new Error("GitHub answered 403");
+          }
+          return `- **Entry for ${tag.slice(1)}**`;
+        },
+      });
+      const watched = settled.then((status) => status);
+
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      // A failure held until the window turns is a failure the job's own budget
+      // may end the run before printing.
+      expect(lines.join("\n")).toContain(`${failing}: GitHub answered 403`);
+      expect(await watched).toBe(2);
+    } finally {
+      await vi.advanceTimersByTimeAsync(2 * 60_000);
+      vi.useRealTimers();
+    }
+  });
+
+  it("reports a section that has answered while a later read is still outstanding", async () => {
+    const file = await changelogWith(changelogOf(2));
+    let answerTheStalled: (body: string) => void = () => {};
+
+    const { lines, settled } = capturing({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      // Empty, so the section drifts and is reported.
+      readBody: (_repo: string, tag: string) =>
+        tag === "v1.2.0"
+          ? Promise.resolve("")
+          : new Promise<string>((answer) => {
+              answerTheStalled = answer;
+            }),
+    });
+
+    await after(20);
+
+    // Nothing sets a per-request timeout, so a report made only once every read
+    // has answered is one the job's budget can end before it is printed.
+    expect(reportedTags(lines.join("\n"))).toEqual(["v1.2.0"]);
+
+    answerTheStalled("- **Entry for 1.1.0**");
+    expect(await settled).toBe(1);
+  });
+
+  it("holds the sections below one still outstanding, and reports them when it answers", async () => {
+    const file = await changelogWith(changelogOf(3));
+    let answerTheOutstanding: (body: string) => void = () => {};
+
+    const { lines, settled } = capturing({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readBody: (_repo: string, tag: string) =>
+        tag === "v1.2.0"
+          ? new Promise<string>((answer) => {
+              answerTheOutstanding = answer;
+            })
+          : Promise.resolve(""),
+    });
+
+    await after(20);
+
+    // The section above the outstanding one is reported. The section below it
+    // has answered too, and waits: the report reads in changelog order.
+    expect(reportedTags(lines.join("\n"))).toEqual(["v1.3.0"]);
+
+    answerTheOutstanding("");
+    expect(await settled).toBe(1);
+    expect(reportedTags(lines.join("\n"))).toEqual(["v1.3.0", "v1.2.0", "v1.1.0"]);
   });
 
   it("counts every section it compared, with the reads overlapping", async () => {
