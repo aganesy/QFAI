@@ -27,7 +27,11 @@ qualifier:
 - `BR-0008-0007` — "Each US/TC MUST have at minimum one normal-path AND one
   error/boundary/edge test case".
 - `TC-0008-0012` — verifies that such a row "triggers REVISE".
-- `AC-0013-0010` — "each AC has at minimum one non-normal type test case".
+- `AC-0013-0010` — "each AC has at minimum one non-normal type test case". Two
+  criteria in that file carry this ID; the one this record changes is the first,
+  headed `Test Case Type Column Required`. The second, `Design Contract
+Normalization`, is untouched — and its sharing the ID is a separate defect for
+  the owning run to settle.
 - `BR-0013-0008` — "Each AC MUST have at minimum one `normal` test case AND one
   non-normal test case", with "Normal-path-only coverage for an AC is considered
   incomplete".
@@ -165,7 +169,8 @@ it is listed because it is what happens if the record is approved in part.
    table states them, and recording this Change Request as one row of
    `09_delta.md`'s `## Change Requests` table.
 
-2. `/qfai-sdd spec-0013`, the same for `AC-0013-0010`, `BR-0013-0008`,
+2. `/qfai-sdd spec-0013`, the same for `AC-0013-0010` (`Test Case Type Column
+Required`), `BR-0013-0008`,
    `EX-0013-0008` and `TC-0013-0013`.
 
 3. Downstream ledger sweep: **reset to `todo`**, recording this Change Request's

@@ -173,11 +173,22 @@ for it would have an analyst invent coverage or record a blocking gap for
 nothing. Oracle strength is the one that never does: every case a row holds has
 an assertion that either can fail or cannot.
 
-`Normal path` is owed by every `US-*` row and by a `TC-*` row whose declared
-`Type` is `normal`. A `TC-*` declaring `error`, `boundary` or `edge` **is** one
-non-normal scenario, and the template puts the normal one in a sibling case, so
-that row marks `Normal path` `n/a` and the sibling carries it. Demanding both of
-one row asks the analyst to write a case the schema puts somewhere else.
+`Normal path` is owed by every `US-*` row that owes an acceptance test, and by a
+`TC-*` row that does not declare a non-normal `Type`. A `TC-*` declaring `error`,
+`boundary` or `edge` **is** one non-normal scenario, and the template puts the
+normal one in a sibling case, so that row marks `Normal path` `n/a` and the
+sibling carries it. Demanding both of one row asks the analyst to write a case
+the schema puts somewhere else.
+
+`Type` is optional in the schema, so a pack written without the column is read
+as declaring none: those rows owe the normal path, which is the reading a pack
+predating the column was scored under. Only an explicit non-normal `Type` lifts
+it.
+
+A `US-*` that owes no acceptance test owes no row here either — a story deferred
+with a `- x-qfai-status: planned` meta line, and every story of a spec the
+surface scoping exempts. Sent into the matrix anyway, it is asked for coverage
+`/qfai-atdd` forbids writing.
 
 **Every section above is scored.** Sections 1–6 and 8 are matrix columns;
 section 7 is the business rule table that follows the matrix. A section with no

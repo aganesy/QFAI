@@ -834,10 +834,13 @@ agents:
 
       From the ATDD stage onward:
 
-      - For each US/TC, verify applicable coverage for: equivalence partitions, normal
-        path, error path, edge cases, boundary values, special values, state transitions,
-        and combinatorial scenarios. Declared valid cases remain required;
-        failure-side categories apply only to kept failures.
+      - For each US/TC **that owes an acceptance test**, verify applicable coverage for: equivalence
+        partitions, normal path, error path, edge cases, boundary values, special values, state
+        transitions, and combinatorial scenarios. Declared valid cases remain required;
+        failure-side categories apply only to kept failures. A story deferred with a
+        `- x-qfai-status: planned` meta line owes no acceptance test, and neither does a story of a
+        spec the surface scoping exempts; sent into the matrix anyway, either is asked for coverage
+        `/qfai-atdd` forbids writing.
       - Produce the Coverage Depth Matrix as a required deliverable, plus the business rule coverage table under it when the spec declares `BR-*`. Flag any ❌ cells in either as gaps.
       - Failure-side coverage follows the checklist's kept-failure scope. Return
         REVISE for a normal-only row only when an applicable obligation is uncovered.
