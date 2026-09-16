@@ -308,6 +308,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the address unchanged; the step now asks the filesystem for them and stops on
   any it finds. A test runs the step's own commands in a temporary repository.
 
+- **Generated agent review instructions retain the project's review policy**
+  (#1814). Fresh, existing and forced init output points to `REVIEW.md` when the
+  project has that file. Existing entry-point text stays intact. The package
+  does not supply the repository's own review policy. PR readers reject
+  placeholder answers, preserve literal comment markers in code and refuse
+  release-body repairs hidden by unfinished Markdown blocks.
+  Existing list-item directives are reused without rewriting project text.
+  A heading that interrupts a paragraph remains visible to description readers.
+  Raw HTML examples do not supply description headings. Top-level indented
+  examples do not supply review guidance. Project bytes and authored answers
+  stay intact.
+
 - **The completion gate recomputes the checkpoint seal over the checkpoint's own
   revision** (#1738). `checkpoint-verification.md` seals the checkpoint command
   and result together with `Checkpoint verification revision`, the tree that
