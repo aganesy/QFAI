@@ -26,6 +26,11 @@ skills write.
   `US-Refs`;
 - **one `Layer = API` row per active `CON-API-*`** the spec owns, the obligation
   in `CON-API-Refs`.
+- A row for an active, owned `CON-DB-*` the spec binds, carrying its ID in
+  `CON-DB-Refs`. A contract declares failures whether or not a user story names
+  it, and those are covered at the Integration layer the constitution routes
+  `CON-DB-*` to; seeded from test cases alone, a contract-only flow has no row
+  for the coverage checklist to map its failures to.
 
 "Active" is the `.qfai/assistant/catalog/test-layers.md` exemption, and it has
 three forms. A contract at `x-qfai-status: planned` owes no API row. A spec with

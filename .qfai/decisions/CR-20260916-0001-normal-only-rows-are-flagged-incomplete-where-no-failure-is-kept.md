@@ -124,9 +124,13 @@ the rows point at it rather than restating it.
 
 ## Decision needed from user
 
-Qualify the nine rows by the failures a row keeps, so that a row with no other
-applicable obligation passes with a normal path alone and the matrix marks its
-failure cells `n/a`?
+Three options, and a recommendation.
+
+### Option A — qualify the nine rows by what the row keeps (recommended)
+
+A row with no other applicable obligation passes with a normal path alone, and
+the matrix marks its failure cells `n/a`. Every row that keeps a failure owes a
+case for each one, as it does today.
 
 **No other applicable obligation**, not merely no kept failure: a row keeping no
 failure can still declare a valid minimum, maximum or other boundary, and the
@@ -134,11 +138,26 @@ checklist scores those whatever the failure side says. A pass qualified on the
 failures alone would have the specs accept coverage the shipped workflow
 refuses.
 
-The alternative is to withdraw the checklist's kept-failure scoping and go on
-demanding a failure case for every row, including rows whose failures a type or
-a schema excludes. That is the state this record was raised from: the demand is
-met by inventing a case for a failure the code cannot reach, which is coverage
-nobody can falsify.
+Recommended because it is the only option that leaves one rule in force. The
+demand and the scoring then agree, and no row is asked for a case nobody can
+write.
+
+### Option B — withdraw the checklist's kept-failure scoping
+
+Go on demanding a failure case for every row, including rows whose failures a
+type or a schema excludes. That is the state this record was raised from: the
+demand is met by inventing a case for a failure the code cannot reach, which is
+coverage nobody can falsify.
+
+It costs nothing to adopt — the nine rows stay as they are — and it keeps the
+gate's present strictness, at the price of cases that assert what cannot happen.
+
+### Option C — qualify the checklist alone, and leave the nine rows
+
+The checklist scores only kept failures while the rows go on demanding a
+non-normal case for every one. Reviewers then disagree by which document they
+read, which is the contradiction this record reports, so it resolves nothing;
+it is listed because it is what happens if the record is approved in part.
 
 ## Approved actions (owner skill rerun plan)
 
