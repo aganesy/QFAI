@@ -67,12 +67,41 @@ const QUOTED = String.raw`${DOUBLE_QUOTED}|'(?:[^'\\\n]|\\.)*'`;
  * masking reads all three — so a restoration pattern reading only the first
  * loses the annotation in the other two.
  */
-const CSHARP_QUOTED = String.raw`@"(?:[^"]|"")*"|"""[\s\S]*?"""|${DOUBLE_QUOTED}`;
+const CSHARP_QUOTED = String.raw`@"(?:[^"]|"")*"|("{3,})[\s\S]*?\1|${DOUBLE_QUOTED}`;
+
+/** A Ruby string literal, including the percent forms a name may be written in. */
+const RUBY_QUOTED = String.raw`%[qQ]?[({\[][^)}\]]*[)}\]]|${QUOTED}`;
+
+/**
+ * The words a Ruby `/` opens a pattern after.
+ *
+ * A value ends before each of them, so the shared JavaScript set left a
+ * regex written after `if` or `unless` read as a division.
+ */
+const RUBY_REGEX_AFTER: ReadonlySet<string> = new Set([
+  "if",
+  "elsif",
+  "unless",
+  "while",
+  "until",
+  "when",
+  "case",
+  "and",
+  "or",
+  "not",
+  "return",
+  "match",
+  "then",
+  "do",
+  "in",
+]);
 
 /** A Java string literal: one line, or a text block. */
-const JAVA_QUOTED = String.raw`"""[\s\S]*?"""|${DOUBLE_QUOTED}`;
+/** A Java string literal: one line, or a text block, whose fence no escape reaches. */
+const JAVA_QUOTED = String.raw`"""(?:[^\\]|\\[\s\S])*?"""|${DOUBLE_QUOTED}`;
 
 /** A Scala string literal: one line, or triple-quoted. */
+/** A Scala string literal: one line, or triple-quoted, which is raw. */
 const SCALA_QUOTED = String.raw`"""[\s\S]*?"""|${QUOTED}`;
 
 /**
@@ -134,7 +163,9 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
           // A parameterized case takes its collected name from the id, so a
           // reference there is the test's name and not fixture data.
           namePattern(
-            String.raw`(?<anchor>parametrize)\s*\([^)]*?\bids\s*=\s*\[[^\]]*?(?<name>${QUOTED})`,
+            // Every element of the list, not the first alone: the scan resumes
+            // after each literal and cannot rediscover the call ahead of it.
+            String.raw`(?<=(?<anchor>parametrize)[\s\S]{0,400}?\bids\s*=\s*\[[^\]]{0,400}?)(?<name>${QUOTED})`,
           ),
           namePattern(String.raw`(?<anchor>pytest\.param)\s*\([^)]*?\bid\s*=\s*(?<name>${QUOTED})`),
         ],
@@ -143,10 +174,18 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         ["rb"],
         // Ruby writes a regex between slashes as JavaScript does, and `%r{…}`
         // is one of its percent literals, so both forms are read.
-        { comments: false, hashComments: true, percentLiterals: true, equalsBlockComments: true },
+        {
+          comments: false,
+          hashComments: true,
+          percentLiterals: true,
+          equalsBlockComments: true,
+          // A value ends before each of these in Ruby, so the shared set — which
+          // is JavaScript's — never opened a pattern after one.
+          regexAfterWords: RUBY_REGEX_AFTER,
+        },
         [
           namePattern(
-            String.raw`\b(?<anchor>it|test|describe|context|specify|example|scenario|feature)\s*\(?\s*(?<name>${QUOTED})`,
+            String.raw`\b(?<anchor>it|test|describe|context|specify|example|scenario|feature)\s*\(?\s*(?<name>${RUBY_QUOTED})`,
           ),
         ],
       ],
@@ -169,19 +208,33 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
             String.raw`(?<anchor>@DisplayName)\s*\(\s*(?:value\s*=\s*)?(?<name>${JAVA_QUOTED})`,
           ),
           namePattern(
-            String.raw`(?<anchor>@ParameterizedTest)\s*\([^)]*?\bname\s*=\s*(?<name>${JAVA_QUOTED})`,
+            String.raw`(?<anchor>@(?:ParameterizedTest|RepeatedTest))\s*\([^)]*?\bname\s*=\s*(?<name>${JAVA_QUOTED})`,
           ),
         ],
       ],
       [
-        // Groovy keeps the slash rule for its slashy strings, and the dollar
-        // form beside it.
-        ["kt", "kts", "groovy"],
+        // Groovy's block comments close at the first `*/`, as Java's do, and it
+        // keeps the slash rule for its slashy strings with the dollar form
+        // beside it.
+        ["groovy"],
+        { comments: false, tripleQuoted: true, dollarSlashyStrings: true },
+        [
+          namePattern(
+            String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${QUOTED})`,
+          ),
+          namePattern(String.raw`\b(?<anchor>def)\s+(?<name>${QUOTED})\s*\(`),
+        ],
+      ],
+      [
+        ["kt", "kts"],
         {
           comments: false,
           tripleQuoted: true,
+          // Kotlin nests its block comments and takes no escape inside a raw
+          // triple-quoted string, where a trailing backslash is a character.
           nestedBlockComments: true,
-          dollarSlashyStrings: true,
+          rawTripleQuoted: true,
+          regexLiterals: false,
         },
         [
           namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${DOUBLE_QUOTED})`),
@@ -192,7 +245,12 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
             String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${QUOTED})`,
           ),
           // Kotlin names a function in backticks, and Spock a method in quotes.
-          namePattern(String.raw`\b(?<anchor>fun)\s+(?<name>` + "`[^`\\n]+`)"),
+          // A backtick name counts where an annotation declares the function a
+          // test; `fun` alone also names an ordinary helper.
+          namePattern(
+            String.raw`(?<anchor>@(?:Test|ParameterizedTest|RepeatedTest|TestFactory))[^@]*?\bfun\s+(?<name>` +
+              "`[^`\\n]+`)",
+          ),
           namePattern(String.raw`\b(?<anchor>def)\s+(?<name>${QUOTED})\s*\(`),
           // Kotest's string spec opens a block, which no membership test does.
           namePattern(String.raw`(?<name>${DOUBLE_QUOTED})\s*(?<anchor>\{)`),
@@ -203,7 +261,15 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         // Kotlin, so reading `"…" in ids` there as a test name put a data
         // string back into the source and cleared an obligation nothing covers.
         ["scala"],
-        { comments: false, tripleQuoted: true, regexLiterals: false, nestedBlockComments: true },
+        {
+          comments: false,
+          tripleQuoted: true,
+          regexLiterals: false,
+          nestedBlockComments: true,
+          rawTripleQuoted: true,
+          // `'fixture` is a symbol, with no closing apostrophe after it.
+          lifetimes: true,
+        },
         [
           namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${DOUBLE_QUOTED})`),
           namePattern(
@@ -265,7 +331,9 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
           namePattern(String.raw`\b(?<anchor>it|test|describe)\s*\(\s*(?<name>${QUOTED})`),
           // PHPUnit names a test in an attribute, which the hash-comment rule
           // leaves as code while the literal inside it is masked.
-          namePattern(String.raw`(?<anchor>TestDox|DataProvider)\s*\(\s*(?<name>${QUOTED})`),
+          namePattern(
+            String.raw`#\[[^\]]*?(?<anchor>TestDox|DataProvider)\s*\(\s*(?<name>${QUOTED})`,
+          ),
         ],
       ],
     ] satisfies [string[], JsMaskOptions, RegExp[]][]

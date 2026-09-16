@@ -340,7 +340,8 @@ function endOfPhpHeredoc(source: string, start: number): number {
  * a quote followed by that many hashes and at no earlier quote.
  */
 function endOfRustRawString(source: string, start: number): number {
-  const header = /^b?r(#*)"/.exec(source.slice(start));
+  // `b` and `c` are the byte and C-string prefixes, and either may precede `r`.
+  const header = /^[bc]?r(#*)"/.exec(source.slice(start));
   if (header === null) return -1;
   const closer = `"${header[1] ?? ""}`;
   const close = source.indexOf(closer, start + header[0].length);
@@ -392,11 +393,13 @@ function endOfRawBacktick(source: string, start: number): number {
   return close === -1 ? source.length : close + 1;
 }
 
-function endOfTripleQuoted(source: string, start: number, fence: string): number {
+function endOfTripleQuoted(source: string, start: number, fence: string, raw = false): number {
   // An escaped quote keeps the string open, so a fence the backslash reaches is
   // not the closer. Stopped there, the rest of the literal was read as code.
+  // A raw one processes no escape, and a trailing backslash there is a
+  // character of the value: read as an escape it consumed the closing fence.
   for (let index = start + fence.length; index < source.length; index += 1) {
-    if (source[index] === "\\") {
+    if (!raw && source[index] === "\\") {
       index += 1;
       continue;
     }
@@ -555,6 +558,24 @@ export type JsMaskOptions = {
    * this adds the dollar form the regex rule does not reach.
    */
   readonly dollarSlashyStrings?: boolean;
+
+  /**
+   * Read a triple-quoted string as raw. Default `false`.
+   *
+   * `true` for Kotlin and Scala, where no escape is processed inside one, so a
+   * trailing backslash does not reach past the closing fence. Read with
+   * JavaScript's escaping, such a value swallowed the rest of the file.
+   */
+  readonly rawTripleQuoted?: boolean;
+
+  /**
+   * Words after which a `/` opens a pattern rather than dividing. Default: the
+   * JavaScript set.
+   *
+   * Ruby writes a regex after `if`, `unless`, `while` and its own operators, and
+   * a value ends before each of them, so the shared set never opened one there.
+   */
+  readonly regexAfterWords?: ReadonlySet<string>;
 };
 
 export function maskJsNonCode(source: string, options: JsMaskOptions = {}): string {
@@ -574,6 +595,8 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
   const hashBracketComments = options.hashBracketComments ?? false;
   const equalsBlockComments = options.equalsBlockComments ?? false;
   const dollarSlashyStrings = options.dollarSlashyStrings ?? false;
+  const rawTripleQuoted = options.rawTripleQuoted ?? false;
+  const regexAfterWords = options.regexAfterWords ?? REGEX_AFTER_KEYWORD;
   const out = source.split("");
   // Whether the token just read closes an expression. It is the whole
   // regex-vs-division test: `a / b` divides, `= /re/` does not. Comments leave
@@ -607,7 +630,7 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
       const end = endOfLineComment(source, i);
       i = blankComments ? blank(out, i, end) : end;
     } else if (tripleQuoted && (ch === '"' || ch === "'") && source.startsWith(ch.repeat(3), i)) {
-      i = blank(out, i, endOfTripleQuoted(source, i, ch.repeat(3)));
+      i = blank(out, i, endOfTripleQuoted(source, i, ch.repeat(3), rawTripleQuoted));
       endsExpression = true;
       lastWord = "";
     } else if (parenStarComments && ch === "(" && next === "*") {
@@ -656,7 +679,7 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
       lastWord = "";
     } else if (
       rustRawStrings &&
-      (ch === "r" || ch === "b") &&
+      (ch === "r" || ch === "b" || ch === "c") &&
       endOfRustRawString(source, i) !== -1 &&
       !WORD.test(source[i - 1] ?? "")
     ) {
@@ -669,9 +692,12 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
         i += 2;
         endsExpression = false;
       } else {
-        // The header stays: it is code, and only the body it opens is a literal.
+        // The header stays: it is code, and only the body it opens is a
+        // literal. So does the rest of the line — `[<<A, <<B]` opens two, and
+        // jumping to the first body left the second opener unread.
         const bodyStart = source.indexOf("\n", i);
-        i = bodyStart === -1 ? end : blank(out, bodyStart, end);
+        if (bodyStart !== -1) blank(out, bodyStart, end);
+        i = bodyStart === -1 ? end : i + 2;
         endsExpression = true;
         lastWord = "";
       }
@@ -704,7 +730,7 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
         i += 1;
       }
       lastWord = source.slice(start, i);
-      endsExpression = !REGEX_AFTER_KEYWORD.has(lastWord);
+      endsExpression = !regexAfterWords.has(lastWord);
     } else {
       if (!SPACE.test(ch)) {
         if (ch === "(") {

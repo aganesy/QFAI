@@ -97,6 +97,50 @@ describe("where an annotation may sit", () => {
     ],
     ["Rust", "pay.rs", `const CASES: &[&str] = &["${ID}"];\n#[test]\nfn pays() {}\n`],
     [
+      // A raw triple-quoted string takes no escape, so a trailing backslash
+      // is a character of the value and the fence after it closes.
+      "a Kotlin raw string ending in a backslash",
+      "PayTest.kt",
+      `val path = """C:\\\\"""\n// ${ID}\nclass PayTest { @Test fun pays() {} }\n`,
+    ],
+    [
+      // One expression can open two heredocs; the first body is not the
+      // end of the header.
+      "a second Ruby heredoc on one line",
+      "pay_spec.rb",
+      `F = [<<A, <<B]\none\nA\n${ID}\nB\nit "pays" do\nend\n`,
+    ],
+    [
+      // A value ends before `if`, so the slash after it opens a pattern.
+      "a Ruby regex after if",
+      "pay_spec.rb",
+      `if /${ID}/.match?(value)\nend\nit "pays" do\nend\n`,
+    ],
+    [
+      // A raw C string takes no escape either.
+      "a Rust raw C string",
+      "pay.rs",
+      `const F: &CStr = cr#"{\\"reference\\":\\"${ID}\\"}"#;\n#[test]\nfn pays() {}\n`,
+    ],
+    [
+      // An ordinary symbol named like the attribute is not the attribute.
+      "a PHP constructor named TestDox",
+      "PayTest.php",
+      `<?php\nclass PayTest {\n  $c = new TestDox(\u0027${ID}\u0027);\n  public function testPays() {}\n}\n`,
+    ],
+    [
+      // `fun` alone also names a helper no runner collects.
+      "a Kotlin backtick helper",
+      "PayTest.kt",
+      `class PayTest {\n  fun \`${ID} fixture builder\`() {}\n  @Test fun pays() {}\n}\n`,
+    ],
+    [
+      // Groovy's block comments close at the first marker, as Java's do.
+      "a Groovy fixture after a nested-looking comment",
+      "PaySpec.groovy",
+      `/* outer /* inner */\ndef id = "${ID}"\ndef "pays"() { expect: pay() }\n`,
+    ],
+    [
       // An escaped quote keeps the string open, so the fence it reaches is
       // not the closer.
       "a Python docstring past an escaped fence",
@@ -208,6 +252,24 @@ describe("where an annotation may sit", () => {
       "a JUnit display name",
       "PayTest.java",
       `class PayTest {\n  @Test\n  @DisplayName("${ID} pays")\n  void pays() {}\n}\n`,
+    ],
+    [
+      // A symbol literal has no closing apostrophe after it.
+      "a Scala comment after a symbol literal",
+      "PaySpec.scala",
+      `val kind = \u0027fixture // ${ID}\nclass PaySpec { }\n`,
+    ],
+    [
+      // A repeated test carries a collected name too.
+      "a JUnit repeated-test name",
+      "PayTest.java",
+      `class PayTest {\n  @RepeatedTest(value = 3, name = "${ID} pays")\n  void pays() {}\n}\n`,
+    ],
+    [
+      // An RSpec name may be written as a percent literal.
+      "an RSpec percent-literal name",
+      "pay_spec.rb",
+      `it %q{${ID} pays} do\nend\n`,
     ],
     [
       // Java's block comments do not nest, so the first close ends the
