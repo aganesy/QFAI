@@ -303,7 +303,27 @@ describe("the run", () => {
     });
 
     expect(status).toBe(0);
-    expect(output).toContain("0 compared");
+    // Not reported as a clean run: nothing was held against anything, and a
+    // sentence saying every body carries its entries would claim otherwise.
+    expect(output).toContain("nothing was compared");
+    expect(output).not.toContain("carries its section's entries");
+  });
+
+  it("stops rather than reading a payload that is not a list as an empty one", async () => {
+    const file = await changelogWith(changelog);
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      // A 2xx from something other than the endpoint — a proxy's error page, an
+      // interstitial. Read as no releases, every section looks unreleased and
+      // the run exits 0 having compared nothing.
+      readPage: () => Promise.resolve({ releases: { message: "Not Found" }, next: null }),
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("not a list of releases");
   });
 
   it("says it compared nothing rather than reporting a clean run, with no token", async () => {
@@ -545,7 +565,7 @@ describe("reading the published bodies", () => {
     // A read by tag never returned one, and the list shows drafts to whoever
     // can push — so without this the answer would follow the token.
     expect(status).toBe(0);
-    expect(output).toContain("0 compared");
+    expect(output).toContain("nothing was compared");
   });
 
   it("reads a release with no notes as an empty body, not as no release", async () => {

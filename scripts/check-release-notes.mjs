@@ -219,7 +219,13 @@ async function releaseBodies(repository, token, readPage) {
         cause,
       });
     }
-    for (const release of Array.isArray(page.releases) ? page.releases : []) {
+    // A 2xx whose payload is not a list is not an empty list. Read as one, every
+    // section below it looks unreleased, and the run exits 0 having compared
+    // nothing — a false clean over whatever answered instead of the endpoint.
+    if (!Array.isArray(page.releases)) {
+      throw new Error(`reading ${url}: the response is not a list of releases`);
+    }
+    for (const release of page.releases) {
       if (release?.draft === true) continue;
       const tag = release?.tag_name;
       if (typeof tag !== "string") continue;
@@ -317,6 +323,14 @@ export async function run(options = {}) {
         "Edit the published body to match; the section is the authority.",
     );
     return 1;
+  }
+
+  if (compared === 0) {
+    // Said plainly rather than as a clean run: no section here has a release,
+    // which is ordinary for a changelog predating the workflow and is also what
+    // a read of the wrong repository looks like.
+    console.log("No released section has a published release; nothing was compared.");
+    return 0;
   }
 
   console.log(
