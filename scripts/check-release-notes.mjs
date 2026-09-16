@@ -36,6 +36,18 @@
  * here holds, and a body can also carry an edit somebody made on purpose —
  * which a rewrite would silently discard.
  *
+ * ## How the bodies are read
+ *
+ * From the release list, a hundred to a page, rather than one request per
+ * section. The list carries `tag_name` and `body` together, so the comparison
+ * costs two requests at the current count of sections and that count is no
+ * longer what decides how many requests are sent.
+ *
+ * A draft is skipped. It carries a tag name and no tag, it is readable only to
+ * whoever can push, and it is the one thing the list shows that a read by tag
+ * would not — so comparing against one would make the answer depend on which
+ * token ran the check.
+ *
  * Usage:
  *   node scripts/check-release-notes.mjs                # every released section
  *   node scripts/check-release-notes.mjs --version 1.11.0
@@ -44,53 +56,12 @@
  *
  * Exit codes: 0 clean, 1 drift, 2 the comparison could not be made.
  */
-/* global console, process, fetch, AbortController, setTimeout, clearTimeout */
+/* global console, process, fetch */
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 /** `## [1.11.0] - 2026-09-07` — a released section, as opposed to `[Unreleased]`. */
 const RELEASED_HEADING_RE = /^## \[(\d+\.\d+\.\d+)\][ \t]+-[ \t]+\d{4}-\d{2}-\d{2}[ \t]*$/;
-
-/**
- * How many bodies are read at once.
- *
- * One request per released section, and the count only grows: one more with
- * every release. Read one at a time, the job's ten-minute budget is divided by
- * that count, so the time each request may take shrinks as the changelog grows
- * and the lane starts failing on a slow API with nothing having changed.
- *
- * Eight, and not all of them at once. The limit a fan-out would meet is the
- * cap of 100 requests in flight from one caller, and a run that put every
- * section against that cap would fail whole rather than run slowly. Eight stays
- * an order of magnitude below it and multiplies the time each request may take
- * by eight.
- *
- * How many are in flight says nothing about how many are sent in a minute.
- * Eight refilled as each answers is a rate of its own, and `READS_A_MINUTE` is
- * what bounds that.
- */
-export const READS_AT_ONCE = 8;
-
-/**
- * How many bodies may be read in any one minute.
- *
- * GitHub's secondary limit for REST is 900 points a minute, and a GET costs one
- * point, so 900 reads a minute is the published ceiling. Half of it is what
- * this run takes. The allowance belongs to the token rather than to this run,
- * so a bound set at the ceiling leaves nothing for anything else holding the
- * same token in that minute, and half costs this run nothing it needs: one
- * request per released section is inside the allowance until the changelog
- * holds more sections than the allowance holds requests, and until then no read
- * waits at all.
- *
- * Counted over a sliding minute rather than spaced evenly. The published limit
- * is a count in a window; a fixed gap between requests would instead slow every
- * run, including each one that never comes near it.
- */
-export const READS_A_MINUTE = 450;
-
-/** The window `READS_A_MINUTE` is counted over. */
-const A_MINUTE = 60_000;
 
 /** The sentence `release.yml` appends when it had to cut the section. */
 export const TRUNCATION_MARKER = "**These notes are not the whole section.**";
@@ -183,173 +154,82 @@ export function missingEntries(sectionBody, releaseBody) {
 }
 
 /**
- * Reads a release body by tag, or `null` when there is no such release.
+ * The `rel="next"` target of a `Link` header, or `null` when the page is the
+ * last one.
  *
- * `signal` is how the run stops a request it no longer has a use for. Without
- * one, a request that never answers keeps its connection open until the job's
- * own budget ends the run, which reports nothing and carries no exit code of
- * its own.
+ * Followed rather than counted. The endpoint states where the next page is, and
+ * a run that built page numbers itself would have to decide when to stop from
+ * the size of the page it just read — which is a guess the header removes.
  */
-async function fetchReleaseBody(repository, tag, token, signal) {
-  const response = await fetch(`https://api.github.com/repos/${repository}/releases/tags/${tag}`, {
-    signal,
+export function nextPageLink(header) {
+  if (typeof header !== "string") return null;
+  // Split only where a comma introduces another target, so a comma inside a URL
+  // does not cut one target into two.
+  for (const target of header.split(/,\s*(?=<)/u)) {
+    const parsed = /^\s*<([^>]+)>\s*;\s*(.+)$/u.exec(target);
+    if (parsed === null) continue;
+    // The whole parameter, not a prefix of one: `rel="nextish"` names something
+    // else, and matching it would end the paging on a page that has a next.
+    const marked = (parsed[2] ?? "")
+      .split(";")
+      .some((parameter) => /^\s*rel\s*=\s*"?next"?\s*$/u.test(parameter));
+    if (marked) return parsed[1] ?? null;
+  }
+  return null;
+}
+
+/** One page of releases, and where the page after it is. */
+async function fetchReleasePage(url, token) {
+  const response = await fetch(url, {
     headers: {
       accept: "application/vnd.github+json",
       authorization: `Bearer ${token}`,
       "user-agent": "qfai-release-notes-check",
     },
   });
-  if (response.status === 404) {
-    return null;
-  }
   if (!response.ok) {
-    throw new Error(`GitHub answered ${String(response.status)} for ${tag}`);
+    throw new Error(`GitHub answered ${String(response.status)}`);
   }
-  const payload = await response.json();
-  return typeof payload?.body === "string" ? payload.body : "";
-}
-
-/** What a read the run gave up on settles with, in place of never settling. */
-const ABANDONED = Symbol("abandoned");
-
-/**
- * A gate that admits `READS_A_MINUTE` reads in any minute and holds the rest.
- *
- * Each caller drops the starts that have left the window, takes a place if one
- * is free, and otherwise waits for the oldest start to leave and asks again.
- *
- * A caller waits here on a timer rather than on a response, so the run's giving
- * up has to reach this wait as well as the read itself: a caller whose
- * `abandoned` settles first leaves without taking a place and is told so, and
- * starts no read. Left out, a failure the run already knows about would go
- * unprinted until the window turned, which is up to a minute and can be longer
- * than the job has left.
- */
-function rateGate() {
-  /** When each read still inside the window started, oldest first. */
-  const starts = [];
-  /** Whether the caller may start its read, or was given up on while waiting. */
-  return async (abandoned) => {
-    for (;;) {
-      const now = Date.now();
-      while (starts.length > 0 && now - starts[0] >= A_MINUTE) starts.shift();
-      if (starts.length < READS_A_MINUTE) {
-        starts.push(now);
-        return true;
-      }
-      let timer;
-      const turned = new Promise((admit) => {
-        timer = setTimeout(admit, A_MINUTE - (now - starts[0]));
-      });
-      try {
-        if ((await Promise.race([turned, abandoned])) === ABANDONED) return false;
-      } finally {
-        // Dropped rather than left to fire into nothing: a timer of up to a
-        // minute holds the process open for the rest of the window.
-        clearTimeout(timer);
-      }
-    }
-  };
+  return { releases: await response.json(), next: nextPageLink(response.headers.get("link")) };
 }
 
 /**
- * Every section's published body, read at most `READS_AT_ONCE` at a time and no
- * more than `READS_A_MINUTE` in a minute, and handed to `deliver` in changelog
- * order.
+ * Every published release body, by tag.
  *
- * A section is delivered as soon as it and every section above it has answered,
- * rather than once the whole set has. Nothing sets a per-request timeout, so a
- * report built at the end is one a single stalled read keeps off the output
- * entirely, and the job's own budget can end a run that has printed nothing. A
- * section still outstanding holds back the sections below it and no more, which
- * is what keeps the report in changelog order whatever order the responses
- * arrived in.
+ * A tag the map does not carry has no release. That is the same set a read by
+ * tag answered 404 for: both endpoints show a published release and neither
+ * shows a draft, which has a tag name and no tag.
  *
- * A read that fails stops the workers claiming any further section, and the
- * failure carried back is the lowest section that failed rather than the first
- * one to answer. Both are what reading them one at a time did: the run ended at
- * that section, and the sections below it were never asked for. A failed
- * section never answers, so the delivery stops there of its own accord.
- *
- * A read still open for a section BELOW that one is stopped and stops being
- * waited for. The run has already failed, its answer cannot change what is
- * reported, and a request that never answers would otherwise hold the failure
- * unprinted until the job's own budget ended the run. A worker held at the rate
- * gate is released the same way and starts no read. A read for a section above
- * the failure is still awaited: the report covers those sections, and a failure
- * among them outranks this one.
+ * A draft is dropped here rather than left to the token's permissions. The list
+ * shows drafts to whoever can push, so a run holding such a token would
+ * otherwise compare a section against notes nobody can read.
  */
-async function readBodies(sections, read, deliver) {
-  /** `{ index, tag, cause }` for the lowest section that failed, or `null`. */
-  let failure = null;
-  let next = 0;
-  /** Bodies that have answered and are waiting for the sections above them. */
-  const answered = new Map();
-  /** The next section to deliver. Everything above it has been delivered. */
-  let delivering = 0;
-  /** The sections a worker holds: what stops each read, and what releases it. */
-  const outstanding = new Map();
-  const admit = rateGate();
-
-  /** Stops every read below `index`, whose answer the run can no longer use. */
-  const giveUpBelow = (index) => {
-    for (const [at, held] of outstanding) {
-      if (at <= index) continue;
-      outstanding.delete(at);
-      held.controller.abort();
-      held.abandon(ABANDONED);
-    }
-  };
-
-  /** Delivers as far down the changelog as the answers now reach. */
-  const deliverInOrder = () => {
-    let landed = answered.get(delivering);
-    while (landed !== undefined) {
-      answered.delete(delivering);
-      delivering += 1;
-      deliver(landed.section, landed.body);
-      landed = answered.get(delivering);
-    }
-  };
-
-  const worker = async () => {
-    while (failure === null) {
-      const index = next;
-      const section = sections[index];
-      if (section === undefined) return;
-      next = index + 1;
-      const tag = `v${section.version}`;
-      const controller = new AbortController();
-      const abandoned = new Promise((abandon) => {
-        outstanding.set(index, { controller, abandon });
+async function releaseBodies(repository, token, readPage) {
+  const bodies = new Map();
+  // A hundred to a page is the most the endpoint serves.
+  let url = `https://api.github.com/repos/${repository}/releases?per_page=100`;
+  while (url !== null) {
+    let page;
+    try {
+      page = await readPage(url, token);
+    } catch (cause) {
+      // Named here rather than in the read, so a page that never answered at
+      // all is reported against the same request a refusal would have been.
+      throw new Error(`reading ${url}: ${cause instanceof Error ? cause.message : String(cause)}`, {
+        cause,
       });
-      try {
-        if (!(await admit(abandoned))) return;
-        if (failure !== null && index > failure.index) return;
-        const body = await Promise.race([read(tag, controller.signal), abandoned]);
-        if (body === ABANDONED) return;
-        answered.set(index, { section, body });
-      } catch (cause) {
-        // A read the run gave up on rejects because it was stopped. That is the
-        // failure above it ending the run, not a second finding.
-        if (outstanding.has(index) && (failure === null || index < failure.index)) {
-          failure = { index, tag, cause };
-          giveUpBelow(index);
-        }
-        return;
-      } finally {
-        outstanding.delete(index);
-        deliverInOrder();
-      }
     }
-  };
-
-  const workers = [];
-  for (let started = 0; started < Math.min(READS_AT_ONCE, sections.length); started++) {
-    workers.push(worker());
+    for (const release of Array.isArray(page.releases) ? page.releases : []) {
+      if (release?.draft === true) continue;
+      const tag = release?.tag_name;
+      if (typeof tag !== "string") continue;
+      bodies.set(tag, typeof release.body === "string" ? release.body : "");
+    }
+    // A page that names no next one ends the paging. Read as anything but
+    // `null` the loop would ask for the same page again, forever.
+    url = page.next ?? null;
   }
-  await Promise.all(workers);
-  return failure;
+  return bodies;
 }
 
 /**
@@ -375,7 +255,7 @@ export async function run(options = {}) {
     repository = process.env["GITHUB_REPOSITORY"],
     token = process.env["GITHUB_TOKEN"] ?? process.env["GH_TOKEN"],
     only = null,
-    readBody = fetchReleaseBody,
+    readPage = fetchReleasePage,
   } = options;
 
   if (!repository || !token) {
@@ -405,32 +285,29 @@ export async function run(options = {}) {
     return 2;
   }
 
-  // Counted and reported as each section's turn comes rather than once every
-  // read has answered, which is what reading them one at a time did: the run
-  // printed a section before asking for the next. The delivery is in changelog
-  // order and one section at a time, so the two counters still have one writer.
+  // Read before anything is compared, so a page that never arrived cannot be
+  // mistaken for the tags it carried having no release. Nothing is reported on
+  // the way: a partial list makes every section below the failure look
+  // unreleased, and that reads as a clean run rather than as the failure it is.
+  let bodies;
+  try {
+    bodies = await releaseBodies(repository, token, readPage);
+  } catch (cause) {
+    console.error(`check-release-notes: ${cause instanceof Error ? cause.message : String(cause)}`);
+    return 2;
+  }
+
   let drifted = 0;
   let compared = 0;
-  const failure = await readBodies(
-    sections,
-    (tag, signal) => readBody(repository, tag, token, signal),
-    (section, body) => {
-      if (body === null) {
-        // A section with no release is an ordinary state: a version tagged but
-        // not released, or a changelog that predates the workflow.
-        return;
-      }
-      compared += 1;
-      if (reportSection(`v${section.version}`, section, body)) drifted += 1;
-    },
-  );
-
-  if (failure !== null) {
-    const { tag, cause } = failure;
-    console.error(
-      `check-release-notes: ${tag}: ${cause instanceof Error ? cause.message : String(cause)}`,
-    );
-    return 2;
+  for (const section of sections) {
+    const body = bodies.get(`v${section.version}`);
+    if (body === undefined) {
+      // A section with no release is an ordinary state: a version tagged but
+      // not released, or a changelog that predates the workflow.
+      continue;
+    }
+    compared += 1;
+    if (reportSection(`v${section.version}`, section, body)) drifted += 1;
   }
 
   if (drifted > 0) {
