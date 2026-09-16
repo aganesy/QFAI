@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Repository-specific halves of four rules split into overlays** (#1917).
+  `distributed-surface`, `version-discipline`, `temporary-files` and
+  `root-additions-policy` each governed an adopter's repository and this one
+  from two files that had drifted with nothing to notice. What generalises
+  stays in the shipped master; what names a path under `packages/qfai/`, a
+  guard script, a CI job or an identifier shape this project mints moves to
+  `<name>.local.md` beside it. The suffix is the overlay convention the
+  assistant tree already uses, so an overlay is never shipped. Registered in
+  `.agents/rules/README.md`, `AGENTS.md` and `CLAUDE.md`, and linked from
+  `.claude/rules/`.
+
 - **Reviewer cards file excess as a blocking code-quality defect** (#1798).
   All six reviewer roles trace excess to Article VII, require a concrete cut
   and replacement, and refuse cuts that remove or weaken a referenced

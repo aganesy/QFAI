@@ -12,19 +12,38 @@ directory.
 
 ## Rules
 
-| File                        | Rule                                                                                                                                                                                                                                                        |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `version-discipline.md`     | The user decides the release version. Guarded by `packages/qfai/scripts/check-branch-version-pin.sh`.                                                                                                                                                       |
-| `distributed-surface.md`    | No internal IDs or version markers in the files the npm package ships.                                                                                                                                                                                      |
-| `root-additions-policy.md`  | Adding a file or directory at the repository root needs explicit user approval.                                                                                                                                                                             |
-| `temporary-files.md`        | Every scratch file goes under `tmp/`.                                                                                                                                                                                                                       |
-| `document-schema.md`        | The structure of SDD documents is declared in `packages/qfai/assets/mdschema/**` and enforced by `pnpm lint:mdschema` and `pnpm lint:mermaid`.                                                                                                              |
-| `documentation-clarity.md`  | Writing standard for PRs, issues, code comments and Markdown. The hooks in `.claude/settings.json` restate it.                                                                                                                                              |
-| `repository-language.md`    | This repository is written in English. Operator-facing strings are held by `packages/qfai/tests/unit/cliMessageLanguage.test.ts` and the changelog by `packages/qfai/tests/unit/changelogLanguage.test.ts`, each against an allowlist that may only shrink. |
-| `minimal-implementation.md` | The order to try solutions in, once a behaviour is agreed, and how a deliberate shortcut is marked.                                                                                                                                                         |
-| `interface-clarity.md`      | What may appear on a screen or in terminal output, and what a sentence there says about the control under it.                                                                                                                                               |
-| `grilling.md`               | Interview the decision tree in rounds before a design is fixed. A session ends when the frontier is empty and the user confirms, never at a question count.                                                                                                 |
-| `user-questions.md`         | Every question to the user arrives in the shape its answer has: a structured choice where a listable set of candidates exists, or a plain request where none does. Where the host's tool cannot carry it, the plain-text fallback keeps the same parts.     |
+| File                             | Rule                                                                                                                                                                                                                                                        |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `version-discipline.md`          | The user decides the release version. Guarded by `packages/qfai/scripts/check-branch-version-pin.sh`.                                                                                                                                                       |
+| `version-discipline.local.md`    | What the pin means here: the convention is adopted, and these are the guards that read it.                                                                                                                                                                  |
+| `distributed-surface.md`         | No internal IDs or version markers in the files the npm package ships.                                                                                                                                                                                      |
+| `distributed-surface.local.md`   | The surface, the forbidden identifier shapes, and the four guards, for this repository.                                                                                                                                                                     |
+| `root-additions-policy.md`       | Adding a file or directory at the repository root needs explicit user approval.                                                                                                                                                                             |
+| `root-additions-policy.local.md` | Two file shapes that turn up at this root and where each belongs.                                                                                                                                                                                           |
+| `temporary-files.md`             | Every scratch file goes under `tmp/`.                                                                                                                                                                                                                       |
+| `temporary-files.local.md`       | A test's own `mkdtemp` sandbox is outside the rule, and where else the rule is written.                                                                                                                                                                     |
+| `document-schema.md`             | The structure of SDD documents is declared in `packages/qfai/assets/mdschema/**` and enforced by `pnpm lint:mdschema` and `pnpm lint:mermaid`.                                                                                                              |
+| `documentation-clarity.md`       | Writing standard for PRs, issues, code comments and Markdown. The hooks in `.claude/settings.json` restate it.                                                                                                                                              |
+| `repository-language.md`         | This repository is written in English. Operator-facing strings are held by `packages/qfai/tests/unit/cliMessageLanguage.test.ts` and the changelog by `packages/qfai/tests/unit/changelogLanguage.test.ts`, each against an allowlist that may only shrink. |
+| `minimal-implementation.md`      | The order to try solutions in, once a behaviour is agreed, and how a deliberate shortcut is marked.                                                                                                                                                         |
+| `interface-clarity.md`           | What may appear on a screen or in terminal output, and what a sentence there says about the control under it.                                                                                                                                               |
+| `grilling.md`                    | Interview the decision tree in rounds before a design is fixed. A session ends when the frontier is empty and the user confirms, never at a question count.                                                                                                 |
+| `user-questions.md`              | Every question to the user arrives in the shape its answer has: a structured choice where a listable set of candidates exists, or a plain request where none does. Where the host's tool cannot carry it, the plain-text fallback keeps the same parts.     |
+
+## Overlays
+
+A rule that governs an adopter's repository as well is written once, in the
+shipped master, and this repository reads that copy. What only applies here —
+a path under `packages/qfai/`, a guard script, a CI job, an identifier shape
+this project mints — goes in `<name>.local.md` beside it.
+
+The suffix is the one `packages/qfai/src/core/assistantAssetProvenance.ts`
+already defines for the assistant tree: a project's legal way to extend a rule
+the package owns, without editing the file the package owns. An overlay is
+never shipped. It is registered here and linked from `.claude/rules/` like any
+other master.
+
+An overlay does not restate the rule it extends. Both are read together.
 
 ## Adding a rule
 

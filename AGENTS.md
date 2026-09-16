@@ -72,9 +72,13 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
 リポジトリで作業する全 AI が守るルールは `.agents/rules/` 配下のマスタが SSOT。
 
 - `version-discipline.md` (上記「バージョン規律」の詳細)
+- `version-discipline.local.md` (pin 規約を採用しているのはこのリポジトリ、という宣言と、それを読むガード)
 - `distributed-surface.md` (npm 配布物の internal id / version leak 禁止)
+- `distributed-surface.local.md` (配布サーフェスの範囲、禁止する識別子の形、4 層のガード)
 - `root-additions-policy.md` (repo root への新規追加は要確認)
+- `root-additions-policy.local.md` (このルートに現れる 2 つのファイル形と、その置き場所)
 - `temporary-files.md` (一時ファイルは `tmp/` 配下のみ)
+- `temporary-files.local.md` (テストの `mkdtemp` サンドボックスは対象外)
 - `document-schema.md` (SDD ドキュメントの章構成・表・図の構造は
   `packages/qfai/assets/mdschema/**` が SSOT)
 - `documentation-clarity.md` (PR / issue / コメント / Markdown の記述基準)
@@ -90,6 +94,10 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
   answer has — a structured choice where a listable set of candidates exists, or a
   plain request where none does; where the host's tool cannot carry it, the
   plain-text fallback keeps the same parts)
+
+`<name>.local.md` は overlay。adopter のリポジトリにも及ぶルールは配布版のマスタに
+一度だけ書き、このリポジトリ固有の部分だけを overlay に置く。overlay は配布しない。
+詳細は `.agents/rules/README.md`。
 
 `.claude/rules/` はこれらへの symlink。Windows では Git の `core.symlinks=true` と
 Developer Mode が必要で、無い場合は `.claude/rules/*.md` がパス文字列だけの
