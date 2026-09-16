@@ -11,7 +11,7 @@
  *       backup byte-equivalence is preserved.
  *   (c) The aggregate capture mirrors are moved aside on every cycle-0
  *       run, logged file by file, and put back when a later step of the
- *       same reset fails (REQ-0166).
+ *       same reset fails (REQ-0174).
  */
 
 // QFAI:SPEC-0012:TC-0012-0449
@@ -249,6 +249,35 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(backedUp).toBe(PRIOR_CONTENT);
     // The new iter-00 must also exist (cycle 0 re-seeded).
     expect(entries).toContain("iter-00");
+  });
+
+  it("backs up an iter-00 that is a regular file", async () => {
+    // The rename takes the entry whole whatever it is. Walked as a directory
+    // it raised ENOTDIR, and the reset stopped before the rename it had just
+    // told the operator to run.
+    const root = await newTempDir();
+    await seedProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(evidenceRoot, { recursive: true });
+    const iter00 = path.join(evidenceRoot, "iter-00");
+    await writeFile(iter00, "not a directory\n", "utf-8");
+    captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      force: true,
+      targetUrl: "http://localhost:5173",
+    });
+
+    expect(exit).toBe(0);
+    const backup = (await readdir(evidenceRoot)).find((entry) =>
+      entry.startsWith("iter-00.backup-"),
+    );
+    expect(backup).toBeDefined();
+    expect(await readFile(path.join(evidenceRoot, backup ?? ""), "utf-8")).toBe(
+      "not a directory\n",
+    );
   });
 
   it("moves aside an iter-00 link whose target is gone", async () => {

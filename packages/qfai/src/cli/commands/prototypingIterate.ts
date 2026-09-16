@@ -2708,7 +2708,11 @@ async function filesWithSizes(
     throw cause;
   });
   if (entry === null) return [];
-  if (entry.isSymbolicLink()) return [{ rel: toRootRelative(root, dirAbs), size: entry.size }];
+  // A link, a regular file, a socket: the rename takes the entry whole, so the
+  // entry is the one thing moved and its own size is what the log records.
+  // Walked as a directory it raised ENOTDIR, and the reset stopped before the
+  // rename it had just told the operator to run.
+  if (!entry.isDirectory()) return [{ rel: toRootRelative(root, dirAbs), size: entry.size }];
   const files: { rel: string; size: number }[] = [];
   for (const fileAbs of await collectFilesRecursively(dirAbs)) {
     // The entry itself moves, so a link is sized as a link.
