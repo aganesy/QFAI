@@ -205,6 +205,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   in changelog order, the exit codes are unchanged, and a failed read still ends
   the run at that section.
 
+- Refuse a scaffold destination where the extensions could not be read, where
+  an exclude glob's range stops the scan, or where a brace range's endpoints
+  are not whole numbers, rather than writing a file the project's own runner
+  does not collect.
+
+- Read a brace range that generates either half of an extglob, and write out
+  every range a pattern holds rather than a fixed number of them, so the
+  scaffold names a file the project's own runner collects.
+
 - Excess tags cover code, controls, settings and explanatory copy in both the
   review definitions and shipped reviewer cards. `delete` also covers reuse of
   code already present (#1800).
@@ -268,6 +277,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   test depends on are unchanged. No check was added: whether a test is about
   what its obligation says is a comparison of two texts, and no validator can
   make that judgment reliably.
+
+- **`qfai atdd scaffold` reads a brace range in a test glob as fast-glob does**
+  (#1752). A range has no comma, so the check that decides whether the file it
+  writes is one the project collects read `{0001..0999}` as the literal text
+  between the braces. It refused, as a naming mismatch, a name the glob selects.
+  A numeric range, zero-padded or not, with or without an increment, ascending
+  or descending, and a single-character range now match the members fast-glob
+  expands them to, padded to the widest part, the increment included. A range
+  fast-glob refuses, one of a thousand steps or more written without an
+  increment, leaves the scan collecting nothing at all, whether the glob is one
+  the scan includes or one it ignores, so the scaffold refuses rather than
+  writing under it. A member the expansion produces is glob syntax, as it is to
+  fast-glob, which expands a range before it compiles, and a range anywhere in
+  the pattern is read when the extension is derived. A wildcard that opens a
+  path segment no longer matches a name beginning with a dot, which is how the
+  scan reads one. A list member is text,
+  not a range, and so is a brace body that is neither. Because a range can make
+  a glob depend on a test case id's digits, the scaffold checks the file it
+  would write for every test case in scope, not a representative one.
 
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
