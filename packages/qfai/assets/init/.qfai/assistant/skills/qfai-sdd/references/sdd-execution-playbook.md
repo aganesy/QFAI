@@ -16,19 +16,27 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 
 ## Stage 0: Preflight
 
-1. Identify the pack this run reads, if there is one: the preflight result's
-   `selectedInputPath`. That is the newest pack by default and an older one once
-   `npx qfai discussion use <id>` has pinned it, so recomputing the newest here
+1. Identify the input this run reads, if there is one: the preflight result's
+   `selectedInputPath`, which is the newest pack by default and an older one once
+   `npx qfai discussion use <id>` has pinned it — so recomputing the newest here
    would source requirements from one pack and advice from another.
+
+   **Read `source` beside it.** An import-lite run reports `import-lite` and
+   points that path at an `.qfai/evidence/import-lite-*.md` file, not a pack
+   directory. Steps 2, 3 and the `prototyping.yaml` step below are about a pack;
+   on an import-lite input they have nothing to inventory and no review to match,
+   and running them anyway searches for discussion reviews of an evidence file.
+
 2. Note which of its files are missing, and any blocking OQ, as reference-quality
    facts — they are recorded, not blocking. A pack is non-normative reference
    material (`.qfai/assistant/constitution/drift-protocol.md#core-rule`), so do NOT repair or
    re-run it to make this gate pass; a correction it implies belongs in the
    SDD-owned artifact, with the discrepancy noted in delta/evidence.
-3. Read the review findings for the pack step 1 selected, from its latest
-   COMPLETED review — the directory whose `summary.json#target.path` names that
-   pack, with the newest stamp among those. The path matched is the selected
-   one, not the newest pack on disk.
+3. Read the review findings for the pack step 1 selected, from its COMPLETED
+   reviews — the directories whose `summary.json#target.path` names that pack.
+   The path matched is the selected one, not the newest pack on disk, and the
+   reviews read are all of them rather than the newest alone; what that means for
+   each is below.
 
    **Compare the two as resolved paths.** The preflight reports an absolute
    `selectedInputPath` while a summary records its target relative to the
@@ -72,8 +80,15 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 
    | The review's `revision`       | Ask                                                     |
    | ----------------------------- | ------------------------------------------------------- |
-   | A git rev                     | `git diff --name-only <rev> -- <pack path>`             |
+   | A git rev, pack tracked       | `git diff --name-only <rev> -- <pack path>`             |
+   | A git rev, pack ignored       | Nothing: git holds no earlier content to compare        |
    | `working-tree+<content hash>` | Nothing: the prior contents are not recoverable from it |
+
+   **The middle row is the ordinary case.** `qfai init` writes
+   `.qfai/discussion/*` into the managed ignore block, so a pack is usually
+   untracked and `git diff` — which compares tracked content — reports nothing
+   about it whatever revision it is given. Check with `git check-ignore` or
+   `git ls-files` before reading an empty diff as an unchanged pack.
 
    One revision, not two. `git diff <rev> HEAD` compares two commits and reports
    nothing about a pack edited but not committed, which is the ordinary state of
@@ -100,8 +115,10 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 
 4. Stop only when there is no usable source at all: no pack, no import-lite
    input, and no explicit user requirement.
-5. **Report — do not stop —** when `prototyping.yaml` is present in the latest UI-bearing pack
-   and does not parse against the schema in
+5. **Report — do not stop —** when `prototyping.yaml` is present in the pack step 1 selected —
+   the one this run consumes, not the latest UI-bearing pack on disk, or the report names a
+   side artifact belonging to a discussion nobody here reads — and does not parse against the
+   schema in
    `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md#prototypingyaml`.
    Record the file and what failed to parse, and continue; `/qfai-prototyping` is where an
    unusable recommendation actually bites, and it re-reads the file.
