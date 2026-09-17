@@ -25,6 +25,8 @@ import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
 
+import { escapeRegExp } from "../../src/core/regex.js";
+
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
@@ -34,6 +36,17 @@ const CROSSWALK_HEADING = "## Routing Phase Crosswalk (Normative)";
 // to be the heading that happened to follow the section inside `SKILL.md`,
 // which stopped meaning anything once the section moved.
 const NEXT_HEADING = "## Crosswalk sources";
+
+/**
+ * Offset of `heading` as a whole line, or -1.
+ *
+ * A substring search for `## X` is also satisfied by `### X`, so a heading
+ * demoted back to its old level would still pass.
+ */
+function headingOffset(text: string, heading: string): number {
+  return new RegExp(`^${escapeRegExp(heading)}[ \\t]*\\r?$`, "m").exec(text)?.index ?? -1;
+}
+
 const FIXED_ORDER_HEADING = "## Stage and Phase Order (Fixed)";
 
 /**
@@ -143,8 +156,8 @@ function spanEntries(cell: string, order: readonly string[]): string[] {
  * section that moved instead of surfacing as a confusing row count.
  */
 function crosswalkRows(skill: string): string[][] {
-  const start = skill.indexOf(CROSSWALK_HEADING);
-  const end = skill.indexOf(NEXT_HEADING);
+  const start = headingOffset(skill, CROSSWALK_HEADING);
+  const end = headingOffset(skill, NEXT_HEADING);
   expect(start, `heading not found: ${CROSSWALK_HEADING}`).toBeGreaterThan(-1);
   expect(end, `heading not found or out of order: ${NEXT_HEADING}`).toBeGreaterThan(start);
   return skill
@@ -302,6 +315,6 @@ describe.each(QFAI_TREES)("%s — qfai-sdd routing phases resolve to fixed-order
 
   it("points the manifest back at the crosswalk", async () => {
     const routing = (await read(tree, "assistant/manifest/agent-routing.yml")).replace(/\s+/g, " ");
-    expect(routing).toContain("## Routing Phase Crosswalk (Normative)");
+    expect(routing).toContain("`## Routing Phase Crosswalk (Normative)`");
   });
 });

@@ -458,7 +458,7 @@ cannot proceed without, and no prototype can enumerate that for a skill it does 
 project_memory:
 
 - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c Obligation reconciliation → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
-- `agent-routing.yml`'s `slice-and-scope` / `design` / `review` phase IDs are spans over that fixed order, not extra steps: resolve them through `### Routing Phase Crosswalk (Normative)`, exceptions included, before placing any mandatory or blocking agent; span membership never narrows `rerun_policy`.
+- `agent-routing.yml`'s `slice-and-scope` / `design` / `review` phase IDs are spans over that fixed order, not extra steps: resolve them through `## Routing Phase Crosswalk (Normative)`, exceptions included, before placing any mandatory or blocking agent; span membership never narrows `rerun_policy`.
 - Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
 - Phase 2b is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence, except for the matrix, raised-Tier and obligation-column migrations below. Only this phase adds, removes or re-scopes rows.
 - A matrix-shaped TC takes one row per independently observable boundary. Re-scope a matrix row already past todo, done included, append a todo row per remaining boundary, and always have the kept row re-executed. Phase 2b writes row identity; `/qfai-implement`'s Change-Request preflight resets Status, DR-ID and Evidence.
