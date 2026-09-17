@@ -26,6 +26,10 @@ Evidence. An unaccepted reply does not resolve a blocking demand.
 
 ## Review Focus
 
+- Verify repository-fact lookup evidence under
+  `.qfai/assistant/skills/qfai-discussion/SKILL.md#reviewer-gate-must`.
+- Judge planning-stage decisions under
+  `.qfai/assistant/constitution/review-convergence.md#discussion-review-precision`.
 - Correctness against source requirements
 - Consistency with upstream/downstream artifacts
 - Testability and acceptance clarity
@@ -72,6 +76,10 @@ Evidence. An unaccepted reply does not resolve a blocking demand.
 ## RCP Rules (Mandatory)
 
 - Blocking feedback triggers immediate return (`changes_requested`). Reports
-  alone do not reopen an answered demand.
+  alone do not reopen an answered demand, and advice a reviewer marks
+  non-normative under
+  `.qfai/assistant/constitution/review-convergence.md#discussion-review-precision`
+  is recorded and carried to the stage that implements the change rather than
+  returning the pack.
 - After fixes, rerun only failed reviewers and reviewers whose scope changed because of the fix.
 - Set `overall_status: PASS` only when all routed blocking reviewers are `PASS`, and no unresolved `FAIL` remains.
