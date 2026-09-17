@@ -203,6 +203,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The release-notes drift check reads the published bodies from the release
+  list, a hundred to a page, instead of asking for one release per changelog
+  section. The list carries each release's tag and body together, so the number
+  of requests follows the number of pages rather than the number of sections,
+  and it no longer rises with every release. A draft is skipped: it is readable
+  only to whoever can push, and a read by tag never returned one. A page that
+  fails ends the run and names the request, and nothing is compared in that
+  case, because a partial list would make the sections it lacks look unreleased.
+  The report still reads by version, newest first, and the exit codes are
+  unchanged.
+
 - Refuse a scaffold destination where the extensions could not be read, where
   an exclude glob's range stops the scan, or where a brace range's endpoints
   are not whole numbers, rather than writing a file the project's own runner
