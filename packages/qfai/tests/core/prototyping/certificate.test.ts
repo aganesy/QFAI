@@ -2,7 +2,7 @@
  * Tests for completion-certificate build / write / load / check
  * (v1.8.4 Phase 5).
  */
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -190,6 +190,102 @@ describe("checkCompletionCertificate", () => {
     if (!result.ok) {
       expect(result.reasons.some((r) => /not in certificate/.test(r))).toBe(true);
     }
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0482
+  it("leaves a cycle-0 reset's backups out of the digest tree", async () => {
+    // They hold the previous loop's evidence, and removing one after certify
+    // must not read as this loop's evidence changing.
+    const root = await newTempDir();
+    const evidenceRoot = await seedEvidence(root, {
+      "iter-00/home.review.json": "{}\n",
+      "iter-00.backup-2026-01-01T00-00-00-000Z/old.review.json": "{}\n",
+      "aggregate.backup-2026-01-01T00-00-00-000Z/screenshots/home.png": "old",
+      // Named like a backup, but a file a reset never writes: still evidence.
+      "aggregate.backup-summary.json": "{}\n",
+      // A reset backs up `iter-00` only, so this is a directory someone made.
+      "iter-01.backup-2026-01-01T00-00-00-000Z/kept.review.json": "{}\n",
+    });
+    const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
+    expect(cert.evidenceDigests.map((entry) => entry.path)).toEqual([
+      "aggregate.backup-summary.json",
+      "iter-00/home.review.json",
+      "iter-01.backup-2026-01-01T00-00-00-000Z/kept.review.json",
+    ]);
+    await writeCompletionCertificate(root, cert);
+
+    await rm(path.join(evidenceRoot, "aggregate.backup-2026-01-01T00-00-00-000Z"), {
+      recursive: true,
+    });
+    expect((await checkCompletionCertificate(root)).ok).toBe(true);
+  });
+
+  it("leaves a backup out whatever the entry turns out to be", async () => {
+    // A reset renames the `iter-00` entry whatever it points at, so a backup can
+    // be a link to a regular file. Resolved rather than read by name, the target
+    // was hashed as one of this loop's own files, and a later change to it
+    // failed a check of a loop nothing had touched.
+    const root = await newTempDir();
+    const evidenceRoot = await seedEvidence(root, { "iter-00/home.review.json": "{}\n" });
+    const target = path.join(root, "linked-seed.json");
+    await writeFile(target, "{}\n", "utf-8");
+    try {
+      await symlink(target, path.join(evidenceRoot, "iter-00.backup-2026-01-01T00-00-00-000Z"));
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+
+    const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
+    expect(cert.evidenceDigests.map((entry) => entry.path)).toEqual(["iter-00/home.review.json"]);
+    await writeCompletionCertificate(root, cert);
+
+    await writeFile(target, '{"changed": true}\n', "utf-8");
+    expect((await checkCompletionCertificate(root)).ok).toBe(true);
+  });
+
+  it("verifies a certificate that lists a backup by its own name", async () => {
+    // A scanner that followed a link sealed the backup's name as a file, with no
+    // path under it. Filtered only as a prefix, that entry read as evidence the
+    // scan no longer holds, and every check of an untouched loop reported it
+    // removed.
+    const root = await newTempDir();
+    const evidenceRoot = await seedEvidence(root, { "iter-00/home.review.json": "{}\n" });
+    const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
+    await writeCompletionCertificate(root, {
+      ...cert,
+      evidenceDigests: [
+        ...cert.evidenceDigests,
+        { path: "iter-00.backup-2026-01-01T00-00-00-000Z", sha256: "0".repeat(64) },
+      ],
+    });
+
+    expect((await checkCompletionCertificate(root)).ok).toBe(true);
+  });
+
+  it("verifies a certificate that lists files under a reset's backups", async () => {
+    // Such a certificate was sealed with the backups inside its digest tree,
+    // and the scan now leaves them out: compared as they stand, every one would
+    // read as removed.
+    const root = await newTempDir();
+    const evidenceRoot = await seedEvidence(root, {
+      "iter-00/home.review.json": "{}\n",
+      "iter-00.backup-2026-01-01T00-00-00-000Z/old.review.json": "changed since",
+    });
+    const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
+    await writeCompletionCertificate(root, {
+      ...cert,
+      evidenceDigests: [
+        ...cert.evidenceDigests,
+        {
+          path: "aggregate.backup-2026-01-01T00-00-00-000Z/html/home.html",
+          sha256: "0".repeat(64),
+        },
+        { path: "iter-00.backup-2026-01-01T00-00-00-000Z/old.review.json", sha256: "0".repeat(64) },
+      ],
+    });
+
+    expect(await checkCompletionCertificate(root)).toEqual({ ok: true });
   });
 
   it("excludes the certificate file itself from the digest tree", async () => {
