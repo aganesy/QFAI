@@ -1184,6 +1184,12 @@ agents:
         finalizes against
         `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`;
         return REVISE for missing or insufficient usage references unless the documented safety-floor exception applies.
+      - On that same handoff, enumerate the contracts and deployment boundaries **the
+        run itself authored** — Phase 0 writes a contract before any Plan cites it —
+        and return REVISE for each one no finalized Plan names. The gate above reads
+        what a Plan cites, and the implementation review delegates both kinds here, so
+        an element left out of the Plan is inspected by nothing at all: the omission,
+        not the count, is what has to be caught first.
       - In contract-scoped SDD, do not apply this Plan gate. A required Plan update
         is a mismatch: report it and halt to widen the Change Request to a spec-scoped
         run; do not authorize Plan writes.
@@ -1217,12 +1223,21 @@ agents:
         target of this run finalizes is not this review's to judge.
       - .qfai/specs/spec-\*/09_delta.md
       - **Count the concrete consumers of each contract and deployment boundary the
-        spec's Plan cites**, once its rows are done. Those are authored before anything
-        implements them, and their dependants arrive across rows the implementation
-        review sees one at a time, so this is the first read that sees all of them. A
-        count below three is a finding unless the safety floor in
+        spec's Plan cites.** Those are authored before anything implements them, and
+        their dependants arrive across rows the implementation review sees one at a
+        time, so no single-row read ever sees all of them.
+
+        Count them while reviewing the **last nonterminal row** — the row whose `done`
+        makes the ledger terminal, so every other row is already `done` or `exception`
+        — and read the whole ledger there rather than that row alone. That review is
+        the per-item one routing already runs from `refactor`; "once its rows are
+        done" named no review at all, because the review that closes the last row runs
+        while that row is still open and nothing routes this reviewer after it.
+
+        A count below three is a finding unless the safety floor in
         `.agents/rules/minimal-implementation.md` § 2 requires the element and the
         Plan records that exception with the obligation requiring it.
+
       - The declarations a Plan's usages name outside the specs tree — **conditional**:
         required wherever a usage names one. A deployment boundary counts the services
         a deployment configuration instantiates, and an API manifest names a
@@ -1234,6 +1249,9 @@ agents:
         reviewer that never opens the declaration either rejects a valid usage as
         unresolved or counts one it has not read. Resolve the directory from
         `qfai.config.yaml`; `.qfai/contracts` is only the default.
+      - The contracts and deployment boundaries this run authored, whether or not a
+        Plan cites them. Read for citations alone, one the author left out of the Plan
+        is invisible here, which is the case the responsibility above reports.
       - Validation evidence and gate results
       - `.qfai/specs/<spec-id>/tdd/test-list.md` — the ledger, for the row under review
       - The per-item evidence file that row's `Layer` owns: `.qfai/evidence/implement-<spec-id>.md`,

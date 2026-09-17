@@ -205,10 +205,13 @@ routing phase's mandatory agents run inside its span, and its blocking agents MU
   span, where `review` runs once per invocation after Phase 4 — so a reviewer cannot hold one target
   while the batch releases the rest, and a check that waited for one would report a deficient Plan
   only after the batch had taken it in. The terminal review still reads what this step recorded.
-  A usage this Plan cites in a sibling target of the same batch is read from that target's own
-  worktree, which the concurrency rules give each writer; delegated in parallel, the sibling's output
-  is not yet integrated, and a check reading the integration point alone would report every
-  cross-target usage as unwritten.
+  A usage this Plan cites in a **sibling target of the same batch** is not settled here. The
+  siblings are delegated in parallel, so the sibling may not have written that output yet and a
+  verdict taken now would follow worker timing rather than the Plan — reading the sibling's own
+  worktree moves where the check looks, not when it may look. Record the citation and carry it to
+  the batch tail, where every target is integrated and the terminal review reads it. Integration is
+  the barrier, and it is the first point at which such a usage is either present or missing for
+  good. Every usage inside this target is still settled here, as it is for a single-spec run.
 
 ## Work Orders Summary
 
