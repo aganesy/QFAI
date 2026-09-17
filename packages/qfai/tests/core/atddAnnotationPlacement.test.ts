@@ -343,7 +343,7 @@ describe("where an annotation may sit", () => {
       // Another annotation may stand between the test one and `fun`.
       "a Kotlin function name after a second annotation",
       "PayTest.kt",
-      `class PayTest {\n  @Test @Tag("integration") fun ``${ID} pays``() {}\n}\n`,
+      `class PayTest {\n  @Test @Tag("integration") fun \`${ID} pays\`() {}\n}\n`,
     ],
     [
       // Scala writes a display name in a triple-quoted string too.
