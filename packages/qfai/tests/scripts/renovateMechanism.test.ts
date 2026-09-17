@@ -59,6 +59,15 @@ const SELF_HOSTED_PRESET_REL = ".github/renovate-presets/qfai-self-hosted.json";
 const workflowText = (): string => readFileSync(path.join(REPO_ROOT, WORKFLOW_REL), "utf-8");
 const configText = (): string => readFileSync(path.join(REPO_ROOT, CONFIG_REL), "utf-8");
 
+describe("dependency pull-request descriptions", () => {
+  it("records superseded pins and explains the obligations that remain", () => {
+    const note = quotedFromConfig(/\bprBodyNotes:\s*\[\s*("(?:\\.|[^"\\])*")/);
+    expect(note).toContain("## What this change made unnecessary");
+    expect(note).toContain("Superseded dependency versions or pins in the diff");
+    expect(note).toContain("remain necessary and are kept");
+  });
+});
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

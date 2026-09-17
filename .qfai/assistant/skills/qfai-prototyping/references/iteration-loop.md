@@ -111,7 +111,10 @@ Two paths remain open on a sealed loop:
 - **Start over** — run `npx qfai prototyping iterate --cycle 0
 --target-url <url> --force`. Cycle 0 is a hard reset and is never
   refused by the sealed-loop guard; it also deletes stale `iter-NN`
-  directories. `--force` is required, not optional: a converged loop
+  directories and moves the aggregate `screenshots/` and `html/`
+  directories to `aggregate.backup-<ISO>`, so a restarted loop holds no
+  evidence until it captures again. `--force` is required,
+  not optional: a converged loop
   always has an `iter-00`, and the cycle-0 destructive-rerun gate
   refuses to overwrite it without the flag. With it, the **evidence**
   `iter-00` is moved to `iter-00.backup-<ISO>` before the reset, so the

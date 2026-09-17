@@ -15,6 +15,20 @@ tools: [Read, Glob, Grep, Bash]
 - Return only PASS or REVISE, with actionable rework instructions on REVISE.
 - Enforce validate evidence, required coverage obligations, and no self-approval.
 - Verify rejected options are not reintroduced without RE-OPEN.
+- Before an SDD handoff that finalizes a Plan — one spec named, or each target of a
+  no-argument batch — check every architectural element in each Plan that run
+  finalizes against
+  `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`;
+  return REVISE for missing or insufficient usage references unless the documented safety-floor exception applies.
+- On that same handoff, enumerate the contracts and deployment boundaries **the
+  run itself authored** — Phase 0 writes a contract before any Plan cites it —
+  and return REVISE for each one no finalized Plan names. The gate above reads
+  what a Plan cites, and the implementation review delegates both kinds here, so
+  an element left out of the Plan is inspected by nothing at all: the omission,
+  not the count, is what has to be caught first.
+- In contract-scoped SDD, do not apply this Plan gate. A required Plan update
+  is a mismatch: report it and halt to widen the Change Request to a spec-scoped
+  run; do not authorize Plan writes.
 - File excess as `defect:code-quality` against constitution Article VII; tag it
   `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
   settings and explanatory copy. Admit it only when it names what to cut
@@ -38,7 +52,42 @@ tools: [Read, Glob, Grep, Bash]
   context; when the two differ the card is the role contract and wins. See
   `.qfai/assistant/constitution/constitution.md` Article III.)
 - .qfai/assistant/catalog/test-layers.md
+- On an SDD cycle that finalizes a Plan, read the `10_Plan.md` of each spec that
+  cycle targets — the one named, or each capability a no-argument batch covers —
+  and its referenced usages, under the specs directory `qfai.config.yaml`
+  declares in `paths.specsDir` (`.qfai/specs` where it declares none). A Plan no
+  target of this run finalizes is not this review's to judge.
 - .qfai/specs/spec-\*/09_delta.md
+- **Count the concrete consumers of each contract and deployment boundary the
+  spec's Plan cites.** Those are authored before anything implements them, and
+  their dependants arrive across rows the implementation review sees one at a
+  time, so no single-row read ever sees all of them.
+
+  Count them while reviewing the **last nonterminal row** — the row whose `done`
+  makes the ledger terminal, so every other row is already `done` or `exception`
+  — and read the whole ledger there rather than that row alone. That review is
+  the per-item one routing already runs from `refactor`; "once its rows are
+  done" named no review at all, because the review that closes the last row runs
+  while that row is still open and nothing routes this reviewer after it.
+
+  A count below three is a finding unless the safety floor in
+  `.agents/rules/minimal-implementation.md` § 2 requires the element and the
+  Plan records that exception with the obligation requiring it.
+
+- The declarations a Plan's usages name outside the specs tree — **conditional**:
+  required wherever a usage names one. A deployment boundary counts the services
+  a deployment configuration instantiates, and an API manifest names a
+  contract's dependants, so a reviewer reading only under `paths.specsDir`
+  either rejects a valid usage as unresolved or counts one it has not read.
+- The contracts a Plan's usages cite, under the configured `paths.contractsDir`
+  — **conditional**: required wherever a usage names a `CON-API-*` or `CON-DB-*`.
+  A contract usage is concrete because the contract declares the dependant, so a
+  reviewer that never opens the declaration either rejects a valid usage as
+  unresolved or counts one it has not read. Resolve the directory from
+  `qfai.config.yaml`; `.qfai/contracts` is only the default.
+- The contracts and deployment boundaries this run authored, whether or not a
+  Plan cites them. Read for citations alone, one the author left out of the Plan
+  is invisible here, which is the case the responsibility above reports.
 - Validation evidence and gate results
 - `.qfai/specs/<spec-id>/tdd/test-list.md` — the ledger, for the row under review
 - The per-item evidence file that row's `Layer` owns: `.qfai/evidence/implement-<spec-id>.md`,
