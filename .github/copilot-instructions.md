@@ -39,3 +39,4 @@ Key rules to follow:
 - `.agents/rules/interface-clarity.md` — what may appear on a screen or in terminal output; text explaining how to work a control is a defect report against that control.
 - `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends in one of four named endings, never at a question count.
 - `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.
+- `.agents/rules/shipped-ci-parity.md` — a change to this repository's CI either reaches the workflow templates the package ships or says in the diff why it does not.

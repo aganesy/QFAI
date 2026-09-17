@@ -278,6 +278,47 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   // carry it. An adopter picks the language of their own repository, and a
   // copy under the shipped masters would both say otherwise and oblige every
   // shipped entry point to cite it.
+  describe("shipped-ci-parity rule", () => {
+    const MASTER = ".agents/rules/shipped-ci-parity.md";
+
+    it("names what is watched, what a marker says, and the three dispositions", async () => {
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      // One token per clause that no other clause carries, so a clause cannot
+      // be dropped while the master still looks complete.
+      for (const clause of [
+        /\.github\/workflows/,
+        /run-lint-checks\.sh/,
+        /SHIPPED-CI:/,
+        /transferred/,
+        /not-applicable/,
+        /deferred/,
+        /shipped-ci-dispositions\.md/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    // Copilot reads none of the other two, so a rule the master declares for
+    // every agent reaches it only through this file.
+    it.each(["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"])(
+      "%s cites the rule master",
+      async (rel) => {
+        const text = await readFile(path.join(ROOT, rel), "utf-8");
+        expect(text).toContain("shipped-ci-parity.md");
+      },
+    );
+
+    it("is not shipped to adopters", async () => {
+      // The rule compares this repository's CI with the templates it ships. An
+      // adopter's repository ships nothing, so there is no comparison to make.
+      const shipped = path.join(
+        ROOT,
+        "packages/qfai/assets/init/root/.agents/rules/shipped-ci-parity.md",
+      );
+      await expect(lstat(shipped)).rejects.toThrow();
+    });
+  });
+
   describe("repository-language rule", () => {
     const MASTER = ".agents/rules/repository-language.md";
 
