@@ -107,7 +107,11 @@ describe.each(SKILL_FILES)("%s — the skill body owns the `plan` phase", (rel) 
     expect(/^### Phase:.*\bPlan\b.*$/m.test(body), "no Required Process heading names Plan").toBe(
       true,
     );
-    const step = /^\d+\. .*routing phase `plan`.*$/m.exec(body);
+    // One numbered item and its continuation lines, read whole. The asset
+    // line ceiling in `src/core/doctor/assetLineBudget.ts` is 400 columns, and
+    // an item naming both roles and the topic file does not fit one line, so a
+    // line-anchored read finds only what landed before the first wrap.
+    const step = /^\d+\. [^\n]*routing phase `plan`[^\n]*(?:\n[ \t]+[^\n]*)*/m.exec(body);
     expect(step, "no Required Process step routes the `plan` phase").not.toBeNull();
     // The step names both routed roles and points at the topic file that
     // carries their inputs, outputs and exit criterion.

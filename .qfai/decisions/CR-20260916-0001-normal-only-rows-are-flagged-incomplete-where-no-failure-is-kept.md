@@ -19,7 +19,7 @@ a failure a specification names, one actually observed, one an active owned
 contract declares, and one the safety floor requires. A row keeping none owes no
 failure case, and the matrix marks its `Error path` cell `n/a`.
 
-Three rows of `spec-0008` and one of `spec-0013` say the opposite, without the
+Five rows of `spec-0008` and four of `spec-0013` say the opposite, without the
 qualifier:
 
 - `AC-0008-0009` — "any US/TC with only normal-path test cases is flagged as

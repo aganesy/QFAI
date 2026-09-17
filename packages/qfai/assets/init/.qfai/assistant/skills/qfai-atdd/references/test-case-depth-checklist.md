@@ -7,7 +7,14 @@ Reviewers MUST use this checklist when evaluating test case completeness during 
 
 A **kept failure** is one of:
 
-- A failure named by a specification.
+- A failure named by an **active obligation declaration** of a specification:
+  a live `BR-*`, `AC-*`, `EX-*` or `TC-*`. Retirement and migration history is
+  not a declaration — a failure surviving only in a retired `BR-*`, a removal row
+  of `09_delta.md`, or prose recording that something was dropped is not kept.
+  The gatekeeper reads those files, and this checklist elsewhere says a retired
+  business rule is no obligation, so reading a mention as a declaration forced an
+  `Error path` cell for a failure nobody owes and left the pack blocked with no
+  way to clear it.
 - A failure actually observed, whatever a type or schema says: the observation
   happened, so a schema claiming it cannot is a contradiction the Drift Protocol
   settles rather than a reason to drop the row.
@@ -48,6 +55,20 @@ which the constitution routes directly and `/qfai-sdd` seeds directly. Name the
 contract ID and the failure clause. **A contract with no US/TC is an ordinary
 API-only or contract-only flow, not drift**; what is drift is a failure no row of
 either kind covers.
+
+Map a kept specification or observed failure the same way, along the chain the
+spec already carries. A failure declared in a `BR-*`, an `AC-*` or an `EX-*` is
+owned by every US/TC row whose `AC-Refs` / `EX-Ref` reach that declaration, and
+one declared on a `TC-*` by that `TC-*`'s own row. An observed failure is owned
+by the row the observation is about — the `US-*` or `TC-*` the run that observed
+it exercised.
+
+**A row no chain reaches marks the cell `n/a` and names the failure it does not
+own.** The definition above says which failures a spec keeps, never which rows
+score them. Read as applying to every row, one flow's authorization failure
+demanded a case of every unrelated row; read as applying wherever a reviewer
+thought it applicable, the same row was `n/a` to one reviewer and ❌ to the next.
+The chain decides, and the spec already carries it.
 
 Cite the API or Integration assertion **where the test exists**. In the blocking
 `coverage` phase none does, so the mapping names the row and the assertion a
@@ -101,7 +122,7 @@ unscored on a row whose normal and error cells are ✅.
 For each US or TC:
 
 - [ ] At least one normal (happy) path test case exists.
-- [ ] A test case exists for each kept failure — every one, not one of them (invalid input, missing data, unauthorized access). The `Error path` cell is ✅ only when none is left over.
+- [ ] A test case exists for each kept failure **this row owns** — every one, not one of them (invalid input, missing data, unauthorized access). Ownership is the mapping under `## Scoring scope`; a kept failure no chain maps here belongs to another row. The `Error path` cell is ✅ only when none of this row's is left over.
 - [ ] Valid edge cases identified and tested (concurrent access, timing, empty collections, maximum payload).
 - [ ] Failure edge cases tested only for kept failures (concurrent access, timing, empty collections, payload limits).
 

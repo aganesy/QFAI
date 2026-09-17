@@ -238,7 +238,10 @@ describe.each(TREES)("%s", (tree) => {
       // A declared failure is kept whatever a type or schema says: excluded
       // here, the same conflict would be dropped from the matrix by one rule
       // while the paragraph below it routes the conflict as drift.
-      "A failure named by a specification.",
+      "A failure named by an **active obligation declaration** of a specification",
+      // A mention is not a declaration. Read as one, a failure surviving only
+      // in a removal record forced an `Error path` cell nobody could clear.
+      "Retirement and migration history is not a declaration",
       "A declared failure stays kept whatever a type or schema says",
       // An observation is never excluded by a schema: the failure happened.
       "A failure actually observed, whatever a type or schema says",
@@ -260,7 +263,10 @@ describe.each(TREES)("%s", (tree) => {
       expect(checklist.includes(clause), clause).toBe(true);
     }
     for (const clause of [
-      "A test case exists for each kept failure — every one, not one of them",
+      "A test case exists for each kept failure **this row owns** — every one, not one of them",
+      // Spec-wide is how a failure is kept, never how it is scored: every row
+      // owed every kept failure, or `applicable` decided it reviewer by reviewer.
+      "A row no chain reaches marks the cell `n/a` and names the failure it does not own",
       "Just below minimum (invalid) tested only for kept failures",
       "Just above maximum (invalid) tested only for kept failures",
       "Invalid partitions identified with at least one representative test case each, only for kept failures",
