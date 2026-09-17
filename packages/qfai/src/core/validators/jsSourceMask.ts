@@ -107,14 +107,14 @@ function endOfBlockComment(source: string, start: number): number {
 }
 
 /** End of a `'` / `"` string, or the newline when it is left unterminated. */
-function endOfQuoted(source: string, start: number, quote: string): number {
+function endOfQuoted(source: string, start: number, quote: string, multiline = false): number {
   for (let i = start + 1; i < source.length; i += 1) {
     const ch = source[i] ?? "";
     if (ch === "\\") {
       i += 1;
       continue;
     }
-    if (ch === "\n") {
+    if (ch === "\n" && !multiline) {
       return i;
     }
     if (ch === quote) {
@@ -145,7 +145,7 @@ function endOfTemplate(source: string, start: number): number {
 }
 
 /** End of a regex literal — `[…]` may hold an unescaped `/`; a newline cannot. */
-function endOfRegexLiteral(source: string, start: number): number {
+function endOfRegexLiteral(source: string, start: number, multiline = false): number {
   let inCharClass = false;
   for (let i = start + 1; i < source.length; i += 1) {
     const ch = source[i] ?? "";
@@ -153,7 +153,7 @@ function endOfRegexLiteral(source: string, start: number): number {
       i += 1;
       continue;
     }
-    if (ch === "\n") {
+    if (ch === "\n" && !multiline) {
       return i;
     }
     if (inCharClass) {
@@ -576,6 +576,37 @@ export type JsMaskOptions = {
    * a value ends before each of them, so the shared set never opened one there.
    */
   readonly regexAfterWords?: ReadonlySet<string>;
+
+  /**
+   * Read an ordinary quoted string as crossing lines. Default `false`.
+   *
+   * `true` for Ruby and PHP, which have no line-bounded string form. Read
+   * with JavaScript's bound, a value whose second line held an
+   * annotation-shaped id left that id standing as code.
+   *
+   * It gives up the bound this file documents: a quote this lexer misreads
+   * now costs the rest of the file rather than one line. Over-blanking only
+   * ever hides a construct, and reading fixture data as coverage is the
+   * failure a coverage gate cannot have.
+   */
+  readonly multilineQuoted?: boolean;
+
+  /**
+   * Read a `/`-delimited literal as crossing lines. Default `false`.
+   *
+   * `true` for Groovy, whose slashy string is written between the same
+   * delimiters as a JavaScript regex and may span lines.
+   */
+  readonly multilineSlashy?: boolean;
+
+  /**
+   * The line after which the file is data rather than source.
+   *
+   * Ruby stops compiling at `__END__` and PHP at `__halt_compiler();`, and
+   * what follows is a payload a fixture reads. Scanned as source it is not
+   * a literal, so an annotation-shaped id in it stood as code.
+   */
+  readonly dataSectionMarker?: RegExp;
 };
 
 export function maskJsNonCode(source: string, options: JsMaskOptions = {}): string {
@@ -597,6 +628,8 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
   const dollarSlashyStrings = options.dollarSlashyStrings ?? false;
   const rawTripleQuoted = options.rawTripleQuoted ?? false;
   const regexAfterWords = options.regexAfterWords ?? REGEX_AFTER_KEYWORD;
+  const multilineQuoted = options.multilineQuoted ?? false;
+  const multilineSlashy = options.multilineSlashy ?? false;
   const out = source.split("");
   // Whether the token just read closes an expression. It is the whole
   // regex-vs-division test: `a / b` divides, `= /re/` does not. Comments leave
@@ -610,8 +643,19 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
   // stay linear and counted parens inside strings and comments on the way. The stack is exact and
   // costs nothing, because the pass has already skipped those spans by the time it gets here.
   const controlHeader: boolean[] = [];
+  // The span the heredoc openers on the current line have queued. The
+  // header line is scanned to its end, because `[<<A, <<B]` opens two; the
+  // bodies are then jumped over rather than read, since a blanked body's own
+  // punctuation would otherwise open a literal that runs past the terminator.
+  let heredocFrom = -1;
+  let heredocTo = -1;
   let i = 0;
   while (i < source.length) {
+    if (heredocFrom !== -1 && i >= heredocFrom) {
+      i = heredocTo;
+      heredocFrom = -1;
+      continue;
+    }
     const ch = source[i] ?? "";
     const next = source[i + 1] ?? "";
     if (equalsBlockComments && ch === "=" && endOfEqualsBlockComment(source, i) !== -1) {
@@ -625,7 +669,10 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
       hashComments &&
       ch === "#" &&
       (hashBracketComments || next !== "[") &&
-      next !== "!"
+      // Only the first line's `#!` is a shebang. Anywhere else the two
+      // characters open an ordinary comment, and leaving it to the code
+      // scanner let an apostrophe in it open a string.
+      (next !== "!" || i > 0)
     ) {
       const end = endOfLineComment(source, i);
       i = blankComments ? blank(out, i, end) : end;
@@ -696,8 +743,14 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
         // literal. So does the rest of the line — `[<<A, <<B]` opens two, and
         // jumping to the first body left the second opener unread.
         const bodyStart = source.indexOf("\n", i);
-        if (bodyStart !== -1) blank(out, bodyStart, end);
-        i = bodyStart === -1 ? end : i + 2;
+        if (bodyStart === -1) {
+          i = end;
+        } else {
+          blank(out, bodyStart, end);
+          heredocFrom = bodyStart;
+          heredocTo = Math.max(heredocTo, end);
+          i += 2;
+        }
         endsExpression = true;
         lastWord = "";
       }
@@ -713,7 +766,7 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
         lastWord = "";
       }
     } else if (ch === "'" || ch === '"') {
-      i = blank(out, i, endOfQuoted(source, i, ch));
+      i = blank(out, i, endOfQuoted(source, i, ch, multilineQuoted));
       endsExpression = true;
       lastWord = "";
     } else if (ch === "`") {
@@ -721,7 +774,7 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
       endsExpression = true;
       lastWord = "";
     } else if (regexLiterals && ch === "/" && !endsExpression) {
-      i = blank(out, i, endOfRegexLiteral(source, i));
+      i = blank(out, i, endOfRegexLiteral(source, i, multilineSlashy));
       endsExpression = true;
       lastWord = "";
     } else if (WORD.test(ch)) {
@@ -750,6 +803,10 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
       }
       i += 1;
     }
+  }
+  const dataSection = options.dataSectionMarker?.exec(source) ?? null;
+  if (dataSection !== null) {
+    blank(out, dataSection.index + dataSection[0].length, source.length);
   }
   return out.join("");
 }

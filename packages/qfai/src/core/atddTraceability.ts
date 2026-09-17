@@ -67,10 +67,18 @@ const QUOTED = String.raw`${DOUBLE_QUOTED}|'(?:[^'\\\n]|\\.)*'`;
  * masking reads all three — so a restoration pattern reading only the first
  * loses the annotation in the other two.
  */
-const CSHARP_QUOTED = String.raw`@"(?:[^"]|"")*"|("{3,})[\s\S]*?\1|${DOUBLE_QUOTED}`;
+const CSHARP_QUOTED = String.raw`@"(?:[^"]|"")*"|(?<csharpFence>"{3,})[\s\S]*?\k<csharpFence>|${DOUBLE_QUOTED}`;
 
-/** A Ruby string literal, including the percent forms a name may be written in. */
-const RUBY_QUOTED = String.raw`%[qQ]?[({\[][^)}\]]*[)}\]]|${QUOTED}`;
+/**
+ * A Ruby string literal, including the percent forms a name may be written in.
+ *
+ * The delimiter rules are the masking scanner's: a paired bracket nests, and
+ * any other punctuation closes on its own repeat. Reading only the brackets
+ * left `%q!…!` masked and never restored, so the name it held was reported
+ * as uncovered.
+ */
+const RUBY_PERCENT = String.raw`%[qQ]?(?:\((?:[^()\\]|\\.)*\)|\{(?:[^{}\\]|\\.)*\}|\[(?:[^\[\]\\]|\\.)*\]|<(?:[^<>\\]|\\.)*>|(?<rubyFence>[^A-Za-z0-9\s(\[{<])(?:[^\\]|\\.)*?\k<rubyFence>)`;
+const RUBY_QUOTED = String.raw`${RUBY_PERCENT}|${QUOTED}`;
 
 /**
  * The words a Ruby `/` opens a pattern after.
@@ -94,7 +102,31 @@ const RUBY_REGEX_AFTER: ReadonlySet<string> = new Set([
   "then",
   "do",
   "in",
+  // A command call takes its argument with no parentheses, so the method
+  // name stands where an operator would and the `/` after it opens a
+  // pattern rather than dividing.
+  "split",
+  "gsub",
+  "sub",
+  "scan",
+  "grep",
+  "grep_v",
+  "index",
+  "rindex",
+  "partition",
+  "rpartition",
 ]);
+
+/**
+ * The line after which a Ruby file is data.
+ *
+ * Everything past it is a payload `DATA` reads, so a fixture written there
+ * is not source and an annotation-shaped id in it is not a reference.
+ */
+const RUBY_DATA_SECTION = /^__END__[ \t]*\r?$/m;
+
+/** The call after which a PHP file is data, as `__END__` is Ruby's. */
+const PHP_DATA_SECTION = /^[ \t]*__halt_compiler\s*\(\s*\)\s*;/m;
 
 /** A Java string literal: one line, or a text block. */
 /** A Java string literal: one line, or a text block, whose fence no escape reaches. */
@@ -167,7 +199,11 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
             // after each literal and cannot rediscover the call ahead of it.
             String.raw`(?<=(?<anchor>parametrize)[\s\S]{0,400}?\bids\s*=\s*\[[^\]]{0,400}?)(?<name>${QUOTED})`,
           ),
-          namePattern(String.raw`(?<anchor>pytest\.param)\s*\([^)]*?\bid\s*=\s*(?<name>${QUOTED})`),
+          namePattern(
+            // A parameter is often built by a call, and a span stopping at the
+            // first `)` never reached the `id` argument beyond it.
+            String.raw`(?<anchor>pytest\.param)\s*\((?:[^()]|\((?:[^()]|\([^()]*\))*\)){0,400}?\bid\s*=\s*(?<name>${QUOTED})`,
+          ),
         ],
       ],
       [
@@ -179,6 +215,8 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
           hashComments: true,
           percentLiterals: true,
           equalsBlockComments: true,
+          multilineQuoted: true,
+          dataSectionMarker: RUBY_DATA_SECTION,
           // A value ends before each of these in Ruby, so the shared set — which
           // is JavaScript's — never opened a pattern after one.
           regexAfterWords: RUBY_REGEX_AFTER,
@@ -193,8 +231,11 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         ["go"],
         { comments: false, rawBacktick: true, regexLiterals: false },
         [
+          // The receiver is part of the anchor: an ordinary helper named
+          // `Run` takes a first argument too, and restoring that literal
+          // cleared an obligation nothing covers.
           namePattern(
-            String.raw`\.\s*(?<anchor>Run)\s*\(\s*(?<name>${DOUBLE_QUOTED}|` + "`[^`]*`)",
+            String.raw`\b(?<anchor>[tbf]\s*\.\s*Run)\s*\(\s*(?<name>${DOUBLE_QUOTED}|` + "`[^`]*`)",
           ),
         ],
       ],
@@ -217,7 +258,7 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
         // keeps the slash rule for its slashy strings with the dollar form
         // beside it.
         ["groovy"],
-        { comments: false, tripleQuoted: true, dollarSlashyStrings: true },
+        { comments: false, tripleQuoted: true, dollarSlashyStrings: true, multilineSlashy: true },
         [
           namePattern(
             String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${QUOTED})`,
@@ -248,7 +289,7 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
           // A backtick name counts where an annotation declares the function a
           // test; `fun` alone also names an ordinary helper.
           namePattern(
-            String.raw`(?<anchor>@(?:Test|ParameterizedTest|RepeatedTest|TestFactory))[^@]*?\bfun\s+(?<name>` +
+            String.raw`(?<anchor>@(?:Test|ParameterizedTest|RepeatedTest|TestFactory))[^{};]{0,200}?\bfun\s+(?<name>` +
               "`[^`\\n]+`)",
           ),
           namePattern(String.raw`\b(?<anchor>def)\s+(?<name>${QUOTED})\s*\(`),
@@ -271,7 +312,7 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
           lifetimes: true,
         },
         [
-          namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${DOUBLE_QUOTED})`),
+          namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${SCALA_QUOTED})`),
           namePattern(
             String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${SCALA_QUOTED})`,
           ),
@@ -326,13 +367,20 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
       ],
       [
         ["php"],
-        { comments: false, hashComments: true, regexLiterals: false, phpHeredocs: true },
+        {
+          comments: false,
+          hashComments: true,
+          regexLiterals: false,
+          phpHeredocs: true,
+          multilineQuoted: true,
+          dataSectionMarker: PHP_DATA_SECTION,
+        },
         [
           namePattern(String.raw`\b(?<anchor>it|test|describe)\s*\(\s*(?<name>${QUOTED})`),
           // PHPUnit names a test in an attribute, which the hash-comment rule
           // leaves as code while the literal inside it is masked.
           namePattern(
-            String.raw`#\[[^\]]*?(?<anchor>TestDox|DataProvider)\s*\(\s*(?<name>${QUOTED})`,
+            String.raw`#\[[^\]]*?(?<anchor>TestDox|DataProvider)\s*\(\s*(?:[A-Za-z_]\w*\s*:\s*)?(?<name>${QUOTED})`,
           ),
         ],
       ],
@@ -2473,6 +2521,15 @@ const DOTNET_ATTRIBUTE_PATTERN = /^\s*\[\s*(?:Test|TestCase|TestCaseSource|Fact|
 const RUST_ATTRIBUTE_PATTERN = /^\s*#\[\s*(?:\w+::)?test\s*\]/m;
 
 /**
+ * Expecto's entry points, which name a case in the call rather than an attribute.
+ *
+ * An F# suite reads the attribute form or this one, and reading only the
+ * first reported a whole Expecto file as declaring no test.
+ */
+const EXPECTO_CALL_PATTERN =
+  /\b(?:testCase|testCaseAsync|ftestCase|ptestCase|testList|testProperty|testTheory)\s+["@]/;
+
+/**
  * The `def test...` convention pytest and minitest both collect on.
  *
  * The form stops at the name rather than requiring `(`, because Ruby's
@@ -2543,7 +2600,8 @@ const TEST_PATTERNS_BY_LANGUAGE: readonly (readonly [readonly string[], readonly
     ["java", "kt", "kts", "groovy", "scala"],
     [JVM_ANNOTATION_PATTERN, CALL_FORM_PATTERN],
   ],
-  [["cs", "fs", "vb"], [DOTNET_ATTRIBUTE_PATTERN]],
+  [["cs", "vb"], [DOTNET_ATTRIBUTE_PATTERN]],
+  [["fs"], [DOTNET_ATTRIBUTE_PATTERN, EXPECTO_CALL_PATTERN]],
   [["rs"], [RUST_ATTRIBUTE_PATTERN]],
   [["php"], [PHP_NAMING_PATTERN]],
 ];

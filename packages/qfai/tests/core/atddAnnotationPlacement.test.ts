@@ -97,6 +97,49 @@ describe("where an annotation may sit", () => {
     ],
     ["Rust", "pay.rs", `const CASES: &[&str] = &["${ID}"];\n#[test]\nfn pays() {}\n`],
     [
+      // Ruby has no line-bounded string, so the value runs to its own closer.
+      "a multiline Ruby string",
+      "pay_spec.rb",
+      `CASES = "first\n${ID}\nlast"\nit "pays" do\nend\n`,
+    ],
+    [
+      // PHP's strings cross lines as Ruby's do.
+      "a multiline PHP string",
+      "PayTest.php",
+      `<?php\n$cases = "first\n${ID}\nlast";\nclass PayTest {\n  public function testPays() {}\n}\n`,
+    ],
+    [
+      // A Groovy slashy string may cross lines, where a regex may not.
+      "a multiline Groovy slashy string",
+      "PaySpec.groovy",
+      `def p = /first\n${ID}/\ndef "pays"() { expect: pay() }\n`,
+    ],
+    [
+      // Ruby stops compiling at the marker; the rest is a payload.
+      "a Ruby data section",
+      "pay_spec.rb",
+      `it "pays" do\nend\n__END__\n${ID}\n`,
+    ],
+    [
+      // PHP's marker does the same.
+      "a PHP data section",
+      "PayTest.php",
+      `<?php\nclass PayTest {\n  public function testPays() {}\n}\n__halt_compiler();\n${ID}\n`,
+    ],
+    [
+      // A command call takes its argument bare, so the slash after the
+      // method name opens a pattern rather than dividing.
+      "a Ruby command-call regex",
+      "pay_spec.rb",
+      `parts = value.split /${ID}/\nit "pays" do\nend\n`,
+    ],
+    [
+      // An ordinary helper named `Run` takes a first argument too.
+      "a Go call to a helper named Run",
+      "pay_test.go",
+      `func TestPay(t *testing.T) {\n  client.Run("${ID}")\n}\n`,
+    ],
+    [
       // One expression can open two heredocs; the first body is not the
       // end of the header.
       "a second Ruby heredoc on one line",
@@ -265,6 +308,56 @@ describe("where an annotation may sit", () => {
       `it %q{${ID} pays} do\nend\n`,
     ],
     [
+      // The body is a literal, so its backtick opens nothing. Scanned as
+      // source it blanked every line to the end of the file.
+      "a Ruby comment after a heredoc holding a backtick",
+      "pay_spec.rb",
+      `S = <<A\nhold \` open\nA\n# ${ID}\nit "pays" do\nend\n`,
+    ],
+    [
+      // Only the first line's `#!` is a shebang; elsewhere it opens a
+      // comment, and the apostrophe inside one is not a quote.
+      "a Python hash-bang comment below the first line",
+      "test_pay.py",
+      `def test_pay():\n    assert pay()\n#! this test\u0027s coverage: ${ID}\n`,
+    ],
+    [
+      // The fence is a run of quotes, so the pattern reads its own length.
+      "an xUnit raw display name",
+      "PayTests.cs",
+      `class PayTests {\n  [Fact(DisplayName = """${ID} pays""")]\n  public void Pays() {}\n}\n`,
+    ],
+    [
+      // Ruby closes a percent literal on any punctuation it opened with.
+      "an RSpec name in a bang-delimited percent literal",
+      "pay_spec.rb",
+      `it %q!${ID} pays! do\nend\n`,
+    ],
+    [
+      // A parameter built by a call still reaches its id.
+      "a pytest parameter id after a nested call",
+      "test_pay.py",
+      `@pytest.mark.parametrize("case", [pytest.param(make_case(), id="${ID}")])\ndef test_pay(case):\n    assert pay()\n`,
+    ],
+    [
+      // Another annotation may stand between the test one and `fun`.
+      "a Kotlin function name after a second annotation",
+      "PayTest.kt",
+      `class PayTest {\n  @Test @Tag("integration") fun ``${ID} pays``() {}\n}\n`,
+    ],
+    [
+      // Scala writes a display name in a triple-quoted string too.
+      "a Scala triple-quoted display name",
+      "PaySpec.scala",
+      `class PaySpec {\n  @Test\n  @DisplayName("""${ID} pays""")\n  def pays(): Unit = {}\n}\n`,
+    ],
+    [
+      // PHP names the argument as often as it passes it positionally.
+      "a PHPUnit TestDox name passed by argument name",
+      "PayTest.php",
+      `<?php\nclass PayTest {\n  #[TestDox(text: \u0027${ID} pays\u0027)]\n  public function testPays() {}\n}\n`,
+    ],
+    [
       // A raw triple-quoted string takes no escape, so the fence after a
       // trailing backslash closes and the comment beyond it is visible.
       "a Kotlin raw string ending in a backslash",
@@ -393,6 +486,14 @@ describe("where an annotation may sit", () => {
     ["a Rust comment", "pay.rs", `// ${ID}\n#[test]\nfn pays() {}\n`],
   ])("counts an annotation written as %s", async (_placement, fileName, body) => {
     expect(await codesFor(body, fileName)).not.toContain("QFAI-ATDD-112");
+  });
+
+  it("reads an Expecto suite as declaring a test", async () => {
+    // An F# suite names its cases in Expecto's calls as often as in an
+    // attribute. Read for the attribute alone, a whole file of them was
+    // reported as declaring none.
+    const body = `let tests = testList "pay" [ testCase "${ID} pays" <| fun _ -> () ]\n`;
+    expect(await codesFor(body, "PayTests.fs")).not.toContain("QFAI-ATDD-119");
   });
 
   it("does not count a test declaration quoted inside a fixture", async () => {
