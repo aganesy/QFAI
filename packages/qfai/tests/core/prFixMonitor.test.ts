@@ -4,7 +4,10 @@ import { chmod, mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+// No module-level `expect`: it resolves against whichever test started last,
+// which under a concurrent suite is rarely the one asserting. Every test here
+// takes `expect` and `onTestFinished` from its own context instead.
+import { describe, it } from "vitest";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -90,20 +93,15 @@ type RunResult = {
   stdout: string;
 };
 
-const tempDirs: string[] = [];
-
-afterEach(async () => {
-  while (tempDirs.length > 0) {
-    const dir = tempDirs.pop();
-    if (!dir) {
-      continue;
-    }
-    await removeTempTree(dir);
-  }
-});
+/**
+ * Registers a cleanup to run when the calling test finishes. Each test passes its own
+ * `onTestFinished`, so a temporary directory is removed by the test that created it and
+ * concurrent tests never delete a directory another one is still using.
+ */
+type RegisterCleanup = (fn: () => void | Promise<void>) => void;
 
 describe("pr-fix wrapper docs", () => {
-  it("keeps pr-fix skill docs aligned across integrations", async () => {
+  it("keeps pr-fix skill docs aligned across integrations", async ({ expect }) => {
     const [claudeSkill, agentsSkill, codexSkill, githubSkill] = await Promise.all([
       readFile(claudeSkillPath, "utf-8"),
       readFile(agentsSkillPath, "utf-8"),
@@ -122,8 +120,8 @@ describe("pr-fix wrapper docs", () => {
   });
 });
 
-describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
-  it.each(
+describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
+  it.for(
     (
       [
         ["instruction", "<?aaaa", "?>"],
@@ -135,7 +133,7 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ),
   )(
     "bounds unmatched HTML label scans for %s / %s / %s / %s",
-    async (_name, opener, closer, boundary) => {
+    async ([_name, opener, closer, boundary], { expect }) => {
       const policyPath = path.join(repoRoot, ".agents/skills/pr-fix/scripts/pr-body-policy.ps1");
       for (const end of ["\n", "\r\n"]) {
         const suffix =
@@ -174,7 +172,9 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     },
   );
 
-  it("matches malformed link candidates without allocating each remaining tail", async () => {
+  it("matches malformed link candidates without allocating each remaining tail", async ({
+    expect,
+  }) => {
     const policyPath = path.join(repoRoot, ".agents/skills/pr-fix/scripts/pr-body-policy.ps1");
     const policy = await readFile(policyPath, "utf-8");
     const branch = policy
@@ -194,9 +194,9 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(result.code).toBe(0);
   });
 
-  it.each(["removed", "comment only"])(
+  it.for(["removed", "comment only"])(
     "rejects a changed dry-run removal answer: %s",
-    async (change) => {
+    async (change, { expect, onTestFinished }) => {
       const clean = makePrView([successCheck()]);
       const body = compliantPrBody().replace(
         /## What this change made unnecessary\n\nNothing\.\n\n/,
@@ -204,6 +204,7 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       );
       const result = await runPrFix({
         extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+        onTestFinished,
         scenario: makeScenario({
           prViews: [clean, makePrView([successCheck()], { body })],
           threads: [[]],
@@ -224,14 +225,15 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     },
   );
 
-  it.each([
+  it.for([
     "   ## What this change made unnecessary",
     "## What this change made unnecessary ##",
     "  ## What this change made unnecessary ###  ",
-  ])("preserves valid authored removal heading %s", async (heading) => {
+  ])("preserves valid authored removal heading %s", async (heading, { expect, onTestFinished }) => {
     const body = `${compliantPrBody().replace("## What this change made unnecessary", heading)}\n\n## Adoption bar\n\nKeep the complete safety floor.\n`;
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         changedFiles: ["REVIEW.md"],
         prViews: [makePrView([successCheck()], { body })],
@@ -246,16 +248,17 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(combinedOutput(result)).toContain("Dry-run completed.");
   });
 
-  it.each([
+  it.for([
     "<p>Nothing.</p>",
     "<div>\nNothing.\n</div>",
     "<span>\nNothing.\n</span>",
     "<div>\n<!--\n## Example -->\nNothing.\n</div>",
     "<div>\n[Nothing]: https://example.com\n</div>",
-  ])("preserves a visible authored HTML answer %s", async (answer) => {
+  ])("preserves a visible authored HTML answer %s", async (answer, { expect, onTestFinished }) => {
     const body = `## What this change made unnecessary\n\n${answer}\n`;
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         changedFiles: ["REVIEW.md"],
         prViews: [makePrView([successCheck()], { body })],
@@ -266,7 +269,7 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(result.ghState.prEditCount ?? 0).toBe(0);
   });
 
-  it.each([
+  it.for([
     ...[
       "## Adoption bar",
       "~~~",
@@ -332,28 +335,32 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ["code-like reference container top level", "    [Nothing]: /url"],
     ["code-like reference container quote", ">     [Nothing]: /url"],
     ["code-like reference container list", "-     [Nothing]: /url"],
-  ])("preserves visible reference-like text: %s", async (_name, answer) => {
-    const body = `## What this change made unnecessary\n\n${answer}`;
-    const result = await runPrFix({
-      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
-      scenario: makeScenario({
-        changedFiles: ["REVIEW.md"],
-        prViews: [makePrView([successCheck()], { body })],
-        threads: [[]],
-      }),
-    });
-    expect(result.code).toBe(0);
-    expect(result.ghState.prEditCount ?? 0).toBe(0);
-    if (_name.startsWith("code-like reference container")) {
-      const preview = await readFile(
-        path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
-        "utf-8",
-      );
-      expect(preview).toContain(`## What this change made unnecessary\n\n${answer}`);
-    }
-  });
+  ])(
+    "preserves visible reference-like text: %s",
+    async ([_name, answer], { expect, onTestFinished }) => {
+      const body = `## What this change made unnecessary\n\n${answer}`;
+      const result = await runPrFix({
+        extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+        onTestFinished,
+        scenario: makeScenario({
+          changedFiles: ["REVIEW.md"],
+          prViews: [makePrView([successCheck()], { body })],
+          threads: [[]],
+        }),
+      });
+      expect(result.code).toBe(0);
+      expect(result.ghState.prEditCount ?? 0).toBe(0);
+      if (_name.startsWith("code-like reference container")) {
+        const preview = await readFile(
+          path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
+          "utf-8",
+        );
+        expect(preview).toContain(`## What this change made unnecessary\n\n${answer}`);
+      }
+    },
+  );
 
-  it.each([
+  it.for([
     ...[
       "## What this change made unnecessary ##",
       " ## What this change made unnecessary",
@@ -369,12 +376,13 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     ["multiline visible link", '[A removed pin](https://example.com "\nNothing\n")\n'],
     ["literal link with a blank title line", '[](https://example.com "\n\nNothing\n")\n'],
     ["literal link with an unquoted title", "[](https://example.com \nNothing\n)\n"],
-  ])("accepts rendered Markdown: %s", async (_name, section) => {
+  ])("accepts rendered Markdown: %s", async ([_name, section], { expect, onTestFinished }) => {
     const body = section.includes("## What")
       ? section
       : `## What this change made unnecessary\n\n${section}`;
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         changedFiles: ["REVIEW.md"],
         prViews: [makePrView([successCheck()], { body })],
@@ -385,28 +393,36 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(result.ghState.prEditCount ?? 0).toBe(0);
   });
 
-  it.each(
+  it.for(
     ["---", "==="].flatMap((underline) =>
       ["Adoption bar", "Adoption\nbar", "=", "==="].map((title) => [underline, title] as const),
     ),
-  )("blocks an empty removal answer before Setext %s / %j", async (underline, title) => {
-    const body = `## What this change made unnecessary\n\n${title}\n${underline}\nKeep publication approval.\n`;
-    const result = await runPrFix({
-      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
-      scenario: makeScenario({
-        changedFiles: ["REVIEW.md"],
-        prViews: [makePrView([successCheck()], { body })],
-        threads: [[]],
-      }),
-    });
-    expect(result.code).not.toBe(0);
-    expect(result.ghState.prEditCount ?? 0).toBe(0);
-  });
+  )(
+    "blocks an empty removal answer before Setext %s / %j",
+    async ([underline, title], { expect, onTestFinished }) => {
+      const body = `## What this change made unnecessary\n\n${title}\n${underline}\nKeep publication approval.\n`;
+      const result = await runPrFix({
+        extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+        onTestFinished,
+        scenario: makeScenario({
+          changedFiles: ["REVIEW.md"],
+          prViews: [makePrView([successCheck()], { body })],
+          threads: [[]],
+        }),
+      });
+      expect(result.code).not.toBe(0);
+      expect(result.ghState.prEditCount ?? 0).toBe(0);
+    },
+  );
 
-  it("accepts a real heading after a first-line indented HTML example", async () => {
+  it("accepts a real heading after a first-line indented HTML example", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const body = "    <pre>\n## What this change made unnecessary\nNothing.\n";
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         changedFiles: ["REVIEW.md"],
         prViews: [makePrView([successCheck()], { body })],
@@ -417,25 +433,32 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(result.ghState.prEditCount ?? 0).toBe(0);
   });
 
-  it.each(
+  it.for(
     ["- ", "1. ", "  - "].flatMap((marker) =>
       ["<pre>", "```", "~~~"].map((opening) => [marker, opening] as const),
     ),
-  )("accepts a real removal section dedented from a container %j / %s", async (marker, opening) => {
-    const body = `${marker}${opening}\n${" ".repeat(marker.length)}Example\n## What this change made unnecessary\nNothing.\n`;
-    const result = await runPrFix({
-      extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
-      scenario: makeScenario({
-        changedFiles: ["REVIEW.md"],
-        prViews: [makePrView([successCheck()], { body })],
-        threads: [[]],
-      }),
-    });
-    expect(result.code).toBe(0);
-    expect(result.ghState.prEditCount ?? 0).toBe(0);
-  });
+  )(
+    "accepts a real removal section dedented from a container %j / %s",
+    async ([marker, opening], { expect, onTestFinished }) => {
+      const body = `${marker}${opening}\n${" ".repeat(marker.length)}Example\n## What this change made unnecessary\nNothing.\n`;
+      const result = await runPrFix({
+        extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+        onTestFinished,
+        scenario: makeScenario({
+          changedFiles: ["REVIEW.md"],
+          prViews: [makePrView([successCheck()], { body })],
+          threads: [[]],
+        }),
+      });
+      expect(result.code).toBe(0);
+      expect(result.ghState.prEditCount ?? 0).toBe(0);
+    },
+  );
 
-  it("accepts a visible removal heading that interrupts a backtick paragraph", async () => {
+  it("accepts a visible removal heading that interrupts a backtick paragraph", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const section = "`\n## What this change made unnecessary\nNothing.\n`\n";
     const body = compliantPrBody().replace(
       /## What this change made unnecessary\n\nNothing\.\n\n/,
@@ -444,6 +467,7 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(body).toContain(section);
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         changedFiles: ["REVIEW.md"],
         prViews: [makePrView([successCheck()], { body })],
@@ -456,7 +480,7 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(result.ghState.threadsCount).toBe(1);
   });
 
-  it.each([
+  it.for([
     ["absent", ""],
     ["empty", "## What this change made unnecessary\n\n"],
     ["comment only", "## What this change made unnecessary\n\n<!-- Answer required. -->\n"],
@@ -632,34 +656,38 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       "raw HTML standalone inline tag",
       "<span>\n## What this change made unnecessary\nNothing.\n</span>\n",
     ],
-  ])("blocks a %s removal answer without inventing nothing", async (name, section) => {
-    const body =
-      name === "import-only body"
-        ? section + compliantPrBody()
-        : compliantPrBody().replace(
-            /## What this change made unnecessary\n\nNothing\.\n\n/,
-            section,
-          );
-    const result = await runPrFix({
-      extraArgs: ["-DryRun"],
-      scenario: makeScenario({
-        changedFiles: ["REVIEW.md"],
-        prViews: [makePrView([successCheck()], { body })],
-        threads: [[]],
-      }),
-    });
-    expect(result.code).not.toBe(0);
-    expect(combinedOutput(result)).toContain("authored removal-list answer");
-    const previewPath = path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md");
-    expect(combinedOutput(result)).toContain(`gh pr edit 166 --body-file "${previewPath}"`);
-    const preview = await readFile(
-      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
-      "utf-8",
-    );
-    expect(preview.split("## Auto-import")[0]).not.toContain("Nothing.");
-  });
+  ])(
+    "blocks a %s removal answer without inventing nothing",
+    async ([name, section], { expect, onTestFinished }) => {
+      const body =
+        name === "import-only body"
+          ? section + compliantPrBody()
+          : compliantPrBody().replace(
+              /## What this change made unnecessary\n\nNothing\.\n\n/,
+              section,
+            );
+      const result = await runPrFix({
+        extraArgs: ["-DryRun"],
+        onTestFinished,
+        scenario: makeScenario({
+          changedFiles: ["REVIEW.md"],
+          prViews: [makePrView([successCheck()], { body })],
+          threads: [[]],
+        }),
+      });
+      expect(result.code).not.toBe(0);
+      expect(combinedOutput(result)).toContain("authored removal-list answer");
+      const previewPath = path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md");
+      expect(combinedOutput(result)).toContain(`gh pr edit 166 --body-file "${previewPath}"`);
+      const preview = await readFile(
+        path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
+        "utf-8",
+      );
+      expect(preview.split("## Auto-import")[0]).not.toContain("Nothing.");
+    },
+  );
 
-  it.each([
+  it.for([
     "",
     "```md\n## What this change made unnecessary\n\nExample only.\n````\n\n",
     "~~~md\n## What this change made unnecessary\n\nExample only.\n~~~~\n\n",
@@ -673,37 +701,45 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     "<pre>\n<!--\n```md\n</pre>\n\n",
     "<div>\nExample\n</div>\n\n",
     "<pre>\n## Auto-import\nImported example only.\n</pre>\n\n",
-  ])("preserves an authored removal answer while repairing other metadata", async (prefix) => {
-    const answer =
-      "A duplicate check. The existing validator stays because it covers malformed inputs.\n\n```sh\nobsolete-check --strict\n## This is command data\n```\n\nThe canonical validator retains that input check.";
-    const result = await runPrFix({
-      extraArgs: ["-DryRun"],
-      scenario: makeScenario({
-        changedFiles: ["REVIEW.md"],
-        prViews: [
-          makePrView([successCheck()], {
-            body: `${prefix}## What this change made unnecessary\n\n${answer}\n`,
-          }),
-        ],
-        threads: [[]],
-      }),
-    });
-    expect(result.code).toBe(0);
-    expect(combinedOutput(result)).toContain("Dry-run completed.");
-    expect(result.ghState.prEditCount ?? 0).toBe(0);
-    expect(result.ghState.threadsCount).toBe(1);
-    const preview = await readFile(
-      path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
-      "utf-8",
-    );
-    expect(preview.split("## Auto-import")[0]).toContain(answer);
-    expect(preview.split("## Auto-import")[0]).not.toContain("Example only.");
-  });
+  ])(
+    "preserves an authored removal answer while repairing other metadata",
+    async (prefix, { expect, onTestFinished }) => {
+      const answer =
+        "A duplicate check. The existing validator stays because it covers malformed inputs.\n\n```sh\nobsolete-check --strict\n## This is command data\n```\n\nThe canonical validator retains that input check.";
+      const result = await runPrFix({
+        extraArgs: ["-DryRun"],
+        onTestFinished,
+        scenario: makeScenario({
+          changedFiles: ["REVIEW.md"],
+          prViews: [
+            makePrView([successCheck()], {
+              body: `${prefix}## What this change made unnecessary\n\n${answer}\n`,
+            }),
+          ],
+          threads: [[]],
+        }),
+      });
+      expect(result.code).toBe(0);
+      expect(combinedOutput(result)).toContain("Dry-run completed.");
+      expect(result.ghState.prEditCount ?? 0).toBe(0);
+      expect(result.ghState.threadsCount).toBe(1);
+      const preview = await readFile(
+        path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
+        "utf-8",
+      );
+      expect(preview.split("## Auto-import")[0]).toContain(answer);
+      expect(preview.split("## Auto-import")[0]).not.toContain("Example only.");
+    },
+  );
 
-  it("extracts version markers from non-feature branch prefixes and blocks mismatches", async () => {
+  it("extracts version markers from non-feature branch prefixes and blocks mismatches", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const branch = "topic/v1.8.5";
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         branch,
         packageVersion: "1.8.4",
@@ -726,10 +762,11 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(versionCheck.ChangelogSectionPresent).toBe(false);
   });
 
-  it("accepts aligned topic/vX.Y.Z branches", async () => {
+  it("accepts aligned topic/vX.Y.Z branches", async ({ expect, onTestFinished }) => {
     const branch = "topic/v1.8.5";
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         branch,
         changelog: changelogWithVersion("1.8.5"),
@@ -744,10 +781,14 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     );
   });
 
-  it("ignores non-version work suffixes after branch version markers", async () => {
+  it("ignores non-version work suffixes after branch version markers", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const branch = "feature/v1.8.5-dds-validator";
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         branch,
         changelog: changelogWithVersion("1.8.5"),
@@ -767,9 +808,13 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(versionCheck.ExpectedVersion).toBe("1.8.5");
   });
 
-  it("rejects live overrides for SleepSeconds and RequiredZeroStreak", async () => {
+  it("rejects live overrides for SleepSeconds and RequiredZeroStreak", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrFix({
       extraArgs: ["-SleepSeconds", "5", "-RequiredZeroStreak", "2"],
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[]],
@@ -782,8 +827,9 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     );
   });
 
-  it("writes CI failure artifacts and exits non-zero", async () => {
+  it("writes CI failure artifacts and exits non-zero", async ({ expect, onTestFinished }) => {
     const result = await runPrFix({
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([failureCheck()])],
         threads: [[]],
@@ -803,8 +849,12 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(existsSync(checksPath)).toBe(true);
   });
 
-  it("writes unresolved-thread artifacts and exits non-zero", async () => {
+  it("writes unresolved-thread artifacts and exits non-zero", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrFix({
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[makeThread()]],
@@ -824,10 +874,11 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(existsSync(threadsPath)).toBe(true);
   });
 
-  it("detects outdated but unresolved threads", async () => {
+  it("detects outdated but unresolved threads", async ({ expect, onTestFinished }) => {
     const outdatedThread = makeThread();
     outdatedThread.isOutdated = true;
     const result = await runPrFix({
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[outdatedThread]],
@@ -843,9 +894,10 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(monitorStatus.State).toBe("action_required_threads");
   });
 
-  it("treats empty status checks as waiting, not clean", async () => {
+  it("treats empty status checks as waiting, not clean", async ({ expect, onTestFinished }) => {
     const result = await runPrFix({
       mockSleep: true,
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([]), makePrView([]), makePrView([successCheck()])],
         threads: [[], [makeThread()]],
@@ -861,12 +913,13 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(existsSync(handoffPath)).toBe(false);
   });
 
-  it("resets the streak when CI is pending/in-progress", async () => {
+  it("resets the streak when CI is pending/in-progress", async ({ expect, onTestFinished }) => {
     const cleanView = makePrView([successCheck()]);
     const pendingView = makePrView([pendingCheck()]);
     const emptyThreads = Array.from({ length: 31 }, () => []);
     const result = await runPrFix({
       mockSleep: true,
+      onTestFinished,
       scenario: makeScenario({
         prViews: [
           cleanView,
@@ -889,9 +942,13 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(existsSync(handoffPath)).toBe(false);
   });
 
-  it("produces handoff only after 30 consecutive clean polls", async () => {
+  it("produces handoff only after 30 consecutive clean polls", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrFix({
       mockSleep: true,
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[]],
@@ -918,9 +975,9 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(monitorStatus.EffectiveRequiredZeroStreak).toBe(30);
   });
 
-  it.each(["poll", "final boundary"])(
+  it.for(["poll", "final boundary"])(
     "blocks an answer removed at the %s without emitting a handoff",
-    async (boundary) => {
+    async (boundary, { expect, onTestFinished }) => {
       const clean = makePrView([successCheck()]);
       const missing = makePrView([successCheck()], {
         body: compliantPrBody().replace(
@@ -930,6 +987,7 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       });
       const result = await runPrFix({
         mockSleep: true,
+        onTestFinished,
         scenario: makeScenario({
           prViews:
             boundary === "poll"
@@ -955,9 +1013,13 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     },
   );
 
-  it("retries transient gh graphql failures during live monitoring", async () => {
+  it("retries transient gh graphql failures during live monitoring", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrFix({
       mockSleep: true,
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[]],
@@ -970,9 +1032,13 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(combinedOutput(result)).toContain("PR handoff ready for PR #166");
   });
 
-  it("prefers ci:local when ci:gate is absent during PR body repair", async () => {
+  it("prefers ci:local when ci:gate is absent during PR body repair", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         changedFiles: ["README.md"],
         packageScripts: { "ci:local": "pnpm ci:local" },
@@ -995,9 +1061,13 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(preview).toContain("- Repo CI command: `pnpm ci:local`");
   });
 
-  it("renders pnpm ci:gate when the repo defines a long ci:gate script", async () => {
+  it("renders pnpm ci:gate when the repo defines a long ci:gate script", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrFix({
       extraArgs: ["-DryRun", "-SleepSeconds", "0", "-RequiredZeroStreak", "1"],
+      onTestFinished,
       scenario: makeScenario({
         changedFiles: ["README.md"],
         packageScripts: {
@@ -1024,11 +1094,15 @@ describe("run-pr-fix strict monitor", { timeout: 120000 }, () => {
   });
 });
 
-describe("run-pr-fix strict monitor pagination", { timeout: 120000 }, () => {
-  it("detects unresolved threads across paginated GraphQL responses within a single poll", async () => {
+describe.concurrent("run-pr-fix strict monitor pagination", { timeout: 120000 }, () => {
+  it("detects unresolved threads across paginated GraphQL responses within a single poll", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const thread1 = makeThread();
     const thread2: FakeThread = { ...makeThread(), id: "PRRT_kwDOQuL-page2" };
     const result = await runPrFix({
+      onTestFinished,
       scenario: makeScenario({
         prViews: [makePrView([successCheck()])],
         threads: [[thread1], [thread2]],
@@ -1049,13 +1123,14 @@ describe("run-pr-fix strict monitor pagination", { timeout: 120000 }, () => {
   });
 });
 
-describe("release PR body repair", () => {
-  it.each(["FIXME: list removals", "HACK"])(
+describe.concurrent("release PR body repair", () => {
+  it.for(["FIXME: list removals", "HACK"])(
     "repairs the %s placeholder without replacing adoption text",
-    async (placeholder) => {
+    async (placeholder, { expect, onTestFinished }) => {
       const adoption = "## Adoption bar\n\nKeep the existing validator.\n";
       const result = await repairReleaseBody(
         `Existing notes.\n\n## What this change made unnecessary\n\n${placeholder}\n\n${adoption}`,
+        onTestFinished,
       );
       expect(result.code).toBe(0);
       expect(result.body).toContain("Superseded package version and heading.");
@@ -1064,59 +1139,68 @@ describe("release PR body repair", () => {
     },
   );
 
-  it.each(["~~~\nunfinished sample\n", "<!-- unfinished note\n", "<pre>\nunfinished sample\n"])(
+  it.for(["~~~\nunfinished sample\n", "<!-- unfinished note\n", "<pre>\nunfinished sample\n"])(
     "keeps an authored answer when only later Markdown is unfinished",
-    async (suffix) => {
+    async (suffix, { expect, onTestFinished }) => {
       const existing =
         "## What this change made unnecessary\n\nRemoved the duplicate selector.\n\n" + suffix;
-      const result = await repairReleaseBody(existing);
+      const result = await repairReleaseBody(existing, onTestFinished);
       expect(result.code).toBe(0);
       expect(result.body).toBe(existing);
     },
   );
 
-  it.each([
+  it.for([
     ["fence", "Existing notes.\n\n~~~\nexample\n"],
     ["comment", "Existing notes.\n\n<!-- example\n"],
     ...["pre", "script", "style", "textarea"].map((tag) => [
       `literal HTML ${tag}`,
       `Existing notes.\n\n<${tag}>\nexample\n`,
     ]),
-  ])("refuses a hidden release repair inside an unclosed %s", async (_name, existing) => {
-    const result = await repairReleaseBody(existing);
-    expect(result.code).not.toBe(0);
-    expect(result.body).toBe(
-      "Release metadata.\n\n## What this change made unnecessary\n\nSuperseded package version and heading.\n",
-    );
-    expect(result.stderr).toContain("unclosed");
-  });
+  ])(
+    "refuses a hidden release repair inside an unclosed %s",
+    async ([_name, existing], { expect, onTestFinished }) => {
+      const result = await repairReleaseBody(existing, onTestFinished);
+      expect(result.code).not.toBe(0);
+      expect(result.body).toBe(
+        "Release metadata.\n\n## What this change made unnecessary\n\nSuperseded package version and heading.\n",
+      );
+      expect(result.stderr).toContain("unclosed");
+    },
+  );
 
-  it.each([
+  it.for([
     ["ordinary", "Release context.\r\n\r\n"],
     ["inline code", "A literal `<!--` appears in code.\r\n\r\n"],
     ["multi-backtick span", "A literal `` `<!--` `` appears in code.\r\n\r\n"],
     ["multiline span", "A literal `a\r\n<!--\r\nb` appears in code.\r\n\r\n"],
     ["backticks in a real comment", "<!-- ` -->\r\n\r\n"],
     ["fence info", "~~~ <!--\r\nexample\r\n~~~\r\n\r\n"],
-  ])("preserves raw release answers after %s", async (_name, prefix) => {
-    const existing =
-      prefix +
-      "## What this change made unnecessary\r\n\r\nRemoved the duplicate selector.\r\n\r\n" +
-      "## Adoption bar\r\n\r\nKeep the existing validator.\r\n\r\n" +
-      "## Release metadata\r\n\r\nPrepared date and publication approval stay unchanged.\r\n";
-    const result = await repairReleaseBody(existing);
-    expect(result.code).toBe(0);
-    expect(result.body).toBe(existing);
-  });
+  ])(
+    "preserves raw release answers after %s",
+    async ([_name, prefix], { expect, onTestFinished }) => {
+      const existing =
+        prefix +
+        "## What this change made unnecessary\r\n\r\nRemoved the duplicate selector.\r\n\r\n" +
+        "## Adoption bar\r\n\r\nKeep the existing validator.\r\n\r\n" +
+        "## Release metadata\r\n\r\nPrepared date and publication approval stay unchanged.\r\n";
+      const result = await repairReleaseBody(existing, onTestFinished);
+      expect(result.code).toBe(0);
+      expect(result.body).toBe(existing);
+    },
+  );
 });
 
-async function repairReleaseBody(existing: string): Promise<{
+async function repairReleaseBody(
+  existing: string,
+  onTestFinished: RegisterCleanup,
+): Promise<{
   body: string;
   code: number | null;
   stderr: string;
   stdout: string;
 }> {
-  const root = await makeTempDir("qfai-release-body-");
+  const root = await makeTempDir("qfai-release-body-", onTestFinished);
   const scriptPath = path.join(root, "release-repair.cjs");
   const existingPath = path.join(root, "existing.md");
   const bodyPath = path.join(root, "generated.md");
@@ -1125,7 +1209,8 @@ async function repairReleaseBody(existing: string): Promise<{
     "utf-8",
   );
   const script = /<<'REPAIR_BODY'\r?\n([\s\S]*?)^ {12}REPAIR_BODY\r?$/m.exec(workflow)?.[1];
-  expect(script).toBeDefined();
+  // Thrown rather than asserted: the rejection reaches the test that awaited
+  // this helper, and a helper takes no test context.
   if (script === undefined) throw new Error("Release repair heredoc is missing");
   await writeFile(scriptPath, script.replace(/^ {12}/gm, ""), "utf-8");
   await writeFile(existingPath, existing, "utf-8");
@@ -1336,9 +1421,10 @@ function makeThread(): FakeThread {
 async function runPrFix(options: {
   extraArgs?: string[];
   mockSleep?: boolean;
+  onTestFinished: RegisterCleanup;
   scenario: FakeScenario;
 }): Promise<RunResult> {
-  const root = await makeTempDir("qfai-pr-fix-");
+  const root = await makeTempDir("qfai-pr-fix-", options.onTestFinished);
   const repoDir = path.join(root, "repo");
   const binDir = path.join(root, "bin");
   const scenarioPath = path.join(root, "scenario.json");
@@ -1584,8 +1670,8 @@ async function readJson(filePath: string): Promise<Record<string, unknown>> {
   return JSON.parse(raw.replace(/^\uFEFF/, "")) as Record<string, unknown>;
 }
 
-async function makeTempDir(prefix: string): Promise<string> {
+async function makeTempDir(prefix: string, onTestFinished: RegisterCleanup): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), prefix));
-  tempDirs.push(dir);
+  onTestFinished(() => removeTempTree(dir));
   return dir;
 }
