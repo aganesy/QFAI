@@ -14,6 +14,32 @@ judgement nowhere in the spec pack.
 - `<the shape of the change: which modules, which seams, in what order>`
 - `<the alternative considered and why this one>`
 
+An **architectural element** is a thing this plan introduces for other things to
+use: a module, a seam, an adapter, a shared helper, a contract, a deployment
+boundary. What makes it one is that something else is meant to go through it. A
+change entirely inside one caller is not one, however large.
+
+For each architectural element, cite at least three distinct concrete usages
+(case, example, contract or interaction references). Planned future usage and
+three links to one usage do not count. If the safety floor in
+`.agents/rules/minimal-implementation.md` § 2 requires an element with fewer
+usages, cite the necessary usages and the obligation that requires that element;
+never cut the obligation to clear the count. Subject to the same floor, shared
+code still waits for its third actual caller; documentation references do not
+prove three callers.
+
+The count is of consumers that exist when the element does, wherever they came
+from: one change wiring three modules to a new adapter leaves three. A consumer
+is whatever uses the element in the way the element is used — a module for code,
+a declared dependant for a contract, a deploying service for a boundary — and it
+is counted once however many times it calls,
+and a usage nobody has written is not one, whatever the element is: a plan, a
+comment, a document that says the element will be used. A declaration that
+stands in the running system is not such a claim — a dependant named in an API
+manifest and a service named in a deployment configuration each instantiate the
+usage the line above counts, and they are counted. The implementing stage counts
+them again before the element lands.
+
 ## Test approach
 
 - `<what is proven at which layer — see catalog/test-layers.md>`

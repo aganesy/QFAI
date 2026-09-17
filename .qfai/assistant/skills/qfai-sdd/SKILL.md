@@ -199,6 +199,19 @@ routing phase's mandatory agents run inside its span, and its blocking agents MU
 - Delegate Slice in parallel per spec.
 - Parallel delegation here is bound by the stage-independent Concurrency rules in `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory`: worktree separation, or the declared degraded mode, plus mandatory commit scoping (`git add <paths>`; never `git add -A` / `git add .` / `git commit -a`).
 - Validate gate and Review gate run once at batch tail after all target specs are integrated.
+- The Plan gate is **this skill's own step**, not a routed reviewer, and runs per target: each
+  target's Plan is checked against `templates/specs/spec/10_Plan.md#implementation-approach` as that
+  Plan is finalized, before the target is integrated. Routing places every reviewer in the terminal
+  span, where `review` runs once per invocation after Phase 4 — so a reviewer cannot hold one target
+  while the batch releases the rest, and a check that waited for one would report a deficient Plan
+  only after the batch had taken it in. The terminal review still reads what this step recorded.
+  A usage this Plan cites in a **sibling target of the same batch** is not settled here. The
+  siblings are delegated in parallel, so the sibling may not have written that output yet and a
+  verdict taken now would follow worker timing rather than the Plan — reading the sibling's own
+  worktree moves where the check looks, not when it may look. Record the citation and carry it to
+  the batch tail, where every target is integrated and the terminal review reads it. Integration is
+  the barrier, and it is the first point at which such a usage is either present or missing for
+  good. Every usage inside this target is still settled here, as it is for a single-spec run.
 
 ## Work Orders Summary
 
@@ -288,6 +301,21 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 8. A `TC` whose assertion reads the **content** of an upstream artifact — a decision record in `07_Decisions.md`, a contract, another spec file — must not be written before that artifact exists. `/qfai-implement` may not write upstream SSOT, so a row routed to it first has no lawful move, and the agent that meets it must choose between three prohibited things. Produce the artifact in
    this stage, or do not write the case yet.
 9. Stop only when `npx qfai validate --profile sdd --fail-on error --format github` exits with `error=0`.
+10. Before sign-off in any run that finalizes a `10_Plan.md` — one spec named,
+    or every capability under a no-argument batch — check every architectural
+    element against
+    `templates/specs/spec/10_Plan.md#implementation-approach`. Report missing or
+    insufficient usage references as findings and stop before implementation
+    until the references are fixed or the template's safety-floor exception is justified.
+    A batch checks each target's Plan as that Plan is finalized, before the
+    target is integrated, so a failing target is held there with its findings
+    rather than carried to the tail. The tail gates read every target together,
+    so the batch waits for the held target to be corrected instead of declaring
+    the batch done without it.
+    Contract-scoped runs do not apply this Plan gate: they finalize no Plan. If a
+    contract change requires a Plan update, report the mismatch and halt to widen
+    the Change Request to a spec-scoped run; do not write the Plan in
+    contract-scoped mode.
 
 ## Required Process
 

@@ -90,11 +90,15 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
   answer has — a structured choice where a listable set of candidates exists, or a
   plain request where none does; where the host's tool cannot carry it, the
   plain-text fallback keeps the same parts)
+- `shipped-ci-parity.md` (a change to this repository's CI either reaches the
+  workflow templates the package ships or says in the diff why it does not)
 
 `.claude/rules/` はこれらへの symlink。Windows では Git の `core.symlinks=true` と
 Developer Mode が必要で、無い場合は `.claude/rules/*.md` がパス文字列だけの
 テキストファイルになるため、マスタを直接読む。
 Codex は本ファイルを、Copilot は `.github/copilot-instructions.md` を読む。
+
+Read `REVIEW.md` before reviewing a pull request or writing its description.
 
 ## 記述基準 (全 AI 必読)
 
