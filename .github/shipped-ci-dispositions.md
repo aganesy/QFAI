@@ -27,3 +27,5 @@ the next one against.
 
 - SHIPPED-CI: not-applicable for package.json
   Because: the lane this entry adds compares this repository's CI with the templates it ships, and an adopter's repository ships nothing, so there is no counterpart lane for the shipped set to gain.
+- SHIPPED-CI: not-applicable for package.json
+  Because: the lane this entry adds lints the documents under `packages/qfai/assets/`, which exist only in the repository that builds the package; an adopter's repository has no such tree, and its own Markdown is already linted by the shipped docs workflow.
