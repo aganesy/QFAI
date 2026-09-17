@@ -58,6 +58,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Carry answered review demands into the next existing review request, so a
   repeated demand can close against its recorded response without suppressing reports (#1810).
 
+- Require architectural elements to cite concrete usages before SDD sign-off,
+  preserving safety-floor obligations and the actual third-caller sharing limit
+  (#1807). The plan template says what an architectural element is — a thing the
+  plan introduces for other things to go through — and the gate covers every run
+  that finalizes a plan, a no-argument batch included. Because the usages are
+  cited before implementation, the implementation reviewer counts the callers
+  again as they exist when the element lands.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
@@ -195,6 +203,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The release-notes drift check reads the published bodies from the release
+  list, a hundred to a page, instead of asking for one release per changelog
+  section. The list carries each release's tag and body together, so the number
+  of requests follows the number of pages rather than the number of sections,
+  and it no longer rises with every release. A draft is skipped: it is readable
+  only to whoever can push, and a read by tag never returned one. A page that
+  fails ends the run and names the request, and nothing is compared in that
+  case, because a partial list would make the sections it lacks look unreleased.
+  The report still reads by version, newest first, and the exit codes are
+  unchanged.
+
+- Refuse a scaffold destination where the extensions could not be read, where
+  an exclude glob's range stops the scan, or where a brace range's endpoints
+  are not whole numbers, rather than writing a file the project's own runner
+  does not collect.
+
+- Read a brace range that generates either half of an extglob, and write out
+  every range a pattern holds rather than a fixed number of them, so the
+  scaffold names a file the project's own runner collects.
+
 - Excess tags cover code, controls, settings and explanatory copy in both the
   review definitions and shipped reviewer cards. `delete` also covers reuse of
   code already present (#1800).
@@ -259,6 +287,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   what its obligation says is a comparison of two texts, and no validator can
   make that judgment reliably.
 
+- **`qfai atdd scaffold` reads a brace range in a test glob as fast-glob does**
+  (#1752). A range has no comma, so the check that decides whether the file it
+  writes is one the project collects read `{0001..0999}` as the literal text
+  between the braces. It refused, as a naming mismatch, a name the glob selects.
+  A numeric range, zero-padded or not, with or without an increment, ascending
+  or descending, and a single-character range now match the members fast-glob
+  expands them to, padded to the widest part, the increment included. A range
+  fast-glob refuses, one of a thousand steps or more written without an
+  increment, leaves the scan collecting nothing at all, whether the glob is one
+  the scan includes or one it ignores, so the scaffold refuses rather than
+  writing under it. A member the expansion produces is glob syntax, as it is to
+  fast-glob, which expands a range before it compiles, and a range anywhere in
+  the pattern is read when the extension is derived. A wildcard that opens a
+  path segment no longer matches a name beginning with a dot, which is how the
+  scan reads one. A list member is text,
+  not a range, and so is a brace body that is neither. Because a range can make
+  a glob depend on a test case id's digits, the scaffold checks the file it
+  would write for every test case in scope, not a representative one.
+
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
   from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and
@@ -269,6 +316,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   also lists no untracked FIFO, socket or device, so adding or removing one left
   the address unchanged; the step now asks the filesystem for them and stops on
   any it finds. A test runs the step's own commands in a temporary repository.
+
+- **Generated agent review instructions retain the project's review policy**
+  (#1814). Fresh, existing and forced init output points to `REVIEW.md` when the
+  project has that file. Existing entry-point text stays intact. The package
+  does not supply the repository's own review policy. PR readers reject
+  placeholder answers, preserve literal comment markers in code and refuse
+  release-body repairs hidden by unfinished Markdown blocks.
+  Existing list-item directives are reused without rewriting project text.
+  A heading that interrupts a paragraph remains visible to description readers.
+  Raw HTML examples do not supply description headings. Top-level indented
+  examples do not supply review guidance. Project bytes and authored answers
+  stay intact.
 
 - **The completion gate recomputes the checkpoint seal over the checkpoint's own
   revision** (#1738). `checkpoint-verification.md` seals the checkpoint command
@@ -812,6 +871,42 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The check still does not walk a hidden skill directory or a dependency or
   build tree. A document in one that a step names is now read, because the host
   opens it, so a step naming one that cannot be read is reported.
+
+- **A loop restarted at cycle 0 holds no evidence until it captures again**
+  (#1765). The cycle-0 reset backed up `iter-00` and removed the other
+  iteration directories, but left the aggregate `screenshots/` and `html/`
+  directories a capture pass mirrors into. The required-path check reads those
+  first, so after `iterate --cycle 0 --force` without `--capture`, and after a
+  cycle 0 in a project holding only aggregate files, `qfai validate` passed on
+  the previous loop's captures. Every cycle-0 reset now moves the two directories
+  into `aggregate.backup-<ISO>/`, beside the `iter-00` backup, and logs each
+  moved file to `mutation-log.jsonl`. They are moved rather than deleted
+  because the same reset removes the iteration directories they were copied
+  from.
+
+  The gate that decides whether a reset is destructive reads the `iter-00`
+  entry itself rather than what it points at, so a link there is backed up like
+  a directory. Read through the link, a dangling one looked like an absent
+  `iter-00`: the reset moved the aggregates and then failed to create `iter-00`
+  over the link still sitting in its place.
+
+  Both backups a reset writes, this one and the `iter-00` backup, are left out
+  of the completion certificate's evidence digests. They hold the previous
+  loop's evidence, and sealed into the next certificate, removing one failed
+  `certify --check` although nothing of the new loop had changed.
+
+- **An id a non-JavaScript test holds as data is not a reference** (#1770). The
+  ATDD scan counts an annotation in a comment or in a test's name, and blanks
+  every other literal first, so a table of ids in a test is not read as covering
+  them. It did that for JavaScript and TypeScript only: in a Python, Ruby, Go,
+  Java, Kotlin, Rust or C# test an annotation-shaped string counted, so a list
+  of cases marked its obligations covered. Those languages, and PHP, Groovy,
+  Scala and F#, are now masked with their own comment and string rules, and the
+  literal names their tests take — an RSpec `it "…"`, a Go `t.Run("…")`, a
+  JUnit `@DisplayName("…")`, a Kotlin backtick name, an xUnit `DisplayName` —
+  still count. A Python docstring is a literal and does not count. Visual
+  Basic, whose comments open with a quote, and any other extension are read as
+  before.
 
 ## [1.12.0] - 2026-09-12
 

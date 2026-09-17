@@ -1338,8 +1338,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // endings instead of on an empty frontier and the user's confirmation. Derived by running
     // `qfai init` into a temp root; restoring the old wording in the written file reproduces
     // `a246e728…` byte for byte.
+    //
+    // Re-pinned for the review directive the run now writes into the golden rules: one line
+    // pointing at the project's own review policy. Derived the same way; removing that line
+    // from the written file reproduces `0dbc8fe1…` byte for byte.
     ".github/copilot-instructions.md",
-    "0dbc8fe16877386b3ce243c5e9871363aedc46946bec8b0f0ea9ebf8b0527c2d",
+    "fe028cb8915f820d104ba4ee3423b63a059793849148827a94fe06aa295c1d00",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1476,8 +1480,14 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for the sentence on later runs, which now says a run rewords a bullet still as an
   // earlier release wrote it. Derived by running `qfai init` into a temp root; restoring the old
   // sentence in both written files reproduces `04f04e43…` and `8da8af3f…` byte for byte.
-  ["AGENTS.md", "4317f660fb2b3312b1067fecb26488b2adef946f799a0d492bc582c900ed7e4d"],
-  ["CLAUDE.md", "40e0888fe7fb50db9138ce3c148da0a7c71bd4914b1a38fb5f88cf256ef852ca"],
+  //
+  // Re-pinned for the review directive the run now writes: a line pointing at the
+  // project's own review policy, and the sentence in the managed section that says
+  // a later run adds it when it is missing. Derived by running `qfai init` into a
+  // temp root; dropping the line and restoring the old sentence in both written
+  // files reproduces `4317f660…` and `40e0888f…` byte for byte.
+  ["AGENTS.md", "d2a68a944b17375a0d07e4b46420e0a7612f546030d715e6307c91f93d410a6c"],
+  ["CLAUDE.md", "cbcc684160d472857160cd28e1ca23e1bdfb75c90807703bf629eb6cae9737f1"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
