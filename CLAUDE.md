@@ -26,6 +26,10 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   sets out: a structured choice where a listable set of candidates exists, or a
   plain request where none does. Where the host's tool cannot carry it, the
   plain-text fallback keeps the same parts.
+- A change to this repository's CI either reaches the workflow templates the
+  package ships or says in the diff why it does not, in the form
+  `.claude/rules/shipped-ci-parity.md` (master:
+  `.agents/rules/shipped-ci-parity.md`) sets out. `pnpm ci:lint` runs the guard.
 - All temporary/scratch files go in `tmp/` — working-tree files only; a test's
   `mkdtemp` sandbox under `os.tmpdir()` is out of scope (see
   `.claude/rules/temporary-files.md`, master: `.agents/rules/temporary-files.md`,

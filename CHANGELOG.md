@@ -69,6 +69,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Carry answered review demands into the next existing review request, so a
   repeated demand can close against its recorded response without suppressing reports (#1810).
 
+- Require architectural elements to cite concrete usages before SDD sign-off,
+  preserving safety-floor obligations and the actual third-caller sharing limit
+  (#1807). The plan template says what an architectural element is — a thing the
+  plan introduces for other things to go through — and the gate covers every run
+  that finalizes a plan, a no-argument batch included. Because the usages are
+  cited before implementation, the implementation reviewer counts the callers
+  again as they exist when the element lands.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
@@ -205,6 +213,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the project edited as it is.
 
 ### Fixed
+
+- The release-notes drift check reads the published bodies from the release
+  list, a hundred to a page, instead of asking for one release per changelog
+  section. The list carries each release's tag and body together, so the number
+  of requests follows the number of pages rather than the number of sections,
+  and it no longer rises with every release. A draft is skipped: it is readable
+  only to whoever can push, and a read by tag never returned one. A page that
+  fails ends the run and names the request, and nothing is compared in that
+  case, because a partial list would make the sections it lacks look unreleased.
+  The report still reads by version, newest first, and the exit codes are
+  unchanged.
 
 - Refuse a scaffold destination where the extensions could not be read, where
   an exclude glob's range stops the scan, or where a brace range's endpoints
@@ -886,6 +905,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   of the completion certificate's evidence digests. They hold the previous
   loop's evidence, and sealed into the next certificate, removing one failed
   `certify --check` although nothing of the new loop had changed.
+
+- **An id a non-JavaScript test holds as data is not a reference** (#1770). The
+  ATDD scan counts an annotation in a comment or in a test's name, and blanks
+  every other literal first, so a table of ids in a test is not read as covering
+  them. It did that for JavaScript and TypeScript only: in a Python, Ruby, Go,
+  Java, Kotlin, Rust or C# test an annotation-shaped string counted, so a list
+  of cases marked its obligations covered. Those languages, and PHP, Groovy,
+  Scala and F#, are now masked with their own comment and string rules, and the
+  literal names their tests take — an RSpec `it "…"`, a Go `t.Run("…")`, a
+  JUnit `@DisplayName("…")`, a Kotlin backtick name, an xUnit `DisplayName` —
+  still count. A Python docstring is a literal and does not count. Visual
+  Basic, whose comments open with a quote, and any other extension are read as
+  before.
 
 ## [1.12.0] - 2026-09-12
 

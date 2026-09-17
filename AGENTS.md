@@ -94,6 +94,8 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
   answer has — a structured choice where a listable set of candidates exists, or a
   plain request where none does; where the host's tool cannot carry it, the
   plain-text fallback keeps the same parts)
+- `shipped-ci-parity.md` (a change to this repository's CI either reaches the
+  workflow templates the package ships or says in the diff why it does not)
 
 A `<name>.local.md` is an overlay. A rule that also governs an adopter's
 repository is written once, in the shipped master, and only what is specific to

@@ -7,9 +7,9 @@
  * afterwards is in the repository and not in the notes anyone reads, and
  * nothing noticed.
  *
- * Three decisions carry the check, and the cases are about them: which
- * sections are compared, what counts as an entry, and what a body the workflow
- * had to cut is allowed to be missing.
+ * Four decisions carry the check, and the cases are about them: which sections
+ * are compared, what counts as an entry, what a body the workflow had to cut is
+ * allowed to be missing, and how the published bodies are read.
  */
 import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -24,6 +24,8 @@ import {
   TRUNCATION_MARKER,
   entryTitles,
   missingEntries,
+  nextPageLink,
+  nextPageUrl,
   releasedSections,
   run,
 } from "../../../../scripts/check-release-notes.mjs";
@@ -32,6 +34,45 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 const SCRIPT = path.join(REPO_ROOT, "scripts", "check-release-notes.mjs");
 
 const tempDirs: string[] = [];
+
+/** One release as the list endpoint carries it. */
+type Release = { tag_name: string; body: string | null; draft?: boolean };
+
+/** A page of releases, and where the page after it is. */
+type Page = { releases: Release[]; next: string | null };
+
+/**
+ * A stand-in for the list endpoint: the pages it serves, in order, and the URLs
+ * it was asked for.
+ *
+ * The URLs are the record of how many requests a run costs and which one
+ * failed, which is what the cases below read instead of counting fetches.
+ */
+function listing(pages: (Page | Error)[]): {
+  readPage: (url: string, token: string) => Promise<Page>;
+  asked: string[];
+} {
+  const asked: string[] = [];
+  return {
+    asked,
+    readPage: (url: string) => {
+      const page = pages[asked.length];
+      asked.push(url);
+      if (page === undefined) throw new Error(`no page prepared for ${url}`);
+      return page instanceof Error ? Promise.reject(page) : Promise.resolve(page);
+    },
+  };
+}
+
+/** One page carrying `releases` and naming no page after it. */
+const onePage = (releases: Release[]): Page => ({ releases, next: null });
+
+/** The tags the report named, in the order it named them. */
+const reportedTags = (output: string): string[] =>
+  output.split("\n").flatMap((line) => {
+    const match = /^(v\d+\.\d+\.\d+): \d+ entr/.exec(line);
+    return match === null ? [] : [match[1] ?? ""];
+  });
 
 /** A changelog file holding the given text, and its path. */
 async function changelogWith(text: string): Promise<string> {
@@ -46,18 +87,17 @@ async function changelogWith(text: string): Promise<string> {
 async function capture(
   options: Parameters<typeof run>[0],
 ): Promise<{ status: number; output: string }> {
-  const chunks: string[] = [];
+  const lines: string[] = [];
   const collect = (...args: unknown[]): void => {
-    chunks.push(args.map((arg) => String(arg)).join(" "));
+    lines.push(args.map((arg) => String(arg)).join(" "));
   };
   const log = vi.spyOn(console, "log").mockImplementation(collect);
   const error = vi.spyOn(console, "error").mockImplementation(collect);
-  try {
-    return { status: await run(options), output: chunks.join("\n") };
-  } finally {
+  const status = await run(options).finally(() => {
     log.mockRestore();
     error.mockRestore();
-  }
+  });
+  return { status, output: lines.join("\n") };
 }
 
 afterEach(async () => {
@@ -220,7 +260,8 @@ describe("the run", () => {
       changelogPath: file,
       repository: "owner/repo",
       token: "t",
-      readBody: () => Promise.resolve("- **Shipped in the notes**"),
+      readPage: listing([onePage([{ tag_name: "v1.2.0", body: "- **Shipped in the notes**" }])])
+        .readPage,
     });
 
     expect(status).toBe(1);
@@ -235,40 +276,139 @@ describe("the run", () => {
       changelogPath: file,
       repository: "owner/repo",
       token: "t",
-      readBody: () =>
-        Promise.resolve(
-          ["- **Shipped in the notes**", "- **Added to the section afterwards**"].join("\n"),
-        ),
+      readPage: listing([
+        onePage([
+          {
+            tag_name: "v1.2.0",
+            body: ["- **Shipped in the notes**", "- **Added to the section afterwards**"].join(
+              "\n",
+            ),
+          },
+        ]),
+      ]).readPage,
     });
 
     expect(status).toBe(0);
   });
 
-  it("passes over a section with no release, which is an ordinary state", async () => {
+  it("passes over a section the list does not name, which is an ordinary state", async () => {
     const file = await changelogWith(changelog);
 
     const { status, output } = await capture({
       changelogPath: file,
       repository: "owner/repo",
       token: "t",
-      readBody: () => Promise.resolve(null),
+      // The list answered and carries no release for this tag. A read by tag
+      // answered 404 for that same state, and neither is a finding.
+      readPage: listing([onePage([])]).readPage,
     });
 
     expect(status).toBe(0);
-    expect(output).toContain("0 compared");
+    // Not reported as a clean run: nothing was held against anything, and a
+    // sentence saying every body carries its entries would claim otherwise.
+    expect(output).toContain("nothing was compared");
+    expect(output).not.toContain("carries its section's entries");
   });
 
-  it("says it compared nothing rather than reporting a clean run, with no token", async () => {
+  it("stops rather than reading a payload that is not a list as an empty one", async () => {
     const file = await changelogWith(changelog);
 
     const { status, output } = await capture({
       changelogPath: file,
       repository: "owner/repo",
+      token: "t",
+      // A 2xx from something other than the endpoint — a proxy's error page, an
+      // interstitial. Read as no releases, every section looks unreleased and
+      // the run exits 0 having compared nothing.
+      readPage: () => Promise.resolve({ releases: { message: "Not Found" }, next: null }),
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("not a list of releases");
+  });
+
+  it("stops on an entry with no tag name rather than leaving its section unread", async () => {
+    const file = await changelogWith(changelog);
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      // Skipped instead, the section it belongs to looks unreleased — the
+      // ordinary state — and the run reports agreement over the one entry
+      // nobody could compare.
+      readPage: () => Promise.resolve({ releases: [{ body: "- **Shipped**" }], next: null }),
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("no tag name");
+  });
+
+  it("stops on a body that is not text rather than comparing against an empty one", async () => {
+    const file = await changelogWith(changelog);
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readPage: () =>
+        Promise.resolve({ releases: [{ tag_name: "v1.2.0", body: { rendered: "" } }], next: null }),
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("is not text");
+  });
+
+  it("stops when the pages name each other rather than paging until the job is killed", async () => {
+    const file = await changelogWith(changelog);
+    const first = "https://api.github.com/repos/owner/repo/releases?per_page=100";
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      // Every page names the one the run has already read. Followed, this
+      // spends the workflow's whole budget and the job is killed with no
+      // verdict of its own.
+      readPage: () => Promise.resolve({ releases: [], next: first }),
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("form a loop");
+  });
+
+  it("says it compared nothing rather than reporting a clean run, with no token", async () => {
+    const file = await changelogWith(changelog);
+    const list = listing([onePage([{ tag_name: "v1.2.0", body: "" }])]);
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
       token: "",
+      readPage: list.readPage,
     });
 
     expect(status).toBe(2);
     expect(output).toContain("nothing was compared");
+    // Before any request. A run that cannot compare has nothing to ask for,
+    // and the list is one request whether or not it is needed.
+    expect(list.asked).toEqual([]);
+  });
+
+  it("asks for nothing when the changelog names no released section", async () => {
+    const file = await changelogWith("# Changelog\n\n## [Unreleased]\n\n- **Not shipped**\n");
+    const list = listing([onePage([])]);
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readPage: list.readPage,
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("no released section");
+    expect(list.asked).toEqual([]);
   });
 
   it("stops rather than guessing when the API refuses", async () => {
@@ -278,7 +418,7 @@ describe("the run", () => {
       changelogPath: file,
       repository: "owner/repo",
       token: "t",
-      readBody: () => Promise.reject(new Error("GitHub answered 401")),
+      readPage: listing([new Error("GitHub answered 401")]).readPage,
     });
 
     expect(status).toBe(2);
@@ -289,20 +429,294 @@ describe("the run", () => {
     const file = await changelogWith(
       [changelog, "## [1.1.0] - 2026-01-01", "", "- **Older**", ""].join("\n"),
     );
-    const asked: string[] = [];
 
-    await capture({
+    const { status, output } = await capture({
       changelogPath: file,
       repository: "owner/repo",
       token: "t",
       only: "1.1.0",
-      readBody: (_repo: string, tag: string) => {
-        asked.push(tag);
-        return Promise.resolve("- **Older**");
-      },
+      // Both releases are on the list. Which sections are compared is decided
+      // by the changelog, not by what the list happens to carry.
+      readPage: listing([
+        onePage([
+          { tag_name: "v1.2.0", body: "" },
+          { tag_name: "v1.1.0", body: "" },
+        ]),
+      ]).readPage,
     });
 
-    expect(asked).toEqual(["v1.1.0"]);
+    expect(status).toBe(1);
+    expect(reportedTags(output)).toEqual(["v1.1.0"]);
+  });
+});
+
+describe("reading the published bodies", () => {
+  /**
+   * A changelog of `count` released sections, newest first, each with one entry.
+   *
+   * The version's minor is the section's distance from the bottom, so a case can
+   * say which section it means by tag alone.
+   */
+  const changelogOf = (count: number): string => {
+    const lines = ["# Changelog", ""];
+    for (let minor = count; minor >= 1; minor -= 1) {
+      lines.push(
+        `## [1.${String(minor)}.0] - 2026-01-02`,
+        "",
+        `- **Entry for 1.${String(minor)}.0**`,
+        "",
+      );
+    }
+    return lines.join("\n");
+  };
+
+  /** The release for each of `count` sections, carrying the entry its section names. */
+  const releasesFor = (count: number): Release[] =>
+    Array.from({ length: count }, (_unused, index) => ({
+      tag_name: `v1.${String(count - index)}.0`,
+      body: `- **Entry for 1.${String(count - index)}.0**`,
+    }));
+
+  /** The request a run opens with, written out rather than rebuilt from the script. */
+  const FIRST_PAGE = "https://api.github.com/repos/owner/repo/releases?per_page=100";
+  const SECOND_PAGE = `${FIRST_PAGE}&page=2`;
+
+  it("asks the list once for a page of a hundred, whatever the section count", async () => {
+    const file = await changelogWith(changelogOf(40));
+    const list = listing([onePage(releasesFor(40))]);
+
+    const { status } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readPage: list.readPage,
+    });
+
+    expect(status).toBe(0);
+    // Forty sections, one request. Read one release per section this would be
+    // forty, and the count would rise with every release.
+    expect(list.asked).toEqual([FIRST_PAGE]);
+  });
+
+  it("follows the link to the next page, and compares a section only that page carries", async () => {
+    const file = await changelogWith(changelogOf(2));
+    const list = listing([
+      { releases: [{ tag_name: "v1.2.0", body: "- **Entry for 1.2.0**" }], next: SECOND_PAGE },
+      // Empty body, so this section drifts: a section compared at all is what
+      // the case is about, and the report is where that shows.
+      onePage([{ tag_name: "v1.1.0", body: "" }]),
+    ]);
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readPage: list.readPage,
+    });
+
+    expect(list.asked).toEqual([FIRST_PAGE, SECOND_PAGE]);
+    expect(status).toBe(1);
+    expect(reportedTags(output)).toEqual(["v1.1.0"]);
+  });
+
+  it("stops at the page that names no page after it", async () => {
+    const file = await changelogWith(changelogOf(2));
+    const list = listing([
+      { releases: [{ tag_name: "v1.2.0", body: "- **Entry for 1.2.0**" }], next: SECOND_PAGE },
+      onePage([{ tag_name: "v1.1.0", body: "- **Entry for 1.1.0**" }]),
+    ]);
+
+    const { status } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readPage: list.readPage,
+    });
+
+    expect(status).toBe(0);
+    expect(list.asked).toHaveLength(2);
+  });
+
+  it("ends the run when a later page fails, and says which request that was", async () => {
+    const file = await changelogWith(changelogOf(2));
+    const list = listing([
+      { releases: [{ tag_name: "v1.2.0", body: "- **Entry for 1.2.0**" }], next: SECOND_PAGE },
+      new Error("GitHub answered 500"),
+    ]);
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readPage: list.readPage,
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain(`reading ${SECOND_PAGE}: GitHub answered 500`);
+    expect(list.asked).toEqual([FIRST_PAGE, SECOND_PAGE]);
+  });
+
+  it("compares nothing when a page fails, rather than reading the rest as unreleased", async () => {
+    const file = await changelogWith(changelogOf(2));
+    const list = listing([
+      // Empty, so this section would be reported as drift had the run got that
+      // far. A partial list is what makes the sections it lacks look released
+      // by nobody, which reads as a clean run rather than as the failure it is.
+      { releases: [{ tag_name: "v1.2.0", body: "" }], next: SECOND_PAGE },
+      new Error("GitHub answered 500"),
+    ]);
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readPage: list.readPage,
+    });
+
+    expect(status).toBe(2);
+    expect(reportedTags(output)).toEqual([]);
+    expect(output).not.toContain("compared)");
+  });
+
+  it("reports by version, newest first, whatever order the list came in", async () => {
+    const file = await changelogWith(changelogOf(3));
+    const list = listing([
+      // The list orders by when each release was created, which is not the
+      // changelog's order and is not what the report reads by.
+      onePage([
+        { tag_name: "v1.1.0", body: "" },
+        { tag_name: "v1.3.0", body: "" },
+        { tag_name: "v1.2.0", body: "" },
+      ]),
+    ]);
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readPage: list.readPage,
+    });
+
+    expect(status).toBe(1);
+    expect(reportedTags(output)).toEqual(["v1.3.0", "v1.2.0", "v1.1.0"]);
+  });
+
+  it("does not compare a section against a draft, which nobody reading the notes can see", async () => {
+    const file = await changelogWith(changelogOf(1));
+    const list = listing([onePage([{ tag_name: "v1.1.0", body: "", draft: true }])]);
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readPage: list.readPage,
+    });
+
+    // The body is empty, so a draft compared at all would be reported as drift.
+    // A read by tag never returned one, and the list shows drafts to whoever
+    // can push — so without this the answer would follow the token.
+    expect(status).toBe(0);
+    expect(output).toContain("nothing was compared");
+  });
+
+  it("reads a release with no notes as an empty body, not as no release", async () => {
+    const file = await changelogWith(changelogOf(1));
+    const list = listing([onePage([{ tag_name: "v1.1.0", body: null }])]);
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readPage: list.readPage,
+    });
+
+    expect(status).toBe(1);
+    expect(reportedTags(output)).toEqual(["v1.1.0"]);
+  });
+
+  it("counts every section it compared, and none the list does not name", async () => {
+    const file = await changelogWith(changelogOf(20));
+    // Every fourth section has no release, which is not a comparison.
+    const list = listing([
+      onePage(
+        releasesFor(20).filter((release) => Number(release.tag_name.split(".")[1]) % 4 !== 0),
+      ),
+    ]);
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readPage: list.readPage,
+    });
+
+    expect(status).toBe(0);
+    expect(output).toContain("15 compared");
+  });
+});
+
+describe("where the next page is", () => {
+  it("is the target the header marks `next`", () => {
+    expect(
+      nextPageLink(
+        '<https://api.github.com/x?page=2>; rel="next", <https://api.github.com/x?page=4>; rel="last"',
+      ),
+    ).toBe("https://api.github.com/x?page=2");
+  });
+
+  it("is nothing on the last page, which marks only what came before it", () => {
+    expect(
+      nextPageLink(
+        '<https://api.github.com/x?page=1>; rel="prev", <https://api.github.com/x?page=1>; rel="first"',
+      ),
+    ).toBe(null);
+  });
+
+  it("is nothing when the response carries no such header", () => {
+    expect(nextPageLink(null)).toBe(null);
+  });
+
+  it("is not a target marked with a longer word beginning `next`", () => {
+    expect(nextPageLink('<https://api.github.com/x?page=2>; rel="nextish"')).toBe(null);
+  });
+
+  it("is a target whose own URL carries a comma", () => {
+    // Split on every comma, this one target becomes two halves, neither of
+    // which parses, and the page that has a next reads as the last.
+    expect(nextPageLink('<https://api.github.com/x?page=2&a=1,2>; rel="next"')).toBe(
+      "https://api.github.com/x?page=2&a=1,2",
+    );
+  });
+});
+
+describe("where the run is willing to send its token", () => {
+  const FROM = "https://api.github.com/repos/owner/repo/releases?per_page=100";
+
+  it("follows a target on the host the page came from", () => {
+    expect(nextPageUrl('<https://api.github.com/x?page=2>; rel="next"', FROM)).toBe(
+      "https://api.github.com/x?page=2",
+    );
+  });
+
+  it("resolves a target given as a path", () => {
+    expect(nextPageUrl('</x?page=2>; rel="next"', FROM)).toBe("https://api.github.com/x?page=2");
+  });
+
+  it("refuses a target on another host", () => {
+    // The request carries the token in an `Authorization` header, and the
+    // header naming the target is part of the response. Followed, a rewritten
+    // one chooses who receives a repository token.
+    expect(() => nextPageUrl('<https://example.invalid/x?page=2>; rel="next"', FROM)).toThrow(
+      /leaves https:\/\/api\.github\.com/,
+    );
+  });
+
+  it("refuses a target that is not a URL at all", () => {
+    expect(() => nextPageUrl('<http://[>; rel="next"', FROM)).toThrow(/not a URL/);
+  });
+
+  it("is nothing when the page names no next one", () => {
+    expect(nextPageUrl(null, FROM)).toBe(null);
   });
 });
 
