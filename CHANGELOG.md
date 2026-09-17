@@ -895,6 +895,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   loop's evidence, and sealed into the next certificate, removing one failed
   `certify --check` although nothing of the new loop had changed.
 
+- **An id a non-JavaScript test holds as data is not a reference** (#1770). The
+  ATDD scan counts an annotation in a comment or in a test's name, and blanks
+  every other literal first, so a table of ids in a test is not read as covering
+  them. It did that for JavaScript and TypeScript only: in a Python, Ruby, Go,
+  Java, Kotlin, Rust or C# test an annotation-shaped string counted, so a list
+  of cases marked its obligations covered. Those languages, and PHP, Groovy,
+  Scala and F#, are now masked with their own comment and string rules, and the
+  literal names their tests take — an RSpec `it "…"`, a Go `t.Run("…")`, a
+  JUnit `@DisplayName("…")`, a Kotlin backtick name, an xUnit `DisplayName` —
+  still count. A Python docstring is a literal and does not count. Visual
+  Basic, whose comments open with a quote, and any other extension are read as
+  before.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added

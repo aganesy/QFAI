@@ -28,7 +28,7 @@ import {
 import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import { isGlobExclusion, namedTestFileMatcher } from "./testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "./traceability.js";
-import { maskJsNonCode } from "./validators/jsSourceMask.js";
+import { maskJsNonCode, type JsMaskOptions } from "./validators/jsSourceMask.js";
 
 // The short form carries `(?!-)`; the long form does not.
 //
@@ -55,23 +55,340 @@ import { maskJsNonCode } from "./validators/jsSourceMask.js";
 // annotation (`TC-0001-0002-foo`) still matches and is still reported as an
 // unknown reference. Trading a false report for a silent miss is the worse
 // direction in a validator.
+/** A literal in double quotes, on one line. */
+const DOUBLE_QUOTED = String.raw`"(?:[^"\\\n]|\\.)*"`;
+/** A literal in double or single quotes, on one line. */
+const QUOTED = String.raw`${DOUBLE_QUOTED}|'(?:[^'\\\n]|\\.)*'`;
+
 /**
- * Extensions whose literals {@link maskTestSource} can blank.
+ * A C# string literal in any of its three forms: ordinary, verbatim, and raw.
  *
- * The scan walks whatever a project puts under its test roots. A JS lexer over
- * a `.py` or `.rb` file would blank spans by JS's rules, and over-blanking here
- * hides a real annotation — the one failure this must not introduce.
+ * A display name is written in whichever the author reached for, and the
+ * masking reads all three — so a restoration pattern reading only the first
+ * loses the annotation in the other two.
  */
-const JS_TEST_EXTENSIONS: ReadonlySet<string> = new Set([
-  ".ts",
-  ".tsx",
-  ".mts",
-  ".cts",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".cjs",
+const CSHARP_QUOTED = String.raw`@"(?:[^"]|"")*"|(?<csharpFence>"{3,})[\s\S]*?\k<csharpFence>|${DOUBLE_QUOTED}`;
+
+/**
+ * A Ruby string literal, including the percent forms a name may be written in.
+ *
+ * The delimiter rules are the masking scanner's: a paired bracket nests, and
+ * any other punctuation closes on its own repeat. Reading only the brackets
+ * left `%q!…!` masked and never restored, so the name it held was reported
+ * as uncovered.
+ */
+const RUBY_PERCENT = String.raw`%[qQ]?(?:\((?:[^()\\]|\\.)*\)|\{(?:[^{}\\]|\\.)*\}|\[(?:[^\[\]\\]|\\.)*\]|<(?:[^<>\\]|\\.)*>|(?<rubyFence>[^A-Za-z0-9\s(\[{<])(?:[^\\]|\\.)*?\k<rubyFence>)`;
+const RUBY_QUOTED = String.raw`${RUBY_PERCENT}|${QUOTED}`;
+
+/**
+ * The words a Ruby `/` opens a pattern after.
+ *
+ * A value ends before each of them, so the shared JavaScript set left a
+ * regex written after `if` or `unless` read as a division.
+ */
+const RUBY_REGEX_AFTER: ReadonlySet<string> = new Set([
+  "if",
+  "elsif",
+  "unless",
+  "while",
+  "until",
+  "when",
+  "case",
+  "and",
+  "or",
+  "not",
+  "return",
+  "match",
+  "then",
+  "do",
+  "in",
+  // A command call takes its argument with no parentheses, so the method
+  // name stands where an operator would and the `/` after it opens a
+  // pattern rather than dividing.
+  "split",
+  "gsub",
+  "sub",
+  "scan",
+  "grep",
+  "grep_v",
+  "index",
+  "rindex",
+  "partition",
+  "rpartition",
 ]);
+
+/**
+ * The line after which a Ruby file is data.
+ *
+ * Everything past it is a payload `DATA` reads, so a fixture written there
+ * is not source and an annotation-shaped id in it is not a reference.
+ */
+const RUBY_DATA_SECTION = /^__END__[ \t]*\r?$/m;
+
+/** The call after which a PHP file is data, as `__END__` is Ruby's. */
+const PHP_DATA_SECTION = /^[ \t]*__halt_compiler\s*\(\s*\)\s*;/m;
+
+/** A Java string literal: one line, or a text block. */
+/** A Java string literal: one line, or a text block, whose fence no escape reaches. */
+const JAVA_QUOTED = String.raw`"""(?:[^\\]|\\[\s\S])*?"""|${DOUBLE_QUOTED}`;
+
+/** A Scala string literal: one line, or triple-quoted. */
+/** A Scala string literal: one line, or triple-quoted, which is raw. */
+const SCALA_QUOTED = String.raw`"""[\s\S]*?"""|${QUOTED}`;
+
+/**
+ * Where a language's tests carry a name written as a literal.
+ *
+ * Each pattern has two named groups: `name`, the literal, and `anchor`, the
+ * code beside it that makes it a declaration. The anchor must survive masking
+ * for the name to count, so a declaration quoted inside a fixture stays data.
+ */
+function namePattern(source: string): RegExp {
+  return new RegExp(source, "dg");
+}
+
+/** A runner call taking the name as its first argument, as JavaScript writes it. */
+const JS_TEST_NAME = namePattern(
+  String.raw`\b(?<anchor>it|test|describe|suite|bench|scenario)(?:\s*\.\s*[A-Za-z_$][\w$]*(?:\s*\([^()]*\))?)*\s*\(\s*(?<name>${QUOTED}|` +
+    "`(?:[^`\\\\]|\\\\.)*`)",
+);
+
+/**
+ * How the scan reads one language's test source: the lexer settings that find
+ * its literals and comments, and where its tests carry a literal name.
+ */
+type TestSourceDialect = {
+  readonly mask: JsMaskOptions;
+  readonly names: readonly RegExp[];
+};
+
+/**
+ * The dialects the scan can mask, by extension.
+ *
+ * A language is listed only where its literals and its comments can both be
+ * told apart, and every form its tests write a literal name in is named: a name
+ * the table misses is blanked with the data around it, and the annotation in it
+ * stops counting.
+ *
+ * SIMPLIFIED: Visual Basic, whose comments open with the quote a string does,
+ * and every extension not listed are read unmasked, so an id a test in one of
+ * them holds as data still counts as a reference.
+ * Lift when: a project's suite in one of them reports such an id.
+ */
+const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
+  (
+    [
+      [["ts", "tsx", "mts", "cts", "js", "jsx", "mjs", "cjs"], { comments: false }, [JS_TEST_NAME]],
+      // A test's name is its identifier, and a docstring is a literal: the
+      // stage counts an annotation in a comment or a test's name, not in one.
+      [
+        ["py"],
+        {
+          comments: false,
+          hashComments: true,
+          tripleQuoted: true,
+          slashComments: false,
+          regexLiterals: false,
+          hashBracketComments: true,
+        },
+        [
+          // A parameterized case takes its collected name from the id, so a
+          // reference there is the test's name and not fixture data.
+          namePattern(
+            // Every element of the list, not the first alone: the scan resumes
+            // after each literal and cannot rediscover the call ahead of it.
+            String.raw`(?<=(?<anchor>parametrize)[\s\S]{0,400}?\bids\s*=\s*\[[^\]]{0,400}?)(?<name>${QUOTED})`,
+          ),
+          namePattern(
+            // A parameter is often built by a call, and a span stopping at the
+            // first `)` never reached the `id` argument beyond it.
+            String.raw`(?<anchor>pytest\.param)\s*\((?:[^()]|\((?:[^()]|\([^()]*\))*\)){0,400}?\bid\s*=\s*(?<name>${QUOTED})`,
+          ),
+        ],
+      ],
+      [
+        ["rb"],
+        // Ruby writes a regex between slashes as JavaScript does, and `%r{…}`
+        // is one of its percent literals, so both forms are read.
+        {
+          comments: false,
+          hashComments: true,
+          percentLiterals: true,
+          equalsBlockComments: true,
+          multilineQuoted: true,
+          dataSectionMarker: RUBY_DATA_SECTION,
+          // A value ends before each of these in Ruby, so the shared set — which
+          // is JavaScript's — never opened a pattern after one.
+          regexAfterWords: RUBY_REGEX_AFTER,
+        },
+        [
+          namePattern(
+            String.raw`\b(?<anchor>it|test|describe|context|specify|example|scenario|feature)\s*\(?\s*(?<name>${RUBY_QUOTED})`,
+          ),
+        ],
+      ],
+      [
+        ["go"],
+        { comments: false, rawBacktick: true, regexLiterals: false },
+        [
+          // The receiver is part of the anchor: an ordinary helper named
+          // `Run` takes a first argument too, and restoring that literal
+          // cleared an obligation nothing covers.
+          namePattern(
+            String.raw`\b(?<anchor>[tbf]\s*\.\s*Run)\s*\(\s*(?<name>${DOUBLE_QUOTED}|` + "`[^`]*`)",
+          ),
+        ],
+      ],
+      [
+        // Java's block comments do not nest, and `test` / `describe` / `should`
+        // are not declarations there — its tests are named by annotations.
+        ["java"],
+        { comments: false, tripleQuoted: true, regexLiterals: false },
+        [
+          namePattern(
+            String.raw`(?<anchor>@DisplayName)\s*\(\s*(?:value\s*=\s*)?(?<name>${JAVA_QUOTED})`,
+          ),
+          namePattern(
+            String.raw`(?<anchor>@(?:ParameterizedTest|RepeatedTest))\s*\([^)]*?\bname\s*=\s*(?<name>${JAVA_QUOTED})`,
+          ),
+        ],
+      ],
+      [
+        // Groovy's block comments close at the first `*/`, as Java's do, and it
+        // keeps the slash rule for its slashy strings with the dollar form
+        // beside it.
+        ["groovy"],
+        { comments: false, tripleQuoted: true, dollarSlashyStrings: true, multilineSlashy: true },
+        [
+          namePattern(
+            String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${QUOTED})`,
+          ),
+          namePattern(String.raw`\b(?<anchor>def)\s+(?<name>${QUOTED})\s*\(`),
+        ],
+      ],
+      [
+        ["kt", "kts"],
+        {
+          comments: false,
+          tripleQuoted: true,
+          // Kotlin nests its block comments and takes no escape inside a raw
+          // triple-quoted string, where a trailing backslash is a character.
+          nestedBlockComments: true,
+          rawTripleQuoted: true,
+          regexLiterals: false,
+        },
+        [
+          namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${DOUBLE_QUOTED})`),
+          namePattern(
+            String.raw`(?<anchor>@ParameterizedTest)\s*\([^)]*?\bname\s*=\s*(?<name>${DOUBLE_QUOTED})`,
+          ),
+          namePattern(
+            String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${QUOTED})`,
+          ),
+          // Kotlin names a function in backticks, and Spock a method in quotes.
+          // A backtick name counts where an annotation declares the function a
+          // test; `fun` alone also names an ordinary helper.
+          namePattern(
+            String.raw`(?<anchor>@(?:Test|ParameterizedTest|RepeatedTest|TestFactory))[^{};]{0,200}?\bfun\s+(?<name>` +
+              "`[^`\\n]+`)",
+          ),
+          namePattern(String.raw`\b(?<anchor>def)\s+(?<name>${QUOTED})\s*\(`),
+          // Kotest's string spec opens a block, which no membership test does.
+          namePattern(String.raw`(?<name>${DOUBLE_QUOTED})\s*(?<anchor>\{)`),
+        ],
+      ],
+      [
+        // Scala keeps the word-spec forms. `in` is a membership operator in
+        // Kotlin, so reading `"…" in ids` there as a test name put a data
+        // string back into the source and cleared an obligation nothing covers.
+        ["scala"],
+        {
+          comments: false,
+          tripleQuoted: true,
+          regexLiterals: false,
+          nestedBlockComments: true,
+          rawTripleQuoted: true,
+          // `'fixture` is a symbol, with no closing apostrophe after it.
+          lifetimes: true,
+        },
+        [
+          namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${SCALA_QUOTED})`),
+          namePattern(
+            String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${SCALA_QUOTED})`,
+          ),
+          namePattern(
+            String.raw`(?<name>${SCALA_QUOTED})\s*(?<anchor>\{|\b(?:in|should|must|can|when)\b)`,
+          ),
+        ],
+      ],
+      [
+        ["cs"],
+        { comments: false, verbatimStrings: true, regexLiterals: false },
+        [
+          namePattern(
+            String.raw`\[(?:Fact|Theory|Test|TestCase|TestMethod|DataTestMethod|Description)[^\]]*?\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${CSHARP_QUOTED})`,
+          ),
+        ],
+      ],
+      [
+        // Expecto and the attribute form both, since an F# suite may use
+        // either. Masked without the first, a real annotation in a test's own
+        // name disappeared and the obligation read as uncovered.
+        ["fs"],
+        {
+          comments: false,
+          verbatimStrings: true,
+          parenStarComments: true,
+          regexLiterals: false,
+          // `'T` is a type parameter, and no closing apostrophe follows it.
+          lifetimes: true,
+        },
+        [
+          namePattern(
+            String.raw`\[(?:Fact|Theory|Test|TestCase|TestMethod|DataTestMethod|Description)[^\]]*?\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${CSHARP_QUOTED})`,
+          ),
+          namePattern(
+            String.raw`\b(?<anchor>testCase|testCaseAsync|ftestCase|ptestCase|testList|testProperty|testTheory)\s+(?<name>${CSHARP_QUOTED})`,
+          ),
+        ],
+      ],
+      // Rust's apostrophe opens a lifetime as often as a character, and paired
+      // as a quote it swallowed the trailing comment an annotation sits in.
+      [
+        ["rs"],
+        {
+          comments: false,
+          lifetimes: true,
+          regexLiterals: false,
+          rustRawStrings: true,
+          nestedBlockComments: true,
+        },
+        [],
+      ],
+      [
+        ["php"],
+        {
+          comments: false,
+          hashComments: true,
+          regexLiterals: false,
+          phpHeredocs: true,
+          multilineQuoted: true,
+          dataSectionMarker: PHP_DATA_SECTION,
+        },
+        [
+          namePattern(String.raw`\b(?<anchor>it|test|describe)\s*\(\s*(?<name>${QUOTED})`),
+          // PHPUnit names a test in an attribute, which the hash-comment rule
+          // leaves as code while the literal inside it is masked.
+          namePattern(
+            String.raw`#\[[^\]]*?(?<anchor>TestDox|DataProvider)\s*\(\s*(?:[A-Za-z_]\w*\s*:\s*)?(?<name>${QUOTED})`,
+          ),
+        ],
+      ],
+    ] satisfies [string[], JsMaskOptions, RegExp[]][]
+  ).flatMap(([extensions, mask, names]) =>
+    extensions.map((extension): [string, TestSourceDialect] => [extension, { mask, names }]),
+  ),
+);
 
 /**
  * A test file's text with its string, template and regex literals blanked.
@@ -86,22 +403,12 @@ const JS_TEST_EXTENSIONS: ReadonlySet<string> = new Set([
  * line a finding names are unchanged.
  */
 function maskTestSource(file: string, text: string): string {
-  if (!JS_TEST_EXTENSIONS.has(path.extname(file).toLowerCase())) {
+  const dialect = TEST_SOURCE_DIALECTS.get(path.extname(file).slice(1).toLowerCase());
+  if (dialect === undefined) {
     return text;
   }
-  return restoreTestNames(maskJsNonCode(text, { comments: false }), text);
+  return restoreTestNames(maskJsNonCode(text, dialect.mask), text, dialect.names);
 }
-
-/**
- * A test's own name, in three parts: the runner, the call up to the name, and
- * the name itself.
- *
- * The runner may carry modifiers before the call that takes the name
- * (`it.each(rows)`, `describe.skipIf(x)`), and the name may be written in any
- * of the three quote forms.
- */
-const TEST_NAME_RE =
-  /\b(it|test|describe|suite|bench|scenario)((?:\s*\.\s*[A-Za-z_$][\w$]*(?:\s*\([^()]*\))?)*\s*\(\s*)("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)/g;
 
 /**
  * Puts each test's name back into the masked text.
@@ -127,15 +434,19 @@ const TEST_NAME_RE =
  * The mask replaces one character for one, so a restored name goes back at the
  * offset it came from and every later offset is unmoved.
  */
-function restoreTestNames(masked: string, original: string): string {
+function restoreTestNames(masked: string, original: string, patterns: readonly RegExp[]): string {
   let restored = masked;
-  for (const match of original.matchAll(TEST_NAME_RE)) {
-    const [, runner = "", call = "", name = ""] = match;
-    if (!restored.startsWith(runner, match.index)) {
-      continue;
+  for (const pattern of patterns) {
+    for (const match of original.matchAll(pattern)) {
+      const anchor = match.indices?.groups?.anchor;
+      const name = match.indices?.groups?.name;
+      if (anchor === undefined || name === undefined) continue;
+      if (restored.slice(anchor[0], anchor[1]) !== original.slice(anchor[0], anchor[1])) {
+        continue;
+      }
+      restored =
+        restored.slice(0, name[0]) + original.slice(name[0], name[1]) + restored.slice(name[1]);
     }
-    const start = match.index + runner.length + call.length;
-    restored = restored.slice(0, start) + name + restored.slice(start + name.length);
   }
   return restored;
 }
@@ -2210,6 +2521,20 @@ const DOTNET_ATTRIBUTE_PATTERN = /^\s*\[\s*(?:Test|TestCase|TestCaseSource|Fact|
 const RUST_ATTRIBUTE_PATTERN = /^\s*#\[\s*(?:\w+::)?test\s*\]/m;
 
 /**
+ * Expecto's entry points, which name a case in the call rather than an attribute.
+ *
+ * An F# suite reads the attribute form or this one, and reading only the
+ * first reported a whole Expecto file as declaring no test.
+ *
+ * Read off the masked body, where the name literal beside the call is already
+ * blanked — so the form is the call and its application, never the quote. The
+ * lookahead keeps a binding of the same name out: `let testCase = …` declares a
+ * value, and only an applied one declares a case.
+ */
+const EXPECTO_CALL_PATTERN =
+  /\b(?:testCase|testCaseAsync|ftestCase|ptestCase|testList|testProperty|testTheory)\s+(?![=:])/;
+
+/**
  * The `def test...` convention pytest and minitest both collect on.
  *
  * The form stops at the name rather than requiring `(`, because Ruby's
@@ -2280,7 +2605,8 @@ const TEST_PATTERNS_BY_LANGUAGE: readonly (readonly [readonly string[], readonly
     ["java", "kt", "kts", "groovy", "scala"],
     [JVM_ANNOTATION_PATTERN, CALL_FORM_PATTERN],
   ],
-  [["cs", "fs", "vb"], [DOTNET_ATTRIBUTE_PATTERN]],
+  [["cs", "vb"], [DOTNET_ATTRIBUTE_PATTERN]],
+  [["fs"], [DOTNET_ATTRIBUTE_PATTERN, EXPECTO_CALL_PATTERN]],
   [["rs"], [RUST_ATTRIBUTE_PATTERN]],
   [["php"], [PHP_NAMING_PATTERN]],
 ];
