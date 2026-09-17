@@ -2525,9 +2525,14 @@ const RUST_ATTRIBUTE_PATTERN = /^\s*#\[\s*(?:\w+::)?test\s*\]/m;
  *
  * An F# suite reads the attribute form or this one, and reading only the
  * first reported a whole Expecto file as declaring no test.
+ *
+ * Read off the masked body, where the name literal beside the call is already
+ * blanked — so the form is the call and its application, never the quote. The
+ * lookahead keeps a binding of the same name out: `let testCase = …` declares a
+ * value, and only an applied one declares a case.
  */
 const EXPECTO_CALL_PATTERN =
-  /\b(?:testCase|testCaseAsync|ftestCase|ptestCase|testList|testProperty|testTheory)\s+["@]/;
+  /\b(?:testCase|testCaseAsync|ftestCase|ptestCase|testList|testProperty|testTheory)\s+(?![=:])/;
 
 /**
  * The `def test...` convention pytest and minitest both collect on.
