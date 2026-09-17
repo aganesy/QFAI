@@ -25,6 +25,7 @@ import {
   entryTitles,
   missingEntries,
   nextPageLink,
+  nextPageUrl,
   releasedSections,
   run,
 } from "../../../../scripts/check-release-notes.mjs";
@@ -324,6 +325,56 @@ describe("the run", () => {
 
     expect(status).toBe(2);
     expect(output).toContain("not a list of releases");
+  });
+
+  it("stops on an entry with no tag name rather than leaving its section unread", async () => {
+    const file = await changelogWith(changelog);
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      // Skipped instead, the section it belongs to looks unreleased — the
+      // ordinary state — and the run reports agreement over the one entry
+      // nobody could compare.
+      readPage: () => Promise.resolve({ releases: [{ body: "- **Shipped**" }], next: null }),
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("no tag name");
+  });
+
+  it("stops on a body that is not text rather than comparing against an empty one", async () => {
+    const file = await changelogWith(changelog);
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readPage: () =>
+        Promise.resolve({ releases: [{ tag_name: "v1.2.0", body: { rendered: "" } }], next: null }),
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("is not text");
+  });
+
+  it("stops when the pages name each other rather than paging until the job is killed", async () => {
+    const file = await changelogWith(changelog);
+    const first = "https://api.github.com/repos/owner/repo/releases?per_page=100";
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      // Every page names the one the run has already read. Followed, this
+      // spends the workflow's whole budget and the job is killed with no
+      // verdict of its own.
+      readPage: () => Promise.resolve({ releases: [], next: first }),
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("form a loop");
   });
 
   it("says it compared nothing rather than reporting a clean run, with no token", async () => {
@@ -635,6 +686,37 @@ describe("where the next page is", () => {
     expect(nextPageLink('<https://api.github.com/x?page=2&a=1,2>; rel="next"')).toBe(
       "https://api.github.com/x?page=2&a=1,2",
     );
+  });
+});
+
+describe("where the run is willing to send its token", () => {
+  const FROM = "https://api.github.com/repos/owner/repo/releases?per_page=100";
+
+  it("follows a target on the host the page came from", () => {
+    expect(nextPageUrl('<https://api.github.com/x?page=2>; rel="next"', FROM)).toBe(
+      "https://api.github.com/x?page=2",
+    );
+  });
+
+  it("resolves a target given as a path", () => {
+    expect(nextPageUrl('</x?page=2>; rel="next"', FROM)).toBe("https://api.github.com/x?page=2");
+  });
+
+  it("refuses a target on another host", () => {
+    // The request carries the token in an `Authorization` header, and the
+    // header naming the target is part of the response. Followed, a rewritten
+    // one chooses who receives a repository token.
+    expect(() => nextPageUrl('<https://example.invalid/x?page=2>; rel="next"', FROM)).toThrow(
+      /leaves https:\/\/api\.github\.com/,
+    );
+  });
+
+  it("refuses a target that is not a URL at all", () => {
+    expect(() => nextPageUrl('<http://[>; rel="next"', FROM)).toThrow(/not a URL/);
+  });
+
+  it("is nothing when the page names no next one", () => {
+    expect(nextPageUrl(null, FROM)).toBe(null);
   });
 });
 

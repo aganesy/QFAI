@@ -56,7 +56,7 @@
  *
  * Exit codes: 0 clean, 1 drift, 2 the comparison could not be made.
  */
-/* global console, process, fetch */
+/* global console, process, fetch, URL */
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
@@ -178,6 +178,50 @@ export function nextPageLink(header) {
   return null;
 }
 
+/**
+ * Where the page after this one is, resolved against the page it came from and
+ * required to stay on that host.
+ *
+ * The header is part of the response, so whatever answers chooses where the run
+ * sends its next request — and the request carries the token in an
+ * `Authorization` header. Left unchecked, a rewritten `Link` hands a repository
+ * token to a host of its choosing.
+ */
+export function nextPageUrl(header, current) {
+  const target = nextPageLink(header);
+  if (target === null) return null;
+  const from = new URL(current);
+  let resolved;
+  try {
+    resolved = new URL(target, from);
+  } catch {
+    throw new Error(`the next-page link is not a URL: ${target}`);
+  }
+  if (resolved.origin !== from.origin) {
+    throw new Error(`the next-page link leaves ${from.origin}: ${resolved.href}`);
+  }
+  return resolved.href;
+}
+
+/**
+ * One release as the comparison reads it, or a reason the entry cannot be read.
+ *
+ * `body` is absent on a release published with no notes, and that is an empty
+ * body rather than a missing one. Any other shape is something else answering,
+ * and reading it as an empty body would report the whole section as drift.
+ */
+function readRelease(release) {
+  if (typeof release !== "object" || release === null)
+    return { error: "an entry is not an object" };
+  const tag = Reflect.get(release, "tag_name");
+  if (typeof tag !== "string") return { error: "an entry has no tag name" };
+  const body = Reflect.get(release, "body");
+  if (body !== null && body !== undefined && typeof body !== "string") {
+    return { error: `the body of ${tag} is not text` };
+  }
+  return { draft: Reflect.get(release, "draft") === true, tag, body: body ?? "" };
+}
+
 /** One page of releases, and where the page after it is. */
 async function fetchReleasePage(url, token) {
   const response = await fetch(url, {
@@ -190,7 +234,7 @@ async function fetchReleasePage(url, token) {
   if (!response.ok) {
     throw new Error(`GitHub answered ${String(response.status)}`);
   }
-  return { releases: await response.json(), next: nextPageLink(response.headers.get("link")) };
+  return { releases: await response.json(), next: nextPageUrl(response.headers.get("link"), url) };
 }
 
 /**
@@ -206,9 +250,17 @@ async function fetchReleasePage(url, token) {
  */
 async function releaseBodies(repository, token, readPage) {
   const bodies = new Map();
+  // A page whose `next` names a page already read ends the paging with a
+  // failure. Followed, a self-referential link spends the job's whole budget
+  // and the run is killed without a verdict of its own.
+  const read = new Set();
   // A hundred to a page is the most the endpoint serves.
   let url = `https://api.github.com/repos/${repository}/releases?per_page=100`;
   while (url !== null) {
+    if (read.has(url)) {
+      throw new Error(`reading ${url}: this page was already read, so the pages form a loop`);
+    }
+    read.add(url);
     let page;
     try {
       page = await readPage(url, token);
@@ -226,10 +278,15 @@ async function releaseBodies(repository, token, readPage) {
       throw new Error(`reading ${url}: the response is not a list of releases`);
     }
     for (const release of page.releases) {
-      if (release?.draft === true) continue;
-      const tag = release?.tag_name;
-      if (typeof tag !== "string") continue;
-      bodies.set(tag, typeof release.body === "string" ? release.body : "");
+      const entry = readRelease(release);
+      // Stopped rather than skipped. An entry skipped for its shape leaves its
+      // section looking unreleased, which is the ordinary state and reads as a
+      // clean run — so the one payload nobody can compare reports as agreement.
+      if (entry.error !== undefined) {
+        throw new Error(`reading ${url}: ${entry.error}`);
+      }
+      if (entry.draft) continue;
+      bodies.set(entry.tag, entry.body);
     }
     // A page that names no next one ends the paging. Read as anything but
     // `null` the loop would ask for the same page again, forever.
