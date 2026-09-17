@@ -10,8 +10,3 @@ file the rule governs. It lies outside the repository, so it cannot land in any
 directory rule 1 protects, and the test that created it removes it, which is
 what rule 5 asks for. Keeping test input and output outside the tree also keeps
 it away from file-watchers and from every guard that walks the repository.
-
-## Where else the rule is written
-
-The same obligation is Article XI of
-`.qfai/assistant/constitution/constitution.md`.

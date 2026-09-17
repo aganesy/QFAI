@@ -9,16 +9,18 @@ and the rest of this file is what that means here.
 A branch named `<type>/v<X.Y.Z>[-<slug>]` carries a pin — `feature/v1.8.8`,
 `release/v1.9.0`, `hotfix/v1.10.2-foo`. The leading `v` is required.
 
-The guards read the pin with this expression:
+The two guards read a branch name differently, and a name outside the
+recommended form can mean a pin to one and nothing to the other. Keep to
+`<type>/v<X.Y.Z>[-<slug>]`, which both read the same way.
 
-```text
-(?:^|[/_-])v([0-9]+)\.([0-9]+)\.([0-9]+)(?:$|[/_-])
-```
+| Guard                         | Reads a pin from                                                                                             | Refuses                                                                                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `check-branch-version-pin.sh` | `(^\|[/_-])v(N).(N).(N)($\|[/_-])` — a `v` after `/`, `_`, `-` or the start of the name                      | A pre-release suffix (`-rc`, `-alpha`, `-beta`, `-pre`, `-next`) or build metadata (`+…`) next to the version: it exits 1 rather than reading `1.9.0` out of `v1.9.0-rc.1` |
+| `CheckVersionAlignment`       | `^.+/v(N.N.N)([-_].*)?$` — a `v` right after a `/`, whose version ends the name or is followed by `-` or `_` | Nothing on its own; a suffix after `-` or `_` is ignored, so `release/v1.9.0-rc.1` reads as `1.9.0`                                                                        |
 
-It takes MAJOR.MINOR.PATCH only, and the `v` must sit between separators, so a
-branch such as `feature/api-2024.10.05`, `bugfix/issue-1.2.3-typo` or
-`fix/log4j-2.17.1` carries no pin. A pre-release branch like
-`release/v1.9.0-rc.1` is run with `VERSION_PIN_SKIP=1`.
+Both take MAJOR.MINOR.PATCH only, so `feature/api-2024.10.05`,
+`bugfix/issue-1.2.3-typo` and `fix/log4j-2.17.1` carry no pin. Run a pre-release
+branch with `VERSION_PIN_SKIP=1`.
 
 ## What a pin authorizes
 

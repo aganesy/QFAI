@@ -6,8 +6,14 @@ the surface, the identifier shapes, and the guards, for this repository only.
 ## The surface
 
 The paths listed in `packages/qfai/package.json#files` — today `dist/`,
-`assets/`, `README.md` and `LICENSE`. Every guard reads `files` rather than a
-list of its own, so changing `files` needs no further work here.
+`assets/`, `README.md` and `LICENSE`.
+
+Only the post-build guard reads `files`. The other two scan targets of their
+own, so a path added to `files` is not covered by them until they are extended:
+
+- the pre-build lint scans `src/**/*.ts` comments and `assets/init/**`;
+- the smoke test scans the tree `qfai init` writes, which is only what init
+  copies out of `assets/`.
 
 When in doubt, ask whether the file is copied into a user's project. If it is,
 the identifier does not belong in it.
@@ -42,9 +48,17 @@ the identifier does not belong in it.
 
 ## The version a shipped file may name
 
-Only `packages/qfai/package.json#version`. Do not mint a `schemaVersion` or a
-private `vN.M` beside it. Express a breaking change by raising the npm minor or
-major.
+The version of this project a shipped file presents as current is
+`packages/qfai/package.json#version`. Do not mint a `schemaVersion` or a private
+`vN.M` beside it. Express a breaking change by raising the npm minor or major.
+
+A version that belongs to something else is not covered by the rule — a
+dependency, a runtime such as Node.js, a protocol, or a past release a migration
+note is about. The post-build guard cannot tell those apart yet: it matches every
+`vN.M` and `vN.M.P` as a deliberately broad backstop, because the surface holds
+no such reference today. When one has to ship, narrow that matcher to a
+project-qualified form rather than rewording the reference; the guard's own
+comment names the form.
 
 ## Four guards
 
@@ -82,6 +96,8 @@ already covers at a different grain.
 - `CHANGELOG.md`
 - `packages/qfai/docs/`
 - Commit messages, and pull request and issue bodies
-- Identifiers in `packages/qfai/src/**` that are not comments, such as a test
-  fixture's spec name. Not in a doc comment: tsup carries those into
-  `dist/*.d.ts`.
+- Test code under `packages/qfai/tests/`, which does not ship.
+
+Not in `packages/qfai/src/**`, comment or not. tsup carries a doc comment into
+`dist/*.d.ts`, and a string literal into the bundle, and the post-build guard
+scans both.

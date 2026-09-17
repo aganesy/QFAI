@@ -1147,3 +1147,70 @@ describe("trust boundaries depend on the caller's control", () => {
     expect(operating.equals(shipped)).toBe(true);
   });
 });
+
+/**
+ * The repository-specific halves of four shipped rules.
+ *
+ * An overlay is read together with the shipped master it extends, so a clause
+ * dropped from one is not restated anywhere else. One token per clause, each
+ * one that no other clause of the same overlay carries, so deleting a clause
+ * fails here while the file still looks complete.
+ */
+describe("rule overlays", () => {
+  const OVERLAYS: ReadonlyArray<{ file: string; clauses: readonly string[] }> = [
+    {
+      file: "distributed-surface.local.md",
+      clauses: [
+        // The surface, and which guard reads it.
+        "package.json#files",
+        "Only the post-build guard reads `files`",
+        // The identifier shapes.
+        "CAP-0010",
+        "DEC-NNNN-NNNN",
+        "schemaVersion",
+        // The exceptions.
+        "spec-0001",
+        // Versions that belong to something else.
+        "A version that belongs to something else",
+        // The guard layers.
+        "distributedSurfaceLeakage.test.ts",
+        // Where internal IDs are fine.
+        "packages/qfai/tests/",
+      ],
+    },
+    {
+      file: "version-discipline.local.md",
+      clauses: [
+        "has adopted it",
+        "chore(release): qfai X.Y.Z",
+        "CheckVersionAlignment",
+        "VERSION_PIN_SKIP",
+      ],
+    },
+    {
+      file: "temporary-files.local.md",
+      clauses: ["mkdtemp"],
+    },
+    {
+      file: "root-additions-policy.local.md",
+      clauses: ["report.<pid>", ".qfai/review/review-<timestamp>/"],
+    },
+  ];
+
+  it.each(OVERLAYS)("$file keeps every clause", async ({ file, clauses }) => {
+    const text = await readFile(path.join(ROOT, ".agents/rules", file), "utf-8");
+    for (const clause of clauses) {
+      expect(text, `${file} lost the clause marked by ${clause}`).toContain(clause);
+    }
+  });
+
+  it.each(
+    OVERLAYS.flatMap(({ file }) => [
+      { entry: "AGENTS.md", file },
+      { entry: "CLAUDE.md", file },
+    ]),
+  )("$entry cites $file", async ({ entry, file }) => {
+    const text = await readFile(path.join(ROOT, entry), "utf-8");
+    expect(text).toContain(file);
+  });
+});
