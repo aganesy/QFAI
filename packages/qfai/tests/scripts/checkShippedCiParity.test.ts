@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { markersIn } from "../../../../scripts/check-shipped-ci-parity.mjs";
+import { headerPath, markersIn } from "../../../../scripts/check-shipped-ci-parity.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // tests/scripts → tests → packages/qfai → packages → repo root
@@ -277,6 +277,94 @@ describe("check-shipped-ci-parity", () => {
     expect(result.stdout).toContain("touches none of this repository's CI");
   });
 
+  it("asks for a disposition when a pinned path leaves the protected set", async () => {
+    // The line looks derived — a digest and a path — but nothing on the other
+    // side pairs with it. Dropping it stops CI verifying that file at all.
+    const pinned = (paths: string[]): string =>
+      BASE_WORKFLOW.replace(
+        "      - run: pnpm ci:lint\n",
+        [
+          "      - run: |",
+          "          sha256sum -c <<'SUMS'",
+          ...paths.map((rel, index) => `          ${String(index).repeat(64)}  ${rel}`),
+          "          SUMS",
+          "      - run: pnpm ci:lint",
+          "",
+        ].join("\n"),
+      );
+    const dir = await branchRepo(
+      { [WORKFLOW]: pinned(["scripts/run-lint-checks.sh", "scripts/pin-guard-bytes.mjs"]) },
+      { [WORKFLOW]: pinned(["scripts/run-lint-checks.sh"]) },
+    );
+
+    const result = runGuard(dir, ["--base", "main"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("this change moves this repository's CI");
+  });
+
+  it("asks for a disposition when an action already in the file is invoked again", async () => {
+    // The target is one the file already carried, so reading the added line on
+    // its own calls it a version bump. Nothing was removed: this is a step.
+    const twice = BASE_WORKFLOW.replace(
+      "      - run: pnpm ci:lint\n",
+      "      - uses: actions/checkout@1111111111111111111111111111111111111111 # v4.0.0\n      - run: pnpm ci:lint\n",
+    );
+    const dir = await branchRepo({ [WORKFLOW]: BASE_WORKFLOW }, { [WORKFLOW]: twice });
+
+    const result = runGuard(dir, ["--base", "main"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("this change moves this repository's CI");
+  });
+
+  it("accepts a deletion transferred by deleting the shipped template too", async () => {
+    const dir = await branchRepo(
+      { [WORKFLOW]: BASE_WORKFLOW, [SHIPPED]: "name: QFAI tests\njobs:\n  a: {}\n" },
+      { [WORKFLOW]: null, [SHIPPED]: null },
+    );
+
+    const result = runGuard(dir, ["--base", "main"]);
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("the shipped workflow templates changed");
+  });
+
+  it("refuses a reason that was already in the file under a newly added marker", async () => {
+    // The explanation is real and it is not this change's. Read as an answer,
+    // a change states no reason of its own and the marker costs one line.
+    const base = BASE_WORKFLOW.replace(
+      "      - run: pnpm ci:lint\n",
+      "      - run: pnpm ci:lint\n      # Because: the shipped set has no lane of this kind at all.\n",
+    );
+    const head = base
+      .replace("      # Because:", "      # SHIPPED-CI: not-applicable\n      # Because:")
+      .replace(
+        "the shipped set has no lane of this kind at all.\n",
+        "the shipped set has no lane of this kind at all.\n      - run: pnpm check-types\n",
+      );
+    const dir = await branchRepo({ [WORKFLOW]: base }, { [WORKFLOW]: head });
+
+    const result = runGuard(dir, ["--base", "main"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("SHIPPED-CI names a disposition and no reason");
+  });
+
+  it("refuses a change that rewrites an entry the ledger already carried", async () => {
+    const entry = (why: string): string =>
+      `${LEDGER_HEADER}- SHIPPED-CI: not-applicable for package.json\n  Because: ${why}\n`;
+    const dir = await branchRepo(
+      { [WORKFLOW]: BASE_WORKFLOW, [LEDGER]: entry("the shipped set has no aggregate lane.") },
+      { [WORKFLOW]: CHANGED_WORKFLOW, [LEDGER]: entry("something else entirely, said later.") },
+    );
+
+    const result = runGuard(dir, ["--base", "main"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("removes or rewrites lines that were already there");
+  });
+
   it("asks for a disposition when a NEW action reference appears", async () => {
     const added = BASE_WORKFLOW.replace(
       "      - run: pnpm ci:lint\n",
@@ -443,5 +531,22 @@ describe("the marker reader", () => {
 
   it("reads none out of a line this change did not add", () => {
     expect(markersIn(WORKFLOW, LIVE.join("\n"), new Set([2]))).toEqual([]);
+  });
+});
+
+describe("the path a diff header names", () => {
+  it("is the header itself when git printed it raw", () => {
+    expect(headerPath("b/.github/workflows/ci.yml")).toBe("b/.github/workflows/ci.yml");
+  });
+
+  it("is the decoded path when git quoted and escaped it", () => {
+    // A quoted path kept as it is matches no watched prefix, so the file reads
+    // as untouched and whatever it changed goes unasked.
+    const quoted = `"b/.github/workflows/caf\\303\\251.yml"`;
+    expect(headerPath(quoted)).toBe("b/.github/workflows/café.yml");
+  });
+
+  it("keeps the characters a named escape stands for", () => {
+    expect(headerPath(`"b/a\\tb\\"c\\\\d.yml"`)).toBe('b/a\tb"c\\d.yml');
   });
 });

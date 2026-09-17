@@ -298,10 +298,15 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       }
     });
 
-    it.each(["AGENTS.md", "CLAUDE.md"])("%s cites the rule master", async (rel) => {
-      const text = await readFile(path.join(ROOT, rel), "utf-8");
-      expect(text).toContain("shipped-ci-parity.md");
-    });
+    // Copilot reads none of the other two, so a rule the master declares for
+    // every agent reaches it only through this file.
+    it.each(["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"])(
+      "%s cites the rule master",
+      async (rel) => {
+        const text = await readFile(path.join(ROOT, rel), "utf-8");
+        expect(text).toContain("shipped-ci-parity.md");
+      },
+    );
 
     it("is not shipped to adopters", async () => {
       // The rule compares this repository's CI with the templates it ships. An

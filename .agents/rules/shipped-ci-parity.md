@@ -23,10 +23,11 @@ answer is written down.
 | `packages/qfai/assets/init/root/.github/**`   | Not watched — changing it is the answer, not the ask |
 
 Three kinds of edit are outside it, because none of them is a decision anyone
-makes: a blank line, a comment, and a derived value. Derived means a
-`<sha256>  <path>` pin a resealing tool rewrites, and a `uses:` reference whose
-target the file already carried, which is a version bump the dependency bot
-opens by itself.
+makes: a blank line, a comment, and a value a tool rewrote in place. The third
+covers a `<sha256>  <path>` pin and a `uses:` reference pointed at a new commit,
+and only where the same path or action appears on both sides of the change. A
+pin added, deleted, or aimed at something else appears on one side alone, and
+each of those changes what CI verifies.
 
 ## The marker
 
@@ -61,6 +62,14 @@ change deletes has no line left to write on. Both record their disposition in
 That ledger is the second place, and the only one. A marker anywhere else does
 not count, so an exemption cannot be parked where no reviewer of the change
 would look.
+
+Entries are added to the end and never taken away. A change that rewrote an
+earlier entry in place would pass while erasing the decision it stood for, so a
+removed line there is refused.
+
+The reason has to be part of the change as well. A marker written above an
+explanation that was already in the file is answered by nothing this change
+says.
 
 ## Held by
 

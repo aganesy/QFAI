@@ -95,6 +95,7 @@
  * Exit codes: 0 clean or base unresolvable / 1 a disposition is owed or
  * incomplete / 2 a git error or an unknown argument.
  */
+import { Buffer } from "node:buffer";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -290,6 +291,42 @@ function resolveRange(explicitBase) {
 }
 
 /**
+ * The path a `---` or `+++` header names, with the quoting git applies when the
+ * path holds a character it will not print raw.
+ *
+ * A quoted path left as it is matches no watched prefix, so the file reads as
+ * untouched and whatever it changed goes unasked.
+ */
+export function headerPath(raw) {
+  if (!raw.startsWith('"')) return raw;
+  const body = raw.slice(1, raw.endsWith('"') ? -1 : undefined);
+  const bytes = [];
+  for (let i = 0; i < body.length; i += 1) {
+    if (body[i] !== "\\") {
+      bytes.push(...Buffer.from(body[i], "utf-8"));
+      continue;
+    }
+    const next = body[i + 1] ?? "";
+    const named = { a: 7, b: 8, t: 9, n: 10, v: 11, f: 12, r: 13, '"': 34, "\\": 92 }[next];
+    if (named !== undefined) {
+      bytes.push(named);
+      i += 1;
+      continue;
+    }
+    const octal = /^[0-7]{1,3}/.exec(body.slice(i + 1))?.[0];
+    if (octal === undefined) {
+      // Not an escape git writes. Kept as the backslash it is, so a path
+      // carrying one is not silently shortened.
+      bytes.push(92);
+      continue;
+    }
+    bytes.push(Number.parseInt(octal, 8));
+    i += octal.length;
+  }
+  return Buffer.from(bytes).toString("utf-8");
+}
+
+/**
  * Per path: the lines this change added, the lines it removed, and whether the
  * path is gone at HEAD.
  *
@@ -300,6 +337,11 @@ function resolveRange(explicitBase) {
  */
 function changedHunks(range) {
   const diff = git([
+    "-c",
+    // Without it a path holding a byte outside ASCII arrives wrapped in quotes
+    // with its bytes octal-escaped, so it matches no watched prefix and the
+    // file reads as untouched. `headerPath` handles the forms this does not.
+    "core.quotePath=false",
     "diff",
     "--no-color",
     "-U0",
@@ -320,12 +362,12 @@ function changedHunks(range) {
   };
   for (const raw of diff.split("\n")) {
     if (raw.startsWith("--- ")) {
-      const p = raw.slice(4).trim();
+      const p = headerPath(raw.slice(4).trim());
       oldPath = p === "/dev/null" ? null : p.replace(/^a\//, "");
       continue;
     }
     if (raw.startsWith("+++ ")) {
-      const p = raw.slice(4).trim();
+      const p = headerPath(raw.slice(4).trim());
       entry =
         p === "/dev/null"
           ? oldPath === null
@@ -356,27 +398,68 @@ function isCommentLine(rel, trimmed) {
   return trimmed.startsWith("#");
 }
 
-/** The action references a file already carried at the base. */
-function baseUsesTargets(baseRev, rel) {
-  const before = baseRev === null ? null : blobAt(baseRev, rel);
-  const targets = new Set();
-  if (before === null) return targets;
-  for (const line of before.split(/\r?\n/)) {
-    const found = ACTION_PIN_RE.exec(line);
-    if (found !== null) targets.add(found[1]);
+/**
+ * What a resealing tool rewrites in place on this line, or `null` for any other
+ * line: the path a digest protects, or the action a `uses:` reference names.
+ *
+ * The key is what stays the same across a reseal. The value beside it — the
+ * digest, the commit — is what changes, and is the part nobody decides.
+ */
+function resealKey(trimmed) {
+  if (DIGEST_PIN_RE.test(trimmed)) return `digest ${trimmed.slice(64).trim()}`;
+  const pinned = ACTION_PIN_RE.exec(trimmed);
+  return pinned === null ? null : `action ${pinned[1]}`;
+}
+
+/**
+ * The keys this change rewrote in place: present on both sides of the diff, the
+ * same number of times.
+ *
+ * Pairing is what makes the exemption safe. A resealed line appears as one
+ * removal and one addition under an unchanged key. A pin added, deleted, or
+ * pointed at a different path appears on one side only — and each of those
+ * changes what CI verifies, whatever the line looks like.
+ */
+function resealedKeys(entry) {
+  const tally = (texts) => {
+    const counts = new Map();
+    for (const text of texts) {
+      const key = resealKey(text.trim());
+      if (key !== null) counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return counts;
+  };
+  const added = tally(entry.added.map(({ text }) => text));
+  const removed = tally(entry.removed);
+  const paired = new Set();
+  for (const [key, count] of added) {
+    if (removed.get(key) === count) paired.add(key);
   }
-  return targets;
+  return paired;
 }
 
 /** Whether a changed line carries meaning a reviewer decides, rather than a computed value. */
-function isSubstantive(rel, text, baseTargets) {
+function isSubstantive(rel, text, resealed) {
   const trimmed = text.trim();
   if (trimmed.length === 0) return false;
   if (isCommentLine(rel, trimmed)) return false;
-  if (DIGEST_PIN_RE.test(trimmed)) return false;
-  const pinned = ACTION_PIN_RE.exec(trimmed);
-  if (pinned !== null && baseTargets.has(pinned[1])) return false;
-  return true;
+  const key = resealKey(trimmed);
+  return key === null || !resealed.has(key);
+}
+
+/**
+ * Whether what a file does changed, on either side of the diff.
+ *
+ * Removals count. A change that deletes a step, a lane or a whole workflow is
+ * the kind most worth asking about, and reading additions alone would let it
+ * through as nothing at all.
+ */
+function movesMeaning(rel, entry) {
+  const resealed = resealedKeys(entry);
+  return (
+    entry.added.some(({ text }) => isSubstantive(rel, text, resealed)) ||
+    entry.removed.some((text) => isSubstantive(rel, text, resealed))
+  );
 }
 
 /** The `ci:*` scripts a manifest declares, or `null` when it does not parse. */
@@ -418,12 +501,17 @@ function isWatched(rel) {
  *
  * The block rather than a line count, so a wrapped disposition does not push
  * its reason out of reach.
+ *
+ * Only lines this change added. A marker written directly above an explanation
+ * that was already there would otherwise be answered by it, and the change
+ * would state no reason of its own.
  */
-function blockAfter(rel, lines, start) {
+function blockAfter(rel, lines, start, addedLines) {
   const out = [];
   for (let i = start + 1; i < lines.length; i += 1) {
     const trimmed = lines[i].trim();
     if (MARKER_RE.test(lines[i])) break;
+    if (!addedLines.has(i + 1)) break;
     if (MARKDOWN_EXTENSIONS.has(path.extname(rel))) {
       if (trimmed.length === 0) break;
     } else if (!isCommentLine(rel, trimmed)) {
@@ -457,7 +545,7 @@ function markersIn(rel, text, addedLines) {
     if (!markdown && !isCommentLine(rel, trimmed)) continue;
     const marker = MARKER_RE.exec(lines[i]);
     if (marker === null) continue;
-    const tail = [marker[3], ...blockAfter(rel, lines, i)];
+    const tail = [marker[3], ...blockAfter(rel, lines, i, addedLines)];
     const reason = tail
       .map((line) => REASON_RE.exec(line)?.[1])
       .find((value) => value !== undefined);
@@ -533,11 +621,7 @@ function obligations(hunks, baseRev) {
   const routed = [];
   for (const [rel, entry] of hunks) {
     if (!isWatched(rel)) continue;
-    const targets = baseUsesTargets(baseRev, rel);
-    const moved =
-      entry.added.some(({ text }) => isSubstantive(rel, text, targets)) ||
-      entry.removed.some((text) => isSubstantive(rel, text, targets));
-    if (!moved) continue;
+    if (!movesMeaning(rel, entry)) continue;
     if (entry.gone) routed.push(rel);
     else inFile.push(rel);
   }
@@ -560,6 +644,16 @@ function collectMarkers(hunks, owed) {
   const sources = new Set([...owed.inFile, COMPANION_REL]);
   const markers = [];
   const faults = [];
+  // The ledger is the record of what was decided, so an entry may be added and
+  // never taken away. Without this a change could put its own disposition where
+  // an earlier one stood and pass, with the decision it overwrote gone.
+  const ledger = hunks.get(COMPANION_REL);
+  if (ledger !== undefined && ledger.removed.some((text) => text.trim().length > 0)) {
+    faults.push(
+      `${COMPANION_REL}: this change removes or rewrites lines that were already there. ` +
+        "Entries are added to the end; an earlier decision stays as it was recorded",
+    );
+  }
   for (const rel of sources) {
     const entry = hunks.get(rel);
     if (entry === undefined || entry.gone) continue;
@@ -620,13 +714,11 @@ function main() {
   const owed = obligations(hunks, resolved.baseRev);
   const { markers, faults } = collectMarkers(hunks, owed);
 
+  // A deleted template counts, and so does a deleted step inside one. Removing
+  // a lane from this repository is transferred by removing it there too, and a
+  // check that read additions alone would refuse the answer it asked for.
   const shipped = [...hunks]
-    .filter(([rel, entry]) => rel.startsWith(SHIPPED_PREFIX) && !entry.gone)
-    .filter(([rel, entry]) =>
-      entry.added.some(({ text }) =>
-        isSubstantive(rel, text, baseUsesTargets(resolved.baseRev, rel)),
-      ),
-    )
+    .filter(([rel, entry]) => rel.startsWith(SHIPPED_PREFIX) && movesMeaning(rel, entry))
     .map(([rel]) => rel);
 
   if (owed.inFile.length === 0 && owed.routed.length === 0) {
