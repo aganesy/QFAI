@@ -165,6 +165,13 @@ implementer, and advice about an agreed obligation proposes no new one. Where an
 item genuinely names nothing the pack carries it is reviewer-originated scope,
 and the baseline's `none` path is the right one for it.
 
+This section is the one place an obligation-traced finding is `advisory`, and
+both provenance contracts name it — `#finding-provenance-must` in the delegation
+baseline and `#provenance-and-routing` in the Drift Protocol. There the trace
+class bounds which findings may block, and the declared severity settles whether
+one does, so an item carried under this section is not also a defect forcing
+`REVISE` elsewhere.
+
 **A cycle that reruns one reviewer keeps the others' findings.** The pack is the
 cycle's record, not the rerun's: a reviewer that passed is not re-run, its
 verdict stands, and its advice stands in the same pack the next stage reads.

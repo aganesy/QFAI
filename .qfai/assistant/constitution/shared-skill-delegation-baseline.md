@@ -216,7 +216,9 @@ Report an unsupported Article VII route as advisory and follow the installed con
 - **Integrity is not record class.** Evidence copied from another round or a sibling row, an anchor resolving to a run other than the one it names, and a false `Authored/edited under review` or `Recommended and unadjudicated` attestation claim work that was not done or independence the reviewer lacked. `agents/qa-gatekeeper.md` and the response rules below refuse a `PASS` built on them,
   so they stay `blocking` as `defect:code-quality` and are never filed as `record:*` — which covers an honestly produced record that is merely wrong.
 - A `none` advisory takes the Change Request / Open Question path (`.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`); a `record:*` advisory takes the queue above. Neither goes to the implementer.
-- Only `blocking` findings — those citing a behaviour-governing obligation or a defect class — force `REVISE`.
+- Only `blocking` findings force `REVISE`, and only a finding citing a behaviour-governing obligation or a defect class may be one. **The trace class bounds which findings may block; the severity is declared, and it settles whether one does.** Read as "an obligation trace is blocking", the same item was a discussion-blocking defect to one reviewer and carried advice to the next.
+- An obligation-traced finding is recorded `advisory` where a named section places the work outside the reviewed stage. The discussion review's implementation precision is that section
+  (`.qfai/assistant/constitution/review-convergence.md#discussion-review-precision`): the obligation is agreed, and what the advice is about is how a later stage implements it, so the finding is carried to that stage rather than demanded here. Nothing else lowers a behaviour-governing finding to `advisory`.
 
 ### Reviewer budget exhausted
 

@@ -95,9 +95,15 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
    a pack a review just ran against; the one-revision form compares that revision
    with the working tree.
 
-   Where the diff is empty the verdicts describe the pack as it stands. Where it
-   is not, and where the revision is a working-tree hash, they may describe an
-   earlier state: disposition what still applies, and record the ones an edit
+   **Only the first row's diff is evidence.** Where the pack is tracked and that
+   diff is empty, the verdicts describe the pack as it stands. The other two rows
+   run no comparison at all, so an empty result there is the absence of an answer
+   rather than one. A tracked pack that has gained an untracked file is the same
+   case for that file: `git diff` reports tracked content, and an addition shows
+   in `git status --untracked-files` instead.
+
+   Where the diff is not empty, and wherever no comparison was possible, the
+   verdicts may describe an earlier state: disposition what still applies, and record the ones an edit
    answered as answered rather than carrying them forward as open findings about
    text that no longer exists. Unrelated repository content moving does not make
    a finding stale, which is why the question is asked over the pack's own paths
