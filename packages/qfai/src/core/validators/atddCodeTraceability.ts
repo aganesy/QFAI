@@ -45,7 +45,7 @@ function narrowToScope(
   result: AtddCodeTraceabilityResult,
   scope: SpecScope | undefined,
 ): AtddCodeTraceabilityResult {
-  const { testsRoot } = result;
+  const ownerOf = testFileOwner(result);
   if (scope === undefined) {
     return result;
   }
@@ -69,7 +69,7 @@ function narrowToScope(
         // of the spec whose tests hold the misplaced annotation — never saw it,
         // and only an unrelated spec's run did. The unknown-reference path
         // already treats that file as `0002`'s; this one has to agree.
-        const own = testPathSpecNumber(entry.file, testsRoot);
+        const own = ownerOf(entry.file);
         if (own !== null && scope.has(own)) return entry;
         return { ...entry, ids: entry.ids.filter(inScope) };
       })
@@ -107,7 +107,7 @@ function narrowToScope(
       const owners = new Set<string>();
       const fromToken = OWNING_SPEC_RE.exec(entry.token)?.[1];
       if (fromToken !== undefined && declaredSpecs.has(fromToken)) owners.add(fromToken);
-      const fromPath = testPathSpecNumber(entry.file, testsRoot);
+      const fromPath = ownerOf(entry.file);
       if (fromPath !== null && declaredSpecs.has(fromPath)) owners.add(fromPath);
       if (owners.size === 0) return true;
       return Array.from(owners).some((owner) => scope.has(owner));
@@ -223,10 +223,10 @@ function unknownOwnerDirs(
   refs: readonly string[],
   specsRoot: string,
   declaredSpecs: ReadonlyMap<string, string>,
-  testsRoot: string,
+  ownerOf: (file: string) => string | null,
 ): string[] {
   const dirs = owningSpecDirs(refs, specsRoot, declaredSpecs);
-  const fromPath = testPathSpecNumber(file, testsRoot);
+  const fromPath = ownerOf(file);
   const own = fromPath === null ? undefined : declaredSpecs.get(fromPath);
   return own === undefined || dirs.includes(own) ? dirs : [...dirs, own];
 }
@@ -261,6 +261,23 @@ function testPathSpecNumber(file: string, testsRoot: string): string | null {
     return null;
   }
   return LAYER_DIRS.has(layer.toLowerCase()) ? (/^spec-(\d{4})$/i.exec(spec)?.[1] ?? null) : null;
+}
+
+/**
+ * The spec a test file's own directory names, at `paths.testsDir` or at a
+ * package's own test root.
+ *
+ * The scan reads every package's acceptance suites, so a package that keeps the
+ * scaffold layout, `packages/checkout/tests/integration/spec-0002/pay.test.ts`,
+ * owns its files the way the central layout does. Reading `paths.testsDir`
+ * alone left such a file ownerless, and a mistyped annotation in it reached
+ * only the run of the spec the typo named.
+ */
+function testFileOwner(result: AtddCodeTraceabilityResult): (file: string) => string | null {
+  return (file) =>
+    testPathSpecNumber(file, result.testsRoot) ??
+    result.testFileSpecOwners.get(path.normalize(file)) ??
+    null;
 }
 
 /** The per-layer directories `qfai atdd scaffold` writes under the tests root. */
@@ -529,7 +546,7 @@ export async function validateAtddCodeTraceability(
       result.unknown,
       result.specsRoot,
       result.declaredSpecDirs,
-      result.testsRoot,
+      testFileOwner(result),
     ),
   );
 
@@ -879,7 +896,7 @@ export async function validateAtddCodeTraceability(
             forbidden.ids,
             result.specsRoot,
             result.declaredSpecDirs,
-            result.testsRoot,
+            testFileOwner(result),
           ),
         },
       ),
@@ -907,7 +924,7 @@ export async function validateAtddCodeTraceability(
             forbidden.ids,
             result.specsRoot,
             result.declaredSpecDirs,
-            result.testsRoot,
+            testFileOwner(result),
           ),
         },
       ),
@@ -935,7 +952,7 @@ export async function validateAtddCodeTraceability(
             forbidden.ids,
             result.specsRoot,
             result.declaredSpecDirs,
-            result.testsRoot,
+            testFileOwner(result),
           ),
         },
       ),
@@ -1089,7 +1106,7 @@ function buildUnknownIssues(
   unknown: AtddUnknownRef[],
   specsRoot: string,
   declaredSpecs: ReadonlyMap<string, string>,
-  testsRoot: string,
+  ownerOf: (file: string) => string | null,
 ): Issue[] {
   if (unknown.length === 0) {
     return [];
@@ -1126,7 +1143,7 @@ function buildUnknownIssues(
           // `file` is the test carrying the typo — what the operator edits —
           // but a `tests/**` path has no spec owner, so without this the
           // finding survived every `--spec` filter.
-          { relatedFiles: unknownOwnerDirs(entry.file, refs, specsRoot, declaredSpecs, testsRoot) },
+          { relatedFiles: unknownOwnerDirs(entry.file, refs, specsRoot, declaredSpecs, ownerOf) },
         );
       }
       if (entry.kind === "tc") {
@@ -1139,7 +1156,7 @@ function buildUnknownIssues(
           refs,
           "change",
           "spec 側に TC を定義するか、テスト注釈を正しい ID へ修正してください。",
-          { relatedFiles: unknownOwnerDirs(entry.file, refs, specsRoot, declaredSpecs, testsRoot) },
+          { relatedFiles: unknownOwnerDirs(entry.file, refs, specsRoot, declaredSpecs, ownerOf) },
         );
       }
       if (entry.kind === "conDb") {

@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A README only where a page is published** (#2010). Four were tracked; two were
+  pages nobody lands on. `.agents/rules/README.md` held the rules register, which
+  a second file can only keep in step by hand — the surface suite now reads each
+  rule's own first heading, so a rule cannot be missing from a list. Its
+  "Adding a rule" steps moved to `root-additions-policy.local.md`, and its
+  Windows symlink section is gone: `check-tracked-symlinks.mjs` prints the same
+  steps when it fails. `.instruction/README.md` ruled on that directory, so the
+  ruling is a rule — `.agents/rules/instruction-tree.md`.
+  `scripts/check-tracked-readmes.mjs` fails on a tracked README outside the
+  project's own page and the one npm publishes, and on a listed page that stops
+  being tracked.
+
 - **The root assistant tree is linked at the assets the package ships** (#1915, #1916).
   `.qfai/assistant/**` was a byte copy of `packages/qfai/assets/init/.qfai/assistant/**`,
   kept in step by a sync script and a tracked-tree diff. It is thirteen symlinks
@@ -156,6 +168,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Verify repository-fact sources, use planning-stage precision and apply targeted
   edits in discussion review cycles (#1818).
+
+- **The discussion profile reads a pack's design direction against the
+  `DESIGN.md` schema** (#1905). On a visual surface a discussion pack records
+  the direction `/qfai-sdd` Phase 0 turns into `DESIGN.md`, and nothing
+  checked it until Phase 0 wrote the file, after the pack had closed. A pack
+  could propose `visual.colors.highlight` or an archetype outside the eight,
+  and `validate --profile discussion` passed. `QFAI-DPACK-011` (warning) now
+  reads the forms that name a key without doubt — a fenced YAML block under a
+  `DESIGN.md` section, a code span holding a dotted key path, and an
+  `archetype:` list item — against the same key tree the parser rejects
+  unknown keys with, and names each key or value the schema lacks. Prose is
+  not read, and cli-only and non-ui packs are skipped.
 
 - **A reviewer may demand more work only on the concrete artifacts** (#1809).
   A reviewer could ask for another business rule, quality target, policy or
@@ -389,6 +413,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with no UI contract is left to the readiness gate, which already reports it,
   and `region` stays prose: a screen contract names a screen, not its parts.
 
+- **The Markdown and Mermaid lanes skip other checkouts** (#1895).
+  `pnpm lint:md` walked `.claude/worktrees/**`, so a worktree of another branch
+  had its findings reported against this one. That happened locally and never
+  in a fresh CI clone. The Markdown lint now ignores `.claude/worktrees/**`, and
+  the Mermaid lane (shipped, and used by adopters' docs workflow) no longer
+  descends into a directory that holds its own `.git`, which is how a worktree
+  or a nested clone is marked. Prettier already skips the path through
+  `.gitignore`, and the schema lane matches paths from the tree's root.
+
 - **A lowercase CDATA lookalike hides what follows it** (#1866). GitHub renders
   `<![cdata[` exactly as it renders the spelled form: the content is hidden, and
   an unclosed opener hides the rest of the document. The body readers matched
@@ -397,6 +430,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   entry-point directive after one was read as operative while `qfai init` added
   no visible copy. The three readers that dispatch an HTML block now match the
   opener without regard to case; the inline raw-HTML forms are unchanged.
+
+- **A package that keeps the scaffold layout owns its own test files** (#1702).
+  The ATDD scan reads each package's acceptance suites, but a test's owning spec
+  was read only from `<paths.testsDir>/<layer>/spec-NNNN/`. A file at
+  `packages/checkout/tests/integration/spec-0002/pay.test.ts` had no owner, so a
+  mistyped annotation in it reached only the run of the spec the typo named,
+  and `--spec 0002` never reported it. The owner is now the `spec-NNNN`
+  directory directly inside the layer directory the scan resolves for the file,
+  at any test root. The ATDD findings and the scope filter every scoped run
+  applies both read it. A `spec-NNNN` directory above the layer directory, or
+  deeper inside it, still owns nothing.
 
 - **The entry points no longer say this repository installs its own package**
   (#1921). `CLAUDE.md` and `AGENTS.md` both described `.qfai/` as the result of
@@ -492,6 +536,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Completion and implementation review stop conditions now include demonstrated
   regressions against named constitution or catalog rules (#1799). New upstream
   product obligations remain advisory.
+
+- **The spec-0013 template-slot record has an ID of its own** (#1942). It was
+  filed as `CR-20260913-0007`, an ID an approved record for `spec-0015` already
+  carries, so every reference to it was ambiguous. It is now
+  `CR-20260913-0011`, with every reference moved. `CR-20260913-0003` also
+  orders itself behind the other open `spec-0013` records, names
+  `CR-20260913-0009` as the ledger repair, appends no row under option `1c`
+  while that option holds its new requirement `planned`, and authorises the
+  `spec-0013/07_Decisions.md` write option `2c` needs.
+
+  Three records hold them. `CR-20260913-0011` and `CR-20260913-0008` are
 
 - Generated TypeScript review guidance flags dropped promises and preserves
   propagation rather than requiring catches for unnamed failures. The repository
@@ -898,6 +953,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `parallelization-policy.md` and the skill now say items 6, 7 and 8 share the
   revision. No completed row in this repository changes result.
 
+- Ten spec ledgers now use the template's columns, and each has a `todo` E2E
+  row for every story that had none: `spec-0001`, `-0003`, `-0005`, `-0006`,
+  `-0007`, `-0008`, `-0009`, `-0011`, `-0016` and `-0017` (#1750). Before
+  this, a Change Request that re-derived one of these packs would also add the
+  rows through Phase 2b, and nothing recorded or authorized them. Existing rows
+  keep every cell they had. The columns they lacked read `-`, which the
+  validators read the same as the absent column. The ledgers of packs with an
+  open Change Request are left for those records to repair.
+
 - **A UI contract entry no screen is read from is reported** (#1734). Every
   consumer of UI contracts reads screens the same way: it keeps the first entry
   for each `id`, skips an entry with no `id` or no `route`, and reads no screen
@@ -924,6 +988,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `Round N: RED failure mode` is now checked against that round's RED. An
   entry that states the field once, without the prefix, still answers for every
   round that states none.
+
+- **The execution ledger says how a UI contract reaches it** (#1902). The ledger
+  has obligation columns for test cases, user stories and API contracts, and
+  none for a UI contract, with nothing saying why. The template now says a
+  `CON-UI-*` has no group and no column: each screen obligation it declares is
+  a test case in the spec that owns the screen, carried by that test case's
+  row. It also says no gate reports an untested UI contract the way
+  `QFAI-ATDD-113` reports an API one, so the test case is written with the
+  contract.
 
 - **A ledger row observes the property it owns** (#1700). One prototyping-loop
   test asserted five properties of the cycle-0 hard reset in a single case, and
@@ -1083,14 +1156,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reports every marked skeleton it reads, and it reads the acceptance
   directories as well as `testFileGlobs`, as the coverage check it runs does.
 
-- **The execution ledger says how a UI contract reaches it** (#1902). The ledger
-  has obligation columns for test cases, user stories and API contracts, and
-  none for a UI contract, with nothing saying why. The template now says a
-  `CON-UI-*` has no group and no column: each screen obligation it declares is
-  a test case in the spec that owns the screen, carried by that test case's
-  row. It also says no gate reports an untested UI contract the way
-  `QFAI-ATDD-113` reports an API one, so the test case is written with the
-  contract.
+- **A shared decision record can cite the spec items it rests on** (#1899).
+  `QFAI-LAYER-100` and `TRACE_SHARED_SCOPE_VIOLATION` forbid spec-local IDs
+  anywhere in `_policies`, prose included. A cross-spec decision could not
+  name the rules it was measured against, and a rationale rewritten to avoid
+  them could not be checked. Inside a `### DR-*` record of
+  `_policies/08_Decisions.md`, the `Context` and a new `Evidence` bullet may
+  now name those items. Every other place in `_policies` stays under both
+  rules. The template says so, and says a table applying one judgement across
+  many specs' test cases belongs under `.qfai/evidence/`, cited from
+  `Evidence`.
 
 - **The audited evidence hash says what its extraction produces, not only which
   fields it reads** (#1616). Naming the fields settled which lines are taken and
@@ -1297,6 +1372,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   of the completion certificate's evidence digests. They hold the previous
   loop's evidence, and sealed into the next certificate, removing one failed
   `certify --check` although nothing of the new loop had changed.
+
+- **A rule summary stays with the master it describes** (#1889). Five gaps
+  remained after `init` stopped refreshing the summary of a master the adopter
+  edited:
+  - `--force` rebuilt the Copilot instructions from the release's summaries
+    whatever the masters held. The rebuilt file now keeps its own bullet for a
+    master the adopter kept.
+  - The set of masters counted as installed came from a plan made before the
+    update pass, so a planned replacement that then kept the adopter's master
+    still moved its summary. The entry points are now refreshed from what the
+    update pass actually did.
+  - A `---` under a list item was read as a setext heading and ended the
+    managed Copilot rule list early. A thematic break now ends nothing.
+  - Where one `/qfai-implement` run writes its grilling block into two
+    evidence files, the gate now also compares that run's `grilling(…)` rows
+    and `none` marker in each file's Work Orders Summary.
+  - The execution skills load the grilling primitive before the confidence
+    check, not only before a preflight round.
 
 - **An id a non-JavaScript test holds as data is not a reference** (#1770). The
   ATDD scan counts an annotation in a comment or in a test's name, and blanks
