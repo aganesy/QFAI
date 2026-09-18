@@ -1266,9 +1266,14 @@ describe("a link that does not resolve still says why", () => {
       await rm(skillsDir, { recursive: true, force: true });
       await symlink(elsewhere, skillsDir, "dir");
 
+      // The link stays inside the project, so it is a layout rather than
+      // damage. The wrappers are still there and the canonical under the link
+      // is not, so what is reported is the path they cannot reach.
       const entry = await finding(root);
-      expect(entry?.message).toContain("a canonical ancestor is a symlink");
-      expect(entry?.message).not.toContain("dangling ->");
+      expect(entry?.message).toContain(".qfai/assistant/skills/qfai-atdd");
+      // The ancestor is not blamed: it resolves, and what it resolves to has
+      // no canonical under it, which is what the wrappers report.
+      expect(entry?.message).not.toContain("a canonical ancestor");
     });
   });
 });
@@ -1396,7 +1401,7 @@ describe("a resolving link is a finding, not a reason to stop", () => {
     },
   );
 
-  it("reports a resolving canonical ancestor with every wrapper gone", async () => {
+  it("reports nothing for a resolving canonical ancestor with every wrapper gone", async () => {
     // The leaves are absent, so the broken-ancestor probe finds nothing — and
     // the integration directories exist, so no missing-directory finding either.
     // A surface where no skill can load passed clean.
@@ -1413,8 +1418,9 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       }
       await seedInitRecord(root);
 
-      const found = await finding(root);
-      expect(found?.message).toContain("a canonical ancestor is a symlink");
+      // An in-project ancestor link is accepted, and this case removed every
+      // wrapper, so there is nothing left for the rule to report.
+      expect(await finding(root)).toBeUndefined();
     });
   });
 
@@ -1761,11 +1767,12 @@ describe("a broken canonical grandparent is found too", () => {
   });
 });
 
-describe("a canonical is a real document, not a link to one", () => {
-  it("reports a canonical ancestor redirected inside the project", async () => {
-    // Following the ancestor lands on a real leaf, so the leaf check passes,
-    // and both resolved paths land in the same place inside the project — so
-    // neither comparison has anything to say.
+describe("a canonical is the document it names, by link or in place", () => {
+  it("accepts a canonical ancestor redirected inside the project", async () => {
+    // Following the ancestor lands on a real leaf, and the target stays inside
+    // the project, so the document an agent opens is one this repository owns
+    // and a reviewer can read. That is vendoring, and the rule is for the link
+    // that leaves, does not resolve, or renames.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
@@ -1778,7 +1785,7 @@ describe("a canonical is a real document, not a link to one", () => {
       await symlink(elsewhere, skillsDir, "dir");
 
       const found = await finding(root);
-      expect(found?.message).toContain("a canonical ancestor is a symlink");
+      expect(found).toBeUndefined();
     });
   });
 
@@ -1909,6 +1916,102 @@ describe("a target can resolve and still be unusable", () => {
 
       const found = await finding(root);
       expect(found?.message).toContain("unreadable");
+    });
+  });
+});
+
+describe("a canonical vendored by link is a layout, not damage", () => {
+  it("accepts a canonical skill linked at the same skill elsewhere in the project", async () => {
+    // Pointing the assistant tree at the assets a package ships is how a
+    // repository reads the documents it publishes rather than a copy of them.
+    // The file an agent opens is one the project owns and a reviewer can read,
+    // which is what the rule was protecting.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const vendored = path.join(root, "vendor", "skills", "qfai-atdd");
+      await mkdir(vendored, { recursive: true });
+      await writeFile(path.join(vendored, "SKILL.md"), "# qfai-atdd", "utf-8");
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      await rm(canonical, { recursive: true, force: true });
+      await symlink(vendored, canonical, "dir");
+
+      expect(await finding(root)).toBeUndefined();
+    });
+  });
+
+  it("accepts a canonical layer whose whole directory is linked inside the project", async () => {
+    // The shape a vendored tree actually takes: one link per layer, with the
+    // skill names underneath it unchanged.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+      const vendored = path.join(root, "vendor", "skills");
+      await mkdir(path.join(vendored, "qfai-atdd"), { recursive: true });
+      await writeFile(path.join(vendored, "qfai-atdd", "SKILL.md"), "# qfai-atdd", "utf-8");
+      await rm(skillsDir, { recursive: true, force: true });
+      await symlink(vendored, skillsDir, "dir");
+
+      expect(await finding(root)).toBeUndefined();
+    });
+  });
+
+  it("still reports a canonical linked at a different skill", async () => {
+    // The hazard the rule exists for, and the one an in-project link does not
+    // make safe: the wrapper says `qfai-atdd` and the agent reads `qfai-verify`.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
+      await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      await rm(canonical, { recursive: true, force: true });
+      await symlink(
+        path.join(root, ".qfai", "assistant", "skills", "qfai-verify"),
+        canonical,
+        "dir",
+      );
+
+      const found = await finding(root);
+      expect(found?.message).toContain("canonical document is a symlink to");
+    });
+  });
+
+  it("still reports a SKILL.md linked at another skill's document", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
+      await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
+      const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
+      await rm(doc, { force: true });
+      await symlink(
+        path.join(root, ".qfai", "assistant", "skills", "qfai-verify", "SKILL.md"),
+        doc,
+        "file",
+      );
+
+      const found = await finding(root);
+      expect(found?.message).toContain("canonical SKILL.md is a symlink to");
+    });
+  });
+
+  it("still reports a canonical linked out of the project", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+      await mkdir(path.join(outside, "qfai-atdd"), { recursive: true });
+      await writeFile(path.join(outside, "qfai-atdd", "SKILL.md"), "# elsewhere", "utf-8");
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      await rm(canonical, { recursive: true, force: true });
+      await symlink(path.join(outside, "qfai-atdd"), canonical, "dir");
+
+      const found = await finding(root);
+      expect(found?.message).toContain("canonical document is a symlink out of the project");
+      await rm(outside, { recursive: true, force: true });
     });
   });
 });

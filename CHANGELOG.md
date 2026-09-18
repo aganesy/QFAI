@@ -6,6 +6,61 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The root assistant tree is linked at the assets the package ships** (#1915, #1916).
+  `.qfai/assistant/**` was a byte copy of `packages/qfai/assets/init/.qfai/assistant/**`,
+  kept in step by a sync script and a tracked-tree diff. It is thirteen symlinks
+  now, so an improvement to a shipped skill reaches the agents working in this
+  repository with no sync step and the two cannot disagree. Seven paths stay real
+  files: the four Stage 0 catalog documents a project owns, named by
+  `ADOPTER_OWNED_ASSETS`, and the migration memos an upgrade writes here.
+  `scripts/link-assistant-tree.mjs` creates and verifies the links and reports a
+  path that exists here and nowhere in the package; `pnpm ci:lint` runs its check.
+  `scripts/sync-init-to-root.mjs` is reduced to seeding the two files a project
+  owns.
+
+- **A guard on the mode a link is staged with** (#1920). `ln -s` in Git Bash on
+  Windows copies the target instead of linking to it unless
+  `MSYS=winsymlinks:nativestrict` is set, and the copy is byte-identical — so
+  every check that reads content passes, and nothing says so until the master
+  moves and the copy stays behind. `scripts/check-tracked-symlinks.mjs` reads
+  the index, where `120000` tells a link from a regular file, and runs in
+  `ci:lint:scans`. Which paths must be links is derived from the shipped rules
+  directory and the entry point onto it, so a rule added later is covered
+  without a second list. A checkout that materialised links as text files is a
+  property of the machine and is not reported.
+
+- **A canonical assistant tree may be vendored by link** (#1927). `QFAI-LINK-001`
+  read any symlink in `.qfai/assistant/**` as damage, so a project that points
+  the tree at documents it keeps elsewhere was told its skills and agents were
+  not applied at all. A link that stays inside the project and keeps the name it
+  was written under is now a layout. The three shapes the rule was written for
+  still fail: a target outside the project, a link that does not resolve, and a
+  link that renames — `skills/qfai-atdd` pointed at `skills/qfai-verify` means
+  the wrapper says one skill and the agent reads another. An integration
+  directory such as `.claude/skills` is unchanged: its wrappers carry relative
+  targets, so a link there re-bases every one of them. `QFAI-LINK-002` follows a
+  linked directory inside the tree, so citations into a vendored layer resolve.
+
+- **`qfai init` refuses a destination that resolves into its own assets** (#1919).
+  A repository that vendors the assistant tree by link has `.qfai/assistant/**`
+  resolving to `assets/init/.qfai/assistant/**`, so a run there wrote the shipped
+  documents through the link — an edit to the package's own assets, made by the
+  command that installs a copy of them. The run now stops and says which path
+  resolved where. Detection is by resolution rather than by a path or a
+  repository name, and it fails open when either side cannot be resolved, so an
+  ordinary project is unaffected.
+
+- **An adoption bar for a change that adds a rule, skill or gate** (#1813). Every
+  improvement to this framework has added one, and nothing asked whether the
+  addition beat the one-line instruction it replaces. A pull request proposing
+  one now records three things in its description: the one-line form carrying
+  the operative clause, what the proposal adds beyond that line, and the
+  safety-floor items it touches. Where nothing goes beyond the line, the line is
+  what ships. `REVIEW.md` states it and the pull-request template asks for it;
+  the body reader that already preserved an authored removal list now preserves
+  this answer by the same route, so neither is rewritten from the template. It
+  binds this repository, not what an adopter builds.
+
 - **Repository-specific halves of four rules split into overlays** (#1917).
   `distributed-surface`, `version-discipline`, `temporary-files` and
   `root-additions-policy` each governed an adopter's repository and this one
@@ -66,6 +121,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   existing code, including duplicates or overlap, before the standard library,
   platform and installed dependencies. One bullet covers detection and reuse.
 
+- **The minimal-implementation reminder points at the floor instead of listing
+  it** (#1815). After each write, the hook asks about repository reuse, refers to
+  the entire floor in the rule's § 2 and names `interface-clarity.md` for screen
+  or terminal changes. Referring to the floor keeps the reminder from promising
+  a shorter obligation set. Existing projects keep their old reminder text.
+
 - **Repository reuse is the second of seven minimal-implementation rungs**
   (#1795). Check the codebase before the standard library, platform and installed
   dependencies. Existing repository code can answer the accepted behavior
@@ -96,6 +157,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Verify repository-fact sources, use planning-stage precision and apply targeted
   edits in discussion review cycles (#1818).
 
+- **A reviewer may demand more work only on the concrete artifacts** (#1809).
+  A reviewer could ask for another business rule, quality target, policy or
+  piece of architecture without limit, and each such demand made the next review
+  cycle larger. The delegation baseline now admits a demand for more on business
+  flows, user stories, acceptance criteria, examples and test cases, and not on
+  business rules, non-functional requirements, policies and decisions, or
+  architecture. Two demands stay admissible anywhere: a recorded item carrying
+  its mandatory pair, and a safety-floor item. Any other demand is recorded as
+  advisory. The drift protocol and the six reviewer cards point at the rule.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
@@ -112,6 +183,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the SDD profile hears it, since the columns are that stage's to write.
 
 ### Changed
+
+- **Grilling outside the discussion stage is delegated between agents.** A
+  griller interviews the authors, and every decision the user does not have to
+  make takes the griller's recommendation. Only a critical decision reaches the
+  user: one that contradicts a spec, a contract or a recorded decision, one
+  whose effect cannot be taken back, or product intent nothing written states.
+  Each adopted decision is recorded, and the stage's final report lists them,
+  so the user can overturn one later. Reviewers no longer return REVISE for an
+  adopted decision that is not critical. The request bounds the tree: a
+  decision that would only add something the request did not ask for is not
+  asked. A delegated session ends in the new ending `adopted`. The discussion
+  stage, and a session the user starts, still put every decision to the user.
 
 - **The worker-setting comparison is re-measured, on the project that is now the
   largest** (#1887). The artifact recorded `core` at 145 test files against a tree
@@ -231,17 +314,55 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   replaces the line only while it is exactly what 1.12.0 wrote, and leaves a line
   the project edited as it is.
 
+### Removed
+
+- **The design-fidelity check and its eleven rule codes.** `QFAI-FID-001`
+  through `QFAI-FID-011` ran in the `prototyping` and `full` profiles and could
+  not fire on anything QFAI produces. The check read `.qfai/evidence/**` and
+  `.qfai/review/**` for Markdown under a `Fidelity Scorecard` heading, and no
+  command, skill or template writes that heading. The prototyping capture the
+  codes were meant to gate is covered by the `taskFidelity` keywords instead.
+
+  The eleven numbers are retired rather than freed. Taking one back would make
+  a published code mean two different checks across releases.
+
+  `uiux.warning_as_error_override` goes with it, its only reader. An unknown key
+  under `uiux` is ignored, so a configuration that still sets it keeps loading.
+
 ### Fixed
 
-- **The active-pointer record can be carried out in the order it states**
-  (#1943). `CR-20260913-0004` puts `spec-0010/TDD-0017` and its split sibling in
-  its blocked set, says their split waits on a `spec-0010` ledger repair no
-  record carries yet, and hands both through `/qfai-atdd` before
-  `/qfai-implement`. Its ATDD pass splits the Integration case that runs the
-  absent and missing pointer together, takes `spec-0013/TDD-0016` only once the
-  record blocking it is applied, and says how the preflight releases this
-  record's own rows before it is applied. It also names the writer-side
-  contradiction it leaves, raised on its own.
+- **A reminder hook's message reaches a project that installed an earlier
+  release** (#2003). `qfai init` wrote each message into `.claude/settings.json`
+  and never touched a group that was already there, so an upgraded project kept
+  the old text for good, even after the rule it restates changed. The settings
+  file now holds only the event, the matcher, the marker and a fixed `node -e`
+  reader. The messages live in `.agents/rules/reminders.json`, which `qfai init`
+  refreshes like a rule master, wherever the project has not edited it. On the
+  next run a group still exactly as an earlier release wrote it is replaced
+  where it stands. A group the project edited is kept, and the run names it. A
+  missing or unreadable message file prints nothing and exits 0.
+
+- **A removal answer written as a heading is pinned** (#1893). A heading deeper
+  than the section's own does not end that section, so the reader that judges
+  the answer and the rebuild that replaces it have to stop at the same place.
+  Three forms now stand in the release-body cases, each with prose after the
+  section: an ATX heading at level three and at level six, and a setext one.
+
+- **A lowercase CDATA lookalike hides what follows it** (#1866). GitHub renders
+  `<![cdata[` exactly as it renders the spelled form: the content is hidden, and
+  an unclosed opener hides the rest of the document. The body readers matched
+  only the uppercase spelling, so a removal answer written inside a lowercase
+  block was accepted while no reader of the rendered body could see it, and an
+  entry-point directive after one was read as operative while `qfai init` added
+  no visible copy. The three readers that dispatch an HTML block now match the
+  opener without regard to case; the inline raw-HTML forms are unchanged.
+
+- **The entry points no longer say this repository installs its own package**
+  (#1921). `CLAUDE.md` and `AGENTS.md` both described `.qfai/` as the result of
+  an npm install of QFAI. There is no such dependency, and
+  `scripts/check-not-a-dependency.mjs` refuses one. They now say where each tree
+  comes from: the assistant tree is generated from the init assets by
+  `pnpm sync:ssot`, and the rule masters are symlinks to their shipped copies.
 
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
@@ -278,6 +399,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Generated TypeScript review guidance flags dropped promises and preserves
   propagation rather than requiring catches for unnamed failures. The repository
   copy matches the generated block (#1806).
+
+- **The active-pointer record can be carried out in the order it states**
+  (#1943). `CR-20260913-0004` puts `spec-0010/TDD-0017` and its split sibling in
+  its blocked set, says their split waits on a `spec-0010` ledger repair no
+  record carries yet, and hands both through `/qfai-atdd` before
+  `/qfai-implement`. Its ATDD pass splits the Integration case that runs the
+  absent and missing pointer together, takes `spec-0013/TDD-0016` only once the
+  record blocking it is applied, and says how the preflight releases this
+  record's own rows before it is applied. It also names the writer-side
+  contradiction it leaves, raised on its own.
 
 - Repository async guidance requires awaited or returned promises and points to
   the shared implementation rule for consuming callers, kept failures and
@@ -570,6 +701,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   prototyping loop captures from and the design audit reads keeps only the
   first, and the second is named. The prototyping profile, which certification
   accepts, reports the finding as well.
+
+- **The completion gate reads `RED failure mode` as the round field the skill
+  writes** (#1633). `round-evidence.md` puts the field under the round prefix,
+  because a blocking revision opens a round on its own tree, and one row-level
+  field cannot hold a falsifiability proof for one round and an observed RED for
+  the next. The gate read only the row-level form, so an entry written as the
+  skill says was reported as having no failure mode. Each round's
+  `Round N: RED failure mode` is now checked against that round's RED. An
+  entry that states the field once, without the prefix, still answers for every
+  round that states none.
 
 - **A ledger row observes the property it owns** (#1700). One prototyping-loop
   test asserted five properties of the cycle-0 hard reset in a single case, and

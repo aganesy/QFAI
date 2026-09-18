@@ -278,9 +278,9 @@ describe("generate-emitted-rule-codes.mjs", () => {
     expect(errorOnly).toContain('"QFAI-EXAMPLE-061"');
   });
 
-  // `designFidelity.ts` picks between `QFAI-FID-010` and `QFAI-FID-011` on a
-  // `const` and hands the result to `issue()`, so an identifier-only resolver
-  // saw neither code and a waiver naming them read as unknown.
+  // A validator that picks its code on a `const` and hands the result to
+  // `issue()` is invisible to an identifier-only resolver, so a waiver naming
+  // either code reads as unknown.
   it("resolves both branches of a conditional constant", async () => {
     const dir = await newTempDir();
     const output = path.join(dir, "emittedRuleCodes.ts");

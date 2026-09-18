@@ -1116,6 +1116,22 @@ describe("a no-question run opens every node, on every surface that says so", ()
 });
 
 describe("this repository's pull-request description", () => {
+  it("keeps the operative adoption bar in the existing policy and template", async () => {
+    const policy = await readFile(path.join(ROOT, "REVIEW.md"), "utf-8");
+    const section = policy.split(/^## A pull request that adds a rule, skill or gate\r?\n/m)[1];
+    expect(section, "the existing review policy has no adoption bar").toBeDefined();
+    expect(section?.split(/^## /m)[0]?.replace(/\s+/g, " ").trim()).toBe(
+      "It records three things in its description: 1. **The one-line form**: the proposal reduced to a single line that still carries its operative clause. 2. **What it adds beyond that line.** 3. **The safety-floor items it touches**, from `.agents/rules/minimal-implementation.md` § 2. Where the proposal adds nothing beyond the line, the line is what ships. Where a comparable requirement has already been run, the description cites that run's review round-trips and change size. This binds changes to this repository, not what an adopter builds with it.",
+    );
+    const template = await readFile(path.join(ROOT, ".github/PULL_REQUEST_TEMPLATE.md"), "utf-8");
+    expect(template).toContain("## Adoption bar");
+    expect(template).toContain("Required when this PR adds a rule, skill or gate");
+    expect(template).toContain("operative clause");
+    expect(template).toContain("What goes beyond the line");
+    expect(template).toContain("Affected safety-floor items");
+    expect(template).toContain("review round-trips and change size");
+  });
+
   it("names removals, explains retained items and states an empty list explicitly", async () => {
     const policy = await readFile(path.join(ROOT, "REVIEW.md"), "utf-8");
     const removalSection = policy.split(/^## What a change made unnecessary\r?\n/m)[1];

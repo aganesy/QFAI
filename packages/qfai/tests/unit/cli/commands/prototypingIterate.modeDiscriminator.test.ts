@@ -42,13 +42,12 @@ const gateSurface = (): Promise<GateSurface> => (cached ??= collectPrototypingGa
  * `issue()` call sites in the reachable graph whose code argument is computed
  * at run time, so no static scan can attribute it. Pinned by module,
  * expression and count: a NEW blind spot fails here instead of silently
- * shrinking the derived gate set. The same three sites are pinned, for the
+ * shrinking the derived gate set. The same sites are pinned, for the
  * same reason, by `tests/validators/ruleCodeUniqueness.test.ts`.
  */
 const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
   ["core/validators/agentDefinition.ts", new Map([["code", 1]])],
   ["core/validators/designAudit.ts", new Map([["finding.ruleId", 1]])],
-  ["core/validators/designFidelity.ts", new Map([["issueCode", 1]])],
 ]);
 
 /** `file: expr x N, expr x N` — the count pins the number of call sites. */
