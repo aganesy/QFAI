@@ -29,6 +29,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -167,5 +168,65 @@ describe("the spelled-out shapes are the ones the validator accepts", () => {
     expect(format.test(POLICY_LEVEL.replace("NNNN", "0004"))).toBe(true);
     // The date form the abstract placeholder invited is exactly what fails.
     expect(format.test("DR-20260808-0002")).toBe(false);
+  });
+});
+
+/**
+ * The ids a decisions file declares twice, each with the lines that declare it.
+ *
+ * A heading declares one id, or a range written `DR-NNNN..NNNN` (spec-scoped
+ * `DR-NNNN-MMMM..MMMM`) that declares every id in it. An id followed by more of
+ * a name — `DR-0106-A` — is not one of those ids.
+ */
+function duplicateDecisionIds(text: string): string[] {
+  const seen = new Map<string, number[]>();
+  text.split(/\r?\n/).forEach((line, index) => {
+    const heading = /^###\s+DR-(\d{4})(?:-(\d{4}))?(?:\.\.(\d{4}))?(?![-\w])/.exec(line);
+    if (heading === null) return;
+    const [, scope = "", own, last] = heading;
+    const first = Number(own ?? scope);
+    const ids: string[] = [];
+    for (let n = first; n <= Number(last ?? first); n += 1) {
+      const number = String(n).padStart(4, "0");
+      ids.push(own === undefined ? `DR-${number}` : `DR-${scope}-${number}`);
+    }
+    for (const id of ids) seen.set(id, [...(seen.get(id) ?? []), index + 1]);
+  });
+  return [...seen]
+    .filter(([, lines]) => lines.length > 1)
+    .map(([id, lines]) => `${id} at lines ${lines.join(", ")}`);
+}
+
+describe("a Decision Record id names one decision", () => {
+  it("is declared once in the policy register and in each spec's decisions", async () => {
+    // A reference to an id declared twice resolves to whichever heading a reader
+    // finds first, so a Change Request superseding it has to name the heading.
+    const files = [
+      ".qfai/specs/_policies/08_Decisions.md",
+      ...(await fg(".qfai/specs/spec-*/07_Decisions.md", { cwd: repoRoot })).sort(),
+    ];
+    const duplicates: string[] = [];
+    for (const file of files) {
+      const text = await readFile(path.join(repoRoot, file), "utf-8");
+      duplicates.push(...duplicateDecisionIds(text).map((entry) => `${file}: ${entry}`));
+    }
+    expect(duplicates, "give the later declaration an id of its own").toEqual([]);
+  });
+
+  it("counts an id declared under two headings, or inside a range, as declared twice", () => {
+    const text = [
+      "### DR-0001: first",
+      "### DR-0002..0004: a range",
+      "### DR-0003: inside the range",
+      "### DR-0001: again",
+      "### DR-0005-0001..0002: spec-scoped",
+      "### DR-0005-0002: inside it",
+      "### DR-0001-A: another name",
+    ].join("\n");
+    expect(duplicateDecisionIds(text)).toEqual([
+      "DR-0001 at lines 1, 4",
+      "DR-0003 at lines 2, 3",
+      "DR-0005-0002 at lines 5, 6",
+    ]);
   });
 });
