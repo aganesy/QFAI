@@ -63,16 +63,13 @@ The directories are a handoff output `spec-0012` requires, the iterate contract
 and the shared policy name them the evidence, and the lookup that reads them
 first reads what both say is there.
 
-**A reset leaves the aggregate copies in place.** `iterate --cycle 0 --force`
-backs up `iter-00/` and removes every `iter-NN/` directory the prototyping
-evidence root lists (`packages/qfai/src/cli/commands/prototypingIterate.ts:867`,
-which calls the helper whose name filter is at `:2406`), and the aggregate
-directories are written only by a capture pass (`:1504`). A loop restarted
-without `--capture` therefore keeps the previous loop's accepted files there, and
-`hasEvidenceFile` (`packages/qfai/src/core/validators/uiEvidenceArtifacts.ts:39-42`)
-accepts them before it looks at any `iter-NN/` directory. A required-path check
-that reads the aggregate directories can pass a new loop on the old loop's
-evidence.
+**A reset moves the aggregate copies aside.** `iterate --cycle 0 --force`
+backs up `iter-00/`, removes every `iter-NN/` directory at the top of the
+prototyping evidence root, and moves `screenshots/` and `html/` aside, so a
+restarted loop starts with no aggregate copy of the previous loop's captures
+(`packages/qfai/src/cli/commands/prototypingIterate.ts`, the cycle-0 reset).
+`hasEvidenceFile` (`packages/qfai/src/core/validators/uiEvidenceArtifacts.ts`)
+still reads the aggregate directories before any `iter-NN/` directory.
 
 The reset does not reach an `iter-NN` directory nested deeper either, and the
 same function accepts a file there too: it walks the whole prototyping root and
@@ -157,10 +154,9 @@ contract's handoff output to settle a question neither of them is party to.
 Option 1 is recommended because it is the one outcome under which a
 required-path check reads only evidence the current loop produced. A cycle-0
 reset removes the `iter-NN/` directories at the top of the evidence root and
-leaves the aggregate directories and anything nested deeper, so a check that
-reads either can pass a restarted loop on the previous loop's files. Option 2
-accepts that; closing it takes a change to the iterate command's reset, a
-behaviour `spec-0012` specifies and this pack does not. Option 1 also settles
+moves the aggregate directories aside, but leaves anything nested deeper, so a
+check that walks the whole root can pass a restarted loop on a stale copy
+there. Option 2 accepts that. Option 1 also settles
 `EVID-PROT2` and `spec-0012`'s layout statements, which rule out the image pair
 an iteration directory holds while the capture pass writes it there and the
 lookup reads it.
@@ -176,8 +172,8 @@ under every option.
 
 Option 2 keeps what the iterate contract and the shared policy already say, for
 two statements and a waived `exception`. It is the better answer if a gate that
-passes a restarted loop on the previous loop's files is acceptable until the
-reset changes, and the narrowed criterion then says what a reader should expect:
+accepts a stale copy nested below the evidence root is acceptable, and the
+narrowed criterion then says what a reader should expect:
 evidence accepted through the aggregate directories cannot say which iteration
 produced it.
 
@@ -221,12 +217,23 @@ produced it.
   blocked set meets this one, but each authorizes a `spec-0014` re-derive over
   the same `tdd/test-list.md` and `09_delta.md`, so the three are ordered:
   approved action 1 runs this record's `spec-0014` rerun after theirs.
+- Overlapping under option 1: `CR-20260912-0003`. Its options edit
+  `spec-0012/01_Spec.md`, `03_Acceptance-Criteria.md`, `05_Examples.md`,
+  `09_delta.md` and `tdd/test-list.md`, and `_policies/05_Contracts.md`,
+  `06_Glossary.md` and `07_Constraints.md`, all of which option 1 edits too.
+  This record assumes that one has landed: option 1's `spec-0012` rerun and
+  its policy edits run over the text its approved outcome leaves. If that
+  record is rejected, option 1 is restated against the text as it then stands
+  before it applies, never applied as written.
 
 ## Impact scope
 
 - Specs: `spec-0014`; and `spec-0012`, `spec-0004` and `_policies` under
   option 1
-- Plans: `none`
+- Plans: `spec-0012/10_Plan.md` under option 1. Its current state says the loop
+  captures no PNG or HTML, that the flat image layout was purged, and that
+  `TDD-0384` is a deferred per-spec migration, each of which the re-derived
+  layout contradicts, so the rerun's Phase 3 rewrites those passages
 - Tests: `spec-0014/TDD-0033` — `packages/qfai/tests/validators/uiEvidenceArtifacts.test.ts`;
   and under option 1 `spec-0012/TDD-0384`, whose test case the `spec-0012`
   rerun re-derives, and the `done` rows of other specs that action 3
@@ -255,6 +262,7 @@ produced it.
   | `.qfai/specs/spec-0012/09_delta.md`               | option 1        |
   | `.qfai/specs/spec-0012/tdd/test-list.md`          | option 1        |
   | `.qfai/specs/spec-0012/16_Traceability-ledger.md` | option 1        |
+  | `.qfai/specs/spec-0012/10_Plan.md`                | option 1        |
   | `.qfai/specs/spec-0004/tdd/test-list.md`          | option 1        |
   | `.qfai/specs/spec-0004/09_delta.md`               | option 1        |
   | `.qfai/specs/_policies/06_Glossary.md`            | option 1        |
@@ -299,8 +307,8 @@ the `iter-NN/` directories at the top of the evidence root — verify reads only
 those while the mirror keeps writing the aggregate `screenshots/` / `html/`
 directories for handoff, and the shared evidence definition and `spec-0012`'s
 layout statements move with it (option 1) — or keep accepting the aggregate
-copies, with the pack's criterion narrowed to what the check reads, a restarted
-loop passing on the previous loop's aggregate files included, and `TDD-0033`
+copies, with the pack's criterion narrowed to what the check reads, a stale
+copy nested below the evidence root included, and `TDD-0033`
 ending as an accepted-risk `exception` (option 2)? Or should the pack withdraw
 its layout obligation altogether (option 3)?
 
@@ -382,7 +390,11 @@ its layout obligation altogether (option 3)?
    ID in `DR-ID`, because `TC-0012-0377` is re-derived. It is at `todo` already
    and has recorded no evidence, so the reset withdraws nothing. This approval
    resets or retires no other `spec-0012` row; the options table says what
-   happens to one that rerun would change.
+   happens to one that rerun would change. `TC-0012-0377` stays an Integration
+   test case, so its test is `/qfai-atdd`'s to write: under option 1,
+   `/qfai-atdd spec-0012` writes it against the re-derived layout after the
+   rerun, and `/qfai-implement spec-0012` then takes `TDD-0384` from `todo`
+   through its cycle from that handoff.
 
 3. Product and test work under `/qfai-implement`, under option 1 only. The
    lookup in `uiEvidenceArtifacts.ts` accepts a screen's file only at

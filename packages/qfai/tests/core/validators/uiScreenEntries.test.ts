@@ -205,6 +205,24 @@ describe("a UI contract entry no screen is read from is reported", () => {
     expect(finding?.message).toContain("is not a mapping");
   });
 
+  it("reports a UI contract that does not parse under the prototyping profile, once under full", async () => {
+    // Every reader of UI contracts skips a file it cannot parse, so its screens
+    // were absent from every check and nothing said so.
+    const root = await projectWith({
+      "a.yaml": ["screens:", ...screen("home", "/")],
+      "b.yaml": ["screens: [", "  - id: broken"],
+    });
+    const profiles: readonly ("prototyping" | "full")[] = ["prototyping", "full"];
+    for (const profile of profiles) {
+      const result = await validateProject(root, undefined, { profile });
+      const parse = result.issues.filter((finding) => finding.code === "QFAI-CONTRACT-021");
+      expect(
+        parse.map((finding) => path.basename(finding.file ?? "")),
+        profile,
+      ).toEqual(["b.yaml"]);
+    }
+  });
+
   it("is reported by the prototyping profile, which certification accepts", async () => {
     const root = await projectWith({
       "a.yaml": ["screens:", ...screen("home", "/"), "  - id: draft"],
