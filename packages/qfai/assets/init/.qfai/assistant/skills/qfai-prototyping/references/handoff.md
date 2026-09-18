@@ -48,6 +48,19 @@ The mirror also records `source: DESIGN.md` and the
 `DESIGN.md.lock.yaml` sha256 so downstream tooling can detect drift.
 LLM assistance is not used here; the mirror is byte-deterministic.
 
+QFAI checks the prototype against these tokens. It does not read the
+product's stylesheet or Tailwind config, so a project that holds its
+implementation to the tokens writes that check itself. Two things make it
+hold:
+
+- **Assert both directions.** Every token in the mirror is declared in the
+  implementation, and every token the implementation declares is in the
+  mirror.
+- **Let a token name contain digits.** `typography.scale` runs from `xs` to
+  `3xl`. A name pattern such as `--token-([a-z-]+)` never captures `2xl` or
+  `3xl`, so both directions pass for them without checking anything. Use
+  `--token-([a-z0-9-]+)` or wider.
+
 When `DESIGN.md` names a `brand.theme`, the mirror copies it too. That
 name is the instruction: install the theme, rather than reproduce
 thirty-two values by hand and hope they match. The values stay in the

@@ -1,4 +1,6 @@
 # Lock file recorded by /qfai-sdd at Phase 0 freeze.
+# Every freeze rewrites the whole file, so frozenAt is the time the hash beside
+# it was frozen. Gates compare the hash with DESIGN.md; none reads frozenAt.
 designMdPath: "DESIGN.md" # relative to project root
 designMdSha256: "<hex>" # frozen content hash
 frozenAt: "2026-05-05T12:34:56Z"

@@ -258,7 +258,11 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
           $htmlEnd = '\?>'
         } elseif ($htmlLine -match '^<![A-Za-z]') {
           $htmlEnd = '>'
-        } elseif ($htmlLine -cmatch '^<!\[CDATA\[') {
+        } elseif ($htmlLine -match '^<!\[CDATA\[') {
+          # Case-insensitive, which CommonMark is not. GitHub hides the
+          # lowercase lookalike exactly as it hides the spelled form, so
+          # reading only the uppercase one accepted an answer no reader of
+          # the rendered body can see.
           $htmlEnd = '\]\]>'
         } elseif ($htmlLine -match '^</?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|/>|$)') {
           $htmlEnd = '^[ \t]*\r?$'

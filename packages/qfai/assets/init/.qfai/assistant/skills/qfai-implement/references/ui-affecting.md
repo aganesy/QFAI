@@ -246,6 +246,18 @@ this record the failure mode is silent by construction: a skipped item 9 leaves 
 a row that had a UI surface and declined to say so is indistinguishable afterwards from a row that
 legitimately had none.
 
+### What the `tdd` validate profile re-evaluates
+
+On a completed row that records `n/a (not UI-affecting)`, the `tdd` profile evaluates clause 1
+where `Owning module` is declared, then clause 2, then clause 3, and refuses the row naming the
+first that holds. It does not evaluate clause 1's fallback: the row's own change is the difference
+between two snapshots taken during the row, and the tree the check reads records neither. That
+half is decided only by the gate-time evaluation above.
+
+An id occurs verbatim where it stands on its own. `home` does not occur in `homepage`, and
+`TC-0001` does not occur in `TC-00010`. A `TC-*` or `US-*` entry is the table row whose first
+cell is the id, together with any section whose heading names it.
+
 ### Staleness: `Reviewed revision` and `Audited evidence hash`
 
 `PASS (clause N)` alone dates from nothing. `Spec review` and `Code quality review` each carry a

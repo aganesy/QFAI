@@ -18,7 +18,7 @@
 - Context: v1.7.13 で canonical/legacy 分離を導入したが、legacy validator コードは migration tooling として残存していた
 - Rationale: v1.7.14 は current-only SSOT リリース。migration tooling の存在自体が migration 期間の延長を示唆し、convergence を遅延させる。ソースツリーからの完全削除により、構造的に legacy path への依存を排除
 
-### DR-0004-0004: IssueCategory "compatibility" 削除 (v1.7.14, DR-0108)
+### DR-0004-0004: IssueCategory "compatibility" 削除 (v1.7.14, DR-0294)
 
 - Decision: IssueCategory union type から "compatibility" を削除し、"canonical" | "change" のみとする
 - Context: v1.7.13 で canonical/legacy 分離後も "compatibility" カテゴリがレポート出力に残り、ユーザーに migration 文脈を想起させていた

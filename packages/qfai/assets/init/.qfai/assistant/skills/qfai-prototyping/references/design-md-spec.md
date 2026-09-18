@@ -53,7 +53,7 @@ visual:
     family_sans: string # CSS font stack
     family_display: string # CSS font stack
     family_mono: string # CSS font stack
-    scale: map # xs..3xl
+    scale: map # xs..3xl; 2xl and 3xl are keys, so keys can contain digits
     weight: map # regular/medium/bold
   spacing:
     base: string # rem

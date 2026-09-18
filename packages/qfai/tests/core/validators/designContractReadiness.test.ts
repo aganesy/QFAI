@@ -406,15 +406,62 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
       );
     };
 
+    /** A second contract, declaring the screen the rows below name. */
+    const withDashboard = async (root: string): Promise<void> => {
+      await writeFile(
+        path.join(root, ".qfai/contracts/ui/ui-0002.yaml"),
+        ["screens:", "  - id: dashboard", "    title: Dashboard", "    route: /dashboard", ""].join(
+          "\n",
+        ),
+        "utf-8",
+      );
+    };
+
     const seeded = async (body: readonly string[]): Promise<string[]> => {
       const root = await newTempDir();
       await seedUiBearingProject(root);
+      await withDashboard(root);
       await seedDesignMdAndLock(root);
       await seedPrototypingDesignYamls(root);
       await withProcurement(root, body);
       const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
       return issues.filter((i) => i.code === "QFAI-DCON-013").map((i) => i.message);
     };
+
+    const rowFor = (list: "procured" | "authored", screen: string): string[] => [
+      "procurement:",
+      `  ${list}:`,
+      `    - screen: "${screen}"`,
+      '      region: "summary cards"',
+      list === "procured" ? '      item: "catalogue stat block"' : '      why: "nothing fits"',
+    ];
+
+    for (const list of ["procured", "authored"] as const) {
+      it(`reports a ${list} row naming a screen no UI contract declares`, async () => {
+        // A typo, or a screen renamed since: the row reads as complete while
+        // naming a region nobody can locate.
+        const messages = await seeded(rowFor(list, "dashbaord"));
+        expect(messages).toHaveLength(1);
+        expect(messages[0]).toContain(`procurement.${list}[0]`);
+        expect(messages[0]).toContain("'dashbaord', which no UI contract declares");
+      });
+
+      it(`accepts a ${list} row naming a declared screen`, async () => {
+        expect(await seeded(rowFor(list, "home"))).toEqual([]);
+      });
+    }
+
+    it("leaves the screen unresolved where no UI contract exists", async () => {
+      // The readiness gate reports that project already; every row failing
+      // beside it would repeat the one finding once per row.
+      const root = await newTempDir();
+      await mkdir(path.join(root, ".qfai/contracts/design"), { recursive: true });
+      await seedDesignMdAndLock(root);
+      await seedPrototypingDesignYamls(root);
+      await withProcurement(root, rowFor("procured", "anything"));
+      const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+      expect(issues.filter((i) => i.message.includes("which no UI contract declares"))).toEqual([]);
+    });
 
     it("reports a list declared and left empty", async () => {
       // `procured:` with nothing under it parses as null. That is a declaration
