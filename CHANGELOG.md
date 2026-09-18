@@ -217,6 +217,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The spec-0002 conflict record's options can each be carried out** (#1937).
+  `CR-20260912-0003` now requires the single-winner finding through the
+  canonical validator list `qfai validate` runs, blocks a pack whose
+  classification does not validate under `2B`, has `2a` fail closed on an
+  absent `DESIGN.md.lock.yaml` as `spec-0012/TC-0012-0347` already requires,
+  and runs `/qfai-atdd spec-0010` for the acceptance rows that pack's
+  re-derivation leaves at `todo`.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
