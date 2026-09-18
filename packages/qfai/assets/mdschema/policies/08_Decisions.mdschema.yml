@@ -24,7 +24,7 @@ structure:
           pattern: "^## Decisions$"
           regex: true
         description: >-
-          The records. Each subsection lists Status, Context, Decision,
+          The records. Each subsection lists Status, Context, Evidence, Decision,
           Consequences and Related.
         allow_additional: true
 

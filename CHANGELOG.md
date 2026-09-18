@@ -1135,6 +1135,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reports every marked skeleton it reads, and it reads the acceptance
   directories as well as `testFileGlobs`, as the coverage check it runs does.
 
+- **A shared decision record can cite the spec items it rests on** (#1899).
+  `QFAI-LAYER-100` and `TRACE_SHARED_SCOPE_VIOLATION` forbid spec-local IDs
+  anywhere in `_policies`, prose included. A cross-spec decision could not
+  name the rules it was measured against, and a rationale rewritten to avoid
+  them could not be checked. Inside a `### DR-*` record of
+  `_policies/08_Decisions.md`, the `Context` and a new `Evidence` bullet may
+  now name those items. Every other place in `_policies` stays under both
+  rules. The template says so, and says a table applying one judgement across
+  many specs' test cases belongs under `.qfai/evidence/`, cited from
+  `Evidence`.
+
 - **The audited evidence hash says what its extraction produces, not only which
   fields it reads** (#1616). Naming the fields settled which lines are taken and
   left open what they become, so two readers taking the same fields computed
