@@ -27,6 +27,7 @@ import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
+import { validateDesignDirectionProposal } from "./validators/designDirectionProposal.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
@@ -41,7 +42,7 @@ import {
 } from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
-import { evaluateAtddCodeTraceability } from "./atddTraceability.js";
+import { atddTestOwnerProbe, evaluateAtddCodeTraceability } from "./atddTraceability.js";
 import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
 import { validateAtddCoverageDepth } from "./validators/atddCoverageDepth.js";
 import {
@@ -153,7 +154,12 @@ export async function validateProject(
   // `testsRoot` as well as `specsRoot`: a file under the canonical test layout
   // is owned by the spec whose directory it sits in, so a scoped run drops a
   // sibling's stub the way it already drops a sibling's broken reference.
-  const scopeRoots = { root, specsRoot, testsRoot: resolvePath(root, config, "testsDir") };
+  const scopeRoots = {
+    root,
+    specsRoot,
+    testsRoot: resolvePath(root, config, "testsDir"),
+    testOwner: atddTestOwnerProbe(root, config),
+  };
   const { scope: requestedScope, invalid: invalidSpecValues } = resolveSpecScope(options.specIds);
   const scopeIssues = await buildSpecScopeIssues(
     specsRoot,
@@ -615,6 +621,7 @@ async function runDiscussionValidators(
     // later stages.
     ...(await validateRootDesignMdParse(root)),
     ...(await validateDiscussionMermaid(root)),
+    ...(await validateDesignDirectionProposal(root, config)),
     ...(await validateDiscussionPackReadiness(root, config)),
     ...(await validateDiscussionVisuals(root)),
     ...(await validateResearchSummary(root, config)),
