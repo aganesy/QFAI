@@ -519,6 +519,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stage to re-execute. It is applied ahead of the record that settles the band
   itself.
 
+- `spec-0013` declares `AC-0013-0008`, `AC-0013-0009` and `AC-0013-0010`
+  twice each, and every test case citing them means the first heading, so the
+  second of each has had no test case of its own (#1704). `CR-20260913-0012`
+  raises the repair: the first headings keep their ids, the side-artifact
+  criterion takes a new id with a chain of its own, and the other two go with
+  the requirements beneath them. One restates the stop the approved
+  `CR-20260903-0001` retired, and the other names design contracts
+  `AC-0013-0016` removed.
+
 - **The skill citation scan reads a document in one pass** (#1788). It read a
   run of path characters with no `.md`, `.yml` or `.yaml` ending once from every
   position in the run, so the time grew with the square of the run's length: a
