@@ -1233,7 +1233,7 @@ describe("rule overlays", () => {
       clauses: [
         // The surface, and which of the three guards reads it.
         "package.json#files",
-        "Only the post-build guard reads `files`",
+        "Only the post-build guard follows `files`",
         // The identifier shapes, one token each for the two that no other
         // clause names.
         "CAP-0010",
