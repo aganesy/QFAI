@@ -94,7 +94,7 @@ describe.each(TREES)("%s — the audit hash's extraction is one text", (tree) =>
   it("enumerates all three reviewer-owned fields before the revision", async () => {
     // Omitting the parity one is how a compliant UI row loses the hash its
     // gate requires.
-    await expectPhrase("**Three ledger fields carry an audited evidence hash");
+    await expectPhrase("**Three evidence-entry fields carry an audited evidence hash");
     await expectPhrase("`Prototype parity audited evidence hash`");
     await expectPhrase("The working-tree revision is a fourth value with a fourth name");
   });
