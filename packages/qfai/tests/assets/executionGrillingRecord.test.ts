@@ -22,8 +22,8 @@ const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const STAGES = ["qfai-implement", "qfai-atdd", "qfai-verify"];
 const RULE_MASTERS = ["packages/qfai/assets/init/root/.agents/rules", ".agents/rules"];
 
-/** The four the rule master names, in the order it names them. */
-const ENDINGS = ["confirmed", "user-closed", "no-question", "stopped"];
+/** The five the rule master names, in the order it names them. */
+const ENDINGS = ["confirmed", "user-closed", "adopted", "no-question", "stopped"];
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
@@ -44,17 +44,17 @@ function section(document: string, heading: string): string {
 describe.each(RULE_MASTERS)("%s/grilling.md — the endings are a closed set", (dir) => {
   const master = (): Promise<string> => readFile(path.join(repoRoot, dir, "grilling.md"), "utf-8");
 
-  it("names four, and says which of them lets the work go on", async () => {
+  it("names five, and says which of them lets the work go on", async () => {
     // A record naming an ending nobody defined is a record no gate can read.
     const text = await master();
-    expectPhrase(text, "### The four endings");
+    expectPhrase(text, "### The five endings");
     for (const ending of ENDINGS) {
       expectPhrase(text, `| \`${ending}\``);
     }
     expectPhrase(text, "**`stopped` is the one that does not let the work continue.**");
-    // The working-when checklist cannot require a confirmation three of the
-    // four endings are reached without.
-    expectPhrase(text, "The session reached one of the four endings on purpose.");
+    // The working-when checklist cannot require a confirmation four of the
+    // five endings are reached without.
+    expectPhrase(text, "The session reached one of the five endings on purpose.");
     expectPhrase(text, "a run that could not have asked is not failing this list by not asking");
   });
 
@@ -70,17 +70,24 @@ describe.each(RULE_MASTERS)("%s/grilling.md — the endings are a closed set", (
     );
   });
 
-  it("says a budget between agents is not a fifth ending", async () => {
-    // The budget ends the rounds, not the session: every decision the user has
-    // not settled goes to them, and they end it in one of the four. Read the
-    // other way, an escalating session would end itself and the user would
-    // never see them. "Not settled" and not "still open": a decision the agents
-    // agreed on is still one nobody took.
+  it("says a budget between agents ends the rounds, not the session", async () => {
+    // A session between agents is delegated: after its two rounds every
+    // decision that is not critical takes the griller's recommendation, and it
+    // ends `adopted`. The budget is still not an ending of its own: a critical
+    // decision goes to the user, and the session stays open until they answer
+    // it. Read the other way, the count would close a session over a critical
+    // decision nobody took. Agreement between agents does not settle one.
     const text = await master();
-    expectPhrase(text, "**A session between agents reaches none of these on its own.**");
-    expectPhrase(text, "every decision the user has not\nsettled goes to the user");
-    expectPhrase(text, "because agreement between agents settles nothing");
-    expectPhrase(text, "the user ends the\nsession in one of the four");
+    expectPhrase(text, "**A session between agents is a delegated session, and ends `adopted`.**");
+    expectPhrase(
+      text,
+      "after two, every decision that is not critical takes the\ngriller's recommendation, and every critical one goes to the user",
+    );
+    expectPhrase(
+      text,
+      "rounds between agents produce agreement, and agreement is not what that\nclass lacks",
+    );
+    expectPhrase(text, "It does not end the session while a\ncritical decision is unanswered.");
     expectPhrase(text, "never an ending of its own");
     // Under a no-question mode nothing reaches the user, so without this the
     // session would have no ending it could reach.
@@ -94,23 +101,23 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
   const grilling = async (skill: string): Promise<string> =>
     section(await read(`assistant/skills/${skill}/SKILL.md`), "## Grilling (MANDATORY)");
 
-  it("has the primitive's own summaries name the four endings", async () => {
+  it("has the primitive's own summaries name the five endings", async () => {
     // A restored summary saying a session ends only on agreement would have an
     // agent reject the endings the body requires.
     const body = await read("assistant/skills/qfai-grilling/SKILL.md");
-    expectPhrase(body, "stops at one of four named endings");
+    expectPhrase(body, "stops at one of five named endings");
     expectPhrase(
       body,
-      "A session ends at one of four endings — `confirmed`, `user-closed`, `no-question` or `stopped` — never at a count.",
+      "A session ends at one of five endings — `confirmed`, `user-closed`, `adopted`, `no-question` or `stopped` — never at a count.",
     );
   });
 
-  it("has the primitive point at the four rather than add its own", async () => {
+  it("has the primitive point at the five rather than add its own", async () => {
     // Three skills defining endings is three vocabularies, and a gate reading
     // one of them passes a record written against another.
     const primitive = await read("assistant/skills/qfai-grilling/SKILL.md");
-    expectPhrase(primitive, "**Those endings have names, and there are four of them.**");
-    expectPhrase(primitive, "`.agents/rules/grilling.md` carries them under **The four endings**");
+    expectPhrase(primitive, "**Those endings have names, and there are five of them.**");
+    expectPhrase(primitive, "`.agents/rules/grilling.md` carries them under **The five endings**");
     expectPhrase(primitive, "this skill adds none of its own");
     expectPhrase(primitive, "the agent never confirms on the user's behalf");
   });
@@ -217,13 +224,15 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     expectPhrase(body, "**A run whose rows count a decision carries no such marker**");
   });
 
-  it.each(STAGES)("%s names the four endings and what they authorize", async (skill) => {
+  it.each(STAGES)("%s names the five endings and what they authorize", async (skill) => {
     const body = await grilling(skill);
     for (const ending of ENDINGS) {
       expectPhrase(body, `\`${ending}\``);
     }
-    expectPhrase(body, "the four endings `.agents/rules/grilling.md` names");
-    expectPhrase(body, "only the first three let the work go on");
+    expectPhrase(body, "the five endings `.agents/rules/grilling.md` names");
+    expectPhrase(body, "only the first four let the work go on");
+    // The stage's sessions are delegated, so the one that completes is `adopted`.
+    expectPhrase(body, "a delegated session that completes ends `adopted`");
     expectPhrase(body, "**The closing answer goes under that table too**");
     expectPhrase(
       body,
@@ -323,7 +332,7 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
     // An unanswered escalation is a decision nobody took, so an ended row keeps
     // it in the register.
     expectPhrase(body, "**An escalation line still waiting on an answer is an open node**");
-    expectPhrase(body, "which the gate accepts on those three endings and on no other");
+    expectPhrase(body, "which the gate accepts on those four endings and on no other");
     expectPhrase(body, "A blank is neither, and is a `REVISE` — **except on a `stopped` row**");
     // The field that says which tree the session ended against is validated,
     // not only required by the record.
@@ -407,6 +416,19 @@ describe.each(TREES)("%s — the execution stages record their sessions", (tree)
       body,
       "**and the closing answer quoted under the table beside that row's `Session`**",
     );
+    // An adopted decision is checkable only through its `agents` row, and a
+    // critical decision adopted without the user is the one thing adoption may
+    // not cover. A sound adoption the reviewer would have made differently is
+    // not a finding against the record.
+    expectPhrase(
+      body,
+      "**Every decision the row counts that no escalation line settled is a `grilling(<Session>@<run key>/agents)` row whose `Output (refs)` carries the reason and each disagreeing position.**",
+    );
+    expectPhrase(
+      body,
+      "An adopted decision missing that row is a `REVISE`, and so is an `agents` row whose decision is critical.",
+    );
+    expectPhrase(body, "An adopted decision that is not critical is not a finding");
     // A frontier left open with nothing in the register is a session that
     // dropped nodes, so a no-question row owes an empty frontier as well.
     expectPhrase(
