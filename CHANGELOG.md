@@ -398,6 +398,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   no visible copy. The three readers that dispatch an HTML block now match the
   opener without regard to case; the inline raw-HTML forms are unchanged.
 
+- **A package that keeps the scaffold layout owns its own test files** (#1702).
+  The ATDD scan reads each package's acceptance suites, but a test's owning spec
+  was read only from `<paths.testsDir>/<layer>/spec-NNNN/`. A file at
+  `packages/checkout/tests/integration/spec-0002/pay.test.ts` had no owner, so a
+  mistyped annotation in it reached only the run of the spec the typo named,
+  and `--spec 0002` never reported it. The owner is now the `spec-NNNN`
+  directory directly inside the layer directory the scan resolves for the file,
+  at any test root. The ATDD findings and the scope filter every scoped run
+  applies both read it. A `spec-NNNN` directory above the layer directory, or
+  deeper inside it, still owns nothing.
+
 - **The entry points no longer say this repository installs its own package**
   (#1921). `CLAUDE.md` and `AGENTS.md` both described `.qfai/` as the result of
   an npm install of QFAI. There is no such dependency, and
@@ -492,6 +503,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Completion and implementation review stop conditions now include demonstrated
   regressions against named constitution or catalog rules (#1799). New upstream
   product obligations remain advisory.
+
+- **The spec-0013 template-slot record has an ID of its own** (#1942). It was
+  filed as `CR-20260913-0007`, an ID an approved record for `spec-0015` already
+  carries, so every reference to it was ambiguous. It is now
+  `CR-20260913-0011`, with every reference moved. `CR-20260913-0003` also
+  orders itself behind the other open `spec-0013` records, names
+  `CR-20260913-0009` as the ledger repair, appends no row under option `1c`
+  while that option holds its new requirement `planned`, and authorises the
+  `spec-0013/07_Decisions.md` write option `2c` needs.
+
+  Three records hold them. `CR-20260913-0011` and `CR-20260913-0008` are
 
 - Generated TypeScript review guidance flags dropped promises and preserves
   propagation rather than requiring catches for unnamed failures. The repository
@@ -662,6 +684,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkpoint revision, checks that it names a revision, and keeps the round's
   `Revision` for a row that records none. The contract also says each value
   enters the seal without a code span around it.
+
+- **The post-build leakage guard scans what npm publishes, the manifest
+  included** (#1931). The guard built its scan list from `package.json#files`,
+  and npm adds files that list never names — the published `package.json`
+  above all. A `schemaVersion` or a private version marker there shipped with
+  every guard green, and a filter meant for the repository's own manifest
+  dropped the `schemaVersion` finding for the published one too. The guard now
+  asks `npm pack --dry-run` for the list, scans the manifest with no filter, and
+  still passes its `version` field. A glob in `files` is now scanned as npm
+  expands it instead of being refused.
 
 - **The evidence revision reference says how a revision is read after a squash
   merge** (#1696). A squash merge lands a commit with no branch revision among
@@ -898,15 +930,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `parallelization-policy.md` and the skill now say items 6, 7 and 8 share the
   revision. No completed row in this repository changes result.
 
-- **The post-build leakage guard scans what npm publishes, the manifest
-  included** (#1931). The guard built its scan list from `package.json#files`,
-  and npm adds files that list never names — the published `package.json`
-  above all. A `schemaVersion` or a private version marker there shipped with
-  every guard green, and a filter meant for the repository's own manifest
-  dropped the `schemaVersion` finding for the published one too. The guard now
-  asks `npm pack --dry-run` for the list, scans the manifest with no filter, and
-  still passes its `version` field. A glob in `files` is now scanned as npm
-  expands it instead of being refused.
+- Ten spec ledgers now use the template's columns, and each has a `todo` E2E
+  row for every story that had none: `spec-0001`, `-0003`, `-0005`, `-0006`,
+  `-0007`, `-0008`, `-0009`, `-0011`, `-0016` and `-0017` (#1750). Before
+  this, a Change Request that re-derived one of these packs would also add the
+  rows through Phase 2b, and nothing recorded or authorized them. Existing rows
+  keep every cell they had. The columns they lacked read `-`, which the
+  validators read the same as the absent column. The ledgers of packs with an
+  open Change Request are left for those records to repair.
 
 - **A UI contract entry no screen is read from is reported** (#1734). Every
   consumer of UI contracts reads screens the same way: it keeps the first entry
