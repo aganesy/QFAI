@@ -532,6 +532,15 @@ function walk(dir, root) {
     } catch {
       continue;
     }
+    // Another repository checked out inside this one — a clone, a submodule, or a
+    // git worktree, which carries `.git` as a file rather than a directory. Its
+    // documents belong to whatever is checked out there, so a finding from one
+    // names a path this tree does not own, and the same commit passes wherever no
+    // such directory happens to exist. The walk starts at `dir`, which has a `.git`
+    // of its own whenever the tree is a repository at all.
+    if (current !== dir && entries.some((entry) => entry.name === ".git")) {
+      continue;
+    }
     for (const entry of entries) {
       const full = path.join(current, entry.name);
       if (entry.isDirectory()) {

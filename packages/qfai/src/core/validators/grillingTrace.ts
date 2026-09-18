@@ -71,8 +71,8 @@ import { exists, issue } from "./utils.js";
  * One code per stage rather than one for the check. Two runners dispatch this
  * and each names its own stage, so a single family would be claimed whole by
  * both profiles while each evaluated half of it — and the unevaluated-gates
- * notice would report partial coverage as complete, which is the mistake the
- * narrower gate groups beside it were split to correct.
+ * notice would report partial coverage as complete, which the narrower gate
+ * groups beside it are split to prevent.
  */
 const SPEC_TRACE_CODE = "QFAI-GRILL-001";
 const DISCUSSION_TRACE_CODE = "QFAI-GRILL-002";
@@ -98,10 +98,9 @@ export const GRILLING_SECTIONS = {
  * Columns that identify each stage's table, so another table under the heading
  * is not read as the record.
  *
- * A section may hold a table about something else, and one under the heading
- * answered for the record it is not — the check said a row was there, which was
- * true, and meant it was the session's, which was not. Two columns each, held
- * against the shipped templates by a test.
+ * A section may hold a table about something else. Taken for the record, such a
+ * table says a row is there, which is true, and that the row is the session's,
+ * which is not. Two columns each, held against the shipped templates by a test.
  */
 export const GRILLING_COLUMNS = {
   spec: ["Phase", "Session"],
@@ -206,8 +205,8 @@ export const DISCUSSION_DIR_REL = ".qfai/discussion";
  * A markdown table's delimiter row, with either outer pipe optional.
  *
  * GFM writes the outer pipes as a courtesy rather than a requirement, so a
- * table that leaves them off is a table. Reading only the pipe-led form found
- * no rows in one and reported a record that was there as missing.
+ * table that leaves them off is a table. Reading only the pipe-led form would
+ * find no rows in one and report a record that is there as missing.
  */
 const DELIMITER_RE = /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/;
 
@@ -215,8 +214,8 @@ const DELIMITER_RE = /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/;
  * A line CommonMark reads as an indented code block.
  *
  * Four columns makes a block an example of a document rather than part of one,
- * exactly as a fence does, and an indented table example under the section
- * answered for the record. A tab is four columns, so it opens one on its own.
+ * exactly as a fence does, so an indented table example under the section is
+ * not the record. A tab is four columns, so it opens one on its own.
  */
 const INDENTED_CODE_RE = /^(?: {4,}|\t)\s*\S/;
 
@@ -235,8 +234,8 @@ const HTML_COMMENT_CLOSE_RE = /-->/;
  * `<hex from DESIGN.md.lock.yaml>` — rather than by what it is not. Every
  * autolink CommonMark admits carries a character this does not: a URL its
  * scheme colon, an email its `@`, an HTML tag its slash or its `!`. Each of
- * those is content, and reading one as a placeholder dropped its row and
- * reported a written record as missing.
+ * those is content, and reading one as a placeholder would drop its row and
+ * report a written record as missing.
  */
 const UNREPLACED_CELL_RE = /^<[A-Za-z][A-Za-z0-9 ._-]*>$/;
 
@@ -262,9 +261,9 @@ function unwrittenAs(line: string): "empty" | "placeheld" | null {
  * something that is not one.
  *
  * An owed candidate is a name the stage's run list implies rather than one the
- * listing produced, so it can be any of the three. Reading only the first threw
- * `EISDIR` out of the whole command over a directory sitting where a record
- * belongs — a crash where the finding is what an operator needs.
+ * listing produced, so it can be any of the three. Reading only the first would
+ * throw `EISDIR` out of the whole command over a directory sitting where a
+ * record belongs — a crash where the finding is what an operator needs.
  */
 const NO_FILE_THERE = new Set(["EISDIR", "ENOTDIR", "ELOOP", "ENAMETOOLONG", "EINVAL"]);
 
@@ -291,11 +290,11 @@ function headingRe(section: string): RegExp {
   const hashes = parsed?.[1] ?? "##";
   const title = parsed?.[2] ?? section;
   // As CommonMark admits an ATX heading: up to three leading spaces, and an
-  // optional closing run of hashes. An exact-line match reported a written
+  // optional closing run of hashes. An exact-line match would report a written
   // record as missing for both.
   //
   // The closing run needs whitespace before it. CommonMark reads `## Title###`
-  // as a heading whose text is `Title###`, so accepting it matched a heading
+  // as a heading whose text is `Title###`, so accepting it would match a heading
   // nobody writes and let a file with no section pass.
   return new RegExp(`^ {0,3}${hashes}\\s+${literal(title)}(?:\\s+#+)?\\s*$`);
 }
@@ -305,12 +304,12 @@ function headingRe(section: string): RegExp {
  *
  * Any, not one of the section's level or above: a subsection's content belongs
  * to the subsection. The record's rows go directly under the section heading,
- * so reading past a `###` let a table that belongs to something else stand in
- * for a table the stage never wrote.
+ * so reading past a `###` would let a table that belongs to something else
+ * stand in for a table the stage never wrote.
  *
  * The text is optional, because CommonMark admits an empty heading: a bare
- * `###` opens a subsection whose title is nothing, and requiring a title read
- * one as prose and carried on into the table below it.
+ * `###` opens a subsection whose title is nothing, and requiring a title would
+ * read one as prose and carry on into the table below it.
  */
 const ANY_HEADING_RE = /^ {0,3}#{1,6}(?:\s|$)/;
 
@@ -318,9 +317,9 @@ const ANY_HEADING_RE = /^ {0,3}#{1,6}(?:\s|$)/;
  * The cells of a markdown table row.
  *
  * `splitMarkdownRow` rather than a split on the character: a pipe escaped as
- * `\\|` is cell content, and counting it as a separator made a header wider
- * than its own delimiter — so a written table failed the arity check below and
- * its record was reported as missing.
+ * `\\|` is cell content, and counting it as a separator would make a header
+ * wider than its own delimiter, so a written table would fail the arity check
+ * below and its record would be reported as missing.
  */
 function cellsOf(line: string): string[] {
   return splitMarkdownRow(line);
@@ -330,18 +329,20 @@ function cellsOf(line: string): string[] {
  * The document with everything that is not Markdown blanked out.
  *
  * Blanked rather than removed, and the line count is kept: closing the gap over
- * a masked block made a header written above one and a delimiter written below
- * it adjacent, and the two read as a table the document does not contain.
+ * a masked block would make a header written above one and a delimiter written
+ * below it adjacent, and the two would read as a table the document does not
+ * contain.
  *
  * Fences come from `maskFencedCodeBlocks`, which is where this repository keeps
  * the rule — a fence closes only on its own marker at its own length or more,
  * so a `~~~` block quoting a backtick line is one block rather than two. A
- * private toggle got that wrong, ended the block at the inner line, and hid the
- * table that followed the real closer.
+ * toggle on any fence line would end the block at the inner line and hide the
+ * table that follows the real closer.
  *
  * Indented blocks and HTML comments are masked for the same reason a fence is:
  * their contents are an example of a document rather than part of one, and a
- * `### Example` inside a comment ended the section before the table under it.
+ * `### Example` inside a comment must not end the section before the table
+ * under it.
  */
 function maskedLines(text: string): string[] {
   const lines = maskFencedCodeBlocks(text).split("\n");
@@ -377,8 +378,8 @@ type SectionRows = {
  * The delimiter is what identifies the table, so everything up to and including
  * it is the header and the rows are the contiguous block after it. Contiguous,
  * because a section may hold more than one table: reading to the end of the
- * section let a second table's own header stand in for the record, and a
- * subsection with any table in it satisfied the check.
+ * section would let a second table's own header stand in for the record, and a
+ * subsection with any table in it would satisfy the check.
  *
  * `null` when the section is absent, which the caller reports differently from
  * a section present with nothing readable under it.
@@ -397,15 +398,15 @@ function ownRowsUnder(text: string, subject: Subject): SectionRows | null {
 
   // A delimiter under a header of the same width, which is the only thing GFM
   // reads as one. Matched on shape alone, a thematic break under a line that
-  // happened to hold a pipe took the role, and what followed read as rows.
+  // happens to hold a pipe would take the role, and what follows would read as
+  // rows.
   const delimiter = body.findIndex((line, at) => {
     const header = body[at - 1];
     if (at === 0 || header === undefined || !header.includes("|")) return false;
     if (!DELIMITER_RE.test(line) || cellsOf(line).length !== cellsOf(header).length) return false;
     // And the header names this stage's table. A section may hold a table about
-    // something else, and one under the heading answered for the record it is
-    // not: a row was there, which was true, and it was the session's, which was
-    // not.
+    // something else, and taken for the record it says a row is there, which is
+    // true, and that the row is the session's, which is not.
     const named = cellsOf(header).map((cell) => cell.trim());
     return subject.columns.every((column) => named.includes(column));
   });
@@ -417,8 +418,8 @@ function ownRowsUnder(text: string, subject: Subject): SectionRows | null {
   for (const line of body.slice(delimiter + 1)) {
     if (!line.includes("|")) break;
     // A second delimiter is the table's furniture, not a row of it. Its cells
-    // are neither empty nor placeholders, so counting it let a copied table
-    // with two delimiters and no data satisfy the check.
+    // are neither empty nor placeholders, so counting it would let a copied
+    // table with two delimiters and no data satisfy the check.
     if (DELIMITER_RE.test(line)) continue;
     const shape = unwrittenAs(line);
     if (shape === null) written.push(line);
@@ -554,7 +555,7 @@ async function withOwedRuns(
     const packsDir = path.resolve(root, discussionDir ?? DISCUSSION_DIR_REL);
     // A tree this cannot enumerate leaves the branch inert and the run
     // reporting clean, which is the answer a project that grilled every run
-    // gets — and that is still the right behaviour here.
+    // gets, and the right one here.
     //
     // A `paths.discussionDir` that is not a directory is a settled case rather
     // than an open one: `doctor` reports it under `paths.discussionDir`, and
