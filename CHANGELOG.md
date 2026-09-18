@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A canonical assistant tree may be vendored by link** (#1927). `QFAI-LINK-001`
+  read any symlink in `.qfai/assistant/**` as damage, so a project that points
+  the tree at documents it keeps elsewhere was told its skills and agents were
+  not applied at all. A link that stays inside the project and keeps the name it
+  was written under is now a layout. The three shapes the rule was written for
+  still fail: a target outside the project, a link that does not resolve, and a
+  link that renames — `skills/qfai-atdd` pointed at `skills/qfai-verify` means
+  the wrapper says one skill and the agent reads another. An integration
+  directory such as `.claude/skills` is unchanged: its wrappers carry relative
+  targets, so a link there re-bases every one of them. `QFAI-LINK-002` follows a
+  linked directory inside the tree, so citations into a vendored layer resolve.
+
 - **`qfai init` refuses a destination that resolves into its own assets** (#1919).
   A repository that vendors the assistant tree by link has `.qfai/assistant/**`
   resolving to `assets/init/.qfai/assistant/**`, so a run there wrote the shipped
