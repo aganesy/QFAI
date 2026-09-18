@@ -19,10 +19,6 @@ const prFixScriptPath = path.join(
   "scripts",
   "run-pr-fix.ps1",
 );
-const claudeSkillPath = path.join(repoRoot, ".claude", "skills", "pr-fix", "SKILL.md");
-const agentsSkillPath = path.join(repoRoot, ".agents", "skills", "pr-fix", "SKILL.md");
-const codexSkillPath = path.join(repoRoot, ".codex", "skills", "pr-fix", "SKILL.md");
-const githubSkillPath = path.join(repoRoot, ".github", "skills", "pr-fix", "SKILL.md");
 
 type FakeCheck = {
   __typename: "CheckRun";
@@ -99,26 +95,6 @@ type RunResult = {
  * concurrent tests never delete a directory another one is still using.
  */
 type RegisterCleanup = (fn: () => void | Promise<void>) => void;
-
-describe("pr-fix wrapper docs", () => {
-  it("keeps pr-fix skill docs aligned across integrations", async ({ expect }) => {
-    const [claudeSkill, agentsSkill, codexSkill, githubSkill] = await Promise.all([
-      readFile(claudeSkillPath, "utf-8"),
-      readFile(agentsSkillPath, "utf-8"),
-      readFile(codexSkillPath, "utf-8"),
-      readFile(githubSkillPath, "utf-8"),
-    ]);
-
-    expect(normalizeNewlines(claudeSkill)).toBe(normalizeNewlines(agentsSkill));
-    expect(normalizeNewlines(codexSkill)).toBe(normalizeNewlines(agentsSkill));
-    expect(normalizeNewlines(agentsSkill)).toBe(normalizeNewlines(githubSkill));
-    expect(agentsSkill).toContain("`-SleepSeconds` の既定値は `60`");
-    expect(agentsSkill).toContain("`-RequiredZeroStreak` の既定値は `30`");
-    expect(agentsSkill).toContain("live 監視モード（`-DryRun` なし）");
-    expect(agentsSkill).toContain("`tmp/pr-fix/`");
-    expect(agentsSkill).toContain("`^.+/v(\\d+\\.\\d+\\.\\d+)(?:[-_].*)?$`");
-  });
-});
 
 describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
   it.for(
@@ -1225,10 +1201,6 @@ async function repairReleaseBody(
     process.env,
   );
   return { ...result, body: await readFile(bodyPath, "utf-8") };
-}
-
-function normalizeNewlines(text: string): string {
-  return text.replace(/\r\n/g, "\n");
 }
 
 function combinedOutput(result: RunResult): string {

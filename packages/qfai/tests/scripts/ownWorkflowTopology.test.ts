@@ -1283,7 +1283,7 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
     // measurement was right and the conclusion was not: the CR had already been decided, by the
     // user, the other way. So the fix was to FINISH option A, and the lane now runs every test
     // whose subject is a root mirror tree — the three that were missing are `codex/agents`,
-    // `core/prFixMonitor` and `core/prMergePlan`.
+    // `core/prFixSkillDocs` and `core/prMergePlan`.
     const mirrors = runClassifier({
       paths: [".claude/rules/temporary-files.md", ".codex/skills/whatever.md"],
     });
@@ -1310,7 +1310,11 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
       "tests/core/integrationSurfaceReadErrors.test.ts",
       "tests/assets/reviewerVerdictVocabulary.test.ts",
       "tests/codex/agents.test.ts",
-      "tests/core/prFixMonitor.test.ts",
+      // The `pr-fix` prose assertions, in their own file. `prFixMonitor.test.ts`
+      // holds the rest of that coverage and reads nothing from a mirror tree but
+      // the script — an executable, which the classifier keeps out of the
+      // documentation-only set, so the test job runs for a change to it.
+      "tests/core/prFixSkillDocs.test.ts",
       "tests/core/prMergePlan.test.ts",
     ]) {
       expect

@@ -17,16 +17,23 @@ separate question, settled by `.agents/rules/repository-language.md`.
 
 ## 本リポジトリの構造に関する重要な前提
 
-本リポジトリは QFAI パッケージそのものの開発リポジトリであり、同時に QFAI パッケージ自体を npm インストールして運用している。  
-そのため、以下の2つのディレクトリが混同されやすい。**修正対象を間違えないこと。**
+This repository builds the QFAI package and is governed by what that package
+ships, so the same document often exists in two trees. **Edit the one the
+package carries.** It does not install its own package: there is no `qfai`
+dependency, and `scripts/check-not-a-dependency.mjs` refuses an install that
+would create one.
 
-| ディレクトリ     | 役割                                                                                                            | 修正してよいか                                                            |
-| ---------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `packages/qfai/` | **QFAI パッケージのソースコード**（実装・テスト・アセット）                                                     | ✅ 開発対象                                                               |
-| `.qfai/`         | QFAI を npm インストールして運用した結果生成されるワークフロー成果物（specs, contracts, discussion, skills 等） | ⚠️ 原則として修正対象外（パッケージ改善時は `packages/qfai/` を修正する） |
+| ディレクトリ     | 役割                                                                                                                                                                            | 修正してよいか                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `packages/qfai/` | **QFAI パッケージのソースコード**（実装・テスト・アセット）                                                                                                                     | ✅ 開発対象                                                       |
+| `.qfai/`         | This repository's own workflow artifacts (specs, contracts, discussion, evidence), and the assistant tree generated from `packages/qfai/assets/init/.qfai/` by `pnpm sync:ssot` | ⚠️ The assistant tree is generated: edit `packages/qfai/` instead |
 
 - skill テンプレートやバリデータ等を改善したい場合は、必ず `packages/qfai/` 配下のソースを修正する。
-- `.qfai/` 配下の skill や設定を直接編集しても、パッケージとしてリリースされない。
+- An edit made directly to the generated assistant tree is reverted by the next
+  `pnpm sync:ssot` and fails the tracked-tree diff in `pnpm ci:gate`.
+- The rule masters under `.agents/rules/` are symlinks to their shipped copies,
+  so editing one there edits the file an adopter receives. A rule about this
+  repository alone is a real file in that directory.
 - リポジトリのルート直下にディレクトリ・ファイルを新規追加する際は事前にユーザー確認を必須とする（既存ルートファイルの編集は対象外）。詳細: `.agents/rules/root-additions-policy.md`。
 
 ### `.qfai/contracts/cli/`
