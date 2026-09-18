@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A guard on the mode a link is staged with** (#1920). `ln -s` in Git Bash on
+  Windows copies the target instead of linking to it unless
+  `MSYS=winsymlinks:nativestrict` is set, and the copy is byte-identical — so
+  every check that reads content passes, and nothing says so until the master
+  moves and the copy stays behind. `scripts/check-tracked-symlinks.mjs` reads
+  the index, where `120000` tells a link from a regular file, and runs in
+  `ci:lint:scans`. Which paths must be links is derived from the shipped rules
+  directory and the entry point onto it, so a rule added later is covered
+  without a second list. A checkout that materialised links as text files is a
+  property of the machine and is not reported.
+
 - **A canonical assistant tree may be vendored by link** (#1927). `QFAI-LINK-001`
   read any symlink in `.qfai/assistant/**` as damage, so a project that points
   the tree at documents it keeps elsewhere was told its skills and agents were
