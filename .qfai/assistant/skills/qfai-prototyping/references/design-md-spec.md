@@ -14,7 +14,7 @@ A reference copy is shipped in this skill at
 
 ## File shape
 
-```
+```markdown
 ---
 <YAML front-matter: brand, audience, visual, accessibility>
 ---

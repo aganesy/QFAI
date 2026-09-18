@@ -166,7 +166,12 @@ interface ShellRun {
  * how a caller shadows a command it must not really run; the environment is
  * otherwise the only thing stubbed.
  */
-async function runShell(body: string, cwd: string, prologue = ""): Promise<ShellRun> {
+async function runShell(
+  body: string,
+  cwd: string,
+  prologue = "",
+  environment: Record<string, string> = {},
+): Promise<ShellRun> {
   const stage = await newTempDir();
   const scriptPath = path.join(stage, "step.sh");
   const outputPath = path.join(stage, "github-output.txt");
@@ -175,7 +180,7 @@ async function runShell(body: string, cwd: string, prologue = ""): Promise<Shell
   const child = spawnSync("bash", ["-e", "-o", "pipefail", scriptPath], {
     cwd,
     encoding: "utf-8",
-    env: { ...process.env, GITHUB_OUTPUT: outputPath },
+    env: { ...process.env, ...environment, GITHUB_OUTPUT: outputPath },
   });
   if (child.error) {
     throw child.error;
@@ -189,6 +194,107 @@ async function runShell(body: string, cwd: string, prologue = ""): Promise<Shell
   }
   return { status: child.status, stdout: child.stdout ?? "", stderr: child.stderr ?? "", outputs };
 }
+
+/** A failure-surviving dependent may report only a failed aggregate, never an uncomputed check. */
+async function aggregateFailureViolations(
+  job: ShippedJob,
+  installNeeds: string[],
+): Promise<string[]> {
+  const site = `${job.file}: job "${job.jobId}"`;
+  const step = job.steps[0];
+  if (
+    job.steps.length !== 1 ||
+    step === undefined ||
+    typeof step["run"] !== "string" ||
+    step["uses"] !== undefined ||
+    step["if"] !== undefined ||
+    step["shell"] !== "bash" ||
+    step["continue-on-error"] !== undefined ||
+    job.job["continue-on-error"] !== undefined ||
+    isInstallStep(step) ||
+    reportsLaneResult(step)
+  ) {
+    return [`${site} survives a failed install but is not a result-only aggregate`];
+  }
+  const bindings = isRecord(step["env"]) ? step["env"] : {};
+  for (const need of installNeeds) {
+    const value = `\${{ needs.${need}.result }}`;
+    if (!Object.values(bindings).includes(value)) {
+      return [`${site} does not consume the result of install-bearing need ${need}`];
+    }
+  }
+  const violations: string[] = [];
+  const dir = await newTempDir();
+  for (const failedNeed of installNeeds) {
+    for (const result of ["failure", "cancelled", "timed_out", "skipped", "unknown", ""]) {
+      const environment: Record<string, string> = {};
+      for (const [key, value] of Object.entries(bindings)) {
+        const need = installNeeds.find(
+          (candidate) => value === `\${{ needs.${candidate}.result }}`,
+        );
+        if (need !== undefined) environment[key] = need === failedNeed ? result : "success";
+      }
+      const run = await runShell(step["run"], dir, "", environment);
+      if (run.status !== 1) {
+        violations.push(
+          `${site} reports exit ${String(run.status)} for ${failedNeed}: ${result || "missing"}`,
+        );
+      }
+    }
+  }
+  return violations;
+}
+
+describe("TC-0003-0058: aggregate failure protection", () => {
+  async function documentAggregate(): Promise<ShippedJob> {
+    const job = (await shippedJobs()).find(
+      (entry) => entry.file === "qfai-docs.yml" && entry.jobId === "docs",
+    );
+    if (job === undefined || job.steps[0] === undefined)
+      throw new Error("the shipped docs aggregate is missing");
+    return job;
+  }
+
+  it("TC-0003-0058 (TDD-0062): rejects a planted green aggregate while accepting its unmodified body", async () => {
+    const job = await documentAggregate();
+    expect(await aggregateFailureViolations(job, ["checks"])).toEqual([]);
+    const step = job.steps[0];
+    if (step === undefined || typeof step["run"] !== "string")
+      throw new Error("the aggregate has no body");
+    const hollowed = step["run"].replace(/\bexit 1\b/, "exit 0");
+    expect(hollowed).not.toBe(step["run"]);
+    job.steps = [{ ...step, run: hollowed }];
+    expect(await aggregateFailureViolations(job, ["checks"])).toHaveLength(6);
+  });
+
+  it("TC-0003-0058 (TDD-0063): rejects a result binding removed from the shipped aggregate", async () => {
+    const job = await documentAggregate();
+    const step = job.steps[0];
+    if (step === undefined) throw new Error("the aggregate has no step");
+    job.steps = [{ ...step, env: {} }];
+    expect(await aggregateFailureViolations(job, ["checks"])).toEqual([
+      'qfai-docs.yml: job "docs" does not consume the result of install-bearing need checks',
+    ]);
+  });
+
+  it.each([
+    { if: "false" },
+    { shell: "bash {0} || true" },
+    { "continue-on-error": true },
+    { uses: "actions/checkout" },
+    { run: "pnpm install" },
+    { run: "npx qfai validate" },
+    { run: false },
+  ])("rejects an aggregate step that cannot preserve failure: %j", async (fields) => {
+    const job = await documentAggregate();
+    const step = job.steps[0];
+    if (step === undefined) throw new Error("the aggregate has no step");
+    job.steps = [{ ...step, ...fields }];
+    expect(await aggregateFailureViolations(job, ["checks"])).toEqual([
+      'qfai-docs.yml: job "docs" survives a failed install but is not a result-only aggregate',
+    ]);
+  });
+});
 
 describe("TC-0003-0043 (TDD-0043): absent Node version file falls open to the documented literal", () => {
   // One it() per TC-0003-0043 verify bullet. Scope notes, disclosed:
@@ -350,11 +456,9 @@ describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with
   //   error, and the stop is a chosen exit (no bash diagnostic on stderr).
   //   The header half of it3 records the same precondition in the file the
   //   adopter reads; header-block COMPLETENESS stays TC-0003-0042's.
-  // - it4's cross-job half is vacuous today (no shipped job `needs:` the
-  //   install-bearing job), disclosed; its non-vacuous half is the
-  //   in-job one — GitHub skips the remaining steps of a job after a
-  //   failed step unless a step opts out, so the assertion is that
-  //   nothing between the guard and the lane result opts out.
+  // - A result-only aggregate may survive a failed setup to report that
+  //   failure. Its actual body must reject every failed or missing need.
+  //   Executing checker steps must retain the default success condition.
 
   /** The TC's fixture: a pnpm lockfile and a manifest without the field. */
   async function pnpmTreeWithoutPackageManager(): Promise<string> {
@@ -547,7 +651,7 @@ describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with
     const violations: string[] = [];
     const installJobIds = new Set<string>();
     for (const job of await installJobs()) {
-      installJobIds.add(job.jobId);
+      installJobIds.add(`${job.file}#${job.jobId}`);
       const guardIndex = job.steps.findIndex((step) => step["id"] === PACKAGE_MANAGER_STEP_ID);
       if (guardIndex === -1) {
         violations.push(`${job.file}: job "${job.jobId}" has no ${PACKAGE_MANAGER_STEP_ID} step`);
@@ -582,20 +686,22 @@ describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with
         }
       });
     }
-    // Cross-job half: no shipped job may depend on an install-bearing job
-    // and escape its failure. Vacuous today (the dependent set is empty),
-    // disclosed above; it names a regression the moment one appears.
+    // A dependent that survives setup failure must execute a fail-closed
+    // aggregate over that result, without running an uncomputed checker.
     for (const job of await shippedJobs()) {
       const needs = job.job["needs"];
       const needsList = typeof needs === "string" ? [needs] : Array.isArray(needs) ? needs : [];
-      if (!needsList.some((entry) => typeof entry === "string" && installJobIds.has(entry))) {
-        continue;
-      }
+      const installNeeds = needsList.filter(
+        (entry): entry is string =>
+          typeof entry === "string" && installJobIds.has(`${job.file}#${entry}`),
+      );
+      if (installNeeds.length === 0) continue;
       const condition = job.job["if"];
-      if (typeof condition === "string" && /always\(\)|!\s*cancelled\(\)/.test(condition)) {
-        violations.push(
-          `${job.file}: job "${job.jobId}" needs an install-bearing job but runs under "${condition}"`,
-        );
+      if (
+        typeof condition === "string" &&
+        /always\(\)|!\s*cancelled\(\)|failure\(\)/.test(condition)
+      ) {
+        violations.push(...(await aggregateFailureViolations(job, installNeeds)));
       }
     }
     expect(violations).toEqual([]);
@@ -855,10 +961,13 @@ describe("TC-0003-0053 (TDD-0053): version file plus packageManager field is the
         `${job.file}: job "${job.jobId}" reports its lane result before installing`,
       ).toBeGreaterThan(installIndex);
       const laneStep = job.steps[laneIndex] ?? {};
-      expect(
-        laneStep["if"],
-        `${job.file}: the lane-result step is conditioned, so it could report without the install`,
-      ).toBeUndefined();
+      const condition = laneStep["if"];
+      if (condition !== undefined) {
+        expect(
+          condition,
+          `${job.file}: selection must preserve the default success condition`,
+        ).toMatch(/^matrix\.[a-z]+ == '[a-z]+'(?: && github\.event_name == 'pull_request')?$/);
+      }
     }
   });
 

@@ -62,6 +62,8 @@ dry-run は `tmp/pr-merge/pr-<PR番号>-merge-plan.json` を生成し、`Suggest
 - PR が draft / closed / merged
 - unresolved review thread が残っている
 - CI check が green ではない
+- The live PR body lacks an authored removal-list answer. Check it again
+  immediately before merging, even when a handoff exists.
 - 指定 tag が既存
 - SemVer tag を選んだが `packages/qfai/package.json` / `CHANGELOG.md` と整合しない
 

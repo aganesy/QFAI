@@ -50,9 +50,11 @@ describe("a US outside the current slice has a documented deferral", () => {
       expect(skill).toContain("All required `US` are covered by E2E tests (`QFAI-ATDD-111`)");
       const occurrences = skill.split("- x-qfai-status: planned").length - 1;
       expect(occurrences).toBeGreaterThanOrEqual(2);
-      // `exception` is a ledger branch and blocking; a `US-*` owns no row. Say
-      // so rather than let the reader spend a cycle looking for one.
-      expect(skill).toContain("`exception` is not the alternative here");
+      expect(skill).toContain(
+        "A ledger-row `exception` does not defer a `US-*` annotation obligation",
+      );
+      expect(skill).toContain("Active stories have their own E2E ledger rows");
+      expect(skill).not.toContain("a `US-*` owns none");
     });
 
     it(`${tree}: the user-story template shows where the marker goes`, async () => {
