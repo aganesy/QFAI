@@ -210,6 +210,58 @@ describe("the reported directories follow the configured testsDir", () => {
     }
   });
 
+  it("names <testsDir>/e2e and <testsDir>/api in the story and contract remediations", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tc-routing-us-api-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
+      await writeFile(
+        path.join(specDir, "02_User-stories.md"),
+        ["# 02 US", "", "## US-0001-0001: title", "- Parent: CAP-0001", ""].join("\n"),
+        "utf-8",
+      );
+      await writeFile(path.join(specDir, "06_Test-Cases.md"), tcTable("L3"), "utf-8");
+      const apiDir = path.join(root, ".qfai", "contracts", "api");
+      await mkdir(apiDir, { recursive: true });
+      for (const [id, planned] of [
+        ["CON-API-0001", false],
+        ["CON-API-0002", true],
+      ] as const) {
+        await writeFile(
+          path.join(apiDir, `${id.toLowerCase()}.yaml`),
+          [
+            `# QFAI-CONTRACT-ID: ${id}`,
+            ...(planned ? ["x-qfai-status: planned"] : []),
+            "openapi: 3.1.0",
+            "paths: {}",
+            "",
+          ].join("\n"),
+          "utf-8",
+        );
+      }
+
+      const config = {
+        ...defaultConfig,
+        paths: { ...defaultConfig.paths, testsDir: "spec-tests" },
+      };
+      const issues = await validateAtddCodeTraceability(root, config);
+      // Following a fix that names the literal `tests/...` builds a suite the
+      // validator does not scan.
+      for (const [code, dir] of [
+        ["QFAI-ATDD-111", "spec-tests/e2e/**"],
+        ["QFAI-ATDD-113", "spec-tests/api/**"],
+        ["QFAI-ATDD-114", "spec-tests/api/**"],
+      ] as const) {
+        const action = issues.find((entry) => entry.code === code)?.suggested_action;
+        expect(action, code).toContain(dir);
+        expect(action, code).not.toMatch(/(^|[^-\w])tests\//);
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('drops the tests/ segment for a root-level layout (testsDir ".")', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tc-routing-root-"));
     try {

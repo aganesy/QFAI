@@ -58,7 +58,7 @@ const PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
   { name: "internal version marker", re: /\bv[0-9]+\.[0-9]+(?:\.[0-9]+)?\b|\bv1\.x\b/g },
   {
     name: "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ/CHG)",
-    re: /\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b|\bCHG-[0-9]+\b/g,
+    re: /\bCAP-0*[1-9][0-9]+\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b|\bCHG-[0-9]+\b/g,
   },
   { name: "schemaVersion field", re: /"schemaVersion"|schemaVersion\s*:/g },
 ];
@@ -302,6 +302,16 @@ describe("distributed surface leakage smoke", () => {
       scannedRelative.filter((rel) => rel.endsWith(".toml")),
       "the init payload ships .toml, so the content scan has to open it",
     ).not.toEqual([]);
+  });
+
+  it.each([
+    ["CAP-0009", []],
+    ["CAP-0999", ["internal trace id (CAP-0010+/DEC/DR/PROT2/OQ/CHG)"]],
+    ["CAP-1000", ["internal trace id (CAP-0010+/DEC/DR/PROT2/OQ/CHG)"]],
+  ])("reads %s as a capability ID only from CAP-0010 up", (id, classes) => {
+    expect(scanPathName(path.join(".qfai", `${id}-notes.md`)).map((h) => h.className)).toEqual(
+      classes,
+    );
   });
 
   // The walk above only proves that today's tree happens to be clean —

@@ -640,7 +640,11 @@ export function addReviewPointer(existing: string, template: string | null): str
           htmlEnd = /\?>/;
         } else if (/^<![A-Za-z]/.test(htmlLine)) {
           htmlEnd = />/;
-        } else if (/^<!\[CDATA\[/.test(htmlLine)) {
+        } else if (/^<!\[CDATA\[/i.test(htmlLine)) {
+          // Case-insensitive, which CommonMark is not. GitHub hides the
+          // lowercase lookalike exactly as it hides the spelled form, so
+          // reading only the uppercase one read a directive nobody can see
+          // as operative and added no visible one.
           htmlEnd = /\]\]>/;
         } else if (
           /^ {0,3}<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|\/>|$)/i.test(
@@ -1083,6 +1087,7 @@ const SUPERSEDED_RULE_BULLETS: ReadonlyMap<string, readonly string[]> = new Map(
     ".agents/rules/grilling.md",
     [
       "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.",
+      "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends in one of four named endings, never at a question count.",
     ],
   ],
 ]);
@@ -1215,8 +1220,33 @@ function setextLevel(
 ): number | null {
   const underline = /^ {0,3}(=+|-+)[ \t]*$/.exec(plainLine(lines[index]));
   if (underline === null || open[index - 1] !== true) return null;
-  if (plainLine(lines[index - 1]).trim() === "") return null;
+  if (!underlinesDocumentParagraph(lines, open, index)) return null;
   return underline[1]?.startsWith("=") === true ? 1 : 2;
+}
+
+/** A line that opens a list item: `- `, `* `, `+ `, `1. ` or `1) `. */
+const LIST_ITEM_RE = /^ {0,3}(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/;
+
+/**
+ * Whether the lines directly above `index` are a paragraph of the document
+ * itself, the only thing an underline turns into a heading.
+ *
+ * Under a list item, inside a blockquote or right after a heading, the same
+ * `---` is a thematic break. Read as a heading there, it ended the managed rule
+ * list at a horizontal rule and left a superseded bullet below it unrefreshed.
+ */
+function underlinesDocumentParagraph(
+  lines: readonly string[],
+  open: readonly boolean[],
+  index: number,
+): boolean {
+  for (let above = index - 1; above >= 0; above -= 1) {
+    const text = (lines[above] ?? "").replace(/\r$/, "");
+    if (text.trim() === "") return above !== index - 1;
+    if (open[above] !== true || isQuoted(text) || LIST_ITEM_RE.test(text)) return false;
+    if (atxLevel(text) !== null) return false;
+  }
+  return true;
 }
 
 /**
@@ -1258,6 +1288,47 @@ function replaceSupersededBullets(
   const held = [...withheld].sort();
   if (refreshed.size === 0) return { text: existing, refreshed: [], withheld: held };
   return { text: lines.join("\n"), refreshed: [...refreshed].sort(), withheld: held };
+}
+
+/** A rule bullet as the entry points write it: `` - `.agents/rules/<name>.md` — … ``. */
+const RULE_BULLET_MASTER_RE = /^- `(\.agents\/rules\/[A-Za-z0-9._-]+\.md)`/;
+
+/**
+ * `generated` with the rule bullet of every master outside `installed` taken
+ * from `existing`, where `existing` carries one in its rule list.
+ *
+ * A summary describes its master. `--force` rebuilds the Copilot instructions
+ * whole, from the release's wording, and a master the adopter edited stays as
+ * the adopter has it, so the release's bullet would assert a rule that file
+ * does not carry. The bullet the file already had is the one that still
+ * describes it. A master with no bullet there keeps the release's.
+ */
+export function keepSummariesOfKeptMasters(
+  generated: string,
+  existing: string,
+  installed: ReadonlySet<string>,
+): string {
+  const lines = existing.split("\n");
+  const open = outsideFences(lines);
+  const range = ruleListRange(lines, open);
+  if (range === null) return generated;
+  const kept = new Map<string, string>();
+  for (let index = range.from; index < range.to; index += 1) {
+    if (open[index] !== true) continue;
+    const own = (lines[index] ?? "").replace(/\r$/, "");
+    const master = RULE_BULLET_MASTER_RE.exec(own)?.[1];
+    if (master !== undefined && !installed.has(master) && !kept.has(master)) {
+      kept.set(master, own);
+    }
+  }
+  if (kept.size === 0) return generated;
+  return generated
+    .split("\n")
+    .map((line) => {
+      const master = RULE_BULLET_MASTER_RE.exec(line)?.[1];
+      return master === undefined ? line : (kept.get(master) ?? line);
+    })
+    .join("\n");
 }
 
 /** The master `line` is a superseded bullet for, or `null` when it is not one. */

@@ -22,9 +22,10 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
 - `.qfai/specs/spec-0017/07_Decisions.md` — `DR-0017-*`, read for the rejected alternatives this
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
-- `.qfai/specs/spec-0017/tdd/test-list.md` — read, never written. 83 rows: 72 `Integration`,
-  11 `Unit`; **74 `refactor`, 6 `blocked`, 3 `todo`**. The three `todo` rows are `Integration` and are
-  therefore this stage's to route — see § "Ledger rows advanced"
+- `.qfai/specs/spec-0017/tdd/test-list.md` — read, never written. 92 rows: 72 `Integration`,
+  11 `Unit`; **73 `refactor`, 6 `blocked`, 13 `todo`**. The other nine rows are `E2E`, one per story,
+  seeded at `todo`. Four `todo` rows are `Integration` and are therefore this stage's to route — see
+  § "Ledger rows advanced"
 - `.qfai/assistant/catalog/test-layers.md` — the layer derivation and the directory each `Level`
   routes to
 - `packages/qfai/assets/init/root/.github/workflows/**` — the shipped surface, measured before any
@@ -2261,7 +2262,7 @@ a merge can invalidate has no author to hold responsible for it.
 The count and its split across the two include roots are on one line, and both are derived by the same
 walk:
 
-e2e callsites at this tree: 2363 (packages/qfai/tests/assets 2186, packages/qfai/tests/e2e 177)
+e2e callsites at this tree: 2391 (packages/qfai/tests/assets 2214, packages/qfai/tests/e2e 177)
 
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is

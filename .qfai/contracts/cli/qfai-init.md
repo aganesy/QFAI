@@ -46,24 +46,35 @@ Reinit behavior (existing `.qfai/` present):
 - User-authored work-log entries (`.qfai/steering/*.md` that match the entry frontmatter schema with `id` matching filename stem) MUST NOT be overwritten.
 - Collisions where the user-edited file lives at an old (pre-recut) path surface a `W-USER-EDIT-PRESERVED` finding via the validate gate (REQ-0013).
 
-#### Same-marker reminder upgrade gap
+#### Reminder hooks
 
-Existing `.claude/settings.json` hook groups are recognized by their
-sorted status-message list within the same event, including repeated markers.
-Removing a repeated marker changes the identity. Ordinary init and `--force`
-preserve an existing same-marker group's command, arguments, matcher and custom
-fields, including older shipped reminder text. Only missing groups are added.
-An older implementation reminder therefore needs a manual update; force does
-not deliver its changed text automatically.
+The `.claude/settings.json` hook groups carry no message text. Each entry runs
+`node -e` with one fixed reader, the path
+`${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json` and the key of one
+message. The reader prints that message and nothing else. A missing or
+unreadable file, or a missing key, prints nothing and exits 0.
 
-Obtain a fresh settings file with the installed release's
-`qfai init --dir <scratch-dir>` in an unused scratch directory. Back up the
-project's settings and compare the same event and sorted marker list. Compare
-each field before editing. Refresh only the message-bearing argument; preserve
-a customized executable, unrelated arguments, markers, matchers, custom fields
-and unrelated settings. Do not replace the existing `command` or entire `args`
-with template values, append a duplicate group or change its markers to request
-an update; a different identity can run both reminders.
+`.agents/rules/reminders.json` is refreshed the way a rule master is: on every
+run, wherever the project's copy still matches what init last recorded. A
+changed message therefore reaches an existing project without the settings
+template changing.
+
+Existing groups are recognized by their sorted status-message list within the
+same event, including repeated markers. For each group whose identity the
+template also declares:
+
+| The project's group                                | Ordinary init and `--force`                           |
+| -------------------------------------------------- | ----------------------------------------------------- |
+| Equal to the template's group                      | Left as it is                                         |
+| Exactly a group an earlier release's template held | Replaced in place by the template's group             |
+| Anything else                                      | Left as it is, and named in the output as edited here |
+
+A template group whose identity the project does not carry is appended after the
+project's groups for that event. Nothing is reordered or removed.
+
+To update an edited group by hand, obtain a fresh settings file with the
+installed release's `qfai init --dir <scratch-dir>` in an unused scratch
+directory, and compare the group with the same event and marker list.
 
 Exit codes:
 
@@ -347,12 +358,23 @@ whole from the same source later in the run. Nothing is added to it or replaced
 in it here, and no refusal is reported for it, because a refusal would name a
 file this run goes on to replace.
 
-**What a refusal does not do.** Queue the citation for later. A master this run
-copied is one no later run offers again, because the file is on disk and the
-next copy skips it. The refusal names the masters that stayed uncited, and
-repairing the file does not bring them with it. An out-of-date summary is
-different: it is still in the file, so the next run finds it again. Where the
-refusal asks for an edit by hand, it names the edit it refused.
+**What a refusal keeps.** The masters it could not cite. A master this run copied
+is one no later copy offers again, because the file is on disk and the next copy
+skips it. So a refused rewrite records those masters for its entry point in
+`.agents/rules/.qfai-citations.pending.json`, and the refusal says they are
+kept. A later run cites every recorded master still on disk once the file can
+be rewritten, and clears that entry point from the record when they land.
+
+| Refused because                                                                                                                       | Recorded under                    |
+| ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| The entry point is a symbolic or hard link, cannot be read back, holds bytes that are not UTF-8, or changed while the run was writing | that entry point                  |
+| `.github/copilot-instructions.md` is not an ordinary file, or is past the read ceiling                                                | `.github/copilot-instructions.md` |
+
+Only a recorded master is retried. A bullet the project deleted, with its master
+still on disk, was never recorded and stays deleted. A dry run records nothing.
+An out-of-date summary needs no record: it is still in the file, so the next run
+finds it again. Where the refusal asks for an edit by hand, it names the edit it
+refused.
 
 **What the signal cannot tell.** A project that deleted both the bullet and the
 master gets both back: the same run writes the file again, so the citation

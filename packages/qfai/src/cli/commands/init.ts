@@ -76,6 +76,7 @@ import {
   citedRuleMastersOutsideCode,
   hasUnclosedRulesSection,
   extractManagedRulesSection,
+  keepSummariesOfKeptMasters,
   needsManagedRulesSection,
   newlyWrittenRuleMasters,
   refreshSupersededRuleBullets,
@@ -119,6 +120,11 @@ import {
   readRuleLock,
   writeRuleLock,
 } from "../../core/ruleMasterUpdates.js";
+import {
+  type PendingCitations,
+  readPendingCitations,
+  writePendingCitations,
+} from "../../core/pendingRuleCitations.js";
 import { resolveToolVersion } from "../../core/version.js";
 import {
   RETIRED_WORKFLOW_NAMES,
@@ -195,6 +201,53 @@ export type InitOptions = {
   toolVersionOverride?: string;
 };
 
+/**
+ * Refuses a run whose destination assistant tree resolves into the assets this
+ * command copies from.
+ *
+ * `init` writes `.qfai/assistant/**` from `assets/init/.qfai/assistant/**`. A
+ * repository that vendors the tree by link has the destination resolving to the
+ * source, so the write lands in the package's own assets — an edit to the
+ * shipped documents, made by the command whose job is to install a copy of
+ * them, and indistinguishable afterwards from an ordinary asset change.
+ *
+ * Detected by resolution rather than by a path or a name, so it holds wherever
+ * the repository is checked out. An ordinary project resolves nowhere near the
+ * installed package and is unaffected; the check fails open when either side
+ * cannot be resolved, for the same reason the dependency guard does — a guard
+ * that mistakes a normal project for this one breaks the product.
+ */
+async function refuseWritingThroughToOwnAssets(
+  destRoot: string,
+  assistantAssets: string,
+): Promise<void> {
+  const resolve = async (target: string): Promise<string | null> => {
+    try {
+      return await realpath(target);
+    } catch {
+      return null;
+    }
+  };
+  const [destAssistant, sourceAssistant] = await Promise.all([
+    resolve(path.join(destRoot, ASSISTANT_DIR)),
+    resolve(assistantAssets),
+  ]);
+  if (destAssistant === null || sourceAssistant === null) return;
+  const relative = path.relative(sourceAssistant, destAssistant);
+  const inside = relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  if (!inside) return;
+  throw new Error(
+    [
+      `qfai init: ${formatReportPath(path.join(destRoot, ASSISTANT_DIR))} resolves to ${formatReportPath(destAssistant)},`,
+      "which is inside the assets this command copies from. Writing there would edit the",
+      "package's own shipped documents rather than install a copy of them.",
+      "",
+      "This is the repository that builds the package, with its assistant tree vendored by",
+      "link. Edit the assets directly — they are the file the link points at.",
+    ].join("\n"),
+  );
+}
+
 export async function runInit(options: InitOptions): Promise<void> {
   const toolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
   const assetsRoot = getInitAssetsDir();
@@ -210,6 +263,8 @@ export async function runInit(options: InitOptions): Promise<void> {
   // 正しい実行と同じ出力になってしまう。レポートより先に出すことで、
   // 中断・失敗した実行でも対象がスクロールバックに残る。
   info(`qfai init: dest=${formatReportPath(destRoot)}`);
+
+  await refuseWritingThroughToOwnAssets(destRoot, assistantAssets);
 
   if (options.force) {
     info(
@@ -404,28 +459,36 @@ export async function runInit(options: InitOptions): Promise<void> {
   if (!options.dryRun && rootResult.copied.includes(configPath)) {
     await aimTestFileGlobsAtRepository(destRoot, configPath);
   }
-  // Runs immediately AFTER the create-only root copy, and before anything else
-  // that can throw. The files it repairs are exactly the ones that copy skipped
-  // because the project already had them, and the signal it reads — which
-  // masters this run wrote — is available only in the run that wrote them. A
-  // step between the two that failed would leave the master on disk and its
-  // citation unwritten, with the next run seeing a master it did not write.
+  // The entry-point repair runs right after the create-only root copy and the
+  // rule-master update pass. The files it repairs are exactly the ones that
+  // copy skipped because the project already had them, and the signal it reads
+  // — which masters this run wrote — is available only in the run that wrote
+  // them. A step between the two that failed would leave the master on disk and
+  // its citation unwritten, with the next run seeing a master it did not write.
   //
-  // SIMPLIFIED: the window is one operation wide rather than closed.
+  // The update pass is the one step allowed in between, because a summary may
+  // only move to the release's wording where its master did, and a planned
+  // replacement can still end with the adopter's master kept. The citation
+  // repair reads this run's own copy report, so a master replaced here — already
+  // on disk before the run — is not one it is looking for.
+  //
+  // SIMPLIFIED: the window is the update pass wide rather than closed.
   // Lift when: init records per-master provenance, which the rule-master upgrade
   // path needs for its own reasons.
   const newlyWritten = newlyWrittenRuleMasters(rootResult.copied, destRoot);
+  const ruleMasterResult = await updateUneditedRuleMasters(rootAssets, destRoot, options.dryRun);
+  const installedMasters: ReadonlySet<string> = new Set([
+    ...newlyWritten,
+    ...ruleMasterResult.installed,
+  ]);
   const entryPointRulesResult = await ensureAgentEntryPointRules(
     rootAssets,
     destRoot,
     options.dryRun,
     options.force,
     newlyWritten,
-    await installedRuleMasters(rootAssets, destRoot, newlyWritten),
+    installedMasters,
   );
-  // After the citation repair, which reads this run's own copy report: a master
-  // replaced here was already on disk, so it is not one that pass is looking for.
-  const ruleMasterResult = await updateUneditedRuleMasters(rootAssets, destRoot, options.dryRun);
   const minimumMaster = path.join(destRoot, AGENTS_RULES_DIR_REL, "minimal-implementation.md");
   const plannedSafetyFloor =
     options.dryRun &&
@@ -478,6 +541,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   const wrappersResult = await syncIntegrationWrappers(assistantAssets, destRoot, {
     force: options.force,
     dryRun: options.dryRun,
+    installedRuleMasters: installedMasters,
   });
   const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
   const legacyEvidenceIgnoreResult = await ensureLegacyEvidenceIgnoreNegations(
@@ -3114,10 +3178,10 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   "!decisions/**",
   // The per-item RED/GREEN records. Every root negation this block adds needs
   // its leaf counterpart here or the migration does nothing for the projects it
-  // exists to serve: measured with `git check-ignore -v` on a tree carrying the
-  // legacy nested file, `.qfai/evidence/implement-<spec-id>.md` and
-  // `atdd-<spec-id>.md` were still reported as ignored by the nested `*`, so the
-  // fresh clone and CI that the root negation was added for saw neither file.
+  // exists to serve: on a tree carrying the legacy nested file, `git
+  // check-ignore -v` reports `.qfai/evidence/implement-<spec-id>.md` and
+  // `atdd-<spec-id>.md` as ignored by the nested `*` without these lines, so the
+  // fresh clone and CI the root negation is for see neither file.
   "!implement-*.md",
   "!atdd-*.md",
   // A spec's own evidence, which carries the grilling trace a validator rule
@@ -3138,10 +3202,9 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // would commit a file nothing reads.
   // The prototyping session record, for the same reason again. It is a user
   // decision rather than regenerable stage evidence, so the root block tracks
-  // it — and the nested `*` overrides that root negation on any project
-  // carrying the legacy file, which is every project initialized before the
-  // root block grew its own evidence negations. The directory needs its own
-  // line: git never descends into an ignored one, so the leaf alone is inert.
+  // it — and the nested `*` overrides that root negation on any project that
+  // carries the legacy file. The directory needs its own line: git never
+  // descends into an ignored one, so the leaf alone is inert.
   "!prototyping/",
   "!prototyping/grilling.md",
   "!import-lite.md",
@@ -3218,6 +3281,8 @@ async function ensureLegacyEvidenceIgnoreNegations(
  */
 /** The masters' directory, relative to a project root and to the shipped tree alike. */
 const AGENTS_RULES_DIR_REL = path.join(".agents", "rules");
+/** The same directory as a citation spells it: with `/` on every platform. */
+const AGENTS_RULES_DIR_CITATION = ".agents/rules";
 
 /** The constitution cannot demote obligations an older or edited floor still omits. */
 async function canSyncConstitution(
@@ -3262,11 +3327,14 @@ async function updateUneditedRuleMasters(
   rootAssets: string,
   destRoot: string,
   dryRun: boolean,
-): Promise<{ copied: string[]; skipped: string[] }> {
+): Promise<{ copied: string[]; skipped: string[]; installed: ReadonlySet<string> }> {
   const shippedRulesDir = path.join(rootAssets, AGENTS_RULES_DIR_REL);
   const projectRulesDir = path.join(destRoot, AGENTS_RULES_DIR_REL);
   const copied: string[] = [];
   const skipped: string[] = [];
+  // The masters whose file carries the release's text once this pass is done,
+  // spelled with `/` as a citation is. A summary moves only for these.
+  const installed = new Set<string>();
 
   let plans: readonly RuleMasterPlan[];
   try {
@@ -3274,9 +3342,11 @@ async function updateUneditedRuleMasters(
   } catch (error: unknown) {
     // A tree this run cannot read is one it must not rewrite. Say so and leave
     // every master where it is: the copy above already put the missing ones
-    // there, and nothing here is required for the run to be correct.
+    // there, and nothing here is required for the run to be correct. With no
+    // way to tell which masters are the release's, none is reported installed,
+    // which withholds every summary refresh rather than guessing one.
     info(`  NOTE: rule masters were not checked for updates (${describeError(error)})`);
-    return { copied, skipped };
+    return { copied, skipped, installed };
   }
 
   const recorded: Record<string, string> = {};
@@ -3293,10 +3363,12 @@ async function updateUneditedRuleMasters(
     }
     if (plan.verdict !== "update") {
       recorded[plan.name] = plan.shippedHash;
+      installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
       continue;
     }
     if (dryRun) {
       copied.push(target);
+      installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
       info(`  would update: ${formatReportPath(target)} (rule master, unedited here)`);
       continue;
     }
@@ -3312,6 +3384,7 @@ async function updateUneditedRuleMasters(
     }
     copied.push(target);
     recorded[plan.name] = plan.shippedHash;
+    installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
   }
 
   if (!dryRun && plans.length > 0) {
@@ -3319,46 +3392,7 @@ async function updateUneditedRuleMasters(
     // state that keeps it unreplaceable for ever.
     await writeRuleLock(projectRulesDir, { ...(await readRuleLock(projectRulesDir)), ...recorded });
   }
-  return { copied, skipped };
-}
-
-/**
- * The masters whose file in this project carries the release's own text once
- * this run finishes: the ones the create-only copy just wrote, and the ones the
- * later update pass will replace because the project never edited them.
- *
- * A summary bullet describes its master, so the entry-point files may only be
- * moved to the release's wording for a master that moves with them. An adopter
- * who edited `grilling.md` keeps it — and an instruction file rewritten anyway
- * would assert a rule its own authoritative master does not carry.
- *
- * An unreadable tree yields the empty set, which refreshes nothing: with no way
- * to tell which masters are the release's, no bullet can be shown to describe
- * the file beside it.
- */
-async function installedRuleMasters(
-  rootAssets: string,
-  destRoot: string,
-  newlyWritten: readonly string[],
-): Promise<ReadonlySet<string>> {
-  const installed = new Set(newlyWritten);
-  try {
-    const plans = await planRuleMasterUpdates(
-      path.join(rootAssets, AGENTS_RULES_DIR_REL),
-      path.join(destRoot, AGENTS_RULES_DIR_REL),
-    );
-    for (const plan of plans) {
-      // `written` is the copy in this run, `current` is already the release's
-      // text, and `update` is the file this run replaces. `keep` is the edited
-      // one, and the only one whose summary may not move. Spelled with `/`, as
-      // a citation is.
-      if (plan.verdict !== "keep") installed.add(`.agents/rules/${plan.name}`);
-    }
-  } catch {
-    // Reported where the update pass meets the same tree; here the empty set is
-    // the answer, and it withholds every refresh rather than guessing one.
-  }
-  return installed;
+  return { copied, skipped, installed };
 }
 
 async function ensureAgentEntryPointRules(
@@ -3374,18 +3408,42 @@ async function ensureAgentEntryPointRules(
 
   if (!dryRun) await reclaimEntryPointStaging(destRoot);
 
+  // A master an earlier run wrote and could not cite is owed alongside the ones
+  // this run wrote. A master the project has since removed is owed nothing.
+  const rulesDir = path.join(destRoot, ".agents", "rules");
+  const pending = await readPendingCitations(rulesDir);
+  const owed = async (entryPoint: string): Promise<string[]> => {
+    const recorded = await Promise.all(
+      (pending[entryPoint] ?? []).map(async (master) =>
+        (await lstat(path.join(destRoot, ...master.split("/"))).then(
+          () => true,
+          () => false,
+        ))
+          ? [master]
+          : [],
+      ),
+    );
+    return [...new Set([...newlyWritten, ...recorded.flat()])].sort();
+  };
+
   // Under `--force` the wrapper sync writes the Copilot file whole, from the
   // same source, later in this run. Editing it here first is work thrown away,
   // and its refusals would name a file this run goes on to replace.
   if (!force) {
-    await updateCopilotRuleList(rootAssets, destRoot, dryRun, newlyWritten, installed, {
-      copied,
-      skipped,
-    });
+    await updateCopilotRuleList(
+      rootAssets,
+      destRoot,
+      dryRun,
+      await owed(COPILOT_INSTRUCTIONS_ENTRY),
+      installed,
+      { copied, skipped },
+      pending,
+    );
   }
 
   for (const name of AGENT_ENTRY_POINT_FILES) {
     const target = path.join(destRoot, name);
+    const toCite = await owed(name);
     const existing = await readTextFileIfPresent(target);
     if (existing === null) {
       // Absent: the create-only copy above owns this case, and on a dry run
@@ -3426,33 +3484,39 @@ async function ensureAgentEntryPointRules(
 
     if (!needsManagedRulesSection(existing, section)) {
       // The section is already there. A master this run wrote is one the file
-      // cannot have cited, so its bullet is added. A bullet a release wrote and
-      // the project never edited takes the template's wording, as an unedited
-      // master takes the release's text. Everything else is left as the project
-      // has it, including a bullet it deleted or reworded.
+      // cannot have cited, and so is one an earlier run recorded as owed, so its
+      // bullet is added. A bullet a release wrote and the project never edited
+      // takes the template's wording, as an unedited master takes the release's
+      // text. Everything else is left as the project has it, including a bullet
+      // it deleted or reworded.
       const refreshed = refreshSupersededRuleBullets(existing, section, installed);
       reportWithheldSummaries(target, refreshed.withheld);
       // The review directive goes in beside the citations; the project's own
       // text and the bullets it deleted are left as they are.
-      const cited = addRuleCitations(refreshed.text, section, newlyWritten);
+      const cited = addRuleCitations(refreshed.text, section, toCite);
       const merged = addReviewPointer(cited, template);
+      const shown = new Set(citedRuleMastersOutsideCode(existing));
+      const uncited = toCite.filter((master) => !shown.has(master));
       if (merged === existing) {
+        if (uncited.length === 0) pending[name] = [];
         skipped.push(target);
         continue;
       }
-      const shown = new Set(citedRuleMastersOutsideCode(existing));
       // Read from the citation step alone. Compared against the text the
       // pointer was added to as well, a run that only added the pointer
       // reported citing masters it had not cited, and told an operator whose
       // rewrite was refused to add citations that were already there.
       const update = {
         ...describeRuleListUpdate(cited !== refreshed.text, merged !== cited, refreshed.refreshed),
-        pending: newlyWritten.filter((master) => !shown.has(master)),
+        pending: uncited,
       };
-      if (await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun)) {
-        copied.push(target);
-      } else {
+      const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
+      if (outcome === "refused") {
+        pending[name] = uncited;
         skipped.push(target);
+      } else {
+        if (outcome === "written") pending[name] = [];
+        copied.push(target);
       }
       continue;
     }
@@ -3498,6 +3562,7 @@ async function ensureAgentEntryPointRules(
           skipped.push(target);
           continue;
         }
+        pending[name] = [];
         info(`  updated: ${formatReportPath(target)} (agent instructions; existing content kept)`);
       }
       copied.push(target);
@@ -3538,12 +3603,15 @@ async function ensureAgentEntryPointRules(
       skipped.push(target);
       continue;
     }
+    pending[name] = [];
     info(
       `  updated: ${formatReportPath(target)} (appended .agents/rules section; existing content kept)`,
     );
     copied.push(target);
   }
 
+  // A dry run records nothing: every change above is to this run's copy alone.
+  if (!dryRun) await writePendingCitations(rulesDir, pending);
   return { copied, skipped };
 }
 
@@ -3555,6 +3623,9 @@ async function ensureAgentEntryPointRules(
  * and decoded in full for one line.
  */
 const COPILOT_INSTRUCTIONS_MAX_BYTES = 512 * 1024;
+
+/** The Copilot instruction file, as the record of owed citations names it. */
+const COPILOT_INSTRUCTIONS_ENTRY = ".github/copilot-instructions.md";
 
 /**
  * Keeps the rule list in an existing `.github/copilot-instructions.md` current.
@@ -3584,24 +3655,33 @@ async function updateCopilotRuleList(
   rootAssets: string,
   destRoot: string,
   dryRun: boolean,
-  newlyWritten: readonly string[],
+  owed: readonly string[],
   installed: ReadonlySet<string>,
   report: { copied: string[]; skipped: string[] },
+  pending: PendingCitations,
 ): Promise<void> {
   const target = path.join(destRoot, ".github", "copilot-instructions.md");
-  const existing = await readCopilotInstructions(target, newlyWritten.length > 0, report);
-  if (existing === null) return;
+  const read = await readCopilotInstructions(target, owed, report);
+  if (read.state !== "read") {
+    // Absent: the wrapper sync writes it whole later in this run, citing every
+    // master. Unreadable: what it owes stays owed, and a master the project has
+    // since removed drops out with the rest of what is no longer owed.
+    pending[COPILOT_INSTRUCTIONS_ENTRY] = read.state === "absent" ? [] : [...owed];
+    return;
+  }
+  const existing = read.text;
 
   const template = await readTextFileIfPresent(path.join(rootAssets, "AGENTS.md"));
   const section = template === null ? null : extractManagedRulesSection(template);
   if (section === null) return;
 
   const shown = new Set(citedRuleMastersOutsideCode(existing));
-  const uncited = newlyWritten.filter((master) => !shown.has(master));
+  const uncited = owed.filter((master) => !shown.has(master));
   const refreshed = refreshSupersededRuleBulletsInList(existing, section, installed);
   reportWithheldSummaries(target, refreshed.withheld);
   const merged = addRuleCitationsToList(refreshed.text, section, uncited);
   if (merged === existing) {
+    if (uncited.length === 0) pending[COPILOT_INSTRUCTIONS_ENTRY] = [];
     if (uncited.length > 0) {
       // A project that wrote its own Copilot instructions: no generated heading
       // and no rule bullet, so there is no list to add a line to. The wrapper
@@ -3620,16 +3700,25 @@ async function updateCopilotRuleList(
     ...describeRuleListUpdate(merged !== refreshed.text, false, refreshed.refreshed),
     pending: uncited,
   };
-  if (await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun)) {
-    report.copied.push(target);
-  } else {
+  const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
+  if (outcome === "refused") {
+    pending[COPILOT_INSTRUCTIONS_ENTRY] = uncited;
     report.skipped.push(target);
+  } else {
+    if (outcome === "written") pending[COPILOT_INSTRUCTIONS_ENTRY] = [];
+    report.copied.push(target);
   }
 }
 
+/** An existing Copilot instruction file as this run finds it. */
+type CopilotInstructions =
+  | { readonly state: "absent" }
+  | { readonly state: "unreadable" }
+  | { readonly state: "read"; readonly text: string };
+
 /**
- * The text of an existing Copilot instruction file, or `null` when there is none
- * this run reads.
+ * The text of an existing Copilot instruction file, or why there is none this
+ * run reads.
  *
  * Absent — and only absent — is not a failure: `syncIntegrationWrappers` writes
  * the file whole later in this run, from the same source.
@@ -3638,32 +3727,32 @@ async function updateCopilotRuleList(
  * adopter: a FIFO blocks until a writer closes it, a device never ends, and an
  * ordinary file of any size would be buffered and decoded whole for one line.
  *
- * A file this run cannot read is reported only when `citing`, because nothing
- * else carries that citation into it. Without one, the only question is whether
- * a summary in it is out of date, and it may well not be: a warning on every run
- * about a file that needs nothing hides the warnings that matter.
+ * A file this run cannot read is reported only when it owes a citation, because
+ * nothing else carries that citation into it. Without one, the only question is
+ * whether a summary in it is out of date, and it may well not be: a warning on
+ * every run about a file that needs nothing hides the warnings that matter.
  */
 async function readCopilotInstructions(
   target: string,
-  citing: boolean,
+  owed: readonly string[],
   report: { skipped: string[] },
-): Promise<string | null> {
+): Promise<CopilotInstructions> {
   const present = await lstat(target).then(
     () => true,
     (cause: unknown) => !isEnoent(cause),
   );
-  if (!present) return null;
+  if (!present) return { state: "absent" };
 
   const bytes = await readBoundedRegularFile(target, COPILOT_INSTRUCTIONS_MAX_BYTES);
-  if (bytes !== undefined) return bytes.toString("utf-8");
-  if (citing) {
+  if (bytes !== undefined) return { state: "read", text: bytes.toString("utf-8") };
+  if (owed.length > 0) {
     error(
       `  WARNING: ${formatReportPath(target)} was left unchanged. It is not an ordinary file this run can ` +
-        `read, or it is larger than ${String(COPILOT_INSTRUCTIONS_MAX_BYTES)} bytes. Add the rule citations by hand.`,
+        `read, or it is larger than ${String(COPILOT_INSTRUCTIONS_MAX_BYTES)} bytes.${pendingNote(owed)}`,
     );
     report.skipped.push(target);
   }
-  return null;
+  return { state: "unreadable" };
 }
 
 /** An update to a rule list, worded for each place the run reports it. */
@@ -3715,14 +3804,18 @@ function describeRuleListUpdate(
   };
 }
 
+/** How a rule-list write ended: on disk, only reported on a dry run, or refused. */
+type RuleListWrite = "written" | "planned" | "refused";
+
 /**
  * Writes an updated rule list through the refusals every entry-point rewrite
  * takes, and reports the outcome.
  *
- * `pending` names the citations no later run offers again, for the refusal to
- * say so. A superseded summary is not among them: a later run finds it again.
+ * `pending` names the citations a refusal leaves owed, for the refusal to say
+ * they are kept; the caller records them for a later run. A superseded summary
+ * is not among them: a later run finds it again.
  *
- * Returns whether the file was written, or would be on a dry run.
+ * Returns whether the file was written, would be on a dry run, or was refused.
  */
 async function writeRuleListUpdate(
   target: string,
@@ -3731,25 +3824,27 @@ async function writeRuleListUpdate(
   update: RuleListUpdate & { readonly pending: readonly string[] },
   destRoot: string,
   dryRun: boolean,
-): Promise<boolean> {
+): Promise<RuleListWrite> {
   const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot, update.byHand);
   if (refusal !== null) {
     error(
       `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(update.pending)}`,
     );
-    return false;
+    return "refused";
   }
   if (dryRun) {
     info(`  would update: ${formatReportPath(target)} (${update.planned})`);
-    return true;
+    return "planned";
   }
   const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
   if (wrote !== null) {
-    error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
-    return false;
+    error(
+      `  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}${pendingNote(update.pending)}`,
+    );
+    return "refused";
   }
   info(`  updated: ${formatReportPath(target)} (${update.done}; nothing else changed)`);
-  return true;
+  return "written";
 }
 
 /**
@@ -3773,16 +3868,16 @@ function quoteList(paths: readonly string[]): string {
 }
 
 /**
- * What a refused rewrite leaves undone, appended to the refusal.
+ * What a refused rewrite leaves owed, appended to the refusal.
  *
- * A master this run copied is one no later run will offer again: the file is on
- * disk, so the next copy skips it and the list of newly written masters comes
- * back empty. Repairing the file therefore does not bring the citation with it,
- * and a refusal that does not say so reads as one.
+ * A master this run copied is one no later copy offers again: the file is on
+ * disk, so the next copy skips it. The run records the masters it could not
+ * cite instead, and a later run cites them once the file can be rewritten,
+ * which is what the note tells the reader to expect.
  */
 function pendingNote(masters: readonly string[]): string {
   if (masters.length === 0) return "";
-  return ` A later run does not retry this: add ${quoteList(masters)} to the file yourself.`;
+  return ` The citations of ${quoteList(masters)} are kept, and a later run adds them once the file can be rewritten.`;
 }
 /**
  * The name shape `replaceEntryPointFile` stages under.
@@ -3997,8 +4092,10 @@ async function refuseUnsafeEntryPointRewrite(
  * `.github/instructions/`.
  *
  * So both cases are handled here rather than one here and one in the copy. A
- * project without a settings file gets the whole template; one that has its own
- * gets only the hook entries, appended after whatever it already declares.
+ * project without a settings file gets the whole template. One that has its own
+ * gets the hook groups it lacks, appended after whatever it already declares,
+ * and each group an earlier release wrote is replaced where it stands. A group
+ * the project edited is kept and named in the output.
  *
  * Every refusal is reported rather than silently absorbed, and none of them ends
  * the run. A reminder is worth less than the rest of what `qfai init` writes, so
@@ -4050,9 +4147,6 @@ async function ensureClaudeCodeHooks(
   }
 
   const merged = mergeDocumentationClarityHooks(existing.text, template.text);
-  if (merged.outcome === "already-present") {
-    return { copied: [], skipped: [target] };
-  }
   if (merged.outcome === "unreadable") {
     error(
       `  WARNING: ${shown} was left unchanged (${merged.reason}). Copy the \`hooks\` entries from ` +
@@ -4060,14 +4154,21 @@ async function ensureClaudeCodeHooks(
     );
     return { copied: [], skipped: [target] };
   }
+  // Every run, so an edited reminder is never mistaken for one this release wrote.
+  for (const group of merged.edited) {
+    info(`  kept: ${shown} hook group ${group} (edited here)`);
+  }
+  if (merged.outcome === "already-present") {
+    return { copied: [], skipped: [target] };
+  }
 
   const events = merged.events.join(", ");
   if (dryRun) {
-    info(`  would update: ${shown} (add reminder hooks: ${events})`);
+    info(`  would update: ${shown} (reminder hooks: ${events})`);
     return { copied: [target], skipped: [] };
   }
   await writeFile(target, serializeClaudeSettings(merged.settings), "utf-8");
-  info(`  updated: ${shown} (added reminder hooks: ${events}; existing settings kept)`);
+  info(`  updated: ${shown} (reminder hooks: ${events}; existing settings kept)`);
   return { copied: [target], skipped: [] };
 }
 
@@ -4694,6 +4795,11 @@ type Note = (message: string) => void;
 type WrapperSyncOptions = {
   force: boolean;
   dryRun: boolean;
+  /**
+   * The masters whose file carries the release's text once this run is done.
+   * Given, a rebuilt Copilot file keeps its own bullet for every other master.
+   */
+  installedRuleMasters?: ReadonlySet<string>;
   /** Defaults to stdout, which is what `qfai init` wants. */
   report?: Note;
 };
@@ -4728,8 +4834,14 @@ async function syncIntegrationWrappers(
   } else {
     copied.push(copilotDest);
     if (!options.dryRun) {
+      const existingCopilot = copilotExists ? await readTextFileIfPresent(copilotDest) : null;
+      const generated = buildCopilotInstructions();
+      const contents =
+        existingCopilot === null || options.installedRuleMasters === undefined
+          ? generated
+          : keepSummariesOfKeptMasters(generated, existingCopilot, options.installedRuleMasters);
       await mkdir(path.dirname(copilotDest), { recursive: true });
-      await writeFile(copilotDest, buildCopilotInstructions(), "utf-8");
+      await writeFile(copilotDest, contents, "utf-8");
     }
   }
 
@@ -8013,7 +8125,7 @@ function buildCopilotInstructions(): string {
     "- `.agents/rules/documentation-clarity.md` — plain, minimal writing in pull requests, issues, comments and Markdown; no local identifiers, no account of how the work went.",
     "- `.agents/rules/minimal-implementation.md` — the order to try solutions in once a behaviour is agreed; mark a deliberate shortcut with its ceiling and the condition that lifts it.",
     "- `.agents/rules/interface-clarity.md` — what may appear on a screen or in terminal output; text explaining how to work a control is a defect report against that control.",
-    "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends in one of four named endings, never at a question count.",
+    "- `.agents/rules/grilling.md` — interview the decision tree before a design is fixed; outside the discussion stage agents grill each other, and only a critical decision reaches the user.",
     "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.",
     "",
   ].join("\n");

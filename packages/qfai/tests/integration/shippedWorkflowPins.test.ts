@@ -375,11 +375,9 @@ describe("TC-0003-0033 (TDD-0033): leakage guard exits 1 on a planted convention
     // flags anywhere in the script.
     expect(script).not.toMatch(/allow[-_]?list/i);
     expect(script).not.toMatch(/--exclude|--include/);
-    // The only inverted grep in the whole script is the pre-existing
-    // schemaVersion carve-out for package.json — nothing new filters
-    // version-marker hits out of the FAIL path.
-    expect(script.match(/grep -v/g) ?? []).toHaveLength(1);
-    expect(script).toContain(String.raw`| grep -vE 'package\.json' || true`);
+    // The script has no inverted grep at all: nothing filters a hit out of
+    // the FAIL path, the published manifest's schemaVersion hits included.
+    expect(script.match(/grep -v/g) ?? []).toHaveLength(0);
   });
 });
 
