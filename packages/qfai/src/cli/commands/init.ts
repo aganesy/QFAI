@@ -196,6 +196,53 @@ export type InitOptions = {
   toolVersionOverride?: string;
 };
 
+/**
+ * Refuses a run whose destination assistant tree resolves into the assets this
+ * command copies from.
+ *
+ * `init` writes `.qfai/assistant/**` from `assets/init/.qfai/assistant/**`. A
+ * repository that vendors the tree by link has the destination resolving to the
+ * source, so the write lands in the package's own assets — an edit to the
+ * shipped documents, made by the command whose job is to install a copy of
+ * them, and indistinguishable afterwards from an ordinary asset change.
+ *
+ * Detected by resolution rather than by a path or a name, so it holds wherever
+ * the repository is checked out. An ordinary project resolves nowhere near the
+ * installed package and is unaffected; the check fails open when either side
+ * cannot be resolved, for the same reason the dependency guard does — a guard
+ * that mistakes a normal project for this one breaks the product.
+ */
+async function refuseWritingThroughToOwnAssets(
+  destRoot: string,
+  assistantAssets: string,
+): Promise<void> {
+  const resolve = async (target: string): Promise<string | null> => {
+    try {
+      return await realpath(target);
+    } catch {
+      return null;
+    }
+  };
+  const [destAssistant, sourceAssistant] = await Promise.all([
+    resolve(path.join(destRoot, ASSISTANT_DIR)),
+    resolve(assistantAssets),
+  ]);
+  if (destAssistant === null || sourceAssistant === null) return;
+  const relative = path.relative(sourceAssistant, destAssistant);
+  const inside = relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  if (!inside) return;
+  throw new Error(
+    [
+      `qfai init: ${formatReportPath(path.join(destRoot, ASSISTANT_DIR))} resolves to ${formatReportPath(destAssistant)},`,
+      "which is inside the assets this command copies from. Writing there would edit the",
+      "package's own shipped documents rather than install a copy of them.",
+      "",
+      "This is the repository that builds the package, with its assistant tree vendored by",
+      "link. Edit the assets directly — they are the file the link points at.",
+    ].join("\n"),
+  );
+}
+
 export async function runInit(options: InitOptions): Promise<void> {
   const toolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
   const assetsRoot = getInitAssetsDir();
@@ -211,6 +258,8 @@ export async function runInit(options: InitOptions): Promise<void> {
   // 正しい実行と同じ出力になってしまう。レポートより先に出すことで、
   // 中断・失敗した実行でも対象がスクロールバックに残る。
   info(`qfai init: dest=${formatReportPath(destRoot)}`);
+
+  await refuseWritingThroughToOwnAssets(destRoot, assistantAssets);
 
   if (options.force) {
     info(
