@@ -107,20 +107,31 @@ describe("the grilling reminder fires where a decision gets made quietly", () =>
   it.each(SETTINGS)("%s points at the master rather than restating it", async (rel) => {
     // A hook that carries the rule drifts from it, and a compressed method is
     // worse than none: the rule's parts qualify each other, so a summary that
-    // drops a qualifier states the opposite of what the rule says. An earlier
-    // draft of this text managed it four times over — user-held facts have no
-    // recommendation, a frontier larger than the host takes goes in consecutive
-    // batches, a running lookup keeps a session open past an empty frontier,
-    // and a session between agents does end at a count.
+    // drops a qualifier states the opposite of what the rule says — a frontier
+    // larger than the host takes goes in consecutive batches, and a running
+    // lookup keeps a session open past an empty frontier.
     //
-    // So the reminder names the trigger, names the file, and stops.
+    // So the reminder names the trigger and who answers, names the file, and
+    // leaves the method's mechanics to the file.
     const settings = await readSettings(rel);
     for (const [matcher] of MARKERS) {
       const payload = preToolUse(settings, matcher)
         .hooks.map((h) => (h.args ?? []).join(" "))
         .join(" ");
       expect(payload, `${matcher} does not name the master`).toContain(".agents/rules/grilling.md");
-      for (const part of ["frontier", "round", "recommend", "confirmation", "lookup"]) {
+      expect(payload, `${matcher} invites working from the line`).toContain(
+        "Read the rule rather than working from this line.",
+      );
+      // Who answers is the one thing the reminder carries: the moment it fires
+      // is when an agent decides whether to stop for the user, and asking the
+      // user every design question is the failure the default avoids.
+      expect(payload, `${matcher} does not name the default answerer`).toContain(
+        "Outside the discussion stage, settle it between agents and take the griller's recommendation",
+      );
+      expect(payload, `${matcher} does not name what reaches the user`).toContain(
+        "ask the user only a critical decision",
+      );
+      for (const part of ["frontier", "round", "confirmation", "lookup"]) {
         expect(payload.toLowerCase(), `${matcher} restates the method: ${part}`).not.toContain(
           part,
         );
