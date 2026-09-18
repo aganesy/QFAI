@@ -85,7 +85,7 @@ describe("deriving a TC's layer is a published procedure", () => {
         "or what a real browser rendered (painted pixels, computed layout) → **L3 Integration**",
       );
       expectPhrase(procedure, "measured on its rendered output is L3, not L5");
-      expect(procedure).toMatch(/rendered border .*\| L3 Integration \|/);
+      expect(procedure).toMatch(/rendered border .*\| L3 Integration +\|/);
       expectPhrase(catalog, "or a real browser rendering the UI) within service boundaries");
 
       const template = await read(
