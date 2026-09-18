@@ -1202,30 +1202,43 @@ describe("rule overlays", () => {
     {
       file: "distributed-surface.local.md",
       clauses: [
-        // The surface, and which guard reads it.
+        // The surface, and which of the three guards reads it.
         "package.json#files",
         "Only the post-build guard reads `files`",
-        // The identifier shapes.
+        // The identifier shapes, one token each for the two that no other
+        // clause names.
         "CAP-0010",
         "DEC-NNNN-NNNN",
-        "schemaVersion",
-        // The exceptions.
+        // The three exceptions: the sample IDs, the manifest version, and the
+        // migration memo whose file name the guards neutralise before scanning.
         "spec-0001",
-        // Versions that belong to something else.
+        "is the released version",
+        "cannot be renamed",
+        // Versions that belong to something else, and the matcher's ceiling.
         "A version that belongs to something else",
-        // The guard layers.
+        "project-qualified form",
+        // The guard layers, and where each of them runs.
         "distributedSurfaceLeakage.test.ts",
+        "lint job and in the build job",
         // Where internal IDs are fine.
-        "packages/qfai/tests/",
+        "which does not ship",
       ],
     },
     {
       file: "version-discipline.local.md",
       clauses: [
+        // The convention is adopted here.
         "has adopted it",
+        // What a pin authorizes, and when it is done.
         "chore(release): qfai X.Y.Z",
-        "CheckVersionAlignment",
-        "VERSION_PIN_SKIP",
+        "Do this once",
+        // How each guard reads a branch name. One token per row, taken from
+        // the half of the row no other row repeats.
+        "exits 1 rather than reading",
+        "a suffix after",
+        // The override, and the unpinned case.
+        "coordinated release",
+        "On an unpinned branch",
       ],
     },
     {
@@ -1246,10 +1259,15 @@ describe("rule overlays", () => {
   });
 
   it.each(
-    OVERLAYS.flatMap(({ file }) => [
-      { entry: "AGENTS.md", file },
-      { entry: "CLAUDE.md", file },
-    ]),
+    OVERLAYS.flatMap(({ file }) =>
+      // Every entry point an agent reads this repository's rules through. A
+      // tool whose entry point names only the base master follows a claim the
+      // overlay has superseded.
+      ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"].map((entry) => ({
+        entry,
+        file,
+      })),
+    ),
   )("$entry cites $file", async ({ entry, file }) => {
     const text = await readFile(path.join(ROOT, entry), "utf-8");
     expect(text).toContain(file);
