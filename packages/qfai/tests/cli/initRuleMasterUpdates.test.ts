@@ -64,7 +64,23 @@ beforeEach(async () => {
 afterEach(async () => {
   vi.restoreAllMocks();
   await removeTempTree(root);
+  for (const dir of outsideRoots.splice(0)) await removeTempTree(dir);
 });
+
+/** Directories created outside the project, removed with the project itself. */
+const outsideRoots: string[] = [];
+
+/**
+ * A directory outside the project, for a link the containment guard must refuse.
+ *
+ * The guard's boundary is the project root: a link to another directory inside
+ * it is a tree vendored at documents the project owns, and that is admitted.
+ */
+async function outsideProject(): Promise<string> {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+  outsideRoots.push(dir);
+  return dir;
+}
 
 describe("a re-init and a rule master the project has", () => {
   it("records what the first run wrote", async () => {
@@ -353,7 +369,7 @@ describe("the constitution and its safety floor upgrade together", () => {
   });
 
   it("does not authorize a leaf symlink even when its target has shipped text", async () => {
-    const target = path.join(root, "external-minimum.md");
+    const target = path.join(await outsideProject(), "external-minimum.md");
     await writeFile(target, await readFile(minimumPath(), "utf-8"), "utf-8");
     await unlink(minimumPath());
     await symlink(target, minimumPath(), "file");
@@ -367,7 +383,7 @@ describe("the constitution and its safety floor upgrade together", () => {
   it.each([".agents", ".agents/rules"])("does not authorize a linked %s parent", async (parent) => {
     const previous = await olderConstitution();
     const original = path.join(root, parent);
-    const held = path.join(root, "held-parent");
+    const held = path.join(await outsideProject(), "held-parent");
     await rename(original, held);
     await symlink(held, original, process.platform === "win32" ? "junction" : "dir");
 
@@ -380,7 +396,10 @@ describe("the constitution and its safety floor upgrade together", () => {
     const previous = await olderConstitution();
     await unlink(minimumPath());
     const original = path.join(root, RULES_REL);
-    const held = path.join(root, "held-rules");
+    // Outside the project, which is what the containment guard refuses. A link
+    // to another directory inside the project is a tree vendored in place, and
+    // the guard admits it.
+    const held = path.join(await mkdtemp(path.join(os.tmpdir(), "qfai-held-rules-")), "rules");
     await rename(original, held);
     await symlink(held, original, process.platform === "win32" ? "junction" : "dir");
 
