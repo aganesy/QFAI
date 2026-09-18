@@ -101,9 +101,10 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
 
   it("blocks handoff on the session, not on one answer", async () => {
     // Convergence is the reviewer's verdict on four fixed axes, and it can
-    // make several decisions answerable at once. The method ends a session on
-    // an empty frontier and the user's confirmation, so reducing the
-    // checkpoint to one question would route to handoff with the rest open.
+    // make several decisions answerable at once. The method ends a delegated
+    // session when no node is open and every critical decision has the user's
+    // answer, so reducing the checkpoint to one question would route to
+    // handoff with the rest open.
     const skill = await read(SKILL);
     expectPhrase(skill, "**Resume the session against the converged prototype**");
     expectPhrase(
@@ -112,7 +113,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     );
     expectPhrase(
       skill,
-      "Blocking: `H` does not start until the session ends — the frontier empty and the user confirming",
+      "Blocking: `H` does not start until the session ends — no node open and every critical decision answered",
     );
     expectPhrase(skill, "convergence is the reviewer's verdict on four axes, not the user's");
     // And the no-question route stops rather than certifying an unpicked design.
@@ -173,7 +174,10 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     const skill = await read(SKILL);
     expectPhrase(skill, "`.qfai/evidence/prototyping/grilling.md`");
     expectPhrase(skill, "under `## Session` for the decisions");
-    expectPhrase(skill, "`## Escalated` for anything the user has yet to settle");
+    // Only a critical decision waits on the user; the rest are adopted and
+    // recorded under `## Session` with the agent that recommended them.
+    expectPhrase(skill, "`## Escalated` for a critical decision the user has yet to settle");
+    expectPhrase(skill, "an adopted one names the agent that recommended it and why it was taken");
     // An answered escalation leaves the open section, or the same decision
     // reads as settled and open at once — and the delegated prompts consume
     // every matching row.
@@ -279,7 +283,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // committed for that reason. Drawing the line at "stage evidence" made this
     // paragraph's own argument rest on a premise the constitution contradicts.
     const skill = await read(SKILL);
-    expectPhrase(skill, "**It is a user decision, not a regenerable log.**");
+    expectPhrase(skill, "**It is a decision record, not a regenerable log.**");
     expectPhrase(skill, "A run log is reproducible by rerunning its stage and is ignored");
     expectPhrase(skill, "The managed ignore block negates this path");
 

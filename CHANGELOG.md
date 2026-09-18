@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The root assistant tree is linked at the assets the package ships** (#1915, #1916).
+  `.qfai/assistant/**` was a byte copy of `packages/qfai/assets/init/.qfai/assistant/**`,
+  kept in step by a sync script and a tracked-tree diff. It is thirteen symlinks
+  now, so an improvement to a shipped skill reaches the agents working in this
+  repository with no sync step and the two cannot disagree. Seven paths stay real
+  files: the four Stage 0 catalog documents a project owns, named by
+  `ADOPTER_OWNED_ASSETS`, and the migration memos an upgrade writes here.
+  `scripts/link-assistant-tree.mjs` creates and verifies the links and reports a
+  path that exists here and nowhere in the package; `pnpm ci:lint` runs its check.
+  `scripts/sync-init-to-root.mjs` is reduced to seeding the two files a project
+  owns.
+
 - **A guard on the mode a link is staged with** (#1920). `ln -s` in Git Bash on
   Windows copies the target instead of linking to it unless
   `MSYS=winsymlinks:nativestrict` is set, and the copy is byte-identical — so
@@ -172,6 +184,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Grilling outside the discussion stage is delegated between agents.** A
+  griller interviews the authors, and every decision the user does not have to
+  make takes the griller's recommendation. Only a critical decision reaches the
+  user: one that contradicts a spec, a contract or a recorded decision, one
+  whose effect cannot be taken back, or product intent nothing written states.
+  Each adopted decision is recorded, and the stage's final report lists them,
+  so the user can overturn one later. Reviewers no longer return REVISE for an
+  adopted decision that is not critical. The request bounds the tree: a
+  decision that would only add something the request did not ask for is not
+  asked. A delegated session ends in the new ending `adopted`. The discussion
+  stage, and a session the user starts, still put every decision to the user.
+
 - **The worker-setting comparison is re-measured, on the project that is now the
   largest** (#1887). The artifact recorded `core` at 145 test files against a tree
   holding 174 — the twenty-percent bound exactly — so the next core test file any
@@ -291,6 +315,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the project edited as it is.
 
 ### Fixed
+
+- **A reminder hook's message reaches a project that installed an earlier
+  release** (#2003). `qfai init` wrote each message into `.claude/settings.json`
+  and never touched a group that was already there, so an upgraded project kept
+  the old text for good, even after the rule it restates changed. The settings
+  file now holds only the event, the matcher, the marker and a fixed `node -e`
+  reader. The messages live in `.agents/rules/reminders.json`, which `qfai init`
+  refreshes like a rule master, wherever the project has not edited it. On the
+  next run a group still exactly as an earlier release wrote it is replaced
+  where it stands. A group the project edited is kept, and the run names it. A
+  missing or unreadable message file prints nothing and exits 0.
 
 - **A removal answer written as a heading is pinned** (#1893). A heading deeper
   than the section's own does not end that section, so the reader that judges
