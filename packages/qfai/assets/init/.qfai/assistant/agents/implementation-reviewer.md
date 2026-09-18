@@ -89,6 +89,7 @@ tools: [Read, Glob, Grep, Bash]
   `.github/instructions/principles.instructions.md` and this count never ask for
   opposite things about the same code.
 
+- Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
 - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a component written where one could be installed, a standard passed over, and an authored region with no recorded reason.
 
 ## Inputs you must read
