@@ -109,7 +109,7 @@ rather than to a split of this row. What stands in the way is the evidence form
 alone, and `CR-20260913-0006` puts that choice to the user.
 
 `TDD-0033` is not backfilled either. Its obligation, `TC-0014-0033`, reads
-"active layout uses `.qfai/evidence/prototyping/iter-NN/` only", and its parent
+"active layout uses `.qfai/evidence/prototyping/iter-NN/` only", and its parent <!-- qfai:not-a-citation -->
 `AC-0014-0005` adds that the legacy `screenshots/` / `html/` directory layout is
 "no longer accepted as the active SSOT".
 
