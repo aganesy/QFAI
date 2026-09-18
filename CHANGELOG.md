@@ -147,6 +147,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Define a trust boundary by uncontrolled callers and sources, including public
   library exports and plugin or tenant contexts (#1803).
 
+- **A batch `/qfai-sdd` run records its shared phases once, in
+  `.qfai/evidence/sdd-batch-<timestamp>.md`** (#1906). With no argument, the
+  skill runs Phase 0 Contracts-first and Phase 1 Outline once for every spec,
+  but the per-spec evidence template required their grilling rows and work
+  orders in each spec's file. That left three choices: eleven copies that must
+  agree in `Ended at` and differ in `Wrote at`, one file with the other ten
+  incomplete, or an undocumented batch file no reviewer checks. A new
+  template, `templates/evidence/sdd-batch.md`, carries those two phases' rows
+  and work orders with the per-spec columns. Each spec's file names it on a
+  `Batch record` line, and the skill's batch section says so.
+
 - **Retained failures keep unit-level coverage** (#1793). The
   minimal-implementation safety floor protects coverage of the failure paths
   production code retains.
@@ -406,6 +417,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   kept. A later run cites the recorded masters that are still on disk once the
   file can be rewritten, then clears the record. A bullet the project deleted on
   purpose was never recorded, so it is still not restored.
+
+- **Test titles and comments name only declared test cases and stories**
+  (#1836). Twenty-five titles and comments in the package's tests cited a
+  `TC-` or `US-` identifier no spec declares, and two annotations in a unit
+  suite named undeclared test cases. `QFAI-ATDD-101` and `-102` read only the
+  annotation form in the acceptance layers, so nothing reported them. They are
+  removed, and a repository check now fails on any bare identifier in a test
+  title or comment that no spec declares. An identifier the same file also
+  uses in code is read as fixture data.
 
 - **A removal answer written as a heading is pinned** (#1893). A heading deeper
   than the section's own does not end that section, so the reader that judges
@@ -862,6 +882,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   cases, dropping `label` from the required keys, or letting the stage start,
   left every case passing.
 
+- **Triage says how to file a source file no spec owns** (#1903). The
+  `Existing Spec` cell names a spec, several specs or `_policies`, and shared
+  code such as a navigation shell or an error boundary belongs to none of them.
+  Each project had to choose between naming an unrelated spec, a policy row
+  that schedules nothing, and a new spec for something that is not a
+  capability. `sdd-triage.md` now says to split the file's obligations by
+  behaviour onto the specs that own each behaviour, says what the other moves
+  cost, and routes a behaviour no spec owns to a new requirement.
+
 - **The prototyping profile reports a UI contract that does not parse**
   (#1767). Every reader of UI contracts skips a file it cannot parse, so its
   screens are absent from every screen check. `sdd`, `tdd` and `full` report
@@ -1062,6 +1091,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A record that explains why an artifact is absent says so with
   `<!-- qfai:not-a-citation -->` on the line, or on the line before a fenced
   block for the paths it names inside it.
+
+- **Article XI no longer sends toolchain output to `tmp/`** (#1929). The
+  article required "intermediate build artifacts" under `tmp/`. The shipped
+  temporary-files rule says build, test and cache output (`dist/`, coverage
+  reports, package tarballs) stays where the toolchain writes it. An article
+  outranks a rule, so an agent reading both was told to move `dist/`. Article
+  XI now covers the scratch files an agent creates, names toolchain output as
+  outside its scope, and gives the same list the rule does.
 
 - **A glob's bracket expression names a set on both sides** (#1652). A class
   was compiled by scanning for the first `]`, which stops inside a named class

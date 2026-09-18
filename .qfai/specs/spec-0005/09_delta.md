@@ -50,6 +50,6 @@
 
 - adopted: REQ-0029（Report Terminology Canonical 統一）追加
 - rationale: v1.7.14 の breaking change を仕様に反映:
-  - **"Compatibility Issues" → "Canonical Issues"**: レポートの issue カテゴリセクション名と issuesByCategory キーを "compatibility" → "canonical" に変更（DR-0108）
+  - **"Compatibility Issues" → "Canonical Issues"**: レポートの issue カテゴリセクション名と issuesByCategory キーを "compatibility" → "canonical" に変更（DR-0294）
   - **Surface inference fallback**: surface 推定不能時に "mixed" にフォールバックし warning を付与（旧: エラー）
   - **バージョン更新**: レポート内バージョンコメント v1.7.13 → v1.7.14

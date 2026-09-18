@@ -1,7 +1,6 @@
 /**
  * Core meta-tests verifying absence of synthetic tokens in core test fixtures
  * and presence of required negative test cases.
- * TC-0012-0238, TC-0012-0239, TC-0012-0241, TC-0012-0248 (v1.7.15 rev9 WS-3/WS-4)
  *
  * Backfill TDD: exception pattern sanctioned by DR-0012-0052.
  */

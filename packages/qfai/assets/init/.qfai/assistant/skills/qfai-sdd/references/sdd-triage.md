@@ -291,6 +291,26 @@ carried out, all gone means it is and the row is its tombstone. A row where
 only some targets resolve is in neither state and is rejected, which is what
 catches a source that was misspelled or never allocated.
 
+### A source file no spec owns
+
+Shared code that every screen uses and no spec describes — a navigation shell,
+a layout wrapper, an error boundary — has no `Existing Spec` value of its own.
+**Split its obligations by behaviour, and give each one a row on the spec that
+already owns that behaviour**: the sign-out control on the authentication spec,
+the menu toggle on the spec whose screen exercises it. It is the impact cascade
+above, keyed on behaviour rather than on the file.
+
+The other moves each lose something:
+
+| Move                             | What it costs                                                                            |
+| -------------------------------- | ---------------------------------------------------------------------------------------- |
+| Name a spec that owns none of it | That spec's capability stops describing what it contains                                 |
+| Target `_policies`               | A policy row produces no execution-ledger row, so the work is never scheduled            |
+| Raise a new spec for the file    | A file is not a capability, and `CREATE` asks for a capability decision nobody is making |
+
+A behaviour no spec owns is a missing capability, not a file problem. Raise it
+as its own requirement, which is the capability decision `CREATE` exists for.
+
 ## Validators
 
 - `QFAI-TRIAGE-001` (warning): delta.md has `## Change Summary` but no
