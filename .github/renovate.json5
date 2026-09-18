@@ -84,6 +84,10 @@
 
   labels: ["dependencies"],
 
+  prBodyNotes: [
+    "## What this change made unnecessary\n\nSuperseded dependency versions or pins in the diff. Unchanged dependencies, tests and workflow steps remain necessary and are kept because runtime and CI obligations are unchanged.",
+  ],
+
   // `chore(deps): …`, built from the two fields rather than from `commitMessagePrefix`, which
   // would override the semantic prefix and give two ways to spell one thing.
   semanticCommits: "enabled",

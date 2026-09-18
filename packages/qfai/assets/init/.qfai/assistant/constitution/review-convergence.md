@@ -4,7 +4,7 @@ How a review round ends, and what may follow it. Referenced from
 `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#round-budget-and-convergence-must`,
 which owns the delegation rules these sit beside.
 
-### Round budget (MUST)
+## Round budget (MUST)
 
 - **Two rounds per reviewer per artifact.** Round 1 is the initial review;
   round 2 reviews the fixes. **The budget is spent the moment round 2 returns
@@ -99,7 +99,7 @@ which owns the delegation rules these sit beside.
 - The round number MUST be recorded on each reviewer response
   (`Round:` in the shared response template).
 
-### Convergence (MUST)
+## Convergence (MUST)
 
 - A finding first raised in round N > 1 MUST state why it was not raisable in
   round N-1 — the fix introduced it, or the fix exposed it. A finding that was
@@ -120,15 +120,93 @@ which owns the delegation rules these sit beside.
   the escalation exit in the round budget withholds _Accept as Open Question_
   for this same class, so a user choice cannot supersede it either.
 
-### Agent-to-agent grilling (MUST)
+## Answered demands (MUST)
+
+A demand already answered MUST NOT be re-raised under another wording. Close a
+repeat by citing its recorded answer. This bounds what a reviewer may require,
+not what a reviewer may report.
+
+A demand is answered only after the authoritative reviewer accepts the fix or a
+reasoned decline, or the user adjudicates it. Record that disposition and its
+evidence in the existing Response and Evidence cells. A producer's reply alone
+does not close a demand. An unresolved blocking demand remains REVISE when
+repeated; cite its prior finding and unresolved disposition instead of requiring
+new work under another wording.
+
+Carry prior answers forward, alongside newly answered demands, into the next
+cycle's `review_request.md` before dispatching reviewers. Each entry names the
+original finding source, demand, response and evidence supporting the response.
+When there are no answered demands, write `None`.
+
+A report of a new defect or evidence that an answer no longer applies must
+state what changed. The existing severity floor and escalation rules still apply.
+
+## Discussion review precision
+
+A discussion review judges what the planning stage decides, not implementation
+precision. Exact code-line edits, generated-copy updates and merge mechanics
+belong to the stage implementing the change. They may be reported as advice,
+not demanded as extra discussion completion work.
+
+Advice is not a verdict. A reviewer whose vocabulary is `PASS` or `REVISE` alone
+returns `PASS` and records the advice in its findings, and the review request's
+rule says the same: an item marked non-normative under this section is carried
+to the implementing stage rather than starting a fix-and-rerun cycle. Reported
+as a demand instead, it makes the discussion stage owe work this section has
+just placed elsewhere.
+
+**How it is written.** In the shape every finding takes
+(`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`):
+`Severity: advisory`, and `Traces to:` **the obligation whose implementation the
+advice is about** — which the pack carries, since the subject is how a later
+stage implements something already agreed. Never `none`: that value means
+reviewer-originated scope, takes the Change Request path and reaches no
+implementer, and advice about an agreed obligation proposes no new one. Where an
+item genuinely names nothing the pack carries it is reviewer-originated scope,
+and the baseline's `none` path is the right one for it.
+
+This section is the one place an obligation-traced finding is `advisory`, and
+both provenance contracts name it:
+`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#finding-provenance-must`
+and `.qfai/assistant/constitution/drift-protocol.md#provenance-and-routing`. There
+the trace class bounds which findings may block, and the declared severity settles
+whether one does, so an item carried under this section is not also a defect
+forcing `REVISE` elsewhere.
+
+**A cycle that reruns one reviewer keeps the others' findings.** The pack is the
+cycle's record, not the rerun's: a reviewer that passed is not re-run, its
+verdict stands, and its advice stands in the same pack the next stage reads.
+A rerun that dropped it would lose the advice of every reviewer who found
+nothing blocking.
+
+**Where it goes.** The advice stays in the review pack's findings, under the
+discussion pack the next stage inventories at its Stage 0 as non-normative
+reference material, like every other part of that pack. That stage gives each
+item a disposition in its own artifacts — a plan step, a spec row, an open
+question, or a line in its evidence saying it was read and not adopted — and
+nothing is back-propagated into the pack. What it may not do is leave an item
+unmentioned: a decision nobody wrote down cannot be told from an item nobody
+read.
+
+Wrong repository facts, missing decision traceability, scope contradictions and
+defects in the pack's own safety obligations remain in remit. Non-normative
+status is not permission to pass those.
+
+## Agent-to-agent grilling (MUST)
 
 A grilling session between agents has no user answering its questions, so the
 end condition the session rule states — an empty frontier and the user's
 confirmation — cannot be reached from inside it. Two agents can also agree on a
-wrong premise with nobody watching. These rules give such a session an end.
+wrong premise with nobody watching. These rules bound the **rounds** such a
+session may take before every decision the user has not settled goes to the user.
 
-**Two rounds**, the same budget a reviewer has. **Every decision still open
-after the second round escalates**, whether or not that round settled others:
+**They do not end the session.** It ends where every session ends, in one of the
+four the session rule names: with a user present, the user ends it; under a
+no-question mode, where the escalation has nobody to reach, the register write
+below ends it `no-question`. An agent that
+treated the budget as an ending closed a session nobody was asked to close.
+
+**Two rounds**, the same budget a reviewer has. **Every decision the user has not settled escalates after the second round** — the ones still open and the ones the agents agreed on, since an agent-adopted recommendation is a decision nobody took — whether or not the agents agreed on others in that round:
 partial progress is the ordinary outcome, and a condition reading "the round
 settled nothing" would be false almost always, leaving the rest of the frontier
 to a third round nobody authorised.

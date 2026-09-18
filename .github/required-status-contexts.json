@@ -96,7 +96,10 @@
         "a dependency condition."
       ],
       "dependencyMatrices": {
-        "test": { "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"] }
+        "test": { "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"] },
+        "node-floor": {
+          "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"]
+        }
       },
       "dependencyMatricesNote": [
         "The matrix values a gated lane expands over, pinned exactly.",
@@ -110,7 +113,14 @@
         "Equality, in both directions and in order. A dropped value is a slice that stopped running; an",
         "added one is a leg whose check name branch protection has never seen; and a REWRITTEN one is",
         "shell the digest cannot see. This is the same obligation `verificationBodies` carries for a",
-        "step's text, applied to the other half of what the step actually runs."
+        "step's text, applied to the other half of what the step actually runs.",
+        "",
+        "TWO lanes are sliced now, and each is pinned separately. `node-floor` runs the same seven",
+        "slices, so a value rewritten in its list reaches its shell exactly as one rewritten in the",
+        "`test` job's reaches that one — and a value dropped from it stops a slice being exercised on",
+        "the engines floor while the `test` job still runs it and the lane still reports green. That",
+        "the two lists are identical is the point and not a reason to share one entry: they are two",
+        "declarations in the workflow, so they are two declarations here."
       ],
       "gateOutputs": {
         "detect": {
@@ -184,7 +194,7 @@
         "scripts/check-atdd-annotation-ledger.mjs": "1891bdeb48e1503a810001f6c917f8f2c5e4430124792f721c8c4bda86f4413f",
         "scripts/check-bidi.mjs": "b006fcaaa399a3718a55f6e85f12fb3e4f87f22e067d159f6ef05c0f9739e9f4",
         "scripts/check-build-warnings.mjs": "f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077",
-        "scripts/check-conflict-markers.mjs": "4b0fe3cdd932aa64b8b4a225c4b9d39a6e21d7fc31f679124247ea4fa0cfda5a",
+        "scripts/check-conflict-markers.mjs": "9759695e9cf3f2590a046c45640124a09ae4ce9146cf6cf24b2dfaf01e31b0da",
         "scripts/check-doc-clarity.mjs": "ca7eed5283b49a844140cbb1ed611a19a1ac979e3fe062f25f5bb17e83d6bd6f",
         "scripts/check-dogfood-backlog.mjs": "35e6b8e27a397d0184305afc05ef7c65d408b079ea8838fb8d8a7a97b1fefb2c",
         "scripts/check-instructions-size.mjs": "edc55807a4bfdaf48ae985992d2785057ce7cf130afab34ec934cc6f740b46f4",
@@ -195,18 +205,19 @@
         "scripts/check-prompt-scanner-pair.mjs": "922b13a3f93ec173b9dd34836c426585db2504d939ec0a99e93d0b80096b40d6",
         "scripts/check-publish-dry-run.mjs": "06c6a1916e868395c1707d452bb95bc111c987866d91760d393af10b4dd06048",
         "scripts/check-readme-alignment.mjs": "8d150ea7bc9487c6029c578ddd4766433bf8a456a4a6f7cc87a767d446253a61",
-        "scripts/check-release-notes.mjs": "0ed297245db8640fbec4f879ea82d940e7513b02bd1c64fc8f3d13a47999de78",
+        "scripts/check-release-notes.mjs": "249f8b5bbd828e5f04d7342f09186f99a2511ea4d3e2f41a45b976d7649cff21",
         "scripts/check-review-profile-consistency.mjs": "f12212dd069051cd19934b42c5fde751d6b6391637ef96484762a3b8dab08cb0",
         "scripts/check-scanner-coverage.mjs": "0f5d0f6d9c7a3db50ead67bbc104cf958883ec74ac523b6def4557a42ec64ed8",
+        "scripts/check-shipped-ci-parity.mjs": "3340742941c90d1204bbca2b2f54baa0e329d7edbf58d7965809566256d0500d",
         "scripts/check-simplification-ledger.mjs": "e891758c0d379cb9bf2f11346330ab131a3ab1dbea8e800249a51ae8ac9a1a67",
-        "scripts/check-toolchain-action.sh": "fff07d335dc0d74e7c2e6eca7683abd21ae87f7b68e2e39e83467647cc89e180",
+        "scripts/check-toolchain-action.sh": "8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682",
         "scripts/check-tracked-scratch.mjs": "a57ff7c6e1c885c233218bbbc15188ea40b56eb8d245c689dcd0ca981d8ca923",
         "scripts/check-tsc-compiler.mjs": "14811d9aa79ca3988a07f3ee51aeac3a4ee825e793e77af69ff05cf55e39e1f1",
         "scripts/check-types-future.mjs": "c5db610e56abad0fe7962384460760915ae1f084936a3c9684656364beb50203",
-        "scripts/check-workflow-hygiene.mjs": "076cf4ad321d2a61f4ebf288577996129ee24ad3e5de25725470ec0140a86a03",
+        "scripts/check-workflow-hygiene.mjs": "744c35cb79999ba0e45c7ddb6e213c074906cdb7f0f0804ca7e3570abc86f303",
         "scripts/derive-cli-message-allowlist-count.mjs": "6c67359c0073519a0fa5b3be5fc9866c49b1ec5bd4bce3feff985ba2fd962d87",
         "scripts/derive-e2e-callsites.mjs": "0185bc5abdcfa2fef223c02362aea44838a3c8dac53157c050d5c3285448c6d3",
-        "scripts/dogfood-backlog.json": "5b2ec0b2e3d3506fbdd8921cd08362ab0d8e2f3bce2c17e15efd702eaa8fbb75",
+        "scripts/dogfood-backlog.json": "f5459ed99c1281920d69963e2388ec1988ff0e566eb7266be4e5d7c596db6686",
         "scripts/fresh-init-findings.json": "28bf7de140686f8df16666c3d2a9e5a8dd7deaa30d5bbbfcb8eda39494b9ecfe",
         "scripts/fresh-init-findings.mjs": "032493d612d6999edef2233ef94718a84d7c21843722c4c5050f2b879d165331",
         "scripts/gen-agent-catalog.mjs": "3a4ca269aabfd40dbebdf8579bee203d5a3ead0ad49c76647b593818d0b27da7",
@@ -215,9 +226,10 @@
         "scripts/lib/ts-specifier-hook.mjs": "b6501b31043719b5bb131994fce0aa3ed28b8bf6b4e8d77035610778681dad24",
         "scripts/lib/write-declaration.mjs": "cfdd1a0a2dc37ce06a183338e3550e9d6bd169ef633cc0cfbd1110d19d5e9dc9",
         "scripts/pin-cli-message-allowlist-count.mjs": "635753d2a837eba74efc62b11dcc6b2174da26988f899317f4c547b07733d71e",
-        "scripts/pin-guard-bytes.mjs": "672f5c8c410c9fc31852b07721a89b7ed3fb68c5277f546bdaec0dc2556dc1cb",
+        "scripts/pin-guard-bytes.mjs": "4c914d40d0dc75cf623fe0cab2110a0106a5f519d4a258fa05891b612f929c97",
         "scripts/pin-stage-evidence-counts.mjs": "9cf2034c8ce05387e50b7b22c0cd33f2e5ff4544f3e5913e469786044a201099",
         "scripts/pin-verification-bodies.mjs": "ada370be9bd4d331a705d5a02e01ba4d4f378c862ddc62680af9ad831eb881cf",
+        "scripts/run-lint-checks.sh": "9d58c7ef0a179450657a0839b8ea3a760d28bef6d0b9d1c0b9cde2cc6fb0f8fb",
         "scripts/sync-init-to-root.mjs": "f25f4410273d41085119c50cf0f439564e300ae25fb8f83bae869c763be29e6c",
         "scripts/verify-pack.mjs": "98fe8d88a5b7a130737a0870393d5c69b6a5fe7136903cfc79fd6c9092e62b40"
       },
@@ -339,7 +351,7 @@
       "gatedVerifications": {
         "Run type check": "check-types",
         "Run future TypeScript compatibility check": "check-types-future",
-        "Run the package test suite on the floor": "node-floor",
+        "Run the package test suite on the floor (${{ matrix.slice }})": "node-floor",
         "Run tests (${{ matrix.slice }})": "test",
         "Run scanner coverage gate": "scanner-coverage"
       },
@@ -367,8 +379,8 @@
         "unconditional verification and joins `verificationSet` with the rest."
       ],
       "verificationBodies": {
-        "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "cfb47693193de024",
+        "Classify the change against the enumerated directory lists": "0c5050f6d8ad4ad5",
+        "Verify the toolchain action before running it": "76f49e900fe605f5",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "e9b6a63cbebe4062",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "abe312b8d2c8fc6f",
@@ -376,10 +388,10 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "9efc82ef75f7a622",
         "QFAI self-validate this repo (dogfooding — full profile)": "3537948e49d1d967",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "664367adeba33fb2",
+        "Run lint gate": "bb293d019ca6e0a3",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
-        "Run the package test suite on the floor": "b343ba3115022005",
+        "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",
         "Run tests (${{ matrix.slice }})": "a60be18921dcaf09",
         "Run scanner coverage gate": "dbb04c7e4d66e944"
       },

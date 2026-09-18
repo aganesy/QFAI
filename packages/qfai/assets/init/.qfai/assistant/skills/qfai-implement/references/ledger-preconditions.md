@@ -26,14 +26,31 @@ skills write.
   `US-Refs`;
 - **one `Layer = API` row per active `CON-API-*`** the spec owns, the obligation
   in `CON-API-Refs`.
+- A row for an active, owned `CON-DB-*` the spec binds, carrying its ID in
+  `CON-DB-Refs`. A contract declares failures whether or not a user story names
+  it, and those are covered at the Integration layer the constitution routes
+  `CON-DB-*` to; seeded from test cases alone, a contract-only flow has no row
+  for the coverage checklist to map its failures to.
 
-"Active" is the `.qfai/assistant/catalog/test-layers.md` exemption: a contract at
-`x-qfai-status: planned` owes no API row, and a spec with no user-facing surface
-owes no `US-*` row — the latter **only in a project that declares at least one
-UI-bearing spec**. Where surface typing is unused `QFAI-ATDD-111` stays
-project-wide, so every `US-*` is active and owes a row. Ownership of an API row
-is the lowest-numbered spec whose own `spec-*/01..10` / `16_*` files name that
-`CON-API-*`.
+"Active" is the `.qfai/assistant/catalog/test-layers.md` exemption, and it has
+three forms. A contract at `x-qfai-status: planned` owes no API row. A spec with
+no user-facing surface owes no `US-*` row — **only in a project that declares
+at least one UI-bearing spec**; where surface typing is unused
+`QFAI-ATDD-111` stays
+project-wide, so every `US-*` is active on that count. And a story deferred on
+its own — a `- x-qfai-status: planned` meta line in its `US-XXXX` block of
+`02_User-stories.md` — owes no E2E test, so it owes no E2E row, whatever the
+project's surface typing says. Read per story, not only per spec: a ledger that
+is header-only because every story is deferred is complete, and a run reading
+only the whole-spec form asks for a row whose test the acceptance stage forbids
+writing. Ownership of an API row
+is the lowest-numbered spec whose own `spec-*/01..10` / `16_*` files **bind** that
+`CON-API-*` — a contract-ref line, a `Contract-Refs` value or a `CON-API-Refs`
+cell, never a mention in an annotation example, a migration note or a removal
+record. Every spec that binds it is an owner; the lowest-numbered of them holds
+the single row and each other records the cross-spec obligation, which is the
+same reading `.qfai/assistant/skills/qfai-atdd/references/cross-spec-obligations.md`
+gives — one row, and no owner allowed to hand its contract to a co-owner.
 
 The last three groups are **ATDD-owned rows**
 (`execution-ledger.md#atdd-owned-rows`): their tests are authored by
@@ -136,7 +153,7 @@ Do **not** proceed with an absent ledger, and do **not** invent rows that no
 E2E / API row — those two are backed by their `US-*` / `CON-API-*` instead, and
 carry `-` in `TC-Refs` because `catalog/test-layers.md` forbids a `TC-*` there.
 
-## An empty ledger is a fault only when `06_Test-Cases.md` disagrees
+## Check all four obligation sources before an empty-ledger exit
 
 A header-only table has very different causes and they need opposite responses,
 so never treat "no rows" as "nothing to do" on its own.

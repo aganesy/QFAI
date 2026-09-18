@@ -9,10 +9,12 @@ import { describe, expect, it } from "vitest";
 import { runInit, SHIPPED_WORKFLOW_NAMES } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
+import { defaultConfig } from "../../src/core/config.js";
 import { MAX_ITERATION_INDEX, MAX_ITERATIONS } from "../../src/core/prototyping/iteration.js";
 import { PROTOTYPING_SUPPORTED_SURFACES } from "../../src/core/review/prototyping.js";
 import { parseAllMarkdownTables } from "../../src/core/specPackParsers.js";
 import { findTableArityMismatches } from "../../src/core/validators/markdownTableArity.js";
+import { validateSkillDocReferences } from "../../src/core/validators/skillDocReferences.js";
 import {
   findRepositoryAttribution,
   formatAttributionOffender,
@@ -2555,6 +2557,65 @@ describe("assets guardrails", () => {
         `${ASSISTANT_ASSET_MAX_LINE_CHARS}. Wrap the prose — a table row and a fenced block are ` +
         `not measured, because neither can be wrapped.`,
     ).toEqual([]);
+  });
+
+  it("holds the narrowed workflow baselines and skill bodies to the default width", async () => {
+    for (const relativePath of [
+      "assistant/constitution/shared-skill-delegation-baseline.md",
+      "assistant/constitution/shared-skill-operating-baseline.md",
+      "assistant/skills/qfai-atdd/SKILL.md",
+      "assistant/skills/qfai-discussion/SKILL.md",
+      "assistant/skills/qfai-sdd/SKILL.md",
+    ]) {
+      expect(WIDTH_BUDGET_BACKLOG.has(relativePath), relativePath).toBe(false);
+      const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
+      expect(widestMeasurableLine(content), relativePath).toBeLessThanOrEqual(
+        ASSISTANT_ASSET_MAX_LINE_CHARS,
+      );
+    }
+    const issues = await validateSkillDocReferences(templateRoot, defaultConfig);
+    expect(issues.filter((entry) => entry.rule === "skillDocReferences.projectMemory")).toEqual([]);
+    const atdd = await readFile(
+      path.join(templateQfaiDir, "assistant/skills/qfai-atdd/SKILL.md"),
+      "utf-8",
+    );
+    const atddMemory = atdd.split(/^project_memory:\s*$/m)[1] ?? "";
+    for (const match of atddMemory.matchAll(/tests\/(?:e2e|api|integration)\/\*\*/g)) {
+      expect(atddMemory.slice(match.index - 1, match.index + match[0].length + 1)).toBe(
+        `\`${match[0]}\``,
+      );
+    }
+    for (const clause of [
+      /tests\/e2e\/\*\* must cover all required US.*tests\/api\/\*\* all active CON-API.*tests\/integration\/\*\* all active CON-DB/,
+      /L1\/Unit and L2\/Component owe no ATDD annotation/,
+      /L3\/Integration.*tests\/integration/,
+      /L4\/API.*tests\/api.*L5\/E2E.*tests\/e2e/,
+      /blank.*unreadable.*system \/ acceptance.*tests\/integration/,
+      /planned.*whole.*file.*never.*operation/,
+      /top-level key.*column-0 comment/,
+      /standalone.*SQL.*leading whitespace.*trailing SQL/,
+      /Only an out-of-slice CON-DB owned by the current spec may receive that marker; in-slice coverage remains required/,
+      /sibling.*cross-spec obligation.*never.*planned/,
+      /surface.*project-wide.*opt-in/,
+    ]) {
+      expect(atddMemory.replace(/`([^`\n]+)`/g, "$1")).toMatch(clause);
+    }
+    const sdd = await readFile(
+      path.join(templateQfaiDir, "assistant/skills/qfai-sdd/SKILL.md"),
+      "utf-8",
+    );
+    const sddMemory = sdd.split(/^project_memory:\s*$/m)[1] ?? "";
+    for (const clause of [
+      /existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence/,
+      /E2E\/API rows split.*boundar.*US-Refs \/ CON-API-Refs.*not.*TC-Refs/,
+      /eight-column ledger.*US-Refs \/ CON-API-Refs.*moving.*TC-Refs.*Layer owns/,
+      /integration-level TC group.*blank.*unrecognized.*system \/ acceptance/,
+      /surface typing is unused.*every.*US-\*/,
+      /Tier.*Layer.*infrastructure.*public API.*persisted schema.*criticality/,
+      /Write.*Tier column.*never.*Evidence/,
+    ]) {
+      expect(sddMemory).toMatch(clause);
+    }
   });
 
   it("pins every width backlog entry to the file's real width", async () => {

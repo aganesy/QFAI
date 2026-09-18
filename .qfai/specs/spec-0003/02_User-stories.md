@@ -180,7 +180,7 @@
 - Parent: CAP-0003
 - Goal: `qfai init` が `qfai-` prefix の複数 workflow ファイルを配布し、layer 別 lane は orchestrator ファイル内の job として表現され、adopter が対応する layer 名スクリプトを宣言するまで各 lane が false 条件で skip される。set 全体で secret を宣言も参照もしない
 - Non-goals: composite-action テンプレートの配布（配布 `.github/` の allow-list が `workflows` のみを許すため構造的に不可能）、secret を消費する配布テンプレート、ephemeral environment / browser backend を前提とする lane
-- Notes: REQ-0026 を実装する。上流 pack REQ-0016 / OQ-0001, OQ-0002, OQ-0012。配布ファイルが他の配布ファイルを参照しないことが、部分 install を「単に不完全」に留める条件（参照先不在は参照側を parse error にし、create-only install に修復経路がない）
+- Notes: REQ-0026 を実装する。上流 pack REQ-0016 / OQ-0001, OQ-0002, OQ-0012。配布ファイルが他の配布ファイルを参照しないことが、部分 install を「単に不完全」に留める条件（参照先不在は参照側を parse error にし、create-only install に修復経路がない）。Independent checks inside one shipped file run as matrix legs, and each file keeps its existing external check name on a job that succeeds only when every leg result succeeds
 
 ## US-0003-0024: 配布 change detection と green-on-skip verdict
 
@@ -215,4 +215,4 @@
 - Parent: CAP-0003
 - Goal: テストスイート内に保持された 1 つの宣言された期待形状に対して配布 set を assert する gate が、lint aggregate または test matrix から実行され、profile 値や failure threshold といった load-bearing な semantic 値の drift で exit 1 する
 - Non-goals: リポジトリ自身の複製との byte-identity 比較（比較対象は spec-0017 の上流 pack REQ-0025 で削除されるため operand が存在しない）、release 専用 gate aggregate への配置、numeric drift scoring
-- Notes: REQ-0031 を実装する。上流 pack REQ-0021 / OQ-0016。ordering: spec-0017 の上流 pack REQ-0025 と同一変更またはそれ以前に着地させる。既存 asset test の ad-hoc string assertion を subsume する際、その test-case annotation は保持または再登録する
+- Notes: REQ-0031 を実装する。上流 pack REQ-0021 / OQ-0016。ordering: spec-0017 の上流 pack REQ-0025 と同一変更またはそれ以前に着地させる。既存 asset test の ad-hoc string assertion を subsume する際、その test-case annotation は保持または再登録する。The declared shape also pins each aggregate lane's always-run condition and the exact `needs` list it names
