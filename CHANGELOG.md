@@ -663,6 +663,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `Revision` for a row that records none. The contract also says each value
   enters the seal without a code span around it.
 
+- **The evidence revision reference says how a revision is read after a squash
+  merge** (#1696). A squash merge lands a commit with no branch revision among
+  its ancestors, so a recorded `<git rev>` did not resolve in a clone of the
+  default branch, and staleness had nothing to start from.
+  `evidence-revision.md` now says the rev resolves by fetching the pull
+  request's ref, and staleness is computed from it as before. It also says a
+  `working-tree+` address does not survive the merge, so a record meant to
+  outlive the branch is taken on a commit.
+
 - **The grilling-trace check accepts the template it was written to reject**
   (#1739). `QFAI-GRILL-001` counted any table row under `## Pre-draft Grilling`
   as a record, and the shipped evidence template carries three worked rows. So
