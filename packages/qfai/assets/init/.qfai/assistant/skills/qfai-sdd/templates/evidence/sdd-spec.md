@@ -17,16 +17,21 @@
 
 ## Preflight summary path
 
-- `.qfai/report/preflight/run-<timestamp>/preflight_summary.md` (run id: <run-id>)
+- Preflight run id `<run-id>`: <status>, <imported requirement count>, <blockers>.
 
-> Cite the run-scoped copy, never `.qfai/report/preflight_summary.md`. That path
-> is the latest-run pointer and every rerun rewrites it, so once a second cycle
-> has run it no longer names the preflight this spec was triaged against.
+> **The run id, not a path.** The report tree is not committed, so a path into it
+> names provenance a reader cannot open — and a committed record naming a path the
+> tree does not carry is refused, by a check whose backlog of existing citations is
+> closed to additions.
 >
-> Take the path from the run rather than typing it — `summary:` in
+> The run-scoped copy is what the id identifies, never
+> `<paths.outDir>/preflight_summary.md`: that one is the latest-run pointer and
+> every rerun rewrites it, so once a second cycle has run it no longer names the
+> preflight this spec was triaged against.
+>
+> Take the id from the run rather than typing it — `summary:` in
 > `npx qfai sdd preflight`'s text output, `preflightSummaryPath` under
-> `--format json` — so a project that moved `paths.outDir` cites the file that
-> was actually written instead of a `.qfai/report/` path that does not exist there.
+> `--format json` — so the record names the run that was actually written.
 
 ## Triage decisions
 
@@ -79,9 +84,17 @@ npx qfai validate --profile sdd --fail-on error --format github
 
 ## Validate evidence paths
 
-- `.qfai/report/validate.log`
-- `.qfai/report/run-<timestamp>/` (run id: <run-id>, status: pass | fail)
-- `.qfai/report/specs-coverage/<spec-id>.md`
+- Validate run id `<run-id>`, scope `<profile and spec>`: <status>, <error count>,
+  <warning count>. <What a non-zero count is, if there is one.>
+
+> Run ids and outcomes, for the reason the preflight section gives: the report tree
+> is not committed. `qfai validate` writes `<paths.outDir>/validate.log` and a
+> `run-<timestamp>/` directory holding that run's findings, and the coverage summary
+> lands beside them — all three are where the id points, and none of them is a name
+> this record may carry as a path.
+>
+> A count of its own per run, because a reader deciding whether to trust the cycle
+> needs to know which run passed and which did not. "Ran validate" is not that.
 
 ## Pre-draft Grilling
 
