@@ -380,7 +380,10 @@ describe("the constitution and its safety floor upgrade together", () => {
     const previous = await olderConstitution();
     await unlink(minimumPath());
     const original = path.join(root, RULES_REL);
-    const held = path.join(root, "held-rules");
+    // Outside the project, which is what the containment guard refuses. A link
+    // to another directory inside the project is a tree vendored in place, and
+    // the guard admits it.
+    const held = path.join(await mkdtemp(path.join(os.tmpdir(), "qfai-held-rules-")), "rules");
     await rename(original, held);
     await symlink(held, original, process.platform === "win32" ? "junction" : "dir");
 

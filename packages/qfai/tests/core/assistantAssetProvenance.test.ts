@@ -1197,8 +1197,10 @@ describe("assistant asset provenance", () => {
       tempRoots.push(root);
       const assistantDir = path.join(root, ".qfai", "assistant");
       await mkdir(path.join(assistantDir, "catalog"), { recursive: true });
-      const outside = path.join(root, "outside-catalog");
-      await mkdir(outside, { recursive: true });
+      // Outside the project: that is what the guard refuses. A link to another
+      // directory inside it is a vendored layer, which the guard admits.
+      const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-catalog-"));
+      tempRoots.push(outside);
 
       const isContained = makeGovernedContainmentGuard(root);
       expect(await isContained("catalog/first.md")).toBe(true);
