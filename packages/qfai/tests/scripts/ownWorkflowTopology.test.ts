@@ -2770,6 +2770,35 @@ describe("release automation performs decisions rather than making them", () => 
     ).toBe(true);
   });
 
+  it("pushes the tag only where the decision that precedes it said to", () => {
+    // Every "nothing to tag" answer writes `push=false` and ends the step successfully. The gate
+    // is what makes those answers mean anything: the version output is written on all of those
+    // paths too, so an ungated push tags any merge that moved the manifest and happens to carry a
+    // matching CHANGELOG heading. A tag starts `release.yml`, so that is not a mistake a rerun
+    // undoes.
+    //
+    // Matched on the OUTPUT NAME, and read from the step or from the job around it. Pinning
+    // `steps.version` would fail a split that gave the push a job of its own and carried the gate
+    // as `needs.<job>.outputs.push` — correct, and this row would have called it a regression.
+    const tagWorkflow = workflow("tag-release.yml");
+    const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
+    const gates: string[] = [];
+    for (const job of Object.values(jobs)) {
+      if (!isRecord(job) || !Array.isArray(job["steps"])) continue;
+      for (const step of job["steps"]) {
+        if (!isRecord(step)) continue;
+        if (!/git push[^\n]*refs\/tags\//.test(String(step["run"] ?? ""))) continue;
+        gates.push(`${String(step["if"] ?? "")} ${String(job["if"] ?? "")}`);
+      }
+    }
+    expect(gates, "exactly one step may push a tag ref").toHaveLength(1);
+    expect(
+      gates[0],
+      "the tag push must be conditional on the `push` output the step before it wrote: the " +
+        "version output is set on every path, so an ungated push tags an ordinary merge",
+    ).toMatch(/outputs\.push\b/);
+  });
+
   it("tags from the manifest, and only when the CHANGELOG names that version", () => {
     const tagWorkflow = workflow("tag-release.yml");
     const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
