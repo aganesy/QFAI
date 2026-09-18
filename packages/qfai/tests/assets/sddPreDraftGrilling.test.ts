@@ -98,27 +98,33 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     expectPhrase(skill, "**One session per phase, over every routed drafting role's decisions.**");
   });
 
-  it("escalates agreement, not only deadlock", async () => {
-    // A decision the author accepted from the griller inside the budget is not
-    // open, so the convergence rules do not escalate it — and the delegation
-    // baseline says an unadjudicated agent-to-agent decision makes the artifact
-    // one no reviewer can clear. Escalating the residue alone therefore hands
-    // the authors a settled set whose agreed half is the half that fails.
+  it("adopts the recommendation on agreement and deadlock alike, and sends a critical decision to the user", async () => {
+    // A non-critical decision takes the griller's recommendation whether the
+    // authors agreed or the budget ran out. Treating the two differently would
+    // put routine choices to the user, who almost always accepts the
+    // recommendation, so the round trip settles nothing.
     const loop = await read(LOOP);
-    expectPhrase(loop, "**Step 3 covers agreement, not only deadlock.**");
-    expectPhrase(loop, "not only the ones still open after the budget");
-    // Agreement leaves the frontier and does not settle the decision, so the
-    // convergence rules do not reach it and step 3 has to.
-    expectPhrase(loop, "has left the frontier");
-    expectPhrase(loop, "nobody with the standing to take it has");
-    // Agreement leaves the frontier and does not settle the decision, so the
-    // convergence rules do not reach it and step 3 has to.
-    expectPhrase(loop, "has left the frontier");
-    expectPhrase(loop, "nobody with the standing to take it has");
-    expectPhrase(loop, "whose agreed half is the half that fails review");
-    // With the one exception that is not a decision at all.
-    expectPhrase(loop, "Authoritative evidence is the exception because it is not a decision");
-    expectPhrase(loop, "asks them to re-decide\nwhat they already decided");
+    expectPhrase(loop, "**Step 4 covers agreement and deadlock alike.**");
+    expectPhrase(loop, "both take the\nrecommendation, and neither is put to the user");
+    expectPhrase(
+      loop,
+      "Take the griller's recommendation for every other decision once the rounds\nend, whether the authors agreed with it or not, and record each disagreeing\nposition beside it.",
+    );
+    // The user keeps the last word: the adopted decision is reported, and
+    // overturned through the ordinary change path rather than a blocking ask.
+    expectPhrase(loop, "the stage's final report lists it");
+    expectPhrase(loop, "overturns it through a change request or a rerun");
+    // A critical decision skips the rounds and reaches the user at once.
+    expectPhrase(loop, "Put to the user **every critical decision**");
+    expectPhrase(loop, "as soon as the tree shows it, without spending a round\n   on it");
+    // Authoritative evidence precedes both paths, because it is not a decision.
+    expectPhrase(
+      loop,
+      "Authoritative evidence answers a question before either path, because it is not\na decision at all",
+    );
+    expectPhrase(loop, "there is nothing to adopt or escalate");
+    // A discussion pack answers product intent for the critical test only.
+    expectPhrase(loop, "It does answer product intent for the critical test.");
   });
 
   it("keeps the orchestrator out of the answers", async () => {
@@ -166,10 +172,18 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     // counted against.
     expectPhrase(loop, "the phase first, because the schema has no column for it");
     expectPhrase(loop, "The griller may review the artifact");
-    expectPhrase(loop, "The reviewer returns `REVISE` and names it");
+    // An adopted decision is not a finding; a critical one adopted without the
+    // user is, and the griller that recommended it stays off the review.
+    expectPhrase(loop, "the griller that recommended it does not review the artifact");
+    expectPhrase(
+      loop,
+      "A critical decision recorded as `agents` is the failure: the reviewer returns\n`REVISE` and names it.",
+    );
 
     const gate = await read(GATE);
     expectPhrase(gate, "names who adjudicated the decision, `user`\n  or `agents`");
+    expectPhrase(gate, "An `agents` row is acceptable");
+    expectPhrase(gate, "A critical decision recorded as\n  `agents` is the failure.");
   });
 
   it("blocks on an escalation nobody answered", async () => {
@@ -183,9 +197,12 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
 
     const gate = await read(GATE);
     expectPhrase(gate, "an `escalated` row needs a `PENDING` work order for it");
-    // And `run` cannot carry one: a `run` row with an escalation in its count
-    // reads as finished while a user-owned decision is open.
-    expectPhrase(gate, "A row reads `run` only with zero escalations");
+    // And `run` cannot carry one: a `run` row with a critical decision waiting
+    // reads as finished while a user-owned decision is open. Adopted decisions
+    // are settled, so they leave the row `run`.
+    expectPhrase(gate, "A row reads `run` when no critical decision waits on the user");
+    expectPhrase(gate, "decisions adopted from the\n  griller's recommendation leave it `run`");
+    expectPhrase(gate, "A critical decision waiting on the user makes it\n  `escalated`");
     // The count is checkable, because the phase is the title's first field. A
     // row that cannot be assigned to a phase is one an omission elsewhere is
     // counted against.
@@ -253,13 +270,25 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
       "MUST NOT record an answer **as the user's** that the user did not give",
     );
     expectPhrase(primitive, "recorded as that author's position, with whose it is");
-    expectPhrase(primitive, "**Agreement closes a node; it does not settle a decision.**");
-    // Open is about the round — is there anything to ask. Settled is about
-    // the decision — has anyone with the standing to take it done so.
-    expectPhrase(primitive, "The two are one state read for two purposes");
+    // In a delegated session the griller's recommendation settles a
+    // non-critical decision, and the positions are kept beside it.
     expectPhrase(
       primitive,
-      "an agreed answer nobody adjudicated is what a stage records as `agents`",
+      "**In a delegated session the griller's recommendation settles a decision that\n  is not critical.**",
+    );
+    expectPhrase(
+      primitive,
+      "records it as\n  `agents`, with the reason and every disagreeing position",
+    );
+    // Agreement between agents never settles a critical decision: closing the
+    // node for the round is not the standing to take it.
+    expectPhrase(
+      primitive,
+      "A critical decision is the exception: agreement closes its node for the\n  round, and only the user's answer settles it.",
+    );
+    expectPhrase(
+      primitive,
+      "Recording an agreed critical\n  decision as settled is how a choice nobody with the standing made reaches a\n  draft.",
     );
   });
 
@@ -296,13 +325,24 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     expectPhrase(loop, "What the orchestrator records is the orchestration evidence");
   });
 
-  it("makes `run` mean nothing was left escalated", async () => {
-    // A `run` row carrying an escalation in its count reads as finished while a
-    // user-owned decision is open, and the gate's PENDING requirement keys on
-    // the cell rather than the count.
+  it("makes `run` mean no critical decision waits on the user", async () => {
+    // A `run` row carrying a waiting critical decision reads as finished while
+    // a user-owned decision is open, and the gate's PENDING requirement keys on
+    // the cell rather than the count. Adopted decisions are settled, not
+    // waiting, so they do not change the state.
     const loop = await read(LOOP);
-    expectPhrase(loop, "`run` means the phase settled its frontier and escalated nothing");
-    expectPhrase(loop, "One escalation makes the row `escalated`, whatever else the phase settled");
+    expectPhrase(
+      loop,
+      "`run` means the phase settled its frontier and no critical decision waits on the\nuser.",
+    );
+    expectPhrase(
+      loop,
+      "Decisions adopted from the griller's recommendation count as settled and\nleave the row `run`.",
+    );
+    expectPhrase(
+      loop,
+      "One critical decision waiting on the user makes the row\n`escalated`, whatever else the phase settled",
+    );
     // And the counts are checkable: each decision row carries its phase.
     expectPhrase(loop, "**The settled count is the number of decision rows for that phase.**");
     expectPhrase(loop, "a count without the rows behind it is a number nobody can check");
@@ -328,20 +368,24 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
 
   it("counts the constitution as authoritative evidence", async () => {
     // Both this skill and the primitive rank it above the specs. Left off the
-    // list, a question an invariant already fixes is put to the user — and
+    // list, a question an invariant already fixes is treated as open — and
     // answering differently produces a draft that cannot be valid.
     const loop = await read(LOOP);
     expectPhrase(loop, "`.qfai/assistant/constitution/**`, `.qfai/specs/**`");
-    expectPhrase(loop, "a draft that cannot be valid");
-    expectPhrase(loop, "blocks waiting for an answer the repository already holds");
+    expectPhrase(loop, "a draft that cannot be\nvalid");
+    expectPhrase(loop, "a question a constitutional invariant already\nfixes is treated as open");
   });
 
   it("recomputes the tree against each answer", async () => {
     // A decision whose prerequisite was open could not enter either agent
-    // round, and putting it in the first escalation would ask it before the
-    // answer it depends on exists.
+    // round, and settling it before the answer it depends on exists would
+    // guess at it.
     const loop = await read(LOOP);
-    expectPhrase(loop, "Recompute the tree against each answer, and put what it newly exposes");
+    expectPhrase(
+      loop,
+      "Recompute the tree against each user answer, and run what it newly exposes\n   through the same steps.",
+    );
+    expectPhrase(loop, "settling it before that answer exists would\n   guess at it");
     expectPhrase(loop, "Repeat until no node is open");
   });
 

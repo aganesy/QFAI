@@ -88,8 +88,10 @@ npx qfai validate --profile sdd --fail-on error --format github
 > One row per grilling-covered phase this run entered — Phase 0, 1, 2, 2c and 3,
 > and only those. Phase 2b and Phase 4 produce no design decision and run no
 > session.
-> `Session` is `run`, `skipped` or `escalated`. `run` means zero escalations;
-> one escalation makes the row `escalated` whatever else the phase settled.
+> `Session` is `run`, `skipped` or `escalated`. `run` means no critical
+> decision waits on the user; decisions adopted from the griller's
+> recommendation leave the row `run`. One critical decision waiting on the user
+> makes the row `escalated` whatever else the phase settled.
 > A `skipped` row names the authoritative artifact that answered the phase's
 > decisions, because an omitted session and an empty frontier are the same
 > absence otherwise.
