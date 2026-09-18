@@ -4,7 +4,7 @@ The mapping `agent-routing.yml`'s three phases for `/qfai-sdd` have onto the nin
 and phases `SKILL.md#stage-and-phase-order-fixed` fixes. Normative: `SKILL.md` points here
 rather than restating it, so there is one copy to keep honest.
 
-### Routing Phase Crosswalk (Normative)
+## Routing Phase Crosswalk (Normative)
 
 `agent-routing.yml` names three phases for this skill; `## Stage and Phase Order (Fixed)` names
 nine stages and phases. They are one sequence in two vocabularies, and this table is the only
@@ -51,7 +51,7 @@ the planner re-evaluates the amended table; `slice-and-scope` is `changed-scope-
 exactly that reason, because `failed-agents-only` would re-run the planner alone against an
 unchanged table and repeat the same verdict.
 
-### Crosswalk sources
+## Crosswalk sources
 
 - `../SKILL.md#stage-and-phase-order-fixed` — the nine fixed entries this table partitions.
 - `../../../manifest/agent-routing.yml` — the three routing phase IDs it maps them onto.

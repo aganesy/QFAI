@@ -125,7 +125,7 @@ because the setup dedup is what changes its arithmetic.
   and it is the one DTC-28 calls the quiet failure.
 - **Boundary cases that must not share a case.** The documentation-only floor at four versus
   three instances (they differ by a repository setting no agent changes); the seven-name equality
-  across three slice surfaces versus the deleted project name no longer resolving; ten workers
+  across every slice surface versus the deleted project name no longer resolving; ten workers
   measured against a second value versus ten workers declared.
 - **What is not proven by execution here.** The bump-owner record and the build-reuse baseline are
   DR-0017-0002's subject. The layer partition's _quality_ is a judgement, not an oracle; only the

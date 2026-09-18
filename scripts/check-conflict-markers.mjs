@@ -73,8 +73,24 @@ const binaryExtensions = new Set([
   ".wasm",
 ]);
 
+/**
+ * Whether a path's bytes are read as text: every extension but the binary
+ * ones above, compared lowercased.
+ */
+export function readsText(relative) {
+  return !binaryExtensions.has(path.extname(relative).toLowerCase());
+}
+
 /** Extensions whose fenced blocks hold examples rather than content. */
 const fencedExtensions = new Set([".md", ".markdown"]);
+
+/**
+ * Whether `markersIn` skips fenced blocks for this path: a Markdown file's fence
+ * holds an example, and a fence means nothing in any other file.
+ */
+export function readsFences(relative) {
+  return fencedExtensions.has(path.extname(relative).toLowerCase());
+}
 
 /**
  * Every tracked path, or `null` when git cannot answer.
@@ -143,7 +159,7 @@ function isScannableEntry(absolute) {
   } catch {
     return false;
   }
-  return info.isFile() && !binaryExtensions.has(path.extname(absolute).toLowerCase());
+  return info.isFile() && readsText(absolute);
 }
 
 /** Runs the scan over `cwd` and returns the process exit code. */
@@ -168,8 +184,7 @@ export function run(cwd = process.cwd()) {
       continue;
     }
     scanned += 1;
-    const fenced = fencedExtensions.has(path.extname(relative).toLowerCase());
-    for (const hit of markersIn(text, { fenced })) {
+    for (const hit of markersIn(text, { fenced: readsFences(relative) })) {
       findings.push({ file: relative, ...hit });
     }
   }
