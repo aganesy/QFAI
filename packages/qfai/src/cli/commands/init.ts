@@ -3168,10 +3168,10 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   "!decisions/**",
   // The per-item RED/GREEN records. Every root negation this block adds needs
   // its leaf counterpart here or the migration does nothing for the projects it
-  // exists to serve: measured with `git check-ignore -v` on a tree carrying the
-  // legacy nested file, `.qfai/evidence/implement-<spec-id>.md` and
-  // `atdd-<spec-id>.md` were still reported as ignored by the nested `*`, so the
-  // fresh clone and CI that the root negation was added for saw neither file.
+  // exists to serve: on a tree carrying the legacy nested file, `git
+  // check-ignore -v` reports `.qfai/evidence/implement-<spec-id>.md` and
+  // `atdd-<spec-id>.md` as ignored by the nested `*` without these lines, so the
+  // fresh clone and CI the root negation is for see neither file.
   "!implement-*.md",
   "!atdd-*.md",
   // A spec's own evidence, which carries the grilling trace a validator rule
@@ -3192,10 +3192,9 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // would commit a file nothing reads.
   // The prototyping session record, for the same reason again. It is a user
   // decision rather than regenerable stage evidence, so the root block tracks
-  // it — and the nested `*` overrides that root negation on any project
-  // carrying the legacy file, which is every project initialized before the
-  // root block grew its own evidence negations. The directory needs its own
-  // line: git never descends into an ignored one, so the leaf alone is inert.
+  // it — and the nested `*` overrides that root negation on any project that
+  // carries the legacy file. The directory needs its own line: git never
+  // descends into an ignored one, so the leaf alone is inert.
   "!prototyping/",
   "!prototyping/grilling.md",
   "!import-lite.md",
@@ -4112,8 +4111,10 @@ async function refuseUnsafeEntryPointRewrite(
  * `.github/instructions/`.
  *
  * So both cases are handled here rather than one here and one in the copy. A
- * project without a settings file gets the whole template; one that has its own
- * gets only the hook entries, appended after whatever it already declares.
+ * project without a settings file gets the whole template. One that has its own
+ * gets the hook groups it lacks, appended after whatever it already declares,
+ * and each group an earlier release wrote is replaced where it stands. A group
+ * the project edited is kept and named in the output.
  *
  * Every refusal is reported rather than silently absorbed, and none of them ends
  * the run. A reminder is worth less than the rest of what `qfai init` writes, so
@@ -4165,9 +4166,6 @@ async function ensureClaudeCodeHooks(
   }
 
   const merged = mergeDocumentationClarityHooks(existing.text, template.text);
-  if (merged.outcome === "already-present") {
-    return { copied: [], skipped: [target] };
-  }
   if (merged.outcome === "unreadable") {
     error(
       `  WARNING: ${shown} was left unchanged (${merged.reason}). Copy the \`hooks\` entries from ` +
@@ -4175,14 +4173,21 @@ async function ensureClaudeCodeHooks(
     );
     return { copied: [], skipped: [target] };
   }
+  // Every run, so an edited reminder is never mistaken for one this release wrote.
+  for (const group of merged.edited) {
+    info(`  kept: ${shown} hook group ${group} (edited here)`);
+  }
+  if (merged.outcome === "already-present") {
+    return { copied: [], skipped: [target] };
+  }
 
   const events = merged.events.join(", ");
   if (dryRun) {
-    info(`  would update: ${shown} (add reminder hooks: ${events})`);
+    info(`  would update: ${shown} (reminder hooks: ${events})`);
     return { copied: [target], skipped: [] };
   }
   await writeFile(target, serializeClaudeSettings(merged.settings), "utf-8");
-  info(`  updated: ${shown} (added reminder hooks: ${events}; existing settings kept)`);
+  info(`  updated: ${shown} (reminder hooks: ${events}; existing settings kept)`);
   return { copied: [target], skipped: [] };
 }
 
@@ -8128,7 +8133,7 @@ function buildCopilotInstructions(): string {
     "- `.agents/rules/documentation-clarity.md` — plain, minimal writing in pull requests, issues, comments and Markdown; no local identifiers, no account of how the work went.",
     "- `.agents/rules/minimal-implementation.md` — the order to try solutions in once a behaviour is agreed; mark a deliberate shortcut with its ceiling and the condition that lifts it.",
     "- `.agents/rules/interface-clarity.md` — what may appear on a screen or in terminal output; text explaining how to work a control is a defect report against that control.",
-    "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends in one of four named endings, never at a question count.",
+    "- `.agents/rules/grilling.md` — interview the decision tree before a design is fixed; outside the discussion stage agents grill each other, and only a critical decision reaches the user.",
     "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.",
     "",
   ].join("\n");
