@@ -182,6 +182,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it. It follows the reasoning the backfilled-evidence warning already gives, and
   the SDD profile hears it, since the columns are that stage's to write.
 
+- **`QFAI-TRIAGE-010` reports a requirement triaged onto `_policies` alone**
+  (#1901). `_policies/**` holds no user story, criterion, rule, example or test
+  case, and the execution ledger is seeded from those per-spec files, so a
+  requirement whose every triage row targets `_policies` was specified,
+  approved and validated, and no implementer could ever select it. The SDD
+  profile now warns on such a source, reading every triage table across the
+  spec deltas and the policy delta. A policy row beside a spec row for the same
+  source, a `CREATE` row, and a source that names no `REQ-` or `NFR-` ID are
+  not reported. The policy-row entry in `sdd-triage.md` says so.
+
 ### Changed
 
 - **Grilling outside the discussion stage is delegated between agents.** A
@@ -331,6 +341,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The evidence citation guard reads citations into `.qfai/evidence/`**
+  (#1686). A record that named a sibling evidence file the tree does not carry
+  passed, because the guard read only the ignored trees. Three records name
+  `.qfai/evidence/README.md`, a format guide written while it existed and
+  retired afterwards in favour of skill references. Those lines, and two that
+  describe a path rather than cite one, now carry the `qfai:not-a-citation`
+  marker. The README is not restored: shipped skills forbid `.qfai/**/README.md`
+  format documents.
+
 - **A reminder hook's message reaches a project that installed an earlier
   release** (#2003). `qfai init` wrote each message into `.claude/settings.json`
   and never touched a group that was already there, so an upgraded project kept
@@ -348,6 +367,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Three forms now stand in the release-body cases, each with prose after the
   section: an ATX heading at level three and at level six, and a setext one.
 
+- **A procurement row must name a screen a UI contract declares** (#1777). A
+  `prototype-handoff.yaml#procurement` row whose `screen` was a typo, or a
+  screen renamed since, passed the shape check while naming a region nobody
+  could locate. The row is now reported under `QFAI-DCON-013` unless its
+  screen is one the contracts under `<contractsDir>/ui/` declare. A project
+  with no UI contract is left to the readiness gate, which already reports it,
+  and `region` stays prose: a screen contract names a screen, not its parts.
+
+- **The Markdown and Mermaid lanes skip other checkouts** (#1895).
+  `pnpm lint:md` walked `.claude/worktrees/**`, so a worktree of another branch
+  had its findings reported against this one. That happened locally and never
+  in a fresh CI clone. The Markdown lint now ignores `.claude/worktrees/**`, and
+  the Mermaid lane (shipped, and used by adopters' docs workflow) no longer
+  descends into a directory that holds its own `.git`, which is how a worktree
+  or a nested clone is marked. Prettier already skips the path through
+  `.gitignore`, and the schema lane matches paths from the tree's root.
+
 - **A lowercase CDATA lookalike hides what follows it** (#1866). GitHub renders
   `<![cdata[` exactly as it renders the spelled form: the content is hidden, and
   an unclosed opener hides the rest of the document. The body readers matched
@@ -364,6 +400,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   comes from: the assistant tree is generated from the init assets by
   `pnpm sync:ssot`, and the rule masters are symlinks to their shipped copies.
 
+- **Three gaps the ATDD scan-root change left** (#1938).
+  - A test-name glob with a negated group now selects what fast-glob selects.
+    `!(fixture|data).json` passes over every name that starts with a member,
+    `fixture-old.json` included, where it passed over only the exact names and
+    so vouched for a fixture another glob collected. A negated group that ends
+    the pattern still excludes only the exact name, so `*.!(json)` selects
+    `fixture.old.json`.
+  - `--profile tdd` reads the legacy `<testsDir>/atdd/` scaffold directory for
+    skipped tests. Older scaffold runs wrote there, the directory is no
+    acceptance layer, and the profile runs no placeholder rule, so a skeleton
+    there was read by nothing in the stage's completion gate.
+  - The story and contract remediations (`QFAI-ATDD-111`, `-113`, `-114`) name
+    the directories under the configured `paths.testsDir` rather than a
+    literal `tests/e2e/**` or `tests/api/**`, which no scan reads in a project
+    that moved it.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
@@ -379,6 +431,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   an exclude glob's range stops the scan, or where a brace range's endpoints
   are not whole numbers, rather than writing a file the project's own runner
   does not collect.
+
+- **The spec-0002 conflict record's options can each be carried out** (#1937).
+  `CR-20260912-0003` now requires the single-winner finding through the
+  canonical validator list `qfai validate` runs, blocks a pack whose
+  classification does not validate under `2B`, has `2a` fail closed on an
+  absent `DESIGN.md.lock.yaml` as `spec-0012/TC-0012-0347` already requires,
+  and runs `/qfai-atdd spec-0010` for the acceptance rows that pack's
+  re-derivation leaves at `todo`.
 
 - Read a brace range that generates either half of an extglob, and write out
   every range a pattern holds rather than a fixed number of them, so the
@@ -1079,14 +1139,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Basic, whose comments open with a quote, and any other extension are read as
   before.
 
-- **The Markdown and Mermaid lanes skip other checkouts** (#1895).
-  `pnpm lint:md` walked `.claude/worktrees/**`, so a worktree of another branch
-  had its findings reported against this one. That happened locally and never
-  in a fresh CI clone. The Markdown lint now ignores `.claude/worktrees/**`, and
-  the Mermaid lane (shipped, and used by adopters' docs workflow) no longer
-  descends into a directory that holds its own `.git`, which is how a worktree
-  or a nested clone is marked. Prettier already skips the path through
-  `.gitignore`, and the schema lane matches paths from the tree's root.
+- **The capability-ID guards read every ID from `CAP-0010` up** (#1928). The
+  pre-build lint, the post-build guard and the smoke test all required a leading
+  `0`, so they caught `CAP-0010` to `CAP-0999` and let `CAP-1000` and every
+  later four-digit ID ship. The three now read the number as a value, any
+  leading zeros then 10 or more, which is how the spec-ID pattern already reads
+  it. `CAP-0009` and below still pass. Each guard has cases at `CAP-0009`,
+  `CAP-0999` and `CAP-1000`.
 
 ## [1.12.0] - 2026-09-12
 
