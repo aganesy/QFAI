@@ -157,6 +157,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Verify repository-fact sources, use planning-stage precision and apply targeted
   edits in discussion review cycles (#1818).
 
+- **The discussion profile reads a pack's design direction against the
+  `DESIGN.md` schema** (#1905). On a visual surface a discussion pack records
+  the direction `/qfai-sdd` Phase 0 turns into `DESIGN.md`, and nothing
+  checked it until Phase 0 wrote the file, after the pack had closed. A pack
+  could propose `visual.colors.highlight` or an archetype outside the eight,
+  and `validate --profile discussion` passed. `QFAI-DPACK-011` (warning) now
+  reads the forms that name a key without doubt — a fenced YAML block under a
+  `DESIGN.md` section, a code span holding a dotted key path, and an
+  `archetype:` list item — against the same key tree the parser rejects
+  unknown keys with, and names each key or value the schema lacks. Prose is
+  not read, and cli-only and non-ui packs are skipped.
+
 - **A reviewer may demand more work only on the concrete artifacts** (#1809).
   A reviewer could ask for another business rule, quality target, policy or
   piece of architecture without limit, and each such demand made the next review
