@@ -133,11 +133,16 @@ function verdictFor(
   return "keep";
 }
 
-/** The `.md` files the package ships as masters, sorted. */
+/**
+ * The files the package ships beside the masters, sorted.
+ *
+ * Not only the `.md` masters: `reminders.json` holds the text the Claude Code
+ * hooks print, and it changes with the rules it restates.
+ */
 async function shippedMasterNames(shippedRulesDir: string): Promise<string[]> {
   const entries = await readdir(shippedRulesDir, { withFileTypes: true });
   return entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".md") && entry.name !== "README.md")
+    .filter((entry) => entry.isFile() && entry.name !== "README.md")
     .map((entry) => entry.name)
     .sort();
 }

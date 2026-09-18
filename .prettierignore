@@ -23,6 +23,12 @@ tmp
 *.min.js
 *.min.css
 
+# The bundle vitest writes beside a TypeScript config while it loads one, and
+# deletes immediately after. The lint lanes run together, so the formatting check
+# can list this file and then fail to read it — a failure that depends on timing
+# and not on anything the change contains.
+*.timestamp-*.mjs
+
 # Generated QFAI artifacts (not versioned)
 .qfai/review/review-*
 .qfai/review_archive/review-*

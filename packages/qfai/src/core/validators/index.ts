@@ -47,7 +47,6 @@ export { validateSkillRoles } from "./skillRoles.js";
 export { validateTddList, validateTddListSeedShape } from "./tddList.js";
 export { validateNavigationFlow } from "./navigationFlow.js";
 export { validateRenderCritique } from "./renderCritique.js";
-export { validateDesignFidelity } from "./designFidelity.js";
 export { validateDesignAudit } from "./designAudit.js";
 export { loadLayoutAntiPatterns, findLayoutAntiPatterns } from "./layoutAntiPatterns.js";
 export type { LayoutAntiPattern, LayoutAntiPatternScope } from "./layoutAntiPatterns.js";
