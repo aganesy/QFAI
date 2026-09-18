@@ -477,6 +477,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   propagation rather than requiring catches for unnamed failures. The repository
   copy matches the generated block (#1806).
 
+- **The active-pointer record can be carried out in the order it states**
+  (#1943). `CR-20260913-0004` puts `spec-0010/TDD-0017` and its split sibling in
+  its blocked set, says their split waits on a `spec-0010` ledger repair no
+  record carries yet, and hands both through `/qfai-atdd` before
+  `/qfai-implement`. Its ATDD pass splits the Integration case that runs the
+  absent and missing pointer together, takes `spec-0013/TDD-0016` only once the
+  record blocking it is applied, and says how the preflight releases this
+  record's own rows before it is applied. It also names the writer-side
+  contradiction it leaves, raised on its own.
+
 - Repository async guidance requires awaited or returned promises and points to
   the shared implementation rule for consuming callers, kept failures and
   callback boundaries. Required handling and incomplete error messages remain
