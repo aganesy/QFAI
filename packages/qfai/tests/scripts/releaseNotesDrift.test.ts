@@ -23,6 +23,7 @@ import { maskFencedCodeBlocks } from "../../src/core/ids.js";
 import {
   TRUNCATION_MARKER,
   entryTitles,
+  fetchReleasePage,
   missingEntries,
   nextPageLink,
   nextPageUrl,
@@ -101,10 +102,56 @@ async function capture(
 }
 
 afterEach(async () => {
+  vi.unstubAllGlobals();
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
     if (dir) await rm(dir, { recursive: true, force: true });
   }
+});
+
+/**
+ * A `fetch` that answers nothing and rejects only once its signal aborts, which
+ * is what the real one does on a request that never returns.
+ */
+function stubHangingFetch(): void {
+  vi.stubGlobal("fetch", (_url: unknown, init: { signal?: AbortSignal }) => {
+    return new Promise((_resolve, reject) => {
+      init.signal?.addEventListener("abort", () => {
+        reject(init.signal?.reason);
+      });
+    });
+  });
+}
+
+describe("a page that never answers", () => {
+  const changelog = "# Changelog\n\n## [1.2.0] - 2026-01-02\n\n- **Shipped in the notes**\n";
+  // Far below the ceiling the script ships. What is under test is that the
+  // ceiling is applied at all, and a real one would make the case take 30s.
+  const soon = (url: string, token: string): Promise<unknown> => fetchReleasePage(url, token, 20);
+
+  it("gives up at its ceiling and says what the ceiling was", async () => {
+    stubHangingFetch();
+
+    await expect(soon("https://api.github.com/x", "t")).rejects.toThrow(/no answer within/);
+  });
+
+  it("reports the giving up as a comparison that could not be made", async () => {
+    // Not as a version with no release, which is an ordinary state and exits 0.
+    // Nor by holding the run until the job's budget kills it, which prints no
+    // verdict at all.
+    const file = await changelogWith(changelog);
+    stubHangingFetch();
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readPage: soon,
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("no answer within");
+  });
 });
 
 describe("which sections are compared", () => {
@@ -1053,6 +1100,12 @@ describe("resuming a release pull-request description", () => {
       "- - TODO",
       "N\\/A",
       "~~TODO~~",
+      // A heading deeper than the section's own does not end that section, so
+      // the reader that judges the answer and the rebuild that replaces it have
+      // to stop at the same place.
+      "### TODO",
+      "###### TODO",
+      "TODO\n===",
     ].map((source) => [
       `hidden or formatted answer ${JSON.stringify(source)}`,
       `## What this change made unnecessary\n\n${source}\n`,
@@ -1171,6 +1224,12 @@ describe("resuming a release pull-request description", () => {
     ],
     ["raw HTML declaration", "<!DOCTYPE\n## What this change made unnecessary\nNothing.\n>\n"],
     ["raw HTML CDATA", "<![CDATA[\n## What this change made unnecessary\nNothing.\n]]>\n"],
+    // GitHub hides the lowercase lookalike exactly as it hides the spelled
+    // form, so an answer inside one reaches no reader of the rendered body.
+    [
+      "raw HTML lowercase CDATA",
+      "<![cdata[\n## What this change made unnecessary\nNothing.\n]]>\n",
+    ],
     [
       "raw HTML standalone inline tag",
       "<span>\n## What this change made unnecessary\nNothing.\n</span>\n",
@@ -1307,7 +1366,6 @@ describe("resuming a release pull-request description", () => {
       "<pre>Example</pre>\n",
       "Paragraph text\n<span>\n",
       "<span title=>\n",
-      "<![cdata[\n",
     ].map((prefix) => [
       `authored after raw block ${JSON.stringify(prefix)}`,
       `${prefix}## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n`,
@@ -1367,6 +1425,99 @@ describe("resuming a release pull-request description", () => {
           ).toBe(true);
         }
       }
+    }
+  });
+});
+
+describe("resuming a release pull-request description", () => {
+  it.each([
+    ["missing", ""],
+    ["empty", "## What this change made unnecessary\n\n<!-- Answer required. -->\n"],
+    ["Markdown-only", "## What this change made unnecessary\n\n- [ ]\n"],
+    ["None marker", "## What this change made unnecessary\n\nNone.\n"],
+    ["N/A marker", "## What this change made unnecessary\n\nN/A\n"],
+    ["named space entity", "## What this change made unnecessary\n\n&nbsp;\n"],
+    ["numeric space entity", "## What this change made unnecessary\n\n&#160;\n"],
+    ["TODO prefix", "## What this change made unnecessary\n\nTODO: fill this in\n"],
+    ["TBD prefix", "## What this change made unnecessary\n\nTBD: list the removals\n"],
+    ["thematic break", "## What this change made unnecessary\n\n---\n"],
+    ["empty quotation", "## What this change made unnecessary\n\n>\n"],
+    ["empty link", "## What this change made unnecessary\n\n[]()\n"],
+    ["empty link with target", "## What this change made unnecessary\n\n[](https://example.com)\n"],
+    ["HTML break", "## What this change made unnecessary\n\n<br>\n"],
+    ["fenced example", "```md\n## What this change made unnecessary\n\nNothing.\n```\n"],
+    ["longer backtick close", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    [
+      "longer tilde close",
+      "~~~md\r\n## What this change made unnecessary\r\n\r\nNothing.\r\n~~~~\r\n",
+    ],
+    ["short close", "````md\n```\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ["wrong marker close", "```md\n~~~\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ["commented example", "<!--\n## What this change made unnecessary\n\nNothing.\n-->\n"],
+    [
+      "authored",
+      "## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
+    ],
+    [
+      "authored after backtick fence",
+      "```md\n## What this change made unnecessary\n\nExample only.\n````\n\n## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
+    ],
+    [
+      "authored after tilde fence",
+      "~~~md\n## What this change made unnecessary\n\nExample only.\n~~~~\n\n## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
+    ],
+    [
+      "authored after commented fence",
+      "<!--\n```md\n## What this change made unnecessary\n\nExample only.\n-->\n\n## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n",
+    ],
+    [
+      "authored heading that interrupts a backtick paragraph",
+      "`\n## What this change made unnecessary\nNothing.\n`\n",
+    ],
+  ])("preserves other prose when the removal answer is %s", async (name, section) => {
+    const workflow = await readFile(
+      path.join(REPO_ROOT, ".github/workflows/prepare-release.yml"),
+      "utf-8",
+    );
+    const resume = workflow.match(
+      /if \[ -n "\$\{existing_pr\}" \]; then([\s\S]*?)\n\s*else\n\s*gh pr create/,
+    )?.[1];
+    expect(resume).toContain('gh pr view "${existing_pr}" --json body --jq .body');
+    expect(resume).toContain('gh pr edit "${existing_pr}" --body-file "${body_file}"');
+    const script = workflow.match(
+      /^\s*node - .* <<'REPAIR_BODY'\r?\n([\s\S]*?)^\s*REPAIR_BODY[ \t]*$/m,
+    )?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("Release body repair script is absent");
+    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-release-body-"));
+    tempDirs.push(dir);
+    const existingPath = path.join(dir, "existing.md");
+    const bodyPath = path.join(dir, "generated.md");
+    const retained =
+      "# Prepared release\n\nDate corrected to 2026-09-14.\n\nRisk note: retain the publication approval.\n\n";
+    const existing = retained + section;
+    const answer = "Superseded package version and Unreleased heading. Release notes are retained.";
+    await writeFile(existingPath, existing, "utf-8");
+    await writeFile(
+      bodyPath,
+      `Generated prose.\n\n## What this change made unnecessary\n\n${answer}\n`,
+      "utf-8",
+    );
+    const result = spawnSync(process.execPath, ["-", existingPath, bodyPath], {
+      input: script,
+      encoding: "utf-8",
+    });
+    if (result.error !== undefined) throw result.error;
+    expect(result.status, result.stderr).toBe(0);
+    const updated = await readFile(bodyPath, "utf-8");
+    expect(updated.startsWith(retained)).toBe(true);
+    expect(updated).not.toContain("Generated prose.");
+    if (name.startsWith("authored")) {
+      expect(updated).toBe(existing);
+    } else {
+      expect(updated).toContain(answer);
+      const outsideCode = maskFencedCodeBlocks(updated).replace(/<!--[\s\S]*?-->/g, "");
+      expect(outsideCode.match(/^## What this change made unnecessary$/gm)).toHaveLength(1);
     }
   });
 });

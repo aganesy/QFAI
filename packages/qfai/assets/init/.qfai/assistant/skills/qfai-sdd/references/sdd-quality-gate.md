@@ -17,8 +17,8 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 - No `08_Open-questions.md` or `_policies/09_Open-questions.md` entry carries the
   `unadjudicated` status. A question
   parked on purpose is `deferred`, with the decision point that takes it up; a
-  decision the user was asked for and never took blocks the stage, because
-  completing there records a design nobody chose.
+  critical decision the user was asked for and never took blocks the stage,
+  because completing there records a design nobody with the standing chose.
 
 ## Triage Checks
 
@@ -66,7 +66,9 @@ Phase 0 is a mandatory output of this skill, so its own artifacts belong on this
   pack that has specs is a finding, not a tool limitation.
 - `05_Examples.md` includes `EX-ID` and `BR-Ref`.
 - `06_Test-Cases.md` includes `TC-ID`, `Level`, `EX-Ref`, `AC-Refs`, and `Type`. `Level` holds exactly one code from `.qfai/assistant/catalog/test-layers.md#layer-definitions`, which defines all five (`L1`-`L5`); the template's list is a reading aid pointing back at it.
-- Error or boundary coverage is present, not only normal-path coverage.
+- Require normal path and declared valid boundaries per AC; require failures only
+  for kept failures, as defined in
+  `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`.
 - **The chain does not terminate at `TC`.** Every `BR` / `AC` names the contract that realizes it,
   and every persisted attribute it names resolves to a column, field or enum member in that
   contract — directly or by a stated join. Phase 0 authors contracts before these obligations
@@ -106,9 +108,10 @@ Phase 0 is a mandatory output of this skill, so its own artifacts belong on this
 - Phase 2c carries one row per expansion, `2c.1` upward, in the order they ran. Its scope is
   recomputed after every contract write, so a single row records the first checkpoint and leaves
   every later one indistinguishable from a checkpoint that never happened.
-- A row reads `run` only with zero escalations. One escalation makes it `escalated`, and an
-  `escalated` row needs a `PENDING` work order for it — an escalation nobody answered is a design
-  decision nobody took. Record it in `08_Open-questions.md` as well, with
+- A row reads `run` when no critical decision waits on the user; decisions adopted from the
+  griller's recommendation leave it `run`. A critical decision waiting on the user makes it
+  `escalated`, and an `escalated` row needs a `PENDING` work order for it — an escalation nobody
+  answered is a design decision nobody took. Record it in `08_Open-questions.md` as well, with
   `status: unadjudicated`: the work order keeps the stage resumable, and the status is what
   validation reads.
 - Each phase's settled count equals the number of `grilling(<phase>/...)` rows in
@@ -117,3 +120,6 @@ Phase 0 is a mandatory output of this skill, so its own artifacts belong on this
   being counted against another, and a reviewer looking for what it recommended finds nothing.
 - Every `grilling(...)` row names who adjudicated the decision, `user` or `agents`. A reviewer reads
   its `Recommended and unadjudicated` answer off these rows and holds no memory of the session.
+- An `agents` row is acceptable: it records a decision adopted from the griller's recommendation,
+  with the reason and each disagreeing position in `Output (refs)`. A critical decision recorded as
+  `agents` is the failure.

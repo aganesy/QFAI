@@ -34,7 +34,7 @@ QFAI Skill Body (SSOT)
 
 ## Stage and Phase Order (Fixed)
 
-```
+```text
 Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
                   -> Phase 1 Outline -> Phase 2 Slice (per spec)
                   -> Phase 2b Seed tdd/test-list.md (per spec)
@@ -161,7 +161,7 @@ So a run against such a spec owes `product-experience-architect` and the `produc
 predicate for a different skill: it grades one execution-ledger row, and this skill has none.
 
 Author↔reviewer separation (MUST): drafting roles and reviewing roles above are routed from one list, but no sub-agent may review an artifact it drafted or edited in this run. `independent` is defined normatively in `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`, and every reviewer response must carry its
-`Authored/edited under review:` and `Recommended and unadjudicated:` attestations.
+`Authored/edited under review:` and `Recommended and unadjudicated:` attestations. A griller does not review an artifact carrying a decision adopted from its own recommendation.
 
 Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.
 
@@ -173,13 +173,12 @@ routing phase's mandatory agents run inside its span, and its blocking agents MU
 ### Pre-draft Grilling (MUST)
 
 - Before Phase 0, Phase 1, Phase 2, Phase 2c and Phase 3 write anything, run one grilling session for that phase, held by this skill. The trigger is this invocation's first write or design mutation in the phase, not whether the artifact already exists — most runs are `UPDATE:*` against artifacts that do.
-- Method: `.agents/rules/grilling.md` through the `qfai-grilling` skill. Ending a session with no user in it: `.qfai/assistant/constitution/review-convergence.md#agent-to-agent-grilling-must`. Placement, roles, what the orchestrator does with the result, and what the phase records: `references/sdd-pre-draft-grilling.md`.
+- Method: `.agents/rules/grilling.md` through the `qfai-grilling` skill, as a delegated session. Rounds and what settles each decision: `.qfai/assistant/constitution/review-convergence.md#agent-to-agent-grilling-must`. Placement, roles, what the orchestrator does with the result, and what the phase records: `references/sdd-pre-draft-grilling.md`.
 - **One session per phase, over every routed drafting role's decisions.** Grilling one author leaves the others free to settle their own before their own writes.
-- **Every decision the session settled that authoritative evidence did not answer goes to the user before any author writes** — not only the ones the round budget left open. An agent-to-agent decision nobody adjudicated makes the artifact one no reviewer can clear (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md`), so escalating only the residue hands the authors a
-  settled set whose agreed half fails review.
+- **Only a critical decision goes to the user before any author writes** (`.agents/rules/grilling.md` § Critical decisions). Every other decision takes the griller's recommendation, reaches the authors as settled, and is recorded as an `agents` row. A decision that only adds what the request did not ask for is not put on the tree.
 - This is not the Reviewer Gate below and does not replace it. The gate reads a written artifact and answers whether it is right; this loop runs before the write and answers whether its decisions were taken. Both run.
 - Holding the loop is not authoring: the orchestrator routes it and does not answer its questions.
-- Every escalation reaches the user through `AskUserQuestion` where it is callable for that question, and through the fallback in `.agents/rules/user-questions.md` where it is not — numbered choices carrying the same parts. Under a no-question mode it is opened as a question instead, never recorded as an assumption alone.
+- Every critical decision reaches the user through `AskUserQuestion` where it is callable for that question, and through the fallback in `.agents/rules/user-questions.md` where it is not — numbered choices carrying the same parts. Under a no-question mode it is opened as a question instead, never recorded as an assumption alone; the other decisions are adopted as in any run.
 - The phase records a run-or-skip line and a work-order row per settled decision, naming who adjudicated it. An omitted session and a legitimate empty frontier are the same absence otherwise.
 
 ### Reviewer Gate (MUST)
@@ -278,7 +277,8 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   per integration-level TC from the same file (every Level whose ATDD annotation routes to the tests/integration tree: L3, integration, blank, a spelling that names no layer, and system / acceptance; TC-Refs), one `Layer = E2E` row per active `US-*` (US-Refs), one `Layer = API` row per active `CON-API-*` the spec owns (CON-API-Refs); the two TC groups are exclusive and a matrix-shaped TC
   splits one row per boundary; "active" is the catalog/test-layers.md exemption (no user-facing surface / x-qfai-status: planned). The surface exemption applies only when the project declares at least one UI-bearing spec; with surface typing unused every `US-*` is active, because QFAI-ATDD-111 stays project-wide. That precondition is project-wide, so a run that adds the project's first
   surface signal or removes its last re-runs the E2E-row delta over every spec's ledger, not the target's alone. A seeded E2E/API row carries `-` in Test file and Selector — the test does not exist yet, `/qfai-atdd` never writes this ledger, and `/qfai-implement` Phase Red step 3b writes both cells from that stage's handoff entry when it advances the row. A spec owns a `CON-API-*` named
-  by its own `spec-*/01..10` or `16_*` files, the lowest-numbered spec wins when several name it, and an unnamed contract gets no row yet. It is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence. The API-row delta is re-run twice more: at the end of Phase 2c for every contract that gained an owner there (Phase 2b runs once, before it), and on the
+  by its own `spec-*/01..10` or `16_*` files — which **bind** — a contract-ref line, a `Contract-Refs` value, or a `CON-API-Refs` cell, never a mention in an annotation example, a migration note or a removal record — and the lowest-numbered spec wins when several bind it, and an unnamed contract gets no row yet. It is a delta: existing rows keep their TDD-ID, Status, Test file,
+  Selector, DR-ID and Evidence. The API-row delta is re-run twice more: at the end of Phase 2c for every contract that gained an owner there (Phase 2b runs once, before it), and on the
   `--contract` route after Phase 0, which otherwise ran no seeding phase and left every `x-qfai-status` flip out of sync; that route runs Phase 2c itself for a contract it activates with no owner, and leaves the contract at `x-qfai-status: planned` when even that names none, rather than shipping a gate no ledger can clear. The same pass migrates an eight-column ledger: add `US-Refs` /
   `CON-API-Refs` to the header and move the `US-*` / `CON-API-*` its E2E/API rows kept in `TC-Refs` into the column their `Layer` owns.
 
@@ -296,7 +296,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    - Phase 0 must also reconcile paired contracts against each other, not only validate each file: every terminal state, status enum value, and error code an API contract mandates must be representable in the paired DB contract. See `references/contract-artifact-rules.md#cross-contract-reconciliation-must`. The reviewer gate checks the pairing before sign-off.
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
 6. `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
-7. `06_Test-Cases.md` must include `TC-ID`, `Level`, `EX-Ref`, `AC-Refs`, and `Type`, with normal-path plus error/boundary coverage. `Level` gates `TDDLIST_TC_NOT_COVERED` at `error`, so it is required, not optional.
+7. `06_Test-Cases.md` must include `TC-ID`, `Level`, `EX-Ref`, `AC-Refs`, and `Type`. Require normal path and declared valid boundaries per AC; require failures only for kept failures, as defined in `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`. `Level` gates `TDDLIST_TC_NOT_COVERED` at `error`, so it is required, not optional.
    Record a failure observed in use in its matching test-case row, as the template's _A failure observed in use_ says.
 8. A `TC` whose assertion reads the **content** of an upstream artifact — a decision record in `07_Decisions.md`, a contract, another spec file — must not be written before that artifact exists. `/qfai-implement` may not write upstream SSOT, so a row routed to it first has no lawful move, and the agent that meets it must choose between three prohibited things. Produce the artifact in
    this stage, or do not write the case yet.
@@ -338,7 +338,8 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    opted in, `QFAI-ATDD-111` stays project-wide for it, and every `US-*` is therefore active; exempting them there would leave a legacy project with no E2E row and a failing gate. Seeding a genuinely exempt obligation parks a completion-prohibiting row on a test that must not be written. **A surface-typing flip re-runs the E2E delta over every spec.** That precondition is a property of
    the **project**, not of the target, so a run that adds the project's **first** surface signal — or removes its **last** — moves every other spec's `US-*` across the active/exempt line while this phase otherwise touches the target spec alone. When this run flips it, apply the E2E-row delta to **every** spec's ledger: losing the last signal returns `QFAI-ATDD-111` to project-wide, so
    each non-target spec now owes E2E rows it has none of, and gaining the first one makes the specs with no surface signal exempt, so their existing E2E rows must be retired. Left at the target only, the flip yields either a gate no ledger can clear or `todo` rows on tests that must not be written — in every spec but one. **Ownership of an API row** is mechanical, because
-   `.qfai/contracts/**` has no spec owner in the model: a spec owns a `CON-API-*` its own `spec-*/01..10` / `16_*` files name, and when more than one names it the **lowest-numbered** such spec owns the single row (the others record it as a cross-spec obligation, not a duplicate row). A `CON-API-*` no spec names has no owner and gets no row here — Phase 2c resolves the owner and re-runs
+   `.qfai/contracts/**` has no spec owner in the model: a spec owns a `CON-API-*` its own `spec-*/01..10` / `16_*` files **bind** — a contract-ref line, a `Contract-Refs` value, or a `CON-API-Refs` cell, never a mention in an annotation example, a migration note or a removal record, and when more than one binds it the **lowest-numbered** such spec owns the single row (the
+   others record it as a cross-spec obligation, not a duplicate row). A `CON-API-*` no spec names has no owner and gets no row here — Phase 2c resolves the owner and re-runs
    this delta for it, so it is deferred rather than dropped. **Seeding is a delta, not a regeneration, in both directions**: unchanged rows keep their state, new TCs and newly active obligations append at `todo`, and changed / removed TCs are reset or retired under the upstream-reset rule — **per boundary within a matrix-shaped TC**, so a boundary the TC no longer declares has its row
    retired rather than reset back to `todo`. Retiring a row means **deleting it from the table**, since there is no `retired` status, and the deletion is recorded in whatever authorised it: the approved `UPDATE:REMOVE` Triage row's `09_delta.md` / `_policies/10_delta.md` on a normal reseed, the driving `CR-*` on a Drift Protocol owner rerun. The same holds for the row of a `US-*` /
    `CON-API-*` deleted upstream or newly exempt (`references/sdd-phase-checklists.md`). **An eight-column ledger is migrated in the same pass**: add `US-Refs` and `CON-API-Refs` to its header, and move the `US-*` / `CON-API-*` its existing `E2E` / `API` rows recorded in `TC-Refs` — the only cell they had — into the column the row's `Layer` owns, leaving `TC-Refs` at `-`. It is a cell
@@ -450,6 +451,7 @@ When declaring DONE, include:
 - Stage 1 Triage table digest (counts per Operation, approvals)
 - Phase order: Contracts-first -> Outline -> Slice -> Plan finalize -> Delta update
 - Decision record IDs touched in `09_delta.md`
+- Every decision adopted from a griller's recommendation, one line each from the `grilling(<phase>/agents)` rows, with its reason
 - Confirmation that no rejected option was reintroduced (or list RE-OPEN IDs)
 - Quality gate result and validate log path
 
@@ -486,14 +488,14 @@ cannot proceed without, and no prototype can enumerate that for a skill it does 
 project_memory:
 
 - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c Obligation reconciliation → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
-- `agent-routing.yml`'s `slice-and-scope` / `design` / `review` phase IDs are spans over that fixed order, not extra steps: resolve them through `### Routing Phase Crosswalk (Normative)`, exceptions included, before placing any mandatory or blocking agent; span membership never narrows `rerun_policy`.
+- `agent-routing.yml`'s `slice-and-scope` / `design` / `review` phase IDs are spans over that fixed order, not extra steps: resolve them through `## Routing Phase Crosswalk (Normative)`, exceptions included, before placing any mandatory or blocking agent; span membership never narrows `rerun_policy`.
 - Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
 - Phase 2b is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence, except for the matrix, raised-Tier and obligation-column migrations below. Only this phase adds, removes or re-scopes rows.
 - A matrix-shaped TC takes one row per independently observable boundary. Re-scope a matrix row already past todo, done included, append a todo row per remaining boundary, and always have the kept row re-executed. Phase 2b writes row identity; `/qfai-implement`'s Change-Request preflight resets Status, DR-ID and Evidence.
 - Before re-execution or the downstream reset, narrow the kept matrix row's `Selector` to the chosen boundary; appended rows cover only the remaining boundaries.
 - An existing ledger's columns are migrated to the template's (Blocked-By on an eight-column ledger) so a downstream blocked row never has to add one.
 - E2E/API rows split one row per independently observable boundary from their US-Refs / CON-API-Refs source, not from TC-Refs.
-- Migrate an eight-column ledger by adding US-Refs / CON-API-Refs and moving US-* / CON-API-* from E2E/API TC-Refs into the column their Layer owns.
+- Migrate an eight-column ledger by adding US-Refs / CON-API-Refs and moving US-\* / CON-API-\* from E2E/API TC-Refs into the column their Layer owns.
 - Which boundary is kept follows what the row actually observed, and an observation is never invented: a natural RED keeps the first failing assert's boundary.
 - A blocked row selected before RED and a falsifiability row at red or beyond have no first failing assert at all, so the kept boundary is the one the driving CR-\* names first, in the order that row's obligation source lists them when the CR gives an unordered set.
 - On a falsifiability row, keep the boundary the predicate its Satisfied-by names covers, falling back to that same order.
@@ -502,7 +504,7 @@ project_memory:
 - The integration-level TC group includes L3/integration, blank or unrecognized Level, and system / acceptance. The two TC groups are exclusive; each matrix-shaped obligation splits by independently observable boundary.
 - Seed Tier from Layer, what the row touches (infrastructure, public API, CON-* contract or persisted schema = T2; UI or rendered output = T3) and criticality. Write this value to the Tier column, never to Evidence.
 - Active uses the catalog/test-layers.md exemption: skip a planned CON-API and skip a US in a spec with no user-facing surface only after project-wide surface opt-in. When surface typing is unused, every non-planned US-* remains required.
-- A spec owns a `CON-API-*` named by its own `spec-*/01..10` or `16_*` files; the lowest-numbered spec wins when several name it, and an unnamed contract waits for Phase 2c.
+- A spec owns a `CON-API-*` its own `spec-*/01..10` or `16_*` files bind (a contract-ref line, a `Contract-Refs` value or a `CON-API-Refs` cell, never a mention); the lowest-numbered spec wins when several bind it, and an unnamed contract waits for Phase 2c.
 - The API-row delta is re-run twice more: after Phase 2c for contracts that gained an owner, and after Phase 0 on the `--contract` route.
 - The `--contract` route runs Phase 2c for an activated contract with no owner and leaves the contract at `x-qfai-status: planned` when even that names none.
 - A surface-typing flip re-runs the E2E-row delta over every spec's ledger: adding the project's first surface signal or removing its last changes the project-wide precondition.
