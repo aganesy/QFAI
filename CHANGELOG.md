@@ -233,6 +233,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Six shipped checks have tests but no test case in any spec, so nothing says
+  what they must do and no ledger row traces them (#1837).
+  `CR-20260913-0014` raises the repair:
+  - Navigation flow, UI-bearing classification and the test stub check go to
+    `spec-0004`.
+  - Traceability integrity goes to `spec-0013`.
+  - The provenance lock's handling of two writers at once goes to `spec-0003`.
+  - The design-fidelity scorecard is recorded as owned by no spec, because
+    nothing the package ships writes the input it reads.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
