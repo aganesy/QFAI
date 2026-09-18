@@ -159,8 +159,8 @@ describe("output language is stated in one place only", () => {
   // The ruling those files are held to. Without it the sweep above says what
   // may not be written and nothing says what may, which is the state that let
   // thirty-two copies of a rule the constitution owns accumulate unread.
-  it(".instruction/README.md rules on the directory", async () => {
-    const text = await readFile(path.join(repoRoot, ".instruction/README.md"), "utf-8");
+  it(".agents/rules/instruction-tree.md rules on the directory", async () => {
+    const text = await readFile(path.join(repoRoot, ".agents/rules/instruction-tree.md"), "utf-8");
     // One token per clause that no other clause carries.
     for (const clause of [
       /Absolute Rule/,

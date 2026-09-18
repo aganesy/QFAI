@@ -339,8 +339,19 @@ export async function validateScaffoldPlaceholder(
   );
   // De-duplicated: an unusual `testsDir` could make two patterns resolve to the
   // same file, and counting it twice would double one skeleton's escalation.
+  //
+  // A directory the account cannot read is passed over rather than rejecting
+  // the whole profile: under the acceptance test directories the ATDD scan
+  // names it as `QFAI-ATDD-135`.
+  // SIMPLIFIED: one under `atdd/`, which that scan does not read, is passed over
+  // unnamed.
+  // Lift when: a project keeps scaffolds under `atdd/` and needs one named.
   const files = Array.from(
-    new Set((await fg(globPatterns, { dot: false, absolute: true })).map((f) => path.resolve(f))),
+    new Set(
+      (await fg(globPatterns, { dot: false, absolute: true, suppressErrors: true })).map((f) =>
+        path.resolve(f),
+      ),
+    ),
   );
   // Track every (spec, TC) we observed as placeholder this pass so we
   // can reset stale counters at the end.

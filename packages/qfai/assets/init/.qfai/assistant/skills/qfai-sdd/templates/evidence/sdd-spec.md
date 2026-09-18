@@ -88,8 +88,10 @@ npx qfai validate --profile sdd --fail-on error --format github
 > One row per grilling-covered phase this run entered — Phase 0, 1, 2, 2c and 3,
 > and only those. Phase 2b and Phase 4 produce no design decision and run no
 > session.
-> `Session` is `run`, `skipped` or `escalated`. `run` means zero escalations;
-> one escalation makes the row `escalated` whatever else the phase settled.
+> `Session` is `run`, `skipped` or `escalated`. `run` means no critical
+> decision waits on the user; decisions adopted from the griller's
+> recommendation leave the row `run`. One critical decision waiting on the user
+> makes the row `escalated` whatever else the phase settled.
 > A `skipped` row names the authoritative artifact that answered the phase's
 > decisions, because an omitted session and an empty frontier are the same
 > absence otherwise.
@@ -102,12 +104,19 @@ npx qfai validate --profile sdd --fail-on error --format github
 > not at all.
 > The settled count equals the number of `grilling(...)` rows below carrying
 > this phase.
+> In a batch run (`/qfai-sdd` with no argument), Phase 0 and Phase 1 ran once
+> for every spec. Their rows and work orders are in
+> `.qfai/evidence/sdd-batch-<timestamp>.md` (`templates/evidence/sdd-batch.md`),
+> not here: name that file on the `Batch record` line below the table. A run
+> for one spec writes `none` there.
 
 | Phase | Session   | Ended at  | Wrote at  | Frontier                   | Evidence             |
 | ----- | --------- | --------- | --------- | -------------------------- | -------------------- |
 | 0     | run       | <ISO8601> | <ISO8601> | <n> settled, 0 escalated   | #work-orders-summary |
 | 1     | skipped   | -         | <ISO8601> | empty: answered by <ref>   | -                    |
 | 2c.1  | escalated | <ISO8601> | -         | <n> settled, <n> escalated | #work-orders-summary |
+
+- Batch record: `.qfai/evidence/sdd-batch-<timestamp>.md` | none
 
 ## Work Orders Summary
 

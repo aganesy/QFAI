@@ -98,6 +98,13 @@ export type SpecScopeRoots = {
    * the answer is what it was before.
    */
   testsRoot?: string;
+  /**
+   * The spec a test file's own `<layer>/spec-NNNN/` directory names at any
+   * test root the ATDD scan reads, a package's own included. Consulted after
+   * the `testsDir` layout, so a package that keeps the scaffold layout owns
+   * its files the way the central one does.
+   */
+  testOwner?: (absolutePath: string) => string | null;
 };
 
 /**
@@ -153,7 +160,8 @@ function isInsideSpecsRoot(filePath: string, roots: SpecScopeRoots): boolean {
 
 export function owningSpecNumber(filePath: string, roots: SpecScopeRoots): string | null {
   const absolute = path.isAbsolute(filePath) ? filePath : path.resolve(roots.root, filePath);
-  const inTestLayout = owningSpecInTestLayout(absolute, roots);
+  const inTestLayout =
+    owningSpecInTestLayout(absolute, roots) ?? roots.testOwner?.(absolute) ?? null;
   if (inTestLayout !== null) {
     return inTestLayout;
   }

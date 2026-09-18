@@ -214,14 +214,28 @@ Example cascade for `REQ-0042 (rename token "draft" -> "proposal")`:
 ```markdown
 ## Triage
 
-| Source   | Subject     | Existing Spec | Operation | Sub-op | Approved By | Rationale |
-| -------- | ----------- | ------------- | --------- | ------ | ----------- | --------- |
-| REQ-XXXX | <one-liner> | spec-NNNN     | UPDATE    | APPEND | -           | <why>     |
+| Source   | Subject     | Existing Spec | Operation | Sub-op | Approved By | Rationale | Depends-On |
+| -------- | ----------- | ------------- | --------- | ------ | ----------- | --------- | ---------- |
+| REQ-XXXX | <one-liner> | spec-NNNN     | UPDATE    | APPEND | -           | <why>     | -          |
 ```
 
 Required columns: `Source`, `Subject`, `Existing Spec`, `Operation`.
 Conditional: `Sub-op` (UPDATE only), `Approved By` (approval-required
 ops), `Rationale` (recommended for every row).
+Optional: `Depends-On`, what the row waits on before its work can start.
+
+`Depends-On` holds `-`, or a comma-separated list of what must finish first:
+
+- another row's `Source` (`REQ-0042`) — the row waits for every row of that
+  source, such as screens migrating to a shared component waiting for the row
+  that builds it;
+- an open question (`OQ-0007`) — the row waits for the question to be
+  resolved, such as metrics that depend on a typeface not yet chosen.
+
+Write the dependency here, not in `Rationale`: a dependency in prose is
+worded differently by each author and dropped when the row is edited, and
+Phase 2 fans out per spec, so a row that silently waits is a row dispatched
+too early.
 
 The heading is `## Triage` (H2), which may name the round it records in
 parentheses: `## Triage (2026-07-26)`. Every such section in the file is
@@ -249,7 +263,10 @@ still a rejected cell:
   policy target gives them nothing to act on. A cell that merely contains
   the word (`not_policies`) resolves to nothing either way, and a path that
   leaves the directory (`_policies/../spec-0003`) is not a policy target —
-  no segment may be `.` or `..`.
+  no segment may be `.` or `..`. A policy row produces no execution-ledger
+  row, since `_policies/**` holds no test case, so a requirement whose every
+  row targets `_policies` is never scheduled; `QFAI-TRIAGE-010` (warning)
+  reports one. Work the requirement asks to be built needs a row on a spec.
 - **No existing spec yet (CREATE)** — the literal `-`. A CREATE row MUST
   NOT name the spec it is about to create; the new spec ID belongs in
   `Subject`. (`(none)` is the legacy spelling of this literal and is still
@@ -273,6 +290,26 @@ read as a state instead: all targets present means the row is not yet
 carried out, all gone means it is and the row is its tombstone. A row where
 only some targets resolve is in neither state and is rejected, which is what
 catches a source that was misspelled or never allocated.
+
+### A source file no spec owns
+
+Shared code that every screen uses and no spec describes — a navigation shell,
+a layout wrapper, an error boundary — has no `Existing Spec` value of its own.
+**Split its obligations by behaviour, and give each one a row on the spec that
+already owns that behaviour**: the sign-out control on the authentication spec,
+the menu toggle on the spec whose screen exercises it. It is the impact cascade
+above, keyed on behaviour rather than on the file.
+
+The other moves each lose something:
+
+| Move                             | What it costs                                                                            |
+| -------------------------------- | ---------------------------------------------------------------------------------------- |
+| Name a spec that owns none of it | That spec's capability stops describing what it contains                                 |
+| Target `_policies`               | A policy row produces no execution-ledger row, so the work is never scheduled            |
+| Raise a new spec for the file    | A file is not a capability, and `CREATE` asks for a capability decision nobody is making |
+
+A behaviour no spec owns is a missing capability, not a file problem. Raise it
+as its own requirement, which is the capability decision `CREATE` exists for.
 
 ## Validators
 

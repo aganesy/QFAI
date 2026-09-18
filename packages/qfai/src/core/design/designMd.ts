@@ -41,6 +41,26 @@ export type RadiusKey = (typeof RADIUS_KEYS)[number];
 export const SHADOW_KEYS = ["sm", "md", "lg"] as const;
 export type ShadowKey = (typeof SHADOW_KEYS)[number];
 
+/**
+ * Every key the front matter admits, by the section that holds it. The parser
+ * rejects any other key at each level, and a design direction proposed before
+ * the file exists is read against the same tree.
+ */
+export const DESIGN_MD_KEYS = {
+  root: ["brand", "visual", "audience", "accessibility"],
+  brand: ["name", "archetype", "voice", "theme"],
+  audience: ["emotion", "do_not_look_like"],
+  accessibility: ["contrast_ratio_min", "motion"],
+  visual: ["colors", "typography", "radius", "shadow", "spacing"],
+  "visual.colors": COLOR_KEYS,
+  "visual.typography": [...FONT_KEYS, "scale", "weight"],
+  "visual.typography.scale": ["xs", "sm", "base", "lg", "xl", "2xl", "3xl"],
+  "visual.typography.weight": ["regular", "medium", "bold"],
+  "visual.radius": RADIUS_KEYS,
+  "visual.shadow": SHADOW_KEYS,
+  "visual.spacing": ["base", "scale"],
+} as const satisfies Readonly<Record<string, readonly string[]>>;
+
 export type DesignMdColors = Record<ColorKey, string>;
 export type DesignMdFonts = Record<FontKey, string>;
 export type DesignMdRadius = Record<RadiusKey, string>;
@@ -352,7 +372,7 @@ function buildDesignMd(raw: unknown): BuildResult {
   // lets it hash into the lock while never reaching the parsed
   // tokens. Allowlist must be kept in sync with the optional sections
   // copied below (`audience`, `accessibility`).
-  const ROOT_ALLOWED_KEYS = new Set(["brand", "visual", "audience", "accessibility"]);
+  const ROOT_ALLOWED_KEYS = new Set<string>(DESIGN_MD_KEYS.root);
   const rootError = rejectUnknownKeys(raw, ROOT_ALLOWED_KEYS, { kind: "root" });
   if (rootError) return { error: rootError };
 
@@ -387,7 +407,7 @@ function buildDesignMd(raw: unknown): BuildResult {
     // spec forbids unknown keys at any level, and silently dropping
     // an authored directive (e.g. `audience.references`) lets it
     // hash into the lock while never reaching the parsed tokens.
-    const AUDIENCE_ALLOWED_KEYS = new Set(["emotion", "do_not_look_like"]);
+    const AUDIENCE_ALLOWED_KEYS = new Set<string>(DESIGN_MD_KEYS.audience);
     const audienceError = rejectUnknownKeys(raw.audience, AUDIENCE_ALLOWED_KEYS, {
       kind: "section",
       name: "audience",
@@ -438,7 +458,7 @@ function buildDesignMd(raw: unknown): BuildResult {
     // every other section: silently dropping authoring directives lets
     // them freeze into the lock hash while never reaching the parsed
     // tokens consumed by iteration / certify.
-    const ACCESSIBILITY_ALLOWED_KEYS = new Set(["contrast_ratio_min", "motion"]);
+    const ACCESSIBILITY_ALLOWED_KEYS = new Set<string>(DESIGN_MD_KEYS.accessibility);
     const accessibilityError = rejectUnknownKeys(raw.accessibility, ACCESSIBILITY_ALLOWED_KEYS, {
       kind: "section",
       name: "accessibility",
@@ -537,7 +557,7 @@ function readBrand(raw: unknown): { value: DesignMd["brand"] } | { error: ParseE
   if (voice !== undefined) value.voice = voice;
   if (theme !== undefined) value.theme = theme;
   // unknown extra keys
-  const BRAND_ALLOWED_KEYS = new Set(["name", "archetype", "voice", "theme"]);
+  const BRAND_ALLOWED_KEYS = new Set<string>(DESIGN_MD_KEYS.brand);
   const brandError = rejectUnknownKeys(raw, BRAND_ALLOWED_KEYS, {
     kind: "section",
     name: "brand",
@@ -559,7 +579,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   // the distributed DESIGN.md spec; the value is still hashed in the
   // lock so prototyping would freeze a directive that the parser
   // discards.
-  const VISUAL_ALLOWED_KEYS = new Set(["colors", "typography", "radius", "shadow", "spacing"]);
+  const VISUAL_ALLOWED_KEYS = new Set<string>(DESIGN_MD_KEYS.visual);
   const visualError = rejectUnknownKeys(raw, VISUAL_ALLOWED_KEYS, {
     kind: "section",
     name: "visual",
@@ -574,7 +594,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   // `validate*` ever sees it, even though the spec rejects unknown keys
   // at any level.
   if (isRecord(raw.colors)) {
-    const colorsKeys = new Set<string>(COLOR_KEYS);
+    const colorsKeys = new Set<string>(DESIGN_MD_KEYS["visual.colors"]);
     const colorsError = rejectUnknownKeys(raw.colors, colorsKeys, {
       kind: "section",
       name: "visual.colors",
@@ -583,7 +603,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     if (colorsError) return { error: colorsError };
   }
   if (isRecord(raw.radius)) {
-    const radiusKeys = new Set<string>(RADIUS_KEYS);
+    const radiusKeys = new Set<string>(DESIGN_MD_KEYS["visual.radius"]);
     const radiusError = rejectUnknownKeys(raw.radius, radiusKeys, {
       kind: "section",
       name: "visual.radius",
@@ -592,7 +612,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     if (radiusError) return { error: radiusError };
   }
   if (isRecord(raw.shadow)) {
-    const shadowKeys = new Set<string>(SHADOW_KEYS);
+    const shadowKeys = new Set<string>(DESIGN_MD_KEYS["visual.shadow"]);
     const shadowError = rejectUnknownKeys(raw.shadow, shadowKeys, {
       kind: "section",
       name: "visual.shadow",
@@ -609,13 +629,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   // (e.g. `font_pairing`, `fallback_policy`) lets them freeze into the
   // lock while never reaching the parsed tokens consumed by iteration
   // / certification.
-  const TYPOGRAPHY_ALLOWED_KEYS = new Set([
-    "family_sans",
-    "family_display",
-    "family_mono",
-    "scale",
-    "weight",
-  ]);
+  const TYPOGRAPHY_ALLOWED_KEYS = new Set<string>(DESIGN_MD_KEYS["visual.typography"]);
   const typographyError = rejectUnknownKeys(typographyRaw, TYPOGRAPHY_ALLOWED_KEYS, {
     kind: "section",
     name: "visual.typography",
@@ -639,8 +653,10 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
   // tokens. Allow the canonical names only — anything else is rejected
   // at parse time so an authored extra (`scale.hero`, `weight.black`)
   // does not freeze into the lock while iteration / certify ignore it.
-  const TYPOGRAPHY_SCALE_ALLOWED_KEYS = new Set(["xs", "sm", "base", "lg", "xl", "2xl", "3xl"]);
-  const TYPOGRAPHY_WEIGHT_ALLOWED_KEYS = new Set(["regular", "medium", "bold"]);
+  const TYPOGRAPHY_SCALE_ALLOWED_KEYS = new Set<string>(DESIGN_MD_KEYS["visual.typography.scale"]);
+  const TYPOGRAPHY_WEIGHT_ALLOWED_KEYS = new Set<string>(
+    DESIGN_MD_KEYS["visual.typography.weight"],
+  );
   // Reject present-but-non-record `scale` / `weight` blocks. Checking
   // only `isRecord(typographyRaw.scale)` would silently skip a
   // string / array authored under `scale:` (`scale: "1rem"` or
@@ -767,7 +783,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     };
   }
   if (isRecord(raw.spacing)) {
-    const SPACING_ALLOWED_KEYS = new Set(["base", "scale"]);
+    const SPACING_ALLOWED_KEYS = new Set<string>(DESIGN_MD_KEYS["visual.spacing"]);
     const spacingError = rejectUnknownKeys(raw.spacing, SPACING_ALLOWED_KEYS, {
       kind: "section",
       name: "visual.spacing",

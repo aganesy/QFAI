@@ -178,7 +178,7 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
   },
   {
     name: "internal-cap-id-jsdoc-leak",
-    re: /\bCAP-0(?:0[1-9][0-9]|[1-9][0-9]{2,})\b/,
+    re: /\bCAP-0*[1-9][0-9]+\b/,
     suggestion:
       "Internal capability IDs (CAP-0010+) MUST NOT appear in src/ JSDoc — tsup keeps JSDoc in dist/*.d.ts.",
     appliesTo: ["src-comment"],

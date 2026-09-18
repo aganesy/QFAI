@@ -28,27 +28,26 @@
     "**/node_modules/**",
     "**/dist/**",
     "tmp/**",
+    // Git worktrees of other branches. Linted here, their findings are reported
+    // against this checkout.
+    ".claude/worktrees/**",
     "CHANGELOG.md",
     ".git/**",
     ".instruction/**",
     ".serena/**",
     ".claude/commands/**",
+    // Git worktrees: another branch's checkout, on disk and outside this tree.
+    // Linted from here, every finding in that branch is reported against this
+    // one, and the same commit passes in CI — which clones fresh and has no
+    // worktrees — while failing locally.
+    ".claude/worktrees/**",
     ".github/prompts/**",
     ".qfai/discussion/**",
     ".qfai/archive/**",
     ".qfai/discussion_archive/**",
     ".qfai/review_archive/**",
     ".qfai/review/_archive/**",
-    ".qfai/assistant/agents/**",
-    ".qfai/assistant/skills/*/references/**",
-    ".qfai/assistant/skills/*/templates/**",
-    ".qfai/assistant/skills/qfai-*/SKILL.md",
-    ".qfai/assistant/skills.local/**",
-    ".qfai/assistant/steering/**",
-    ".qfai/assistant/constitution/**",
-    ".qfai/assistant/manifest/**",
-    ".qfai/assistant/catalog/**",
-    ".qfai/assistant/process/**",
+    ".qfai/assistant/**",
     ".qfai/contracts/**",
     ".qfai/evidence/*[0-9]*.md",
     ".qfai/report/atdd-traceability/**",
