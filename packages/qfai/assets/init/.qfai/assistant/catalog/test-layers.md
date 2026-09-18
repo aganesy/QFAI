@@ -388,7 +388,7 @@ referenced" was implemented as "every `US-*` gets its own E2E test".
 The gate is satisfied by **one E2E test per business flow carrying every
 `US-*` that flow realizes**:
 
-```
+```ts
 // QFAI:SPEC-0007:US-0007-0001
 // QFAI:SPEC-0007:US-0007-0004
 test("an operator schedules a call list and it dials", ...)
@@ -399,7 +399,7 @@ The flows are enumerated in `_policies/04_Business-Flow.md`, each opening its
 entry with a `BF-NNNN`; a story names the flows that realize it with
 `- Flow: BF-0001` in its own block; and a test annotates the flow:
 
-```
+```ts
 // QFAI:BF-0001
 test("an operator schedules a call list and it dials", ...)
 ```

@@ -22,6 +22,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   states the precedence that makes an overlay usable — an overlay beside a
   master supersedes the master's default.
 
+- **Markdown lint for the documents the package ships** (#1914). `assets/**`
+  was excluded from the lint lane, so the skills, agent definitions, constitution
+  and templates an adopter receives were checked by markdownlint nowhere. They now
+  run in `ci:lint:structure` and `ci:gate:structure` under their own rule set.
+  Five rules are off for these documents because they read them as the wrong kind
+  of text: line length, inline HTML, spaces in code spans, blank lines between
+  blockquotes, and ordered-list prefixes. Duplicate headings are compared among
+  siblings, so a template may repeat a subsection name under each category.
+  Bare code fences, heading-level jumps and unescaped emphasis markers in the
+  shipped documents are corrected.
+
 - **Reviewer cards file excess as a blocking code-quality defect** (#1798).
   All six reviewer roles trace excess to Article VII, require a concrete cut
   and replacement, and refuse cuts that remove or weaken a referenced
@@ -81,6 +92,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that finalizes a plan, a no-argument batch included. Because the usages are
   cited before implementation, the implementation reviewer counts the callers
   again as they exist when the element lands.
+
+- Verify repository-fact sources, use planning-stage precision and apply targeted
+  edits in discussion review cycles (#1818).
 
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
