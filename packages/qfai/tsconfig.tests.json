@@ -109,6 +109,7 @@
     "tests/assets/reviewIgnoreOwnership.test.ts",
     "tests/assets/reviewPackSeal.test.ts",
     "tests/assets/reviewPayloadSchemaShipped.test.ts",
+    "tests/assets/reviewerDemandBound.test.ts",
     "tests/assets/reviewerResponseProvenance.test.ts",
     "tests/assets/roundBlockHome.test.ts",
     "tests/assets/sddImportLiteEvidence.test.ts",
