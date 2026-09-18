@@ -244,6 +244,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The entry points no longer say this repository installs its own package**
+  (#1921). `CLAUDE.md` and `AGENTS.md` both described `.qfai/` as the result of
+  an npm install of QFAI. There is no such dependency, and
+  `scripts/check-not-a-dependency.mjs` refuses one. They now say where each tree
+  comes from: the assistant tree is generated from the init assets by
+  `pnpm sync:ssot`, and the rule masters are symlinks to their shipped copies.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
