@@ -158,6 +158,8 @@ to end.
   when no review has run yet. A round with several review attempts records each
   attempt's verdict here in review order, under the same `(attempt M)`
   qualifier, so every pack in the round has the verdict it carried beside it.
+  Every verdict attempt has its `Round N: Review pack` pair beside it: a
+  verdict with no pair is a review whose pack the gate cannot recompute.
 - `Round N: Resumed-from-blocked (resumption M)` — **on the round the
   resumption wrote into, or on the highest existing round when the resumption
   opened none** (`#what-opens-a-round`): the blocker and the status the row was
