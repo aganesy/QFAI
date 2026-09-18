@@ -348,6 +348,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Three forms now stand in the release-body cases, each with prose after the
   section: an ATX heading at level three and at level six, and a setext one.
 
+- **A procurement row must name a screen a UI contract declares** (#1777). A
+  `prototype-handoff.yaml#procurement` row whose `screen` was a typo, or a
+  screen renamed since, passed the shape check while naming a region nobody
+  could locate. The row is now reported under `QFAI-DCON-013` unless its
+  screen is one the contracts under `<contractsDir>/ui/` declare. A project
+  with no UI contract is left to the readiness gate, which already reports it,
+  and `region` stays prose: a screen contract names a screen, not its parts.
+
 - **A lowercase CDATA lookalike hides what follows it** (#1866). GitHub renders
   `<![cdata[` exactly as it renders the spelled form: the content is hidden, and
   an unclosed opener hides the rest of the document. The body readers matched
