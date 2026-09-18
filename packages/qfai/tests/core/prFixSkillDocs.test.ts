@@ -8,7 +8,7 @@
  * a guard over those trees still runs. The lane therefore carries every test
  * whose subject is one of them.
  *
- * The rest of the `pr-fix` coverage lives in `prFixMonitor.test.ts`, spawns a
+ * The rest of the `pr-fix` coverage lives in `../pr-fix/prFixMonitor.test.ts`, spawns a
  * PowerShell process per case, and reads nothing from those trees but the script
  * itself — an executable, which the classifier already keeps out of the
  * documentation-only set. Running that file in the lint lane to reach the one

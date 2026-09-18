@@ -198,6 +198,36 @@ const OPEN_READ_FLAGS =
  */
 const SKIPPABLE_READ_CODES = new Set(["ENOENT", "ENXIO", "EISDIR", "ENOTDIR", "ELOOP"]);
 
+/**
+ * The hash of a governed asset, following a link that stays inside the project.
+ *
+ * `hashAssistantAssetFile` refuses a symlink by default, and the reason holds:
+ * a link out of the tree is content nobody here reviewed, read through a name
+ * the project controls. A link that resolves **inside** the project is the
+ * other case — a tree vendored at documents it owns — and refusing it reported
+ * every one of those files as missing.
+ *
+ * The boundary is the project root, two levels above the assistant directory.
+ * Anything that cannot be resolved keeps the strict answer.
+ */
+async function hashGovernedAsset(filePath: string, assistantDir: string): Promise<string | null> {
+  const strict = await hashAssistantAssetFile(filePath);
+  if (strict !== null) return strict;
+  const link = await lstat(filePath).catch(() => null);
+  if (link?.isSymbolicLink() !== true) return null;
+  try {
+    const [resolved, root] = await Promise.all([
+      realpath(filePath),
+      realpath(path.resolve(assistantDir, "../..")),
+    ]);
+    const relative = path.relative(root, resolved);
+    const inside = relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+    return inside ? await hashAssistantAssetFile(filePath, { allowSymlink: true }) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function validateAssistantAssets(root: string, config: QfaiConfig): Promise<Issue[]> {
   const skillsDir = resolvePath(root, config, "skillsDir");
   const assistantDir = path.dirname(skillsDir);
@@ -594,7 +624,7 @@ async function validateAssistantAssetProvenance(
   for (const relative of relatives) {
     const filePath = path.join(assistantDir, ...relative.split("/"));
     const status = classifyAssistantAsset(
-      await hashAssistantAssetFile(filePath),
+      await hashGovernedAsset(filePath, assistantDir),
       shipped[relative],
       lock?.files[relative],
     );

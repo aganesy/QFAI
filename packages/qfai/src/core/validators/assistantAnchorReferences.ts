@@ -1,5 +1,5 @@
 import type { Dirent } from "node:fs";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
@@ -293,8 +293,10 @@ function emptyTreeFiles(): TreeFiles {
  * A subtree damaged in the ways `QFAI-LINK-001` reports is skipped rather than
  * thrown out of: raising `ENOTDIR` / `ELOOP` from here would reject the run and
  * take that finding with it. Every other read failure propagates — see
- * {@link isStructuralDamage}. Symlinked entries are listed but never descended
- * into, so a cycle cannot trap the walk.
+ * {@link isStructuralDamage}. A symlinked directory inside the tree IS
+ * descended into, because a project may vendor the tree by link and its
+ * documents are cited like any other; the resolved-path set is what stops a
+ * cycle, and what stops a linked directory being walked twice.
  */
 async function collectTreeFiles(
   dir: string,
@@ -307,14 +309,31 @@ async function collectTreeFiles(
     if (isStructuralDamage(error)) return out;
     throw error;
   }
+  const here = await realpath(dir).catch(() => path.resolve(dir));
+  // A tree vendored by link reaches the same directory twice — once by its own
+  // path and once through the link — and a cycle reaches it forever. Keyed by
+  // the resolved path, the second arrival is a no-op either way.
+  if (out.directories.has(here)) return out;
   out.directories.add(path.resolve(dir));
+  out.directories.add(here);
   for (const entry of entries) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       await collectTreeFiles(full, out);
       continue;
     }
-    if (!entry.isFile()) continue;
+    if (entry.isSymbolicLink()) {
+      // A linked directory inside the tree is a layout a project may choose,
+      // and its documents are cited like any other. Followed through `stat`,
+      // which resolves the link, with the visited set above as the guard the
+      // "never descend" rule used to be.
+      const target = await stat(full).catch(() => null);
+      if (target?.isDirectory() === true) {
+        await collectTreeFiles(full, out);
+        continue;
+      }
+    }
+    if (!entry.isFile() && !entry.isSymbolicLink()) continue;
     const extension = path.extname(entry.name).toLowerCase();
     if (extension === ".md") {
       out.markdown.push(full);
