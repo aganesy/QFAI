@@ -84,9 +84,11 @@ Receives the same ledgers and each row's `Layer`, and — **listed independently
 — each queued spec's whole obligation set: `06_Test-Cases.md` for `TC-*`, `02_User-stories.md` for
 `US-*`, and `.qfai/contracts/api/**` for `CON-API-*`. Deriving the `TC-*` set from the rows instead
 hides the gap this role is here for: a coverage-target `TC-*` whose row was dropped is cited by
-nothing, so a check that starts from the rows can never see it. `US-*` and `CON-API-*` are read for
-the **layer-ownership** check below — which obligation an `E2E` / `API` row may cite — not as a row
-census. `.qfai/contracts/api/**` is the one entry of that set a spec may legitimately not have — a
+nothing, so a check that starts from the rows can never see it. All four seeded groups are checked
+against their independent obligation sources. Resolve `paths.specsDir` and `paths.contractsDir`
+from `qfai.config.yaml` first; the paths above are defaults. Use the active/exempt and shared API
+ownership rules in `ledger-preconditions.md` and the role card's full ownership scan before
+counting. `.qfai/contracts/api/**` is the one entry of that set a spec may legitimately not have — a
 spec with no API surface, or a fresh install, which ships no such directory — and its `CON-API-*` set
 is then **empty, not missing**: the role card marks it conditional for exactly this reason
 (`agents/test-design-analyst.md`, "Inputs you must read"), so it is not a missing required source
@@ -96,19 +98,23 @@ Returns **coverage and layer-ownership findings**:
 
 - a row citing an obligation its `Layer` does not own — an `E2E` row hanging off a `TC-*`, an
   `Integration` row hanging off a `US-*`;
-- an in-scope **coverage-target `TC-*`** with no row at all, which is the gap
-  `ledger-preconditions.md` separates from a truthfully empty ledger. **`US-*` and `CON-API-*` are
-  not row-producing obligations** — `/qfai-sdd` Phase 2b seeds one row per coverage-target `TC-*`
-  only — so a ledger holding **zero** `E2E` / `API` rows is normal on a first run and is never a
-  missing-row finding; those two are discharged by the acceptance tests' annotations and checked by
-  `QFAI-ATDD-111` / `113`
-  (`../../qfai-atdd/references/red-provenance.md#a-spec-with-no-atdd-owned-rows`). Raising them here
-  produces a handoff to `/qfai-sdd` or `/qfai-atdd` that neither skill may satisfy;
+- an in-scope **coverage-target `TC-*`** or integration-level `TC-*` with no TC row,
+  an active `US-*` with no E2E row, or an active, owned `CON-API-*` with no API row.
+  `/qfai-sdd` Phase 2b seeds all four groups; zero E2E/API rows is valid only when those obligations are exempt or absent.
+  A story deferred on its own — a `- x-qfai-status: planned` meta line in its `US-XXXX` block of
+  `02_User-stories.md` — owes no E2E test (`catalog/test-layers.md`), so it owes no E2E row either
+  and is not counted here. Whole-spec surface scoping is the other exemption, and
+  `references/ledger-preconditions.md` owns it; a census reading only that one hands back a row for
+  a test the acceptance stage forbids writing.
+  TC rows carry `TC-Refs`, E2E rows carry `US-Refs`, and API rows carry `CON-API-Refs`.
+  The API row belongs only to the lowest-numbered owning spec; another owner's row is a cross-spec
+  obligation, not a missing local row. `QFAI-ATDD-111` / `113` still check the acceptance annotations;
+  they do not replace the execution ledger;
 - a `Selector` accumulating unrelated boundaries, which invalidates the row's RED before it is taken
   (`selector-granularity.md`, enforced per row by Phase Red step 5).
 
-**Not blocking, because the repair is upstream.** This skill may not invent rows that no `TC-*`
-backs (Preconditions), so a finding that needs a new row or a new test case leaves as a handoff note
+**Not blocking, because the repair is upstream.** This skill may not invent rows unsupported by
+their layer's `TC-*`, `US-*` or `CON-API-*` (Preconditions), so a finding that needs a new row or a new test case leaves as a handoff note
 to `/qfai-sdd` or `/qfai-atdd`, while the rows that _are_ well-formed proceed. A blocking verdict
 here would stop those rows for a defect they do not have.
 

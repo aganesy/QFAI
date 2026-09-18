@@ -68,7 +68,7 @@
 
 ## Commands executed
 
-```
+```sh
 npx qfai validate --profile sdd --fail-on error --format github
 ```
 

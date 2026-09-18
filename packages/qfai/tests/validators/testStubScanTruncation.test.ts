@@ -69,6 +69,20 @@ describe("QFAI-TEST-002 — a truncated scan names a remedy that applies to it",
     );
   });
 
+  it("names testFileGlobs when the project's own globs are part of a caller's selection", async () => {
+    // Narrowing `testFileGlobs` shrinks what those globs contributed, so it is
+    // a remedy that applies once they are in the selection.
+    const issues = await validateTestTodoStubs("/nowhere", CONFIG, {
+      globs: ["tests/e2e/**/*.ts", "packages/*/tests/**/*.ts"],
+      projectGlobs: ["packages/*/tests/**/*.ts"],
+    });
+    const truncation = issues.find((i) => i.code === "QFAI-TEST-002");
+    expect(truncation?.refs).toEqual(["validation.traceability.testFileGlobs"]);
+    expect(truncation?.message).toContain(
+      "the acceptance directories this gate scans and `validation.traceability.testFileGlobs`",
+    );
+  });
+
   it("counts the files it read rather than claiming a total it never measured", async () => {
     // The collector stops the stream at the limit, so it never learns how many
     // more would have matched. "matched N" asserted a number nothing produced,

@@ -58,6 +58,11 @@
 
 > 判断基準（SSOT）: `packages/qfai/assets/init/.qfai/assistant/instructions/change-classification.md`
 
+## What this change made unnecessary
+
+<!-- List what the change made unnecessary, explain why listed items remain,
+and write "nothing" for an empty list. REVIEW.md governs this answer. -->
+
 ## 1. 概要（What / Why）
 
 ### 目的・背景

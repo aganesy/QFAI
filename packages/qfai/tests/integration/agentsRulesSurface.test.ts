@@ -8,6 +8,164 @@ import { describe, expect, it } from "vitest";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
 
+describe("excess vocabulary covers code and product surface without adding tags", () => {
+  const TAGS = ["delete", "stdlib", "native", "yagni", "shrink"];
+
+  it("the repository definitions cover controls, settings, copy and repository reuse", async () => {
+    const text = await readFile(path.join(ROOT, "REVIEW.md"), "utf-8");
+    const excess = text.split("## Findings about excess")[1]?.split(/^## /m)[0];
+    expect(excess).toBeDefined();
+    const tags = Array.from(excess?.matchAll(/^\|\s*`([^`]+)`\s*\|/gm) ?? [], (match) => match[1]);
+    expect(tags).toEqual(TAGS);
+    expect(excess?.replace(/\s+/g, " ")).toContain("code, controls, settings and explanatory copy");
+    expect(excess).toContain("code already present");
+    expect(excess).toContain(".agents/rules/interface-clarity.md");
+    expect(excess).toContain("§ 2");
+  });
+
+  it.each(
+    ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>
+      [
+        "architecture-reviewer",
+        "completion-reviewer",
+        "implementation-reviewer",
+        "product-surface-reviewer",
+        "qa-gatekeeper",
+        "requirements-reviewer",
+      ].map((role) => ({ tree, role })),
+    ),
+  )("$tree/$role ships the same vocabulary and product scope", async ({ tree, role }) => {
+    const text = await readFile(path.join(ROOT, tree, "assistant/agents", `${role}.md`), "utf-8");
+    const routes = text.match(/^- File excess .*(?:\r?\n {2}.+)*/gm);
+    expect(routes).toHaveLength(1);
+    const excess = routes?.[0]?.replace(/\s+/g, " ");
+    expect(excess).toBeDefined();
+    for (const tag of TAGS) expect(excess).toContain("`" + tag + "`");
+    expect(excess).toContain("code, controls, settings and explanatory copy");
+    expect(excess).toContain("`delete` also covers replacement by code already present.");
+    expect(excess).toContain(".agents/rules/interface-clarity.md");
+    expect(excess).toContain("§ 2");
+    expect(excess).toContain("`defect:code-quality` against constitution Article VII");
+    expect(excess).toContain("Admit it only when it names what to cut and what replaces it.");
+    expect(excess).toContain(
+      "Refuse it when the cut removes or weakens an obligation in the safety floor",
+    );
+    expect(excess).toContain(
+      "Use this route only where the installed Article VII governs the artifact.",
+    );
+    expect(excess).toContain("Otherwise report unsupported Article VII excess as advisory");
+    expect(text).not.toMatch(/^- Apply .*tag excess/m);
+  });
+});
+
+describe("the implementation reviewer flags dropped promises, not uncaught propagation", () => {
+  it.each(["packages/qfai/assets/init/.qfai", ".qfai"])(
+    "%s keeps the correctness class",
+    async (tree) => {
+      const card = await readFile(
+        path.join(ROOT, tree, "assistant/agents/implementation-reviewer.md"),
+        "utf-8",
+      );
+      expect(card.replace(/\s+/g, " ")).toContain("a promise that is neither awaited nor returned");
+      expect(card).not.toContain("unhandled async paths");
+      const classification = await readFile(
+        path.join(
+          ROOT,
+          tree,
+          "assistant/skills/qfai-implement/references/finding-classification.md",
+        ),
+        "utf-8",
+      );
+      expect(classification).toContain("defect:correctness");
+      expect(classification).toContain("unhandled rejection");
+    },
+  );
+});
+
+describe("reviewer stop conditions distinguish named-rule defects from new product obligations", () => {
+  it.each(
+    ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>
+      ["completion-reviewer", "implementation-reviewer"].map((role) => ({ tree, role })),
+    ),
+  )("$tree/$role retains the named-rule defect route", async ({ tree, role }) => {
+    const text = await readFile(path.join(ROOT, tree, "assistant/agents", `${role}.md`), "utf-8");
+    const stop = text.split("## Stop conditions")[1]?.split(/^## /m)[0]?.replace(/\s+/g, " ");
+    expect(stop).toBeDefined();
+    expect(stop).toContain("The finding would add a product obligation upstream never asked for.");
+    expect(stop).toContain("raise it as an advisory finding plus a Change Request proposal");
+    expect(stop).toContain("a regression against a named constitution or catalog rule");
+    expect(stop).toContain("it stays blocking and traces to its `defect:*` class");
+  });
+});
+
+describe("repository async guidance agrees with the retained-failure test", () => {
+  it.each(["CLAUDE.md", "REVIEW.md", "AGENTS.md"])(
+    "%s preserves propagation and the whole floor",
+    async (file) => {
+      const text = await readFile(path.join(ROOT, file), "utf-8");
+      const flat = text.replace(/\s+/g, " ").toLowerCase();
+      expect(flat).toContain("await or return every promise");
+      expect(flat).toContain(".agents/rules/minimal-implementation.md");
+      expect(flat).toContain("§ 2");
+      expect(flat).toContain("governs consuming callers, kept failures and callback boundaries");
+      expect(flat).not.toContain("returning propagates only when its caller awaits or adopts");
+      expect(flat).not.toContain("do not add a catch for a failure that no specification");
+      expect(flat).not.toContain("require an adapter that adopts asynchronous work");
+      expect(flat).not.toContain("every async path must have explicit error handling");
+      if (file === "REVIEW.md") {
+        expect(flat).not.toContain("missing error handling or incomplete error messages");
+        expect(flat).toContain("incomplete error messages");
+        expect(flat).toContain("neither awaited nor returned");
+      }
+    },
+  );
+});
+
+describe("the retained-failure test stays under the safety floor", () => {
+  it.each([
+    ".agents/rules/minimal-implementation.md",
+    "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md",
+  ])("%s names the criterion, propagation and process boundary", async (relative) => {
+    const text = await readFile(path.join(ROOT, relative), "utf-8");
+    const failure = text.split("### Which failures are handled here")[1]?.split(/^## /m)[0];
+    expect(failure).toBeDefined();
+    const flat = failure?.replace(/\s+/g, " ");
+    expect(flat).toContain("Subject to the safety floor in this section");
+    expect(flat).toContain("no type or schema excludes it");
+    expect(flat).toContain("the specification, a contract or an actual observation names it");
+    expect(flat).toContain(
+      "only when both hold: no type or schema excludes it, and the specification, a contract or an actual observation names it. Other failures propagate to the caller.",
+    );
+    expect(flat).toContain(
+      "Every promise is awaited or returned to a caller that awaits or adopts it, never dropped",
+    );
+    expect(flat).toContain("callback runtime ignores returned promises");
+    expect(flat).toContain(
+      "Subject to the same floor, when a callback runtime ignores returned promises, " +
+        "use an explicit adapter that adopts the asynchronous result and handles " +
+        "rejections at that trust boundary.",
+    );
+    expect(flat).toContain(
+      "Do not make the callback async and assume its ignored outer promise is consumed",
+    );
+    expect(flat).toContain("<paths.specsDir>/spec-*/06_Test-Cases.md");
+    expect(flat).toContain("Resolve `paths.specsDir` from `qfai.config.yaml`");
+    expect(flat).toContain("process entry point is a trust boundary");
+    expect(flat).toContain("A dropped rejection remains a correctness defect");
+    expect(flat).toContain("06_Test-Cases.md");
+  });
+
+  it("keeps the operating rule byte-identical to its shipped master", async () => {
+    const [master, shipped] = await Promise.all([
+      readFile(path.join(ROOT, ".agents/rules/minimal-implementation.md")),
+      readFile(
+        path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md"),
+      ),
+    ]);
+    expect(master.equals(shipped)).toBe(true);
+  });
+});
+
 /**
  * Every rule master, read off the directory.
  *
@@ -39,16 +197,39 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   it("master version-discipline.md exists with required content", async () => {
     const text = await readFile(path.join(ROOT, ".agents/rules/version-discipline.md"), "utf-8");
     for (const term of [
-      "ブランチ",
-      "package\\.json",
-      "chore\\(release\\)",
       "Version Discipline",
-      "VERSION_PIN_SKIP",
-      "禁止",
+      "branch name",
+      "packaging manifest",
+      "chore\\(release\\)",
+      // The default, and the two ways a project says it has decided otherwise.
+      "Adoption status: not adopted",
+      "supersedes the master",
+      // What stays the user's call whatever the branch is named.
+      "create or push a release tag",
     ]) {
       expect(text).toMatch(new RegExp(term));
     }
   });
+
+  /**
+   * A rule the package ships is read here through its shipped copy.
+   *
+   * Two files drift, and these did: the local `distributed-surface.md` said
+   * every guard follows `package.json#files` while the shipped one did not,
+   * and nothing compared them. A link cannot hold two answers.
+   */
+  it.each(readdirSync(path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules")))(
+    ".agents/rules/%s is the shipped master",
+    async (fileName) => {
+      const local = path.join(ROOT, ".agents/rules", fileName);
+      const shipped = path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules", fileName);
+      const stat = await lstat(local);
+      expect(stat.isSymbolicLink(), `${fileName} must be a symlink to the shipped master`).toBe(
+        true,
+      );
+      expect(await realpath(local)).toBe(await realpath(shipped));
+    },
+  );
 
   it("finds the rule masters it reads the directory for", () => {
     // An empty read passes both cases below without asking anything, and the
@@ -120,6 +301,47 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   // carry it. An adopter picks the language of their own repository, and a
   // copy under the shipped masters would both say otherwise and oblige every
   // shipped entry point to cite it.
+  describe("shipped-ci-parity rule", () => {
+    const MASTER = ".agents/rules/shipped-ci-parity.md";
+
+    it("names what is watched, what a marker says, and the three dispositions", async () => {
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      // One token per clause that no other clause carries, so a clause cannot
+      // be dropped while the master still looks complete.
+      for (const clause of [
+        /\.github\/workflows/,
+        /run-lint-checks\.sh/,
+        /SHIPPED-CI:/,
+        /transferred/,
+        /not-applicable/,
+        /deferred/,
+        /shipped-ci-dispositions\.md/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    // Copilot reads none of the other two, so a rule the master declares for
+    // every agent reaches it only through this file.
+    it.each(["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"])(
+      "%s cites the rule master",
+      async (rel) => {
+        const text = await readFile(path.join(ROOT, rel), "utf-8");
+        expect(text).toContain("shipped-ci-parity.md");
+      },
+    );
+
+    it("is not shipped to adopters", async () => {
+      // The rule compares this repository's CI with the templates it ships. An
+      // adopter's repository ships nothing, so there is no comparison to make.
+      const shipped = path.join(
+        ROOT,
+        "packages/qfai/assets/init/root/.agents/rules/shipped-ci-parity.md",
+      );
+      await expect(lstat(shipped)).rejects.toThrow();
+    });
+  });
+
   describe("repository-language rule", () => {
     const MASTER = ".agents/rules/repository-language.md";
 
@@ -232,13 +454,49 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     const MASTERS = [
       ".agents/rules/minimal-implementation.md",
       "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md",
-    ];
+    ] as const;
+
+    it.each(MASTERS)("%s protects unit coverage of retained failures in the floor", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      const floor = text.split("## 2. What the ladder never removes")[1]?.split("## 3.")[0];
+      expect(floor).toContain("- Unit-level coverage of the failures the code retains.");
+    });
+
+    it("keeps the operating and shipped minimal-implementation rules byte-identical", async () => {
+      const [master, shipped] = await Promise.all([
+        readFile(path.join(ROOT, MASTERS[0])),
+        readFile(path.join(ROOT, MASTERS[1])),
+      ]);
+      expect(shipped.equals(master)).toBe(true);
+    });
+
+    it.each(MASTERS)("%s gives repository reuse the second of seven rungs", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      const rungs = [...text.matchAll(/^(\d+)\. \*\*(.+?)\*\*/gm)].map((match) => [
+        match[1],
+        match[2],
+      ]);
+      expect(rungs).toEqual([
+        ["1", "Does this need to exist at all?"],
+        ["2", "Is it already in this codebase?"],
+        ["3", "Does the standard library do it?"],
+        ["4", "Does a native platform feature cover it?"],
+        ["5", "Does an already-installed dependency solve it?"],
+        ["6", "Can it be one line?"],
+        ["7", "Only then"],
+      ]);
+      expect(text).toMatch(/standard library has one is not a simplification; it is rung 3\./);
+      expect(text).toMatch(
+        /5\. \*\*Does an already-installed dependency solve it\?\*\* Reach for what the\s+project already carries before adding anything\./,
+      );
+    });
 
     it.each(MASTERS)("%s states every clause", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       // One token per clause that no other clause in the file carries, so a
       // clause cannot be dropped and still leave the master looking complete.
       for (const clause of [
+        /already in this codebase/i,
         /standard library/i,
         /already-installed dependency/i,
         /trust boundary/i,
@@ -249,6 +507,16 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       ]) {
         expect(text).toMatch(clause);
       }
+    });
+
+    it.each([
+      "packages/qfai/assets/init/.qfai/assistant/constitution/constitution.md",
+      ".qfai/assistant/constitution/constitution.md",
+    ])("%s names this repository first among the reuse rungs", async (rel) => {
+      const text = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
+      expect(text).toContain(
+        "find what already covers the change, in the order the reuse rungs of `.agents/rules/minimal-implementation.md` give: this repository, including a duplicate or overlapping implementation, then the standard library, the platform, and the dependencies already installed",
+      );
     });
 
     // The two halves of the marker are one obligation. A ceiling with no
@@ -847,6 +1115,41 @@ describe("a no-question run opens every node, on every surface that says so", ()
   });
 });
 
+describe("this repository's pull-request description", () => {
+  it("names removals, explains retained items and states an empty list explicitly", async () => {
+    const policy = await readFile(path.join(ROOT, "REVIEW.md"), "utf-8");
+    const removalSection = policy.split(/^## What a change made unnecessary\r?\n/m)[1];
+    expect(removalSection, "the existing review policy has no removal obligation").toBeDefined();
+    const obligation = removalSection?.split(/^## /m)[0]?.replace(/\s+/g, " ").trim();
+    expect(obligation).toBe(
+      'Every pull request lists, in its description, what the change made unnecessary, and says why anything on the list was kept. An empty list is a complete answer: it is written as "nothing", not left out.',
+    );
+    const template = await readFile(path.join(ROOT, ".github/PULL_REQUEST_TEMPLATE.md"), "utf-8");
+    expect(template).toContain("## What this change made unnecessary");
+    expect(template).toContain('write "nothing" for an empty list');
+    for (const relative of [
+      "AGENTS.md",
+      ".github/copilot-instructions.md",
+      ".github/instructions/code-review.instructions.md",
+    ]) {
+      const entry = await readFile(path.join(ROOT, relative), "utf-8");
+      if (relative === ".github/instructions/code-review.instructions.md") {
+        expect(entry).toContain(
+          "Process:\n\nRead `REVIEW.md` if present.\n\n1. Read the PR description",
+        );
+      } else {
+        expect(entry, relative).toContain("Read `REVIEW.md` before reviewing a pull request");
+      }
+    }
+    const release = await readFile(
+      path.join(ROOT, ".github/workflows/prepare-release.yml"),
+      "utf-8",
+    );
+    expect(release).toContain('echo "## What this change made unnecessary"');
+    expect(release).toContain("Superseded package version and Unreleased heading");
+  });
+});
+
 describe("an open fact survives the surfaces that report a session", () => {
   // The wrapper is the only output a `/qfai-grill` run has, and the register is
   // where a stage's unanswered questions land. A fact only the user holds
@@ -867,5 +1170,119 @@ describe("an open fact survives the surfaces that report a session", () => {
     const text = await readFile(path.join(ROOT, rel), "utf-8");
     expect(text).toMatch(/A\s+question\s+asking\s+for\s+a\s+fact\s+is\s+the\s+exception/);
     expect(text).toMatch(/where\s+one\s+is\s+permitted/);
+  });
+});
+
+describe("trust boundaries depend on the caller's control", () => {
+  it.each([
+    ".agents/rules/minimal-implementation.md",
+    "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md",
+  ])("%s defines external and internal calls", async (relative) => {
+    const text = await readFile(path.join(ROOT, relative), "utf-8");
+    const floor = text.split("## 2. What the ladder never removes")[1]?.split(/^## /m)[0];
+    expect(floor).toBeDefined();
+    const flat = floor?.replace(/\s+/g, " ");
+    expect(flat).toContain("caller or a source the code does not control");
+    for (const example of [
+      "process entry",
+      "external input",
+      "a received request",
+      "a file or database read",
+      "an environment variable",
+      "user input",
+      "a published library's exported function",
+      "a plugin or tenant context",
+    ]) {
+      expect(flat).toContain(example);
+    }
+    expect(flat).toContain("A call between functions under the code's own control is not one");
+    expect(flat).toContain("parsed there into a form that cannot hold an invalid value");
+    expect(flat).toContain("the code past it carries no branch for that value");
+    expect(flat).toContain("Validation of input crossing a trust boundary");
+  });
+});
+
+/**
+ * The repository-specific halves of four shipped rules.
+ *
+ * An overlay is read together with the shipped master it extends, so a clause
+ * dropped from one is not restated anywhere else. One token per clause, each
+ * one that no other clause of the same overlay carries, so deleting a clause
+ * fails here while the file still looks complete.
+ */
+describe("rule overlays", () => {
+  const OVERLAYS: ReadonlyArray<{ file: string; clauses: readonly string[] }> = [
+    {
+      file: "distributed-surface.local.md",
+      clauses: [
+        // The surface, and which of the three guards reads it.
+        "package.json#files",
+        "Only the post-build guard reads `files`",
+        // The identifier shapes, one token each for the two that no other
+        // clause names.
+        "CAP-0010",
+        "DEC-NNNN-NNNN",
+        // The three exceptions: the sample IDs, the manifest version, and the
+        // migration memo whose file name the guards neutralise before scanning.
+        "spec-0001",
+        "is the released version",
+        "cannot be renamed",
+        // Versions that belong to something else, and the matcher's ceiling.
+        "A version that belongs to something else",
+        "project-qualified form",
+        // The guard layers, and where each of them runs.
+        "distributedSurfaceLeakage.test.ts",
+        "lint job and in the build job",
+        // Where internal IDs are fine.
+        "which does not ship",
+      ],
+    },
+    {
+      file: "version-discipline.local.md",
+      clauses: [
+        // The convention is adopted here.
+        "has adopted it",
+        // What a pin authorizes, and when it is done.
+        "chore(release): qfai X.Y.Z",
+        "Do this once",
+        // How each guard reads a branch name. One token per row, taken from
+        // the half of the row no other row repeats.
+        "exits 1 rather than reading",
+        "a suffix after",
+        // The override, and the unpinned case.
+        "coordinated release",
+        "On an unpinned branch",
+      ],
+    },
+    {
+      file: "temporary-files.local.md",
+      clauses: ["mkdtemp"],
+    },
+    {
+      file: "root-additions-policy.local.md",
+      clauses: ["report.<pid>", ".qfai/review/review-<timestamp>/"],
+    },
+  ];
+
+  it.each(OVERLAYS)("$file keeps every clause", async ({ file, clauses }) => {
+    const text = await readFile(path.join(ROOT, ".agents/rules", file), "utf-8");
+    for (const clause of clauses) {
+      expect(text, `${file} lost the clause marked by ${clause}`).toContain(clause);
+    }
+  });
+
+  it.each(
+    OVERLAYS.flatMap(({ file }) =>
+      // Every entry point an agent reads this repository's rules through. A
+      // tool whose entry point names only the base master follows a claim the
+      // overlay has superseded.
+      ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"].map((entry) => ({
+        entry,
+        file,
+      })),
+    ),
+  )("$entry cites $file", async ({ entry, file }) => {
+    const text = await readFile(path.join(ROOT, entry), "utf-8");
+    expect(text).toContain(file);
   });
 });
