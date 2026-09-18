@@ -525,4 +525,37 @@ describe("script resolution through the helper", () => {
       rmSync(temp, { recursive: true, force: true });
     }
   });
+
+  /**
+   * The lanes start together, so one lane's temporary files are in the tree while
+   * another lane walks it. Vitest writes a bundle beside a TypeScript config while
+   * it loads one and deletes it straight after, and the formatting check listed that
+   * file and then failed to read it — a red job that depended on timing and on
+   * nothing the change contained.
+   *
+   * Asserted through `--file-info`, which answers for a path rather than for a file,
+   * so the case needs no file on disk and no race of its own to reproduce. The
+   * control path is asserted beside it: an ignore rule that swallowed the config
+   * itself would satisfy the first expectation on its own.
+   */
+  it("keeps the formatting check off the bundle vitest writes while loading a config", () => {
+    const fileInfo = (relative: string): { ignored?: boolean } => {
+      const result = spawnSync("npx", ["prettier", "--file-info", relative], {
+        cwd: root,
+        encoding: "utf-8",
+        shell: process.platform === "win32",
+      });
+      expect(result.status, result.stderr).toBe(0);
+      const parsed: unknown = JSON.parse(result.stdout);
+      if (typeof parsed !== "object" || parsed === null) {
+        throw new Error(`prettier --file-info did not answer with an object: ${result.stdout}`);
+      }
+      return parsed;
+    };
+
+    expect(
+      fileInfo("packages/qfai/vitest.config.ts.timestamp-1789704611720-073b9378a4c25.mjs").ignored,
+    ).toBe(true);
+    expect(fileInfo("packages/qfai/vitest.config.ts").ignored).toBe(false);
+  });
 });

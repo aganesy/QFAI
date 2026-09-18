@@ -410,6 +410,12 @@ describe.concurrent("run-pr-merge plan", () => {
     ],
     ["raw HTML declaration", "<!DOCTYPE\n## What this change made unnecessary\nNothing.\n>\n"],
     ["raw HTML CDATA", "<![CDATA[\n## What this change made unnecessary\nNothing.\n]]>\n"],
+    // GitHub hides the lowercase lookalike exactly as it hides the spelled form,
+    // so an answer inside one reaches no reader of the rendered body.
+    [
+      "raw HTML lowercase CDATA",
+      "<![cdata[\n## What this change made unnecessary\nNothing.\n]]>\n",
+    ],
     [
       "raw HTML standalone inline tag",
       "<span>\n## What this change made unnecessary\nNothing.\n</span>\n",
@@ -571,7 +577,6 @@ describe.concurrent("run-pr-merge plan", () => {
     ["similar ordinary word", ""],
     ["paragraph inline tag", "Paragraph text\n<span>\n"],
     ["invalid custom tag", "<span title=>\n"],
-    ["lowercase CDATA lookalike", "<![cdata[\n"],
   ])("allows an authored answer after %s", async ([_name, prefix], { expect, onTestFinished }) => {
     const baseline = makeScenario({});
     const body = `${prefix}## What this change made unnecessary\n\nHACKathon-specific duplicate setup is gone.\n`;

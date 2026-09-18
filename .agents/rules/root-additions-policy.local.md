@@ -31,6 +31,12 @@ already is:
 `scripts/check-tracked-readmes.mjs` fails on a tracked `README.md` outside those
 two, so the rule holds for a contributor who never read it.
 
+## What else lives in `.agents/rules/`
+
+`reminders.json` is not a rule. It holds the message each reminder hook in
+`.claude/settings.json` prints, and it ships beside the rules those messages
+restate, so `qfai init` refreshes the two together.
+
 ## Adding a rule to `.agents/rules/`
 
 1. Write it. If it governs an adopter's repository too, write it in

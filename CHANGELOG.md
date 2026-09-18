@@ -196,6 +196,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Grilling outside the discussion stage is delegated between agents.** A
+  griller interviews the authors, and every decision the user does not have to
+  make takes the griller's recommendation. Only a critical decision reaches the
+  user: one that contradicts a spec, a contract or a recorded decision, one
+  whose effect cannot be taken back, or product intent nothing written states.
+  Each adopted decision is recorded, and the stage's final report lists them,
+  so the user can overturn one later. Reviewers no longer return REVISE for an
+  adopted decision that is not critical. The request bounds the tree: a
+  decision that would only add something the request did not ask for is not
+  asked. A delegated session ends in the new ending `adopted`. The discussion
+  stage, and a session the user starts, still put every decision to the user.
+
 - **The worker-setting comparison is re-measured, on the project that is now the
   largest** (#1887). The artifact recorded `core` at 145 test files against a tree
   holding 174 — the twenty-percent bound exactly — so the next core test file any
@@ -314,7 +326,48 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   replaces the line only while it is exactly what 1.12.0 wrote, and leaves a line
   the project edited as it is.
 
+### Removed
+
+- **The design-fidelity check and its eleven rule codes.** `QFAI-FID-001`
+  through `QFAI-FID-011` ran in the `prototyping` and `full` profiles and could
+  not fire on anything QFAI produces. The check read `.qfai/evidence/**` and
+  `.qfai/review/**` for Markdown under a `Fidelity Scorecard` heading, and no
+  command, skill or template writes that heading. The prototyping capture the
+  codes were meant to gate is covered by the `taskFidelity` keywords instead.
+
+  The eleven numbers are retired rather than freed. Taking one back would make
+  a published code mean two different checks across releases.
+
+  `uiux.warning_as_error_override` goes with it, its only reader. An unknown key
+  under `uiux` is ignored, so a configuration that still sets it keeps loading.
+
 ### Fixed
+
+- **A reminder hook's message reaches a project that installed an earlier
+  release** (#2003). `qfai init` wrote each message into `.claude/settings.json`
+  and never touched a group that was already there, so an upgraded project kept
+  the old text for good, even after the rule it restates changed. The settings
+  file now holds only the event, the matcher, the marker and a fixed `node -e`
+  reader. The messages live in `.agents/rules/reminders.json`, which `qfai init`
+  refreshes like a rule master, wherever the project has not edited it. On the
+  next run a group still exactly as an earlier release wrote it is replaced
+  where it stands. A group the project edited is kept, and the run names it. A
+  missing or unreadable message file prints nothing and exits 0.
+
+- **A removal answer written as a heading is pinned** (#1893). A heading deeper
+  than the section's own does not end that section, so the reader that judges
+  the answer and the rebuild that replaces it have to stop at the same place.
+  Three forms now stand in the release-body cases, each with prose after the
+  section: an ATX heading at level three and at level six, and a setext one.
+
+- **A lowercase CDATA lookalike hides what follows it** (#1866). GitHub renders
+  `<![cdata[` exactly as it renders the spelled form: the content is hidden, and
+  an unclosed opener hides the rest of the document. The body readers matched
+  only the uppercase spelling, so a removal answer written inside a lowercase
+  block was accepted while no reader of the rendered body could see it, and an
+  entry-point directive after one was read as operative while `qfai init` added
+  no visible copy. The three readers that dispatch an HTML block now match the
+  opener without regard to case; the inline raw-HTML forms are unchanged.
 
 - **The entry points no longer say this repository installs its own package**
   (#1921). `CLAUDE.md` and `AGENTS.md` both described `.qfai/` as the result of
@@ -650,6 +703,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   prototyping loop captures from and the design audit reads keeps only the
   first, and the second is named. The prototyping profile, which certification
   accepts, reports the finding as well.
+
+- **The completion gate reads `RED failure mode` as the round field the skill
+  writes** (#1633). `round-evidence.md` puts the field under the round prefix,
+  because a blocking revision opens a round on its own tree, and one row-level
+  field cannot hold a falsifiability proof for one round and an observed RED for
+  the next. The gate read only the row-level form, so an entry written as the
+  skill says was reported as having no failure mode. Each round's
+  `Round N: RED failure mode` is now checked against that round's RED. An
+  entry that states the field once, without the prefix, still answers for every
+  round that states none.
 
 - **A ledger row observes the property it owns** (#1700). One prototyping-loop
   test asserted five properties of the cycle-0 hard reset in a single case, and

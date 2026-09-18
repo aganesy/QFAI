@@ -94,9 +94,9 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
   behaviour is agreed, and how a deliberate shortcut is marked)
 - `interface-clarity.md` (what may appear on a screen or in terminal output,
   and what a sentence there says about the control under it)
-- `grilling.md` (interview the decision tree in rounds before a design is
-  fixed; a session ends in one of four named endings, never at a question
-  count)
+- `grilling.md` (interview the decision tree before a design is fixed; outside
+  the discussion stage agents grill each other and take the recommendation,
+  only a critical decision reaches the user, and the request bounds the tree)
 - `user-questions.md` (every question to the user arrives in the shape its
   answer has — a structured choice where a listable set of candidates exists, or a
   plain request where none does; where the host's tool cannot carry it, the

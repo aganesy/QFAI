@@ -111,6 +111,24 @@ describe("a re-init and a rule master the project has", () => {
     expect(await readFile(masterPath(), "utf-8")).toBe(shipped);
   });
 
+  it("replaces the reminder messages the project has not touched", async () => {
+    // The hooks in `.claude/settings.json` print what this file holds, so a
+    // release that rewords a reminder reaches the project through this pass.
+    const messages = path.join(root, RULES_REL, "reminders.json");
+    const shipped = await readFile(messages, "utf-8");
+    await writeFile(messages, '{ "grilling-plan": "an older release\'s wording" }\n', "utf-8");
+    const recorded = await readRuleLock(path.join(root, RULES_REL));
+    await writeFile(
+      lockPath(),
+      JSON.stringify({ ...recorded, "reminders.json": await hashOf(messages) }, null, 2),
+      "utf-8",
+    );
+
+    await init();
+
+    expect(await readFile(messages, "utf-8")).toBe(shipped);
+  });
+
   it("keeps a master the project edited, and says so", async () => {
     // The record holds this run's own write, and the bytes no longer match it,
     // so the difference is an edit rather than the release moving.
