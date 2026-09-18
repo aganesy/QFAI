@@ -50,6 +50,12 @@ export type SddPreflightResult = {
   importedReqCount: number | null;
   openQuestions: string[];
   blockers: string[];
+  /**
+   * What the selected pack lacks or contradicts. Listed, never a stop: the pack
+   * is non-normative reference material, so SDD records each gap in its own
+   * delta or evidence and carries on.
+   */
+  packGaps: string[];
   nextCommands: string[];
   /** Run id of this preflight, in `run-<17-digit local timestamp>` form. */
   runId: string;
@@ -83,13 +89,16 @@ export async function runSddPreflight(
   const nextCommands = ["/qfai-discussion"];
   const carryOverOpenQuestions = normalizeTextList(options.assumptions);
   const blockers = resolvePreflightBlockers(readiness);
-  blockers.push(...(await resolveStoryWorkshopBlockers(readiness.latestPackDir)));
+  const packGaps = [
+    ...resolvePackGaps(readiness),
+    ...(await resolveStoryWorkshopGaps(readiness.latestPackDir)),
+  ];
 
   if (blockers.length > 0) {
     // `resolveImportLiteEntrypoint` gates the fallback to the shape the shipped
     // Stage 0 step describes: specs already exist and there is no discussion
-    // pack at all (a pack that exists but is incomplete or misnamed still
-    // blocks — evidence is an entrypoint, never an override).
+    // pack at all (a misnamed pack still blocks — evidence is an entrypoint,
+    // never an override).
     const importLiteEvidencePath = await resolveImportLiteEntrypoint(root, config);
     if (importLiteEvidencePath !== null) {
       return await completeReadyPreflight({
@@ -102,6 +111,7 @@ export async function runSddPreflight(
         importedReqCount: null,
         run,
         openQuestions: carryOverOpenQuestions,
+        packGaps: [],
         // `/qfai-discussion` is not the follow-up here — the input source is
         // already recorded, so the caller continues the SDD workflow.
         nextCommands: ["/qfai-sdd"],
@@ -126,6 +136,7 @@ export async function runSddPreflight(
       importedReqCount: null,
       openQuestions: carryOverOpenQuestions,
       blockers,
+      packGaps,
       nextCommands,
       ...toSummaryPaths(run),
     };
@@ -140,6 +151,7 @@ export async function runSddPreflight(
     importedReqCount: countReqIds(reqPath === null ? "" : await readSafe(reqPath)),
     run,
     openQuestions: carryOverOpenQuestions,
+    packGaps,
     nextCommands,
   });
 }
@@ -156,6 +168,7 @@ async function completeReadyPreflight(input: {
   importedReqCount: number | null;
   run: PreflightRun;
   openQuestions: string[];
+  packGaps: string[];
   nextCommands: string[];
 }): Promise<SddPreflightResult> {
   await publishPreflightSummary(
@@ -166,6 +179,7 @@ async function completeReadyPreflight(input: {
       selectedInputPath: input.selectedInputPath,
       importedReqCount: input.importedReqCount,
       openQuestions: input.openQuestions,
+      packGaps: input.packGaps,
     }),
   );
 
@@ -176,6 +190,7 @@ async function completeReadyPreflight(input: {
     importedReqCount: input.importedReqCount,
     openQuestions: input.openQuestions,
     blockers: [],
+    packGaps: input.packGaps,
     nextCommands: input.nextCommands,
     ...toSummaryPaths(input.run),
   };
@@ -248,7 +263,7 @@ async function publishPreflightSummary(run: PreflightRun, body: string): Promise
   await writeFile(run.latestSummaryPath, contents, "utf-8");
 }
 
-function resolvePreflightBlockers(readiness: {
+type PackReadiness = {
   latestPackDir: string | null;
   dangerousPackNames: string[];
   missingFiles: string[];
@@ -257,7 +272,13 @@ function resolvePreflightBlockers(readiness: {
   blockingOqIds: string[];
   deferredWithoutDetails: string[];
   prototypingRequired: boolean;
-}): string[] {
+};
+
+/**
+ * What stops Stage 0: no usable source at all, or a pack name that cannot be
+ * read as one. Everything else a pack can get wrong is a gap, not a stop.
+ */
+function resolvePreflightBlockers(readiness: PackReadiness): string[] {
   const blockers: string[] = [];
 
   if (!readiness.latestPackDir) {
@@ -272,60 +293,74 @@ function resolvePreflightBlockers(readiness: {
     );
   }
 
+  return blockers;
+}
+
+/**
+ * What a present pack lacks or contradicts.
+ *
+ * The pack is non-normative reference material
+ * (`constitution/drift-protocol.md#core-rule`), so an incomplete one, a
+ * contradictory one or one carrying a blocking OQ does not stop SDD: each gap is
+ * listed in the summary, recorded in the SDD-owned delta or evidence, and the
+ * correction lands in the spec rather than in the pack.
+ */
+function resolvePackGaps(readiness: PackReadiness): string[] {
+  const gaps: string[] = [];
+
   if (readiness.missingFiles.length > 0 || readiness.missingSideArtifacts.length > 0) {
     const fileMissing = [...readiness.missingFiles];
     const sideArtifactMissing = [...readiness.missingSideArtifacts];
 
     if (fileMissing.length > 0) {
-      blockers.push(`必須ファイル不足: ${fileMissing.join(", ")}`);
+      gaps.push(`必須ファイル不足: ${fileMissing.join(", ")}`);
     }
     if (sideArtifactMissing.length > 0) {
       const message = readiness.prototypingRequired
         ? `UI-bearing discussion pack に必須 side artifact が不足しています: ${sideArtifactMissing.join(", ")}`
         : `必須 side artifact 不足: ${sideArtifactMissing.join(", ")}`;
-      blockers.push(message);
+      gaps.push(message);
     }
   }
 
   if (readiness.incompleteFiles.length > 0) {
-    blockers.push(`最小内容を満たしていないファイル: ${readiness.incompleteFiles.join(", ")}`);
+    gaps.push(`最小内容を満たしていないファイル: ${readiness.incompleteFiles.join(", ")}`);
   }
 
   if (readiness.blockingOqIds.length > 0) {
-    blockers.push(`Blocking OQ（Disposition=open）: ${readiness.blockingOqIds.join(", ")}`);
+    gaps.push(`Blocking OQ（Disposition=open）: ${readiness.blockingOqIds.join(", ")}`);
   }
 
-  // `QFAI-DPACK-007` の preflight 側の等価判定。`validate --profile sdd` は
-  // discussion validator を実行しないため、ここで止めないと deferred の根拠を
-  // 欠いたまま Stage 1 以降へ進んでしまう。
+  // The preflight side of `QFAI-DPACK-007`. `validate --profile sdd` does not
+  // run the discussion validator, so a deferral without its details would reach
+  // Stage 1 unnamed unless it is listed here.
   if (readiness.deferredWithoutDetails.length > 0) {
-    blockers.push(
+    gaps.push(
       `11_OQ-Register.md の deferred が 13_Deferred.md に存在しません: ${readiness.deferredWithoutDetails.join(", ")}`,
     );
   }
 
-  return blockers;
+  return gaps;
 }
 
 /**
  * The preflight side of `QFAI-DPACK-008`.
  *
  * `03_Story-Workshop.md` owes a mermaid diagram, and the discussion validator
- * reports its absence at `error`. Stage 0 did not, and `validate --profile sdd`
- * does not run that validator — so prose of the right length cleared the one
- * gate standing between a pack with no flow and Stage 1. Read by the same
- * predicate as the validator, so the two cannot drift into two readings of
- * "has a diagram".
+ * reports its absence at `error`. `validate --profile sdd` does not run that
+ * validator, so a pack with no flow would reach Stage 1 unnamed unless it is
+ * listed here. Read by the same predicate as the validator, so the two cannot
+ * drift into two readings of "has a diagram".
  */
-async function resolveStoryWorkshopBlockers(packDir: string | null): Promise<string[]> {
+async function resolveStoryWorkshopGaps(packDir: string | null): Promise<string[]> {
   if (packDir === null) {
     // No pack at all is already a blocker, and there is nothing to read.
     return [];
   }
   const text = await readSafe(path.join(packDir, "03_Story-Workshop.md"));
   // An absent, unreadable or empty file is the missing-files / incomplete-files
-  // blocker's finding — `readSafe` here returns `""` for all three. Reporting
-  // it again would name one defect twice.
+  // gap already — `readSafe` here returns `""` for all three. Reporting it
+  // again would name one defect twice.
   if (text.length === 0 || containsMermaidBlock(text)) {
     return [];
   }
@@ -378,6 +413,7 @@ function buildReadyPreflightSummary(input: {
   selectedInputPath: string | null;
   importedReqCount: number | null;
   openQuestions: string[];
+  packGaps: string[];
 }): string {
   const openQuestions = renderCarryOver(input.openQuestions);
   const inputLabel =
@@ -396,6 +432,10 @@ function buildReadyPreflightSummary(input: {
     "## Requirement Intake",
     "",
     `- Imported REQ count: ${input.importedReqCount ?? "unknown"}`,
+    "",
+    "## Pack Gaps",
+    "",
+    ...(input.packGaps.length > 0 ? input.packGaps.map((gap) => `- ${gap}`) : ["- none"]),
     "",
     "## Open Questions (Carry-over)",
     "",

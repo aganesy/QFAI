@@ -87,11 +87,11 @@ describe("runSddPreflight", () => {
     }
   });
 
-  it("blocks when 03_Story-Workshop.md carries no Mermaid diagram", async () => {
+  it("lists a Story Workshop with no Mermaid diagram as a gap, and continues", async () => {
     // `QFAI-DPACK-008` reports this at `error`, but `validate --profile sdd`
-    // does not run the discussion validator — so Stage 0 is the only gate
-    // standing between a pack with no flow and Stage 1, and prose of the right
-    // length used to clear it.
+    // does not run the discussion validator — so Stage 0 is the only place a
+    // pack with no flow is named before Stage 1. Named, not stopped: the pack
+    // is non-normative reference material.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       await seedDiscussionPack(root, "20260216010203031", {
@@ -105,16 +105,18 @@ describe("runSddPreflight", () => {
 
       const result = await runSddPreflight(root, defaultConfig);
 
-      expect(result.status).toBe("blocked");
-      expect(result.blockers.some((item) => item.includes("Mermaid"))).toBe(true);
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toEqual([]);
+      expect(result.packGaps.some((item) => item.includes("Mermaid"))).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("does not report the Mermaid blocker twice for an absent Story Workshop", async () => {
-    // A missing file is the missing-files blocker's finding. Naming it here as
-    // well would report one defect under two headings.
+  it("continues on a pack missing a required file, and names the file once", async () => {
+    // The approved restatement of the usable-source criterion: a pack that
+    // exists but is incomplete does not stop SDD. The missing file is a gap,
+    // and naming its missing diagram as well would report one defect twice.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       await seedDiscussionPack(root, "20260216010203032");
@@ -131,15 +133,21 @@ describe("runSddPreflight", () => {
 
       const result = await runSddPreflight(root, defaultConfig);
 
-      expect(result.status).toBe("blocked");
-      expect(result.blockers.some((item) => item.includes("必須ファイル不足"))).toBe(true);
-      expect(result.blockers.some((item) => item.includes("Mermaid"))).toBe(false);
+      expect(result.status).toBe("ready");
+      expect(result.source).toBe("discussion-pack");
+      expect(result.blockers).toEqual([]);
+      expect(result.packGaps.some((item) => item.includes("必須ファイル不足"))).toBe(true);
+      expect(result.packGaps.some((item) => item.includes("Mermaid"))).toBe(false);
+
+      const summary = await readFile(result.preflightSummaryPath, "utf-8");
+      expect(summary).toContain("## Pack Gaps");
+      expect(summary).toContain("03_Story-Workshop.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("blocks when a deferred OQ has no entry in 13_Deferred.md", async () => {
+  it("lists a deferred OQ with no entry in 13_Deferred.md as a gap", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       await seedDiscussionPack(root, "20260216010203030", {
@@ -156,9 +164,9 @@ describe("runSddPreflight", () => {
 
       const result = await runSddPreflight(root, defaultConfig);
 
-      expect(result.status).toBe("blocked");
-      expect(result.blockers.some((item) => item.includes("13_Deferred.md"))).toBe(true);
-      expect(result.blockers.some((item) => item.includes("OQ-0007"))).toBe(true);
+      expect(result.status).toBe("ready");
+      expect(result.packGaps.some((item) => item.includes("13_Deferred.md"))).toBe(true);
+      expect(result.packGaps.some((item) => item.includes("OQ-0007"))).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -192,7 +200,7 @@ describe("runSddPreflight", () => {
     }
   });
 
-  it("returns blocked when discussion-pack has blocking OQ", async () => {
+  it("continues on a pack carrying a blocking OQ, and lists it", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       await seedDiscussionPack(root, "20260216010203004", {
@@ -210,8 +218,8 @@ describe("runSddPreflight", () => {
 
       const result = await runSddPreflight(root, defaultConfig);
 
-      expect(result.status).toBe("blocked");
-      expect(result.blockers.some((item) => item.includes("OQ-0009"))).toBe(true);
+      expect(result.status).toBe("ready");
+      expect(result.packGaps.some((item) => item.includes("OQ-0009"))).toBe(true);
 
       const summary = await readFile(result.preflightSummaryPath, "utf-8");
       expect(summary).toContain("Blocking OQ");

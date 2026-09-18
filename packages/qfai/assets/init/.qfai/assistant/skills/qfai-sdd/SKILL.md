@@ -48,7 +48,8 @@ Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
 ## Stage 0: Preflight (Mandatory)
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`. Take a source inventory. A discussion pack is **optional, non-normative reference material** here — sources, requirement seeds, UX exploration and provenance IDs — not an upstream SSOT, so an incomplete pack, a contradictory one, or a blocking discussion OQ does not
-by itself stop this stage. Do NOT edit, repair or re-run a pack to make this stage's gate pass: the correction belongs in the SDD-owned spec, policy or contract artifact, with the source discrepancy recorded in delta/evidence. Stop only when there is no usable source at all — no pack, no import-lite input, and no explicit user requirement. A product decision that cannot be inferred
+by itself stop this stage. Do NOT edit, repair or re-run a pack to make this stage's gate pass: the correction belongs in the SDD-owned spec, policy or contract artifact, with the source discrepancy recorded in delta/evidence.
+`npx qfai sdd preflight` lists those discrepancies under its summary's `## Pack Gaps` and still reports `ready`. Stop only when there is no usable source at all — no pack, no import-lite input, and no explicit user requirement. A product decision that cannot be inferred
 safely still goes to the user, and the answer is recorded in SDD artifacts rather than back-propagated into the pack. When there is no discussion pack at all and specs already exist (import-lite entrypoint), record the input source instead: write `.qfai/evidence/import-lite-<ts>.md` from `templates/evidence/import-lite.md` before editing any spec (`<ts>` is the 17-digit run stamp; see
 Evidence below for the full naming rule), filling `generated_at` with an ISO8601 datetime and at least one real `Sources` entry or user excerpt (a file left on its `<...>` placeholders is not accepted). Validator: `QFAI-IMPLITE-001`. On validate / doctor / quality-gate failures, follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
@@ -435,7 +436,7 @@ Questions.
 
 The packaged `runSddPreflight` API takes this route itself, so do not hand-write the summary. When the pack check blocks and the evidence resolves, it returns `source: import-lite` with the evidence file as the selected input, an unknown `Imported REQ count` (a pointer artifact carries no REQ ids) and `/qfai-sdd` as the next command — so the summary names its real input source instead of
 a pack that does not exist. It writes both copies under `<paths.outDir>`: the run-scoped `preflight/run-<timestamp>/preflight_summary.md` that evidence cites, and the `preflight_summary.md` pointer each rerun rewrites — the latter is `.qfai/report/preflight_summary.md` only when `qfai.config.yaml` leaves `paths.outDir` at its default; a hand-written copy in the old place would be a
-second, unread one. Evidence is an entrypoint, never an override: a pack that exists but is incomplete or misnamed still blocks.
+second, unread one. Evidence is an entrypoint, never an override: a misnamed pack still blocks, and an incomplete one is read as the source, its gaps listed under `## Pack Gaps`.
 
 On this route Stage 1 has no pack to read, so it takes its REQ/NFR intake from that evidence file instead: the `## Sources` and `## User provided excerpt` it records stand in for `06_REQ.md` / `07_NFR.md`. See `references/sdd-triage.md`, Inputs — never guess the intake from existing specs. US and AC items this route writes carry the evidence pair `Source: import-lite-<ts>#<REQ-ID>` in
 place of the `<pack-id>#<discussion-id>` one; the form is defined in `references/spec-traceability-rules.md`.

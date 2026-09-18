@@ -1079,6 +1079,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Basic, whose comments open with a quote, and any other extension are read as
   before.
 
+- **`qfai sdd preflight` continues on an incomplete discussion pack** (#1973).
+  The approved usable-source criterion says SDD continues on a pack that is
+  incomplete, contradictory or carries a blocking open question, since the pack
+  is reference material. The `qfai-sdd` skill says the same. The preflight
+  still stopped on each of them, and the skill runs it with
+  `--fail-on error`, so a pack missing one file stopped SDD. Now only a missing
+  or misnamed pack blocks. A missing file, a side artifact, content under the
+  minimum, a blocking open question, a deferral without details and a Story
+  Workshop without a diagram are listed under a new `## Pack Gaps` section of
+  the summary (`packGaps` in the JSON result), and the result is `ready`. The
+  skill, the summary template and both READMEs say so.
+
 ## [1.12.0] - 2026-09-12
 
 ### Added
