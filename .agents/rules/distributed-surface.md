@@ -8,10 +8,13 @@ QFAI の npm パッケージとして配布されるファイル群を「配布�
 
 ## 配布サーフェスの範囲
 
-`packages/qfai/package.json` の `files` に列挙されたパス。
-現在は `dist/`, `assets/`, `README.md`, `LICENSE`。
+Every file `npm pack` publishes from `packages/qfai`. The `files` field of
+`packages/qfai/package.json` declares `dist/`, `assets/`, `README.md` and
+`LICENSE`, and npm adds `package.json` to every package whatever that list
+says.
 
-ガードは `files` を読んで対象パスを決める。`files` を変えても追加作業はない。
+The post-build guard asks `npm pack --dry-run` for the list rather than reading
+`files`, so a change to `files` needs no further work.
 
 ## 書いてはいけないもの
 
@@ -47,7 +50,7 @@ QFAI の npm パッケージとして配布されるファイル群を「配布�
 | 層               | 実装                                                                | 何を見るか                                                                    |
 | ---------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | pre-build lint   | `packages/qfai/scripts/lint-shipping.ts` (`src-comment`)            | `src/**/*.ts` のコメント行。tsup が `dist/*.d.ts` に残す経路を build 前に塞ぐ |
-| post-build guard | `packages/qfai/scripts/check-no-internal-version-leakage.sh`        | `package.json` の `files` が指すパスの内容とファイル名                        |
+| post-build guard | `packages/qfai/scripts/check-no-internal-version-leakage.sh`        | Contents and names of every file `npm pack --dry-run` lists                   |
 | smoke test       | `packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts` | `qfai init` を一時ディレクトリに実行し、出力ツリーの内容とファイル名          |
 | 規約             | このファイル                                                        | 寄稿者の認識合わせ                                                            |
 

@@ -206,6 +206,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The post-build leakage guard scans what npm publishes, the manifest
+  included** (#1931). The guard built its scan list from `package.json#files`,
+  and npm adds files that list never names — the published `package.json`
+  above all. A `schemaVersion` or a private version marker there shipped with
+  every guard green, and a filter meant for the repository's own manifest
+  dropped the `schemaVersion` finding for the published one too. The guard now
+  asks `npm pack --dry-run` for the list, scans the manifest with no filter, and
+  still passes its `version` field. A glob in `files` is now scanned as npm
+  expands it instead of being refused.
+
 - **The capability-ID guards read every ID from `CAP-0010` up** (#1928). The
   pre-build lint, the post-build guard and the smoke test all required a leading
   `0`, so they caught `CAP-0010` to `CAP-0999` and let `CAP-1000` and every

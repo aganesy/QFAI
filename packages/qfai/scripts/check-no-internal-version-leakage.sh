@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Fail if QFAI internal spec IDs or internal version markers leak into
-# distributed surfaces. Distributed surface = paths listed in
-# packages/qfai/package.json "files" field. The npm package version is
-# the only canonical version.
+# distributed surfaces. Distributed surface = every file `npm pack` would
+# publish from packages/qfai, the manifest included. The npm package
+# version is the only canonical version.
 set -euo pipefail
 
 # An explicit root lets the release workflow scan an unpacked tarball — what
@@ -107,79 +107,72 @@ MIGRATION_MEMO_STAMP_SED='s#(^|/)\.qfai/assistant/process/migrations/v[0-9]+\.[0
 # `schemaVersion\n:` slip through this final backstop.
 SCHEMA_VERSION_RE='"schemaVersion"|schemaVersion[[:space:]]*:'
 
-# Scope: derived dynamically from package.json "files" field.
-# The "files" field is the SSOT for what npm ships; this guard scans
-# every entry that exists on disk so it stays in sync without manual
-# maintenance.
+# Scope: what npm would publish, asked of the packer rather than read from
+# package.json "files". npm adds files the include list never names — the
+# manifest itself above all — so a scan built from "files" alone never read
+# the published package.json. `npm pack --dry-run` applies globs, the files
+# npm always adds, and every exclusion exactly as the publish will.
 #
-# The node lookup is captured into a variable (rather than a process
-# substitution into mapfile) so that a non-zero exit from node — for
-# example an unparseable package.json or missing files[] field — fails
-# this guard instead of being silently swallowed by `mapfile < <(...)`.
-# A silent pass would defeat the purpose of the leakage guard.
-files_listing=$(node -e '
-  const path = require("node:path");
-  const pkg = require(path.resolve(process.argv[1], "package.json"));
-  if (!Array.isArray(pkg.files)) {
-    console.error("package.json missing files[] field");
-    process.exit(1);
-  }
-  for (const f of pkg.files) console.log(f);
-' "$ROOT") || {
-  echo "ERROR: could not enumerate package.json#files for $ROOT" >&2
+# The scan runs over the first segment of each packed path (`assets`,
+# `dist`, `package.json`, ...) rather than file by file. A directory can hold
+# a file npm leaves out, and scanning that too only makes the guard stricter,
+# while a surface costs one grep instead of one per file.
+#
+# The listing is captured into a variable (rather than a process
+# substitution into mapfile) so that a failure — an unparseable
+# package.json, npm missing from PATH — fails this guard instead of being
+# silently swallowed by `mapfile < <(...)`. A silent pass would defeat the
+# purpose of the leakage guard.
+pack_stderr=$(mktemp)
+trap 'rm -f "$pack_stderr"' EXIT
+surfaces_listing=$(cd "$ROOT" && npm pack --dry-run --json --ignore-scripts 2>"$pack_stderr" | node -e '
+  let raw = "";
+  process.stdin.on("data", (chunk) => (raw += chunk));
+  process.stdin.on("end", () => {
+    const packs = JSON.parse(raw);
+    const files = Array.isArray(packs) && packs.length === 1 ? packs[0].files : undefined;
+    if (!Array.isArray(files) || files.length === 0) {
+      console.error("npm pack --dry-run listed no files");
+      process.exit(1);
+    }
+    const surfaces = new Set(files.map((file) => file.path.split("/")[0]));
+    for (const surface of [...surfaces].sort()) console.log(surface);
+  });
+') || {
+  echo "ERROR: could not enumerate the files npm would pack for $ROOT" >&2
+  head -20 "$pack_stderr" >&2
   exit 1
 }
-mapfile -t FILES_FIELD <<< "$files_listing"
+mapfile -t SURFACES <<< "$surfaces_listing"
 
 SCAN_PATHS=()
-# `SCAN_RELATIVES` keeps each surface as its `package.json#files` entry,
-# i.e. relative to `$ROOT`. The FILE NAME pass must use these: when
-# `QFAI_LEAKAGE_SCAN_ROOT` points at an absolute path (the release
-# workflow unpacks the tarball into a temp dir), `find "$ROOT/$entry"`
-# emits the *root's own* ancestors on every line, so a checkout under
-# e.g. `/tmp/qfai-v2.0/package` would fail the version regex on every
-# path even when the distributed surface is clean. The distributed
-# surface is the files[] entry, not the directory that happens to hold
-# it.
+# `SCAN_RELATIVES` keeps each surface relative to `$ROOT`. The FILE NAME
+# pass must use these: when `QFAI_LEAKAGE_SCAN_ROOT` points at an absolute
+# path (the release workflow unpacks the tarball into a temp dir),
+# `find "$ROOT/$entry"` emits the *root's own* ancestors on every line, so a
+# checkout under e.g. `/tmp/qfai-v2.0/package` would fail the version regex
+# on every path even when the distributed surface is clean. The distributed
+# surface is the packed path, not the directory that happens to hold it.
 SCAN_RELATIVES=()
-SKIPPED_PATHS=()
-for entry in "${FILES_FIELD[@]}"; do
-  # `package.json#files` is treated as literal paths (or directories).
-  # Glob patterns like `dist/**` or `assets/*.md` are NOT expanded; if
-  # they appear, the leakage guard would silently miss them, so detect
-  # and refuse explicitly. If glob support becomes necessary, plumb
-  # `fast-glob` (or equivalent) into the node lookup above.
-  if [[ "$entry" == *"*"* || "$entry" == *"?"* ]]; then
-    echo "ERROR: package.json#files contains a glob pattern '$entry'." >&2
-    echo "       This guard expects literal file/directory paths only." >&2
-    echo "       Either drop the glob from package.json#files or extend" >&2
-    echo "       this guard to expand globs explicitly." >&2
-    exit 1
-  fi
-  candidate="$ROOT/$entry"
-  # dist/ may not exist in lint-only CI passes; record what is skipped
-  # so the WARN below can name it instead of leaving the operator
-  # guessing whether scan coverage was complete.
-  if [[ -e "$candidate" ]]; then
-    SCAN_PATHS+=("$candidate")
-    SCAN_RELATIVES+=("$entry")
-  else
-    SKIPPED_PATHS+=("$candidate")
-  fi
+for entry in "${SURFACES[@]}"; do
+  SCAN_PATHS+=("$ROOT/$entry")
+  SCAN_RELATIVES+=("$entry")
 done
 
-if [[ "${#SCAN_PATHS[@]}" -eq 0 ]]; then
-  # SCAN_PATHS being completely empty means package.json#files was
-  # rewritten to an unknown layout. README.md / LICENSE / assets/ are
-  # checked-in artifacts and are normally always present; only dist/
-  # is build-time, so a totally empty scan set is an anomaly.
-  echo "WARN: no distributed surfaces found under $ROOT; nothing scanned." >&2
-elif [[ "${#SKIPPED_PATHS[@]}" -gt 0 ]]; then
-  # Lint-only CI passes legitimately skip dist/ (no build yet); the
-  # post-build job re-runs this same guard so dist/ is always covered
-  # eventually. Name what was scanned vs skipped so reviewers do not
-  # have to guess.
-  echo "WARN: scanned ${#SCAN_PATHS[@]} surface(s); skipped ${#SKIPPED_PATHS[@]} that are not on disk yet (e.g. dist/ before build): ${SKIPPED_PATHS[*]}" >&2
+# `dist/` does not exist before a build, and npm then packs nothing for it.
+# Name every include-list entry with nothing on disk, so a lint-only pass
+# does not read as a complete scan; the post-build job runs this guard again
+# with `dist/` present.
+not_built=$(node -e '
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const pkg = JSON.parse(fs.readFileSync(path.join(process.argv[1], "package.json"), "utf-8"));
+  for (const entry of Array.isArray(pkg.files) ? pkg.files : []) {
+    if (!/[*?]/.test(entry) && !fs.existsSync(path.join(process.argv[1], entry))) console.log(entry);
+  }
+' "$ROOT")
+if [[ -n "$not_built" ]]; then
+  echo "WARN: scanned ${#SCAN_PATHS[@]} surface(s); package.json#files names entries that are not on disk yet (e.g. dist/ before build): ${not_built//$'\n'/ }" >&2
 fi
 
 for idx in "${!SCAN_PATHS[@]}"; do
@@ -199,7 +192,7 @@ for idx in "${!SCAN_PATHS[@]}"; do
   # project. Run the same regexes over the path list to close that
   # dimension, and report it separately so the operator can tell a name
   # leak from a content leak.
-  # `./` prefix: a `package.json#files` entry may legitimately begin with a
+  # `./` prefix: a packed path may legitimately begin with a
   # hyphen, and `find -notes-v2.0` reads that as a predicate rather than a
   # starting point. Suppressed, that failure looked exactly like an empty
   # tree — the guard skipped the surface and still exited 0. Anchor the
@@ -220,15 +213,14 @@ for idx in "${!SCAN_PATHS[@]}"; do
     echo "FAIL: internal spec id, version marker, or trace id leaked in a FILE NAME under $target:" >&2
     # `fail=1` is already decided above; this only tidies the REPORT, by
     # keeping the lines that carry a path when one of the two hit sets is
-    # empty. Written as a positive match on purpose: TDD-0033 pins that the
-    # only inverted grep in this script is the schemaVersion carve-out
-    # below, so that no filter can ever sit between a hit and the FAIL path.
+    # empty. Written as a positive match on purpose: TDD-0033 pins that
+    # this script has no inverted grep, so that no filter can ever sit
+    # between a hit and the FAIL path.
     { printf '%s\n%s\n' "$name_hits" "$version_name_hits" \
       | grep -E '[^[:space:]]' | head -20 >&2; } || true
     fail=1
   fi
-  schema_hits=$(grep -rnE "$SCHEMA_VERSION_RE" "$target" 2>/dev/null \
-    | grep -vE 'package\.json' || true)
+  schema_hits=$(grep -rnE "$SCHEMA_VERSION_RE" "$target" 2>/dev/null || true)
   if [[ -n "$schema_hits" ]]; then
     echo "FAIL: schemaVersion field present in distributed surface $target:" >&2
     echo "$schema_hits" | head -20 >&2
