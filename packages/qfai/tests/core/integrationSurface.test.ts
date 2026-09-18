@@ -1271,7 +1271,9 @@ describe("a link that does not resolve still says why", () => {
       // is not, so what is reported is the path they cannot reach.
       const entry = await finding(root);
       expect(entry?.message).toContain(".qfai/assistant/skills/qfai-atdd");
-      expect(entry?.message).not.toContain("dangling ->");
+      // The ancestor is not blamed: it resolves, and what it resolves to has
+      // no canonical under it, which is what the wrappers report.
+      expect(entry?.message).not.toContain("a canonical ancestor");
     });
   });
 });
