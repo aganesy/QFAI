@@ -202,6 +202,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   its mandatory pair, and a safety-floor item. Any other demand is recorded as
   advisory. The drift protocol and the six reviewer cards point at the rule.
 
+- **A triage row can say what it waits on** (#1900). The triage table had no
+  column for one row's work waiting on another's, or on an open question, so the
+  dependency went into `Rationale` prose. There no fan-out could read it, and
+  three authors worded it three ways. The table format in `sdd-triage.md` now
+  defines an optional `Depends-On` column, holding another row's `Source` or an
+  `OQ-*`, and both delta templates carry it. The `qfai-sdd` batch section holds
+  a dependent row back until what it names is done or resolved.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
