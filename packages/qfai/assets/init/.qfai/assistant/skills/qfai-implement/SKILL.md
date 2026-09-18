@@ -514,10 +514,7 @@ Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer r
   later time to carry, and requiring one would have the stage invent it. A
   blank is neither, and is a `REVISE` — **except on a `stopped` row**, where empty is the value that ending requires and `none — <why>` would claim a decision the stop forecloses. A run that skipped a session leaves the same tree as one
   that ran it, and an evidence file is updated in place, so these are what tell
-  a fresh session from an absent one and from last week's.
-- Where this run's block went into more than one evidence file, this run's
-  `grilling(<Session>@<run key>/…)` rows and its `none` marker are identical in
-  each of those files' Work Orders Summary, as the block is.
+  a fresh session from an absent one and from last week's. Where this run's block went into more than one evidence file, this run's `grilling(<Session>@<run key>/…)` rows and its `none` marker are identical in each of those files' Work Orders Summary, as the block is.
 - **Each ending carries its own condition, and the name alone is not one.** A
   malformed row labelled `confirmed` passes an enum check and fails the rule it
   claims to have met.
