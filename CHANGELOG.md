@@ -206,6 +206,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Three gaps the ATDD scan-root change left** (#1938).
+  - A test-name glob with a negated group now selects what fast-glob selects.
+    `!(fixture|data).json` passes over every name that starts with a member,
+    `fixture-old.json` included, where it passed over only the exact names and
+    so vouched for a fixture another glob collected. A negated group that ends
+    the pattern still excludes only the exact name, so `*.!(json)` selects
+    `fixture.old.json`.
+  - `--profile tdd` reads the legacy `<testsDir>/atdd/` scaffold directory for
+    skipped tests. Older scaffold runs wrote there, the directory is no
+    acceptance layer, and the profile runs no placeholder rule, so a skeleton
+    there was read by nothing in the stage's completion gate.
+  - The story and contract remediations (`QFAI-ATDD-111`, `-113`, `-114`) name
+    the directories under the configured `paths.testsDir` rather than a
+    literal `tests/e2e/**` or `tests/api/**`, which no scan reads in a project
+    that moved it.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number

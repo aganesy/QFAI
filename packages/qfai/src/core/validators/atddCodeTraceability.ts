@@ -528,7 +528,7 @@ export async function validateAtddCodeTraceability(
         // that have not opted in — while the unscoped reading must not become
         // "annotate every US in the repository", which is the annotation-only
         // E2E tree `catalog/test-layers.md` forbids.
-        "Add a `QFAI:SPEC-XXXX:US-YYYY` annotation under `tests/e2e/**` referencing each user story above at least once. Where any spec declares a user-facing surface, the obligation covers user-facing specs only; where none does, it covers every spec (`.qfai/assistant/catalog/test-layers.md#atdd-annotation-hard-gate`)." +
+        `Add a \`QFAI:SPEC-XXXX:US-YYYY\` annotation under \`${dirs.e2e}\` referencing each user story above at least once. Where any spec declares a user-facing surface, the obligation covers user-facing specs only; where none does, it covers every spec (\`.qfai/assistant/catalog/test-layers.md#atdd-annotation-hard-gate\`).` +
           ATDD_PACKAGE_SUITE_HINT,
         { relatedFiles: usAttribution.relatedFiles },
       ),
@@ -757,7 +757,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.conApiDeferred",
         deferred,
         "canonical",
-        `When the slice is implemented, set \`x-qfai-status\` to something other than planned and reference the contract under tests/api/**.${ATDD_PACKAGE_SUITE_HINT}`,
+        `When the slice is implemented, set \`x-qfai-status\` to something other than planned and reference the contract under \`${dirs.api}\`.${ATDD_PACKAGE_SUITE_HINT}`,
       ),
     );
   }
@@ -772,7 +772,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.conApiToApiTests",
         result.missing.conApi,
         "change",
-        "Add a `QFAI:CON-API-XXXX` annotation under `tests/api/**` referencing every CON-API declared in `.qfai/contracts/api`." +
+        `Add a \`QFAI:CON-API-XXXX\` annotation under \`${dirs.api}\` referencing every CON-API declared in \`.qfai/contracts/api\`.` +
           ATDD_PACKAGE_SUITE_HINT,
       ),
     );
