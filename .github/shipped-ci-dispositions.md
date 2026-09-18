@@ -29,3 +29,7 @@ the next one against.
   Because: the lane this entry adds compares this repository's CI with the templates it ships, and an adopter's repository ships nothing, so there is no counterpart lane for the shipped set to gain.
 - SHIPPED-CI: not-applicable for package.json
   Because: the lane lints `packages/qfai/assets/`, which exists only in the repository that builds the package, so an adopter has no such tree to lint.
+- SHIPPED-CI: not-applicable for package.json
+  Because: the lane this entry adds reads which paths this repository links, and an adopter's tree links none of them.
+- SHIPPED-CI: not-applicable for package.json
+  Because: the lane this entry adds verifies links into this package's own assets, which an adopter's tree does not have.

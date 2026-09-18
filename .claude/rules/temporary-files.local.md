@@ -1,0 +1,1 @@
+../../.agents/rules/temporary-files.local.md
