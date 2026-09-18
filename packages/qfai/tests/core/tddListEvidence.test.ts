@@ -3614,6 +3614,68 @@ ${packPair(1).join("\n")}
       });
     });
 
+    describe("an n/a verdict a clause of ui-affecting.md contradicts", () => {
+      const NOT_APPLICABLE = [
+        "- Prototype parity: n/a (not UI-affecting)",
+        `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
+      ];
+
+      async function seed(root: string, files: Readonly<Record<string, string>>): Promise<void> {
+        for (const [relative, body] of Object.entries(files)) {
+          const file = path.join(root, ...relative.split("/"));
+          await mkdir(path.dirname(file), { recursive: true });
+          await writeFile(file, body, "utf8");
+        }
+      }
+
+      const structure = (glob: string): string =>
+        [
+          "## UI surface paths (SSOT)",
+          "",
+          "ui_paths:",
+          "",
+          `- \`${glob}\``,
+          "",
+          "## Quality gates",
+          "",
+        ].join("\n");
+
+      it("refuses n/a on a row whose Test file matches a declared UI path", async () => {
+        await withProject(async (root) => {
+          await seed(root, {
+            ".qfai/assistant/catalog/structure.md": structure("tests/unit/**"),
+          });
+          const [issue] = await unresolved(root, withParity(NOT_APPLICABLE));
+          expect(issue?.message).toContain(
+            "a product-surface review rather than n/a (not UI-affecting), since clause 2 holds: Test file tests/unit/sample.test.ts matches tests/unit/**",
+          );
+        });
+      });
+
+      it("refuses n/a on a row whose obligation a UI contract names", async () => {
+        await withProject(async (root) => {
+          await seed(root, {
+            ".qfai/contracts/ui/home.yaml":
+              "screens:\n  - id: home\n    route: /\n    notes: TC-0001\n",
+          });
+          const [issue] = await unresolved(root, withParity(NOT_APPLICABLE));
+          expect(issue?.message).toContain(
+            "since clause 3 holds: TC-0001 occurs in .qfai/contracts/ui/home.yaml",
+          );
+        });
+      });
+
+      it("accepts n/a where no declaration names the row", async () => {
+        await withProject(async (root) => {
+          await seed(root, {
+            ".qfai/assistant/catalog/structure.md": structure("src/ui/**"),
+            ".qfai/contracts/ui/home.yaml": "screens:\n  - id: home\n    route: /\n",
+          });
+          expect(await unresolved(root, withParity(NOT_APPLICABLE))).toEqual([]);
+        });
+      });
+    });
+
     it("asks an n/a row for its revision and nothing a reviewer writes", async () => {
       await withProject(async (root) => {
         const [issue] = await unresolved(
