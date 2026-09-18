@@ -1,7 +1,7 @@
 // Rule set for the documents the package ships (`assets/**`).
 //
 // These are instructions an agent reads, not prose a person scans in a column,
-// and four rules read them as the wrong kind of document:
+// and five rules read them as the wrong kind of document:
 //
 //   MD013  line length — reflowing an instruction moves where its meaning breaks
 //   MD033  inline HTML — the skill bodies and templates use it deliberately
