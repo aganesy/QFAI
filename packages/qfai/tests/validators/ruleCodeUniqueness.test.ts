@@ -55,7 +55,6 @@ const KNOWN_COLLISIONS = new Map<string, readonly string[]>([]);
 const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
   ["validators/agentDefinition.ts", new Map([["code", 1]])],
   ["validators/designAudit.ts", new Map([["finding.ruleId", 1]])],
-  ["validators/designFidelity.ts", new Map([["issueCode", 1]])],
   // One emission site for two stages, each with its own code, taken from the
   // subject table beside it. Both codes are module-level constants the
   // ownership scan reads there, so the codes are attributed; what is dynamic is
@@ -101,6 +100,20 @@ const RETIRED_CODES: readonly string[] = [
   "QFAI-REQCTX-010",
   "QFAI-REQCTX-020",
   "QFAI-REQCTX-021",
+  // validators/designFidelity.ts — deleted. It scanned evidence and review
+  // Markdown for a `Fidelity Scorecard` heading that nothing writes, so no
+  // project could reach any of the eleven codes.
+  "QFAI-FID-001",
+  "QFAI-FID-002",
+  "QFAI-FID-003",
+  "QFAI-FID-004",
+  "QFAI-FID-005",
+  "QFAI-FID-006",
+  "QFAI-FID-007",
+  "QFAI-FID-008",
+  "QFAI-FID-009",
+  "QFAI-FID-010",
+  "QFAI-FID-011",
   // validators/uix/designSystemPresence.ts — deleted rather than stubbed: it
   // required a file the three-layer validator reports as a forbidden legacy
   // sidecar, and nothing dispatched it.
@@ -142,22 +155,6 @@ const DYNAMIC_SITE_CODES = new Map<string, readonly string[]>([
     ],
   ],
   ["validators/designAudit.ts", ["QFAI-AUD-001", "QFAI-AUD-004", "QFAI-AUD-020", "QFAI-AUD-021"]],
-  [
-    "validators/designFidelity.ts",
-    [
-      "QFAI-FID-001",
-      "QFAI-FID-002",
-      "QFAI-FID-003",
-      "QFAI-FID-004",
-      "QFAI-FID-005",
-      "QFAI-FID-006",
-      "QFAI-FID-007",
-      "QFAI-FID-008",
-      "QFAI-FID-009",
-      "QFAI-FID-010",
-      "QFAI-FID-011",
-    ],
-  ],
   // One per stage. The check reads a record a stage was told to write, and the
   // two stages are gated by different profiles — a single code would be claimed
   // whole by both while each evaluated half of it.
