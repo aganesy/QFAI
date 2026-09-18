@@ -1320,6 +1320,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   loop's evidence, and sealed into the next certificate, removing one failed
   `certify --check` although nothing of the new loop had changed.
 
+- **A rule summary stays with the master it describes** (#1889). Five gaps
+  remained after `init` stopped refreshing the summary of a master the adopter
+  edited:
+  - `--force` rebuilt the Copilot instructions from the release's summaries
+    whatever the masters held. The rebuilt file now keeps its own bullet for a
+    master the adopter kept.
+  - The set of masters counted as installed came from a plan made before the
+    update pass, so a planned replacement that then kept the adopter's master
+    still moved its summary. The entry points are now refreshed from what the
+    update pass actually did.
+  - A `---` under a list item was read as a setext heading and ended the
+    managed Copilot rule list early. A thematic break now ends nothing.
+  - Where one `/qfai-implement` run writes its grilling block into two
+    evidence files, the gate now also compares that run's `grilling(…)` rows
+    and `none` marker in each file's Work Orders Summary.
+  - The execution skills load the grilling primitive before the confidence
+    check, not only before a preflight round.
+
 - **An id a non-JavaScript test holds as data is not a reference** (#1770). The
   ATDD scan counts an annotation in a comment or in a test's name, and blanks
   every other literal first, so a table of ids in a test is not read as covering
