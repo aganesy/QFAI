@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync, type Dirent } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "./config.js";
@@ -532,6 +533,13 @@ export type AtddTraceabilityScan = {
    * tests only these select is not evidence those tests hold none.
    */
   unreadable: string[];
+  /**
+   * Directories the scan could not read and read past, in POSIX form: relative
+   * to the repository, or absolute where a scanned root lies outside it. The
+   * rest of each pattern reaching one was still read, but no test inside the
+   * directory is counted.
+   */
+  unreadableDirectories: string[];
 };
 
 /**
@@ -654,8 +662,10 @@ export type AtddCodeTraceabilityResult = {
    * renaming the ledger cannot clear the obligation. Skip state is out of
    * scope, so this asserts a test is *declared*, never that it is enabled.
    *
-   * Empty whenever `scan.truncated` is set: an executable carrier may sit past
-   * the file limit, so the claim is unproven and suppressed rather than guessed.
+   * Empty whenever `scan.truncated` is set or `scan.unreadable` or
+   * `scan.unreadableDirectories` is not empty: an executable carrier may sit
+   * past the file limit or in what was not read, so the claim is unproven and
+   * suppressed rather than guessed.
    */
   coveredByCarrierOnly: AtddObligationRefs;
   /**
@@ -813,11 +823,12 @@ export async function evaluateAtddCodeTraceability(
     acceptanceSource(file) && acceptanceLayer(path.relative(root, file));
   let scanResult: CollectFilesByGlobsResult;
   let unreadable: string[] = [];
+  let unreadableDirectories: string[] = [];
   try {
     scanResult = await collectTestFiles(root, scanGlobs, scanExcludes, scanKeeps);
   } catch (error) {
     if (isFileSystemError(error)) {
-      ({ scanResult, unreadable } = await collectReadableTestFiles(
+      ({ scanResult, unreadable, unreadableDirectories } = await collectReadableTestFiles(
         root,
         scanGlobs,
         scanExcludes,
@@ -1075,9 +1086,10 @@ export async function evaluateAtddCodeTraceability(
   // Suppressed rather than guessed; the truncation is reported as
   // `QFAI-ATDD-134` and persisted into the summary artifact, so a downstream
   // gate reads an indeterminate scan there instead of an empty list it can
-  // trust.
+  // trust. A pattern the scan could not read (`QFAI-ATDD-134`) and a directory
+  // it read past (`QFAI-ATDD-135`) leave the same gap.
   const coveredByCarrierOnly =
-    scanResult.truncated || unreadable.length > 0
+    scanResult.truncated || unreadable.length > 0 || unreadableDirectories.length > 0
       ? { us: [], tc: [], conApi: [], conDb: [] }
       : buildCarrierOnlyRefs({
           usRefs,
@@ -1132,6 +1144,7 @@ export async function evaluateAtddCodeTraceability(
       truncated: scanResult.truncated,
       limit: scanResult.limit,
       unreadable,
+      unreadableDirectories,
     },
   };
 }
@@ -1155,27 +1168,43 @@ function scanFailureReason(failure: unknown): string {
 
 /**
  * The scan, one selecting pattern at a time, after the combined scan met a
- * directory it could not read. The patterns that still read are unioned, and
- * each one that does not is named with its reason, so the missing references
- * that follow have a cause beside them. A negative entry travels with every
- * pattern, since on its own it selects nothing.
+ * directory it could not read. Each pattern reads past every directory the
+ * failure names, and those directories are returned. A pattern that still
+ * fails is named with its reason. The patterns that read are unioned, so the
+ * missing references that follow have a cause beside them. A negative entry
+ * travels with every pattern, since on its own it selects nothing.
  */
 async function collectReadableTestFiles(
   root: string,
   globs: string[],
   excludeGlobs: readonly string[],
   filter: (absolutePath: string) => boolean,
-): Promise<{ scanResult: CollectFilesByGlobsResult; unreadable: string[] }> {
+): Promise<{
+  scanResult: CollectFilesByGlobsResult;
+  unreadable: string[];
+  unreadableDirectories: string[];
+}> {
   const exclusions = globs.filter(isGlobExclusion);
   const outcomes = await Promise.all(
     globs
       .filter((glob) => !isGlobExclusion(glob))
       .map(async (glob) => {
+        const directories: string[] = [];
         try {
-          const scan = await collectTestFiles(root, [glob, ...exclusions], excludeGlobs, filter);
-          return { kind: "scanned" as const, scan };
+          const scan = await collectPatternPastUnreadable(
+            root,
+            [glob, ...exclusions],
+            excludeGlobs,
+            filter,
+            directories,
+          );
+          return { kind: "scanned" as const, scan, directories };
         } catch (failure) {
-          return { kind: "failed" as const, reason: `${glob}: ${scanFailureReason(failure)}` };
+          return {
+            kind: "failed" as const,
+            reason: `${glob}: ${scanFailureReason(failure)}`,
+            directories,
+          };
         }
       }),
   );
@@ -1189,7 +1218,57 @@ async function collectReadableTestFiles(
       limit: DEFAULT_GLOB_FILE_LIMIT,
     },
     unreadable: outcomes.flatMap((outcome) => (outcome.kind === "failed" ? [outcome.reason] : [])),
+    unreadableDirectories: [...new Set(outcomes.flatMap((outcome) => outcome.directories))].sort(),
   };
+}
+
+/**
+ * One pattern's scan, taken again past each directory the account running it
+ * cannot read. Every such directory is pushed onto `directories` as it is met,
+ * so a caller still holds the ones already passed when a later failure rejects.
+ *
+ * SIMPLIFIED: one more walk per unreadable directory.
+ * Lift when: a tree holds enough unreadable directories for the repeated walks
+ * to be measured as slow.
+ */
+async function collectPatternPastUnreadable(
+  root: string,
+  globs: string[],
+  excludeGlobs: readonly string[],
+  filter: (absolutePath: string) => boolean,
+  directories: string[],
+): Promise<CollectFilesByGlobsResult> {
+  for (;;) {
+    try {
+      return await collectTestFiles(
+        root,
+        globs,
+        [...excludeGlobs, ...directories.map((directory) => `${fg.escapePath(directory)}/**`)],
+        filter,
+      );
+    } catch (error) {
+      const directory = unreadableDirectoryOf(root, error);
+      // A failure that names no directory, or one the walk already passes over,
+      // is not one reading past can clear.
+      if (directory === null || directories.includes(directory)) throw error;
+      directories.push(directory);
+    }
+  }
+}
+
+/**
+ * The directory a file-system error names, in POSIX form: relative to `root`
+ * where it lies inside, and absolute where it does not, since a configured
+ * `paths.testsDir` or test glob may point outside the repository.
+ */
+function unreadableDirectoryOf(root: string, error: unknown): string | null {
+  if (!isFileSystemError(error) || !(error instanceof Error)) return null;
+  if (!("path" in error) || typeof error.path !== "string") return null;
+  const absolute = path.resolve(root, error.path);
+  const relative = path.relative(root, absolute);
+  if (relative === "") return null;
+  const outside = relative.startsWith("..") || path.isAbsolute(relative);
+  return toPosixPath(outside ? absolute : relative);
 }
 
 /**

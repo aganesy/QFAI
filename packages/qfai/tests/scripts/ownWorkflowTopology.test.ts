@@ -3345,6 +3345,16 @@ describe("release automation performs decisions rather than making them", () => 
         );
         const run = spawnSync("bash", [script], { encoding: "utf-8" });
         if (run.error !== undefined) throw run.error;
+        // A tool the gate calls and this machine lacks leaves the gate silent,
+        // which reads as a verdict: the positive case failed saying the workflow
+        // would not tag a release, and the negative ones passed for no reason.
+        // The GitHub runner ships `jq`; a contributor's machine need not.
+        const missing = /: ([\w.+-]+): command not found/.exec(run.stderr)?.[1];
+        if (missing !== undefined) {
+          throw new Error(
+            `the association gate calls \`${missing}\`, which is not installed here; install it to run this case`,
+          );
+        }
         return `${run.stdout}${run.stderr}`.includes("TAGGED");
       } finally {
         rmSync(dir, { recursive: true, force: true });

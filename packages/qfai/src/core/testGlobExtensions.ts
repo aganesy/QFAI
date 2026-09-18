@@ -295,7 +295,7 @@ function globPathPattern(glob: string): string | null {
       source += last ? "(?:(?!\\.)[^/]*(?:/(?!\\.)[^/]*)*)" : "(?:(?!\\.)[^/]+/)*";
       continue;
     }
-    const part = segmentPattern(segment);
+    const part = segmentPattern(segment, false, true, last);
     if (part === null) return null;
     source += last ? part : `${part}/`;
   }
@@ -308,9 +308,12 @@ function globPathPattern(glob: string): string | null {
  * alternations, a bracket expression stays a character class, and `*` and `?`
  * stay inside the segment.
  *
- * A negated group matches wherever none of its alternatives, followed by the
- * rest of the segment, would, which is how the glob matcher reads it. Inside
- * another group it is not translated.
+ * A negated group is read as the collector reads it: it passes over a name
+ * starting with any of its members, so `!(fixture).json` selects neither
+ * `fixture.json` nor `fixture-old.json`. Only where it ends the whole pattern
+ * does it exclude the exact name alone, so `*.!(json)` still selects
+ * `fixture.old.json`. `last` says the segment ends the pattern. Inside another
+ * group a negated group is not translated.
  *
  * `start` says the text opens a path segment, where a leading `*` or `?` does
  * not match a dot. A brace group there is read as the scan expands it, each
@@ -399,7 +402,12 @@ function classBody(body: string): string | null {
   return source;
 }
 
-function segmentPattern(segment: string, nested = false, start = true): string | null {
+function segmentPattern(
+  segment: string,
+  nested = false,
+  start = true,
+  last = false,
+): string | null {
   let source = "";
   for (let index = 0; index < segment.length; index += 1) {
     const char = segment[index] ?? "";
@@ -412,9 +420,12 @@ function segmentPattern(segment: string, nested = false, start = true): string |
       const group = alternation(groupMembers(segment.slice(index + 2, close), "|"));
       if (group === null) return null;
       if (char === "!") {
-        const rest = nested ? null : segmentPattern(segment.slice(close + 1), false, false);
+        const rest = nested ? null : segmentPattern(segment.slice(close + 1), false, false, last);
         if (rest === null) return null;
-        return `${source}(?:(?!${group}${rest}(?:/|$))[^/]*?)${rest}`;
+        // The group excludes names that start with one of its members, unless
+        // it ends the whole pattern, where it excludes that exact name.
+        const anchor = last && close === segment.length - 1 ? "$" : "";
+        return `${source}(?:(?!${group}${anchor})[^/]*?)${rest}`;
       }
       source += char === "@" ? group : `${group}${char}`;
       index = close;
@@ -428,6 +439,7 @@ function segmentPattern(segment: string, nested = false, start = true): string |
           body.split(",").map((member) => member + rest),
           nested,
           true,
+          last,
         );
       }
       const group = body.includes(",") ? alternation(body.split(",")) : braceBody(body);
@@ -470,10 +482,15 @@ function braceBody(body: string): string | null {
   return inner === null ? null : `\\{${inner}\\}`;
 }
 
-function alternation(alternatives: readonly string[], nested = true, start = false): string | null {
+function alternation(
+  alternatives: readonly string[],
+  nested = true,
+  start = false,
+  last = false,
+): string | null {
   const sources: string[] = [];
   for (const alternative of alternatives) {
-    const source = segmentPattern(alternative, nested, start);
+    const source = segmentPattern(alternative, nested, start, last);
     if (source === null) return null;
     sources.push(source);
   }

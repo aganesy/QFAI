@@ -1,14 +1,11 @@
 import path from "node:path";
 
-import { resolvePath, type QfaiConfig } from "../config.js";
+import type { QfaiConfig } from "../config.js";
 import { readUiContractScreenContracts } from "../contracts/screenContracts.js";
 import { collectFiles } from "../fs.js";
+import { PROTOTYPING_EVIDENCE_REL } from "../prototyping/paths.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
-
-function resolveEvidenceRoot(root: string, config: QfaiConfig): string {
-  return path.join(path.dirname(resolvePath(root, config, "specsDir")), "evidence");
-}
 
 function toPosixRelative(root: string, targetPath: string): string {
   return path.relative(root, targetPath).replace(/\\/g, "/");
@@ -59,8 +56,10 @@ export async function validateUiEvidenceArtifacts(
     return issues;
   }
 
-  const evidenceRoot = resolveEvidenceRoot(root, config);
-  const prototypingRoot = path.join(evidenceRoot, "prototyping");
+  // Where `qfai prototyping iterate` writes the captures and mirrors them,
+  // whatever `paths.specsDir` says: read beside a moved specs directory, the
+  // check found none of them.
+  const prototypingRoot = path.join(root, PROTOTYPING_EVIDENCE_REL);
   const screenshotRoot = path.join(prototypingRoot, "screenshots");
   const htmlRoot = path.join(prototypingRoot, "html");
 

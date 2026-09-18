@@ -270,6 +270,65 @@ describe("a skill carries what a host needs to register it", () => {
     expect(description?.suggested_action).toContain("Add `description:`");
   });
 
+  it("reports a document a linked skill's step names that is not valid UTF-8", async () => {
+    // The host follows the link and opens the document the step names, so a
+    // broken one is reported although the crawl does not walk into the link.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const real = path.join(root, "elsewhere", "qfai-linked");
+    await mkdir(path.join(real, "references"), { recursive: true });
+    await writeFile(
+      path.join(real, "SKILL.md"),
+      [
+        "---",
+        "name: qfai-linked",
+        'description: "Does the linked thing."',
+        "---",
+        "",
+        "See references/guide.md.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(real, "references", "guide.md"),
+      Buffer.concat([Buffer.from("# guide\n"), Buffer.from([0xff])]),
+    );
+    try {
+      await symlink(real, path.join(skills, "qfai-linked"), "junction");
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    const guide = path.join(skills, "qfai-linked", "references", "guide.md");
+    expect(found.some((item) => item.code === "QFAI-SKILLS-014" && item.file === guide)).toBe(true);
+  });
+
+  it("finishes over a link that loops back into its own skill", async () => {
+    // The crawl does not walk into a link, and a step names a document by one
+    // path, so a cycle cannot keep the run going.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    await writeFile(
+      path.join(skillDir, "SKILL.md"),
+      `${await readFile(path.join(skillDir, "SKILL.md"), "utf-8")}\nSee loop/loop/references/guide.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    await writeFile(path.join(skillDir, "references", "guide.md"), "# guide\n", "utf-8");
+    try {
+      await symlink(skillDir, path.join(skillDir, "loop"), "junction");
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.filter((item) => item.code === "QFAI-SKILLS-014")).toEqual([]);
+  });
+
   it("follows a symlinked skill directory", async () => {
     // A shape this CLI writes itself. `isDirectory()` is false for the link, so
     // excluding on it left the skill unchecked by anything.
