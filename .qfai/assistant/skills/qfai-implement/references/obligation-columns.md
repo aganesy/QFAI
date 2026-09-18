@@ -12,6 +12,7 @@ row's layer cannot host a `TC-*`.
 | ------------ | ----------------------------------------------------------------------------------------------------------------- |
 | US-Refs      | `US-*` obligations this row implements. Legal **only** on `Layer = E2E` rows                                      |
 | CON-API-Refs | `CON-API-*` obligations this row implements. Legal **only** on `Layer = API` rows                                 |
+| CON-DB-Refs  | `CON-DB-*` obligations this row implements. Legal **only** on `Layer = Integration` rows                          |
 | Blocked-By   | What a `blocked` row is waiting on, and the status it was blocked at. Required on `blocked` rows, blank otherwise |
 
 `Blocked-By` takes a Change Request ID (`CR-YYYYMMDD-NNNN`), a contract path
@@ -44,7 +45,8 @@ separate.
 
 `test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and `tests/api/**`,
 so an E2E or API row has no legal `TC-Refs` value. Those rows carry `-` in
-`TC-Refs` and record their obligation in `US-Refs` / `CON-API-Refs` instead.
+`TC-Refs` and record their obligation in `US-Refs` / `CON-API-Refs` /
+`CON-DB-Refs` instead.
 
 **Both columns are seeded, not hand-added.** `/qfai-sdd` Phase 2b writes one
 `Layer = E2E` row per active `US-*` and one `Layer = API` row per active

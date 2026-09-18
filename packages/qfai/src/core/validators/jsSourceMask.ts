@@ -107,14 +107,14 @@ function endOfBlockComment(source: string, start: number): number {
 }
 
 /** End of a `'` / `"` string, or the newline when it is left unterminated. */
-function endOfQuoted(source: string, start: number, quote: string): number {
+function endOfQuoted(source: string, start: number, quote: string, multiline = false): number {
   for (let i = start + 1; i < source.length; i += 1) {
     const ch = source[i] ?? "";
     if (ch === "\\") {
       i += 1;
       continue;
     }
-    if (ch === "\n") {
+    if (ch === "\n" && !multiline) {
       return i;
     }
     if (ch === quote) {
@@ -145,7 +145,7 @@ function endOfTemplate(source: string, start: number): number {
 }
 
 /** End of a regex literal — `[…]` may hold an unescaped `/`; a newline cannot. */
-function endOfRegexLiteral(source: string, start: number): number {
+function endOfRegexLiteral(source: string, start: number, multiline = false): number {
   let inCharClass = false;
   for (let i = start + 1; i < source.length; i += 1) {
     const ch = source[i] ?? "";
@@ -153,7 +153,7 @@ function endOfRegexLiteral(source: string, start: number): number {
       i += 1;
       continue;
     }
-    if (ch === "\n") {
+    if (ch === "\n" && !multiline) {
       return i;
     }
     if (inCharClass) {
@@ -179,9 +179,233 @@ function endOfRegexLiteral(source: string, start: number): number {
 }
 
 /** End of a `"""` / `\'\'\'` docstring, or end of file when it is never closed. */
-function endOfTripleQuoted(source: string, start: number, fence: string): number {
-  const close = source.indexOf(fence, start + fence.length);
-  return close === -1 ? source.length : close + fence.length;
+/** The closing delimiter for a `%` literal's opening one. */
+const PERCENT_PAIRS: ReadonlyMap<string, string> = new Map([
+  ["(", ")"],
+  ["[", "]"],
+  ["{", "}"],
+  ["<", ">"],
+]);
+
+/**
+ * The end of a Ruby `%` literal beginning at `start`, or `-1` where what stands
+ * there is a modulo operator rather than a literal.
+ *
+ * The delimiter is whatever follows the optional type letter, and a bracketing
+ * pair nests: `%w[a [b] c]` is one literal, not two.
+ */
+function endOfPercentLiteral(source: string, start: number): number {
+  const letter = source[start + 1] ?? "";
+  const opens = /[A-Za-z]/.test(letter) ? start + 2 : start + 1;
+  const open = source[opens] ?? "";
+  if (open === "" || /[A-Za-z0-9\s]/.test(open)) return -1;
+  if (/[A-Za-z]/.test(letter) && !"qQwWiIrsx".includes(letter)) return -1;
+  const close = PERCENT_PAIRS.get(open) ?? open;
+  let depth = 1;
+  for (let index = opens + 1; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "\\") {
+      index += 1;
+      continue;
+    }
+    if (close !== open && char === open) depth += 1;
+    else if (char === close) {
+      depth -= 1;
+      if (depth === 0) return index + 1;
+    }
+  }
+  return source.length;
+}
+
+/**
+ * The end of a Ruby heredoc whose header begins at `start`, or `-1` where `<<`
+ * there is a shift or an append rather than a header.
+ *
+ * The body runs from the next line to the line holding the terminator alone.
+ * The header itself is left in place: it is code, and only what it opens is a
+ * literal.
+ */
+function endOfHeredoc(source: string, start: number): number {
+  const header = /^<<([~-]?)(?:(["'])([A-Za-z_][A-Za-z0-9_]*)\2|([A-Za-z_][A-Za-z0-9_]*))/.exec(
+    source.slice(start),
+  );
+  if (header === null) return -1;
+  const terminator = header[3] ?? header[4] ?? "";
+  if (terminator === "") return -1;
+  const bodyStart = source.indexOf("\n", start + header[0].length);
+  if (bodyStart === -1) return source.length;
+  const indented = header[1] !== "";
+  const closer = new RegExp(`^${indented ? "[ \\t]*" : ""}${terminator}[ \\t]*\\r?$`);
+  let index = bodyStart + 1;
+  while (index <= source.length) {
+    const lineEnd = source.indexOf("\n", index);
+    const line = source.slice(index, lineEnd === -1 ? source.length : lineEnd);
+    if (closer.test(line)) return lineEnd === -1 ? source.length : lineEnd;
+    if (lineEnd === -1) return source.length;
+    index = lineEnd + 1;
+  }
+  return source.length;
+}
+
+/**
+ * The end of a Rust character literal beginning at `start`, or `-1` where the
+ * apostrophe opens a lifetime instead.
+ *
+ * A lifetime is an apostrophe and a name with no closing one, so it is told
+ * from a literal by what closes rather than by what follows.
+ */
+function endOfCharLiteral(source: string, start: number): number {
+  const literal = /^'(?:\\(?:u\{[0-9A-Fa-f]{1,6}\}|x[0-9A-Fa-f]{2}|.)|[^\\'])'/.exec(
+    source.slice(start),
+  );
+  return literal === null ? -1 : start + literal[0].length;
+}
+
+/**
+ * The end of a C# verbatim or raw string beginning at `start`, or `-1` where
+ * neither opens there.
+ *
+ * A verbatim string ends at a quote that is not doubled; a raw string ends at a
+ * run of quotes at least as long as the one that opened it.
+ */
+function endOfVerbatimString(source: string, start: number): number {
+  if (source.startsWith('"""', start)) {
+    const open = /^"{3,}/.exec(source.slice(start))?.[0] ?? '"""';
+    const close = source.indexOf(open, start + open.length);
+    return close === -1 ? source.length : close + open.length;
+  }
+  // `@"`, and the interpolated forms in either ordering: `$@"` and `@$"`.
+  const opener = ['@"', '$@"', '@$"'].find((prefix) => source.startsWith(prefix, start));
+  if (opener === undefined) return -1;
+  for (let index = start + opener.length; index < source.length; index += 1) {
+    if (source[index] !== '"') continue;
+    if (source[index + 1] === '"') {
+      index += 1;
+      continue;
+    }
+    return index + 1;
+  }
+  return source.length;
+}
+
+/** The end of a `(* … *)` comment beginning at `start`, counting nesting. */
+function endOfParenStarComment(source: string, start: number): number {
+  let depth = 0;
+  for (let index = start; index < source.length; index += 1) {
+    if (source.startsWith("(*", index)) {
+      depth += 1;
+      index += 1;
+      continue;
+    }
+    if (source.startsWith("*)", index)) {
+      depth -= 1;
+      if (depth === 0) return index + 2;
+      index += 1;
+    }
+  }
+  return source.length;
+}
+
+/**
+ * The end of a PHP heredoc or nowdoc whose header begins at `start`, or `-1`
+ * where `<<<` there opens neither.
+ *
+ * The body runs to the line holding the terminator, which may carry indentation
+ * and may be followed by a separator. The header stays: it is code.
+ */
+function endOfPhpHeredoc(source: string, start: number): number {
+  const header =
+    /^<<<[ \t]*(?:(["'])([A-Za-z_][A-Za-z0-9_]*)\1|([A-Za-z_][A-Za-z0-9_]*))[ \t]*\r?\n/.exec(
+      source.slice(start),
+    );
+  if (header === null) return -1;
+  const terminator = header[2] ?? header[3] ?? "";
+  if (terminator === "") return -1;
+  const closer = new RegExp(`^[ \\t]*${terminator}\\b`);
+  let index = start + header[0].length;
+  while (index <= source.length) {
+    const lineEnd = source.indexOf("\n", index);
+    const line = source.slice(index, lineEnd === -1 ? source.length : lineEnd);
+    if (closer.test(line)) return lineEnd === -1 ? source.length : lineEnd;
+    if (lineEnd === -1) return source.length;
+    index = lineEnd + 1;
+  }
+  return source.length;
+}
+
+/**
+ * The end of a Rust raw string beginning at `start`, or `-1` where none does.
+ *
+ * `r`, an optional `b`, then the hashes that decide the closer: the span ends at
+ * a quote followed by that many hashes and at no earlier quote.
+ */
+function endOfRustRawString(source: string, start: number): number {
+  // `b` and `c` are the byte and C-string prefixes, and either may precede `r`.
+  const header = /^[bc]?r(#*)"/.exec(source.slice(start));
+  if (header === null) return -1;
+  const closer = `"${header[1] ?? ""}`;
+  const close = source.indexOf(closer, start + header[0].length);
+  return close === -1 ? source.length : close + closer.length;
+}
+
+/** The end of a `/* … *\/` comment beginning at `start`, counting nesting. */
+function endOfNestedBlockComment(source: string, start: number): number {
+  let depth = 0;
+  for (let index = start; index < source.length; index += 1) {
+    if (source.startsWith("/*", index)) {
+      depth += 1;
+      index += 1;
+      continue;
+    }
+    if (source.startsWith("*/", index)) {
+      depth -= 1;
+      if (depth === 0) return index + 2;
+      index += 1;
+    }
+  }
+  return source.length;
+}
+
+/**
+ * The end of a `=begin` / `=end` comment beginning at `start`, or `-1` where the
+ * line does not open one.
+ *
+ * Both markers stand at column zero, which is what tells them from an ordinary
+ * assignment.
+ */
+function endOfEqualsBlockComment(source: string, start: number): number {
+  if (start !== 0 && source[start - 1] !== "\n") return -1;
+  if (!/^=begin\b/.test(source.slice(start))) return -1;
+  const close = /\n=end\b[^\n]*/.exec(source.slice(start));
+  return close === null ? source.length : start + close.index + close[0].length;
+}
+
+/** The end of a `$/…/$` string beginning at `start`, or `-1` where none does. */
+function endOfDollarSlashy(source: string, start: number): number {
+  if (!source.startsWith("$/", start)) return -1;
+  const close = source.indexOf("/$", start + 2);
+  return close === -1 ? source.length : close + 2;
+}
+
+/** The end of a raw backtick span, which no escape can extend. */
+function endOfRawBacktick(source: string, start: number): number {
+  const close = source.indexOf("`", start + 1);
+  return close === -1 ? source.length : close + 1;
+}
+
+function endOfTripleQuoted(source: string, start: number, fence: string, raw = false): number {
+  // An escaped quote keeps the string open, so a fence the backslash reaches is
+  // not the closer. Stopped there, the rest of the literal was read as code.
+  // A raw one processes no escape, and a trailing backslash there is a
+  // character of the value: read as an escape it consumed the closing fence.
+  for (let index = start + fence.length; index < source.length; index += 1) {
+    if (!raw && source[index] === "\\") {
+      index += 1;
+      continue;
+    }
+    if (source.startsWith(fence, index)) return index + fence.length;
+  }
+  return source.length;
 }
 
 /** Which span kinds {@link maskJsNonCode} blanks. */
@@ -215,12 +439,197 @@ export type JsMaskOptions = {
    * reading it as three empty strings leaves its body as code.
    */
   readonly tripleQuoted?: boolean;
+
+  /**
+   * Recognise Ruby's `%` literals and heredocs. Default `false`.
+   *
+   * `true` for a Ruby suite. `%q{...}`, `%w[...]` and `<<~SQL ... SQL` are each
+   * one literal, and a lexer that knows only quoted strings walks straight past
+   * them: an id written in one stays visible, and a scan counting visible ids
+   * reads data as an annotation.
+   */
+  readonly percentLiterals?: boolean;
+
+  /**
+   * Read `'` as a lifetime where it does not open a character literal. Default
+   * `false`.
+   *
+   * `true` for Rust. `fn f<'a>(x: &'a str)` holds an odd number of apostrophes,
+   * and paired as quotes they swallow the rest of the line — the trailing
+   * comment an annotation sits in included.
+   */
+  readonly lifetimes?: boolean;
+
+  /**
+   * Read `//` as a line comment. Default `true`.
+   *
+   * `false` for Python, where `//` is floor division. Read as a comment, the
+   * rest of the line goes unscanned and a quoted id after it stays visible to a
+   * caller that keeps comments.
+   */
+  readonly slashComments?: boolean;
+
+  /**
+   * Recognise C#'s verbatim (`@"…"`) and raw (`\"\"\"…\"\"\"`) strings. Default
+   * `false`.
+   *
+   * Both span lines, and the single-line scanner stops at the first newline: an
+   * id after that point stays visible while the literal around it is masked.
+   */
+  readonly verbatimStrings?: boolean;
+
+  /**
+   * Recognise `(* … *)` block comments, which nest. Default `false`.
+   *
+   * `true` for F#, where the generic quote rule reads an apostrophe inside one
+   * as a string opener and blanks the comment's remainder — the annotation a
+   * comment is a valid place for included.
+   */
+  readonly parenStarComments?: boolean;
+
+  /**
+   * Read a backtick span as raw, with no escapes. Default `false`.
+   *
+   * `true` for Go, whose raw string ends at the next backtick whatever stands
+   * before it. Read with JavaScript's escaping, a trailing backslash consumed
+   * the closer and the mask ran on to the next one.
+   */
+  readonly rawBacktick?: boolean;
+
+  /**
+   * Read an unexpected `/` as opening a regular expression. Default `true`.
+   *
+   * `false` for every language that has no such literal. There a `/` is
+   * division, and `4 // 2` put the lexer in front of a second slash where a
+   * value had not just ended — read as a regex opener, it blanked the rest of
+   * the line and took a trailing comment with it.
+   */
+  readonly regexLiterals?: boolean;
+
+  /**
+   * Recognise PHP's `<<<ID` heredocs and `<<<'ID'` nowdocs. Default `false`.
+   *
+   * Three angle brackets, where Ruby writes two. The body spans lines and no
+   * other rule consumes it, so an id written in one stayed visible.
+   */
+  readonly phpHeredocs?: boolean;
+
+  /**
+   * Recognise Rust's raw strings, `r#"…"#` and `br##"…"##`. Default `false`.
+   *
+   * A raw string takes no escapes and ends only at a quote followed by as many
+   * hashes as opened it, so the quotes inside a JSON fixture are ordinary
+   * characters. Read as a plain quoted span, the first of them ended it.
+   */
+  readonly rustRawStrings?: boolean;
+
+  /**
+   * Read `/* … *\/` as nesting. Default `false`.
+   *
+   * `true` for Kotlin and Scala, where an inner close does not end the outer
+   * comment. Stopped at the first one, the rest of the comment was read as
+   * code — an apostrophe in it as a quote, taking the annotation after it.
+   */
+  readonly nestedBlockComments?: boolean;
+
+  /**
+   * Read `#[` as a comment like any other `#`. Default `false`.
+   *
+   * `true` for Python, where every `#` opens one. PHP and Rust write an
+   * attribute that way, so the shared rule leaves `#[` as code — and a Python
+   * comment beginning with it was then scanned, its apostrophe opening a span
+   * that took the annotation after it.
+   */
+  readonly hashBracketComments?: boolean;
+
+  /**
+   * Recognise `=begin` / `=end` block comments. Default `false`.
+   *
+   * `true` for Ruby. Unrecognised, the lines between them are read as code, and
+   * an apostrophe in one opens a span over the annotation beside it.
+   */
+  readonly equalsBlockComments?: boolean;
+
+  /**
+   * Recognise Groovy's slashy and dollar-slashy strings. Default `false`.
+   *
+   * `/…/` and `$/…/$` are literals there wherever a value may stand, so an id
+   * written in one is data. Groovy keeps the slash rule for that reason, and
+   * this adds the dollar form the regex rule does not reach.
+   */
+  readonly dollarSlashyStrings?: boolean;
+
+  /**
+   * Read a triple-quoted string as raw. Default `false`.
+   *
+   * `true` for Kotlin and Scala, where no escape is processed inside one, so a
+   * trailing backslash does not reach past the closing fence. Read with
+   * JavaScript's escaping, such a value swallowed the rest of the file.
+   */
+  readonly rawTripleQuoted?: boolean;
+
+  /**
+   * Words after which a `/` opens a pattern rather than dividing. Default: the
+   * JavaScript set.
+   *
+   * Ruby writes a regex after `if`, `unless`, `while` and its own operators, and
+   * a value ends before each of them, so the shared set never opened one there.
+   */
+  readonly regexAfterWords?: ReadonlySet<string>;
+
+  /**
+   * Read an ordinary quoted string as crossing lines. Default `false`.
+   *
+   * `true` for Ruby and PHP, which have no line-bounded string form. Read
+   * with JavaScript's bound, a value whose second line held an
+   * annotation-shaped id left that id standing as code.
+   *
+   * It gives up the bound this file documents: a quote this lexer misreads
+   * now costs the rest of the file rather than one line. Over-blanking only
+   * ever hides a construct, and reading fixture data as coverage is the
+   * failure a coverage gate cannot have.
+   */
+  readonly multilineQuoted?: boolean;
+
+  /**
+   * Read a `/`-delimited literal as crossing lines. Default `false`.
+   *
+   * `true` for Groovy, whose slashy string is written between the same
+   * delimiters as a JavaScript regex and may span lines.
+   */
+  readonly multilineSlashy?: boolean;
+
+  /**
+   * The line after which the file is data rather than source.
+   *
+   * Ruby stops compiling at `__END__` and PHP at `__halt_compiler();`, and
+   * what follows is a payload a fixture reads. Scanned as source it is not
+   * a literal, so an annotation-shaped id in it stood as code.
+   */
+  readonly dataSectionMarker?: RegExp;
 };
 
 export function maskJsNonCode(source: string, options: JsMaskOptions = {}): string {
   const blankComments = options.comments ?? true;
   const hashComments = options.hashComments ?? false;
   const tripleQuoted = options.tripleQuoted ?? false;
+  const percentLiterals = options.percentLiterals ?? false;
+  const lifetimes = options.lifetimes ?? false;
+  const slashComments = options.slashComments ?? true;
+  const verbatimStrings = options.verbatimStrings ?? false;
+  const parenStarComments = options.parenStarComments ?? false;
+  const rawBacktick = options.rawBacktick ?? false;
+  const regexLiterals = options.regexLiterals ?? true;
+  const phpHeredocs = options.phpHeredocs ?? false;
+  const rustRawStrings = options.rustRawStrings ?? false;
+  const nestedBlockComments = options.nestedBlockComments ?? false;
+  const hashBracketComments = options.hashBracketComments ?? false;
+  const equalsBlockComments = options.equalsBlockComments ?? false;
+  const dollarSlashyStrings = options.dollarSlashyStrings ?? false;
+  const rawTripleQuoted = options.rawTripleQuoted ?? false;
+  const regexAfterWords = options.regexAfterWords ?? REGEX_AFTER_KEYWORD;
+  const multilineQuoted = options.multilineQuoted ?? false;
+  const multilineSlashy = options.multilineSlashy ?? false;
   const out = source.split("");
   // Whether the token just read closes an expression. It is the whole
   // regex-vs-division test: `a / b` divides, `= /re/` does not. Comments leave
@@ -234,33 +643,138 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
   // stay linear and counted parens inside strings and comments on the way. The stack is exact and
   // costs nothing, because the pass has already skipped those spans by the time it gets here.
   const controlHeader: boolean[] = [];
+  // The span the heredoc openers on the current line have queued. The
+  // header line is scanned to its end, because `[<<A, <<B]` opens two; the
+  // bodies are then jumped over rather than read, since a blanked body's own
+  // punctuation would otherwise open a literal that runs past the terminator.
+  let heredocFrom = -1;
+  let heredocTo = -1;
   let i = 0;
   while (i < source.length) {
+    if (heredocFrom !== -1 && i >= heredocFrom) {
+      i = heredocTo;
+      heredocFrom = -1;
+      continue;
+    }
     const ch = source[i] ?? "";
     const next = source[i + 1] ?? "";
-    if (hashComments && ch === "#" && next !== "[" && next !== "!") {
+    if (equalsBlockComments && ch === "=" && endOfEqualsBlockComment(source, i) !== -1) {
+      const end = endOfEqualsBlockComment(source, i);
+      i = blankComments ? blank(out, i, end) : end;
+    } else if (dollarSlashyStrings && ch === "$" && endOfDollarSlashy(source, i) !== -1) {
+      i = blank(out, i, endOfDollarSlashy(source, i));
+      endsExpression = true;
+      lastWord = "";
+    } else if (
+      hashComments &&
+      ch === "#" &&
+      (hashBracketComments || next !== "[") &&
+      // Only the first line's `#!` is a shebang. Anywhere else the two
+      // characters open an ordinary comment, and leaving it to the code
+      // scanner let an apostrophe in it open a string.
+      (next !== "!" || i > 0)
+    ) {
       const end = endOfLineComment(source, i);
       i = blankComments ? blank(out, i, end) : end;
     } else if (tripleQuoted && (ch === '"' || ch === "'") && source.startsWith(ch.repeat(3), i)) {
-      i = blank(out, i, endOfTripleQuoted(source, i, ch.repeat(3)));
+      i = blank(out, i, endOfTripleQuoted(source, i, ch.repeat(3), rawTripleQuoted));
       endsExpression = true;
       lastWord = "";
-    } else if (ch === "/" && next === "/") {
+    } else if (parenStarComments && ch === "(" && next === "*") {
+      const end = endOfParenStarComment(source, i);
+      i = blankComments ? blank(out, i, end) : end;
+    } else if (
+      verbatimStrings &&
+      (ch === "@" || ch === '"') &&
+      endOfVerbatimString(source, i) !== -1
+    ) {
+      i = blank(out, i, endOfVerbatimString(source, i));
+      endsExpression = true;
+      lastWord = "";
+    } else if (slashComments && ch === "/" && next === "/") {
       const end = endOfLineComment(source, i);
       i = blankComments ? blank(out, i, end) : end;
     } else if (ch === "/" && next === "*") {
-      const end = endOfBlockComment(source, i);
+      const end = nestedBlockComments
+        ? endOfNestedBlockComment(source, i)
+        : endOfBlockComment(source, i);
       i = blankComments ? blank(out, i, end) : end;
+    } else if (
+      percentLiterals &&
+      ch === "%" &&
+      // A typed literal names itself: `%q{…}` is one wherever it stands, and a
+      // command argument such as `logger.debug %q{…}` follows an identifier. The
+      // bare form is the ambiguous one, and only it waits for a position where a
+      // modulo operator cannot be.
+      (/[A-Za-z]/.test(next) || !endsExpression)
+    ) {
+      const end = endOfPercentLiteral(source, i);
+      if (end === -1) {
+        i += 1;
+        endsExpression = false;
+      } else {
+        i = blank(out, i, end);
+        endsExpression = true;
+        lastWord = "";
+      }
+    } else if (phpHeredocs && ch === "<" && next === "<" && endOfPhpHeredoc(source, i) !== -1) {
+      const end = endOfPhpHeredoc(source, i);
+      // The header stays: it is code, and only the body it opens is a literal.
+      const bodyStart = source.indexOf("\n", i);
+      i = bodyStart === -1 ? end : blank(out, bodyStart, end);
+      endsExpression = true;
+      lastWord = "";
+    } else if (
+      rustRawStrings &&
+      (ch === "r" || ch === "b" || ch === "c") &&
+      endOfRustRawString(source, i) !== -1 &&
+      !WORD.test(source[i - 1] ?? "")
+    ) {
+      i = blank(out, i, endOfRustRawString(source, i));
+      endsExpression = true;
+      lastWord = "";
+    } else if (percentLiterals && ch === "<" && next === "<") {
+      const end = endOfHeredoc(source, i);
+      if (end === -1) {
+        i += 2;
+        endsExpression = false;
+      } else {
+        // The header stays: it is code, and only the body it opens is a
+        // literal. So does the rest of the line — `[<<A, <<B]` opens two, and
+        // jumping to the first body left the second opener unread.
+        const bodyStart = source.indexOf("\n", i);
+        if (bodyStart === -1) {
+          i = end;
+        } else {
+          blank(out, bodyStart, end);
+          heredocFrom = bodyStart;
+          heredocTo = Math.max(heredocTo, end);
+          i += 2;
+        }
+        endsExpression = true;
+        lastWord = "";
+      }
+    } else if (lifetimes && ch === "'") {
+      const end = endOfCharLiteral(source, i);
+      if (end === -1) {
+        // A lifetime, so the apostrophe names nothing and closes nothing.
+        i += 1;
+        endsExpression = true;
+      } else {
+        i = blank(out, i, end);
+        endsExpression = true;
+        lastWord = "";
+      }
     } else if (ch === "'" || ch === '"') {
-      i = blank(out, i, endOfQuoted(source, i, ch));
+      i = blank(out, i, endOfQuoted(source, i, ch, multilineQuoted));
       endsExpression = true;
       lastWord = "";
     } else if (ch === "`") {
-      i = blank(out, i, endOfTemplate(source, i));
+      i = blank(out, i, rawBacktick ? endOfRawBacktick(source, i) : endOfTemplate(source, i));
       endsExpression = true;
       lastWord = "";
-    } else if (ch === "/" && !endsExpression) {
-      i = blank(out, i, endOfRegexLiteral(source, i));
+    } else if (regexLiterals && ch === "/" && !endsExpression) {
+      i = blank(out, i, endOfRegexLiteral(source, i, multilineSlashy));
       endsExpression = true;
       lastWord = "";
     } else if (WORD.test(ch)) {
@@ -269,7 +783,7 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
         i += 1;
       }
       lastWord = source.slice(start, i);
-      endsExpression = !REGEX_AFTER_KEYWORD.has(lastWord);
+      endsExpression = !regexAfterWords.has(lastWord);
     } else {
       if (!SPACE.test(ch)) {
         if (ch === "(") {
@@ -289,6 +803,10 @@ export function maskJsNonCode(source: string, options: JsMaskOptions = {}): stri
       }
       i += 1;
     }
+  }
+  const dataSection = options.dataSectionMarker?.exec(source) ?? null;
+  if (dataSection !== null) {
+    blank(out, dataSection.index + dataSection[0].length, source.length);
   }
   return out.join("");
 }

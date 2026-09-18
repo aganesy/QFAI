@@ -279,7 +279,13 @@ describe.each(TREES)("%s", (tree) => {
     const memory = skill.slice(skill.indexOf("project_memory:"));
 
     expect(memory).toContain("one row per independently observable boundary");
+    expect(memory).toContain("Each TC group seeds at least one row per TC from `06_Test-Cases.md`");
+    expect(memory).toContain("independent TCs never share a row");
     expect(memory).toContain("always have the kept row re-executed");
+    expect(memory).toContain(
+      "Before re-execution or the downstream reset, narrow the kept matrix row's `Selector` to the chosen boundary",
+    );
+    expect(memory).toContain("appended rows cover only the remaining boundaries");
     expect(memory).toContain("columns are migrated to the template's");
   });
 
