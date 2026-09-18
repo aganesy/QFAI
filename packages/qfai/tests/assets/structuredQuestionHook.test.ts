@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { STRUCTURED_QUESTION_HOOK_MARKER } from "../../src/core/claudeCodeHooks.js";
+import { projectDirOf, runReminderHook } from "../helpers/reminderHooks.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -43,9 +44,13 @@ function promptGroup(settings: Settings): Group {
   return group;
 }
 
-/** The payload the group's entries carry, as one string. */
-const payloadOf = (group: Group): string =>
-  group.hooks.map((hook) => (hook.args ?? []).join(" ")).join(" ");
+/** What the group's entries print, run against the project the settings file serves. */
+async function payloadOf(rel: string, group: Group): Promise<string> {
+  const outputs = await Promise.all(
+    group.hooks.map((hook) => runReminderHook(hook, projectDirOf(repoRoot, rel))),
+  );
+  return outputs.join(" ");
+}
 
 describe("the structured-question reminder", () => {
   it.each(SETTINGS)("%s fires on every turn, not once", async (rel) => {
@@ -64,14 +69,14 @@ describe("the structured-question reminder", () => {
     // needs intent, and a false positive on a hook that fires every turn stops
     // the session outright.
     const settings = await readSettings(rel);
-    const payload = payloadOf(promptGroup(settings));
+    const payload = await payloadOf(rel, promptGroup(settings));
     expect(payload).toContain("additionalContext");
     expect(payload).not.toContain("permissionDecision");
   });
 
   it.each(SETTINGS)("%s runs node directly, with no shell", async (rel) => {
-    // No shell, no file reads, no network, so a hook on every turn cannot
-    // itself fail the session it is attached to.
+    // No shell and no network, and a missing message prints nothing, so a hook
+    // on every turn cannot itself fail the session it is attached to.
     const settings = await readSettings(rel);
     for (const hook of promptGroup(settings).hooks) {
       expect(hook.type).toBe("command");
@@ -85,7 +90,7 @@ describe("the structured-question reminder", () => {
     // the rule lives and the one line an agent reaches past when it would
     // rather not ask.
     const settings = await readSettings(rel);
-    const payload = payloadOf(promptGroup(settings));
+    const payload = await payloadOf(rel, promptGroup(settings));
     expect(payload).toContain(".agents/rules/user-questions.md");
     expect(payload).toContain("No question is light enough to skip it");
     // The fallback, so a host without the tool is not read as an exemption.
@@ -104,7 +109,8 @@ describe("the structured-question reminder", () => {
     expect(master).toContain("`UserPromptSubmit`");
     // The two properties a later editor would otherwise have to rediscover.
     expect(master).toMatch(/reminds and never blocks/i);
-    expect(master).toMatch(/no shell, no file reads and no\s+network/);
+    expect(master).toMatch(/no shell and no\s+network/);
+    expect(master).toContain("`.agents/rules/reminders.json`");
   });
 
   it("both settings files carry it", async () => {

@@ -9,6 +9,7 @@ import {
   GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
   GRILLING_PLAN_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
+import { projectDirOf, runReminderHook } from "../helpers/reminderHooks.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -29,6 +30,14 @@ type Settings = { readonly hooks: Record<string, readonly Matcher[] | undefined>
 
 const readSettings = async (rel: string): Promise<Settings> =>
   JSON.parse(await readFile(path.join(repoRoot, rel), "utf-8"));
+
+/** What one group's entries print, run against the project the settings file serves. */
+async function printed(rel: string, group: Matcher): Promise<string> {
+  const outputs = await Promise.all(
+    group.hooks.map((hook) => runReminderHook(hook, projectDirOf(repoRoot, rel))),
+  );
+  return outputs.join(" ");
+}
 
 /** The `PreToolUse` groups, in file order. */
 const groups = (s: Settings): readonly Matcher[] => s.hooks.PreToolUse ?? [];
@@ -83,17 +92,16 @@ describe("the grilling reminder fires where a decision gets made quietly", () =>
     // `additionalContext` is what a reminder emits; a decision field is not.
     const settings = await readSettings(rel);
     for (const [matcher] of MARKERS) {
-      for (const hook of preToolUse(settings, matcher).hooks) {
-        const payload = (hook.args ?? []).join(" ");
-        expect(payload).toContain("additionalContext");
-        expect(payload).not.toContain("permissionDecision");
-      }
+      const payload = await printed(rel, preToolUse(settings, matcher));
+      expect(payload).toContain("additionalContext");
+      expect(payload).not.toContain("permissionDecision");
     }
   });
 
   it.each(SETTINGS)("%s runs node directly, with no shell", async (rel) => {
-    // The pattern the writing-standard reminder established: no shell, no file
-    // reads, no network — so a hook on every write cannot itself fail the run.
+    // The pattern the writing-standard reminder established: no shell and no
+    // network, and a missing message prints nothing — so a hook on every write
+    // cannot itself fail the run.
     const settings = await readSettings(rel);
     for (const [matcher] of MARKERS) {
       for (const hook of preToolUse(settings, matcher).hooks) {
@@ -116,9 +124,7 @@ describe("the grilling reminder fires where a decision gets made quietly", () =>
     // So the reminder names the trigger, names the file, and stops.
     const settings = await readSettings(rel);
     for (const [matcher] of MARKERS) {
-      const payload = preToolUse(settings, matcher)
-        .hooks.map((h) => (h.args ?? []).join(" "))
-        .join(" ");
+      const payload = await printed(rel, preToolUse(settings, matcher));
       expect(payload, `${matcher} does not name the master`).toContain(".agents/rules/grilling.md");
       for (const part of ["frontier", "round", "recommend", "confirmation", "lookup"]) {
         expect(payload.toLowerCase(), `${matcher} restates the method: ${part}`).not.toContain(

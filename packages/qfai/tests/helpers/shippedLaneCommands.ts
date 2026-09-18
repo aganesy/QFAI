@@ -1493,9 +1493,17 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // rule when a pull request, issue or review is posted through the GitHub tools
   // and after a Markdown file is written, and the implementation rule after any
   // file is written or edited. Each entry runs `node` in exec form — no shell, no
-  // file reads, no network — and prints one constant JSON envelope, which
+  // network — and prints one JSON envelope, which
   // `tests/assets/documentationClarityHooks.test.ts` executes and parses. The
   // bytes are what an adopter's agent runs, so the bytes are the pin.
+  //
+  // Re-pinned when the messages left this file. Every entry now runs the same
+  // fixed `node -e` reader with two more arguments: the path
+  // `${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json` and the key of one
+  // message. The reader prints that message, and prints nothing when the file or
+  // the key is missing. Events, matchers, `if` conditions and markers are
+  // unchanged, so a changed message now moves `reminders.json` and not this pin.
+  // Derived by running `qfai init` into a temp root and hashing what it wrote.
   //
   // Re-pinned for the three grilling groups. Derived by running `qfai init` into
   // a temp root and hashing what it wrote. Each group is one `node -e` entry
@@ -1505,7 +1513,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // is silently absent in a project that moved them. The `UserPromptSubmit`
   // group is one more entry of the same shape, on every turn rather than
   // every write.
-  [".claude/settings.json", "67db0c8de2407f1a94338492a99b1f20bf98deeb7fe1f3fd41d9a09cf4c03f59"],
+  [".claude/settings.json", "a7547fbeb12d71170058c068b6fc136353679330bf06c53b6308319c3be6a523"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1654,6 +1662,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/grilling.md",
   "root/.agents/rules/interface-clarity.md",
   "root/.agents/rules/minimal-implementation.md",
+  "root/.agents/rules/reminders.json",
   "root/.agents/rules/root-additions-policy.md",
   "root/.agents/rules/temporary-files.md",
   "root/.agents/rules/user-questions.md",
