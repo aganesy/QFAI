@@ -226,8 +226,8 @@ describe("validateGrillingTrace", () => {
   });
 
   it("reads a table that leaves its outer pipes off", async () => {
-    // GFM writes them as a courtesy. Reading only the pipe-led form found no
-    // rows in a written table and reported the record as missing.
+    // GFM writes them as a courtesy. Reading only the pipe-led form would find
+    // no rows in a written table and report the record as missing.
     await withRoot(async (root) => {
       await evidence(
         root,
@@ -247,9 +247,9 @@ describe("validateGrillingTrace", () => {
   });
 
   it("does not take a later table in the section for the record", async () => {
-    // A section may hold more than one table. Reading to the end of it let the
-    // second table's own header stand in for the row, so adding any table under
-    // a subsection satisfied the check.
+    // A section may hold more than one table. Reading to the end of it would let
+    // the second table's own header stand in for the row, so adding any table
+    // under a subsection would satisfy the check.
     await withRoot(async (root) => {
       await evidence(
         root,
@@ -280,8 +280,8 @@ describe("validateGrillingTrace", () => {
       ["up to three leading spaces", "   ## Pre-draft Grilling"],
     ] as const) {
       it(`admits ${name}`, async () => {
-        // Both are headings in CommonMark. Matching the line exactly reported a
-        // written record as missing for each.
+        // Both are headings in CommonMark. Matching the line exactly would
+        // report a written record as missing for each.
         await withRoot(async (root) => {
           await evidence(
             root,
@@ -296,8 +296,8 @@ describe("validateGrillingTrace", () => {
 
     it("does not take a closing run glued to the text", async () => {
       // CommonMark needs whitespace before a closing run, so `## Title###` is a
-      // heading whose text is `Title###`. Accepting it matched a heading nobody
-      // writes, and a file with no section of its own passed.
+      // heading whose text is `Title###`. Accepting it would match a heading
+      // nobody writes and pass a file with no section of its own.
       await withRoot(async (root) => {
         await evidence(
           root,
@@ -333,7 +333,7 @@ describe("validateGrillingTrace", () => {
     ] as const) {
       it(`${name} reports ${String(findings)}`, async () => {
         // Only the first is a placeholder. A cell carrying a link or a comment
-        // has been written, and dropping its row reported a record that is
+        // has been written, and dropping its row would report a record that is
         // there as missing — against a stage that did the work.
         await withRoot(async (root) => {
           await evidence(root, "sdd-spec-0007.md", withLastCell(cell));
@@ -431,7 +431,7 @@ describe("validateGrillingTrace", () => {
     });
 
     it("reports the shipped example, copied and filled in with nothing", async () => {
-      // The same shortcut the spec template had, on the other stage: an agent
+      // The same shortcut as the spec template's, on the other stage: an agent
       // copies the block the skill shows and replaces none of it.
       await withRoot(async (root) => {
         await evidence(
@@ -703,9 +703,9 @@ describe("validateGrillingTrace", () => {
 
   describe("a table that is not the record", () => {
     it("does not answer for one", async () => {
-      // A section may hold a table about something else. One under the heading
-      // answered for the record it is not: a row was there, which was true, and
-      // it was the session's, which was not.
+      // A section may hold a table about something else. Taken for the record,
+      // it says a row is there, which is true, and that the row is the
+      // session's, which is not.
       await withRoot(async (root) => {
         await evidence(
           root,
@@ -745,9 +745,9 @@ describe("validateGrillingTrace", () => {
       ["## Pre-draft Grilling", "", ...body, ""].join("\n");
 
     it("closes a fence only on its own marker", async () => {
-      // A `~~~` block quoting a backtick line is one block. A toggle that
-      // flipped on any fence-looking line ended it at the inner line and hid
-      // the table that followed the real closer.
+      // A `~~~` block quoting a backtick line is one block. A toggle on any
+      // fence-looking line would end it at the inner line and hide the table
+      // that follows the real closer.
       await withRoot(async (root) => {
         await evidence(root, "sdd-spec-0007.md", under("~~~text", "```", "~~~", "", ...table));
 
@@ -768,9 +768,9 @@ describe("validateGrillingTrace", () => {
     });
 
     it("counts an escaped pipe as cell content", async () => {
-      // `\\|` is content, and counting it as a separator made the header wider
-      // than its own delimiter — so a written table failed the arity check and
-      // its record was reported as missing.
+      // `\\|` is content, and counting it as a separator would make the header
+      // wider than its own delimiter, so a written table would fail the arity
+      // check and its record would be reported as missing.
       await withRoot(async (root) => {
         await evidence(
           root,
@@ -789,7 +789,7 @@ describe("validateGrillingTrace", () => {
     it("leaves a cell holding an email autolink alone", async () => {
       // Every autolink CommonMark admits carries a character a placeholder does
       // not — a URL its scheme colon, an email its `@` — and reading one as a
-      // placeholder dropped its row.
+      // placeholder would drop its row.
       await withRoot(async (root) => {
         await evidence(
           root,
@@ -807,8 +807,8 @@ describe("validateGrillingTrace", () => {
 
     it("ends the section at a heading with no text", async () => {
       // CommonMark admits an empty heading, so a bare `###` opens a subsection
-      // whose title is nothing. Requiring a title read it as prose and carried
-      // on into the table below it.
+      // whose title is nothing. Requiring a title would read it as prose and
+      // carry on into the table below it.
       await withRoot(async (root) => {
         await evidence(root, "sdd-spec-0007.md", under("###", "", ...table));
 
@@ -818,7 +818,8 @@ describe("validateGrillingTrace", () => {
 
     it("does not end the section inside an HTML comment", async () => {
       // A comment's contents are an example of a document rather than part of
-      // one, so a `### Example` inside one ended the section before the table.
+      // one, so a `### Example` inside one must not end the section before the
+      // table.
       await withRoot(async (root) => {
         await evidence(root, "sdd-spec-0007.md", under("<!--", "### Example", "-->", "", ...table));
 
@@ -849,9 +850,9 @@ describe("validateGrillingTrace", () => {
   });
 
   it("does not splice a table across a fence", async () => {
-    // Dropping the fenced lines closed the gap over them, so a header written
-    // above a fence and a delimiter written below it became adjacent and read
-    // as a table the document does not contain.
+    // Dropping the fenced lines would close the gap over them, so a header
+    // written above a fence and a delimiter written below it would become
+    // adjacent and read as a table the document does not contain.
     await withRoot(async (root) => {
       await evidence(
         root,
@@ -875,8 +876,9 @@ describe("validateGrillingTrace", () => {
 
   it("does not take a subsection's table for the record", async () => {
     // A subsection's content belongs to the subsection. The record's rows go
-    // directly under the section heading, so reading past a `###` let a table
-    // that belongs to something else stand in for one the stage never wrote.
+    // directly under the section heading, so reading past a `###` would let a
+    // table that belongs to something else stand in for one the stage never
+    // wrote.
     await withRoot(async (root) => {
       await evidence(
         root,
@@ -901,8 +903,8 @@ describe("validateGrillingTrace", () => {
 
   it("does not open the section on a heading inside a fence", async () => {
     // A fence holds an example of a document rather than part of one. Located
-    // before the fences were dropped, a fenced copy of the heading opened the
-    // section in the middle of a fence and inverted the tracking below it.
+    // before the fences are dropped, a fenced copy of the heading would open the
+    // section in the middle of a fence and invert the tracking below it.
     await withRoot(async (root) => {
       await evidence(
         root,
@@ -926,7 +928,8 @@ describe("validateGrillingTrace", () => {
   it("does not take a break under a line that happens to hold a pipe", async () => {
     // GFM reads a delimiter only under a header of the same width, and a `---`
     // under a paragraph is a setext heading rather than a table. Matched on
-    // shape alone, the break took the role and what followed read as rows.
+    // shape alone, the break would take the role and what follows would read as
+    // rows.
     await withRoot(async (root) => {
       await evidence(
         root,
@@ -940,7 +943,8 @@ describe("validateGrillingTrace", () => {
 
   it("does not take a thematic break for a delimiter", async () => {
     // GFM puts a delimiter under a header and nowhere else. Matched anywhere,
-    // a break took the role and whatever followed it read as the table's rows.
+    // a break would take the role and whatever follows it would read as the
+    // table's rows.
     await withRoot(async (root) => {
       await evidence(
         root,
@@ -956,8 +960,8 @@ describe("validateGrillingTrace", () => {
 
   it("does not take a repeated delimiter for a row", async () => {
     // A second delimiter is the table's furniture. Its cells are neither empty
-    // nor placeholders, so counting it let a copied table with two delimiters
-    // and no data of its own satisfy the check.
+    // nor placeholders, so counting it would let a copied table with two
+    // delimiters and no data of its own satisfy the check.
     await withRoot(async (root) => {
       await evidence(
         root,
@@ -978,9 +982,9 @@ describe("validateGrillingTrace", () => {
 
   it("reports an owed record that is a directory rather than throwing", async () => {
     // An owed name comes from the stage's run list rather than from the
-    // listing, so it can be anything on disk. Reading it unconditionally threw
-    // `EISDIR` out of the whole command — a crash where the finding is what an
-    // operator needs.
+    // listing, so it can be anything on disk. Reading it unconditionally would
+    // throw `EISDIR` out of the whole command — a crash where the finding is
+    // what an operator needs.
     await withRoot(async (root) => {
       await pack(root, `discussion-${NEWER}`);
       await mkdir(path.join(root, ".qfai", "evidence", `discussion-${NEWER}.md`), {
