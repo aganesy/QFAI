@@ -455,20 +455,19 @@ const TDD_LIST_EXECUTION_STATE_CODES: readonly string[] = EMITTED_RULE_CODES.fil
  *
  * The keys mirror the composition in `core/validate.ts#runFullValidators`, so
  * "what a partial profile did not evaluate" can be derived as
- * `full groups - profile groups` instead of being restated per profile. The
- * earlier hand-written per-profile lists named only the three headline
- * families and therefore claimed, for example, that `--profile tdd` had
- * evaluated repository hygiene (`QFAI-HYG-*`) when `runTddValidators` never
- * calls it.
+ * `full groups - profile groups` instead of being restated per profile. A
+ * hand-written list per profile that names only the three headline families
+ * claims, for example, that `--profile tdd` evaluated repository hygiene
+ * (`QFAI-HYG-*`), which `runTddValidators` never calls.
  *
  * A group is a **set of validators**, not a code prefix, because a prefix is
- * not a partition of the validator set. Three shapes broke the earlier prefix
- * table:
+ * not a partition of the validator set. Three shapes keep a prefix table from
+ * working:
  *
  *   - `validateContracts` and `validateTraceability` are called by both
  *     `runSddValidators` and `runTddValidators`, so `QFAI-CONTRACT-*` /
  *     `QFAI-TRACE-*` cannot sit in either profile's own group — a `tdd` run
- *     listed as unevaluated a family it had just emitted. The wildcard cannot
+ *     would list as unevaluated a family it had just emitted. The wildcard cannot
  *     stand in for the shared work either: `QFAI-CONTRACT-030` belongs to the
  *     sdd-only `validateContractReferences`, so a shared entry spelled
  *     `QFAI-CONTRACT-*` would let a stage claim coverage of a hard gate it
@@ -487,8 +486,8 @@ const TDD_LIST_EXECUTION_STATE_CODES: readonly string[] = EMITTED_RULE_CODES.fil
  *   - The reviewer-gate `R-*` codes split by emitter, not by prefix:
  *     `detectMockHrefDrift`, `validateDesignMdPatchZone` and
  *     `detectEvidenceMutationUnlogged` run only in prototyping, the rest only
- *     in sdd. The wildcard made `--profile sdd` claim coverage of detectors it
- *     never ran. Emitter, not detector, is the unit: `runSddValidators` also
+ *     in sdd. A wildcard would make `--profile sdd` claim coverage of detectors
+ *     it never ran. Emitter, not detector, is the unit: `runSddValidators` also
  *     calls `validateReviewerJustification`, which re-issues a
  *     justification-catalog code verbatim when a JSON report anywhere under
  *     `.qfai/review/` carries a finding with an empty `justification:` — so the
@@ -501,8 +500,8 @@ const TDD_LIST_EXECUTION_STATE_CODES: readonly string[] = EMITTED_RULE_CODES.fil
  *
  * Whichever form an entry takes, it must cover **every** code its gate emits:
  * a gate that gains a second code would otherwise drop out of the notice
- * unannounced, which is how `QFAI-TEST-001` alone came to under-state what
- * `--profile tdd` had skipped once `QFAI-TEST-002` / `QFAI-TEST-003` existed.
+ * unannounced, and an entry naming only a gate's first code under-states what
+ * a profile skipped.
  * So: a prefix glob where the gate owns its whole prefix, enumerated codes
  * where it owns only part of one — and then the split has to partition the
  * prefix rather than sample it. `tdd-ledger-seed` takes the tighter form
@@ -519,16 +518,16 @@ export const GATE_GROUP_FAMILIES = {
   // One group per stage, because one validator answers for two and each
   // profile runs half of it. `runSddValidators` passes `subjects: ["spec"]` and
   // `runDiscussionValidators` passes `subjects: ["discussion"]`, so a single
-  // `QFAI-GRILL-*` family was claimed whole by both while neither evaluated it
-  // whole — the notice reported partial coverage as complete. This is what
-  // `contracts` / `contract-references` and `traceability-code-references`
-  // above were split for, and the split needs two codes because a family of one
-  // cannot be halved by pattern.
+  // `QFAI-GRILL-*` family would be claimed whole by both while neither evaluates
+  // it whole, and the notice would report partial coverage as complete. The
+  // groups `contracts` / `contract-references` and `traceability-code-references`
+  // above are split for the same reason, and this split needs two codes because
+  // a family of one cannot be halved by pattern.
   "grilling-spec": ["QFAI-GRILL-001"],
   "grilling-discussion": ["QFAI-GRILL-002"],
   // `validateResearchSummary` and `runCanonicalUixValidators` are called from
   // both `runDiscussionValidators` and `runUiuxValidators`, so neither can sit
-  // inside `discussion`: a prototyping run listed as unevaluated a family it
+  // inside `discussion`: a prototyping run would list as unevaluated a family it
   // had just emitted.
   "research-summary": ["QFAI-RESEARCH-*"],
   // Enumerated. This entry WAS `["UIX-VAL-*"]`, and that glob is a PREFIX of
@@ -743,7 +742,6 @@ export const GATE_GROUP_FAMILIES = {
   prototyping: [
     "QFAI-PROT-*",
     "QFAI-CRIT-*",
-    "QFAI-FID-*",
     "QFAI-UIE-*",
     "QFAI-DT-*",
     "QFAI-MOCK-*",
