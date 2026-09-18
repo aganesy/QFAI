@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The root assistant tree is linked at the assets the package ships** (#1915, #1916).
+  `.qfai/assistant/**` was a byte copy of `packages/qfai/assets/init/.qfai/assistant/**`,
+  kept in step by a sync script and a tracked-tree diff. It is thirteen symlinks
+  now, so an improvement to a shipped skill reaches the agents working in this
+  repository with no sync step and the two cannot disagree. Seven paths stay real
+  files: the four Stage 0 catalog documents a project owns, named by
+  `ADOPTER_OWNED_ASSETS`, and the migration memos an upgrade writes here.
+  `scripts/link-assistant-tree.mjs` creates and verifies the links and reports a
+  path that exists here and nowhere in the package; `pnpm ci:lint` runs its check.
+  `scripts/sync-init-to-root.mjs` is reduced to seeding the two files a project
+  owns.
+
 - **A guard on the mode a link is staged with** (#1920). `ln -s` in Git Bash on
   Windows copies the target instead of linking to it unless
   `MSYS=winsymlinks:nativestrict` is set, and the copy is byte-identical — so
