@@ -142,16 +142,6 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-DCON-012",
   "QFAI-DCON-013",
   "QFAI-DCON-033",
-  // validators/designFidelity.ts — statically attributable fidelity gates
-  "QFAI-FID-001",
-  "QFAI-FID-002",
-  "QFAI-FID-003",
-  "QFAI-FID-004",
-  "QFAI-FID-005",
-  "QFAI-FID-006",
-  "QFAI-FID-007",
-  "QFAI-FID-008",
-  "QFAI-FID-009",
   // validators/designToken.ts
   "QFAI-DT-001",
   "QFAI-DT-002",
