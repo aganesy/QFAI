@@ -271,6 +271,7 @@
     "tests/scripts/trackedScratch.test.ts",
     "tests/scripts/boundedRead.test.ts",
     "tests/scripts/checkDocClarity.test.ts",
+    "tests/scripts/checkTrackedReadmes.test.ts",
     "tests/scripts/assistantTreeLinks.test.ts",
     "tests/scripts/checkTrackedSymlinks.test.ts",
     "tests/scripts/checkShippedCiParity.test.ts",
