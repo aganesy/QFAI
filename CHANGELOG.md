@@ -206,6 +206,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A procurement row must name a screen a UI contract declares** (#1777). A
+  `prototype-handoff.yaml#procurement` row whose `screen` was a typo, or a
+  screen renamed since, passed the shape check while naming a region nobody
+  could locate. The row is now reported under `QFAI-DCON-013` unless its
+  screen is one the contracts under `<contractsDir>/ui/` declare. A project
+  with no UI contract is left to the readiness gate, which already reports it,
+  and `region` stays prose: a screen contract names a screen, not its parts.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
