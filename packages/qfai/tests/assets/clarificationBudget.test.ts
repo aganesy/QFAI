@@ -200,7 +200,19 @@ describe("the clarification budget binds a stage", () => {
       // has to permit what Article X permits. Forbidding the labelled value
       // outright here left a `--auto` discussion run choosing between omitting a
       // required field and breaking the protocol.
-      expectPhrase(content, "opens each\n  node it could not settle as a question");
+      expectPhrase(
+        content,
+        "each node it could not settle is opened as a question in the register the stage reads",
+      );
+      // A delegated session still adopts its non-critical decisions under
+      // `--auto`; only the nodes adoption cannot settle are opened.
+      expectPhrase(content, "a delegated one still adopts every decision that is not critical");
+      // The session's end condition is stated for both kinds, so neither runs
+      // to a count.
+      expectPhrase(
+        content,
+        "for a delegated one no open node and an answer to every critical decision",
+      );
       // Each node, not each decision: a fact only the user holds cannot be
       // settled from evidence either.
       expectPhrase(content, "Each\n  node, not each decision");

@@ -258,7 +258,11 @@ function MaskBodyExamples([string]$Body, [switch]$SetextHeadings) {
           $htmlEnd = '\?>'
         } elseif ($htmlLine -match '^<![A-Za-z]') {
           $htmlEnd = '>'
-        } elseif ($htmlLine -cmatch '^<!\[CDATA\[') {
+        } elseif ($htmlLine -match '^<!\[CDATA\[') {
+          # Case-insensitive, which CommonMark is not. GitHub hides the
+          # lowercase lookalike exactly as it hides the spelled form, so
+          # reading only the uppercase one accepted an answer no reader of
+          # the rendered body can see.
           $htmlEnd = '\]\]>'
         } elseif ($htmlLine -match '^</?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|/>|$)') {
           $htmlEnd = '^[ \t]*\r?$'
@@ -490,10 +494,10 @@ function StripAutoImport([string]$Body) {
   return $normalized
 }
 
-function RemovalAnswer([string]$Body) {
+function DescriptionAnswer([string]$Body, [string]$HeadingPattern) {
   $raw = StripAutoImport $Body
   $text = MaskBodyExamples $raw -SetextHeadings
-  $match = [regex]::Match($text, '(?ms)^ {0,3}## What (?:this|a) change made unnecessary(?:[ \t]+#+)?[ \t]*\n(?<answer>.*?)(?=^ {0,3}#{1,2}(?:[ \t]|$)|\z)')
+  $match = [regex]::Match($text, '(?ms)^ {0,3}## ' + $HeadingPattern + '(?:[ \t]+#+)?[ \t]*\n(?<answer>.*?)(?=^ {0,3}#{1,2}(?:[ \t]|$)|\z)')
   if (-not $match.Success) { return "" }
   $answer = $match.Groups['answer']
   # A quote and a list marker interleave, and one pass per kind left the
@@ -527,4 +531,17 @@ function RemovalAnswer([string]$Body) {
   $meaningful = [regex]::Replace($meaningful, '^(?:#{1,6}[ 	]+|>[ 	]*)+', '').Trim()
   if ($meaningful -notmatch '[\p{L}\p{N}]' -or $meaningful -match '^(?:TBD|TODO|FIXME|HACK)(?:[^\p{L}\p{N}]|$)' -or $meaningful -match '^(?:TBD|TODO|FIXME|HACK|None|N/?A|Not applicable|\[.*\])\.?$') { return "" }
   return [regex]::Replace($raw.Substring($answer.Index, $answer.Length).TrimEnd(), '\A(?:[ \t]*\n)*', '')
+}
+
+# The two authored answers are read the same way and differ only in their
+# heading, so one reader answers both and neither drifts from the other.
+$script:RemovalHeadingPattern = 'What (?:this|a) change made unnecessary'
+$script:AdoptionHeadingPattern = 'Adoption bar'
+
+function RemovalAnswer([string]$Body) {
+  return DescriptionAnswer $Body $script:RemovalHeadingPattern
+}
+
+function AdoptionAnswer([string]$Body) {
+  return DescriptionAnswer $Body $script:AdoptionHeadingPattern
 }

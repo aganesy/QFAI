@@ -72,7 +72,75 @@ describe.each(TREES)("%s", (rel) => {
     // for what the repository already holds.
     expectPhrase(master, "## Facts are yours, decisions are theirs");
     expectPhrase(master, "Never ask the user for something you could look up.");
-    expectPhrase(master, "An agent that answers its own decisions has not read this rule");
+    // A decision's owner depends on the session. In a user session the agent
+    // waits; in a delegated one the recommendation settles it only after the
+    // rounds, and never a critical one.
+    expectPhrase(master, "In a user session a decision is the user's, and you wait for it.");
+    expectPhrase(master, "An agent that answers its own decisions there has not read this rule");
+    expectPhrase(
+      master,
+      "In a delegated session a decision takes the griller's recommendation, reached in rounds and recorded.",
+    );
+    expectPhrase(master, "never skips the rounds,\nand never takes a critical decision");
+  });
+
+  it("makes a delegated session the default, and names the one user session", async () => {
+    const master = await read(rel);
+    // Asked every design question of a routine stage, a user answers most by
+    // accepting the recommendation. The default spends their attention only
+    // where their answer can differ from it.
+    expectPhrase(master, "## Two kinds of session");
+    expectPhrase(master, "**Delegated is the default.**");
+    expectPhrase(master, "The discussion stage is that stage: there the interview is\nthe work.");
+    expectPhrase(
+      master,
+      "After two rounds every decision that is not\ncritical takes the griller's recommendation, whether the authors agreed with it\nor not.",
+    );
+  });
+
+  it("names the critical decisions that reach the user in every session", async () => {
+    const master = await read(rel);
+    // Each class is one a wrong recommendation cannot be repaired from, or one
+    // the agents would have to invent. Nothing else is critical, so doubt about
+    // a recommendation cannot be used to send every decision back to the user.
+    expectPhrase(master, "### Critical decisions");
+    expectPhrase(master, "It contradicts a spec, a contract or a recorded decision");
+    expectPhrase(master, "Its effect cannot be taken back");
+    expectPhrase(
+      master,
+      "It rests on product or business intent that the request, the discussion pack, the specs and the contracts all leave unstated",
+    );
+    expectPhrase(master, "Nothing else is critical.");
+  });
+
+  it("records every adopted decision and reports it without waiting", async () => {
+    const master = await read(rel);
+    // An adopted decision the user cannot see is one they cannot overturn.
+    expectPhrase(master, "### What an adopted decision owes");
+    expectPhrase(master, "A position that disagreed stays beside it.");
+    expectPhrase(master, "The report does not wait for an answer.");
+  });
+
+  it("keeps what the request did not ask for off the tree", async () => {
+    const master = await read(rel);
+    // A menu answered "as recommended" builds all of it, so an addition is not
+    // a node, and the recommendation among real options is the smallest.
+    expectPhrase(master, "## The request bounds the tree");
+    expectPhrase(master, "is not a node. Leave the thing out, and do not ask.");
+    expectPhrase(master, "recommend the one that adds least beyond\n  what was asked");
+    expectPhrase(master, "An addition nobody can point to\n  is dropped, not adopted.");
+  });
+
+  it("names five endings, and `adopted` is the delegated one", async () => {
+    const master = await read(rel);
+    expectPhrase(master, "### The five endings");
+    expect(master).toMatch(
+      /^\| `adopted` +\| A delegated session: no node open, every critical decision answered by the user/m,
+    );
+    expectPhrase(
+      master,
+      "It **completes** when no\nnode is open and every critical decision has the user's answer, and it ends\n`adopted`.",
+    );
   });
 
   it("carries no recommendation on a question that asks for a fact", async () => {
