@@ -692,6 +692,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   first, and the second is named. The prototyping profile, which certification
   accepts, reports the finding as well.
 
+- **The completion gate reads `RED failure mode` as the round field the skill
+  writes** (#1633). `round-evidence.md` puts the field under the round prefix,
+  because a blocking revision opens a round on its own tree, and one row-level
+  field cannot hold a falsifiability proof for one round and an observed RED for
+  the next. The gate read only the row-level form, so an entry written as the
+  skill says was reported as having no failure mode. Each round's
+  `Round N: RED failure mode` is now checked against that round's RED. An
+  entry that states the field once, without the prefix, still answers for every
+  round that states none.
+
 - **A ledger row observes the property it owns** (#1700). One prototyping-loop
   test asserted five properties of the cycle-0 hard reset in a single case, and
   a ledger row owning one of them, the `fullHarness` deletion, named no case at
