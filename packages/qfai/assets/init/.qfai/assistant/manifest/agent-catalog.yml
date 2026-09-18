@@ -1226,6 +1226,7 @@ agents:
         `.agents/rules/minimal-implementation.md` § 2.
         Use this route only where the installed Article VII governs the artifact.
         Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
+      - Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
 
       ## Inputs you must read
 
@@ -1380,6 +1381,7 @@ agents:
         `.agents/rules/minimal-implementation.md` § 2.
         Use this route only where the installed Article VII governs the artifact.
         Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
+      - Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
 
       ## Inputs you must read
 
@@ -1461,6 +1463,7 @@ agents:
         `.agents/rules/minimal-implementation.md` § 2.
         Use this route only where the installed Article VII governs the artifact.
         Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
+      - Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: ask whether a catalogue covered the need, and whether a language or framework standard was passed over for a hand-rolled one.
 
       ## Inputs you must read
@@ -1609,6 +1612,7 @@ agents:
         `.github/instructions/principles.instructions.md` and this count never ask for
         opposite things about the same code.
 
+      - Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a component written where one could be installed, a standard passed over, and an authored region with no recorded reason.
 
       ## Inputs you must read
@@ -1753,6 +1757,7 @@ agents:
         `.agents/rules/minimal-implementation.md` § 2.
         Use this route only where the installed Article VII governs the artifact.
         Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
+      - Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
       - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 
@@ -1851,6 +1856,7 @@ agents:
         `.agents/rules/minimal-implementation.md` § 2.
         Use this route only where the installed Article VII governs the artifact.
         Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
+      - Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
 
       ## Ownership boundaries
 

@@ -31,7 +31,7 @@
  * swapped, which is a different and nonsensical authorisation.
  *
  * Not covered here, deliberately: the two trees being byte-identical.
- * `tests/scripts/syncInitStaleDetection.test.ts` runs
+ * `tests/scripts/assistantTreeLinks.test.ts` runs
  * `sync-init-to-root.mjs --check`, which compares every mirrored path with
  * `Buffer.equals` in both directions. Repeating it would be a second, weaker
  * spelling of an invariant that already fails loudly.
@@ -58,7 +58,7 @@ const TRACE = "assistant/skills/qfai-sdd/references/spec-traceability-rules.md";
 // Read as source text, not imported: `selectorResolves` and
 // `TEST_FILE_CHECK_STATUSES` are module-private, and exporting them purely to
 // let a test observe them would widen the validator's API for no runtime
-// reason. `tests/scripts/syncInitStaleDetection.test.ts` reads its subject the
+// reason. `tests/scripts/assistantTreeLinks.test.ts` reads its subject the
 // same way.
 const VALIDATOR = "packages/qfai/src/core/validators/tddList.ts";
 
