@@ -38,7 +38,7 @@ spec-claimed paths in other specs were never checked, so the column is not decor
 | `packages/qfai/scripts/check-branch-version-pin.sh`                  | present     | Stays in the lint lane. This spec changes which lane runs it, never its rule set.                                             |
 | `packages/qfai/scripts/check-pack-locations.mjs`                     | present     | Existing `ci:lint` member; the precedent for a bare-`R-` script-emitted lint code.                                            |
 | `scripts/verify-pack.mjs`                                            | present     | The binding allow-list over the shipped `.github/`. It is why the composite action cannot ship.                               |
-| `scripts/sync-init-to-root.mjs`                                      | present     | Mirrors the whole asset tree recursively, so a new catalog file needs no script change — only a sync run.                     |
+| `scripts/link-assistant-tree.mjs`                                    | present     | Links the assistant tree at the shipped assets, so a new catalog file needs no script change — only a link run.               |
 | `packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml` | present     | Scanned by the hygiene lane, authored by `spec-0003`. This spec never edits it.                                               |
 | `packages/qfai/tests/assets/assets.test.ts`                          | present     | Asserts floating major-version references in the shipped workflow. Its co-change is `spec-0003`'s obligation, not ours.       |
 

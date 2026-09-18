@@ -271,8 +271,9 @@ this spec owns the own-CI half only.
   routing, which the catalog marks as not enforced, and extending the built-in token set to
   legalize CI vocabulary is rejected. **It must be authored under
   `packages/qfai/assets/init/.qfai/assistant/catalog/`**: the root `.qfai/assistant/**` tree is
-  SSOT-synced from assets by `scripts/sync-init-to-root.mjs`, so editing the root copy directly is
-  reverted by `pnpm sync:ssot` and fails `git diff --exit-code .qfai/` in `pnpm ci:gate` (DTC-20).
+  symlinked at those assets by `scripts/link-assistant-tree.mjs`, so the root path resolves to the
+  asset file and there is no second copy to edit. A root path that is a regular file where a link
+  belongs fails `link-assistant-tree --check` in `pnpm ci:lint` (DTC-20).
   (upstream: `discussion-20260804173914356#REQ-0023`, `both` — own-CI half, should)
 - REQ-0015: Retire the repository's duplicate of the shipped validate workflow — the repository's
   own copy is removed and its full-profile run is folded into the existing `build` job, which

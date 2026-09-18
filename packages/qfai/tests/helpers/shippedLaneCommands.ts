@@ -1342,8 +1342,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned for the review directive the run now writes into the golden rules: one line
     // pointing at the project's own review policy. Derived the same way; removing that line
     // from the written file reproduces `0dbc8fe1…` byte for byte.
+    //
+    // Re-pinned for the grilling bullet, which now says agents grill each other outside the
+    // discussion stage and only a critical decision reaches the user. Derived by running
+    // `qfai init` into a temp root; restoring the old wording reproduces `fe028cb8…` byte for byte.
     ".github/copilot-instructions.md",
-    "fe028cb8915f820d104ba4ee3423b63a059793849148827a94fe06aa295c1d00",
+    "7f4f473a71660f6fe887ca1ee706af54fa34566d443120a0729256c3c0f02fcc",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1486,16 +1490,29 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // a later run adds it when it is missing. Derived by running `qfai init` into a
   // temp root; dropping the line and restoring the old sentence in both written
   // files reproduces `4317f660…` and `40e0888f…` byte for byte.
-  ["AGENTS.md", "d2a68a944b17375a0d07e4b46420e0a7612f546030d715e6307c91f93d410a6c"],
-  ["CLAUDE.md", "cbcc684160d472857160cd28e1ca23e1bdfb75c90807703bf629eb6cae9737f1"],
+  //
+  // Re-pinned for the grilling bullet, which now says agents grill each other outside the
+  // discussion stage and only a critical decision reaches the user. Derived by running `qfai init`
+  // into a temp root; restoring the old wording in both written files reproduces `d2a68a94…` and
+  // `cbcc6841…` byte for byte.
+  ["AGENTS.md", "66f2f506c9a2e5c219efc85665e09dbeec271d127fc28e1d10428beb6e71550f"],
+  ["CLAUDE.md", "bf6a52afb3cd0ed63fbb7f6f9ad18cb9b9309d103a6a8d23d87022b66816ab1d"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
   // and after a Markdown file is written, and the implementation rule after any
   // file is written or edited. Each entry runs `node` in exec form — no shell, no
-  // file reads, no network — and prints one constant JSON envelope, which
+  // network — and prints one JSON envelope, which
   // `tests/assets/documentationClarityHooks.test.ts` executes and parses. The
   // bytes are what an adopter's agent runs, so the bytes are the pin.
+  //
+  // Re-pinned when the messages left this file. Every entry now runs the same
+  // fixed `node -e` reader with two more arguments: the path
+  // `${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json` and the key of one
+  // message. The reader prints that message, and prints nothing when the file or
+  // the key is missing. Events, matchers, `if` conditions and markers are
+  // unchanged, so a changed message now moves `reminders.json` and not this pin.
+  // Derived by running `qfai init` into a temp root and hashing what it wrote.
   //
   // Re-pinned for the three grilling groups. Derived by running `qfai init` into
   // a temp root and hashing what it wrote. Each group is one `node -e` entry
@@ -1505,7 +1522,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // is silently absent in a project that moved them. The `UserPromptSubmit`
   // group is one more entry of the same shape, on every turn rather than
   // every write.
-  [".claude/settings.json", "67db0c8de2407f1a94338492a99b1f20bf98deeb7fe1f3fd41d9a09cf4c03f59"],
+  //
+  // The grilling groups were also reworded to say who answers: agents outside the discussion
+  // stage, and the user only for a critical decision (`2fc70e4a…` with the text inline). The
+  // merged file carries both changes: that wording lives in `reminders.json`, so the settings
+  // file is the reader layout above, and the digest is the one that layout already had. Derived
+  // again by running `qfai init` into a temp root after the merge.
+  [".claude/settings.json", "a7547fbeb12d71170058c068b6fc136353679330bf06c53b6308319c3be6a523"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1654,6 +1677,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/grilling.md",
   "root/.agents/rules/interface-clarity.md",
   "root/.agents/rules/minimal-implementation.md",
+  "root/.agents/rules/reminders.json",
   "root/.agents/rules/root-additions-policy.md",
   "root/.agents/rules/temporary-files.md",
   "root/.agents/rules/user-questions.md",

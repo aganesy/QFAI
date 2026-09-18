@@ -248,12 +248,13 @@
         "scripts/lib/bounded-read.mjs": "1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444",
         "scripts/lib/ts-specifier-hook.mjs": "b6501b31043719b5bb131994fce0aa3ed28b8bf6b4e8d77035610778681dad24",
         "scripts/lib/write-declaration.mjs": "cfdd1a0a2dc37ce06a183338e3550e9d6bd169ef633cc0cfbd1110d19d5e9dc9",
+        "scripts/link-assistant-tree.mjs": "75e4742e36f847622eac505365ea28f700295b2699d2d3faf591b8036600bc0e",
         "scripts/pin-cli-message-allowlist-count.mjs": "635753d2a837eba74efc62b11dcc6b2174da26988f899317f4c547b07733d71e",
         "scripts/pin-guard-bytes.mjs": "4c914d40d0dc75cf623fe0cab2110a0106a5f519d4a258fa05891b612f929c97",
         "scripts/pin-stage-evidence-counts.mjs": "9cf2034c8ce05387e50b7b22c0cd33f2e5ff4544f3e5913e469786044a201099",
         "scripts/pin-verification-bodies.mjs": "ada370be9bd4d331a705d5a02e01ba4d4f378c862ddc62680af9ad831eb881cf",
         "scripts/run-lint-checks.sh": "9d58c7ef0a179450657a0839b8ea3a760d28bef6d0b9d1c0b9cde2cc6fb0f8fb",
-        "scripts/sync-init-to-root.mjs": "f25f4410273d41085119c50cf0f439564e300ae25fb8f83bae869c763be29e6c",
+        "scripts/sync-init-to-root.mjs": "f053272f5a47c1e08fd53112255b52366b4da3bd62718c1ca57d30f7787d3af3",
         "scripts/verify-pack.mjs": "98fe8d88a5b7a130737a0870393d5c69b6a5fe7136903cfc79fd6c9092e62b40"
       },
       "pinnedBytesNote": [
@@ -403,7 +404,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ff046bcf7d3956e0",
-        "Verify the toolchain action before running it": "1cc7d4d947cb2e45",
+        "Verify the toolchain action before running it": "116c0040c651faeb",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "e9b6a63cbebe4062",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "abe312b8d2c8fc6f",
@@ -411,7 +412,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "9efc82ef75f7a622",
         "QFAI self-validate this repo (dogfooding — full profile)": "3537948e49d1d967",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "0f16949c965e6937",
+        "Run lint gate": "f42fed39a838ffbc",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",
