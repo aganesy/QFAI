@@ -331,6 +331,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The evidence citation guard reads citations into `.qfai/evidence/`**
+  (#1686). A record that named a sibling evidence file the tree does not carry
+  passed, because the guard read only the ignored trees. Three records name
+  `.qfai/evidence/README.md`, a format guide written while it existed and
+  retired afterwards in favour of skill references. Those lines, and two that
+  describe a path rather than cite one, now carry the `qfai:not-a-citation`
+  marker. The README is not restored: shipped skills forbid `.qfai/**/README.md`
+  format documents.
+
 - **A reminder hook's message reaches a project that installed an earlier
   release** (#2003). `qfai init` wrote each message into `.claude/settings.json`
   and never touched a group that was already there, so an upgraded project kept
