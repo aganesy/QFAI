@@ -8,11 +8,11 @@ police it.
 
 There is **one** legal shape, and it is capped at **240 characters**:
 
-```
+```text
 RED:<fail|falsifiability|n-a> GREEN:pass ORACLE:<proved|equivalent-mutant> [TIER:<T1|T2|T3>] REV:<revision> -> <anchor>
 ```
 
-```
+```text
 RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-0001.md#tdd-0027`
 ```
 

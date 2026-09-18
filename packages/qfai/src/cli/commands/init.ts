@@ -78,6 +78,8 @@ import {
   extractManagedRulesSection,
   needsManagedRulesSection,
   newlyWrittenRuleMasters,
+  refreshSupersededRuleBullets,
+  refreshSupersededRuleBulletsInList,
 } from "../../core/agentEntryPoints.js";
 import {
   CLAUDE_SETTINGS_RELATIVE_PATH,
@@ -412,12 +414,14 @@ export async function runInit(options: InitOptions): Promise<void> {
   // SIMPLIFIED: the window is one operation wide rather than closed.
   // Lift when: init records per-master provenance, which the rule-master upgrade
   // path needs for its own reasons.
+  const newlyWritten = newlyWrittenRuleMasters(rootResult.copied, destRoot);
   const entryPointRulesResult = await ensureAgentEntryPointRules(
     rootAssets,
     destRoot,
     options.dryRun,
     options.force,
-    newlyWrittenRuleMasters(rootResult.copied, destRoot),
+    newlyWritten,
+    await installedRuleMasters(rootAssets, destRoot, newlyWritten),
   );
   // After the citation repair, which reads this run's own copy report: a master
   // replaced here was already on disk, so it is not one that pass is looking for.
@@ -3318,12 +3322,52 @@ async function updateUneditedRuleMasters(
   return { copied, skipped };
 }
 
+/**
+ * The masters whose file in this project carries the release's own text once
+ * this run finishes: the ones the create-only copy just wrote, and the ones the
+ * later update pass will replace because the project never edited them.
+ *
+ * A summary bullet describes its master, so the entry-point files may only be
+ * moved to the release's wording for a master that moves with them. An adopter
+ * who edited `grilling.md` keeps it — and an instruction file rewritten anyway
+ * would assert a rule its own authoritative master does not carry.
+ *
+ * An unreadable tree yields the empty set, which refreshes nothing: with no way
+ * to tell which masters are the release's, no bullet can be shown to describe
+ * the file beside it.
+ */
+async function installedRuleMasters(
+  rootAssets: string,
+  destRoot: string,
+  newlyWritten: readonly string[],
+): Promise<ReadonlySet<string>> {
+  const installed = new Set(newlyWritten);
+  try {
+    const plans = await planRuleMasterUpdates(
+      path.join(rootAssets, AGENTS_RULES_DIR_REL),
+      path.join(destRoot, AGENTS_RULES_DIR_REL),
+    );
+    for (const plan of plans) {
+      // `written` is the copy in this run, `current` is already the release's
+      // text, and `update` is the file this run replaces. `keep` is the edited
+      // one, and the only one whose summary may not move. Spelled with `/`, as
+      // a citation is.
+      if (plan.verdict !== "keep") installed.add(`.agents/rules/${plan.name}`);
+    }
+  } catch {
+    // Reported where the update pass meets the same tree; here the empty set is
+    // the answer, and it withholds every refresh rather than guessing one.
+  }
+  return installed;
+}
+
 async function ensureAgentEntryPointRules(
   rootAssets: string,
   destRoot: string,
   dryRun: boolean,
   force: boolean,
   newlyWritten: readonly string[],
+  installed: ReadonlySet<string>,
 ): Promise<{ copied: string[]; skipped: string[] }> {
   const copied: string[] = [];
   const skipped: string[] = [];
@@ -3331,10 +3375,10 @@ async function ensureAgentEntryPointRules(
   if (!dryRun) await reclaimEntryPointStaging(destRoot);
 
   // Under `--force` the wrapper sync writes the Copilot file whole, from the
-  // same source, later in this run. Adding a line here first is work thrown
-  // away, and its refusals would name a file this run goes on to replace.
+  // same source, later in this run. Editing it here first is work thrown away,
+  // and its refusals would name a file this run goes on to replace.
   if (!force) {
-    await citeNewMastersInCopilotInstructions(rootAssets, destRoot, dryRun, newlyWritten, {
+    await updateCopilotRuleList(rootAssets, destRoot, dryRun, newlyWritten, installed, {
       copied,
       skipped,
     });
@@ -3381,38 +3425,35 @@ async function ensureAgentEntryPointRules(
     }
 
     if (!needsManagedRulesSection(existing, section)) {
-      // Add the missing review directive and newly shipped master bullets.
-      // Preserve project text and deliberately deleted bullets.
-      const merged = addReviewPointer(addRuleCitations(existing, section, newlyWritten), template);
+      // The section is already there. A master this run wrote is one the file
+      // cannot have cited, so its bullet is added. A bullet a release wrote and
+      // the project never edited takes the template's wording, as an unedited
+      // master takes the release's text. Everything else is left as the project
+      // has it, including a bullet it deleted or reworded.
+      const refreshed = refreshSupersededRuleBullets(existing, section, installed);
+      reportWithheldSummaries(target, refreshed.withheld);
+      // The review directive goes in beside the citations; the project's own
+      // text and the bullets it deleted are left as they are.
+      const cited = addRuleCitations(refreshed.text, section, newlyWritten);
+      const merged = addReviewPointer(cited, template);
       if (merged === existing) {
         skipped.push(target);
         continue;
       }
-      const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
-      if (refusal !== null) {
-        const shown = new Set(citedRuleMastersOutsideCode(existing));
-        const pending = newlyWritten.filter((master) => !shown.has(master));
-        error(
-          `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(pending)}`,
-        );
-        skipped.push(target);
-        continue;
-      }
-      if (dryRun) {
-        info(`  would update: ${formatReportPath(target)} (review policy and rule citations)`);
+      const shown = new Set(citedRuleMastersOutsideCode(existing));
+      // Read from the citation step alone. Compared against the text the
+      // pointer was added to as well, a run that only added the pointer
+      // reported citing masters it had not cited, and told an operator whose
+      // rewrite was refused to add citations that were already there.
+      const update = {
+        ...describeRuleListUpdate(cited !== refreshed.text, merged !== cited, refreshed.refreshed),
+        pending: newlyWritten.filter((master) => !shown.has(master)),
+      };
+      if (await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun)) {
         copied.push(target);
-        continue;
-      }
-      const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
-      if (wrote !== null) {
-        error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
+      } else {
         skipped.push(target);
-        continue;
       }
-      info(
-        `  updated: ${formatReportPath(target)} (review policy and rule citations; existing content kept)`,
-      );
-      copied.push(target);
       continue;
     }
 
@@ -3449,7 +3490,7 @@ async function ensureAgentEntryPointRules(
         continue;
       }
       if (dryRun) {
-        info(`  would update: ${formatReportPath(target)} (review policy and rule citations)`);
+        info(`  would update: ${formatReportPath(target)} (agent instructions)`);
       } else {
         const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
         if (wrote !== null) {
@@ -3457,9 +3498,7 @@ async function ensureAgentEntryPointRules(
           skipped.push(target);
           continue;
         }
-        info(
-          `  updated: ${formatReportPath(target)} (review policy and rule citations; existing content kept)`,
-        );
+        info(`  updated: ${formatReportPath(target)} (agent instructions; existing content kept)`);
       }
       copied.push(target);
       continue;
@@ -3518,52 +3557,40 @@ async function ensureAgentEntryPointRules(
 const COPILOT_INSTRUCTIONS_MAX_BYTES = 512 * 1024;
 
 /**
- * Cites a newly shipped master in an existing `.github/copilot-instructions.md`.
+ * Keeps the rule list in an existing `.github/copilot-instructions.md` current.
  *
  * That file is generated whole and then skipped, so without this a rule the run
- * shipped reached Codex and Claude Code and not the third agent this repository
- * says loads it. It carries no managed markers — the whole file is qfai's — so
- * the bullet goes after the last rule bullet in it, and the same refusals apply
- * as to the two entry points.
+ * shipped, or a summary the template rewords, reached Codex and Claude Code and
+ * not the third agent this repository says loads it. It carries no managed
+ * markers — the whole file is qfai's — so a new bullet goes after the last rule
+ * bullet in it, a superseded one is replaced where it stands, and the same
+ * refusals apply as to the two entry points.
  */
-async function citeNewMastersInCopilotInstructions(
+/**
+ * Names the masters whose summary this run left as it stands, with why.
+ *
+ * Silence here reads as "the summaries are current", which is the state this
+ * withholding exists because the run could not reach.
+ */
+function reportWithheldSummaries(target: string, withheld: readonly string[]): void {
+  if (withheld.length === 0) return;
+  info(
+    `  NOTE: ${formatReportPath(target)} keeps its summary of ${withheld.join(", ")} ` +
+      `(the master here is not this release's, so the bullet describes the file beside it)`,
+  );
+}
+
+async function updateCopilotRuleList(
   rootAssets: string,
   destRoot: string,
   dryRun: boolean,
   newlyWritten: readonly string[],
+  installed: ReadonlySet<string>,
   report: { copied: string[]; skipped: string[] },
 ): Promise<void> {
-  // Nothing to cite: no read, no stat, no risk of blocking on a path that is
-  // not an ordinary file.
-  if (newlyWritten.length === 0) return;
-
   const target = path.join(destRoot, ".github", "copilot-instructions.md");
-  // Absent — and only absent. `syncIntegrationWrappers` writes the file whole
-  // later in this run, from the same source, so it will carry every master
-  // already. Any other failure means a file is there and something is wrong
-  // with reaching it, which the bounded read below reports rather than passing
-  // over in silence.
-  const present = await lstat(target).then(
-    () => true,
-    (cause: unknown) => !isEnoent(cause),
-  );
-  if (!present) return;
-
-  // One open, one descriptor, a ceiling on the read. The file belongs to the
-  // adopter: a FIFO blocks until a writer closes it, a device never ends, and an
-  // ordinary file of any size would be buffered and decoded whole for the sake
-  // of adding one line. The wrapper sync this path took over from only asked
-  // whether the entry was occupied.
-  const bytes = await readBoundedRegularFile(target, COPILOT_INSTRUCTIONS_MAX_BYTES);
-  if (bytes === undefined) {
-    error(
-      `  WARNING: ${formatReportPath(target)} was left unchanged. It is not an ordinary file this run can ` +
-        `read, or it is larger than ${String(COPILOT_INSTRUCTIONS_MAX_BYTES)} bytes. Add the rule citations by hand.`,
-    );
-    report.skipped.push(target);
-    return;
-  }
-  const existing = bytes.toString("utf-8");
+  const existing = await readCopilotInstructions(target, newlyWritten.length > 0, report);
+  if (existing === null) return;
 
   const template = await readTextFileIfPresent(path.join(rootAssets, "AGENTS.md"));
   const section = template === null ? null : extractManagedRulesSection(template);
@@ -3571,7 +3598,9 @@ async function citeNewMastersInCopilotInstructions(
 
   const shown = new Set(citedRuleMastersOutsideCode(existing));
   const uncited = newlyWritten.filter((master) => !shown.has(master));
-  const merged = addRuleCitationsToList(existing, section, uncited);
+  const refreshed = refreshSupersededRuleBulletsInList(existing, section, installed);
+  reportWithheldSummaries(target, refreshed.withheld);
+  const merged = addRuleCitationsToList(refreshed.text, section, uncited);
   if (merged === existing) {
     if (uncited.length > 0) {
       // A project that wrote its own Copilot instructions: no generated heading
@@ -3587,30 +3616,140 @@ async function citeNewMastersInCopilotInstructions(
     report.skipped.push(target);
     return;
   }
-  const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
-  if (refusal !== null) {
-    const pending = uncited;
+  const update = {
+    ...describeRuleListUpdate(merged !== refreshed.text, false, refreshed.refreshed),
+    pending: uncited,
+  };
+  if (await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun)) {
+    report.copied.push(target);
+  } else {
+    report.skipped.push(target);
+  }
+}
+
+/**
+ * The text of an existing Copilot instruction file, or `null` when there is none
+ * this run reads.
+ *
+ * Absent — and only absent — is not a failure: `syncIntegrationWrappers` writes
+ * the file whole later in this run, from the same source.
+ *
+ * One open, one descriptor, a ceiling on the read. The file belongs to the
+ * adopter: a FIFO blocks until a writer closes it, a device never ends, and an
+ * ordinary file of any size would be buffered and decoded whole for one line.
+ *
+ * A file this run cannot read is reported only when `citing`, because nothing
+ * else carries that citation into it. Without one, the only question is whether
+ * a summary in it is out of date, and it may well not be: a warning on every run
+ * about a file that needs nothing hides the warnings that matter.
+ */
+async function readCopilotInstructions(
+  target: string,
+  citing: boolean,
+  report: { skipped: string[] },
+): Promise<string | null> {
+  const present = await lstat(target).then(
+    () => true,
+    (cause: unknown) => !isEnoent(cause),
+  );
+  if (!present) return null;
+
+  const bytes = await readBoundedRegularFile(target, COPILOT_INSTRUCTIONS_MAX_BYTES);
+  if (bytes !== undefined) return bytes.toString("utf-8");
+  if (citing) {
     error(
-      `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(pending)}`,
+      `  WARNING: ${formatReportPath(target)} was left unchanged. It is not an ordinary file this run can ` +
+        `read, or it is larger than ${String(COPILOT_INSTRUCTIONS_MAX_BYTES)} bytes. Add the rule citations by hand.`,
     );
     report.skipped.push(target);
-    return;
+  }
+  return null;
+}
+
+/** An update to a rule list, worded for each place the run reports it. */
+type RuleListUpdate = {
+  /** What a dry run says it would do. */
+  readonly planned: string;
+  /** What the run says it did. */
+  readonly done: string;
+  /** What a refusal leaves to the operator, as a sentence opening. */
+  readonly byHand: string;
+};
+
+/**
+ * The wording for an update that cites newly shipped masters, refreshes
+ * superseded summaries, or both.
+ *
+ * The report names every edit the write makes, so the "nothing else changed" it
+ * closes with stays true.
+ */
+function describeRuleListUpdate(
+  cited: boolean,
+  pointed: boolean,
+  refreshed: readonly string[],
+): RuleListUpdate {
+  const planned: string[] = [];
+  const done: string[] = [];
+  const byHand: string[] = [];
+  if (cited) {
+    planned.push("cite the newly shipped rule masters");
+    done.push("cited the newly shipped rule masters");
+    byHand.push("add the rule citations");
+  }
+  if (pointed) {
+    planned.push("add the review directive");
+    done.push("added the review directive");
+    byHand.push("add the review directive");
+  }
+  if (refreshed.length > 0) {
+    const summaries = `${refreshed.length === 1 ? "summary" : "summaries"} of ${quoteList(refreshed)}`;
+    planned.push(`refresh the unedited ${summaries}`);
+    done.push(`refreshed the unedited ${summaries}`);
+    byHand.push(`refresh the ${summaries}`);
+  }
+  const clause = byHand.join(" and ");
+  return {
+    planned: planned.join("; "),
+    done: done.join("; "),
+    byHand: `${clause.charAt(0).toUpperCase()}${clause.slice(1)}`,
+  };
+}
+
+/**
+ * Writes an updated rule list through the refusals every entry-point rewrite
+ * takes, and reports the outcome.
+ *
+ * `pending` names the citations no later run offers again, for the refusal to
+ * say so. A superseded summary is not among them: a later run finds it again.
+ *
+ * Returns whether the file was written, or would be on a dry run.
+ */
+async function writeRuleListUpdate(
+  target: string,
+  existing: string,
+  merged: string,
+  update: RuleListUpdate & { readonly pending: readonly string[] },
+  destRoot: string,
+  dryRun: boolean,
+): Promise<boolean> {
+  const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot, update.byHand);
+  if (refusal !== null) {
+    error(
+      `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(update.pending)}`,
+    );
+    return false;
   }
   if (dryRun) {
-    info(`  would update: ${formatReportPath(target)} (cite the newly shipped rule masters)`);
-    report.copied.push(target);
-    return;
+    info(`  would update: ${formatReportPath(target)} (${update.planned})`);
+    return true;
   }
   const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
   if (wrote !== null) {
     error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
-    report.skipped.push(target);
-    return;
+    return false;
   }
-  info(
-    `  updated: ${formatReportPath(target)} (cited the newly shipped rule masters; nothing else changed)`,
-  );
-  report.copied.push(target);
+  info(`  updated: ${formatReportPath(target)} (${update.done}; nothing else changed)`);
+  return true;
 }
 
 /**
@@ -3808,25 +3947,29 @@ async function keepOwner(staging: string, original: Stats): Promise<string | nul
  * between this read and the write below. It narrows a silent overwrite to a race
  * measured in milliseconds, which is what a single-process CLI can honestly
  * offer.
+ *
+ * `byHand` opens the sentence that tells the operator what to do instead, so a
+ * refusal names the edit that was refused rather than one that was not planned.
  */
 async function refuseUnsafeEntryPointRewrite(
   target: string,
   readEarlier: string,
   destRoot: string,
+  byHand = "Add the rule citations",
 ): Promise<string | null> {
   // Every path component, not only the final entry: a linked `.github` with an
   // ordinary file inside it reports that file as regular, and the write then
   // lands in whatever the parent points at.
   const linked = await firstLinkedComponent(target, destRoot);
   if (linked !== null) {
-    return `${formatReportPath(linked)} is a symbolic link, so writing here would change a file outside this project — which may be shared with another repository. Add the rule citations to the link's target by hand.`;
+    return `${formatReportPath(linked)} is a symbolic link, so writing here would change a file outside this project — which may be shared with another repository. ${byHand} in the link's target by hand.`;
   }
   const link = await lstat(target).catch(() => null);
   // A hard link reports as an ordinary file, and a write truncates the inode
   // every name shares — so a file linked into another repository changes there
   // too, with nothing in this run naming it.
   if (link !== null && link.nlink > 1) {
-    return `It is a hard link with ${String(link.nlink)} names, and writing to it would change every one of them. Add the rule citations by hand, or give this project its own copy.`;
+    return `It is a hard link with ${String(link.nlink)} names, and writing to it would change every one of them. ${byHand} by hand, or give this project its own copy.`;
   }
 
   const bytes = await readFile(target).catch(() => null);
@@ -7870,7 +8013,7 @@ function buildCopilotInstructions(): string {
     "- `.agents/rules/documentation-clarity.md` — plain, minimal writing in pull requests, issues, comments and Markdown; no local identifiers, no account of how the work went.",
     "- `.agents/rules/minimal-implementation.md` — the order to try solutions in once a behaviour is agreed; mark a deliberate shortcut with its ceiling and the condition that lifts it.",
     "- `.agents/rules/interface-clarity.md` — what may appear on a screen or in terminal output; text explaining how to work a control is a defect report against that control.",
-    "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.",
+    "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends in one of four named endings, never at a question count.",
     "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.",
     "",
   ].join("\n");

@@ -130,10 +130,99 @@ afterEach(async () => {
  * lower it.
  */
 describe("run-pr-merge plan", () => {
+  it.each(
+    (
+      [
+        ["instruction", "<?aaaa", "?>"],
+        ["CDATA", "<![CDATA[aaaa", "]]>"],
+        ["declaration", "<!DOCTYPE aaaa ", ">"],
+      ] as const
+    ).flatMap(([name, opener, closer]) =>
+      ["absent", "blank", "table"].map((boundary) => [name, opener, closer, boundary] as const),
+    ),
+  )(
+    "bounds unmatched HTML label scans for %s / %s / %s / %s",
+    async (_name, opener, closer, boundary) => {
+      const policyPath = path.join(repoRoot, ".agents/skills/pr-fix/scripts/pr-body-policy.ps1");
+      for (const end of ["\n", "\r\n"]) {
+        const suffix =
+          boundary === "absent"
+            ? ""
+            : boundary === "blank"
+              ? `${end}prefix ${opener}closed${closer}${end}`
+              : `head | detail${end}--- | ---${end}prefix ${opener}closed${closer}${end}`;
+        const body = `\uFEFF## What this change made unnecessary${end}${end}prefix ${opener.repeat(256)}${end}${suffix}Nothing removed.${end}`;
+        const result = await spawnCommand(
+          "pwsh",
+          [
+            "-NoProfile",
+            "-Command",
+            [
+              "$ErrorActionPreference = 'Stop'",
+              "$policy = [IO.File]::ReadAllText($env:QFAI_TEST_HTML_POLICY)",
+              "$marker = '$html = $labelHtml.Match($Body, $labelIndex)'",
+              "if (($policy.Split($marker).Length - 1) -ne 1) { throw 'Expected one label matcher' }",
+              "$instrumented = $policy.Replace($marker, '$script:labelHtmlAttempts += 1; ' + $marker)",
+              ". ([scriptblock]::Create($instrumented))",
+              "$script:labelHtmlAttempts = 0",
+              "$masked = MaskBodyExamples (NormalizeBody $env:QFAI_TEST_HTML_BODY)",
+              "@{ Attempts = $script:labelHtmlAttempts; KeepsAnswer = $masked.Contains('Nothing removed.') } | ConvertTo-Json -Compress",
+            ].join("; "),
+          ],
+          { ...process.env, QFAI_TEST_HTML_POLICY: policyPath, QFAI_TEST_HTML_BODY: body },
+        );
+        expect(result.code, result.stderr).toBe(0);
+        const measurement = JSON.parse(result.stdout) as { Attempts: number; KeepsAnswer: boolean };
+        expect(measurement.KeepsAnswer).toBe(true);
+        expect(measurement.Attempts).toBeGreaterThan(0);
+        expect(measurement.Attempts).toBeLessThanOrEqual(2);
+        expect(measurement.Attempts).toBe(boundary === "absent" ? 1 : 2);
+      }
+    },
+  );
+
+  it.each(
+    ["---", "==="].flatMap((underline) =>
+      ["Adoption bar", "Adoption\nbar", "=", "==="].map((title) => [underline, title] as const),
+    ),
+  )("blocks an empty removal answer before Setext %s / %j", async (underline, title) => {
+    const baseline = makeScenario({});
+    const body = `## What this change made unnecessary\n\n${title}\n${underline}\nKeep publication approval.\n`;
+    const result = await runPrMerge({
+      live: true,
+      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+    });
+    expect(result.code).not.toBe(0);
+    expect(result.ghState.prMergeCount ?? 0).toBe(0);
+  });
+
+  it.each(
+    ["- ", "1. ", "  - "].flatMap((marker) =>
+      ["<pre>", "```", "~~~"].map((opening) => [marker, opening] as const),
+    ),
+  )("accepts a real removal section dedented from a container %j / %s", async (marker, opening) => {
+    const baseline = makeScenario({});
+    const body = `${marker}${opening}\n${" ".repeat(marker.length)}Example\n## What this change made unnecessary\nNothing.\n`;
+    const result = await runPrMerge({
+      live: true,
+      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prMergeCount).toBe(1);
+  });
+
   it.each([
     ["absent", ""],
     ["Markdown-only", "## What this change made unnecessary\n\n---\n"],
+    ...["---", "==="].map((underline) => [
+      `reference paragraph becomes Setext ${underline}`,
+      `## What this change made unnecessary\n\n[Nothing]: /url "Title\n${underline}\nNothing"\n`,
+    ]),
     ["None marker", "## What this change made unnecessary\n\nNone.\n"],
+    ...["---", "==="].map((underline) => [
+      `code span becomes Setext ${underline}`,
+      `## What this change made unnecessary\n\n\`\nNext section\n${underline}\nNothing removed.\n\`\n`,
+    ]),
     ["N/A marker", "## What this change made unnecessary\n\nN/A\n"],
     ["named space entity", "## What this change made unnecessary\n\n&nbsp;\n"],
     ["numeric space entity", "## What this change made unnecessary\n\n&#160;\n"],
@@ -141,7 +230,184 @@ describe("run-pr-merge plan", () => {
     ["TBD prefix", "## What this change made unnecessary\n\nTBD: list the removals\n"],
     ["FIXME prefix", "## What this change made unnecessary\n\nFIXME: list the removals\n"],
     ["HACK placeholder", "## What this change made unnecessary\n\nHACK\n"],
+    ["HTML empty block", "## What this change made unnecessary\n\n<div>\n</div>\n"],
+    ...[
+      "![Nothing](/image.png)",
+      "![Nothing][image]\n\n[image]: /image.png",
+      "![Nothing][]\n\n[Nothing]: /image.png",
+      "![Nothing]\n\n[Nothing]: /image.png",
+      "> [Nothing]: /url",
+      "- [Nothing]: /url",
+      "- > [Nothing]: /url",
+      "> - > [Nothing]: /url",
+    ].map((source) => [
+      `hidden image/container answer ${JSON.stringify(source)}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...[
+      "[^1]: Hidden\nNothing removed.\n",
+      "[^1]: Hidden\n    Nothing removed.\n",
+      "[^1]: Hidden\n\n    Nothing removed.\n",
+    ].map((source) => [
+      `hidden footnote continuation ${JSON.stringify(source)}`,
+      `## What this change made unnecessary\n\n${source}`,
+    ]),
+    ...[
+      "![Nothing [example]](/image.png)",
+      "![Nothing [example]][image]\n\n[image]: /image.png",
+    ].map((source) => [
+      `balanced image answer ${JSON.stringify(source)}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...["T&#79;DO", "T&#x4f;DO", "N&#111;ne", "Not&#32;applicable", "N&sol;A"].map((source) => [
+      `encoded placeholder ${source}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...[
+      // A container opened inside a list item: the line-leading pass reads only
+      // the quote markers standing before the list marker, so the fence behind
+      // one was never seen as an opener and the prose inside it read as an
+      // authored answer.
+      ["list then quote", "- > ~~~md\n  > Nothing removed.\n  > ~~~\n"],
+      ["quote then list", "> - ~~~md\n>   Nothing removed.\n>   ~~~\n"],
+    ].map(([name, source]) => [
+      `interleaved container fence ${name}`,
+      `## What this change made unnecessary\n\n${source}`,
+    ]),
+    [
+      // A linked image shows no prose. The flat link pattern cannot read a
+      // label whose brackets nest, so the destination stayed visible and
+      // satisfied the check on its own.
+      "image-only linked answer",
+      "## What this change made unnecessary\n\n[![Nothing](/image.png)](/target)\n",
+    ],
+    ...[
+      // A quote and a list marker interleave, and one pass per kind left the
+      // nested one in place, so the anchored placeholder test matched neither.
+      "> - TODO",
+      "- - TODO",
+      "1. > FIXME",
+      // A backslash escape renders as the punctuation alone.
+      "N\\/A",
+    ].map((source) => [
+      `nested or escaped placeholder ${source}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    [
+      // A linked image written as a reference shows no prose either, and the
+      // label letters are not it.
+      "image-only reference-linked answer",
+      "## What this change made unnecessary\n\n[![Nothing](/image.png)][target]!\n\n[target]: /url\n",
+    ],
+    ...["~~TODO~~", "### TODO", "> TBD", "~~N/A~~"].map((source) => [
+      // Emphasis, strikethrough and a leading marker are formatting, not text,
+      // so what renders is the placeholder alone.
+      `formatted placeholder ${source}`,
+      `## What this change made unnecessary\n\n${source}\n`,
+    ]),
+    ...["- - ", "1. - ", "- 2. "].flatMap((prefix) =>
+      ["```", "~~~"].map((fence) => [
+        `nested list fence ${prefix}${fence}`,
+        `## What this change made unnecessary\n\n${prefix}${fence}md\n${" ".repeat(prefix.length)}Nothing removed.\n${" ".repeat(prefix.length)}${fence}\n`,
+      ]),
+    ),
+    [
+      "link-reference definition",
+      "## What this change made unnecessary\n\n[Nothing]: https://example.com\n",
+    ],
+    ...[
+      "[Nothing]:\n   https://example.com\n",
+      '[Nothing]: https://example.com "Title\nwith a line break"\n',
+      "[Nothing]: <https://example.com/space here>\n",
+      "[Nothing]: https://example.com/a(b)c\n",
+      "[Nothing]: https://example.com\r\n",
+      "[\u00a0]: https://example.com\n",
+    ].map((definition) => [
+      `reference boundary ${JSON.stringify(definition)}`,
+      `## What this change made unnecessary\n\n${definition}`,
+    ]),
+    ...[
+      ["1000 ASCII bytes", `[${"a".repeat(1000)}]: /url\n`],
+      ["1000 emoji bytes", `[${"😀".repeat(250)}]: /url\n`],
+      ["1000 accented bytes", `[${"é".repeat(500)}]: /url\n`],
+      ["CRLF label", `[${"a".repeat(996)}\r\nok]: /url\r\n`],
+      ["32 nested parentheses", `[Nothing]: /${"(".repeat(32)}a${")".repeat(32)}\n`],
+      ["optional title before a heading", '[Nothing]: /url\n"\n## Adoption bar\nNothing"\n'],
+      ...["+", "2. Nothing", "<span>", "    ## Adoption bar"].map((line) => [
+        `non-interrupting title line ${line}`,
+        `[Nothing]: /url "Title\n${line}\nNothing"\n`,
+      ]),
+    ].map(([name, definition]) => [
+      `hidden reference ${name}`,
+      `## What this change made unnecessary\n\n${definition}`,
+    ]),
+    ...[
+      '[](https://example.com "\nNothing\n")',
+      "[](https://example.com '\nNothing\n')",
+      "[](https://example.com (\nNothing\n))",
+      '[ ](https://example.com "\nNothing\n")',
+      '[](<https://example.com> "\nNothing\n")',
+      '[](https://example.com/a(b)c "\nNothing\n")',
+    ].map((link) => [
+      `empty multiline link ${JSON.stringify(link)}`,
+      `## What this change made unnecessary\n\n${link}\n`,
+    ]),
+    ["tab-indented fence closer", "~~~\n\t~~~\n## What this change made unnecessary\n\nNothing.\n"],
+    ...["[](/url))", "[](/url(a)))", "[]())"].map((link) => [
+      `empty link with trailing parenthesis ${link}`,
+      `## What this change made unnecessary\n\n${link}\n`,
+    ]),
+    [
+      "multiline HTML tag",
+      '## What this change made unnecessary\n\n<div\nclass="Nothing">\n</div>\n',
+    ],
+    [
+      "quoted HTML attribute",
+      '## What this change made unnecessary\n\n<span\ntitle="Nothing > never">\n</span>\n',
+    ],
+    ...[1, 2, 3].flatMap((indent) =>
+      ["#", "##"].map((level) => [
+        `indented next heading ${indent}/${level}`,
+        `## What this change made unnecessary\n\n${" ".repeat(indent)}${level} Adoption bar\n\nKeep publication approval.\n`,
+      ]),
+    ),
+    [
+      "HTML comment only",
+      "## What this change made unnecessary\n\n<div>\n<!-- Nothing. -->\n</div>\n",
+    ],
+    ["HTML entity only", "## What this change made unnecessary\n\n<p>&nbsp;</p>\n"],
+    ["HTML placeholder only", "## What this change made unnecessary\n\n<p>TODO</p>\n"],
+    ...["pre", "script", "style", "textarea"].map((tag) => [
+      `literal HTML answer ${tag}`,
+      `## What this change made unnecessary\n\n<${tag}>\nNothing.\n</${tag}>\n`,
+    ]),
     ["fenced", "```md\n## What this change made unnecessary\n\nNothing.\n````\n"],
+    ...["pre", "script", "style", "textarea", "div", "table"].map((tag) => [
+      `raw HTML ${tag}`,
+      `<${tag}>\n## What this change made unnecessary\nNothing.\n</${tag}>\n`,
+    ]),
+    ...["- ", "1. ", "  - "].flatMap((marker) =>
+      ["pre", "div", "span"].map((tag) => [
+        `raw HTML list-contained ${JSON.stringify(marker)} ${tag}`,
+        `${marker}<${tag}>\n${" ".repeat(marker.length)}## What this change made unnecessary\n${" ".repeat(marker.length)}Nothing.\n${" ".repeat(marker.length)}</${tag}>\n`,
+      ]),
+    ),
+    ...["- ", "1. ", "  - "].flatMap((marker) =>
+      ["```", "~~~"].map((fence) => [
+        `list-contained fence ${JSON.stringify(marker)} ${fence}`,
+        `${marker}${fence}\n${" ".repeat(marker.length)}## What this change made unnecessary\n${" ".repeat(marker.length)}Nothing.\n${" ".repeat(marker.length)}${fence}\n`,
+      ]),
+    ),
+    [
+      "raw HTML processing instruction",
+      "<?qfai\n## What this change made unnecessary\nNothing.\n?>\n",
+    ],
+    ["raw HTML declaration", "<!DOCTYPE\n## What this change made unnecessary\nNothing.\n>\n"],
+    ["raw HTML CDATA", "<![CDATA[\n## What this change made unnecessary\nNothing.\n]]>\n"],
+    [
+      "raw HTML standalone inline tag",
+      "<span>\n## What this change made unnecessary\nNothing.\n</span>\n",
+    ],
   ])("blocks a %s removal answer without a handoff or merge", async (_name, body) => {
     const baseline = makeScenario({});
     const result = await runPrMerge({
@@ -169,9 +435,118 @@ describe("run-pr-merge plan", () => {
   });
 
   it.each([
+    ...[
+      "## Adoption bar",
+      "~~~",
+      "> Nothing",
+      "- Nothing",
+      "01. Nothing",
+      "<![cdata[",
+      "<div>",
+    ].map((block) => [
+      `title interrupted by ${block}`,
+      `[Nothing]: /url "Title\n${block}\nNothing"\n`,
+    ]),
+    ["label interrupted by a heading", "[Nothing\n## Adoption bar\nNothing]: /url\n"],
+    ["destination interrupted by HTML", "[Nothing]:\n<div>\n"],
+    ["1001 ASCII bytes", `[${"a".repeat(1001)}]: /url\n`],
+    ["1004 emoji bytes", `[${"😀".repeat(251)}]: /url\n`],
+    ["1002 accented bytes", `[${"é".repeat(501)}]: /url\n`],
+    ["33 nested parentheses", `[Nothing]: /${"(".repeat(33)}a${")".repeat(33)}\n`],
+    ["empty anchor then a literal reference", "[](/url)\n[Nothing]: /target\n"],
+    ["escaped multiline link", '\\[](https://example.com "\nNothing\n")\n'],
+    ["literal HTML link", "<div>\n[](https://example.com)\n</div>\n"],
+    ["literal inline code link", "`[](https://example.com)`\n"],
+    ["escaped single-line link", "\\[](https://example.com)\n"],
+    ["ordinary link text", "[Nothing](/url)"],
+    ["escaped image", "\\![Nothing](/image.png)"],
+    ["unresolved image", "![Nothing][missing]"],
+    ["quoted definition-like paragraph", "> Paragraph\n> [Nothing]: /url"],
+    ["list definition-like paragraph", "- Paragraph\n  [Nothing]: /url"],
+    ["image with prose", "![Example](/image.png)\n\nNothing."],
+    ["escaped comment opener", "\\<!--\nNothing removed.\n-->"],
+    ["odd escaped comment opener", "\\\\\\<!--\nNothing removed.\n-->"],
+    ["encoded authored text", "Nothing&#32;removed."],
+    ["literal encoded code text", "`T&#79;DO`"],
+    ["escaped entity text", "T\\&#79;DO"],
+    ["literal uppercase entity", "N&SOL;A"],
+    ["paragraph numbered continuation", "Paragraph\n2. Nothing removed."],
+    ["ordinary balanced link", "[Nothing [example]](/url)"],
+    ["escaped balanced image", "\\![Nothing [example]](/image.png)"],
+    ["unresolved balanced image", "![Nothing [example]][missing]"],
+    [
+      "balanced image interrupted by table",
+      "![removed [item] | detail\n--- | ---\nstill present](/image.png) |",
+    ],
+    [
+      "reference image interrupted by table",
+      "![removed [item] | detail\n--- | ---\nstill present][image] |\n\n[image]: /image.png",
+    ],
+    ["image label raw HTML", '![prefix [nested]\nNothing removed.\n<span title="](/image.png)">'],
+    [
+      "image label autolink",
+      "![prefix [nested]\nNothing removed.\n<https://example.com/](/image.png)>",
+    ],
+    [
+      "image label inline comment",
+      "![prefix [nested]\nNothing removed.\nlater <!-- ](/image.png) -->",
+    ],
+    [
+      "image paragraph interrupted by a table",
+      "![prefix [nested]\nNothing removed.\nfoo | bar\n--- | ---\n](/image.png)",
+    ],
+    ["live after footnote dedent", "[^1]: Hidden\n\nNothing removed."],
+    ["live after footnote block", "[^1]: Hidden\n### Heading\nNothing removed."],
+    ["code-like reference container top level", "    [Nothing]: /url"],
+    ["code-like reference container quote", ">     [Nothing]: /url"],
+    ["code-like reference container list", "-     [Nothing]: /url"],
+  ])("preserves visible reference-like text: %s", async (_name, answer) => {
+    const baseline = makeScenario({});
+    const body = `## What this change made unnecessary\n\n${answer}`;
+    const result = await runPrMerge({
+      live: true,
+      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prMergeCount).toBe(1);
+  });
+
+  it.each([
+    ...[
+      "## What this change made unnecessary ##",
+      " ## What this change made unnecessary",
+      "  ## What a change made unnecessary ###",
+      "   ## What this change made unnecessary",
+    ].map((heading) => [heading, `${heading}\n\nA removed pin.\n`]),
+    ...["\t", " \t"].flatMap((indent) =>
+      ["```", "~~~", "<pre>"].map((opener) => [
+        `indented code ${JSON.stringify(indent + opener)}`,
+        `${indent}${opener}\n## What this change made unnecessary\n\nA removed pin.\n`,
+      ]),
+    ),
+    ["multiline visible link", '[A removed pin](https://example.com "\nNothing\n")\n'],
+    ["literal link with a blank title line", '[](https://example.com "\n\nNothing\n")\n'],
+    ["literal link with an unquoted title", "[](https://example.com \nNothing\n)\n"],
+  ])("accepts rendered Markdown: %s", async (_name, section) => {
+    const baseline = makeScenario({});
+    const body = section.includes("## What")
+      ? section
+      : `## What this change made unnecessary\n\n${section}`;
+    const result = await runPrMerge({
+      live: true,
+      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prMergeCount).toBe(1);
+  });
+
+  it.each([
     ["inline code", "Use `<!--` literally.\n\n"],
     ["fence info", "~~~ <!--\nExample\n~~~\n\n"],
     ["similar ordinary word", ""],
+    ["paragraph inline tag", "Paragraph text\n<span>\n"],
+    ["invalid custom tag", "<span title=>\n"],
+    ["lowercase CDATA lookalike", "<![cdata[\n"],
   ])("allows an authored answer after %s", async (_name, prefix) => {
     const baseline = makeScenario({});
     const body = `${prefix}## What this change made unnecessary\n\nHACKathon-specific duplicate setup is gone.\n`;
@@ -192,6 +567,34 @@ describe("run-pr-merge plan", () => {
     });
     expect(result.code).toBe(0);
     expect(result.ghState.prViewCount).toBe(2);
+    expect(result.ghState.prMergeCount).toBe(1);
+  });
+
+  it.each([
+    "<p>Nothing.</p>",
+    "<div>\nNothing.\n</div>",
+    "<span>\nNothing.\n</span>",
+    "<div>\n<!--\n## Example -->\nNothing.\n</div>",
+    "<div>\n[Nothing]: https://example.com\n</div>",
+  ])("preserves a visible authored HTML answer %s", async (answer) => {
+    const baseline = makeScenario({});
+    const body = `## What this change made unnecessary\n\n${answer}\n`;
+    const result = await runPrMerge({
+      live: true,
+      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+    });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prMergeCount).toBe(1);
+  });
+
+  it("accepts a real heading after a first-line indented HTML example", async () => {
+    const baseline = makeScenario({});
+    const body = "    <pre>\n## What this change made unnecessary\nNothing.\n";
+    const result = await runPrMerge({
+      live: true,
+      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+    });
+    expect(result.code).toBe(0);
     expect(result.ghState.prMergeCount).toBe(1);
   });
 

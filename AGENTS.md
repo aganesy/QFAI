@@ -72,9 +72,13 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
 リポジトリで作業する全 AI が守るルールは `.agents/rules/` 配下のマスタが SSOT。
 
 - `version-discipline.md` (上記「バージョン規律」の詳細)
+- `version-discipline.local.md` (this repository has adopted the pin convention, and the guards that read it)
 - `distributed-surface.md` (npm 配布物の internal id / version leak 禁止)
+- `distributed-surface.local.md` (the surface, the forbidden identifier shapes, and the four guards)
 - `root-additions-policy.md` (repo root への新規追加は要確認)
+- `root-additions-policy.local.md` (two file shapes that turn up at this root, and where each belongs)
 - `temporary-files.md` (一時ファイルは `tmp/` 配下のみ)
+- `temporary-files.local.md` (a test's `mkdtemp` sandbox is outside the rule)
 - `document-schema.md` (SDD ドキュメントの章構成・表・図の構造は
   `packages/qfai/assets/mdschema/**` が SSOT)
 - `documentation-clarity.md` (PR / issue / コメント / Markdown の記述基準)
@@ -84,12 +88,19 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
 - `interface-clarity.md` (what may appear on a screen or in terminal output,
   and what a sentence there says about the control under it)
 - `grilling.md` (interview the decision tree in rounds before a design is
-  fixed; a session ends on an empty frontier and the user's confirmation,
-  never at a question count)
+  fixed; a session ends in one of four named endings, never at a question
+  count)
 - `user-questions.md` (every question to the user arrives in the shape its
   answer has — a structured choice where a listable set of candidates exists, or a
   plain request where none does; where the host's tool cannot carry it, the
   plain-text fallback keeps the same parts)
+- `shipped-ci-parity.md` (a change to this repository's CI either reaches the
+  workflow templates the package ships or says in the diff why it does not)
+
+A `<name>.local.md` is an overlay. A rule that also governs an adopter's
+repository is written once, in the shipped master, and only what is specific to
+this repository goes in the overlay. Overlays do not ship. See
+`.agents/rules/README.md`.
 
 `.claude/rules/` はこれらへの symlink。Windows では Git の `core.symlinks=true` と
 Developer Mode が必要で、無い場合は `.claude/rules/*.md` がパス文字列だけの

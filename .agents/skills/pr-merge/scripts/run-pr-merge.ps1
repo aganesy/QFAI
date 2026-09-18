@@ -300,7 +300,7 @@ if ([string]$pr.state -ne "OPEN") {
 if ($pr.isDraft) {
   $blockers.Add(("PR #{0} is still a draft." -f $pr.number))
 }
-if ([string]::IsNullOrWhiteSpace((DescriptionAnswer ([string]$pr.body)))) {
+if ([string]::IsNullOrWhiteSpace((RemovalAnswer ([string]$pr.body)))) {
   $blockers.Add("PR body needs an authored removal-list answer. Update the PR body before merging.")
 }
 if ($badChecks.Count -gt 0) {
@@ -372,7 +372,7 @@ if ($DryRun) {
 }
 
 $finalPr = RunJson "gh" @("pr", "view", "$PrNumber", "--json", "body") "Failed to refresh PR body before merge."
-if ([string]::IsNullOrWhiteSpace((DescriptionAnswer ([string]$finalPr.body)))) {
+if ([string]::IsNullOrWhiteSpace((RemovalAnswer ([string]$finalPr.body)))) {
   throw "PR body needs an authored removal-list answer at the merge boundary. Update the PR body before merging."
 }
 

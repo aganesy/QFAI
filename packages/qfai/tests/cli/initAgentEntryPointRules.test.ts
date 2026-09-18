@@ -2,6 +2,7 @@
 
 import {
   chmod,
+  link,
   mkdir,
   mkdtemp,
   readFile,
@@ -31,6 +32,8 @@ import {
   extractManagedRulesSection,
   hasUnclosedRulesSection,
   needsManagedRulesSection,
+  refreshSupersededRuleBullets,
+  refreshSupersededRuleBulletsInList,
 } from "../../src/core/agentEntryPoints.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 
@@ -64,6 +67,30 @@ const withoutAddedReviewPointer = (text: string): string =>
 
 const occurrences = (haystack: string, needle: string): number => haystack.split(needle).length - 1;
 
+/** `runInit` with what it wrote to stdout and to stderr. */
+async function initCapturing(
+  root: string,
+  options: { force: boolean; dryRun: boolean },
+): Promise<{ stdout: string; stderr: string }> {
+  const out: string[] = [];
+  const err: string[] = [];
+  const stdout = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+    out.push(String(chunk));
+    return true;
+  });
+  const stderr = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+    err.push(String(chunk));
+    return true;
+  });
+  try {
+    await runInit({ dir: root, ...options, yes: true });
+  } finally {
+    stdout.mockRestore();
+    stderr.mockRestore();
+  }
+  return { stdout: out.join(""), stderr: err.join("") };
+}
+
 /** `runInit` with the diagnostics it wrote to stderr. */
 async function initCapturingStderr(root: string): Promise<string> {
   const chunks: string[] = [];
@@ -80,6 +107,68 @@ async function initCapturingStderr(root: string): Promise<string> {
 }
 
 describe("qfai init connects a pre-existing agent entry point to the rule masters", () => {
+  it.each([false, true])("reports only instruction updates with dryRun %j", async (dryRun) => {
+    for (const handWired of [false, true]) {
+      for (const pointerOnly of [false, true]) {
+        await withProject(async (root) => {
+          const master = ".agents/rules/grilling.md";
+          await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
+          await runInit({ dir: root, force: false, dryRun: false, yes: true });
+          const section = extractManagedRulesSection(await readTemplate("AGENTS.md")) ?? "";
+          const seeded = handWired
+            ? `${PROJECT_TEXT}${citedRuleMasters(section)
+                .map((rule) => `- \`${rule}\``)
+                .join("\n")}\n`
+            : await readEntryPoint(root, "AGENTS.md");
+          const before = pointerOnly
+            ? withoutAddedReviewPointer(seeded)
+            : `${REVIEW_POINTER}\n\n${withoutAddedReviewPointer(seeded)}`
+                .split("\n")
+                .filter((line) => !(line.startsWith("- ") && line.includes(master)))
+                .join("\n");
+          await writeFile(path.join(root, "AGENTS.md"), before, "utf-8");
+          if (!pointerOnly) await rm(path.join(root, ...master.split("/")), { force: true });
+          const chunks: string[] = [];
+          const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+            chunks.push(String(chunk));
+            return true;
+          });
+          try {
+            await runInit({ dir: root, force: false, dryRun, yes: true });
+          } finally {
+            spy.mockRestore();
+          }
+          const line = chunks
+            .join("")
+            .split("\n")
+            .find((entry) => /(?:would update|updated): .*AGENTS[.]md \(/.test(entry));
+          // What the run says it did is what it did. A file already carrying
+          // every citation and lacking only the directive is a directive
+          // update, and reporting it as a citation update told an operator
+          // whose rewrite was refused to add citations already there.
+          if (pointerOnly) {
+            expect(line).toContain("the review directive");
+            expect(line).not.toContain("rule masters");
+          } else if (handWired) {
+            // Rules cited by hand, with no managed section to describe a
+            // change to: the whole file is reported as the instructions it is.
+            expect(line).toContain("(agent instructions");
+          } else {
+            expect(line).toContain("the newly shipped rule masters");
+          }
+          expect(line).not.toContain("review policy and rule citations");
+          const after = await readEntryPoint(root, "AGENTS.md");
+          if (dryRun) expect(after).toBe(before);
+          else if (pointerOnly) expect(after).toBe(`${REVIEW_POINTER}\n\n${before}`);
+          else {
+            expect(after).toContain(master);
+            expect(occurrences(after, REVIEW_POINTER)).toBe(1);
+          }
+        });
+      }
+    }
+  });
+
   it("installs optional review policy into existing entry points", async () => {
     const pointer =
       "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository. Read it before writing the PR description as well.";
@@ -707,11 +796,998 @@ describe("a hand-wired file this run cannot extend is named", () => {
 });
 
 describe("optional review directive detection", () => {
+  it.each(["direct", "reference"])("keeps eligible table image guidance %s", (kind) => {
+    for (const end of ["\n", "\r\n"]) {
+      const suffix = kind === "direct" ? "](/image.png) |" : "][image] |\n\n[image]: /image.png";
+      const existing =
+        `\uFEFF![prefix [nested] | head\n--- | ---\n${REVIEW_POINTER}\n${suffix}\n`.replace(
+          /\n/g,
+          end,
+        );
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    }
+  });
+
+  it.each([
+    ["image", "![prefix [nested]", "](/image.png)"],
+    ["link title", '[caption](/url "prefix', '")'],
+    ["code", "``prefix", "``"],
+    ["tag", 'prefix <span title="caption', '">'],
+  ])("keeps guidance before a table-interrupted %s paragraph", (_name, opener, closer) => {
+    for (const end of ["\n", "\r\n"]) {
+      const existing =
+        `\uFEFF${opener}\n${REVIEW_POINTER}\nfoo | bar\n--- | ---\n${closer}\n`.replace(/\n/g, end);
+      const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      expect(updated).toBe(existing);
+      expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+    }
+  });
+
+  it.each([
+    '<span title="](/image.png)">',
+    "<https://example.com/](/image.png)>",
+    "<!-- ](/image.png) -->",
+  ])("keeps live image-label HTML guidance %j", (html) => {
+    for (const end of ["\n", "\r\n"]) {
+      const existing = `\uFEFF![prefix [nested]\n${REVIEW_POINTER}\n${html}\n`.replace(/\n/g, end);
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    }
+  });
+
+  it.each(["2. - ", "02. - "])("keeps noninterrupting nested list guidance %j", (prefix) => {
+    for (const end of ["\n", "\r\n"]) {
+      const existing =
+        `\uFEFFParagraph\n${prefix}~~~\n${" ".repeat(prefix.length)}${REVIEW_POINTER}\n${" ".repeat(prefix.length)}~~~\n`.replace(
+          /\n/g,
+          end,
+        );
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    }
+  });
+
+  it.each(
+    (
+      [
+        ["instruction", "<?aaaa", "?>"],
+        ["CDATA", "<![CDATA[aaaa", "]]>"],
+        ["declaration", "<!DOCTYPE aaaa ", ">"],
+      ] as const
+    ).flatMap(([name, opener, closer]) =>
+      ["absent", "blank", "table"].map((boundary) => [name, opener, closer, boundary] as const),
+    ),
+  )(
+    "bounds unmatched HTML label scans for %s / %s / %s / %s",
+    (_name, opener, closer, boundary) => {
+      for (const end of ["\n", "\r\n"]) {
+        const suffix =
+          boundary === "absent"
+            ? ""
+            : boundary === "blank"
+              ? `${end}prefix ${opener}closed${closer}${end}`
+              : `head | detail${end}--- | ---${end}prefix ${opener}closed${closer}${end}`;
+        const existing = `\uFEFFprefix ${opener.repeat(256)}${end}${suffix}${REVIEW_POINTER}${end}`;
+        const originalExec = RegExp.prototype.exec;
+        let attempts = 0;
+        let updated: string;
+        const spy = vi.spyOn(RegExp.prototype, "exec").mockImplementation(function (
+          this: RegExp,
+          input: string,
+        ) {
+          if (this.sticky && this.source.includes("\\?>")) attempts += 1;
+          return originalExec.call(this, input);
+        });
+        try {
+          updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+        } finally {
+          spy.mockRestore();
+        }
+        expect(updated).toBe(existing);
+        expect(attempts).toBeGreaterThan(0);
+        expect(attempts).toBeLessThanOrEqual(2);
+        expect(attempts).toBe(boundary === "absent" ? 1 : 2);
+      }
+    },
+  );
+
+  it("does not rescan table sets for inline candidates", () => {
+    const existing = `${"head | detail\n--- | ---\n\n".repeat(128)}${"[caption](/url)\n".repeat(128)}\n${REVIEW_POINTER}\n`;
+    const tableText = "head | detail\n--- | ---\n\n";
+    const boundaries = Array.from(
+      { length: 128 },
+      (_, index) => index * tableText.length + "head | detail\n".length,
+    );
+    const originalPush = Array.prototype.push;
+    let observedTables = 0;
+    let boundaryReads = 0;
+    Array.prototype.push = function (this: unknown[], ...values: unknown[]): number {
+      const length = originalPush.apply(this, values);
+      if (length !== boundaries.length || values.length !== 1 || values[0] !== boundaries.at(-1))
+        return length;
+      for (let index = 0; index < boundaries.length; index += 1)
+        if (this[index] !== boundaries[index]) return length;
+      observedTables += 1;
+      for (let index = 0; index < boundaries.length; index += 1) {
+        const value = this[index];
+        Object.defineProperty(this, index, {
+          configurable: true,
+          enumerable: true,
+          get: () => {
+            boundaryReads += 1;
+            return value;
+          },
+        });
+      }
+      return length;
+    };
+    const spy = vi.spyOn(Set.prototype, Symbol.iterator);
+    let calls: number;
+    let updated: string;
+    try {
+      updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      calls = spy.mock.calls.length;
+    } finally {
+      Array.prototype.push = originalPush;
+      spy.mockRestore();
+    }
+    expect(updated).toBe(existing);
+    expect(calls).toBe(0);
+    expect(observedTables).toBe(1);
+    expect(boundaryReads).toBeGreaterThan(0);
+    expect(boundaryReads).toBeLessThanOrEqual((128 * 8 + 8) * (Math.ceil(Math.log2(128)) + 1));
+  });
+
+  it.each([
+    ["tag", '<span title=" | head', '">'],
+    ["image", "![Unclosed | head", "](/image.png)"],
+    ["link title", '[caption](/url " | head', '")'],
+  ])("keeps table-interrupted %s guidance", (_name, opener, closer) => {
+    for (const end of ["\n", "\r\n"]) {
+      const existing = `\uFEFF${opener}${end}--- | ---${end}${REVIEW_POINTER}${end}${closer}${end}`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    }
+  });
+
+  it.each(["- - ", "1. - ", "- 2. "])("masks nested list fence guidance %j", (prefix) => {
+    for (const fence of ["```", "~~~"]) {
+      for (const end of ["\n", "\r\n"]) {
+        const existing = `\uFEFF${prefix}${fence}md${end}${" ".repeat(prefix.length)}${REVIEW_POINTER}${end}${" ".repeat(prefix.length)}${fence}${end}`;
+        const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+        expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+        expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+      }
+    }
+  });
+
+  it.each([1, 3])("keeps escaped inline opener guidance with %i backslashes", (count) => {
+    for (const end of ["\n", "\r\n"]) {
+      for (const [opener, closer] of [
+        ["`", "`"],
+        ["<!--", "-->"],
+      ]) {
+        const existing = `\uFEFF${"\\".repeat(count)}${opener}${end}${REVIEW_POINTER}${end}${closer}${end}`;
+        expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+      }
+    }
+  });
+
+  it("retains unescaped spans and comments after even backslashes", () => {
+    for (const [opener, closer] of [
+      ["``", "\\``"],
+      ["<!--", "-->"],
+    ]) {
+      const existing = `\\\\${opener}\n${REVIEW_POINTER}\n${closer}\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `${REVIEW_POINTER}\n\n${existing}`,
+      );
+    }
+  });
+
+  it.each([
+    `![\n${REVIEW_POINTER}\n[caption]\n](/image.png)\n`,
+    `![\n${REVIEW_POINTER}\n[caption]\n][image]\n\n[image]: /image.png\n`,
+  ])("masks balanced image guidance %j", (source) => {
+    for (const end of ["\n", "\r\n"]) {
+      const existing = `\uFEFF${source}`.replace(/\n/g, end);
+      const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+      expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+    }
+  });
+
+  it("keeps live guidance after a one-column table delimiter", () => {
+    const existing = `| \`unclosed |\n| --- |\n${REVIEW_POINTER}\n`;
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+  });
+
+  it.each(["- - ", "1. - ", "- 2. "])("reuses visible nested list guidance %j", (prefix) => {
+    for (const end of ["\n", "\r\n"]) {
+      const existing = `\uFEFF${prefix}${REVIEW_POINTER}${end}`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    }
+  });
+
+  it.each(["--- | ---", "| :--- | ---: |"])(
+    "keeps live guidance after a table delimiter %j",
+    (delimiter) => {
+      for (const end of ["\n", "\r\n"]) {
+        const existing = `\uFEFF\`unclosed | head${end}${delimiter}${end}${REVIEW_POINTER}${end}`;
+        expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+      }
+    },
+  );
+
+  it.each(["unclosed", "unclosed | head | extra", "unclosed \\| head"])(
+    "keeps non-table code-span examples masked %j",
+    (header) => {
+      for (const end of ["\n", "\r\n"]) {
+        const existing = `\uFEFF\`\`${header}${end}--- | ---${end}${REVIEW_POINTER}${end}Closing\`\`${end}`;
+        expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+          `\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`,
+        );
+      }
+    },
+  );
+
+  it.each(["- ", "- - ", "1. - "])("masks list-contained footnote guidance %j", (prefix) => {
+    for (const end of ["\n", "\r\n"]) {
+      const existing = `\uFEFF${prefix}[^1]: Hidden${end}${" ".repeat(prefix.length)}${REVIEW_POINTER}${end}`;
+      const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+      expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+    }
+  });
+
+  it.each(["- > ", "> - > ", "- > - > "])(
+    "resolves reference definitions after alternating containers %j",
+    (prefix) => {
+      for (const end of ["\n", "\r\n"]) {
+        const existing =
+          `\uFEFF![\n${REVIEW_POINTER}\n][image]\n\n${prefix}[image]: /image.png\n`.replace(
+            /\n/g,
+            end,
+          );
+        const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+        expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+        expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+      }
+    },
+  );
+
+  it.each(["\n", "\r\n"])(
+    "masks footnote definitions and keeps dedented guidance with %j",
+    (end) => {
+      const lazy = `\uFEFF[^1]: Hidden note${end}${REVIEW_POINTER}${end}`;
+      expect(addReviewPointer(lazy, `${REVIEW_POINTER}\n`)).toBe(
+        `\uFEFF${REVIEW_POINTER}${end}${end}${lazy.slice(1)}`,
+      );
+      for (const separation of ["", end]) {
+        const existing = `\uFEFF[^1]: Hidden note${end}${separation}    ${REVIEW_POINTER}${end}`;
+        const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+        expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+        expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+      }
+      for (const boundary of [end, `# Heading${end}`]) {
+        const live = `\uFEFF[^1]: Hidden note${end}${boundary}${REVIEW_POINTER}${end}`;
+        expect(addReviewPointer(live, `${REVIEW_POINTER}\n`)).toBe(live);
+      }
+    },
+  );
+
+  it.each([
+    "# Heading",
+    "- Item",
+    "> Quoted\n",
+    "---",
+    "~~~\nExample\n~~~",
+    "<div>\nExample\n</div>\n",
+  ])("stops multiline code spans at a block interruption %j", (block) => {
+    for (const end of ["\n", "\r\n"]) {
+      const existing = `\uFEFF\`\`Unclosed\n${block}\n${REVIEW_POINTER}\nClosing\`\`\n`.replace(
+        /\n/g,
+        end,
+      );
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    }
+  });
+
+  it.each([997, 998])("normalizes CRLF before the %i-byte reference boundary", (length) => {
+    for (const end of ["\n", "\r\n"]) {
+      const label = `${"a".repeat(length)}${end}ok`;
+      const existing = `\uFEFF![${end}${REVIEW_POINTER}${end}][${label}]${end}${end}[${label}]: /image.png${end}`;
+      const expected =
+        length === 997 ? `\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}` : existing;
+      const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      expect(updated).toBe(expected);
+      expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+    }
+  });
+
+  it.each(["\n", "\r\n"])("preserves closed code-span comment markers with %j", (end) => {
+    const existing = `\uFEFFUse \`a\n<!--\nb\` literally.\n\n${REVIEW_POINTER}\n`.replace(
+      /\n/g,
+      end,
+    );
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+  });
+
+  it.each([
+    ["quote", "> [image]: /image.png\n", true],
+    ["list", "- [image]: /image.png\n", true],
+    ["nested quoted list", "> > - [image]: /image.png\n", true],
+    ["list continuation", "- Item\n\n  [image]: /image.png\n", true],
+    ["quoted paragraph", "> Paragraph\n> [image]: /image.png\n", false],
+    ["list paragraph", "- Paragraph\n  [image]: /image.png\n", false],
+    ["quoted fence", "> ~~~\n> [image]: /image.png\n> ~~~\n", false],
+    ["list fence", "- ~~~\n  [image]: /image.png\n  ~~~\n", false],
+    ["quoted HTML", "> <div>\n> [image]: /image.png\n> </div>\n", false],
+    ["list HTML", "- <div>\n  [image]: /image.png\n  </div>\n", false],
+  ] as const)(
+    "resolves only operative container definitions in a %s",
+    (_name, definition, hidden) => {
+      for (const end of ["\n", "\r\n"]) {
+        const existing = `\uFEFF![\n${REVIEW_POINTER}\n][image]\n\n${definition}`.replace(
+          /\n/g,
+          end,
+        );
+        const expected = hidden
+          ? `\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`
+          : existing;
+        const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+        expect(updated).toBe(expected);
+        expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+      }
+    },
+  );
+
+  it.each([false, true])(
+    "writes guidance outside container-resolved images with force=%s",
+    async (force) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const templates = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+            name,
+            text: await readEntryPoint(root, name),
+            mode: (await stat(path.join(root, name))).mode,
+          })),
+        );
+        for (const end of ["\n", "\r\n"]) {
+          const originals = templates.map(({ name, text, mode }) => ({
+            name,
+            mode,
+            text: `\uFEFF${text.replace(REVIEW_POINTER, `![\n${REVIEW_POINTER}\n][image]\n\n${name === "AGENTS.md" ? "> " : "- "}[image]: /image.png`)}${PROJECT_TEXT}`.replace(
+              /\n/g,
+              end,
+            ),
+          }));
+          for (const { name, text } of originals)
+            await writeFile(path.join(root, name), text, "utf-8");
+          await runInit({ dir: root, force, dryRun: false, yes: true });
+          for (const { name, text, mode } of originals) {
+            expect(await readEntryPoint(root, name)).toBe(
+              `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}`,
+            );
+            expect((await stat(path.join(root, name))).mode).toBe(mode);
+          }
+          await runInit({ dir: root, force, dryRun: false, yes: true });
+          for (const { name, text, mode } of originals) {
+            expect(await readEntryPoint(root, name)).toBe(
+              `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}`,
+            );
+            expect((await stat(path.join(root, name))).mode).toBe(mode);
+          }
+        }
+      });
+    },
+  );
+
+  it.each([false, true])(
+    "keeps review boundary repairs byte-preserving with force=%s",
+    async (force) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const templates = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+            name,
+            text: await readEntryPoint(root, name),
+            mode: (await stat(path.join(root, name))).mode,
+          })),
+        );
+        const label = `${"a".repeat(997)}\nok`;
+        for (const source of [
+          { text: `![\n${REVIEW_POINTER}\n][image]\n\n- > [image]: /image.png`, hidden: true },
+          { text: `[^1]: Hidden note\n    ${REVIEW_POINTER}`, hidden: true },
+          { text: `[^1]: Hidden note\n${REVIEW_POINTER}`, hidden: true },
+          { text: `- [^1]: Hidden\n  ${REVIEW_POINTER}`, hidden: true },
+          { text: `\`unclosed | head\n--- | ---\n${REVIEW_POINTER}`, hidden: false },
+          { text: `- - ${REVIEW_POINTER}`, hidden: false },
+          { text: `![\n${REVIEW_POINTER}\n][${label}]\n\n[${label}]: /image.png`, hidden: true },
+          { text: `\`\`Unclosed\n# Heading\n${REVIEW_POINTER}\nClosing\`\``, hidden: false },
+        ]) {
+          for (const end of ["\n", "\r\n"]) {
+            const originals = templates.map(({ name, text, mode }) => ({
+              name,
+              mode,
+              text: `\uFEFF${text.replace(REVIEW_POINTER, source.text)}${PROJECT_TEXT}`.replace(
+                /\n/g,
+                end,
+              ),
+            }));
+            for (const { name, text } of originals)
+              await writeFile(path.join(root, name), text, "utf-8");
+            for (let run = 0; run < 2; run += 1) {
+              await runInit({ dir: root, force, dryRun: false, yes: true });
+              for (const { name, text, mode } of originals) {
+                expect(await readEntryPoint(root, name)).toBe(
+                  source.hidden ? `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}` : text,
+                );
+                expect((await stat(path.join(root, name))).mode).toBe(mode);
+              }
+            }
+          }
+        }
+      });
+    },
+  );
+
+  it.each([false, true])(
+    "keeps inline review repairs byte-preserving with force=%s",
+    async (force) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const templates = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+            name,
+            text: await readEntryPoint(root, name),
+            mode: (await stat(path.join(root, name))).mode,
+          })),
+        );
+        for (const source of [
+          { text: `![\n${REVIEW_POINTER}\n[caption]\n](/image.png)`, hidden: true },
+          {
+            text: `![\n${REVIEW_POINTER}\n[caption]\n][image]\n\n[image]: /image.png`,
+            hidden: true,
+          },
+          { text: `- - ~~~md\n    ${REVIEW_POINTER}\n    ~~~`, hidden: true },
+          { text: `<span title=" | head\n--- | ---\n${REVIEW_POINTER}\n">`, hidden: false },
+          { text: `\\\`\n${REVIEW_POINTER}\n\``, hidden: false },
+          { text: `\\<!--\n${REVIEW_POINTER}\n-->`, hidden: false },
+        ]) {
+          for (const end of ["\n", "\r\n"]) {
+            const originals = templates.map(({ name, text, mode }) => ({
+              name,
+              mode,
+              text: `\uFEFF${text.replace(REVIEW_POINTER, source.text)}${PROJECT_TEXT}`.replace(
+                /\n/g,
+                end,
+              ),
+            }));
+            for (const { name, text } of originals)
+              await writeFile(path.join(root, name), text, "utf-8");
+            for (let run = 0; run < 2; run += 1) {
+              await runInit({ dir: root, force, dryRun: false, yes: true });
+              for (const { name, text, mode } of originals) {
+                expect(await readEntryPoint(root, name)).toBe(
+                  source.hidden ? `\uFEFF${REVIEW_POINTER}${end}${end}${text.slice(1)}` : text,
+                );
+                expect((await stat(path.join(root, name))).mode).toBe(mode);
+              }
+            }
+          }
+        }
+      });
+    },
+  );
+
+  it.each([false, true])(
+    "keeps inline precedence repairs byte-preserving with force=%s",
+    async (force) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const templates = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+            name,
+            text: await readEntryPoint(root, name),
+            mode: (await stat(path.join(root, name))).mode,
+          })),
+        );
+        for (const source of [
+          `![prefix [nested] | head\n--- | ---\n${REVIEW_POINTER}\n](/image.png) |`,
+          `![prefix [nested]\n${REVIEW_POINTER}\n<span title="](/image.png)">`,
+          `![prefix [nested]\n${REVIEW_POINTER}\n<https://example.com/](/image.png)>`,
+          `![prefix [nested]\n${REVIEW_POINTER}\nlater <!-- ](/image.png) -->`,
+          `Paragraph\n2. - ~~~\n     ${REVIEW_POINTER}\n     ~~~`,
+          `![prefix [nested]\n${REVIEW_POINTER}\nfoo | bar\n--- | ---\n](/image.png)`,
+        ]) {
+          for (const end of ["\n", "\r\n"]) {
+            const originals = templates.map(({ name, text, mode }) => ({
+              name,
+              mode,
+              text: `\uFEFF${text.replace(REVIEW_POINTER, source)}${PROJECT_TEXT}`.replace(
+                /\n/g,
+                end,
+              ),
+            }));
+            for (const { name, text } of originals)
+              await writeFile(path.join(root, name), text, "utf-8");
+            for (let run = 0; run < 2; run += 1) {
+              await runInit({ dir: root, force, dryRun: false, yes: true });
+              for (const { name, text, mode } of originals) {
+                expect(await readEntryPoint(root, name)).toBe(text);
+                expect((await stat(path.join(root, name))).mode).toBe(mode);
+              }
+            }
+          }
+        }
+      });
+    },
+  );
+
+  it.each([false, true])(
+    "keeps failed HTML scan repairs byte-preserving with force=%s",
+    async (force) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const templates = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+            name,
+            text: await readEntryPoint(root, name),
+            mode: (await stat(path.join(root, name))).mode,
+          })),
+        );
+        for (const [opener, closer] of [
+          ["<?aaaa", "?>"],
+          ["<![CDATA[aaaa", "]]>"],
+          ["<!DOCTYPE aaaa ", ">"],
+        ] as const) {
+          const source = `prefix ${opener.repeat(256)}\n\nprefix ${opener.repeat(256)}\nhead | detail\n--- | ---\nprefix ${opener}closed${closer}\n${REVIEW_POINTER}`;
+          for (const end of ["\n", "\r\n"]) {
+            const originals = templates.map(({ name, text, mode }) => ({
+              name,
+              mode,
+              text: `\uFEFF${text.replace(REVIEW_POINTER, source)}${PROJECT_TEXT}`.replace(
+                /\n/g,
+                end,
+              ),
+            }));
+            for (const { name, text } of originals)
+              await writeFile(path.join(root, name), text, "utf-8");
+            for (let run = 0; run < 2; run += 1) {
+              await runInit({ dir: root, force, dryRun: false, yes: true });
+              for (const { name, text, mode } of originals) {
+                expect(await readEntryPoint(root, name)).toBe(text);
+                expect((await stat(path.join(root, name))).mode).toBe(mode);
+              }
+            }
+          }
+        }
+      });
+    },
+  );
+
+  it("reuses invariant reference parsing across discovery passes", () => {
+    const existing = `![\n${REVIEW_POINTER}\n][image]\n\n[image]: /image.png\n`;
+    const spy = vi.spyOn(String.prototype, "matchAll");
+    let calls: number;
+    let updated: string;
+    try {
+      updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      calls = spy.mock.calls.length;
+    } finally {
+      spy.mockRestore();
+    }
+    expect(updated).toBe(`${REVIEW_POINTER}\n\n${existing}`);
+    expect(calls).toBe(1);
+  });
+
+  it.each([333, 334])("preserves GitHub's CJK reference boundary at %i characters", (length) => {
+    const label = "漢".repeat(length);
+    const existing = `![\n${REVIEW_POINTER}\n][${label}]\n\n[${label}]: /image.png\n`;
+    const expected = length === 333 ? `${REVIEW_POINTER}\n\n${existing}` : existing;
+    const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+    expect(updated).toBe(expected);
+    expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+  });
+
+  it.each(["\n", "\r\n"])(
+    "link-reference boundary: adds guidance outside image labels with %j",
+    (end) => {
+      for (const image of [
+        `![${end}${REVIEW_POINTER}${end}](/image.png)`,
+        `![${end}${REVIEW_POINTER}${end}][image]${end}${end}[image]: /image.png`,
+        `![${end}${REVIEW_POINTER}${end}][]${end}${end}[${end}${REVIEW_POINTER}${end}]: /image.png`,
+        `![${end}${REVIEW_POINTER}${end}]${end}${end}[${end}${REVIEW_POINTER}${end}]: /image.png`,
+      ]) {
+        const existing = `\uFEFF${image}${end}`;
+        const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+        expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+        expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+      }
+    },
+  );
+
+  it.each(["\n", "\r\n"])(
+    "link-reference boundary: adds guidance outside reference definitions with %j",
+    (end) => {
+      for (const definition of [
+        `[example]: /url "${end}${REVIEW_POINTER}${end}"`,
+        `[example]: /url '${end}${REVIEW_POINTER}${end}'`,
+        `[example]: /url (${end}${REVIEW_POINTER}${end})`,
+        `[${end}${REVIEW_POINTER}${end}]: /url`,
+      ]) {
+        const existing = `\uFEFF${definition}${end}`;
+        const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+        expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+        expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+      }
+    },
+  );
+
+  it.each(["\n", "\r\n"])(
+    "link-reference boundary: retains ordinary and unresolved label text with %j",
+    (end) => {
+      for (const source of [
+        `[${end}${REVIEW_POINTER}${end}](/url)`,
+        `\\![${end}${REVIEW_POINTER}${end}](/url)`,
+        `![${end}${REVIEW_POINTER}${end}][missing]`,
+        `Paragraph text${end}[example]: /url "${end}${REVIEW_POINTER}${end}"`,
+        `[example]: /url "${end}${REVIEW_POINTER}${end}## Live heading${end}"`,
+      ]) {
+        const existing = `\uFEFF${source}${end}`;
+        expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+      }
+    },
+  );
+
+  it("link-reference boundary: does not copy the remaining tail for unmatched inline links", () => {
+    const existing = `${"[ \n".repeat(6400)}\n${REVIEW_POINTER}\n`;
+    const originalSlice = String.prototype.slice;
+    let copiedTail = 0;
+    const spy = vi.spyOn(String.prototype, "slice").mockImplementation(function (
+      this: string,
+      start?: number,
+      end?: number,
+    ) {
+      const result = originalSlice.call(this, start, end);
+      if (this === existing) copiedTail += result.length;
+      return result;
+    });
+    let updated: string;
+    try {
+      updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(updated).toBe(existing);
+    expect(copiedTail).toBeLessThanOrEqual(existing.length * 4);
+  });
+
+  it.each(["\n", "\r\n"])(
+    "adds guidance outside lowercase CDATA-like attribute text with %j",
+    (end) => {
+      const existing = `\uFEFF<span title="${end}<![cdata[${end}${REVIEW_POINTER}${end}">Example</span>${end}`;
+      const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+      expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+    },
+  );
+
+  it.each(["\n", "\r\n"])("retains live guidance after a tag-like ATX heading with %j", (end) => {
+    const existing = `\uFEFF# <span title="${end}${REVIEW_POINTER}${end}">Example</span>${end}`;
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+  });
+
+  it.each(["\n", "\r\n"])("keeps reference-definition continuations quoted with %j", (end) => {
+    const existing = `> [example]: /url${end}${REVIEW_POINTER}${end}`;
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+      `${REVIEW_POINTER}${end}${end}${existing}`,
+    );
+    const live = `> [example]: /url${end}${end}${REVIEW_POINTER}${end}`;
+    expect(addReviewPointer(live, `${REVIEW_POINTER}\n`)).toBe(live);
+  });
+
+  it("does not copy the remaining tail for every malformed multiline tag", () => {
+    const existing = `${'<span a="\n'.repeat(6400)}\n${REVIEW_POINTER}\n`;
+    const originalSlice = String.prototype.slice;
+    let copiedTail = 0;
+    const spy = vi.spyOn(String.prototype, "slice").mockImplementation(function (
+      this: string,
+      start?: number,
+      end?: number,
+    ) {
+      const result = originalSlice.call(this, start, end);
+      if (this === existing) copiedTail += result.length;
+      return result;
+    });
+    let updated: string;
+    try {
+      updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(updated).toBe(existing);
+    expect(copiedTail).toBeLessThanOrEqual(existing.length * 4);
+  });
+
+  it.each(
+    (
+      [
+        ["lazy quote", `> Quoted example\n${REVIEW_POINTER}\n`],
+        ["nested lazy quote", `> > Quoted example\n${REVIEW_POINTER}\n`],
+        ["lazy quoted list", `> - Quoted example\n${REVIEW_POINTER}\n`],
+        ["indented lazy quote", `> Quoted example\n    ${REVIEW_POINTER}\n`],
+        ["double-quoted tag", `<span\ntitle="\n${REVIEW_POINTER}\n">Example</span>\n`],
+        ["single-quoted tag", `<span\ntitle='\n${REVIEW_POINTER}\n'>Example</span>\n`],
+        [
+          "inline double-quoted tag",
+          `Paragraph <span title="\n${REVIEW_POINTER}\n">Example</span>\n`,
+        ],
+        [
+          "inline single-quoted tag",
+          `Paragraph <span title='\n${REVIEW_POINTER}\n'>Example</span>\n`,
+        ],
+      ] as const
+    ).flatMap(([name, example]) =>
+      ["\n", "\r\n"].map((end) => [name, example.replace(/\n/g, end), end] as const),
+    ),
+  )("adds guidance outside a lazy quote or multiline HTML tag %s / %j", (_name, example, end) => {
+    const existing = `\uFEFF# Project rules${end}${end}${example}`;
+    const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+    expect(updated).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+    expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+  });
+
+  it.each([
+    ["blank quote boundary", "> Quoted example\n\n", ""],
+    ["quoted blank boundary", "> Quoted example\n>\n", ""],
+    ["quoted heading", "> # Quoted heading\n", ""],
+    ["quoted indented code", ">     Example only.\n", ""],
+    ["quoted list code", "> -     Example only.\n", ""],
+    ["quoted fence", "> ~~~\n> Example only.\n> ~~~\n", ""],
+    ["quoted literal HTML", "> <pre>\n> Example only.\n> </pre>\n", ""],
+    ["escaped multiline tag", '\\<span\ntitle="\n', '">Example</span>\n'],
+    ["interrupted multiline tag", '<span title="\n# Live heading\n', '">Example</span>\n'],
+  ])("retains live guidance after a quote or tag boundary %s", (_name, prefix, suffix) => {
+    const existing = `${prefix}${REVIEW_POINTER}\n${suffix}`;
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+  });
+
+  it.each(
+    ["pre", "div", "span"].flatMap((tag) =>
+      ["-", "10.", "   -"].map((marker) => [tag, marker] as const),
+    ),
+  )("adds guidance outside list HTML %s / %s", (tag, marker) => {
+    const indent = " ".repeat(marker.length + 1);
+    const existing = `# Project rules\n\n${marker} <${tag}>\n${indent}${REVIEW_POINTER}\n${indent}</${tag}>\n\nKeep every byte.\n`;
+    const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+    expect(updated).toBe(`${REVIEW_POINTER}\n\n${existing}`);
+    expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+  });
+
+  it.each(['"', "'", "("])("adds guidance outside a multiline link title %s", (delimiter) => {
+    const close = delimiter === "(" ? ")" : delimiter;
+    const existing = `\uFEFF# Project rules\r\n\r\n[](https://example.com ${delimiter}\r\n${REVIEW_POINTER}\r\n${close})\r\nKeep every byte.\r\n`;
+    const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+    expect(updated).toBe(`\uFEFF${REVIEW_POINTER}\r\n\r\n${existing.slice(1)}`);
+    expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+  });
+
+  it.each([
+    ["escaped link", `\\[](https://example.com "\n${REVIEW_POINTER}\n")\n`],
+    ["invalid blank title", `[](https://example.com "\n\n${REVIEW_POINTER}\n")\n`],
+    ["visible label", `[${REVIEW_POINTER}](https://example.com "\nExample\n")\n`],
+    ["after a closed link", `[](/url)\n\n${REVIEW_POINTER}\n`],
+    ["after a dedented list HTML block", `- <pre>\n  Example only.\n\n${REVIEW_POINTER}\n`],
+  ])("retains a live directive %s", (_name, section) => {
+    const existing = `# Project rules\n\n${section}`;
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+  });
+
+  it.each(["```", "~~~"].flatMap((fence) => ["-", "1.", "10)"].map((marker) => [fence, marker])))(
+    "keeps list-like %s fence content with %s inside its real close",
+    (fence, marker) => {
+      const existing = `# Project rules\n\n${fence}md\n${marker} ${fence}\n${REVIEW_POINTER}\n${fence}\n\nKeep this text.\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `${REVIEW_POINTER}\n\n${existing}`,
+      );
+    },
+  );
+
+  it.each([
+    ["bullet", "-", 2],
+    ["ordered", "10.", 4],
+    ["indented", "   -", 5],
+  ] as const)(
+    "keeps a live directive after a real %s list fence close",
+    (_name, marker, indent) => {
+      const padding = " ".repeat(indent);
+      const existing = `${marker} \`\`\`md\n${padding}Example only.\n${padding}\`\`\`\n\n${REVIEW_POINTER}\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    },
+  );
+
+  it.each(["-", "10."])(
+    "adds guidance outside first-line code at the %s list content column",
+    (marker) => {
+      const existing = `# Project rules\n\n${marker}     ${REVIEW_POINTER}\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `${REVIEW_POINTER}\n\n${existing}`,
+      );
+    },
+  );
+
+  it.each([
+    ["bullet", "- Project rules", 6],
+    ["ordered", "10. Project rules", 8],
+    ["tabbed marker", "1.\tProject rules", 8],
+    ["three-space marker", "   - Project rules", 9],
+    ["nested bullet", "- Project rules\n  - Nested rules", 8],
+    ["nested ordered", "- Project rules\n  10. Nested rules", 10],
+    ["outer continuation", "- Project rules\n  - Nested rules\n\n  Outer rules", 6],
+  ] as const)(
+    "adds guidance outside code at the %s list content column",
+    (_name, list, indentation) => {
+      const existing = `\uFEFF# Project rules\r\n\r\n${list.replace(/\n/g, "\r\n")}\r\n\r\n${" ".repeat(indentation)}${REVIEW_POINTER}\r\n\r\nKeep this text.\r\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `\uFEFF${REVIEW_POINTER}\r\n\r\n${existing.slice(1)}`,
+      );
+    },
+  );
+
+  it.each([
+    ["bullet", "- Project rules", 2],
+    ["ordered", "10. Project rules", 4],
+    ["tabbed marker", "1.\tProject rules", 4],
+    ["three-space marker", "   - Project rules", 5],
+    ["nested bullet", "- Project rules\n  - Nested rules", 4],
+    ["nested ordered", "- Project rules\n  10. Nested rules", 6],
+  ] as const)(
+    "keeps a live directive at the %s list content column",
+    (_name, list, indentation) => {
+      const existing = `${list}\n\n${" ".repeat(indentation)}${REVIEW_POINTER}\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    },
+  );
+
+  it.each([
+    ["heading", "# Project rules\n"],
+    ["fence", "~~~\nExample\n~~~\n"],
+    ["literal HTML", "<pre>\nExample\n</pre>\n"],
+  ])("adds guidance outside indented code immediately after a %s block", (_name, prefix) => {
+    const existing = `${prefix}    - ${REVIEW_POINTER}\n`;
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+      `${REVIEW_POINTER}\n\n${existing}`,
+    );
+  });
+
+  it.each(["pre", "script", "style", "textarea", "div", "table", "span"])(
+    "adds a live directive outside a raw HTML %s example",
+    (tag) => {
+      const existing = `# Project rules\n\n<${tag}>\n${REVIEW_POINTER}\n</${tag}>\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `${REVIEW_POINTER}\n\n${existing}`,
+      );
+    },
+  );
+
+  it.each(["    - ", "    1. ", "\t- ", " \t1. ", "    "])(
+    "adds a live directive when %j indents the existing copy as top-level code",
+    (prefix) => {
+      const existing = `\uFEFF# Project rules\r\n\r\n${prefix}${REVIEW_POINTER}\r\n\r\nKeep this text.\r\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `\uFEFF${REVIEW_POINTER}\r\n\r\n${existing.slice(1)}`,
+      );
+    },
+  );
+
+  it.each([
+    ["three-space list item", `# Project rules\n\n   - ${REVIEW_POINTER}\n`],
+    ["nested list item", `- Project rules\n\n    - ${REVIEW_POINTER}\n`],
+    ["indented paragraph continuation", `Paragraph text\n    - ${REVIEW_POINTER}\n`],
+    ["past an indented literal comment", `    <!--\n\n${REVIEW_POINTER}\n`],
+  ])("retains a live directive in %s", (_name, existing) => {
+    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+  });
+
   it.each(["-", "*", "+", "1.", "2)", "10."])(
     "retains an operative directive in a %s list item byte for byte",
     (marker) => {
       const existing = `\uFEFF# Project rules\r\n\r\n  ${marker}\t${REVIEW_POINTER}\r\nKeep this text.\r\n`;
       expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    },
+  );
+
+  it.each([false, true])(
+    "preserves project bytes when adding guidance outside an example with force=%s",
+    async (force) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const templates = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+            name,
+            text: await readEntryPoint(root, name),
+            mode: (await stat(path.join(root, name))).mode,
+          })),
+        );
+        for (const example of [
+          `    - ${REVIEW_POINTER}`,
+          `<pre>\n${REVIEW_POINTER}\n</pre>`,
+          `- Project rules\n\n      ${REVIEW_POINTER}`,
+          `10. Project rules\n\n        ${REVIEW_POINTER}`,
+          `- <pre>\n  ${REVIEW_POINTER}\n  </pre>`,
+          `[](https://example.com "\n${REVIEW_POINTER}\n")`,
+          `> Quoted example\n${REVIEW_POINTER}`,
+          `> > Quoted example\n${REVIEW_POINTER}`,
+          `<span\ntitle="\n${REVIEW_POINTER}\n">Example</span>`,
+          `<span\ntitle='\n${REVIEW_POINTER}\n'>Example</span>`,
+          `<span title="\n<![cdata[\n${REVIEW_POINTER}\n">Example</span>`,
+          `> [example]: /url\n${REVIEW_POINTER}`,
+          `![\n${REVIEW_POINTER}\n](/image.png)`,
+          `![\n${REVIEW_POINTER}\n][image]\n\n[image]: /image.png`,
+          `![\n${REVIEW_POINTER}\n][]\n\n[\n${REVIEW_POINTER}\n]: /image.png`,
+          `![\n${REVIEW_POINTER}\n]\n\n[\n${REVIEW_POINTER}\n]: /image.png`,
+          `[example]: /url "\n${REVIEW_POINTER}\n"`,
+          `[example]: /url '\n${REVIEW_POINTER}\n'`,
+          `[example]: /url (\n${REVIEW_POINTER}\n)`,
+          `[\n${REVIEW_POINTER}\n]: /url`,
+        ]) {
+          const originals = templates.map(({ name, text, mode }) => ({
+            name,
+            mode,
+            text: `\uFEFF${text.replace(REVIEW_POINTER, example)}${PROJECT_TEXT}`.replace(
+              /\n/g,
+              "\r\n",
+            ),
+          }));
+          for (const { name, text } of originals) {
+            await writeFile(path.join(root, name), text, "utf-8");
+          }
+          await runInit({ dir: root, force, dryRun: false, yes: true });
+          for (const { name, text, mode } of originals) {
+            expect(await readEntryPoint(root, name)).toBe(
+              `\uFEFF${REVIEW_POINTER}\r\n\r\n${text.slice(1)}`,
+            );
+            expect((await stat(path.join(root, name))).mode).toBe(mode);
+          }
+        }
+      });
+    },
+  );
+
+  it.each([false, true])(
+    "keeps live block-boundary directives during init with force=%s",
+    async (force) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const templates = await Promise.all(
+          AGENT_ENTRY_POINT_FILES.map(async (name) => ({
+            name,
+            text: await readEntryPoint(root, name),
+            mode: (await stat(path.join(root, name))).mode,
+          })),
+        );
+        for (const fragment of [
+          `# <span title="\n${REVIEW_POINTER}\n">Example</span>`,
+          `> [example]: /url\n\n${REVIEW_POINTER}`,
+        ]) {
+          const originals = templates.map(({ name, text, mode }) => ({
+            name,
+            mode,
+            text: `\uFEFF${text.replace(REVIEW_POINTER, fragment)}${PROJECT_TEXT}`.replace(
+              /\n/g,
+              "\r\n",
+            ),
+          }));
+          for (const { name, text } of originals) {
+            await writeFile(path.join(root, name), text, "utf-8");
+          }
+          await runInit({ dir: root, force, dryRun: false, yes: true });
+          for (const { name, text, mode } of originals) {
+            expect(await readEntryPoint(root, name)).toBe(text);
+            expect((await stat(path.join(root, name))).mode).toBe(mode);
+          }
+        }
+      });
     },
   );
 
@@ -1117,5 +2193,410 @@ describe("what the citation scan reads a line as", () => {
     // The project's own CRLF lines are still CRLF, and the section is still LF.
     expect(merged.startsWith("# Our house rules\r\n")).toBe(true);
     expect(merged).toContain("- `.agents/rules/grilling.md` — interview the decision tree.\n");
+  });
+});
+
+/**
+ * A rule summary an earlier release wrote, which the template has since reworded.
+ *
+ * The section is written once and left to the project, while the master it
+ * summarises is refreshed wherever the project has not edited it. Unless the
+ * bullet is refreshed too, the agent loading the entry point reads a summary its
+ * own rule contradicts.
+ */
+describe("a later init refreshes a rule summary the project never edited", () => {
+  const master = ".agents/rules/grilling.md";
+  /** The grilling bullet as an earlier release wrote it into every rule list. */
+  const superseded =
+    "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.";
+
+  /** The template's own bullet for the master. */
+  async function currentBullet(name: string): Promise<string> {
+    const bullet = (extractManagedRulesSection(await readTemplate(name)) ?? "")
+      .split("\n")
+      .find((line) => line.startsWith("- ") && line.includes(master));
+    expect(bullet, `${name} has no bullet for ${master}`).toBeDefined();
+    expect(bullet).not.toBe(superseded);
+    return bullet ?? "";
+  }
+
+  /** Both entry points as that release left them, written with `eol`. */
+  async function seedSuperseded(root: string, eol = "\n"): Promise<Map<string, string>> {
+    for (const name of AGENT_ENTRY_POINT_FILES) {
+      await writeFile(path.join(root, name), PROJECT_TEXT, "utf-8");
+    }
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const seeded = new Map<string, string>();
+    for (const name of AGENT_ENTRY_POINT_FILES) {
+      const written = await readEntryPoint(root, name);
+      expect(written).toContain(await currentBullet(name));
+      const old = written
+        .replace(await currentBullet(name), superseded)
+        .split("\n")
+        .join(eol);
+      await writeFile(path.join(root, name), old, "utf-8");
+      seeded.set(name, old);
+    }
+    return seeded;
+  }
+
+  /** The report lines `runInit` printed for `name` under `verb`. */
+  const reportLines = (stdout: string, verb: string, name: string): string[] =>
+    stdout.split("\n").filter((line) => line.includes(`${verb}: `) && line.includes(`${name} (`));
+
+  it.each([
+    { mode: "a plain run", force: false },
+    { mode: "--force", force: true },
+  ])("replaces the unedited bullet on $mode and changes nothing else", async ({ force }) => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+
+      const { stdout } = await initCapturing(root, { force, dryRun: false });
+
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        const expected = (seeded.get(name) ?? "").replace(superseded, await currentBullet(name));
+        expect(await readEntryPoint(root, name)).toBe(expected);
+        // The report names the refresh, so its "nothing else changed" is true.
+        expect(reportLines(stdout, "updated", name)).toEqual([
+          expect.stringContaining(
+            `(refreshed the unedited summary of \`${master}\`; nothing else changed)`,
+          ),
+        ]);
+      }
+    });
+  });
+
+  it("leaves a bullet the project edited, and refreshes one it did not", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+      const edited = superseded.replace("never at a question count", "and we stop after three");
+      const agents = (seeded.get("AGENTS.md") ?? "").replace(superseded, edited);
+      await writeFile(path.join(root, "AGENTS.md"), agents, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      // The edited line is the project's, however close to a shipped one.
+      expect(await readEntryPoint(root, "AGENTS.md")).toBe(agents);
+      expect(await readEntryPoint(root, "CLAUDE.md")).toBe(
+        (seeded.get("CLAUDE.md") ?? "").replace(superseded, await currentBullet("CLAUDE.md")),
+      );
+    });
+  });
+
+  it("keeps the summary where the project edited the master it describes", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+      // The adopter's own master. The update pass keeps it, so a summary moved
+      // to this release's wording would describe a rule this tree does not have.
+      const master = path.join(root, ".agents", "rules", "grilling.md");
+      const theirs = `${await readFile(master, "utf-8")}\n\nOur own addition.\n`;
+      await writeFile(master, theirs, "utf-8");
+
+      const output = await initCapturing(root, { force: false, dryRun: false });
+
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        expect(await readEntryPoint(root, name), name).toBe(seeded.get(name));
+      }
+      expect(await readFile(master, "utf-8")).toBe(theirs);
+      expect(output.stdout).toContain(".agents/rules/grilling.md");
+    });
+  });
+
+  it("leaves the same line inside a fenced example as it is", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+      // An example inside the section, below the real bullet. It shows a line;
+      // it cites nothing, so it is not a summary to refresh.
+      const withExample = (seeded.get("AGENTS.md") ?? "").replace(
+        QFAI_AGENT_RULES_END,
+        ["```markdown", superseded, "```", "", QFAI_AGENT_RULES_END].join("\n"),
+      );
+      await writeFile(path.join(root, "AGENTS.md"), withExample, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const after = await readEntryPoint(root, "AGENTS.md");
+      // The first occurrence is the bullet; the second, in the fence, stays.
+      expect(after).toBe(withExample.replace(superseded, await currentBullet("AGENTS.md")));
+      expect(occurrences(after, superseded)).toBe(1);
+    });
+  });
+
+  it("keeps a CRLF file's line endings", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root, "\r\n");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        const after = await readEntryPoint(root, name);
+        expect(after).toBe((seeded.get(name) ?? "").replace(superseded, await currentBullet(name)));
+        // Only the empty remainder after the final CRLF lacks a CR.
+        expect(after.split("\n").filter((line) => !line.endsWith("\r"))).toEqual([""]);
+      }
+    });
+  });
+
+  it("reports the refresh on --dry-run and writes nothing", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+
+      const { stdout } = await initCapturing(root, { force: false, dryRun: true });
+
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        expect(await readEntryPoint(root, name)).toBe(seeded.get(name));
+        expect(reportLines(stdout, "would update", name)).toEqual([
+          expect.stringContaining(`(refresh the unedited summary of \`${master}\`)`),
+        ]);
+      }
+    });
+  });
+
+  it("refreshes the bullet and cites a newly shipped master in one write", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+      // A master this run ships for the first time: no bullet, no file.
+      const shipped = ".agents/rules/user-questions.md";
+      const withoutBullet = (seeded.get("AGENTS.md") ?? "")
+        .split("\n")
+        .filter((line) => !(line.startsWith("- ") && line.includes(shipped)))
+        .join("\n");
+      await writeFile(path.join(root, "AGENTS.md"), withoutBullet, "utf-8");
+      await rm(path.join(root, ...shipped.split("/")), { force: true });
+
+      const { stdout } = await initCapturing(root, { force: false, dryRun: false });
+
+      const after = await readEntryPoint(root, "AGENTS.md");
+      expect(after).toContain(await currentBullet("AGENTS.md"));
+      expect(after).not.toContain(superseded);
+      expect(after).toContain(shipped);
+      expect(reportLines(stdout, "updated", "AGENTS.md")).toEqual([
+        expect.stringContaining(
+          `(cited the newly shipped rule masters; refreshed the unedited summary of \`${master}\`; nothing else changed)`,
+        ),
+      ]);
+    });
+  });
+
+  it("says which summary to refresh by hand when the file cannot be rewritten", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+      // A second name for the same file. Rewriting through one changes both.
+      try {
+        await link(path.join(root, "AGENTS.md"), path.join(root, "shared-agents.md"));
+      } catch {
+        // A file system without hard links cannot exercise this case.
+        return;
+      }
+
+      const { stderr } = await initCapturing(root, { force: false, dryRun: false });
+
+      expect(await readEntryPoint(root, "AGENTS.md")).toBe(seeded.get("AGENTS.md"));
+      expect(stderr).toContain("hard link");
+      expect(stderr).toContain(`Refresh the summary of \`${master}\` by hand`);
+      expect(stderr).not.toContain("Add the rule citations");
+    });
+  });
+
+  it("refreshes it in the Copilot instruction file on a plain run", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const generated = await readFile(copilot, "utf-8");
+      const bullet = generated
+        .split("\n")
+        .find((line) => line.startsWith("- ") && line.includes(master));
+      expect(bullet).toBeDefined();
+      await writeFile(copilot, generated.replace(bullet ?? "", superseded), "utf-8");
+
+      const { stdout } = await initCapturing(root, { force: false, dryRun: false });
+
+      // Back to what this release generates, byte for byte.
+      expect(await readFile(copilot, "utf-8")).toBe(generated);
+      expect(reportLines(stdout, "updated", "copilot-instructions.md")).toEqual([
+        expect.stringContaining(`(refreshed the unedited summary of \`${master}\`;`),
+      ]);
+    });
+  });
+
+  it("leaves the same line in another section of the Copilot file as it is", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const generated = await readFile(copilot, "utf-8");
+      const bullet = generated
+        .split("\n")
+        .find((line) => line.startsWith("- ") && line.includes(master));
+      expect(bullet).toBeDefined();
+      // The old line quoted in the project's own notes, one section above the
+      // rule list and one below it. Only the rule-list entry is qfai's.
+      const note = ["The rule used to read:", "", superseded, ""].join("\n");
+      const edited = generated
+        .replace(bullet ?? "", superseded)
+        .replace(
+          CROSS_AI_RULES_HEADING,
+          `## Before we adopted it\n\n${note}\n${CROSS_AI_RULES_HEADING}`,
+        )
+        .concat(`\n## Migration notes\n\n${note}`);
+      expect(occurrences(edited, superseded)).toBe(3);
+      await writeFile(copilot, edited, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const headingAt = edited.indexOf(CROSS_AI_RULES_HEADING);
+      const listEntryAt = edited.indexOf(superseded, headingAt);
+      const expected = `${edited.slice(0, listEntryAt)}${bullet ?? ""}${edited.slice(listEntryAt + superseded.length)}`;
+      expect(await readFile(copilot, "utf-8")).toBe(expected);
+    });
+  });
+
+  describe("which lines the refresh reads", () => {
+    const template = [
+      QFAI_AGENT_RULES_BEGIN,
+      "",
+      "- `.agents/rules/grilling.md` — interview the decision tree in rounds.",
+      "",
+      QFAI_AGENT_RULES_END,
+    ].join("\n");
+    const current = "- `.agents/rules/grilling.md` — interview the decision tree in rounds.";
+
+    it("reads only inside the markers of an entry point", () => {
+      // The project's own list above the section holds the same line. Outside
+      // the markers nothing says a release wrote it.
+      const existing = [
+        "# Our house rules",
+        "",
+        superseded,
+        "",
+        QFAI_AGENT_RULES_BEGIN,
+        "",
+        superseded,
+        "",
+        QFAI_AGENT_RULES_END,
+        "",
+      ].join("\n");
+
+      const result = refreshSupersededRuleBullets(existing, template);
+
+      const expected = existing.split("\n");
+      expected[6] = current;
+      expect(result.refreshed).toEqual([master]);
+      expect(result.text).toBe(expected.join("\n"));
+    });
+
+    it("skips a fenced or quoted line in a list the run generates whole", () => {
+      const existing = [
+        CROSS_AI_RULES_HEADING,
+        "",
+        superseded,
+        "",
+        "```markdown",
+        superseded,
+        "```",
+        "",
+        `> ${superseded}`,
+        "",
+      ].join("\n");
+
+      const result = refreshSupersededRuleBulletsInList(existing, template);
+
+      const expected = existing.split("\n");
+      expected[2] = current;
+      expect(result.refreshed).toEqual([master]);
+      expect(result.text).toBe(expected.join("\n"));
+    });
+
+    it("ends the Copilot rule list at the next heading of its level or higher", () => {
+      const existing = [
+        "# QFAI repository instructions (Copilot)",
+        "",
+        CROSS_AI_RULES_HEADING,
+        "",
+        superseded,
+        "",
+        "### Still part of the rule list",
+        "",
+        superseded,
+        "",
+        "Our own notes",
+        "-------------",
+        "",
+        superseded,
+        "",
+        "# Appendix",
+        "",
+        superseded,
+        "",
+      ].join("\n");
+
+      const result = refreshSupersededRuleBulletsInList(existing, template);
+
+      // A deeper heading stays inside the list; a setext or ATX heading at the
+      // list's level or above ends it.
+      const expected = existing.split("\n");
+      expected[4] = current;
+      expected[8] = current;
+      expect(result.refreshed).toEqual([master]);
+      expect(result.text).toBe(expected.join("\n"));
+    });
+
+    it("refreshes nothing in a Copilot file with no rule-list heading", () => {
+      const existing = ["# House instructions", "", superseded, ""].join("\n");
+
+      expect(refreshSupersededRuleBulletsInList(existing, template)).toEqual({
+        text: existing,
+        refreshed: [],
+        withheld: [],
+      });
+    });
+
+    it.each([
+      ["a quoted heading", `> ${CROSS_AI_RULES_HEADING}`],
+      ["a heading that only begins with it", `${CROSS_AI_RULES_HEADING} — project notes`],
+      ["a deeper heading of the same words", `### ${CROSS_AI_RULES_HEADING.replace("## ", "")}`],
+    ])("refreshes nothing under %s", (_name, heading) => {
+      // Without markers the heading is the only thing marking the list as this
+      // tool's, so anything but the heading itself is the project's own text.
+      const existing = ["# House instructions", "", heading, "", superseded, ""].join("\n");
+
+      expect(refreshSupersededRuleBulletsInList(existing, template)).toEqual({
+        text: existing,
+        refreshed: [],
+        withheld: [],
+      });
+    });
+
+    it("does not end the rule list at a heading inside a blockquote", () => {
+      // The heading belongs to the quote, not to the document, so the bullet
+      // below it is still in the managed list.
+      const existing = [
+        CROSS_AI_RULES_HEADING,
+        "",
+        "> ## Historical rules",
+        "",
+        superseded,
+        "",
+      ].join("\n");
+
+      const result = refreshSupersededRuleBulletsInList(existing, template);
+
+      const expected = existing.split("\n");
+      expected[4] = current;
+      expect(result.refreshed).toEqual([master]);
+      expect(result.text).toBe(expected.join("\n"));
+    });
+
+    it("reads the heading with a closing run of hashes and up to three spaces", () => {
+      for (const heading of [`${CROSS_AI_RULES_HEADING} ##`, `   ${CROSS_AI_RULES_HEADING}`]) {
+        const existing = ["# House instructions", "", heading, "", superseded, ""].join("\n");
+
+        const result = refreshSupersededRuleBulletsInList(existing, template);
+
+        const expected = existing.split("\n");
+        expected[4] = current;
+        expect(result.refreshed, heading).toEqual([master]);
+        expect(result.text, heading).toBe(expected.join("\n"));
+      }
+    });
   });
 });

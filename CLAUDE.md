@@ -19,17 +19,30 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   is a defect report against that control.
 - Interview the decision tree before a design is fixed, in the rounds
   `.claude/rules/grilling.md` (master: `.agents/rules/grilling.md`) sets out. A
-  session ends on an empty frontier and the user's confirmation, never at a
-  question count.
+  session ends in one of the four endings that rule names, and completes only
+  on an empty frontier and the user's confirmation — never at a question count.
 - Every question to the user arrives in the shape its answer has, in the form
   `.claude/rules/user-questions.md` (master: `.agents/rules/user-questions.md`)
   sets out: a structured choice where a listable set of candidates exists, or a
   plain request where none does. Where the host's tool cannot carry it, the
   plain-text fallback keeps the same parts.
-- All temporary/scratch files go in `tmp/` — working-tree files only; a test's `mkdtemp` sandbox under `os.tmpdir()` is out of scope (see `.claude/rules/temporary-files.md`, master: `.agents/rules/temporary-files.md`).
-- Do not create new directories or files at the repository root without explicit user approval; editing existing root files is allowed (see `.claude/rules/root-additions-policy.md`, master: `.agents/rules/root-additions-policy.md`).
+- A change to this repository's CI either reaches the workflow templates the
+  package ships or says in the diff why it does not, in the form
+  `.claude/rules/shipped-ci-parity.md` (master:
+  `.agents/rules/shipped-ci-parity.md`) sets out. `pnpm ci:lint` runs the guard.
+- All temporary/scratch files go in `tmp/` — working-tree files only; a test's
+  `mkdtemp` sandbox under `os.tmpdir()` is out of scope (see
+  `.claude/rules/temporary-files.md`, master: `.agents/rules/temporary-files.md`,
+  plus `temporary-files.local.md` for what applies here only).
+- Do not create new directories or files at the repository root without explicit
+  user approval; editing existing root files is allowed (see
+  `.claude/rules/root-additions-policy.md`, master:
+  `.agents/rules/root-additions-policy.md`, plus `root-additions-policy.local.md`
+  for what applies here only).
 - Traceability chain (REQ -> Spec -> Code -> Test) must be maintained; TDD-IDs and TC-Refs must not collide or reference unregistered entries.
-- Distributed surface discipline (no internal IDs / version markers in shipped files): see `.claude/rules/distributed-surface.md` (master: `.agents/rules/distributed-surface.md`).
+- Distributed surface discipline (no internal IDs / version markers in shipped files): see `.claude/rules/distributed-surface.md` (master: `.agents/rules/distributed-surface.md`). The
+  surface, the forbidden identifier shapes and the four guards are in
+  `.agents/rules/distributed-surface.local.md`.
 - SDD ドキュメントの構造 (章構成 / リスト / 表の必須列 / Gherkin / Mermaid) は
   `packages/qfai/assets/mdschema/**` が SSOT。`pnpm lint:mdschema` と
   `pnpm lint:mermaid` が強制する。see `.claude/rules/document-schema.md`
@@ -52,7 +65,9 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   of those edits require explicit instruction. Tag / publish / force-push /
   amend / AI-merge always require explicit instruction. See
   `.claude/rules/version-discipline.md` (master:
-  `.agents/rules/version-discipline.md`) for full details.
+  `.agents/rules/version-discipline.md`) for full details, and
+  `.agents/rules/version-discipline.local.md` for the pin convention this
+  repository has adopted.
 
 ## Code Review
 

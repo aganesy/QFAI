@@ -152,8 +152,8 @@ describe("E2E: multi-tool wrapper generation (US-0003-0005)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0006
-describe("E2E: legacy file evacuation (US-0003-0006)", () => {
+// QFAI:SPEC-0003:US-0003-0007
+describe("E2E: legacy file evacuation (US-0003-0007)", () => {
   it("--force removes legacy 10_workflow.md from skills", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -163,21 +163,23 @@ describe("E2E: legacy file evacuation (US-0003-0006)", () => {
       const skillDir = path.join(tmpDir, ".qfai", "assistant", "skills");
       const subdirs = await (await import("node:fs/promises")).readdir(skillDir);
       const firstSkill = subdirs.find((d) => d.startsWith("qfai-"));
-      if (firstSkill) {
-        await writeFile(path.join(skillDir, firstSkill, "10_workflow.md"), "legacy");
+      // A run that shipped no skill leaves nothing to plant the legacy file in,
+      // and the case then asserted nothing at all.
+      expect(firstSkill, "init must ship at least one skill").toBeDefined();
+      const seeded = firstSkill ?? "";
+      await writeFile(path.join(skillDir, seeded, "10_workflow.md"), "legacy");
 
-        await captureStdout(() => runInit({ dir: tmpDir, force: true, dryRun: false, yes: true }));
+      await captureStdout(() => runInit({ dir: tmpDir, force: true, dryRun: false, yes: true }));
 
-        expect(await pathExists(path.join(skillDir, firstSkill, "10_workflow.md"))).toBe(false);
-      }
+      expect(await pathExists(path.join(skillDir, seeded, "10_workflow.md"))).toBe(false);
     } finally {
       await cleanupTempDir(tmpDir);
     }
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0007
-describe("E2E: commands/prompts deprecation + skill symlink integration (US-0003-0007)", () => {
+// QFAI:SPEC-0003:US-0003-0008
+describe("E2E: commands/prompts deprecation + skill symlink integration (US-0003-0008)", () => {
   it("--force removes the commands/prompts wrappers qfai shipped, and only those", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -225,6 +227,36 @@ describe("E2E: commands/prompts deprecation + skill symlink integration (US-0003
     }
   });
 
+  it("--force prunes a qfai-* skill directory that is not a link", async () => {
+    // The story's third surface: a directory left by an older release, where a
+    // link belongs now. The two above cover the command and prompt wrappers.
+    const tmpDir = await createTempDir();
+    try {
+      await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
+
+      const stale = path.join(tmpDir, ".claude", "skills", "qfai-spec");
+      await rm(stale, { recursive: true, force: true });
+      await mkdir(stale, { recursive: true });
+      // The directory form init once wrote: a doc delegating to the canonical
+      // skill. Ownership is what authorises the delete, not the `qfai-` name.
+      await writeFile(
+        path.join(stale, "SKILL.md"),
+        [
+          "Follow the canonical QFAI skill:",
+          "- .qfai/assistant/skills/qfai-spec/SKILL.md",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await captureStdout(() => runInit({ dir: tmpDir, force: true, dryRun: false, yes: true }));
+
+      expect(await pathExists(stale)).toBe(false);
+    } finally {
+      await cleanupTempDir(tmpDir);
+    }
+  });
+
   it("creates skill symlinks in integration directories", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -247,8 +279,8 @@ describe("E2E: commands/prompts deprecation + skill symlink integration (US-0003
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0008
-describe("E2E: agent wrapper symlink (US-0003-0008)", () => {
+// QFAI:SPEC-0003:US-0003-0006
+describe("E2E: agent wrapper symlink (US-0003-0006)", () => {
   it("creates agent symlinks in .claude/agents/ and .github/agents/", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -257,12 +289,18 @@ describe("E2E: agent wrapper symlink (US-0003-0008)", () => {
       const claudeAgentsDir = path.join(tmpDir, ".claude", "agents");
       const githubAgentsDir = path.join(tmpDir, ".github", "agents");
 
+      // Both directories are what the story asks for, and every assertion below
+      // stands behind a check that the directory is there. Without this, a run
+      // that wrote neither passed every one of them.
+      expect(await pathExists(claudeAgentsDir), claudeAgentsDir).toBe(true);
+      expect(await pathExists(githubAgentsDir), githubAgentsDir).toBe(true);
+
       if (await pathExists(claudeAgentsDir)) {
         const entries = await (
           await import("node:fs/promises")
         ).readdir(claudeAgentsDir, { withFileTypes: true });
         const mdFiles = entries.filter((e) => e.name.endsWith(".md") && e.name !== "README.md");
-        // Agent symlinks should exist (if canonical agents are defined)
+        expect(mdFiles.length).toBeGreaterThan(0);
         for (const entry of mdFiles) {
           const stat = await lstat(path.join(claudeAgentsDir, entry.name));
           expect(stat.isSymbolicLink()).toBe(true);
@@ -274,6 +312,7 @@ describe("E2E: agent wrapper symlink (US-0003-0008)", () => {
           await import("node:fs/promises")
         ).readdir(githubAgentsDir, { withFileTypes: true });
         const agentFiles = entries.filter((e) => e.name.endsWith(".agent.md"));
+        expect(agentFiles.length).toBeGreaterThan(0);
         for (const entry of agentFiles) {
           const stat = await lstat(path.join(githubAgentsDir, entry.name));
           expect(stat.isSymbolicLink()).toBe(true);

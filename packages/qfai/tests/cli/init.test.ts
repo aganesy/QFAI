@@ -2370,7 +2370,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0001
+  // QFAI:SPEC-0003:TC-0003-0011
   it("New repo init creates both instructions files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2416,7 +2416,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0002
+  // QFAI:SPEC-0003:TC-0003-0012
   it("Skip when instructions files exist", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2446,7 +2446,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0003
+  // QFAI:SPEC-0003:TC-0003-0013
   it("--force refreshes instructions from the shipped template", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2472,7 +2472,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0003
   it("--force replaces an instructions symlink instead of writing through it", async () => {
     // `writeFile` follows a symlink, so refreshing without unlinking first
     // would rewrite the link's target — a file outside the project that init
@@ -2507,7 +2506,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0003
   it("--force does not overwrite instructions reached through a symlinked ancestor", async () => {
     // `lstat` only answers about the last path component, so with
     // `.github/instructions` pointing at a shared directory the destination
@@ -2539,7 +2537,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0003
   it("--force does not delete a real directory standing where an instructions file goes", async () => {
     // `rename` cannot replace a populated directory, and the recovery for that
     // failure is meant for a *symlink* — which `lstat` reports as a link, not
@@ -2660,7 +2657,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0003
+  // QFAI:SPEC-0003:TC-0003-0013
   it("--force refreshes instructions linked to an in-project dir whose name starts with dots", async () => {
     // The escape check compared `path.relative(...)` with a `startsWith("..")`
     // prefix, which also matches a directory merely *named* `..rules`. Link
@@ -2691,7 +2688,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0004
   it("Directory auto-creation for instructions", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2707,7 +2703,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0005
+  // QFAI:SPEC-0003:TC-0003-0012
   it("Partial existing instructions files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2729,7 +2725,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0006
   it("Report includes instructions in counts", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2753,7 +2748,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0007
   it("--dry-run does not write instructions files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2770,7 +2764,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0008
   it("Instructions idempotency (3 consecutive runs)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2816,7 +2809,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0009
   it("SDD marker present in templates", async () => {
     const assetsRoot = getInitAssetsDir();
     const instructionsDir = path.join(assetsRoot, ".github", "instructions");
@@ -2848,7 +2840,7 @@ describe("qfai init", () => {
     expect(principlesLines.length - principlesMarkerIdx).toBeLessThanOrEqual(5);
   });
 
-  // QFAI:SPEC-0003:TC-0003-0010
+  // QFAI:SPEC-0003:TC-0003-0014
   it("Activation guidance printed on create", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2868,7 +2860,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0011
+  // QFAI:SPEC-0003:TC-0003-0012
   it("Empty file treated as existing (instructions)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2886,7 +2878,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0012
   it("current init outputs remain stable after additive instruction assets", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {

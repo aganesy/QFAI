@@ -158,7 +158,7 @@ function Compliance([string]$Body) {
     "tests_section" = "(?m)^## 4\..*Tests.*$"
     "review_focus" = "(?m)^## Review Focus \(auto by type\)\s*$"
     "open_questions" = "(?m)^## Open Questions / Follow-ups(?:.*)?$"
-    "removal_list" = "(?m)^## What (?:this|a) change made unnecessary[ \t]*$"
+    "removal_list" = "(?m)^ {0,3}## What (?:this|a) change made unnecessary(?:[ \t]+#+)?[ \t]*$"
   }
   $missing = @()
   foreach ($entry in $required.GetEnumerator()) {
@@ -168,7 +168,7 @@ function Compliance([string]$Body) {
   $hasCompat = ($normalized -match "(?s)## Compatibility \(compat\).*?- \[x\] ")
   $hasReviewLang = ($normalized -match "Review Language:\s*\S+")
   $hasTests = ($normalized -match "(?s)## 4\..*Tests.*?- .*?:.*?- .*?:")
-  $hasRemovalAnswer = -not [string]::IsNullOrWhiteSpace((DescriptionAnswer $Body))
+  $hasRemovalAnswer = -not [string]::IsNullOrWhiteSpace((RemovalAnswer $Body))
   return [pscustomobject]@{
     Missing     = $missing
     ChangeType  = $hasChangeType
@@ -222,7 +222,9 @@ function RepairBody([string]$Template, $Pr, [string[]]$ChangedFiles, $Classifica
   $preview = @($ChangedFiles | Select-Object -First 10)
   if ((CountOf $preview) -eq 0) { $preview = @("(no files detected)") }
   $original = StripAutoImport ([string]$Pr.body)
-  foreach ($heading in @('What (?:this|a) change made unnecessary', 'Adoption bar')) {
+  # The adoption bar is authored the same way as the removal list, so repair
+  # preserves both rather than rewriting one of them from the template.
+  foreach ($heading in @($script:RemovalHeadingPattern, $script:AdoptionHeadingPattern)) {
     $answer = DescriptionAnswer $original $heading
     if ([string]::IsNullOrWhiteSpace($answer)) { continue }
     $body = [regex]::Replace($body, '(?ms)(^## ' + $heading + '[ \t]*\n).*?(?=^#{1,2} |\z)', {
@@ -508,7 +510,7 @@ if (-not $check.IsCompliant) {
   if ((CountOf $check.Missing) -gt 0) {
     Warn ("Missing sections: {0}" -f (($check.Missing -join ", ")))
   }
-  if ([string]::IsNullOrWhiteSpace((DescriptionAnswer $newBody))) {
+  if ([string]::IsNullOrWhiteSpace((RemovalAnswer $newBody))) {
     Warn ('Complete the preview, then upload it: gh pr edit {0} --body-file "{1}"' -f $pr.number, $preview)
     throw "PR body repair needs an authored removal-list answer. Upload the completed preview before rerunning; no empty answer is inferred."
   }
@@ -528,15 +530,13 @@ while ($streak -lt $effectiveRequiredZeroStreak) {
   $firstPoll = $false
 
   $snapshot = RunJson "gh" @("pr", "view", "$targetPrNumber", "--json", "number,title,body,baseRefName,headRefName,statusCheckRollup,url") "Failed to refresh PR details."
-  if (-not $DryRun) {
-    $bodyCheck = Compliance ([string]$snapshot.body)
-    if (-not $bodyCheck.IsCompliant) {
-      $streak = 0
-      $bodyArtifact = "pr-{0}-body-compliance.json" -f $targetPrNumber
-      [void](SaveJson -Root $root -Name $bodyArtifact -Value $bodyCheck)
-      [void](SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_body" -BlockingArtifact $bodyArtifact -NextAction "Restore the required authored PR sections, update the PR body, then rerun the live monitor.")
-      throw "PR body is no longer template-compliant. Update the PR body, then rerun the live monitor."
-    }
+  $bodyCheck = Compliance ([string]$snapshot.body)
+  if (-not $bodyCheck.IsCompliant -and (-not $DryRun -or [string]$snapshot.body -cne [string]$pr.body)) {
+    $streak = 0
+    $bodyArtifact = "pr-{0}-body-compliance.json" -f $targetPrNumber
+    [void](SaveJson -Root $root -Name $bodyArtifact -Value $bodyCheck)
+    [void](SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_body" -BlockingArtifact $bodyArtifact -NextAction "Restore the required authored PR sections, update the PR body, then rerun the live monitor.")
+    throw "PR body is no longer template-compliant. Update the PR body, then rerun the live monitor."
   }
   $threads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $targetPrNumber)
   $checkState = EvaluateChecks $snapshot

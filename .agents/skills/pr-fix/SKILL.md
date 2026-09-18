@@ -107,12 +107,11 @@ $pr = gh pr view --json number,headRefName,baseRefName,url
 
 Read `REVIEW.md` before writing or repairing a PR description. Body repair keeps
 an authored removal-list answer and any authored adoption bar, including their
-fenced command or config examples. A missing required removal answer blocks
-repair. Template placeholders and imported fenced copies do not supply an
-answer. Complete the
+fenced command or config examples. A missing removal answer blocks repair;
+neither a template placeholder nor an imported fenced copy supplies one. Complete the
 saved preview from the actual diff, upload it with the displayed
 `gh pr edit <number> --body-file "<preview>"` command, then rerun. Each live
-poll and the final handoff boundary recheck required body fields; invalid
+poll and the final handoff boundary recheck the authored sections; invalid
 body changes stop monitoring without a handoff.
 Dry-run leaves the remote body unchanged and assesses CI and review threads
 after saving a repair preview with an authored answer.

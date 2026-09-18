@@ -23,6 +23,7 @@ import { describe, expect, it } from "vitest";
 import { defaultConfig, loadConfig } from "../../src/core/config.js";
 import { runAtddScaffold } from "../../src/cli/commands/atddScaffold.js";
 import { scaffoldDestPath } from "../../src/core/atdd/scaffold.js";
+import { deriveTestFileExtensions } from "../../src/core/atddTraceability.js";
 import {
   resolveScaffoldDialect,
   type ScaffoldDialect,
@@ -330,6 +331,275 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     );
   });
 
+  it.each([
+    ["a zero-padded range", "tests/**/TC-0000-{0000..0999}.test.ts"],
+    ["a range with an increment", "tests/**/TC-{0000..0010..5}-0000.test.ts"],
+    ["a descending range", "tests/**/TC-{0010..0000}-0000.test.ts"],
+    ["a letter range", "tests/**/*.{s..u}est.ts"],
+    ["a range inside a list", "tests/**/TC-{{0000..0002},9999}-0000.test.ts"],
+  ])("reads %s as the members fast-glob expands it to", (_shape, glob) => {
+    // A range has no comma, so reading its body as a list matched only the
+    // text between the braces and refused a name the project's scan collects.
+    expect(requireDialect([glob]).id).toBe("js-ts");
+  });
+
+  it("refuses a name outside the range", () => {
+    expect(resolveScaffoldDialect(["tests/**/TC-{0001..0999}-0000.test.ts"]).outcome).toBe(
+      "naming-mismatch",
+    );
+    expect(resolveScaffoldDialect(["tests/**/TC-{0..10..3}-0000.test.ts"]).outcome).toBe(
+      "naming-mismatch",
+    );
+  });
+
+  it.each([
+    ["an increment written with a leading zero", "tests/**/TC-{0..10..0005}-0000.test.ts"],
+    ["an increment past the range limit", "tests/**/TC-{0000..9999..5}-0000.test.ts"],
+  ])("reads a range with %s as fast-glob expands it", (_shape, glob) => {
+    // fast-glob pads to the widest part, the increment included, and applies
+    // its range limit only where no increment is written.
+    expect(requireDialect([glob]).id).toBe("js-ts");
+  });
+
+  it("reads a list's own members as text, not as ranges", () => {
+    // `{0000..0002,9999}` names the text `0000..0002`; only a nested group expands.
+    expect(resolveScaffoldDialect(["tests/**/TC-{0000..0002,9999}-0000.test.ts"]).outcome).toBe(
+      "naming-mismatch",
+    );
+  });
+
+  it("refuses a pattern holding a refused range even when another alternative admits the name", () => {
+    // fast-glob refuses the whole pattern, so the other alternative collects nothing.
+    expect(resolveScaffoldDialect(["tests/**/TC-{{0000..9999},0000}-0000.test.ts"]).outcome).toBe(
+      "naming-mismatch",
+    );
+  });
+
+  it("reads a member the expansion produces beside what stands next to it", () => {
+    // fast-glob expands the brace before it compiles anything, so the star the
+    // range produces and the star after it are one globstar and cross
+    // directories. Compiled group by group they were two segment-local
+    // wildcards, and the path the globstar admits was refused.
+    expect(
+      resolveScaffoldDialect(["tests/{*..*}*/TC-0000-0000.test.ts"], {
+        scaffoldDir: "tests/integration/spec-0001",
+      }).outcome,
+    ).toBe("resolved");
+  });
+
+  it("keeps a wildcard out of a hidden directory, generated or written", () => {
+    // The scan runs fast-glob with its default `dot: false`: measured, neither
+    // `*` nor the star a range produces collects anything under `.tests`, while
+    // a pattern naming `.tests` does. Admitted here, the destination would be
+    // one the project's own scan never reads.
+    for (const glob of ["*/**/*.test.ts", "{*..*}/**/*.test.ts"]) {
+      expect(
+        resolveScaffoldDialect([glob], { scaffoldDir: ".tests/integration/spec-0001" }).outcome,
+        glob,
+      ).toBe("naming-mismatch");
+    }
+    expect(
+      resolveScaffoldDialect([".tests/**/*.test.ts"], {
+        scaffoldDir: ".tests/integration/spec-0001",
+      }).outcome,
+    ).toBe("resolved");
+  });
+
+  it("derives the extension a range spells", () => {
+    // `{p..p}y` is `.py` to fast-glob. Read as text it named no extension the
+    // stage knows, so the run fell back to its JavaScript default and wrote a
+    // skeleton the project's scan does not collect.
+    expect(requireDialect(["tests/**/*.{p..p}y"]).id).toBe("python");
+  });
+
+  it("reads a dot inside a name, and keeps one out of a segment's first character", () => {
+    // fast-glob collects `TC-0000-0000.test.ts` for a group after literal text:
+    // the wildcard there is inside the name, where a dot is an ordinary
+    // character. The guard belongs to the segment's first character, so an
+    // alternative compiled out of a group carries the group's position.
+    expect(requireDialect(["tests/**/TC-0000-0000@(*).ts"]).id).toBe("js-ts");
+  });
+
+  it("expands a range whose member carries a separator", () => {
+    // `{/../}` writes out to `/`, which moves the boundary the segments either
+    // side are read against, so the pattern names a directory deeper.
+    expect(
+      resolveScaffoldDialect(["tests{/../}**/TC-0000-0000.test.ts"], {
+        scaffoldDir: "tests/integration/spec-0001",
+      }).outcome,
+    ).toBe("resolved");
+  });
+
+  it("expands a range inside a bracket expression", () => {
+    // fast-glob writes the brace out first, so this is three classes and none
+    // of them admits `9`. Left as text, `0-{` was a range over every digit.
+    expect(
+      resolveScaffoldDialect(["tests/**/TC-0000-000[0-{1..3}].test.ts"], {
+        tcIds: ["TC-0000-0009"],
+      }).outcome,
+    ).toBe("naming-mismatch");
+    expect(requireDialect(["tests/**/TC-0000-000[0-{1..3}].test.ts"]).id).toBe("js-ts");
+  });
+
+  it("expands a range inside an extglob before the quantifier applies", () => {
+    // fast-glob writes it out into `*(0)` and `*(1)`, neither of which collects
+    // a name mixing the two. Compiled as one group, `(?:0|1)*` did.
+    expect(
+      resolveScaffoldDialect(["tests/**/TC-0000-*({0..1}).test.ts"], {
+        tcIds: ["TC-0000-0101"],
+      }).outcome,
+    ).toBe("naming-mismatch");
+  });
+
+  it("refuses a pattern whose refused range leaves no extension to read", () => {
+    // The glob names no extension once the refused range is passed over, and
+    // read as a project that configured nothing it took the default skeleton.
+    expect(resolveScaffoldDialect(["tests/{{0000..9999},integration}/**/*"]).outcome).toBe(
+      "naming-mismatch",
+    );
+  });
+
+  it("reads every member of a range that spells the extension", () => {
+    // `.ts` is the nineteenth member of `t{a..z}`, and a slice of the first
+    // sixteen made a TypeScript project look like one nothing supports.
+    expect(requireDialect(["tests/**/*.t{a..z}"]).id).toBe("js-ts");
+  });
+
+  it("expands a range that opens an extglob", () => {
+    // `{@..@}(` is a group once the range is written out, and the matcher reads
+    // it as one. Left as text, the pattern selected only a name holding `@(`.
+    expect(requireDialect(["tests/**/TC-0000-0000{@..@}(.test).ts"]).id).toBe("js-ts");
+  });
+
+  it("writes out a range that generates the other half of an extglob", () => {
+    // A range spelling `(` closes a group the `@` beside it opened, so fast-glob
+    // reads the pair before it compiles anything. Left as text, `@(` named
+    // itself and the pattern selected a name holding those two characters.
+    expect(requireDialect(["tests/**/TC-0000-0000@{(..(}.test).ts"]).id).toBe("js-ts");
+  });
+
+  it("expands every range a pattern holds, not the first few", () => {
+    // Each round writes out one range per candidate, so a pattern with four
+    // ranges before the one that spells the extension needs five.
+    expect(requireDialect(["{t..t}{e..e}{s..s}{t..t}s/**/*.{p..p}y"]).id).toBe("python");
+  });
+
+  it("expands past any number of ranges standing ahead of the extension", () => {
+    // Sixteen groups spell the two directory names, and the range that spells
+    // the extension is the seventeenth. Stopping after a fixed number of rounds
+    // left it as text, and the run took its JavaScript default while fast-glob
+    // selected only Python.
+    expect(
+      requireDialect([
+        "{t..t}{e..e}{s..s}{t..t}{s..s}/{i..i}{n..n}{t..t}{e..e}{g..g}{r..r}{a..a}{t..t}{i..i}{o..o}{n..n}/**/*.{p..p}y",
+      ]).id,
+    ).toBe("python");
+  });
+
+  it("names no extension for a glob larger than the expansion bound", () => {
+    // Four ranges of the whole alphabet in the last segment are more strings
+    // than there is reason to write out. A set read from part of that expansion
+    // would name extensions the matcher does not select.
+    const globs = ["tests/**/*.{a..z}{a..z}{a..z}{a..z}"];
+    expect([...deriveTestFileExtensions(globs)]).toEqual([]);
+    // And the writer refuses rather than taking the default: an empty answer
+    // here is not the empty answer an unconfigured project gives.
+    expect(resolveScaffoldDialect(globs).outcome).toBe("naming-mismatch");
+  });
+
+  it("refuses when an exclude glob's range stops the scan and no extension is named", () => {
+    // fast-glob compiles the ignore in the same call, so the scan collects
+    // nothing. Read after the include set's own empty answer, the run took the
+    // default and wrote a skeleton under an include that refusal had stopped.
+    const globs = ["tests/**/*"];
+    expect(
+      resolveScaffoldDialect(globs, {
+        scaffoldDir: "tests/integration/spec-0001",
+        excludeGlobs: ["tests/{0000..9999}/**/*"],
+      }).outcome,
+    ).toBe("naming-mismatch");
+  });
+
+  it("reads a brace range whose endpoints are quoted", () => {
+    // The expander takes the quotes off before it reads the range, so the
+    // pattern selects Python files. Read with them on, it named no member,
+    // the extension went unrecovered and the writer took its default.
+    expect(requireDialect(["tests/**/*.{'p'..'p'}y"]).id).toBe("python");
+  });
+
+  it("writes out a range that generates the extglob's closing parenthesis", () => {
+    // The `)` between the braces is not the group's close: the expansion puts
+    // one after `.test`. Read as the close, the group ended where the pattern
+    // never ends and the whole brace was never written out.
+    expect(requireDialect(["tests/**/TC-0000-0000@(.test{)..)}.ts"]).id).toBe("js-ts");
+  });
+
+  it("derives an extension a range spells inside a list", () => {
+    // `{{p..p}y,rb}` is a list of `py` and `rb` once the range is written out,
+    // and the list is unreadable before that.
+    expect(requireDialect(["tests/**/*.{{p..p}y,rb}"]).id).toBe("python");
+  });
+
+  it("derives the extension past a range the scan refuses", () => {
+    // Read as the whole pattern, the refused range stopped the group that
+    // spells the extension from being expanded at all. The pattern selects
+    // nothing either way, which the resolution says with or without a
+    // destination; what the derivation must not do is lose the extension and
+    // leave the project looking like one that configured no glob.
+    const globs = ["tests/{0000..9999}/**/*.{p..p}y"];
+    expect([...deriveTestFileExtensions(globs)]).toContain("py");
+    expect(resolveScaffoldDialect(globs).outcome).toBe("naming-mismatch");
+    expect(
+      resolveScaffoldDialect(globs, { scaffoldDir: "tests/integration/spec-0001" }).outcome,
+    ).toBe("naming-mismatch");
+  });
+
+  it("derives the extension a range spells behind a list", () => {
+    // A directory list can stand ahead of the range, and reading only the first
+    // group left the extension unread and the run on its JavaScript default.
+    expect(requireDialect(["tests/{unit,integration}/**/*.{p..p}y"]).id).toBe("python");
+  });
+
+  it("refuses when an exclude glob holds a range the scan refuses", () => {
+    // fast-glob throws while compiling the ignore, and for the whole call, so
+    // the scan collects nothing. Read as an exclusion that matches nothing, the
+    // writer emitted a skeleton under an include the same refusal had stopped.
+    expect(
+      resolveScaffoldDialect(["tests/**/*.test.ts"], {
+        scaffoldDir: "tests/integration/spec-0001",
+        excludeGlobs: ["tests/**/TC-{{0000..9999},0000}-0000.test.ts"],
+      }).outcome,
+    ).toBe("naming-mismatch");
+  });
+
+  it("reads a member the expansion produces as glob syntax", () => {
+    // fast-glob expands the range first and compiles each member after, so the
+    // `*` that `{*..*}` expands to selects every name. Escaped as a literal
+    // star it selected only a file whose name holds one.
+    expect(requireDialect(["tests/**/TC-0000-000{*..*}.test.ts"]).id).toBe("js-ts");
+  });
+
+  it("admits a naming only when every test case the run writes is inside the range", () => {
+    const globs = ["tests/**/TC-0001-{0001..0009}.test.ts"];
+    expect(resolveScaffoldDialect(globs, { tcIds: ["TC-0001-0001", "TC-0001-0009"] }).outcome).toBe(
+      "resolved",
+    );
+    expect(resolveScaffoldDialect(globs, { tcIds: ["TC-0001-0001", "TC-0001-0010"] }).outcome).toBe(
+      "naming-mismatch",
+    );
+  });
+
+  it("refuses a range fast-glob does not expand, and reads a body that is no range as text", () => {
+    // fast-glob refuses a range of a thousand steps or more, so that glob
+    // selects no file; `{TC-0000-0000}` is text, braces included.
+    for (const glob of [
+      "tests/**/TC-0000-{0000..9999}.test.ts",
+      "tests/**/{TC-0000-0000}.test.ts",
+    ]) {
+      expect(resolveScaffoldDialect([glob]).outcome, glob).toBe("naming-mismatch");
+    }
+  });
+
   it("follows the configured pytest basename convention", () => {
     const dialect = requireDialect(["tests/**/*_test.py"]);
     expect(dialect.id).toBe("python");
@@ -355,6 +625,31 @@ describe("the scaffold writes a name the project's own runner collects", () => {
         await expect(
           readFile(
             path.join(root, "tests", "integration", "spec-0001", "test_tc_0001_0001.py"),
+            "utf-8",
+          ),
+        ).rejects.toThrow();
+      },
+      COMPOSITE_TC_TABLE,
+    );
+  });
+
+  it("refuses when a test case it would write is outside a range the glob names", async () => {
+    // The representative id `TC-0000-0000` is inside the range and the run's
+    // `TC-0001-0001` is not, so only a check of the ids the run writes refuses.
+    await withProject(
+      { "qfai.config.yaml": CONFIG_WITH_GLOBS(["tests/**/TC-{0000..0000}-0000.test.ts"]) },
+      async (root) => {
+        const errors: string[] = [];
+        const code = await runAtddScaffold({
+          root,
+          specId: "spec-0001",
+          write: () => {},
+          writeErr: (message) => errors.push(message),
+        });
+        expect(code).toBe(1);
+        await expect(
+          readFile(
+            path.join(root, "tests", "integration", "spec-0001", "TC-0001-0001.test.ts"),
             "utf-8",
           ),
         ).rejects.toThrow();

@@ -31,11 +31,16 @@ mirrors (`.claude/rules/`, etc.) reference these masters; the
 Key rules to follow:
 
 - `.agents/rules/temporary-files.md` — temporary files MUST go under `tmp/`.
+- `.agents/rules/temporary-files.local.md` — a test's own `mkdtemp` sandbox is outside that rule.
 - `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.
+- `.agents/rules/root-additions-policy.local.md` — two file shapes that turn up at this root, and where each belongs.
 - `.agents/rules/distributed-surface.md` — no internal QFAI IDs or version markers in shipped files.
+- `.agents/rules/distributed-surface.local.md` — the surface, the forbidden identifier shapes, and the four guards.
 - `.agents/rules/version-discipline.md` — release version numbers are the project maintainer's call; never select or bump one independently.
+- `.agents/rules/version-discipline.local.md` — this repository has adopted the branch-name pin, and these are the guards that read it.
 - `.agents/rules/documentation-clarity.md` — plain, minimal writing in PRs, issues, comments and Markdown; no local identifiers, no account of how the work went.
 - `.agents/rules/minimal-implementation.md` — the order to try solutions in once a behaviour is agreed; mark a deliberate shortcut with its ceiling and the condition that lifts it.
 - `.agents/rules/interface-clarity.md` — what may appear on a screen or in terminal output; text explaining how to work a control is a defect report against that control.
-- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.
+- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends in one of four named endings, never at a question count.
 - `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.
+- `.agents/rules/shipped-ci-parity.md` — a change to this repository's CI either reaches the workflow templates the package ships or says in the diff why it does not.

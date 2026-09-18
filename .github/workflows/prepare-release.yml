@@ -277,83 +277,569 @@ jobs:
             node - "${existing_body}" "${body_file}" <<'REPAIR_BODY'
             const { readFileSync, writeFileSync } = require('node:fs');
             const [existingPath, bodyPath] = process.argv.slice(2);
-            const existing = readFileSync(existingPath, 'utf8');
+            // A byte-order mark ahead of the first heading stops the section
+            // pattern anchoring there, and the reader that judges the result
+            // strips it, so the two read different sections of one body. Removed
+            // once, here, so discovery and reconstruction read the same text and
+            // the body written back carries none.
+            const existing = readFileSync(existingPath, 'utf8').replace(/^\ufeff/, '');
             const generated = readFileSync(bodyPath, 'utf8');
             const section =
-              /^## What (?:this|a) change made unnecessary[ \t]*\r?\n([\s\S]*?)(?=^#{1,2} |(?![\s\S]))/m;
-            const maskExamples = (body) => {
-              let fence = '';
-              let inComment = false;
-              let spanEnd = 0;
-              const visible = body.replace(/^[^\n]*/gm, (line, offset) => {
-                if (fence) {
-                  const closing = /^[ \t]{0,3}(`{3,}|~{3,})[ \t]*\r?$/.exec(line)?.[1] ?? '';
-                  if (closing[0] === fence[0] && closing.length >= fence.length) fence = '';
-                  return line.replace(/[^\r\n]/g, ' ');
+              /^ {0,3}## What (?:this|a) change made unnecessary(?:[ \t]+#+)?[ \t]*\r?\n([\s\S]*?)(?=^ {0,3}#{1,2}(?:[ \t]|\r?$)|(?![\s\S]))/m;
+            const maskExamples = (body, setextHeadings = false) => {
+              const definitions = new Map();
+              const definitionLabels = new Map();
+              const referenceLabels = new Set();
+              const normalizeLabel = (label) => label.replace(/[ \t\r\n]+/g, ' ').trim().toLowerCase().toUpperCase();
+              const blockTags =
+                'address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul'.replace(
+                  /[a-z]/g,
+                  (letter) => `[${letter}${letter.toUpperCase()}]`,
+                );
+              const interrupt = String.raw` {0,3}(?:#{1,6}(?:[ \t]|\r?$)|>|~{3,}|\x60{3,}[^\x60\r\n]*\r?$|(?:=+|-+)[ \t]*\r?$|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})\r?$|(?:[-+*]|0{0,8}1[.)])[ \t]+\S|<(?:!--|\?|![A-Za-z]|!\[[cC][dD][aA][tT][aA]\[|(?:[pP][rR][eE]|[sS][cC][rR][iI][pP][tT]|[sS][tT][yY][lL][eE]|[tT][eE][xX][tT][aA][rR][eE][aA])(?=[ \t>]|\r?$)|/?(?:${blockTags})(?=[ \t>]|/>|\r?$)))`;
+              const continuation = String.raw`\r?\n(?![ \t]*(?:\r?\n|(?![\s\S])))(?!${interrupt})`;
+              const paragraphInterrupt = new RegExp(`^${interrupt}`);
+              // SIMPLIFIED: closed code spans retain literal comment openers.
+              // Lift when: block parsing and code-span preservation share paragraph boundaries.
+              const codeSpan = new RegExp(
+                '^(`+)(?!`)(?:(?!\\r?\\n[ \\t]*\\r?\\n)(?!\\r?\\n' +
+                  interrupt.replace('!--|', '').replace(/\$/g, '(?=\\r?\\n|$)') +
+                  ')[\\s\\S])*?(?<!`)\\1(?!`)',
+              );
+              const label = String.raw`\[(?<label>(?:\\.|[^\[\]\\\r\n]|${continuation})+)\]`;
+              const destination = String.raw`(?<destination><(?:\\.|[^<>\\\r\n])*>|(?:\\.|[^\x00-\x20\x7f<>\\])+)`;
+              const title = String.raw`(?:"(?:[^"\\\r\n]|\\.|${continuation})*"|'(?:[^'\\\r\n]|\\.|${continuation})*'|\((?:[^()\\\r\n]|\\.|${continuation})*\))`;
+              const spacing = String.raw`(?:[ \t]+(?:${continuation}[ \t]*)?|[ \t]*${continuation}[ \t]*)`;
+              const definition = new RegExp(
+                String.raw`^(?: {0,3}(?:>[ \t]?|(?:[-*+]|\d{1,9}[.)])[ \t]+))*[ \t]*${label}:[ \t]*(?:${continuation}[ \t]*)?${destination}(?:${spacing}${title})?[ \t]*\r?$`,
+                'gm',
+              );
+              const link = new RegExp(
+                String.raw`\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\]\([ \t]*(?:${continuation}[ \t]*)?(?:${destination})?(?:${spacing}${title})?[ \t]*(?:${continuation}[ \t]*)?\)`,
+                'y',
+              );
+              const referenceImage = new RegExp(
+                String.raw`\[(?<text>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\](?:\[(?<reference>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\])?`,
+                'y',
+              );
+              const imageSuffix = new RegExp(
+                String.raw`\]\([ \t]*(?:${continuation}[ \t]*)?(?:${destination})?(?:${spacing}${title})?[ \t]*(?:${continuation}[ \t]*)?\)`,
+                'y',
+              );
+              const imageReference = new RegExp(String.raw`\[(?<reference>(?:\\.|[^\[\]\\\r\n]|${continuation})*)\]`, 'y');
+              const imageLabelEnds = new Map();
+              const labelStack = [];
+              const labelContinuation = new RegExp(continuation, 'y');
+              const labelCodeSpan = new RegExp(codeSpan.source.slice(1), 'y');
+              const tableBoundaries = [];
+              const tableDelimiter = /^ {0,3}\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*\r?$/;
+              let tableOffset = 0;
+              let previousLine = '';
+              for (const line of body.split('\n')) {
+                if (tableDelimiter.test(line) && /^ {0,3}\S/.test(previousLine)) {
+                  const header = previousLine.trim();
+                  const headerCells = header.replace(/^\||(?<!\\)(?:\\\\)*\|$/g, '');
+                  const separator = line.trim().replace(/^\||\|$/g, '');
+                  if (/(?<!\\)(?:\\\\)*\|/.test(header) &&
+                    (headerCells.match(/(?<!\\)(?:\\\\)*\|/g)?.length ?? 0) ===
+                    (separator.match(/\|/g)?.length ?? 0)) tableBoundaries.push(tableOffset);
                 }
-                const rawOpening = /^[ \t]{0,3}(`{3,}|~{3,})(.*)\r?$/.exec(line);
-                if (
-                  !inComment &&
-                  offset >= spanEnd &&
-                  rawOpening &&
-                  !(rawOpening[1][0] === '`' && rawOpening[2].includes('`'))
-                ) {
-                  fence = rawOpening[1];
-                  return line.replace(/[^\r\n]/g, ' ');
+                previousLine = line;
+                tableOffset += line.length + 1;
+              }
+              const crossesTable = (start, end) => {
+                let low = 0;
+                let high = tableBoundaries.length;
+                while (low < high) {
+                  const middle = low + Math.floor((high - low) / 2);
+                  if (tableBoundaries[middle] <= start) low = middle + 1;
+                  else high = middle;
                 }
-                let visible = line;
-                let position = 0;
-                while (position < line.length) {
-                  if (offset + position < spanEnd) {
-                    position = Math.min(line.length, spanEnd - offset);
+                return low < tableBoundaries.length && tableBoundaries[low] < end;
+              };
+              const htmlSpace = String.raw`(?:[ \t]|${continuation})`;
+              const htmlValue = String.raw`(?:[^"'=<>\x60\x00-\x20]+|'(?:[^'\r\n]|${continuation})*'|"(?:[^"\r\n]|${continuation})*")`;
+              const htmlTag = String.raw`(?:<[A-Za-z][A-Za-z0-9-]*(?:${htmlSpace}+[A-Za-z_:][A-Za-z0-9:._-]*(?:${htmlSpace}*=${htmlSpace}*${htmlValue})?)*${htmlSpace}*/?>|</[A-Za-z][A-Za-z0-9-]*${htmlSpace}*>)`;
+              const labelHtml = new RegExp(String.raw`(?:${htmlTag}|<!--(?!>|->)(?:(?!--)[^\r\n]|${continuation})*(?<!-)-->|<\?(?:[^\r\n]|${continuation})*?\?>|<![A-Z]+(?:[ \t]|${continuation})+(?:[^>\r\n]|${continuation})*>|<!\[CDATA\[(?:[^\r\n]|${continuation})*?\]\]>|<(?:[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\x00-\x20<>]*|[A-Za-z0-9.!#$%&'*+/=?^_\x60{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)>)`, 'y');
+              const escapable = /[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]/;
+              const isEscaped = (start) => {
+                let slashes = 0;
+                for (let before = start - 1; before >= 0 && body[before] === '\\'; before -= 1) slashes += 1;
+                return slashes % 2 !== 0;
+              };
+              const labelHtmlPrefix = /<(?:(\?)|(!\[CDATA\[)|(![A-Z]+(?=[ \t\r\n])))/y;
+              const failedLabelHtmlEnds = [0, 0, 0];
+              const labelParagraphEnd = (start) => {
+                let newline = body.indexOf('\n', start);
+                while (newline !== -1) {
+                  labelContinuation.lastIndex = newline;
+                  if (labelContinuation.exec(body) === null || crossesTable(newline, newline + 2)) return newline;
+                  newline = body.indexOf('\n', newline + 1);
+                }
+                return body.length;
+              };
+              for (let labelIndex = 0; labelIndex < body.length; labelIndex += 1) {
+                const character = body[labelIndex];
+                if (character === '\\' && escapable.test(body[labelIndex + 1] ?? '')) { labelIndex += 1; continue; }
+                labelContinuation.lastIndex = labelIndex;
+                if (character === '\n' && (labelContinuation.exec(body) === null || crossesTable(labelIndex, labelIndex + 2))) labelStack.length = 0;
+                if (character === '`') {
+                  labelCodeSpan.lastIndex = labelIndex;
+                  const span = labelCodeSpan.exec(body);
+                  if (span !== null && !crossesTable(labelIndex, labelIndex + span[0].length)) { labelIndex += span[0].length - 1; continue; }
+                }
+                if (character === '<') {
+                  labelHtmlPrefix.lastIndex = labelIndex;
+                  const prefix = labelHtmlPrefix.exec(body);
+                  const family = prefix?.[1] ? 0 : prefix?.[2] ? 1 : prefix?.[3] ? 2 : -1;
+                  if (family < 0 || labelIndex >= failedLabelHtmlEnds[family]) {
+                    labelHtml.lastIndex = labelIndex;
+                    const html = labelHtml.exec(body);
+                    if (html !== null && !crossesTable(labelIndex, labelIndex + html[0].length)) { labelIndex += html[0].length - 1; continue; }
+                    if (family >= 0) failedLabelHtmlEnds[family] = labelParagraphEnd(labelIndex);
+                  }
+                }
+                if (character === '[') labelStack.push(labelIndex);
+                if (character === ']' && labelStack.length > 0) imageLabelEnds.set(labelStack.pop(), labelIndex);
+              }
+              const destinationLength = (target, inline = false) => {
+                if (target.startsWith('<')) return target.length;
+                let depth = 0;
+                for (let index = 0; index < target.length; index += 1) {
+                  if (target[index] === '\\') {
+                    index += 1;
                     continue;
                   }
-                  if (!inComment) {
-                    if (line[position] === '`') {
-                      const tail = body.slice(offset + position);
-                      const span = /^(`+)(?!`)(?:(?!\r?\n[ \t]*\r?\n)[\s\S])*?(?<!`)\1(?!`)/.exec(tail)?.[0];
-                      if (span !== undefined) {
-                        spanEnd = offset + position + span.length;
-                        position = Math.min(line.length, spanEnd - offset);
+                  if (target[index] === '(') depth += 1;
+                  if (target[index] === ')') depth -= 1;
+                  if (depth < 0) return inline ? index : -1;
+                  if (depth > 32) return -1;
+                }
+                return depth === 0 ? target.length : -1;
+              };
+              for (const reference of body.matchAll(definition)) {
+                if (
+                  Buffer.byteLength(reference.groups.label.replace(/\r\n/g, '\n'), 'utf8') > 1000 ||
+                  !/[^ \t\r\n]/.test(reference.groups.label)
+                )
+                  continue;
+                if (destinationLength(reference.groups.destination) < 0) continue;
+                definitions.set(reference.index, reference.index + reference[0].length);
+                definitionLabels.set(reference.index, normalizeLabel(reference.groups.label));
+              }
+              let visible = '';
+              let unfinished = false;
+              for (let pass = 0; pass < 2; pass += 1) {
+                let referenceEnd = 0;
+                let linkStart = 0;
+                // The destination of a link whose label holds another one. Kept
+                // apart because the scan walks into that label and the inner link
+                // overwrites the pair above.
+                let labelLinkStart = 0;
+                let labelLinkEnd = 0;
+                let linkEnd = 0;
+                let fence = '';
+                let fenceContentColumn = 0;
+                let fenceContainer = '';
+                let inComment = false;
+                let spanEnd = 0;
+                let htmlEnd = null;
+                let htmlTextVisible = false;
+                let htmlContentColumn = 0;
+                let htmlContainer = '';
+                const listContentColumns = [];
+                let listContainer = '';
+                let footnoteColumn = null;
+                let footnoteParagraph = false;
+                let footnoteContainer = '';
+                const columnAfter = (prefix) => {
+                  let column = 0;
+                  for (const character of prefix)
+                    column += character === '\t' ? 4 - (column % 4) : 1;
+                  return column;
+                };
+                let paragraph = false;
+                let paragraphStart = -1;
+                const headings = [];
+                visible = body.replace(/^[^\n]*/gm, (line, offset) => {
+                  if (!paragraph) paragraphStart = -1;
+                  if (offset < referenceEnd) return line.replace(/[^\r\n]/g, ' ');
+                  const previousContainer = listContainer;
+                  const content = line.replace(/^ {0,3}(?:> ?)+/, '');
+                  let container = (/^ {0,3}(?:> ?)*/.exec(line)?.[0] ?? '').replace(/[^>]/g, '');
+                  const indentation = columnAfter(/^[ \t]*/.exec(content)?.[0] ?? '');
+                  const blank = line.trim().length === 0;
+                  if (
+                    footnoteColumn !== null && container === footnoteContainer &&
+                    (blank || indentation >= footnoteColumn ||
+                      (footnoteParagraph && !paragraphInterrupt.test(content)))
+                  ) {
+                    footnoteParagraph = !blank && indentation < footnoteColumn + 4 &&
+                      !paragraphInterrupt.test(content.trimStart());
+                    paragraph = false;
+                    return line.replace(/[^\r\n]/g, ' ');
+                  }
+                  footnoteColumn = null;
+                  if (container !== listContainer) {
+                    listContentColumns.length = 0;
+                    listContainer = container;
+                  }
+                  while (!blank && indentation < (listContentColumns.at(-1) ?? 0))
+                    listContentColumns.pop();
+                  if (fence && (container !== fenceContainer || (!blank && indentation < fenceContentColumn)))
+                    fence = '';
+                  if (htmlEnd && (container !== htmlContainer || (!blank && indentation < htmlContentColumn)))
+                    htmlEnd = null;
+                  let insideHtml = Boolean(htmlEnd);
+                  if (fence) {
+                    paragraph = false;
+                    const closing = /^(`{3,}|~{3,})[ \t]*\r?$/.exec(content.replace(/^[ \t]*/, ''))?.[1] ?? '';
+                    if (indentation <= fenceContentColumn + 3 && closing[0] === fence[0] && closing.length >= fence.length)
+                      fence = '';
+                    return line.replace(/[^\r\n]/g, ' ');
+                  }
+                  if (htmlEnd) {
+                    paragraph = false;
+                    if (htmlEnd.test(line)) htmlEnd = null;
+                    if (!htmlTextVisible) return line.replace(/[^\r\n]/g, ' ');
+                  }
+                  const contentColumn = listContentColumns.at(-1) ?? 0;
+                  let htmlAllowed = indentation >= contentColumn && indentation <= contentColumn + 3;
+                  let htmlLine = content;
+                  const marker = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/.exec(content);
+                  if (
+                    !insideHtml && !inComment && offset >= spanEnd && offset >= linkEnd &&
+                    htmlAllowed && marker &&
+                    (!paragraph || contentColumn > 0 ||
+                      (/^(?:[-*+]|0{0,8}1[.)])$/.test(marker[2]) && /^\S/.test(content.slice(marker[0].length))))
+                  ) {
+                    const markerEnd = columnAfter(marker[1] + marker[2]);
+                    const gap = columnAfter(marker[0]) - markerEnd;
+                    listContentColumns.push(markerEnd + (gap > 4 ? 1 : gap));
+                    htmlLine = content.slice(marker[0].length);
+                    htmlAllowed = gap <= 4;
+                    paragraph = false;
+                    paragraphStart = -1;
+                  }
+                  // A container opened inside a list item is stripped here: the
+                  // line-leading pass reads quote markers standing before the list
+                  // marker, so a fence behind one was never seen as an opener.
+                  while (!insideHtml && !inComment && offset >= spanEnd && offset >= linkEnd && htmlAllowed && listContentColumns.length > 0) {
+                    const quoted = /^ {0,3}(?:> ?)+/.exec(htmlLine);
+                    if (quoted !== null) {
+                      container += quoted[0].replace(/[^>]/g, '');
+                      // Zero, not an addition: the line-leading pass strips each later
+                      // line's own quote prefix, so its content is measured from after
+                      // the marker.
+                      listContentColumns.push(0);
+                      htmlLine = htmlLine.slice(quoted[0].length);
+                      paragraph = false;
+                      paragraphStart = -1;
+                      continue;
+                    }
+                    const nested = /^ {0,3}([-*+]|\d{1,9}[.)])([ \t]{1,4})(?![ \t])/.exec(htmlLine);
+                    if (nested === null) break;
+                    listContentColumns.push(listContentColumns.at(-1) + columnAfter(nested[0]));
+                    htmlLine = htmlLine.slice(nested[0].length);
+                    paragraph = false;
+                    paragraphStart = -1;
+                  }
+                  htmlLine = htmlLine.replace(/^[ \t]*/, '');
+                  const rawOpening = /^(`{3,}|~{3,})(.*)\r?$/.exec(htmlLine);
+                  if (
+                    !insideHtml && !inComment && offset >= spanEnd && offset >= linkEnd &&
+                    htmlAllowed && rawOpening &&
+                    !(rawOpening[1][0] === '`' && rawOpening[2].includes('`'))
+                  ) {
+                    fence = rawOpening[1];
+                    fenceContentColumn = listContentColumns.at(-1) ?? 0;
+                    fenceContainer = container;
+                    paragraph = false;
+                    return line.replace(/[^\r\n]/g, ' ');
+                  }
+                  if (!inComment && !insideHtml && offset >= spanEnd && offset >= linkEnd && htmlAllowed) {
+                    htmlTextVisible = false;
+                    if (/^<(?:pre|script|style|textarea)(?=[ \t>]|$)/i.test(htmlLine)) {
+                      htmlEnd = /<\/(?:pre|script|style|textarea)>/i;
+                    } else if (/^<\?/.test(htmlLine)) {
+                      htmlEnd = /\?>/;
+                    } else if (/^<![A-Za-z]/.test(htmlLine)) {
+                      htmlEnd = />/;
+                    } else if (/^<!\[CDATA\[/.test(htmlLine)) {
+                      htmlEnd = /\]\]>/;
+                    } else if (
+                      /^<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|\/>|$)/i.test(
+                        htmlLine,
+                      )
+                    ) {
+                      htmlEnd = /^[ \t]*\r?$/;
+                      htmlTextVisible = true;
+                    } else if (
+                      !paragraph &&
+                      /^(?:<(?!pre(?:[ \t/>]|$)|script(?:[ \t/>]|$)|style(?:[ \t/>]|$)|textarea(?:[ \t/>]|$))[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t]*=[ \t]*(?:[^"'=<>`\x00-\x20]+|'[^']*'|"[^"]*"))?)*[ \t]*\/?>|<\/[A-Za-z][A-Za-z0-9-]*[ \t]*>)[ \t]*\r?$/i.test(
+                        htmlLine,
+                      )
+                    ) {
+                      htmlEnd = /^[ \t]*\r?$/;
+                      htmlTextVisible = true;
+                    }
+                    if (htmlEnd) {
+                      htmlContentColumn = listContentColumns.at(-1) ?? 0;
+                      htmlContainer = container;
+                      insideHtml = true;
+                      paragraph = false;
+                      if (htmlEnd.test(line)) htmlEnd = null;
+                      if (!htmlTextVisible) return line.replace(/[^\r\n]/g, ' ');
+                    }
+                  }
+                  const footnote = /^\[\^[^\]\r\n]+\]:[ \t]*(.*)/.exec(htmlLine);
+                  if (!insideHtml && !inComment && offset >= spanEnd && offset >= linkEnd && htmlAllowed && footnote) {
+                    footnoteColumn = (listContentColumns.at(-1) ?? 0) + 4;
+                    footnoteParagraph = footnote[1].trim().length > 0 && !paragraphInterrupt.test(footnote[1]);
+                    footnoteContainer = container;
+                    paragraph = false;
+                    return line.replace(/[^\r\n]/g, ' ');
+                  }
+                  if (!insideHtml && !inComment && offset >= spanEnd && htmlAllowed && (!paragraph || (container && container !== previousContainer)) && definitions.has(offset)) {
+                    referenceEnd = definitions.get(offset);
+                    referenceLabels.add(definitionLabels.get(offset));
+                    return line.replace(/[^\r\n]/g, ' ');
+                  }
+                  let visible = line;
+                  let hasInlineLink = offset < Math.max(linkEnd, labelLinkEnd);
+                  let position = 0;
+                  while (position < line.length) {
+                    const inLink = offset + position >= linkStart && offset + position < linkEnd;
+                    const inLabelLink =
+                      offset + position >= labelLinkStart && offset + position < labelLinkEnd;
+                    if (inLink || inLabelLink) {
+                      const reach = Math.max(inLink ? linkEnd : 0, inLabelLink ? labelLinkEnd : 0);
+                      const next = Math.min(line.length, reach - offset);
+                      visible = visible.slice(0, position) + ' '.repeat(next - position) + visible.slice(next);
+                      position = next;
+                      continue;
+                    }
+                    if (offset + position < spanEnd) {
+                      position = Math.min(line.length, spanEnd - offset);
+                      continue;
+                    }
+                    if (!inComment) {
+                      if (!insideHtml && line[position] === '[') {
+                        let escapes = 0;
+                        for (let before = position - 1; before >= 0 && line[before] === '\\'; before -= 1)
+                          escapes += 1;
+                        const start = offset + position;
+                        link.lastIndex = start;
+                        let inline = escapes % 2 === 0 ? link.exec(body) : null;
+                        let imageEscapes = 0;
+                        for (let before = position - 2; before >= 0 && line[before] === '\\'; before -= 1)
+                          imageEscapes += 1;
+                        const image = line[position - 1] === '!' && imageEscapes % 2 === 0;
+                        let flatLink = false;
+                        if (image && escapes % 2 === 0 && imageLabelEnds.has(start)) {
+                          const close = imageLabelEnds.get(start);
+                          imageSuffix.lastIndex = close;
+                          let suffix = imageSuffix.exec(body);
+                          if (suffix !== null && !crossesTable(start, close + suffix[0].length)) {
+                            const target = suffix.groups.destination ?? '';
+                            const length = destinationLength(target, true);
+                            if (length >= 0 && length < target.length) {
+                              const complete = suffix[0].slice(0, suffix[0].indexOf(target, 2) + length + 1);
+                              imageSuffix.lastIndex = 0;
+                              suffix = imageSuffix.exec(complete);
+                            }
+                            if (length >= 0 && suffix !== null && destinationLength(suffix.groups.destination ?? '') >= 0) {
+                              linkStart = start;
+                              linkEnd = close + suffix[0].length;
+                              hasInlineLink = true;
+                              continue;
+                            }
+                          }
+                          imageReference.lastIndex = close + 1;
+                          const reference = imageReference.exec(body);
+                          const text = reference?.groups.reference || body.slice(start + 1, close);
+                          if (!crossesTable(start, close + 1 + (reference?.[0].length ?? 0)) && Buffer.byteLength(text.replace(/\r\n/g, '\n'), 'utf8') <= 1000 && referenceLabels.has(normalizeLabel(text))) {
+                            linkStart = start;
+                            linkEnd = close + 1 + (reference?.[0].length ?? 0);
+                            hasInlineLink = true;
+                            continue;
+                          }
+                        }
+                        // A link whose label holds an image is one the flat pattern
+                        // cannot read: its brackets nest. Read the label off the
+                        // balanced map, so the destination is masked rather than left
+                        // standing as the only text an image-only answer shows.
+                        if (!image && escapes % 2 === 0 && imageLabelEnds.has(start)) {
+                          const close = imageLabelEnds.get(start);
+                          imageSuffix.lastIndex = close;
+                          let suffix = imageSuffix.exec(body);
+                          if (suffix !== null && !crossesTable(start, close + suffix[0].length)) {
+                            const target = suffix.groups.destination ?? '';
+                            const length = destinationLength(target, true);
+                            if (length >= 0 && length < target.length) {
+                              const complete = suffix[0].slice(0, suffix[0].indexOf(target, 2) + length + 1);
+                              imageSuffix.lastIndex = 0;
+                              suffix = imageSuffix.exec(complete);
+                            }
+                            if (length >= 0 && suffix !== null && destinationLength(suffix.groups.destination ?? '') >= 0) {
+                              visible = visible.slice(0, position) + ' ' + visible.slice(position + 1);
+                              // The label stays scanned: an image inside it is masked
+                              // by its own branch, and prose inside it is visible.
+                              labelLinkStart = close;
+                              labelLinkEnd = close + suffix[0].length;
+                              hasInlineLink = true;
+                              flatLink = true;
+                            }
+                          }
+                          // And the reference forms of the same link: full,
+                          // collapsed and shortcut. Read only for the inline
+                          // form, a linked image written any of those three ways
+                          // left its label letters standing as the only text.
+                          if (!flatLink) {
+                            imageReference.lastIndex = close + 1;
+                            const reference = imageReference.exec(body);
+                            const text = reference?.groups.reference || body.slice(start + 1, close);
+                            const referenceLength = reference?.[0].length ?? 0;
+                            if (!crossesTable(start, close + 1 + referenceLength) && Buffer.byteLength(text.replace(/\r\n/g, '\n'), 'utf8') <= 1000 && referenceLabels.has(normalizeLabel(text))) {
+                              visible = visible.slice(0, position) + ' ' + visible.slice(position + 1);
+                              labelLinkStart = close;
+                              labelLinkEnd = close + 1 + referenceLength;
+                              hasInlineLink = true;
+                              flatLink = true;
+                            }
+                          }
+                        }
+                        if (!flatLink && inline !== null && !crossesTable(start, start + inline[0].length)) {
+                          const target = inline.groups.destination ?? '';
+                          const length = destinationLength(target, true);
+                          if (length >= 0 && length < target.length) {
+                            const start = inline[0].indexOf(target, inline.groups.text.length + 3);
+                            const complete = inline[0].slice(0, start + length + 1);
+                            link.lastIndex = 0;
+                            inline = link.exec(complete);
+                          }
+                          if (
+                            length >= 0 &&
+                            inline !== null &&
+                            destinationLength(inline.groups.destination ?? '') >= 0
+                          ) {
+                            visible = visible.slice(0, position) + ' ' + visible.slice(position + 1);
+                            linkStart = image ? start : start + 1 + inline.groups.text.length;
+                            linkEnd = start + inline[0].length;
+                            hasInlineLink = true;
+                            flatLink = true;
+                            if (image) continue;
+                          }
+                        }
+                        if (image && escapes % 2 === 0) {
+                          referenceImage.lastIndex = start;
+                          const reference = referenceImage.exec(body);
+                          const text = reference?.groups.reference || reference?.groups.text || '';
+                          if (reference && !crossesTable(start, start + reference[0].length) && Buffer.byteLength(text.replace(/\r\n/g, '\n'), 'utf8') <= 1000 && referenceLabels.has(normalizeLabel(text))) {
+                            linkStart = start;
+                            linkEnd = referenceImage.lastIndex;
+                            hasInlineLink = true;
+                            continue;
+                          }
+                        }
+                      }
+                      if (!insideHtml && line[position] === '`') {
+                        if (isEscaped(offset + position)) { position += 1; continue; }
+                        const tail = body.slice(offset + position);
+                        const span = codeSpan.exec(tail)?.[0];
+                        if (span !== undefined && !crossesTable(offset + position, offset + position + span.length)) {
+                          spanEnd = offset + position + span.length;
+                          position = Math.min(line.length, spanEnd - offset);
+                          continue;
+                        }
+                        position += /^`+/.exec(tail)[0].length;
                         continue;
                       }
-                      position += /^`+/.exec(tail)[0].length;
-                      continue;
+                      if (!line.startsWith('<!--', position) || isEscaped(offset + position)) {
+                        position += 1;
+                        continue;
+                      }
+                      inComment = true;
                     }
-                    if (!line.startsWith('<!--', position)) {
-                      position += 1;
-                      continue;
-                    }
-                    inComment = true;
+                    const end = line.indexOf('-->', position);
+                    const next = end < 0 ? line.length : end + 3;
+                    visible =
+                      visible.slice(0, position) +
+                      line.slice(position, next).replace(/[^\r\n]/g, ' ') +
+                      visible.slice(next);
+                    position = next;
+                    inComment = end < 0;
                   }
-                  const end = line.indexOf('-->', position);
-                  const next = end < 0 ? line.length : end + 3;
-                  visible =
-                    visible.slice(0, position) +
-                    line.slice(position, next).replace(/[^\r\n]/g, ' ') +
-                    visible.slice(next);
-                  position = next;
-                  inComment = end < 0;
+                  const opening = /^ {0,3}(`{3,}|~{3,})(.*)\r?$/.exec(visible);
+                  if (!insideHtml && opening && !(opening[1][0] === '`' && opening[2].includes('`'))) {
+                    fence = opening[1];
+                    fenceContentColumn = listContentColumns.at(-1) ?? 0;
+                    fenceContainer = container;
+                    paragraph = false;
+                    return line.replace(/[^\r\n]/g, ' ');
+                  }
+                  if (insideHtml && /^ {0,3}#{1,6}(?:[ \t]|$)/.test(visible))
+                    visible = line.replace(/[^\r\n]/g, ' ');
+                  if (
+                    setextHeadings && paragraphStart >= 0 && !insideHtml && !inComment &&
+                    offset >= spanEnd && offset >= linkEnd && /^ {0,3}(?:=+|-+)[ \t]*\r?$/.test(line)
+                  ) headings.push(paragraphStart);
+                  const wasParagraph = paragraph;
+                  const equalsUnderline = wasParagraph && /^ {0,3}=+[ \t]*\r?$/.test(line);
+                  paragraph =
+                    !insideHtml &&
+                    !equalsUnderline &&
+                    (hasInlineLink || visible.trim().length > 0) &&
+                    !/^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})\r?$)/.test(
+                      visible,
+                    );
+                  if (
+                    !wasParagraph && paragraph && /^ {0,3}[^ \t\r\n]/.test(line) &&
+                    !/^ {0,3}(?:>|[-+*](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$))/.test(line)
+                  ) paragraphStart = offset;
+                  return visible;
+                });
+                for (const start of headings) {
+                  const newline = visible.indexOf('\n', start);
+                  const end = newline < 0 ? visible.length : newline;
+                  visible = visible.slice(0, start) + '#' + ' '.repeat(end - start - 1) + visible.slice(end);
                 }
-                const opening = /^[ \t]{0,3}(`{3,}|~{3,})(.*)\r?$/.exec(visible);
-                if (opening && !(opening[1][0] === '`' && opening[2].includes('`'))) {
-                  fence = opening[1];
-                  return line.replace(/[^\r\n]/g, ' ');
-                }
-                return visible;
-              });
-              return { visible, unfinished: Boolean(fence) || inComment };
+                unfinished = Boolean(fence) || inComment || Boolean(htmlEnd && !htmlEnd.test(''));
+              }
+              return { visible, unfinished };
             };
-            const parsed = maskExamples(existing);
+            const parsed = maskExamples(existing, true);
             const match = section.exec(parsed.visible);
             const hasAnswer = (candidate) => {
+              // SIMPLIFIED: other named references remain separators, not a full HTML5 decode.
+              // Lift when: the body readers can share a complete installed entity decoder.
+              const namedEntities = { sol: '/', period: '.', lbrack: '[', rbrack: ']', lsqb: '[', rsqb: ']', nbsp: '\u00a0', Tab: '\t', NewLine: '\n' };
               const answer = (candidate?.[1] ?? '')
-                .replace(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]*(?:\[[ xX-]?\][ \t]*)?/gm, '')
-                .replace(/^[ \t]*>+[ \t]*/gm, '')
-                .replace(/\[([^\]]*)\]\([^\)\r\n]*\)/g, '$1')
-                .replace(/<\/?[A-Za-z][A-Za-z0-9:-]*(?:[ \t][^>]*|[ \t]*\/?)>/g, '')
-                .replace(/&(?:#(?:[xX][0-9A-Fa-f]+|\d+)|[A-Za-z][A-Za-z0-9]*);/g, ' ')
-                .replace(/[`*_]/g, '')
+                .replace(/\r\n/g, '\n')
+                // A quote and a list marker interleave, and one pass per kind
+                // left the nested one in place.
+                .replace(/^(?:[ \t]*(?:>+|(?:[-*+]|\d+[.)])(?:[ \t]*\[[ xX-]?\])?)[ \t]*)+/gm, '')
+                .replace(
+                  /<\/?[A-Za-z][A-Za-z0-9:-]*(?:[ \t\n]+[A-Za-z_:][A-Za-z0-9:._-]*(?:[ \t\n]*=[ \t\n]*(?:[^"'=<>`\x00-\x20]+|'[^']*'|"[^"]*"))?)*[ \t\n]*\/?>/g,
+                  '',
+                )
+                .replace(/(\\[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]|(`+)(?!`)[\s\S]*?(?<!`)\2(?!`))|&(?<entity>#[xX][0-9A-Fa-f]{1,6}|#\d{1,7}|[A-Za-z][A-Za-z0-9]*);/g, (match, literal, ticks, entity, offset, source, groups) => {
+                  if (literal !== undefined) return literal;
+                  const text = groups.entity;
+                  if (!text.startsWith('#')) return Object.hasOwn(namedEntities, text) ? namedEntities[text] : ' ';
+                  const value = /^[xX]/.test(text[1]) ? Number.parseInt(text.slice(2), 16) : Number.parseInt(text.slice(1), 10);
+                  return value === 0 || value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff) ? '\ufffd' : String.fromCodePoint(value);
+                })
+                // Emphasis, strikethrough and a leading heading marker render as
+                // formatting, not as text, so a placeholder wearing one still reads
+                // as the placeholder. A backslash escape renders as the punctuation
+                // alone, so an escaped `N/A` reads as the placeholder it is.
+                .replace(/\\([\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e])/g, '$1')
+                .replace(/[`*_]|~~/g, '')
+                .trim()
+                // Trimmed first: the captured section opens with a newline, so a
+                // marker anchored at the start never met the one after it.
+                .replace(/^(?:#{1,6}[ \t]+|>[ \t]*)+/, '')
                 .trim();
               return (
                 /[\p{L}\p{N}]/u.test(answer) &&
@@ -365,7 +851,7 @@ jobs:
             if (!hasAnswer(match)) {
               if (parsed.unfinished)
                 throw new Error(
-                  'Existing release PR has an unclosed fenced block or HTML comment; close it before repairing the removal answer',
+                  'Existing release PR has an unclosed fenced block, HTML comment or literal HTML block; close it before repairing the removal answer',
                 );
               const replacement = section.exec(generated)?.[0];
               if (!replacement) throw new Error('Generated release body lacks its removal answer');
@@ -381,6 +867,13 @@ jobs:
             writeFileSync(bodyPath, next, 'utf8');
             REPAIR_BODY
             if ! cmp -s "${existing_body}" "${body_file}"; then
+              latest_body="${existing_body}.latest"
+              trap 'rm -f "${body_file}" "${existing_body}" "${latest_body}"' EXIT
+              gh pr view "${existing_pr}" --json body --jq .body > "${latest_body}"
+              if ! cmp -s "${existing_body}" "${latest_body}"; then
+                echo "prepare-release: pull request body changed; rerun to preserve the latest authored body" >&2
+                exit 1
+              fi
               gh pr edit "${existing_pr}" --body-file "${body_file}"
             fi
             echo "prepare-release: reusing pull request #${existing_pr} for ${RELEASE_BRANCH} with its authored body preserved"
