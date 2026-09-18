@@ -909,6 +909,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `parallelization-policy.md` and the skill now say items 6, 7 and 8 share the
   revision. No completed row in this repository changes result.
 
+- Ten spec ledgers now use the template's columns, and each has a `todo` E2E
+  row for every story that had none: `spec-0001`, `-0003`, `-0005`, `-0006`,
+  `-0007`, `-0008`, `-0009`, `-0011`, `-0016` and `-0017` (#1750). Before
+  this, a Change Request that re-derived one of these packs would also add the
+  rows through Phase 2b, and nothing recorded or authorized them. Existing rows
+  keep every cell they had. The columns they lacked read `-`, which the
+  validators read the same as the absent column. The ledgers of packs with an
+  open Change Request are left for those records to repair.
+
 - **A UI contract entry no screen is read from is reported** (#1734). Every
   consumer of UI contracts reads screens the same way: it keeps the first entry
   for each `id`, skips an entry with no `id` or no `route`, and reads no screen
