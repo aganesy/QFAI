@@ -448,6 +448,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   review definitions and shipped reviewer cards. `delete` also covers reuse of
   code already present (#1800).
 
+- **The band-drift and template-name records name their ledger repair, and own
+  the work it leaves** (#1940). `CR-20260913-0001` and `CR-20260913-0010` name
+  `CR-20260913-0009` as the `spec-0013` ledger repair, and bring the rows it
+  seeds into their scope and costs. `CR-20260913-0001` runs the `spec-0004`
+  acceptance pass under every option and states that no record repairs that
+  ledger yet, so it stays open until one does. `CR-20260913-0010` is applied
+  only once its own `TDD-0027` reset has run, whatever the other record
+  decides, and its `DR-0267` reproduction names the current line.
+
 - The implementation reviewer flags promises neither awaited nor returned rather
   than requiring catches on propagated async failures. A dropped rejection keeps
   its correctness class (#1805).
