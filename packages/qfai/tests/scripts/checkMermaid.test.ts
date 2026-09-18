@@ -7,6 +7,7 @@
  *   - a ```mermaid nested inside a wider fence       -> not a diagram
  *   - `<!-- mermaid-lint:ignore -->` above a fence   -> that block is skipped
  *   - unknown flag / unreadable path                 -> exit 2
+ *   - a directory holding its own `.git`             -> not scanned (another checkout)
  *
  * Spawned rather than imported: the exit code is half the contract, and a lane
  * that reports failures on stdout while exiting 0 is the failure mode a CI check
@@ -95,6 +96,27 @@ describe("check-mermaid lane", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("broken.md:3");
     expect(result.stderr).toContain("1 of 1 diagram(s) failed to parse");
+  });
+
+  it("does not descend into another checkout below the scan root", async () => {
+    // A git worktree under `.claude/worktrees/` holds another branch's
+    // Markdown. Read here, its broken diagram failed this tree locally and
+    // never in a fresh CI clone.
+    const dir = await newTempDir();
+    await writeFile(path.join(dir, "ok.md"), `# Fine\n\n${GOOD_DIAGRAM}\n`, "utf-8");
+    const worktree = path.join(dir, ".claude", "worktrees", "other-branch");
+    await mkdir(worktree, { recursive: true });
+    await writeFile(path.join(worktree, ".git"), "gitdir: /elsewhere/.git/worktrees/x\n", "utf-8");
+    await writeFile(path.join(worktree, "broken.md"), `# B\n\n${BROKEN_DIAGRAM}\n`, "utf-8");
+    // A plain directory beside it is still read.
+    const plain = path.join(dir, "docs");
+    await mkdir(plain, { recursive: true });
+    await writeFile(path.join(plain, "fine.md"), `# Fine\n\n${GOOD_DIAGRAM}\n`, "utf-8");
+
+    const result = runLane([dir]);
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("2 diagram(s) parsed");
   });
 
   it("reports every broken diagram rather than stopping at the first", async () => {
