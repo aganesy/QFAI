@@ -1064,6 +1064,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `<!-- qfai:not-a-citation -->` on the line, or on the line before a fenced
   block for the paths it names inside it.
 
+- **Article XI no longer sends toolchain output to `tmp/`** (#1929). The
+  article required "intermediate build artifacts" under `tmp/`. The shipped
+  temporary-files rule says build, test and cache output (`dist/`, coverage
+  reports, package tarballs) stays where the toolchain writes it. An article
+  outranks a rule, so an agent reading both was told to move `dist/`. Article
+  XI now covers the scratch files an agent creates, names toolchain output as
+  outside its scope, and gives the same list the rule does.
+
 - **A glob's bracket expression names a set on both sides** (#1652). A class
   was compiled by scanning for the first `]`, which stops inside a named class
   such as `[[:digit:]]` and leaves a pattern matching the letters of the name.
