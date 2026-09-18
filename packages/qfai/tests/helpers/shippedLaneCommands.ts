@@ -1513,9 +1513,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // Re-pinned for the text of the three grilling groups, which now says who answers: agents
   // outside the discussion stage, and the user only for a critical decision. The written file is
-  // byte-identical to the template, and the template at the previous revision hashes to
-  // `a5f0f0e0…`.
-  [".claude/settings.json", "ed2029adb50f34ad88b713a86bfacb2825b72037475695593c6eda0f9d60543b"],
+  // byte-identical to the template, and restoring the previous hook text in it reproduces
+  // `67db0c8d…` byte for byte.
+  [".claude/settings.json", "2fc70e4a3702957e8f3c43f6e55adbe10c00283bd00d7dc02e5b997314fef3d3"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

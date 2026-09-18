@@ -3,7 +3,10 @@ import { chmod, mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+// No module-level `expect`: it resolves against whichever test started last,
+// which under a concurrent suite is rarely the one asserting. Every test here
+// takes `expect` and `onTestFinished` from its own context instead.
+import { describe, it } from "vitest";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -85,17 +88,12 @@ type RunResult = {
   stdout: string;
 };
 
-const tempDirs: string[] = [];
-
-afterEach(async () => {
-  while (tempDirs.length > 0) {
-    const dir = tempDirs.pop();
-    if (!dir) {
-      continue;
-    }
-    await removeTempTree(dir);
-  }
-});
+/**
+ * Registers a cleanup to run when the calling test finishes. Each test passes its own
+ * `onTestFinished`, so a temporary directory is removed by the test that created it and
+ * concurrent tests never delete a directory another one is still using.
+ */
+type RegisterCleanup = (fn: () => void | Promise<void>) => void;
 
 /**
  * Deliberately no `{ timeout: … }` here, and none on the pagination block below.
@@ -129,8 +127,8 @@ afterEach(async () => {
  * without a second copy to update when `CR-20260823-0001` lets the knobs file
  * lower it.
  */
-describe("run-pr-merge plan", () => {
-  it.each(
+describe.concurrent("run-pr-merge plan", () => {
+  it.for(
     (
       [
         ["instruction", "<?aaaa", "?>"],
@@ -142,7 +140,7 @@ describe("run-pr-merge plan", () => {
     ),
   )(
     "bounds unmatched HTML label scans for %s / %s / %s / %s",
-    async (_name, opener, closer, boundary) => {
+    async ([_name, opener, closer, boundary], { expect }) => {
       const policyPath = path.join(repoRoot, ".agents/skills/pr-fix/scripts/pr-body-policy.ps1");
       for (const end of ["\n", "\r\n"]) {
         const suffix =
@@ -181,37 +179,45 @@ describe("run-pr-merge plan", () => {
     },
   );
 
-  it.each(
+  it.for(
     ["---", "==="].flatMap((underline) =>
       ["Adoption bar", "Adoption\nbar", "=", "==="].map((title) => [underline, title] as const),
     ),
-  )("blocks an empty removal answer before Setext %s / %j", async (underline, title) => {
-    const baseline = makeScenario({});
-    const body = `## What this change made unnecessary\n\n${title}\n${underline}\nKeep publication approval.\n`;
-    const result = await runPrMerge({
-      live: true,
-      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
-    });
-    expect(result.code).not.toBe(0);
-    expect(result.ghState.prMergeCount ?? 0).toBe(0);
-  });
+  )(
+    "blocks an empty removal answer before Setext %s / %j",
+    async ([underline, title], { expect, onTestFinished }) => {
+      const baseline = makeScenario({});
+      const body = `## What this change made unnecessary\n\n${title}\n${underline}\nKeep publication approval.\n`;
+      const result = await runPrMerge({
+        live: true,
+        onTestFinished,
+        scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+      });
+      expect(result.code).not.toBe(0);
+      expect(result.ghState.prMergeCount ?? 0).toBe(0);
+    },
+  );
 
-  it.each(
+  it.for(
     ["- ", "1. ", "  - "].flatMap((marker) =>
       ["<pre>", "```", "~~~"].map((opening) => [marker, opening] as const),
     ),
-  )("accepts a real removal section dedented from a container %j / %s", async (marker, opening) => {
-    const baseline = makeScenario({});
-    const body = `${marker}${opening}\n${" ".repeat(marker.length)}Example\n## What this change made unnecessary\nNothing.\n`;
-    const result = await runPrMerge({
-      live: true,
-      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
-    });
-    expect(result.code).toBe(0);
-    expect(result.ghState.prMergeCount).toBe(1);
-  });
+  )(
+    "accepts a real removal section dedented from a container %j / %s",
+    async ([marker, opening], { expect, onTestFinished }) => {
+      const baseline = makeScenario({});
+      const body = `${marker}${opening}\n${" ".repeat(marker.length)}Example\n## What this change made unnecessary\nNothing.\n`;
+      const result = await runPrMerge({
+        live: true,
+        onTestFinished,
+        scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+      });
+      expect(result.code).toBe(0);
+      expect(result.ghState.prMergeCount).toBe(1);
+    },
+  );
 
-  it.each([
+  it.for([
     ["absent", ""],
     ["Markdown-only", "## What this change made unnecessary\n\n---\n"],
     ...["---", "==="].map((underline) => [
@@ -408,33 +414,47 @@ describe("run-pr-merge plan", () => {
       "raw HTML standalone inline tag",
       "<span>\n## What this change made unnecessary\nNothing.\n</span>\n",
     ],
-  ])("blocks a %s removal answer without a handoff or merge", async (_name, body) => {
-    const baseline = makeScenario({});
+  ])(
+    "blocks a %s removal answer without a handoff or merge",
+    async ([_name, body], { expect, onTestFinished }) => {
+      const baseline = makeScenario({});
+      const result = await runPrMerge({
+        live: true,
+        onTestFinished,
+        scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+      });
+      expect(result.code).not.toBe(0);
+      expect(`${result.stdout}${result.stderr}`).toContain("authored removal-list answer");
+      expect(result.ghState.prMergeCount ?? 0).toBe(0);
+    },
+  );
+
+  it("rechecks the body immediately before merging without trusting a handoff", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrMerge({
       live: true,
-      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+      onTestFinished,
+      scenario: makeScenario({ finalPrBody: "" }),
     });
-    expect(result.code).not.toBe(0);
-    expect(`${result.stdout}${result.stderr}`).toContain("authored removal-list answer");
-    expect(result.ghState.prMergeCount ?? 0).toBe(0);
-  });
-
-  it("rechecks the body immediately before merging without trusting a handoff", async () => {
-    const result = await runPrMerge({ live: true, scenario: makeScenario({ finalPrBody: "" }) });
     expect(result.code).not.toBe(0);
     expect(`${result.stdout}${result.stderr}`).toContain("authored removal-list answer");
     expect(result.ghState.prViewCount).toBe(2);
     expect(result.ghState.prMergeCount ?? 0).toBe(0);
   });
 
-  it("allows an authored answer without requiring a handoff", async () => {
-    const result = await runPrMerge({ live: true, scenario: makeScenario({}) });
+  it("allows an authored answer without requiring a handoff", async ({
+    expect,
+    onTestFinished,
+  }) => {
+    const result = await runPrMerge({ live: true, onTestFinished, scenario: makeScenario({}) });
     expect(result.code).toBe(0);
     expect(result.ghState.prViewCount).toBe(2);
     expect(result.ghState.prMergeCount).toBe(1);
   });
 
-  it.each([
+  it.for([
     ...[
       "## Adoption bar",
       "~~~",
@@ -500,18 +520,22 @@ describe("run-pr-merge plan", () => {
     ["code-like reference container top level", "    [Nothing]: /url"],
     ["code-like reference container quote", ">     [Nothing]: /url"],
     ["code-like reference container list", "-     [Nothing]: /url"],
-  ])("preserves visible reference-like text: %s", async (_name, answer) => {
-    const baseline = makeScenario({});
-    const body = `## What this change made unnecessary\n\n${answer}`;
-    const result = await runPrMerge({
-      live: true,
-      scenario: makeScenario({ prView: { ...baseline.prView, body } }),
-    });
-    expect(result.code).toBe(0);
-    expect(result.ghState.prMergeCount).toBe(1);
-  });
+  ])(
+    "preserves visible reference-like text: %s",
+    async ([_name, answer], { expect, onTestFinished }) => {
+      const baseline = makeScenario({});
+      const body = `## What this change made unnecessary\n\n${answer}`;
+      const result = await runPrMerge({
+        live: true,
+        onTestFinished,
+        scenario: makeScenario({ prView: { ...baseline.prView, body } }),
+      });
+      expect(result.code).toBe(0);
+      expect(result.ghState.prMergeCount).toBe(1);
+    },
+  );
 
-  it.each([
+  it.for([
     ...[
       "## What this change made unnecessary ##",
       " ## What this change made unnecessary",
@@ -527,42 +551,48 @@ describe("run-pr-merge plan", () => {
     ["multiline visible link", '[A removed pin](https://example.com "\nNothing\n")\n'],
     ["literal link with a blank title line", '[](https://example.com "\n\nNothing\n")\n'],
     ["literal link with an unquoted title", "[](https://example.com \nNothing\n)\n"],
-  ])("accepts rendered Markdown: %s", async (_name, section) => {
+  ])("accepts rendered Markdown: %s", async ([_name, section], { expect, onTestFinished }) => {
     const baseline = makeScenario({});
     const body = section.includes("## What")
       ? section
       : `## What this change made unnecessary\n\n${section}`;
     const result = await runPrMerge({
       live: true,
+      onTestFinished,
       scenario: makeScenario({ prView: { ...baseline.prView, body } }),
     });
     expect(result.code).toBe(0);
     expect(result.ghState.prMergeCount).toBe(1);
   });
 
-  it.each([
+  it.for([
     ["inline code", "Use `<!--` literally.\n\n"],
     ["fence info", "~~~ <!--\nExample\n~~~\n\n"],
     ["similar ordinary word", ""],
     ["paragraph inline tag", "Paragraph text\n<span>\n"],
     ["invalid custom tag", "<span title=>\n"],
     ["lowercase CDATA lookalike", "<![cdata[\n"],
-  ])("allows an authored answer after %s", async (_name, prefix) => {
+  ])("allows an authored answer after %s", async ([_name, prefix], { expect, onTestFinished }) => {
     const baseline = makeScenario({});
     const body = `${prefix}## What this change made unnecessary\n\nHACKathon-specific duplicate setup is gone.\n`;
     const result = await runPrMerge({
       live: true,
+      onTestFinished,
       scenario: makeScenario({ prView: { ...baseline.prView, body } }),
     });
     expect(result.code).toBe(0);
     expect(result.ghState.prMergeCount).toBe(1);
   });
 
-  it("accepts a visible removal heading that interrupts a backtick paragraph", async () => {
+  it("accepts a visible removal heading that interrupts a backtick paragraph", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const baseline = makeScenario({});
     const body = "`\n## What this change made unnecessary\nNothing.\n`\n";
     const result = await runPrMerge({
       live: true,
+      onTestFinished,
       scenario: makeScenario({ prView: { ...baseline.prView, body } }),
     });
     expect(result.code).toBe(0);
@@ -570,36 +600,45 @@ describe("run-pr-merge plan", () => {
     expect(result.ghState.prMergeCount).toBe(1);
   });
 
-  it.each([
+  it.for([
     "<p>Nothing.</p>",
     "<div>\nNothing.\n</div>",
     "<span>\nNothing.\n</span>",
     "<div>\n<!--\n## Example -->\nNothing.\n</div>",
     "<div>\n[Nothing]: https://example.com\n</div>",
-  ])("preserves a visible authored HTML answer %s", async (answer) => {
+  ])("preserves a visible authored HTML answer %s", async (answer, { expect, onTestFinished }) => {
     const baseline = makeScenario({});
     const body = `## What this change made unnecessary\n\n${answer}\n`;
     const result = await runPrMerge({
       live: true,
+      onTestFinished,
       scenario: makeScenario({ prView: { ...baseline.prView, body } }),
     });
     expect(result.code).toBe(0);
     expect(result.ghState.prMergeCount).toBe(1);
   });
 
-  it("accepts a real heading after a first-line indented HTML example", async () => {
+  it("accepts a real heading after a first-line indented HTML example", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const baseline = makeScenario({});
     const body = "    <pre>\n## What this change made unnecessary\nNothing.\n";
     const result = await runPrMerge({
       live: true,
+      onTestFinished,
       scenario: makeScenario({ prView: { ...baseline.prView, body } }),
     });
     expect(result.code).toBe(0);
     expect(result.ghState.prMergeCount).toBe(1);
   });
 
-  it("renders pnpm ci:gate when the repo defines a long ci:gate script", async () => {
+  it("renders pnpm ci:gate when the repo defines a long ci:gate script", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrMerge({
+      onTestFinished,
       scenario: makeScenario({
         packageScripts: {
           "ci:gate": "pnpm format:check && pnpm lint && pnpm check-types && pnpm verify:pack",
@@ -615,8 +654,9 @@ describe("run-pr-merge plan", () => {
     expect(plan.CiCommand).toBe("pnpm ci:gate");
   });
 
-  it("prefers ci:local when ci:gate is absent", async () => {
+  it("prefers ci:local when ci:gate is absent", async ({ expect, onTestFinished }) => {
     const result = await runPrMerge({
+      onTestFinished,
       scenario: makeScenario({
         packageScripts: { "ci:local": "pnpm ci:local" },
       }),
@@ -632,11 +672,15 @@ describe("run-pr-merge plan", () => {
   });
 });
 
-describe("run-pr-merge pagination", () => {
-  it("detects unresolved threads split across multiple GraphQL pages", async () => {
+describe.concurrent("run-pr-merge pagination", () => {
+  it("detects unresolved threads split across multiple GraphQL pages", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const thread1 = makeThread();
     const thread2: FakeThread = { ...makeThread(), id: "PRRT_kwDOQuL-page2" };
     const result = await runPrMerge({
+      onTestFinished,
       scenario: makeScenario({
         threadPages: [[thread1], [thread2]],
       }),
@@ -651,8 +695,12 @@ describe("run-pr-merge pagination", () => {
     expect(plan.UnresolvedThreads).toBe(2);
   });
 
-  it("fails fast when pagination reports next page without endCursor", async () => {
+  it("fails fast when pagination reports next page without endCursor", async ({
+    expect,
+    onTestFinished,
+  }) => {
     const result = await runPrMerge({
+      onTestFinished,
       scenario: makeScenario({
         threadPages: [[makeThread()]],
         threadPageInfos: [{ hasNextPage: true, endCursor: null }],
@@ -723,8 +771,12 @@ function successCheck(): FakeCheck {
   };
 }
 
-async function runPrMerge(options: { live?: boolean; scenario: FakeScenario }): Promise<RunResult> {
-  const root = await makeTempDir("qfai-pr-merge-");
+async function runPrMerge(options: {
+  live?: boolean;
+  onTestFinished: RegisterCleanup;
+  scenario: FakeScenario;
+}): Promise<RunResult> {
+  const root = await makeTempDir("qfai-pr-merge-", options.onTestFinished);
   const repoDir = path.join(root, "repo");
   const binDir = path.join(root, "bin");
   const scenarioPath = path.join(root, "scenario.json");
@@ -933,8 +985,8 @@ async function readJson(filePath: string): Promise<Record<string, unknown>> {
   return JSON.parse(raw.replace(/^\uFEFF/, "")) as Record<string, unknown>;
 }
 
-async function makeTempDir(prefix: string): Promise<string> {
+async function makeTempDir(prefix: string, onTestFinished: RegisterCleanup): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), prefix));
-  tempDirs.push(dir);
+  onTestFinished(() => removeTempTree(dir));
   return dir;
 }

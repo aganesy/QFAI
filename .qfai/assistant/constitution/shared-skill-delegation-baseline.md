@@ -225,6 +225,26 @@ Report an unsupported Article VII route as advisory and follow the installed con
 - An obligation-traced finding is recorded `advisory` where a named section places the work outside the reviewed stage. The discussion review's implementation precision is that section
   (`.qfai/assistant/constitution/review-convergence.md#discussion-review-precision`): the obligation is agreed, and what the advice is about is how a later stage implements it, so the finding is carried to that stage rather than demanded here. Nothing else lowers a behaviour-governing finding to `advisory`.
 
+### What a reviewer may demand more of (MUST)
+
+A finding that asks for more work — another item, more detail, a wider set — is admissible only on
+the concrete artifacts.
+
+| Admissible on                                                           | Inadmissible on                                                                   |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| business flows, user stories, acceptance criteria, examples, test cases | business rules, non-functional requirements, policies and decisions, architecture |
+
+Two demands stay admissible on any artifact:
+
+- that an abstract item already recorded carry its mandatory pair, such as a quality floor naming
+  its verification method;
+- that a safety-floor item be met: security, accessibility, data-loss handling, or validation at a
+  trust boundary (`.agents/rules/minimal-implementation.md` § 2).
+
+This bounds what a reviewer may require, never what a reviewer may report. A demand the table does
+not admit, such as one for another business rule, is recorded as `advisory` and cannot force
+`REVISE`.
+
 ### Reviewer budget exhausted
 
 A blocking review that cannot be delegated because the agent budget is spent is a `saturated` failure, not a licence to skip the gate or to self-review.

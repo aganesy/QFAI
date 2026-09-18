@@ -6,6 +6,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A guard on the mode a link is staged with** (#1920). `ln -s` in Git Bash on
+  Windows copies the target instead of linking to it unless
+  `MSYS=winsymlinks:nativestrict` is set, and the copy is byte-identical — so
+  every check that reads content passes, and nothing says so until the master
+  moves and the copy stays behind. `scripts/check-tracked-symlinks.mjs` reads
+  the index, where `120000` tells a link from a regular file, and runs in
+  `ci:lint:scans`. Which paths must be links is derived from the shipped rules
+  directory and the entry point onto it, so a rule added later is covered
+  without a second list. A checkout that materialised links as text files is a
+  property of the machine and is not reported.
+
+- **A canonical assistant tree may be vendored by link** (#1927). `QFAI-LINK-001`
+  read any symlink in `.qfai/assistant/**` as damage, so a project that points
+  the tree at documents it keeps elsewhere was told its skills and agents were
+  not applied at all. A link that stays inside the project and keeps the name it
+  was written under is now a layout. The three shapes the rule was written for
+  still fail: a target outside the project, a link that does not resolve, and a
+  link that renames — `skills/qfai-atdd` pointed at `skills/qfai-verify` means
+  the wrapper says one skill and the agent reads another. An integration
+  directory such as `.claude/skills` is unchanged: its wrappers carry relative
+  targets, so a link there re-bases every one of them. `QFAI-LINK-002` follows a
+  linked directory inside the tree, so citations into a vendored layer resolve.
+
 - **`qfai init` refuses a destination that resolves into its own assets** (#1919).
   A repository that vendors the assistant tree by link has `.qfai/assistant/**`
   resolving to `assets/init/.qfai/assistant/**`, so a run there wrote the shipped
@@ -14,6 +37,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   resolved where. Detection is by resolution rather than by a path or a
   repository name, and it fails open when either side cannot be resolved, so an
   ordinary project is unaffected.
+
+- **An adoption bar for a change that adds a rule, skill or gate** (#1813). Every
+  improvement to this framework has added one, and nothing asked whether the
+  addition beat the one-line instruction it replaces. A pull request proposing
+  one now records three things in its description: the one-line form carrying
+  the operative clause, what the proposal adds beyond that line, and the
+  safety-floor items it touches. Where nothing goes beyond the line, the line is
+  what ships. `REVIEW.md` states it and the pull-request template asks for it;
+  the body reader that already preserved an authored removal list now preserves
+  this answer by the same route, so neither is rewritten from the template. It
+  binds this repository, not what an adopter builds.
 
 - **Repository-specific halves of four rules split into overlays** (#1917).
   `distributed-surface`, `version-discipline`, `temporary-files` and
@@ -75,6 +109,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   existing code, including duplicates or overlap, before the standard library,
   platform and installed dependencies. One bullet covers detection and reuse.
 
+- **The minimal-implementation reminder points at the floor instead of listing
+  it** (#1815). After each write, the hook asks about repository reuse, refers to
+  the entire floor in the rule's § 2 and names `interface-clarity.md` for screen
+  or terminal changes. Referring to the floor keeps the reminder from promising
+  a shorter obligation set. Existing projects keep their old reminder text.
+
 - **Repository reuse is the second of seven minimal-implementation rungs**
   (#1795). Check the codebase before the standard library, platform and installed
   dependencies. Existing repository code can answer the accepted behavior
@@ -104,6 +144,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Verify repository-fact sources, use planning-stage precision and apply targeted
   edits in discussion review cycles (#1818).
+
+- **A reviewer may demand more work only on the concrete artifacts** (#1809).
+  A reviewer could ask for another business rule, quality target, policy or
+  piece of architecture without limit, and each such demand made the next review
+  cycle larger. The delegation baseline now admits a demand for more on business
+  flows, user stories, acceptance criteria, examples and test cases, and not on
+  business rules, non-functional requirements, policies and decisions, or
+  architecture. Two demands stay admissible anywhere: a recorded item carrying
+  its mandatory pair, and a safety-floor item. Any other demand is recorded as
+  advisory. The drift protocol and the six reviewer cards point at the rule.
 
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
