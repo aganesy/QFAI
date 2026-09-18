@@ -127,7 +127,7 @@ describe("developer fixes missing phrase; asset tests pass", () => {
   });
 });
 
-describe("E2E: prototyping wording alignment (US-0006-0014)", () => {
+describe("E2E: prototyping wording alignment", () => {
   it("SKILL.md wording matches implementation behavior with no aspirational language", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     const aspirationalPhrases = [

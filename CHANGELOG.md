@@ -399,6 +399,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file can be rewritten, then clears the record. A bullet the project deleted on
   purpose was never recorded, so it is still not restored.
 
+- **Test titles and comments name only declared test cases and stories**
+  (#1836). Twenty-five titles and comments in the package's tests cited a
+  `TC-` or `US-` identifier no spec declares, and two annotations in a unit
+  suite named undeclared test cases. `QFAI-ATDD-101` and `-102` read only the
+  annotation form in the acceptance layers, so nothing reported them. They are
+  removed, and a repository check now fails on any bare identifier in a test
+  title or comment that no spec declares. An identifier the same file also
+  uses in code is read as fixture data.
+
 - **A removal answer written as a heading is pinned** (#1893). A heading deeper
   than the section's own does not end that section, so the reader that judges
   the answer and the rebuild that replaces it have to stop at the same place.
@@ -542,6 +551,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `TDD-0029`'s drop their band and empty-list assertions, the no-file-times row
   observes metadata reads at run time instead of searching source text, and
   `TC-0013-0014`'s row checks the result's values, not only its fields.
+
+- **The token docs say a scale key can contain digits, and what a project's
+  own token check must do** (#1908). QFAI checks the prototype against
+  `DESIGN.md`, not a product stylesheet or Tailwind config, so each project
+  writes that check itself. The natural name pattern, letters and hyphens,
+  never captures `2xl` or `3xl`, which `typography.scale` declares, and a
+  check that captures nothing for a key passes both ways. The schema comment
+  now says scale keys contain digits. The `design-system.yaml` contract says
+  QFAI does not check the implementation, that a project's check asserts both
+  directions, and that its name pattern has to admit digits.
 
 - Completion and implementation review stop conditions now include demonstrated
   regressions against named constitution or catalog rules (#1799). New upstream
@@ -1054,6 +1073,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A record that explains why an artifact is absent says so with
   `<!-- qfai:not-a-citation -->` on the line, or on the line before a fenced
   block for the paths it names inside it.
+
+- **Article XI no longer sends toolchain output to `tmp/`** (#1929). The
+  article required "intermediate build artifacts" under `tmp/`. The shipped
+  temporary-files rule says build, test and cache output (`dist/`, coverage
+  reports, package tarballs) stays where the toolchain writes it. An article
+  outranks a rule, so an agent reading both was told to move `dist/`. Article
+  XI now covers the scratch files an agent creates, names toolchain output as
+  outside its scope, and gives the same list the rule does.
 
 - **A glob's bracket expression names a set on both sides** (#1652). A class
   was compiled by scanning for the first `]`, which stops inside a named class
