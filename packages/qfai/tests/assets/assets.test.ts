@@ -2361,11 +2361,14 @@ describe("assets guardrails", () => {
       ),
       "utf-8",
     );
+    // The run id, and not a path, is what the record carries. A committed record
+    // naming a path the tree does not have is refused, and the report tree is not
+    // committed — so the shape this asserted was one no evidence file could land.
+    // The id satisfies the same obligation more exactly: it names the one run,
+    // where the rewritten pointer names whichever ran last.
     const preflightSection = sectionOf(evidenceTemplate, "## Preflight summary path");
-    expect(preflightSection).toContain(
-      "`.qfai/report/preflight/run-<timestamp>/preflight_summary.md` (run id: <run-id>)",
-    );
-    expect(preflightSection).not.toMatch(/^- `\.qfai\/report\/preflight_summary\.md`$/m);
+    expect(preflightSection).toMatch(/^- Preflight run id `<run-id>`:/m);
+    expect(preflightSection).not.toMatch(/^- `\.qfai\/report\//m);
 
     const sddSkill = await readFile(
       path.join(templateQfaiDir, "assistant", "skills", "qfai-sdd", "SKILL.md"),
