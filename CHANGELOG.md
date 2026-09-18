@@ -432,6 +432,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The report still reads by version, newest first, and the exit codes are
   unchanged.
 
+- **The audited-evidence-hash reference calls the three hashes evidence-entry
+  fields** (#1939). It called them ledger fields, which could send a reader to
+  add `test-list.md` columns the ledger contract does not have, while the
+  completion gate reads the three hashes from each row's `### TDD-NNNN`
+  evidence entry.
+
 - Refuse a scaffold destination where the extensions could not be read, where
   an exclude glob's range stops the scan, or where a brace range's endpoints
   are not whole numbers, rather than writing a file the project's own runner
