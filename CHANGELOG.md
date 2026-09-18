@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The discussion profile reads a pack's design direction against the
+  `DESIGN.md` schema** (#1905). On a visual surface a discussion pack records
+  the direction `/qfai-sdd` Phase 0 turns into `DESIGN.md`, and nothing
+  checked it until Phase 0 wrote the file, after the pack had closed. A pack
+  could propose `visual.colors.highlight` or an archetype outside the eight,
+  and `validate --profile discussion` passed. `QFAI-DPACK-011` (warning) now
+  reads the forms that name a key without doubt — a fenced YAML block under a
+  `DESIGN.md` section, a code span holding a dotted key path, and an
+  `archetype:` list item — against the same key tree the parser rejects
+  unknown keys with, and names each key or value the schema lacks. Prose is
+  not read, and cli-only and non-ui packs are skipped.
+
 - **Repository-specific halves of four rules split into overlays** (#1917).
   `distributed-surface`, `version-discipline`, `temporary-files` and
   `root-additions-policy` each governed an adopter's repository and this one
