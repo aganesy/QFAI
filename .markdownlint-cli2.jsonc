@@ -39,6 +39,7 @@
     ".qfai/discussion_archive/**",
     ".qfai/review_archive/**",
     ".qfai/review/_archive/**",
+    ".qfai/assistant/**",
     ".qfai/contracts/**",
     ".qfai/evidence/*[0-9]*.md",
     ".qfai/report/atdd-traceability/**",
