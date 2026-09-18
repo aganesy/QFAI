@@ -233,6 +233,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The spec-0013 template-slot record has an ID of its own** (#1942). It was
+  filed as `CR-20260913-0007`, an ID an approved record for `spec-0015` already
+  carries, so every reference to it was ambiguous. It is now
+  `CR-20260913-0011`, with every reference moved. `CR-20260913-0003` also
+  orders itself behind the other open `spec-0013` records, names
+  `CR-20260913-0009` as the ledger repair, appends no row under option `1c`
+  while that option holds its new requirement `planned`, and authorises the
+  `spec-0013/07_Decisions.md` write option `2c` needs.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
@@ -818,7 +827,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   deprecation window is emitted as an unconditional error, because the
   version-keyed severity mechanism those layers name was retired.
 
-  Three records hold them. `CR-20260913-0007` and `CR-20260913-0008` are
+  Three records hold them. `CR-20260913-0011` and `CR-20260913-0008` are
   defects the pack shows on its own, each with its one correction: the template
   slot restated as a key holding authored tasks, and the legacy-contract test
   case given the sunset its business rule already carries. `CR-20260913-0003`
