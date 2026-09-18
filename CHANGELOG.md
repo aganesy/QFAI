@@ -1058,6 +1058,15 @@ pack` name different paths or seals. The layout says a round after a REVISE
   entry that states the field once, without the prefix, still answers for every
   round that states none.
 
+- **The execution ledger says how a UI contract reaches it** (#1902). The ledger
+  has obligation columns for test cases, user stories and API contracts, and
+  none for a UI contract, with nothing saying why. The template now says a
+  `CON-UI-*` has no group and no column: each screen obligation it declares is
+  a test case in the spec that owns the screen, carried by that test case's
+  row. It also says no gate reports an untested UI contract the way
+  `QFAI-ATDD-113` reports an API one, so the test case is written with the
+  contract.
+
 - **A ledger row observes the property it owns** (#1700). One prototyping-loop
   test asserted five properties of the cycle-0 hard reset in a single case, and
   a ledger row owning one of them, the `fullHarness` deletion, named no case at

@@ -432,6 +432,17 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(template).toContain("**one `Layer = API` row per active `CON-API-*`**");
     });
 
+    it(`${tree}: the template says how a UI contract reaches the ledger`, async () => {
+      // A reader who knows `CON-API-Refs` looks for the UI column, finds none,
+      // and is left to guess whether screen obligations are carried at all.
+      const template = unwrap(await read(tree, TEMPLATE));
+      expect(template).toContain("**A UI contract has no group and no column.**");
+      expect(template).toContain(
+        "each screen obligation the contract declares is a `TC-*` in `06_Test-Cases.md` of the spec that owns the screen",
+      );
+      expect(template).toContain("No gate reports a UI contract nobody tested");
+    });
+
     it(`${tree}: Phase 2b seeds obligation rows only for active obligations`, async () => {
       // `catalog/test-layers.md` exempts a non-UI-bearing spec's `US-*` from
       // `QFAI-ATDD-111` and a `x-qfai-status: planned` contract from

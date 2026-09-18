@@ -30,6 +30,12 @@ Without the integration group an integration-level TC has no row at all, and
 nothing reports its absence — the whole integration layer then sits outside the
 micro-cycle while `validate` stays quiet.
 
+**A UI contract has no group and no column.** A `CON-UI-*` reaches this ledger
+only through test cases: each screen obligation the contract declares is a
+`TC-*` in `06_Test-Cases.md` of the spec that owns the screen, and that TC's row
+carries it. No gate reports a UI contract nobody tested, as `QFAI-ATDD-113` does
+for an API contract, so write the test case when the contract is written.
+
 The two TC groups are exclusive, and membership is decided by **where the
 annotation goes, not by whether the word is familiar**. `system` and
 `acceptance` are the case that proves it: both are in the layer vocabulary, so
