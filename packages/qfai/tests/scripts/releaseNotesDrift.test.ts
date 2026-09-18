@@ -1218,6 +1218,16 @@ describe("resuming a release pull-request description", () => {
     ],
     ["raw HTML declaration", "<!DOCTYPE\n## What this change made unnecessary\nNothing.\n>\n"],
     ["raw HTML CDATA", "<![CDATA[\n## What this change made unnecessary\nNothing.\n]]>\n"],
+    // GitHub hides the lowercase lookalike exactly as it hides the spelled
+    // form, so an answer inside one reaches no reader of the rendered body.
+    [
+      "raw HTML lowercase CDATA",
+      "<![cdata[\n## What this change made unnecessary\nNothing.\n]]>\n",
+    ],
+    [
+      "raw HTML unclosed lowercase CDATA",
+      "<![cdata[\n## What this change made unnecessary\nNothing.\n",
+    ],
     [
       "raw HTML standalone inline tag",
       "<span>\n## What this change made unnecessary\nNothing.\n</span>\n",
@@ -1354,7 +1364,6 @@ describe("resuming a release pull-request description", () => {
       "<pre>Example</pre>\n",
       "Paragraph text\n<span>\n",
       "<span title=>\n",
-      "<![cdata[\n",
     ].map((prefix) => [
       `authored after raw block ${JSON.stringify(prefix)}`,
       `${prefix}## What this change made unnecessary\n\nA superseded pin. Notes stay to document this release.\n`,

@@ -292,6 +292,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A lowercase CDATA lookalike hides what follows it** (#1866). GitHub renders
+  `<![cdata[` exactly as it renders the spelled form: the content is hidden, and
+  an unclosed opener hides the rest of the document. The body readers matched
+  only the uppercase spelling, so a removal answer written inside a lowercase
+  block was accepted while no reader of the rendered body could see it, and an
+  entry-point directive after one was read as operative while `qfai init` added
+  no visible copy. The three readers that dispatch an HTML block now match the
+  opener without regard to case; the inline raw-HTML forms are unchanged.
+
 - **The entry points no longer say this repository installs its own package**
   (#1921). `CLAUDE.md` and `AGENTS.md` both described `.qfai/` as the result of
   an npm install of QFAI. There is no such dependency, and
