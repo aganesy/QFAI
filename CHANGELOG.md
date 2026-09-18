@@ -206,6 +206,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The capability-ID guards read every ID from `CAP-0010` up** (#1928). The
+  pre-build lint, the post-build guard and the smoke test all required a leading
+  `0`, so they caught `CAP-0010` to `CAP-0999` and let `CAP-1000` and every
+  later four-digit ID ship. The three now read the number as a value, any
+  leading zeros then 10 or more, which is how the spec-ID pattern already reads
+  it. `CAP-0009` and below still pass. Each guard has cases at `CAP-0009`,
+  `CAP-0999` and `CAP-1000`.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
