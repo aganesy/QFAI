@@ -3551,10 +3551,11 @@ const CANONICAL_REVIEW_PACK = /^\.qfai\/review\/review-\d{17}$/;
  *
  * The pair is written after its review has run, so it is left out of every
  * audited subject, and this is the check that sees a pack edited after its
- * attempt closed or a pack from another review. A round that records any pair
- * owes exactly one for every verdict attempt: the last attempt's pack is the
- * one the round closed on, and a second pair for one attempt would leave the
- * first unchecked. A pack absent from the checkout is skipped once its path has
+ * attempt closed or a pack from another review. Every verdict attempt owes
+ * exactly one pair, whether or not the round records any other: a verdict with
+ * no pair keeps its outcome and discards the review it was written to. The last
+ * attempt's pack is the one the round closed on, and a second pair for one
+ * attempt would leave the first unchecked. A pack absent from the checkout is skipped once its path has
  * the canonical shape, as a row-level pack is, because review packs are
  * local-only.
  *
@@ -3587,8 +3588,8 @@ async function invalidRoundReviewPacks(
   // its values rather than no pair, which would let the row complete unreviewed.
   const packs = inRound("Review pack", true);
   const seals = inRound("Review pack seal", true);
-  if (packs.length === 0 && seals.length === 0) return [];
   const verdicts = inRound("reviewer verdict", true);
+  if (packs.length === 0 && seals.length === 0 && verdicts.length === 0) return [];
   const closingAttempt = verdicts.at(-1)?.attempt ?? null;
   const attempts = new Set([...verdicts, ...packs, ...seals].map(({ attempt }) => attempt));
   const invalid: string[] = [];

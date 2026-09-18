@@ -36,6 +36,19 @@ import {
 
 const TEST_FILE = "tests/unit/sample.test.ts";
 
+/**
+ * The review pack pair a round's verdict attempt is written beside, naming a
+ * pack absent from the checkout, as review packs are local-only.
+ */
+function packPair(round: number, attempt?: number): string[] {
+  const qualifier = attempt === undefined ? "" : ` (attempt ${String(attempt)})`;
+  const stamp = String(20260102000000000 + round * 100 + (attempt ?? 0));
+  return [
+    `- Round ${String(round)}: Review pack${qualifier}: .qfai/review/review-${stamp}`,
+    `- Round ${String(round)}: Review pack seal${qualifier}: sha256:${"c".repeat(64)}`,
+  ];
+}
+
 function digest(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -1672,6 +1685,8 @@ describe("QFAI-TDDLIST-008", () => {
           "```text",
           "PASS",
           "```",
+          ...packPair(1, 1),
+          ...packPair(1, 2),
           "- Refactor verify command: npm test",
         ].join("\n"),
       );
@@ -1784,6 +1799,7 @@ describe("QFAI-TDDLIST-008", () => {
         .replace(
           "- Refactor verify command: npm test",
           `- Round 1: reviewer verdict: REVISE — needs new production behaviour
+${packPair(1).join("\n")}
 - Round 2: Revision: ${secondRoundRevision}
 - Round 2: RED revision: def7890000000000000000000000000000000000
 - Round 2: RED command: npm test
@@ -1818,6 +1834,8 @@ describe("QFAI-TDDLIST-008", () => {
           [
             "- Round 1: reviewer verdict (attempt 1): REVISE — re-reviewed in this round",
             "- Round 1: reviewer verdict (attempt 2): REVISE — needs new production behaviour",
+            ...packPair(1, 1),
+            ...packPair(1, 2),
             "- Round 2: Revision: " + secondRoundRevision,
             "- Round 2: RED revision: def7890000000000000000000000000000000000",
             "- Round 2: RED command: npm test",
@@ -1851,6 +1869,7 @@ describe("QFAI-TDDLIST-008", () => {
           "- Refactor verify command: npm test",
           [
             "- **Round 1: reviewer verdict:** REVISE — needs new production behaviour",
+            ...packPair(1),
             "- Round 2: Revision: " + secondRoundRevision,
             "- Round 2: RED revision: def7890000000000000000000000000000000000",
             "- Round 2: RED command: npm test",
@@ -2069,7 +2088,7 @@ describe("QFAI-TDDLIST-008", () => {
     });
   });
 
-  it("requires a pack pair for every verdict attempt once a round records one", async () => {
+  it("requires a pack pair for every verdict attempt when a round records some", async () => {
     // The last attempt's pack is the one the round closed on, so a round that
     // recorded the first attempt's pair and not the closing one's is missing
     // the review it rests on.
@@ -2090,6 +2109,33 @@ describe("QFAI-TDDLIST-008", () => {
         { ".qfai/evidence/implement-spec-0001.md": evidence },
       );
       expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: Review pack (attempt 2) beside that attempt's reviewer verdict",
+      );
+    });
+  });
+
+  it("requires a pack pair for a verdict in a round that records none", async () => {
+    // A round with verdicts and no pair at all kept every outcome and the
+    // audit trail of none of them, while the row-level packs still passed.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          "- Round 1: reviewer verdict (attempt 2): PASS",
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      const messages = issues.map((issue) => issue.message).join("\n");
+      expect(messages).toContain(
+        "Round 1: Review pack (attempt 1) beside that attempt's reviewer verdict",
+      );
+      expect(messages).toContain(
         "Round 1: Review pack (attempt 2) beside that attempt's reviewer verdict",
       );
     });
@@ -3309,6 +3355,7 @@ describe("QFAI-TDDLIST-008", () => {
             "```text",
             "REVISE — needs new production behaviour",
             "```",
+            ...packPair(1),
             "- Round 2: Revision: " + secondRoundRevision,
             "- Round 2: RED revision: def7890000000000000000000000000000000000",
             "- Round 2: RED command: npm test",
@@ -3395,6 +3442,7 @@ describe("QFAI-TDDLIST-008", () => {
 \`\`\`text
 REVISE — needs new production behaviour
 \`\`\`
+${packPair(1).join("\n")}
 - Round 2: Revision: ${secondRoundRevision}
 - Round 2: RED revision: def7890000000000000000000000000000000000
 - Round 2: RED command: npm test
@@ -3920,6 +3968,7 @@ REVISE — needs new production behaviour
         .replace(
           "- Refactor verify command: npm test",
           `- Round 1: reviewer verdict: REVISE — update the shared fixture
+${packPair(1).join("\n")}
 - Round 2: Revision: abc1230000000000000000000000000000000000
 - Round 2: RED revision: def7890000000000000000000000000000000000
 - Round 2: RED test hash: {{RED_TEST_HASH}}

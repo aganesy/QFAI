@@ -233,6 +233,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Every reviewer verdict attempt needs its review pack pair** (#1949). The
+  completion gate checked a round's `Round N: Review pack` pairs only where the
+  round recorded at least one, so a `done` row whose rounds recorded verdicts
+  and no pair passed, keeping each outcome and none of the reviews behind it.
+  A verdict attempt with no pair beside it is now reported, as
+  `round-evidence.md` requires. A verdict written as a label with its answer in
+  the fenced block below reads its outcome from that block, as before.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
