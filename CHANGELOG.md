@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Markdown lint for the documents the package ships** (#1914). `assets/**`
+  was excluded from the lint lane, so the skills, agent definitions, constitution
+  and templates an adopter receives were checked by markdownlint nowhere. They now
+  run in `ci:lint:structure` and `ci:gate:structure` under their own rule set.
+  Five rules are off for these documents because they read them as the wrong kind
+  of text: line length, inline HTML, spaces in code spans, blank lines between
+  blockquotes, and ordered-list prefixes. Duplicate headings are compared among
+  siblings, so a template may repeat a subsection name under each category.
+  Bare code fences, heading-level jumps and unescaped emphasis markers in the
+  shipped documents are corrected.
+
 - **Reviewer cards file excess as a blocking code-quality defect** (#1798).
   All six reviewer roles trace excess to Article VII, require a concrete cut
   and replacement, and refuse cuts that remove or weaken a referenced

@@ -20,7 +20,7 @@ A branch-2 row is _passed over_ by `/qfai-implement` when it is not the named
 row — see the note above — which is neither a stop nor a defer of the branch:
 P4b hands it over in its turn.
 
-### What each stage gate owes
+## What each stage gate owes
 
 **P1b — choose, for every row.** A row with no branch chosen is the one that
 leaves P1b with no legal transition out of `todo`. **The choice is provisional

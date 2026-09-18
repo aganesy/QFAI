@@ -1739,12 +1739,12 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       ).toBeGreaterThan(0);
     });
 
-    it(`${tree}: an empty ledger is only "nothing to do" when 06_Test-Cases.md agrees`, async () => {
+    it(`${tree}: an empty ledger is only "nothing to do" when all obligation sources agree`, async () => {
       // The rule is stated in SKILL.md; the procedure behind it lives in the
       // reference, where the progressive-disclosure split put it.
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
       expect(skill).toContain(
-        "**An empty ledger is a fault only when `06_Test-Cases.md` disagrees.**",
+        "**An empty ledger is a fault when any active obligation source requires a row.**",
       );
       expect(skill).toContain("references/ledger-preconditions.md");
 
@@ -1847,7 +1847,8 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       // SKILL.md still names the producer and forbids inventing rows — those
       // bind the agent before it opens anything else.
       expect(skill).toContain("**Producer**");
-      expect(skill).toContain("do **not** invent rows that no TC backs");
+      expect(skill).toContain("do **not** invent rows that no TC, US or CON-API backs");
+      expect(skill).toContain("one `Layer = Integration` row per integration-level TC");
 
       const preconditions = await read(
         tree,
@@ -1863,7 +1864,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       );
       expect(preconditions).toContain("## Recovery when it is missing");
       expect(preconditions).toContain(
-        "## An empty ledger is a fault only when `06_Test-Cases.md` disagrees",
+        "## Check all four obligation sources before an empty-ledger exit",
       );
       expect(preconditions).toContain('Report\n  "nothing to do" and exit');
     });
