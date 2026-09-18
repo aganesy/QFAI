@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A README only where a page is published** (#2010). Four were tracked; two were
+  pages nobody lands on. `.agents/rules/README.md` held the rules register, which
+  a second file can only keep in step by hand — the surface suite now reads each
+  rule's own first heading, so a rule cannot be missing from a list. Its
+  "Adding a rule" steps moved to `root-additions-policy.local.md`, and its
+  Windows symlink section is gone: `check-tracked-symlinks.mjs` prints the same
+  steps when it fails. `.instruction/README.md` ruled on that directory, so the
+  ruling is a rule — `.agents/rules/instruction-tree.md`.
+  `scripts/check-tracked-readmes.mjs` fails on a tracked README outside the
+  project's own page and the one npm publishes, and on a listed page that stops
+  being tracked.
+
 - **The root assistant tree is linked at the assets the package ships** (#1915, #1916).
   `.qfai/assistant/**` was a byte copy of `packages/qfai/assets/init/.qfai/assistant/**`,
   kept in step by a sync script and a tracked-tree diff. It is thirteen symlinks
