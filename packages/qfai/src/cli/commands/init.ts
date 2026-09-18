@@ -3163,10 +3163,10 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   "!decisions/**",
   // The per-item RED/GREEN records. Every root negation this block adds needs
   // its leaf counterpart here or the migration does nothing for the projects it
-  // exists to serve: measured with `git check-ignore -v` on a tree carrying the
-  // legacy nested file, `.qfai/evidence/implement-<spec-id>.md` and
-  // `atdd-<spec-id>.md` were still reported as ignored by the nested `*`, so the
-  // fresh clone and CI that the root negation was added for saw neither file.
+  // exists to serve: on a tree carrying the legacy nested file, `git
+  // check-ignore -v` reports `.qfai/evidence/implement-<spec-id>.md` and
+  // `atdd-<spec-id>.md` as ignored by the nested `*` without these lines, so the
+  // fresh clone and CI the root negation is for see neither file.
   "!implement-*.md",
   "!atdd-*.md",
   // A spec's own evidence, which carries the grilling trace a validator rule
@@ -3187,10 +3187,9 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // would commit a file nothing reads.
   // The prototyping session record, for the same reason again. It is a user
   // decision rather than regenerable stage evidence, so the root block tracks
-  // it — and the nested `*` overrides that root negation on any project
-  // carrying the legacy file, which is every project initialized before the
-  // root block grew its own evidence negations. The directory needs its own
-  // line: git never descends into an ignored one, so the leaf alone is inert.
+  // it — and the nested `*` overrides that root negation on any project that
+  // carries the legacy file. The directory needs its own line: git never
+  // descends into an ignored one, so the leaf alone is inert.
   "!prototyping/",
   "!prototyping/grilling.md",
   "!import-lite.md",
