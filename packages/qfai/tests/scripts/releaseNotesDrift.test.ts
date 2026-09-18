@@ -1100,6 +1100,12 @@ describe("resuming a release pull-request description", () => {
       "- - TODO",
       "N\\/A",
       "~~TODO~~",
+      // A heading deeper than the section's own does not end that section, so
+      // the reader that judges the answer and the rebuild that replaces it have
+      // to stop at the same place.
+      "### TODO",
+      "###### TODO",
+      "TODO\n===",
     ].map((source) => [
       `hidden or formatted answer ${JSON.stringify(source)}`,
       `## What this change made unnecessary\n\n${source}\n`,
