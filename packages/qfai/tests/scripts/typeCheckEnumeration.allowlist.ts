@@ -132,7 +132,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/core/densityHints.test.ts",
   "tests/core/densityRuleCellOutlier.test.ts",
   "tests/core/design/designMd.test.ts",
-  "tests/core/designFidelity.test.ts",
   "tests/core/detection/display.test.ts",
   "tests/core/detection/stub.test.ts",
   "tests/core/discovery.test.ts",

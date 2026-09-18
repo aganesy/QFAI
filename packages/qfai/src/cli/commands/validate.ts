@@ -743,7 +743,6 @@ export const GATE_GROUP_FAMILIES = {
   prototyping: [
     "QFAI-PROT-*",
     "QFAI-CRIT-*",
-    "QFAI-FID-*",
     "QFAI-UIE-*",
     "QFAI-DT-*",
     "QFAI-MOCK-*",
