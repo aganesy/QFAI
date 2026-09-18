@@ -1659,6 +1659,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every Triage section is introduced by the canonical `## Triage` H2, optionally naming its round in parentheses, so the triage rules read the rows under it.",
   "QFAI-TRIAGE-009":
     "`Existing Spec` names its target in one grammar: `spec-NNNN` (multiple joined by `+`), `_policies` for a policy-only row, or `-` on a CREATE row. Every named spec must exist on disk; ranges are not a form.",
+  "QFAI-TRIAGE-010":
+    "A requirement reaches the execution ledger through a spec: at least one of its triage rows targets a spec, not `_policies` alone.",
   "QFAI-SPLIT-106":
     "Every `CAP-NNNN` row in the CAP Catalog appears exactly once and its `Spec` cell names exactly one spec directory, and no two rows name the same one.",
   "QFAI-TEST-001":
