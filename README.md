@@ -170,6 +170,9 @@ npx qfai report
     then refreshes `<paths.outDir>/preflight_summary.md` as the latest-run pointer. Exits 1 when the result is
     `blocked` (use `--fail-on never` to report without failing); `--format json` emits the machine-readable
     result on stdout.
+  - Only a missing or misnamed pack blocks. What a present pack lacks or contradicts is listed under the
+    summary's `## Pack Gaps` (`packGaps` in the JSON result), and the result stays `ready`: the pack is
+    reference material, so the gap is recorded in the SDD artifacts rather than stopping the stage.
   - The pack is the one `npx qfai discussion use <id>` pinned (`.qfai/state.json#discussion.currentId`); the
     newest pack is used only when no pointer is set. A pointer that matches no pack on disk stops the run with
     the candidate list instead of silently gating a different pack.
