@@ -2586,6 +2586,35 @@ describe("a later init refreshes a rule summary the project never edited", () =>
       expect(result.text).toBe(expected.join("\n"));
     });
 
+    it("does not end the rule list at a thematic break under a list item", () => {
+      // `---` straight under a bullet is a horizontal rule, not a setext
+      // underline: only a paragraph of the document itself becomes a heading.
+      // Read as one, it stopped the list above a bullet the release superseded.
+      const existing = [
+        CROSS_AI_RULES_HEADING,
+        "",
+        "- `.agents/rules/house-rule.md` — a rule this project keeps",
+        "---",
+        "",
+        superseded,
+        "",
+        "Our own notes",
+        "-------------",
+        "",
+        superseded,
+        "",
+      ].join("\n");
+
+      const result = refreshSupersededRuleBulletsInList(existing, template);
+
+      // The paragraph "Our own notes" does take the underline, so that heading
+      // still ends the list.
+      const expected = existing.split("\n");
+      expected[5] = current;
+      expect(result.refreshed).toEqual([master]);
+      expect(result.text).toBe(expected.join("\n"));
+    });
+
     it("reads the heading with a closing run of hashes and up to three spaces", () => {
       for (const heading of [`${CROSS_AI_RULES_HEADING} ##`, `   ${CROSS_AI_RULES_HEADING}`]) {
         const existing = ["# House instructions", "", heading, "", superseded, ""].join("\n");

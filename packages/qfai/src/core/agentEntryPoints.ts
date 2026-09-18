@@ -1215,8 +1215,33 @@ function setextLevel(
 ): number | null {
   const underline = /^ {0,3}(=+|-+)[ \t]*$/.exec(plainLine(lines[index]));
   if (underline === null || open[index - 1] !== true) return null;
-  if (plainLine(lines[index - 1]).trim() === "") return null;
+  if (!underlinesDocumentParagraph(lines, open, index)) return null;
   return underline[1]?.startsWith("=") === true ? 1 : 2;
+}
+
+/** A line that opens a list item: `- `, `* `, `+ `, `1. ` or `1) `. */
+const LIST_ITEM_RE = /^ {0,3}(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/;
+
+/**
+ * Whether the lines directly above `index` are a paragraph of the document
+ * itself, the only thing an underline turns into a heading.
+ *
+ * Under a list item, inside a blockquote or right after a heading, the same
+ * `---` is a thematic break. Read as a heading there, it ended the managed rule
+ * list at a horizontal rule and left a superseded bullet below it unrefreshed.
+ */
+function underlinesDocumentParagraph(
+  lines: readonly string[],
+  open: readonly boolean[],
+  index: number,
+): boolean {
+  for (let above = index - 1; above >= 0; above -= 1) {
+    const text = (lines[above] ?? "").replace(/\r$/, "");
+    if (text.trim() === "") return above !== index - 1;
+    if (open[above] !== true || isQuoted(text) || LIST_ITEM_RE.test(text)) return false;
+    if (atxLevel(text) !== null) return false;
+  }
+  return true;
 }
 
 /**
