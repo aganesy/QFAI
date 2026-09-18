@@ -101,10 +101,10 @@ stays one boundary, a contract from before the slot blocking the lane.
   its template, splitting every progressed row that runs several boundaries
   behind one `Selector`, `TDD-0021` among them. **It is applied first, and this
   record assumes it has landed**; if it is rejected, this record is restated
-  before it is applied. `CR-20260913-0003` and `CR-20260913-0007` name files
+  before it is applied. `CR-20260913-0003` and `CR-20260913-0011` name files
   this record names too — `06_Test-Cases.md`, `09_delta.md` and
   `tdd/test-list.md`. This record is applied before both, and
-  `CR-20260913-0007` and then `CR-20260913-0003` assume it has landed. The
+  `CR-20260913-0011` and then `CR-20260913-0003` assume it has landed. The
   three blocked sets do not intersect.
 
 ## Impact scope
