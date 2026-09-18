@@ -56,6 +56,48 @@
             ]
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: design artifact",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the request needs and the repository cannot settle? Outside the discussion stage, settle it between agents and take the griller's recommendation; ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule rather than working from this line.\"}}))"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: delegation",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the request needs and the repository cannot settle? Outside the discussion stage, settle it between agents and take the griller's recommendation; ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule rather than working from this line.\"}}))"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: plan",
+            "command": "node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:\"QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the request needs and the repository cannot settle? Outside the discussion stage, settle it between agents and take the griller's recommendation; ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule rather than working from this line.\"}}))"
+            ]
+          }
+        ]
       }
     ],
     "PostToolUse": [

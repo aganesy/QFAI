@@ -184,6 +184,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Grilling outside the discussion stage is delegated between agents.** A
+  griller interviews the authors, and every decision the user does not have to
+  make takes the griller's recommendation. Only a critical decision reaches the
+  user: one that contradicts a spec, a contract or a recorded decision, one
+  whose effect cannot be taken back, or product intent nothing written states.
+  Each adopted decision is recorded, and the stage's final report lists them,
+  so the user can overturn one later. Reviewers no longer return REVISE for an
+  adopted decision that is not critical. The request bounds the tree: a
+  decision that would only add something the request did not ask for is not
+  asked. A delegated session ends in the new ending `adopted`. The discussion
+  stage, and a session the user starts, still put every decision to the user.
+
 - **The worker-setting comparison is re-measured, on the project that is now the
   largest** (#1887). The artifact recorded `core` at 145 test files against a tree
   holding 174 — the twenty-percent bound exactly — so the next core test file any

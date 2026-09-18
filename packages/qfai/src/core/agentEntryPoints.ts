@@ -1083,6 +1083,7 @@ const SUPERSEDED_RULE_BULLETS: ReadonlyMap<string, readonly string[]> = new Map(
     ".agents/rules/grilling.md",
     [
       "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.",
+      "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends in one of four named endings, never at a question count.",
     ],
   ],
 ]);

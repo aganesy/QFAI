@@ -14,19 +14,19 @@
   "grilling-design-artifact": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
-      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them."
+      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the request needs and the repository cannot settle? Outside the discussion stage, settle it between agents and take the griller's recommendation; ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule rather than working from this line."
     }
   },
   "grilling-delegation": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
-      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them."
+      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the request needs and the repository cannot settle? Outside the discussion stage, settle it between agents and take the griller's recommendation; ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule rather than working from this line."
     }
   },
   "grilling-plan": {
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
-      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the repository cannot settle — a design, an approach, a scope boundary, a trade-off? If so, that rule governs how it is put, and an agent that answers it alone has stopped following it. Read the rule rather than working from this line: the method has parts a reminder cannot carry without contradicting them."
+      "additionalContext": "QFAI grilling (.agents/rules/grilling.md). Before this: is a decision about to be fixed that the request needs and the repository cannot settle? Outside the discussion stage, settle it between agents and take the griller's recommendation; ask the user only a critical decision — one that contradicts a spec, a contract or a recorded decision, one whose effect cannot be taken back, or product intent nothing written states. Do not ask about, or add, what the request did not need. Read the rule rather than working from this line."
     }
   },
   "documentation-clarity-after-write": {

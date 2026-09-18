@@ -26,7 +26,11 @@ const TYPED_TEST_FILES = JSON.parse(
 
 export default [
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "tmp/**", "**/tmp/**"],
+    // `.claude/worktrees/` holds git worktrees: another branch's checkout, on
+    // disk and outside this tree. Linted from here, every finding in that branch
+    // is reported against this one, and the same commit passes in CI — which
+    // clones fresh and has no worktrees — while failing locally.
+    ignores: ["**/dist/**", "**/node_modules/**", "tmp/**", "**/tmp/**", ".claude/worktrees/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,

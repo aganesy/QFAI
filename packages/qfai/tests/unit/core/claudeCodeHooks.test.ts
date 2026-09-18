@@ -357,7 +357,7 @@ describe("an earlier release's hook groups", () => {
   );
 
   it("covers every group the fixture holds", () => {
-    expect(cases).toHaveLength(9);
+    expect(cases).toHaveLength(12);
   });
 
   it.each(cases)("replaces $event group $index where it stands", ({ event, group }) => {
