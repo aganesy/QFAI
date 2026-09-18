@@ -233,6 +233,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- `spec-0010` makes `/qfai-discussion` the writer of the active-pack pointer,
+  but only `qfai discussion use` writes it, and `spec-0010/TDD-0016` stands
+  `done` on that command's test (#1961). `CR-20260913-0013` raises the repair:
+  the discussion skill runs `qfai discussion use` on the pack it has just
+  authored, no statement in the spec changes, and `TDD-0016` is reset onto a
+  test that proves the stage makes the write.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
