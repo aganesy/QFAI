@@ -33,6 +33,11 @@ const GENERATED_ROOTS = [
   // `.qfai/output/verify.json` as a fallback, so a record citing one of its
   // files is the same unsupported provenance as any other.
   ".qfai/output/",
+  // Tracked rather than ignored, but a record names its siblings as readily as
+  // it names a pack, and a sibling that was never written, or was retired, leaves
+  // the same claim with nothing behind it. A record naming a retired document
+  // says so with the `qfai:not-a-citation` marker.
+  ".qfai/evidence/",
 ] as const;
 
 /**
@@ -74,7 +79,8 @@ function toPosixSeparators(cited: string): string {
  * there — so the absent artifact reached neither the resolution nor the census.
  * The token is canonicalized to `/` where it is captured.
  */
-const CITED_GENERATED_ROOT = /\.qfai[\\/](?:review|review_archive|report|discussion|output)[\\/]/g;
+const CITED_GENERATED_ROOT =
+  /\.qfai[\\/](?:review|review_archive|report|discussion|output|evidence)[\\/]/g;
 
 /** The characters a citation carries outside a group. */
 const CITATION_CHARACTER = /[A-Za-z0-9._/*?+-]/;
@@ -1576,6 +1582,19 @@ describe("a committed record cites what the repository has", () => {
     const paths = trackedPaths(listing);
     expect([...paths.files]).toEqual([".qfai/evidence/a.md"]);
     expect(paths.links).toEqual([".qfai/evidence/b.md", ".qfai/evidence/c"]);
+  });
+
+  it("reads a record's own siblings in the evidence tree", () => {
+    // Tracked, so a sibling resolves only where the tree carries it: a retired
+    // format guide is not one.
+    const listing = [
+      "100644 0000000000000000000000000000000000000000 0\t.qfai/evidence/atdd-spec-0001.md",
+      "",
+    ].join("\0");
+    const paths = trackedPaths(listing);
+    expect(citationsIn("see `.qfai/evidence/README.md`")).toEqual([".qfai/evidence/README.md"]);
+    expect(resolves(".qfai/evidence/atdd-spec-0001.md", paths)).toBe(true);
+    expect(resolves(".qfai/evidence/README.md", paths)).toBe(false);
   });
 
   it("counts no directory that holds only a placeholder dotfile", () => {
