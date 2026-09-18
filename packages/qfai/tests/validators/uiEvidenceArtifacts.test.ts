@@ -146,6 +146,45 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues[0]?.file).toContain(".qfai/contracts/ui/ui-0001-orders.yaml#../escape");
   });
 
+  it("reads the evidence where iterate writes it when specsDir is moved", async () => {
+    // Iterate writes the captures under `.qfai/evidence/prototyping` whatever
+    // `specsDir` is, so a check reading beside the moved specs directory
+    // reported every captured screen missing.
+    const root = await newTempRoot();
+    const config = {
+      ...defaultConfig,
+      paths: { ...defaultConfig.paths, specsDir: "workspace/specs" },
+    };
+    const contractsDir = path.join(root, ".qfai", "contracts", "ui");
+    await mkdir(contractsDir, { recursive: true });
+    await writeFile(
+      path.join(contractsDir, "ui-0001-orders.yaml"),
+      ["screens:", "  - id: orders-dashboard", '    route: "/orders"'].join("\n"),
+      "utf-8",
+    );
+    const written = path.join(root, ".qfai", "evidence", "prototyping");
+    await mkdir(path.join(written, "screenshots"), { recursive: true });
+    await mkdir(path.join(written, "html"), { recursive: true });
+    await writeFile(path.join(written, "screenshots", "orders-dashboard.png"), "png", "utf-8");
+    await writeFile(path.join(written, "html", "orders-dashboard.html"), "<html></html>", "utf-8");
+
+    expect(await validateUiEvidenceArtifacts(root, config)).toEqual([]);
+
+    // A copy beside the moved specs directory is not where iterate writes.
+    const beside = await newTempRoot();
+    await mkdir(path.join(beside, ".qfai", "contracts", "ui"), { recursive: true });
+    await writeFile(
+      path.join(beside, ".qfai", "contracts", "ui", "ui-0001-orders.yaml"),
+      ["screens:", "  - id: orders-dashboard", '    route: "/orders"'].join("\n"),
+      "utf-8",
+    );
+    const elsewhere = path.join(beside, "workspace", "evidence", "prototyping");
+    await mkdir(path.join(elsewhere, "screenshots"), { recursive: true });
+    await writeFile(path.join(elsewhere, "screenshots", "orders-dashboard.png"), "png", "utf-8");
+    const codes = (await validateUiEvidenceArtifacts(beside, config)).map((found) => found.code);
+    expect(codes).toContain("QFAI-UIE-001");
+  });
+
   it("custom contractsDir でも suggested_action は実際の evidence path を案内する", async () => {
     const root = await newTempRoot();
     const config = {
@@ -172,9 +211,10 @@ describe("validateUiEvidenceArtifacts", () => {
     const issues = await validateUiEvidenceArtifacts(root, config);
 
     expect(issues.map((issue) => issue.code).sort()).toEqual(["QFAI-UIE-001", "QFAI-UIE-002"]);
-    expect(issues[0]?.suggested_action).toContain("workspace/evidence/prototyping/");
+    expect(issues[0]?.suggested_action).toContain(".qfai/evidence/prototyping/");
+    expect(issues[0]?.suggested_action).not.toContain("workspace/evidence");
     expect(issues[0]?.suggested_action).toContain("workspace/contracts/ui/*.yaml");
-    expect(issues[1]?.suggested_action).toContain("workspace/evidence/prototyping/");
+    expect(issues[1]?.suggested_action).toContain(".qfai/evidence/prototyping/");
     expect(issues[1]?.suggested_action).toContain("workspace/contracts/ui/*.yaml");
   });
 });
