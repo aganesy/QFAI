@@ -210,7 +210,7 @@ describe("old template deprecation marking", () => {
 // ---------------------------------------------------------------------------
 
 // QFAI:SPEC-0004:TC-0004-0002
-describe("TC-0004-0035: canonical entrypoint wiring", () => {
+describe("canonical entrypoint wiring", () => {
   it("validateProject source calls runCanonicalUixValidators", async () => {
     const validateSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),

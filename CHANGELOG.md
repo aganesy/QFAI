@@ -399,6 +399,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file can be rewritten, then clears the record. A bullet the project deleted on
   purpose was never recorded, so it is still not restored.
 
+- **Test titles and comments name only declared test cases and stories**
+  (#1836). Twenty-five titles and comments in the package's tests cited a
+  `TC-` or `US-` identifier no spec declares, and two annotations in a unit
+  suite named undeclared test cases. `QFAI-ATDD-101` and `-102` read only the
+  annotation form in the acceptance layers, so nothing reported them. They are
+  removed, and a repository check now fails on any bare identifier in a test
+  title or comment that no spec declares. An identifier the same file also
+  uses in code is read as fixture data.
+
 - **A removal answer written as a heading is pinned** (#1893). A heading deeper
   than the section's own does not end that section, so the reader that judges
   the answer and the rebuild that replaces it have to stop at the same place.
@@ -464,6 +473,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     the directories under the configured `paths.testsDir` rather than a
     literal `tests/e2e/**` or `tests/api/**`, which no scan reads in a project
     that moved it.
+
+- **The imported requirement count no longer counts a prose mention** (#1897).
+  `qfai sdd preflight` counts the IDs in `06_REQ.md`'s `REQ-ID` column, and
+  when that column held none it scanned the whole file. A pack numbering its
+  requirements `REQ-D-0001` reported a count of 1, from a sentence saying the
+  pack did not use `REQ-0001`. A `REQ-ID` column that holds no `REQ-NNNN` now
+  makes the count unknown. Only a file with no such column still falls back to
+  the distinct IDs in its text. The `06_REQ.md` template says a pack numbers
+  from `REQ-0001`, because specs cite a requirement with the pack's id, and
+  that a prefixed form is not read.
 
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
@@ -539,6 +558,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `TDD-0029`'s drop their band and empty-list assertions, the no-file-times row
   observes metadata reads at run time instead of searching source text, and
   `TC-0013-0014`'s row checks the result's values, not only its fields.
+
+- **The token docs say a scale key can contain digits, and what a project's
+  own token check must do** (#1908). QFAI checks the prototype against
+  `DESIGN.md`, not a product stylesheet or Tailwind config, so each project
+  writes that check itself. The natural name pattern, letters and hyphens,
+  never captures `2xl` or `3xl`, which `typography.scale` declares, and a
+  check that captures nothing for a key passes both ways. The schema comment
+  now says scale keys contain digits. The `design-system.yaml` contract says
+  QFAI does not check the implementation, that a project's check asserts both
+  directions, and that its name pattern has to admit digits.
 
 - Completion and implementation review stop conditions now include demonstrated
   regressions against named constitution or catalog rules (#1799). New upstream
@@ -724,6 +753,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkpoint revision, checks that it names a revision, and keeps the round's
   `Revision` for a row that records none. The contract also says each value
   enters the seal without a code span around it.
+
+- **The post-build leakage guard scans what npm publishes, the manifest
+  included** (#1931). The guard built its scan list from `package.json#files`,
+  and npm adds files that list never names — the published `package.json`
+  above all. A `schemaVersion` or a private version marker there shipped with
+  every guard green, and a filter meant for the repository's own manifest
+  dropped the `schemaVersion` finding for the published one too. The guard now
+  asks `npm pack --dry-run` for the list, scans the manifest with no filter, and
+  still passes its `version` field. A glob in `files` is now scanned as npm
+  expands it instead of being refused.
 
 - **The evidence revision reference says how a revision is read after a squash
   merge** (#1696). A squash merge lands a commit with no branch revision among
@@ -1031,6 +1070,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A record that explains why an artifact is absent says so with
   `<!-- qfai:not-a-citation -->` on the line, or on the line before a fenced
   block for the paths it names inside it.
+
+- **Article XI no longer sends toolchain output to `tmp/`** (#1929). The
+  article required "intermediate build artifacts" under `tmp/`. The shipped
+  temporary-files rule says build, test and cache output (`dist/`, coverage
+  reports, package tarballs) stays where the toolchain writes it. An article
+  outranks a rule, so an agent reading both was told to move `dist/`. Article
+  XI now covers the scratch files an agent creates, names toolchain output as
+  outside its scope, and gives the same list the rule does.
 
 - **A glob's bracket expression names a set on both sides** (#1652). A class
   was compiled by scanning for the first `]`, which stops inside a named class

@@ -3,8 +3,6 @@
  *
  * QFAI:SPEC-0002:TC-0002-0010
  * QFAI:SPEC-0002:TC-0002-0011
- * QFAI:SPEC-0002:TC-0002-0012
- * QFAI:SPEC-0002:TC-0002-0026
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
