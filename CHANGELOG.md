@@ -217,6 +217,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The spec-0013 ledger repair keeps each split row's case on its own
+  boundary and execution path** (#1944). In `CR-20260913-0009`, `TDD-0003`'s
+  cases run the SDD preflight rather than search `SKILL.md`, `TDD-0026`'s enter
+  through `qfai sdd lint` and drop the already-declared-frontmatter case,
+  `TDD-0029`'s drop their band and empty-list assertions, the no-file-times row
+  observes metadata reads at run time instead of searching source text, and
+  `TC-0013-0014`'s row checks the result's values, not only its fields.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
