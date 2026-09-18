@@ -762,6 +762,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   ignored stage evidence, so where one is absent from the checkout, as on a fresh
   clone, the gate skips the recomputation. It does the same for a review pack.
 
+- **The UI evidence check reads the captures where iterate writes them**
+  (#1769). `qfai prototyping iterate` writes screenshots and HTML under
+  `.qfai/evidence/prototyping`, and every other evidence reader looks under
+  `.qfai/evidence`. `QFAI-UIE-001` and `QFAI-UIE-002` alone looked beside
+  `paths.specsDir`, so with the specs directory moved they reported every
+  captured screen missing, and were satisfied by files iterate never wrote. The
+  check now reads `.qfai/evidence/prototyping` too, and its suggested action
+  names that path.
+
 - **The working-tree address is written one way** (#1651). The procedure said
   "a hash over HEAD and the working tree", and that is not one value: a
   producer and a reviewer could each pick a defensible separator, record shape
