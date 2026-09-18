@@ -1180,10 +1180,9 @@ function evidenceFieldOccurrences(
     if (/^\s*\|/.test(visibleLine)) {
       const cells = splitMarkdownRow(visibleLine);
       // Labels are the even cells, as `hasFieldBesideReviewerAppendedCell` reads
-      // them. Visiting every cell took a value that quotes a field name — the
-      // output of a test asserting on one — for a label, and the label after it
-      // for that field's value, so a row carrying such output acquired a pack or
-      // a verdict nobody wrote and the entry failed completion over it.
+      // them, and a value cell is never read as a label. A value may quote a
+      // field name, as a test asserting on one does, and reading it as a label
+      // would give the row a pack or a verdict nobody wrote.
       for (let cellIndex = 0; cellIndex < cells.length - 1; cellIndex += 2) {
         const rawLabel = (cells[cellIndex] ?? "").replace(/^\*\*|\*\*$/g, "").trim();
         const roundMatch = /^Round\s+(\d+):\s*(.*)$/i.exec(rawLabel);

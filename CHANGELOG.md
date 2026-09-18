@@ -206,6 +206,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The audited-evidence-hash reference calls the three hashes evidence-entry
+  fields** (#1939). It called them ledger fields, which could send a reader to
+  add `test-list.md` columns the ledger contract does not have, while the
+  completion gate reads the three hashes from each row's `### TDD-NNNN`
+  evidence entry.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
