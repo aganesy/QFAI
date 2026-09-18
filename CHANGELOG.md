@@ -461,6 +461,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   than requiring catches on propagated async failures. A dropped rejection keeps
   its correctness class (#1805).
 
+- **The spec-0013 ledger repair keeps each split row's case on its own
+  boundary and execution path** (#1944). In `CR-20260913-0009`, `TDD-0003`'s
+  cases run the SDD preflight rather than search `SKILL.md`, `TDD-0026`'s enter
+  through `qfai sdd lint` and drop the already-declared-frontmatter case,
+  `TDD-0029`'s drop their band and empty-list assertions, the no-file-times row
+  observes metadata reads at run time instead of searching source text, and
+  `TC-0013-0014`'s row checks the result's values, not only its fields.
+
 - Completion and implementation review stop conditions now include demonstrated
   regressions against named constitution or catalog rules (#1799). New upstream
   product obligations remain advisory.
