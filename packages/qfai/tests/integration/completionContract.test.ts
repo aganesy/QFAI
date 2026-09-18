@@ -30,7 +30,7 @@ async function loadContent(): Promise<string> {
   return content;
 }
 
-// QFAI:SPEC-0011:TC-0011-0005
+// QFAI:SPEC-0011:TC-0011-0006
 describe("item completion checklist end-to-end enforcement", () => {
   it("defines a numbered item completion checklist", async () => {
     const c = await loadContent();
@@ -112,7 +112,6 @@ describe("item completion blocked: no GREEN evidence", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0008
 describe("item completion blocked: reviewer not run", () => {
   it("prohibits completion when completion-reviewer has not been run", async () => {
     const c = await loadContent();
@@ -157,7 +156,6 @@ describe("spec-level completion conditions", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0011
 describe("reviewer rejection/re-approval cycle", () => {
   it("defines reviewer rejection and re-approval flow", async () => {
     const c = await loadContent();
@@ -167,11 +165,10 @@ describe("reviewer rejection/re-approval cycle", () => {
 });
 
 // ---------------------------------------------------------------------------
-// spec-0001: Canonical template generation / deprecation
+// spec-0010: Canonical template generation / deprecation
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0003:TC-0003-0052
-describe("TC-0003-0052: canonical template generation", () => {
+describe("canonical templates ship with the UI-bearing family", () => {
   it("verifies UI-bearing UIX templates exist after init", async () => {
     const files = await readdir(uiuxTemplateDir);
     // Brand-level inputs moved to root DESIGN.md; only screen-level
@@ -186,8 +183,7 @@ describe("TC-0003-0052: canonical template generation", () => {
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0053
-describe("TC-0003-0053: 00_index.md references canonical family", () => {
+describe("00_index.md references canonical family", () => {
   it("canonical family referenced in 00_index.md, no legacy evaluation family refs", async () => {
     const indexPath = path.join(uiuxTemplateDir, "00_index.md");
     const content = await readFile(indexPath, "utf-8");
@@ -196,8 +192,7 @@ describe("TC-0003-0053: 00_index.md references canonical family", () => {
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0054
-describe("TC-0003-0054: old template deprecation marking", () => {
+describe("old template deprecation marking", () => {
   it("canonical templates use exploration-first naming, not deprecated evaluation-axis files", async () => {
     const files = await readdir(uiuxTemplateDir);
     expect(files).not.toContain("30_option_comparison.md");

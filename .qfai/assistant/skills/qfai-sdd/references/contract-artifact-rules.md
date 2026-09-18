@@ -214,7 +214,7 @@ satisfied by a file that cannot run.
   `## Contract executability` heading of `templates/evidence/sdd-spec.md`, as a
   line of the form:
 
-  ```
+  ```text
   - Executability: CON-DB-NNNN — applied to scratch DB; every declared write path driven twice; <command> / <result>
   ```
 

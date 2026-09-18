@@ -75,6 +75,22 @@ describe("TC-0012-0480: detectEvidenceMutationUnlogged fires (error) for unlogge
     expect(issues.filter((i) => i.code === "R-EVIDENCE-MUTATION-UNLOGGED")).toEqual([]);
   });
 
+  it("fires when a reset's log entries are built but never written", async () => {
+    // The entries alone are not the write: a reset that assembles them and
+    // drops the call keeps every token but the one that logs anything.
+    const source = [
+      "await rename(iter00Abs, backupAbs);",
+      "await rename(sourceAbs, path.join(backupAbs, name));",
+      "const entries = [...aggregateLogEntries, ...iter00LogEntries];",
+    ].join("\n");
+    await writeSource("packages/qfai/src/cli/commands/prototypingIterate.ts", source);
+
+    const issues = await detectEvidenceMutationUnlogged(root);
+
+    const clauses = issues.map((entry) => /clause=([^,]+)/.exec(entry.message)?.[1]);
+    expect(clauses).toEqual(["iterate-cycle-0-force-rename", "iterate-cycle-0-aggregate-move"]);
+  });
+
   it("does NOT fire when neither token is present (file has no iter-NN mutation surface)", async () => {
     for (const pair of EVIDENCE_MUTATION_PAIRS) {
       await writeSource(

@@ -14,7 +14,18 @@
  * that should not be offered to the model says so with
  * `disable-model-invocation: true` beside it.
  */
-import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import {
+  chmod,
+  link,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  truncate,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -292,6 +303,41 @@ describe("a skill carries what a host needs to register it", () => {
     expect(finding?.message).toContain("Codex surface");
   });
 
+  it("still reports an uncited reference beside an entry point that holds no text", async () => {
+    // A directory where `SKILL.md` should be cites nothing, so the reference
+    // graph stays decided.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(path.join(skills, "qfai-folder", "SKILL.md"), { recursive: true });
+    await mkdir(path.join(skills, "qfai-example", "references"), { recursive: true });
+    const orphan = path.join(skills, "qfai-example", "references", "orphan.md");
+    await writeFile(orphan, "# orphan\n", "utf-8");
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-013" && item.file === orphan)).toBe(
+      true,
+    );
+  });
+
+  it("reports a document under a hidden directory that a registered skill names", async () => {
+    // The host lists no hidden directory, and a registered skill can still open
+    // a document there by naming it.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const entryPoint = path.join(skills, "qfai-example", "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee ../.draft/references/guide.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skills, ".draft", "references"), { recursive: true });
+    const guide = path.join(skills, ".draft", "references", "guide.md");
+    await writeFile(guide, Buffer.concat([Buffer.from("# guide\n"), Buffer.from([0xff])]));
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-014" && item.file === guide)).toBe(true);
+  });
+
   it("reports an entry point that is not a file", async () => {
     // A `SKILL.md` that is a directory: `stat` succeeds and the host still
     // cannot load it, and the crawl walks through rather than naming it.
@@ -370,5 +416,854 @@ describe("a skill carries what a host needs to register it", () => {
     const [finding] = await registrationFindings(root);
     expect(finding?.suggested_action).toContain("Claude Code surface");
     expect(finding?.suggested_action).toContain("guard the skill itself");
+  });
+});
+
+describe("the gate reads a skill as the host does", () => {
+  const findings = async (
+    root: string,
+  ): Promise<Awaited<ReturnType<typeof validateAssistantAssets>>> =>
+    (await validateAssistantAssets(root, defaultConfig)).filter((finding) =>
+      finding.code.startsWith("QFAI-SKILLS-01"),
+    );
+
+  it("reports a description the host refuses for its length", async () => {
+    // The field is registration metadata, not the document. Past the cap the
+    // host refuses it and the skill is not loaded, which is the same outcome as
+    // having no description at all.
+    const root = await projectWithSkill([`description: "${"a".repeat(1025)}"`]);
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("1025 characters");
+    expect(finding?.suggested_action).toContain("Cut `description:`");
+    // And the length a host does accept is accepted here.
+    const ok = await projectWithSkill([`description: "${"a".repeat(1024)}"`]);
+    expect(await registrationFindings(ok)).toEqual([]);
+  });
+
+  it("tells the operator to rename a directory no name can match", async () => {
+    // The directory's own spelling fails the form, and every legal spelling
+    // differs from it, so the action names the rename.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-registration-"));
+    tempDirs.push(root);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "My Skill");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      path.join(skillDir, "SKILL.md"),
+      ["---", "name: my-skill", 'description: "Does the thing."', "---", "", "# x", ""].join("\n"),
+      "utf-8",
+    );
+
+    const [finding] = await registrationFindings(root);
+    expect(finding?.suggested_action).toContain("Rename the skill's directory");
+    expect(finding?.suggested_action).not.toContain("Set `name:` to `My Skill`");
+  });
+
+  it("asks for the rename after a front matter repair where the directory can be no name", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-registration-"));
+    tempDirs.push(root);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "My Skill");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      path.join(skillDir, "SKILL.md"),
+      ["---", "name: my-skill", "description: [", "---", "", "# x", ""].join("\n"),
+      "utf-8",
+    );
+
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("front matter a host cannot read");
+    expect(finding?.suggested_action).toContain("rename the skill's directory");
+    expect(finding?.suggested_action).not.toContain("`name:` is `My Skill`");
+  });
+
+  it("leaves a SKILL.md in a skill's vendored tree out of the marker checks", async () => {
+    // Neither the document crawl nor the marker checks walk such a tree: the
+    // marker checks are about the documents the skill's author wrote, and a file
+    // there that a step names is read when the step is reached.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const vendored = path.join(skillDir, "node_modules", "pkg", "SKILL.md");
+    await mkdir(path.dirname(vendored), { recursive: true });
+    await writeFile(vendored, "# vendored\n", "utf-8");
+
+    const codes = (await validateAssistantAssets(root, defaultConfig))
+      .filter((item) => item.file === vendored)
+      .map((item) => item.code);
+    expect(codes).not.toContain("QFAI-SKILLS-010");
+    expect(codes).not.toContain("QFAI-SKILLS-011");
+  });
+
+  it("passes over a directory the host does not list", async () => {
+    // A dot-prefixed skill directory is one the host never loads.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(path.join(skills, ".draft"), { recursive: true });
+    await writeFile(path.join(skills, ".draft", "SKILL.md"), "# draft\n", "utf-8");
+
+    expect(await findings(root)).toEqual([]);
+  });
+
+  it("reports a crawled document that is not valid UTF-8", async () => {
+    // An entry point holding a byte that is not UTF-8 is one the host refuses,
+    // so it is reported, however well its metadata would parse.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    await writeFile(
+      path.join(skillDir, "SKILL.md"),
+      Buffer.concat([
+        Buffer.from('---\nname: qfai-example\ndescription: "Does the '),
+        Buffer.from([0xff]),
+        Buffer.from('thing."\n---\n\n# qfai-example\n'),
+      ]),
+    );
+
+    const codes = (await findings(root)).map((finding) => finding.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+  });
+
+  it("reports nothing under a hidden tree no registered skill reaches", async () => {
+    // A hidden skill directory is not registered and is no root of the reference
+    // graph, so its entry point answers no rule and an unreached reference is no
+    // orphan. A document there that a registered skill names is still read, and
+    // reported when it cannot be.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(path.join(skills, ".draft", "references"), { recursive: true });
+    await writeFile(path.join(skills, ".draft", "SKILL.md"), "# draft\n", "utf-8");
+    await writeFile(path.join(skills, ".draft", "references", "orphan.md"), "# orphan\n", "utf-8");
+
+    const reported = (await validateAssistantAssets(root, defaultConfig)).filter((finding) =>
+      (finding.file ?? "").includes(".draft"),
+    );
+    expect(reported).toEqual([]);
+  });
+  it("reports an entry point that is not valid UTF-8", async () => {
+    // A byte that is not UTF-8 makes the document unreadable, as the host reads it.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const dist = path.join(skills, "dist");
+    await mkdir(dist, { recursive: true });
+    await writeFile(
+      path.join(dist, "SKILL.md"),
+      Buffer.concat([
+        Buffer.from('---\nname: dist\ndescription: "Does the '),
+        Buffer.from([0xff]),
+        Buffer.from('thing."\n---\n\n# dist\n'),
+      ]),
+    );
+
+    const codes = (await findings(root)).map((finding) => finding.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+    expect(codes).not.toContain("QFAI-SKILLS-015");
+  });
+
+  it("escapes a control character in the name it reports", async () => {
+    // A value read out of a document reaches the terminal escaped, so a newline
+    // or an escape sequence in it cannot forge lines in the run's output.
+    const root = await projectWithSkillDocument(
+      ["---", 'name: "qfai-\u001b[31mexample"', 'description: "Does the thing."', "---", ""].join(
+        "\n",
+      ),
+    );
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("\\u001b");
+    expect(finding?.message).not.toContain("\u001b");
+  });
+
+  it("escapes a bidirectional control in the name it reports", async () => {
+    // A control that reorders the text after it would rearrange the rest of the
+    // finding on the terminal.
+    const root = await projectWithSkillDocument(
+      ["---", 'name: "qfai-\u202eexample"', 'description: "Does the thing."', "---", ""].join("\n"),
+    );
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("\\u202e");
+    expect(finding?.message).not.toContain("\u202e");
+  });
+
+  it("escapes a line separator in the name it reports", async () => {
+    // Neither a C0 control nor a bidirectional one, and a renderer that reads
+    // it starts a line there, which forges output the same way a newline does.
+    const root = await projectWithSkillDocument(
+      ["---", 'name: "qfai-\u2028example"', 'description: "Does the thing."', "---", ""].join("\n"),
+    );
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("\\u2028");
+    expect(finding?.message).not.toContain("\u2028");
+  });
+
+  it("asks for a rename when the directory is longer than a name may be", async () => {
+    // The directory's spelling is legal and its length is not, so the action
+    // names the rename rather than a `name:` that fails the same check.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-registration-"));
+    tempDirs.push(root);
+    const overlong = "a".repeat(65);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", overlong);
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      path.join(skillDir, "SKILL.md"),
+      ["---", "name: qfai-example", 'description: "Does the thing."', "---", "", "# x", ""].join(
+        "\n",
+      ),
+      "utf-8",
+    );
+
+    const [finding] = await registrationFindings(root);
+    expect(finding?.suggested_action).toContain("Rename the skill's directory");
+    expect(finding?.suggested_action).not.toContain(`Set \`name:\` to \`${overlong}\``);
+  });
+
+  it("passes over a hidden directory whose name begins with two dots", async () => {
+    // The host lists no dot-prefixed directory, `..draft` included: it is a
+    // name under the skills root, not a path leaving it.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(path.join(skills, "..draft", "references"), { recursive: true });
+    await writeFile(path.join(skills, "..draft", "SKILL.md"), "# draft\n", "utf-8");
+    await writeFile(path.join(skills, "..draft", "references", "orphan.md"), "# orphan\n", "utf-8");
+
+    const reported = (await validateAssistantAssets(root, defaultConfig)).filter((finding) =>
+      (finding.file ?? "").includes("..draft"),
+    );
+    expect(reported).toEqual([]);
+  });
+
+  it("passes over a hidden directory it cannot enumerate", async () => {
+    // The registration walks skip a hidden skill directory, and the document
+    // crawl passes over one it cannot list, so it fails nothing. Permission is
+    // the portable way to produce one, and neither Windows nor root honours it.
+    if (process.platform === "win32" || process.getuid?.() === 0) return;
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const hidden = path.join(root, ".qfai", "assistant", "skills", ".draft");
+    await mkdir(hidden, { recursive: true });
+    await writeFile(path.join(hidden, "SKILL.md"), "# draft\n", "utf-8");
+    await chmod(hidden, 0o000);
+
+    const reported = await findings(root).catch((error: unknown) => error);
+
+    await chmod(hidden, 0o700);
+    expect(reported).toEqual([]);
+  });
+
+  it("says what an unreadable reference stops, and what it does not", async () => {
+    // The host registers the skill from its entry point and reads a reference
+    // only where a step names one, so the finding says the step fails, not the
+    // load.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const references = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-example",
+      "references",
+    );
+    await mkdir(references, { recursive: true });
+    const file = path.join(references, "note.md");
+    await writeFile(file, Buffer.concat([Buffer.from("# note\n"), Buffer.from([0xff])]));
+
+    const [finding] = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (item) => item.code === "QFAI-SKILLS-014" && item.file === file,
+    );
+    expect(finding?.message).toContain("only where a step names it");
+    expect(finding?.message).not.toContain("registers no skill");
+  });
+
+  it("reads a hidden directory inside a registered skill", async () => {
+    // Inside a registered skill, a dot-prefixed directory is read: the skill can
+    // name a document under it, and the host then opens it.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const internal = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-example",
+      "references",
+      ".internal",
+    );
+    await mkdir(internal, { recursive: true });
+    const file = path.join(internal, "guide.md");
+    await writeFile(file, Buffer.concat([Buffer.from("# guide\n"), Buffer.from([0xff])]));
+
+    const codes = (await validateAssistantAssets(root, defaultConfig))
+      .filter((item) => item.file === file)
+      .map((item) => item.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+  });
+
+  it("reads a document a step names inside a directory named like build output", async () => {
+    // The crawl passes over `tmp`, and a skill can still name a document under
+    // it, which the host then opens.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/guide.md.\n`,
+      "utf-8",
+    );
+    const tmp = path.join(skillDir, "references", "tmp");
+    await mkdir(tmp, { recursive: true });
+    const file = path.join(tmp, "guide.md");
+    await writeFile(file, Buffer.concat([Buffer.from("# guide\n"), Buffer.from([0xff])]));
+
+    const codes = (await validateAssistantAssets(root, defaultConfig))
+      .filter((item) => item.file === file)
+      .map((item) => item.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+  });
+
+  it("reads a document a step names under an uncrawled tree up to the ceiling", async () => {
+    // A document under the ceiling is read however large it is within it, so a
+    // file of several mebibytes is still judged rather than passed over. The
+    // case above it holds what happens past the ceiling.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/large.md.\n`,
+      "utf-8",
+    );
+    const tmp = path.join(skillDir, "references", "tmp");
+    await mkdir(tmp, { recursive: true });
+    const file = path.join(tmp, "large.md");
+    // Over nine mebibytes of prose, past the ceiling an entry point is read within.
+    await writeFile(file, `# large\n\n${"A line of prose.\n".repeat(600_000)}`, "utf-8");
+
+    const codes = (await validateAssistantAssets(root, defaultConfig))
+      .filter((item) => item.file === file)
+      .map((item) => item.code);
+    expect(codes).toEqual([]);
+  });
+
+  it("reports nothing against a named document too large to hold, and decides no orphan past it", async () => {
+    // Held in memory, a multi-gigabyte file would end the run. It is not read, so
+    // what it cites is unknown, and an uncited reference is not reported as one.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/huge.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references", "tmp"), { recursive: true });
+    const huge = path.join(skillDir, "references", "tmp", "huge.md");
+    await writeFile(huge, "# huge\n", "utf-8");
+    await truncate(huge, 65 * 1024 * 1024);
+    await writeFile(path.join(skillDir, "references", "uncited.md"), "# uncited\n", "utf-8");
+
+    const findings = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (item) => item.code === "QFAI-SKILLS-014" || item.code === "QFAI-SKILLS-013",
+    );
+    expect(findings).toEqual([]);
+  });
+
+  it("reports a named document too large to hold whose bytes are not UTF-8", async () => {
+    // Its text cannot be held, and its encoding is still what the host fails
+    // on, so the stream is decoded a chunk at a time and kept nowhere.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/huge.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references", "tmp"), { recursive: true });
+    const huge = path.join(skillDir, "references", "tmp", "huge.md");
+    // A lone continuation byte is valid in no sequence, wherever it sits.
+    await writeFile(huge, Buffer.from([0x23, 0x20, 0x68, 0x75, 0x67, 0x65, 0x0a, 0x80]));
+    await truncate(huge, 65 * 1024 * 1024);
+
+    const codes = (await validateAssistantAssets(root, defaultConfig))
+      .filter((item) => item.file === huge)
+      .map((item) => item.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+  });
+
+  it("reports a named document too large to hold that this run cannot read", async () => {
+    // Stated, so the size ceiling is what sends it down the streaming path, and
+    // then unreadable. Reported as the unreadable file it is, rather than passed
+    // over as one whose bytes were read and found to be UTF-8.
+    if (process.platform === "win32" || process.getuid?.() === 0) return;
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/huge.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references", "tmp"), { recursive: true });
+    const huge = path.join(skillDir, "references", "tmp", "huge.md");
+    await writeFile(huge, "# huge\n", "utf-8");
+    await truncate(huge, 65 * 1024 * 1024);
+    await chmod(huge, 0o000);
+
+    const codes = (await validateAssistantAssets(root, defaultConfig))
+      .filter((item) => item.file === huge)
+      .map((item) => item.code);
+
+    await chmod(huge, 0o600);
+    expect(codes).toContain("QFAI-SKILLS-014");
+  });
+
+  it("reports a name a step gives below an ordinary file", async () => {
+    // `notes.md` is a file, so nothing can sit under it. The host opens the
+    // name the step gives and fails there, which is a path it cannot read
+    // rather than a path nobody wrote.
+    //
+    // Windows reports the same absence for this path as for one nobody wrote,
+    // so there the two cases cannot be told apart and this one does not arise.
+    if (process.platform === "win32") return;
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/notes.md/guide.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    await writeFile(path.join(skillDir, "references", "notes.md"), "# notes\n", "utf-8");
+    const below = path.join(skillDir, "references", "notes.md", "guide.md");
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-014" && item.file === below)).toBe(true);
+  });
+
+  it("roots a skill whose entry point links to a document crawled under another name", async () => {
+    // The host loads the link as the entry point, so the document is a root and
+    // its citations resolve from the skill's directory.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    const entry = path.join(skillDir, "references", "entry.md");
+    await writeFile(
+      entry,
+      `${await readFile(path.join(skillDir, "SKILL.md"), "utf-8")}\nSee references/guide.md.\n`,
+      "utf-8",
+    );
+    await writeFile(path.join(skillDir, "references", "guide.md"), "# guide\n", "utf-8");
+    await rm(path.join(skillDir, "SKILL.md"));
+    try {
+      await symlink(entry, path.join(skillDir, "SKILL.md"));
+    } catch {
+      // A host without symlink permission cannot exercise this case.
+      return;
+    }
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.filter((item) => item.code === "QFAI-SKILLS-013")).toEqual([]);
+  });
+
+  it("reports a path a step names that is not an ordinary file", async () => {
+    // A directory at the named path exists, and the host still cannot open it.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/guide.md.\n`,
+      "utf-8",
+    );
+    const directory = path.join(skillDir, "references", "tmp", "guide.md");
+    await mkdir(directory, { recursive: true });
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-014" && item.file === directory)).toBe(
+      true,
+    );
+  });
+
+  it("reports a link a step names whose target is gone", async () => {
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/guide.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references", "tmp"), { recursive: true });
+    const link = path.join(skillDir, "references", "tmp", "guide.md");
+    try {
+      await symlink(path.join(skillDir, "references", "tmp", "gone.md"), link);
+    } catch {
+      // A host without symlink permission cannot exercise this case.
+      return;
+    }
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-014" && item.file === link)).toBe(true);
+  });
+
+  it("reads the candidate a step names ahead of a crawled fallback", async () => {
+    // From `references/tmp/notes.md`, `guide.md` names the file beside it first;
+    // the crawled `qfai-example/guide.md` is only the fallback.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/tmp/notes.md.\n`,
+      "utf-8",
+    );
+    const tmp = path.join(skillDir, "references", "tmp");
+    await mkdir(tmp, { recursive: true });
+    await writeFile(path.join(tmp, "notes.md"), "# notes\n\nSee guide.md.\n", "utf-8");
+    const beside = path.join(tmp, "guide.md");
+    await writeFile(beside, Buffer.concat([Buffer.from("# guide\n"), Buffer.from([0xff])]));
+    await writeFile(path.join(skillDir, "guide.md"), "# fallback\n", "utf-8");
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-014" && item.file === beside)).toBe(
+      true,
+    );
+  });
+
+  it("reports a document a step names in another case once", async () => {
+    // On a volume that folds case the citation and the crawled name are one file;
+    // elsewhere the citation names nothing. Either way the file is reported once.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/guide.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    const file = path.join(skillDir, "references", "Guide.md");
+    await writeFile(file, Buffer.concat([Buffer.from("# guide\n"), Buffer.from([0xff])]));
+
+    const found = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (item) => item.code === "QFAI-SKILLS-014" && item.file?.toLowerCase() === file.toLowerCase(),
+    );
+    expect(found).toHaveLength(1);
+  });
+
+  it("keeps uncited references reported beside an entry point that is a link cycle", async () => {
+    // A cycle holds no text and cites nothing, so the graph stays decided.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(path.join(skills, "qfai-example", "references"), { recursive: true });
+    const orphan = path.join(skills, "qfai-example", "references", "orphan.md");
+    await writeFile(orphan, "# orphan\n", "utf-8");
+    const looped = path.join(skills, "qfai-loop");
+    await mkdir(looped, { recursive: true });
+    try {
+      await symlink(path.join(looped, "OTHER.md"), path.join(looped, "SKILL.md"));
+      await symlink(path.join(looped, "SKILL.md"), path.join(looped, "OTHER.md"));
+    } catch {
+      // A host without permission to link cannot exercise this case.
+      return;
+    }
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.some((item) => item.code === "QFAI-SKILLS-013" && item.file === orphan)).toBe(
+      true,
+    );
+  });
+
+  it("passes over a dependency tree no step names", async () => {
+    // An installed package can hold more documents than every skill together,
+    // and the host opens none of them unless a step names one.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const vendored = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-example",
+      "node_modules",
+      "pkg",
+    );
+    await mkdir(vendored, { recursive: true });
+    await writeFile(
+      path.join(vendored, "README.md"),
+      Buffer.concat([Buffer.from("# pkg\n"), Buffer.from([0xff])]),
+    );
+
+    const reported = (await validateAssistantAssets(root, defaultConfig)).filter((item) =>
+      (item.file ?? "").includes("node_modules"),
+    );
+    expect(reported).toEqual([]);
+  });
+
+  it("follows the references an entry point the crawl passes over names", async () => {
+    // `dist` is an ordinary skill name. Its entry point is read by the probe, and
+    // a reference only it cites is not uncited.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(path.join(skills, "qfai-example", "references"), { recursive: true });
+    const shared = path.join(skills, "qfai-example", "references", "shared.md");
+    await writeFile(shared, "# shared\n", "utf-8");
+    await mkdir(path.join(skills, "dist"), { recursive: true });
+    await writeFile(
+      path.join(skills, "dist", "SKILL.md"),
+      [
+        "---",
+        "name: dist",
+        'description: "Builds the thing."',
+        "---",
+        "",
+        "See ../qfai-example/references/shared.md.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const found = await validateAssistantAssets(root, defaultConfig);
+    expect(found.filter((item) => item.code === "QFAI-SKILLS-013")).toEqual([]);
+  });
+
+  it("reports both of a description's problems in one finding", async () => {
+    // Told of one, the operator clears it and meets the other on the next run.
+    const root = await projectWithSkill([`description: "<file> ${"a".repeat(1025)}"`]);
+    const findings = await registrationFindings(root);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("holding `<` or `>`");
+    expect(findings[0]?.message).toContain("1032 characters");
+    expect(findings[0]?.suggested_action).toContain("without angle brackets");
+    expect(findings[0]?.suggested_action).toContain("cut it to 1024 characters");
+  });
+
+  it("reports an unreadable entry point once, whatever case it is spelled in", async () => {
+    // On a case-insensitive file system the crawl and the entry-point probe name
+    // one file two ways.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    await rm(path.join(skillDir, "SKILL.md"));
+    const file = path.join(skillDir, "skill.md");
+    await writeFile(file, Buffer.concat([Buffer.from("# skill\n"), Buffer.from([0xff])]));
+
+    const unreadable = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (item) => item.code === "QFAI-SKILLS-014" && item.file?.toLowerCase() === file.toLowerCase(),
+    );
+    expect(unreadable).toHaveLength(1);
+    // Where the file system folds case, `skill.md` is the entry point the host
+    // loads, and the finding calls it one; elsewhere it is a document like any
+    // other.
+    const foldsCase = existsSync(path.join(skillDir, "SKILL.md"));
+    expect(unreadable[0]?.message.includes("entry point")).toBe(foldsCase);
+  });
+
+  it("reports no uncited reference in a skill whose entry point cannot be read", async () => {
+    // With no readable entry point there is no root to reach a reference from,
+    // so the decoding failure is the finding, not every reference beside it.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    await writeFile(
+      path.join(skillDir, "SKILL.md"),
+      Buffer.concat([Buffer.from("# skill\nSee references/guide.md.\n"), Buffer.from([0xff])]),
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    await writeFile(path.join(skillDir, "references", "guide.md"), "# guide\n", "utf-8");
+
+    const codes = (await validateAssistantAssets(root, defaultConfig)).map((item) => item.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+    expect(codes).not.toContain("QFAI-SKILLS-013");
+  });
+
+  it("reports an entry point linked to an unreadable document as an entry point", async () => {
+    // The host opens the entry point through the link to register the skill, so
+    // the bytes at the other end stop the skill, whatever the target's own
+    // finding says about the target.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skillDir = path.join(skills, "qfai-example");
+    const target = path.join(skills, "shared", "entry.md");
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(
+      target,
+      Buffer.concat([Buffer.from("# skill\nSee references/guide.md.\n"), Buffer.from([0xff])]),
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    await writeFile(path.join(skillDir, "references", "guide.md"), "# guide\n", "utf-8");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await rm(entryPoint);
+    try {
+      await symlink(target, entryPoint);
+    } catch {
+      // A host without symlink permission cannot exercise this case.
+      return;
+    }
+
+    const findings = await validateAssistantAssets(root, defaultConfig);
+    const unreadable = findings.filter((item) => item.code === "QFAI-SKILLS-014");
+    expect(unreadable.find((item) => item.file === entryPoint)?.message).toContain("entry point");
+    expect(unreadable.find((item) => item.file === target)?.message).toContain(
+      "only where a step names it",
+    );
+    expect(findings.map((item) => item.code)).not.toContain("QFAI-SKILLS-013");
+  });
+
+  it("reports no uncited reference beside a document that cannot be read", async () => {
+    // What the unreadable document cites is unknown, so the reference it may
+    // cite is not called uncited; the decoding failure is the finding.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/bad.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    const bad = path.join(skillDir, "references", "bad.md");
+    await writeFile(
+      bad,
+      Buffer.concat([Buffer.from("# bad\nSee references/guide.md.\n"), Buffer.from([0xff])]),
+    );
+    await writeFile(path.join(skillDir, "references", "guide.md"), "# guide\n", "utf-8");
+
+    const findings = await validateAssistantAssets(root, defaultConfig);
+    expect(findings.some((item) => item.code === "QFAI-SKILLS-014" && item.file === bad)).toBe(
+      true,
+    );
+    expect(findings.map((item) => item.code)).not.toContain("QFAI-SKILLS-013");
+  });
+
+  it("reports no uncited reference in another skill while a reached document cannot be read", async () => {
+    // A citation can name a document in another skill, so what the unreadable
+    // document cites may be anywhere in the tree.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const entryPoint = path.join(skills, "qfai-example", "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/bad.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skills, "qfai-example", "references"), { recursive: true });
+    await writeFile(
+      path.join(skills, "qfai-example", "references", "bad.md"),
+      Buffer.concat([
+        Buffer.from("# bad\nSee ../../qfai-other/references/guide.md.\n"),
+        Buffer.from([0xff]),
+      ]),
+    );
+    await mkdir(path.join(skills, "qfai-other", "references"), { recursive: true });
+    await writeFile(
+      path.join(skills, "qfai-other", "references", "guide.md"),
+      "# guide\n",
+      "utf-8",
+    );
+
+    const codes = (await validateAssistantAssets(root, defaultConfig)).map((item) => item.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+    expect(codes).not.toContain("QFAI-SKILLS-013");
+  });
+
+  it("reports an uncited reference beside a document that cannot be read and no step reaches", async () => {
+    // Unreached, the unreadable document can make nothing reachable, so the
+    // uncited reference is still decided.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    await mkdir(path.join(skillDir, "templates"), { recursive: true });
+    await writeFile(
+      path.join(skillDir, "templates", "bad.md"),
+      Buffer.concat([Buffer.from("# bad\n"), Buffer.from([0xff])]),
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    const orphan = path.join(skillDir, "references", "orphan.md");
+    await writeFile(orphan, "# orphan\n", "utf-8");
+
+    const findings = await validateAssistantAssets(root, defaultConfig);
+    expect(findings.some((item) => item.code === "QFAI-SKILLS-013" && item.file === orphan)).toBe(
+      true,
+    );
+  });
+
+  it("reports an unreadable entry point once when a hard link gives it a second crawled path", async () => {
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(entryPoint, Buffer.concat([Buffer.from("# skill\n"), Buffer.from([0xff])]));
+    await mkdir(path.join(skillDir, "templates"), { recursive: true });
+    try {
+      await link(entryPoint, path.join(skillDir, "templates", "bad.md"));
+    } catch {
+      // A file system without hard links cannot exercise this case.
+      return;
+    }
+
+    const findings = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (item) => item.code === "QFAI-SKILLS-014" && item.file === entryPoint,
+    );
+    expect(findings).toHaveLength(1);
+  });
+
+  it("calls a nested SKILL.md a reference, not an entry point", async () => {
+    // A template named SKILL.md inside a skill registers nothing, so an invalid
+    // byte in it stops the step that names it rather than the skill.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const templates = path.join(root, ".qfai", "assistant", "skills", "qfai-example", "templates");
+    await mkdir(templates, { recursive: true });
+    const file = path.join(templates, "SKILL.md");
+    await writeFile(file, Buffer.concat([Buffer.from("# template\n"), Buffer.from([0xff])]));
+
+    const [finding] = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (item) => item.code === "QFAI-SKILLS-014" && item.file === file,
+    );
+    expect(finding?.message).toContain("only where a step names it");
+  });
+
+  it("measures a description as a host reads it, trimmed", async () => {
+    // Padding around the text is not part of the value the host measures.
+    const padded = await projectWithSkill([`description: " ${"a".repeat(1024)} "`]);
+    expect(await registrationFindings(padded)).toEqual([]);
+    const over = await projectWithSkill([`description: " ${"a".repeat(1025)}"`]);
+    const [finding] = await registrationFindings(over);
+    expect(finding?.message).toContain("1025 characters");
+  });
+
+  it("counts a description in characters, not UTF-16 units", async () => {
+    // An emoji outside the Basic Multilingual Plane is one character to a host
+    // and two units to a JavaScript string.
+    const emoji = String.fromCodePoint(0x1f600);
+    const within = await projectWithSkill([`description: "${emoji.repeat(1024)}"`]);
+    expect(await registrationFindings(within)).toEqual([]);
+    const over = await projectWithSkill([`description: "${emoji.repeat(1025)}"`]);
+    const [finding] = await registrationFindings(over);
+    expect(finding?.message).toContain("1025 characters");
+  });
+
+  it("strips a description with the host's whitespace set", async () => {
+    // U+FEFF is kept by the host's strip and counted; U+0085 is removed.
+    const bom = await projectWithSkill([`description: "${"a".repeat(1024)}\uFEFF"`]);
+    expect((await registrationFindings(bom))[0]?.message).toContain("1025 characters");
+    const nel = await projectWithSkill([`description: "${"a".repeat(1024)}\u0085"`]);
+    expect(await registrationFindings(nel)).toEqual([]);
+  });
+
+  it("refuses a description holding an angle bracket, as a host does", async () => {
+    const root = await projectWithSkill(['description: "Use <file> inputs."']);
+    const [finding] = await registrationFindings(root);
+    expect(finding?.message).toContain("holding `<` or `>`");
+  });
+
+  it("does not read front matter behind a byte order mark", async () => {
+    // The host keeps a leading byte order mark, so it finds no opening
+    // delimiter behind one and registers nothing.
+    const body = [
+      "---",
+      "name: qfai-example",
+      'description: "Does the thing."',
+      "---",
+      "",
+      "# x",
+      "",
+    ].join("\n");
+    const root = await projectWithSkillDocument(body);
+    const file = path.join(root, ".qfai", "assistant", "skills", "qfai-example", "SKILL.md");
+    await writeFile(file, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(body)]));
+
+    expect((await registrationFindings(root)).length).toBeGreaterThan(0);
+    await writeFile(file, body, "utf-8");
+    expect(await registrationFindings(root)).toEqual([]);
   });
 });

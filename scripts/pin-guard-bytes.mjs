@@ -23,13 +23,15 @@
  * pins that step's BODY, runs after this one.
  */
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { argv, cwd, exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { LIFECYCLE_MANIFESTS_REL, lifecycleProjection } from "./check-lifecycle-manifests.mjs";
-import { writeFormattedJson } from "./lib/write-declaration.mjs";
+// The repository's own modules are loaded after the conflict scan rather than imported here: a
+// module carrying a conflict block does not parse, and a static import would end the run before
+// the scan could name it.
+const CONFLICT_SCANNER_REL = "scripts/check-conflict-markers.mjs";
 
 /** The roots whose every file is pinned, repo-relative and POSIX-separated. */
 const PINNED_ROOTS = [".github/actions", "scripts"];
@@ -57,6 +59,27 @@ const WORKFLOW_PINNED = [
   ".github/command-files.txt",
 ];
 
+/**
+ * The manifests the lifecycle list names, whose projections this program reseals. A line
+ * shaped like a conflict marker is not a path, and a path with no file behind it has nothing
+ * to scan.
+ */
+function lifecycleManifestPaths(root) {
+  let text;
+  try {
+    text = readFileSync(path.join(root, ".github/lifecycle-manifests.txt"), "utf-8");
+  } catch {
+    return [];
+  }
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && !line.startsWith("#"))
+    .filter((line) => !/^(?:<{7}|={7}|>{7}|\|{7})(?: |$)/.test(line))
+    .map((line) => /^[0-9a-f]{64} {2}(.+)$/.exec(line)?.[1] ?? line)
+    .filter((rel) => existsSync(path.join(root, rel)));
+}
+
 /** Every file under `rel`, repo-relative and POSIX-separated, in a stable order. */
 function filesUnder(root, rel) {
   const out = [];
@@ -80,18 +103,73 @@ function digestOf(root, rel) {
     .digest("hex");
 }
 
+/**
+ * The paths that still carry a merge conflict, read as the tracked-file scan
+ * reads them, so a fenced example in a Markdown file is not one.
+ *
+ * Resealing computes a digest over whatever bytes are there, so a conflict block
+ * would be pinned rather than reported, and a list this program rewrites from
+ * the tree would drop a conflict inside it with nothing left to read. Every file
+ * it seals or rewrites is scanned: the workflow-pinned lists, and the
+ * declaration and workflow that take the new digests. A conflict in the workflow
+ * would otherwise survive around the digest lines written into it, and one in
+ * the declaration would stop the run as unparseable JSON after the list was
+ * already written.
+ */
+async function pathsWithConflictMarkers(root, rels) {
+  let scanner;
+  try {
+    scanner = await import("./check-conflict-markers.mjs");
+  } catch (cause) {
+    // The scanner cannot vouch for itself when it does not load. Git's marker
+    // lines are what a merge leaves in a file that no longer parses, so they
+    // name the conflict; any other load failure is not this program's to explain.
+    const own = readFileSync(path.join(root, CONFLICT_SCANNER_REL), "utf-8");
+    if (/^(?:<{7}|={7}|>{7}|\|{7})(?: |$)/m.test(own)) return [CONFLICT_SCANNER_REL];
+    throw cause;
+  }
+  // A binary file's bytes can hold a marker-shaped line that means nothing, so
+  // it is skipped as the tracked-file scan skips it.
+  return rels.filter(
+    (rel) =>
+      scanner.readsText(rel) &&
+      scanner.markersIn(readFileSync(path.join(root, rel), "utf-8"), {
+        fenced: scanner.readsFences(rel),
+      }).length > 0,
+  );
+}
+
 async function main(root) {
   // The list first, over the roots as they now stand: the workflow pins its digest, so the file
   // has to be final before the workflow can be written. Nothing here is circular — `ci.yml` is
   // not itself pinned by bytes, so writing it changes none of the digests just computed.
-  const entries = [];
+  const rels = [];
   for (const pinnedRoot of PINNED_ROOTS) {
-    for (const rel of filesUnder(root, pinnedRoot)) {
-      entries.push([digestOf(root, rel), rel]);
-    }
+    rels.push(...filesUnder(root, pinnedRoot));
   }
 
   const listPath = path.join(root, LIST_REL);
+  const conflicted = await pathsWithConflictMarkers(root, [
+    ...new Set([
+      ...rels,
+      ...WORKFLOW_PINNED,
+      ...lifecycleManifestPaths(root),
+      DECLARATION_REL,
+      WORKFLOW_REL,
+    ]),
+  ]);
+  if (conflicted.length > 0) {
+    stdout.write(
+      `pin-guard-bytes: nothing was pinned. These files carry merge conflict markers: ${conflicted.join(", ")}\n` +
+        "Resolve the merge, then run this again.\n",
+    );
+    return 1;
+  }
+  const { LIFECYCLE_MANIFESTS_REL, lifecycleProjection } =
+    await import("./check-lifecycle-manifests.mjs");
+  const { writeFormattedJson } = await import("./lib/write-declaration.mjs");
+
+  const entries = rels.map((rel) => [digestOf(root, rel), rel]);
   const existing = readFileSync(listPath, "utf-8");
   const header = existing
     .split(/\r?\n/)

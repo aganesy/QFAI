@@ -12,6 +12,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+. (Join-Path $PSScriptRoot "../../pr-fix/scripts/pr-body-policy.ps1")
 
 try {
   $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
@@ -262,7 +263,7 @@ $repoPkg = ReadUtf8File (Join-Path $root "package.json") | ConvertFrom-Json
 $packageJson = ReadUtf8File (Join-Path $root "packages/qfai/package.json") | ConvertFrom-Json
 $changelog = ReadUtf8File (Join-Path $root "CHANGELOG.md")
 $branch = CurrentBranch
-$pr = RunJson "gh" @("pr", "view", "$PrNumber", "--json", "number,title,baseRefName,headRefName,statusCheckRollup,url,state,isDraft") "Failed to read PR details."
+$pr = RunJson "gh" @("pr", "view", "$PrNumber", "--json", "number,title,body,baseRefName,headRefName,statusCheckRollup,url,state,isDraft") "Failed to read PR details."
 $threads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $PrNumber)
 $badChecks = @(FailingChecks $pr)
 $suggestedReleaseTag = SuggestReleaseTag ([string]$packageJson.version)
@@ -298,6 +299,9 @@ if ([string]$pr.state -ne "OPEN") {
 }
 if ($pr.isDraft) {
   $blockers.Add(("PR #{0} is still a draft." -f $pr.number))
+}
+if ([string]::IsNullOrWhiteSpace((RemovalAnswer ([string]$pr.body)))) {
+  $blockers.Add("PR body needs an authored removal-list answer. Update the PR body before merging.")
 }
 if ($badChecks.Count -gt 0) {
   foreach ($check in $badChecks) {
@@ -365,6 +369,11 @@ if ($blockers.Count -gt 0) {
 if ($DryRun) {
   Info "Dry-run completed."
   return
+}
+
+$finalPr = RunJson "gh" @("pr", "view", "$PrNumber", "--json", "body") "Failed to refresh PR body before merge."
+if ([string]::IsNullOrWhiteSpace((RemovalAnswer ([string]$finalPr.body)))) {
+  throw "PR body needs an authored removal-list answer at the merge boundary. Update the PR body before merging."
 }
 
 [void](Run "gh" (MergeArgs -Method $MergeMethod -Number $PrNumber) "gh pr merge failed.")
