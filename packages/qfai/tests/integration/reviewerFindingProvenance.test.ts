@@ -177,12 +177,18 @@ describe("reviewer finding provenance", () => {
     expect(baseline).toMatch(
       /`record:\*` and `none` MUST be recorded as `advisory`;\s+neither can be `blocking` or gate `DONE`/,
     );
+    // The trace class bounds which findings may block; the declared severity
+    // settles whether one does. Read the other way, an obligation-traced item
+    // was a blocking defect to one reviewer and carried advice to the next.
     expect(baseline).toMatch(
-      /Only `blocking` findings — those citing a behaviour-governing obligation or a defect class/,
+      /Only `blocking` findings force `REVISE`, and only a finding citing a behaviour-governing obligation or a defect class may be one/,
+    );
+    expect(baseline).toMatch(
+      /An obligation-traced finding is recorded `advisory` where a named section places the work outside the reviewed stage/,
     );
     // The reviewer response schema has to offer the value it now requires.
     expect(baseline).toContain("defect:code-quality|record:<CODE>|none>");
-    expect(drift).toMatch(/`record:\*` and `none` are not\./);
+    expect(drift).toMatch(/`record:\*` and `none` never are\./);
   });
 
   it("restates the record class as advisory downstream of the constitution", async () => {

@@ -153,6 +153,10 @@ Before declaring completion, you MUST:
 
 Reviewer checks must confirm:
 
+- each repository fact the pack states names where it was read, precisely enough
+  to open: a file and a heading, a file and a line or a symbol where the file has
+  no headings, or a command and its observed output; read that source and verify
+  the claim rather than treating a citation as proof;
 - the stage evidence's `## Grilling Session` row shows the session ended before authoring began, with `Ended` one of `confirmed`, `user-closed` or `no-question`; and every decision it settled is recorded where `references/oq-and-deferred-rules.md` says;
 - the cycle's review pack was written per `references/review-cycle-playbook.md`, i.e. the three required artifacts exist under a `.qfai/review/review-YYYYMMDDhhmmssSSS/` directory;
 - the 15-file discussion pack is complete; `Disposition: open` count is zero in `11_OQ-Register.md`;
