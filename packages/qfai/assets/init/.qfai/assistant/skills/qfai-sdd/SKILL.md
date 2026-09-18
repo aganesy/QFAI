@@ -404,7 +404,7 @@ a root `DESIGN.md`, a design contract or a prototype, so assuming visual leaves 
 5. Write `.qfai/contracts/design/DESIGN.md.lock.yaml` from the template at `templates/contracts/design-md-lock.sample.yaml` with these fields:
    - `designMdPath: "DESIGN.md"`
    - `designMdSha256: <hex>`
-   - `frozenAt: <UTC ISO-8601>`
+   - `frozenAt: <UTC ISO-8601>`, the time of this freeze. A re-freeze writes every field again, never the hash alone: gates compare `designMdSha256` with `DESIGN.md`, and no gate reads `frozenAt`, so a stale one passes and records a freeze that did not happen then.
    - `schemaTokens.colors`, `fontFamilies`, `radii`, `shadows` enumerated per the sample.
 6. Record the freeze in `_policies/05_Contracts.md` under the Contract Index. The lock yaml plus root `DESIGN.md` are the only brand contract; per-aspect brand yaml contracts have been removed.
 

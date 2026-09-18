@@ -522,6 +522,13 @@ pack` name different paths or seals. The layout says a round after a REVISE
   completion gate reads the three hashes from each row's `### TDD-NNNN`
   evidence entry.
 
+- **The DESIGN.md lock says what checks `frozenAt`: nothing** (#1898). Gates
+  compare the lock's hash with `DESIGN.md`, and none reads `frozenAt`, so a
+  re-freeze that rewrote only the hash passed. A green run was then read as
+  evidence that the timestamp had moved with it. The `qfai-sdd` freeze step
+  now says a re-freeze writes every field again, never the hash alone, and that
+  a stale `frozenAt` passes. The lock sample's header says the same.
+
 - Refuse a scaffold destination where the extensions could not be read, where
   an exclude glob's range stops the scan, or where a brace range's endpoints
   are not whole numbers, rather than writing a file the project's own runner
