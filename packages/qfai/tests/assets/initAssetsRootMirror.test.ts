@@ -1,22 +1,19 @@
 /**
- * The root `.qfai/` tree is a generated mirror of
- * `packages/qfai/assets/init/.qfai/`, produced by
- * `scripts/sync-init-to-root.mjs` (`pnpm sync:ssot`).
+ * What the root `.qfai/` tree owes the assets the package ships.
  *
- * Until now the only thing holding the two halves together was `pnpm ci:gate`,
- * which runs `sync:ssot` and then `git diff --exit-code .qfai/`. CI does not run
- * `ci:gate` — it runs `ci:lint`, the type checks, the test projects,
- * `ci:coverage`, `ci:build-verify` and `qfai validate`. So a change that edited
- * one half and forgot the other reached main with the trees diverged, and the
- * next contributor to run `sync:ssot` picked up an unrelated diff.
+ * `.qfai/assistant/**` is symlinked at `packages/qfai/assets/init/.qfai/assistant/**`
+ * by `scripts/link-assistant-tree.mjs`, so the two cannot differ and the
+ * byte-for-byte comparison that used to live here has nothing left to compare.
+ * `assistantTreeLinks.test.ts` holds the half a link does not settle: a path
+ * that exists here and nowhere in the package.
  *
- * This test applies the same rule the sync script does: every file under the
- * init assets must exist at the mirrored root path with identical bytes. Root-
- * only files are ignored, exactly as `sync-init-to-root.mjs` ignores them — it
- * copies init -> root and never deletes.
+ * What is still open is the rest of `assets/init/.qfai/`. A file added there
+ * that is neither linked nor seeded reaches an adopter and never appears in
+ * this tree, which is the shape of every consumer-only failure this repository
+ * has recorded. The first case below is that accounting.
  *
- * `qfai.config.yaml` is the one exception, and the script says so: it is seeded
- * when absent, never overwritten. See the second case.
+ * `qfai.config.yaml` is seeded, not mirrored — the script says why, and the
+ * second case pins it.
  */
 
 import { readdir, readFile } from "node:fs/promises";
@@ -91,28 +88,30 @@ async function readOrNull(filePath: string): Promise<Buffer | null> {
 }
 
 describe("init assets root mirror", () => {
-  it("mirrors every init .qfai file to the repo root byte-for-byte", async () => {
+  it("accounts for every shipped .qfai path as linked, seeded or under the linked tree", async () => {
     const initFiles = await collectFiles(initQfaiDir);
     expect(initFiles.length).toBeGreaterThan(0);
 
-    const missing: string[] = [];
-    const differing: string[] = [];
-    for (const relative of initFiles) {
-      const [source, mirrored] = await Promise.all([
-        readOrNull(path.join(initQfaiDir, relative)),
-        readOrNull(path.join(rootQfaiDir, relative)),
-      ]);
-      if (mirrored === null) {
-        missing.push(`.qfai/${relative}`);
-      } else if (source !== null && !source.equals(mirrored)) {
-        differing.push(`.qfai/${relative}`);
-      }
-    }
+    // `assistant/**` is the linked tree, and `link-assistant-tree --check`
+    // owns it. `waivers.yml` is seeded. Anything else is a shipped path with
+    // no route into this tree, and nobody would notice until an adopter did.
+    const SEEDED = new Set(["waivers.yml"]);
+    const unaccounted = initFiles.filter(
+      (relative) => !relative.startsWith("assistant/") && !SEEDED.has(relative),
+    );
 
     expect(
-      { missing, differing },
-      "root .qfai/ is out of sync with packages/qfai/assets/init/.qfai/ — run `pnpm sync:ssot`",
-    ).toEqual({ missing: [], differing: [] });
+      unaccounted,
+      "a shipped .qfai path is neither under the linked tree nor seeded — link it, seed it, or say here why it needs neither",
+    ).toEqual([]);
+
+    // And the seeded ones are actually here, since nothing else checks that.
+    for (const relative of SEEDED) {
+      expect(
+        await readOrNull(path.join(rootQfaiDir, relative)),
+        `.qfai/${relative}`,
+      ).not.toBeNull();
+    }
   });
 
   // `qfai.config.yaml` is SEEDED, not mirrored: `sync-init-to-root.mjs` writes
