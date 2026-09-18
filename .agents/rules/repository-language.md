@@ -61,13 +61,13 @@ surfaces the rule is held by review.
 
 ## Existing content
 
-Japanese predates this rule across much of the tree, including four of the rule
-masters in this directory. That is a backlog, not permission. Content you add
-or change is English whatever surrounds it.
+Japanese predates this rule across much of the tree. That is a backlog, not
+permission. Content you add or change is English whatever surrounds it.
 
-The English wording of several rules already exists: the copies under
-`packages/qfai/assets/init/root/.agents/rules/`, which `qfai init` ships, carry
-no Japanese at all.
+The rule masters in this directory are no longer part of that backlog: each one
+a project shares with an adopter is a link to its shipped copy under
+`packages/qfai/assets/init/root/.agents/rules/`, and those carry no Japanese at
+all.
 
 ## Related
 

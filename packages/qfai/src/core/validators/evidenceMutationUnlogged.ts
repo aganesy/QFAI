@@ -42,6 +42,15 @@ export type EvidenceMutationPair = {
   readonly logTokens: readonly string[];
 };
 
+/** One space wherever the source has any run of whitespace. */
+function collapseWhitespace(text: string): string {
+  return text.replace(/\s+/g, " ");
+}
+
+/** The single mutation-log write a cycle-0 reset makes for every move it keeps. */
+const RESET_LOG_WRITE =
+  "logMovedFiles(options.root, [ ...aggregateLogEntries, ...iter00LogEntries, ])";
+
 /**
  * SSOT manifest for paired mutation call-sites. Each entry maps to a
  * concrete source file under `packages/qfai/src/core/prototyping/` (or
@@ -54,7 +63,10 @@ export const EVIDENCE_MUTATION_PAIRS: readonly EvidenceMutationPair[] = [
     clause: "iterate-cycle-0-force-rename",
     sourceRel: "packages/qfai/src/cli/commands/prototypingIterate.ts",
     mutationTokens: ["await rename(iter00Abs"],
-    logTokens: ["logEvidenceMove"],
+    // The one log write, spelled with the entries of both moves. The helper's
+    // name alone would pass with this move's entries left out, and the entries
+    // alone would pass with the write removed.
+    logTokens: [RESET_LOG_WRITE],
   },
   {
     // Mutation-log wiring-depth extension: every
@@ -65,6 +77,14 @@ export const EVIDENCE_MUTATION_PAIRS: readonly EvidenceMutationPair[] = [
     sourceRel: "packages/qfai/src/cli/commands/prototypingIterate.ts",
     mutationTokens: ["await rm(abs, { recursive: true, force: true })"],
     logTokens: ["logEvidenceDelete"],
+  },
+  {
+    // The cycle-0 reset moves the aggregate `screenshots/` and `html/`
+    // directories aside, and logs each file once the move is kept.
+    clause: "iterate-cycle-0-aggregate-move",
+    sourceRel: "packages/qfai/src/cli/commands/prototypingIterate.ts",
+    mutationTokens: ["await rename(sourceAbs"],
+    logTokens: [RESET_LOG_WRITE],
   },
 ];
 
@@ -81,15 +101,20 @@ export async function detectEvidenceMutationUnlogged(root: string): Promise<read
   for (const pair of EVIDENCE_MUTATION_PAIRS) {
     const abs = path.join(root, pair.sourceRel);
     if (!(await exists(abs))) continue;
-    let text = "";
-    try {
-      text = await readFile(abs, "utf-8");
-    } catch {
-      continue;
-    }
-    const hasMutation = pair.mutationTokens.some((token) => text.includes(token));
+    const text = await readFile(abs, "utf-8").then(
+      (read) => read,
+      () => null,
+    );
+    if (text === null) continue;
+    // Read with runs of whitespace collapsed, on both sides. A token spelling a
+    // call the formatter later broke across lines is the same call, and matched
+    // literally it read as the call being gone.
+    const flat = collapseWhitespace(text);
+    const hasMutation = pair.mutationTokens.some((token) =>
+      flat.includes(collapseWhitespace(token)),
+    );
     if (!hasMutation) continue;
-    const hasLog = pair.logTokens.some((token) => text.includes(token));
+    const hasLog = pair.logTokens.some((token) => flat.includes(collapseWhitespace(token)));
     if (hasLog) continue;
     const message =
       `${FINDING_CODE}: ${pair.sourceRel} performs an iter-NN evidence mutation ` +

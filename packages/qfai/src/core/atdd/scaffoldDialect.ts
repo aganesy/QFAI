@@ -35,7 +35,8 @@
  * the caller refuses rather than emitting a test nothing executes.
  */
 
-import { deriveTestFileExtensions } from "../atddTraceability.js";
+import { readTestFileExtensions } from "../atddTraceability.js";
+import { BraceRangeRefused, braceRangeMembers } from "../globBraceRange.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
 
 /**
@@ -288,8 +289,9 @@ export type ScaffoldDialectResolution =
 
 /**
  * Representative TC id used to probe a candidate basename against the
- * configured globs. Every naming above is a pure function of the id's shape,
- * not its digits, so one probe decides for all of them.
+ * configured globs when the caller names no ids. Every naming above is a pure
+ * function of the id's shape, so the probe decides for every id a glob without
+ * a brace range admits.
  */
 const PROBE_TC_ID = "TC-0000-0000";
 
@@ -299,9 +301,18 @@ function escapeRegExp(value: string): string {
 
 /** Last path segment of a glob — the basename convention it prescribes. */
 function globBasename(glob: string): string {
-  const normalized = glob.replace(/\\/g, "/");
-  const lastSlash = normalized.lastIndexOf("/");
-  return lastSlash === -1 ? normalized : normalized.slice(lastSlash + 1);
+  // Separators are already folded; a `/` or a backslash inside a bracket
+  // expression is a member, not a boundary.
+  let lastSlash = -1;
+  for (let index = 0; index < glob.length; index += 1) {
+    const close = glob[index] === "[" ? findClassClose(glob, index) : -1;
+    if (close !== -1) {
+      index = close;
+      continue;
+    }
+    if (glob[index] === "/") lastSlash = index;
+  }
+  return lastSlash === -1 ? glob : glob.slice(lastSlash + 1);
 }
 
 /**
@@ -321,6 +332,28 @@ function findGroupClose(pattern: string, open: number, opener: string, closer: s
   let depth = 0;
   for (let index = open; index < pattern.length; index += 1) {
     const char = pattern[index];
+    // A bracket expression is skipped whole: a `)` or a `}` written inside one
+    // is a member of the class, and read as a closer it ended the group early
+    // and rejected a candidate the project's own scan collects.
+    if (char === "[") {
+      const classClose = findClassClose(pattern, index);
+      if (classClose !== -1) {
+        index = classClose;
+        continue;
+      }
+    }
+    // A brace group is skipped whole for the same reason, and for one more: a
+    // member of it can spell the closer. `@(.test{)..)}.ts` expands to
+    // `@(.test).ts` before anything is compiled, so the `)` between the braces
+    // is not this group's close — read as one it ended the group at a place the
+    // expansion never puts it.
+    if (opener !== "{" && char === "{") {
+      const braceClose = findGroupClose(pattern, index, "{", "}");
+      if (braceClose !== -1) {
+        index = braceClose;
+        continue;
+      }
+    }
     if (char === opener) {
       depth += 1;
     } else if (char === closer) {
@@ -332,20 +365,32 @@ function findGroupClose(pattern: string, open: number, opener: string, closer: s
 }
 
 /**
- * Split a group's interior on its top-level separators. `,` (braces) and `|`
- * (extglob) are both accepted in both group kinds: no real glob relies on the
- * other one being a literal, and conflating them keeps one splitter.
+ * Split a group's interior on its top-level separator: `,` in a brace list and
+ * `|` in an extended group. Each is a literal in the other kind, so
+ * `@(a.md,b.md)` names one file with a comma in its name.
  */
-function splitGlobAlternatives(inner: string): string[] {
+function splitGlobAlternatives(inner: string, separator: "|" | ","): string[] {
   const parts: string[] = [];
   let depth = 0;
   let current = "";
-  for (const char of inner) {
+  for (let index = 0; index < inner.length; index += 1) {
+    const char = inner[index] ?? "";
+    // A bracket expression is copied whole: a `,` or a `|` inside one is a
+    // member of the class, and split on it the alternatives came apart into
+    // fragments that match nothing.
+    if (char === "[") {
+      const classClose = findClassClose(inner, index);
+      if (classClose !== -1) {
+        current += inner.slice(index, classClose + 1);
+        index = classClose;
+        continue;
+      }
+    }
     if (char === "(" || char === "{") {
       depth += 1;
     } else if (char === ")" || char === "}") {
       depth -= 1;
-    } else if ((char === "," || char === "|") && depth === 0) {
+    } else if (char === separator && depth === 0) {
       parts.push(current);
       current = "";
       continue;
@@ -357,10 +402,128 @@ function splitGlobAlternatives(inner: string): string[] {
 }
 
 /**
+ * The characters that mean something to a matcher rather than naming themselves.
+ *
+ * `@`, `+` and `!` are here because each opens an extglob before a `(`, and `(`
+ * for the other side of the same pair: a range expanding to either half leaves
+ * a group the matcher reads, not a literal. So is `/`: a member carrying one
+ * moves the boundary the segments either side are read against. And so is a
+ * backslash, which escapes whatever follows it — `{Z..^}` produces one, and
+ * the character after the group stops meaning itself.
+ */
+const GLOB_SYNTAX = /[*?[\]{}@+!()/\\]/;
+
+/**
+ * The pattern with one brace group written out, when a member of it carries
+ * glob syntax; `null` when no group does.
+ *
+ * fast-glob expands a brace before it compiles anything, so a member and what
+ * stands beside it are read together: `tests/{*..*}*\/x` expands to
+ * `tests/**\/x`, whose globstar crosses directories. Compiled group by group,
+ * the same two stars are two segment-local wildcards, and the path the
+ * globstar admits is refused.
+ *
+ * Only such a group is written out. A range of digits or letters carries no
+ * syntax to combine with anything, and expanding it here would multiply the
+ * pattern by a thousand for nothing.
+ *
+ * @throws {BraceRangeRefused} for a numeric range fast-glob refuses to expand.
+ */
+function expandMetaBrace(pattern: string): string[] | null {
+  for (let index = 0; index < pattern.length; index += 1) {
+    const char = pattern[index] ?? "";
+    // A group inside a bracket expression or an extglob is written out whatever
+    // its members are. fast-glob expands the brace first and compiles what
+    // comes out, so `[0-{1..3}]` is three classes and `*({0..1})` is two
+    // quantified groups — neither of which the one pattern they were read as
+    // says: `[0-{` admits every digit, and `(?:0|1)*` admits the mixtures the
+    // two separate patterns exclude.
+    if (char === "[") {
+      const classClose = findClassClose(pattern, index);
+      if (classClose !== -1) {
+        const written = writeOutFirstBrace(pattern, index + 1, classClose);
+        if (written !== null) return written;
+        index = classClose;
+        continue;
+      }
+    }
+    if (pattern[index + 1] === "(" && "@?*+!".includes(char)) {
+      const groupClose = findGroupClose(pattern, index + 1, "(", ")");
+      if (groupClose !== -1) {
+        const written = writeOutFirstBrace(pattern, index + 2, groupClose);
+        if (written !== null) return written;
+        index = groupClose;
+        continue;
+      }
+    }
+    if (char !== "{") continue;
+    const close = findGroupClose(pattern, index, "{", "}");
+    if (close === -1) continue;
+    const members = braceMembers(pattern.slice(index + 1, close));
+    // A group standing on its own is written out only where a member carries
+    // syntax to combine with what stands beside it. A range of digits or
+    // letters carries none, and expanding it here would multiply the pattern by
+    // a thousand for nothing.
+    if (members === null || !members.some((member) => GLOB_SYNTAX.test(member))) {
+      index = close;
+      continue;
+    }
+    return substituted(pattern, index, close, members);
+  }
+  return null;
+}
+
+/** The first brace group between `from` and `until`, written out; `null` for none. */
+function writeOutFirstBrace(pattern: string, from: number, until: number): string[] | null {
+  for (let index = from; index < until; index += 1) {
+    if (pattern[index] !== "{") continue;
+    const close = findGroupClose(pattern, index, "{", "}");
+    if (close === -1 || close > until) continue;
+    const members = braceMembers(pattern.slice(index + 1, close));
+    if (members === null) continue;
+    return substituted(pattern, index, close, members);
+  }
+  return null;
+}
+
+/** A brace body's members: a list's alternatives, or a range's values. */
+function braceMembers(body: string): readonly string[] | null {
+  const alternatives = splitGlobAlternatives(body, ",");
+  if (alternatives.length > 1) return alternatives.map((alternative) => alternative.trim());
+  return braceRangeMembers(body);
+}
+
+/** The pattern with the group between `open` and `close` replaced by each member. */
+function substituted(
+  pattern: string,
+  open: number,
+  close: number,
+  members: readonly string[],
+): string[] {
+  const head = pattern.slice(0, open);
+  const tail = pattern.slice(close + 1);
+  return members.map((member) => `${head}${member}${tail}`);
+}
+
+/**
+ * Whether the character at `index` is the first of its path segment.
+ *
+ * `atStart` is what the caller knows about the fragment's own position. An
+ * alternative compiled out of a group carries the group's position, since
+ * `@(a|*)` after literal text is inside the segment wherever the alternative
+ * begins; read without it, every alternative looked segment-leading and the
+ * guard refused an ordinary dot in the middle of a name.
+ */
+function opensSegment(pattern: string, index: number, atStart: boolean): boolean {
+  return index === 0 ? atStart : pattern[index - 1] === "/";
+}
+
+/**
  * Compile one glob into regex source.
  *
  * Handles the constructs fast-glob's own matcher does inside a single path
- * segment: `*`, `?`, brace alternation `{a,b}`, and the extglob forms
+ * segment: `*`, `?`, brace alternation `{a,b}`, a brace range `{1..5}` or
+ * `{a..e}`, and the extglob forms
  * `@(a|b)`, `?(a|b)`, `*(a|b)`, `+(a|b)`, `!(a|b)`. Alternatives are compiled
  * recursively, so a wildcard nested in a group keeps its meaning. The
  * cross-segment globstar `**` is handled too, so a whole configured glob —
@@ -374,15 +537,47 @@ function splitGlobAlternatives(inner: string): string[] {
  * `!(a|b)` uses picomatch's own expansion — a negative lookahead followed by a
  * lazy segment wildcard — so this matcher agrees with fast-glob there too.
  */
-function compileGlob(pattern: string): string {
+/**
+ * What a wildcard may match, which is not the same question for every caller.
+ *
+ * The scan this matcher stands in for runs fast-glob at its default, where a
+ * wildcard passes over a name beginning with a dot. A caller reading a record's
+ * citations wants the other reading — it matches the hidden name and reports it
+ * separately — so the dialect is the caller's to state, and a caller that says
+ * nothing gets the permissive one.
+ */
+export type GlobDialect = { readonly dot: boolean };
+
+const MATCHES_HIDDEN_NAMES: GlobDialect = { dot: true };
+
+export function compileGlob(
+  pattern: string,
+  dialect: GlobDialect = MATCHES_HIDDEN_NAMES,
+  atSegmentStart = true,
+): string {
+  const expanded = expandMetaBrace(pattern);
+  if (expanded !== null) {
+    return expanded.length === 0
+      ? NEVER_MATCHES
+      : `(?:${expanded.map((one) => compileGlob(one, dialect, atSegmentStart)).join("|")})`;
+  }
   let source = "";
   for (let index = 0; index < pattern.length; index += 1) {
     const char = pattern[index] ?? "";
+    // A backslash takes the next character's meaning away, so an escaped star
+    // is a star and an escaped dot a dot. A range can produce one — `{Z..^}` does — and the
+    // character it then escapes belongs to the pattern around the group.
+    if (char === "\\" && index + 1 < pattern.length) {
+      source += escapeRegExp(pattern[index + 1] ?? "");
+      index += 1;
+      continue;
+    }
     if (pattern[index + 1] === "(" && "@?*+!".includes(char)) {
       const close = findGroupClose(pattern, index + 1, "(", ")");
       if (close !== -1) {
-        const alternatives = splitGlobAlternatives(pattern.slice(index + 2, close))
-          .map((alternative) => compileGlob(alternative.trim()))
+        const inSegment = opensSegment(pattern, index, atSegmentStart);
+        const alternatives = splitGlobAlternatives(pattern.slice(index + 2, close), "|")
+          .map((alternative) => compileGlob(alternative.trim(), dialect, inSegment))
           .join("|");
         source +=
           char === "!"
@@ -397,37 +592,74 @@ function compileGlob(pattern: string): string {
       // `a**b` to a single `*`, and so does this.
       const precededByBoundary = index === 0 || pattern[index - 1] === "/";
       const afterIndex = index + 2;
+      // A globstar written next to another matches no more than one does, and
+      // two quantified groups side by side try every split of the segments
+      // between them: ten in a row took seconds against one deep path.
+      // Compared against the spelling THIS dialect emits. Read against the
+      // other one, an adjacent globstar was not recognised as one, and two
+      // quantified groups side by side tried every split of the segments
+      // between them — measured at two minutes on one deep path.
+      const wholeSegments = dialect.dot ? SEGMENTS_ANY : SEGMENTS_GLOBSTAR;
+      const followsGlobstar = source.endsWith(wholeSegments);
       if (precededByBoundary && afterIndex >= pattern.length) {
-        source += "[^/]*(?:/[^/]*)*";
+        const guard = dialect.dot ? "" : NOT_A_DOT_NAME;
+        const segments = `${guard}[^/]*(?:/${guard}[^/]*)*`;
+        source = `${followsGlobstar ? source.slice(0, -wholeSegments.length) : source}${segments}`;
         index = afterIndex - 1;
         continue;
       }
       if (precededByBoundary && pattern[afterIndex] === "/") {
         // `**/` matches zero or more whole segments, so `tests/**\/*.py` still
         // matches `tests/a.py`.
-        source += "(?:[^/]*/)*";
+        if (!followsGlobstar) source += wholeSegments;
         index = afterIndex;
         continue;
       }
-      source += "[^/]*";
+      source += `${!dialect.dot && opensSegment(pattern, index, atSegmentStart) ? NOT_A_DOT_NAME : ""}[^/]*`;
       index = afterIndex - 1;
       continue;
     }
     if (char === "*") {
-      source += "[^/]*";
+      source += `${!dialect.dot && opensSegment(pattern, index, atSegmentStart) ? NOT_A_DOT_NAME : ""}[^/]*`;
       continue;
     }
     if (char === "?") {
-      source += "[^/]";
+      source += `${!dialect.dot && opensSegment(pattern, index, atSegmentStart) ? NOT_A_DOT_NAME : ""}[^/]`;
       continue;
     }
     if (char === "{") {
       const close = findGroupClose(pattern, index, "{", "}");
       if (close !== -1) {
-        const alternatives = splitGlobAlternatives(pattern.slice(index + 1, close))
-          .map((alternative) => compileGlob(alternative.trim()))
-          .join("|");
-        source += `(?:${alternatives})`;
+        source += compileBraces(
+          pattern.slice(index + 1, close),
+          dialect,
+          opensSegment(pattern, index, atSegmentStart),
+        );
+        index = close;
+        continue;
+      }
+    }
+    if (char === "[") {
+      // A bracket class, which fast-glob supports and an escape-everything
+      // matcher reads as four literal characters. `[!a-z]` is the glob spelling
+      // of a negated class; a regular expression spells it `[^a-z]`.
+      const close = findClassClose(pattern, index);
+      if (close !== -1) {
+        const body = pattern.slice(index + 1, close);
+        const negated = body.startsWith("!") || body.startsWith("^");
+        // A class never reaches across a separator, whatever it spells. A
+        // range holding `/` — `[.-9]` does — otherwise matched the separator
+        // itself, and a destination the project's own scan cannot reach was
+        // accepted as one it could. A lookahead holds it out in both forms:
+        // written into a negated class beside the members, it made a range with
+        // a leading hyphen, and `[!-a-z]` excluded every capital letter.
+        const members = compileClassBody(body.slice(negated ? 1 : 0));
+        const compiled = `(?!/)[${negated ? "^" : ""}${members}]`;
+        // A class the author wrote wrongly — a descending range, say — matches
+        // nothing, which is what the project's own scan does with it. Left to
+        // build a regular expression it threw instead, out of a command whose
+        // answer for a pattern nothing matches is a refusal.
+        source += isUsableExpression(compiled) ? compiled : NEVER_MATCHES;
         index = close;
         continue;
       }
@@ -437,9 +669,180 @@ function compileGlob(pattern: string): string {
   return source;
 }
 
+/**
+ * What stands before a wildcard that opens a segment.
+ *
+ * The scan runs fast-glob with its default `dot: false`, where a wildcard does
+ * not match a name beginning with a dot — measured: `*\/**\/*.test.ts` collects
+ * nothing under `.tests`, while the pattern naming `.tests` itself does. Without
+ * this the matcher admitted a destination under a dot directory that the
+ * project's own scan never reads.
+ */
+const NOT_A_DOT_NAME = "(?!\\.)";
+
+/** What `**\/` compiles to: zero or more whole segments, none of them hidden. */
+const SEGMENTS_GLOBSTAR = `(?:${NOT_A_DOT_NAME}[^/]*/)*`;
+
+/** The same, for a caller whose wildcards read a hidden name like any other. */
+const SEGMENTS_ANY = "(?:[^/]*/)*";
+
+/** An expression that matches nothing, for a class the author wrote wrongly. */
+const NEVER_MATCHES = "(?!)";
+
+/** Whether a fragment is one a regular expression can be built from. */
+function isUsableExpression(source: string): boolean {
+  try {
+    new RegExp(source);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Where the bracket expression opened at `open` ends, or `-1`.
+ *
+ * Two things make a `]` something other than the terminator: one written first
+ * in the class, where it is an ordinary member, and the `]` that closes a named
+ * class. A scan for the first `]` stops inside `[[:digit:]]` and compiles a
+ * class over the characters of the word `digit`, which matches none of the names
+ * the pattern was written for.
+ *
+ * A named class is the only element the matcher reads inside a class: `[:`, a
+ * name its table carries, and `:]`. Every other `[` is a member, so `[[.T]`
+ * holds `[`, `.` and `T` and ends at its own `]`, however far a later `.]` is.
+ */
+export function findClassClose(pattern: string, open: number): number {
+  let index = open + 1;
+  if (pattern[index] === "!" || pattern[index] === "^") index += 1;
+  if (pattern[index] === "]") index += 1;
+  while (index < pattern.length) {
+    const char = pattern[index];
+    // An escaped member is a member, `]` included.
+    if (char === "\\") {
+      index += 2;
+      continue;
+    }
+    if (char === "]") return index;
+    index = namedClassAt(pattern, index)?.end ?? index + 1;
+  }
+  return -1;
+}
+
+/**
+ * The named classes the matcher accepts, as regular-expression members.
+ *
+ * A regular expression has no POSIX class, so each is written out. Left as it
+ * stands, `[[:digit:]]` compiles to a class of `[`, `:` and the letters of
+ * `digit`.
+ *
+ * Written exactly as the matcher's own table writes them, order included: a
+ * member beside a named class can join its first range, so `[T-[:alpha:]]` is
+ * the valid `[T-a-zA-Z]` there, and with the ranges swapped it was the
+ * descending `T-A`, a class that matches nothing.
+ */
+const POSIX_CLASS_MEMBERS: Readonly<Record<string, string>> = {
+  alnum: "a-zA-Z0-9",
+  alpha: "a-zA-Z",
+  ascii: "\\x00-\\x7F",
+  blank: " \\t",
+  cntrl: "\\x00-\\x1F\\x7F",
+  digit: "0-9",
+  graph: "\\x21-\\x7E",
+  lower: "a-z",
+  print: "\\x20-\\x7E ",
+  punct: "\\-!\"#$%&'()\\*+,./:;<=>?@[\\]^_`{|}~",
+  space: " \\t\\r\\n\\v\\f",
+  upper: "A-Z",
+  word: "A-Za-z0-9_",
+  xdigit: "A-Fa-f0-9",
+};
+
+/** The named class written at `index`, when the matcher's table carries the name. */
+function namedClassAt(text: string, index: number): { members: string; end: number } | null {
+  const named = /\[:([a-z]+):\]/y;
+  named.lastIndex = index;
+  const name = named.exec(text)?.[1];
+  if (name === undefined || !Object.hasOwn(POSIX_CLASS_MEMBERS, name)) return null;
+  return { members: POSIX_CLASS_MEMBERS[name] ?? "", end: named.lastIndex };
+}
+
+/**
+ * One bracket expression's members, as a regular expression writes them.
+ *
+ * Ranges pass through — `a-z` means the same on both sides — and only the two
+ * characters that would end the class early are escaped. A named class is
+ * written out from the table. Any other `[` is a member, as it is to the
+ * matcher: `[[:TC:]]` is a class of `[`, `:`, `T` and `C` followed by a literal
+ * `]`, and so is never the `TC-` a skeleton name starts with.
+ */
+function compileClassBody(body: string): string {
+  let source = "";
+  let index = 0;
+  while (index < body.length) {
+    const named = namedClassAt(body, index);
+    if (named !== null) {
+      source += named.members;
+      index = named.end;
+      continue;
+    }
+    const char = body[index] ?? "";
+    // The matcher reads a backslash as escaping the member after it, so `[\-T]`
+    // names a hyphen and `T`. Copied as a backslash member, it made a range
+    // no expression accepts, and the class matched nothing.
+    if (char === "\\" && index + 1 < body.length) {
+      const member = body[index + 1] ?? "";
+      source += /[\\\][^-]/.test(member) ? `\\${member}` : member;
+      index += 2;
+      continue;
+    }
+    source += char === "\\" || char === "]" ? `\\${char}` : char;
+    index += 1;
+  }
+  return source;
+}
+
+/**
+ * One brace group, given its interior. A list expands to its members and a
+ * range to the values it spans. A body that is neither stays text, braces
+ * included, as fast-glob leaves `{a}` and `{1..}`. A list's own members are
+ * not read as ranges, so `{0..2,9}` names the text `0..2`; only a brace group
+ * nested in the list, as `{{0..2},9}` has, expands.
+ *
+ * @throws {BraceRangeRefused} for a numeric range fast-glob refuses to expand.
+ */
+function compileBraces(body: string, dialect: GlobDialect, atSegmentStart: boolean): string {
+  const alternatives = splitGlobAlternatives(body, ",");
+  if (alternatives.length > 1) {
+    return `(?:${alternatives
+      .map((alternative) => compileGlob(alternative.trim(), dialect, atSegmentStart))
+      .join("|")})`;
+  }
+  const members = braceRangeMembers(body);
+  // The braces stay as text, so what stands between them is inside the segment.
+  if (members === null) return `\\{${compileGlob(body, dialect, false)}\\}`;
+  // Expanded first and compiled after, as fast-glob does it, so a member the
+  // expansion produces is glob syntax there and here alike: `{*..*}` expands
+  // to `*`, which selects every name and not a literal star.
+  const compiled = members.map((member) => compileGlob(member, dialect, atSegmentStart)).join("|");
+  return members.length === 0 ? NEVER_MATCHES : `(?:${compiled})`;
+}
+
 /** `./tests/**\/*.py` -> `tests/**\/*.py`; backslashes folded to POSIX. */
 function normalizeGlobPath(value: string): string {
-  return value.replace(/\\/g, "/").replace(/^\.\//, "");
+  // A backslash inside a bracket expression escapes a member, as `[\]T]` does;
+  // outside one it is a Windows separator.
+  let folded = "";
+  for (let index = 0; index < value.length; index += 1) {
+    const close = value[index] === "[" ? findClassClose(value, index) : -1;
+    if (close !== -1) {
+      folded += value.slice(index, close + 1);
+      index = close;
+      continue;
+    }
+    folded += value[index] === "\\" ? "/" : (value[index] ?? "");
+  }
+  return folded.replace(/^\.\//, "");
 }
 
 /**
@@ -469,15 +872,49 @@ function normalizeGlobPath(value: string): string {
  * Blank entries are dropped exactly as `normalizeGlobs` drops them for the
  * scan, so both sides agree on which globs are configured at all.
  */
-function compileGlobMatchers(patterns: readonly string[], matchWholePath: boolean): RegExp[] {
+/** A compiled matcher for a pattern that selects nothing. */
+const NEVER_MATCHES_PATTERN = /(?!)/;
+
+/** One list of configured globs, compiled. */
+type CompiledGlobs = {
+  readonly matchers: readonly RegExp[];
+  /**
+   * One of the globs holds a brace range fast-glob refuses to expand. It throws
+   * while compiling, for the whole call rather than for that pattern, so the
+   * scan collects no file at all — which is what the glob being an include or
+   * an exclude both come to. The caller admits no destination either way.
+   */
+  readonly refused: boolean;
+};
+
+function compileGlobMatchers(patterns: readonly string[], matchWholePath: boolean): CompiledGlobs {
   const matchers: RegExp[] = [];
+  let refused = false;
   for (const pattern of patterns) {
     const normalized = normalizeGlobPath(pattern.trim());
     if (normalized === "") continue;
     const source = matchWholePath ? normalized : globBasename(normalized);
-    matchers.push(new RegExp(`^${compileGlob(source)}$`));
+    try {
+      matchers.push(new RegExp(`^${compileGlob(source, { dot: false })}$`));
+    } catch (error) {
+      if (!(error instanceof BraceRangeRefused)) throw error;
+      refused = true;
+      matchers.push(NEVER_MATCHES_PATTERN);
+    }
   }
-  return matchers;
+  return { matchers, refused };
+}
+
+/**
+ * Basenames `SCAFFOLD_PLACEHOLDER_GLOBS` collect, as matchers.
+ *
+ * Exported for the one caller that has to answer "does that validator scan this
+ * file" without running its scan. Basename rather than whole path: every
+ * placeholder glob names a basename pattern under a globstar, and the
+ * directory half is the caller's own containment check.
+ */
+export function scaffoldPlaceholderBasenameMatchers(): RegExp[] {
+  return [...compileGlobMatchers(SCAFFOLD_PLACEHOLDER_GLOBS, false).matchers];
 }
 
 /** Where the writer will put the skeleton, when the caller knows it. */
@@ -502,6 +939,13 @@ export type ScaffoldDialectOptions = {
    * exclude glob describes a location, and there is none to test without one.
    */
   readonly excludeGlobs?: readonly string[];
+  /**
+   * The test case ids the run writes a skeleton for. Given, a naming is chosen
+   * only when the globs admit the file it would write for every one of them,
+   * since a brace range can make a glob depend on an id's digits. Omitted, a
+   * representative id stands in for all of them.
+   */
+  readonly tcIds?: readonly string[];
 };
 
 /** One (dialect, naming) pair the project's configured extensions admit. */
@@ -557,7 +1001,56 @@ export function resolveScaffoldDialect(
   /** The path the writer would produce for `fileName`, as the globs see it. */
   const candidatePath = (fileName: string): string =>
     scaffoldDir === undefined || scaffoldDir === "" ? fileName : `${scaffoldDir}/${fileName}`;
-  const extensions = deriveTestFileExtensions(testFileGlobs);
+  // Compiled before the extensions are read, because a glob the scan cannot
+  // compile is one that collects nothing whatever extension it names — and a
+  // pattern whose refused range hides the rest of it names none at all, which
+  // the unconfigured-project fallback below would read as a project that
+  // configured nothing.
+  const includes = compileGlobMatchers(testFileGlobs, matchWholePath);
+  // Read over the whole glob whether or not the destination is known: a refused
+  // range in the directory half is what stops the scan, and a basename-only
+  // compile never sees it.
+  const scannable = matchWholePath
+    ? !includes.refused
+    : !compileGlobMatchers(testFileGlobs, true).refused;
+  const { extensions, overBound } = readTestFileExtensions(testFileGlobs);
+  if (!scannable) {
+    return {
+      outcome: "naming-mismatch",
+      shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_TC_ID))],
+    };
+  }
+  // The defaults are unioned in because BOTH scans apply them
+  // (`collectScTestReferences` and the ATDD scan itself), so a scaffold
+  // directory under `dist/` or `out/` is invisible to every reader of it.
+  // Excludes are skipped entirely without a destination: an exclude glob names
+  // a location, and matching one by basename would reject on `**` alone.
+  //
+  // Compiled before the fallback below, not after: an exclude fast-glob refuses
+  // stops the call it is in, so the project's scan collects nothing, and an
+  // include set naming no extension would otherwise have taken the default and
+  // written a file that scan never opens.
+  const excludes = matchWholePath
+    ? compileGlobMatchers(
+        [...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, ...(options.excludeGlobs ?? [])],
+        true,
+      )
+    : { matchers: [], refused: false };
+  if (excludes.refused) {
+    return {
+      outcome: "naming-mismatch",
+      shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_TC_ID))],
+    };
+  }
+  if (overBound) {
+    // Extensions this read could not recover. Taking the default here writes a
+    // skeleton under an extension the project's own globs may not select, and
+    // the refusal names the shape it would have written.
+    return {
+      outcome: "naming-mismatch",
+      shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_TC_ID))],
+    };
+  }
   if (extensions.size === 0) {
     // Same fallback the scan takes (`DEFAULT_TEST_FILE_GLOB`), so an
     // unconfigured project still gets the vitest skeleton the scan reads.
@@ -567,23 +1060,18 @@ export function resolveScaffoldDialect(
   if (candidates.length === 0) {
     return { outcome: "unsupported-stack" };
   }
-  const includes = compileGlobMatchers(testFileGlobs, matchWholePath);
-  // The defaults are unioned in because BOTH scans apply them
-  // (`collectScTestReferences` and the ATDD scan itself), so a scaffold
-  // directory under `dist/` or `out/` is invisible to every reader of it.
-  // Excludes are skipped entirely without a destination: an exclude glob names
-  // a location, and matching one by basename would reject on `**` alone.
-  const excludes = matchWholePath
-    ? compileGlobMatchers(
-        [...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, ...(options.excludeGlobs ?? [])],
-        true,
-      )
-    : [];
+  // A refused range stops fast-glob compiling the call it is in, so the
+  // project's scan collects nothing and no destination this writer could
+  // choose is one that scan reads. An exclude holding one is the case a matcher
+  // that excludes nothing read as an exclusion that does not apply, and the
+  // skeleton was written under an include the same refusal had already stopped.
   const admits = (candidate: string): boolean =>
-    includes.some((matcher) => matcher.test(candidate)) &&
-    !excludes.some((matcher) => matcher.test(candidate));
+    includes.matchers.some((matcher) => matcher.test(candidate)) &&
+    !excludes.matchers.some((matcher) => matcher.test(candidate));
+  const tcIds =
+    options.tcIds !== undefined && options.tcIds.length > 0 ? options.tcIds : [PROBE_TC_ID];
   const chosen = candidates.find(({ naming }) =>
-    admits(candidatePath(naming.fileName(PROBE_TC_ID))),
+    tcIds.every((tcId) => admits(candidatePath(naming.fileName(tcId)))),
   );
   if (chosen === undefined) {
     // The shapes name the whole destination when one is known, so the refusal

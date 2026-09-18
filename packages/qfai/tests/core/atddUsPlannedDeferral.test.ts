@@ -122,6 +122,7 @@ describe("QFAI-ATDD-118 — US deferral by `- x-qfai-status: planned`", () => {
         const deferred = issues.find((entry) => entry.code === "QFAI-ATDD-118");
         expect(deferred?.severity).toBe("info");
         expect(deferred?.refs).toEqual(["SPEC-0001:US-0001-0002"]);
+        expect(deferred?.suggested_action).toContain("A package with a suite of its own");
       },
     );
   });

@@ -1,5 +1,90 @@
 # 09 Delta
 
+## Triage (2026-09-13 concrete-pattern review)
+
+| Source                                                                         | Subject                                         | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------ | ----------------------------------------------- | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| .qfai/decisions/CR-20260913-0007-concrete-pattern-review.md#requirement-source | Concrete-pattern review without numeric targets | spec-0015     | UPDATE    | MODIFY | -           | Retain US-0015-0005 and BR-0015-0005. Restrict the optional advisory mode to concrete flows, US, AC, EX and TC. Qualify AC-0015-0009 by the catalog bound. Preserve IDs and all ledger rows; reset only TDD-0006 and TDD-0007 when their obligations change. |
+
+## Change Summary
+
+- Change ID: DELTA-0001
+- Date: 2026-09-14
+- Primary: Behavior
+- Tags: @docs, @test
+- Summary: optional pattern review proposes concrete business-flow, US, AC, EX and TC coverage with rationale and no numeric target. Catalog bounds override old targets without overwriting adopter manifests. Existing IDs and independently required obligations remain intact.
+
+## Update History
+
+| Date       | DL      | Summary                                                              |
+| ---------- | ------- | -------------------------------------------------------------------- |
+| 2026-09-14 | DL-0001 | Bound concrete-pattern review and record the authorized owner rerun. |
+
+## Decision Log
+
+### DL-0001
+
+#### Meta
+
+```yaml
+id: DL-0001
+date: 2026-09-14
+primary: Behavior
+tags: ["@docs", "@test"]
+compat: Change
+scope:
+  - spec-0015
+  - manifest/review-profiles.yml
+  - catalog/review-gate.rules.yml
+notes: Keep optional advisory review of concrete coverage without numeric or abstract growth demands.
+```
+
+#### Migration / Follow-ups
+
+- US-0015-0005, AC-0015-0006/0007/0009, BR-0015-0005, EX-0015-0004 and TC-0015-0006/0007 retain their IDs. TC-0015-0009 retains its routing meaning. The existing plan names the concrete catalog bound and compatibility risk.
+- The canonical ledger contains one table and 53 rows: 37 existing rows and 16 seeds. TDD-0038 covers already-active TC-0015-0034; TDD-0039 covers TC-0015-0007's legacy-profile-preservation boundary; TDD-0040..0053 cover fourteen missing active US obligations. This is the normal approved re-derive producer delta, not a new TC meaning or an extra reset.
+- Only TDD-0007's existing selector narrows to its original abstract-only boundary. The executing owner reset only TDD-0006/0007 to todo, named CR-20260913-0007 in DR-ID and cleared Blocked-By. Prior Evidence remains verbatim as history. Every other existing row's status, identity and Evidence remain unchanged; no row is retired or renumbered.
+- Keep existing init preservation and catalog emission. No new parser, validator, role or artifact format is needed. The existing compatibility oracle seeds an older catalog and its prior receipt: normal reinit retains it, and forced reinit adopts the shipped bound while preserving the adopter manifest.
+- Observed scoped SDD validation passes with zero errors. Full scoped and global SDD validation retain the same 61 and 96 baseline errors. Historical reviewer verdicts apply only to their recorded revisions; current source attestations remain pending. No baseline failure is waived and CR Applied at remains `-`.
+
+#### Rejected
+
+- option: Keep the current specification
+  reason: Numeric targets demand additional abstract rules rather than concrete coverage.
+  do_not: Restore numeric targets or treat abstract ID counts as a required growth target.
+  temptation: Preserved legacy manifests can still contain numeric settings.
+
+#### Verification
+
+### Plan
+
+```yaml
+- id: VFY-001
+  level: integration
+  target: Concrete review scope and preserved-manifest authority
+  method: Existing agentDelegationSpec0015 suite, including normal and receipted older-catalog forced reinit
+  owner: dev
+  expected: Rationale and N/A bounds hold; legacy targets are ineffective and adopter profiles remain unchanged.
+  links:
+    - .qfai/evidence/sdd-spec-0015.md
+- id: VFY-002
+  level: migration
+  target: Approved ledger delta
+  method: Main-baseline-to-worktree payload comparison and the narrowed TDD-0007 selector
+  owner: dev
+  expected: 37 existing rows retain payloads except the authorized two resets and selector refinement; 16 seeds are todo.
+  links:
+    - .qfai/evidence/sdd-spec-0015.md
+```
+
+## Change Requests
+
+| CR ID            | Upstream artifact                | Mode      | Approved by                                             | Applied at |
+| ---------------- | -------------------------------- | --------- | ------------------------------------------------------- | ---------- |
+| CR-20260913-0007 | `spec-0015/04_Business-Rules.md` | re-derive | user (current session's delegated implementation scope) | -          |
+
+- Scoped physical changes are recorded. Applied at matches the CR and remains unset until the required owner gates complete.
+
 ## 2026-09-04
 
 - `CR-20260904-0004` (`confirm-only`, `/qfai-sdd 0015`):

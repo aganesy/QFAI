@@ -62,7 +62,7 @@ async function seedLayeredSpec(specDir: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// TDD-0011 (TC-0013-0010): Spec BR changed + impl unchanged → QFAI-TRACE-001
+// TDD-0011: Spec BR changed + impl unchanged → QFAI-TRACE-001
 // ---------------------------------------------------------------------------
 describe("TDD-0011: spec BR changed + impl unchanged", () => {
   let tmpRoot: string;
@@ -106,7 +106,7 @@ describe("TDD-0011: spec BR changed + impl unchanged", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0012 (TC-0013-0011): Spec BR changed + impl changed → PASS
+// TDD-0012: Spec BR changed + impl changed → PASS
 // ---------------------------------------------------------------------------
 describe("TDD-0012: spec BR changed + impl changed", () => {
   let tmpRoot: string;
@@ -235,7 +235,7 @@ describe("ledger reads only the first Markdown table", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TDD-0013 (TC-0013-0012): Ledger absent → warning + skip
+// TDD-0013: Ledger absent → warning + skip
 // ---------------------------------------------------------------------------
 describe("TDD-0013: ledger absent", () => {
   let tmpRoot: string;

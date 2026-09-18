@@ -15,7 +15,15 @@ tools: [Read, Glob, Grep, Bash]
 - Audit option sets for missing alternatives and weak recommendation rationale.
 - Review OQ candidates for completeness, neutrality, and safe deferral.
 - Ensure unresolved requirement ambiguity is explicit and actionable.
-- Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+- File excess as `defect:code-quality` against constitution Article VII; tag it
+  `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
+  settings and explanatory copy. Admit it only when it names what to cut
+  and what replaces it. `delete` also covers replacement by code already present.
+  For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+  Refuse it when the cut removes or weakens an obligation in the safety floor at
+  `.agents/rules/minimal-implementation.md` § 2.
+  Use this route only where the installed Article VII governs the artifact.
+  Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 - Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
 
 ## Inputs you must read
