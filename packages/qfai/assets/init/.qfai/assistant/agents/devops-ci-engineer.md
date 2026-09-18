@@ -15,7 +15,9 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Execute build, lint, typecheck, test, validate, and report workflows.
 - Record commands, key outputs, environment assumptions, and reproducibility notes.
 - Surface CI/runtime blockers with minimal ambiguity.
-- Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
+- Apply `.agents/rules/minimal-implementation.md`: check this codebase before the
+  standard library, native platform features and installed dependencies. Mark
+  a deliberate shortcut with its ceiling and the condition that lifts it.
 
 ## Inputs you must read
 

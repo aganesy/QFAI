@@ -79,7 +79,7 @@ describe("an unreadable directory under the acceptance test roots", () => {
     denied.target = path.join(root, "tests", "e2e", "locked");
 
     const result = await evaluateAtddCodeTraceability(root, defaultConfig);
-    expect(result.scan.unreadable).toEqual(["tests/e2e/locked"]);
+    expect(result.scan.unreadableDirectories).toEqual(["tests/e2e/locked"]);
     expect(result.scan.matchedFileCount).toBe(1);
     // Nothing inside the directory was read, so no carrier-only claim is made.
     expect(result.coveredByCarrierOnly).toEqual({ us: [], tc: [], conApi: [], conDb: [] });
@@ -95,6 +95,43 @@ describe("an unreadable directory under the acceptance test roots", () => {
     expect(finding?.refs).toEqual(["tests/e2e/locked"]);
     expect(finding?.suggested_action).toContain("readable");
     expect(result.issues.some((issue) => issue.code !== "QFAI-ATDD-135")).toBe(true);
+    // The directory is named and the rest of every pattern was read, so no
+    // pattern is reported as unread.
+    expect(result.issues.some((issue) => issue.code === "QFAI-ATDD-134")).toBe(false);
+  });
+
+  it("is named under a package test directory the project globs select", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-unreadable-"));
+    tempDirs.push(root);
+    const e2e = path.join(root, "packages", "app", "tests", "e2e");
+    await mkdir(path.join(e2e, "locked"), { recursive: true });
+    await writeFile(path.join(root, "packages", "app", "package.json"), "{}\n", "utf-8");
+    await writeFile(
+      path.join(e2e, "a.test.ts"),
+      '// QFAI:SPEC-0001:US-0001\nit("x", () => {});\n',
+      "utf-8",
+    );
+    await writeFile(
+      path.join(e2e, "locked", "b.test.ts"),
+      '// QFAI:SPEC-0001:US-0002\nit("y", () => {});\n',
+      "utf-8",
+    );
+    denied.target = path.join(e2e, "locked");
+    const config = {
+      ...defaultConfig,
+      validation: {
+        ...defaultConfig.validation,
+        traceability: {
+          ...defaultConfig.validation.traceability,
+          testFileGlobs: ["packages/*/tests/**/*.test.ts"],
+        },
+      },
+    };
+
+    const result = await evaluateAtddCodeTraceability(root, config);
+    expect(result.scan.unreadableDirectories).toEqual(["packages/app/tests/e2e/locked"]);
+    expect(result.scan.unreadable).toEqual([]);
+    expect(result.scan.matchedFileCount).toBe(1);
   });
 
   it("names a directory under a tests directory outside the repository by its full path", async () => {
@@ -105,13 +142,13 @@ describe("an unreadable directory under the acceptance test roots", () => {
     const config = { ...defaultConfig, paths: { ...defaultConfig.paths, testsDir: "../tests" } };
 
     const result = await evaluateAtddCodeTraceability(root, config);
-    expect(result.scan.unreadable).toEqual([denied.target.split(path.sep).join("/")]);
+    expect(result.scan.unreadableDirectories).toEqual([denied.target.split(path.sep).join("/")]);
   });
 
   it("names nothing on a tree it can read", async () => {
     const root = await projectWithLockedDirectory();
     const result = await evaluateAtddCodeTraceability(root, defaultConfig);
-    expect(result.scan.unreadable).toEqual([]);
+    expect(result.scan.unreadableDirectories).toEqual([]);
     expect(result.scan.matchedFileCount).toBe(2);
   });
 

@@ -26,6 +26,14 @@ describe("deriveAtddFilePattern", () => {
 
   it("lifts a single extension out of a configured glob", () => {
     expect(deriveAtddFilePattern(["tests/**/*.py"])).toBe("**/*.{feature,markdown,md,py}");
+    // A negative entry withdraws files, so its extension is not one to scan for.
+    expect(deriveAtddFilePattern(["tests/**/*.py", "!tests/fixtures/**/*.json"])).toBe(
+      "**/*.{feature,markdown,md,py}",
+    );
+    // The scan trims each glob, so surrounding whitespace hides no extension.
+    expect(deriveAtddFilePattern([" tests/**/*.{py,pyi} ", " tests/**/*.go "])).toBe(
+      "**/*.{feature,go,markdown,md,py,pyi}",
+    );
   });
 
   it("lifts and merges a brace set", () => {

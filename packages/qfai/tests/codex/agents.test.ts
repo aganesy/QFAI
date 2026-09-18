@@ -123,8 +123,7 @@ function loadCanonicalFrontmatter(name: string): { name: string; description: st
   };
 }
 
-// QFAI:SPEC-0003:TC-0003-0006
-describe("TC-0003-0006: config.toml 存在・妥当性", () => {
+describe("config.toml exists and is valid", () => {
   it("config.toml が存在し TOML としてパースできる", () => {
     expect(existsSync(CONFIG_PATH)).toBe(true);
     const config = loadTomlFile(CONFIG_PATH);
@@ -144,8 +143,7 @@ describe("TC-0003-0006: config.toml 存在・妥当性", () => {
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0001
-describe("TC-0003-0001: TOML ファイル存在確認", () => {
+describe("TOML files exist", () => {
   it(".codex/agents/ に agent-catalog.yml と同数の TOML ファイルが存在する", () => {
     const files = readdirSync(AGENTS_DIR).filter((f) => f.endsWith(".toml"));
     expect(files).toHaveLength(EXPECTED_AGENT_COUNT);
@@ -160,8 +158,7 @@ describe("TC-0003-0001: TOML ファイル存在確認", () => {
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0002
-describe("TC-0003-0002: TOML 必須フィールド検証", () => {
+describe("TOML required fields", () => {
   it("全 TOML が name, description, developer_instructions を持つ", () => {
     const agents = loadAllAgents();
     expect(agents).toHaveLength(EXPECTED_AGENT_COUNT);
@@ -192,8 +189,7 @@ describe("TC-0003-0002: TOML 必須フィールド検証", () => {
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0009
-describe("TC-0003-0009: name フィールドとファイル名の一致", () => {
+describe("name field matches the file name", () => {
   it("各 TOML の name フィールドがファイル名（拡張子なし）と一致する", () => {
     const agents = loadAllAgents();
     for (const { name, data } of agents) {
@@ -202,8 +198,7 @@ describe("TC-0003-0009: name フィールドとファイル名の一致", () => 
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0011
-describe("TC-0003-0011: canonical metadata parity", () => {
+describe("canonical metadata parity", () => {
   it("各 TOML の name/description が canonical agent frontmatter と一致する", () => {
     const agents = loadAllAgents();
     for (const { name, data } of agents) {
@@ -219,8 +214,7 @@ describe("TC-0003-0011: canonical metadata parity", () => {
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0004
-describe("TC-0003-0004: レビュー系 sandbox_mode = read-only", () => {
+describe("reviewer agents set sandbox_mode = read-only", () => {
   it("reviewer 種別エージェントすべてが sandbox_mode = read-only を持つ", () => {
     for (const name of REVIEW_AGENTS) {
       const data = loadTomlFile(join(AGENTS_DIR, `${name}.toml`));
@@ -229,8 +223,7 @@ describe("TC-0003-0004: レビュー系 sandbox_mode = read-only", () => {
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0005
-describe("TC-0003-0005: 実装系 sandbox_mode 省略", () => {
+describe("worker agents omit sandbox_mode", () => {
   it("worker 種別エージェントすべてが sandbox_mode キーを持たない", () => {
     for (const name of IMPL_AGENTS) {
       const data = loadTomlFile(join(AGENTS_DIR, `${name}.toml`));
@@ -239,8 +232,7 @@ describe("TC-0003-0005: 実装系 sandbox_mode 省略", () => {
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0003
-describe("TC-0003-0003: developer_instructions 必須セクション含有", () => {
+describe("developer_instructions carries the required sections", () => {
   const REQUIRED_SECTIONS = [
     "Mission",
     "Domain Responsibilities",
@@ -294,8 +286,8 @@ describe("TC-0003-0003: developer_instructions 必須セクション含有", () 
 // QFAI:SPEC-0004:TC-0004-0026 — agent-catalog.yml#developer_instructions
 // MUST stay in lockstep with canonical .qfai/assistant/agents/<name>.md
 // bodies (3-way SSOT: canonical MD ↔ codex TOML ↔ agent-catalog.yml).
-// The codex side is already covered by TC-0003-0003 above; this test
-// closes the catalog side.
+// The codex side is covered by the developer_instructions describe above;
+// this test closes the catalog side.
 describe("TC-0004-0026: agent-catalog.yml developer_instructions matches canonical MD", () => {
   it("全 agent の developer_instructions が canonical MD と実質一致する", () => {
     const normalize = (s: string) => s.replace(/\r\n/g, "\n").trim();
@@ -338,8 +330,7 @@ describe("TC-0004-0026: agent-catalog.yml developer_instructions matches canonic
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0007
-describe("TC-0003-0007: model フィールド不在確認", () => {
+describe("no model field", () => {
   it("全 TOML に model キーが存在しない", () => {
     const agents = loadAllAgents();
     for (const { name, data } of agents) {
@@ -348,8 +339,7 @@ describe("TC-0003-0007: model フィールド不在確認", () => {
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0008
-describe("TC-0003-0008: nickname_candidates フィールド不在確認", () => {
+describe("no nickname_candidates field", () => {
   it("全 TOML に nickname_candidates キーが存在しない", () => {
     const agents = loadAllAgents();
     for (const { name, data } of agents) {
@@ -360,8 +350,7 @@ describe("TC-0003-0008: nickname_candidates フィールド不在確認", () => 
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0010
-describe("TC-0003-0010: TOML 構文妥当性", () => {
+describe("TOML syntax is valid", () => {
   it("全 agent TOML + config.toml が TOML パースエラーなし", () => {
     // config.toml
     expect(() => loadTomlFile(CONFIG_PATH)).not.toThrow();
@@ -375,16 +364,14 @@ describe("TC-0003-0010: TOML 構文妥当性", () => {
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0011
-describe("TC-0003-0011: カタログ外エージェントの不在確認", () => {
+describe("no agent outside the catalog", () => {
   it("agent-catalog.yml に存在しない TOML ファイルが混入していない", () => {
     const files = readdirSync(AGENTS_DIR).filter((f) => f.endsWith(".toml"));
     expect(files.slice().sort()).toEqual(ALL_AGENTS.map((name) => `${name}.toml`).sort());
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0012
-describe("TC-0003-0012: ファイル名 kebab-case 検証", () => {
+describe("file names are kebab-case", () => {
   it("全 TOML ファイル名が kebab-case パターンに一致する", () => {
     const files = readdirSync(AGENTS_DIR).filter((f) => f.endsWith(".toml"));
     const kebabPattern = /^[a-z][a-z0-9-]*\.toml$/;

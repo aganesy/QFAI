@@ -45,7 +45,6 @@ async function loadContent(): Promise<string> {
   return content;
 }
 
-// QFAI:SPEC-0011:TC-0011-0012
 describe("valid evidence accepted (free-text+labels format)", () => {
   it("defines evidence with labeled fields: TDD-ID, TC-ref, RED cmd+result, GREEN cmd+result", async () => {
     const c = await loadContent();

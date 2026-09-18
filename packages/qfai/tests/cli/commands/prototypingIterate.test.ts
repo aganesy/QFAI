@@ -481,7 +481,6 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0322 (alias — input validation shares cycle-0 entry path)
 describe("runPrototypingIterate input validation", () => {
   it("returns 2 when --cycle is negative", async () => {
     const root = await newTempDir();
@@ -1032,13 +1031,24 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
     expect(body.iterations[0].blockingFindings).toEqual(["Awaiting the first review."]);
   });
 
-  it("re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate / fullHarness / executionPlan on cycle 0", async () => {
+  /**
+   * Runs cycle 0 over a `prototyping.json` holding a stale value for each of
+   * the five properties the cases below assert, and a value the reset does not
+   * write for each of the two it re-seeds. Returns the project root once the
+   * command has exited 0, so a caller reads what the reset left.
+   *
+   * Run once per case rather than shared across them, because each case below
+   * owns one property of the reset and a shared root would make the second
+   * case depend on what the first left.
+   */
+  async function runCycleZeroFromPriorLoopState(): Promise<string> {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedRawPrototypingJson(root, {
       iterations: [{ index: 0 }],
       reviewerGate: { result: "PASS", signoff: { reviewerId: "stale" } },
-      acceptedIterationIndex: 0,
+      // Not the 0 the reset writes, so a reset that kept the prior value fails.
+      acceptedIterationIndex: 3,
       stopReason: "converged",
       fullHarness: {
         runId: "legacy-prior-run",
@@ -1053,20 +1063,38 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
         plannedAt: "2025-01-01T00:00:00Z",
       },
     });
-
     expect(
       await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
     ).toBe(0);
+    return root;
+  }
 
-    const body = await readProtoJson(root);
-    // reviewerGate, fullHarness and executionPlan remain deleted (per-loop state).
-    expect("reviewerGate" in body).toBe(false);
+  // One property per case. The reset clears three blocks and re-seeds two, and
+  // a single case asserting all five reports only the first that fails, so a
+  // change that breaks two of them reads as one.
+  it("cycle 0 deletes fullHarness", async () => {
+    const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
     expect("fullHarness" in body).toBe(false);
+  });
+
+  it("cycle 0 deletes reviewerGate", async () => {
+    const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
+    expect("reviewerGate" in body).toBe(false);
+  });
+
+  it("cycle 0 deletes executionPlan", async () => {
+    const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
     expect("executionPlan" in body).toBe(false);
-    // Phase 3: acceptedIterationIndex=0 (the seed) and stopReason=null
-    // (loop running) replace the prior stale values rather than being
-    // removed.
+  });
+
+  it("cycle 0 re-seeds acceptedIterationIndex rather than removing it", async () => {
+    const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
     expect(body.acceptedIterationIndex).toBe(0);
+  });
+
+  it("cycle 0 re-seeds stopReason as null rather than removing it", async () => {
+    // The loop is running, so the field is present and empty rather than gone.
+    const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
     expect(body.stopReason).toBe(null);
   });
 
