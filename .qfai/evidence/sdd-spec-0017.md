@@ -20,7 +20,10 @@
 
 ## Preflight summary path
 
-- `.qfai/report/preflight/run-20260918144217322/preflight_summary.md` (run id: 20260918144217322)
+- Preflight run id 20260918144217322: ready, source `discussion-pack`, seven imported
+  requirements, no blockers.
+- Written as the run id and its outcome rather than as a path. The report tree is not
+  committed, so a path there reads as provenance a reader cannot open.
 
 ## Triage decisions
 
@@ -74,9 +77,11 @@ npx qfai validate --profile sdd --fail-on error --spec spec-0017 --format github
 
 ## Validate evidence paths
 
-- `.qfai/report/validate.log`
-- `.qfai/report/run-20260918145343249/` (run id: 20260918145343249, status: pass)
-- `.qfai/report/specs-coverage/spec-0017.md`
+- Validate run id 20260918145343249, scope `--profile sdd --spec spec-0017`: pass, zero
+  errors, fifteen warnings and four info. Every warning predates this change — the
+  unreplaced sample brand, and broken links in the work-log tree.
+- The run log and the coverage summary sit under the same uncommitted report tree, so
+  they are named by run id and outcome rather than by path.
 
 ## Pre-draft Grilling
 
