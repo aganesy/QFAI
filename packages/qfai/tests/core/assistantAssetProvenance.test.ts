@@ -58,6 +58,19 @@ async function expectedProvenanceSeverity(): Promise<"warning" | "error"> {
 const shippedAssistantDir = path.join(getInitAssetsDir(), ".qfai", "assistant");
 const tempRoots: string[] = [];
 
+/**
+ * A directory outside the project, for a link the containment guard must refuse.
+ *
+ * The guard's boundary is the project root: a link to another directory inside
+ * it is a tree vendored at documents the project owns, and that is admitted.
+ * Only a target beyond the root is the escape these cases are about.
+ */
+async function outsideProject(): Promise<string> {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+  tempRoots.push(dir);
+  return dir;
+}
+
 async function makeProject(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-"));
   tempRoots.push(root);
@@ -383,7 +396,7 @@ describe("assistant asset provenance", () => {
   it("drops a lock key that points outside the governed layers", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
-    const outside = path.join(root, "outside-victim.json");
+    const outside = path.join(await outsideProject(), "outside-victim.json");
     const outsideBody = '{ "name": "victim" }\n';
     await writeFile(outside, outsideBody, "utf-8");
 
@@ -576,7 +589,7 @@ describe("assistant asset provenance", () => {
     async () => {
       const root = await makeProject();
       const assistantDir = path.join(root, ".qfai", "assistant");
-      const outside = path.join(root, "outside.json");
+      const outside = path.join(await outsideProject(), "outside.json");
       await writeFile(outside, "{}\n", "utf-8");
       await rm(path.join(assistantDir, ASSISTANT_ASSETS_LOCK_BASENAME), { force: true });
       await symlink(outside, path.join(assistantDir, ASSISTANT_ASSETS_LOCK_BASENAME));
@@ -718,7 +731,7 @@ describe("assistant asset provenance", () => {
   it("never writes or retires through a governed layer that leaves the project", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
-    const outside = path.join(root, "outside-catalog");
+    const outside = path.join(await outsideProject(), "outside-catalog");
     await mkdir(outside, { recursive: true });
     const refreshVictim = path.join(outside, "test-layers.md");
     const refreshVictimBody = "# not qfai's\n";
@@ -756,7 +769,7 @@ describe("assistant asset provenance", () => {
   it("never writes or retires through a .qfai that leaves the project", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
-    const outsideQfai = path.join(root, "outside-qfai");
+    const outsideQfai = path.join(await outsideProject(), "outside-qfai");
 
     // Move the whole governed tree out of the project, then link `.qfai` at it.
     const lock = await readAssistantAssetsLock(assistantDir);
@@ -833,7 +846,7 @@ describe("assistant asset provenance", () => {
   it("refuses to walk a governed layer that is a symlink, and says so", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
-    const outside = path.join(root, "outside-catalog");
+    const outside = path.join(await outsideProject(), "outside-catalog");
     // Identical content, so a validator that followed the link found nothing to
     // report and the escape stayed invisible.
     await cp(path.join(shippedAssistantDir, "catalog"), outside, { recursive: true });
@@ -894,7 +907,7 @@ describe("assistant asset provenance", () => {
       const root = await makeProject();
       const relative = path.join("catalog", "test-layers.md");
       const target = path.join(root, ".qfai", "assistant", relative);
-      const outside = path.join(root, "outside-test-layers.md");
+      const outside = path.join(await outsideProject(), "outside-test-layers.md");
       await cp(path.join(shippedAssistantDir, "catalog", "test-layers.md"), outside);
       await rm(target);
       await symlink(outside, target);
@@ -1085,7 +1098,7 @@ describe("assistant asset provenance", () => {
     "refuses to compare through a .qfai that leaves the project",
     async () => {
       const root = await makeProject();
-      const outside = path.join(root, "outside-qfai");
+      const outside = path.join(await outsideProject(), "outside-qfai");
       await rename(path.join(root, ".qfai"), outside);
       await symlink(outside, path.join(root, ".qfai"));
 
