@@ -206,6 +206,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The evidence citation guard reads citations into `.qfai/evidence/`**
+  (#1686). A record that named a sibling evidence file the tree does not carry
+  passed, because the guard read only the ignored trees. Three records name
+  `.qfai/evidence/README.md`, a format guide written while it existed and
+  retired afterwards in favour of skill references. Those lines, and two that
+  describe a path rather than cite one, now carry the `qfai:not-a-citation`
+  marker. The README is not restored: shipped skills forbid `.qfai/**/README.md`
+  format documents.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
