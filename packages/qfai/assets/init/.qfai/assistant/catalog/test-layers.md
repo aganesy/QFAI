@@ -92,7 +92,8 @@ writer targets a declared layer instead.
 
 ### L3 Integration
 
-- Scope: real infrastructure integration (for example DB/queue/filesystem) within service boundaries.
+- Scope: real infrastructure integration (for example DB/queue/filesystem, or a
+  real browser rendering the UI) within service boundaries.
 - Goal: verify `TC-*` obligations from specs.
 - Location rule: `<testsDir>/integration/**`.
 
@@ -123,20 +124,25 @@ falsifying-oracle rule:
    - inputs and return values only → **L1 Unit**
    - collaboration with a port through a fixture adapter (no real
      infrastructure) → **L2 Component**
-   - real infrastructure state — DB rows, queue messages, files → **L3 Integration**
+   - real infrastructure state — DB rows, queue messages, files, or what a real
+     browser rendered (painted pixels, computed layout) → **L3 Integration**.
+     A property of one screen measured on its rendered output is L3, not L5:
+     the browser is the infrastructure the oracle reads, and the obligation is
+     not a journey.
    - values at the service boundary — status codes, response bodies, auth and
      error contracts → **L4 API**
    - a full-system journey across UI/API/data → **L5 E2E**
 
 ### Worked examples
 
-| Oracle asserts                                                                | Layer          |
-| ----------------------------------------------------------------------------- | -------------- |
-| `price(order) === 1250` for a given input                                     | L1 Unit        |
-| the repository port was called with the normalized key, via a fixture adapter | L2 Component   |
-| the row is present in the database after commit                               | L3 Integration |
-| `POST /orders` returns `422` with `code: "OUT_OF_AREA"`                       | L4 API         |
-| a user can register, order, and see the order in their history                | L5 E2E         |
+| Oracle asserts                                                                    | Layer          |
+| --------------------------------------------------------------------------------- | -------------- |
+| `price(order) === 1250` for a given input                                         | L1 Unit        |
+| the repository port was called with the normalized key, via a fixture adapter     | L2 Component   |
+| the row is present in the database after commit                                   | L3 Integration |
+| the focused control's rendered border has 3:1 contrast with the surface behind it | L3 Integration |
+| `POST /orders` returns `422` with `code: "OUT_OF_AREA"`                           | L4 API         |
+| a user can register, order, and see the order in their history                    | L5 E2E         |
 
 ### Obligation spanning more than one layer
 

@@ -217,6 +217,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A screen property measured on rendered output has a layer: L3** (#1909).
+  A test case may take L1, L2 or L3, and none of them named a browser, so an
+  obligation read off painted pixels or computed layout had no legal layer.
+  The nearest-sounding bullet at the decision point was L5, which a test case
+  may never take. `catalog/test-layers.md` now counts what a real browser
+  rendered as real infrastructure state: the L3 definition, the L3 bullet of
+  step 3 and a worked example say so, and step 3 says such a property is L3,
+  not L5, because it is not a journey. The `06_Test-Cases.md` template's L3
+  summary follows.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number

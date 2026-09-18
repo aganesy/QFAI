@@ -72,6 +72,29 @@ describe("deriving a TC's layer is a published procedure", () => {
       );
     });
 
+    it(`${tree}: a screen property measured on rendered output reads as L3`, async () => {
+      // Read at step 3, where the layer is chosen: the nearest-sounding bullet
+      // there was L5, which a TC may never take.
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      const procedure = catalog.slice(
+        catalog.indexOf("## Layer derivation procedure (normative)"),
+        catalog.indexOf("### Obligation spanning more than one layer"),
+      );
+      expectPhrase(
+        procedure,
+        "or what a real browser rendered (painted pixels, computed layout) → **L3 Integration**",
+      );
+      expectPhrase(procedure, "measured on its rendered output is L3, not L5");
+      expect(procedure).toMatch(/rendered border .*\| L3 Integration \|/);
+      expectPhrase(catalog, "or a real browser rendering the UI) within service boundaries");
+
+      const template = await read(
+        tree,
+        "assistant/skills/qfai-sdd/templates/specs/spec/06_Test-Cases.md",
+      );
+      expectPhrase(template, "(DB / queue / filesystem, or what a real browser rendered)");
+    });
+
     it(`${tree}: step 2 is declared to outrank step 3`, async () => {
       const catalog = await read(tree, "assistant/catalog/test-layers.md");
       expect(catalog).toContain("**Step 2 outranks step 3.**");
