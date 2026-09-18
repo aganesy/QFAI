@@ -36,6 +36,7 @@ Either way, edit the master — never a copy under a tool-specific directory.
 | `user-questions.md`              | Every question to the user arrives in the shape its answer has: a structured choice where a listable set of candidates exists, or a plain request where none does. Where the host's tool cannot carry it, the plain-text fallback keeps the same parts.     |
 | `reminders.json`                 | Not a rule: the message each reminder hook in `.claude/settings.json` prints. It ships beside the rules it restates, and `qfai init` refreshes it with them.                                                                                                |
 | `shipped-ci-parity.md`           | A change to this repository's CI either reaches the workflow templates the package ships or says in the diff why it does not. Guarded by `scripts/check-shipped-ci-parity.mjs`.                                                                             |
+| `api-budget.md`                  | Ask the cheapest surface that can answer: git, then REST, then GraphQL. One call for the whole set, a payload saved once, and the remaining budget read off the response. `scripts/gh-budget.mjs` is the command.                                           |
 
 ## Overlays
 
