@@ -314,6 +314,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   replaces the line only while it is exactly what 1.12.0 wrote, and leaves a line
   the project edited as it is.
 
+### Removed
+
+- **The design-fidelity check and its eleven rule codes.** `QFAI-FID-001`
+  through `QFAI-FID-011` ran in the `prototyping` and `full` profiles and could
+  not fire on anything QFAI produces. The check read `.qfai/evidence/**` and
+  `.qfai/review/**` for Markdown under a `Fidelity Scorecard` heading, and no
+  command, skill or template writes that heading. The prototyping capture the
+  codes were meant to gate is covered by the `taskFidelity` keywords instead.
+
+  The eleven numbers are retired rather than freed. Taking one back would make
+  a published code mean two different checks across releases.
+
+  `uiux.warning_as_error_override` goes with it, its only reader. An unknown key
+  under `uiux` is ignored, so a configuration that still sets it keeps loading.
+
 ### Fixed
 
 - **A reminder hook's message reaches a project that installed an earlier
