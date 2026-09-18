@@ -161,10 +161,10 @@ describe("a non-UI pack raises no UIX finding from threeLayer", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0014-0004: UIX-VAL determinism
+// UIX-VAL determinism
 // ---------------------------------------------------------------------------
 
-describe("TC-0014-0004: UIX-VAL determinism", () => {
+describe("UIX-VAL determinism", () => {
   it("same input produces identical output on repeated runs", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);

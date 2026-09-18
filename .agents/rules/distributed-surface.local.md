@@ -5,11 +5,14 @@ the surface, the identifier shapes, and the guards, for this repository only.
 
 ## The surface
 
-The paths listed in `packages/qfai/package.json#files` — today `dist/`,
-`assets/`, `README.md` and `LICENSE`.
+Every file `npm pack` publishes from `packages/qfai`: the paths
+`packages/qfai/package.json#files` declares — today `dist/`, `assets/`,
+`README.md` and `LICENSE` — and `package.json`, which npm adds to every package
+whatever that list says.
 
-Only the post-build guard reads `files`. The other two scan targets of their
-own, so a path added to `files` is not covered by them until they are extended:
+Only the post-build guard follows `files`, by asking `npm pack --dry-run` for
+the list. The other two scan targets of their own, so a path added to `files`
+is not covered by them until they are extended:
 
 - the pre-build lint scans `src/**/*.ts` comments and `assets/init/**`;
 - the smoke test scans the tree `qfai init` writes, which is only what init
@@ -65,7 +68,7 @@ comment names the form.
 | Layer            | Implementation                                                      | What it reads                                                                                   |
 | ---------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | Pre-build lint   | `packages/qfai/scripts/lint-shipping.ts` (`src-comment`)            | Comment lines in `src/**/*.ts`, closing the route by which tsup carries them into `dist/*.d.ts` |
-| Post-build guard | `packages/qfai/scripts/check-no-internal-version-leakage.sh`        | The contents and the file names under the paths `files` points at                               |
+| Post-build guard | `packages/qfai/scripts/check-no-internal-version-leakage.sh`        | The contents and the file names of every file `npm pack --dry-run` lists                        |
 | Smoke test       | `packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts` | The contents and file names of the tree `qfai init` writes into a temporary directory           |
 | This file        | —                                                                   | Agreement among contributors                                                                    |
 
