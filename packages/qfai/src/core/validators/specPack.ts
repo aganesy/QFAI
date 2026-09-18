@@ -182,7 +182,85 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
   // policy delta would silently bypass QFAI-TRIAGE-006 and SPLIT/MERGE
   // rows would skip the approval gate.
   issues.push(...(await validatePoliciesDeltaTriage(specsRoot, knownSpecIds)));
+  issues.push(...validatePolicyOnlySources(await readTriageDeltas(entries, specsRoot)));
 
+  return issues;
+}
+
+/** Every delta file a triage table can sit in: each spec's, then the policy delta. */
+async function readTriageDeltas(
+  entries: readonly SpecEntry[],
+  specsRoot: string,
+): Promise<{ path: string; text: string }[]> {
+  const paths = [
+    ...entries.map((entry) => entry.deltaPath).filter((deltaPath) => deltaPath.length > 0),
+    path.join(specsRoot, "_policies", "10_delta.md"),
+  ];
+  const deltas: { path: string; text: string }[] = [];
+  for (const deltaPath of paths) {
+    try {
+      deltas.push({ path: deltaPath, text: await readFile(deltaPath, "utf-8") });
+    } catch {
+      // A missing delta holds no triage row; other rules report the file.
+    }
+  }
+  return deltas;
+}
+
+/**
+ * A requirement triaged onto `_policies` alone (`QFAI-TRIAGE-010`, warning).
+ *
+ * `_policies/**` holds no user story, criterion, rule, example or test case,
+ * and Phase 2b seeds the execution ledger from those per-spec files, so a
+ * policy row produces no ledger row. A source whose every row targets
+ * `_policies` is specified, approved and validated, and no implementer can
+ * select it. A policy row beside a spec row for the same source is the ordinary
+ * cascade and is not reported. Warning, because a source that only changes
+ * policy text is legitimate, and only its author knows which this is.
+ */
+/** A source that names a requirement, the only kind whose work a ledger row would carry. */
+const REQUIREMENT_SOURCE_RE = /\b(?:REQ|NFR)-\d+/;
+
+function validatePolicyOnlySources(deltas: readonly { path: string; text: string }[]): Issue[] {
+  const bySource = new Map<string, { policiesOnly: boolean; file: string }>();
+  for (const delta of deltas) {
+    for (const section of collectTriageSections(delta.text)) {
+      for (const table of parseAllMarkdownTables(section.body)) {
+        const columns = new Map(
+          table.headers.map((header, index) => [header.trim().toLowerCase(), index]),
+        );
+        const sourceColumn = columns.get("source");
+        const targetColumn = columns.get("existing spec");
+        if (sourceColumn === undefined || targetColumn === undefined) continue;
+        for (const row of table.rows) {
+          const source = (row[sourceColumn] ?? "").trim();
+          if (!REQUIREMENT_SOURCE_RE.test(source)) continue;
+          const target = (row[targetColumn] ?? "").trim();
+          const isPolicy = target.length > 0 && parseExistingSpecCell(target).kind === "policies";
+          const seen = bySource.get(source);
+          if (seen) seen.policiesOnly &&= isPolicy;
+          else bySource.set(source, { policiesOnly: isPolicy, file: delta.path });
+        }
+      }
+    }
+  }
+
+  const issues: Issue[] = [];
+  for (const [source, seen] of bySource) {
+    if (!seen.policiesOnly) continue;
+    issues.push(
+      issue(
+        "QFAI-TRIAGE-010",
+        `Every triage row for ${source} targets \`_policies\`, so no execution-ledger row carries it and nothing schedules its work.`,
+        "warning",
+        seen.file,
+        "triage.policyOnlySource",
+        [source],
+        "change",
+        "If the requirement asks for work to be built, add a row for each spec whose behaviour carries it. If it only changes policy text, leave it.",
+      ),
+    );
+  }
   return issues;
 }
 

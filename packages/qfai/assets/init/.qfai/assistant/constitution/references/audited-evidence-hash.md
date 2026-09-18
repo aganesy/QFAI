@@ -233,8 +233,9 @@ procedure, in four steps:
    in the matrix contributes nothing.
 4. **Hash.** SHA-256 of that record list; record the hex digest.
 
-**Three ledger fields carry an audited evidence hash, and none of them is the
-working-tree revision.** A row records `Spec audited evidence hash`,
+**Three evidence-entry fields carry an audited evidence hash, and none of them is
+the working-tree revision.** A row's `### TDD-NNNN` evidence entry records
+`Spec audited evidence hash`,
 `Code quality audited evidence hash` and — on a UI-affecting row —
 `Prototype parity audited evidence hash`, one per named reviewer role, each
 computed by these same four steps over that role's own subject. The words

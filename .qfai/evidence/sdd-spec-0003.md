@@ -112,7 +112,7 @@ No instance appears in both an authoring step and a review step. Both reviewers 
 ## Gaps / Open risks
 
 - The six new ledger rows stand at `todo` while the tests they name already exist and pass. A later `/qfai-atdd` run owes their provenance, and it cannot observe a natural RED, because the implementation ships in the same change.
-- `.qfai/evidence/coverage-depth-spec-0003.md` does not exist. `QFAI-ATDD-131` is the standing finding that names it.
+- `.qfai/evidence/coverage-depth-spec-0003.md` does not exist. `QFAI-ATDD-131` is the standing finding that names it. <!-- qfai:not-a-citation -->
 - The document lane's two matrix legs each repeat the full dependency install ahead of one short checker, so the split buys both failures surfacing in one run rather than shorter wall time.
 - No dimension of the declared shape reads a step condition, a matrix axis or an external check name. A change to any of them is caught as a byte difference rather than as a named obligation.
 - `tdd/test-list.md` still carries the eight-column shape plus `Boundary`. The remaining columns and the Integration, E2E and API row groups are tracked separately.
