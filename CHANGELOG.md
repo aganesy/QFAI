@@ -147,6 +147,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Define a trust boundary by uncontrolled callers and sources, including public
   library exports and plugin or tenant contexts (#1803).
 
+- **A batch `/qfai-sdd` run records its shared phases once, in
+  `.qfai/evidence/sdd-batch-<timestamp>.md`** (#1906). With no argument, the
+  skill runs Phase 0 Contracts-first and Phase 1 Outline once for every spec,
+  but the per-spec evidence template required their grilling rows and work
+  orders in each spec's file. That left three choices: eleven copies that must
+  agree in `Ended at` and differ in `Wrote at`, one file with the other ten
+  incomplete, or an undocumented batch file no reviewer checks. A new
+  template, `templates/evidence/sdd-batch.md`, carries those two phases' rows
+  and work orders with the per-spec columns. Each spec's file names it on a
+  `Batch record` line, and the skill's batch section says so.
+
 - **Retained failures keep unit-level coverage** (#1793). The
   minimal-implementation safety floor protects coverage of the failure paths
   production code retains.
@@ -862,6 +873,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   preflight refusing, and a structured task missing `label`. Before these
   cases, dropping `label` from the required keys, or letting the stage start,
   left every case passing.
+
+- **Triage says how to file a source file no spec owns** (#1903). The
+  `Existing Spec` cell names a spec, several specs or `_policies`, and shared
+  code such as a navigation shell or an error boundary belongs to none of them.
+  Each project had to choose between naming an unrelated spec, a policy row
+  that schedules nothing, and a new spec for something that is not a
+  capability. `sdd-triage.md` now says to split the file's obligations by
+  behaviour onto the specs that own each behaviour, says what the other moves
+  cost, and routes a behaviour no spec owns to a new requirement.
 
 - **The prototyping profile reports a UI contract that does not parse**
   (#1767). Every reader of UI contracts skips a file it cannot parse, so its

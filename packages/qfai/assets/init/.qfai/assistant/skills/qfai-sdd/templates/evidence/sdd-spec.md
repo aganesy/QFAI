@@ -104,12 +104,19 @@ npx qfai validate --profile sdd --fail-on error --format github
 > not at all.
 > The settled count equals the number of `grilling(...)` rows below carrying
 > this phase.
+> In a batch run (`/qfai-sdd` with no argument), Phase 0 and Phase 1 ran once
+> for every spec. Their rows and work orders are in
+> `.qfai/evidence/sdd-batch-<timestamp>.md` (`templates/evidence/sdd-batch.md`),
+> not here: name that file on the `Batch record` line below the table. A run
+> for one spec writes `none` there.
 
 | Phase | Session   | Ended at  | Wrote at  | Frontier                   | Evidence             |
 | ----- | --------- | --------- | --------- | -------------------------- | -------------------- |
 | 0     | run       | <ISO8601> | <ISO8601> | <n> settled, 0 escalated   | #work-orders-summary |
 | 1     | skipped   | -         | <ISO8601> | empty: answered by <ref>   | -                    |
 | 2c.1  | escalated | <ISO8601> | -         | <n> settled, <n> escalated | #work-orders-summary |
+
+- Batch record: `.qfai/evidence/sdd-batch-<timestamp>.md` | none
 
 ## Work Orders Summary
 
