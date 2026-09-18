@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import type { Dirent } from "node:fs";
-import { lstat, open, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, open, readdir, realpath, rename, rm, writeFile } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 
@@ -289,18 +289,40 @@ export async function hasRealGovernedAssistantParents(
   let current = projectRoot;
   for (const segment of segments) {
     current = path.join(current, segment);
-    if (!(await isRealDirectoryOrAbsent(current))) {
+    if (!(await isRealDirectoryOrAbsent(current, projectRoot))) {
       return false;
     }
   }
   return true;
 }
 
-async function isRealDirectoryOrAbsent(target: string): Promise<boolean> {
+/**
+ * Whether `target` is a directory this project may walk, or is absent.
+ *
+ * A real directory passes, and so does a symlink that resolves to a directory
+ * **inside `boundary`**: a project may vendor its assistant tree by link, and
+ * the file an agent then reads is one the project owns and a reviewer can open.
+ *
+ * What the check is for is the link that leaves. Without `boundary` — the
+ * caller has no project root to judge against — a symlink is refused, which is
+ * the stricter of the two answers.
+ */
+async function isRealDirectoryOrAbsent(target: string, boundary?: string): Promise<boolean> {
+  let entry;
   try {
-    return (await lstat(target)).isDirectory();
+    entry = await lstat(target);
   } catch (error: unknown) {
     return isEnoent(error);
+  }
+  if (entry.isDirectory()) return true;
+  if (!entry.isSymbolicLink() || boundary === undefined) return false;
+  try {
+    const [resolved, root] = await Promise.all([realpath(target), realpath(boundary)]);
+    const relative = path.relative(root, resolved);
+    const inside = relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+    return inside && (await lstat(resolved)).isDirectory();
+  } catch {
+    return false;
   }
 }
 
@@ -511,9 +533,15 @@ async function collectGovernedFilesUnder(
 ): Promise<void> {
   // Nested entries were classified by `readdir` itself, which does not resolve
   // links — only a scan root arrives here unexamined.
-  if (isLayerRoot && !(await isRealDirectoryOrAbsent(directory))) {
+  // `projectRoot` is two levels above a layer: `<root>/.qfai/assistant/<layer>`.
+  // A link that stays inside it is a vendored tree; one that leaves is what
+  // this refusal is for.
+  if (
+    isLayerRoot &&
+    !(await isRealDirectoryOrAbsent(directory, path.resolve(directory, "../../..")))
+  ) {
     throw new Error(
-      `${directory} is not a real directory, so it cannot be walked as a governed layer (it may be a symlink or a junction).`,
+      `${directory} cannot be walked as a governed layer: it is not a directory, or it is a link that leaves the project.`,
     );
   }
   let entries: Dirent[];

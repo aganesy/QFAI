@@ -46,7 +46,9 @@ Preflight: session opened
 
 <!-- The shared schema. A session adds one
      `grilling(<Session>@<run key>/<adjudication>): <the decision>` row per
-     decision it settled, and a run that settled none writes one `grilling(-@<run key>/none): none` row. -->
+     decision it settled, and a run that settled none writes one `grilling(-@<run key>/none): none` row.
+     A decision a session adopted is an `agents` row, with why it was taken
+     and any disagreeing position in `Output (refs)`. -->
 
 | Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
 | ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
