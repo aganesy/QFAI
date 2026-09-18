@@ -559,6 +559,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   what its obligation says is a comparison of two texts, and no validator can
   make that judgment reliably.
 
+- Two skipped integration test files for `qfai atdd scaffold` and
+  `qfai doctor --clean` / `--autoremediate` are removed (#1436). They were
+  written before those commands existed and never enabled. Their test cases
+  are now covered by the separate tests each ledger row names. The files ran
+  against the repository itself rather than a temporary tree, so enabling them
+  was never the repair. Their four `QFAI-TEST-003` errors leave the dogfooding
+  backlog. The two E2E files beside them stay: they are what the E2E
+  annotation ledger counts for three stories.
+
 - **`qfai atdd scaffold` reads a brace range in a test glob as fast-glob does**
   (#1752). A range has no comma, so the check that decides whether the file it
   writes is one the project collects read `{0001..0999}` as the literal text
