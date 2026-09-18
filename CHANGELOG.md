@@ -147,6 +147,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Define a trust boundary by uncontrolled callers and sources, including public
   library exports and plugin or tenant contexts (#1803).
 
+- **A batch `/qfai-sdd` run records its shared phases once, in
+  `.qfai/evidence/sdd-batch-<timestamp>.md`** (#1906). With no argument, the
+  skill runs Phase 0 Contracts-first and Phase 1 Outline once for every spec,
+  but the per-spec evidence template required their grilling rows and work
+  orders in each spec's file. That left three choices: eleven copies that must
+  agree in `Ended at` and differ in `Wrote at`, one file with the other ten
+  incomplete, or an undocumented batch file no reviewer checks. A new
+  template, `templates/evidence/sdd-batch.md`, carries those two phases' rows
+  and work orders with the per-spec columns. Each spec's file names it on a
+  `Batch record` line, and the skill's batch section says so.
+
 - **Retained failures keep unit-level coverage** (#1793). The
   minimal-implementation safety floor protects coverage of the failure paths
   production code retains.
