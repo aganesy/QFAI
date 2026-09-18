@@ -217,6 +217,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The layer derivation procedure says, where the layer is chosen, that a
+  test case never takes L4 or L5** (#1904). The restriction sat in the
+  crosswalk seventy lines above, and the procedure — which readers reach
+  through its anchor — offered both layers in step 3 and its worked examples.
+  Step 3 now says an oracle landing on either means the obligation is filed as
+  `CON-API-*` or `US-*`, and the two worked examples say which.
+
 - **Step 2 of the layer derivation says how a test case reaches its parent
   business rule** (#1907). The step restricts the oracle to the parent BR's
   obligations, and no test-case column names a BR, so each reader picked a
