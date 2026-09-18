@@ -6,6 +6,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Repository-specific halves of four rules split into overlays** (#1917).
+  `distributed-surface`, `version-discipline`, `temporary-files` and
+  `root-additions-policy` each governed an adopter's repository and this one
+  from two files that had drifted with nothing to notice. What generalises
+  stays in the shipped master; what names a path under `packages/qfai/`, a
+  guard script, a CI job or an identifier shape this project mints moves to
+  `<name>.local.md` beside it. The suffix is the overlay convention the
+  assistant tree already uses, so an overlay is never shipped. Registered in
+  `.agents/rules/README.md`, `AGENTS.md`, `CLAUDE.md` and
+  `.github/copilot-instructions.md`, and linked from `.claude/rules/`.
+  Every rule the package ships is now read here through its shipped copy:
+  the nine entries in `.agents/rules/` are links, so the file this repository
+  follows is the file an adopter receives. The shipped `version-discipline.md`
+  states the precedence that makes an overlay usable — an overlay beside a
+  master supersedes the master's default.
+
+- **Markdown lint for the documents the package ships** (#1914). `assets/**`
+  was excluded from the lint lane, so the skills, agent definitions, constitution
+  and templates an adopter receives were checked by markdownlint nowhere. They now
+  run in `ci:lint:structure` and `ci:gate:structure` under their own rule set.
+  Five rules are off for these documents because they read them as the wrong kind
+  of text: line length, inline HTML, spaces in code spans, blank lines between
+  blockquotes, and ordered-list prefixes. Duplicate headings are compared among
+  siblings, so a template may repeat a subsection name under each category.
+  Bare code fences, heading-level jumps and unescaped emphasis markers in the
+  shipped documents are corrected.
+
 - **Reviewer cards file excess as a blocking code-quality defect** (#1798).
   All six reviewer roles trace excess to Article VII, require a concrete cut
   and replacement, and refuse cuts that remove or weaken a referenced
