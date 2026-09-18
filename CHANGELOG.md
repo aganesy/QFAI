@@ -388,6 +388,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   are not whole numbers, rather than writing a file the project's own runner
   does not collect.
 
+- **The spec-0002 conflict record's options can each be carried out** (#1937).
+  `CR-20260912-0003` now requires the single-winner finding through the
+  canonical validator list `qfai validate` runs, blocks a pack whose
+  classification does not validate under `2B`, has `2a` fail closed on an
+  absent `DESIGN.md.lock.yaml` as `spec-0012/TC-0012-0347` already requires,
+  and runs `/qfai-atdd spec-0010` for the acceptance rows that pack's
+  re-derivation leaves at `todo`.
+
 - Read a brace range that generates either half of an extglob, and write out
   every range a pattern holds rather than a fixed number of them, so the
   scaffold names a file the project's own runner collects.
