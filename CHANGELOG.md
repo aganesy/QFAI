@@ -292,6 +292,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A removal answer written as a heading is pinned** (#1893). A heading deeper
+  than the section's own does not end that section, so the reader that judges
+  the answer and the rebuild that replaces it have to stop at the same place.
+  Three forms now stand in the release-body cases, each with prose after the
+  section: an ATX heading at level three and at level six, and a setext one.
+
 - **The entry points no longer say this repository installs its own package**
   (#1921). `CLAUDE.md` and `AGENTS.md` both described `.qfai/` as the result of
   an npm install of QFAI. There is no such dependency, and
