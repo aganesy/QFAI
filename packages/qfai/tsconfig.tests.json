@@ -132,6 +132,7 @@
     "tests/assets/stopReasonSpecAlignment.test.ts",
     "tests/assets/structuredQuestionHook.test.ts",
     "tests/assets/tddIdAllocation.test.ts",
+    "tests/assets/testTitleIdentifiers.test.ts",
     "tests/assets/tokenProvenance.test.ts",
     "tests/assets/traceabilityChainLayered.test.ts",
     "tests/assets/triageColonShorthand.test.ts",
