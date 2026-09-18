@@ -194,7 +194,7 @@ routing phase's mandatory agents run inside its span, and its blocking agents MU
 ### No-argument batch delegation (MUST)
 
 - Without argument: target all capabilities in `_policies/03_Capabilities.md`.
-- Run Contracts-first and Outline once per batch.
+- Run Contracts-first and Outline once per batch, and record them once, in `.qfai/evidence/sdd-batch-<timestamp>.md` from `templates/evidence/sdd-batch.md`. Each spec's evidence names that file on its `Batch record` line rather than copying the two phases' rows.
 - Delegate Slice in parallel per spec.
 - Parallel delegation here is bound by the stage-independent Concurrency rules in `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory`: worktree separation, or the declared degraded mode, plus mandatory commit scoping (`git add <paths>`; never `git add -A` / `git add .` / `git commit -a`).
 - Validate gate and Review gate run once at batch tail after all target specs are integrated.
