@@ -51,6 +51,7 @@ import {
 // progress figure cannot disagree about which TCs a spec declares.
 import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
 import type { Issue } from "../types.js";
+import { UiAffectingClauses } from "../uiAffectingClauses.js";
 // The same `AC` / `BR` / `EX` / `TC` walk `layerCoverage.ts` scores coverage
 // with. The review-group key is derived from those very edges, so re-parsing
 // the layer files here is how the derived key and the coverage graph would come
@@ -1180,10 +1181,9 @@ function evidenceFieldOccurrences(
     if (/^\s*\|/.test(visibleLine)) {
       const cells = splitMarkdownRow(visibleLine);
       // Labels are the even cells, as `hasFieldBesideReviewerAppendedCell` reads
-      // them. Visiting every cell took a value that quotes a field name — the
-      // output of a test asserting on one — for a label, and the label after it
-      // for that field's value, so a row carrying such output acquired a pack or
-      // a verdict nobody wrote and the entry failed completion over it.
+      // them, and a value cell is never read as a label. A value may quote a
+      // field name, as a test asserting on one does, and reading it as a label
+      // would give the row a pack or a verdict nobody wrote.
       for (let cellIndex = 0; cellIndex < cells.length - 1; cellIndex += 2) {
         const rawLabel = (cells[cellIndex] ?? "").replace(/^\*\*|\*\*$/g, "").trim();
         const roundMatch = /^Round\s+(\d+):\s*(.*)$/i.exec(rawLabel);
@@ -2994,6 +2994,36 @@ function reviewPacksApart(section: string): string[] {
   });
 }
 
+/**
+ * An `n/a (not UI-affecting)` verdict a clause of `ui-affecting.md` contradicts.
+ *
+ * `n/a` owes no product-surface review, no capture manifest and no parity
+ * hash, so it is the cheapest answer and was read as given. Clause 1 is
+ * evaluated only where `Owning module` is declared: its fallback reads the
+ * row's own change, which the tree the gate reads does not record.
+ */
+async function contradictedNotApplicableParity(
+  clauses: UiAffectingClauses,
+  entrySection: string,
+  ref: LedgerRowRef,
+): Promise<string[]> {
+  if (parityVerdict(entryOwnFields(entrySection)) !== "not-applicable") return [];
+  const holding = await clauses.firstHolding({
+    owningModule: cell(ref, "Owning module"),
+    testFile: cell(ref, "Test file"),
+    obligations: ["TC-Refs", "US-Refs", "CON-API-Refs"].flatMap((column) =>
+      cell(ref, column)
+        .split(/[\s,]+/)
+        .filter((value) => /^(?:TC|US|CON-API)-[A-Za-z0-9-]+$/.test(value)),
+    ),
+  });
+  return holding === null
+    ? []
+    : [
+        `a product-surface review rather than n/a (not UI-affecting), since clause ${String(holding.clause)} holds: ${holding.because}`,
+      ];
+}
+
 /** Minimum phase and review evidence required once a row reaches `done`. */
 function missingCompletedEvidenceFields(
   entrySection: string,
@@ -3591,10 +3621,11 @@ const CANONICAL_REVIEW_PACK = /^\.qfai\/review\/review-\d{17}$/;
  *
  * The pair is written after its review has run, so it is left out of every
  * audited subject, and this is the check that sees a pack edited after its
- * attempt closed or a pack from another review. A round that records any pair
- * owes exactly one for every verdict attempt: the last attempt's pack is the
- * one the round closed on, and a second pair for one attempt would leave the
- * first unchecked. A pack absent from the checkout is skipped once its path has
+ * attempt closed or a pack from another review. Every verdict attempt owes
+ * exactly one pair, whether or not the round records any other: a verdict with
+ * no pair keeps its outcome and discards the review it was written to. The last
+ * attempt's pack is the one the round closed on, and a second pair for one
+ * attempt would leave the first unchecked. A pack absent from the checkout is skipped once its path has
  * the canonical shape, as a row-level pack is, because review packs are
  * local-only.
  *
@@ -3627,8 +3658,8 @@ async function invalidRoundReviewPacks(
   // its values rather than no pair, which would let the row complete unreviewed.
   const packs = inRound("Review pack", true);
   const seals = inRound("Review pack seal", true);
-  if (packs.length === 0 && seals.length === 0) return [];
   const verdicts = inRound("reviewer verdict", true);
+  if (packs.length === 0 && seals.length === 0 && verdicts.length === 0) return [];
   const closingAttempt = verdicts.at(-1)?.attempt ?? null;
   const attempts = new Set([...verdicts, ...packs, ...seals].map(({ attempt }) => attempt));
   const invalid: string[] = [];
@@ -5044,6 +5075,7 @@ export async function validateTddList(
       gate,
       recordIds,
       srcRelDir,
+      config.paths.contractsDir,
     );
     issues.push(...demoteRetiredSpecIssues(specIssues, entry));
   }
@@ -5358,6 +5390,7 @@ async function validateSpecTddList(
   gate: BlockedWorklogGate,
   recordIds: ReadonlySet<string>,
   srcRelDir: string,
+  contractsDir: string,
 ): Promise<Issue[]> {
   // The whole entry, not its directory: Check 8c derives the review-group key
   // from the spec's layer files, and `SpecEntry` is what already resolves those
@@ -6494,6 +6527,10 @@ async function validateSpecTddList(
   // its parsed sections (and a missing-file sentinel) so each path is read once.
   const evidenceIndexCache = new Map<string, MarkdownEvidenceIndex | null>();
   const evidenceContext = completedEvidenceContext(root, specsRoot);
+  const uiAffecting = new UiAffectingClauses(root, contractsDir, {
+    testCases: specEntry.testCasesPath,
+    userStories: specEntry.userStoriesPath,
+  });
   for (const ref of ledgerRows()) {
     const status = cell(ref, "Status").toLowerCase();
     if (!EVIDENCE_CHECK_STATUSES.has(status)) continue;
@@ -6712,6 +6749,7 @@ async function validateSpecTddList(
             section,
             expectation,
           )),
+          ...(await contradictedNotApplicableParity(uiAffecting, section, ref)),
         ];
         if (missing.length > 0) {
           anchorFailure = `${anchor.file}#${anchor.fragment} is missing completed evidence fields: ${missing.join(", ")}`;

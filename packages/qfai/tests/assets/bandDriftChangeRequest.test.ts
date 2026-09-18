@@ -149,7 +149,8 @@ describe("the primary_tasks band drift has a Change Request", () => {
 
   it("routes the acceptance tests through the stage that writes them", async () => {
     // `/qfai-implement` writes no E2E, API or ATDD-owned Integration test.
-    await expectPhrase("`/qfai-atdd spec-0004` updates the two skipped cases");
+    await expectPhrase("**`/qfai-atdd spec-0004` runs under every option**");
+    await expectPhrase("the same pass also updates the two skipped cases");
     await expectPhrase("are acceptance tests, which `/qfai-atdd spec-0013` updates");
   });
 
