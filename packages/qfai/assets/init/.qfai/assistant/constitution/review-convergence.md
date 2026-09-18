@@ -4,7 +4,7 @@ How a review round ends, and what may follow it. Referenced from
 `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#round-budget-and-convergence-must`,
 which owns the delegation rules these sit beside.
 
-### Round budget (MUST)
+## Round budget (MUST)
 
 - **Two rounds per reviewer per artifact.** Round 1 is the initial review;
   round 2 reviews the fixes. **The budget is spent the moment round 2 returns
@@ -99,7 +99,7 @@ which owns the delegation rules these sit beside.
 - The round number MUST be recorded on each reviewer response
   (`Round:` in the shared response template).
 
-### Convergence (MUST)
+## Convergence (MUST)
 
 - A finding first raised in round N > 1 MUST state why it was not raisable in
   round N-1 — the fix introduced it, or the fix exposed it. A finding that was
@@ -120,7 +120,7 @@ which owns the delegation rules these sit beside.
   the escalation exit in the round budget withholds _Accept as Open Question_
   for this same class, so a user choice cannot supersede it either.
 
-### Answered demands (MUST)
+## Answered demands (MUST)
 
 A demand already answered MUST NOT be re-raised under another wording. Close a
 repeat by citing its recorded answer. This bounds what a reviewer may require,
@@ -141,7 +141,7 @@ When there are no answered demands, write `None`.
 A report of a new defect or evidence that an answer no longer applies must
 state what changed. The existing severity floor and escalation rules still apply.
 
-### Discussion review precision
+## Discussion review precision
 
 A discussion review judges what the planning stage decides, not implementation
 precision. Exact code-line edits, generated-copy updates and merge mechanics
@@ -192,47 +192,46 @@ Wrong repository facts, missing decision traceability, scope contradictions and
 defects in the pack's own safety obligations remain in remit. Non-normative
 status is not permission to pass those.
 
-### Agent-to-agent grilling (MUST)
+## Agent-to-agent grilling (MUST)
 
-A grilling session between agents has no user answering its questions, so the
-end condition the session rule states — an empty frontier and the user's
-confirmation — cannot be reached from inside it. Two agents can also agree on a
-wrong premise with nobody watching. These rules bound the **rounds** such a
-session may take before every decision the user has not settled goes to the user.
+A grilling session between agents is a **delegated session**
+(`.agents/rules/grilling.md`): a griller interviews the authors, and the user is
+asked only a critical decision. These rules bound its rounds and say what
+settles each decision when they run out.
 
-**They do not end the session.** It ends where every session ends, in one of the
-four the session rule names: with a user present, the user ends it; under a
-no-question mode, where the escalation has nobody to reach, the register write
-below ends it `no-question`. An agent that
-treated the budget as an ending closed a session nobody was asked to close.
+**Two rounds**, the same budget a reviewer has. After the second round **every
+decision that is not critical takes the griller's recommendation** — the ones
+the agents agreed on and the ones still open alike. A third round is never
+started: partial agreement is the ordinary outcome, and rounds past two buy
+fluency rather than a better answer.
 
-**Two rounds**, the same budget a reviewer has. **Every decision the user has not settled escalates after the second round** — the ones still open and the ones the agents agreed on, since an agent-adopted recommendation is a decision nobody took — whether or not the agents agreed on others in that round:
-partial progress is the ordinary outcome, and a condition reading "the round
-settled nothing" would be false almost always, leaving the rest of the frontier
-to a third round nobody authorised.
+Where the authors disagreed, the recommendation is still taken, and each
+position is recorded beside it with whose it is. The stage reports every adopted
+decision at its end without waiting for an answer. A user who disagrees
+overturns one through a change request or a rerun.
 
-Each escalated decision goes to the user with both positions and a
+**A critical decision goes to the user at once**, without spending a round.
+Rounds between agents produce agreement, and agreement is not what these lack.
+
+| Critical decision                                                                                                                             | Why it goes to the user                                                     |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| It contradicts a spec, a contract or a recorded decision                                                                                      | Changing settled input is a Change Request, not a design round              |
+| Its effect cannot be taken back: security, lost or corrupted data, a broken released contract, spending, a legal commitment, a public release | A wrong recommendation here is not repaired by the next run                 |
+| It rests on product or business intent that the request, the discussion pack, the specs and the contracts all leave unstated                  | Two agents reasoning past the evidence converge on the more fluent argument |
+
+A discussion pack answers product intent for this test. It is non-normative for
+the Drift Protocol, but it is where the user already answered these questions in
+a user session, and asking them again spends that session twice.
+
+Each critical decision goes to the user with every position and a
 recommendation. Escalating is not failure: the work stays where it is and the
 user accepts, decides, or drops the item, exactly as at the reviewer gate.
 
-**Three subjects escalate at once**, without spending a round. The test in each
-is authoritative evidence: `.qfai/specs/**`, `.qfai/contracts/**`, and recorded
-decisions. A discussion pack is not among them — it is non-normative discovery
-material (`.qfai/assistant/constitution/drift-protocol.md`), so a decision
-resting on one alone is a proposal awaiting promotion rather than a settled
-answer.
+**The budget does not end the session while a critical decision is open.** The
+session ends `adopted` once the user has answered every critical decision.
 
-| Subject                                                            | Escalates when                                                                                                        |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| Product or business intent                                         | No authoritative artifact answers it. Where one does, that is the answer and there is nothing left to settle          |
-| A decision contradicting a spec, a contract or a recorded decision | Always. Changing settled input is a Change Request, not a design round                                                |
-| A decision resting on nothing authoritative                        | Always, discussion-pack support included. Two agents reasoning past the evidence converge on the more fluent argument |
-
-Each names a decision agents cannot settle from what the repository
-authoritatively holds. Rounds spent on one produce agreement, which is not the
-same as an answer and is harder to tell apart afterwards.
-
-Under a no-question mode the escalation has nobody to reach. The decision is
-opened as a question in the register the stage reads, so the stage cannot
+Under a no-question mode the escalation has nobody to reach. A critical decision
+is opened as a question in the register the stage reads, so the stage cannot
 complete over it (`.qfai/assistant/constitution/constitution.md` Article X,
-rule 6).
+rule 6), and that write ends the session `no-question`. Non-critical decisions
+are adopted as they are in any delegated session.

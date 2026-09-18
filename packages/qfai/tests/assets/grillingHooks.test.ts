@@ -9,6 +9,7 @@ import {
   GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
   GRILLING_PLAN_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
+import { projectDirOf, runReminderHook } from "../helpers/reminderHooks.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -29,6 +30,14 @@ type Settings = { readonly hooks: Record<string, readonly Matcher[] | undefined>
 
 const readSettings = async (rel: string): Promise<Settings> =>
   JSON.parse(await readFile(path.join(repoRoot, rel), "utf-8"));
+
+/** What one group's entries print, run against the project the settings file serves. */
+async function printed(rel: string, group: Matcher): Promise<string> {
+  const outputs = await Promise.all(
+    group.hooks.map((hook) => runReminderHook(hook, projectDirOf(repoRoot, rel))),
+  );
+  return outputs.join(" ");
+}
 
 /** The `PreToolUse` groups, in file order. */
 const groups = (s: Settings): readonly Matcher[] => s.hooks.PreToolUse ?? [];
@@ -83,17 +92,16 @@ describe("the grilling reminder fires where a decision gets made quietly", () =>
     // `additionalContext` is what a reminder emits; a decision field is not.
     const settings = await readSettings(rel);
     for (const [matcher] of MARKERS) {
-      for (const hook of preToolUse(settings, matcher).hooks) {
-        const payload = (hook.args ?? []).join(" ");
-        expect(payload).toContain("additionalContext");
-        expect(payload).not.toContain("permissionDecision");
-      }
+      const payload = await printed(rel, preToolUse(settings, matcher));
+      expect(payload).toContain("additionalContext");
+      expect(payload).not.toContain("permissionDecision");
     }
   });
 
   it.each(SETTINGS)("%s runs node directly, with no shell", async (rel) => {
-    // The pattern the writing-standard reminder established: no shell, no file
-    // reads, no network — so a hook on every write cannot itself fail the run.
+    // The pattern the writing-standard reminder established: no shell and no
+    // network, and a missing message prints nothing — so a hook on every write
+    // cannot itself fail the run.
     const settings = await readSettings(rel);
     for (const [matcher] of MARKERS) {
       for (const hook of preToolUse(settings, matcher).hooks) {
@@ -107,20 +115,29 @@ describe("the grilling reminder fires where a decision gets made quietly", () =>
   it.each(SETTINGS)("%s points at the master rather than restating it", async (rel) => {
     // A hook that carries the rule drifts from it, and a compressed method is
     // worse than none: the rule's parts qualify each other, so a summary that
-    // drops a qualifier states the opposite of what the rule says. An earlier
-    // draft of this text managed it four times over — user-held facts have no
-    // recommendation, a frontier larger than the host takes goes in consecutive
-    // batches, a running lookup keeps a session open past an empty frontier,
-    // and a session between agents does end at a count.
+    // drops a qualifier states the opposite of what the rule says — a frontier
+    // larger than the host takes goes in consecutive batches, and a running
+    // lookup keeps a session open past an empty frontier.
     //
-    // So the reminder names the trigger, names the file, and stops.
+    // So the reminder names the trigger and who answers, names the file, and
+    // leaves the method's mechanics to the file.
     const settings = await readSettings(rel);
     for (const [matcher] of MARKERS) {
-      const payload = preToolUse(settings, matcher)
-        .hooks.map((h) => (h.args ?? []).join(" "))
-        .join(" ");
+      const payload = await printed(rel, preToolUse(settings, matcher));
       expect(payload, `${matcher} does not name the master`).toContain(".agents/rules/grilling.md");
-      for (const part of ["frontier", "round", "recommend", "confirmation", "lookup"]) {
+      expect(payload, `${matcher} invites working from the line`).toContain(
+        "Read the rule rather than working from this line.",
+      );
+      // Who answers is the one thing the reminder carries: the moment it fires
+      // is when an agent decides whether to stop for the user, and asking the
+      // user every design question is the failure the default avoids.
+      expect(payload, `${matcher} does not name the default answerer`).toContain(
+        "Outside the discussion stage, settle it between agents and take the griller's recommendation",
+      );
+      expect(payload, `${matcher} does not name what reaches the user`).toContain(
+        "ask the user only a critical decision",
+      );
+      for (const part of ["frontier", "round", "confirmation", "lookup"]) {
         expect(payload.toLowerCase(), `${matcher} restates the method: ${part}`).not.toContain(
           part,
         );

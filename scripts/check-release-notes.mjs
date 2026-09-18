@@ -56,7 +56,7 @@
  *
  * Exit codes: 0 clean, 1 drift, 2 the comparison could not be made.
  */
-/* global console, process, fetch, URL */
+/* global console, process, fetch, AbortSignal, URL */
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
@@ -222,15 +222,42 @@ function readRelease(release) {
   return { draft: Reflect.get(release, "draft") === true, tag, body: body ?? "" };
 }
 
+/**
+ * How long one page may take to answer.
+ *
+ * The list endpoint answers a hundred-item page in well under a second, so
+ * thirty is more than an order of magnitude above anything ordinary and cuts no
+ * slow response. The run makes one request per page and there are two, so even
+ * both at this ceiling spend a tenth of the job's ten-minute budget — which is
+ * the bound that matters, because past the budget the runner kills the job and a
+ * killed job prints no verdict of its own.
+ *
+ * A read that times out is not retried. This lane runs weekly, so a red run is
+ * followed by another on its own; retrying would double the wait before the
+ * failure is reported and would hide, in the output, that a read failed at all.
+ */
+const READ_TIMEOUT_MS = 30_000;
+
 /** One page of releases, and where the page after it is. */
-async function fetchReleasePage(url, token) {
-  const response = await fetch(url, {
-    headers: {
-      accept: "application/vnd.github+json",
-      authorization: `Bearer ${token}`,
-      "user-agent": "qfai-release-notes-check",
-    },
-  });
+export async function fetchReleasePage(url, token, timeoutMs = READ_TIMEOUT_MS) {
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${token}`,
+        "user-agent": "qfai-release-notes-check",
+      },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (cause) {
+    // Named rather than left as the runtime's abort message, which says a
+    // timeout happened without saying what the ceiling was.
+    if (cause instanceof Error && cause.name === "TimeoutError") {
+      throw new Error(`no answer within ${String(Math.round(timeoutMs / 1000))}s`, { cause });
+    }
+    throw cause;
+  }
   if (!response.ok) {
     throw new Error(`GitHub answered ${String(response.status)}`);
   }

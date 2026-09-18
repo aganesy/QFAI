@@ -85,9 +85,10 @@ moments it is easiest to forget:
 | Posting a pull request, issue or review through the GitHub tools | PreToolUse  |
 | Writing or editing a Markdown file                               | PostToolUse |
 
-Each hook runs `node` directly and prints one fixed message. No shell, no file
-reads, no network. Delete the entries from `.claude/settings.json` to turn the
-reminder off; the rule still applies.
+Each hook runs `node` directly and prints one message from
+`.agents/rules/reminders.json`. No shell, no network, and a missing file prints
+nothing. Delete the entries from `.claude/settings.json` to turn the reminder
+off; the rule still applies.
 
 The `gh` command line is out of scope. A shell-argument condition also matches
 compound commands that have nothing to do with GitHub, which would put the

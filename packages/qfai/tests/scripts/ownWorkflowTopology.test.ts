@@ -1154,7 +1154,17 @@ describe("TC-0017-0007 (TDD-0007): unneeded legs stay declared and are skipped, 
         Array.isArray(slices) ? [...slices].sort() : slices,
         "every declared slice must stay in the matrix so its check name persists",
       )
-      .toEqual(["cli", "core", "e2e", "integration", "scripts", "unit", "validators"]);
+      .toEqual([
+        "cli",
+        "core",
+        "e2e",
+        "integration",
+        "pr-fix",
+        "pr-merge",
+        "scripts",
+        "unit",
+        "validators",
+      ]);
 
     // CLAIM 2 — and the condition sits on the JOB. A condition inside the matrix would
     // change the leg set, which is CLAIM 1's removal by another route.
@@ -1283,7 +1293,7 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
     // measurement was right and the conclusion was not: the CR had already been decided, by the
     // user, the other way. So the fix was to FINISH option A, and the lane now runs every test
     // whose subject is a root mirror tree — the three that were missing are `codex/agents`,
-    // `core/prFixMonitor` and `core/prMergePlan`.
+    // `core/prFixSkillDocs` and `pr-merge/prMergePlan`.
     const mirrors = runClassifier({
       paths: [".claude/rules/temporary-files.md", ".codex/skills/whatever.md"],
     });
@@ -1310,8 +1320,12 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
       "tests/core/integrationSurfaceReadErrors.test.ts",
       "tests/assets/reviewerVerdictVocabulary.test.ts",
       "tests/codex/agents.test.ts",
-      "tests/core/prFixMonitor.test.ts",
-      "tests/core/prMergePlan.test.ts",
+      // The `pr-fix` prose assertions, in their own file. `../pr-fix/prFixMonitor.test.ts`
+      // holds the rest of that coverage and reads nothing from a mirror tree but
+      // the script — an executable, which the classifier keeps out of the
+      // documentation-only set, so the test job runs for a change to it.
+      "tests/core/prFixSkillDocs.test.ts",
+      "tests/pr-merge/prMergePlan.test.ts",
     ]) {
       expect
         .soft(
@@ -1419,7 +1433,7 @@ describe("TC-0017-0012 (TDD-0012): the lint lane carries no selection condition"
 
 // ── change 9: layer separation stays inside the file, and no check name moves ─
 //
-// The layer split ALREADY exists: seven matrix legs of the `test` job, one per runner
+// The layer split ALREADY exists: nine matrix legs of the `test` job, one per runner
 // project. `BR-0017-0035` is what keeps it that way — "test-layer separation MUST be
 // expressed as jobs and matrix legs inside the existing own-CI workflow file", with the
 // file count and the aggregate check name unchanged.
@@ -1503,14 +1517,14 @@ const OWN_WORKFLOW_FILES = [
  * promises; an API present in Node 24 and absent in 20.19 passes every gate and breaks
  * exactly the supported users.
  *
- * It is sliced over the same seven values as `test`, so it reports seven check names and no
+ * It is sliced over the same nine values as `test`, so it reports nine check names and no
  * bare `node-floor`: no job produces that name, and pinning it would hold this list against
  * a check that cannot appear.
  *
  * Creating a check name is normally a repository-settings problem. It is not one here, which
  * is what lets a required lane be sliced without a settings change: only `ci-pass` is
  * required, the verdict is derived from its `needs` map, and a matrix job contributes ONE
- * rolled-up `result` to that map however many legs it expands to. So the seven legs are
+ * rolled-up `result` to that map however many legs it expands to. So the nine legs are
  * gated by the context that already exists.
  */
 const CI_CHECK_NAMES = [
@@ -1524,6 +1538,8 @@ const CI_CHECK_NAMES = [
   "node-floor (core)",
   "node-floor (e2e)",
   "node-floor (integration)",
+  "node-floor (pr-fix)",
+  "node-floor (pr-merge)",
   "node-floor (scripts)",
   "node-floor (unit)",
   "node-floor (validators)",
@@ -1532,6 +1548,8 @@ const CI_CHECK_NAMES = [
   "test (core)",
   "test (e2e)",
   "test (integration)",
+  "test (pr-fix)",
+  "test (pr-merge)",
   "test (scripts)",
   "test (unit)",
   "test (validators)",
@@ -1580,15 +1598,15 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
       .soft(ownWorkflowFiles(), "layer separation may not add a workflow file")
       .toEqual([...OWN_WORKFLOW_FILES]);
 
-    // CLAIM 2 — the layers are legs of a job, not one job each. Seven jobs would satisfy
-    // "inside the existing file" and still create six new check names, so the shape is
+    // CLAIM 2 — the layers are legs of a job, not one job each. Nine jobs would satisfy
+    // "inside the existing file" and still create eight new check names, so the shape is
     // asserted and not just the location.
     //
     // Two jobs express the split: `test`, and `node-floor` running the same slices on the
     // engines floor. That is the same shape applied twice rather than an exception to it —
     // what `AC-0017-0018` rejects is a layer becoming a job of its own, and each lane is
-    // ONE job whose legs are the layers. Expressing either lane as seven jobs would create
-    // seven check names the same way, and the axis claim below is what refuses it.
+    // ONE job whose legs are the layers. Expressing either lane as nine jobs would create
+    // nine check names the same way, and the axis claim below is what refuses it.
     //
     // A LITERAL list, so a third sliced lane arrives as a failing test naming the new member
     // rather than as a diff to interpret — the reason `CI_CHECK_NAMES` is a literal too.
@@ -1780,7 +1798,7 @@ describe("one lane runs on the floor `engines.node` declares", () => {
     // The ORDER is asserted, not just the presence: a build after the test step is a build that
     // ran too late.
     //
-    // And the CONDITION. The build runs on two of seven legs, so "a build step exists" does not
+    // And the CONDITION. The build runs on two of nine legs, so "a build step exists" does not
     // imply that the legs reading `dist/` get one: a condition narrowed to one slice, or widened
     // to a slice that reads nothing, is invisible to the order claim. It is asserted against the
     // `test` job's rather than restated, because the two jobs run the same slices over the same
@@ -1819,13 +1837,13 @@ describe("one lane runs on the floor `engines.node` declares", () => {
 
   it("runs one slice per leg, over the set the `test` job declares", () => {
     // The lane's claim is about the WHOLE package suite on the engines floor. Slicing it keeps
-    // that claim only while the legs partition the suite, and the seven names are the partition
+    // that claim only while the legs partition the suite, and the nine names are the partition
     // `sliceSurfaceAlignment` holds against the runner workspace. A value dropped here stops a
     // slice being exercised on the floor while the `test` job still runs it on the resolved
     // release, and every remaining leg reports green.
     //
     // Read from the `test` job rather than written out, for the reason the build condition is:
-    // two lists of the same seven names drift one edit at a time, and the drift is silent.
+    // two lists of the same nine names drift one edit at a time, and the drift is silent.
     const jobs = ciJobs();
     const sliceList = (job: unknown): unknown => {
       const strategy = isRecord(job) ? job["strategy"] : undefined;
@@ -3409,13 +3427,13 @@ describe("release automation performs decisions rather than making them", () => 
  *
  * The middle column is the one that decides the shape. A tag can carry SOME of the slice scripts,
  * so "does this slice have a script" answered per leg reads v1.10.0 as sliced for five legs and
- * as old for two — which means the aggregate runs the suite whole in `gate` while five legs run
- * it again beside it, and the two legs with no script report green having run nothing. The suite
- * runs twice for five slices and not at all for two, in one release.
+ * as old for four — which means the aggregate runs the suite whole in `gate` while five legs run
+ * it again beside it, and the four legs with no script report green having run nothing. The suite
+ * runs twice for five slices and not at all for four, in one release.
  *
  * So the rows below assert a MULTISET, not a set: every package test script the gate jobs would
  * invoke for one tag, counted, must be exactly one cover of the suite — `test` alone, or the
- * seven slices. A second copy of `test` shows up as a duplicate, a dropped slice as a short list,
+ * nine slices. A second copy of `test` shows up as a duplicate, a dropped slice as a short list,
  * and a mixed run as neither.
  *
  * ## Executed, not pattern-matched
@@ -3865,7 +3883,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     ).toEqual({ "v1.12.0": "whole", "v1.10.0": "whole", "v1.8.0": "whole" });
     expect(
       classify(currentRoot(), currentPackage()).shape,
-      "this tree declares ci:gate:checks and all seven slices, so it is the sliced shape",
+      "this tree declares ci:gate:checks and all nine slices, so it is the sliced shape",
     ).toBe("sliced");
   });
 
@@ -3940,7 +3958,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
             isCover,
             `${tag} takes the ${shape} path and its ${floor ? "floor" : "range"} jobs run the ` +
               `suite as [${runs.join(", ")}] — one cover is the whole suite exactly once, either ` +
-              "`test` or the seven slices, so this is a double run, a partial one, or none at all",
+              "`test` or the nine slices, so this is a double run, a partial one, or none at all",
           )
           .toBe(true);
       }

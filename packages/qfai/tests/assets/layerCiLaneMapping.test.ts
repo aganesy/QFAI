@@ -33,7 +33,8 @@
 // QFAI:SPEC-0017:TC-0017-0081
 // QFAI:SPEC-0017:TC-0017-0082
 
-import { existsSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -56,8 +57,8 @@ const ROOT_CATALOG = path.join(REPO_ROOT, ".qfai", "assistant", "catalog");
 const MAPPING = "test-layers-ci-lanes.md";
 const CATALOG = "test-layers.md";
 
-/** The sync script that makes the root copy a mirror. */
-const SYNC_SCRIPT = path.join(REPO_ROOT, "scripts", "sync-init-to-root.mjs");
+/** The script that links the root assistant tree at the shipped assets. */
+const LINK_SCRIPT = path.join(REPO_ROOT, "scripts", "link-assistant-tree.mjs");
 
 const read = (dir: string, file: string): string => readFileSync(path.join(dir, file), "utf-8");
 
@@ -237,23 +238,33 @@ describe("TC-0017-0081 (TDD-0081): authoring in the asset tree passes both mirro
   });
 });
 
-describe("TC-0017-0082 (TDD-0082): a root-only edit is reverted and fails the tracked-tree diff", () => {
-  it("mirrors from the asset tree to the root, and offers a check mode that detects a divergence", () => {
-    const script = readFileSync(SYNC_SCRIPT, "utf-8");
-
-    // CLAIM 1 — the DIRECTION. Two identical copies say nothing about which is the source, so
-    // the row reads the script: the asset tree is resolved as the source and the root as the
-    // target. That is what makes a root-only edit temporary rather than an alternative.
-    const sourceLine = script.split(/\r?\n/).find((line) => /const\s+INIT_QFAI\s*=/.test(line));
-    const targetLine = script.split(/\r?\n/).find((line) => /const\s+TARGET_QFAI\s*=/.test(line));
-    expect.soft(sourceLine ?? "", "the source must be the asset tree").toContain("assets");
+describe("TC-0017-0082 (TDD-0082): an unlinked repository-root path fails the link check", () => {
+  it("resolves the root mapping path to the packaged asset, and rejects a regular file in its place", () => {
+    // CLAIM 1 — the root path is a LINK, not a second copy. Two identical files say nothing
+    // about which one an edit lands in; a link says it, because there is only one file.
+    const rootMapping = path.join(ROOT_CATALOG, MAPPING);
+    const stat = lstatSync(rootMapping);
     expect
-      .soft(targetLine ?? "", "the target must be the repository root's .qfai")
-      .toContain('".qfai"');
+      .soft(stat.isSymbolicLink(), `${MAPPING} under the repository root must be a symlink`)
+      .toBe(true);
 
-    // CLAIM 2 — and a check mode exists, so the divergence is detectable without writing. The
-    // aggregate runs the sync and then diffs the tracked tree; the check mode is what lets a
-    // reviewer see the same thing without mutating their working copy.
-    expect.soft(script, "the sync script must offer a check mode").toMatch(/--check/);
+    // CLAIM 2 — and it resolves to the asset the package ships, not to some other file that
+    // happens to hold the same bytes today.
+    expect
+      .soft(realpathSync(rootMapping), "the link must resolve to the packaged asset")
+      .toBe(realpathSync(path.join(ASSET_CATALOG, MAPPING)));
+
+    // CLAIM 3 — a regular file where a link belongs is REPORTED. Without this the shape is a
+    // convention nobody enforces: `git checkout` on a host without symlink support, or an
+    // editor that replaces a link on save, silently reinstates the second copy.
+    const check = spawnSync("node", [LINK_SCRIPT, "--check"], {
+      cwd: REPO_ROOT,
+      encoding: "utf-8",
+    });
+    expect.soft(check.status, "the link check must pass on this tree").toBe(0);
+    const script = readFileSync(LINK_SCRIPT, "utf-8");
+    expect
+      .soft(script, "the check must report a path that is a file where a link belongs")
+      .toMatch(/not a symlink to/);
   });
 });
