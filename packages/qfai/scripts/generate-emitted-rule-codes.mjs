@@ -103,11 +103,13 @@ const STRING_CONST_RE = new RegExp(
 /**
  * A `const NAME = <cond> ? "a": "b"` binding — one name, several codes.
  *
- * `designFidelity.ts` picks between `QFAI-FID-010` and `QFAI-FID-011` this way
- * and hands the result to `issue()`, so an identifier-only resolver saw neither
- * code and a waiver naming them was dropped on any run where the rule stayed
- * quiet. Every literal in the initializer counts: `RULE_ID_RE` filters what is
- * not a rule id, so over-reading a branch costs nothing.
+ * A validator that picks its code this way and hands the result to `issue()` is
+ * invisible to an identifier-only resolver, so a waiver naming either code is
+ * dropped on every run where the rule stays quiet. No module in the tree writes
+ * that shape today; the resolver stays because the shape follows house style and
+ * would be registered nowhere. Every literal in the initializer counts:
+ * `RULE_ID_RE` filters what is not a rule id, so over-reading a branch costs
+ * nothing.
  */
 const CONDITIONAL_CONST_RE =
   /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=;\n]+)?=\s*([^;\n]*\?[^;\n]*:[^;\n]*)/g;

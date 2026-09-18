@@ -989,7 +989,7 @@ describe("the floor lane bounds its forks by the runner it is on", () => {
    * The override is per leg, not per lane. The oversubscription is the declared
    * ceiling measured against the runner's cores, and every leg gets its own runner
    * with the same four, so a leg carries the same 2.5x over fewer tests. One step
-   * states the count for all seven legs, which is why this row insists on exactly
+   * states the count for all nine legs, which is why this row insists on exactly
    * one such step rather than tolerating a second that omits it.
    */
   const floorLaneRun = (): string => {

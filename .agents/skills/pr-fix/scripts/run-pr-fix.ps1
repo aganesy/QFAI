@@ -222,11 +222,14 @@ function RepairBody([string]$Template, $Pr, [string[]]$ChangedFiles, $Classifica
   $preview = @($ChangedFiles | Select-Object -First 10)
   if ((CountOf $preview) -eq 0) { $preview = @("(no files detected)") }
   $original = StripAutoImport ([string]$Pr.body)
-  $removals = RemovalAnswer $original
-  if (-not [string]::IsNullOrWhiteSpace($removals)) {
-    $body = [regex]::Replace($body, '(?ms)(^## What (?:this|a) change made unnecessary[ \t]*\n).*?(?=^#{1,2} |\z)', {
+  # The adoption bar is authored the same way as the removal list, so repair
+  # preserves both rather than rewriting one of them from the template.
+  foreach ($heading in @($script:RemovalHeadingPattern, $script:AdoptionHeadingPattern)) {
+    $answer = DescriptionAnswer $original $heading
+    if ([string]::IsNullOrWhiteSpace($answer)) { continue }
+    $body = [regex]::Replace($body, '(?ms)(^## ' + $heading + '[ \t]*\n).*?(?=^#{1,2} |\z)', {
       param($match)
-      return $match.Groups[1].Value + "`n" + $removals + "`n`n"
+      return $match.Groups[1].Value + "`n" + $answer + "`n`n"
     })
   }
   if ([string]::IsNullOrWhiteSpace($original)) { $original = "(empty)" }
