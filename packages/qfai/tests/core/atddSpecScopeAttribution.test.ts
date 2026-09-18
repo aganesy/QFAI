@@ -20,7 +20,12 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { isFindingInSpecScope, resolveSpecScope } from "../../src/core/specScope.js";
+import { atddTestOwnerProbe } from "../../src/core/atddTraceability.js";
+import {
+  isFindingInSpecScope,
+  owningSpecNumber,
+  resolveSpecScope,
+} from "../../src/core/specScope.js";
 import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../src/core/atdd/scaffold.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
 import { validateScaffoldPlaceholder } from "../../src/core/validators/scaffoldPlaceholder.js";
@@ -771,6 +776,93 @@ describe("a forbidden reference is owned by the tests that hold it", () => {
       expect(finding).toBeDefined();
       const roots = { root, specsRoot: path.join(root, ".qfai", "specs") };
       expect(isFindingInSpecScope(finding ?? {}, roots, new Set(["0002"]))).toBe(true);
+    });
+  });
+});
+
+describe("a package that keeps the scaffold layout owns its own files", () => {
+  const packageConfig = {
+    ...defaultConfig,
+    validation: {
+      ...defaultConfig.validation,
+      traceability: {
+        ...defaultConfig.validation.traceability,
+        testFileGlobs: ["packages/*/tests/**/*.test.ts"],
+      },
+    },
+  };
+
+  async function writeTest(root: string, ...segments: string[]): Promise<string> {
+    const testFile = path.join(root, ...segments);
+    await mkdir(path.dirname(testFile), { recursive: true });
+    await writeFile(
+      testFile,
+      ["// QFAI:SPEC-0001:TC-9999", "it('x', () => {});", ""].join("\n"),
+      "utf-8",
+    );
+    return testFile;
+  }
+
+  async function scopedCodes(root: string, spec: string): Promise<string[]> {
+    const issues = await validateAtddCodeTraceability(root, packageConfig, {
+      specScope: new Set([spec]),
+    });
+    return issues.map((entry) => entry.code);
+  }
+
+  it("reports a typo in a package's spec directory to that spec's run as well", async () => {
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      await writeTest(
+        root,
+        "packages",
+        "checkout",
+        "tests",
+        "integration",
+        "spec-0002",
+        "a.test.ts",
+      );
+
+      expect(await scopedCodes(root, "0002")).toContain("QFAI-ATDD-102");
+      expect(await scopedCodes(root, "0001")).toContain("QFAI-ATDD-102");
+    });
+  });
+
+  it.each([
+    ["below the layer directory", ["integration", "fixtures", "spec-0002", "a.test.ts"]],
+    ["as the package's name", ["..", "..", "spec-0002", "tests", "integration", "a.test.ts"]],
+  ])("finds no owner in a spec-shaped directory %s", async (_where, tail) => {
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      await writeTest(root, path.join("packages", "checkout", "tests", ...tail));
+
+      expect(await scopedCodes(root, "0002")).not.toContain("QFAI-ATDD-102");
+      expect(await scopedCodes(root, "0001")).toContain("QFAI-ATDD-102");
+    });
+  });
+
+  it("scopes any finding filed against such a file by the spec directory it sits in", async () => {
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const testFile = await writeTest(
+        root,
+        "packages",
+        "checkout",
+        "tests",
+        "integration",
+        "spec-0002",
+        "a.test.ts",
+      );
+      const roots = {
+        root,
+        specsRoot: path.join(root, ".qfai", "specs"),
+        testsRoot: path.join(root, "tests"),
+        testOwner: atddTestOwnerProbe(root, packageConfig),
+      };
+
+      expect(owningSpecNumber(testFile, roots)).toBe("0002");
+      expect(isFindingInSpecScope({ file: testFile }, roots, new Set(["0002"]))).toBe(true);
+      expect(isFindingInSpecScope({ file: testFile }, roots, new Set(["0001"]))).toBe(false);
     });
   });
 });
