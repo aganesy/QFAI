@@ -1267,7 +1267,9 @@ describe("a link that does not resolve still says why", () => {
       await symlink(elsewhere, skillsDir, "dir");
 
       const entry = await finding(root);
-      expect(entry?.message).toContain("a canonical ancestor is a symlink");
+      // The link stays inside the project, so it is a layout rather than damage.
+      // What is left is the canonical that is not under it.
+      expect(entry?.message).toContain("missing");
       expect(entry?.message).not.toContain("dangling ->");
     });
   });
@@ -1414,7 +1416,9 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       await seedInitRecord(root);
 
       const found = await finding(root);
-      expect(found?.message).toContain("a canonical ancestor is a symlink");
+      // An in-project ancestor link is accepted, so the finding is about the
+      // canonical the link does not lead to.
+      expect(found?.message).toContain("missing");
     });
   });
 
@@ -1761,11 +1765,12 @@ describe("a broken canonical grandparent is found too", () => {
   });
 });
 
-describe("a canonical is a real document, not a link to one", () => {
-  it("reports a canonical ancestor redirected inside the project", async () => {
-    // Following the ancestor lands on a real leaf, so the leaf check passes,
-    // and both resolved paths land in the same place inside the project — so
-    // neither comparison has anything to say.
+describe("a canonical is the document it names, by link or in place", () => {
+  it("accepts a canonical ancestor redirected inside the project", async () => {
+    // Following the ancestor lands on a real leaf, and the target stays inside
+    // the project, so the document an agent opens is one this repository owns
+    // and a reviewer can read. That is vendoring, and the rule is for the link
+    // that leaves, does not resolve, or renames.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
@@ -1778,7 +1783,7 @@ describe("a canonical is a real document, not a link to one", () => {
       await symlink(elsewhere, skillsDir, "dir");
 
       const found = await finding(root);
-      expect(found?.message).toContain("a canonical ancestor is a symlink");
+      expect(found).toBeUndefined();
     });
   });
 
