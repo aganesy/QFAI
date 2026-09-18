@@ -233,6 +233,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Two tests now hold the skill check's handling of a skill directory reached
+  through a link (#1754). A document that a linked skill's step names, and that
+  is not valid UTF-8, is reported as `QFAI-SKILLS-014`. A link that loops back
+  into its own skill ends the run without a finding. The walk reads a document
+  under a link when a skill cites it, which is the document the host opens.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
