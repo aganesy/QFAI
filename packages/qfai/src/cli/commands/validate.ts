@@ -693,15 +693,16 @@ export const GATE_GROUP_FAMILIES = {
   // reach it, and run by the prototyping profile on its own, since that is the
   // profile certification accepts.
   "ui-screen-entries": ["QFAI-CONTRACT-042"],
-  // `validateContractReferences` — `runSddValidators` only. Five codes, not
-  // one: the gate reports a missing reference, and four shapes of a reference
-  // that resolves to the wrong thing.
+  // `validateContractReferences` — `runSddValidators` only. It reports a missing
+  // reference, four shapes of a reference that resolves to the wrong thing, and
+  // a UI contract no live spec binds.
   "contract-references": [
     "QFAI-CONTRACT-030",
     "QFAI-CONTRACT-032",
     "QFAI-CONTRACT-033",
     "QFAI-CONTRACT-034",
     "QFAI-CONTRACT-035",
+    "QFAI-CONTRACT-043",
   ],
   // `validateContractSsotModules` — `runSddValidators`, and `runTddValidators`
   // behind its `includeContracts` flag: the implementation stage is the one
@@ -1872,6 +1873,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
   "QFAI-CONTRACT-042":
     "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, no two entries of one contract share an `id` (each spec's own contract is one), and contracts sharing an `id` state it with the same `title`, `route` and `primary_tasks`, so each entry is a screen every consumer reads.",
+  "QFAI-CONTRACT-043":
+    "Every UI contract is bound by a live spec, through a business rule's `Contract-Refs` cell or a `QFAI-CONTRACT-REF:` line, so its screen obligations reach a test case.",
   // Same rule as `QFAI-BPAP-001` below: `paths.contractsDir` is configurable, so
   // the expected state names the contracts root by role. Pinning the default
   // path sent a project that moved its contracts to repair a directory it does

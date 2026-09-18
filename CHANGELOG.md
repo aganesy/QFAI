@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`QFAI-CONTRACT-043` reports a UI contract no live spec binds** (#1967). A
+  UI contract has no ledger row and no test directory of its own. Its screen
+  obligations reach a test case through the business rule that binds it, which
+  owes acceptance criteria and test cases under `QFAI-COV-*`, and nothing
+  reported a UI contract no rule bound. An API contract has `QFAI-ATDD-113` for
+  the same gap. The SDD profile now warns on a `CON-UI-*` that no live spec
+  names in a business rule's `Contract-Refs` cell or a `QFAI-CONTRACT-REF:`
+  line. A retired spec's binding does not count, and a mention elsewhere, such
+  as in `Notes`, does not bind.
+
 - **Repository-specific halves of four rules split into overlays** (#1917).
   `distributed-surface`, `version-discipline`, `temporary-files` and
   `root-additions-policy` each governed an adopter's repository and this one

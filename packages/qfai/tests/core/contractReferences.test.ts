@@ -736,3 +736,88 @@ describe("QFAI-CONTRACT-034 — a contract missing from every index", () => {
     }
   });
 });
+
+/**
+ * A UI contract has no ledger row or test directory of its own: it reaches a
+ * test case only through the business rule that binds it.
+ */
+describe("a UI contract no live spec binds (QFAI-CONTRACT-043)", () => {
+  async function withUiContract(
+    specFiles: Record<string, string>,
+    task: (root: string) => Promise<void>,
+  ): Promise<void> {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ui-bound-"));
+    try {
+      await seedLayered(root);
+      for (const [name, body] of Object.entries(specFiles)) {
+        await writeFile(path.join(root, ".qfai", "specs", "spec-0001", name), body, "utf-8");
+      }
+      const uiDir = path.join(root, ".qfai", "contracts", "ui");
+      await mkdir(uiDir, { recursive: true });
+      await writeFile(
+        path.join(uiDir, "ui-0001-search.yaml"),
+        ["# QFAI-CONTRACT-ID: CON-UI-0001", "screens: []", ""].join("\n"),
+        "utf-8",
+      );
+      await task(root);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  const unbound = async (root: string) =>
+    (await validateContractReferences(root, defaultConfig)).filter(
+      (item) => item.code === "QFAI-CONTRACT-043",
+    );
+
+  const rules = (contractRefs: string): string =>
+    [
+      "# 04 Business Rules",
+      "",
+      "| BR-ID | Rule | AC-Refs | Contract-Refs |",
+      "| ----- | ---- | ------- | ------------- |",
+      `| BR-0001 | search narrows the list | AC-0001 | ${contractRefs} |`,
+      "",
+    ].join("\n");
+
+  it("reports a UI contract nothing binds, at warning", async () => {
+    await withUiContract({ "04_Business-Rules.md": rules("-") }, async (root) => {
+      const issues = await unbound(root);
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.severity).toBe("warning");
+      expect(issues[0]?.refs).toEqual(["CON-UI-0001"]);
+      expect(issues[0]?.file).toContain("ui-0001-search.yaml");
+    });
+  });
+
+  it("accepts a business rule's Contract-Refs cell, in either spelling", async () => {
+    for (const cell of ["CON-UI-0001", "CON-API-0002, UI-001"]) {
+      await withUiContract({ "04_Business-Rules.md": rules(cell) }, async (root) => {
+        expect(await unbound(root), cell).toEqual([]);
+      });
+    }
+  });
+
+  it("accepts a contract-ref line in the spec", async () => {
+    await withUiContract(
+      { "01_Spec.md": "# 01 Spec\n\nQFAI-CONTRACT-REF: CON-UI-0001\n" },
+      async (root) => {
+        expect(await unbound(root)).toEqual([]);
+      },
+    );
+  });
+
+  it("does not count a mention outside the Contract-Refs column", async () => {
+    const notes = [
+      "# 04 Business Rules",
+      "",
+      "| BR-ID | Rule | Notes |",
+      "| ----- | ---- | ----- |",
+      "| BR-0001 | search narrows the list | see CON-UI-0001 |",
+      "",
+    ].join("\n");
+    await withUiContract({ "04_Business-Rules.md": notes }, async (root) => {
+      expect(await unbound(root)).toHaveLength(1);
+    });
+  });
+});
