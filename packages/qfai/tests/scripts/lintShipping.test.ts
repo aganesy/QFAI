@@ -420,6 +420,28 @@ describe("lint-shipping fixture — detection rules", () => {
     expect(violations).toEqual([]);
   });
 
+  it.each([
+    ["CAP-0009", false],
+    ["CAP-0999", true],
+    ["CAP-1000", true],
+  ])("reads %s in src/ JSDoc as a capability ID only from CAP-0010 up", async (id, flagged) => {
+    // `CAP-0001`..`CAP-0009` are the sample tier `qfai init` ships. The
+    // internal sequence has no ceiling, so four digits past 0999 still leak.
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src/foo"), { recursive: true });
+    await writeFile(
+      path.join(root, "src/foo/bar.ts"),
+      `/**\n * Implements ${id}.\n */\nexport function bar(): void {}\n`,
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    const matched = violations
+      .filter((v) => v.pattern === "internal-cap-id-jsdoc-leak")
+      .map((v) => v.matched);
+    expect(matched).toEqual(flagged ? [id] : []);
+  });
+
   it("does NOT flag content immediately after a pragma in YAML runtime data", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "assets/init/.qfai"), { recursive: true });

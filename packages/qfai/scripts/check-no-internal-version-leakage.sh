@@ -72,7 +72,7 @@ INTERNAL_VERSION_RE='\bv[0-9]+\.[0-9]+(\.[0-9]+)?\b|\bv1\.x\b'
 # CHG-NNN is the cross-spec change ID from `_policies/10_delta.md`; it
 # resolves to nothing outside this repository, so a consuming project that
 # receives one has no way to look it up.
-INTERNAL_ID_RE='\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b|\bCHG-[0-9]+\b'
+INTERNAL_ID_RE='\bCAP-0*[1-9][0-9]+\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b|\bCHG-[0-9]+\b'
 
 # Version-class exemption for the FILE NAME pass below.
 #
