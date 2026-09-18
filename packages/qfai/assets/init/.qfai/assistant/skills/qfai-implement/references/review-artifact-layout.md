@@ -16,6 +16,10 @@ QFAI package enforces under `npx qfai validate`, and `npx qfai doctor` archives:
   (`volume-policy.md#batched-review`). Do not nest `<scope>/<layer>/attempt-NN/`
   directories under `.qfai/review/` — that layout is not validated and packs written there are
   invisible to `npx qfai validate`.
+- Every verdict a completed row records names its last round's pack: `Spec review pack`,
+  `Code quality review pack` and, on a UI-affecting row, `Prototype parity review pack` carry one
+  path and one seal, and `--profile tdd` reports a row where they differ. A round that follows a
+  REVISE asks every routed reviewer again, since each verdict has to name the final tree.
 - The scope of the pack is recorded **inside** the artifacts, not in the directory name. In
   `summary.json` set `target.kind: "spec"` and `target.path` to the spec dir, and name the round's
   `TDD-ID`s in `review_request.md` as a **list** — one id for a T2 or T3 row, the group's whole

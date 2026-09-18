@@ -42,9 +42,9 @@
 
 ### DELTA-0001 (YYYY-MM-DD)
 
-| Source   | Subject     | Existing Spec | Operation | Sub-op | Approved By | Rationale |
-| -------- | ----------- | ------------- | --------- | ------ | ----------- | --------- |
-| REQ-XXXX | <one-liner> | spec-0001     | UPDATE    | APPEND | -           | <why>     |
+| Source   | Subject     | Existing Spec | Operation | Sub-op | Approved By | Rationale | Depends-On |
+| -------- | ----------- | ------------- | --------- | ------ | ----------- | --------- | ---------- |
+| REQ-XXXX | <one-liner> | spec-0001     | UPDATE    | APPEND | -           | <why>     | -          |
 
 ## Update History
 

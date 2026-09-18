@@ -147,6 +147,7 @@ const DIGEST_PIN_RE = /^[0-9a-f]{64}\s{1,2}\S+$/;
 const ACTION_PIN_RE = /\buses:\s*(\S+?)@[0-9a-f]{40}\b/;
 
 const SOURCE_COMMENT_EXTENSIONS = new Set([".mjs", ".cjs", ".js", ".ts"]);
+const WORKFLOW_EXTENSIONS = new Set([".yml", ".yaml"]);
 const MARKDOWN_EXTENSIONS = new Set([".md"]);
 
 function git(args) {
@@ -394,6 +395,14 @@ function changedHunks(range) {
 function isCommentLine(rel, trimmed) {
   if (SOURCE_COMMENT_EXTENSIONS.has(path.extname(rel))) {
     return trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*");
+  }
+  // A workflow carries JavaScript as well as YAML: `actions/github-script` takes
+  // a script as a block scalar, and the comment marker inside it is `//`. Read as
+  // YAML alone, a line of prose in one of those blocks is a change to what CI
+  // does, and no `#` marker can answer it — a `#` inside the block would not
+  // parse as JavaScript.
+  if (WORKFLOW_EXTENSIONS.has(path.extname(rel))) {
+    return trimmed.startsWith("#") || trimmed.startsWith("//");
   }
   return trimmed.startsWith("#");
 }

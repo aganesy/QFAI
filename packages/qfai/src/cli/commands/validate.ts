@@ -455,20 +455,19 @@ const TDD_LIST_EXECUTION_STATE_CODES: readonly string[] = EMITTED_RULE_CODES.fil
  *
  * The keys mirror the composition in `core/validate.ts#runFullValidators`, so
  * "what a partial profile did not evaluate" can be derived as
- * `full groups - profile groups` instead of being restated per profile. The
- * earlier hand-written per-profile lists named only the three headline
- * families and therefore claimed, for example, that `--profile tdd` had
- * evaluated repository hygiene (`QFAI-HYG-*`) when `runTddValidators` never
- * calls it.
+ * `full groups - profile groups` instead of being restated per profile. A
+ * hand-written list per profile that names only the three headline families
+ * claims, for example, that `--profile tdd` evaluated repository hygiene
+ * (`QFAI-HYG-*`), which `runTddValidators` never calls.
  *
  * A group is a **set of validators**, not a code prefix, because a prefix is
- * not a partition of the validator set. Three shapes broke the earlier prefix
- * table:
+ * not a partition of the validator set. Three shapes keep a prefix table from
+ * working:
  *
  *   - `validateContracts` and `validateTraceability` are called by both
  *     `runSddValidators` and `runTddValidators`, so `QFAI-CONTRACT-*` /
  *     `QFAI-TRACE-*` cannot sit in either profile's own group — a `tdd` run
- *     listed as unevaluated a family it had just emitted. The wildcard cannot
+ *     would list as unevaluated a family it had just emitted. The wildcard cannot
  *     stand in for the shared work either: `QFAI-CONTRACT-030` belongs to the
  *     sdd-only `validateContractReferences`, so a shared entry spelled
  *     `QFAI-CONTRACT-*` would let a stage claim coverage of a hard gate it
@@ -487,8 +486,8 @@ const TDD_LIST_EXECUTION_STATE_CODES: readonly string[] = EMITTED_RULE_CODES.fil
  *   - The reviewer-gate `R-*` codes split by emitter, not by prefix:
  *     `detectMockHrefDrift`, `validateDesignMdPatchZone` and
  *     `detectEvidenceMutationUnlogged` run only in prototyping, the rest only
- *     in sdd. The wildcard made `--profile sdd` claim coverage of detectors it
- *     never ran. Emitter, not detector, is the unit: `runSddValidators` also
+ *     in sdd. A wildcard would make `--profile sdd` claim coverage of detectors
+ *     it never ran. Emitter, not detector, is the unit: `runSddValidators` also
  *     calls `validateReviewerJustification`, which re-issues a
  *     justification-catalog code verbatim when a JSON report anywhere under
  *     `.qfai/review/` carries a finding with an empty `justification:` — so the
@@ -501,8 +500,8 @@ const TDD_LIST_EXECUTION_STATE_CODES: readonly string[] = EMITTED_RULE_CODES.fil
  *
  * Whichever form an entry takes, it must cover **every** code its gate emits:
  * a gate that gains a second code would otherwise drop out of the notice
- * unannounced, which is how `QFAI-TEST-001` alone came to under-state what
- * `--profile tdd` had skipped once `QFAI-TEST-002` / `QFAI-TEST-003` existed.
+ * unannounced, and an entry naming only a gate's first code under-states what
+ * a profile skipped.
  * So: a prefix glob where the gate owns its whole prefix, enumerated codes
  * where it owns only part of one — and then the split has to partition the
  * prefix rather than sample it. `tdd-ledger-seed` takes the tighter form
@@ -519,16 +518,16 @@ export const GATE_GROUP_FAMILIES = {
   // One group per stage, because one validator answers for two and each
   // profile runs half of it. `runSddValidators` passes `subjects: ["spec"]` and
   // `runDiscussionValidators` passes `subjects: ["discussion"]`, so a single
-  // `QFAI-GRILL-*` family was claimed whole by both while neither evaluated it
-  // whole — the notice reported partial coverage as complete. This is what
-  // `contracts` / `contract-references` and `traceability-code-references`
-  // above were split for, and the split needs two codes because a family of one
-  // cannot be halved by pattern.
+  // `QFAI-GRILL-*` family would be claimed whole by both while neither evaluates
+  // it whole, and the notice would report partial coverage as complete. The
+  // groups `contracts` / `contract-references` and `traceability-code-references`
+  // above are split for the same reason, and this split needs two codes because
+  // a family of one cannot be halved by pattern.
   "grilling-spec": ["QFAI-GRILL-001"],
   "grilling-discussion": ["QFAI-GRILL-002"],
   // `validateResearchSummary` and `runCanonicalUixValidators` are called from
   // both `runDiscussionValidators` and `runUiuxValidators`, so neither can sit
-  // inside `discussion`: a prototyping run listed as unevaluated a family it
+  // inside `discussion`: a prototyping run would list as unevaluated a family it
   // had just emitted.
   "research-summary": ["QFAI-RESEARCH-*"],
   // Enumerated. This entry WAS `["UIX-VAL-*"]`, and that glob is a PREFIX of
@@ -672,7 +671,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-014",
     "QFAI-CONTRACT-015",
     "QFAI-CONTRACT-020",
-    "QFAI-CONTRACT-021",
     "QFAI-CONTRACT-031",
     // `validateDbContractApplyOrder`, composed by `validateContracts` beside
     // `-031` and reachable from the same two profiles.
@@ -693,6 +691,10 @@ export const GATE_GROUP_FAMILIES = {
   // reach it, and run by the prototyping profile on its own, since that is the
   // profile certification accepts.
   "ui-screen-entries": ["QFAI-CONTRACT-042"],
+  // A contract that does not parse: `validateContracts` reports it for every
+  // kind, so sdd and tdd reach it, and the prototyping profile runs the UI
+  // contracts' part on its own, since it reads its screens from them.
+  "contract-parse": ["QFAI-CONTRACT-021"],
   // `validateContractReferences` — `runSddValidators` only. Five codes, not
   // one: the gate reports a missing reference, and four shapes of a reference
   // that resolves to the wrong thing.
@@ -743,7 +745,6 @@ export const GATE_GROUP_FAMILIES = {
   prototyping: [
     "QFAI-PROT-*",
     "QFAI-CRIT-*",
-    "QFAI-FID-*",
     "QFAI-UIE-*",
     "QFAI-DT-*",
     "QFAI-MOCK-*",
@@ -914,6 +915,7 @@ const FULL_GATE_GROUPS: readonly GateGroup[] = ALL_GATE_GROUPS.filter(
 const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
   "prototyping",
   "ui-screen-entries",
+  "contract-parse",
   "reviewer-gate-shared",
   "design-contract-readiness",
   "design-contract-readiness-prototyping",
@@ -962,6 +964,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "reviewer-justification-only",
     "contracts",
     "ui-screen-entries",
+    "contract-parse",
     "contract-references",
     "contract-ssot-modules",
     "design-contract-readiness",
@@ -995,6 +998,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "drift",
     "contracts",
     "ui-screen-entries",
+    "contract-parse",
     "contract-ssot-modules",
     "traceability-ledger",
     "traceability-impl-drift",
@@ -1661,6 +1665,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every Triage section is introduced by the canonical `## Triage` H2, optionally naming its round in parentheses, so the triage rules read the rows under it.",
   "QFAI-TRIAGE-009":
     "`Existing Spec` names its target in one grammar: `spec-NNNN` (multiple joined by `+`), `_policies` for a policy-only row, or `-` on a CREATE row. Every named spec must exist on disk; ranges are not a form.",
+  "QFAI-TRIAGE-010":
+    "A requirement reaches the execution ledger through a spec: at least one of its triage rows targets a spec, not `_policies` alone.",
   "QFAI-SPLIT-106":
     "Every `CAP-NNNN` row in the CAP Catalog appears exactly once and its `Spec` cell names exactly one spec directory, and no two rows name the same one.",
   "QFAI-TEST-001":
@@ -1729,6 +1735,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`## Coverage Depth Matrix` in `.qfai/evidence/atdd-<spec-id>.md` exists and is a link plus counted totals.",
   "QFAI-ATDD-134":
     "The ATDD scan reads every test its globs select: the glob matcher accepts every pattern, every directory the patterns reach is readable, and the selection fits under the file limit.",
+  "QFAI-ATDD-135":
+    "Every directory under the acceptance test roots can be read by the account running `qfai validate`, so every test there is counted.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-BFLOW-005":
@@ -1760,6 +1768,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`03_Story-Workshop.md` Mermaid content should include `flowchart` or `sequenceDiagram`.",
   "QFAI-DPACK-010":
     "Legacy discussion naming is deprecated; canonical naming should be used for new outputs.",
+  "QFAI-DPACK-011":
+    "On a visual surface, every `DESIGN.md` key and archetype a discussion pack proposes is one the front-matter schema accepts.",
   "QFAI-IMPLITE-001":
     "A project that has spec packs also has a traceable input source: a `discussion-*/06_REQ.md` under the configured discussion directory, or an `.qfai/evidence/import-lite-*.md`.",
   "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",

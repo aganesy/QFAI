@@ -161,7 +161,7 @@ So a run against such a spec owes `product-experience-architect` and the `produc
 predicate for a different skill: it grades one execution-ledger row, and this skill has none.
 
 Author↔reviewer separation (MUST): drafting roles and reviewing roles above are routed from one list, but no sub-agent may review an artifact it drafted or edited in this run. `independent` is defined normatively in `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`, and every reviewer response must carry its
-`Authored/edited under review:` and `Recommended and unadjudicated:` attestations.
+`Authored/edited under review:` and `Recommended and unadjudicated:` attestations. A griller does not review an artifact carrying a decision adopted from its own recommendation.
 
 Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.
 
@@ -173,13 +173,12 @@ routing phase's mandatory agents run inside its span, and its blocking agents MU
 ### Pre-draft Grilling (MUST)
 
 - Before Phase 0, Phase 1, Phase 2, Phase 2c and Phase 3 write anything, run one grilling session for that phase, held by this skill. The trigger is this invocation's first write or design mutation in the phase, not whether the artifact already exists — most runs are `UPDATE:*` against artifacts that do.
-- Method: `.agents/rules/grilling.md` through the `qfai-grilling` skill. Ending a session with no user in it: `.qfai/assistant/constitution/review-convergence.md#agent-to-agent-grilling-must`. Placement, roles, what the orchestrator does with the result, and what the phase records: `references/sdd-pre-draft-grilling.md`.
+- Method: `.agents/rules/grilling.md` through the `qfai-grilling` skill, as a delegated session. Rounds and what settles each decision: `.qfai/assistant/constitution/review-convergence.md#agent-to-agent-grilling-must`. Placement, roles, what the orchestrator does with the result, and what the phase records: `references/sdd-pre-draft-grilling.md`.
 - **One session per phase, over every routed drafting role's decisions.** Grilling one author leaves the others free to settle their own before their own writes.
-- **Every decision the session settled that authoritative evidence did not answer goes to the user before any author writes** — not only the ones the round budget left open. An agent-to-agent decision nobody adjudicated makes the artifact one no reviewer can clear (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md`), so escalating only the residue hands the authors a
-  settled set whose agreed half fails review.
+- **Only a critical decision goes to the user before any author writes** (`.agents/rules/grilling.md` § Critical decisions). Every other decision takes the griller's recommendation, reaches the authors as settled, and is recorded as an `agents` row. A decision that only adds what the request did not ask for is not put on the tree.
 - This is not the Reviewer Gate below and does not replace it. The gate reads a written artifact and answers whether it is right; this loop runs before the write and answers whether its decisions were taken. Both run.
 - Holding the loop is not authoring: the orchestrator routes it and does not answer its questions.
-- Every escalation reaches the user through `AskUserQuestion` where it is callable for that question, and through the fallback in `.agents/rules/user-questions.md` where it is not — numbered choices carrying the same parts. Under a no-question mode it is opened as a question instead, never recorded as an assumption alone.
+- Every critical decision reaches the user through `AskUserQuestion` where it is callable for that question, and through the fallback in `.agents/rules/user-questions.md` where it is not — numbered choices carrying the same parts. Under a no-question mode it is opened as a question instead, never recorded as an assumption alone; the other decisions are adopted as in any run.
 - The phase records a run-or-skip line and a work-order row per settled decision, naming who adjudicated it. An omitted session and a legitimate empty frontier are the same absence otherwise.
 
 ### Reviewer Gate (MUST)
@@ -195,8 +194,8 @@ routing phase's mandatory agents run inside its span, and its blocking agents MU
 ### No-argument batch delegation (MUST)
 
 - Without argument: target all capabilities in `_policies/03_Capabilities.md`.
-- Run Contracts-first and Outline once per batch.
-- Delegate Slice in parallel per spec.
+- Run Contracts-first and Outline once per batch, and record them once, in `.qfai/evidence/sdd-batch-<timestamp>.md` from `templates/evidence/sdd-batch.md`. Each spec's evidence names that file on its `Batch record` line rather than copying the two phases' rows.
+- Delegate Slice in parallel per spec. A Triage row whose `Depends-On` names a source or an open question is not dispatched until every row of that source is done or the question is resolved (`references/sdd-triage.md#triage-table-format`).
 - Parallel delegation here is bound by the stage-independent Concurrency rules in `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory`: worktree separation, or the declared degraded mode, plus mandatory commit scoping (`git add <paths>`; never `git add -A` / `git add .` / `git commit -a`).
 - Validate gate and Review gate run once at batch tail after all target specs are integrated.
 - The Plan gate is **this skill's own step**, not a routed reviewer, and runs per target: each
@@ -405,7 +404,7 @@ a root `DESIGN.md`, a design contract or a prototype, so assuming visual leaves 
 5. Write `.qfai/contracts/design/DESIGN.md.lock.yaml` from the template at `templates/contracts/design-md-lock.sample.yaml` with these fields:
    - `designMdPath: "DESIGN.md"`
    - `designMdSha256: <hex>`
-   - `frozenAt: <UTC ISO-8601>`
+   - `frozenAt: <UTC ISO-8601>`, the time of this freeze. A re-freeze writes every field again, never the hash alone: gates compare `designMdSha256` with `DESIGN.md`, and no gate reads `frozenAt`, so a stale one passes and records a freeze that did not happen then.
    - `schemaTokens.colors`, `fontFamilies`, `radii`, `shadows` enumerated per the sample.
 6. Record the freeze in `_policies/05_Contracts.md` under the Contract Index. The lock yaml plus root `DESIGN.md` are the only brand contract; per-aspect brand yaml contracts have been removed.
 
@@ -452,6 +451,7 @@ When declaring DONE, include:
 - Stage 1 Triage table digest (counts per Operation, approvals)
 - Phase order: Contracts-first -> Outline -> Slice -> Plan finalize -> Delta update
 - Decision record IDs touched in `09_delta.md`
+- Every decision adopted from a griller's recommendation, one line each from the `grilling(<phase>/agents)` rows, with its reason
 - Confirmation that no rejected option was reintroduced (or list RE-OPEN IDs)
 - Quality gate result and validate log path
 

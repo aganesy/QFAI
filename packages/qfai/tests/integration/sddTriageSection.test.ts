@@ -250,3 +250,88 @@ describe("validateSpecPacks - status & triage integration", () => {
     expect(codes(issues)).toContain("QFAI-TRIAGE-005");
   });
 });
+
+/**
+ * `_policies/**` holds nothing Phase 2b seeds a ledger row from, so a source
+ * every one of whose rows targets it never reaches an implementer.
+ */
+describe("validateSpecPacks - a source triaged onto _policies alone (QFAI-TRIAGE-010)", () => {
+  const triage = (...rows: string[]): string =>
+    [
+      "## Triage",
+      "",
+      "| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |",
+      "| --- | --- | --- | --- | --- | --- | --- |",
+      ...rows,
+      "",
+    ].join("\n");
+
+  async function writePolicyDelta(root: string, body: string): Promise<void> {
+    await writeFile(
+      path.join(root, ".qfai", "specs", "_policies", "10_delta.md"),
+      ["# 10 Delta", "", "## Change Summary", "", "- one change", "", body, ""].join("\n"),
+      "utf-8",
+    );
+  }
+
+  const policyOnly = (issues: { code: string; refs?: string[] }[]) =>
+    issues.filter((i) => i.code === "QFAI-TRIAGE-010").map((i) => i.refs);
+
+  it("reports a source whose every row, in any delta, targets _policies", async () => {
+    const root = await newTempRoot();
+    await seedLayeredSpec(root, "0001", { status: "active", capability: "CAP-0001" });
+    await writePolicyDelta(
+      root,
+      triage(
+        "| REQ-0042 | shared button component | _policies | UPDATE | APPEND | - | no owning spec |",
+        "| REQ-0042 | button tokens | _policies/05_Contracts.md | UPDATE | MODIFY | - | tokens |",
+      ),
+    );
+    const issues = await validateSpecPacks(root, defaultConfig);
+    expect(policyOnly(issues)).toEqual([["REQ-0042"]]);
+    expect(issues.find((i) => i.code === "QFAI-TRIAGE-010")?.severity).toBe("warning");
+  });
+
+  it("does not report the ordinary cascade, a policy row beside a spec row", async () => {
+    const root = await newTempRoot();
+    await seedLayeredSpec(root, "0001", {
+      status: "active",
+      capability: "CAP-0001",
+      deltaTriage: triage(
+        "| REQ-0042 | use the button | spec-0001 | UPDATE | MODIFY | - | caller |",
+      ),
+    });
+    await writePolicyDelta(
+      root,
+      triage("| REQ-0042 | glossary term | _policies | UPDATE | APPEND | - | term |"),
+    );
+    expect(policyOnly(await validateSpecPacks(root, defaultConfig))).toEqual([]);
+  });
+
+  it("reads only sources that name a requirement", async () => {
+    const root = await newTempRoot();
+    await seedLayeredSpec(root, "0001", { status: "active", capability: "CAP-0001" });
+    await writePolicyDelta(
+      root,
+      triage("| internal/sdd | template wording | _policies | UPDATE | MODIFY | - | editorial |"),
+    );
+    expect(policyOnly(await validateSpecPacks(root, defaultConfig))).toEqual([]);
+  });
+
+  it("does not report a CREATE row, which makes the spec that carries the work", async () => {
+    const root = await newTempRoot();
+    await seedLayeredSpec(root, "0001", {
+      status: "active",
+      capability: "CAP-0001",
+      capabilityCatalog: ["CAP-0001", "CAP-0002"],
+    });
+    await writePolicyDelta(
+      root,
+      triage(
+        "| REQ-0050 | component library | - | CREATE | - | user@host | CAP-0002 |",
+        "| REQ-0050 | naming convention | _policies | UPDATE | APPEND | - | shared |",
+      ),
+    );
+    expect(policyOnly(await validateSpecPacks(root, defaultConfig))).toEqual([]);
+  });
+});
