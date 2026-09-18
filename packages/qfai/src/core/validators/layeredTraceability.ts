@@ -158,6 +158,13 @@ export async function validateLayeredTraceability(
 
 /** The one file `sdd-triage.md` mandates for cross-spec / policy-only rows. */
 const POLICIES_TRIAGE_FILE = "10_delta.md";
+const POLICIES_DECISIONS_FILE = "08_Decisions.md";
+/** A shared decision record: `### DR-<number>: title`. */
+const DECISION_HEADING_RE = /^###[ \t]+DR-\d+/;
+/** A decision's own grounds: the two bullets that may name what it was measured against. */
+const DECISION_CITATION_BULLET_RE = /^[ \t]*[-*][ \t]+(?:Context|Evidence):/;
+const BULLET_RE = /^[ \t]*[-*][ \t]+/;
+const ANY_HEADING_RE = /^#{1,6}[ \t]/;
 
 /**
  * The canonical `## Triage` heading — exactly what `validateTriageSection`
@@ -213,6 +220,49 @@ const SECTION_BOUNDARY_RE = /^#{1,2}[ \t]+\S/;
  *   columns), so blanking the whole row would let a `Parent` column carry an
  *   ownership edge past every check. Those cells stay visible.
  */
+/**
+ * The citations a shared decision record may carry, blanked before the scope
+ * rules read `_policies/08_Decisions.md`.
+ *
+ * A cross-spec decision rests on spec items: showing that a subject already
+ * lives in existing specs means naming the rules that carry it. Keeping
+ * spec-local IDs out of `_policies` stops the shared layer holding spec
+ * content, and it also stopped the decision pointing at its own grounds, which
+ * left the rationale unverifiable. So inside a `### DR-*` block the `Context:`
+ * and `Evidence:` bullets, and their continuation lines, may name them.
+ * Everything else in the file, `Related:` and `Decision:` included, stays under
+ * both rules: pointing is permitted, holding is not.
+ */
+function maskDecisionCitations(fileName: string, text: string): string {
+  if (fileName !== POLICIES_DECISIONS_FILE) {
+    return text;
+  }
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const scanned = maskNonSpecRegions(text).replace(/\r\n/g, "\n").split("\n");
+  let inDecision = false;
+  let citing = false;
+  for (const [index, line] of scanned.entries()) {
+    if (ANY_HEADING_RE.test(line)) {
+      inDecision = DECISION_HEADING_RE.test(line);
+      citing = false;
+      continue;
+    }
+    if (!inDecision) continue;
+    if (BULLET_RE.test(line)) {
+      citing = DECISION_CITATION_BULLET_RE.test(line);
+    } else if (line.trim().length === 0) {
+      citing = false;
+    }
+    if (citing) lines[index] = "";
+  }
+  return lines.join("\n");
+}
+
+/** What a `_policies` file may cite that the scope rules would otherwise read. */
+function maskPermittedCitations(fileName: string, text: string): string {
+  return maskDecisionCitations(fileName, maskTriageSection(fileName, text));
+}
+
 function maskTriageSection(fileName: string, text: string): string {
   if (fileName !== POLICIES_TRIAGE_FILE) {
     return text;
@@ -348,7 +398,7 @@ async function validatePoliciesDownstreamReferences(policiesDir: string): Promis
     if (text.trim().length === 0) {
       continue;
     }
-    const refs = uniqueMatches(maskTriageSection(fileName, text), POLICIES_DOWNSTREAM_RE);
+    const refs = uniqueMatches(maskPermittedCitations(fileName, text), POLICIES_DOWNSTREAM_RE);
     if (refs.length === 0) {
       continue;
     }
@@ -382,7 +432,10 @@ async function validatePoliciesScopeForV1421(policiesDir: string): Promise<Issue
     // same-named file in some nested directory, so compare the path relative
     // to `_policies/` rather than the basename.
     const relative = path.relative(policiesDir, filePath).replace(/\\/g, "/");
-    const refs = uniqueMatches(maskTriageSection(relative, text), POLICIES_DOWNSTREAM_V1421_RE);
+    const refs = uniqueMatches(
+      maskPermittedCitations(relative, text),
+      POLICIES_DOWNSTREAM_V1421_RE,
+    );
     if (refs.length === 0) {
       continue;
     }

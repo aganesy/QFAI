@@ -1,6 +1,6 @@
 # Change Request
 
-- ID: `CR-20260913-0007`
+- ID: `CR-20260913-0011`
 - Title: `spec-0013 requires the template to ship the value its own lane fails`
 - Raised by: `qfai-implement`
 - Raised at: `2026-09-13T02:18:39Z`
