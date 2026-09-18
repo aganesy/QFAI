@@ -95,6 +95,18 @@ describe("deriving a TC's layer is a published procedure", () => {
       expectPhrase(template, "(DB / queue / filesystem, or what a real browser rendered)");
     });
 
+    it(`${tree}: step 2 says how to reach the parent BR from a TC`, async () => {
+      // A TC row has no BR column, so a step naming "the parent BR" with no
+      // route to it left each reader to pick one, and the AC was nearest.
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      const step2 = catalog.slice(
+        catalog.indexOf("2. **Restrict it to the parent BR's obligations.**"),
+        catalog.indexOf("3. **Read the layer off what the oracle observes:**"),
+      );
+      expectPhrase(step2, "reach the parent through the TC's `EX-Ref` and that example's `BR-Ref`");
+      expectPhrase(step2, "the parents are the BRs whose `AC-Refs` name one of the TC's `AC-Refs`");
+    });
+
     it(`${tree}: step 2 is declared to outrank step 3`, async () => {
       const catalog = await read(tree, "assistant/catalog/test-layers.md");
       expect(catalog).toContain("**Step 2 outranks step 3.**");

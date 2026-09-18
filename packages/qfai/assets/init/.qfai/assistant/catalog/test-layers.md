@@ -119,7 +119,10 @@ falsifying-oracle rule:
    TC verifies.
 2. **Restrict it to the parent BR's obligations.** Anything the oracle observes
    that the parent business rule does not own is incidental and does not raise
-   the layer.
+   the layer. No `TC` column names a `BR`, so reach the parent through the TC's
+   `EX-Ref` and that example's `BR-Ref`. Where the `EX-Ref` cell names no `EX`
+   — an empty cell as much as `—` — the parents are the BRs whose `AC-Refs`
+   name one of the TC's `AC-Refs`.
 3. **Read the layer off what the oracle observes:**
    - inputs and return values only → **L1 Unit**
    - collaboration with a port through a fixture adapter (no real
