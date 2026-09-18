@@ -233,6 +233,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The DESIGN.md lock says what checks `frozenAt`: nothing** (#1898). Gates
+  compare the lock's hash with `DESIGN.md`, and none reads `frozenAt`, so a
+  re-freeze that rewrote only the hash passed. A green run was then read as
+  evidence that the timestamp had moved with it. The `qfai-sdd` freeze step
+  now says a re-freeze writes every field again, never the hash alone, and that
+  a stale `frozenAt` passes. The lock sample's header says the same.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
