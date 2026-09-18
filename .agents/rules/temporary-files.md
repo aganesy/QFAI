@@ -6,7 +6,7 @@ repository-root `tmp/` directory.
 ## Scope
 
 The rule covers files written into the working tree: scratch scripts, patch
-and analysis scripts, intermediate build output, downloaded fixtures, notes,
+and analysis scripts, captured command output, downloaded fixtures, notes,
 and anything else a task writes beside the source it works on.
 
 A sandbox a test creates with `mkdtemp` under `os.tmpdir()` is outside the
@@ -15,16 +15,22 @@ protects, and the test that created it removes it, which is what Rule 4 asks
 for. Keeping test I/O outside the repository also keeps it away from
 file-watchers and from every guard that walks the tree.
 
+Build, test and cache output the toolchain emits (`dist/`, coverage reports,
+package tarballs) is outside the rule too. Those paths belong to the packaging,
+deploy and test contracts. Leave them where the tooling puts them and never
+redirect them to `tmp/`.
+
 ## Rules
 
 1. **Never** create temporary files in the repository root, `src/`,
    `.qfai/specs/`, or any other production or artifact directory.
 2. Use `tmp/` at the repository root as the sole staging area. Create
-   subdirectories as needed (for example `tmp/glossary/`, `tmp/build/`).
+   subdirectories as needed (for example `tmp/glossary/`, `tmp/capture/`).
 3. `tmp/` is listed in `.gitignore`. Temporary files are never committed.
 4. Clean up `tmp/` when the task that created the files is complete.
 5. A temporary file found outside `tmp/` in the working tree is a defect. Move
-   or delete it immediately. A test's `mkdtemp` sandbox is not one (see Scope).
+   or delete it immediately. A test's `mkdtemp` sandbox and toolchain output
+   are not (see Scope).
 
 ## Reference
 

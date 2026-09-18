@@ -206,6 +206,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Article XI no longer sends toolchain output to `tmp/`** (#1929). The
+  article required "intermediate build artifacts" under `tmp/`. The shipped
+  temporary-files rule says build, test and cache output (`dist/`, coverage
+  reports, package tarballs) stays where the toolchain writes it. An article
+  outranks a rule, so an agent reading both was told to move `dist/`. Article
+  XI now covers the scratch files an agent creates, names toolchain output as
+  outside its scope, and gives the same list the rule does. This repository's
+  copy of the rule no longer lists intermediate build output as in scope.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number

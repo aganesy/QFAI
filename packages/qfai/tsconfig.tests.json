@@ -132,6 +132,7 @@
     "tests/assets/structuredQuestionHook.test.ts",
     "tests/assets/tddIdAllocation.test.ts",
     "tests/assets/tokenProvenance.test.ts",
+    "tests/assets/toolchainOutputScope.test.ts",
     "tests/assets/traceabilityChainLayered.test.ts",
     "tests/assets/triageColonShorthand.test.ts",
     "tests/assets/uiAffectingDefinition.test.ts",
