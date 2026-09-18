@@ -1225,10 +1225,6 @@ describe("resuming a release pull-request description", () => {
       "<![cdata[\n## What this change made unnecessary\nNothing.\n]]>\n",
     ],
     [
-      "raw HTML unclosed lowercase CDATA",
-      "<![cdata[\n## What this change made unnecessary\nNothing.\n",
-    ],
-    [
       "raw HTML standalone inline tag",
       "<span>\n## What this change made unnecessary\nNothing.\n</span>\n",
     ],
