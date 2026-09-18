@@ -1342,8 +1342,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned for the review directive the run now writes into the golden rules: one line
     // pointing at the project's own review policy. Derived the same way; removing that line
     // from the written file reproduces `0dbc8fe1…` byte for byte.
+    //
+    // Re-pinned for the grilling bullet, which now says agents grill each other outside the
+    // discussion stage and only a critical decision reaches the user. Derived by running
+    // `qfai init` into a temp root; restoring the old wording reproduces `fe028cb8…` byte for byte.
     ".github/copilot-instructions.md",
-    "fe028cb8915f820d104ba4ee3423b63a059793849148827a94fe06aa295c1d00",
+    "7f4f473a71660f6fe887ca1ee706af54fa34566d443120a0729256c3c0f02fcc",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
