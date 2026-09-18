@@ -28,6 +28,9 @@
     "**/node_modules/**",
     "**/dist/**",
     "tmp/**",
+    // Git worktrees of other branches. Linted here, their findings are reported
+    // against this checkout.
+    ".claude/worktrees/**",
     "CHANGELOG.md",
     ".git/**",
     ".instruction/**",
