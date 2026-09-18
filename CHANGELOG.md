@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A README only where a page is published** (#2010). Four were tracked; two were
+  pages nobody lands on. `.agents/rules/README.md` held the rules register, which
+  a second file can only keep in step by hand — the surface suite now reads each
+  rule's own first heading, so a rule cannot be missing from a list. Its
+  "Adding a rule" steps moved to `root-additions-policy.local.md`, and its
+  Windows symlink section is gone: `check-tracked-symlinks.mjs` prints the same
+  steps when it fails. `.instruction/README.md` ruled on that directory, so the
+  ruling is a rule — `.agents/rules/instruction-tree.md`.
+  `scripts/check-tracked-readmes.mjs` fails on a tracked README outside the
+  project's own page and the one npm publishes, and on a listed page that stops
+  being tracked.
+
 - **The root assistant tree is linked at the assets the package ships** (#1915, #1916).
   `.qfai/assistant/**` was a byte copy of `packages/qfai/assets/init/.qfai/assistant/**`,
   kept in step by a sync script and a tracked-tree diff. It is thirteen symlinks
@@ -461,6 +473,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     literal `tests/e2e/**` or `tests/api/**`, which no scan reads in a project
     that moved it.
 
+- **The imported requirement count no longer counts a prose mention** (#1897).
+  `qfai sdd preflight` counts the IDs in `06_REQ.md`'s `REQ-ID` column, and
+  when that column held none it scanned the whole file. A pack numbering its
+  requirements `REQ-D-0001` reported a count of 1, from a sentence saying the
+  pack did not use `REQ-0001`. A `REQ-ID` column that holds no `REQ-NNNN` now
+  makes the count unknown. Only a file with no such column still falls back to
+  the distinct IDs in its text. The `06_REQ.md` template says a pack numbers
+  from `REQ-0001`, because specs cite a requirement with the pack's id, and
+  that a prefixed form is not read.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
@@ -528,6 +550,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `TDD-0029`'s drop their band and empty-list assertions, the no-file-times row
   observes metadata reads at run time instead of searching source text, and
   `TC-0013-0014`'s row checks the result's values, not only its fields.
+
+- **The token docs say a scale key can contain digits, and what a project's
+  own token check must do** (#1908). QFAI checks the prototype against
+  `DESIGN.md`, not a product stylesheet or Tailwind config, so each project
+  writes that check itself. The natural name pattern, letters and hyphens,
+  never captures `2xl` or `3xl`, which `typography.scale` declares, and a
+  check that captures nothing for a key passes both ways. The schema comment
+  now says scale keys contain digits. The `design-system.yaml` contract says
+  QFAI does not check the implementation, that a project's check asserts both
+  directions, and that its name pattern has to admit digits.
 
 - Completion and implementation review stop conditions now include demonstrated
   regressions against named constitution or catalog rules (#1799). New upstream
@@ -713,6 +745,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkpoint revision, checks that it names a revision, and keeps the round's
   `Revision` for a row that records none. The contract also says each value
   enters the seal without a code span around it.
+
+- **The post-build leakage guard scans what npm publishes, the manifest
+  included** (#1931). The guard built its scan list from `package.json#files`,
+  and npm adds files that list never names — the published `package.json`
+  above all. A `schemaVersion` or a private version marker there shipped with
+  every guard green, and a filter meant for the repository's own manifest
+  dropped the `schemaVersion` finding for the published one too. The guard now
+  asks `npm pack --dry-run` for the list, scans the manifest with no filter, and
+  still passes its `version` field. A glob in `files` is now scanned as npm
+  expands it instead of being refused.
 
 - **The evidence revision reference says how a revision is read after a squash
   merge** (#1696). A squash merge lands a commit with no branch revision among
