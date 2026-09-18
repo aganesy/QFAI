@@ -737,6 +737,13 @@ pack` name different paths or seals. The layout says a round after a REVISE
   a glob depend on a test case id's digits, the scaffold checks the file it
   would write for every test case in scope, not a representative one.
 
+- **The layer derivation procedure says, where the layer is chosen, that a
+  test case never takes L4 or L5** (#1904). The restriction sat in the
+  crosswalk seventy lines above, and the procedure — which readers reach
+  through its anchor — offered both layers in step 3 and its worked examples.
+  Step 3 now says an oracle landing on either means the obligation is filed as
+  `CON-API-*` or `US-*`, and the two worked examples say which.
+
 - Six shipped checks have tests but no test case in any spec, so nothing says
   what they must do and no ledger row traces them (#1837).
   `CR-20260913-0014` raises the repair:

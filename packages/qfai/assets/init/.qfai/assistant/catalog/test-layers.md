@@ -136,16 +136,23 @@ falsifying-oracle rule:
      error contracts → **L4 API**
    - a full-system journey across UI/API/data → **L5 E2E**
 
+   **A `TC-*` never takes L4 or L5.** An oracle that lands on either means the
+   obligation is misfiled: record it as `CON-API-*` (L4) or `US-*` (L5)
+   instead, as [re-filing](#annotation-routing) describes.
+
 ### Worked examples
 
-| Oracle asserts                                                                    | Layer          |
-| --------------------------------------------------------------------------------- | -------------- |
-| `price(order) === 1250` for a given input                                         | L1 Unit        |
-| the repository port was called with the normalized key, via a fixture adapter     | L2 Component   |
-| the row is present in the database after commit                                   | L3 Integration |
-| the focused control's rendered border has 3:1 contrast with the surface behind it | L3 Integration |
-| `POST /orders` returns `422` with `code: "OUT_OF_AREA"`                           | L4 API         |
-| a user can register, order, and see the order in their history                    | L5 E2E         |
+The last two rows are not `TC-*` rows: they show where an oracle lands, and
+the obligation is then filed under the ID type that layer verifies.
+
+| Oracle asserts                                                                    | Layer                       |
+| --------------------------------------------------------------------------------- | --------------------------- |
+| `price(order) === 1250` for a given input                                         | L1 Unit                     |
+| the repository port was called with the normalized key, via a fixture adapter     | L2 Component                |
+| the row is present in the database after commit                                   | L3 Integration              |
+| the focused control's rendered border has 3:1 contrast with the surface behind it | L3 Integration              |
+| `POST /orders` returns `422` with `code: "OUT_OF_AREA"`                           | L4 API: file as `CON-API-*` |
+| a user can register, order, and see the order in their history                    | L5 E2E: file as `US-*`      |
 
 ### Obligation spanning more than one layer
 

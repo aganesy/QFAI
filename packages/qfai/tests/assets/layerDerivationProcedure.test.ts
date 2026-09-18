@@ -107,6 +107,23 @@ describe("deriving a TC's layer is a published procedure", () => {
       expectPhrase(step2, "the parents are the BRs whose `AC-Refs` name one of the TC's `AC-Refs`");
     });
 
+    it(`${tree}: step 3 says a TC never takes L4 or L5, where the layer is chosen`, async () => {
+      // The restriction sat seventy lines above the procedure, which readers
+      // reach through its anchor, so the procedure alone offered both layers.
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      const procedure = catalog.slice(
+        catalog.indexOf("## Layer derivation procedure (normative)"),
+        catalog.indexOf("### Obligation spanning more than one layer"),
+      );
+      expectPhrase(procedure, "**A `TC-*` never takes L4 or L5.**");
+      expectPhrase(procedure, "record it as `CON-API-*` (L4) or `US-*` (L5) instead");
+      expect(procedure).toMatch(/\| L4 API: file as `CON-API-\*` +\|/);
+      expect(procedure).toMatch(/\| L5 E2E: file as `US-\*` +\|/);
+      // No worked example reads as a TC landing at L4 or L5.
+      expect(procedure).not.toMatch(/\| L4 API +\|/);
+      expect(procedure).not.toMatch(/\| L5 E2E +\|/);
+    });
+
     it(`${tree}: step 2 is declared to outrank step 3`, async () => {
       const catalog = await read(tree, "assistant/catalog/test-layers.md");
       expect(catalog).toContain("**Step 2 outranks step 3.**");
