@@ -34,7 +34,7 @@ QFAI Skill Body (SSOT)
 
 ## Stage and Phase Order (Fixed)
 
-```
+```text
 Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
                   -> Phase 1 Outline -> Phase 2 Slice (per spec)
                   -> Phase 2b Seed tdd/test-list.md (per spec)
@@ -488,14 +488,14 @@ cannot proceed without, and no prototype can enumerate that for a skill it does 
 project_memory:
 
 - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c Obligation reconciliation → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
-- `agent-routing.yml`'s `slice-and-scope` / `design` / `review` phase IDs are spans over that fixed order, not extra steps: resolve them through `### Routing Phase Crosswalk (Normative)`, exceptions included, before placing any mandatory or blocking agent; span membership never narrows `rerun_policy`.
+- `agent-routing.yml`'s `slice-and-scope` / `design` / `review` phase IDs are spans over that fixed order, not extra steps: resolve them through `## Routing Phase Crosswalk (Normative)`, exceptions included, before placing any mandatory or blocking agent; span membership never narrows `rerun_policy`.
 - Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
 - Phase 2b is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence, except for the matrix, raised-Tier and obligation-column migrations below. Only this phase adds, removes or re-scopes rows.
 - A matrix-shaped TC takes one row per independently observable boundary. Re-scope a matrix row already past todo, done included, append a todo row per remaining boundary, and always have the kept row re-executed. Phase 2b writes row identity; `/qfai-implement`'s Change-Request preflight resets Status, DR-ID and Evidence.
 - Before re-execution or the downstream reset, narrow the kept matrix row's `Selector` to the chosen boundary; appended rows cover only the remaining boundaries.
 - An existing ledger's columns are migrated to the template's (Blocked-By on an eight-column ledger) so a downstream blocked row never has to add one.
 - E2E/API rows split one row per independently observable boundary from their US-Refs / CON-API-Refs source, not from TC-Refs.
-- Migrate an eight-column ledger by adding US-Refs / CON-API-Refs and moving US-* / CON-API-* from E2E/API TC-Refs into the column their Layer owns.
+- Migrate an eight-column ledger by adding US-Refs / CON-API-Refs and moving US-\* / CON-API-\* from E2E/API TC-Refs into the column their Layer owns.
 - Which boundary is kept follows what the row actually observed, and an observation is never invented: a natural RED keeps the first failing assert's boundary.
 - A blocked row selected before RED and a falsifiability row at red or beyond have no first failing assert at all, so the kept boundary is the one the driving CR-\* names first, in the order that row's obligation source lists them when the CR gives an unordered set.
 - On a falsifiability row, keep the boundary the predicate its Satisfied-by names covers, falling back to that same order.

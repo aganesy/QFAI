@@ -2,7 +2,7 @@
 
 ## Phases
 
-```
+```text
 [Freeze] cycle 0:    cache the lock-anchored sha256(DESIGN.md) into prototyping.json
 [Seed]   cycle 0:    generate one iter-00/index.html under DESIGN.md tokens
 [Loop]   cycle 1..9:  capture -> review -> iterate (DESIGN.md hash held)
@@ -11,7 +11,7 @@
 
 ## Per-iter artifacts
 
-```
+```text
 .qfai/prototypes/iter-NN/index.html
 .qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, <screen>.signals.json, review.json}
 .qfai/evidence/prototyping/iter-NN/<spec-id>/<screen>.review.json
