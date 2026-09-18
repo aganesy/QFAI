@@ -738,10 +738,10 @@ describe("TC-0013-0017: old evidence without Diff Context remains parseable", ()
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// spec-0035: Routing determinism (TC-0012-0019..0022)
+// Routing determinism
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe("TC-0012-0019: explicit flag routing determinism", () => {
+describe("explicit flag routing determinism", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -767,7 +767,7 @@ describe("TC-0012-0019: explicit flag routing determinism", () => {
   });
 });
 
-describe("TC-0012-0020: routing idempotency", () => {
+describe("routing idempotency", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -797,7 +797,7 @@ describe("TC-0012-0020: routing idempotency", () => {
   });
 });
 
-describe("TC-0012-0021: precedence chain doc-impl match", () => {
+describe("precedence chain doc-impl match", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -832,7 +832,7 @@ describe("TC-0012-0021: precedence chain doc-impl match", () => {
   });
 });
 
-describe("TC-0012-0022: cross-doc routing consistency", () => {
+describe("cross-doc routing consistency", () => {
   it("prototyping SKILL.md references routing precedence chain", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const skillPath = path.join(
@@ -856,10 +856,10 @@ describe("TC-0012-0022: cross-doc routing consistency", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// spec-0037: Vocabulary, fixture alignment, integration (TC-0014-0023..0029)
+// Vocabulary, fixture alignment, integration
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe("TC-0014-0023: vocabulary pass scan", () => {
+describe("vocabulary pass scan", () => {
   it("SKILL.md uses canonical spec-related vocabulary", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const skillPath = path.join(
@@ -881,7 +881,7 @@ describe("TC-0014-0023: vocabulary pass scan", () => {
   });
 });
 
-describe("TC-0014-0024: contradiction detection", () => {
+describe("contradiction detection", () => {
   it("detectSpecChanges result structure has no contradictions", async () => {
     const tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-vocab-"));
     try {
@@ -904,7 +904,7 @@ describe("TC-0014-0024: contradiction detection", () => {
   });
 });
 
-describe("TC-0014-0025: vocabulary fail — prohibited terms", () => {
+describe("vocabulary fail — prohibited terms", () => {
   it("specDiffDetector source does not use prohibited legacy terms", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const srcPath = path.join(repoRoot, "packages", "qfai", "src", "core", "specDiffDetector.ts");
@@ -915,7 +915,7 @@ describe("TC-0014-0025: vocabulary fail — prohibited terms", () => {
   });
 });
 
-describe("TC-0014-0026: fixture alignment — exploration-first model", () => {
+describe("fixture alignment — exploration-first model", () => {
   it("discussion SKILL.md references exploration brief and rubric artifacts", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const skillPath = path.join(
@@ -935,7 +935,7 @@ describe("TC-0014-0026: fixture alignment — exploration-first model", () => {
   });
 });
 
-describe("TC-0014-0027: fixture 4-axis reject", () => {
+describe("fixture 4-axis reject", () => {
   it("discussion SKILL.md completion conditions do not use 4-axis model keyword", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const skillPath = path.join(

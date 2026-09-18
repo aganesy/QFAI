@@ -233,6 +233,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Test titles and comments name only declared test cases and stories**
+  (#1836). Twenty-five titles and comments in the package's tests cited a
+  `TC-` or `US-` identifier no spec declares, and two annotations in a unit
+  suite named undeclared test cases. `QFAI-ATDD-101` and `-102` read only the
+  annotation form in the acceptance layers, so nothing reported them. They are
+  removed, and a repository check now fails on any bare identifier in a test
+  title or comment that no spec declares. An identifier the same file also
+  uses in code is read as fixture data.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
