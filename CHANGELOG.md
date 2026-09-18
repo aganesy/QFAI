@@ -233,6 +233,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- `spec-0013` declares `AC-0013-0008`, `AC-0013-0009` and `AC-0013-0010`
+  twice each, and every test case citing them means the first heading, so the
+  second of each has had no test case of its own (#1704). `CR-20260913-0012`
+  raises the repair: the first headings keep their ids, the side-artifact
+  criterion takes a new id with a chain of its own, and the other two go with
+  the requirements beneath them. One restates the stop the approved
+  `CR-20260903-0001` retired, and the other names design contracts
+  `AC-0013-0016` removed.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
