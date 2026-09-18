@@ -62,7 +62,7 @@ Skill-specific examples:
 
 When unsure, read inputs in this order:
 
-- P1: `.qfai/assistant/constitution/*`, and `.qfai/assistant/skills/qfai-grilling/SKILL.md` before the preflight round (see Grilling)
+- P1: `.qfai/assistant/constitution/*`, and `.qfai/assistant/skills/qfai-grilling/SKILL.md` before the confidence check, so it is loaded for a preflight round and for any session detection opens later (see Grilling)
 - P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
 - P3: `.qfai/specs/<spec-id>/tdd/test-list.md` — the execution ledger, and the row this cycle is working
 - P4: the obligations that row names (`06_Test-Cases.md` through its `TC-Refs`, then `03_Acceptance-Criteria.md`, `05_Examples.md`, `01_Spec.md`, `.qfai/contracts/**`)
@@ -111,7 +111,7 @@ without the section its gate requires. The blocks are the same block —
 identical heading, identical rows, written in the same edit when the session
 ends. Each gate reads the block in the file it audits, and **where this
 invocation's block went into more than one file, the gate also compares every
-copy and requires them identical**: copies written in one edit can still part
+copy and requires them identical**, together with this run's `grilling(<Session>@<run key>/…)` rows and `none` marker in each file's Work Orders Summary, which sit outside the block and can name different decisions while the counts agree: copies written in one edit can still part
 later, through an edit, a conflict resolution or a partial write, and each
 would then pass on its own. A run whose rows all own one file writes one block, which is the
 ordinary case.
@@ -514,6 +514,9 @@ Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer r
   blank is neither, and is a `REVISE` — **except on a `stopped` row**, where empty is the value that ending requires and `none — <why>` would claim a decision the stop forecloses. A run that skipped a session leaves the same tree as one
   that ran it, and an evidence file is updated in place, so these are what tell
   a fresh session from an absent one and from last week's.
+- Where this run's block went into more than one evidence file, this run's
+  `grilling(<Session>@<run key>/…)` rows and its `none` marker are identical in
+  each of those files' Work Orders Summary, as the block is.
 - **Each ending carries its own condition, and the name alone is not one.** A
   malformed row labelled `confirmed` passes an enum check and fails the rule it
   claims to have met.
