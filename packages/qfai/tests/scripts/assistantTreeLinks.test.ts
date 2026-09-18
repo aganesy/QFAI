@@ -78,6 +78,17 @@ describe("link-assistant-tree --check", () => {
     expect(source).toContain("Add it to the assets, delete it, or allow-list it");
   });
 
+  it("reads the owned-file constant without executing TypeScript", async () => {
+    // Importing the `.ts` module needs the type stripping Node gained after the
+    // floor this package supports, so the lane that runs on that floor could
+    // not execute this script at all. Reading it as text keeps one source.
+    const source = await readFile(SCRIPT, "utf-8");
+
+    expect(source).toContain("ADOPTER_OWNED_CATALOG_FILES");
+    expect(source).not.toContain("ts-specifier-hook");
+    expect(source).not.toContain("await import(");
+  });
+
   it("considers only the paths git tracks", async () => {
     // A suite that writes into the working tree leaves an untracked file
     // behind. Reporting that would fail the lane for something no commit

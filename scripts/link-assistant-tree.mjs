@@ -11,11 +11,11 @@
  *
  * WHAT STAYS A REAL FILE is not a list kept here. Two things earn it:
  *
- *   1. The project owns the content. `ADOPTER_OWNED_ASSETS` in
+ *   1. The project owns the content. `ADOPTER_OWNED_CATALOG_FILES` in
  *      `packages/qfai/src/core/assistantAssetProvenance.ts` names those, and it
- *      is imported rather than restated — `qfai init --force` reads the same
- *      constant to decide what it must not overwrite, and two copies of that
- *      answer is how one of them silently stops matching the other.
+ *      is read from that file rather than restated — `qfai init --force` reads
+ *      the same constant to decide what it must not overwrite, and two copies
+ *      of that answer is how one of them silently stops matching the other.
  *   2. The path exists here and nowhere in the assets. A migration memo is the
  *      live case: `qfai init --upgrade-assistant-tree` writes one per upgrade,
  *      and they accumulate in the tree that ran it.
@@ -31,6 +31,7 @@
 import { execFileSync } from "node:child_process";
 import {
   existsSync,
+  readFileSync,
   lstatSync,
   mkdirSync,
   readdirSync,
@@ -38,13 +39,9 @@ import {
   rmSync,
   symlinkSync,
 } from "node:fs";
-import { register } from "node:module";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath, pathToFileURL } from "node:url";
-
-// The constant lives in `src/`, whose modules import their siblings as `./x.js`.
-register("./lib/ts-specifier-hook.mjs", import.meta.url);
+import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SOURCE_REL = path.join("packages", "qfai", "assets", "init", ".qfai", "assistant");
@@ -278,11 +275,41 @@ function apply(links, realDirs) {
   return written;
 }
 
-async function main() {
-  const provenance = pathToFileURL(
+/**
+ * `ADOPTER_OWNED_CATALOG_FILES`, read out of the TypeScript source.
+ *
+ * Read as text rather than imported. Importing it would run a `.ts` module,
+ * which needs the type stripping Node gained after the floor this package
+ * supports — so the lane that runs on that floor could not execute this script
+ * at all. The constant is a list of string literals, and parsing it keeps the
+ * single source the alternative was for.
+ *
+ * A rename or a reshape stops the pattern matching, and that throws rather than
+ * yielding an empty set: an empty one would link the four documents a project
+ * owns over the placeholders it shipped with.
+ */
+function adopterOwnedAssets() {
+  const source = readFileSync(
     path.join(ROOT, "packages", "qfai", "src", "core", "assistantAssetProvenance.ts"),
-  ).href;
-  const { ADOPTER_OWNED_ASSETS } = await import(provenance);
+    "utf-8",
+  );
+  const block = /ADOPTER_OWNED_CATALOG_FILES\s*=\s*\[([^\]]*)\]/.exec(source);
+  if (block === null) {
+    throw new Error(
+      "link-assistant-tree: ADOPTER_OWNED_CATALOG_FILES is not where this script reads it, in " +
+        "packages/qfai/src/core/assistantAssetProvenance.ts. Update this reader in the change " +
+        "that moved it.",
+    );
+  }
+  const names = [...(block[1] ?? "").matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+  if (names.length === 0) {
+    throw new Error("link-assistant-tree: ADOPTER_OWNED_CATALOG_FILES parsed to nothing.");
+  }
+  return new Set(names.map((name) => `catalog/${name}`));
+}
+
+async function main() {
+  const ADOPTER_OWNED_ASSETS = adopterOwnedAssets();
 
   const { links, realDirs, kept, unexpected } = plan(ADOPTER_OWNED_ASSETS);
 
