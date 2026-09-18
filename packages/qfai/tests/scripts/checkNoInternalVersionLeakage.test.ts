@@ -199,6 +199,18 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
     expect(r.stderr).toMatch(/DR-0007/);
   });
 
+  it.each([
+    ["CAP-0009", 0],
+    ["CAP-0999", 1],
+    ["CAP-1000", 1],
+  ])("reads %s in shipped content as a capability ID only from CAP-0010 up", async (id, status) => {
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["notes.md", `Implements ${id}.\n`]]);
+    const r = runGuard(tmp);
+    expect(r.status, r.stderr).toBe(status);
+    if (status === 1) expect(r.stderr).toContain(id);
+  });
+
   it("exempts version-stamped migration memo names from the name pass (exit 0)", async () => {
     // `assistant/process/migrations/<version>-*.md` names are stamped on
     // purpose — see the exemption block in the guard.
