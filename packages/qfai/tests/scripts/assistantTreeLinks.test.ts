@@ -78,6 +78,17 @@ describe("link-assistant-tree --check", () => {
     expect(source).toContain("Add it to the assets, delete it, or allow-list it");
   });
 
+  it("considers only the paths git tracks", async () => {
+    // A suite that writes into the working tree leaves an untracked file
+    // behind. Reporting that would fail the lane for something no commit
+    // holds, which is what it did the first time this ran in CI.
+    const source = await readFile(SCRIPT, "utf-8");
+
+    expect(source).toContain("git");
+    expect(source).toContain("ls-files");
+    expect(source).toContain("TRACKED !== null");
+  });
+
   it("names the one prefix this tree may hold alone", async () => {
     // `qfai init --upgrade-assistant-tree` writes a migration memo per upgrade
     // into the tree that ran it. Everything else is unaccounted for, so the

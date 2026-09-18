@@ -380,7 +380,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/scripts/genAgentCatalog.test.ts",
   "tests/scripts/generateEmittedRuleCodes.test.ts",
   "tests/scripts/lintShipping.test.ts",
-  "tests/scripts/syncInitStaleDetection.test.ts",
   "tests/skill/prototypingSkill.test.ts",
   "tests/unit/cli/commands/auditLog.defaultFormat.test.ts",
   "tests/unit/cli/commands/handoffUpgrade.malformed.test.ts",

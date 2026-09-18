@@ -37,7 +37,7 @@
 
 import { copyFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, URL } from "node:url";
 
 /**
  * `fileURLToPath`, not `URL.pathname`: a checkout under a directory with a
