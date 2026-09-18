@@ -58,6 +58,15 @@
 
 > 判断基準（SSOT）: `packages/qfai/assets/init/.qfai/assistant/instructions/change-classification.md`
 
+## Adoption bar
+
+<!-- Required when this PR adds a rule, skill or gate:
+- One-line form, with its operative clause.
+- What goes beyond the line; if nothing does, only the line ships.
+- Affected safety-floor items from .agents/rules/minimal-implementation.md § 2.
+For a comparable requirement already run, cite its review round-trips and change size.
+REVIEW.md governs this repository-only adoption condition. -->
+
 ## What this change made unnecessary
 
 <!-- List what the change made unnecessary, explain why listed items remain,
