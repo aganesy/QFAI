@@ -233,6 +233,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The imported requirement count no longer counts a prose mention** (#1897).
+  `qfai sdd preflight` counts the IDs in `06_REQ.md`'s `REQ-ID` column, and
+  when that column held none it scanned the whole file. A pack numbering its
+  requirements `REQ-D-0001` reported a count of 1, from a sentence saying the
+  pack did not use `REQ-0001`. A `REQ-ID` column that holds no `REQ-NNNN` now
+  makes the count unknown. Only a file with no such column still falls back to
+  the distinct IDs in its text. The `06_REQ.md` template says a pack numbers
+  from `REQ-0001`, because specs cite a requirement with the pack's id, and
+  that a prefixed form is not read.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
