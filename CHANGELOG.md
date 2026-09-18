@@ -109,6 +109,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   existing code, including duplicates or overlap, before the standard library,
   platform and installed dependencies. One bullet covers detection and reuse.
 
+- **The minimal-implementation reminder points at the floor instead of listing
+  it** (#1815). After each write, the hook asks about repository reuse, refers to
+  the entire floor in the rule's § 2 and names `interface-clarity.md` for screen
+  or terminal changes. Referring to the floor keeps the reminder from promising
+  a shorter obligation set. Existing projects keep their old reminder text.
+
 - **Repository reuse is the second of seven minimal-implementation rungs**
   (#1795). Check the codebase before the standard library, platform and installed
   dependencies. Existing repository code can answer the accepted behavior
