@@ -316,6 +316,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A reminder hook's message reaches a project that installed an earlier
+  release** (#2003). `qfai init` wrote each message into `.claude/settings.json`
+  and never touched a group that was already there, so an upgraded project kept
+  the old text for good, even after the rule it restates changed. The settings
+  file now holds only the event, the matcher, the marker and a fixed `node -e`
+  reader. The messages live in `.agents/rules/reminders.json`, which `qfai init`
+  refreshes like a rule master, wherever the project has not edited it. On the
+  next run a group still exactly as an earlier release wrote it is replaced
+  where it stands. A group the project edited is kept, and the run names it. A
+  missing or unreadable message file prints nothing and exits 0.
+
 - **The entry points no longer say this repository installs its own package**
   (#1921). `CLAUDE.md` and `AGENTS.md` both described `.qfai/` as the result of
   an npm install of QFAI. There is no such dependency, and
