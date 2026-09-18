@@ -88,10 +88,11 @@ npx qfai validate --profile sdd --fail-on error --format github
   <warning count>. <What a non-zero count is, if there is one.>
 
 > Run ids and outcomes, for the reason the preflight section gives: the report tree
-> is not committed. `qfai validate` writes `<paths.outDir>/validate.log` and a
+> is not committed. `npx qfai validate` writes `.qfai/report/validate.log` and a
 > `run-<timestamp>/` directory holding that run's findings, and the coverage summary
 > lands beside them — all three are where the id points, and none of them is a name
-> this record may carry as a path.
+> this record may carry as a path. Under a relocated `paths.outDir` they move with
+> it, which is another reason the record names the run rather than the place.
 >
 > A count of its own per run, because a reader deciding whether to trust the cycle
 > needs to know which run passed and which did not. "Ran validate" is not that.
