@@ -616,7 +616,16 @@ jobs:
         # While this read `test -- --project <slice>` a slice with no script of
         # its own still ran, so nothing ever demanded the script exist and the
         # three slice surfaces could drift silently.
-        run: pnpm -C packages/qfai test:${{ matrix.slice }}
+        #
+        # `QFAI_TEST_MAX_WORKERS` for the reason the floor lane above states at
+        # length: the declared fork count oversubscribes a four-core runner, and
+        # a leg gets the same four cores whichever lane declares it. This lane
+        # ran without the override while the floor lane had it, so the same
+        # suites were measured under two different pool sizes.
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped test lanes are placeholders that run no test, so
+        # there is no invocation on that side for a worker cap to bound.
+        run: QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:${{ matrix.slice }}
 
   # ── 4b. Scanner module statement-coverage gate ───────────────────
   # Asserts that `packages/qfai/src/core/prototyping/designMdViolations.ts`

@@ -86,9 +86,10 @@ export const DECLARED_WORKERS = Math.min(DECLARED_START, availableParallelism())
  *
  * The axis bounds concurrent cases inside one process rather than forks, so the cap above
  * does not cover it and needed its own measurement. Taken on
- * `tests/core/prFixMonitor.test.ts`, whose fifteen cases each spawn a shell that runs a
- * script through its poll loop and shells out once per poll — the heaviest concurrent file
- * the suite has. One full run per setting, on four cores, the count `ubuntu-latest` gives:
+ * `tests/core/prFixMonitor.test.ts`, whose cases each spawn a shell that runs a script
+ * through its poll loop and shells out once per poll. It and `prMergePlan.test.ts` beside
+ * it are the files this axis is for, and no other file in the suite carries that cost.
+ * One full run per setting, on four cores, the count `ubuntu-latest` gives:
  *
  * ```text
  * concurrent  wall
