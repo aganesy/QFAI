@@ -9,6 +9,10 @@
  * overwritten on a guess.
  */
 
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -303,6 +307,105 @@ describe("mergeDocumentationClarityHooks", () => {
     Reflect.set(group, "matcher", "changed");
     const again = groupsFor(mergedSettings("{}"), "PreToolUse")[0];
     expect(JSON.stringify(again)).toContain("mcp__github__(create_pull_request)");
+  });
+});
+
+// tests/unit/core/<this file> -> tests -> packages/qfai
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+
+/** The template this release ships. */
+const SHIPPED = readFileSync(path.join(packageRoot, "assets/init/.claude/settings.json"), "utf-8");
+
+/**
+ * Every hook group an earlier template held, each exactly as that template
+ * wrote it, taken from the history of the shipped settings file.
+ */
+const EARLIER: Record<string, unknown> = JSON.parse(
+  readFileSync(
+    path.join(packageRoot, "tests/fixtures/claude-settings/earlier-reminder-groups.json"),
+    "utf-8",
+  ),
+);
+
+const EVENTS = ["UserPromptSubmit", "PreToolUse", "PostToolUse"];
+
+/** A group's markers, sorted, as the merge compares them. */
+function markersOf(group: unknown): string {
+  const entries: unknown =
+    typeof group === "object" && group !== null ? Reflect.get(group, "hooks") : undefined;
+  if (!Array.isArray(entries)) return "";
+  return JSON.stringify(
+    entries
+      .map((entry: unknown) =>
+        typeof entry === "object" && entry !== null
+          ? String(Reflect.get(entry, "statusMessage"))
+          : "",
+      )
+      .sort(),
+  );
+}
+
+/** The shipped group under `event` whose markers match `group`'s. */
+function shippedCounterpart(event: string, group: unknown): unknown {
+  const shipped: Record<string, unknown> = JSON.parse(SHIPPED);
+  return groupsFor(shipped, event).find((candidate) => markersOf(candidate) === markersOf(group));
+}
+
+describe("an earlier release's hook groups", () => {
+  const cases = EVENTS.flatMap((event) =>
+    groupsFor(EARLIER, event).map((group, index) => ({ event, index, group })),
+  );
+
+  it("covers every group the fixture holds", () => {
+    expect(cases).toHaveLength(12);
+  });
+
+  it.each(cases)("replaces $event group $index where it stands", ({ event, group }) => {
+    const own = { matcher: "Bash", hooks: [{ type: "command", command: "./own.sh" }] };
+    const existing = JSON.stringify({ hooks: { [event]: [own, group, own] } });
+
+    const result = mergeDocumentationClarityHooks(existing, SHIPPED);
+    expect(result.outcome).toBe("merged");
+    if (result.outcome !== "merged") return;
+    const groups = groupsFor(result.settings, event);
+    // Same place, this release's content, and the project's groups untouched.
+    expect(groups[0]).toEqual(own);
+    expect(groups[1]).toEqual(shippedCounterpart(event, group));
+    expect(groups[2]).toEqual(own);
+    expect(result.edited).toEqual([]);
+    // The replacement carries no message of its own.
+    expect(JSON.stringify(groups[1])).not.toContain("additionalContext");
+  });
+
+  it("brings a whole earlier file to the shipped hooks, and a second run changes nothing", () => {
+    const result = mergeDocumentationClarityHooks(JSON.stringify(EARLIER), SHIPPED);
+    expect(result.outcome).toBe("merged");
+    if (result.outcome !== "merged") return;
+    // The fixture holds two spellings of some groups. Each becomes the shipped
+    // group where it stands.
+    for (const event of EVENTS) {
+      for (const [index, group] of groupsFor(EARLIER, event).entries()) {
+        expect(groupsFor(result.settings, event)[index]).toEqual(shippedCounterpart(event, group));
+      }
+    }
+    expect(result.edited).toEqual([]);
+
+    const again = mergeDocumentationClarityHooks(serializeClaudeSettings(result.settings), SHIPPED);
+    expect(again).toEqual({ outcome: "already-present", edited: [] });
+  });
+
+  it("keeps a group that differs from every spelling a release shipped, and names it", () => {
+    const first: unknown = groupsFor(EARLIER, "PreToolUse")[0];
+    if (typeof first !== "object" || first === null) throw new Error("fixture has no group");
+    expect(markersOf(first)).toBe(JSON.stringify([DOCUMENTATION_CLARITY_HOOK_MARKER]));
+    const edited = { ...first, matcher: "mcp__github__(create_pull_request)" };
+    const existing = JSON.stringify({ hooks: { PreToolUse: [edited] } });
+
+    const result = mergeDocumentationClarityHooks(existing, SHIPPED);
+    expect(result.outcome).toBe("merged");
+    if (result.outcome !== "merged") return;
+    expect(groupsFor(result.settings, "PreToolUse")[0]).toEqual(edited);
+    expect(result.edited).toEqual([`PreToolUse "${DOCUMENTATION_CLARITY_HOOK_MARKER}"`]);
   });
 });
 

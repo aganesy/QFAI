@@ -138,7 +138,6 @@ export type QfaiUiuxConfig = {
    * registered are still held to the same three fields.
    */
   catalogue_refs_min?: number;
-  warning_as_error_override?: string[];
   renderEvidence?: RenderEvidenceConfig;
   audit?: QfaiUiuxAuditConfig;
 };
@@ -1244,21 +1243,6 @@ function normalizeUiux(
     } else {
       issues.push(
         configIssue(configPath, "uiux.catalogue_refs_min must be an integer of 0 or more."),
-      );
-    }
-  }
-  if (raw.warning_as_error_override !== undefined) {
-    if (
-      Array.isArray(raw.warning_as_error_override) &&
-      raw.warning_as_error_override.every((v: unknown) => typeof v === "string")
-    ) {
-      result.warning_as_error_override = raw.warning_as_error_override;
-    } else {
-      issues.push(
-        configIssue(
-          configPath,
-          "uiux.warning_as_error_override は文字列配列である必要があります。",
-        ),
       );
     }
   }
