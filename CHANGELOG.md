@@ -389,6 +389,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with no UI contract is left to the readiness gate, which already reports it,
   and `region` stays prose: a screen contract names a screen, not its parts.
 
+- **The Markdown and Mermaid lanes skip other checkouts** (#1895).
+  `pnpm lint:md` walked `.claude/worktrees/**`, so a worktree of another branch
+  had its findings reported against this one. That happened locally and never
+  in a fresh CI clone. The Markdown lint now ignores `.claude/worktrees/**`, and
+  the Mermaid lane (shipped, and used by adopters' docs workflow) no longer
+  descends into a directory that holds its own `.git`, which is how a worktree
+  or a nested clone is marked. Prettier already skips the path through
+  `.gitignore`, and the schema lane matches paths from the tree's root.
+
 - **A lowercase CDATA lookalike hides what follows it** (#1866). GitHub renders
   `<![cdata[` exactly as it renders the spelled form: the content is hidden, and
   an unclosed opener hides the rest of the document. The body readers matched
