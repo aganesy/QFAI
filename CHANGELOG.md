@@ -233,6 +233,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The execution ledger says how a UI contract reaches it** (#1902). The ledger
+  has obligation columns for test cases, user stories and API contracts, and
+  none for a UI contract, with nothing saying why. The template now says a
+  `CON-UI-*` has no group and no column: each screen obligation it declares is
+  a test case in the spec that owns the screen, carried by that test case's
+  row. It also says no gate reports an untested UI contract the way
+  `QFAI-ATDD-113` reports an API one, so the test case is written with the
+  contract.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
