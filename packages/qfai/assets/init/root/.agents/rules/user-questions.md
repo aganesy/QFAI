@@ -204,9 +204,10 @@ compacted — which is when a long session starts reaching for an exception.
 
 It reminds and never blocks. Deciding whether a question should have been asked
 as a structured choice needs intent, and a false positive on a hook that fires
-every turn stops the session outright. It runs `node` directly and prints fixed
-text, with no shell, no file reads and no network, so it cannot fail the session
-it is attached to.
+every turn stops the session outright. It runs `node` directly, with no shell and
+no network, and prints one message from `.agents/rules/reminders.json`. A missing
+or unreadable file prints nothing, so it cannot fail the session it is attached
+to.
 
 What it carries is where this rule lives and the line an agent reaches past when
 it would rather not ask. The rest is here.
