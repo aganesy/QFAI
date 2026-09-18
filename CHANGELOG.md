@@ -572,6 +572,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the address unchanged; the step now asks the filesystem for them and stops on
   any it finds. A test runs the step's own commands in a temporary repository.
 
+- Two tests now hold the skill check's handling of a skill directory reached
+  through a link (#1754). A document that a linked skill's step names, and that
+  is not valid UTF-8, is reported as `QFAI-SKILLS-014`. A link that loops back
+  into its own skill ends the run without a finding. The walk reads a document
+  under a link when a skill cites it, which is the document the host opens.
+
 - **Generated agent review instructions retain the project's review policy**
   (#1814). Fresh, existing and forced init output points to `REVIEW.md` when the
   project has that file. Existing entry-point text stays intact. The package
