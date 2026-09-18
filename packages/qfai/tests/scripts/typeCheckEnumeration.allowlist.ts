@@ -249,6 +249,8 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/e2e/spec0004ProfileSuffixedValidateE2E.test.ts",
   "tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts",
   "tests/e2e/spec0006DoctorProbeOrderE2E.test.ts",
+  "tests/e2e/spec0006DoctorRemediationE2E.test.ts",
+  "tests/e2e/spec0008AtddScaffoldE2E.test.ts",
   "tests/e2e/spec0010DiscussionMockAndPointerE2E.test.ts",
   "tests/e2e/spec0012DesignMdPatchZoneE2E.test.ts",
   "tests/e2e/spec0012EmitSkeletonsCoverageE2E.test.ts",
