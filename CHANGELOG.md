@@ -6,6 +6,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai init` refuses a destination that resolves into its own assets** (#1919).
+  A repository that vendors the assistant tree by link has `.qfai/assistant/**`
+  resolving to `assets/init/.qfai/assistant/**`, so a run there wrote the shipped
+  documents through the link — an edit to the package's own assets, made by the
+  command that installs a copy of them. The run now stops and says which path
+  resolved where. Detection is by resolution rather than by a path or a
+  repository name, and it fails open when either side cannot be resolved, so an
+  ordinary project is unaffected.
+
 - **Repository-specific halves of four rules split into overlays** (#1917).
   `distributed-surface`, `version-discipline`, `temporary-files` and
   `root-additions-policy` each governed an adopter's repository and this one
