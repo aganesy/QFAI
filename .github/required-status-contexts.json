@@ -96,9 +96,31 @@
         "a dependency condition."
       ],
       "dependencyMatrices": {
-        "test": { "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"] },
+        "test": {
+          "slice": [
+            "core",
+            "validators",
+            "integration",
+            "e2e",
+            "cli",
+            "unit",
+            "scripts",
+            "pr-fix",
+            "pr-merge"
+          ]
+        },
         "node-floor": {
-          "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"]
+          "slice": [
+            "core",
+            "validators",
+            "integration",
+            "e2e",
+            "cli",
+            "unit",
+            "scripts",
+            "pr-fix",
+            "pr-merge"
+          ]
         }
       },
       "dependencyMatricesNote": [
@@ -115,7 +137,7 @@
         "shell the digest cannot see. This is the same obligation `verificationBodies` carries for a",
         "step's text, applied to the other half of what the step actually runs.",
         "",
-        "TWO lanes are sliced now, and each is pinned separately. `node-floor` runs the same seven",
+        "TWO lanes are sliced now, and each is pinned separately. `node-floor` runs the same nine",
         "slices, so a value rewritten in its list reaches its shell exactly as one rewritten in the",
         "`test` job's reaches that one — and a value dropped from it stops a slice being exercised on",
         "the engines floor while the `test` job still runs it and the lane still reports green. That",
@@ -380,7 +402,7 @@
         "unconditional verification and joins `verificationSet` with the rest."
       ],
       "verificationBodies": {
-        "Classify the change against the enumerated directory lists": "0c5050f6d8ad4ad5",
+        "Classify the change against the enumerated directory lists": "ff046bcf7d3956e0",
         "Verify the toolchain action before running it": "14a8f3831a25d4cd",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "e9b6a63cbebe4062",
@@ -389,7 +411,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "9efc82ef75f7a622",
         "QFAI self-validate this repo (dogfooding — full profile)": "3537948e49d1d967",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "2ba778a9202c3055",
+        "Run lint gate": "0f16949c965e6937",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",

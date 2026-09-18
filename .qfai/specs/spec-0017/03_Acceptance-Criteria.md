@@ -286,16 +286,17 @@ Scenario: Parallelism becomes explicit per project
   And the declared starting value on the within-file concurrency axis is ten
   And each declared value is overridable rather than fixed
 
-# AC-0017-0027: Every slice surface holds the same seven names
+# AC-0017-0027: Every slice surface holds the same nine names
 # Parent: US-0017-0007
 # Source: discussion-20260804173914356#DAC-006-05
-Scenario: One slice name resolves everywhere, and the dead project is gone
-  Given one declared runner project matches zero files, is absent from every CI matrix that expands over the slice set, and would fail an unfiltered run
-  And two CI matrix slices have no corresponding per-slice script
-  When the dead project is deleted and the two missing scripts are added
+Scenario: One slice name resolves on every surface that declares the slice set
+  Given the runner workspace declares one project per slice
+  And the package manifest declares a per-slice script for each slice
+  And every CI job that expands over the slice set lists the slices it runs
+  When the three surfaces are compared
   Then the runner project set, the per-slice script set and the slice list of every CI job that expands over the slice set are equal
-  And each of those sets holds seven names
-  And the deleted project name no longer resolves
+  And each of those sets holds nine names
+  And no declared runner project matches zero files
 
 # AC-0017-0028: A worker value is adopted only against a recorded measurement
 # Parent: US-0017-0007
@@ -405,7 +406,7 @@ Scenario: The repository-root copy is generated, so authoring it directly is rej
 | AC-0017-0024 | The lane runs from the aggregate a pull request executes           | Edge / boundary (gate placement), US-0017-0006, REQ-0012                        | Should   |
 | AC-0017-0025 | The lane checks the expected-required-context declaration          | Edge / boundary, US-0017-0006, REQ-0012                                         | Must     |
 | AC-0017-0026 | Every project declares the knob set with the decided value         | Happy path, US-0017-0007, REQ-0010                                              | Must     |
-| AC-0017-0027 | Every slice surface holds the same seven names                     | Happy path plus state transition (dead project removed), US-0017-0007, REQ-0011 | Must     |
+| AC-0017-0027 | Every slice surface holds the same nine names                      | Happy path plus boundary (three surfaces, one name set), US-0017-0007, REQ-0011 | Must     |
 | AC-0017-0028 | A worker value is adopted only against a recorded measurement      | Happy path plus negative measurement, US-0017-0007, REQ-0010                    | Must     |
 | AC-0017-0029 | No retry setting, and one tuning change per pull request           | Edge / boundary (flake budget), US-0017-0007, REQ-0010                          | Must     |
 | AC-0017-0030 | Exactly one pull-request-triggered workflow, full profile folded   | Happy path, US-0017-0008, REQ-0015                                              | Must     |

@@ -244,8 +244,9 @@ this spec owns the own-CI half only.
 - REQ-0011: Slice-surface alignment — delete the vitest project that matches zero files, is
   absent from the CI matrix, and would fail on an unfiltered run; add the two missing per-slice
   scripts, so the vitest project set, the per-slice script set and the matrix slice list of every
-  CI job that expands over the slice set hold the same names as each other — seven once the dead
-  project is deleted, not three. A CI job sliced later is one more surface, held to the same set.
+  CI job that expands over the slice set hold the same names as each other — nine, because each of
+  the two test files that spawn a process per case takes a slice of its own. A CI job sliced later
+  is one more surface, held to the same set.
   (upstream: `discussion-20260804173914356#REQ-0011`, `own-CI`, must)
 - REQ-0012: Workflow-hygiene lint lane over own workflows — a repository script, run from the
   lint aggregate that pull requests actually execute, asserts over `.github/workflows/**`: every

@@ -386,9 +386,10 @@ file, so an entry here is what makes that citation checkable.
 - Context: the `node-floor` lane runs the package test suite on the floor `engines.node` promises,
   and it ran the whole suite in one process pool. At 312 s it was the longest job in the run and set
   the wall clock for every other lane, which is the same shape that put the `test` job behind a
-  matrix. The lane now expands over the seven slices the `test` job declares —
-  `core, validators, integration, e2e, cli, unit, scripts` — with `fail-fast: false`, each leg
-  pinning and asserting the floor, and the build running on the `e2e` and `integration` legs only.
+  matrix. The lane expands over the same slices the `test` job declares, whichever they are, with
+  `fail-fast: false`, each leg pinning and asserting the floor, and the build running on the `e2e`
+  and `integration` legs only. The set itself is `BR-0017-0057`'s to state; naming it here would be
+  a second place for it to be wrong.
 - Decision, the measurement, because `BR-0017-0030` forbids a wall-clock or parallelism claim
   landing on argument. One full run per side, the last successful run of `main` against the first
   complete run on the branch:
@@ -420,7 +421,7 @@ file, so an entry here is what makes that citation checkable.
 - Context: `DR-0017-0011` ends by naming `lint` as the lane that now sets the run's wall clock, at
   120 s against 100 s for the longest engines-floor leg. The gate ran two lanes: the mirror-surface
   runner, and one serial chain of eighteen commands beside it. It now starts five, and
-  `packages/qfai/tests/core/prFixMonitor.test.ts` runs its fifteen cases concurrently, which
+  `packages/qfai/tests/pr-fix/prFixMonitor.test.ts` runs its fifteen cases concurrently, which
   shortens the mirror lane those five contend with.
 - Decision, the measurement, because `BR-0017-0030` forbids a wall-clock or parallelism claim
   landing on argument. `pnpm ci:lint` end to end, same machine, nothing else running, three runs per
@@ -459,7 +460,7 @@ file, so an entry here is what makes that citation checkable.
   concurrent cases inside one process rather than forks and no measurement had been taken on it.
   This entry takes that measurement and closes it the same way.
 - Decision, the measurement, because `BR-0017-0030` forbids a parallelism claim landing on argument.
-  `packages/qfai/tests/core/prFixMonitor.test.ts` standalone — fifteen cases, each spawning a shell
+  `packages/qfai/tests/pr-fix/prFixMonitor.test.ts` standalone — fifteen cases, each spawning a shell
   that runs a script through its poll loop and shelling out once per poll, which makes it the
   heaviest concurrent file in the suite. One full run per setting, 15 of 15 passing every time,
   swept at 1, 2, 4, 5, 8, 10 and 15 on two core counts:
