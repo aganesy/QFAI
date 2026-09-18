@@ -14,7 +14,8 @@ mode: interactive-by-default
 
 Run a grilling session on whatever the argument names. This skill holds no
 method of its own: it directs the run to `qfai-grilling`, which is the one
-implementation.
+implementation. It holds a user session (`.agents/rules/grilling.md` § Two kinds
+of session): the user asked for the interview, so every decision is put to them.
 
 **`disable-model-invocation: true` is the mechanism, and it is stated rather
 than implied.** A host offers a skill to the model from its description, so
@@ -136,7 +137,8 @@ records the same thing from the reviewer's side: there is no artifact to review.
 What the user is shown at the end:
 
 - **the ending the session reached**, named: `confirmed`, `user-closed`,
-  `no-question` or `stopped`. It is the one thing the rest cannot be read off:
+  `no-question` or `stopped` — four of the five the rule names, because
+  `adopted` ends only a delegated session. It is the one thing the rest cannot be read off:
   a confirmed session and a closed session that left nothing open produce the
   same three lists, and only the first says the user agreed the understanding
   was shared;

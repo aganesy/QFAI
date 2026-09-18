@@ -244,8 +244,9 @@ this spec owns the own-CI half only.
 - REQ-0011: Slice-surface alignment — delete the vitest project that matches zero files, is
   absent from the CI matrix, and would fail on an unfiltered run; add the two missing per-slice
   scripts, so the vitest project set, the per-slice script set and the matrix slice list of every
-  CI job that expands over the slice set hold the same names as each other — seven once the dead
-  project is deleted, not three. A CI job sliced later is one more surface, held to the same set.
+  CI job that expands over the slice set hold the same names as each other — nine, because each of
+  the two test files that spawn a process per case takes a slice of its own. A CI job sliced later
+  is one more surface, held to the same set.
   (upstream: `discussion-20260804173914356#REQ-0011`, `own-CI`, must)
 - REQ-0012: Workflow-hygiene lint lane over own workflows — a repository script, run from the
   lint aggregate that pull requests actually execute, asserts over `.github/workflows/**`: every
@@ -270,8 +271,9 @@ this spec owns the own-CI half only.
   routing, which the catalog marks as not enforced, and extending the built-in token set to
   legalize CI vocabulary is rejected. **It must be authored under
   `packages/qfai/assets/init/.qfai/assistant/catalog/`**: the root `.qfai/assistant/**` tree is
-  SSOT-synced from assets by `scripts/sync-init-to-root.mjs`, so editing the root copy directly is
-  reverted by `pnpm sync:ssot` and fails `git diff --exit-code .qfai/` in `pnpm ci:gate` (DTC-20).
+  symlinked at those assets by `scripts/link-assistant-tree.mjs`, so the root path resolves to the
+  asset file and there is no second copy to edit. A root path that is a regular file where a link
+  belongs fails `link-assistant-tree --check` in `pnpm ci:lint` (DTC-20).
   (upstream: `discussion-20260804173914356#REQ-0023`, `both` — own-CI half, should)
 - REQ-0015: Retire the repository's duplicate of the shipped validate workflow — the repository's
   own copy is removed and its full-profile run is folded into the existing `build` job, which
