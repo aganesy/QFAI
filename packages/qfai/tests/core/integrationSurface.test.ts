@@ -1266,10 +1266,11 @@ describe("a link that does not resolve still says why", () => {
       await rm(skillsDir, { recursive: true, force: true });
       await symlink(elsewhere, skillsDir, "dir");
 
+      // The link stays inside the project, so it is a layout rather than
+      // damage. The wrappers are still there and the canonical under the link
+      // is not, so what is reported is the path they cannot reach.
       const entry = await finding(root);
-      // The link stays inside the project, so it is a layout rather than damage.
-      // What is left is the canonical that is not under it.
-      expect(entry?.message).toContain("missing");
+      expect(entry?.message).toContain(".qfai/assistant/skills/qfai-atdd");
       expect(entry?.message).not.toContain("dangling ->");
     });
   });
@@ -1398,7 +1399,7 @@ describe("a resolving link is a finding, not a reason to stop", () => {
     },
   );
 
-  it("reports a resolving canonical ancestor with every wrapper gone", async () => {
+  it("reports nothing for a resolving canonical ancestor with every wrapper gone", async () => {
     // The leaves are absent, so the broken-ancestor probe finds nothing — and
     // the integration directories exist, so no missing-directory finding either.
     // A surface where no skill can load passed clean.
@@ -1415,10 +1416,9 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       }
       await seedInitRecord(root);
 
-      const found = await finding(root);
-      // An in-project ancestor link is accepted, so the finding is about the
-      // canonical the link does not lead to.
-      expect(found?.message).toContain("missing");
+      // An in-project ancestor link is accepted, and this case removed every
+      // wrapper, so there is nothing left for the rule to report.
+      expect(await finding(root)).toBeUndefined();
     });
   });
 
