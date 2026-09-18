@@ -55,14 +55,16 @@ describe("qfai init refuses to write through to the assets it ships", () => {
       "dir",
     );
 
-    const restore = captureStdout();
-    try {
-      await expect(runInit({ dir: root })).rejects.toThrow(
-        /inside the assets this command copies from/,
+    let failure: unknown;
+    await captureStdout(async () => {
+      failure = await runInit({ dir: root, force: false, dryRun: false, yes: true }).then(
+        () => undefined,
+        (error: unknown) => error,
       );
-    } finally {
-      restore();
-    }
+    });
+
+    expect(failure).toBeInstanceOf(Error);
+    expect((failure as Error).message).toMatch(/inside the assets this command copies from/);
   });
 
   it("runs normally for a project whose assistant tree is its own", async () => {
@@ -73,11 +75,14 @@ describe("qfai init refuses to write through to the assets it ships", () => {
     await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
     await writeFile(path.join(root, ".qfai", "assistant", "kept.md"), "# kept", "utf-8");
 
-    const restore = captureStdout();
-    try {
-      await expect(runInit({ dir: root })).resolves.not.toThrow();
-    } finally {
-      restore();
-    }
+    let failure: unknown;
+    await captureStdout(async () => {
+      failure = await runInit({ dir: root, force: false, dryRun: false, yes: true }).then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+    });
+
+    expect(failure).toBeUndefined();
   });
 });

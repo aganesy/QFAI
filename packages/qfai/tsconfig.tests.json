@@ -151,6 +151,7 @@
     "tests/cli/initRepairsUnfollowableLinks.test.ts",
     "tests/cli/initRuleMasterUpdates.test.ts",
     "tests/cli/initConstitutionCreation.test.ts",
+    "tests/cli/initSelfAssetWrite.test.ts",
     "tests/cli/initRunReport.test.ts",
     "tests/cli/initTestGlobDerivation.test.ts",
     "tests/cli/prototypingRescope.test.ts",
