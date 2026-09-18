@@ -33,6 +33,11 @@
     ".instruction/**",
     ".serena/**",
     ".claude/commands/**",
+    // Git worktrees: another branch's checkout, on disk and outside this tree.
+    // Linted from here, every finding in that branch is reported against this
+    // one, and the same commit passes in CI — which clones fresh and has no
+    // worktrees — while failing locally.
+    ".claude/worktrees/**",
     ".github/prompts/**",
     ".qfai/discussion/**",
     ".qfai/archive/**",
