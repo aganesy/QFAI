@@ -14,7 +14,7 @@ describe("answered review demands are carried into the next existing request", (
     it(`${tree}: the common rule bounds demands, not reports`, async () => {
       const text = await read(tree, "assistant/constitution/review-convergence.md");
       for (const clause of [
-        "### Answered demands (MUST)",
+        "## Answered demands (MUST)",
         "MUST NOT be re-raised under another wording",
         "Close a repeat by citing its recorded answer",
         "what a reviewer may require, not what a reviewer may report",

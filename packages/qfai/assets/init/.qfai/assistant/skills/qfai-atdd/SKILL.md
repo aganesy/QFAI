@@ -131,14 +131,14 @@ Use the shared schema.
   `Preflight`, a row for every session detection opened, and — when `Preflight`
   says `session opened` — one for the preflight session, all of them inside this run's own block — **except a session the user stopped**, which is reported in the stage's output rather than written, as the table below sets out, so its absence is not a `REVISE`. **`Preflight` is `session opened` or `confidence high`**, and any other value is a `REVISE`: those two say whether a preflight
   row is owed, and a third value says neither. **No two rows share a `Session`**, and the keys run `S1`, `S2`, … with none skipped: the lines under the table are reconciled by that key, so one key on two rows lets a single quoted answer, open line or escalation stand for both. **And every `Ended at` is at or after the one on the row before it.** The keys are assigned in opening order and
-  a stage opens no session while one is running, so a later key ending earlier is a history that cannot have happened — and the chronology is the whole of what the two times are recorded for. Every `Ended` is one of the four endings the rule master
+  a stage opens no session while one is running, so a later key ending earlier is a history that cannot have happened — and the chronology is the whole of what the two times are recorded for. Every `Ended` is one of the five endings the rule master
   names, every row's `Ended at` is at or after the run-started time on
   a `### /qfai-atdd — run started` block
   whose heading — the time to the millisecond, and a host run identifier beside
   it where there is one — equals what this run's work order states, and which no
   other `/qfai-atdd` block in the file carries,
   and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it**, **and its `Decisions` count matches the `grilling(<Session>@<run key>/<adjudication>)` rows the Work Orders Summary carries under that `Session` and this run's start** — a count checked against nothing lets a row claim `0` over
-  decisions that never reached the user. **And the other way: every `grilling(<Session>@<run key>/<adjudication>)` row the summary carries for this run names a `Session` exactly one row of this block holds.** Counted only from the rows inward, a summary row keyed to a session the block never opened is checked by nothing, so the record can claim a decision for a session that did not exist
+  decisions it took. **And the other way: every `grilling(<Session>@<run key>/<adjudication>)` row the summary carries for this run names a `Session` exactly one row of this block holds.** Counted only from the rows inward, a summary row keyed to a session the block never opened is checked by nothing, so the record can claim a decision for a session that did not exist
   — and, beside the run's `none` marker, claim in the same breath that the run settled none. **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as
   the record requires, and a blank or any other value is
   a `REVISE`: it is the one field saying which tree the session ended against.
@@ -157,7 +157,7 @@ Use the shared schema.
   carries a `Work resumed` later than its own `Ended at`** — that ordering is
   the whole reason both times are recorded, and an earlier one is a session
   recorded after the edit it was meant to precede. **A run that did not resume
-  writes `none — <why>` instead**, which the gate accepts on those three
+  writes `none — <why>` instead**, which the gate accepts on those four
   endings and on no other: a session that was the run's last activity has no
   later time to carry, and requiring one would have the stage invent it. A
   blank is neither, and is a `REVISE` — **except on a `stopped` row**, where empty is the value that ending requires and `none — <why>` would claim a decision the stop forecloses. A run that skipped a session leaves the same tree as one
@@ -171,6 +171,7 @@ Use the shared schema.
   | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
   | `confirmed`   | `Frontier` empty, `Lookups` none in flight, `Open` 0, **and the confirming answer quoted under the table beside that row's `Session`**. Those are the rule master's two completing conditions, and tree state is only the first: a session that closed its own tree and never asked satisfies every count while the user has said nothing                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
   | `user-closed` | `Lookups` none in flight, every open node assumable, **and every one of them carrying its labelled assumption in the register**, **and the closing answer quoted under the table beside that row's `Session`** — the ending is an act of the user's, and a register alone cannot show it happened. The closure covers the tree as it finally stands, so a lookup still running can raise a node after it — and a row accepted while one was in flight is a verdict taken over a register that was not yet complete. A decision some document requires the user to make and record, and an input declared undefaultable, are not assumable — the rule master says the closure does not reach them, so a row carrying one is a `REVISE`. A node listed without the value the stage went on to use is the other half of the same failure: the assumption is then unread, which the rule master calls a decision nobody took wearing the face of one somebody did |
+  | `adopted`     | `Frontier` empty, `Lookups` none in flight and `Open` 0 — so every critical decision the session escalated has the user's answer, which is when the rule master ends a delegated session `adopted`. **Every decision the row counts that no escalation line settled is a `grilling(<Session>@<run key>/agents)` row whose `Output (refs)` carries the reason and each disagreeing position.** An adopted decision missing that row is a `REVISE`, and so is an `agents` row whose decision is critical. An adopted decision that is not critical is not a finding, whatever the reviewer would have chosen: doubt about its merit is an ordinary finding against the artifact                                                                                                                                                                                                                                                                                 |
   | `no-question` | `Frontier` empty, `Lookups` none in flight and `Open` 0. Article X, rule 6: the stage cannot complete over a decision nobody took, and nobody was asked. **Nor does any line under the table record a reply from the user under that row's `Session`**: no confirming or closing answer, and no escalation marked answered. The mode reached nobody, so a reply recorded under it is one nobody gave, and an escalation it raised is still waiting, which makes it an open line that `Open` 0 already refuses                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
   | `stopped`     | `Work resumed` empty. The user ended the session, so the stage reports every open node rather than resuming — a `stopped` row with work after it is a `REVISE` whatever it counts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
@@ -196,6 +197,17 @@ Use the shared schema.
     and a table of only `✅` rows that drops a declared rule is a REVISE, not a PASS (a spec declaring no active `BR-*` states the omission instead of carrying the table);
   - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` reached one of its **two** passing states — exit 0, or `PASS with cross-spec obligations`: every finding this spec owns is clean, and each residual `QFAI-ATDD-113` / `-115` / `QFAI-TEST-001` is recorded one row per obligation under `## Cross-spec obligations` with a named sibling owner
     — a contract per row for the first two, a stub file per row for the third. Exit 1 alone is not `REVISE` here; residue that is unrecorded, unattributable, or attributed to this spec is (`references/cross-spec-obligations.md`);
+  - Matrix production and review carry governing US/AC/BR/TC sections,
+    referenced contracts and relevant types/schemas for kept-failure judgments.
+    Map each owned contract failure to the row that covers it: a scored US/TC
+    row where one owns the obligation, and otherwise the contract's own API or
+    Integration row, which a contract with no user story has and which this
+    stage seeds directly. In the `coverage` phase the mapping names the row and
+    the assertion the later phase will write, since no acceptance test exists yet
+    there; the assertion itself is read at the completion review, after `red` and
+    `implementation` have created it, and a failure no row of either kind covers
+    is upstream DRIFT rather than a clean matrix. Preserve declared valid coverage and all
+    oracle checks;
   - Drift Protocol is enforced;
   - test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`;
   - coverage floors and ratios are signals, not gates;
@@ -229,6 +241,10 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is restated here.
 
+**Both are delegated sessions** (`.agents/rules/grilling.md` § Two kinds of
+session): a critical decision goes to the user at once, and after two rounds
+every other takes the griller's recommendation, recorded as an `agents` row.
+
 - **At the preflight.** A session over what the confidence check left uncertain, and nothing else. The bound is on the subject: the spec and the ledger are settled input, and re-interrogating them each run would stop the cycle and invite the drift this stage avoids.
 - **On detection.** A contradiction in the spec, an unconsidered case or a technical obstacle surfacing mid-run stops the work and opens a session over what was detected, rather than being decided alone.
 - **What this stage's session holds, and what it does not.** The decisions of
@@ -252,10 +268,8 @@ Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions 
 
   | Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
   | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
-  | S1 | confirmed | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 2 | 0 | 0 |
+  | S1 | adopted | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 2 | 0 | 0 |
   | S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | the stored state a criterion's case starts from | empty | none in flight | 1 | 1 | 0 |
-
-  Confirmed S1: "Yes — that is the understanding."
 
   Closed S2: "proceed"
 
@@ -268,8 +282,8 @@ Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions 
   ```text
   | Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
   | ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
-  | 2 | <role> | <instance> | grilling(S1@2026-01-01T09:02:00.417Z/user): <a decision S1 settled> | <refs> | <refs> | PASS |
-  | 3 | <role> | <instance> | grilling(S1@2026-01-01T09:02:00.417Z/user): <another decision S1 settled> | <refs> | <refs> | PASS |
+  | 2 | <role> | <instance> | grilling(S1@2026-01-01T09:02:00.417Z/agents): <a decision S1 adopted> | <refs> | <refs>; <why it was taken; any position that disagreed> | PASS |
+  | 3 | <role> | <instance> | grilling(S1@2026-01-01T09:02:00.417Z/agents): <another decision S1 adopted> | <refs> | <refs>; <why it was taken; any position that disagreed> | PASS |
   | 6 | <role> | <instance> | grilling(S2@2026-01-01T09:02:00.417Z/user): <the decision S2 settled> | <refs> | <refs> | PASS |
   ```
 
@@ -328,13 +342,13 @@ Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions 
   and the second is a disposition the reviewer reads rather than an omission it
   cannot see.
 
-  `Ended` is `confirmed`, `user-closed`, `no-question` or `stopped` — the four
-  endings `.agents/rules/grilling.md` names — and only the first three let the
-  work go on.
+  `Ended` is `confirmed`, `user-closed`, `adopted`, `no-question` or `stopped`
+  — the five endings `.agents/rules/grilling.md` names — and only the first four
+  let the work go on; a delegated session that completes ends `adopted`.
 
   **`Decisions` counts what the session settled, and each has a row that
   names who recommended it.** A decision the user answered counts, and so does
-  one the agents settled; an open node and an unanswered escalation do not.
+  one the session adopted; an open node and an unanswered escalation do not.
   Each counted decision is a `grilling(<where>/<adjudication>): <the decision>`
   row in the stage's Work Orders Summary
   (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md`), so the
@@ -354,14 +368,13 @@ Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions 
   naming the `Session` it closed. `user-closed` is a claim about the user as
   much as `confirmed` is, and a row carrying it over no reply would pass the
   agent's own assumptions off as a closure the user made.
-- **The escalated decisions go under that table too.** One line per decision
-  a session between agents sent to the user, naming the `Session` it came from
+- **The escalated decisions go under that table too.** One line per critical
+  decision a session sent to the user, naming the `Session` it came from
   and what the user answered, or that no answer has come yet — **and a decision
   still waiting is an open line under that `Session` as well**, because an
-  escalation nobody answered is a decision nobody took. A decision the
-  agents agreed on is among them: agreement between agents settles nothing, so
-  it reaches the user like one left open. `Escalated` counts these lines, and
-  the gate reconciles the two the way it reconciles `Open` with the register.
+  escalation nobody answered is a decision nobody took. `Escalated` counts these
+  lines, and the gate reconciles the two the way it reconciles `Open` with the
+  register.
 - **A free-form cell is one line, with `|` written `\|`.** `Subject` and a
   `none — <why>` disposition are the author's own words, and a pipe or a line
   break in them adds cells to the row, so `Open` and `Escalated` land under the
@@ -408,7 +421,8 @@ Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions 
 
 - Coverage obligations are mandatory : , and **`required` narrows on a different mechanism for each ID kind — `US-*` by surface type, `TC-*` by its declared `Level`, `CON-API-*` by active-vs-deferred. They share a word, not a rule; never carry one kind's over to another**:
   - `tests/e2e/**` must cover all required `US-*`. A story outside the current slice is deferred in `02_User-stories.md` with a `- x-qfai-status: planned` meta line in its own `US-XXXX` block (a `##`-or-deeper heading, or its catalog list entry) — the same token both contract kinds use — and is named at `info` by `QFAI-ATDD-118`. It is not left uncovered, and it is not covered by a test
-    that asserts nothing. `exception` is not the alternative here: that branch belongs to a ledger row, and a `US-*` owns none (`references/red-provenance.md#a-spec-with-no-atdd-owned-rows`). **Required** here = every declared `US-*` of a **user-facing** spec, "user-facing" being the same surface union `/qfai-prototyping` resolves — frontmatter `surface_type: ui-bearing` in `01_Spec.md`,
+    that asserts nothing. A ledger-row `exception` does not defer a `US-*` annotation obligation.
+    Active stories have their own E2E ledger rows and follow the ATDD-owned lifecycle (`references/red-provenance.md#a-spec-with-no-atdd-owned-rows`). **Required** here = every declared `US-*` of a **user-facing** spec, "user-facing" being the same surface union `/qfai-prototyping` resolves — frontmatter `surface_type: ui-bearing` in `01_Spec.md`,
     a matching UI contract in `.qfai/contracts/ui/` (the resolver accepts these names and no others: `<spec-id>.yaml`, `spec-<spec-id>.yaml`, `ui-<spec-id>.yaml`, `ui-<spec-id>-<slug>.yaml`, or any `*.yaml` at any depth under a `spec-<spec-id>/` subdirectory — a basename that merely contains the id, such as `0002-orders.yaml`, is not one, and a `.yml` extension never is), a legacy
     `# … prototyping …` heading, or the spec pinned by `qfai.config.yaml#prototyping.primarySpecId`; any one signal is enough. **That narrowing is a project-wide, all-or-nothing opt-in**: it turns on the moment any one spec in the repository declares a user-facing surface, and until then it is off repo-wide. So a spec with no user-facing surface owes no E2E reference once the project has
     opted in, and before that owes one for every declared `US-*` — the obligation on the spec in front of you can change because a **different** spec added a surface declaration, with nothing in this stage's inputs to show it. On a resolution failure `qfai` names the reason on stderr and keeps the obligation project-wide, so read stderr before treating an unexpectedly wide
@@ -552,7 +566,7 @@ Notes:
 - Tests exist but were never executed.
 - Validation evidence is missing, or failing on a finding this spec owns. **A residual `QFAI-ATDD-113` / `-115` attributed to a named sibling spec and recorded under `## Cross-spec obligations` is not this criterion** — it blocks _that_ spec's completion, not this one, and `/qfai-verify` settles the repo-wide residue at the end of the stage. Unrecorded residue is, and so is an entry that
   names no owning spec, names **this** spec as the owner, or omits the contract ID the finding cites.
-- Coverage Depth Matrix is missing, omits the business rule coverage table on a spec that declares an active `BR-*`, or contains unjustified ❌ cells in either table, or that table drops an active `BR-ID` declared in `04_Business-Rules.md` (normal-path-only coverage is incomplete).
+- Coverage Depth Matrix is missing, omits the business rule coverage table on a spec that declares an active `BR-*`, or contains unjustified ❌ cells in either table, or that table drops an active `BR-ID` declared in `04_Business-Rules.md` (normal-path-only coverage is incomplete where an applicable obligation is uncovered: normal path, declared valid boundaries and kept failures).
 - A ledger row was advanced past `todo` with none of the three forms — no observed RED, no falsifiability evidence, and no `DR-*`.
 - A row was sent to `exception` without a `DR-*` recording why **both** branches were unavailable. "The surface was built earlier in this cycle" is not such a reason.
 
@@ -598,7 +612,8 @@ Template:
 <!-- One `### /qfai-atdd — run started <time>` block per invocation, one row
      per session inside it, written when each session ends. See this skill's
      `## Grilling (MANDATORY)` section; the open questions go under the
-     table. -->
+     table. A decision a session adopted is an `agents` row in the Work Orders
+     Summary, with why it was taken and any disagreeing position. -->
 
 ### /qfai-atdd — run started 2026-01-01T09:02:00.417Z
 
@@ -726,6 +741,9 @@ Include the referenced inputs (instructions/steering and spec delta), the DR-IDs
 ## Completion Message & Next Actions (MUST)
 
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+
+The message lists each adopted decision — every `grilling(<Session>@<run key>/agents)`
+row — with its reason and any disagreeing position, and does not wait for an answer.
 
 - Proceed (recommended): `/qfai-implement`. Action: run unified TDD micro-cycle (Red/Green/Refactor) one test at a time from test-list.md.
 - Acceptance tests need fixes: rerun `/qfai-atdd`. Action: close uncovered `US` / `TC` / `CON-API` / `CON-DB` obligations and rerun validation.
