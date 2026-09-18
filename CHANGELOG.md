@@ -217,6 +217,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The band-drift and template-name records name their ledger repair, and own
+  the work it leaves** (#1940). `CR-20260913-0001` and `CR-20260913-0010` name
+  `CR-20260913-0009` as the `spec-0013` ledger repair, and bring the rows it
+  seeds into their scope and costs. `CR-20260913-0001` runs the `spec-0004`
+  acceptance pass under every option and states that no record repairs that
+  ledger yet, so it stays open until one does. `CR-20260913-0010` is applied
+  only once its own `TDD-0027` reset has run, whatever the other record
+  decides, and its `DR-0267` reproduction names the current line.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
