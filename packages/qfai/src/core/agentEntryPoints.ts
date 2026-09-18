@@ -640,7 +640,11 @@ export function addReviewPointer(existing: string, template: string | null): str
           htmlEnd = /\?>/;
         } else if (/^<![A-Za-z]/.test(htmlLine)) {
           htmlEnd = />/;
-        } else if (/^<!\[CDATA\[/.test(htmlLine)) {
+        } else if (/^<!\[CDATA\[/i.test(htmlLine)) {
+          // Case-insensitive, which CommonMark is not. GitHub hides the
+          // lowercase lookalike exactly as it hides the spelled form, so
+          // reading only the uppercase one read a directive nobody can see
+          // as operative and added no visible one.
           htmlEnd = /\]\]>/;
         } else if (
           /^ {0,3}<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \t>]|\/>|$)/i.test(
@@ -1083,6 +1087,7 @@ const SUPERSEDED_RULE_BULLETS: ReadonlyMap<string, readonly string[]> = new Map(
     ".agents/rules/grilling.md",
     [
       "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.",
+      "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends in one of four named endings, never at a question count.",
     ],
   ],
 ]);
