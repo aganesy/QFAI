@@ -590,6 +590,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   examples do not supply review guidance. Project bytes and authored answers
   stay intact.
 
+- **A missing `jq` is named, not read as a broken release workflow** (#1689). The
+  test that runs the release workflow's tag gate reported, on a machine without
+  `jq`, that the workflow would not tag a release merge, while the negative
+  cases beside it passed for no reason: the gate's `jq` call failed, it printed
+  nothing, and the case read that silence as a verdict. The case now fails
+  naming the tool that is not installed.
+
 - **The completion gate recomputes the checkpoint seal over the checkpoint's own
   revision** (#1738). `checkpoint-verification.md` seals the checkpoint command
   and result together with `Checkpoint verification revision`, the tree that
