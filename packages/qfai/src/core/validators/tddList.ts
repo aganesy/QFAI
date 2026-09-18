@@ -1289,6 +1289,7 @@ const ROUND_SCOPED_EVIDENCE_FIELDS = [
   "RED result",
   "GREEN command",
   "GREEN result",
+  "RED failure mode",
 ] as const;
 
 function evidenceRoundNumbers(section: string): number[] {
@@ -3015,7 +3016,6 @@ function missingCompletedEvidenceFields(
     "Test file",
     "Selector",
     expected.obligationField,
-    "RED failure mode",
     "Refactor verify command",
     "Refactor verify result",
     "qa-gatekeeper",
@@ -3152,7 +3152,12 @@ function missingCompletedEvidenceFields(
     );
   }
 
-  const failureMode = rowEvidenceFieldValue(section, "RED failure mode")?.toLowerCase();
+  // The classification belongs to a round, as `round-evidence.md` writes it: a
+  // blocking REVISE opens a round on its own tree, and one row-level field
+  // cannot hold a falsifiability proof for one round and an observed RED for
+  // the next. An entry written before that carries it once, unprefixed, and
+  // that value still answers for every round that states none.
+  const rowFailureMode = rowEvidenceFieldValue(section, "RED failure mode");
   let latestRevision: string | null = null;
   let latestGreenCommand: string | null = null;
   let oracleProofOwed = false;
@@ -3241,11 +3246,21 @@ function missingCompletedEvidenceFields(
     ) {
       missing.push(`Round ${round}: Falsifiability revision naming ${REVISION_FORM_HINT}`);
     }
-    if (validObservedRed && failureMode !== "assertion" && failureMode !== "expected-error") {
-      missing.push("RED failure mode: assertion or expected-error for observed RED");
+    const stated = roundEvidenceFieldValue(section, round, "RED failure mode") ?? rowFailureMode;
+    const failureMode = stated?.toLowerCase();
+    if (stated === null) missing.push(`Round ${round}: RED failure mode`);
+    if (
+      stated !== null &&
+      validObservedRed &&
+      failureMode !== "assertion" &&
+      failureMode !== "expected-error"
+    ) {
+      missing.push(
+        `Round ${round}: RED failure mode: assertion or expected-error for observed RED`,
+      );
     }
-    if (validFalsifiability && failureMode !== "falsifiability") {
-      missing.push("RED failure mode: falsifiability for falsifiability proof");
+    if (stated !== null && validFalsifiability && failureMode !== "falsifiability") {
+      missing.push(`Round ${round}: RED failure mode: falsifiability for falsifiability proof`);
     }
     if (ATDD_OWNED_LAYERS.has(normalizedLayer) && !expected.preSplit) {
       const redHash = roundEvidenceFieldValue(section, round, "RED test hash");
