@@ -237,6 +237,34 @@ describe("check-shipped-ci-parity", () => {
     expect(result.stdout).toContain(SHIPPED);
   });
 
+  it("asks nothing for prose inside a workflow's embedded script", async () => {
+    // `actions/github-script` takes JavaScript as a block scalar, so a comment
+    // there opens with `//`. Read as YAML alone it is a change to what CI does,
+    // and no `#` marker could answer it: a `#` inside the block would not parse.
+    const scripted = (note: string): string =>
+      BASE_WORKFLOW.replace(
+        "      - run: pnpm ci:lint\n",
+        [
+          "      - uses: actions/github-script@4444444444444444444444444444444444444444 # v7.0.0",
+          "        with:",
+          "          script: |",
+          `            // ${note}`,
+          "            core.info('classified')",
+          "      - run: pnpm ci:lint",
+          "",
+        ].join("\n"),
+      );
+    const dir = await branchRepo(
+      { [WORKFLOW]: scripted("what this step decides") },
+      { [WORKFLOW]: scripted("what this step decides, said more clearly") },
+    );
+
+    const result = runGuard(dir, ["--base", "main"]);
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("touches none of this repository's CI");
+  });
+
   it("asks nothing for a change that only reformats", async () => {
     const reformatted = BASE_WORKFLOW.replace(
       "jobs:",

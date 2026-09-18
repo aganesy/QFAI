@@ -3,9 +3,9 @@
 ## Status
 
 - status: ready
-- run id: run-20260911090607227
+- run id: run-20260918144217322
 - source: discussion-pack
-- selected discussion-pack: /tmp/claude-0/-home-user-QFAI/dc1b2544-2798-59cb-b7a4-60f54515c4ab/scratchpad/wt1503/.qfai/discussion/discussion-20260418170937652
+- selected discussion-pack: C:\Users\YusukeSenaga\Documents\GitHub\QFAI-2\.claude\worktrees\agent-a6428068cff460aec\.qfai\discussion\discussion-20260418170937652
 
 ## Requirement Intake
 
