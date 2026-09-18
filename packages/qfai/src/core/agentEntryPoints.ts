@@ -1285,6 +1285,47 @@ function replaceSupersededBullets(
   return { text: lines.join("\n"), refreshed: [...refreshed].sort(), withheld: held };
 }
 
+/** A rule bullet as the entry points write it: `` - `.agents/rules/<name>.md` — … ``. */
+const RULE_BULLET_MASTER_RE = /^- `(\.agents\/rules\/[A-Za-z0-9._-]+\.md)`/;
+
+/**
+ * `generated` with the rule bullet of every master outside `installed` taken
+ * from `existing`, where `existing` carries one in its rule list.
+ *
+ * A summary describes its master. `--force` rebuilds the Copilot instructions
+ * whole, from the release's wording, and a master the adopter edited stays as
+ * the adopter has it, so the release's bullet would assert a rule that file
+ * does not carry. The bullet the file already had is the one that still
+ * describes it. A master with no bullet there keeps the release's.
+ */
+export function keepSummariesOfKeptMasters(
+  generated: string,
+  existing: string,
+  installed: ReadonlySet<string>,
+): string {
+  const lines = existing.split("\n");
+  const open = outsideFences(lines);
+  const range = ruleListRange(lines, open);
+  if (range === null) return generated;
+  const kept = new Map<string, string>();
+  for (let index = range.from; index < range.to; index += 1) {
+    if (open[index] !== true) continue;
+    const own = (lines[index] ?? "").replace(/\r$/, "");
+    const master = RULE_BULLET_MASTER_RE.exec(own)?.[1];
+    if (master !== undefined && !installed.has(master) && !kept.has(master)) {
+      kept.set(master, own);
+    }
+  }
+  if (kept.size === 0) return generated;
+  return generated
+    .split("\n")
+    .map((line) => {
+      const master = RULE_BULLET_MASTER_RE.exec(line)?.[1];
+      return master === undefined ? line : (kept.get(master) ?? line);
+    })
+    .join("\n");
+}
+
 /** The master `line` is a superseded bullet for, or `null` when it is not one. */
 function supersededMasterOf(line: string): string | null {
   for (const [master, spellings] of SUPERSEDED_RULE_BULLETS) {

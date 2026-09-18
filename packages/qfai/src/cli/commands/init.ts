@@ -76,6 +76,7 @@ import {
   citedRuleMastersOutsideCode,
   hasUnclosedRulesSection,
   extractManagedRulesSection,
+  keepSummariesOfKeptMasters,
   needsManagedRulesSection,
   newlyWrittenRuleMasters,
   refreshSupersededRuleBullets,
@@ -404,28 +405,36 @@ export async function runInit(options: InitOptions): Promise<void> {
   if (!options.dryRun && rootResult.copied.includes(configPath)) {
     await aimTestFileGlobsAtRepository(destRoot, configPath);
   }
-  // Runs immediately AFTER the create-only root copy, and before anything else
-  // that can throw. The files it repairs are exactly the ones that copy skipped
-  // because the project already had them, and the signal it reads — which
-  // masters this run wrote — is available only in the run that wrote them. A
-  // step between the two that failed would leave the master on disk and its
-  // citation unwritten, with the next run seeing a master it did not write.
+  // The entry-point repair runs right after the create-only root copy and the
+  // rule-master update pass. The files it repairs are exactly the ones that
+  // copy skipped because the project already had them, and the signal it reads
+  // — which masters this run wrote — is available only in the run that wrote
+  // them. A step between the two that failed would leave the master on disk and
+  // its citation unwritten, with the next run seeing a master it did not write.
   //
-  // SIMPLIFIED: the window is one operation wide rather than closed.
+  // The update pass is the one step allowed in between, because a summary may
+  // only move to the release's wording where its master did, and a planned
+  // replacement can still end with the adopter's master kept. The citation
+  // repair reads this run's own copy report, so a master replaced here — already
+  // on disk before the run — is not one it is looking for.
+  //
+  // SIMPLIFIED: the window is the update pass wide rather than closed.
   // Lift when: init records per-master provenance, which the rule-master upgrade
   // path needs for its own reasons.
   const newlyWritten = newlyWrittenRuleMasters(rootResult.copied, destRoot);
+  const ruleMasterResult = await updateUneditedRuleMasters(rootAssets, destRoot, options.dryRun);
+  const installedMasters: ReadonlySet<string> = new Set([
+    ...newlyWritten,
+    ...ruleMasterResult.installed,
+  ]);
   const entryPointRulesResult = await ensureAgentEntryPointRules(
     rootAssets,
     destRoot,
     options.dryRun,
     options.force,
     newlyWritten,
-    await installedRuleMasters(rootAssets, destRoot, newlyWritten),
+    installedMasters,
   );
-  // After the citation repair, which reads this run's own copy report: a master
-  // replaced here was already on disk, so it is not one that pass is looking for.
-  const ruleMasterResult = await updateUneditedRuleMasters(rootAssets, destRoot, options.dryRun);
   const minimumMaster = path.join(destRoot, AGENTS_RULES_DIR_REL, "minimal-implementation.md");
   const plannedSafetyFloor =
     options.dryRun &&
@@ -478,6 +487,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   const wrappersResult = await syncIntegrationWrappers(assistantAssets, destRoot, {
     force: options.force,
     dryRun: options.dryRun,
+    installedRuleMasters: installedMasters,
   });
   const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
   const legacyEvidenceIgnoreResult = await ensureLegacyEvidenceIgnoreNegations(
@@ -3218,6 +3228,8 @@ async function ensureLegacyEvidenceIgnoreNegations(
  */
 /** The masters' directory, relative to a project root and to the shipped tree alike. */
 const AGENTS_RULES_DIR_REL = path.join(".agents", "rules");
+/** The same directory as a citation spells it: with `/` on every platform. */
+const AGENTS_RULES_DIR_CITATION = ".agents/rules";
 
 /** The constitution cannot demote obligations an older or edited floor still omits. */
 async function canSyncConstitution(
@@ -3262,11 +3274,14 @@ async function updateUneditedRuleMasters(
   rootAssets: string,
   destRoot: string,
   dryRun: boolean,
-): Promise<{ copied: string[]; skipped: string[] }> {
+): Promise<{ copied: string[]; skipped: string[]; installed: ReadonlySet<string> }> {
   const shippedRulesDir = path.join(rootAssets, AGENTS_RULES_DIR_REL);
   const projectRulesDir = path.join(destRoot, AGENTS_RULES_DIR_REL);
   const copied: string[] = [];
   const skipped: string[] = [];
+  // The masters whose file carries the release's text once this pass is done,
+  // spelled with `/` as a citation is. A summary moves only for these.
+  const installed = new Set<string>();
 
   let plans: readonly RuleMasterPlan[];
   try {
@@ -3274,9 +3289,11 @@ async function updateUneditedRuleMasters(
   } catch (error: unknown) {
     // A tree this run cannot read is one it must not rewrite. Say so and leave
     // every master where it is: the copy above already put the missing ones
-    // there, and nothing here is required for the run to be correct.
+    // there, and nothing here is required for the run to be correct. With no
+    // way to tell which masters are the release's, none is reported installed,
+    // which withholds every summary refresh rather than guessing one.
     info(`  NOTE: rule masters were not checked for updates (${describeError(error)})`);
-    return { copied, skipped };
+    return { copied, skipped, installed };
   }
 
   const recorded: Record<string, string> = {};
@@ -3293,10 +3310,12 @@ async function updateUneditedRuleMasters(
     }
     if (plan.verdict !== "update") {
       recorded[plan.name] = plan.shippedHash;
+      installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
       continue;
     }
     if (dryRun) {
       copied.push(target);
+      installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
       info(`  would update: ${formatReportPath(target)} (rule master, unedited here)`);
       continue;
     }
@@ -3312,6 +3331,7 @@ async function updateUneditedRuleMasters(
     }
     copied.push(target);
     recorded[plan.name] = plan.shippedHash;
+    installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
   }
 
   if (!dryRun && plans.length > 0) {
@@ -3319,46 +3339,7 @@ async function updateUneditedRuleMasters(
     // state that keeps it unreplaceable for ever.
     await writeRuleLock(projectRulesDir, { ...(await readRuleLock(projectRulesDir)), ...recorded });
   }
-  return { copied, skipped };
-}
-
-/**
- * The masters whose file in this project carries the release's own text once
- * this run finishes: the ones the create-only copy just wrote, and the ones the
- * later update pass will replace because the project never edited them.
- *
- * A summary bullet describes its master, so the entry-point files may only be
- * moved to the release's wording for a master that moves with them. An adopter
- * who edited `grilling.md` keeps it — and an instruction file rewritten anyway
- * would assert a rule its own authoritative master does not carry.
- *
- * An unreadable tree yields the empty set, which refreshes nothing: with no way
- * to tell which masters are the release's, no bullet can be shown to describe
- * the file beside it.
- */
-async function installedRuleMasters(
-  rootAssets: string,
-  destRoot: string,
-  newlyWritten: readonly string[],
-): Promise<ReadonlySet<string>> {
-  const installed = new Set(newlyWritten);
-  try {
-    const plans = await planRuleMasterUpdates(
-      path.join(rootAssets, AGENTS_RULES_DIR_REL),
-      path.join(destRoot, AGENTS_RULES_DIR_REL),
-    );
-    for (const plan of plans) {
-      // `written` is the copy in this run, `current` is already the release's
-      // text, and `update` is the file this run replaces. `keep` is the edited
-      // one, and the only one whose summary may not move. Spelled with `/`, as
-      // a citation is.
-      if (plan.verdict !== "keep") installed.add(`.agents/rules/${plan.name}`);
-    }
-  } catch {
-    // Reported where the update pass meets the same tree; here the empty set is
-    // the answer, and it withholds every refresh rather than guessing one.
-  }
-  return installed;
+  return { copied, skipped, installed };
 }
 
 async function ensureAgentEntryPointRules(
@@ -4694,6 +4675,11 @@ type Note = (message: string) => void;
 type WrapperSyncOptions = {
   force: boolean;
   dryRun: boolean;
+  /**
+   * The masters whose file carries the release's text once this run is done.
+   * Given, a rebuilt Copilot file keeps its own bullet for every other master.
+   */
+  installedRuleMasters?: ReadonlySet<string>;
   /** Defaults to stdout, which is what `qfai init` wants. */
   report?: Note;
 };
@@ -4728,8 +4714,14 @@ async function syncIntegrationWrappers(
   } else {
     copied.push(copilotDest);
     if (!options.dryRun) {
+      const existingCopilot = copilotExists ? await readTextFileIfPresent(copilotDest) : null;
+      const generated = buildCopilotInstructions();
+      const contents =
+        existingCopilot === null || options.installedRuleMasters === undefined
+          ? generated
+          : keepSummariesOfKeptMasters(generated, existingCopilot, options.installedRuleMasters);
       await mkdir(path.dirname(copilotDest), { recursive: true });
-      await writeFile(copilotDest, buildCopilotInstructions(), "utf-8");
+      await writeFile(copilotDest, contents, "utf-8");
     }
   }
 

@@ -233,6 +233,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A rule summary stays with the master it describes** (#1889). Five gaps
+  remained after `init` stopped refreshing the summary of a master the adopter
+  edited:
+  - `--force` rebuilt the Copilot instructions from the release's summaries
+    whatever the masters held. The rebuilt file now keeps its own bullet for a
+    master the adopter kept.
+  - The set of masters counted as installed came from a plan made before the
+    update pass, so a planned replacement that then kept the adopter's master
+    still moved its summary. The entry points are now refreshed from what the
+    update pass actually did.
+  - A `---` under a list item was read as a setext heading and ended the
+    managed Copilot rule list early. A thematic break now ends nothing.
+  - Where one `/qfai-implement` run writes its grilling block into two
+    evidence files, the gate now also compares that run's `grilling(…)` rows
+    and `none` marker in each file's Work Orders Summary.
+  - The execution skills load the grilling primitive before the confidence
+    check, not only before a preflight round.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number

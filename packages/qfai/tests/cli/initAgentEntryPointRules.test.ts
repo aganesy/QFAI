@@ -2302,6 +2302,38 @@ describe("a later init refreshes a rule summary the project never edited", () =>
     });
   });
 
+  it.each([
+    { edited: true, kept: "the file's own bullet" },
+    { edited: false, kept: "the release's bullet" },
+  ])(
+    "rebuilds the Copilot file under --force with $kept for a master edited: $edited",
+    async ({ edited }) => {
+      await withProject(async (root) => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        const copilot = path.join(root, ".github", "copilot-instructions.md");
+        const written = await readFile(copilot, "utf-8");
+        const current =
+          written.split("\n").find((line) => line.startsWith(`- \`${master}\``)) ?? "";
+        expect(current, "the Copilot file has no bullet for the master").not.toBe("");
+        await writeFile(copilot, written.replace(current, superseded), "utf-8");
+        if (edited) {
+          // The adopter's own master: the update pass keeps it, so the release's
+          // summary would describe a rule this tree does not have.
+          const file = path.join(root, ".agents", "rules", "grilling.md");
+          await writeFile(file, `${await readFile(file, "utf-8")}\n\nOur own addition.\n`, "utf-8");
+        }
+
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+        const after = await readFile(copilot, "utf-8");
+        expect(after).toContain(edited ? superseded : current);
+        expect(after).not.toContain(edited ? current : superseded);
+        // Every other rule keeps the release's wording.
+        expect(after).toContain("- `.agents/rules/user-questions.md` — ");
+      });
+    },
+  );
+
   it("leaves the same line inside a fenced example as it is", async () => {
     await withProject(async (root) => {
       const seeded = await seedSuperseded(root);
