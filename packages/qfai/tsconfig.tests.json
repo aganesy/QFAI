@@ -167,6 +167,7 @@
     "tests/core/bpApDb.test.ts",
     "tests/core/businessFlowTraceability.test.ts",
     "tests/core/capCatalogSpecColumn.test.ts",
+    "tests/core/designDirectionProposal.test.ts",
     "tests/core/discussionDesignMdParse.test.ts",
     "tests/core/evidenceRevisionStale.test.ts",
     "tests/core/findingCodeGrammar.test.ts",
