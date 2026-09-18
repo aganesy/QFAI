@@ -138,7 +138,17 @@ describe("at most one runner project is moved off the declared parallelism value
       projects.map((project) => project.name).sort(),
       "the scan must see the whole runner surface; a project it cannot read is a project that can be " +
         "tuned without this rule noticing",
-    ).toEqual(["cli", "core", "e2e", "integration", "scripts", "unit", "validators"]);
+    ).toEqual([
+      "cli",
+      "core",
+      "e2e",
+      "integration",
+      "pr-fix",
+      "pr-merge",
+      "scripts",
+      "unit",
+      "validators",
+    ]);
 
     // The value being compared against is the DECLARED one, not whatever the file happens to hold.
     // Without this the rule would follow a quiet edit to `projectKnobs` and report nothing moved.

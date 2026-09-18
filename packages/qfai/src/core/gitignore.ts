@@ -143,7 +143,7 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // `atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row. Unlike a
   // report or a run log these are not regenerable — a RED is an observation
   // taken before the code that makes it pass exists, and rerunning the owner
-  // skill afterwards cannot reproduce it. Left ignored, the anchor resolved
+  // skill afterwards cannot reproduce it. Left ignored, the anchor resolves
   // only on the machine that ran the gate: a reviewer, a fresh clone and CI
   // all read a repository where the payload is absent, and the ledger's
   // `Evidence` cell is the only part of the record that reaches a commit.
@@ -178,9 +178,10 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // `import-lite-<ts>.md`, and the copy an operator kept under the template's
   // own `import-lite.md`. `findImportLiteEvidence` accepts that second one
   // deliberately — the remedy names the stamped form, but the shipped template
-  // does not carry a stamp, so requiring the separator left an operator who
-  // copied it under its own name still holding the warning they had just acted
-  // on. Both are input sources when filled in, so both have to reach a commit.
+  // does not carry a stamp, so requiring the separator would leave an operator
+  // who copied it under its own name still holding the warning they had just
+  // acted on. Both are input sources when filled in, so both have to reach a
+  // commit.
   //
   // The stamped entry spells the stamp out to its full width, which is the
   // only width the check accepts: `classifyEvidenceName` rejects any other

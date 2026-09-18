@@ -747,25 +747,22 @@ Claude Code is reminded of it at the two moments it matters, through hooks in
 | Writing or editing a Markdown file                               | PostToolUse |
 
 A project without a settings file receives the whole shipped one. A project that
-already has settings keeps them: only the hook entries are added, after whatever
-is already there, and a second run adds nothing. A settings file that is not
-readable JSON is left untouched and reported. Each hook runs `node` directly and
-prints one fixed message — no shell, no file reads, no network. Remove the
-entries to turn the reminder off; the rule still applies.
+already has settings keeps them: missing hook groups are added after whatever is
+already there, and a second run adds nothing. A settings file that is not
+readable JSON is left untouched and reported.
 
-An older implementation reminder with the same status-message markers keeps its
-old text on reinit, including with `--force`. Init adds missing groups; it does
-not refresh an existing same-marker group. This is a manual-upgrade gap.
+Each hook runs `node` directly, with no shell and no network, and prints one
+message from `.agents/rules/reminders.json`. A missing or unreadable message
+file prints nothing. `qfai init` refreshes that file wherever the project has
+not edited it, so a new release's wording reaches an existing project without
+changing `.claude/settings.json`. Remove the entries to turn the reminder off;
+the rule still applies.
 
-To update it, run `npx qfai init --dir <scratch-dir>` with the installed release
-in an unused scratch directory and compare its `.claude/settings.json` with
-your project's file. Match the same hook event and sorted status-message list,
-including repeated markers. Removing one repeated marker changes its identity.
-Compare each field before editing. Refresh only the message-bearing argument;
-keep a customized executable, unrelated arguments, markers, matchers and custom
-fields. Do not copy the template's `command` or entire `args` over your settings,
-append a second group or change its markers. A different identity can run both
-reminders. Back up your settings before editing; other settings remain yours.
+A hook group an earlier release wrote, still exactly as written, is replaced by
+this release's group on the next `qfai init`. A group the project edited is
+kept, and the run names it. To update one by hand, run
+`npx qfai init --dir <scratch-dir>` in an unused scratch directory and compare
+its `.claude/settings.json` with your project's file, group by group.
 
 ## Contributing (for QFAI maintainers)
 
