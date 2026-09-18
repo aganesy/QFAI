@@ -16,6 +16,7 @@ import {
   findLatestDiscussionPackDir,
   resolveActiveDiscussionPack,
 } from "../discussionPack.js";
+import { readUiContractScreenContracts } from "../contracts/screenContracts.js";
 import { resolveAllUiBearingSpecs } from "../prototyping/specResolution.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
@@ -1033,7 +1034,14 @@ async function validatePrototypeHandoff(
     }
   }
 
-  issues.push(...procurementIssues(parsed.value, filePathRel));
+  // The screens a row may name are the ones the UI contracts declare, read
+  // where the prototyping loop reads them.
+  const declaredScreens = new Set(
+    (await readUiContractScreenContracts(root, config.paths.contractsDir)).map(
+      (screen) => screen.screenId,
+    ),
+  );
+  issues.push(...procurementIssues(parsed.value, filePathRel, declaredScreens));
 
   return issues;
 }
@@ -1133,9 +1141,14 @@ function cellIsWritten(value: unknown): boolean {
  * reader cannot act on. `/qfai-implement` installs what this names rather than
  * rebuilding it, so a row with no `item` names nothing to install, and a row
  * with no `why` satisfies the reviewer's last-resort criterion on its face
- * while recording none of what that criterion asks for.
+ * while recording none of what that criterion asks for. A row's `screen` has to
+ * be one a UI contract declares, or neither consumer can locate the region.
  */
-function procurementIssues(handoff: Record<string, unknown>, filePathRel: string): Issue[] {
+function procurementIssues(
+  handoff: Record<string, unknown>,
+  filePathRel: string,
+  declaredScreens: ReadonlySet<string>,
+): Issue[] {
   // Absent, not empty. The contract lets a screen drawn entirely from what the
   // project already had omit the key; a bare `procurement:` parses as `null`,
   // which is a declaration present and saying nothing, and reading the two as
@@ -1218,6 +1231,18 @@ function procurementIssues(handoff: Record<string, unknown>, filePathRel: string
         const seen = realised.get(key);
         if (seen === undefined) realised.set(key, where);
         else duplicates.push({ key, first: seen, second: where });
+        // With no UI contract at all there is no list to hold the row to, and
+        // the readiness gate already reports that project. `region` is not
+        // resolved: a screen contract names a screen, not its parts.
+        if (declaredScreens.size > 0 && !declaredScreens.has(screen)) {
+          issues.push(
+            report(
+              `row '${where}' names screen '${screen}', which no UI contract declares. ` +
+                `An implementer and a reviewer locate the region through the screen, so a ` +
+                `row naming one that does not exist gives neither of them anything to act on.`,
+            ),
+          );
+        }
       }
       if (missing.length > 0) {
         issues.push(

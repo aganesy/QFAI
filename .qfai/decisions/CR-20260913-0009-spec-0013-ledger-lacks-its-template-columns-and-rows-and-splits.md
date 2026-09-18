@@ -154,14 +154,14 @@ them.
 
 | Row        | Obligation     | Boundaries, kept first                                                                                                                                                                        | Why the first is kept                                                                                       |
 | ---------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `TDD-0003` | `TC-0013-0003` | `/qfai-sdd` continues on an incomplete or contradictory pack; it stops only when no usable source exists                                                                                      | it records a one-shot GREEN and no RED, so the test case's order decides                                    |
+| `TDD-0003` | `TC-0013-0003` | the SDD preflight continues on an incomplete or contradictory pack; it stops only when no usable source exists                                                                                | it records a one-shot GREEN and no RED, so the test case's order decides                                    |
 | `TDD-0019` | `TC-0013-0025` | every screen of the template carries `primary_tasks: []`; the requirements-analyst guide asks for at least one task per screen                                                                | its RED failed both at once, so the test case's order decides                                               |
 | `TDD-0020` | `TC-0013-0026` | the lane fails an empty list at `error`, naming the file, the screen and the rule; the `/qfai-prototyping` preflight refuses it                                                               | its proof names both the lane and the preflight check, so the test case's order decides                     |
 | `TDD-0021` | `TC-0013-0027` | the lane passes a contract whose screens each hold a task; the preflight proceeds on it; a contract from before the slot is informational and non-blocking under the deprecation window       | its RED was taken over the whole file                                                                       |
 | `TDD-0022` | `US-0013-0011` | the template's slot; the guide's instruction; the lane fails an empty list; the preflight refuses it; the lane passes a non-empty list                                                        | its RED observed the template-slot case failing                                                             |
 | `TDD-0024` | `TC-0013-0029` | a pointer naming a missing pack raises an error naming the candidate `discussion-*` directories and the recovery command `qfai discussion use <id>`; an absent pointer raises that same error | its proof is the filter matching the pointer against the packs on disk, which the absent case never reaches |
 | `TDD-0025` | `TC-0013-0030` | `/qfai-sdd` sets `surface_type: ui-bearing` for a spec with a UI companion; `resolveAllUiBearingSpecs()` requires the frontmatter                                                             | its recorded RED names no case, so the test case's order decides                                            |
-| `TDD-0026` | `TC-0013-0031` | the finding is raised at warning severity during the window for a companion without the frontmatter; no finding for a spec with no companion                                                  | its recorded RED names no case, so the test case's order decides                                            |
+| `TDD-0026` | `TC-0013-0031` | `qfai sdd lint` emits the finding at warning severity during the window for a companion without the frontmatter; it emits none for a spec with no companion                                   | its recorded RED names no case, so the test case's order decides                                            |
 | `TDD-0027` | `TC-0013-0032` | `templates/contracts/ui-spec.yaml`'s comments state the band; the guide states it; the `QFAI-AUD-020` message names it                                                                        | its RED covered all three at once, so the test case's order decides                                         |
 | `TDD-0028` | `TC-0013-0033` | fewer than three tasks warns; more than seven warns; exactly three does not; exactly seven does not                                                                                           | its RED covered all three at once, so the test case's order decides                                         |
 | `TDD-0029` | `TC-0013-0034` | complete structured items are accepted; string-only items are accepted                                                                                                                        | its proof is the required-key set, which only structured items are measured against                         |
@@ -173,14 +173,37 @@ it exercises:
 - `TDD-0021`'s case for an authored but empty list repeats the first boundary
   of `TC-0013-0026`, which `TDD-0020` keeps. It is removed.
 - `TDD-0024`'s case asserting that no file times are read states
-  `TC-0013-0028`'s second boundary, and becomes the case of the row appended
-  for it.
+  `TC-0013-0028`'s second boundary, and the row appended for it takes the
+  boundary but not the case as written: the case searches `discussionPack.ts`
+  for `mtime`, `birthtime` and `statSync`, which a resolver delegating to
+  another module, or calling a metadata API by another name, passes. The
+  appended row's case observes the metadata reads made while
+  `resolveActiveDiscussionPack` runs and requires there to be none.
 - `TDD-0025`'s cases for a second run changing nothing and for a spec with no
   companion state no boundary of what the row keeps, which is the stage writing
   the frontmatter for a spec that has a companion. Both leave the `Selector`,
   under the rule the ATDD pass applies below. `TDD-0026`'s case for a spec that
-  already declares the frontmatter, and `TDD-0030`'s case for a list whose every
-  entry is malformed, do exercise the boundary their rows keep and stay.
+  already declares the frontmatter leaves it on the same terms: `TC-0013-0031`
+  specifies a warning for a companion without the frontmatter and no finding
+  where there is no companion, so a third condition in the selector fails the
+  warning row on a behaviour neither boundary states. `TDD-0030`'s case for a
+  list whose every entry is malformed does exercise the boundary its row keeps
+  and stays.
+
+The cases the kept boundaries retain reach the execution path their test case
+names, and assert that boundary alone:
+
+- `TDD-0003`'s two cases run the SDD preflight over an incomplete pack and over
+  one with no usable source. The cases `sddSkillSpec0013.test.ts` carries today
+  search `SKILL.md` for sentences, which pass while the preflight stops on an
+  incomplete pack or continues with no source at all.
+- `TDD-0026`'s two cases enter through `qfai sdd lint`, the command
+  `TC-0013-0031` names, rather than calling `validateSurfaceTypeDrift`
+  directly, so a lint path that stopped registering the validator fails them.
+- `TDD-0029`'s two cases in `primaryTasksStructured.test.ts` drop their
+  `QFAI-AUD-020` and `QFAI-AUD-001` assertions, as `TDD-0030`'s case drops its
+  empty-list one: a regression in the band or the empty-list check would
+  otherwise fail the row while both of its boundaries hold.
 
 Where the product answers a boundary differently from the test case — the
 floor `TC-0013-0033` states, or the resolver half of `TC-0013-0030` — the row
@@ -334,7 +357,9 @@ at its own granularity, so this record does not decompose it below that.
      with a `Boundary` slug wherever a test case holds more than one. Thirteen
      rows:
      - `TC-0013-0014`: one row, the result carrying `entries`, `allSpecs` and
-       `fullScan`;
+       `fullScan`, each populated correctly: in the forced full-scan scenario
+       `fullScan` is `true` and `entries` holds every changed spec, beside the
+       `allSpecs` contents the carrier already checks;
      - `TC-0013-0015`: `true` when a `_policies/` file is modified; `false`
        when none is;
      - `TC-0013-0016`: a configured `baseBranch` is read; an absent one returns

@@ -671,7 +671,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-014",
     "QFAI-CONTRACT-015",
     "QFAI-CONTRACT-020",
-    "QFAI-CONTRACT-021",
     "QFAI-CONTRACT-031",
     // `validateDbContractApplyOrder`, composed by `validateContracts` beside
     // `-031` and reachable from the same two profiles.
@@ -692,6 +691,10 @@ export const GATE_GROUP_FAMILIES = {
   // reach it, and run by the prototyping profile on its own, since that is the
   // profile certification accepts.
   "ui-screen-entries": ["QFAI-CONTRACT-042"],
+  // A contract that does not parse: `validateContracts` reports it for every
+  // kind, so sdd and tdd reach it, and the prototyping profile runs the UI
+  // contracts' part on its own, since it reads its screens from them.
+  "contract-parse": ["QFAI-CONTRACT-021"],
   // `validateContractReferences` — `runSddValidators` only. Five codes, not
   // one: the gate reports a missing reference, and four shapes of a reference
   // that resolves to the wrong thing.
@@ -912,6 +915,7 @@ const FULL_GATE_GROUPS: readonly GateGroup[] = ALL_GATE_GROUPS.filter(
 const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
   "prototyping",
   "ui-screen-entries",
+  "contract-parse",
   "reviewer-gate-shared",
   "design-contract-readiness",
   "design-contract-readiness-prototyping",
@@ -960,6 +964,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "reviewer-justification-only",
     "contracts",
     "ui-screen-entries",
+    "contract-parse",
     "contract-references",
     "contract-ssot-modules",
     "design-contract-readiness",
@@ -993,6 +998,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "drift",
     "contracts",
     "ui-screen-entries",
+    "contract-parse",
     "contract-ssot-modules",
     "traceability-ledger",
     "traceability-impl-drift",
@@ -1659,6 +1665,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every Triage section is introduced by the canonical `## Triage` H2, optionally naming its round in parentheses, so the triage rules read the rows under it.",
   "QFAI-TRIAGE-009":
     "`Existing Spec` names its target in one grammar: `spec-NNNN` (multiple joined by `+`), `_policies` for a policy-only row, or `-` on a CREATE row. Every named spec must exist on disk; ranges are not a form.",
+  "QFAI-TRIAGE-010":
+    "A requirement reaches the execution ledger through a spec: at least one of its triage rows targets a spec, not `_policies` alone.",
   "QFAI-SPLIT-106":
     "Every `CAP-NNNN` row in the CAP Catalog appears exactly once and its `Spec` cell names exactly one spec directory, and no two rows name the same one.",
   "QFAI-TEST-001":
@@ -1727,6 +1735,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`## Coverage Depth Matrix` in `.qfai/evidence/atdd-<spec-id>.md` exists and is a link plus counted totals.",
   "QFAI-ATDD-134":
     "The ATDD scan reads every test its globs select: the glob matcher accepts every pattern, every directory the patterns reach is readable, and the selection fits under the file limit.",
+  "QFAI-ATDD-135":
+    "Every directory under the acceptance test roots can be read by the account running `qfai validate`, so every test there is counted.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-BFLOW-005":

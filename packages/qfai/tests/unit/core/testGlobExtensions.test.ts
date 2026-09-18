@@ -100,6 +100,21 @@ describe("namedTestFileMatcher", () => {
     expect(namedTestFileMatcher(["a/tests/test_[]x].zig"])("a/tests/test_x.zig")).toBe(true);
     expect(namedTestFileMatcher(["a/tests/test_[]x].zig"])("a/tests/test_y.zig")).toBe(false);
   });
+
+  // Each row is what fast-glob selects from the same names: a negated group
+  // passes over a name that starts with a member, unless it ends the pattern.
+  it.each([
+    ["t/!(fixture|data).json", ["t/afixture.json", "t/pay.json", "t/x.test.json"]],
+    ["t/!(fixture|data).json", [], ["t/fixture-old.json", "t/fixture.old.json", "t/datax.json"]],
+    ["t/*.!(json)", ["t/fixture.old.json", "t/x.test.json"], ["t/fixture.json", "t/pay.json"]],
+    ["t/!(fixture)/x.json", ["t/pay/x.json"], ["t/fixture/x.json", "t/fixture-old/x.json"]],
+    ["t/!(fix)ture.json", ["t/afixture.json"], ["t/fixture.json"]],
+    ["t/!(*.test).json", ["t/fixture.old.json", "t/pay.json"], ["t/x.test.json"]],
+  ])("reads the negated group in %s as the collector does", (glob, selected, passed = []) => {
+    const matches = namedTestFileMatcher([glob]);
+    for (const file of selected) expect(matches(file), file).toBe(true);
+    for (const file of passed) expect(matches(file), file).toBe(false);
+  });
 });
 
 describe("globExtensions", () => {
