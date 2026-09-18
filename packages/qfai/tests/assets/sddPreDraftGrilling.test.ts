@@ -25,6 +25,7 @@ const LOOP = "assistant/skills/qfai-sdd/references/sdd-pre-draft-grilling.md";
 const CHECKLISTS = "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md";
 const GATE = "assistant/skills/qfai-sdd/references/sdd-quality-gate.md";
 const EVIDENCE_TEMPLATE = "assistant/skills/qfai-sdd/templates/evidence/sdd-spec.md";
+const BATCH_TEMPLATE = "assistant/skills/qfai-sdd/templates/evidence/sdd-batch.md";
 const PRIMITIVE = "assistant/skills/qfai-grilling/SKILL.md";
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
@@ -423,5 +424,33 @@ describe.each(TREES)("%s — the pre-draft grilling loop", (tree) => {
     const order = /## Stage and Phase Order \(Fixed\)([\s\S]*?)\n## /.exec(skill);
     expect(order, "the fixed order section is gone").not.toBeNull();
     expect(order?.[1] ?? "").not.toMatch(/grilling/i);
+  });
+
+  it("records a batch's shared phases once, and each spec cites that record", async () => {
+    // A batch runs one Phase 0 and one Phase 1 session for every spec. Copied
+    // into each spec's file, the rows must agree in `Ended at` and differ in
+    // `Wrote at`, and nothing says which copy is the record.
+    const batch = await read(BATCH_TEMPLATE);
+    const spec = await read(EVIDENCE_TEMPLATE);
+    /** The column names of the first table under a heading, padding aside. */
+    const header = (text: string, heading: string): string | undefined =>
+      text
+        .slice(text.indexOf(heading))
+        .split("\n")
+        .find((line) => line.startsWith("| "))
+        ?.split("|")
+        .map((cell) => cell.trim())
+        .join("|");
+    for (const heading of ["## Pre-draft Grilling", "## Work Orders Summary"]) {
+      expect(batch).toContain(heading);
+      expect(header(batch, heading)).toBe(header(spec, heading));
+    }
+    expect(batch).toContain("It records the two phases that run once for");
+    expectPhrase(spec, "- Batch record: `.qfai/evidence/sdd-batch-<timestamp>.md` | none");
+    expect(spec).toContain("not here: name that file on the `Batch record` line below the table.");
+    expectPhrase(
+      await read(SKILL),
+      "record them once, in `.qfai/evidence/sdd-batch-<timestamp>.md` from `templates/evidence/sdd-batch.md`",
+    );
   });
 });
