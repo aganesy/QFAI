@@ -168,6 +168,26 @@ export function extractMermaidBlocks(text) {
 }
 
 /**
+ * Whether a directory is a checkout of its own: a git worktree or a nested
+ * clone, marked by a `.git` file or directory at its root.
+ *
+ * Its diagrams belong to another branch, so reading them here would report
+ * that branch's findings against this tree, locally and never in a fresh CI
+ * clone. The scan root itself is not asked.
+ *
+ * @param {string} dir Absolute path of a directory below the scan root.
+ * @returns {Promise<boolean>}
+ */
+async function isOtherCheckout(dir) {
+  try {
+    await stat(path.join(dir, ".git"));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Collects Markdown files under one path, which may be a file or a directory.
  *
  * @param {string} target Absolute path.
@@ -192,8 +212,9 @@ async function collectMarkdown(target) {
     }
     for (const child of entries) {
       if (child.isDirectory()) {
-        if (!SKIP_DIRS.has(child.name)) {
-          pending.push(path.join(dir, child.name));
+        const childPath = path.join(dir, child.name);
+        if (!SKIP_DIRS.has(child.name) && !(await isOtherCheckout(childPath))) {
+          pending.push(childPath);
         }
         continue;
       }
