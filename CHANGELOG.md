@@ -6,6 +6,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The tag push is held to the decision before it, and four workflows say what
+  keeps each of them serial** (#1870). Nothing pinned that `tag-release.yml`
+  pushes a tag only where its decision step wrote `push=true`, and every "nothing
+  to tag" answer ends that step successfully with the version output already
+  written — so an ungated push tags any merge that moved the manifest and happened
+  to carry a matching CHANGELOG heading, and a tag starts the release workflow.
+  The new row reads the gate from the step or from the job around it, so giving
+  the push a job of its own still passes. `tag-release.yml`,
+  `release-notes-drift.yml`, `prepare-release.yml` and `renovate.yml` now each
+  record what stops them dividing further: one tag ref plus an early exit that
+  spends no API call on an ordinary merge; an account-wide API allowance that
+  per-version shards would multiply while dividing the work; an edit step whose
+  only product is the work tree, with no install anywhere to amortize a second
+  runner; and a re-pin chain whose guard must precede the toolchain it protects.
 - **A rule on which surface answers a question about the hosted repository, and
   how often it is asked** (#2009). An API allowance belongs to the account, so
   every session and sub-agent draws on one pool and none of them can see what the
