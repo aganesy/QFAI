@@ -5,6 +5,7 @@
 export { validateDiscussionPackReadiness } from "./discussionPack.js";
 export { validateDiscussionVisuals } from "./discussionVisuals.js";
 export { validateDensityHints } from "./densityHints.js";
+export { validateDesignDirectionProposal } from "./designDirectionProposal.js";
 export { validateImportLiteEvidencePresence } from "./importLite.js";
 export { validateLayerCoverage } from "./layerCoverage.js";
 export { validateLayeredTraceability } from "./layeredTraceability.js";
