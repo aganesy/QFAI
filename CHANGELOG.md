@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`QFAI-ID-002` reports one ID declared by two headings of one pack file**
+  (#1971). `QFAI-ID-001` keys each ID on the set of files that define it, so a
+  second definition in the same file added nothing and was never reported.
+  Two headings sharing an ID make every citation of it ambiguous, and a test
+  case written for the first then counted as coverage for the second. The new
+  check reads the `##` headings of a layered spec's user stories, criteria,
+  rules, examples and test cases and names the ID and both headings. A summary
+  table row beside its own heading is one item, not two. Heading definitions
+  now also reach `QFAI-ID-001`, so a heading in each of two files is still the
+  cross-file duplicate it reports.
+
 - **Repository-specific halves of four rules split into overlays** (#1917).
   `distributed-surface`, `version-discipline`, `temporary-files` and
   `root-additions-policy` each governed an adopter's repository and this one

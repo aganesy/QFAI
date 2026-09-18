@@ -1760,6 +1760,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`03_Story-Workshop.md` Mermaid content should include `flowchart` or `sequenceDiagram`.",
   "QFAI-DPACK-010":
     "Legacy discussion naming is deprecated; canonical naming should be used for new outputs.",
+  "QFAI-ID-002":
+    "Within one pack file, each `US`, `AC`, `BR`, `EX` or `TC` ID is declared by at most one heading.",
   "QFAI-IMPLITE-001":
     "A project that has spec packs also has a traceable input source: a `discussion-*/06_REQ.md` under the configured discussion directory, or an `.qfai/evidence/import-lite-*.md`.",
   "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
