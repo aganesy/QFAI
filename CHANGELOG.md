@@ -1138,6 +1138,14 @@ pack` name different paths or seals. The layout says a round after a REVISE
   `<!-- qfai:not-a-citation -->` on the line, or on the line before a fenced
   block for the paths it names inside it.
 
+- **Step 2 of the layer derivation says how a test case reaches its parent
+  business rule** (#1907). The step restricts the oracle to the parent BR's
+  obligations, and no test-case column names a BR, so each reader picked a
+  parent, usually the nearest `AC-Refs`. Step 2 now gives the route the
+  ledger's `BR-Ref` check already uses: the TC's `EX-Ref` to that example's
+  `BR-Ref`, or, where `EX-Ref` names no example, the BRs whose `AC-Refs` name
+  one of the TC's `AC-Refs`.
+
 - **Article XI no longer sends toolchain output to `tmp/`** (#1929). The
   article required "intermediate build artifacts" under `tmp/`. The shipped
   temporary-files rule says build, test and cache output (`dist/`, coverage
