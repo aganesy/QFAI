@@ -214,14 +214,28 @@ Example cascade for `REQ-0042 (rename token "draft" -> "proposal")`:
 ```markdown
 ## Triage
 
-| Source   | Subject     | Existing Spec | Operation | Sub-op | Approved By | Rationale |
-| -------- | ----------- | ------------- | --------- | ------ | ----------- | --------- |
-| REQ-XXXX | <one-liner> | spec-NNNN     | UPDATE    | APPEND | -           | <why>     |
+| Source   | Subject     | Existing Spec | Operation | Sub-op | Approved By | Rationale | Depends-On |
+| -------- | ----------- | ------------- | --------- | ------ | ----------- | --------- | ---------- |
+| REQ-XXXX | <one-liner> | spec-NNNN     | UPDATE    | APPEND | -           | <why>     | -          |
 ```
 
 Required columns: `Source`, `Subject`, `Existing Spec`, `Operation`.
 Conditional: `Sub-op` (UPDATE only), `Approved By` (approval-required
 ops), `Rationale` (recommended for every row).
+Optional: `Depends-On`, what the row waits on before its work can start.
+
+`Depends-On` holds `-`, or a comma-separated list of what must finish first:
+
+- another row's `Source` (`REQ-0042`) — the row waits for every row of that
+  source, such as screens migrating to a shared component waiting for the row
+  that builds it;
+- an open question (`OQ-0007`) — the row waits for the question to be
+  resolved, such as metrics that depend on a typeface not yet chosen.
+
+Write the dependency here, not in `Rationale`: a dependency in prose is
+worded differently by each author and dropped when the row is edited, and
+Phase 2 fans out per spec, so a row that silently waits is a row dispatched
+too early.
 
 The heading is `## Triage` (H2), which may name the round it records in
 parentheses: `## Triage (2026-07-26)`. Every such section in the file is

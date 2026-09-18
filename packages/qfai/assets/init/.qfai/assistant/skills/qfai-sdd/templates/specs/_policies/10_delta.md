@@ -31,9 +31,9 @@
 
 ### DELTA-0001 (YYYY-MM-DD)
 
-| Source   | Subject     | Existing Spec       | Operation | Sub-op | Approved By | Rationale |
-| -------- | ----------- | ------------------- | --------- | ------ | ----------- | --------- |
-| REQ-XXXX | <one-liner> | spec-AAAA+spec-BBBB | MERGE     | -      | <approver>  | <why>     |
+| Source   | Subject     | Existing Spec       | Operation | Sub-op | Approved By | Rationale | Depends-On |
+| -------- | ----------- | ------------------- | --------- | ------ | ----------- | --------- | ---------- |
+| REQ-XXXX | <one-liner> | spec-AAAA+spec-BBBB | MERGE     | -      | <approver>  | <why>     | -          |
 
 <!-- Cross-spec ops (SPLIT / MERGE / SUPERSEDE) are approval-required;
      `Approved By` MUST be a real approver, not `-`, or QFAI-TRIAGE-005

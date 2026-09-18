@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A triage row can say what it waits on** (#1900). The triage table had no
+  column for one row's work waiting on another's, or on an open question, so the
+  dependency went into `Rationale` prose. There no fan-out could read it, and
+  three authors worded it three ways. The table format in `sdd-triage.md` now
+  defines an optional `Depends-On` column, holding another row's `Source` or an
+  `OQ-*`, and both delta templates carry it. The `qfai-sdd` batch section holds
+  a dependent row back until what it names is done or resolved.
+
 - **Repository-specific halves of four rules split into overlays** (#1917).
   `distributed-surface`, `version-discipline`, `temporary-files` and
   `root-additions-policy` each governed an adopter's repository and this one

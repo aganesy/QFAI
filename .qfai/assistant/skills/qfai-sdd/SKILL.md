@@ -196,7 +196,7 @@ routing phase's mandatory agents run inside its span, and its blocking agents MU
 
 - Without argument: target all capabilities in `_policies/03_Capabilities.md`.
 - Run Contracts-first and Outline once per batch.
-- Delegate Slice in parallel per spec.
+- Delegate Slice in parallel per spec. A Triage row whose `Depends-On` names a source or an open question is not dispatched until every row of that source is done or the question is resolved (`references/sdd-triage.md#triage-table-format`).
 - Parallel delegation here is bound by the stage-independent Concurrency rules in `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory`: worktree separation, or the declared degraded mode, plus mandatory commit scoping (`git add <paths>`; never `git add -A` / `git add .` / `git commit -a`).
 - Validate gate and Review gate run once at batch tail after all target specs are integrated.
 - The Plan gate is **this skill's own step**, not a routed reviewer, and runs per target: each
