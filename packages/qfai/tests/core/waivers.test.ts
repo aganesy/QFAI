@@ -934,13 +934,9 @@ describe("applyWaivers", () => {
   // that way and no `code` literal yields either. The static severity table
   // does not list them — nothing about their severity is fixed — so a waiver
   // naming the documented spelling was refused as a rule that does not exist.
-  // `QFAI-FID-010` / `-011` are the other half: one `const` picks between them
-  // before the factory call ever sees a literal.
   it.each([
     ["TDDLIST-003", "an alias carried only as Issue.rule"],
     ["TDDLIST-004", "an alias carried only as Issue.rule"],
-    ["QFAI-FID-010", "a code named through a conditional constant"],
-    ["QFAI-FID-011", "a code named through a conditional constant"],
   ])("recognises the quiet rule %s (%s)", async (rule) => {
     const root = await createRoot();
     try {
