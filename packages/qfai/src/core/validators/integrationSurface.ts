@@ -405,9 +405,19 @@ async function canonicalKindProblem(wrapper: Wrapper, stats: Stats): Promise<str
  * reasons that are not symlinks — case on a case-insensitive filesystem, most
  * of all — and this question has an exact answer per component.
  */
+/**
+ * @param linksInsideAllowed Whether a symlink ancestor that resolves inside the
+ *   project is a layout rather than damage. True for the canonical tree, which
+ *   a project may vendor by link. False for an integration directory: the
+ *   wrappers under it carry **relative** targets, so a link there silently
+ *   re-bases every one of them, and where the directory is empty there are no
+ *   wrappers left to notice.
+ */
 async function unusableAncestor(
   root: string,
   dir: string,
+  realRoot: string | null,
+  linksInsideAllowed: boolean,
 ): Promise<{ relative: string; detail: string } | null> {
   const parts = dir.split("/");
   for (let depth = 1; depth < parts.length; depth += 1) {
@@ -417,7 +427,12 @@ async function unusableAncestor(
     // Nothing above exists, so nothing above is damaged — the surface is simply
     // not created, which is the caller's other branch.
     if (stats === null) return null;
-    if (stats.isSymbolicLink()) return { relative, detail: `is a symlink` };
+    if (stats.isSymbolicLink()) {
+      if (!linksInsideAllowed) return { relative, detail: `is a symlink` };
+      const problem = await externalLinkProblem(path.join(root, ...partial), realRoot);
+      if (problem !== null) return { relative, detail: problem };
+      continue;
+    }
     // A regular file at `.claude` is not a link, but every path under it still
     // raises `ENOTDIR`. Reported through the leaf, the remedy named a child the
     // operator cannot reach; the component at fault is this one.
@@ -450,33 +465,88 @@ async function brokenAncestor(
 }
 
 /**
- * A canonical reachable only through a symlink — its own, an ancestor's, or its
- * `SKILL.md`'s — or `null` when every one of them is a real entry.
+ * Why a symlink at `filePath` is damage, or `null` when it is not one.
  *
- * `init` writes all three as real directories and real files, so a link is
- * damage wherever it points. A resolving one is the case no path comparison
- * catches: both sides follow it to the same place.
+ * `init` writes the canonical tree as real files, but a project may vendor it
+ * by link — pointing `.qfai/assistant/skills` at the assets a package ships is
+ * a layout, not a fault, and the file an agent then reads is one the project
+ * owns and a reviewer can open.
+ *
+ * What the check is for is the link that leaves: a target outside the project
+ * is instructions nobody here reviewed, and both sides follow it to the same
+ * place, so no path comparison catches it. A dangling link and a cycle are the
+ * other two, and `realpath` answers `null` for each.
+ *
+ * With no resolvable project root there is nothing to judge "inside" against,
+ * so the link is reported rather than assumed harmless.
+ */
+async function externalLinkProblem(
+  filePath: string,
+  realRoot: string | null,
+): Promise<string | null> {
+  const resolved = await realpathOrNull(filePath);
+  if (resolved === null) return "is a symlink that does not resolve";
+  if (realRoot === null) return `is a symlink, and the project root does not resolve`;
+  if (!isInside(realRoot, resolved)) {
+    return `is a symlink out of the project: ${toPosix(resolved)}`;
+  }
+  return null;
+}
+
+/**
+ * The name a link resolves to when it is not the name it was written under, or
+ * `null` when the identity is preserved.
+ *
+ * Vendoring points a path at the same document somewhere else in the project.
+ * Pointing `skills/qfai-atdd` at `skills/qfai-verify` is a different thing: the
+ * wrapper still says `qfai-atdd`, the agent reads the other skill, and no path
+ * comparison catches it because both sides follow the link to the same place.
+ * What tells the two apart is whether the last `segments` of the resolved path
+ * still spell the same thing.
+ */
+async function renamedThrough(filePath: string, segments: number): Promise<string | null> {
+  const resolved = await realpathOrNull(filePath);
+  if (resolved === null) return null;
+  const tail = (value: string): string =>
+    toPosix(value).split("/").slice(-segments).join("/").toLowerCase();
+  return tail(resolved) === tail(filePath) ? null : toPosix(resolved);
+}
+
+/**
+ * A canonical reached through a symlink that leaves the project or renames it —
+ * its own, an ancestor's, or its `SKILL.md`'s — or `null` when each link stays
+ * inside and keeps the name.
+ *
+ * See {@link externalLinkProblem} for why a link inside the project passes, and
+ * {@link renamedThrough} for the one inside it that still does not.
  */
 async function canonicalLinkProblem(
   root: string,
   realRoot: string | null,
   wrapper: Wrapper,
 ): Promise<string | null> {
-  const ancestor = await unusableAncestor(root, wrapper.canonicalRelative);
+  const ancestor = await unusableAncestor(root, wrapper.canonicalRelative, realRoot, true);
   if (ancestor !== null) {
     return `a canonical ancestor ${ancestor.detail}: ${toPosix(ancestor.relative)}`;
   }
   const own = await lstatOrNull(wrapper.canonical);
   if (own?.isSymbolicLink() === true) {
-    const resolved = await realpathOrNull(wrapper.canonical);
-    return realRoot !== null && resolved !== null && !isInside(realRoot, resolved)
-      ? `canonical document is a symlink out of the project: ${toPosix(resolved)}`
-      : `canonical document is a symlink: ${toPosix(resolved ?? "?")}`;
+    const problem = await externalLinkProblem(wrapper.canonical, realRoot);
+    if (problem !== null) return `canonical document ${problem}`;
+    const renamed = await renamedThrough(wrapper.canonical, 1);
+    if (renamed !== null) return `canonical document is a symlink to ${renamed}`;
   }
   if (wrapper.kind !== "skill") return null;
   const doc = path.join(wrapper.canonical, "SKILL.md");
   const docOwn = await lstatOrNull(doc);
-  if (docOwn?.isSymbolicLink() === true) return "canonical SKILL.md is a symlink";
+  if (docOwn?.isSymbolicLink() === true) {
+    const problem = await externalLinkProblem(doc, realRoot);
+    if (problem !== null) return `canonical SKILL.md ${problem}`;
+    // Two skills' documents are both named `SKILL.md`, so the owning directory
+    // is what tells them apart.
+    const renamed = await renamedThrough(doc, 2);
+    if (renamed !== null) return `canonical SKILL.md is a symlink to ${renamed}`;
+  }
   return null;
 }
 
@@ -639,7 +709,7 @@ async function canonicalDamage(
   const state = await canonicalState(wrapper.canonical);
   const culprit =
     state.kind === "not-a-directory"
-      ? await unusableAncestor(root, wrapper.canonicalRelative)
+      ? await unusableAncestor(root, wrapper.canonicalRelative, realRoot, true)
       : null;
   const relative = culprit?.relative ?? wrapper.canonicalRelative;
   // **Per tree, because the readers differ.** The skills tree is `readdir`ed —
@@ -1075,7 +1145,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
       // answer "absent" — and then the remedy is "re-run `qfai init`", which
       // cannot create a directory through a broken link. The surface is not
       // missing; the path to it is.
-      const ancestor = await unusableAncestor(root, dir);
+      const ancestor = await unusableAncestor(root, dir, realRoot, false);
       // Before anything about the directory itself: when `.claude` is a cycle
       // or points at a non-directory, the probe on `.claude/skills` answers
       // `cycle` / `not-a-directory` too, and naming the child sent the operator
@@ -1366,8 +1436,8 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         // which they already handle.
         unwalkable:
           code === "ENOTDIR"
-            ? ((await unusableAncestor(root, wrapper.canonicalRelative))?.relative ??
-              wrapper.canonicalRelative)
+            ? ((await unusableAncestor(root, wrapper.canonicalRelative, realRoot, true))
+                ?.relative ?? wrapper.canonicalRelative)
             : undefined,
       });
       continue;

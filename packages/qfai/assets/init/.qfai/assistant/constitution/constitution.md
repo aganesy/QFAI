@@ -191,10 +191,11 @@ Default policy:
 - **Grilling questions are exempt.** A question asked inside a grilling
   session — the interview `.agents/rules/grilling.md` defines, which walks a
   design tree in rounds until nothing is left silently assumed — is not a
-  clarification against this budget. Such questions are unbounded and MUST still
-  be asked after the budget is exhausted. A session completes on an empty
-  frontier and the user's confirmation, or ends in another of the endings that
-  rule names, and never on a count. A cap would end it on a number instead: some
+  clarification against this budget. The exemption covers the questions a
+  session puts to the user, which in a delegated session are only its critical
+  decisions and the facts only the user holds. Such questions are unbounded and
+  MUST still be asked after the budget is exhausted. A session ends in one of the
+  endings that rule names, and never on a count. A cap would end it on a number instead: some
   plans need three questions and some need fifty, and a ceiling either truncates
   the first kind or looks arbitrary on the second.
 
@@ -284,7 +285,8 @@ sanctioned move, and neither is asking a sixth clarification anyway.
 
 **A grilling session survives exhaustion too**, and for the same reason: its
 questions never spent budget, so there is none left to run out of. A session
-already under way continues to its own end condition, and a stage reached after
+already under way continues to its own end condition, a delegated one still
+putting its critical decisions to the user, and a stage reached after
 exhaustion still opens one where its work calls for it. Treating a spent budget
 as the end of a session would put the design decisions back where this article
 found them — settled quietly, on an assumption nobody was asked about.
@@ -348,6 +350,10 @@ declared here the way that rule requires — a session is entered deliberately,
 and this is the deliberate entry. Not an ordinary clarification: those are
 capped by Article VI, and a cap on the one question that would have prevented
 the wrong build is the failure this gate exists to catch.
+
+It is a delegated session unless the stage says otherwise: a griller puts the
+questions to the agents authoring the work, and only a critical decision reaches
+the user. A contradiction with the spec is critical.
 
 **Its subject is bounded, not its length.** The session interrogates what the
 preflight left uncertain, and nothing else. A spec and a test ledger are settled
@@ -443,9 +449,11 @@ Rules:
 6. **A grilling session does not reach the user under `--auto`.** Its questions
    are exempt from the Article VI budget, not from rule 4: a no-question mode
    asks nothing, whatever the question is for. The session still runs — it
-   settles what the repository settles and dispatches sub-agents for the facts —
-   and every **node** left over is **opened as a question in the register the
-   stage reads**, so the stage cannot complete over it. Every node, not every
+   settles what the repository settles, dispatches sub-agents for the facts, and
+   in a delegated session adopts the griller's recommendation for every decision
+   that is not critical — and every **node** left over (in a delegated session,
+   each critical decision and each fact only the user holds) is **opened as a
+   question in the register the stage reads**, so the stage cannot complete over it. Every node, not every
    decision: a fact only the user holds cannot be settled from evidence either,
    and opening the decisions while dropping the facts loses exactly the nodes no
    lookup could have reached. Where a document requires the field to hold
