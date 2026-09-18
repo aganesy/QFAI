@@ -728,6 +728,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `Revision` for a row that records none. The contract also says each value
   enters the seal without a code span around it.
 
+- **The post-build leakage guard scans what npm publishes, the manifest
+  included** (#1931). The guard built its scan list from `package.json#files`,
+  and npm adds files that list never names — the published `package.json`
+  above all. A `schemaVersion` or a private version marker there shipped with
+  every guard green, and a filter meant for the repository's own manifest
+  dropped the `schemaVersion` finding for the published one too. The guard now
+  asks `npm pack --dry-run` for the list, scans the manifest with no filter, and
+  still passes its `version` field. A glob in `files` is now scanned as npm
+  expands it instead of being refused.
+
 - **The evidence revision reference says how a revision is read after a squash
   merge** (#1696). A squash merge lands a commit with no branch revision among
   its ancestors, so a recorded `<git rev>` did not resolve in a clone of the
