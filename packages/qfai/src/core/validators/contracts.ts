@@ -141,31 +141,64 @@ async function validateContractFile(file: string, kind: ContractKind): Promise<I
     return issues;
   }
 
-  try {
-    const parsed = parseStructuredContract(file, stripContractDeclarationLines(text));
-    if (kind === "API" && !hasOpenApi(parsed)) {
-      issues.push(
-        issue(
-          "QFAI-CONTRACT-020",
-          "API 契約ファイルに openapi 定義が見つかりません。",
-          "error",
-          file,
-          "contracts.api.openapi",
-        ),
-      );
-    }
-  } catch (error) {
+  const parsed = parseContract(file, kind, text);
+  if (!parsed.ok) {
+    issues.push(parsed.failure);
+  } else if (kind === "API" && !hasOpenApi(parsed.contract)) {
     issues.push(
       issue(
+        "QFAI-CONTRACT-020",
+        "API 契約ファイルに openapi 定義が見つかりません。",
+        "error",
+        file,
+        "contracts.api.openapi",
+      ),
+    );
+  }
+
+  return issues;
+}
+
+/** A structured contract's content, or the finding that says it does not parse. */
+type ContractParse =
+  { ok: true; contract: Record<string, unknown> } | { ok: false; failure: Issue };
+
+function parseContract(file: string, kind: ContractKind, text: string): ContractParse {
+  try {
+    return {
+      ok: true,
+      contract: parseStructuredContract(file, stripContractDeclarationLines(text)),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      failure: issue(
         "QFAI-CONTRACT-021",
         `${kind} 契約ファイルの解析に失敗しました: ${formatError(error)}`,
         "error",
         file,
         "contracts.parse",
       ),
-    );
+    };
   }
+}
 
+/**
+ * Every UI contract that does not parse, and nothing else of the contract checks.
+ *
+ * The prototyping profile reads its screens from these files and runs none of
+ * the contract checks, so without this a malformed contract reached
+ * certification with its screens unchecked and no finding at all. `full` runs
+ * {@link validateContracts}, which reports the same finding, and does not call
+ * this.
+ */
+export async function validateUiContractParse(root: string, config: QfaiConfig): Promise<Issue[]> {
+  const uiRoot = path.join(resolvePath(root, config, "contractsDir"), "ui");
+  const issues: Issue[] = [];
+  for (const file of await collectUiContractFiles(uiRoot)) {
+    const parsed = parseContract(file, "UI", await readFile(file, "utf-8"));
+    if (!parsed.ok) issues.push(parsed.failure);
+  }
   return issues;
 }
 

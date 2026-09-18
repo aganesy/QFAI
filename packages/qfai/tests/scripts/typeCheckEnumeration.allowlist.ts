@@ -337,8 +337,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/integration/spec0004ProfileSuffixedValidate.test.ts",
   "tests/integration/spec0004SaasPackageAndPackLocation.test.ts",
   "tests/integration/spec0006DoctorProbeOrder.test.ts",
-  "tests/integration/spec0006DoctorRemediation.test.ts",
-  "tests/integration/spec0008AtddScaffold.test.ts",
   "tests/integration/spec0010DiscussionMockAndPointer.test.ts",
   "tests/integration/spec0012PrototypingRemediation.test.ts",
   "tests/integration/spec0012SkeletonModePatchZone.test.ts",
