@@ -249,8 +249,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
    */
   it.each(RULE_MASTERS)("%s names itself in its first heading", async (fileName) => {
     const text = await readFile(path.join(ROOT, ".agents/rules", fileName), "utf-8");
-    const first = text.split(/?
-/).find((line) => line.trim() !== "");
+    const first = text.split(/\r?\n/).find((line) => line.trim() !== "");
 
     expect(first, `${fileName} is empty`).toBeDefined();
     expect(first ?? "", `${fileName} must open with a level-1 heading naming the rule`).toMatch(
