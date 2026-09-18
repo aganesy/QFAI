@@ -874,6 +874,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   cases, dropping `label` from the required keys, or letting the stage start,
   left every case passing.
 
+- **Triage says how to file a source file no spec owns** (#1903). The
+  `Existing Spec` cell names a spec, several specs or `_policies`, and shared
+  code such as a navigation shell or an error boundary belongs to none of them.
+  Each project had to choose between naming an unrelated spec, a policy row
+  that schedules nothing, and a new spec for something that is not a
+  capability. `sdd-triage.md` now says to split the file's obligations by
+  behaviour onto the specs that own each behaviour, says what the other moves
+  cost, and routes a behaviour no spec owns to a new requirement.
+
 - **The prototyping profile reports a UI contract that does not parse**
   (#1767). Every reader of UI contracts skips a file it cannot parse, so its
   screens are absent from every screen check. `sdd`, `tdd` and `full` report
