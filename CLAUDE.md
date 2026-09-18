@@ -18,9 +18,11 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   `.agents/rules/interface-clarity.md`). Text explaining how to work a control
   is a defect report against that control.
 - Interview the decision tree before a design is fixed, in the rounds
-  `.claude/rules/grilling.md` (master: `.agents/rules/grilling.md`) sets out. A
-  session ends in one of the four endings that rule names, and completes only
-  on an empty frontier and the user's confirmation — never at a question count.
+  `.claude/rules/grilling.md` (master: `.agents/rules/grilling.md`) sets out.
+  The discussion stage holds a session with the user; everywhere else agents
+  grill each other and take the griller's recommendation, and only a critical
+  decision reaches the user. The request bounds the tree: what it did not ask
+  for is neither asked about nor added.
 - Every question to the user arrives in the shape its answer has, in the form
   `.claude/rules/user-questions.md` (master: `.agents/rules/user-questions.md`)
   sets out: a structured choice where a listable set of candidates exists, or a
@@ -94,11 +96,25 @@ to the shipped `qfai-sdd` skill.
 
 Naming and indexing rules: `AGENTS.md`.
 
-### ⚠️ packages/qfai/ と .qfai/ の区別（重要）
+### `packages/qfai/` and `.qfai/`
 
-本リポジトリは QFAI パッケージの開発リポジトリであると同時に、QFAI 自体を npm インストールして運用している。
+This repository builds the package and is governed by what the package ships,
+so the same document often exists in both trees. Edit the one the package
+carries.
 
-- **`packages/qfai/`** — QFAI パッケージのソースコード。機能追加・バグ修正・skill テンプレート改善などはすべてここを修正する。
-- **`.qfai/`** — インストールされた QFAI の運用ディレクトリ（specs, contracts, discussion, skills 等）。パッケージ改善目的では修正しない。
+- **`packages/qfai/`** — the package's source: implementation, tests and the
+  assets `qfai init` writes. Features, fixes and skill or rule changes go here.
+- **`.qfai/`** — this repository's own workflow artifacts (specs, contracts,
+  discussion, evidence), plus the assistant tree. That tree is generated from
+  `packages/qfai/assets/init/.qfai/` by `pnpm sync:ssot`, so an edit made
+  directly to it is reverted by the next run and fails the tracked-tree diff in
+  `pnpm ci:gate`.
 
-skill やバリデータを改善したいときに `.qfai/` 配下を誤って編集しないこと。
+The rule masters under `.agents/rules/` are symlinks to
+`packages/qfai/assets/init/root/.agents/rules/`, so editing one there edits the
+shipped file, which is the intent. A rule about this repository alone is a real
+file in that directory.
+
+This repository does not install its own package. There is no `qfai`
+dependency, and `scripts/check-not-a-dependency.mjs` refuses an install that
+would create one.
