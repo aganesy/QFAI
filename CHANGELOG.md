@@ -242,6 +242,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Ten spec ledgers now use the template's columns, and each has a `todo` E2E
+  row for every story that had none: `spec-0001`, `-0003`, `-0005`, `-0006`,
+  `-0007`, `-0008`, `-0009`, `-0011`, `-0016` and `-0017` (#1750). Before
+  this, a Change Request that re-derived one of these packs would also add the
+  rows through Phase 2b, and nothing recorded or authorized them. Existing rows
+  keep every cell they had. The columns they lacked read `-`, which the
+  validators read the same as the absent column. The ledgers of packs with an
+  open Change Request are left for those records to repair.
+
 - **The entry points no longer say this repository installs its own package**
   (#1921). `CLAUDE.md` and `AGENTS.md` both described `.qfai/` as the result of
   an npm install of QFAI. There is no such dependency, and
