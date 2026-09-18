@@ -504,6 +504,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   regressions against named constitution or catalog rules (#1799). New upstream
   product obligations remain advisory.
 
+- **The spec-0013 template-slot record has an ID of its own** (#1942). It was
+  filed as `CR-20260913-0007`, an ID an approved record for `spec-0015` already
+  carries, so every reference to it was ambiguous. It is now
+  `CR-20260913-0011`, with every reference moved. `CR-20260913-0003` also
+  orders itself behind the other open `spec-0013` records, names
+  `CR-20260913-0009` as the ledger repair, appends no row under option `1c`
+  while that option holds its new requirement `planned`, and authorises the
+  `spec-0013/07_Decisions.md` write option `2c` needs.
+
+  Three records hold them. `CR-20260913-0011` and `CR-20260913-0008` are
+
 - Generated TypeScript review guidance flags dropped promises and preserves
   propagation rather than requiring catches for unnamed failures. The repository
   copy matches the generated block (#1806).
