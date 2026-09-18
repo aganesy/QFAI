@@ -24,6 +24,7 @@ tools: [Read, Glob, Grep, Bash]
   `.agents/rules/minimal-implementation.md` § 2.
   Use this route only where the installed Article VII governs the artifact.
   Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
+- Require more work only on what `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
 
 ## Inputs you must read
 

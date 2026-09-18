@@ -1220,6 +1220,76 @@ describe("QFAI-TDDLIST-008", () => {
     });
   }
 
+  describe("RED failure mode is a round field", () => {
+    const entryWith = (line: string | null): string =>
+      completeEntry("Unit").replace(
+        "- RED failure mode: assertion\n",
+        line === null ? "" : `${line}\n`,
+      );
+
+    it("reads the round form the skill writes", async () => {
+      // `round-evidence.md` lists the field under the round prefix, and an entry
+      // written that way was read as having no failure mode at all.
+      const roundEvidence = await readFile(
+        path.join(
+          __dirname,
+          "..",
+          "..",
+          "assets",
+          "init",
+          ".qfai",
+          "assistant",
+          "skills",
+          "qfai-implement",
+          "references",
+          "round-evidence.md",
+        ),
+        "utf-8",
+      );
+      expect(roundEvidence).toContain("`Round N: RED failure mode`");
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": entryWith(
+            "- Round 1: RED failure mode: assertion",
+          ),
+        });
+        expect(codes).not.toContain("QFAI-TDDLIST-008");
+      });
+    });
+
+    it("names the round whose failure mode disagrees with its RED", async () => {
+      await withProject(async (root) => {
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+          {
+            ".qfai/evidence/implement-spec-0001.md": entryWith(
+              "- Round 1: RED failure mode: falsifiability",
+            ),
+          },
+        );
+        const unresolved = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
+        expect(unresolved?.message).toContain(
+          "Round 1: RED failure mode: assertion or expected-error for observed RED",
+        );
+      });
+    });
+
+    it("names the round that states no failure mode", async () => {
+      await withProject(async (root) => {
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+          {
+            ".qfai/evidence/implement-spec-0001.md": entryWith(null),
+          },
+        );
+        const unresolved = issues.find((issue) => issue.code === "QFAI-TDDLIST-008");
+        expect(unresolved?.message).toContain("Round 1: RED failure mode");
+      });
+    });
+  });
+
   // `execution-ledger.md#atdd-owned-rows`: "There is no waiver here". A row
   // whose test `/qfai-atdd` authors owes an observed RED or a falsifiability
   // argument, so `RED:n-a` — which the other layers may use for a row that

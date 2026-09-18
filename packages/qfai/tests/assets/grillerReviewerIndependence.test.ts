@@ -33,20 +33,45 @@ describe("a griller's recommendations and reviewer independence", () => {
       expect(content).toMatch(
         /\|\s*By the user, from the recommendation among the inputs\s*\|\s*The decision is theirs\. The griller may review the artifact\s*\|/,
       );
+      // An adopted non-critical decision stands; only a critical one adopted
+      // without the user makes the artifact wrong.
       expect(content).toMatch(
-        /\|\s*Agent to agent, with no user adjudication\s*\|\s*The artifact is wrong, and no reviewer can clear it\s*\|/,
+        /\|\s*Agent to agent, not critical\s*\|\s*The decision stands\. The griller that recommended it does not review the artifact\s*\|/,
+      );
+      expect(content).toMatch(
+        /\|\s*Agent to agent, critical, with no user adjudication\s*\|\s*The artifact is wrong, and no reviewer can clear it\s*\|/,
       );
     });
 
-    it(`${tree}: an agent-settled decision is a defect, not a routing problem`, async () => {
-      // A decision is the user's, and a run that could not ask records it open.
-      // An agent-adopted recommendation is therefore an artifact carrying
-      // something nobody decided — handing it to a different reviewer launders
-      // it rather than fixing it.
+    it(`${tree}: an adopted non-critical decision is not a finding`, async () => {
+      // Adoption is how a delegated session ends. Read as a defect, every
+      // routine stage would return REVISE over the decisions it exists to
+      // settle without the user. The reviewer checks the record; doubt about
+      // merit stays an ordinary finding under the reviewer's remit.
       const content = await read(tree);
-      expectPhrase(content, "**The second row is not a routing problem.**");
-      expectPhrase(content, "handing it to a\ndifferent reviewer would launder it");
-      expectPhrase(content, "MUST** return `REVISE` and\nname the decision");
+      expectPhrase(content, "**The second row is how a delegated session is meant to end**");
+      expectPhrase(content, "not a finding");
+      expectPhrase(
+        content,
+        "The reviewer checks that the decision has its `agents` row and is not critical.",
+      );
+      expectPhrase(
+        content,
+        "raises that as an ordinary finding against the artifact, under its own remit",
+      );
+    });
+
+    it(`${tree}: an agent-adopted critical decision is a defect, not a routing problem`, async () => {
+      // A critical decision is the user's in every session, and a run that
+      // could not ask records it open. An agent-adopted critical decision is
+      // therefore an artifact carrying something nobody with the standing
+      // decided — handing it to a different reviewer launders it rather than
+      // fixing it.
+      const content = await read(tree);
+      expectPhrase(content, "**The third row is not a routing problem.**");
+      expectPhrase(content, "A critical decision is the user's in every session");
+      expectPhrase(content, "handing it to a different reviewer would launder it");
+      expectPhrase(content, "MUST** return `REVISE` and name the decision");
     });
 
     it(`${tree}: names correlation rather than memory as the risk`, async () => {
@@ -85,10 +110,11 @@ describe("a griller's recommendations and reviewer independence", () => {
     });
 
     it(`${tree}: the row says who adjudicated, not only that a session ran`, async () => {
-      // The two outcomes point opposite ways: a user-settled decision leaves
-      // the griller free to review the artifact, an agent-settled one makes the
-      // artifact wrong until somebody decides. One marker for both makes them
-      // indistinguishable in the row the reviewer is told to rely on.
+      // The outcomes point different ways: a user-settled decision leaves the
+      // griller free to review the artifact, an agent-settled one keeps that
+      // griller out of the review, and an agent-settled critical one makes the
+      // artifact wrong until the user decides. One marker for all of them makes
+      // them indistinguishable in the row the reviewer is told to rely on.
       const content = await read(tree);
       expectPhrase(content, "**`<where>` is the stage's own name for where the session ran**");
       // `withdrawn` is the third: the user's answer dropped the item, which
@@ -98,6 +124,13 @@ describe("a griller's recommendations and reviewer independence", () => {
       // A row that cannot be assigned to a place is one an omission elsewhere
       // can be counted against.
       expectPhrase(content, "a row that cannot be assigned to a place");
+      // An adopted decision reaches the user through the final report, so its
+      // row carries the reason and every disagreeing position.
+      expectPhrase(
+        content,
+        "**An `agents` row also carries why the recommendation was taken**, in `Output (refs)`",
+      );
+      expectPhrase(content, "The stage's final report lists every `agents` row");
       expectPhrase(content, "tells the reviewer nothing it can act on");
       // One format, so a gate selecting the prefix finds every row rather than
       // skipping the ones that carry the adjudication.
@@ -218,7 +251,7 @@ describe("a griller's recommendations and reviewer independence", () => {
       );
       expectPhrase(
         content,
-        "Recommended and unadjudicated: none | <decisions in THIS artifact as it now stands that any agent recommended and adopted with no user adjudication>",
+        "Recommended and unadjudicated: none | <critical decisions in THIS artifact as it now stands that any agent recommended and adopted with no user adjudication>",
       );
       expectPhrase(
         content,
