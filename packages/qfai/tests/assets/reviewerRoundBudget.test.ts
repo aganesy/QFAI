@@ -56,7 +56,7 @@ describe("reviewer gates terminate", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: the Reviewer Gate Baseline caps rounds and escalates`, async () => {
       const content = await read(tree, CONVERGENCE);
-      expectPhrase(content, "### Round budget (MUST)");
+      expectPhrase(content, "## Round budget (MUST)");
       expectPhrase(content, "**Two rounds per reviewer per artifact.**");
       expectPhrase(content, "MUST stop and\n  escalate to the user");
       expectPhrase(content, "Escalation is not failure");
@@ -144,7 +144,7 @@ describe("reviewer gates terminate", () => {
 
     it(`${tree}: a later-round finding must justify itself`, async () => {
       const content = await read(tree, CONVERGENCE);
-      expectPhrase(content, "### Convergence (MUST)");
+      expectPhrase(content, "## Convergence (MUST)");
       expectPhrase(content, "MUST state why it was not raisable in\n  round N-1");
       expectPhrase(content, "out of budget");
       expectPhrase(content, "MUST NOT open a new blocking _class_");

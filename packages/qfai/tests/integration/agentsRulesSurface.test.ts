@@ -197,16 +197,39 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   it("master version-discipline.md exists with required content", async () => {
     const text = await readFile(path.join(ROOT, ".agents/rules/version-discipline.md"), "utf-8");
     for (const term of [
-      "ブランチ",
-      "package\\.json",
-      "chore\\(release\\)",
       "Version Discipline",
-      "VERSION_PIN_SKIP",
-      "禁止",
+      "branch name",
+      "packaging manifest",
+      "chore\\(release\\)",
+      // The default, and the two ways a project says it has decided otherwise.
+      "Adoption status: not adopted",
+      "supersedes the master",
+      // What stays the user's call whatever the branch is named.
+      "create or push a release tag",
     ]) {
       expect(text).toMatch(new RegExp(term));
     }
   });
+
+  /**
+   * A rule the package ships is read here through its shipped copy.
+   *
+   * Two files drift, and these did: the local `distributed-surface.md` said
+   * every guard follows `package.json#files` while the shipped one did not,
+   * and nothing compared them. A link cannot hold two answers.
+   */
+  it.each(readdirSync(path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules")))(
+    ".agents/rules/%s is the shipped master",
+    async (fileName) => {
+      const local = path.join(ROOT, ".agents/rules", fileName);
+      const shipped = path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules", fileName);
+      const stat = await lstat(local);
+      expect(stat.isSymbolicLink(), `${fileName} must be a symlink to the shipped master`).toBe(
+        true,
+      );
+      expect(await realpath(local)).toBe(await realpath(shipped));
+    },
+  );
 
   it("finds the rule masters it reads the directory for", () => {
     // An empty read passes both cases below without asking anything, and the
@@ -1093,6 +1116,22 @@ describe("a no-question run opens every node, on every surface that says so", ()
 });
 
 describe("this repository's pull-request description", () => {
+  it("keeps the operative adoption bar in the existing policy and template", async () => {
+    const policy = await readFile(path.join(ROOT, "REVIEW.md"), "utf-8");
+    const section = policy.split(/^## A pull request that adds a rule, skill or gate\r?\n/m)[1];
+    expect(section, "the existing review policy has no adoption bar").toBeDefined();
+    expect(section?.split(/^## /m)[0]?.replace(/\s+/g, " ").trim()).toBe(
+      "It records three things in its description: 1. **The one-line form**: the proposal reduced to a single line that still carries its operative clause. 2. **What it adds beyond that line.** 3. **The safety-floor items it touches**, from `.agents/rules/minimal-implementation.md` § 2. Where the proposal adds nothing beyond the line, the line is what ships. Where a comparable requirement has already been run, the description cites that run's review round-trips and change size. This binds changes to this repository, not what an adopter builds with it.",
+    );
+    const template = await readFile(path.join(ROOT, ".github/PULL_REQUEST_TEMPLATE.md"), "utf-8");
+    expect(template).toContain("## Adoption bar");
+    expect(template).toContain("Required when this PR adds a rule, skill or gate");
+    expect(template).toContain("operative clause");
+    expect(template).toContain("What goes beyond the line");
+    expect(template).toContain("Affected safety-floor items");
+    expect(template).toContain("review round-trips and change size");
+  });
+
   it("names removals, explains retained items and states an empty list explicitly", async () => {
     const policy = await readFile(path.join(ROOT, "REVIEW.md"), "utf-8");
     const removalSection = policy.split(/^## What a change made unnecessary\r?\n/m)[1];
@@ -1177,14 +1216,89 @@ describe("trust boundaries depend on the caller's control", () => {
     expect(flat).toContain("the code past it carries no branch for that value");
     expect(flat).toContain("Validation of input crossing a trust boundary");
   });
+});
 
-  it("keeps the operating and shipped masters byte-identical", async () => {
-    const [operating, shipped] = await Promise.all([
-      readFile(path.join(ROOT, ".agents/rules/minimal-implementation.md")),
-      readFile(
-        path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md"),
-      ),
-    ]);
-    expect(operating.equals(shipped)).toBe(true);
+/**
+ * The repository-specific halves of four shipped rules.
+ *
+ * An overlay is read together with the shipped master it extends, so a clause
+ * dropped from one is not restated anywhere else. One token per clause, each
+ * one that no other clause of the same overlay carries, so deleting a clause
+ * fails here while the file still looks complete.
+ */
+describe("rule overlays", () => {
+  const OVERLAYS: ReadonlyArray<{ file: string; clauses: readonly string[] }> = [
+    {
+      file: "distributed-surface.local.md",
+      clauses: [
+        // The surface, and which of the three guards reads it.
+        "package.json#files",
+        "Only the post-build guard reads `files`",
+        // The identifier shapes, one token each for the two that no other
+        // clause names.
+        "CAP-0010",
+        "DEC-NNNN-NNNN",
+        // The three exceptions: the sample IDs, the manifest version, and the
+        // migration memo whose file name the guards neutralise before scanning.
+        "spec-0001",
+        "is the released version",
+        "cannot be renamed",
+        // Versions that belong to something else, and the matcher's ceiling.
+        "A version that belongs to something else",
+        "project-qualified form",
+        // The guard layers, and where each of them runs.
+        "distributedSurfaceLeakage.test.ts",
+        "lint job and in the build job",
+        // Where internal IDs are fine.
+        "which does not ship",
+      ],
+    },
+    {
+      file: "version-discipline.local.md",
+      clauses: [
+        // The convention is adopted here.
+        "has adopted it",
+        // What a pin authorizes, and when it is done.
+        "chore(release): qfai X.Y.Z",
+        "Do this once",
+        // How each guard reads a branch name. One token per row, taken from
+        // the half of the row no other row repeats.
+        "exits 1 rather than reading",
+        "a suffix after",
+        // The override, and the unpinned case.
+        "coordinated release",
+        "On an unpinned branch",
+      ],
+    },
+    {
+      file: "temporary-files.local.md",
+      clauses: ["mkdtemp"],
+    },
+    {
+      file: "root-additions-policy.local.md",
+      clauses: ["report.<pid>", ".qfai/review/review-<timestamp>/"],
+    },
+  ];
+
+  it.each(OVERLAYS)("$file keeps every clause", async ({ file, clauses }) => {
+    const text = await readFile(path.join(ROOT, ".agents/rules", file), "utf-8");
+    for (const clause of clauses) {
+      expect(text, `${file} lost the clause marked by ${clause}`).toContain(clause);
+    }
+  });
+
+  it.each(
+    OVERLAYS.flatMap(({ file }) =>
+      // Every entry point an agent reads this repository's rules through. A
+      // tool whose entry point names only the base master follows a claim the
+      // overlay has superseded.
+      ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"].map((entry) => ({
+        entry,
+        file,
+      })),
+    ),
+  )("$entry cites $file", async ({ entry, file }) => {
+    const text = await readFile(path.join(ROOT, entry), "utf-8");
+    expect(text).toContain(file);
   });
 });
