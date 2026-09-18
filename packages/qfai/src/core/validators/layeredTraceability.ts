@@ -159,7 +159,7 @@ export async function validateLayeredTraceability(
 /** The one file `sdd-triage.md` mandates for cross-spec / policy-only rows. */
 const POLICIES_TRIAGE_FILE = "10_delta.md";
 const POLICIES_DECISIONS_FILE = "08_Decisions.md";
-/** A shared decision record: `### DR-0018: title`. */
+/** A shared decision record: `### DR-<number>: title`. */
 const DECISION_HEADING_RE = /^###[ \t]+DR-\d+/;
 /** A decision's own grounds: the two bullets that may name what it was measured against. */
 const DECISION_CITATION_BULLET_RE = /^[ \t]*[-*][ \t]+(?:Context|Evidence):/;
