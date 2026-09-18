@@ -2971,6 +2971,30 @@ function manifestLines(manifest: string): string[] {
 }
 
 /**
+ * The routed reviewers' verdicts that name a pack other than the first one's.
+ *
+ * A review round writes one pack, and every verdict a completed row records
+ * comes from its last round: each reviewer's revision has to name the final
+ * tree, so a round after a REVISE asks every routed reviewer again. Packs that
+ * differ are verdicts from different requests presented as one round.
+ */
+function reviewPacksApart(section: string): string[] {
+  const packs = (["Spec", "Code quality", "Prototype parity"] as const).flatMap((prefix) => {
+    const pack = rowEvidenceFieldValue(section, `${prefix} review pack`);
+    const seal = rowEvidenceFieldValue(section, `${prefix} review pack seal`);
+    return pack === null ? [] : [{ prefix, pack, seal }];
+  });
+  const [first, ...rest] = packs;
+  if (first === undefined) return [];
+  return rest.flatMap(({ prefix, pack, seal }) => {
+    if (pack !== first.pack) return [`${prefix} review pack matching ${first.prefix} review pack`];
+    return seal !== null && first.seal !== null && bareSha256(seal) !== bareSha256(first.seal)
+      ? [`${prefix} review pack seal matching ${first.prefix} review pack seal`]
+      : [];
+  });
+}
+
+/**
  * An `n/a (not UI-affecting)` verdict a clause of `ui-affecting.md` contradicts.
  *
  * `n/a` owes no product-surface review, no capture manifest and no parity
@@ -3378,6 +3402,7 @@ function missingCompletedEvidenceFields(
   if (checkpointRevision !== null && !EVIDENCE_REVISION_FORM.test(checkpointRevision)) {
     missing.push(`Checkpoint verification revision naming ${REVISION_FORM_HINT}`);
   }
+  missing.push(...reviewPacksApart(section));
   return missing;
 }
 

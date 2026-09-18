@@ -433,6 +433,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with no UI contract is left to the readiness gate, which already reports it,
   and `region` stays prose: a screen contract names a screen, not its parts.
 
+- **A completed row's verdicts have to come from one review pack** (#1742).
+  `review-artifact-layout.md` writes one pack per review round, and the gate
+  checked each verdict's pack on its own. A row could present the completion,
+  implementation and product-surface verdicts from three unrelated review
+  requests as one round. `QFAI-TDDLIST-008` now reports a row whose
+  `Spec review pack`, `Code quality review pack` and `Prototype parity review
+pack` name different paths or seals. The layout says a round after a REVISE
+  asks every routed reviewer again, since each verdict has to name the final
+  tree.
+
 - **The Markdown and Mermaid lanes skip other checkouts** (#1895).
   `pnpm lint:md` walked `.claude/worktrees/**`, so a worktree of another branch
   had its findings reported against this one. That happened locally and never
