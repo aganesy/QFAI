@@ -195,7 +195,7 @@ function checkRuleCellOutliers(brText: string, businessRulesPath: string): Issue
   return [
     issue(
       "QFAI-DENSITY-005",
-      `Rule セルが同一ファイルの他 BR 平均の ${RULE_CELL_OUTLIER_FACTOR} 倍以上です: ${uniqueOutliers
+      `A Rule cell is at least ${RULE_CELL_OUTLIER_FACTOR} times the mean of the other BR rows in this file: ${uniqueOutliers
         .map((row) => `${row.id} (${row.length})`)
         .join(", ")}`,
       "warning",
@@ -203,7 +203,9 @@ function checkRuleCellOutliers(brText: string, businessRulesPath: string): Issue
       "density.businessRules.ruleCellOutlier",
       refs,
       "change",
-      "1 BR = 1 つの独立して反証可能なルールです。Rule セルの半分を削っても残りが完全なルールなら 2 つの BR に分割してください。",
+      // Cutting comes first: a split adds an abstract item, and an oversized cell
+      // most often carries text that is not part of its rule.
+      "Cut what the cell carries beyond its rule, such as examples, rationale or history. Split the row only if what remains is two rules that can each be falsified on their own.",
     ),
   ];
 }

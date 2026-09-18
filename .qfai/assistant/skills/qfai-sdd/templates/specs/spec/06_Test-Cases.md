@@ -4,7 +4,7 @@
 
 - Verify examples and acceptance criteria with explicit refs.
 - Include both `AC-Refs` and `EX-Ref` whenever possible.
-- Ensure test cases cover not only normal paths but also error paths, boundary values, and edge cases.
+- Require normal path and declared valid boundaries per AC; require failures only for kept failures.
 
 Derive each row's `Level` with
 `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
@@ -145,12 +145,30 @@ is not the answer either.
 - `boundary` — Boundary value (min, max, just-outside-range).
 - `edge` — Edge case (null, empty, concurrent, timing, max payload, etc.).
 
+### A failure observed in use
+
+A failure someone saw happen — in production, in a report, in a log — is
+recorded in a test-case row. Reuse a row when its behavior, boundary, oracle
+and layer all match; strengthen its steps, expected result and observation
+notes. Add a new `TC-*` row only for a distinct behavior, boundary, oracle or layer.
+
+- `Type` follows the scenario in the legend above, not the observation's origin.
+- `AC-Refs` or `EX-Ref` names the behavior that failed.
+- `Notes` says where it was seen, so the next reader can find the observation.
+
+That row is where the observation is recorded. The coverage depth checklist
+scores test-case rows, so a failure kept only in a decision or a note is one it
+never sees.
+
 ## Quality depth guideline
 
 Each AC should have at minimum:
 
 - One `normal` test case.
-- One `error` or `boundary` test case.
+- Tests for every declared valid boundary.
+- Failure tests only for kept failures.
 
-If an AC has only `normal` type test cases, the test case set is considered incomplete.
+A normal-only AC is incomplete only when a declared valid boundary or kept
+failure is uncovered. The sample error row illustrates a type; it is not a
+requirement to invent an absent failure.
 Refer to `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md` for the full depth checklist.

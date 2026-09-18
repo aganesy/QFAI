@@ -221,7 +221,7 @@ As a maintainer, I want accepted-iter content mirrored to `.qfai/evidence/protot
 
 ## US-0012-0131
 
-As an operator, I want `qfai prototyping iterate --cycle 0` to refuse a destructive re-run unless `--force` is passed AND to move existing `iter-00/` to `iter-00.backup-<ISO>/` before clearing, so that mistaken re-seeds remain recoverable. (REQ-0012-0067)
+As an operator, I want `qfai prototyping iterate --cycle 0` to refuse a destructive re-run unless `--force` is passed AND to move existing `iter-00/` to `iter-00.backup-<ISO>/` before clearing, so that mistaken re-seeds remain recoverable; and every cycle-0 run to move the aggregate `screenshots/` and `html/` directories into `aggregate.backup-<ISO>/` as well, so that a restarted loop holds no capture the previous loop left. (REQ-0012-0067, REQ-0174)
 
 ## US-0012-0132
 

@@ -17,16 +17,23 @@ separate question, settled by `.agents/rules/repository-language.md`.
 
 ## 本リポジトリの構造に関する重要な前提
 
-本リポジトリは QFAI パッケージそのものの開発リポジトリであり、同時に QFAI パッケージ自体を npm インストールして運用している。  
-そのため、以下の2つのディレクトリが混同されやすい。**修正対象を間違えないこと。**
+This repository builds the QFAI package and is governed by what that package
+ships, so the same document often exists in two trees. **Edit the one the
+package carries.** It does not install its own package: there is no `qfai`
+dependency, and `scripts/check-not-a-dependency.mjs` refuses an install that
+would create one.
 
-| ディレクトリ     | 役割                                                                                                            | 修正してよいか                                                            |
-| ---------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `packages/qfai/` | **QFAI パッケージのソースコード**（実装・テスト・アセット）                                                     | ✅ 開発対象                                                               |
-| `.qfai/`         | QFAI を npm インストールして運用した結果生成されるワークフロー成果物（specs, contracts, discussion, skills 等） | ⚠️ 原則として修正対象外（パッケージ改善時は `packages/qfai/` を修正する） |
+| ディレクトリ     | 役割                                                                                                                                                                            | 修正してよいか                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `packages/qfai/` | **QFAI パッケージのソースコード**（実装・テスト・アセット）                                                                                                                     | ✅ 開発対象                                                       |
+| `.qfai/`         | This repository's own workflow artifacts (specs, contracts, discussion, evidence), and the assistant tree generated from `packages/qfai/assets/init/.qfai/` by `pnpm sync:ssot` | ⚠️ The assistant tree is generated: edit `packages/qfai/` instead |
 
 - skill テンプレートやバリデータ等を改善したい場合は、必ず `packages/qfai/` 配下のソースを修正する。
-- `.qfai/` 配下の skill や設定を直接編集しても、パッケージとしてリリースされない。
+- An edit made directly to the generated assistant tree is reverted by the next
+  `pnpm sync:ssot` and fails the tracked-tree diff in `pnpm ci:gate`.
+- The rule masters under `.agents/rules/` are symlinks to their shipped copies,
+  so editing one there edits the file an adopter receives. A rule about this
+  repository alone is a real file in that directory.
 - リポジトリのルート直下にディレクトリ・ファイルを新規追加する際は事前にユーザー確認を必須とする（既存ルートファイルの編集は対象外）。詳細: `.agents/rules/root-additions-policy.md`。
 
 ### `.qfai/contracts/cli/`
@@ -72,9 +79,13 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
 リポジトリで作業する全 AI が守るルールは `.agents/rules/` 配下のマスタが SSOT。
 
 - `version-discipline.md` (上記「バージョン規律」の詳細)
+- `version-discipline.local.md` (this repository has adopted the pin convention, and the guards that read it)
 - `distributed-surface.md` (npm 配布物の internal id / version leak 禁止)
+- `distributed-surface.local.md` (the surface, the forbidden identifier shapes, and the four guards)
 - `root-additions-policy.md` (repo root への新規追加は要確認)
+- `root-additions-policy.local.md` (two file shapes that turn up at this root, and where each belongs)
 - `temporary-files.md` (一時ファイルは `tmp/` 配下のみ)
+- `temporary-files.local.md` (a test's `mkdtemp` sandbox is outside the rule)
 - `document-schema.md` (SDD ドキュメントの章構成・表・図の構造は
   `packages/qfai/assets/mdschema/**` が SSOT)
 - `documentation-clarity.md` (PR / issue / コメント / Markdown の記述基準)
@@ -84,17 +95,26 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
 - `interface-clarity.md` (what may appear on a screen or in terminal output,
   and what a sentence there says about the control under it)
 - `grilling.md` (interview the decision tree in rounds before a design is
-  fixed; a session ends on an empty frontier and the user's confirmation,
-  never at a question count)
+  fixed; a session ends in one of four named endings, never at a question
+  count)
 - `user-questions.md` (every question to the user arrives in the shape its
   answer has — a structured choice where a listable set of candidates exists, or a
   plain request where none does; where the host's tool cannot carry it, the
   plain-text fallback keeps the same parts)
+- `shipped-ci-parity.md` (a change to this repository's CI either reaches the
+  workflow templates the package ships or says in the diff why it does not)
+
+A `<name>.local.md` is an overlay. A rule that also governs an adopter's
+repository is written once, in the shipped master, and only what is specific to
+this repository goes in the overlay. Overlays do not ship. See
+`.agents/rules/README.md`.
 
 `.claude/rules/` はこれらへの symlink。Windows では Git の `core.symlinks=true` と
 Developer Mode が必要で、無い場合は `.claude/rules/*.md` がパス文字列だけの
 テキストファイルになるため、マスタを直接読む。
 Codex は本ファイルを、Copilot は `.github/copilot-instructions.md` を読む。
+
+Read `REVIEW.md` before reviewing a pull request or writing its description.
 
 ## 記述基準 (全 AI 必読)
 
@@ -153,6 +173,8 @@ Planテンプレート:
 - Try solutions in the order `.agents/rules/minimal-implementation.md` sets
   out, and mark a deliberate shortcut with its ceiling and the condition
   that lifts it.
+- TypeScript: await or return every promise. `.agents/rules/minimal-implementation.md`
+  § 2 governs consuming callers, kept failures and callback boundaries.
 - 型安全を徹底し `any`・型無効化（`@ts-ignore`等）を原則禁止する。
 - 入力は型とバリデーションで検証し、失敗パスを先に書く。
 - 早期 return でネストを浅くし、読みやすさと責務を守る。

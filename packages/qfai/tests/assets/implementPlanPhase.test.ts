@@ -107,7 +107,11 @@ describe.each(SKILL_FILES)("%s — the skill body owns the `plan` phase", (rel) 
     expect(/^### Phase:.*\bPlan\b.*$/m.test(body), "no Required Process heading names Plan").toBe(
       true,
     );
-    const step = /^\d+\. .*routing phase `plan`.*$/m.exec(body);
+    // One numbered item and its continuation lines, read whole. The asset
+    // line ceiling in `src/core/doctor/assetLineBudget.ts` is 400 columns, and
+    // an item naming both roles and the topic file does not fit one line, so a
+    // line-anchored read finds only what landed before the first wrap.
+    const step = /^\d+\. [^\n]*routing phase `plan`[^\n]*(?:\n[ \t]+[^\n]*)*/m.exec(body);
     expect(step, "no Required Process step routes the `plan` phase").not.toBeNull();
     // The step names both routed roles and points at the topic file that
     // carries their inputs, outputs and exit criterion.
@@ -132,16 +136,20 @@ describe.each(SKILL_FILES)("%s — the skill body owns the `plan` phase", (rel) 
     expect(missing, "routed with no task definition in the skill body").toEqual([]);
   });
 
-  it("scopes the analyst's missing-row check to the row-producing class", async () => {
-    // `/qfai-sdd` Phase 2b seeds a row per coverage-target `TC-*` only, so a
-    // first-run ledger holds zero `E2E` / `API` rows legitimately. Comparing
-    // `US-*` / `CON-API-*` against rows would turn that normal state into a
-    // dropped-obligation finding and a handoff neither upstream skill can
-    // satisfy — they are discharged by the acceptance tests' annotations.
+  it("checks each seeded obligation class without inventing exempt rows", async () => {
     const reference = rel.replace(/SKILL\.md$/, "references/plan-phase.md");
     const detail = await readFile(path.join(repoRoot, reference), "utf-8");
     expect(detail).toContain("coverage-target `TC-*`");
-    expect(detail).toContain("not row-producing obligations");
+    expect(unwrap(detail)).toContain("integration-level `TC-*`");
+    expect(unwrap(detail)).toContain("active `US-*` with no E2E row");
+    expect(unwrap(detail)).toContain("active, owned `CON-API-*` with no API row");
+    expect(unwrap(detail)).toContain(
+      "zero E2E/API rows is valid only when those obligations are exempt or absent",
+    );
+    expect(detail).not.toContain("not row-producing obligations");
+    const body = unwrap(skillBody(await readFile(path.join(repoRoot, rel), "utf-8")));
+    expect(body).toContain("missing row for any of the four seeded groups");
+    expect(body).not.toContain("`US-*` and `CON-API-*` seed no rows");
     expect(detail).toContain("QFAI-ATDD-111");
   });
 

@@ -58,6 +58,72 @@ if ! command -v sha256sum > /dev/null 2>&1; then
   echo "::error::check-toolchain-action: sha256sum is not on this runner, so the pinned local-action bytes cannot be verified."
   exit 1
 fi
+# BEFORE the digests: a file carrying a merge conflict is a different failure with a different
+# repair, and the message below names resealing, which would pin the conflict block as the
+# reviewed bytes.
+#
+# Read as `scripts/check-conflict-markers.mjs` reads a tracked file, without the toolchain this
+# step runs ahead of: seven of a marker character followed by a space or the end of the line,
+# with a carriage return before the newline ignored, and in a Markdown file nothing inside a
+# fenced block, which holds an example. A file with a binary extension is not read, since a
+# marker-shaped line in its bytes means nothing. The workflow-pinned lists are appended to what
+# the list names, because `pin-guard-bytes.mjs` rewrites them from the tree, and so are the
+# manifests the lifecycle list names, whose projections it reseals.
+has_conflict_markers() {
+  # The extension is compared lowercased, and a name that is only an extension has none, as
+  # Node's `path.extname` reads it.
+  name=$(printf '%s' "${1##*/}" | tr '[:upper:]' '[:lower:]')
+  case "${name}" in
+    ?*.png | ?*.jpg | ?*.jpeg | ?*.gif | ?*.ico | ?*.webp | ?*.pdf | ?*.woff | ?*.woff2 | ?*.ttf | \
+      ?*.otf | ?*.zip | ?*.gz | ?*.tgz | ?*.mp4 | ?*.webm | ?*.wasm)
+      return 1
+      ;;
+  esac
+  case "${name}" in
+    .md | .markdown) fenced=0 ;;
+    *.md | *.markdown) fenced=1 ;;
+    *) fenced=0 ;;
+  esac
+  awk -v fenced="${fenced}" '
+    {
+      line = $0
+      sub(/\r$/, "", line)
+      if (fenced == 1) {
+        s = line
+        sub(/^[ \t]?[ \t]?[ \t]?/, "", s)
+        c = substr(s, 1, 1)
+        n = 0
+        if (c == "`" || c == "~") { while (substr(s, n + 1, 1) == c) n++ }
+        if (n >= 3) {
+          if (open == "") { open = c; width = n }
+          else if (c == open && n >= width) { open = "" }
+          next
+        }
+        if (open != "") next
+      }
+      if (line ~ /^(<<<<<<<|=======|>>>>>>>|[|][|][|][|][|][|][|])( |$)/) { found = 1; exit }
+    }
+    END { exit found ? 0 : 1 }
+  ' "$1"
+}
+conflicted=""
+while IFS= read -r pinned_path; do
+  [ -n "${pinned_path}" ] || continue
+  if (cd "${root}" && has_conflict_markers "${pinned_path}" 2> /dev/null); then
+    conflicted="${conflicted} ${pinned_path}"
+  fi
+done <<EOF
+$(grep -E "^[0-9a-f]{64}  " "${digests_file}" | sed "s/^[0-9a-f]\{64\}  //")
+$(grep -E "^[0-9a-f]{64}  " "${root}/.github/lifecycle-manifests.txt" 2> /dev/null | sed "s/^[0-9a-f]\{64\}  //")
+.github/pinned-bytes.txt
+.github/lifecycle-manifests.txt
+.github/command-files.txt
+EOF
+if [ -n "${conflicted}" ]; then
+  echo "::error::A pinned file carries merge conflict markers:${conflicted}. Resolve the merge; do not reseal."
+  exit 1
+fi
+
 if ! (cd "${root}" && sha256sum -c --quiet "${digests_file}"); then
   echo "::error::A pinned file does not match its digest in .github/pinned-bytes.txt. These are the local composite actions and the guard programs — they run before every verification in this job, and one of them decides whether this lane reports anything at all. An edit is refused here rather than executed; if it is intended, reseal with \`node scripts/pin-guard-bytes.mjs\` and land the new digests in the same commit."
   exit 1

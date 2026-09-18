@@ -11,7 +11,7 @@ key, misspelled field, legacy flat key) fails the whole file.
 
 ## Path
 
-```
+```text
 .qfai/evidence/prototyping/iter-NN/<spec-id>/<screen>.review.json
 ```
 
