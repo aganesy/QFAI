@@ -233,6 +233,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Four skipped test files for `qfai atdd scaffold` and `qfai doctor --clean` /
+  `--autoremediate` are removed (#1436). They were written before those
+  commands existed and never enabled. Their test cases are now covered by
+  the separate tests each ledger row names. The files ran against the
+  repository itself rather than a temporary tree, so enabling them was never
+  the repair. Their eight `QFAI-TEST-003` errors leave the dogfooding backlog.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number

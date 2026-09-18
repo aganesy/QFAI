@@ -384,7 +384,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          f512b8c166fce7d9be822d470b1d824393234b5a659022322db455bdfe72a493  .github/pinned-bytes.txt
+          2b5523eff4eddfe0a2da2b94c5bde55dc8a94282390bbfeea21fda537f7fa33e  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -597,8 +597,7 @@ jobs:
       - uses: ./.github/actions/setup
       # The e2e AND integration slices contain tests that exec the built
       # CLI at `packages/qfai/dist/cli/index.{cjs,mjs}` (e.g.
-      # spec0010DiscussionMockAndPointerE2E, spec0008AtddScaffold,
-      # spec0014SaasPackageCertify, spec0006DoctorRemediation,
+      # spec0010DiscussionMockAndPointerE2E, spec0014SaasPackageCertify,
       # spec0004SaasPackageAndPackLocation). In a clean GitHub Actions
       # checkout `dist/` is not committed, so both slices need a build
       # step before the test step. Other slices run pure TS via vitest's
