@@ -578,6 +578,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a glob depend on a test case id's digits, the scaffold checks the file it
   would write for every test case in scope, not a representative one.
 
+- Six shipped checks have tests but no test case in any spec, so nothing says
+  what they must do and no ledger row traces them (#1837).
+  `CR-20260913-0014` raises the repair:
+  - Navigation flow, UI-bearing classification and the test stub check go to
+    `spec-0004`.
+  - Traceability integrity goes to `spec-0013`.
+  - The provenance lock's handling of two writers at once goes to `spec-0003`.
+  - The design-fidelity scorecard is recorded as owned by no spec, because
+    nothing the package ships writes the input it reads.
+
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
   from the worktree root, but rooted the `.qfai/evidence`, `.qfai/review` and
