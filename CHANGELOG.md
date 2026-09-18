@@ -233,6 +233,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The active-pointer record can be carried out in the order it states**
+  (#1943). `CR-20260913-0004` puts `spec-0010/TDD-0017` and its split sibling in
+  its blocked set, says their split waits on a `spec-0010` ledger repair no
+  record carries yet, and hands both through `/qfai-atdd` before
+  `/qfai-implement`. Its ATDD pass splits the Integration case that runs the
+  absent and missing pointer together, takes `spec-0013/TDD-0016` only once the
+  record blocking it is applied, and says how the preflight releases this
+  record's own rows before it is applied. It also names the writer-side
+  contradiction it leaves, raised on its own.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
