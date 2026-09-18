@@ -217,6 +217,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Step 2 of the layer derivation says how a test case reaches its parent
+  business rule** (#1907). The step restricts the oracle to the parent BR's
+  obligations, and no test-case column names a BR, so each reader picked a
+  parent, usually the nearest `AC-Refs`. Step 2 now gives the route the
+  ledger's `BR-Ref` check already uses: the TC's `EX-Ref` to that example's
+  `BR-Ref`, or, where `EX-Ref` names no example, the BRs whose `AC-Refs` name
+  one of the TC's `AC-Refs`.
+
 - **A screen property measured on rendered output has a layer: L3** (#1909).
   A test case may take L1, L2 or L3, and none of them named a browser, so an
   obligation read off painted pixels or computed layout had no legal layer.
