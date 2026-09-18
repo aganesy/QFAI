@@ -27,6 +27,7 @@ import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
+import { validateDesignDirectionProposal } from "./validators/designDirectionProposal.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
@@ -620,6 +621,7 @@ async function runDiscussionValidators(
     // later stages.
     ...(await validateRootDesignMdParse(root)),
     ...(await validateDiscussionMermaid(root)),
+    ...(await validateDesignDirectionProposal(root, config)),
     ...(await validateDiscussionPackReadiness(root, config)),
     ...(await validateDiscussionVisuals(root)),
     ...(await validateResearchSummary(root, config)),

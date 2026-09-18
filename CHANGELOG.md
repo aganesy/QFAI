@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A README only where a page is published** (#2010). Four were tracked; two were
+  pages nobody lands on. `.agents/rules/README.md` held the rules register, which
+  a second file can only keep in step by hand — the surface suite now reads each
+  rule's own first heading, so a rule cannot be missing from a list. Its
+  "Adding a rule" steps moved to `root-additions-policy.local.md`, and its
+  Windows symlink section is gone: `check-tracked-symlinks.mjs` prints the same
+  steps when it fails. `.instruction/README.md` ruled on that directory, so the
+  ruling is a rule — `.agents/rules/instruction-tree.md`.
+  `scripts/check-tracked-readmes.mjs` fails on a tracked README outside the
+  project's own page and the one npm publishes, and on a listed page that stops
+  being tracked.
+
 - **The root assistant tree is linked at the assets the package ships** (#1915, #1916).
   `.qfai/assistant/**` was a byte copy of `packages/qfai/assets/init/.qfai/assistant/**`,
   kept in step by a sync script and a tracked-tree diff. It is thirteen symlinks
@@ -156,6 +168,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - Verify repository-fact sources, use planning-stage precision and apply targeted
   edits in discussion review cycles (#1818).
+
+- **The discussion profile reads a pack's design direction against the
+  `DESIGN.md` schema** (#1905). On a visual surface a discussion pack records
+  the direction `/qfai-sdd` Phase 0 turns into `DESIGN.md`, and nothing
+  checked it until Phase 0 wrote the file, after the pack had closed. A pack
+  could propose `visual.colors.highlight` or an archetype outside the eight,
+  and `validate --profile discussion` passed. `QFAI-DPACK-011` (warning) now
+  reads the forms that name a key without doubt — a fenced YAML block under a
+  `DESIGN.md` section, a code span holding a dotted key path, and an
+  `archetype:` list item — against the same key tree the parser rejects
+  unknown keys with, and names each key or value the schema lacks. Prose is
+  not read, and cli-only and non-ui packs are skipped.
 
 - **A reviewer may demand more work only on the concrete artifacts** (#1809).
   A reviewer could ask for another business rule, quality target, policy or
@@ -389,6 +413,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with no UI contract is left to the readiness gate, which already reports it,
   and `region` stays prose: a screen contract names a screen, not its parts.
 
+- **The Markdown and Mermaid lanes skip other checkouts** (#1895).
+  `pnpm lint:md` walked `.claude/worktrees/**`, so a worktree of another branch
+  had its findings reported against this one. That happened locally and never
+  in a fresh CI clone. The Markdown lint now ignores `.claude/worktrees/**`, and
+  the Mermaid lane (shipped, and used by adopters' docs workflow) no longer
+  descends into a directory that holds its own `.git`, which is how a worktree
+  or a nested clone is marked. Prettier already skips the path through
+  `.gitignore`, and the schema lane matches paths from the tree's root.
+
 - **A lowercase CDATA lookalike hides what follows it** (#1866). GitHub renders
   `<![cdata[` exactly as it renders the spelled form: the content is hidden, and
   an unclosed opener hides the rest of the document. The body readers matched
@@ -431,6 +464,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     the directories under the configured `paths.testsDir` rather than a
     literal `tests/e2e/**` or `tests/api/**`, which no scan reads in a project
     that moved it.
+
+- **The imported requirement count no longer counts a prose mention** (#1897).
+  `qfai sdd preflight` counts the IDs in `06_REQ.md`'s `REQ-ID` column, and
+  when that column held none it scanned the whole file. A pack numbering its
+  requirements `REQ-D-0001` reported a count of 1, from a sentence saying the
+  pack did not use `REQ-0001`. A `REQ-ID` column that holds no `REQ-NNNN` now
+  makes the count unknown. Only a file with no such column still falls back to
+  the distinct IDs in its text. The `06_REQ.md` template says a pack numbers
+  from `REQ-0001`, because specs cite a requirement with the pack's id, and
+  that a prefixed form is not read.
 
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
@@ -694,6 +737,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkpoint revision, checks that it names a revision, and keeps the round's
   `Revision` for a row that records none. The contract also says each value
   enters the seal without a code span around it.
+
+- **The post-build leakage guard scans what npm publishes, the manifest
+  included** (#1931). The guard built its scan list from `package.json#files`,
+  and npm adds files that list never names — the published `package.json`
+  above all. A `schemaVersion` or a private version marker there shipped with
+  every guard green, and a filter meant for the repository's own manifest
+  dropped the `schemaVersion` finding for the published one too. The guard now
+  asks `npm pack --dry-run` for the list, scans the manifest with no filter, and
+  still passes its `version` field. A glob in `files` is now scanned as npm
+  expands it instead of being refused.
 
 - **The evidence revision reference says how a revision is read after a squash
   merge** (#1696). A squash merge lands a commit with no branch revision among
@@ -1124,6 +1177,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reports every marked skeleton it reads, and it reads the acceptance
   directories as well as `testFileGlobs`, as the coverage check it runs does.
 
+- **A shared decision record can cite the spec items it rests on** (#1899).
+  `QFAI-LAYER-100` and `TRACE_SHARED_SCOPE_VIOLATION` forbid spec-local IDs
+  anywhere in `_policies`, prose included. A cross-spec decision could not
+  name the rules it was measured against, and a rationale rewritten to avoid
+  them could not be checked. Inside a `### DR-*` record of
+  `_policies/08_Decisions.md`, the `Context` and a new `Evidence` bullet may
+  now name those items. Every other place in `_policies` stays under both
+  rules. The template says so, and says a table applying one judgement across
+  many specs' test cases belongs under `.qfai/evidence/`, cited from
+  `Evidence`.
+
 - **The audited evidence hash says what its extraction produces, not only which
   fields it reads** (#1616). Naming the fields settled which lines are taken and
   left open what they become, so two readers taking the same fields computed
@@ -1329,6 +1393,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   of the completion certificate's evidence digests. They hold the previous
   loop's evidence, and sealed into the next certificate, removing one failed
   `certify --check` although nothing of the new loop had changed.
+
+- **A rule summary stays with the master it describes** (#1889). Five gaps
+  remained after `init` stopped refreshing the summary of a master the adopter
+  edited:
+  - `--force` rebuilt the Copilot instructions from the release's summaries
+    whatever the masters held. The rebuilt file now keeps its own bullet for a
+    master the adopter kept.
+  - The set of masters counted as installed came from a plan made before the
+    update pass, so a planned replacement that then kept the adopter's master
+    still moved its summary. The entry points are now refreshed from what the
+    update pass actually did.
+  - A `---` under a list item was read as a setext heading and ended the
+    managed Copilot rule list early. A thematic break now ends nothing.
+  - Where one `/qfai-implement` run writes its grilling block into two
+    evidence files, the gate now also compares that run's `grilling(…)` rows
+    and `none` marker in each file's Work Orders Summary.
+  - The execution skills load the grilling primitive before the confidence
+    check, not only before a preflight round.
 
 - **An id a non-JavaScript test holds as data is not a reference** (#1770). The
   ATDD scan counts an annotation in a comment or in a test's name, and blanks
