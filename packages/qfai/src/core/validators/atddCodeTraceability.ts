@@ -327,8 +327,9 @@ type AtddTraceabilitySummary = {
    * `missing.<kind>` empty **and** this empty.
    *
    * Two limits a gate must read with it, both in `scan` below: the partition is
-   * empty when `truncated` is set (unproven, so suppressed), and a declared but
-   * skipped test still counts as a declaration.
+   * empty when `truncated` is set or `unreadable` or `unreadableDirectories` is
+   * not empty (unproven, so suppressed), and a declared but skipped test still
+   * counts as a declaration.
    */
   coveredByCarrierOnly: {
     us: string[];
@@ -387,6 +388,8 @@ type AtddTraceabilitySummary = {
     globs: string[];
     /** Each glob the scan could not read, with the reason. */
     unreadable: string[];
+    /** Directories the scan could not read and read past. */
+    unreadableDirectories: string[];
   };
 };
 
@@ -440,6 +443,28 @@ async function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Pro
   }
 }
 
+/**
+ * A directory under the acceptance test roots the scan could not read.
+ *
+ * The scan reads past it, so every other result of the stage still stands, but
+ * no test inside it is counted: an obligation one of them carries reads as
+ * missing, and an annotation in one is checked by nothing.
+ */
+function unreadableTestDirectoryIssues(root: string, directories: readonly string[]): Issue[] {
+  return directories.map((directory) =>
+    issue(
+      "QFAI-ATDD-135",
+      `The acceptance test scan could not read ${JSON.stringify(directory)}, so no test inside it is counted. A coverage finding in this run may name an obligation a test there carries.`,
+      "error",
+      path.resolve(root, directory),
+      "atddCodeTraceability.scan.readable",
+      [directory],
+      "canonical",
+      "Make the directory readable to the account running `qfai validate`, or exclude it with `validation.traceability.testFileExcludeGlobs` where it holds no acceptance test.",
+    ),
+  );
+}
+
 export async function validateAtddCodeTraceability(
   root: string,
   config: QfaiConfig,
@@ -461,6 +486,7 @@ export async function validateAtddCodeTraceability(
   const issues: Issue[] = [];
 
   issues.push(...(await collectUnreadableTestGlobs(root, config)));
+  issues.push(...unreadableTestDirectoryIssues(root, result.scan.unreadableDirectories));
   if (result.scan.unreadable.length > 0) {
     issues.push(
       issue(
@@ -1210,6 +1236,7 @@ async function writeAtddTraceabilityReport(
       limit: result.scan.limit,
       globs: result.scan.globs,
       unreadable: result.scan.unreadable,
+      unreadableDirectories: result.scan.unreadableDirectories,
     },
   };
 
@@ -1259,6 +1286,11 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   } else if (summary.scan.unreadable.length > 0) {
     lines.push(
       "> Part of the test globs could not be read: this partition is indeterminate and was suppressed. Treat it as unknown, not as empty.",
+    );
+    lines.push("");
+  } else if (summary.scan.unreadableDirectories.length > 0) {
+    lines.push(
+      "> A directory under the scanned roots could not be read: this partition is indeterminate and was suppressed. Treat it as unknown, not as empty.",
     );
     lines.push("");
   }
@@ -1315,6 +1347,12 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   lines.push(`- unreadable:${summary.scan.unreadable.length === 0 ? " none" : ""}`);
   for (const entry of summary.scan.unreadable) {
     lines.push(`  - ${entry}`);
+  }
+  lines.push(
+    `- unreadableDirectories:${summary.scan.unreadableDirectories.length === 0 ? " none" : ""}`,
+  );
+  for (const directory of summary.scan.unreadableDirectories) {
+    lines.push(`  - ${directory}`);
   }
   lines.push("");
   return `${lines.join("\n")}\n`;

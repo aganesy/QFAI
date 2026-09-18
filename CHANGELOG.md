@@ -846,6 +846,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is unchanged until it is applied. `CR-20260913-0006` puts the one row whose
   evidence has no form it can take to the user.
 
+- **An unreadable directory under the acceptance test directories is reported,
+  and the run finishes** (#1755). A directory the account running
+  `qfai validate` cannot read stopped the ATDD scan's glob walk, and the
+  rejection ended `--profile atdd` with no finding and none of its other
+  results. The scan now reads past each such directory and
+  `QFAI-ATDD-135` names it. No test inside is counted, so the carrier-only
+  partition is suppressed as it is for a truncated scan, and the summary
+  artifact lists the directories. The scaffold placeholder scan reads past
+  them too.
+
 - **The completion gate holds reviewers to the tree after the refactor** (#1732).
   `evidence-revision.md` says the reviews judge the final tree, which
   `Refactor verify revision` names, while a round's `Revision` names the tree
