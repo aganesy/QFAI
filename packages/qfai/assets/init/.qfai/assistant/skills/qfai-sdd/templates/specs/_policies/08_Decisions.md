@@ -12,6 +12,17 @@ re-declared.
 - A spec-only decision uses `DR-NNNN-MMMM` and belongs in that spec's
   `07_Decisions.md`. Declaring the same ID in both files gives it two owners.
 
+## Citing spec items
+
+`_policies` may not define or reference a spec's `US`, `AC`, `BR`, `EX` or `TC`
+items, so the shared layer never becomes a second home for spec content. A
+decision still has to point at what it was measured against, so a record's
+`Context` and `Evidence` bullets may name those items and the specs holding
+them. Nowhere else in this file may.
+
+A table applying one judgement across many specs' test cases is evidence, not a
+decision: keep it under `.qfai/evidence/` and name that file in `Evidence`.
+
 ## Decisions
 
 <!-- One `### DR-NNNN` block per decision. Copy the sample below. -->
@@ -20,6 +31,7 @@ re-declared.
 
 - Status: proposed | accepted | superseded | rejected
 - Context: what forced the decision — the constraint, conflict or anomaly
+- Evidence: the spec items, specs or evidence files the decision rests on, or `-`
 - Decision: what was decided, in the imperative
 - Consequences: what this costs and what it forecloses
 - Related: the specs, capabilities, contracts or `CR-*` this decision binds, or `-`
