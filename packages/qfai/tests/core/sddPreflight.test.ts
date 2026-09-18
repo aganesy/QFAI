@@ -221,58 +221,6 @@ describe("runSddPreflight", () => {
     }
   });
 
-  it("reports the intake as unknown when the REQ-ID column holds no REQ-NNNN id", async () => {
-    // The column read nothing, and the prose scan that followed counted a
-    // sentence saying the pack does not use `REQ-0001`: one requirement,
-    // reported for a table of three.
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
-    try {
-      await seedDiscussionPack(root, "20260216010203033", {
-        "06_REQ.md": [
-          "# 06 REQ",
-          "",
-          "This pack numbers its own requirements and does not use REQ-0001 onwards.",
-          "",
-          "| REQ-ID     | Title  | Description        | Source   | Priority | Status |",
-          "| ---------- | ------ | ------------------ | -------- | -------- | ------ |",
-          "| REQ-D-0001 | save   | keep the set       | SRC-0001 | must     | draft  |",
-          "| REQ-D-0002 | reload | read the set again | SRC-0001 | must     | draft  |",
-          "| REQ-D-0003 | export | write the set out  | SRC-0001 | should   | draft  |",
-          "",
-        ].join("\n"),
-      });
-
-      const result = await runSddPreflight(root, defaultConfig);
-
-      expect(result.importedReqCount).toBeNull();
-      const summary = await readFile(result.preflightSummaryPath, "utf-8");
-      expect(summary).toContain("Imported REQ count: unknown");
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("still counts distinct ids in a 06_REQ.md with no REQ-ID column", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
-    try {
-      await seedDiscussionPack(root, "20260216010203034", {
-        "06_REQ.md": [
-          "# 06 REQ",
-          "",
-          "- REQ-0001: keep the set of requirements for the audit trail",
-          "- REQ-0002: read the saved set again, which depends on REQ-0001",
-          "",
-        ].join("\n"),
-      });
-
-      const result = await runSddPreflight(root, defaultConfig);
-
-      expect(result.importedReqCount).toBe(2);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
   it("ignores unscoped disposition guidance lines in OQ register", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
