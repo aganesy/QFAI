@@ -576,6 +576,12 @@ export type AtddCodeTraceabilityResult = {
    */
   declaredSpecDirs: Map<string, string>;
   /**
+   * Scanned test file, normalised as the findings name it -> the spec whose
+   * `<layer>/spec-NNNN/` directory holds it, at `paths.testsDir` or at a
+   * package's own test root. A file in no such directory has no entry.
+   */
+  testFileSpecOwners: Map<string, string>;
+  /**
    * Every declared `US-*`, active and deferred alike — the same
    * declared-not-owed distinction the contract sets draw. A deferred story is
    * still a known id, so an E2E test written ahead of its slice must not become
@@ -850,6 +856,8 @@ export async function evaluateAtddCodeTraceability(
   // bodies are already in hand, and read only by `buildCarrierOnlyRefs`.
   const executableCarriers = new Set<string>();
 
+  const testFileSpecOwners = new Map<string, string>();
+
   const forbiddenTcInApi = new Map<string, Set<string>>();
   const forbiddenTcInE2e = new Map<string, Set<string>>();
   const forbiddenTcInIntegration = new Map<string, Set<string>>();
@@ -865,7 +873,7 @@ export async function evaluateAtddCodeTraceability(
   const flowStories = storiesByFlow(await scanBusinessFlows(root, config));
 
   for (const file of scanResult.files) {
-    const kind = resolveTestKind(file, {
+    const layer = resolveTestLayer(file, {
       root,
       testsDirName: scanTestsDirName,
       e2eRoot,
@@ -873,7 +881,7 @@ export async function evaluateAtddCodeTraceability(
       integrationRoot,
       isPackageRoot: scanPackageRoot,
     });
-    if (!kind) {
+    if (!layer) {
       // Dropped, not recorded. A unit or component suite owes ATDD nothing
       // wherever it sits, and every conventional `tests/unit` tree is matched
       // by an ordinary `tests/**` glob — so recording them here would tell an
@@ -893,6 +901,11 @@ export async function evaluateAtddCodeTraceability(
     // tokenizer and that one knows a `/.../` after a control header is a regex
     // rather than a division. Handing it the masked text let a blanked span
     // swallow the `it(` beside it and reported a real test as annotation-only.
+    const { kind } = layer;
+    const owner = layerSpecNumber(layer, file);
+    if (owner !== null) {
+      testFileSpecOwners.set(path.normalize(file), owner);
+    }
     const raw = await readSafe(file);
     const text = maskTestSource(file, raw);
     const usAnnotations = extractSpecScopedAnnotations(text, US_TEST_ANNOTATION_RE);
@@ -1092,6 +1105,7 @@ export async function evaluateAtddCodeTraceability(
 
   return {
     declaredSpecDirs: specRefs.declaredSpecDirs,
+    testFileSpecOwners,
     unitComponentTcIds: unitComponentTc,
     misfiledLevelTcIds: collectMisfiledLevelTcIds(specTcIds, tcLevels),
     deferredTcIds: deferredTc,
@@ -3075,27 +3089,75 @@ const ATDD_LAYER_SEGMENTS = new Map<string, AtddTestKind>([
   ["integration", "integration"],
 ]);
 
-function resolveTestKind(
-  filePath: string,
-  roots: {
-    root: string;
-    testsDirName: string;
-    e2eRoot: string;
-    apiRoot: string;
-    integrationRoot: string;
-    isPackageRoot: (absoluteDir: string) => boolean;
-  },
-): AtddTestKind | null {
+type TestLayerRoots = {
+  root: string;
+  testsDirName: string;
+  e2eRoot: string;
+  apiRoot: string;
+  integrationRoot: string;
+  isPackageRoot: (absoluteDir: string) => boolean;
+};
+
+/** An acceptance layer a file answers, and the layer directory it sits in. */
+type TestLayer = { kind: AtddTestKind; layerDir: string };
+
+function resolveTestKind(filePath: string, roots: TestLayerRoots): AtddTestKind | null {
+  return resolveTestLayer(filePath, roots)?.kind ?? null;
+}
+
+function resolveTestLayer(filePath: string, roots: TestLayerRoots): TestLayer | null {
   if (isWithinPath(roots.e2eRoot, filePath)) {
-    return "e2e";
+    return { kind: "e2e", layerDir: roots.e2eRoot };
   }
   if (isWithinPath(roots.apiRoot, filePath)) {
-    return "api";
+    return { kind: "api", layerDir: roots.apiRoot };
   }
   if (isWithinPath(roots.integrationRoot, filePath)) {
-    return "integration";
+    return { kind: "integration", layerDir: roots.integrationRoot };
   }
-  return resolveTestKindFromPath(roots.root, filePath, roots.testsDirName, roots.isPackageRoot);
+  return resolveTestLayerFromPath(roots.root, filePath, roots.testsDirName, roots.isPackageRoot);
+}
+
+/**
+ * The spec that owns a test file by where it sits: a `spec-NNNN` directory
+ * directly inside the layer directory the file answers, holding the file.
+ *
+ * The layout `qfai atdd scaffold` writes, `<layer>/spec-NNNN/**`, read at every
+ * test root the scan reads rather than at `paths.testsDir` alone, so a
+ * package's own `tests/integration/spec-0002/pay.test.ts` belongs to spec-0002
+ * as the central one does. Read positionally for the same reason as the layer:
+ * a `spec-NNNN` segment above the layer directory, or deeper inside it, names a
+ * checkout or a fixture tree rather than the file's spec.
+ */
+function layerSpecNumber(layer: TestLayer, filePath: string): string | null {
+  const [specDir, ...rest] = toPosixPath(path.relative(layer.layerDir, filePath)).split("/");
+  if (specDir === undefined || rest.length === 0) {
+    return null;
+  }
+  return /^spec-(\d{4})$/i.exec(specDir)?.[1] ?? null;
+}
+
+/**
+ * The owning spec of a test file, read as {@link layerSpecNumber} reads it, for
+ * callers outside the scan. `null` for a file in no acceptance layer.
+ */
+export function atddTestOwnerProbe(
+  root: string,
+  config: QfaiConfig,
+): (absolutePath: string) => string | null {
+  const testsRoot = resolvePath(root, config, "testsDir");
+  const roots: TestLayerRoots = {
+    root,
+    testsDirName: testsDirName(root, config),
+    e2eRoot: path.join(testsRoot, "e2e"),
+    apiRoot: path.join(testsRoot, "api"),
+    integrationRoot: path.join(testsRoot, "integration"),
+    isPackageRoot: packageRootProbe(),
+  };
+  return (absolutePath) => {
+    const layer = resolveTestLayer(absolutePath, roots);
+    return layer === null ? null : layerSpecNumber(layer, absolutePath);
+  };
 }
 
 /**
@@ -3132,12 +3194,12 @@ const TEST_ROOT_SEGMENTS = new Set(["tests", "test", "__tests__"]);
  * or by pointing `paths.testsDir` at one; missing such a file is the safe
  * direction, and claiming one is not.
  */
-function resolveTestKindFromPath(
+function resolveTestLayerFromPath(
   root: string,
   filePath: string,
   testsDirName: string,
   isPackageRoot: (absoluteDir: string) => boolean,
-): AtddTestKind | null {
+): TestLayer | null {
   const relative = path.relative(root, filePath);
   if (relative.length === 0 || relative.startsWith("..") || path.isAbsolute(relative)) {
     return null;
@@ -3192,11 +3254,14 @@ function resolveTestKindFromPath(
     return null;
   }
   const layer = directories[testRoot + 1];
-  return layer === undefined ? null : (ATDD_LAYER_SEGMENTS.get(layer) ?? null);
+  const kind = layer === undefined ? undefined : ATDD_LAYER_SEGMENTS.get(layer);
+  return kind === undefined
+    ? null
+    : { kind, layerDir: path.join(root, ...directories.slice(0, testRoot + 2)) };
 }
 
 /**
- * The basename `resolveTestKindFromPath` reads as a test root for this project.
+ * The basename `resolveTestLayerFromPath` reads as a test root for this project.
  *
  * Empty when `paths.testsDir` is the repository root: there the layer directories
  * sit at the top level and the containment check answers for them, so taking

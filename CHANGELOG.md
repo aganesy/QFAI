@@ -206,6 +206,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A package that keeps the scaffold layout owns its own test files** (#1702).
+  The ATDD scan reads each package's acceptance suites, but a test's owning spec
+  was read only from `<paths.testsDir>/<layer>/spec-NNNN/`. A file at
+  `packages/checkout/tests/integration/spec-0002/pay.test.ts` had no owner, so a
+  mistyped annotation in it reached only the run of the spec the typo named,
+  and `--spec 0002` never reported it. The owner is now the `spec-NNNN`
+  directory directly inside the layer directory the scan resolves for the file,
+  at any test root. The ATDD findings and the scope filter every scoped run
+  applies both read it. A `spec-NNNN` directory above the layer directory, or
+  deeper inside it, still owns nothing.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
