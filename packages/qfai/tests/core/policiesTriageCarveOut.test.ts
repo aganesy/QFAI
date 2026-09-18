@@ -353,3 +353,76 @@ describe("_policies scope bans carve out the mandated Triage table", () => {
     );
   });
 });
+
+/**
+ * A shared decision record may point at the spec items it was measured
+ * against — in its `Context` and `Evidence` bullets, and nowhere else.
+ */
+describe("a shared decision record cites its grounds", () => {
+  const decisions = (...block: string[]): string =>
+    ["# 08 Decisions", "", "## Decisions", "", ...block, ""].join("\n");
+  const noTriage = "# 10 delta\n";
+
+  it("lets Context and Evidence name spec items, continuation lines included", async () => {
+    await withPolicies(
+      noTriage,
+      (issues) => {
+        expect(policyScopeFindings(issues)).toEqual([]);
+      },
+      {
+        "08_Decisions.md": decisions(
+          "### DR-0018: classify the button requirement as an update",
+          "",
+          "- Status: accepted",
+          "- Context: the subject already lives in BR-0007-0003 and BR-0009-0001",
+          "- Evidence: TC-0007-0012, and the per-case table in",
+          "  `.qfai/evidence/decision-button.md` across spec-0007 and spec-0009",
+          "- Decision: treat it as UPDATE:MODIFY on the specs that own the rule",
+          "- Consequences: no new capability",
+          "- Related: -",
+        ),
+      },
+    );
+  });
+
+  it("keeps every other bullet of the record under both rules", async () => {
+    await withPolicies(
+      noTriage,
+      (issues) => {
+        expect(policyScopeFindings(issues)).toEqual(
+          expect.arrayContaining(["BR-0007-0003", "TC-0007-0012"]),
+        );
+      },
+      {
+        "08_Decisions.md": decisions(
+          "### DR-0019: move a rule",
+          "",
+          "- Status: accepted",
+          "- Context: -",
+          "- Decision: rewrite BR-0007-0003 in place",
+          "- Consequences: -",
+          "- Related: TC-0007-0012",
+        ),
+      },
+    );
+  });
+
+  it("does not exempt a Context bullet outside a decision record", async () => {
+    await withPolicies(
+      noTriage,
+      (issues) => {
+        expect(policyScopeFindings(issues)).toContain("AC-0007-0001");
+      },
+      {
+        "08_Decisions.md": [
+          "# 08 Decisions",
+          "",
+          "## Empty State",
+          "",
+          "- Context: AC-0007-0001 is not a decision record",
+          "",
+        ].join("\n"),
+      },
+    );
+  });
+});

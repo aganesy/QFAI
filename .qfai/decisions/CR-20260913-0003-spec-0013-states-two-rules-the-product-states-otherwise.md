@@ -27,7 +27,7 @@ one question per item, and an approval names an option for each.
 
 Two further contradictions found in the same pass are the pack disagreeing with
 itself. Each has one correct fix, so each is raised as a defect on its own:
-`CR-20260913-0007` for the template slot, and `CR-20260913-0008` for the
+`CR-20260913-0011` for the template slot, and `CR-20260913-0008` for the
 legacy-contract window.
 
 ### 1. A skill is named, a helper nothing calls is driven, and the resolver admits more
@@ -104,11 +104,11 @@ specifies. That is not a choice this record offers. The resolver is another
 pack's, its fallback is specified there, and the product and its tests
 implement it. The options below settle the first half only.
 
-| #   | Option                                                                                                                                      | Cost                                                                                                                                    | Risk                                                                                                                             | Recommended |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| 1a  | Wire the helper into `/qfai-sdd` so the obligation's first half has a driver, and add a case that drives the stage rather than the function | A product change and its test, plus whatever the stage's contract needs                                                                 | The stage gains a write to a spec's frontmatter, which is an upstream edit made by a stage rather than by an author              |             |
-| 1b  | Narrow `TC-0013-0030` to the helper's behaviour, and state that the wiring is not this pack's obligation                                    | The statements that name the stage as the writer, restated to the helper                                                                | The pack then specifies a function nobody calls. The obligation reads as met while the behaviour a user would see does not exist |             |
-| 1c  | Split the obligation: keep the helper's half here, and record the wiring as its own requirement with its own row                            | The same restatement, and one new requirement chain with two ledger rows: an `E2E` row for its story and a row at its test case's level | Two records where there was one, and the new rows are `todo` from the day they are written                                       | ✅          |
+| #   | Option                                                                                                                                      | Cost                                                                                                                                                                                              | Risk                                                                                                                             | Recommended |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1a  | Wire the helper into `/qfai-sdd` so the obligation's first half has a driver, and add a case that drives the stage rather than the function | A product change and its test, plus whatever the stage's contract needs                                                                                                                           | The stage gains a write to a spec's frontmatter, which is an upstream edit made by a stage rather than by an author              |             |
+| 1b  | Narrow `TC-0013-0030` to the helper's behaviour, and state that the wiring is not this pack's obligation                                    | The statements that name the stage as the writer, restated to the helper                                                                                                                          | The pack then specifies a function nobody calls. The obligation reads as met while the behaviour a user would see does not exist |             |
+| 1c  | Split the obligation: keep the helper's half here, and record the wiring as its own requirement with its own row                            | The same restatement, and one new requirement chain, held `planned`, whose two ledger rows — an `E2E` row for its story and a row at its test case's level — are seeded when a slice activates it | Two records where there was one, and the new requirement waits, planned, until a slice takes it up                               | ✅          |
 
 Option 1c is recommended, and the case against 1a is its risk rather than its
 reach. 1a completes the obligation as written: it wires the helper and drives
@@ -152,18 +152,28 @@ record has not settled would fix that side into the record.
   `TC-0013-0025`, `TC-0013-0027` or `US-0013-0011` are blocked by the two
   defect requests instead. `TDD-0016`, the row for the lock write, is about
   which stage writes the lock, which neither item touches.
-- Overlapping open CRs: **the `spec-0013` ledger repair is owed and unwritten.**
-  It re-derives that ledger to its template, seeding the `US-0013-0013` rows
-  above and splitting `TDD-0025` and `TDD-0026`. It is written and applied
-  first, and this record is refreshed against the ledger it leaves before either
-  item is approved: until then the rows below name entries no ledger holds, and
-  the prerequisite names no record an operator can open. `CR-20260913-0007` and `CR-20260913-0008` name files this record
-  names too — `06_Test-Cases.md`, `09_delta.md` and `tdd/test-list.md`, and
-  `CR-20260913-0007` also the other statement files and `10_Plan.md`. **They
-  are applied in order**: `CR-20260913-0008`, then `CR-20260913-0007`, then
-  this record, which assumes both have landed. If any of the three is rejected,
-  this record is restated before it is applied. The blocked sets do not
-  intersect.
+- Overlapping open CRs: **the `spec-0013` ledger repair is
+  `CR-20260913-0009`.** It re-derives that ledger to its template, splitting
+  `TDD-0025` and `TDD-0026`, and is applied first; this record is refreshed
+  against the ledger it leaves, including the `US-0013-0013` rows it seeds,
+  before either item is approved. Four more open records name files this
+  record names — the `spec-0013` statement files, `09_delta.md`, `10_Plan.md`
+  and `tdd/test-list.md`:
+
+  | Order | Record             | What it edits that this record also edits                                                |
+  | ----- | ------------------ | ---------------------------------------------------------------------------------------- |
+  | 1     | `CR-20260913-0009` | `tdd/test-list.md`, `09_delta.md`                                                        |
+  | 2     | `CR-20260913-0010` | the statement files that name the UI contract template, `09_delta.md`, `10_Plan.md`      |
+  | 3     | `CR-20260913-0001` | the band statements, `09_delta.md`, `10_Plan.md`, `tdd/test-list.md`                     |
+  | 4     | `CR-20260913-0008` | `06_Test-Cases.md`, `09_delta.md`, `tdd/test-list.md`                                    |
+  | 5     | `CR-20260913-0011` | the statement files, `06_Test-Cases.md`, `09_delta.md`, `10_Plan.md`, `tdd/test-list.md` |
+  | 6     | this record        | —                                                                                        |
+
+  **They are applied in that order**, and each assumes every earlier one has
+  landed. `CR-20260913-0010` before `CR-20260913-0001` is the order those two
+  already state. If any earlier record is rejected, each later one is restated
+  against the text as it then stands before it is applied, never applied as
+  written. The blocked sets do not intersect.
 
 ## Impact scope
 
@@ -194,6 +204,7 @@ record has not settled would fix that side into the record.
   | `.qfai/specs/spec-0013/04_Business-Rules.md`      | every outcome             |
   | `.qfai/specs/spec-0013/05_Examples.md`            | every outcome but `1a/2c` |
   | `.qfai/specs/spec-0013/06_Test-Cases.md`          | every outcome             |
+  | `.qfai/specs/spec-0013/07_Decisions.md`           | `2c`                      |
   | `.qfai/specs/spec-0013/09_delta.md`               | every outcome             |
   | `.qfai/specs/spec-0013/10_Plan.md`                | every outcome             |
   | `.qfai/specs/spec-0013/tdd/test-list.md`          | every outcome             |
@@ -329,18 +340,22 @@ ask for.
      with no companion, whose boundary no option restates; and under `1a`,
      `TDD-0025` and the `E2E` row for the stage's write, whose boundary `1a`
      keeps while their cases change (action 4).
-   - **Appended at `todo` under `1c`**, with no `DR-ID`, since no reset reaches
-     a row that did not exist: an `E2E` row with the new story in `US-Refs`,
-     and a row at the new test case's declared level with it in `TC-Refs`. A
-     test case never goes on the `E2E` row.
+   - **Nothing is appended under `1c` yet.** The new story and test case are
+     marked `x-qfai-status: planned` (action 4), and Phase 2b seeds an `E2E` row
+     only for an active story, nor a row for a planned test case, so an
+     appended row would be one no test is owed for and the completion gate
+     could never see terminal. The option's rows, an `E2E` row with the new
+     story in `US-Refs` and a row at the test case's declared level with it in
+     `TC-Refs`, are seeded by the rerun that activates the two.
    - No row is retired. Every row keeps an obligation under every option, so
      the retirement branch does not apply and no `TDD-ID` reservation is owed.
    - **Under `2c`, `TDD-0026` is reset by the ledger repair and needs a
      terminal path of its own.** That repair returns it to `todo`, and action 4
      then runs `/qfai-atdd` over every unblocked owed row — while the test case
      requires a warning and the case asserts an error, which `2c` declines to
-     change. The row therefore completes as an `exception`, and `2c` carries
-     the Decision Record that says so in `spec-0013/07_Decisions.md`: the
+     change. The row therefore completes as an `exception`, and the
+     `/qfai-sdd spec-0013` rerun writes, under `2c`, the Decision Record that
+     says so in `spec-0013/07_Decisions.md`: the
      product states the finding at `error`, the pack states it at `warning`,
      and `2c` is the option that keeps both. Without that record the row has no
      ending and `2c` is an outcome nothing can execute.
@@ -363,17 +378,16 @@ ask for.
         helper, which `surfaceTypePopulate.test.ts` and
         `spec0013ActivePointerSurfaceTypeE2E.test.ts` already hold, and the
         header of `surfaceTypePopulate.test.ts` stops calling it the helper
-        `/qfai-sdd` invokes. **Under `1c` no test is written for the two
-        appended rows, and they are not left at `todo` without one either.** A
-        test written for them could only fail until the stage write `1c`
-        records as a requirement is implemented, and a failing test is the RED
-        handoff `/qfai-atdd` owes and `/qfai-implement` needs — so leaving them
-        untested stops both stages and neither row ever completes. `1c` marks
-        the new story and test case `x-qfai-status: planned` instead, in
-        `02_User-stories.md` and `06_Test-Cases.md`, which is the declared way
-        to hold an obligation outside the current slice: the rows stay in the
-        ledger, the stage owes them no test yet, and the requirement the option
-        records is what is tracked.
+        `/qfai-sdd` invokes. **Under `1c` no test is written for the new
+        requirement, and it has no row to leave at `todo`.** A test written for
+        it could only fail until the stage write `1c` records as a requirement
+        is implemented, and a failing test is the RED handoff `/qfai-atdd` owes
+        and `/qfai-implement` needs. `1c` marks the new story and test case
+        `x-qfai-status: planned` instead, in `02_User-stories.md` and
+        `06_Test-Cases.md`, which is the declared way to hold an obligation
+        outside the current slice: the stage owes it no test yet, and the
+        requirement the option records is what is tracked until a later slice
+        activates it and its rows are seeded.
       - **The test-side text.** Each title, message and comment the item 2
         table names is corrected to state what its case asserts. It is owed
         under every outcome, save the titles `2c` leaves below: text stating
