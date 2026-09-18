@@ -30,7 +30,7 @@
  * matrix leaves all three original surfaces in perfect agreement: the project
  * exists, the script exists, the `test` job runs it. Nothing is unreachable from
  * CI and nothing advertises coverage that cannot exist. What stops is that slice
- * being exercised on the floor at all — the six remaining legs go green, the
+ * being exercised on the floor at all — the eight remaining legs go green, the
  * lane rolls up green, and an API absent in the floor release breaks exactly the
  * supported users the lane was added for. That is the same class of silent
  * divergence as the three above, arriving through a job this file did not read.
@@ -177,12 +177,17 @@ const SLICED_JOBS = ["test", "node-floor"] as const;
  * The first draft of this row did use the prefix, and the RED caught it by
  * demanding that `test:assets` select an `assets` project that does not exist.
  */
-// `[a-z0-9]+` and not `[a-z]+`: one project is named `e2e`. The first draft used
-// the letters-only class, so surface 3 silently lost `test:e2e` and the equality
-// claim would have failed for a reason that had nothing to do with alignment. A
-// count check in the implementation script caught it; the character class is
-// recorded here because the next project with a digit in its name will hit it too.
-const PROJECT_SELECTOR = /^vitest run --project ([a-z0-9]+)$/;
+// `[a-z0-9-]+` and not `[a-z]+`: one project is named `e2e`, and `pr-fix` and
+// `pr-merge` carry a hyphen. The first draft used the letters-only class, so surface 3
+// silently lost `test:e2e` and the equality claim would have failed for a reason that
+// had nothing to do with alignment. A count check in the implementation script caught
+// it; the character class is recorded here because every project whose name reaches
+// outside the letters hits it the same way, and the miss is silent in the direction
+// that matters — the slice drops out of surface 3, so the count claim passes while the
+// equality claim fails. The digit was the first such character and the hyphen the
+// second. A name using a third needs this class widened before its slice is read here
+// at all.
+const PROJECT_SELECTOR = /^vitest run --project ([a-z0-9-]+)$/;
 
 function perSliceScriptEntries(): { key: string; slice: string }[] {
   const pkg: unknown = JSON.parse(readFileSync(PACKAGE_JSON, "utf-8"));
@@ -217,7 +222,7 @@ function jobSteps(job: string): Record<string, unknown>[] {
 
 const sorted = (xs: readonly string[]): string[] => [...xs].sort();
 
-describe("TC-0017-0062 (TDD-0062): the slice surfaces hold one set of seven names", () => {
+describe("TC-0017-0062 (TDD-0062): the slice surfaces hold one set of nine names", () => {
   it("agrees across the runner workspace, both CI matrices and the per-slice scripts", () => {
     const projects = sorted(runnerProjects());
     const scripts = sorted(perSliceScripts());
@@ -240,10 +245,14 @@ describe("TC-0017-0062 (TDD-0062): the slice surfaces hold one set of seven name
       .soft(scripts, "the per-slice scripts name exactly the runner's projects")
       .toEqual(projects);
 
-    // CLAIM 2 — and there are seven. The count is asserted because the spec states
+    // CLAIM 2 — and there are nine. The count is asserted because the spec states
     // it, and it is asserted LAST: if the sets disagree, the count is not the
     // useful thing to be told.
-    expect.soft(projects.length, "the aligned set has seven members").toBe(7);
+    //
+    // A number rather than a phrase, because this is the only claim that catches a
+    // shrink every surface agreed to: drop a slice from all three and CLAIM 1 still
+    // holds.
+    expect.soft(projects.length, "the aligned set has nine members").toBe(9);
   });
 });
 
