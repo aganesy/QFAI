@@ -217,6 +217,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The token docs say a scale key can contain digits, and what a project's
+  own token check must do** (#1908). QFAI checks the prototype against
+  `DESIGN.md`, not a product stylesheet or Tailwind config, so each project
+  writes that check itself. The natural name pattern, letters and hyphens,
+  never captures `2xl` or `3xl`, which `typography.scale` declares, and a
+  check that captures nothing for a key passes both ways. The schema comment
+  now says scale keys contain digits. The `design-system.yaml` contract says
+  QFAI does not check the implementation, that a project's check asserts both
+  directions, and that its name pattern has to admit digits.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
