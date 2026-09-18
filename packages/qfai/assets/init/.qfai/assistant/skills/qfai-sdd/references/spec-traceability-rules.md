@@ -646,7 +646,10 @@ register. What blocks is the status on the row.
 | `resolved`      | Notes name the decision that settled it                           | No               |
 | `unadjudicated` | Put to the user, and nobody answered                              | Yes              |
 
-A decision the user must settle goes to the user during the stage. Where the
+A decision the user must settle — a critical one (`.agents/rules/grilling.md`),
+or one a document requires the user to record — goes to the user during the
+stage. A decision adopted from a griller's recommendation is settled, and is
+recorded in the first row of the table above. Where the
 stage ends with it unanswered, the row says `unadjudicated` and validation stops
 the stage there: writing it down as an ordinary open question instead is how a
 stage completes with a design nobody decided. The same status, in the same

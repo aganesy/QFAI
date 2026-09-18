@@ -1486,8 +1486,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // a later run adds it when it is missing. Derived by running `qfai init` into a
   // temp root; dropping the line and restoring the old sentence in both written
   // files reproduces `4317f660…` and `40e0888f…` byte for byte.
-  ["AGENTS.md", "d2a68a944b17375a0d07e4b46420e0a7612f546030d715e6307c91f93d410a6c"],
-  ["CLAUDE.md", "cbcc684160d472857160cd28e1ca23e1bdfb75c90807703bf629eb6cae9737f1"],
+  //
+  // Re-pinned for the grilling bullet, which now says agents grill each other outside the
+  // discussion stage and only a critical decision reaches the user. Derived by running `qfai init`
+  // into a temp root; restoring the old wording in both written files reproduces `d2a68a94…` and
+  // `cbcc6841…` byte for byte.
+  ["AGENTS.md", "66f2f506c9a2e5c219efc85665e09dbeec271d127fc28e1d10428beb6e71550f"],
+  ["CLAUDE.md", "bf6a52afb3cd0ed63fbb7f6f9ad18cb9b9309d103a6a8d23d87022b66816ab1d"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1505,7 +1510,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // is silently absent in a project that moved them. The `UserPromptSubmit`
   // group is one more entry of the same shape, on every turn rather than
   // every write.
-  [".claude/settings.json", "a5f0f0e088022672b869c566a2a4d05cecc7aa7904b9fbde699140e88f5f4827"],
+  //
+  // Re-pinned for the text of the three grilling groups, which now says who answers: agents
+  // outside the discussion stage, and the user only for a critical decision. The written file is
+  // byte-identical to the template, and the template at the previous revision hashes to
+  // `a5f0f0e0…`.
+  [".claude/settings.json", "ed2029adb50f34ad88b713a86bfacb2825b72037475695593c6eda0f9d60543b"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

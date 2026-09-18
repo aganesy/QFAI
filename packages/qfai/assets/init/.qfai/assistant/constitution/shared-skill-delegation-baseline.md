@@ -91,8 +91,10 @@ Every major artifact in the stage should include this table schema:
 - **A grilling session adds a row for every decision it settled**, with `Task title` = `grilling(<where>/<adjudication>): <the decision>` and `Agent instance` = the agent that **made the recommendation**, whether or not it was taken. That row is what a later reviewer reads its `Recommended and unadjudicated` answer off: a reset instance holds no memory of the session, so without the row
   the field cannot be answered honestly and the review has nothing to check against. The field asks what this reviewer recommended, so the recommender is what the row has to name — "the agent whose recommendation was adopted" is undefined for the ordinary case where the user chose something else.
 - **`<where>` is the stage's own name for where the session ran** — a phase for a spec stage, `-` for a stage that has one session — and **`<adjudication>` is one of `user`, `agents` and `withdrawn`** — the user settled it, the agents settled it between themselves, or the user's answer dropped the item, which settles the decision by removing what it was about. (`none` is not one of
-  these: it is the marker a run with no settled decision writes, `grilling(<where>/none): none`, and it carries no decision to adjudicate.) Both are in the title because the schema has no column for either, and a row that cannot be assigned to a place is one an omission elsewhere can be counted against. The two outcomes point opposite ways — a
-  user-settled decision leaves the griller free to review the artifact, an agent-settled one makes the artifact wrong until somebody decides — so a row recording only that a session happened tells the reviewer nothing it can act on. One format, always parenthesized, so a gate selecting `grilling(` finds every row.
+  these: it is the marker a run with no settled decision writes, `grilling(<where>/none): none`, and it carries no decision to adjudicate.) Both are in the title because the schema has no column for either, and a row that cannot be assigned to a place is one an omission elsewhere can be counted against. The outcomes point different ways — a
+  user-settled decision leaves the griller free to review the artifact, an agent-settled one keeps the griller that recommended it out of that review, and an agent-settled critical one makes the artifact wrong until the user decides — so a row recording only that a session happened tells the reviewer nothing it can act on.
+  One format, always parenthesized, so a gate selecting `grilling(` finds every row.
+- **An `agents` row also carries why the recommendation was taken**, in `Output (refs)`: the reason, and each position that disagreed with whose it is. The stage's final report lists every `agents` row, which is how the user sees what a delegated session adopted without being asked about it.
 - `PENDING` records a gate that could not be run — the only honest status for the exhausted-budget branch below, which mandates it. It is never a substitute for `PASS`: DONE stays blocked while any row is `PENDING`, and the stage stays resumable. A skill that allows only `PASS`/`REVISE` would force an agent on that path to either break the schema or mislabel an unrun gate.
 
 ## Reviewer Gate Baseline
@@ -113,13 +115,16 @@ An **independent reviewer** is a sub-agent that did **not** author or edit any a
 
 A grilling session puts a recommended answer beside each question (`.agents/rules/grilling.md`). Who settled the decision decides what happens next.
 
-| The decision was settled                              | What follows                                                |
-| ----------------------------------------------------- | ----------------------------------------------------------- |
-| By the user, from the recommendation among the inputs | The decision is theirs. The griller may review the artifact |
-| Agent to agent, with no user adjudication             | The artifact is wrong, and no reviewer can clear it         |
+| The decision was settled                              | What follows                                                                      |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------- |
+| By the user, from the recommendation among the inputs | The decision is theirs. The griller may review the artifact                       |
+| Agent to agent, not critical                          | The decision stands. The griller that recommended it does not review the artifact |
+| Agent to agent, critical, with no user adjudication   | The artifact is wrong, and no reviewer can clear it                               |
 
-**The second row is not a routing problem.** A decision is the user's (`.agents/rules/grilling.md`), and a run that could not ask records it as an open question rather than adopting it. An agent-adopted recommendation is therefore an artifact carrying something nobody decided, and handing it to a different reviewer would launder it. The reviewer **MUST** return `REVISE` and name the
-decision: it is reopened and put to the user, or recorded open where no question can be asked.
+**The second row is how a delegated session is meant to end** (`.agents/rules/grilling.md`), not a finding. The reviewer checks that the decision has its `agents` row and is not critical. A reviewer that doubts its merit raises that as an ordinary finding against the artifact, under its own remit, as it would for any other content.
+
+**The third row is not a routing problem.** A critical decision is the user's in every session, and a run that could not ask records it as an open question rather than adopting it. An agent-adopted critical decision is therefore an artifact carrying something nobody with the standing decided, and handing it to a different reviewer would launder it.
+The reviewer **MUST** return `REVISE` and name the decision: it is reopened and put to the user, or recorded open where no question can be asked.
 
 The first row needs a reason, because the intuitive one is wrong. A sub-agent starting with a reset context cannot defer to something it does not remember, so deference is not the risk. **Correlation** is: a fresh instance of the same agent, on the same model, over the same evidence, re-derives the preference that produced the recommendation and finds it good on the merits. Resetting the
 context removes the memory, not the disposition — which is why role name alone never establishes independence either. Where the user chose, that disposition is one input among several and the decision is not the griller's to re-derive.
@@ -130,7 +135,7 @@ context removes the memory, not the disposition — which is why role name alone
 holding several invocations keys it to the run it answers for, `grilling(-@<run key>/none): none`, as it keys that run's decision rows. A stage that
 settled some writes a row per decision. A summary carrying neither is incomplete, and that is the `REVISE` — not an inference in either direction. Absence of rows cannot be read as evidence for `none`, because a table that omitted a required row looks exactly like a table that had none to write, and the reviewer would attest `none` over the very decision the record exists to expose.
 
-**The field asks about the artifact, not about the reviewer.** It reports any decision the artifact still carries that an agent recommended and agents adopted with nobody adjudicating — whichever agent recommended it. Scoped to the reviewer's own recommendations it would answer `none` truthfully whenever a different agent made them, which is the common case and the one the record was
+**The field asks about the artifact, not about the reviewer.** It reports any critical decision the artifact still carries that an agent recommended and agents adopted with nobody adjudicating — whichever agent recommended it. Scoped to the reviewer's own recommendations it would answer `none` truthfully whenever a different agent made them, which is the common case and the one the record was
 built to catch: what is wrong is that the artifact carries a decision nobody took, and that is true however the review was routed. The reviewer's own recommendations are covered because they are a subset, and the dual-role table above is what decides whether that reviewer may rule at all.
 
 The `grilling(-/none): none` row records a fact rather than a step, so it names no agent: `Agent instance` is `n/a`, `Role`, `Input (refs)` and `Output (refs)` are `-`, and `Status` is `PASS`. Writing a role or an instance there would invent provenance for work nobody did, which is the failure the `Agent instance` column exists to make detectable.
@@ -261,7 +266,7 @@ Result: PASS | REVISE
 Reviewed revision: <git rev> | working-tree+<content hash>
 Audited evidence hash: <content hash of the evidence read>   # one line per TDD-ID on a T1 group
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
-Recommended and unadjudicated: none | <decisions in THIS artifact as it now stands that any agent recommended and adopted with no user adjudication>
+Recommended and unadjudicated: none | <critical decisions in THIS artifact as it now stands that any agent recommended and adopted with no user adjudication>
 Findings:
 - <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none>
 Required fixes:
