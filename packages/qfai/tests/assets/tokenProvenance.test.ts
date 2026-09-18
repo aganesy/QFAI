@@ -87,3 +87,29 @@ describe("the design tokens name their source", () => {
     });
   }
 });
+
+describe("a project's own token check can hold every key", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: the schema says a scale key can contain digits`, async () => {
+      const spec = await read(tree, SPEC);
+      expect(spec).toContain(
+        "scale: map # xs..3xl; 2xl and 3xl are keys, so keys can contain digits",
+      );
+    });
+
+    it(`${tree}: the mirror contract says what such a check must do`, async () => {
+      // A name class of letters and hyphens never captures `2xl` or `3xl`, and a
+      // check that captures nothing for a key passes in both directions.
+      const handoff = flat(await read(tree, HANDOFF));
+      expect(handoff).toContain("It does not read the product's stylesheet or Tailwind config");
+      expect(handoff).toContain("**Assert both directions.**");
+      expect(handoff).toContain("**Let a token name contain digits.**");
+      expect(handoff).toContain("Use `--token-([a-z0-9-]+)` or wider.");
+      const narrow = /--token-([a-z-]+)/g;
+      const wide = /--token-([a-z0-9-]+)/g;
+      const sheet = ":root { --token-text-xl: 1.25rem; --token-text-2xl: 1.5rem; }";
+      expect([...sheet.matchAll(narrow)].map((m) => m[1])).toEqual(["text-xl", "text-"]);
+      expect([...sheet.matchAll(wide)].map((m) => m[1])).toEqual(["text-xl", "text-2xl"]);
+    });
+  }
+});
