@@ -7,8 +7,13 @@ others).
 Each rule is a plain Markdown file. The tool-specific entry points
 (`.claude/rules/*.md`, `AGENTS.md`, `CLAUDE.md`,
 `.github/copilot-instructions.md`) reach these files by symlink or by
-reference. Edit the master here, never a copy under a tool-specific
-directory.
+reference.
+
+A rule that also governs an adopter's repository is **written in the shipped
+copy** under `packages/qfai/assets/init/root/.agents/rules/`, and the entry in
+this directory is a link to it, so the file this repository reads is the file
+its users receive. A rule about this repository alone is a real file here.
+Either way, edit the master — never a copy under a tool-specific directory.
 
 ## Rules
 
@@ -48,7 +53,15 @@ An overlay does not restate the rule it extends. Both are read together.
 
 ## Adding a rule
 
-1. Write `<name>.md` here as a plain document.
+1. Write the rule. If it governs an adopter's repository as well, write it in
+   `packages/qfai/assets/init/root/.agents/rules/<name>.md` and link it here:
+
+   ```sh
+   MSYS=winsymlinks:nativestrict ln -s      ../../packages/qfai/assets/init/root/.agents/rules/<name>.md      .agents/rules/<name>.md
+   ```
+
+   A rule about this repository alone is a plain document in this directory.
+
 2. Add a row to the table above. `agentsRulesSurface.test.ts` reads this file
    as the register and fails on a master it does not list.
 3. Add the symlink `.claude/rules/<name>.md`, then check what you got:
@@ -70,11 +83,10 @@ An overlay does not restate the rule it extends. Both are read together.
 5. If Copilot must see the rule, add a one-line reference in
    `.github/copilot-instructions.md`. Codex reads `AGENTS.md`, so step 4
    already covers it.
-6. If the rule governs an adopter's repository as well, copy it to
-   `packages/qfai/assets/init/root/.agents/rules/` and cite it from
-   `root/AGENTS.md` and `root/CLAUDE.md`. A rule about this repository alone is
-   not shipped — `document-schema.md` and `repository-language.md` are the two
-   that stay here.
+6. A shipped rule is cited from `root/AGENTS.md` and `root/CLAUDE.md` too, so
+   an adopter's entry points name it. `document-schema.md`,
+   `repository-language.md` and `shipped-ci-parity.md` are about this
+   repository alone and stay here as real files.
 7. Add a block to `agentsRulesSurface.test.ts` naming one token per clause of
    the rule and each entry point that cites it. Steps 2 and 3 are held for
    every master already; the rest are held only by the block you write.

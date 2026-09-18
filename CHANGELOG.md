@@ -14,8 +14,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   guard script, a CI job or an identifier shape this project mints moves to
   `<name>.local.md` beside it. The suffix is the overlay convention the
   assistant tree already uses, so an overlay is never shipped. Registered in
-  `.agents/rules/README.md`, `AGENTS.md` and `CLAUDE.md`, and linked from
-  `.claude/rules/`.
+  `.agents/rules/README.md`, `AGENTS.md`, `CLAUDE.md` and
+  `.github/copilot-instructions.md`, and linked from `.claude/rules/`.
+  Every rule the package ships is now read here through its shipped copy:
+  the nine entries in `.agents/rules/` are links, so the file this repository
+  follows is the file an adopter receives. The shipped `version-discipline.md`
+  states the precedence that makes an overlay usable — an overlay beside a
+  master supersedes the master's default.
 
 - **Reviewer cards file excess as a blocking code-quality defect** (#1798).
   All six reviewer roles trace excess to Article VII, require a concrete cut

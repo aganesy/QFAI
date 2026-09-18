@@ -197,16 +197,39 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   it("master version-discipline.md exists with required content", async () => {
     const text = await readFile(path.join(ROOT, ".agents/rules/version-discipline.md"), "utf-8");
     for (const term of [
-      "ブランチ",
-      "package\\.json",
-      "chore\\(release\\)",
       "Version Discipline",
-      "VERSION_PIN_SKIP",
-      "禁止",
+      "branch name",
+      "packaging manifest",
+      "chore\\(release\\)",
+      // The default, and the two ways a project says it has decided otherwise.
+      "Adoption status: not adopted",
+      "supersedes the master",
+      // What stays the user's call whatever the branch is named.
+      "create or push a release tag",
     ]) {
       expect(text).toMatch(new RegExp(term));
     }
   });
+
+  /**
+   * A rule the package ships is read here through its shipped copy.
+   *
+   * Two files drift, and these did: the local `distributed-surface.md` said
+   * every guard follows `package.json#files` while the shipped one did not,
+   * and nothing compared them. A link cannot hold two answers.
+   */
+  it.each(readdirSync(path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules")))(
+    ".agents/rules/%s is the shipped master",
+    async (fileName) => {
+      const local = path.join(ROOT, ".agents/rules", fileName);
+      const shipped = path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules", fileName);
+      const stat = await lstat(local);
+      expect(stat.isSymbolicLink(), `${fileName} must be a symlink to the shipped master`).toBe(
+        true,
+      );
+      expect(await realpath(local)).toBe(await realpath(shipped));
+    },
+  );
 
   it("finds the rule masters it reads the directory for", () => {
     // An empty read passes both cases below without asking anything, and the
@@ -1176,16 +1199,6 @@ describe("trust boundaries depend on the caller's control", () => {
     expect(flat).toContain("parsed there into a form that cannot hold an invalid value");
     expect(flat).toContain("the code past it carries no branch for that value");
     expect(flat).toContain("Validation of input crossing a trust boundary");
-  });
-
-  it("keeps the operating and shipped masters byte-identical", async () => {
-    const [operating, shipped] = await Promise.all([
-      readFile(path.join(ROOT, ".agents/rules/minimal-implementation.md")),
-      readFile(
-        path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md"),
-      ),
-    ]);
-    expect(operating.equals(shipped)).toBe(true);
   });
 });
 
