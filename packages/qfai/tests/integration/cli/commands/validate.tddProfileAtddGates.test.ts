@@ -478,6 +478,20 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
+  it("reads the legacy scaffold directory for skeletons under --profile tdd", async () => {
+    // Older scaffold runs wrote to `<testsDir>/atdd/`, which is no acceptance
+    // layer. `--profile tdd` runs no placeholder rule, so the stub gate is the
+    // only reader a skeleton there has in the stage's completion gate.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await seedScaffold(root, "tests/atdd/spec-0001");
+        await runValidate({ root, strict: false, profile: "tdd" });
+        const skipped = (await findings(root)).filter((entry) => entry.code === "QFAI-TEST-003");
+        expect(skipped).toHaveLength(1);
+      });
+    });
+  });
+
   it("reads the acceptance directories for skeletons under --profile tdd whatever testFileGlobs holds", async () => {
     // The coverage check `--profile tdd` runs reads those directories on the
     // config `qfai init` ships, so a skeleton's annotation clears its missing

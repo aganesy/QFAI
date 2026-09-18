@@ -263,7 +263,10 @@ still a rejected cell:
   policy target gives them nothing to act on. A cell that merely contains
   the word (`not_policies`) resolves to nothing either way, and a path that
   leaves the directory (`_policies/../spec-0003`) is not a policy target —
-  no segment may be `.` or `..`.
+  no segment may be `.` or `..`. A policy row produces no execution-ledger
+  row, since `_policies/**` holds no test case, so a requirement whose every
+  row targets `_policies` is never scheduled; `QFAI-TRIAGE-010` (warning)
+  reports one. Work the requirement asks to be built needs a row on a spec.
 - **No existing spec yet (CREATE)** — the literal `-`. A CREATE row MUST
   NOT name the spec it is about to create; the new spec ID belongs in
   `Subject`. (`(none)` is the legacy spelling of this literal and is still

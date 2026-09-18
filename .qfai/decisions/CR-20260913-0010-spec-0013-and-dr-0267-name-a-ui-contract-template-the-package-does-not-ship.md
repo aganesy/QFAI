@@ -62,7 +62,7 @@ $ grep -rno "ui-spec\.yaml" .qfai/specs
 .qfai/specs/spec-0013/07_Decisions.md:21:ui-spec.yaml
 .qfai/specs/spec-0013/09_delta.md:148:ui-spec.yaml
 .qfai/specs/spec-0013/10_Plan.md:48:ui-spec.yaml
-.qfai/specs/_policies/08_Decisions.md:1783:ui-spec.yaml
+.qfai/specs/_policies/08_Decisions.md:1799:ui-spec.yaml
 ```
 
 No tracked file has that name. The contract templates the `qfai-sdd` skill
@@ -119,7 +119,7 @@ name. Nothing else in the statements changes.
 | `TC-0013-0032` | `spec-0013/06_Test-Cases.md:230`          | `templates/contracts/ui-spec.yaml` | `templates/contracts/ui-contract.sample.yaml` |
 | `DR-0013-0003` | `spec-0013/07_Decisions.md:21`            | `templates/contracts/ui-spec.yaml` | `templates/contracts/ui-contract.sample.yaml` |
 | Band item      | `spec-0013/10_Plan.md:48`                 | `templates/contracts/ui-spec.yaml` | `templates/contracts/ui-contract.sample.yaml` |
-| `DR-0267`      | `_policies/08_Decisions.md:1783`          | `ui-spec.yaml`                     | `ui-contract.sample.yaml`                     |
+| `DR-0267`      | `_policies/08_Decisions.md:1799`          | `ui-spec.yaml`                     | `ui-contract.sample.yaml`                     |
 
 Two other mentions of the old name are not corrected:
 
@@ -164,10 +164,12 @@ No `spec-0004` statement names either file.
   and not edited, since it already reads the shipped template; and, through the
   `/qfai-atdd spec-0013` pass in action 4, the tests for `TDD-0016` to
   `TDD-0018`, with `.qfai/evidence/atdd-spec-0013.md` and
-  `.qfai/evidence/coverage-depth-spec-0013.md`. **No `E2E` test for a story
-  the ledger has no row for**: action 4 writes none, and the thirteen missing
-  rows are recorded there as an open cross-spec obligation, so naming those
-  files here would put an output in the scope that the plan refuses to write
+  `.qfai/evidence/coverage-depth-spec-0013.md`. Action 4 runs over the ledger
+  `CR-20260913-0009` leaves, so the pass also takes the rows that record seeds:
+  the `Integration` rows for `TC-0013-0014` to `TC-0013-0019`, with tests for
+  `TC-0013-0018` and `TC-0013-0019` and a handoff and evidence for all six, and
+  the `E2E` rows, with a new test under `packages/qfai/tests/e2e/**` for each of
+  the ten stories no test annotates, `US-0013-0001` to `US-0013-0010`
 - Contracts: `none`
 - Schema: `none`
 - Upstream paths edited under this CR:
@@ -253,22 +255,24 @@ the ledger rows that carry those statements?
    `PASS with cross-spec obligations` only for attributable `QFAI-ATDD-113`,
    `QFAI-ATDD-115` or `QFAI-TEST-001` residue, so recording these as a
    cross-spec obligation would ask the reviewer gate to pass something it may
-   not. The repair is the record `CR-20260913-0001` and this one both name as
-   owed and neither authorises: a `/qfai-sdd` Phase 2b re-derivation that seeds
-   the missing `Integration` and `E2E` rows and splits the progressed rows it
-   stops at. Action 4 runs after it lands, over the ledger it leaves.
+   not. The repair is `CR-20260913-0009`: a `/qfai-sdd` Phase 2b re-derivation
+   that seeds the missing `Integration` and `E2E` rows and splits the
+   progressed rows it stops at. Action 4 runs after it lands, over the ledger
+   it leaves, and so takes the rows it seeds as well, writing the tests and
+   handoffs the impact scope lists.
 
 5. **`/qfai-implement spec-0013`, last.** It advances each reset row from the
    handoff that pass recorded.
 
-**Actions 1 and 2 do not wait on anything.** The file-name correction and the
-two delta rows touch no ledger and no blocked row, so this record is applied —
-`Applied at` written — as soon as they land. Actions 3 to 5 are the shared
-downstream execution both records order, and they belong to whichever record
-resolves second: `TDD-0027` sits in both blocked sets, so it is released only
-once both are resolved, and a record that held its own `Applied at` open
-waiting for them would keep its claim in the union and stop the release it is
-waiting for.
+**Actions 1 and 2 do not wait on anything**, but this record is not applied
+until actions 3 to 5 have run. This record changes the obligation `TDD-0027`
+certifies, so its reset and re-execution are this record's own work, whatever
+`CR-20260913-0001` decides: that record may be rejected, or approve an option
+that resets nothing, and neither would re-execute the row. `Applied at` is
+written once action 5 has advanced `TDD-0027` from the handoff. Where the other
+record is approved first with a sweep that already covers the row, actions 3
+to 5 run once, under whichever record reaches them first, and both records name
+that run when they are applied.
 
 ## Resolution
 

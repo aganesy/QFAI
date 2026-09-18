@@ -25,7 +25,7 @@ import type {
 } from "./types.js";
 import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
-import { validateContracts } from "./validators/contracts.js";
+import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
@@ -879,9 +879,11 @@ async function runPrototypingProfileValidators(
   const raw = [
     ...(await runPrototypingValidators(root, config, timings, platformOption)),
     // The profile certification accepts, so an entry no screen is read from is
-    // reported here too. Kept out of `runPrototypingValidators`: `full` also
-    // runs `validateContracts`, which composes it already.
+    // reported here too, and so is a UI contract that does not parse. Kept out
+    // of `runPrototypingValidators`: `full` also runs `validateContracts`, which
+    // reports both already.
     ...(await validateUiScreenEntries(root, config)),
+    ...(await validateUiContractParse(root, config)),
   ];
   return await relaxPrototypingIssuesIfExploration(root, raw);
 }
@@ -983,6 +985,40 @@ function acceptanceStubScan(root: string, config: ConfigLoadResult["config"]): T
   };
 }
 
+/**
+ * The TDD profile's acceptance stub selection: the ATDD stage's, plus the
+ * legacy `<testsDir>/atdd/` scaffold directory.
+ *
+ * Older `qfai atdd scaffold` runs wrote their skeletons there, and it is no
+ * acceptance layer, so the ATDD selection passes it over. Under `full` the
+ * placeholder validator reads it; `--profile tdd` runs no such validator, so a
+ * skeleton there, one for an L1/L2 test case above all, whose placement is
+ * deliberately not reported, was read by nothing in the stage's completion gate.
+ */
+function tddAcceptanceStubScan(
+  root: string,
+  config: ConfigLoadResult["config"],
+): TestTodoStubOptions {
+  const scan = acceptanceStubScan(root, config);
+  const legacyDir = path.join(resolvePath(root, config, "testsDir"), "atdd");
+  const relative = path.relative(root, legacyDir);
+  const base =
+    relative.length > 0 && !relative.startsWith("..") && !path.isAbsolute(relative)
+      ? relative
+      : legacyDir;
+  const pattern = stubSourceFilePattern(config.validation.traceability.testFileGlobs);
+  const inLegacyDir = (relativePath: string): boolean => {
+    const inside = path.relative(legacyDir, path.resolve(root, relativePath));
+    return inside.length > 0 && !inside.startsWith("..") && !path.isAbsolute(inside);
+  };
+  return {
+    ...scan,
+    globs: [...(scan.globs ?? []), `${base.replace(/\\/g, "/")}/${pattern}`],
+    fileFilter: (relativePath) =>
+      (scan.fileFilter?.(relativePath) ?? true) || inLegacyDir(relativePath),
+  };
+}
+
 async function runTddValidators(
   root: string,
   config: ConfigLoadResult["config"],
@@ -1026,7 +1062,7 @@ async function runTddValidators(
     ...(includeAtddCodeTraceability
       ? dedupeStubFindings([
           ...(await validateTestTodoStubs(root, config)),
-          ...(await validateTestTodoStubs(root, config, acceptanceStubScan(root, config))),
+          ...(await validateTestTodoStubs(root, config, tddAcceptanceStubScan(root, config))),
         ])
       : await validateTestTodoStubs(root, config, {
           placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
