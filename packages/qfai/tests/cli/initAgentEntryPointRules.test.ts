@@ -2196,6 +2196,102 @@ describe("what the citation scan reads a line as", () => {
   });
 });
 
+describe("a citation a refused rewrite could not write is kept for a later run", () => {
+  const PENDING = path.join(".agents", "rules", ".qfai-citations.pending.json");
+  const master = ".agents/rules/grilling.md";
+
+  /** A project whose AGENTS.md cites every master but `master`, whose file is gone. */
+  async function projectOwingOneCitation(root: string): Promise<string> {
+    await writeFile(path.join(root, "AGENTS.md"), PROJECT_TEXT, "utf-8");
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const written = (await readEntryPoint(root, "AGENTS.md"))
+      .split("\n")
+      .filter((line) => !(line.startsWith("- ") && line.includes(master)))
+      .join("\n");
+    await rm(path.join(root, ...master.split("/")), { force: true });
+    return written;
+  }
+
+  it("records the masters a refused run could not cite, and cites them once the file is repaired", async () => {
+    // The next copy skips a master that is already on disk, so without the
+    // record no later run offers the citation again.
+    await withProject(async (root) => {
+      const written = await projectOwingOneCitation(root);
+      const corrupt = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(written, "utf-8")]);
+      await writeFile(path.join(root, "AGENTS.md"), corrupt);
+
+      const refused = await initCapturingStderr(root);
+      expect(await readFile(path.join(root, "AGENTS.md"))).toEqual(corrupt);
+      expect(refused).toContain("a later run adds them once the file can be rewritten");
+      const record: unknown = JSON.parse(await readFile(path.join(root, PENDING), "utf-8"));
+      expect(record).toEqual({ "AGENTS.md": [master] });
+
+      await writeFile(path.join(root, "AGENTS.md"), written, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readEntryPoint(root, "AGENTS.md")).toContain(master);
+      await expect(stat(path.join(root, PENDING))).rejects.toThrow();
+    });
+  });
+
+  it("restores no bullet the project deleted while a citation is owed", async () => {
+    // Only what a run recorded is retried. A bullet deleted on purpose, with its
+    // master still on disk, was never recorded.
+    await withProject(async (root) => {
+      const written = await projectOwingOneCitation(root);
+      const deleted = ".agents/rules/temporary-files.md";
+      const edited = written
+        .split("\n")
+        .filter((line) => !(line.startsWith("- ") && line.includes(deleted)))
+        .join("\n");
+      await writeFile(
+        path.join(root, "AGENTS.md"),
+        Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(edited, "utf-8")]),
+      );
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      await writeFile(path.join(root, "AGENTS.md"), edited, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const after = await readEntryPoint(root, "AGENTS.md");
+      expect(after).toContain(master);
+      expect(after).not.toContain(deleted);
+    });
+  });
+
+  it("writes no record on a dry run", async () => {
+    await withProject(async (root) => {
+      const written = await projectOwingOneCitation(root);
+      await writeFile(
+        path.join(root, "AGENTS.md"),
+        Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(written, "utf-8")]),
+      );
+      await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      await expect(stat(path.join(root, PENDING))).rejects.toThrow();
+    });
+  });
+
+  it("keeps a citation the Copilot file could not take", async () => {
+    // An instruction file past the read ceiling is the third ground a rewrite
+    // is refused on.
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const trimmed = (await readFile(copilot, "utf-8"))
+        .split("\n")
+        .filter((line) => !(line.startsWith("- ") && line.includes(master)))
+        .join("\n");
+      await writeFile(copilot, `${trimmed}\n${"x".repeat(600 * 1024)}\n`, "utf-8");
+      await rm(path.join(root, ...master.split("/")), { force: true });
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const record: unknown = JSON.parse(await readFile(path.join(root, PENDING), "utf-8"));
+      expect(record).toEqual({ ".github/copilot-instructions.md": [master] });
+    });
+  });
+});
+
 /**
  * A rule summary an earlier release wrote, which the template has since reworded.
  *
