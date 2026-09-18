@@ -543,6 +543,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   observes metadata reads at run time instead of searching source text, and
   `TC-0013-0014`'s row checks the result's values, not only its fields.
 
+- **The token docs say a scale key can contain digits, and what a project's
+  own token check must do** (#1908). QFAI checks the prototype against
+  `DESIGN.md`, not a product stylesheet or Tailwind config, so each project
+  writes that check itself. The natural name pattern, letters and hyphens,
+  never captures `2xl` or `3xl`, which `typography.scale` declares, and a
+  check that captures nothing for a key passes both ways. The schema comment
+  now says scale keys contain digits. The `design-system.yaml` contract says
+  QFAI does not check the implementation, that a project's check asserts both
+  directions, and that its name pattern has to admit digits.
+
 - Completion and implementation review stop conditions now include demonstrated
   regressions against named constitution or catalog rules (#1799). New upstream
   product obligations remain advisory.
