@@ -67,7 +67,7 @@ routing:
   # `skills/qfai-sdd/SKILL.md` `## Stage and Phase Order (Fixed)` declares — the
   # two documents use different vocabularies on purpose. The mapping is
   # normative and lives in `skills/qfai-sdd/SKILL.md`
-  # `### Routing Phase Crosswalk (Normative)`, together with the two exceptions
+  # `## Routing Phase Crosswalk (Normative)`, together with the two exceptions
   # that bound it (contract-scoped runs, no-argument batch fan-out). Without it
   # an orchestrator cannot tell which of the nine phases a blocking agent gates,
   # and two conforming runs can place the same blocking reviewer at different

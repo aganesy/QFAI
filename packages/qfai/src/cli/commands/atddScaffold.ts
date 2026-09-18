@@ -430,6 +430,7 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
   const resolution = resolveScaffoldDialect(testFileGlobs, {
     ...(comparable ? { scaffoldDir: scaffoldDirRel } : {}),
     excludeGlobs: testFileExcludeGlobs,
+    tcIds: entries.map((entry) => entry.tcId),
   });
   if (resolution.outcome === "unsupported-stack") {
     // Refuse rather than mislead: a skeleton in a language qfai has no shape

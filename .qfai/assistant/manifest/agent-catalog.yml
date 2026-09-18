@@ -551,7 +551,9 @@ agents:
       - Coordinate with backend changes without breaking surface contracts.
       - Keep UI code cohesive and readable: isolate concerns, minimize hidden coupling, avoid duplication, and use existing patterns/utilities before inventing new ones.
       - Apply fail-fast validation and least-astonishment behavior to form handling, loading states, error states, and interaction flows.
-      - Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
+      - Apply `.agents/rules/minimal-implementation.md`: check this codebase before the
+        standard library, native platform features and installed dependencies. Mark
+        a deliberate shortcut with its ceiling and the condition that lifts it.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: install a component before writing one, and for anything the prototype does not show, take the adopted system's default rather than inventing one.
       - Apply `.agents/rules/interface-clarity.md`: label a control in the user's words, never the parameter's. The label stays; the sentence explaining it goes.
 
@@ -640,7 +642,9 @@ agents:
       - Implement with SOLID: prefer simple contracts and explicit invariants.
       - Keep business logic, transport, persistence, and infrastructure concerns separated to reduce coupling and surprise.
       - Apply fail-fast validation, defensive programming, and least-privilege thinking to inputs, permissions, data access, and operational behavior.
-      - Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
+      - Apply `.agents/rules/minimal-implementation.md`: check this codebase before the
+        standard library, native platform features and installed dependencies. Mark
+        a deliberate shortcut with its ceiling and the condition that lifts it.
 
       ## Inputs you must read
 
@@ -830,9 +834,19 @@ agents:
 
       From the ATDD stage onward:
 
-      - For each US/TC, verify that test cases exist for: equivalence partitions, normal path, error path, edge cases, boundary values, special values, state transitions, and combinatorial scenarios.
+      - For each US/TC **that owes an acceptance test**, verify applicable coverage for: equivalence
+        partitions, normal path, error path, edge cases, boundary values, special values, state
+        transitions, and combinatorial scenarios. Declared valid cases remain required;
+        failure-side categories apply only to kept failures. A story deferred with a
+        `- x-qfai-status: planned` meta line owes no acceptance test, and neither does a story of a
+        spec the surface scoping exempts; sent into the matrix anyway, either is asked for coverage
+        `/qfai-atdd` forbids writing.
       - Produce the Coverage Depth Matrix as a required deliverable, plus the business rule coverage table under it when the spec declares `BR-*`. Flag any ❌ cells in either as gaps.
-      - Test cases covering only normal (happy) paths are INCOMPLETE. Return REVISE with specific missing scenarios.
+      - Failure-side coverage follows the checklist's kept-failure scope. Return
+        REVISE for a normal-only row only when an applicable obligation is uncovered.
+        Where a pack's own criteria still demand a failure case for every row, the
+        criteria are the authority until the Change Request that qualifies them is
+        applied: report the conflict rather than passing the row against them.
 
       Exception — `qfai-implement`'s `plan` phase:
 
@@ -844,13 +858,15 @@ agents:
 
       During SDD:
 
-      - Require normal path plus error/boundary coverage per AC, read directly from `06_Test-Cases.md`.
+      - Require normal path and declared valid boundaries per AC; require error/boundary
+        failures only for kept failures. Read directly from `06_Test-Cases.md`.
       - Record any further depth gap (special values, state transitions, combinatorial) as a finding.
       - Do NOT produce the matrix, and do NOT return REVISE solely because the matrix is absent or because
         special / state-transition / combinatorial cases are not yet enumerated.
 
-      At both stages: when business rules (BR-\*) exist, verify each BR has at least one positive and one
-      negative test case. From the ATDD stage onward that verdict is recorded per BR in the business rule
+      At both stages: when business rules (BR-\*) exist, verify each BR has at least one
+      positive test case and negative cases only for kept failures. From the ATDD stage
+      onward that verdict is recorded per BR in the business rule
       coverage table under the Coverage Depth Matrix, which has one row per rule — a `US/TC` row cannot
       carry it.
 
@@ -875,23 +891,35 @@ agents:
       - .qfai/specs/spec-\*/06_Test-Cases.md
       - .qfai/contracts/api/\*\* (CON-API) — **conditional**, see below: only where the spec under review references `CON-API-*`
       - .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; where it does not, absence is not a gap
+      - Relevant types and schemas governing the reviewed values — **conditional**:
+        required for coverage judgments that depend on a type or schema. Include the
+        actual validation boundary, not a type assertion alone.
 
-      A spec references a contract from either of two places: `Contract-Refs` in
-      `04_Business-Rules.md`, and a `QFAI-CONTRACT-REF` line in `01_Spec.md`. Read
-      both before deciding a conditional input does not apply. A spec that names a
-      `CON-DB-*` only in `01_Spec.md` reads as having none if the second place is
-      skipped, and the estimate then omits the Integration work that contract carries.
+      Resolve `paths.specsDir` and `paths.contractsDir` from `qfai.config.yaml` first.
+      Before reporting no referenced contract, read all existing `01..10` and `16_*`
+      Markdown files of the reviewed spec, including `Contract-Refs` in
+      `04_Business-Rules.md`, and a `QFAI-CONTRACT-REF` line in `01_Spec.md`.
+      Use the same full scan for shared ownership, including sibling specs, under
+      `.qfai/assistant/skills/qfai-atdd/references/cross-spec-obligations.md`.
+      Normalize short API-NNNN and DB-NNNN references under that rule; do not invent
+      a local row for a sibling's obligation. Conditional absence follows the full
+      scan, not only the two named files.
 
       Read `06_Test-Cases.md` and `02_User-stories.md` as the obligation set in full — `TC-*` and `US-*` — independently of whichever
       rows an execution ledger happens to hold: a coverage-target `TC-*` whose row was dropped is invisible to a check that starts from
-      the rows. `US-*` seeds no ledger row, so its absence from one is never a missing-row finding — it is read for layer ownership, and
-      discharged by the acceptance tests' annotations.
+      the rows. An active `US-*` has an E2E row carrying `US-Refs`; an active, owned
+      `CON-API-*` has an API row carrying `CON-API-Refs`. Read their declared scope
+      before judging missing rows. Seeded E2E/API rows keep Test file and Selector at
+      `-` until `/qfai-implement` fills them from the ATDD handoff; do not invent a
+      test identity before the test exists.
 
-      `.qfai/contracts/api/\*\*` joins that obligation set **only where it applies**: in `qfai-implement`'s `plan` phase, and there only
-      for a spec whose `CON-API-*` an `API` row's `CON-API-Refs` can cite. It is not a required input of this card in general. A spec
-      with no API surface is normal, and a fresh install ships no `.qfai/contracts/api/` at all, so its absence is **not** a missing
-      required source artifact and must not trip the Stop condition below — not here, and not in `qfai-sdd`'s `design` phase or
-      `qfai-atdd`'s blocking `coverage` phase, where this same card is routed against specs that may have no API contract at all.
+      `.qfai/contracts/api/**` joins that obligation set **only where it applies**:
+      in `qfai-implement`'s `plan` phase, SDD and `qfai-atdd`'s blocking `coverage` phase
+      when the spec references `CON-API-*`, including matrix production and review.
+      Read referenced contracts under configured `paths.contractsDir`. A spec with no
+      API surface is normal; its absence is **not** a missing required source artifact
+      when there is no referenced API obligation. Such an absent input must not trip
+      the Stop condition.
 
       ## Deliverables
 
@@ -1031,7 +1059,9 @@ agents:
       - Execute build, lint, typecheck, test, validate, and report workflows.
       - Record commands, key outputs, environment assumptions, and reproducibility notes.
       - Surface CI/runtime blockers with minimal ambiguity.
-      - Apply `.agents/rules/minimal-implementation.md`: work the reuse rungs before writing, and mark a deliberate shortcut with its ceiling and the condition that lifts it.
+      - Apply `.agents/rules/minimal-implementation.md`: check this codebase before the
+        standard library, native platform features and installed dependencies. Mark
+        a deliberate shortcut with its ceiling and the condition that lifts it.
 
       ## Inputs you must read
 
@@ -1173,7 +1203,29 @@ agents:
       - Return only PASS or REVISE, with actionable rework instructions on REVISE.
       - Enforce validate evidence, required coverage obligations, and no self-approval.
       - Verify rejected options are not reintroduced without RE-OPEN.
-      - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+      - Before an SDD handoff that finalizes a Plan — one spec named, or each target of a
+        no-argument batch — check every architectural element in each Plan that run
+        finalizes against
+        `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`;
+        return REVISE for missing or insufficient usage references unless the documented safety-floor exception applies.
+      - On that same handoff, enumerate the contracts and deployment boundaries **the
+        run itself authored** — Phase 0 writes a contract before any Plan cites it —
+        and return REVISE for each one no finalized Plan names. The gate above reads
+        what a Plan cites, and the implementation review delegates both kinds here, so
+        an element left out of the Plan is inspected by nothing at all: the omission,
+        not the count, is what has to be caught first.
+      - In contract-scoped SDD, do not apply this Plan gate. A required Plan update
+        is a mismatch: report it and halt to widen the Change Request to a spec-scoped
+        run; do not authorize Plan writes.
+      - File excess as `defect:code-quality` against constitution Article VII; tag it
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
+        settings and explanatory copy. Admit it only when it names what to cut
+        and what replaces it. `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `.agents/rules/minimal-implementation.md` § 2.
+        Use this route only where the installed Article VII governs the artifact.
+        Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 
       ## Inputs you must read
 
@@ -1188,7 +1240,42 @@ agents:
         context; when the two differ the card is the role contract and wins. See
         `.qfai/assistant/constitution/constitution.md` Article III.)
       - .qfai/assistant/catalog/test-layers.md
+      - On an SDD cycle that finalizes a Plan, read the `10_Plan.md` of each spec that
+        cycle targets — the one named, or each capability a no-argument batch covers —
+        and its referenced usages, under the specs directory `qfai.config.yaml`
+        declares in `paths.specsDir` (`.qfai/specs` where it declares none). A Plan no
+        target of this run finalizes is not this review's to judge.
       - .qfai/specs/spec-\*/09_delta.md
+      - **Count the concrete consumers of each contract and deployment boundary the
+        spec's Plan cites.** Those are authored before anything implements them, and
+        their dependants arrive across rows the implementation review sees one at a
+        time, so no single-row read ever sees all of them.
+
+        Count them while reviewing the **last nonterminal row** — the row whose `done`
+        makes the ledger terminal, so every other row is already `done` or `exception`
+        — and read the whole ledger there rather than that row alone. That review is
+        the per-item one routing already runs from `refactor`; "once its rows are
+        done" named no review at all, because the review that closes the last row runs
+        while that row is still open and nothing routes this reviewer after it.
+
+        A count below three is a finding unless the safety floor in
+        `.agents/rules/minimal-implementation.md` § 2 requires the element and the
+        Plan records that exception with the obligation requiring it.
+
+      - The declarations a Plan's usages name outside the specs tree — **conditional**:
+        required wherever a usage names one. A deployment boundary counts the services
+        a deployment configuration instantiates, and an API manifest names a
+        contract's dependants, so a reviewer reading only under `paths.specsDir`
+        either rejects a valid usage as unresolved or counts one it has not read.
+      - The contracts a Plan's usages cite, under the configured `paths.contractsDir`
+        — **conditional**: required wherever a usage names a `CON-API-*` or `CON-DB-*`.
+        A contract usage is concrete because the contract declares the dependant, so a
+        reviewer that never opens the declaration either rejects a valid usage as
+        unresolved or counts one it has not read. Resolve the directory from
+        `qfai.config.yaml`; `.qfai/contracts` is only the default.
+      - The contracts and deployment boundaries this run authored, whether or not a
+        Plan cites them. Read for citations alone, one the author left out of the Plan
+        is invisible here, which is the case the responsibility above reports.
       - Validation evidence and gate results
       - `.qfai/specs/<spec-id>/tdd/test-list.md` — the ledger, for the row under review
       - The per-item evidence file that row's `Layer` owns: `.qfai/evidence/implement-<spec-id>.md`,
@@ -1238,8 +1325,9 @@ agents:
       - The finding would add a product obligation upstream never asked for. Do not raise it as blocking;
         raise it as an advisory finding plus a Change Request proposal per
         `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`. A defect you can
-        demonstrate from the changed artifacts (correctness, security / data integrity, or a repository
-        quality gate) is NOT in this category: it stays blocking and traces to its `defect:*` class.
+        demonstrate from the changed artifacts (correctness, security / data integrity, a repository
+        quality gate, or a regression against a named constitution or catalog rule) is NOT in this category:
+        it stays blocking and traces to its `defect:*` class.
 
       ## Sign-off
 
@@ -1283,7 +1371,15 @@ agents:
       - Audit option sets for missing alternatives and weak recommendation rationale.
       - Review OQ candidates for completeness, neutrality, and safe deferral.
       - Ensure unresolved requirement ambiguity is explicit and actionable.
-      - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+      - File excess as `defect:code-quality` against constitution Article VII; tag it
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
+        settings and explanatory copy. Admit it only when it names what to cut
+        and what replaces it. `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `.agents/rules/minimal-implementation.md` § 2.
+        Use this route only where the installed Article VII governs the artifact.
+        Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 
       ## Inputs you must read
 
@@ -1356,6 +1452,15 @@ agents:
       - Check that extensions are justified by current requirements and do not introduce speculative abstraction or over-engineering.
       - Verify contracts, module boundaries, and public interfaces obey least astonishment and design-by-contract expectations.
       - Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
+      - File excess as `defect:code-quality` against constitution Article VII; tag it
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
+        settings and explanatory copy. Admit it only when it names what to cut
+        and what replaces it. `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `.agents/rules/minimal-implementation.md` § 2.
+        Use this route only where the installed Article VII governs the artifact.
+        Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: ask whether a catalogue covered the need, and whether a language or framework standard was passed over for a hand-rolled one.
 
       ## Inputs you must read
@@ -1433,8 +1538,77 @@ agents:
       - Review using the repository PR review checklist: design fit, correctness, security/privacy, performance, maintainability, tests, docs/UX, and consistency.
       - Flag violations of SOLID with concrete reasoning and a smaller alternative when applicable.
       - Check separation of concerns, fail-fast validation, least astonishment, and avoidance of premature optimization in changed code.
-      - Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics, unchecked `unknown`, and unhandled async paths.
-      - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+      - Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics and unchecked `unknown`.
+        Flag a promise that is neither awaited nor returned. A return propagates only when its caller awaits or adopts the promise.
+      - File excess as `defect:code-quality` against constitution Article VII; tag it
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
+        settings and explanatory copy. Admit it only when it names what to cut
+        and what replaces it. `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `.agents/rules/minimal-implementation.md` § 2.
+        Use this route only where the installed Article VII governs the artifact.
+        Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
+      - Count the consumers of an architectural element this change introduces or
+        extracts, or leaves below three by removing one — a module, a seam, an
+        adapter, a shared helper, a contract, a deployment boundary — as they exist in
+        the tree, against
+        `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/10_Plan.md#implementation-approach`,
+        which says what a consumer is for each kind. The Plan's three usages are cited
+        before implementation, so a usage nobody has written is not one of them; three
+        this change itself wires are. Count independent consumers, not call sites: one
+        module calling a helper in three places is one, and a generated route, client
+        or binding that ships is one. Count the consumers that belong to the element's
+        own domain: a test does not depend on a production element, it exercises one,
+        while independent test modules are what a test-only helper or fixture is built
+        for and are counted as its consumers. A helper with one production consumer is
+        shared with one. Removing the last consumer but one is the same count reached
+        from the other side: the element is inlined back into what still uses it, or
+        it keeps the same exception below.
+        **Reusing code that already exists is never this finding.** A change
+        satisfying an accepted behaviour by calling a helper that is already there is
+        rung 2 of `.agents/rules/minimal-implementation.md`, and a verdict against it
+        leaves the implementer duplicating what the repository already has. The count
+        reads the change that creates the shared element, not every change that later
+        uses it.
+        **A contract and a deployment boundary are counted elsewhere.** Those are
+        authored before anything implements them, and their dependants arrive across
+        rows this review sees one at a time — so a verdict here falls on whichever row
+        landed first, which is the row least able to answer it. `completion-reviewer`
+        reads the whole spec once its rows are done, and counts them there.
+        Return REVISE unless the safety floor in
+        `.agents/rules/minimal-implementation.md` § 2 requires the element **and** the
+        owning `10_Plan.md` records that exception together with the obligation
+        requiring it. Both halves, not either: the floor requiring an element is not a
+        record anyone can review, and a Plan claiming an exception no obligation
+        requires is a claim about nothing. The template asks for the two together, so a
+        PASS on one alone accepts half of what it asks.
+
+        **There is no exception for usages a later row will deliver.** Three consumers
+        cited in a Plan and delivered by separate rows land one at a time, and the rule
+        for the first of them is the same as for any other element with one consumer:
+        it stays local to that consumer. The extraction happens when the third lands,
+        which is the change this count reads. An exception waiting on the others needs
+        a record nothing authors, survives no interrupted queue, and asks a reviewer to
+        hold a verdict open across invocations; each of those is a way for an
+        under-three element to become permanent with nobody deciding it should.
+
+        **The Plan read is the one that owns the element**, resolved through the same
+        `paths.specsDir`. Where that spec was deleted its Plan is gone with it, and a
+        missing Plan there is not a missing required input: the change that removed the
+        spec removed the record too, so count the consumers the tree still holds and say
+        in the finding that the exception could not be read because the owning pack is
+        gone. For a change removing a consumer the element usually belongs
+        to another spec, and that spec's Plan is where its exception and the obligation
+        requiring it are recorded — read only the row's own Plan, the reviewer cannot
+        tell a justified security or data-loss element from an unjustified two-consumer
+        abstraction, and demands the inlining of something the floor requires.
+        This count reads an element placed where several modules reach it. An
+        extraction that stays inside the module holding the repetition is not one, so
+        the third-occurrence limit on sharing in
+        `.github/instructions/principles.instructions.md` and this count never ask for
+        opposite things about the same code.
+
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a component written where one could be installed, a standard passed over, and an authored region with no recorded reason.
 
       ## Inputs you must read
@@ -1454,7 +1628,22 @@ agents:
       - .github/instructions/code-review.instructions.md
       - .github/instructions/principles.instructions.md
       - Diff of changed files
-      - `.qfai/contracts/api/**` and `.qfai/contracts/db/**`
+      - The contracts under the configured `paths.contractsDir` whose kind this
+        change's count reads — `api/**` and `db/**` always, and `ui/**` or `design/**`
+        wherever the change adds or removes one of their consumers. A contract this
+        change does not alter does not appear in the diff, so the count above cannot be
+        made without reading it, and a removal is exactly the case where the contract
+        is unchanged.
+      - `qfai.config.yaml`, for `paths.specsDir` and `paths.contractsDir`: the
+        defaults below are defaults, and a project that moved either keeps the same
+        obligations at the path it configured.
+      - `<paths.specsDir>/<spec-id>/10_Plan.md` — the target Plan, where the usage
+        references are cited and where an exception under the safety floor records the
+        obligation requiring it. The template is the contract for the shape; this is
+        the document under review. **And the Plan of whichever spec owns an element
+        this change recounts**, which for a removal is usually not the target: the
+        exception that justifies its consumer count is recorded there and nowhere
+        else.
       - `.qfai/specs/<spec-id>/tdd/test-list.md` — the ledger, for the row under review
       - The per-item evidence file that row's `Layer` owns: `.qfai/evidence/implement-<spec-id>.md`,
         or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row
@@ -1495,8 +1684,9 @@ agents:
       - The finding would add a product obligation upstream never asked for. Do not raise it as blocking;
         raise it as an advisory finding plus a Change Request proposal per
         `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`. A defect you can
-        demonstrate from the changed artifacts (correctness, security / data integrity, or a repository
-        quality gate) is NOT in this category: it stays blocking and traces to its `defect:*` class.
+        demonstrate from the changed artifacts (correctness, security / data integrity, a repository
+        quality gate, or a regression against a named constitution or catalog rule) is NOT in this category:
+        it stays blocking and traces to its `defect:*` class.
 
       ## Sign-off
 
@@ -1554,7 +1744,15 @@ agents:
       - Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
       - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
       - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
-      - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+      - File excess as `defect:code-quality` against constitution Article VII; tag it
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
+        settings and explanatory copy. Admit it only when it names what to cut
+        and what replaces it. `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `.agents/rules/minimal-implementation.md` § 2.
+        Use this route only where the installed Article VII governs the artifact.
+        Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
       - Apply `.qfai/assistant/catalog/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
       - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 
@@ -1644,7 +1842,15 @@ agents:
       - Treat density or volume smells as review signals, not standalone hard gates.
       - Verify test-case quality depth using the Coverage Depth Matrix (see below).
       - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
-      - Apply `.agents/rules/minimal-implementation.md`: tag excess `delete`, `stdlib`, `native`, `yagni` or `shrink`, and name what to cut and what replaces it.
+      - File excess as `defect:code-quality` against constitution Article VII; tag it
+        `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
+        settings and explanatory copy. Admit it only when it names what to cut
+        and what replaces it. `delete` also covers replacement by code already present.
+        For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
+        Refuse it when the cut removes or weakens an obligation in the safety floor at
+        `.agents/rules/minimal-implementation.md` § 2.
+        Use this route only where the installed Article VII governs the artifact.
+        Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 
       ## Ownership boundaries
 
@@ -1931,8 +2137,9 @@ agents:
         Missing matrix: REVISE from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note.
         A matrix that exists only inside `.qfai/evidence/atdd-<spec-id>.md` is a **missing** matrix: that committed file is the
         ledger's per-item evidence payload, not the dedicated matrix artifact whose justifications this gate reads.
-      - Check that each US/TC has test cases for at minimum: normal path AND error/failure path.
-      - Flag any US/TC that has only normal-path test cases as a coverage gap.
+      - Check each US/TC's normal path and applicable checklist categories.
+      - Failure-side coverage follows the checklist's kept-failure scope. Normal-only
+        cases are gaps only where an applicable obligation remains uncovered.
       - Reference: `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
       - Which verdict applies depends on the review cycle, per the scope note below.
         On an **SDD** cycle this check is a review signal, not a hard gate that blocks validation.
@@ -1953,8 +2160,9 @@ agents:
         the matrix under both Mandatory Outputs and Not-done criteria. A missing matrix is a REVISE there,
         and so is one whose ❌ cells are unjustified.
       - Do NOT evaluate it against an SDD spec pack that has no tests yet. On an SDD review cycle,
-        assess depth directly from `06_Test-Cases.md` (normal path plus error/boundary coverage per
-        AC) and record any gap as a finding, without requiring the matrix format.
+        assess depth directly from `06_Test-Cases.md` (normal path and declared valid
+        boundaries per AC, plus failures only for kept failures) and record any gap as
+        a finding, without requiring the matrix format.
 
       ## Inputs you must read
 
@@ -1970,6 +2178,21 @@ agents:
         `.qfai/assistant/constitution/constitution.md` Article III.)
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
+      - Governing `01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`,
+        `04_Business-Rules.md`, `05_Examples.md` and `06_Test-Cases.md` —
+        **conditional**: required for coverage review, not an unrelated item
+        observation or Skeleton gate. The examples are in that list because a failure
+        the specification names is a kept failure wherever it names it, and an `EX-*`
+        is one of the places it does: read without them, a row whose only declared
+        failure sits in an example reads as a row keeping none, and its `Error path`
+        cell is accepted as `n/a`.
+      - Referenced CON-API and CON-DB contracts under configured `paths.contractsDir`
+        — **conditional**: required for coverage review when the reviewed spec's
+        full ownership scan names them. Unreferenced contracts are not missing
+        required inputs.
+      - Relevant types and schemas governing the reviewed values — **conditional**:
+        required for a kept-failure or n/a judgment that depends on them. Read the
+        actual validation boundary; a type assertion does not prove validation.
       - `.qfai/specs/spec-*/tdd/test-list.md` — the ledger row under review
       - **The per-item RED/GREEN evidence for the row under review — in the file its
         `Layer` owns, and only that one.** `.qfai/evidence/atdd-<spec-id>.md`, under
@@ -2012,6 +2235,16 @@ agents:
         sibling's success reads as this spec's PASS
       - `.qfai/report/specs-coverage/spec-*.md`
       - Runtime evidence and prototyping evidence artifacts
+
+      For coverage review, resolve `paths.specsDir` and `paths.contractsDir` from
+      `qfai.config.yaml` first. Before reporting no referenced contract, read all
+      existing `01..10` and `16_*` Markdown files of the reviewed spec, including
+      `Contract-Refs` in `04_Business-Rules.md` and `QFAI-CONTRACT-REF` in `01_Spec.md`.
+      Use the same full scan for shared ownership, including sibling specs, under
+      `.qfai/assistant/skills/qfai-atdd/references/cross-spec-obligations.md`.
+      Normalize short API-NNNN and DB-NNNN references under that rule; preserve
+      cross-spec obligations rather than inventing local coverage. Conditional
+      absence follows the full scan, not only the two named files.
 
       **Branch 3 gets its own verdict.** The observation gate admits an observed RED
       or a falsifiability trio and calls anything else "never neither" — but a genuine

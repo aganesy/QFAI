@@ -12,6 +12,9 @@ Use this file when you need the detailed review-cycle mechanics for `/qfai-sdd`.
 
 1. Select reviewers from routing and profile rules.
 2. Build one review pack for the current cycle only.
+   Carry prior answers and newly answered demands into the next cycle's
+   `review_request.md` before dispatching reviewers, under
+   `.qfai/assistant/constitution/review-convergence.md#answered-demands-must`.
 3. Apply the footer SSOT without rewriting it locally.
 4. Collect verdicts.
 5. If any blocking reviewer returns `REVISE`, fix only the affected scope and rerun that reviewer plus any reviewer whose scope changed. `REVISE` is the in-flight verdict (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`); it becomes `status: "FAIL"` only when the pack's `summary.json` is written.

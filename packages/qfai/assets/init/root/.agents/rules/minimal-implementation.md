@@ -38,15 +38,53 @@ implementation.
 
 The ladder trims code, not obligations. These stay whatever rung you stop at.
 
+- Required traceability annotations.
+  The execution ledger and full Article V chain also stay: Require → Spec →
+  US → AC → BR → EX → TC → Tests → Code → Verification evidence.
+- Repository quality gates and their verification evidence.
 - Validation of input crossing a trust boundary.
 - Error handling that prevents data loss.
 - Security.
 - Accessibility.
 - Anything the spec asks for.
+- Unit-level coverage of the failures the code retains.
+
+A **trust boundary** is wherever a value arrives from a caller or a source the
+code does not control:
+
+- process entry, the common case: external input, a received request, a file or
+  database read, an environment variable, user input;
+- a published library's exported function;
+- a plugin or tenant context.
+
+A call between functions under the code's own control is not one. A value
+crossing a boundary is parsed there into a form that cannot hold an invalid
+value, so the code past it carries no branch for that value.
 
 Tests are in the same position. The ladder shapes how a test is built — reuse a
 helper that exists before adding a harness — and never how many obligations are
 verified.
+
+### Which failures are handled here
+
+Subject to the safety floor in this section, handle a failure where it occurs
+only when both hold: no type or schema excludes it, and the specification, a
+contract or an actual observation names it. Other failures propagate to the
+caller. Every promise is awaited or returned to a caller that awaits or adopts
+it, never dropped.
+
+Subject to the same floor, when a callback runtime ignores returned promises,
+use an explicit adapter that adopts the asynchronous result and handles
+rejections at that trust boundary. Do not make the callback async and assume
+its ignored outer promise is consumed. An ignored return is a dropped promise,
+not propagation.
+
+An observation has a test-case row in
+`<paths.specsDir>/spec-*/06_Test-Cases.md`. Resolve `paths.specsDir` from
+`qfai.config.yaml`; `.qfai/specs` is only the default.
+The process entry point is a trust boundary and handles failures that propagate
+that far. A dropped rejection remains a correctness defect under
+`.qfai/assistant/constitution/drift-protocol.md`.
 
 ## 3. Marking a deliberate simplification
 
