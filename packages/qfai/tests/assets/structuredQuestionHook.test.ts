@@ -109,7 +109,7 @@ describe("the structured-question reminder", () => {
     expect(master).toContain("`UserPromptSubmit`");
     // The two properties a later editor would otherwise have to rediscover.
     expect(master).toMatch(/reminds and never blocks/i);
-    expect(master).toMatch(/no shell and no\s+network/);
+    expect(master).toMatch(/no shell and\s+no\s+network/);
     expect(master).toContain("`.agents/rules/reminders.json`");
   });
 
