@@ -6,6 +6,9 @@ The following categories must ALWAYS be reported as inline PR comments,
 regardless of confidence level or severity.
 Do not suppress any actionable finding.
 
+Await or return every promise. `.agents/rules/minimal-implementation.md`
+§ 2 governs consuming callers, kept failures and callback boundaries.
+
 - Style and formatting inconsistencies
 - Naming improvements (variables, functions, types, files)
 - Minor readability improvements
@@ -16,7 +19,9 @@ Do not suppress any actionable finding.
 - Minor performance improvements
 - Simplification opportunities (see **Findings about excess** below for the shape)
 - Inconsistency with existing codebase patterns
-- Missing error handling or incomplete error messages
+- A promise neither awaited nor returned
+- Failure handling missing where `.agents/rules/minimal-implementation.md` § 2 requires it
+- Incomplete error messages
 - Type safety improvements (e.g., unnecessary `as` assertions)
 - Test coverage gaps (missing edge cases, incomplete assertions)
 - TODO/FIXME/HACK comments without tracking references
@@ -27,19 +32,20 @@ Do not suppress any actionable finding.
 
 ## Findings about excess
 
-A finding about code that should not exist is one line: **where it is, what to
-cut, and what replaces it**. Tag it with the reason.
+A finding about excess is one line: **where it is, what to cut, and what
+replaces it**. The tags cover code, controls, settings and explanatory copy.
 
-| Tag      | Means                                                                               | What replaces it      |
-| -------- | ----------------------------------------------------------------------------------- | --------------------- |
-| `delete` | Dead code, unused flexibility, a speculative feature                                | Nothing               |
-| `stdlib` | A hand-rolled thing the standard library ships                                      | Name the function     |
-| `native` | Code or a dependency doing what the platform already does                           | Name the feature      |
-| `yagni`  | An abstraction with one implementation, config nobody sets, a layer with one caller | Inline it             |
-| `shrink` | The same logic, fewer lines                                                         | Show the shorter form |
+| Tag      | Means                                                                                 | What replaces it                            |
+| -------- | ------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `delete` | Unneeded code, controls, settings or explanatory sentences; duplicated implementation | Nothing, or code already present            |
+| `stdlib` | A hand-rolled implementation of a standard-library function                           | Name the function                           |
+| `native` | Custom code or controls duplicating a platform feature                                | Name the built-in feature                   |
+| `yagni`  | A speculative abstraction, control or setting without a current requirement           | Remove it, or inline the kept behavior      |
+| `shrink` | The same behavior or meaning with less code or clearer, shorter copy                  | Show the smaller implementation or sentence |
 
-The ladder these tags read against is
-`.agents/rules/minimal-implementation.md`. It is not restated here.
+Code tags read against `.agents/rules/minimal-implementation.md`. For controls,
+settings and copy, use `.agents/rules/interface-clarity.md`. Every cut preserves
+the safety floor in the implementation rule § 2. Neither rule is restated here.
 
 A finding that names no replacement is not actionable: the author cannot act on
 it and the reviewer cannot be held to it. "This might be more complex than
@@ -48,6 +54,12 @@ to cut nor what would stand in its place.
 
 Applies to findings about excess only. Correctness, security and performance
 keep the shape the rest of this document describes.
+
+## What a change made unnecessary
+
+Every pull request lists, in its description, what the change made unnecessary,
+and says why anything on the list was kept. An empty list is a complete answer:
+it is written as "nothing", not left out.
 
 ## Severity Prefixes
 

@@ -1,12 +1,3 @@
-// QFAI:SPEC-0011:TC-0011-0001
-// QFAI:SPEC-0011:TC-0011-0002
-// QFAI:SPEC-0011:TC-0011-0003
-// QFAI:SPEC-0011:TC-0011-0004
-// QFAI:SPEC-0011:TC-0011-0005
-// QFAI:SPEC-0011:TC-0011-0006
-// QFAI:SPEC-0011:TC-0011-0007
-// QFAI:SPEC-0011:TC-0011-0008
-
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -37,13 +28,13 @@ async function withSpecDir(
 }
 
 describe("canonical UIX detection integration", () => {
-  it("TC-0011-0001: explicit surface web is UI-bearing", async () => {
+  it("explicit surface web is UI-bearing", async () => {
     await withSpecDir({ "01_Spec.md": "# Spec\n\n- surface: web\n" }, [], async (specRoot) => {
       expect(await isUiBearingSpec(specRoot)).toBe(true);
     });
   });
 
-  it("TC-0011-0002: explicit non-ui overrides fallback HTML signals", async () => {
+  it("explicit non-ui overrides fallback HTML signals", async () => {
     await withSpecDir(
       {
         "01_Spec.md": "# Spec\n\n- surface: non-ui\n",
@@ -56,7 +47,7 @@ describe("canonical UIX detection integration", () => {
     );
   });
 
-  it("TC-0011-0003: Mermaid screen flow classifies as UI-bearing", async () => {
+  it("Mermaid screen flow classifies as UI-bearing", async () => {
     await withSpecDir(
       {
         "03_Story-Workshop.md": [
@@ -76,13 +67,13 @@ describe("canonical UIX detection integration", () => {
     );
   });
 
-  it("TC-0011-0004: uiux directory marks the spec as UI-bearing", async () => {
+  it("uiux directory marks the spec as UI-bearing", async () => {
     await withSpecDir({ "placeholder.md": "" }, ["uiux"], async (specRoot) => {
       expect(await isUiBearingSpec(specRoot)).toBe(true);
     });
   });
 
-  it("TC-0011-0005: screen contract sidecar marks the spec as UI-bearing", async () => {
+  it("screen contract sidecar marks the spec as UI-bearing", async () => {
     await withSpecDir(
       {
         "uiux/40_screen_contracts.md": [
@@ -100,7 +91,7 @@ describe("canonical UIX detection integration", () => {
     );
   });
 
-  it("TC-0011-0006: style tag inside fenced code is ignored", async () => {
+  it("style tag inside fenced code is ignored", async () => {
     await withSpecDir(
       {
         "03_Story-Workshop.md": [
@@ -118,7 +109,7 @@ describe("canonical UIX detection integration", () => {
     );
   });
 
-  it("TC-0011-0007: div in inline code is ignored", async () => {
+  it("div in inline code is ignored", async () => {
     await withSpecDir(
       { "03_Story-Workshop.md": "# Story\n\nUse `<div>` in docs only.\n" },
       [],
@@ -128,7 +119,7 @@ describe("canonical UIX detection integration", () => {
     );
   });
 
-  it("TC-0011-0008: generic flowchart without screen hints is non-UI", async () => {
+  it("generic flowchart without screen hints is non-UI", async () => {
     await withSpecDir(
       {
         "03_Story-Workshop.md": [
