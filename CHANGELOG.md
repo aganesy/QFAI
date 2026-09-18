@@ -217,6 +217,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The evidence-layout record orders itself and schedules what option 1
+  leaves** (#1941). `CR-20260913-0002` now states that option 1 runs after
+  `CR-20260912-0003`, which edits the same `spec-0012` and policy files, and is
+  restated if that record is rejected. Option 1 also refreshes
+  `spec-0012/10_Plan.md` and runs `/qfai-atdd` and `/qfai-implement` for
+  `spec-0012/TDD-0384`. The record no longer says a cycle-0 reset keeps the
+  aggregate captures: the reset now moves them aside, and what remains is a
+  stale copy nested below the evidence root.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
