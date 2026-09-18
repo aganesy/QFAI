@@ -30,6 +30,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `scripts/sync-init-to-root.mjs` is reduced to seeding the two files a project
   owns.
 
+- **`QFAI-CONTRACT-043` reports a UI contract no live spec binds** (#1967). A
+  UI contract has no ledger row and no test directory of its own. Its screen
+  obligations reach a test case through the business rule that binds it, which
+  owes acceptance criteria and test cases under `QFAI-COV-*`, and nothing
+  reported a UI contract no rule bound. An API contract has `QFAI-ATDD-113` for
+  the same gap. The SDD profile now warns on a `CON-UI-*` that no live spec
+  names in a business rule's `Contract-Refs` cell or a `QFAI-CONTRACT-REF:`
+  line. A retired spec's binding does not count, and a mention elsewhere, such
+  as in `Notes`, does not bind.
+
 - **A guard on the mode a link is staged with** (#1920). `ln -s` in Git Bash on
   Windows copies the target instead of linking to it unless
   `MSYS=winsymlinks:nativestrict` is set, and the copy is byte-identical — so

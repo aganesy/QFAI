@@ -33,8 +33,10 @@ micro-cycle while `validate` stays quiet.
 **A UI contract has no group and no column.** A `CON-UI-*` reaches this ledger
 only through test cases: each screen obligation the contract declares is a
 `TC-*` in `06_Test-Cases.md` of the spec that owns the screen, and that TC's row
-carries it. No gate reports a UI contract nobody tested, as `QFAI-ATDD-113` does
-for an API contract, so write the test case when the contract is written.
+carries it. A spec binds the contract with a business rule's `Contract-Refs`
+cell or a `QFAI-CONTRACT-REF:` line, and `QFAI-CONTRACT-043` (warning) reports a
+UI contract no live spec binds. Nothing checks that every screen obligation of a
+bound contract has its own test case, so write it when the contract is written.
 
 The two TC groups are exclusive, and membership is decided by **where the
 annotation goes, not by whether the word is familiar**. `system` and
