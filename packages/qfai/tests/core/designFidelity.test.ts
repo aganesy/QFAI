@@ -1,16 +1,3 @@
-// QFAI:SPEC-0010:TC-0010-0001
-// QFAI:SPEC-0010:TC-0010-0002
-// QFAI:SPEC-0010:TC-0010-0003
-// QFAI:SPEC-0010:TC-0010-0004
-// QFAI:SPEC-0010:TC-0010-0005
-// QFAI:SPEC-0010:TC-0010-0006
-// QFAI:SPEC-0010:TC-0010-0007
-// QFAI:SPEC-0010:TC-0010-0008
-// QFAI:SPEC-0010:TC-0010-0009
-// QFAI:SPEC-0010:TC-0010-0010
-// QFAI:SPEC-0010:TC-0010-0011
-// QFAI:SPEC-0010:TC-0010-0012
-
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -159,10 +146,9 @@ describe("Design Fidelity Scorecard validation", () => {
     return lines.join("\n");
   }
 
-  // ── TDD-0001: TC-0010-0001, TC-0010-0002 ────────────────────────────────
+  // ── TDD-0001 ────────────────────────────────────────────────────────────
 
   describe("TDD-0001: Scorecard 4-dim + score/prose", () => {
-    // ATDD: QFAI:SPEC-0010:TC-0010-0001
     it("passes when all 4 dimensions with score and prose are present", async () => {
       await writeEvidence("review-001.md", buildCompleteScorecard());
       const issues = await validateDesignFidelity(root, config());
@@ -172,7 +158,6 @@ describe("Design Fidelity Scorecard validation", () => {
       expect(fidIssues).toHaveLength(0);
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0001
     it("flags missing dimensions", async () => {
       const scorecard = [
         "## Fidelity Scorecard",
@@ -199,7 +184,6 @@ describe("Design Fidelity Scorecard validation", () => {
       );
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0002
     it("flags dimension missing score", async () => {
       const scorecard = [
         "## Fidelity Scorecard",
@@ -229,7 +213,6 @@ describe("Design Fidelity Scorecard validation", () => {
       expect(scoreMissing[0]?.message).toContain("score");
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0002
     it("flags dimension missing prose comment", async () => {
       const scorecard = [
         "## Fidelity Scorecard",
@@ -260,10 +243,9 @@ describe("Design Fidelity Scorecard validation", () => {
     });
   });
 
-  // ── TDD-0002: TC-0010-0003, TC-0010-0007 ────────────────────────────────
+  // ── TDD-0002 ────────────────────────────────────────────────────────────
 
   describe("TDD-0002: PASS/FAIL threshold + boundary", () => {
-    // ATDD: QFAI:SPEC-0010:TC-0010-0003
     it("no threshold violations when all scores >= 70", async () => {
       await writeEvidence("review-001.md", buildCompleteScorecard());
       const issues = await validateDesignFidelity(root, config());
@@ -271,7 +253,6 @@ describe("Design Fidelity Scorecard validation", () => {
       expect(threshold).toHaveLength(0);
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0007
     it("flags accessibility at 60 even when others are high", async () => {
       await writeEvidence("review-001.md", buildCompleteScorecard({ accessibility: 60 }));
       const issues = await validateDesignFidelity(root, config());
@@ -280,7 +261,6 @@ describe("Design Fidelity Scorecard validation", () => {
       expect(threshold.some((i) => i.message.includes("accessibility"))).toBe(true);
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0003
     it("flags when overall average is below 70", async () => {
       await writeEvidence(
         "review-001.md",
@@ -319,10 +299,9 @@ describe("Design Fidelity Scorecard validation", () => {
     });
   });
 
-  // ── TDD-0003: TC-0010-0004, TC-0010-0008 ────────────────────────────────
+  // ── TDD-0003 ────────────────────────────────────────────────────────────
 
   describe("TDD-0003: FAIL improvement guidance + responsive viewport", () => {
-    // ATDD: QFAI:SPEC-0010:TC-0010-0004
     it("flags FAIL dimension without improvement instructions", async () => {
       const scorecard = [
         "## Fidelity Scorecard",
@@ -352,7 +331,6 @@ describe("Design Fidelity Scorecard validation", () => {
       expect(improvement[0]?.message).toContain("hierarchy");
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0004
     it("no improvement issue when FAIL dimension has improvement + alternative", async () => {
       await writeEvidence("review-001.md", buildCompleteScorecard({ hierarchy: 60 }));
       const issues = await validateDesignFidelity(root, config());
@@ -360,7 +338,6 @@ describe("Design Fidelity Scorecard validation", () => {
       expect(improvement).toHaveLength(0);
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0008
     it("flags responsive dimension missing desktop viewport", async () => {
       await writeEvidence("review-001.md", buildCompleteScorecard({ includeDesktopMobile: false }));
       const issues = await validateDesignFidelity(root, config());
@@ -369,7 +346,6 @@ describe("Design Fidelity Scorecard validation", () => {
       expect(viewport[0]?.message).toContain("desktop");
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0008
     it("no viewport issue when both desktop and mobile are present", async () => {
       await writeEvidence("review-001.md", buildCompleteScorecard());
       const issues = await validateDesignFidelity(root, config());
@@ -378,10 +354,9 @@ describe("Design Fidelity Scorecard validation", () => {
     });
   });
 
-  // ── TDD-0004: TC-0010-0005, TC-0010-0006 ────────────────────────────────
+  // ── TDD-0004 ────────────────────────────────────────────────────────────
 
   describe("TDD-0004: Breaking delta + reproducibility", () => {
-    // ATDD: QFAI:SPEC-0010:TC-0010-0005
     it("flags breaking delta with missing fields", async () => {
       const scorecard = [
         "## Fidelity Scorecard",
@@ -414,7 +389,6 @@ describe("Design Fidelity Scorecard validation", () => {
       expect(delta[0]?.message).toContain("migration");
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0005
     it("no delta issue when all breaking delta fields present", async () => {
       await writeEvidence("review-001.md", buildCompleteScorecard({ includeDelta: true }));
       const issues = await validateDesignFidelity(root, config());
@@ -422,7 +396,6 @@ describe("Design Fidelity Scorecard validation", () => {
       expect(delta).toHaveLength(0);
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0006
     it("flags missing rubric", async () => {
       await writeEvidence("review-001.md", buildCompleteScorecard({ includeRubric: false }));
       const issues = await validateDesignFidelity(root, config());
@@ -431,7 +404,6 @@ describe("Design Fidelity Scorecard validation", () => {
       expect(rubric[0]?.message).toContain("rubric");
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0006
     it("no rubric issue when rubric is documented", async () => {
       await writeEvidence("review-001.md", buildCompleteScorecard());
       const issues = await validateDesignFidelity(root, config());
@@ -440,10 +412,9 @@ describe("Design Fidelity Scorecard validation", () => {
     });
   });
 
-  // ── TDD-0005: TC-0010-0009, TC-0010-0010 ────────────────────────────────
+  // ── TDD-0005 ────────────────────────────────────────────────────────────
 
   describe("TDD-0005: taskFidelity 5th dimension", () => {
-    // ATDD: QFAI:SPEC-0010:TC-0010-0009
     it("flags missing taskFidelity when spec requires it", async () => {
       const scorecard = [
         "taskFidelity: required",
@@ -475,7 +446,6 @@ describe("Design Fidelity Scorecard validation", () => {
       expect(tf[0]?.message).toContain("taskFidelity");
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0009
     it("no issue when taskFidelity not required and not present", async () => {
       await writeEvidence("review-001.md", buildCompleteScorecard());
       const issues = await validateDesignFidelity(root, config());
@@ -483,7 +453,6 @@ describe("Design Fidelity Scorecard validation", () => {
       expect(tf).toHaveLength(0);
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0010
     it("flags missing taskFidelity fields", async () => {
       const scorecard = [
         "taskFidelity: required",
@@ -527,7 +496,6 @@ describe("Design Fidelity Scorecard validation", () => {
       );
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0010
     it("no field issues when all taskFidelity fields present", async () => {
       await writeEvidence(
         "review-001.md",
@@ -542,10 +510,9 @@ describe("Design Fidelity Scorecard validation", () => {
     });
   });
 
-  // ── TDD-0006: TC-0010-0011, TC-0010-0012 ────────────────────────────────
+  // ── TDD-0006 ────────────────────────────────────────────────────────────
 
   describe("TDD-0006: Warning->error escalation + config override", () => {
-    // ATDD: QFAI:SPEC-0010:TC-0010-0011
     it("escalates known anti-pattern to error by default", async () => {
       await writeEvidence(
         "review-001.md",
@@ -558,7 +525,6 @@ describe("Design Fidelity Scorecard validation", () => {
       expect(escalated[0]?.message).toContain("dual_primary_cta");
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0011
     it("escalates multiple anti-patterns", async () => {
       await writeEvidence(
         "review-001.md",
@@ -574,7 +540,6 @@ describe("Design Fidelity Scorecard validation", () => {
       }
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0012
     it("config override downgrades escalation back to warning", async () => {
       await writeEvidence(
         "review-001.md",
@@ -590,7 +555,6 @@ describe("Design Fidelity Scorecard validation", () => {
       expect(overridden[0]?.message).toContain("overridden");
     });
 
-    // ATDD: QFAI:SPEC-0010:TC-0010-0012
     it("override only affects specified codes", async () => {
       await writeEvidence(
         "review-001.md",

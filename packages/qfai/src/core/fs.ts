@@ -3,17 +3,49 @@ import path from "node:path";
 
 import fg from "fast-glob";
 
-const DEFAULT_IGNORE_DIRS = new Set(["node_modules", ".git", "dist", ".pnpm", "tmp", ".mcp-tools"]);
+export const DEFAULT_IGNORE_DIRS: ReadonlySet<string> = new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  ".pnpm",
+  "tmp",
+  ".mcp-tools",
+]);
 
 export type CollectFilesOptions = {
   extensions?: string[];
   ignoreDirs?: string[];
+  /**
+   * Directories to walk past, decided from each one's path rather than listed.
+   *
+   * A caller that skips a whole class of directory — every dot-prefixed one
+   * directly under the root, say — cannot enumerate the class in `ignoreDirs`,
+   * and filtering the result afterwards is too late: the walk has already read
+   * inside, so a directory this process may not traverse fails the collection
+   * rather than being passed over.
+   *
+   * Given, it replaces the default list of directory names to skip: a caller
+   * deciding by path decides every directory, and a `dist` or `tmp` it wants
+   * read is not pruned by name behind its back.
+   */
+  skipDirectory?: (directory: string) => boolean;
+  /**
+   * Called for a directory the walk cannot list, which is then passed over.
+   * Without it the listing error rejects the whole collection.
+   */
+  onUnreadableDirectory?: (directory: string, error: unknown) => void;
 };
 
 export type CollectFilesByGlobOptions = {
   globs: string[];
   ignore?: string[];
   limit?: number;
+  /**
+   * Keeps a matched file, or drops it before it is counted against `limit`.
+   *
+   * Takes the absolute path, which is what the stream yields.
+   */
+  filter?: (absolutePath: string) => boolean;
 };
 
 export type CollectFilesByGlobsResult = {
@@ -65,10 +97,13 @@ export async function collectFiles(
     return entries;
   }
 
-  const ignoreDirs = new Set([...DEFAULT_IGNORE_DIRS, ...(options.ignoreDirs ?? [])]);
+  const ignoreDirs = new Set([
+    ...(options.skipDirectory === undefined ? DEFAULT_IGNORE_DIRS : []),
+    ...(options.ignoreDirs ?? []),
+  ]);
   const extensions = options.extensions?.map((ext) => ext.toLowerCase()) ?? [];
 
-  await walk(root, root, ignoreDirs, extensions, entries);
+  await walk(root, { ...options, ignoreDirs, extensions, out: entries });
   return entries;
 }
 
@@ -95,34 +130,51 @@ export async function collectFilesByGlobs(
   const files: string[] = [];
   let truncated = false;
   for await (const entry of stream) {
+    const file = String(entry);
+    // Applied before the limit is charged, not after collection. A caller whose
+    // globs also match files it does not own would otherwise spend the whole
+    // budget on them and never reach the ones it does — and the truncation that
+    // reports it is an `info`, so the run still passes `--fail-on error`.
+    if (options.filter && !options.filter(file)) {
+      continue;
+    }
     if (files.length >= limit) {
       truncated = true;
       destroyStream(stream);
       break;
     }
-    files.push(String(entry));
+    files.push(file);
   }
   const matchedFileCount = files.length;
   return { files, truncated, matchedFileCount, limit };
 }
 
 async function walk(
-  base: string,
   current: string,
-  ignoreDirs: Set<string>,
-  extensions: string[],
-  out: string[],
+  options: Pick<CollectFilesOptions, "skipDirectory" | "onUnreadableDirectory"> & {
+    readonly ignoreDirs: ReadonlySet<string>;
+    readonly extensions: readonly string[];
+    readonly out: string[];
+  },
 ): Promise<void> {
-  const items = await readdir(current, { withFileTypes: true });
+  const { ignoreDirs, skipDirectory, onUnreadableDirectory, extensions, out } = options;
+  let items;
+  try {
+    items = await readdir(current, { withFileTypes: true });
+  } catch (error) {
+    if (onUnreadableDirectory === undefined) throw error;
+    onUnreadableDirectory(current, error);
+    return;
+  }
 
   for (const item of items) {
     const fullPath = path.join(current, item.name);
 
     if (item.isDirectory()) {
-      if (ignoreDirs.has(item.name)) {
+      if (ignoreDirs.has(item.name) || skipDirectory?.(fullPath) === true) {
         continue;
       }
-      await walk(base, fullPath, ignoreDirs, extensions, out);
+      await walk(fullPath, options);
       continue;
     }
 

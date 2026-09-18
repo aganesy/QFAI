@@ -2,6 +2,11 @@
 
 ## Source Registry
 
+Repository facts follow `.qfai/assistant/skills/qfai-discussion/SKILL.md#reviewer-gate-must`.
+Each fact names where it was read, beside the fact itself or by the `SRC-ID` of
+the row that holds it. A row nobody cites leaves the reader to work out which
+fact it backs, which is the check this registry exists for.
+
 | SRC-ID   | Title | Type    | URL / Path | Retrieved  | Notes |
 | -------- | ----- | ------- | ---------- | ---------- | ----- |
 | SRC-0001 | TBD   | primary | <link>     | YYYY-MM-DD | -     |

@@ -59,6 +59,7 @@ import {
   buildCompletionCertificate,
   checkCompletionCertificate,
   COMPLETION_CERTIFICATE_REL_PATH,
+  isResetBackupDirectory,
   loadCompletionCertificate,
   writeCompletionCertificate,
   type CompletionCertificate,
@@ -620,7 +621,8 @@ export async function runPrototypingCertify(
       );
       error(
         "  The cycle-0 re-run is DESTRUCTIVE, and --force does not make it safe: it renames " +
-          "only iter-00 to iter-00.backup-<ISO>. Everything else in " +
+          "only iter-00 to iter-00.backup-<ISO>, and moves the aggregate screenshots/ and " +
+          "html/ to aggregate.backup-<ISO>. Everything else in " +
           `${PROTOTYPING_EVIDENCE_REL}/ is then reset — iter-01 and up are deleted outright, ` +
           "and prototyping.json#iterations / #reviewerGate are cleared. Copy the whole " +
           `${PROTOTYPING_EVIDENCE_REL}/ directory somewhere safe first if the earlier ` +
@@ -2143,6 +2145,12 @@ async function findEvidenceNewerThan(
     }
     for (const entry of entries) {
       const absolute = path.join(dir, entry.name);
+      // A reset's backups are not sealed, so a change inside one is not a change
+      // to the tree the run judged. Read by name, as the digest walk reads it:
+      // nothing is asked of `stat`, so the two answer the same for a backup a
+      // listing can read and a `stat` cannot, and for a link whatever its
+      // target is.
+      if (dir === evidenceRoot && isResetBackupDirectory(entry.name)) continue;
       if (entry.isDirectory()) {
         await visit(absolute);
         continue;
@@ -2658,19 +2666,10 @@ async function hasPerSpecSubdir(iterDirAbs: string): Promise<boolean> {
  * Returns an empty array on read / parse failure or on a missing
  * `screens:` array.
  *
- * pre-fix the read / parse
- * failure path silently swallowed the error and returned `[]`, which
- * the aggregate-warn at the call site only surfaced when the entire
- * matched set produced zero screens. In a half-failure (e.g. three
- * matched files, one with a YAML parse error, two with valid
- * `screens:`), the call site's aggregate warn never fired because the
- * other files filled the array — and the operator never saw the parse
- * error. This per-file `warn` line names the offending file and
- * narrows the error class (read vs parse) so authoring typos surface
- * at the certify gate. The function still returns `[]` on failure so
- * existing callers keep their contracts; CLAUDE.md "every async path
- * must have explicit error handling" is satisfied via the
- * named-error warn.
+ * Reports each read or YAML parse failure with its file name. An
+ * aggregate zero-screen warning cannot expose one failed file when
+ * other files provide valid screens. The empty-array result preserves
+ * the caller's contract while the per-file warning exposes that failure.
  */
 async function parseUiScreenFile(
   root: string,

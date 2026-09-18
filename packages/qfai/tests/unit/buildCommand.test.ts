@@ -1981,27 +1981,40 @@ describe("the real workflow trees", () => {
       )
       .toEqual([
         "build::ci.yml::pnpm -C packages/qfai build",
-        // TWICE, and the duplicate is the point rather than an accident of the format: the `test`
-        // job builds for its `e2e` / `integration` slices, and `node-floor` builds for the same
-        // reason — it runs the whole suite on the engines floor, and `dist/` is not committed.
-        // without it that lane is structurally always red, and an always-red
-        // required lane carries no differential Node-20 signal. The entry is per OCCURRENCE, so
-        // deleting either lane's build step fails this row.
+        // TWICE, and the duplicate is the point rather than an accident of the format: both the
+        // `test` job and `node-floor` build for their `e2e` and `integration` slices, which read
+        // `dist/` and are the two slices `dist/` is not committed for. Without it those legs are
+        // structurally always red, and an always-red leg of a required lane carries no
+        // differential Node-20 signal. The entry is per OCCURRENCE, so deleting either lane's
+        // build step fails this row.
         "build::ci.yml::pnpm -C packages/qfai build",
         // This one is new, and it is a fact about the repository rather than about the predicate:
         // the own tree has a THIRD lane that builds. `check-types` runs `tsc -b`, which emits into
         // `dist`, so the type-check lane and the build lane compile the same package twice.
         "build::ci.yml::pnpm check-types",
-        // `release.yml`'s floor gate builds for the reason `node-floor` does: it runs the whole
+        // `release.yml`'s floor gate builds for the reason `node-floor` does: it runs the
         // package suite on the floor `packages/qfai/package.json#engines.node` promises, and
         // `dist/` is not committed. A tag re-published
         // through `workflow_dispatch` may predate `node-floor` entirely, so the floor is exercised
         // on the tagged tree at release time rather than assumed from its ancestry.
         "build::release.yml::pnpm -C packages/qfai build",
+        // Repeated here as well, for the reason the `ci.yml` duplicate above records: the release
+        // suite and the sliced floor suite each build for the two slices that read `dist/`. The
+        // entry is per OCCURRENCE, so deleting either lane's build step fails this row.
+        "build::release.yml::pnpm -C packages/qfai build",
+        // And once more for the floor lane that runs the suite whole. A tag whose tree predates
+        // the sliced scripts takes that lane instead of the sliced one, and the whole suite
+        // contains both of the slices that read `dist/`, so it builds unconditionally rather than
+        // for a slice.
+        "build::release.yml::pnpm -C packages/qfai build",
         'build::release.yml::pnpm -C packages/qfai pack --pack-destination "$PWD/tmp"',
-        // `ci:gate` runs `check-types`, whose `tsc -b` emits into `dist`. It was `heuristic` here for
-        // three rounds because the chain was read as far as a script NAME and no further.
+        // The aggregate, which the gate runs where the tagged tree predates the split. It reaches
+        // a build for the same reason the line below does — `check-types` is inside it — and it
+        // is listed because the gate's step names both.
         "build::release.yml::pnpm ci:gate",
+        // `ci:gate:checks` runs `check-types`, whose `tsc -b` emits into `dist`. It was `heuristic`
+        // here for three rounds because the chain was read as far as a script NAME and no further.
+        "build::release.yml::pnpm ci:gate:checks",
         "heuristic::ci.yml::pnpm ci:build-verify",
       ]);
   });
