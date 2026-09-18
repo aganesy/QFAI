@@ -23,6 +23,7 @@ import { maskFencedCodeBlocks } from "../../src/core/ids.js";
 import {
   TRUNCATION_MARKER,
   entryTitles,
+  fetchReleasePage,
   missingEntries,
   nextPageLink,
   nextPageUrl,
@@ -101,10 +102,56 @@ async function capture(
 }
 
 afterEach(async () => {
+  vi.unstubAllGlobals();
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
     if (dir) await rm(dir, { recursive: true, force: true });
   }
+});
+
+/**
+ * A `fetch` that answers nothing and rejects only once its signal aborts, which
+ * is what the real one does on a request that never returns.
+ */
+function stubHangingFetch(): void {
+  vi.stubGlobal("fetch", (_url: unknown, init: { signal?: AbortSignal }) => {
+    return new Promise((_resolve, reject) => {
+      init.signal?.addEventListener("abort", () => {
+        reject(init.signal?.reason);
+      });
+    });
+  });
+}
+
+describe("a page that never answers", () => {
+  const changelog = "# Changelog\n\n## [1.2.0] - 2026-01-02\n\n- **Shipped in the notes**\n";
+  // Far below the ceiling the script ships. What is under test is that the
+  // ceiling is applied at all, and a real one would make the case take 30s.
+  const soon = (url: string, token: string): Promise<unknown> => fetchReleasePage(url, token, 20);
+
+  it("gives up at its ceiling and says what the ceiling was", async () => {
+    stubHangingFetch();
+
+    await expect(soon("https://api.github.com/x", "t")).rejects.toThrow(/no answer within/);
+  });
+
+  it("reports the giving up as a comparison that could not be made", async () => {
+    // Not as a version with no release, which is an ordinary state and exits 0.
+    // Nor by holding the run until the job's budget kills it, which prints no
+    // verdict at all.
+    const file = await changelogWith(changelog);
+    stubHangingFetch();
+
+    const { status, output } = await capture({
+      changelogPath: file,
+      repository: "owner/repo",
+      token: "t",
+      readPage: soon,
+    });
+
+    expect(status).toBe(2);
+    expect(output).toContain("no answer within");
+  });
 });
 
 describe("which sections are compared", () => {

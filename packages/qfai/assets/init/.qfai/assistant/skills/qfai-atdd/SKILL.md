@@ -196,6 +196,17 @@ Use the shared schema.
     and a table of only `✅` rows that drops a declared rule is a REVISE, not a PASS (a spec declaring no active `BR-*` states the omission instead of carrying the table);
   - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` reached one of its **two** passing states — exit 0, or `PASS with cross-spec obligations`: every finding this spec owns is clean, and each residual `QFAI-ATDD-113` / `-115` / `QFAI-TEST-001` is recorded one row per obligation under `## Cross-spec obligations` with a named sibling owner
     — a contract per row for the first two, a stub file per row for the third. Exit 1 alone is not `REVISE` here; residue that is unrecorded, unattributable, or attributed to this spec is (`references/cross-spec-obligations.md`);
+  - Matrix production and review carry governing US/AC/BR/TC sections,
+    referenced contracts and relevant types/schemas for kept-failure judgments.
+    Map each owned contract failure to the row that covers it: a scored US/TC
+    row where one owns the obligation, and otherwise the contract's own API or
+    Integration row, which a contract with no user story has and which this
+    stage seeds directly. In the `coverage` phase the mapping names the row and
+    the assertion the later phase will write, since no acceptance test exists yet
+    there; the assertion itself is read at the completion review, after `red` and
+    `implementation` have created it, and a failure no row of either kind covers
+    is upstream DRIFT rather than a clean matrix. Preserve declared valid coverage and all
+    oracle checks;
   - Drift Protocol is enforced;
   - test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`;
   - coverage floors and ratios are signals, not gates;
@@ -408,7 +419,8 @@ Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions 
 
 - Coverage obligations are mandatory : , and **`required` narrows on a different mechanism for each ID kind — `US-*` by surface type, `TC-*` by its declared `Level`, `CON-API-*` by active-vs-deferred. They share a word, not a rule; never carry one kind's over to another**:
   - `tests/e2e/**` must cover all required `US-*`. A story outside the current slice is deferred in `02_User-stories.md` with a `- x-qfai-status: planned` meta line in its own `US-XXXX` block (a `##`-or-deeper heading, or its catalog list entry) — the same token both contract kinds use — and is named at `info` by `QFAI-ATDD-118`. It is not left uncovered, and it is not covered by a test
-    that asserts nothing. `exception` is not the alternative here: that branch belongs to a ledger row, and a `US-*` owns none (`references/red-provenance.md#a-spec-with-no-atdd-owned-rows`). **Required** here = every declared `US-*` of a **user-facing** spec, "user-facing" being the same surface union `/qfai-prototyping` resolves — frontmatter `surface_type: ui-bearing` in `01_Spec.md`,
+    that asserts nothing. A ledger-row `exception` does not defer a `US-*` annotation obligation.
+    Active stories have their own E2E ledger rows and follow the ATDD-owned lifecycle (`references/red-provenance.md#a-spec-with-no-atdd-owned-rows`). **Required** here = every declared `US-*` of a **user-facing** spec, "user-facing" being the same surface union `/qfai-prototyping` resolves — frontmatter `surface_type: ui-bearing` in `01_Spec.md`,
     a matching UI contract in `.qfai/contracts/ui/` (the resolver accepts these names and no others: `<spec-id>.yaml`, `spec-<spec-id>.yaml`, `ui-<spec-id>.yaml`, `ui-<spec-id>-<slug>.yaml`, or any `*.yaml` at any depth under a `spec-<spec-id>/` subdirectory — a basename that merely contains the id, such as `0002-orders.yaml`, is not one, and a `.yml` extension never is), a legacy
     `# … prototyping …` heading, or the spec pinned by `qfai.config.yaml#prototyping.primarySpecId`; any one signal is enough. **That narrowing is a project-wide, all-or-nothing opt-in**: it turns on the moment any one spec in the repository declares a user-facing surface, and until then it is off repo-wide. So a spec with no user-facing surface owes no E2E reference once the project has
     opted in, and before that owes one for every declared `US-*` — the obligation on the spec in front of you can change because a **different** spec added a surface declaration, with nothing in this stage's inputs to show it. On a resolution failure `qfai` names the reason on stderr and keeps the obligation project-wide, so read stderr before treating an unexpectedly wide
@@ -552,7 +564,7 @@ Notes:
 - Tests exist but were never executed.
 - Validation evidence is missing, or failing on a finding this spec owns. **A residual `QFAI-ATDD-113` / `-115` attributed to a named sibling spec and recorded under `## Cross-spec obligations` is not this criterion** — it blocks _that_ spec's completion, not this one, and `/qfai-verify` settles the repo-wide residue at the end of the stage. Unrecorded residue is, and so is an entry that
   names no owning spec, names **this** spec as the owner, or omits the contract ID the finding cites.
-- Coverage Depth Matrix is missing, omits the business rule coverage table on a spec that declares an active `BR-*`, or contains unjustified ❌ cells in either table, or that table drops an active `BR-ID` declared in `04_Business-Rules.md` (normal-path-only coverage is incomplete).
+- Coverage Depth Matrix is missing, omits the business rule coverage table on a spec that declares an active `BR-*`, or contains unjustified ❌ cells in either table, or that table drops an active `BR-ID` declared in `04_Business-Rules.md` (normal-path-only coverage is incomplete where an applicable obligation is uncovered: normal path, declared valid boundaries and kept failures).
 - A ledger row was advanced past `todo` with none of the three forms — no observed RED, no falsifiability evidence, and no `DR-*`.
 - A row was sent to `exception` without a `DR-*` recording why **both** branches were unavailable. "The surface was built earlier in this cycle" is not such a reason.
 

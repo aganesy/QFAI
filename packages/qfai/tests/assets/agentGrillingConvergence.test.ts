@@ -26,7 +26,7 @@ describe("a grilling session between agents has an end", () => {
       // no user answering, neither half arrives, so a loop between two agents
       // would run until something else stopped it.
       const content = await read(path.join(tree, CONVERGENCE));
-      expectPhrase(content, "### Agent-to-agent grilling (MUST)");
+      expectPhrase(content, "## Agent-to-agent grilling (MUST)");
       expectPhrase(content, "cannot be reached from inside it");
     });
 

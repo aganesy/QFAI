@@ -10,13 +10,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const ARTICLE = "packages/qfai/assets/init/.qfai/assistant/constitution/constitution.md";
 const SHIPPED_RULE = "packages/qfai/assets/init/root/.agents/rules/temporary-files.md";
 
-/** Every text that says where a temporary file goes, in both trees. */
-const SOURCES = [
-  ARTICLE,
-  ".qfai/assistant/constitution/constitution.md",
-  SHIPPED_RULE,
-  ".agents/rules/temporary-files.md",
-];
+/** Every text that says where a temporary file goes. This repository reads the shipped rule. */
+const SOURCES = [ARTICLE, ".qfai/assistant/constitution/constitution.md", SHIPPED_RULE];
 
 /** Collapses whitespace runs so a prose reflow is not a failure. */
 const flat = (s: string): string => s.replace(/\s+/g, " ");

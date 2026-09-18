@@ -11,7 +11,7 @@ checkpoint address as well.
 
 Every observation records the revision it was made against.
 
-```
+```text
 Revision: <git rev> | working-tree+<content hash>
 ```
 
