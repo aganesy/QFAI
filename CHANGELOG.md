@@ -6,6 +6,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A rule on which surface answers a question about the hosted repository, and
+  how often it is asked** (#2009). An API allowance belongs to the account, so
+  every session and sub-agent draws on one pool and none of them can see what the
+  others spent; one agent asking the expensive way returns a refusal to all of
+  them. `api-budget.md` states the order — git, then REST, then GraphQL — one call
+  for the set rather than one per member, a payload saved once and searched
+  locally, and an interval that follows the subject rather than the impatience.
+  It also records that a dedicated rate-limit endpoint can misreport the budget,
+  and names the response header as the instrument. A `PreToolUse` hook puts it in
+  front of a shell command that mentions the forge's CLI or its API host; the
+  filter is in the program, so `documentation-clarity.md`'s decision to keep its
+  own hook off the shell still stands. `scripts/gh-budget.mjs` is this
+  repository's own cheap path: the CI state of every branch from one call, a job
+  log saved once, the remaining count reported on every invocation, and a refusal
+  rather than a degradation once a reserve is reached.
 - **A README only where a page is published** (#2010). Four were tracked; two were
   pages nobody lands on. `.agents/rules/README.md` held the rules register, which
   a second file can only keep in step by hand — the surface suite now reads each

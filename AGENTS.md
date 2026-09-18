@@ -103,6 +103,10 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
   plain-text fallback keeps the same parts)
 - `shipped-ci-parity.md` (a change to this repository's CI either reaches the
   workflow templates the package ships or says in the diff why it does not)
+- `api-budget.md` (ask git before REST and REST before GraphQL; one call for
+  the whole set; read the remaining budget off the response rather than from a
+  rate-limit endpoint; the allowance belongs to the account and every session
+  draws on it at once)
 
 A `<name>.local.md` is an overlay. A rule that also governs an adopter's
 repository is written once, in the shipped master, and only what is specific to

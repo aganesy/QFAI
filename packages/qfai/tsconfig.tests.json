@@ -290,6 +290,7 @@
     "tests/scripts/checkDogfoodBacklog.test.ts",
     "tests/scripts/checkTscCompiler.test.ts",
     "tests/scripts/eslintSuppressionCensus.test.ts",
+    "tests/scripts/ghBudget.test.ts",
     "tests/scripts/freshInitFindings.test.ts",
     "tests/scripts/lintParallel.test.ts",
     "tests/scripts/ownWorkflowTopology.test.ts",

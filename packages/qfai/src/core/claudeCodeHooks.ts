@@ -66,6 +66,16 @@ export const GRILLING_PLAN_HOOK_MARKER = "QFAI grilling reminder: plan";
  */
 export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminder";
 
+/**
+ * Identity of the group that restates the API-budget rule before a shell command.
+ *
+ * It is the one entry whose program decides whether to print: it reads the
+ * command out of the hook's own input and stays silent unless the command
+ * mentions the forge. The matcher alone would fire on every compound command,
+ * which is the reason the writing rule's hook stays off the shell entirely.
+ */
+export const API_BUDGET_HOOK_MARKER = "QFAI api-budget reminder";
+
 /** Where both the template and the project keep the file, relative to the root. */
 export const CLAUDE_SETTINGS_RELATIVE_PATH = ".claude/settings.json";
 

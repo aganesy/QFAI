@@ -246,6 +246,7 @@
         "scripts/fresh-init-findings.mjs": "032493d612d6999edef2233ef94718a84d7c21843722c4c5050f2b879d165331",
         "scripts/gen-agent-catalog.mjs": "3a4ca269aabfd40dbebdf8579bee203d5a3ead0ad49c76647b593818d0b27da7",
         "scripts/gen-codex-agents.mjs": "732b21f9b368195dafe1138b288bb755fc19f3c692f1a92c521a01ce88b36136",
+        "scripts/gh-budget.mjs": "7d63b0909ea4afa667cdcf699fee0565716b8775919f99426d8436974f0dca5e",
         "scripts/lib/bounded-read.mjs": "1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444",
         "scripts/lib/ts-specifier-hook.mjs": "b6501b31043719b5bb131994fce0aa3ed28b8bf6b4e8d77035610778681dad24",
         "scripts/lib/write-declaration.mjs": "cfdd1a0a2dc37ce06a183338e3550e9d6bd169ef633cc0cfbd1110d19d5e9dc9",
@@ -405,7 +406,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ff046bcf7d3956e0",
-        "Verify the toolchain action before running it": "4e568023a5e8c4d6",
+        "Verify the toolchain action before running it": "a6728b500f127afd",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "e9b6a63cbebe4062",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "306b0d7d4a52b808",
