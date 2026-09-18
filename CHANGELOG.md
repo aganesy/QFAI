@@ -27,6 +27,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   repository name, and it fails open when either side cannot be resolved, so an
   ordinary project is unaffected.
 
+- **An adoption bar for a change that adds a rule, skill or gate** (#1813). Every
+  improvement to this framework has added one, and nothing asked whether the
+  addition beat the one-line instruction it replaces. A pull request proposing
+  one now records three things in its description: the one-line form carrying
+  the operative clause, what the proposal adds beyond that line, and the
+  safety-floor items it touches. Where nothing goes beyond the line, the line is
+  what ships. `REVIEW.md` states it and the pull-request template asks for it;
+  the body reader that already preserved an authored removal list now preserves
+  this answer by the same route, so neither is rewritten from the template. It
+  binds this repository, not what an adopter builds.
+
 - **Repository-specific halves of four rules split into overlays** (#1917).
   `distributed-surface`, `version-discipline`, `temporary-files` and
   `root-additions-policy` each governed an adopter's repository and this one
