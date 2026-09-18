@@ -11,7 +11,7 @@ checkpoint address as well.
 
 Every observation records the revision it was made against.
 
-```
+```text
 Revision: <git rev> | working-tree+<content hash>
 ```
 
@@ -441,10 +441,11 @@ per attempt, because a behaviour-preserving `REVISE` re-reviews inside the
 same round into a pack of its own — by the **audit-hash**
 procedure in
 `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`,
-not the working-tree one above: its step 2 normalization (LF, trailing
-whitespace, leading and trailing blank lines, one final newline), its
-`path + NUL + SHA-256` record sorted by path, its final hash over the
-joined records. The subject is every file in that `review-<timestamp>/`
+not the working-tree one above: its step 2, which normalizes a `.md` or
+`.html` file (LF, trailing whitespace, leading and trailing blank lines, one
+final newline) and hashes every other file, `summary.json` among them, as
+its raw bytes; its `path + NUL + SHA-256` record sorted by path; and its
+final hash over the joined records. The subject is every file in that `review-<timestamp>/`
 directory, each under its repo-relative path. Naming it as "the procedure"
 alone is ambiguous between the two, and the two produce different values. It is
 recorded **outside** the pack, so nothing in the pack hashes itself, and

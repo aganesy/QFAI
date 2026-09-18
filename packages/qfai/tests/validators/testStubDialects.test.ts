@@ -653,9 +653,14 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own rule", () => {
   // error. Reporting the same block here too would fail `--fail-on error` on
   // the scaffold's own output before a line of it was written, and would
   // overrule that ladder from outside.
+  // What `qfai atdd scaffold` writes: the sentinel AND a per-TC TODO line.
+  // The validator that owns an unfilled skeleton requires both, so a fixture
+  // carrying only the sentinel is a file it passes over — and this gate
+  // standing aside for that would leave the skipped case reported by neither.
   const SCAFFOLDED = [
     'import { describe, it } from "vitest";',
     "",
+    "// TODO: implement assertion for TC-0001-0001",
     `it${SKIP}("pending — scaffold placeholder", () => {`,
     "  // QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
     "});",
@@ -664,9 +669,19 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own rule", () => {
 
   it("leaves an unfilled scaffold to the rule that owns it", async () => {
     await withTests({ "tests/a.test.ts": SCAFFOLDED }, async (root) => {
-      const issues = await validateTestTodoStubs(root, CONFIG);
+      const issues = await validateTestTodoStubs(root, CONFIG, { placeholderReported: () => true });
 
       expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toEqual([]);
+    });
+  });
+
+  // Only a run that has that rule can leave the skeleton to it. A caller that
+  // does not say the rule reads the file, as `--profile tdd` cannot, keeps it.
+  it("reports an unfilled scaffold when no rule in the run owns it", async () => {
+    await withTests({ "tests/a.test.ts": SCAFFOLDED }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+
+      expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toHaveLength(1);
     });
   });
 
@@ -695,6 +710,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own rule", () => {
     const mixed = [
       'import { describe, it } from "vitest";',
       "",
+      "// TODO: implement assertion for TC-0001-0001",
       `it${SKIP}("pending — scaffold placeholder", () => {`,
       "  // QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
       "});",
@@ -703,7 +719,7 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own rule", () => {
     ].join("\n");
 
     await withTests({ "tests/a.test.ts": mixed }, async (root) => {
-      const issues = await validateTestTodoStubs(root, CONFIG);
+      const issues = await validateTestTodoStubs(root, CONFIG, { placeholderReported: () => true });
 
       expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toEqual([]);
       expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toHaveLength(1);

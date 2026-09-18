@@ -49,8 +49,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  docs:
-    name: qfai docs (document shape and Mermaid syntax)
+  checks:
+    name: qfai docs check (${{ matrix.check }})
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [shape, mermaid]
     runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # Least privilege: the job only checks out the repository and reads it; it
     # writes nothing back to GitHub.
@@ -436,6 +440,7 @@ jobs:
             npm install --no-save --no-audit --no-fund --registry=https://registry.npmjs.org/ qfai
           fi
       - name: Check SDD document shape
+        if: matrix.check == 'shape'
         shell: bash
         run: |
           # The driver and the schemas both come out of the installed package,
@@ -445,6 +450,7 @@ jobs:
           # `qfai.config.yaml`, so a relocated specs tree is covered.
           node node_modules/qfai/assets/scripts/check-mdschema.mjs --scope all --summary
       - name: Check Mermaid diagram syntax
+        if: matrix.check == 'mermaid'
         shell: bash
         run: |
           # Every ```mermaid block in the tree, parsed with Mermaid's own
@@ -452,3 +458,22 @@ jobs:
           # tokens opts out with `<!-- mermaid-lint:ignore -->` on the line
           # directly above its opening fence.
           node node_modules/qfai/assets/scripts/check-mermaid.mjs
+
+  docs:
+    name: qfai docs (document shape and Mermaid syntax)
+    needs: checks
+    if: ${{ always() }}
+    runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
+    permissions: {}
+    timeout-minutes: 5
+    steps:
+      - name: Require every document check to succeed
+        env:
+          CHECK_RESULT: ${{ needs.checks.result }}
+        shell: bash
+        run: |
+          if [ "${CHECK_RESULT}" != "success" ]; then
+            echo "::error::qfai docs: document checks concluded ${CHECK_RESULT:-missing}"
+            exit 1
+          fi
+          echo "qfai docs: all document checks passed"

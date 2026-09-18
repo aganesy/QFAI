@@ -20,7 +20,7 @@
    - `.qfai/contracts/`
    - `.qfai/evidence/`
 
-Do not use discussion-pack artifacts as verification inputs. Verify reads normalized specs, contracts, and evidence only.
+   Do not use discussion-pack artifacts as verification inputs. Verify reads normalized specs, contracts, and evidence only.
 
 4. Inspect repo conventions:
    - package manager (pnpm/npm/yarn), test runner, lint/typecheck scripts, CI definitions
