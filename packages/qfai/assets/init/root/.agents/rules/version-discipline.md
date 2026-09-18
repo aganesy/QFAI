@@ -16,9 +16,15 @@ it depends on review.
 
 ## Optional: pin the version in the branch name
 
-> **Adoption status: not adopted.** Remove this note only once the project has
-> decided to use branch-name pins. While it stands, a branch name is just a
-> name and never authorizes a release edit.
+> **Adoption status: not adopted.** This is the default, and it stands until
+> the project says otherwise: while it does, a branch name is just a name and
+> never authorizes a release edit.
+>
+> A project says otherwise in one of two ways — by removing this note, or by
+> writing `version-discipline.local.md` beside this file and declaring the
+> convention adopted there. An overlay beside a master supersedes the master's
+> default, so where both exist the overlay is the project's answer. Editing
+> this file is the other way, and it loses the edit on the next upgrade.
 
 Some projects encode the decision in the branch name (`feature/vX.Y.Z`,
 `release/vX.Y.Z`) so that tooling can check it. A branch name carries that
