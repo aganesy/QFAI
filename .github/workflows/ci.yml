@@ -159,7 +159,7 @@ jobs:
           // and review finding [12] measured what that cost. A pull request deleting the
           // default values and the `tmp/pr-fix/` prose from
           // `.agents/skills/pr-fix/SKILL.md` classified as documentation-only and skipped
-          // the `test` job entirely — while `tests/core/prFixMonitor.test.ts` asserts that
+          // the `test` job entirely — while `tests/core/prFixSkillDocs.test.ts` asserts that
           // prose explicitly.
           //
           // `CR-20260820-0004` was raised on exactly that, and the user approved **option A**:
@@ -174,7 +174,12 @@ jobs:
           // than to substitute another, so the lane now runs every test whose subject is a root
           // mirror tree — `agentsRulesSurface`, `skillLinkSurface`, `integrationSurface`,
           // `integrationSurfaceReadErrors`, `reviewerVerdictVocabulary`, and the three that were
-          // missing: `codex/agents`, `core/prFixMonitor`, `core/prMergePlan`.
+          // missing: `codex/agents`, `core/prFixSkillDocs`, `core/prMergePlan`.
+          //
+          // `core/prFixSkillDocs` holds only the assertions over that prose. The rest of the
+          // `pr-fix` coverage sits in `core/prFixMonitor`, spawns a PowerShell process per
+          // case, and reads nothing from a mirror tree but the script — which the narrowing
+          // below already keeps out of this set, so the test job runs for a change to it.
           //
           // Which three was measured, not listed from the CR: the test files that resolve the
           // REPOSITORY ROOT and then enter `.agents/`, `.claude/`, `.codex/` or `.instruction/`.
