@@ -17,9 +17,14 @@ tree with no packs only warns, so the cycle passes `--fail-on error` unreviewed:
 ## Cycle Rules
 
 1. Create a new review pack for each cycle.
+   Carry prior answers and newly answered demands into the next cycle's
+   `review_request.md` before dispatching reviewers, under
+   `.qfai/assistant/constitution/review-convergence.md#answered-demands-must`.
 2. Apply the footer SSOT from `rcp_footer.md`.
 3. Run only the routed reviewers for the current phase and conditions.
 4. On `REVISE`, rerun only that reviewer and any reviewer whose scope changed. `REVISE` is the in-flight verdict (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`); it becomes `status: "FAIL"` only when the pack's `summary.json` is written.
+   Fix the finding with the smallest edit that resolves it; leave unaffected
+   content alone.
 5. Mark fixed only when all routed blocking reviewers are `PASS`.
 
 ## summary.json

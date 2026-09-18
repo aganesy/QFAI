@@ -36,6 +36,18 @@
  * here holds, and a body can also carry an edit somebody made on purpose —
  * which a rewrite would silently discard.
  *
+ * ## How the bodies are read
+ *
+ * From the release list, a hundred to a page, rather than one request per
+ * section. The list carries `tag_name` and `body` together, so the comparison
+ * costs two requests at the current count of sections and that count is no
+ * longer what decides how many requests are sent.
+ *
+ * A draft is skipped. It carries a tag name and no tag, it is readable only to
+ * whoever can push, and it is the one thing the list shows that a read by tag
+ * would not — so comparing against one would make the answer depend on which
+ * token ran the check.
+ *
  * Usage:
  *   node scripts/check-release-notes.mjs                # every released section
  *   node scripts/check-release-notes.mjs --version 1.11.0
@@ -44,7 +56,7 @@
  *
  * Exit codes: 0 clean, 1 drift, 2 the comparison could not be made.
  */
-/* global console, process, fetch */
+/* global console, process, fetch, AbortSignal, URL */
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
@@ -141,23 +153,189 @@ export function missingEntries(sectionBody, releaseBody) {
   return wanted.slice(0, covered + 1).filter((title) => !published.has(title));
 }
 
-/** Reads a release body by tag, or `null` when there is no such release. */
-async function fetchReleaseBody(repository, tag, token) {
-  const response = await fetch(`https://api.github.com/repos/${repository}/releases/tags/${tag}`, {
-    headers: {
-      accept: "application/vnd.github+json",
-      authorization: `Bearer ${token}`,
-      "user-agent": "qfai-release-notes-check",
-    },
-  });
-  if (response.status === 404) {
-    return null;
+/**
+ * The `rel="next"` target of a `Link` header, or `null` when the page is the
+ * last one.
+ *
+ * Followed rather than counted. The endpoint states where the next page is, and
+ * a run that built page numbers itself would have to decide when to stop from
+ * the size of the page it just read — which is a guess the header removes.
+ */
+export function nextPageLink(header) {
+  if (typeof header !== "string") return null;
+  // Split only where a comma introduces another target, so a comma inside a URL
+  // does not cut one target into two.
+  for (const target of header.split(/,\s*(?=<)/u)) {
+    const parsed = /^\s*<([^>]+)>\s*;\s*(.+)$/u.exec(target);
+    if (parsed === null) continue;
+    // The whole parameter, not a prefix of one: `rel="nextish"` names something
+    // else, and matching it would end the paging on a page that has a next.
+    const marked = (parsed[2] ?? "")
+      .split(";")
+      .some((parameter) => /^\s*rel\s*=\s*"?next"?\s*$/u.test(parameter));
+    if (marked) return parsed[1] ?? null;
+  }
+  return null;
+}
+
+/**
+ * Where the page after this one is, resolved against the page it came from and
+ * required to stay on that host.
+ *
+ * The header is part of the response, so whatever answers chooses where the run
+ * sends its next request — and the request carries the token in an
+ * `Authorization` header. Left unchecked, a rewritten `Link` hands a repository
+ * token to a host of its choosing.
+ */
+export function nextPageUrl(header, current) {
+  const target = nextPageLink(header);
+  if (target === null) return null;
+  const from = new URL(current);
+  let resolved;
+  try {
+    resolved = new URL(target, from);
+  } catch {
+    throw new Error(`the next-page link is not a URL: ${target}`);
+  }
+  if (resolved.origin !== from.origin) {
+    throw new Error(`the next-page link leaves ${from.origin}: ${resolved.href}`);
+  }
+  return resolved.href;
+}
+
+/**
+ * One release as the comparison reads it, or a reason the entry cannot be read.
+ *
+ * `body` is absent on a release published with no notes, and that is an empty
+ * body rather than a missing one. Any other shape is something else answering,
+ * and reading it as an empty body would report the whole section as drift.
+ */
+function readRelease(release) {
+  if (typeof release !== "object" || release === null)
+    return { error: "an entry is not an object" };
+  const tag = Reflect.get(release, "tag_name");
+  if (typeof tag !== "string") return { error: "an entry has no tag name" };
+  const body = Reflect.get(release, "body");
+  if (body !== null && body !== undefined && typeof body !== "string") {
+    return { error: `the body of ${tag} is not text` };
+  }
+  return { draft: Reflect.get(release, "draft") === true, tag, body: body ?? "" };
+}
+
+/**
+ * How long one page may take to answer.
+ *
+ * The list endpoint answers a hundred-item page in well under a second, so
+ * thirty is more than an order of magnitude above anything ordinary and cuts no
+ * slow response. The run makes one request per page and there are two, so even
+ * both at this ceiling spend a tenth of the job's ten-minute budget — which is
+ * the bound that matters, because past the budget the runner kills the job and a
+ * killed job prints no verdict of its own.
+ *
+ * A read that times out is not retried. This lane runs weekly, so a red run is
+ * followed by another on its own; retrying would double the wait before the
+ * failure is reported and would hide, in the output, that a read failed at all.
+ */
+const READ_TIMEOUT_MS = 30_000;
+
+/** One page of releases, and where the page after it is. */
+export async function fetchReleasePage(url, token, timeoutMs = READ_TIMEOUT_MS) {
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${token}`,
+        "user-agent": "qfai-release-notes-check",
+      },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (cause) {
+    // Named rather than left as the runtime's abort message, which says a
+    // timeout happened without saying what the ceiling was.
+    if (cause instanceof Error && cause.name === "TimeoutError") {
+      throw new Error(`no answer within ${String(Math.round(timeoutMs / 1000))}s`, { cause });
+    }
+    throw cause;
   }
   if (!response.ok) {
-    throw new Error(`GitHub answered ${String(response.status)} for ${tag}`);
+    throw new Error(`GitHub answered ${String(response.status)}`);
   }
-  const payload = await response.json();
-  return typeof payload?.body === "string" ? payload.body : "";
+  return { releases: await response.json(), next: nextPageUrl(response.headers.get("link"), url) };
+}
+
+/**
+ * Every published release body, by tag.
+ *
+ * A tag the map does not carry has no release. That is the same set a read by
+ * tag answered 404 for: both endpoints show a published release and neither
+ * shows a draft, which has a tag name and no tag.
+ *
+ * A draft is dropped here rather than left to the token's permissions. The list
+ * shows drafts to whoever can push, so a run holding such a token would
+ * otherwise compare a section against notes nobody can read.
+ */
+async function releaseBodies(repository, token, readPage) {
+  const bodies = new Map();
+  // A page whose `next` names a page already read ends the paging with a
+  // failure. Followed, a self-referential link spends the job's whole budget
+  // and the run is killed without a verdict of its own.
+  const read = new Set();
+  // A hundred to a page is the most the endpoint serves.
+  let url = `https://api.github.com/repos/${repository}/releases?per_page=100`;
+  while (url !== null) {
+    if (read.has(url)) {
+      throw new Error(`reading ${url}: this page was already read, so the pages form a loop`);
+    }
+    read.add(url);
+    let page;
+    try {
+      page = await readPage(url, token);
+    } catch (cause) {
+      // Named here rather than in the read, so a page that never answered at
+      // all is reported against the same request a refusal would have been.
+      throw new Error(`reading ${url}: ${cause instanceof Error ? cause.message : String(cause)}`, {
+        cause,
+      });
+    }
+    // A 2xx whose payload is not a list is not an empty list. Read as one, every
+    // section below it looks unreleased, and the run exits 0 having compared
+    // nothing — a false clean over whatever answered instead of the endpoint.
+    if (!Array.isArray(page.releases)) {
+      throw new Error(`reading ${url}: the response is not a list of releases`);
+    }
+    for (const release of page.releases) {
+      const entry = readRelease(release);
+      // Stopped rather than skipped. An entry skipped for its shape leaves its
+      // section looking unreleased, which is the ordinary state and reads as a
+      // clean run — so the one payload nobody can compare reports as agreement.
+      if (entry.error !== undefined) {
+        throw new Error(`reading ${url}: ${entry.error}`);
+      }
+      if (entry.draft) continue;
+      bodies.set(entry.tag, entry.body);
+    }
+    // A page that names no next one ends the paging. Read as anything but
+    // `null` the loop would ask for the same page again, forever.
+    url = page.next ?? null;
+  }
+  return bodies;
+}
+
+/**
+ * Reports what a section's published body does not carry, and says whether it
+ * was missing anything.
+ */
+function reportSection(tag, section, body) {
+  const missing = missingEntries(section.body, body);
+  if (missing.length === 0) {
+    return false;
+  }
+  console.error(`${tag}: ${String(missing.length)} entr(y|ies) the published body does not carry:`);
+  for (const title of missing) {
+    console.error(`  ${title}`);
+  }
+  return true;
 }
 
 /** Compares every released section against its published body. */
@@ -167,7 +345,7 @@ export async function run(options = {}) {
     repository = process.env["GITHUB_REPOSITORY"],
     token = process.env["GITHUB_TOKEN"] ?? process.env["GH_TOKEN"],
     only = null,
-    readBody = fetchReleaseBody,
+    readPage = fetchReleasePage,
   } = options;
 
   if (!repository || !token) {
@@ -197,36 +375,29 @@ export async function run(options = {}) {
     return 2;
   }
 
+  // Read before anything is compared, so a page that never arrived cannot be
+  // mistaken for the tags it carried having no release. Nothing is reported on
+  // the way: a partial list makes every section below the failure look
+  // unreleased, and that reads as a clean run rather than as the failure it is.
+  let bodies;
+  try {
+    bodies = await releaseBodies(repository, token, readPage);
+  } catch (cause) {
+    console.error(`check-release-notes: ${cause instanceof Error ? cause.message : String(cause)}`);
+    return 2;
+  }
+
   let drifted = 0;
   let compared = 0;
   for (const section of sections) {
-    const tag = `v${section.version}`;
-    let body;
-    try {
-      body = await readBody(repository, tag, token);
-    } catch (cause) {
-      console.error(
-        `check-release-notes: ${tag}: ${cause instanceof Error ? cause.message : String(cause)}`,
-      );
-      return 2;
-    }
-    if (body === null) {
+    const body = bodies.get(`v${section.version}`);
+    if (body === undefined) {
       // A section with no release is an ordinary state: a version tagged but
       // not released, or a changelog that predates the workflow.
       continue;
     }
     compared += 1;
-    const missing = missingEntries(section.body, body);
-    if (missing.length === 0) {
-      continue;
-    }
-    drifted += 1;
-    console.error(
-      `${tag}: ${String(missing.length)} entr(y|ies) the published body does not carry:`,
-    );
-    for (const title of missing) {
-      console.error(`  ${title}`);
-    }
+    if (reportSection(`v${section.version}`, section, body)) drifted += 1;
   }
 
   if (drifted > 0) {
@@ -236,6 +407,14 @@ export async function run(options = {}) {
         "Edit the published body to match; the section is the authority.",
     );
     return 1;
+  }
+
+  if (compared === 0) {
+    // Said plainly rather than as a clean run: no section here has a release,
+    // which is ordinary for a changelog predating the workflow and is also what
+    // a read of the wrong repository looks like.
+    console.log("No released section has a published release; nothing was compared.");
+    return 0;
   }
 
   console.log(
