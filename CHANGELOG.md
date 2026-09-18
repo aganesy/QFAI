@@ -706,6 +706,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   itself stays optional: the handoff contract lets a screen drawn entirely from
   what the project already had omit both lists.
 
+- **When the aggregate prototyping mirror runs is recorded as a Change
+  Request** (#1766). `spec-0012`, from its requirement down to its test case,
+  and both prototyping command contracts place the mirror into `screenshots/`
+  and `html/` on convergence, copying the accepted iteration. The command runs
+  it at the end of every capture pass, before that capture is reviewed, and the
+  test for it pins that reading. While a loop runs, and after one stops at its
+  iteration limit, the directories hold a capture nobody accepted.
+
+  `CR-20260913-0030` records both sides, blocks the ledger row and the
+  statements the options reword, and puts the choice: reword the documents to
+  match the command, move the mirror to the converged stop as the documents
+  already say, or keep the per-capture mirror and move the directories aside
+  when a loop stops without converging.
+
 - **The prototyping preflight refuses a screen with no primary task** (#1698).
   The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
   `qfai prototyping preflight` never read the field, so the stage started on a
