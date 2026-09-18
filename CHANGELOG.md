@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`QFAI-TRIAGE-010` reports a requirement triaged onto `_policies` alone**
+  (#1901). `_policies/**` holds no user story, criterion, rule, example or test
+  case, and the execution ledger is seeded from those per-spec files, so a
+  requirement whose every triage row targets `_policies` was specified,
+  approved and validated, and no implementer could ever select it. The SDD
+  profile now warns on such a source, reading every triage table across the
+  spec deltas and the policy delta. A policy row beside a spec row for the same
+  source, a `CREATE` row, and a source that names no `REQ-` or `NFR-` ID are
+  not reported. The policy-row entry in `sdd-triage.md` says so.
+
 - **Repository-specific halves of four rules split into overlays** (#1917).
   `distributed-surface`, `version-discipline`, `temporary-files` and
   `root-additions-policy` each governed an adopter's repository and this one
