@@ -670,3 +670,65 @@ file, so an entry here is what makes that citation checkable.
   that note, so the entry is held by review.
 - Related: AC-0017-0006, BR-0017-0007, BR-0017-0011, EX-0017-0011, TC-0017-0012, TC-0017-0085,
   NFR-0002, NFR-0006, REQ-0007, `DR-0017-0015`
+
+### DR-0017-0017: the mirror-surface lane gets a runner of its own, and the CI figure DR-0017-0012 deferred
+
+- Status: accepted
+- Context: `DR-0017-0012` measured the five-lane lint gate locally and left one thing open in its
+  own Consequences — "peak concurrency is five lanes … against four cores on the runner … The
+  local direction is unambiguous and the CI figure is not: it must be read off the pull-request
+  run rather than inferred, and it is recorded as a limit of this measurement rather than
+  predicted." This record reads that figure. The lane in question is `lint:mirror-surface`, a
+  vitest run over eight files, one of which spawns a process in most of its cases.
+- Decision: the lane leaves `pnpm ci:lint` for a job of its own. The gate starts four lanes
+  rather than five, which retires one edge `DR-0017-0012` recorded as a constraint on the
+  grouping: it kept the two forking commands away from the mirror lane, and a mirror lane
+  outside the aggregate removes the contention that arrangement worked around.
+- Decision, the measurement, because `BR-0017-0030` forbids a wall-clock or parallelism claim
+  landing on argument. Both figures are green CI runs of the `pull_request` shape on
+  `ubuntu-latest`, read from the runs API. Before: run 35468157603 on `9117bff2`. After: run
+  35470980604 on `42fb2caf`.
+
+  | Figure                 | Before        | After                             |
+  | ---------------------- | ------------- | --------------------------------- |
+  | `lint` job             | 265 s         | 68 s                              |
+  | of which the lint gate | 243 s         | 44 s                              |
+  | `mirror-surface` job   | —             | 133 s, of which the lane is 116 s |
+  | Longest job in the run | `lint`, 265 s | `node-floor (pr-fix)`, 274 s      |
+  | Job instances          | 25            | 26                                |
+  | Summed runner time     | 38.0 min      | 39.0 min                          |
+
+  The lint job fell by 197 s and its gate step by 199 s. The lane itself fell from roughly the
+  gate step it dominated, 243 s, to 116 s once nothing contended with it — which agrees with the
+  per-file measurement that opened this line of work, 111.7 s alone against 250.1 s under
+  contention.
+
+- Decision, what is NOT claimed: the run's wall clock. The longest job is no longer `lint`; it
+  is `node-floor (pr-fix)`, which measured 274 s here against 177 s in the before run. Nothing
+  in this change touches that slice, and one run a side cannot attribute a difference of that
+  size — so no wall-clock claim is made, in either direction. Summed runner time rose 1.0 min,
+  which is the new job's own checkout and setup net of the lane's saving.
+- Decision, what this measurement is not: `DR-0017-0012` took three runs per shape on one
+  machine and rested its claim on the two ranges not overlapping, which is the stronger form. A
+  CI run cannot be repeated on an identical machine, and repeating a twenty-six-job workflow to
+  establish a range costs more than the claim is worth. So what is recorded is the direction and
+  the magnitude of one comparison, stated as that rather than as a distribution.
+- Consequences:
+  - `documentationOnlyCostPin` rises from four jobs / 35 declared minutes to five / 45. That is
+    a declared ceiling rather than a measurement, so it moves by the new job's
+    `timeout-minutes` and not by what the job costs.
+  - A check name is created. No repository setting changed: only `ci-pass` is required and the
+    verdict is derived from its `needs` map, so the new lane is gated by the context that
+    already exists. `TC-0017-0043`'s pinned set gains the name, which is how the addition
+    arrives as a failing equality rather than as a diff nobody reads.
+  - The new job carries no condition and appears in no `dependencyConditions` entry, which
+    `BR-0017-0011` requires of a lane moved into a job of its own. `TC-0017-0012` asserts it by
+    resolving each exempt lane to its host job — through a step that names the lane, or through
+    the aggregate whose script does.
+  - The hygiene lane does not enforce that pair. Measured: with a detection-derived condition on
+    the new job and the job added to `dependencyConditions`,
+    `node scripts/check-workflow-hygiene.mjs --root .` exits 0. `TDD-0094` is the seeded row for
+    the lane-level rule and stays `todo`; enforcing it there needs the exempt-lane list declared
+    where the lane can read it, which is a decision of its own.
+- Related: AC-0017-0014, BR-0017-0007, BR-0017-0011, BR-0017-0030, NFR-0001, NFR-0002,
+  NFR-0004, `DR-0017-0011`, `DR-0017-0012`, `DR-0017-0013`, `DR-0017-0015`, `DR-0017-0016`
