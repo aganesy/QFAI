@@ -53,6 +53,25 @@ export function outcomeOf(code: number | null, signal: NodeJS.Signals | null): s
   return `exit ${code}`;
 }
 
+/**
+ * What to show when an assertion about a child's OUTPUT fails.
+ *
+ * `expected '' to contain 'authored removal-list answer'` is the whole of what one such
+ * failure reported, and it reads as the script under test printing the wrong thing. It meant
+ * the script printed nothing at all — a different failure, and one no rerun of the assertion
+ * can tell apart, because the assertion is about the text and the defect is about the child.
+ *
+ * So a row that reads the output passes this as its message. Silence is named as silence and
+ * attributed to the child's ending, and a child that spoke hands the reader its stderr, which
+ * is the part `toContain` never shows.
+ */
+export function outputContext(result: Spawned): string {
+  if (result.stdout.length + result.stderr.length > 0) {
+    return `${result.outcome}\n${result.stderr}`;
+  }
+  return `${result.outcome}, and the child wrote nothing on either stream — the harness failed rather than the script printing the wrong thing`;
+}
+
 export interface SpawnCapturedOptions {
   cwd?: string;
   env?: NodeJS.ProcessEnv;

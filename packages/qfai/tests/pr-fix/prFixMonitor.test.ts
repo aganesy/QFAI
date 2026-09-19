@@ -7,7 +7,13 @@ import path from "node:path";
 // which under a concurrent suite is rarely the one asserting. Every test here
 // takes `expect` and `onTestFinished` from its own context instead.
 import { describe, it } from "vitest";
-import { EXIT_NONZERO, EXIT_ZERO, type Spawned, spawnCaptured } from "../helpers/spawnCaptured.js";
+import {
+  EXIT_NONZERO,
+  EXIT_ZERO,
+  type Spawned,
+  outputContext,
+  spawnCaptured,
+} from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -138,6 +144,9 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
           { ...process.env, QFAI_TEST_HTML_POLICY: policyPath, QFAI_TEST_HTML_BODY: body },
         );
         expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
+        // Before the parse, because `JSON.parse("")` raises `Unexpected end of JSON input`
+        // and that names neither the child nor the stream it did not write to.
+        expect(result.stdout, outputContext(result)).not.toBe("");
         const measurement = JSON.parse(result.stdout) as { Attempts: number; KeepsAnswer: boolean };
         expect(measurement.KeepsAnswer).toBe(true);
         expect(measurement.Attempts).toBeGreaterThan(0);
@@ -186,8 +195,10 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
         }),
       });
       expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-      expect(combinedOutput(result)).toContain("PR body is no longer template-compliant");
-      expect(combinedOutput(result)).not.toContain("Dry-run completed.");
+      expect(combinedOutput(result), outputContext(result)).toContain(
+        "PR body is no longer template-compliant",
+      );
+      expect(combinedOutput(result), outputContext(result)).not.toContain("Dry-run completed.");
       expect(result.ghState.prEditCount ?? 0).toBe(0);
       expect(existsSync(path.join(result.repoDir, "tmp", "pr-fix", "pr-166-handoff.json"))).toBe(
         false,
@@ -220,7 +231,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(existsSync(path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"))).toBe(
       false,
     );
-    expect(combinedOutput(result)).toContain("Dry-run completed.");
+    expect(combinedOutput(result), outputContext(result)).toContain("Dry-run completed.");
   });
 
   it.for([
@@ -450,7 +461,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
     expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
-    expect(combinedOutput(result)).toContain("Dry-run completed.");
+    expect(combinedOutput(result), outputContext(result)).toContain("Dry-run completed.");
     expect(result.ghState.prEditCount ?? 0).toBe(0);
     expect(result.ghState.threadsCount).toBe(1);
   });
@@ -651,9 +662,13 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
         }),
       });
       expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-      expect(combinedOutput(result)).toContain("authored removal-list answer");
+      expect(combinedOutput(result), outputContext(result)).toContain(
+        "authored removal-list answer",
+      );
       const previewPath = path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md");
-      expect(combinedOutput(result)).toContain(`gh pr edit 166 --body-file "${previewPath}"`);
+      expect(combinedOutput(result), outputContext(result)).toContain(
+        `gh pr edit 166 --body-file "${previewPath}"`,
+      );
       const preview = await readFile(
         path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
         "utf-8",
@@ -695,7 +710,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
         }),
       });
       expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
-      expect(combinedOutput(result)).toContain("Dry-run completed.");
+      expect(combinedOutput(result), outputContext(result)).toContain("Dry-run completed.");
       expect(result.ghState.prEditCount ?? 0).toBe(0);
       expect(result.ghState.threadsCount).toBe(1);
       const preview = await readFile(
@@ -723,8 +738,10 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
 
     expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-    expect(combinedOutput(result)).toContain("Branch version marker resolved v1.8.5");
-    expect(combinedOutput(result)).toContain(
+    expect(combinedOutput(result), outputContext(result)).toContain(
+      "Branch version marker resolved v1.8.5",
+    );
+    expect(combinedOutput(result), outputContext(result)).toContain(
       "Version alignment is required before pr-fix can continue.",
     );
 
@@ -751,7 +768,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
 
     expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
-    expect(combinedOutput(result)).toContain(
+    expect(combinedOutput(result), outputContext(result)).toContain(
       "Version alignment check passed for branch marker v1.8.5.",
     );
   });
@@ -773,7 +790,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
 
     expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
-    expect(combinedOutput(result)).toContain(
+    expect(combinedOutput(result), outputContext(result)).toContain(
       "Version alignment check passed for branch marker v1.8.5.",
     );
 
@@ -797,7 +814,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
 
     expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-    expect(combinedOutput(result)).toContain(
+    expect(combinedOutput(result), outputContext(result)).toContain(
       "Live monitor mode fixes SleepSeconds=60 and RequiredZeroStreak=30",
     );
   });
@@ -812,7 +829,9 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
 
     expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-    expect(combinedOutput(result)).toContain("Non-green check: build (COMPLETED/FAILURE)");
+    expect(combinedOutput(result), outputContext(result)).toContain(
+      "Non-green check: build (COMPLETED/FAILURE)",
+    );
 
     const monitorStatus = await readJson(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-monitor-status.json"),
@@ -837,7 +856,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
 
     expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-    expect(combinedOutput(result)).toContain("Unresolved thread:");
+    expect(combinedOutput(result), outputContext(result)).toContain("Unresolved thread:");
 
     const monitorStatus = await readJson(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-monitor-status.json"),
@@ -861,7 +880,9 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
 
     expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-    expect(combinedOutput(result)).toContain("Unresolved thread [outdated]:");
+    expect(combinedOutput(result), outputContext(result)).toContain(
+      "Unresolved thread [outdated]:",
+    );
 
     const monitorStatus = await readJson(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-monitor-status.json"),
@@ -880,7 +901,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
 
     expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-    expect(combinedOutput(result)).toContain(
+    expect(combinedOutput(result), outputContext(result)).toContain(
       "CI checks are pending/in-progress or not yet reported. Resetting clean streak to 0.",
     );
 
@@ -907,11 +928,11 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
 
     expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-    expect(combinedOutput(result)).toContain("Clean PR poll 29/30");
-    expect(combinedOutput(result)).toContain(
+    expect(combinedOutput(result), outputContext(result)).toContain("Clean PR poll 29/30");
+    expect(combinedOutput(result), outputContext(result)).toContain(
       "CI checks are pending/in-progress or not yet reported. Resetting clean streak to 0.",
     );
-    expect(combinedOutput(result)).toContain("Clean PR poll 1/30");
+    expect(combinedOutput(result), outputContext(result)).toContain("Clean PR poll 1/30");
 
     const handoffPath = path.join(result.repoDir, "tmp", "pr-fix", "pr-166-handoff.json");
     expect(existsSync(handoffPath)).toBe(false);
@@ -931,8 +952,8 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
 
     expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
-    expect(combinedOutput(result)).toContain("Clean PR poll 30/30");
-    expect(combinedOutput(result)).toContain("PR handoff ready for PR #166");
+    expect(combinedOutput(result), outputContext(result)).toContain("Clean PR poll 30/30");
+    expect(combinedOutput(result), outputContext(result)).toContain("PR handoff ready for PR #166");
 
     const handoff = await readJson(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-handoff.json"),
@@ -972,7 +993,9 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
         }),
       });
       expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-      expect(combinedOutput(result)).toContain("PR body is no longer template-compliant");
+      expect(combinedOutput(result), outputContext(result)).toContain(
+        "PR body is no longer template-compliant",
+      );
       expect(existsSync(path.join(result.repoDir, "tmp", "pr-fix", "pr-166-handoff.json"))).toBe(
         false,
       );
@@ -1003,8 +1026,10 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
 
     expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
-    expect(combinedOutput(result)).toContain("Transient gh failure on attempt 1/3");
-    expect(combinedOutput(result)).toContain("PR handoff ready for PR #166");
+    expect(combinedOutput(result), outputContext(result)).toContain(
+      "Transient gh failure on attempt 1/3",
+    );
+    expect(combinedOutput(result), outputContext(result)).toContain("PR handoff ready for PR #166");
   });
 
   it("prefers ci:local when ci:gate is absent during PR body repair", async ({
@@ -1027,7 +1052,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
 
     expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-    expect(combinedOutput(result)).toContain("authored removal-list answer");
+    expect(combinedOutput(result), outputContext(result)).toContain("authored removal-list answer");
 
     const preview = await readFile(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
@@ -1058,7 +1083,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     });
 
     expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-    expect(combinedOutput(result)).toContain("authored removal-list answer");
+    expect(combinedOutput(result), outputContext(result)).toContain("authored removal-list answer");
 
     const preview = await readFile(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"),
@@ -1089,7 +1114,7 @@ describe.concurrent("run-pr-fix strict monitor pagination", { timeout: 120000 },
     });
 
     expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-    expect(combinedOutput(result)).toContain("Unresolved thread:");
+    expect(combinedOutput(result), outputContext(result)).toContain("Unresolved thread:");
 
     const monitorStatus = await readJson(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-monitor-status.json"),
