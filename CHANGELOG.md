@@ -423,6 +423,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`Prepare release` opens its pull request again.** The step that pushes the
+  release branch and opens the pull request exited 2 with a bash syntax error,
+  after the push and before `gh pr create`. The terminator of the heredoc that repairs an existing pull request body was
+  indented past the `run:` block's base, so after YAML removed that base it
+  still carried two spaces, and a plain `<<` never matched it. Bash parses the
+  whole script first, so the step failed on every path, including those that
+  never reach the heredoc. The terminator now sits at the base indentation. A
+  new test runs `bash -n` on every bash `run:` block in this repository's
+  workflows and actions and in the shipped workflow templates, and fails on any
+  diagnostic, including the warning bash prints for a heredoc left open at the
+  end of a script.
+
 - **The evidence citation guard reads citations into `.qfai/evidence/`**
   (#1686). A record that named a sibling evidence file the tree does not carry
   passed, because the guard read only the ignored trees. Three records name
