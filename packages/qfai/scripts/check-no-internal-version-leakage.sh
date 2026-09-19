@@ -118,6 +118,11 @@ SCHEMA_VERSION_RE='"schemaVersion"|schemaVersion[[:space:]]*:'
 # a file npm leaves out, and scanning that too only makes the guard stricter,
 # while a surface costs one grep instead of one per file.
 #
+# npm prints that report in two shapes: an array of packs up to npm 11, and
+# an object keyed by package name from npm 12. Which one arrives depends on
+# the npm that runs, and the publish job pins a newer npm than the CI
+# runners carry, so both are read.
+#
 # The listing is captured into a variable (rather than a process
 # substitution into mapfile) so that a failure — an unparseable
 # package.json, npm missing from PATH — fails this guard instead of being
@@ -130,7 +135,12 @@ surfaces_listing=$(cd "$ROOT" && npm pack --dry-run --json --ignore-scripts 2>"$
   process.stdin.on("data", (chunk) => (raw += chunk));
   process.stdin.on("end", () => {
     const packs = JSON.parse(raw);
-    const files = Array.isArray(packs) && packs.length === 1 ? packs[0].files : undefined;
+    const list = Array.isArray(packs)
+      ? packs
+      : typeof packs === "object" && packs !== null
+        ? Object.values(packs)
+        : [];
+    const files = list.length === 1 ? list[0]?.files : undefined;
     if (!Array.isArray(files) || files.length === 0) {
       console.error("npm pack --dry-run listed no files");
       process.exit(1);

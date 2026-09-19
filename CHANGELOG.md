@@ -425,6 +425,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The release job's leakage guard reads what npm 12 prints.** The guard asks
+  `npm pack --dry-run --json` what will ship, and read only the array npm 11
+  and earlier print. npm 12 prints an object keyed by package name instead. The
+  CI runners carry an older npm and the publish job pins npm 12, so the guard passed
+  on every pull request and then refused to publish. It now reads both shapes,
+  and so does the tarball proof in `check-publish-dry-run.mjs`, which read the
+  same report the same way.
+
 - **The evidence citation guard reads citations into `.qfai/evidence/`**
   (#1686). A record that named a sibling evidence file the tree does not carry
   passed, because the guard read only the ignored trees. Three records name
