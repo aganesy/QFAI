@@ -41,12 +41,22 @@ describe("the aggregate's dependency topology is declared, not inferred", () => 
     // The attack as filed: delete `test` from `ci-pass.needs`. The lane still runs and can
     // still fail, but its result never enters the serialized map the verdict reads — and the
     // topology test that would notice runs inside that very job.
+    //
+    // The needle is `test` as a member of a YAML flow sequence, in either layout the list
+    // can take: all on one line, or one entry per line once it grows past the print width.
+    // The first version matched the two neighbours as they happened to sit on one line, and a
+    // job added to the verdict re-wrapped the list and left the plant with nothing to find —
+    // which the row reports rather than passes over, but it still has to be fixed by hand
+    // every time the list grows. One member, whichever way the list is written.
     const dir = plantedTree((d) => {
       editWorkflow(d, firstContext(d).workflow, (text) => {
-        if (!text.includes("test, scanner-coverage")) {
-          throw new Error("the needs list is not in the shape this row plants into");
-        }
-        return text.replace("test, scanner-coverage", "scanner-coverage");
+        // One entry per line, which is how the list is written once it passes the print width.
+        const ownLine = /^[ \t]*test,[ \t]*\r?\n/m;
+        if (ownLine.test(text)) return text.replace(ownLine, "");
+        // All on one line, which is how a shorter list is written.
+        const inline = / test,(?= )/;
+        if (inline.test(text)) return text.replace(inline, "");
+        throw new Error("the needs list holds no `test` member this row can delete");
       });
     });
     try {
