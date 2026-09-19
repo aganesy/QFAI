@@ -528,3 +528,145 @@ file, so an entry here is what makes that citation checkable.
   accepted only real directories in the canonical tree and now accept a link that stays inside the
   project and keeps its name; a link that leaves, does not resolve, or renames still fails.
 - Related: AC-0017-0034, BR-0017-0066, EX-0017-0066, TC-0017-0082, OC-70, `scripts/link-assistant-tree.mjs`
+
+### DR-0017-0015: the documentation-only cost is measured in runner-minutes, and the rule is a re-pin obligation
+
+- Status: accepted
+- Context: `BR-0017-0007` bounded a documentation-only run by a set equality over four job names —
+  detection, `lint`, `build` and the verdict — and `TC-0017-0006` claim 1 held that set. The
+  equality refuses a change that serves the requirement underneath it. One full run, 25 legs, all
+  `success` and none skipped:
+  - wall clock, first leg starting to the aggregate finishing — **302 s**;
+  - the critical-path job — **`lint`, 285 s**, against its declared ten-minute budget;
+  - the critical path inside it — the **`lint:mirror-surface`** lane, **253 s**;
+  - the critical path inside that lane — `tests/pr-merge/prMergePlan.test.ts`, 222 tests,
+    **250.1 s**;
+  - the same file on a runner of its own in the same run — **111.7 s**, in `test (pr-merge)`;
+  - the sum of leg durations — **39.9 runner-minutes**, of which 14.7% is everything but a leg's
+    own work;
+  - the aggregation itself — `ci-pass`, **3 s**, every step sub-second.
+    The cause is contention rather than the file: five lint lanes fork onto one four-core runner,
+    and prettier holds cores for 154 s of that window. Extracting the lane puts `lint` at about
+    **160 s**, bounded by prettier's 154 s, and raises the headroom against the ten-minute job
+    budget from 315 s to about 440 s. The extracted lane must stay unconditional, because a
+    documentation change can break what it checks, so the equality forbids a change that cuts the
+    measured critical path and adds no work.
+- Decision: the pin measures **cost**, and the unit is **runner-minutes**, operationalized as
+  the sum of declared `timeout-minutes` over the jobs a documentation-only run executes — the jobs
+  with no `if`, plus the jobs whose `if` is `always()`. On `ci.yml` that is four jobs and 35
+  declared minutes.
+- Decision, the options and the verdict on each:
+
+  | Option                                                     | Verdict                                                                                                                     |
+  | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+  | Job instances, the unit in force                           | Refused. It charges +1 for a change that cuts the critical path and adds no work, which is the change measured above        |
+  | Runner-minutes, as the declared `timeout-minutes` sum      | Adopted. It is derivable from the tree a pull request can read, and it falls when work is removed rather than when a job is |
+  | Frozen-lockfile installs                                   | Refused. Today the count is numerically identical to instances, so it inherits the same defect under another name           |
+  | A literal number in the rule                               | Refused. The dissent below is the position that held for it                                                                 |
+  | Delete `BR-0017-0007`'s ceiling                            | Refused by the user. With no ceiling, nothing stops every job becoming unconditional                                        |
+  | Raise `BR-0017-0007`'s ceiling from four job names to five | Refused by the user. It prices the next extraction exactly as badly and leaves the same question to be asked again          |
+
+- Decision: **the rule carries no number.** The figures are a pin, re-derived from the workflow tree
+  by `scripts/pin-documentation-only-cost.mjs` and written into
+  `.github/required-status-contexts.json`,
+  with one new `check-workflow-hygiene.mjs` rule comparing the committed value against a fresh
+  recomputation. That is the pattern `pin-guard-bytes.mjs`, `pin-stage-evidence-counts.mjs` and
+  `pin-cli-message-allowlist-count.mjs` already use. What stops a silent raise is not the pin:
+  it is `BR-0017-0030`. A raised pin is a cost claim, so it may not land on argument.
+- Decision, the two claims that replace the set equality:
+  1. the committed pin equals what the tree recomputes: the jobs that execute — those with no `if`,
+     plus those whose `if` matches `always()` — and the sum of their declared `timeout-minutes`. A
+     change to either re-pins in the same change, carrying `BR-0017-0030`'s before-and-after
+     numbers, and the hygiene lane exits 1 while committed and recomputed disagree.
+  2. among the jobs the aggregate verdict depends on, the ones that execute are exactly the
+     `dependencies` entries absent from `dependencyConditions` in
+     `.github/required-status-contexts.json`, and `dependencyConditionsNote` names each one with
+     the reason it cannot be skipped.
+- Decision, and why the two claims read different sets: claim 1 sums the wider one, four jobs today,
+  and the verdict belongs to it because `always()` makes it execute. Claim 2 is checked against the
+  narrower one, three jobs today, because the verdict is not one of its own `dependencies` — a flat
+  equality over the wider set would be false on the tree it describes.
+- Decision, and what claim 2 needs that already exists: no new declaration file, and no new hygiene
+  code. The declaration asserts the executing set by omission, and `check-workflow-hygiene.mjs`
+  property 2c already rejects a listed job that drops its condition and an unlisted job that gains
+  one. The verdict's own `always()` is property 2's subject and is already held there.
+  `dependencyConditionsNote` already carries the prose reason for the three entries it holds today.
+- Decision: `NFR-0002`'s baseline clause keeps instance count, and its documentation-only figure
+  moves from four to five. That clause is a different artifact from `BR-0017-0007`'s ceiling in the
+  table above, and it moves on a separate authorization: the user agreed to correct every statement
+  the fifth job makes false. The figure stays in instances because the same clause is quantified in
+  frozen-lockfile installs and bundler builds, so converting one part of it to minutes would leave
+  one NFR carrying two units.
+- Decision, the weaknesses of the adopted unit, named rather than smoothed over:
+  - **The measure sits far from the reality it prices.** The declared sum over today's
+    unconditional set is 35 minutes,
+    against `NFR-0001`'s 3-minute bound for a documentation-only run — roughly twelve times the
+    reality it prices. It still catches a runaway job and a forgotten raise, which is what it is
+    for.
+  - **The extraction will raise the pinned sum.** `timeout-minutes` is integer-only and each half
+    of a split needs its own margin, so the sum rises while the measured critical path falls.
+    `BR-0017-0030` judges the measured figures, not the pin.
+  - **An unrelated raise trips it.** A timeout raised for a safety reason of its own reddens the
+    lane until the pin is redone, which forces whoever raises it to re-price the documentation-only
+    path deliberately.
+  - **A "costs no more than the ceiling" clause could not fail.** Enforcement is equality against a
+    value recomputed from the same tree, so once the pinner has run no state of the tree violates
+    such a clause. The rule therefore states the re-pin obligation the lane can enforce, and no
+    bound beside it that nothing can.
+- Decision, the dissent, recorded beside the adopted answer: the test-design analyst held for a
+  literal number in the rule, on the ground that an equality pin always agrees with the tree after
+  a re-run and so refuses nothing — a tripwire rather than a ceiling. On the vacuity that position
+  was right, and the rule now says so: the clause a re-derived pin could not contradict is gone,
+  and what stands is the re-pin obligation. The literal itself was still not taken. `BR-0017-0030`
+  is what refuses a raise, on review rather than in the lane, and that answer governed only the
+  review until the unfalsifiable clause was removed. A literal is also the option the user rejected
+  in its other form, which the table above records.
+- Consequences: the measure now moves with the tree instead of with a job list, so a change that
+  alters a `timeout-minutes` on an unconditional job re-pins in the same commit or the hygiene lane
+  fails. One cost is accepted and named: a change that extracts a lane and re-pins together
+  presents a raised pin as a green run, so the pin is not the evidence — the measured
+  before-and-after is, in the pull-request description and in this file (OC-80, `BR-0017-0030`).
+- Related: AC-0017-0003, BR-0017-0007, BR-0017-0009, BR-0017-0011, BR-0017-0012, BR-0017-0030,
+  EX-0017-0007, TC-0017-0006, NFR-0001, NFR-0002, OC-80, `DR-0017-0004`, `DR-0017-0012`,
+  `.github/required-status-contexts.json`
+
+### DR-0017-0016: the selection exemption belongs to the lane, not to the job hosting it
+
+- Status: accepted
+- Context: `BR-0017-0011` exempted the lint lane from change-detection selection and gave four
+  guards as the reason — the formatter, the Markdown linter, the leakage guard and the
+  branch-version-pin guard. The lane also carries the agent-integration mirror guards, and the rule
+  did not say so, so those guards were exempt only because one job happened to host them.
+  `NFR-0002` and `REQ-0007` both state that the mirror-guard lane may never be skipped, and
+  `AC-0017-0006` reads on the lane rather than on its host. Moving that lane into a job of its own
+  is work this spec plans, so the gap stops being theoretical the moment the extraction lands.
+- Decision: the exemption's subject is **every lane of the lint aggregate, whichever job hosts it**,
+  and the guard list names the agent-integration mirror guards as a fifth member. A lane moved into
+  a job of its own MUST NOT acquire a condition, and MUST NOT be added to `dependencyConditions`.
+- Decision, why the narrower scope fails, which is the whole of the reason: `BR-0017-0007`
+  **accepts** the arrangement in which the guard stops running. Give the lane a job of its own, put
+  a detection-derived condition on that job, and list the job in `dependencyConditions`. Both of
+  that rule's claims then hold — the job leaves the executing set, so the pinned set and sum stay
+  consistent, and it leaves `dependencies` minus `dependencyConditions`, so membership stays
+  consistent. The guard is priced, declared and skipped, and nothing in the tree objects.
+- Decision, the consequence stated as a prohibition rather than an aim: the pair is forbidden, in
+  `BR-0017-0011`'s second sentence, and `TC-0017-0085` is its oracle. A rule that only asked for
+  the lane to run would be satisfied by the arrangement above, because there the lane does run —
+  in a job that was skipped.
+- Decision, the reading that is wrong, recorded because the rules invite it: `BR-0017-0007`'s
+  membership claim does not carry this obligation. That claim constrains **which** jobs execute —
+  the executing ones must be exactly `dependencies` minus `dependencyConditions` — and says nothing
+  about any named job staying in the executing set. A change that moves a lane out of the executing
+  set and declares the move satisfies it exactly. So the exemption needs its own statement, and
+  deleting it as redundant removes the only rule that forbids the arrangement.
+- Decision, rejected alternative — defer the whole obligation to the extraction change: refused,
+  because it cannot be done without removing `NFR-0002`'s clause that lane selection may never skip
+  the mirror-guard lane and `REQ-0007`'s exempt entry for it. Both are statements the user approved
+  in this cycle, and reversing an approved statement is a change request the user owns.
+- Consequences: the rule now has something the tree can fail rather than only something to do, so
+  the extraction inherits the obligation instead of creating it, and `10_Plan.md` step 11 cites the
+  rule for that reason. One cost is accepted and named: every lane later moved into a job of its own
+  owes a `dependencyConditionsNote` entry giving the reason it cannot be skipped, and no lane parses
+  that note, so the entry is held by review.
+- Related: AC-0017-0006, BR-0017-0007, BR-0017-0011, EX-0017-0011, TC-0017-0012, TC-0017-0085,
+  NFR-0002, NFR-0006, REQ-0007, `DR-0017-0015`

@@ -34,15 +34,16 @@ Scenario: The verdict distinguishes "nothing needed running" from "nothing was v
   And when every need was skipped because change detection selected no lane, the verdict exits 0
   And an unrecognized need state fails closed rather than being read as success
 
-# AC-0017-0003: Documentation-only pull request executes the minimum lane set
+# AC-0017-0003: Documentation-only pull request executes the pinned unconditional set
 # Parent: US-0017-0001
 # Source: discussion-20260804173914356#DAC-001-01
-Scenario: A Markdown-only change runs detection, lint, build and the verdict, and nothing else
+Scenario: A Markdown-only change runs the jobs the pin records, and skips the rest
   Given the repository's duplicate validate workflow has already been retired
   And every test matrix leg is declared and carries a condition derived from the detection output
   When a pull request touches only Markdown files outside the recognized source directories
-  Then at most four job instances execute while the build job carries the required status context
-  And that floor falls to three once the required context moves off the build job
+  Then the jobs that execute are the ones carrying no condition plus the aggregate verdict, whose condition is always
+  And that set, and the sum of its members' declared timeout-minutes, are the values pinned for this path
+  And of the jobs the verdict depends on, the executing ones are exactly the declared dependencies that carry no pinned condition, each named with the reason it cannot be skipped
   And every unneeded leg reports as skipped, so its check name persists
   And no skipped leg consumes runner minutes
   And the aggregate verdict reports success
@@ -67,14 +68,15 @@ Scenario: The exclusion set is a closed list, and the assistant tree is not docu
   And when a pull request touches Markdown under the assistant catalog tree, the full lane set is selected
   And when a pull request touches only the agent-integration mirrors, they are treated as documentation-only
 
-# AC-0017-0006: Lint lane and required-context job are never skipped by selection
+# AC-0017-0006: A lane whose gate selection would empty is exempt from selection
 # Parent: US-0017-0001
 # Source: discussion-20260804173914356#DAC-001-04
-Scenario: Two lanes are structurally exempt from change-derived selection
-  Given the lint lane carries the formatter, the Markdown linter, the leakage guard and the pin guard
+Scenario: A lane is exempt when skipping it would leave a gate with nothing to check, or report a green nobody earned
+  Given the lint aggregate's lanes carry the formatter, the Markdown linter, the leakage guard, the pin guard and the agent-integration mirror guards
   And a skipped job reports success to branch protection
   When change detection selects no test lane at all
   Then the lint lane still runs, so the formatter and Markdown gates are not vacuous for a documentation change
+  And the lane carrying the agent-integration mirror guards still runs, whichever job hosts it
   And the job carrying a required status context still runs unconditionally while it carries it
   And no check name is created or renamed by selection, so no repository setting has to change
 
@@ -382,10 +384,10 @@ Scenario: The repository-root path resolves to the packaged asset, so there is n
 | ------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------- | -------- |
 | AC-0017-0001 | Verdict fails on a failed need and on a cancelled need             | Negative path, US-0017-0001, REQ-0006                                           | Must     |
 | AC-0017-0002 | Verdict succeeds on all-succeeded and on all-skipped needs         | Happy path plus boundary (all-skipped), US-0017-0001, REQ-0006                  | Must     |
-| AC-0017-0003 | Documentation-only pull request executes the minimum lane set      | Happy path, US-0017-0001, REQ-0007                                              | Should   |
+| AC-0017-0003 | Documentation-only pull request runs the pinned unconditional set  | Happy path, US-0017-0001, REQ-0007                                              | Should   |
 | AC-0017-0004 | Detection fails open with a warning annotation                     | Error path (fail-open), US-0017-0001, REQ-0007                                  | Should   |
 | AC-0017-0005 | Unrecognized path and assistant-tree Markdown run everything       | Edge / boundary (exclusion set), US-0017-0001, REQ-0007                         | Should   |
-| AC-0017-0006 | Lint lane and required-context job are never skipped               | Edge / boundary (non-skippability), US-0017-0001, REQ-0007                      | Should   |
+| AC-0017-0006 | A lane whose gate selection would empty is exempt                  | Edge / boundary (non-skippability), US-0017-0001, REQ-0007                      | Should   |
 | AC-0017-0007 | Every own-CI job has a reachable permission block                  | Happy path, US-0017-0002, REQ-0001                                              | Must     |
 | AC-0017-0008 | Removing both permission blocks fails the hygiene run              | Negative path (planted removal), US-0017-0002, REQ-0001                         | Must     |
 | AC-0017-0009 | Every checkout refuses to persist credentials                      | Happy path plus boundary (job-scoped full history), US-0017-0002, REQ-0002      | Must     |
