@@ -302,7 +302,13 @@ export async function checkCompletionCertificate(root: string): Promise<CertifyC
   const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
   const currentDigests = await scanEvidenceDigests(evidenceRoot);
 
-  const certMap = new Map(cert.evidenceDigests.map((entry) => [entry.path, entry.sha256]));
+  // A certificate can list files under a reset's backups, which are not this
+  // loop's evidence. The scan leaves them out, so the certificate's side does too.
+  const certMap = new Map(
+    cert.evidenceDigests
+      .filter((entry) => !inResetBackup(entry.path))
+      .map((entry) => [entry.path, entry.sha256]),
+  );
   const currMap = new Map(currentDigests.map((entry) => [entry.path, entry.sha256]));
 
   for (const [p, hash] of certMap) {
@@ -349,6 +355,35 @@ export async function checkCompletionCertificate(root: string): Promise<CertifyC
 }
 
 /**
+ * The directories a cycle-0 reset moves the previous loop's evidence into:
+ * `iter-00` and the aggregate directories, under the stamp the reset gives them.
+ */
+const RESET_BACKUP_DIRECTORY =
+  /^(?:iter-00|aggregate)\.backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
+
+/**
+ * Whether a directory at the top of the prototyping evidence tree is one of a
+ * cycle-0 reset's backups, which hold the previous loop's evidence and are not
+ * part of what a certificate seals.
+ */
+export function isResetBackupDirectory(name: string): boolean {
+  return RESET_BACKUP_DIRECTORY.test(name);
+}
+
+/**
+ * Whether an evidence path is one of a reset's backups, or lies inside one.
+ *
+ * The name on its own counts, not only a path below it. A scanner that followed
+ * a link sealed the backup's own name as a file, and read against a scan that
+ * leaves the entry out, such a certificate reported the backup removed on every
+ * check.
+ */
+function inResetBackup(relPath: string): boolean {
+  const slash = relPath.indexOf("/");
+  return isResetBackupDirectory(slash === -1 ? relPath : relPath.slice(0, slash));
+}
+
+/**
  * Walk every file under `evidenceRoot` (recursively), computing
  * SHA-256(content) per file. Output is sorted by path for determinism.
  *
@@ -381,6 +416,13 @@ async function walk(
     // in a sub-directory is still digested (defense against accidental
     // shadowing of the digest tree).
     if (dir === rootDir && name === "completion-certificate.json") continue;
+    // A cycle-0 reset's backups hold the previous loop's evidence. Sealed into
+    // this loop's certificate, a backup removed once it is no longer needed
+    // would fail `certify --check` although nothing of this loop changed. The
+    // name a reset gives them is the whole test: a backup is left out whatever
+    // it turns out to be — a directory, a link to one, or a link to a file,
+    // which is what a reset writes for an `iter-00` that was a link to a file.
+    if (dir === rootDir && isResetBackupDirectory(name)) continue;
     const full = path.join(dir, name);
     let s: Awaited<ReturnType<typeof stat>>;
     try {

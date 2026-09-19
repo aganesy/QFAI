@@ -425,6 +425,9 @@ a quality bar that upstream SSOT does not contain and the changed artifacts do n
 "It would be better if the feature also did X" is scope. "The feature does not do what it says" is
 a defect.
 
+A demand for more work is bounded by the artifact it is made on as well:
+`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must`.
+
 ### Provenance and routing
 
 - Every reviewer finding declares a `Traces to:` value. See
@@ -437,7 +440,7 @@ a defect.
     demonstrates it;
   - `record:<CODE>` — a defect in the run's own record rather than in the product;
   - `none` — reviewer-originated scope.
-- The first two are **blocking** and gate `done`. `record:*` and `none` are not.
+- The first two are the classes that **may** be blocking and gate `done`; `record:*` and `none` never are. Which of the first two actually blocks is the declared severity, not the trace: a finding whose work a named section places outside the reviewed stage is recorded `advisory` and carried (`.qfai/assistant/constitution/review-convergence.md#discussion-review-precision`).
 - `Traces to: record:<CODE>` is a record defect: the ledger, a round block, an evidence anchor or
   the provenance prose is wrong while the product is not. It MUST be recorded as `advisory`, MUST
   NOT be `blocking`, and settles in the spec's record-defect queue (`#the-record-defect-queue`)

@@ -12,17 +12,22 @@
  * commands it was never meant to, so the entries filter on tool name and on
  * file path, which do not have that failure. Widening them back is a change a
  * reader should see.
+ *
+ * The entries carry no message. Each runs one fixed reader over
+ * `.agents/rules/reminders.json`, which `qfai init` refreshes where the project
+ * has not edited it, so a changed message reaches a project that installed an
+ * earlier release. The settings file does not change with the message.
  */
 
-import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
+  API_BUDGET_HOOK_MARKER,
   DOCUMENTATION_CLARITY_HOOK_MARKER,
   GRILLING_DELEGATION_HOOK_MARKER,
   GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
@@ -30,6 +35,27 @@ import {
   MINIMAL_IMPLEMENTATION_HOOK_MARKER,
   STRUCTURED_QUESTION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
+import {
+  PROJECT_DIR_PLACEHOLDER,
+  projectDirOf,
+  runReminderHook,
+} from "../helpers/reminderHooks.js";
+import { removeTempTree } from "../helpers/tempTree.js";
+
+/** Where every entry reads its message, as the settings file names it. */
+const MESSAGES_ARG = `${PROJECT_DIR_PLACEHOLDER}/.agents/rules/reminders.json`;
+
+/** The shipped message file. */
+const SHIPPED_MESSAGES = "packages/qfai/assets/init/root/.agents/rules/reminders.json";
+
+/** What the host writes to a `Bash` hook's stdin for one command. */
+function hookInput(command: string): string {
+  return JSON.stringify({
+    hook_event_name: "PreToolUse",
+    tool_name: "Bash",
+    tool_input: { command },
+  });
+}
 
 /**
  * The rule master each reminder restates, by the marker its entries carry.
@@ -46,9 +72,8 @@ const RESTATES: ReadonlyMap<string, string> = new Map([
   [GRILLING_DELEGATION_HOOK_MARKER, "grilling.md"],
   [GRILLING_PLAN_HOOK_MARKER, "grilling.md"],
   [STRUCTURED_QUESTION_HOOK_MARKER, "user-questions.md"],
+  [API_BUDGET_HOOK_MARKER, "api-budget.md"],
 ]);
-
-const run = promisify(execFile);
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -165,7 +190,18 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     expect(group.hooks[0].if).toBeUndefined();
   });
 
-  it("runs a program directly, with no shell and no arguments of its own", () => {
+  it("points at the floor and the interface rule instead of restating them", async () => {
+    const entry = (hooks.get("PostToolUse") ?? [])[1]?.hooks[0];
+    const text =
+      entry === undefined ? "" : await runReminderHook(entry, projectDirOf(repoRoot, rel));
+    expect(text).toContain("The ladder never removes what § 2 of that rule lists.");
+    expect(text).not.toContain("error handling that prevents data loss");
+    expect(text).toContain("is it already in this codebase");
+    expect(text).toContain(".agents/rules/interface-clarity.md");
+  });
+
+  it("runs a program directly, with no shell and no message of its own", () => {
+    const readers = new Set<string>();
     for (const [, groups] of hooks) {
       for (const group of groups) {
         for (const entry of group.hooks) {
@@ -175,8 +211,105 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
           expect(entry.command).toBe("node");
           expect(entry.args[0]).toBe("-e");
           expect([...RESTATES.keys()]).toContain(entry.statusMessage);
+          // The reader, the file it reads and the key of one message. The text
+          // lives in the file, so a release that changes it leaves this alone.
+          expect(entry.args).toHaveLength(4);
+          expect(entry.args[2]).toBe(MESSAGES_ARG);
+          expect(entry.args.join(" ")).not.toContain("additionalContext");
+          readers.add(entry.args[1] ?? "");
         }
       }
+    }
+    // Two readers. One prints the named message; the other reads the hook's own
+    // input first and prints only for a command that names the forge, which is
+    // what lets a `Bash` matcher exist at all. A third would mean a reminder had
+    // grown logic of its own, which is the thing kept out of this file.
+    expect(readers.size, "a reminder runs one of the two pinned readers").toBe(2);
+    for (const reader of readers) {
+      expect(reader).toContain("process.argv[1]");
+      expect(reader).toContain("process.argv[2]");
+    }
+  });
+
+  // The matcher fires on every shell command, so the program is what narrows it.
+  // `documentation-clarity.md` keeps its own hook off the shell for exactly the
+  // over-matching this filter prevents, and that decision is unchanged.
+  it("prints the budget reminder only for a command that names the forge", async () => {
+    const group = (hooks.get("PreToolUse") ?? []).find((candidate) => candidate.matcher === "Bash");
+    expect(group, "no PreToolUse group matches Bash").toBeDefined();
+    expect(group?.hooks.map((entry) => entry.statusMessage)).toEqual([API_BUDGET_HOOK_MARKER]);
+    const entry = group?.hooks[0];
+    if (entry === undefined) return;
+    const project = projectDirOf(repoRoot, rel);
+
+    for (const command of [
+      "gh api repos/owner/repo/actions/runs",
+      "gh pr checks",
+      "curl https://api.github.com/rate_limit",
+    ]) {
+      const printed = await runReminderHook(entry, project, hookInput(command));
+      expect(printed, `${command} printed nothing`).toContain("api-budget.md");
+    }
+
+    for (const command of [
+      "git status && pnpm check-types",
+      "node scripts/check-bidi.mjs --highlight",
+      "echo ghost",
+    ]) {
+      await expect(runReminderHook(entry, project, hookInput(command))).resolves.toBe("");
+    }
+  });
+
+  // The host's payload is not part of this repository, so the entry prints
+  // nothing for input it does not recognise rather than guessing at a shape.
+  it("prints nothing for input that carries no command", async () => {
+    const group = (hooks.get("PreToolUse") ?? []).find((candidate) => candidate.matcher === "Bash");
+    const entry = group?.hooks[0];
+    if (entry === undefined) return;
+    const project = projectDirOf(repoRoot, rel);
+    for (const input of ["", "{ not json", "{}", JSON.stringify({ tool_name: "Bash" })]) {
+      await expect(runReminderHook(entry, project, input)).resolves.toBe("");
+    }
+  });
+
+  it("names only messages the shipped file carries, and every one of them", async () => {
+    const messages: unknown = JSON.parse(
+      await readFile(path.join(repoRoot, SHIPPED_MESSAGES), "utf-8"),
+    );
+    if (typeof messages !== "object" || messages === null) throw new Error("no message table");
+    const named = new Set<string>();
+    for (const [, groups] of hooks) {
+      for (const group of groups) {
+        for (const entry of group.hooks) named.add(entry.args[3] ?? "");
+      }
+    }
+    expect([...named].sort()).toEqual(Object.keys(messages).sort());
+  });
+
+  it("prints nothing and exits 0 when the message file is missing or unreadable", async () => {
+    // A reminder is worth less than the session it runs in. `runReminderHook`
+    // rejects on a non-zero exit, so a resolved empty string is both halves.
+    const project = await mkdtemp(path.join(os.tmpdir(), "qfai-reminder-hook-"));
+    try {
+      const entries = [...hooks.values()].flatMap((groups) => groups.flatMap((g) => g.hooks));
+      for (const entry of entries) {
+        await expect(runReminderHook(entry, project)).resolves.toBe("");
+      }
+      await mkdir(path.join(project, ".agents", "rules"), { recursive: true });
+      await writeFile(
+        path.join(project, ".agents", "rules", "reminders.json"),
+        "{ not json",
+        "utf-8",
+      );
+      for (const entry of entries) {
+        await expect(runReminderHook(entry, project)).resolves.toBe("");
+      }
+      await writeFile(path.join(project, ".agents", "rules", "reminders.json"), "{}\n", "utf-8");
+      for (const entry of entries) {
+        await expect(runReminderHook(entry, project)).resolves.toBe("");
+      }
+    } finally {
+      await removeTempTree(project);
     }
   });
 
@@ -198,7 +331,7 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     for (const [event, groups] of hooks) {
       for (const group of groups) {
         for (const entry of group.hooks) {
-          const { stdout } = await run(entry.command, [...entry.args]);
+          const stdout = await runReminderHook(entry, projectDirOf(repoRoot, rel));
           const payload: unknown = JSON.parse(stdout);
           if (typeof payload !== "object" || payload === null) {
             throw new Error("hook printed something other than an object");

@@ -13,6 +13,11 @@ name: Release notes drift
 # published, not of a branch, and a pull request that did not cause it should not fail for it.
 # The check name this reports therefore appears on no pull request and nothing in branch
 # protection has to be configured for it.
+#
+# One job, and sharding the comparison per version would not make it finer. Each shard repeats the
+# checkout and then reads the same paginated release listing, so the work divides while the calls
+# multiply — against an allowance the whole account draws on at once. The run is weekly and on no
+# critical path, so there is nothing for the extra calls to buy.
 on:
   schedule:
     # Weekly. The drift appears when a released section is edited, which is rare, and a daily

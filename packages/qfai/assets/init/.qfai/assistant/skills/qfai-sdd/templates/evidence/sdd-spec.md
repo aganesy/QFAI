@@ -17,16 +17,21 @@
 
 ## Preflight summary path
 
-- `.qfai/report/preflight/run-<timestamp>/preflight_summary.md` (run id: <run-id>)
+- Preflight run id `<run-id>`: <status>, <imported requirement count>, <blockers>.
 
-> Cite the run-scoped copy, never `.qfai/report/preflight_summary.md`. That path
-> is the latest-run pointer and every rerun rewrites it, so once a second cycle
-> has run it no longer names the preflight this spec was triaged against.
+> **The run id, not a path.** The report tree is not committed, so a path into it
+> names provenance a reader cannot open — and a committed record naming a path the
+> tree does not carry is refused, by a check whose backlog of existing citations is
+> closed to additions.
 >
-> Take the path from the run rather than typing it — `summary:` in
+> The run-scoped copy is what the id identifies, never
+> `<paths.outDir>/preflight_summary.md`: that one is the latest-run pointer and
+> every rerun rewrites it, so once a second cycle has run it no longer names the
+> preflight this spec was triaged against.
+>
+> Take the id from the run rather than typing it — `summary:` in
 > `npx qfai sdd preflight`'s text output, `preflightSummaryPath` under
-> `--format json` — so a project that moved `paths.outDir` cites the file that
-> was actually written instead of a `.qfai/report/` path that does not exist there.
+> `--format json` — so the record names the run that was actually written.
 
 ## Triage decisions
 
@@ -68,7 +73,7 @@
 
 ## Commands executed
 
-```
+```sh
 npx qfai validate --profile sdd --fail-on error --format github
 ```
 
@@ -79,17 +84,28 @@ npx qfai validate --profile sdd --fail-on error --format github
 
 ## Validate evidence paths
 
-- `.qfai/report/validate.log`
-- `.qfai/report/run-<timestamp>/` (run id: <run-id>, status: pass | fail)
-- `.qfai/report/specs-coverage/<spec-id>.md`
+- Validate run id `<run-id>`, scope `<profile and spec>`: <status>, <error count>,
+  <warning count>. <What a non-zero count is, if there is one.>
+
+> Run ids and outcomes, for the reason the preflight section gives: the report tree
+> is not committed. `npx qfai validate` writes `.qfai/report/validate.log` and a
+> `run-<timestamp>/` directory holding that run's findings, and the coverage summary
+> lands beside them — all three are where the id points, and none of them is a name
+> this record may carry as a path. Under a relocated `paths.outDir` they move with
+> it, which is another reason the record names the run rather than the place.
+>
+> A count of its own per run, because a reader deciding whether to trust the cycle
+> needs to know which run passed and which did not. "Ran validate" is not that.
 
 ## Pre-draft Grilling
 
 > One row per grilling-covered phase this run entered — Phase 0, 1, 2, 2c and 3,
 > and only those. Phase 2b and Phase 4 produce no design decision and run no
 > session.
-> `Session` is `run`, `skipped` or `escalated`. `run` means zero escalations;
-> one escalation makes the row `escalated` whatever else the phase settled.
+> `Session` is `run`, `skipped` or `escalated`. `run` means no critical
+> decision waits on the user; decisions adopted from the griller's
+> recommendation leave the row `run`. One critical decision waiting on the user
+> makes the row `escalated` whatever else the phase settled.
 > A `skipped` row names the authoritative artifact that answered the phase's
 > decisions, because an omitted session and an empty frontier are the same
 > absence otherwise.
@@ -102,12 +118,19 @@ npx qfai validate --profile sdd --fail-on error --format github
 > not at all.
 > The settled count equals the number of `grilling(...)` rows below carrying
 > this phase.
+> In a batch run (`/qfai-sdd` with no argument), Phase 0 and Phase 1 ran once
+> for every spec. Their rows and work orders are in
+> `.qfai/evidence/sdd-batch-<timestamp>.md` (`templates/evidence/sdd-batch.md`),
+> not here: name that file on the `Batch record` line below the table. A run
+> for one spec writes `none` there.
 
 | Phase | Session   | Ended at  | Wrote at  | Frontier                   | Evidence             |
 | ----- | --------- | --------- | --------- | -------------------------- | -------------------- |
 | 0     | run       | <ISO8601> | <ISO8601> | <n> settled, 0 escalated   | #work-orders-summary |
 | 1     | skipped   | -         | <ISO8601> | empty: answered by <ref>   | -                    |
 | 2c.1  | escalated | <ISO8601> | -         | <n> settled, <n> escalated | #work-orders-summary |
+
+- Batch record: `.qfai/evidence/sdd-batch-<timestamp>.md` | none
 
 ## Work Orders Summary
 

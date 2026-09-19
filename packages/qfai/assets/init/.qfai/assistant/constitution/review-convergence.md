@@ -4,7 +4,7 @@ How a review round ends, and what may follow it. Referenced from
 `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#round-budget-and-convergence-must`,
 which owns the delegation rules these sit beside.
 
-### Round budget (MUST)
+## Round budget (MUST)
 
 - **Two rounds per reviewer per artifact.** Round 1 is the initial review;
   round 2 reviews the fixes. **The budget is spent the moment round 2 returns
@@ -99,7 +99,7 @@ which owns the delegation rules these sit beside.
 - The round number MUST be recorded on each reviewer response
   (`Round:` in the shared response template).
 
-### Convergence (MUST)
+## Convergence (MUST)
 
 - A finding first raised in round N > 1 MUST state why it was not raisable in
   round N-1 — the fix introduced it, or the fix exposed it. A finding that was
@@ -120,41 +120,118 @@ which owns the delegation rules these sit beside.
   the escalation exit in the round budget withholds _Accept as Open Question_
   for this same class, so a user choice cannot supersede it either.
 
-### Agent-to-agent grilling (MUST)
+## Answered demands (MUST)
 
-A grilling session between agents has no user answering its questions, so the
-end condition the session rule states — an empty frontier and the user's
-confirmation — cannot be reached from inside it. Two agents can also agree on a
-wrong premise with nobody watching. These rules give such a session an end.
+A demand already answered MUST NOT be re-raised under another wording. Close a
+repeat by citing its recorded answer. This bounds what a reviewer may require,
+not what a reviewer may report.
 
-**Two rounds**, the same budget a reviewer has. **Every decision still open
-after the second round escalates**, whether or not that round settled others:
-partial progress is the ordinary outcome, and a condition reading "the round
-settled nothing" would be false almost always, leaving the rest of the frontier
-to a third round nobody authorised.
+A demand is answered only after the authoritative reviewer accepts the fix or a
+reasoned decline, or the user adjudicates it. Record that disposition and its
+evidence in the existing Response and Evidence cells. A producer's reply alone
+does not close a demand. An unresolved blocking demand remains REVISE when
+repeated; cite its prior finding and unresolved disposition instead of requiring
+new work under another wording.
 
-Each escalated decision goes to the user with both positions and a
+Carry prior answers forward, alongside newly answered demands, into the next
+cycle's `review_request.md` before dispatching reviewers. Each entry names the
+original finding source, demand, response and evidence supporting the response.
+When there are no answered demands, write `None`.
+
+A report of a new defect or evidence that an answer no longer applies must
+state what changed. The existing severity floor and escalation rules still apply.
+
+## Discussion review precision
+
+A discussion review judges what the planning stage decides, not implementation
+precision. Exact code-line edits, generated-copy updates and merge mechanics
+belong to the stage implementing the change. They may be reported as advice,
+not demanded as extra discussion completion work.
+
+Advice is not a verdict. A reviewer whose vocabulary is `PASS` or `REVISE` alone
+returns `PASS` and records the advice in its findings, and the review request's
+rule says the same: an item marked non-normative under this section is carried
+to the implementing stage rather than starting a fix-and-rerun cycle. Reported
+as a demand instead, it makes the discussion stage owe work this section has
+just placed elsewhere.
+
+**How it is written.** In the shape every finding takes
+(`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`):
+`Severity: advisory`, and `Traces to:` **the obligation whose implementation the
+advice is about** — which the pack carries, since the subject is how a later
+stage implements something already agreed. Never `none`: that value means
+reviewer-originated scope, takes the Change Request path and reaches no
+implementer, and advice about an agreed obligation proposes no new one. Where an
+item genuinely names nothing the pack carries it is reviewer-originated scope,
+and the baseline's `none` path is the right one for it.
+
+This section is the one place an obligation-traced finding is `advisory`, and
+both provenance contracts name it:
+`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#finding-provenance-must`
+and `.qfai/assistant/constitution/drift-protocol.md#provenance-and-routing`. There
+the trace class bounds which findings may block, and the declared severity settles
+whether one does, so an item carried under this section is not also a defect
+forcing `REVISE` elsewhere.
+
+**A cycle that reruns one reviewer keeps the others' findings.** The pack is the
+cycle's record, not the rerun's: a reviewer that passed is not re-run, its
+verdict stands, and its advice stands in the same pack the next stage reads.
+A rerun that dropped it would lose the advice of every reviewer who found
+nothing blocking.
+
+**Where it goes.** The advice stays in the review pack's findings, under the
+discussion pack the next stage inventories at its Stage 0 as non-normative
+reference material, like every other part of that pack. That stage gives each
+item a disposition in its own artifacts — a plan step, a spec row, an open
+question, or a line in its evidence saying it was read and not adopted — and
+nothing is back-propagated into the pack. What it may not do is leave an item
+unmentioned: a decision nobody wrote down cannot be told from an item nobody
+read.
+
+Wrong repository facts, missing decision traceability, scope contradictions and
+defects in the pack's own safety obligations remain in remit. Non-normative
+status is not permission to pass those.
+
+## Agent-to-agent grilling (MUST)
+
+A grilling session between agents is a **delegated session**
+(`.agents/rules/grilling.md`): a griller interviews the authors, and the user is
+asked only a critical decision. These rules bound its rounds and say what
+settles each decision when they run out.
+
+**Two rounds**, the same budget a reviewer has. After the second round **every
+decision that is not critical takes the griller's recommendation** — the ones
+the agents agreed on and the ones still open alike. A third round is never
+started: partial agreement is the ordinary outcome, and rounds past two buy
+fluency rather than a better answer.
+
+Where the authors disagreed, the recommendation is still taken, and each
+position is recorded beside it with whose it is. The stage reports every adopted
+decision at its end without waiting for an answer. A user who disagrees
+overturns one through a change request or a rerun.
+
+**A critical decision goes to the user at once**, without spending a round.
+Rounds between agents produce agreement, and agreement is not what these lack.
+
+| Critical decision                                                                                                                             | Why it goes to the user                                                     |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| It contradicts a spec, a contract or a recorded decision                                                                                      | Changing settled input is a Change Request, not a design round              |
+| Its effect cannot be taken back: security, lost or corrupted data, a broken released contract, spending, a legal commitment, a public release | A wrong recommendation here is not repaired by the next run                 |
+| It rests on product or business intent that the request, the discussion pack, the specs and the contracts all leave unstated                  | Two agents reasoning past the evidence converge on the more fluent argument |
+
+A discussion pack answers product intent for this test. It is non-normative for
+the Drift Protocol, but it is where the user already answered these questions in
+a user session, and asking them again spends that session twice.
+
+Each critical decision goes to the user with every position and a
 recommendation. Escalating is not failure: the work stays where it is and the
 user accepts, decides, or drops the item, exactly as at the reviewer gate.
 
-**Three subjects escalate at once**, without spending a round. The test in each
-is authoritative evidence: `.qfai/specs/**`, `.qfai/contracts/**`, and recorded
-decisions. A discussion pack is not among them — it is non-normative discovery
-material (`.qfai/assistant/constitution/drift-protocol.md`), so a decision
-resting on one alone is a proposal awaiting promotion rather than a settled
-answer.
+**The budget does not end the session while a critical decision is open.** The
+session ends `adopted` once the user has answered every critical decision.
 
-| Subject                                                            | Escalates when                                                                                                        |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| Product or business intent                                         | No authoritative artifact answers it. Where one does, that is the answer and there is nothing left to settle          |
-| A decision contradicting a spec, a contract or a recorded decision | Always. Changing settled input is a Change Request, not a design round                                                |
-| A decision resting on nothing authoritative                        | Always, discussion-pack support included. Two agents reasoning past the evidence converge on the more fluent argument |
-
-Each names a decision agents cannot settle from what the repository
-authoritatively holds. Rounds spent on one produce agreement, which is not the
-same as an answer and is harder to tell apart afterwards.
-
-Under a no-question mode the escalation has nobody to reach. The decision is
-opened as a question in the register the stage reads, so the stage cannot
+Under a no-question mode the escalation has nobody to reach. A critical decision
+is opened as a question in the register the stage reads, so the stage cannot
 complete over it (`.qfai/assistant/constitution/constitution.md` Article X,
-rule 6).
+rule 6), and that write ends the session `no-question`. Non-critical decisions
+are adopted as they are in any delegated session.

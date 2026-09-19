@@ -21,6 +21,7 @@ import {
   GRILLING_DELEGATION_HOOK_MARKER,
   GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
   GRILLING_PLAN_HOOK_MARKER,
+  MINIMAL_IMPLEMENTATION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
 import { captureStderr } from "../helpers/stderr.js";
 import { captureStdout } from "../helpers/stdout.js";
@@ -48,14 +49,54 @@ function readPreToolUse(settings: unknown): unknown[] {
 }
 
 /** One `qfai init` run with its console output swallowed; returns what it wrote to stderr. */
-async function initInto(root: string): Promise<string> {
+async function initInto(root: string, force = false): Promise<string> {
   let stderr = "";
   await captureStdout(async () => {
     stderr = await captureStderr(async () => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await runInit({ dir: root, force, dryRun: false, yes: true });
     });
   });
   return stderr;
+}
+
+/** One `qfai init` run; returns what it wrote to stdout. */
+async function initReporting(root: string): Promise<string> {
+  return captureStdout(async () => {
+    await captureStderr(async () => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    });
+  });
+}
+
+/** Every hook entry of a parsed settings object, with the event it sits under. */
+function entriesOf(settings: unknown): { event: string; entry: Record<string, unknown> }[] {
+  const hooks: unknown =
+    typeof settings === "object" && settings !== null ? Reflect.get(settings, "hooks") : undefined;
+  if (typeof hooks !== "object" || hooks === null) throw new Error("settings carry no hooks");
+  const found: { event: string; entry: Record<string, unknown> }[] = [];
+  for (const [event, groups] of Object.entries(hooks)) {
+    if (!Array.isArray(groups)) throw new Error(`${event} is not an array`);
+    for (const group of groups) {
+      const entries: unknown = Reflect.get(group, "hooks");
+      if (!Array.isArray(entries)) throw new Error(`a ${event} group has no entries`);
+      for (const entry of entries) found.push({ event, entry: { ...entry } });
+    }
+  }
+  return found;
+}
+
+/** Every group an earlier template held, exactly as it was written. */
+async function earlierGroups(): Promise<unknown> {
+  const fixture = path.join(
+    assetsRoot,
+    "..",
+    "..",
+    "tests",
+    "fixtures",
+    "claude-settings",
+    "earlier-reminder-groups.json",
+  );
+  return JSON.parse(await readFile(fixture, "utf-8"));
 }
 
 async function seedSettings(root: string, settings: unknown): Promise<void> {
@@ -88,6 +129,75 @@ describe("qfai init and the reminder hooks", () => {
       const text = await readFile(path.join(root, SETTINGS), "utf-8");
       expect(text).toContain(DOCUMENTATION_CLARITY_HOOK_MARKER);
       expect(text).toContain("mcp__github__");
+    });
+  });
+
+  it("writes no message text into the settings file, and the messages beside the rules", async () => {
+    await withTempRoot(async (root) => {
+      await initInto(root);
+
+      const text = await readFile(path.join(root, SETTINGS), "utf-8");
+      expect(text).not.toContain("additionalContext");
+      expect(text).not.toContain(".agents/rules/grilling.md");
+      const messages: unknown = JSON.parse(
+        await readFile(path.join(root, ".agents", "rules", "reminders.json"), "utf-8"),
+      );
+      if (typeof messages !== "object" || messages === null) throw new Error("no message table");
+      const entries = entriesOf(JSON.parse(text));
+      expect(entries.length).toBeGreaterThan(0);
+      for (const { entry } of entries) {
+        const args: unknown = entry.args;
+        if (!Array.isArray(args)) throw new Error("entry has no args");
+        expect(args[2]).toBe("${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json");
+        expect(Object.keys(messages)).toContain(args[3]);
+      }
+    });
+  });
+
+  it("replaces every group an earlier release wrote with this release's", async () => {
+    await withTempRoot(async (root) => {
+      const earlier = await earlierGroups();
+      if (typeof earlier !== "object" || earlier === null) throw new Error("fixture is empty");
+      await seedSettings(root, { permissions: { allow: ["Bash(git status)"] }, ...earlier });
+
+      const stdout = await initReporting(root);
+
+      const settings = await readSettings(root);
+      expect(settings.permissions).toEqual({ allow: ["Bash(git status)"] });
+      expect(JSON.stringify(settings)).not.toContain("additionalContext");
+      const shipped = entriesOf(
+        JSON.parse(await readFile(path.join(assetsRoot, ".claude", "settings.json"), "utf-8")),
+      ).map(({ event, entry }) => JSON.stringify({ event, entry }));
+      for (const { event, entry } of entriesOf(settings)) {
+        expect(shipped).toContain(JSON.stringify({ event, entry }));
+      }
+      expect(stdout).toContain("updated: .claude/settings.json");
+      expect(stdout).not.toContain("(edited here)");
+    });
+  });
+
+  it("keeps a group the project edited, and names it on every run", async () => {
+    await withTempRoot(async (root) => {
+      const edited = {
+        matcher: "mcp__github__(create_pull_request)",
+        hooks: [
+          {
+            type: "command",
+            statusMessage: DOCUMENTATION_CLARITY_HOOK_MARKER,
+            command: "node",
+            args: ["-e", "console.log('our own reminder')"],
+          },
+        ],
+      };
+      await seedSettings(root, { hooks: { PreToolUse: [edited] } });
+
+      for (let run = 0; run < 2; run += 1) {
+        const stdout = await initReporting(root);
+        expect(readPreToolUse(await readSettings(root))[0]).toEqual(edited);
+        expect(stdout).toContain(
+          `kept: .claude/settings.json hook group PreToolUse "${DOCUMENTATION_CLARITY_HOOK_MARKER}" (edited here)`,
+        );
+      }
     });
   });
 
@@ -157,6 +267,45 @@ describe("qfai init and the reminder hooks", () => {
 
       expect(afterSecond).toBe(afterFirst);
       expect(afterSecond.split(DOCUMENTATION_CLARITY_HOOK_MARKER)).toHaveLength(4);
+    });
+  });
+
+  it("keeps older same-marker implementation text on normal and forced reinit", async () => {
+    await withTempRoot(async (root) => {
+      const own = { matcher: "Bash", hooks: [{ type: "command", command: "./own.sh" }] };
+      const older = {
+        matcher: "Edit",
+        customSetting: "keep",
+        hooks: [
+          {
+            type: "command",
+            statusMessage: MINIMAL_IMPLEMENTATION_HOOK_MARKER,
+            command: "project-node",
+            args: ["-e", "console.log('older implementation reminder')"],
+          },
+        ],
+      };
+      await seedSettings(root, {
+        permissions: { allow: ["Bash(git status)"] },
+        hooks: { PostToolUse: [own, older] },
+      });
+
+      let previousText: string | undefined;
+      for (const force of [false, true, false]) {
+        await initInto(root, force);
+        const settings = await readSettings(root);
+        const hooks: unknown = settings.hooks;
+        if (typeof hooks !== "object" || hooks === null) throw new Error("missing hooks");
+        const groups: unknown = Reflect.get(hooks, "PostToolUse");
+        if (!Array.isArray(groups)) throw new Error("missing PostToolUse groups");
+        expect(groups).toHaveLength(3);
+        expect(groups.slice(0, 2)).toEqual([own, older]);
+        expect(JSON.stringify(groups).split(MINIMAL_IMPLEMENTATION_HOOK_MARKER)).toHaveLength(2);
+        expect(settings.permissions).toEqual({ allow: ["Bash(git status)"] });
+        const text = await readFile(path.join(root, SETTINGS), "utf-8");
+        if (previousText !== undefined) expect(text).toBe(previousText);
+        previousText = text;
+      }
     });
   });
 

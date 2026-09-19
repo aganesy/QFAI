@@ -51,7 +51,7 @@ Skill-specific examples:
 
 When unsure, read inputs in this order:
 
-- P1: `.qfai/assistant/constitution/*`
+- P1: `.qfai/assistant/constitution/*`, and `.qfai/assistant/skills/qfai-grilling/SKILL.md` before the confidence check, so it is loaded for a preflight round and for any session detection opens later (see Grilling)
 - P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
 - P3: `.qfai/specs/<spec-id>/07_Decisions.md` + `.qfai/specs/_policies/08_Decisions.md` (Decision Records, `DR-*`; if no spec yet, state "not applicable")
 - P4: other artifacts (01_Spec.md, contracts, evidence, optional legacy `scenario.feature` / coverage ledgers)
@@ -62,7 +62,8 @@ When unsure, read inputs in this order:
 - Do NOT use Preflight Diff (or any diff-only shortcut) in this skill.
 - Preserve the verify-as-safety-gate intent: verify must not be reduced to incremental checks.
 - "Full-scan" means every gate that applies to the current stage, not every gate in the repository regardless of stage. Each scope names the profile that produces it, and they must match — a `full`-profile run is recorded as `scope: "full"` whatever stage triggered it.
-- **Prototyping carve-out (local only — see "Mandatory checks": CI rejects narrow profiles).** When `/qfai-verify` is invoked to satisfy the prototyping DONE gate — i.e. Work Order H of `/qfai-prototyping`, before `npx qfai prototyping certify` — the scope is `prototyping`, and the validate run is `npx qfai validate --profile prototyping --fail-on error`. This is NOT a diff-only shortcut and NOT a waiver: it is the phase-isolation contract the certify gate enforces (`prototypingCertify.ts` accepts only `scope="prototyping"`, and `reviewerGate.ts` raises `R-CERTIFY-VERIFY-CIRCULAR` at severity `error` when a `verify.json` carrying `atdd` / `full` / `implement` is present while a prototyping loop is active). A `full` run at that point necessarily fails `QFAI-ATDD-111/112/113`, which are obligations of stage 5 (`/qfai-atdd`) — a stage that has not run yet. Do not clear them with annotation-only tests; declare the prototyping scope instead.
+- **Prototyping carve-out (local only — see "Mandatory checks": CI rejects narrow profiles).** When `/qfai-verify` is invoked to satisfy the prototyping DONE gate — i.e. Work Order H of `/qfai-prototyping`, before `npx qfai prototyping certify` — the scope is `prototyping`, and the validate run is `npx qfai validate --profile prototyping --fail-on error`. This is NOT a diff-only shortcut and NOT a waiver: it is the phase-isolation contract the certify gate enforces (`prototypingCertify.ts` accepts only `scope="prototyping"`, and `reviewerGate.ts` raises `R-CERTIFY-VERIFY-CIRCULAR` at severity `error` when a `verify.json` carrying `atdd` / `full` / `implement` is present while a prototyping loop is active). A `full` run at that point necessarily fails `QFAI-ATDD-111/112/113`, which are obligations of stage 5 (`/qfai-atdd`) — a stage that has not run yet. Do not clear them with
+  annotation-only tests; declare the prototyping scope instead.
 
 ## Verify Output Contract — `.qfai/report/verify.json`
 
@@ -107,6 +108,62 @@ Use the shared schema.
 ### Reviewer Gate (MUST)
 
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
+- The stage evidence's `## Grilling Session` section carries `Run started`,
+  `Preflight`, a row for every session detection opened, and — when `Preflight`
+  says `session opened` — one for the preflight session, all of them inside this run's own block — **except a session the user stopped**, which is reported in the stage's output rather than written, as the table below sets out, so its absence is not a `REVISE`. **`Preflight` is `session opened` or `confidence high`**, and any other value is a `REVISE`: those two say whether a preflight row is owed, and a third value says neither. **No two rows share a `Session`**, and the keys run `S1`, `S2`, … with none skipped: the lines under the table are reconciled by that key, so one key on two rows lets a single quoted answer, open line or escalation stand for both. **And every `Ended at` is at or after the one on the row before it.** The keys are assigned in opening order and a stage opens no session while one is running, so a later key ending earlier is a history that cannot have happened — and
+  the chronology is the whole of what the two times are recorded for. Every `Ended` is one of the five endings the rule master
+  names, every row's `Ended at` is at or after the run-started time on
+  a `### /qfai-verify — run started` block
+  whose heading — the time to the millisecond, and a host run identifier beside
+  it where there is one — equals what this run's work order states, and which no
+  other `/qfai-verify` block in the file carries,
+  and each row's `Open` count matches the register lines naming that row's `Session`, **and its `Escalated` count matches the escalation lines naming it**, **and its `Decisions` count matches the `grilling(<Session>@<run key>/<adjudication>)` rows the Work Orders Summary carries under that `Session` and this run's start** — a count checked against nothing lets a row claim `0` over decisions it took. **And the other way: every `grilling(<Session>@<run key>/<adjudication>)` row the summary carries for this run names a `Session` exactly one row of this block holds.** Counted only from the rows inward, a summary row keyed to a session the block never opened is checked by nothing, so the record can claim a decision for a session that did not exist — and, beside the run's `none` marker, claim in the same breath that the run settled none.
+  **An escalation line still waiting on an answer is an open node**: it is also an `Open` line under the same `Session`, so a row that ended over it keeps the decision in the register instead of losing it behind a valid ending. **Every row's `Revision` is a git rev or `working-tree+<hash>`**, as the record requires, and a blank or any other value is a `REVISE`: it is the one field saying which tree the session ended against.
+  **Every row's `Subject` is non-blank, and when `Preflight` says `session opened` exactly one row's is `preflight`, and when it says `confidence high` none is**: it is the one cell saying what a
+  session was about, and a session that settled everything leaves no register
+  line to say it. **Every line under the table — a confirmation, a closure, an
+  open node, an escalation — names a `Session` a row of this block carries**: a
+  line keyed to no row is an open node no count reconciles. **An escalation line
+  recording the user's answer is one of that `Session`'s counted decisions**,
+  and the decision it states is the one a `grilling(<Session>@<run key>/user)` row states, or a `grilling(<Session>@<run key>/withdrawn)` row where the answer dropped the item: the answer settled it either way, and only the row records who recommended it or that it left the artifact. **A run whose rows count no decision carries
+  `grilling(-@<run key>/none): none`** in the Work Orders Summary, keyed to this run's key as the decision rows are, because that summary holds every invocation's rows.
+  **A run whose rows count a decision carries no such marker**: the marker says
+  the run settled none, so beside a decision row the summary would claim both,
+  and the pair is a `REVISE`.
+  **A row whose ending lets the work go on, and after which the stage wrote,
+  carries a `Work resumed` later than its own `Ended at`** — that ordering is
+  the whole reason both times are recorded, and an earlier one is a session
+  recorded after the edit it was meant to precede. **A run that did not resume
+  writes `none — <why>` instead**, which the gate accepts on those four
+  endings and on no other: a session that was the run's last activity has no
+  later time to carry, and requiring one would have the stage invent it. A
+  blank is neither, and is a `REVISE` — **except on a `stopped` row**, where empty is the value that ending requires and `none — <why>` would claim a decision the stop forecloses. A run that skipped a session leaves the same tree as one
+  that ran it, and an evidence file is updated in place, so these are what tell
+  a fresh session from an absent one and from last week's.
+- **Each ending carries its own condition, and the name alone is not one.** A
+  malformed row labelled `confirmed` passes an enum check and fails the rule it
+  claims to have met.
+
+  | `Ended`       | What the row must also show                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+  | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `confirmed`   | `Frontier` empty, `Lookups` none in flight, `Open` 0, **and the confirming answer quoted under the table beside that row's `Session`**. Those are the rule master's two completing conditions, and tree state is only the first: a session that closed its own tree and never asked satisfies every count while the user has said nothing                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+  | `user-closed` | `Lookups` none in flight, every open node assumable, **and every one of them carrying its labelled assumption in the register**, **and the closing answer quoted under the table beside that row's `Session`** — the ending is an act of the user's, and a register alone cannot show it happened. The closure covers the tree as it finally stands, so a lookup still running can raise a node after it — and a row accepted while one was in flight is a verdict taken over a register that was not yet complete. A decision some document requires the user to make and record, and an input declared undefaultable, are not assumable — the rule master says the closure does not reach them, so a row carrying one is a `REVISE`. A node listed without the value the stage went on to use is the other half of the same failure: the assumption is then unread, which the rule master calls a decision nobody took wearing the face of one somebody did |
+  | `adopted`     | `Frontier` empty, `Lookups` none in flight and `Open` 0 — so every critical decision the session escalated has the user's answer, which is when the rule master ends a delegated session `adopted`. **Every decision the row counts that no escalation line settled is a `grilling(<Session>@<run key>/agents)` row whose `Output (refs)` carries the reason and each disagreeing position.** An adopted decision missing that row is a `REVISE`, and so is an `agents` row whose decision is critical. An adopted decision that is not critical is not a finding, whatever the reviewer would have chosen: doubt about its merit is an ordinary finding against the artifact                                                                                                                                                                                                                                                                                 |
+  | `no-question` | `Frontier` empty, `Lookups` none in flight and `Open` 0. Article X, rule 6: the stage cannot complete over a decision nobody took, and nobody was asked. **Nor does any line under the table record a reply from the user under that row's `Session`**: no confirming or closing answer, and no escalation marked answered. The mode reached nobody, so a reply recorded under it is one nobody gave, and an escalation it raised is still waiting, which makes it an open line that `Open` 0 already refuses                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+  | `stopped`     | `Work resumed` empty. The user ended the session, so the stage reports every open node rather than resuming — a `stopped` row with work after it is a `REVISE` whatever it counts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+
+  **A stopped session is reported, not written.** Article X ends a stopped
+  invocation with no further work or file changes, and a row is a file change —
+  so the gate requires no row for it, and the stage names the stopped session
+  and its open nodes in its own output instead. Where a row for one does exist,
+  because the stop arrived after the section was already written, it is held to
+  the line above. That is the one place the record is weaker than the tree it
+  describes, and it is weaker on purpose: the alternative is an instruction to
+  edit a file the user just stopped.
+
+  A `user-closed` row with open nodes otherwise **passes**: the user saw them and
+  closed the asking, and the method records each as a labelled assumption.
+
 - Reviewer checks:
   - required roles were delegated;
   - validate evidence exists: `npx qfai validate --profile verify --fail-on error` completed with `error=0` — for a `scope: "prototyping"` run this is `npx qfai validate --profile prototyping --fail-on error` instead, per the prototyping carve-out in "Verify Scope Rule". Requiring the `verify` profile here would reinstate the circular gate: it fails `QFAI-ATDD-111/112/113`, so no reviewer could return PASS before `/qfai-atdd` has run;
@@ -145,6 +202,10 @@ Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions
 this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is
 restated here.
 
+**Both are delegated sessions** (`.agents/rules/grilling.md` § Two kinds of
+session): a critical decision goes to the user at once, and after two rounds
+every other takes the griller's recommendation, recorded as an `agents` row.
+
 - **At the preflight.** A session over what the confidence check left uncertain,
   and nothing else. The bound is on the subject: the spec and the ledger are
   settled input, and re-interrogating them each run would stop the cycle and
@@ -152,11 +213,158 @@ restated here.
 - **On detection.** A contradiction in the spec, an unconsidered case or a
   technical obstacle surfacing mid-run stops the work and opens a session over
   what was detected, rather than being decided alone.
+- **What this stage's session holds, and what it does not.** The decisions of
+  this invocation: what evidence a finding needs before it is reported as one,
+  and how a gate the environment cannot execute is recorded. **Not which gates
+  apply** — the declared scope and the mandatory completion list fix that, and
+  whether this environment can run one is a fact to inspect rather than a
+  decision to take.
 - **Neither session changes settled input.** Where one concludes that settled
   input must change, `.qfai/assistant/constitution/drift-protocol.md` governs:
   stop the dependent work, raise the Change Request, wait for approval. Where it
   concludes the obstacle is this run's to solve, the run solves it — nothing
   upstream changes, so there is nothing to approve.
+- **Record both sessions where the gate reads them.** The method writes no
+  artifact of its own, so a run that grilled and a run that skipped it leave the
+  same tree. `.qfai/evidence/verify-<spec-id>.md` carries a `## Grilling Session`
+  section holding one row per session the user did not stop, under two lines the run writes before it
+  opens any:
+
+  ```text
+  ### /qfai-verify — run started 2026-01-01T09:02:00.417Z
+
+  Preflight: session opened
+
+  | Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+  | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+  | S1 | adopted | 2026-01-01T09:14:00Z | a1b2c3d | 2026-01-01T09:15:20Z | preflight | empty | none in flight | 2 | 0 | 0 |
+  | S2 | user-closed | 2026-01-01T11:02:00Z | a1b2c3d | 2026-01-01T11:04:10Z | a CI lane with no single local command | empty | none in flight | 1 | 1 | 0 |
+
+  Closed S2: "proceed"
+
+  Open S2: which local command reproduces the lane — assumed: <the value the stage used>
+  ```
+
+  The three decisions those rows count are three rows in the stage's Work Orders
+  Summary, each keyed to its session and this run:
+
+  ```text
+  | Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+  | ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+  | 2 | <role> | <instance> | grilling(S1@2026-01-01T09:02:00.417Z/agents): <a decision S1 adopted> | <refs> | <refs>; <why it was taken; any position that disagreed> | PASS |
+  | 3 | <role> | <instance> | grilling(S1@2026-01-01T09:02:00.417Z/agents): <another decision S1 adopted> | <refs> | <refs>; <why it was taken; any position that disagreed> | PASS |
+  | 6 | <role> | <instance> | grilling(S2@2026-01-01T09:02:00.417Z/user): <the decision S2 settled> | <refs> | <refs> | PASS |
+  ```
+
+  The shape `/qfai-discussion` already writes, with `Subject` in place of that
+  stage's lone `Authoring began`: this stage holds more than one session, so a row says which, and the preflight session's says `preflight`. `Work resumed` is when the stage next wrote — the first gate result for the preflight session, the
+  first edit made after a detected one.
+
+  **Both times, and the second later than the first.** A row holding only the
+  ending reads the same whether the session ran before the work or after it,
+  because it is written at the end either way. What the pair records is the
+  order, which is the part a later reader has no other way to recover. It still
+  cannot prove a session happened: the agent writes its own record.
+
+  **The `### <command> — run started <time>` heading is what bounds the
+  invocation, and it is one block per stage-invocation.** An evidence file is
+  updated in place, so a row left by an earlier run has a valid ending, an
+  `Ended at` before its own `Work resumed`, and a consistent count; and a rerun
+  over an unchanged tree produces the same `Revision`, because that address is a
+  tree address and excludes `.qfai/evidence/**`. Only a value that moves every
+  invocation separates the two.
+
+  **To the millisecond, because a retry is immediate.** A run that failed and
+  was re-run at once shares a second with the one before it, and two blocks
+  carrying the same heading let the earlier one pass as current — which is the
+  staleness this heading replaced a revision to fix. Where the host mints a run identifier of its own, the heading carries it **beside** the time, never in place of it: the gate compares every `Ended at` against that time, and an identifier gives it nothing to compare. What neither may be is a value two invocations can share.
+
+  **The run's start goes to the reviewer in its work order, not only into the
+  file.** A block carries its own heading, so a gate reading the heading alone
+  checks the record against itself: a rerun that wrote no block leaves an
+  earlier one internally consistent, and its reviewer has nothing to contradict
+  it with.
+  The orchestrator states this invocation's start, with the host run identifier
+  where the heading carries one, in every reviewer work order it opens, and the
+  gate requires the block heading to carry exactly those values.
+  An artifact cannot prove its own freshness, and the one value
+  that settles it has to arrive from outside the artifact.
+
+  **One block per stage as well as per run**, because two stages share an
+  evidence file: an `E2E` / `API` / `Integration` row's proof lives in
+  `atdd-<spec-id>.md`, which `/qfai-atdd` wrote its own sessions into and
+  `/qfai-implement` later writes to. One table for both would have each stage's
+  gate rejecting the other's rows for a start time they never claimed. The gate
+  reads this stage's own block and leaves every other block alone, so both
+  histories stay in the file and stay valid.
+
+  `Revision` stays beside it, written in the notation
+  `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md`
+  defines — a git rev, or `working-tree+<hash>` for an uncommitted tree. It says
+  which tree the session ended against, which is what a later reader needs to
+  reconstruct what was being decided.
+
+  **`Preflight` says whether the confidence check opened a session.** Article IX
+  asks its targeted questions _if confidence is low_, so a run that found none
+  owes no preflight row — and an absent row and a skipped session look alike
+  without a line saying which. It takes `session opened` or `confidence high`,
+  and the second is a disposition the reviewer reads rather than an omission it
+  cannot see.
+
+  `Ended` is `confirmed`, `user-closed`, `adopted`, `no-question` or `stopped`
+  — the five endings `.agents/rules/grilling.md` names — and only the first four
+  let the work go on; a delegated session that completes ends `adopted`.
+
+  **`Decisions` counts what the session settled, and each has a row that
+  names who recommended it.** A decision the user answered counts, and so does
+  one the session adopted; an open node and an unanswered escalation do not.
+  Each counted decision is a `grilling(<where>/<adjudication>): <the decision>`
+  row in the stage's Work Orders Summary
+  (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md`), so the
+  count can be checked against records rather than taken as written.
+  **`<where>` is `<Session>@<run key>`**: the row's `Session`, then this run's key — the time on its heading, followed by the host run identifier where the heading carries one, as the heading writes them. The keys restart at `S1` every invocation, and
+  the Work Orders Summary sits outside the run's block, so a row keyed by `Session` alone is counted again by every later run that reuses the key.
+  A run that settled no decision writes the shared schema's marker the same way,
+  `grilling(-@<run key>/none): none`, so an earlier run's marker does not
+  answer for it.
+
+- **The confirming answer goes under that table too**, one line per
+  `confirmed` row, quoting what the user replied and naming the `Session` it
+  closed. A `confirmed` label is a claim about the user rather than about the
+  tree, and nothing else in the record can be checked against them.
+- **The closing answer goes under that table too**, one line per
+  `user-closed` row, quoting the `proceed`, `done` or reply to that effect and
+  naming the `Session` it closed. `user-closed` is a claim about the user as
+  much as `confirmed` is, and a row carrying it over no reply would pass the
+  agent's own assumptions off as a closure the user made.
+- **The escalated decisions go under that table too.** One line per critical
+  decision a session sent to the user, naming the `Session` it came from
+  and what the user answered, or that no answer has come yet — **and a decision
+  still waiting is an open line under that `Session` as well**, because an
+  escalation nobody answered is a decision nobody took. `Escalated` counts these
+  lines, and the gate reconciles the two the way it reconciles `Open` with the
+  register.
+- **A free-form cell is one line, with `|` written `\|`.** `Subject` and a
+  `none — <why>` disposition are the author's own words, and a pipe or a line
+  break in them adds cells to the row, so `Open` and `Escalated` land under the
+  wrong headings and the gate reads a valid row as malformed.
+- **The open questions go under that table, in the same section.** One line per
+  **node** left open — a decision, or a fact only the user holds — naming the
+  `Session` it belongs to and carrying the labelled assumption written
+  in its place where a document required a value. That is the register this
+  stage's gate reads, and it is here so a reader finds the count and the
+  questions it counts in one place.
+
+  **Nodes, not decisions.** `.agents/rules/grilling.md` puts a user-held fact on
+  the frontier because nothing else can settle it, and a register of decisions
+  alone lets a run with one unanswered fact write `Open = 0` and complete.
+  `Open` counts the lines.
+
+  **And each line names its session by `Session`**, not by `Subject`. Two rows may
+  each carry `Open = 1`, and an unkeyed register satisfies both with one
+  question; `Subject` does not fix that either, because a recurring obstacle
+  reopens a session under the same description. `Session` is `S1`, `S2`, … in
+  the order the sessions opened, and it is unique by construction.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
@@ -478,6 +686,9 @@ When you declare DONE, include:
 ## Completion Message & Next Actions (MUST)
 
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
+
+The message lists each adopted decision — every `grilling(<Session>@<run key>/agents)`
+row — with its reason and any disagreeing position, and does not wait for an answer.
 
 - Proceed (recommended): Create a PR on your hosting platform.
   Action: use the verified evidence to write the PR description.

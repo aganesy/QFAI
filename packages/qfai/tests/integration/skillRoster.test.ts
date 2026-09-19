@@ -14,8 +14,6 @@ const implementSkillPath = path.join(
   "SKILL.md",
 );
 
-// QFAI:SPEC-0011:TC-0011-0001
-// QFAI:SPEC-0011:TC-0011-0002
 describe("sub-agent roster completeness and handoff contracts", () => {
   let content: string | undefined;
 
@@ -24,7 +22,6 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     expect(content.length).toBeGreaterThan(0);
   });
 
-  // TC-0011-0001: All routed specialists are declared with clear ownership
   it("defines the routed implementation specialists", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
@@ -67,7 +64,6 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     );
   });
 
-  // TC-0011-0002: All handoff contracts present
   it("defines routed handoff transitions across planning, evidence, and review", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
@@ -122,7 +118,6 @@ describe("qa-gatekeeper is sole observation authority", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0004
 describe("watch-it-fail enforcement and resubmission", () => {
   let content: string | undefined;
 
@@ -147,7 +142,7 @@ describe("watch-it-fail enforcement and resubmission", () => {
 // spec-0006: Wording alignment + routing consistency
 // ---------------------------------------------------------------------------
 
-describe("TC-0012-0042: wording alignment implementation mode", () => {
+describe("wording alignment implementation mode", () => {
   it("SKILL.md claims match implementation keywords", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     const agents = ["delivery-planner", "qa-gatekeeper", "implementation-reviewer"];
@@ -158,7 +153,7 @@ describe("TC-0012-0042: wording alignment implementation mode", () => {
   });
 });
 
-describe("TC-0012-0043: aspirational language detection", () => {
+describe("aspirational language detection", () => {
   it("SKILL.md does not use vague aspirational phrases without concrete criteria", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     // Responsibility sections should use concrete verbs, not vague aspirational language
@@ -166,7 +161,7 @@ describe("TC-0012-0043: aspirational language detection", () => {
   });
 });
 
-describe("TC-0012-0044: routing consistency", () => {
+describe("routing consistency", () => {
   it("SKILL.md routing matches handoff contract targets", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     expect(content).toMatch(
@@ -180,7 +175,7 @@ describe("TC-0012-0044: routing consistency", () => {
   });
 });
 
-describe("TC-0012-0045: routing contradiction detection", () => {
+describe("routing contradiction detection", () => {
   it("no contradictory routing in SKILL.md handoff contracts", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     expect(content).not.toMatch(/implementation agent[\s\S]*?assigns itself the next item/i);

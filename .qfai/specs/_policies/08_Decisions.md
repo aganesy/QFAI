@@ -2,7 +2,7 @@
 
 ## Decisions
 
-### DR-0018: Contract-first downstream
+### DR-0278: Contract-first downstream
 
 116 items — discussion-20260312143000000（symlink アーキテクチャ移行）、
 discussion-20260313143000000（SDP）、discussion-20260314053646704（AskUserQuestion MUST 化）、
@@ -27,7 +27,7 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Rejected-A: downstream も discussion pack を直接読めるようにする
   - DO NOT: downstream の fallback source に discussion pack を残さない。Temptation: 既存 sidecar をそのまま使いたい
 
-### DR-0019: Canonical UIX validators are direct-pack only
+### DR-0279: Canonical UIX validators are direct-pack only
 
 - Decision: `runCanonicalUixValidators` は direct discussion-pack validation 用に限定し、repo-root downstream validate の production path とはみなさない
 - Context: 旧 posture では canonical runner が repo-root validate の主経路だったが、current code は contract-first validator 群を primary path にしている
@@ -35,7 +35,7 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Rejected: canonical runner を repo-root validate の唯一経路として残す
   - DO NOT: latest discussion pack の暗黙解決を downstream validate に戻さない。Temptation: 1 runner に統合したい
 
-### DR-0020: Web Research spec ID convergence
+### DR-0280: Web Research spec ID convergence
 
 - Decision: Web Research Enhancement の active spec は `spec-0016` とし、`spec-0034` は historical migration record に降格する
 - Context: `_policies/03_Capabilities.md` では active capability ID が `CAP-0016` であり、`spec-0034` は orphan ID になっていた
@@ -65,13 +65,29 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Rejected-B: 無制限にブロッキング FAIL を許可する（無限ループのリスクが許容できない）
   - DO NOT: 連続 FAIL の上限を設けないまま全否定エージェントを運用しない。Temptation: 品質を最大化したい
 
-### DR-0012-002: パターン倍増エージェントの全 skill 共通化
+### DR-0012-002: Optional concrete-pattern review across skills
 
-- Decision: パターン倍増エージェント（pattern-doubler）を全 skill 共通にする（SDD 専用ではない）
-- Context: 当初 SDD スキルの成果物拡充を目的として設計されたが、ID 付き項目の倍増は全 skill で品質向上に寄与する
-- Rationale: 全 skill 共通化によりパターン数の底上げが全工程で機能する。ID 付き項目が存在しない成果物では N/A として無害に通過できる
-- Rejected: SDD 専用のままにする（他 skill での品質向上機会を逃す）
-  - DO NOT: パターン倍増エージェントを特定 skill に限定しない。Temptation: SDD 以外では不要と思う
+- Decision: Keep `pattern-doubler` optional and advisory across skills.
+  Propose missing concrete business-flow, US, AC, EX or TC coverage with a
+  rationale. Do not demand numeric targets or more BR, non-functional floors,
+  policies, decisions or architecture.
+- Context: Concrete coverage gaps can occur in any skill's artifacts. An ID
+  on an abstract item does not make additional abstract items useful.
+- Rationale: Review should identify missing behavior, not produce items to
+  satisfy a count. Return N/A when only abstract artifacts are available.
+  N/A never excuses a missing mandatory pairing. Independently required gates,
+  product obligations and the whole safety floor in
+  `.agents/rules/minimal-implementation.md` § 2 still apply.
+- Authority: `.qfai/assistant/catalog/review-gate.rules.yml` bounds this mode,
+  including targets in preserved `review-profiles.yml` manifests. Init and
+  upgrade continue to protect adopter manifests.
+- Rejected-A: Numeric doubling adds items without identifying a coverage gap.
+  - DO NOT: Treat an item count or a preserved numeric target as a requirement
+    for more work. Temptation: counts make review easy to measure.
+- Rejected-B: SDD-only review leaves concrete coverage gaps in other skills.
+  - DO NOT: Restrict this optional mode to SDD. Temptation: other skills do not
+    always produce concrete artifacts, but those runs can return N/A.
+- Related: `CR-20260913-0007`.
 
 ### DR-0012-003: 新エージェントの実行順序
 
@@ -1034,7 +1050,7 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 
 ### v1.7.13 Canonical Sidecar Convergence (implementation-derived, 2026-04-04)
 
-### DR-0093: Canonical/Legacy Validator Separation
+### DR-0281: Canonical/Legacy Validator Separation
 
 - Decision: production-path `validate.ts` に `runCanonicalUixValidators()` のみを登録し、DDP validators を `legacy/` namespace に移動する
 - Context: 旧 monolithic `uixValidators.ts` が canonical と legacy の責務を混在させていた
@@ -1042,7 +1058,7 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Rejected: legacy validators を production path に残す（canonical contract 違反の検出精度が下がる）
   - DO NOT: legacy validator を validate.ts pipeline に登録しない。Temptation: 後方互換性のために残したい
 
-### DR-0094: prototyping.yaml as Required Side Artifact
+### DR-0282: prototyping.yaml as Required Side Artifact
 
 - Decision: discussion-pack の必須アーティファクトとして prototyping.yaml を追加し、SDD preflight のブロッカーとする
 - Context: prototyping mode recommendation が discussion-pack 内に構造化されておらず、mode 選択の根拠がトレースできなかった
@@ -1050,7 +1066,7 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Rejected: prototyping.yaml を optional にする（mode recommendation の欠落を検出できない）
   - DO NOT: prototyping.yaml を optional にしない。Temptation: 非 UI プロジェクトでは不要に見える
 
-### DR-0095: Existence-Based Precedence (D-5)
+### DR-0283: Existence-Based Precedence (D-5)
 
 - Decision: prototyping.yaml 内の `prototyping` key の存在自体（値の妥当性ではなく）で namespaced contract を権威的とする
 - Context: 旧実装では値の妥当性チェックで legacy fallback が発動し、意図しない mode 選択が発生していた
@@ -1058,31 +1074,31 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Rejected: 値の妥当性に基づく precedence（legacy fallback が silent に発動する）
   - DO NOT: 値ベースの precedence を使わない。Temptation: 空の prototyping block でもデフォルトにフォールバックしたい
 
-### DR-0096: IssueCategory "canonical" 追加
+### DR-0284: IssueCategory "canonical" 追加
 
 - Decision: IssueCategory type に "canonical" を追加し、新規 canonical validator が emit する issue の category とする
 - Context: "compatibility" と "change" の 2 値では canonical contract violation と legacy warning を区別できなかった
 - Rationale: downstream tooling（report, CI checks）が canonical vs compatibility vs change を区別可能になる
 
-### DR-0097: Report Prototyping Section as Foundation-Only
+### DR-0285: Report Prototyping Section as Foundation-Only
 
 - Decision: report.ts に prototyping observability section を追加するが、v1.7.13 では blocking validation には統合しない
 - Context: prototyping data の品質が安定するまで、observability としてのみ提供する
 - Rationale: foundation-only として段階的に導入し、将来の validation 統合に向けた data model を確立する
 
-### DR-0098: Harness Loop Status Normalization
+### DR-0286: Harness Loop Status Normalization
 
 - Decision: harness loop の termination status を "converged" / "max-iterations" に正規化する（旧 "accepted" / "cap-reached" を置換）
 - Context: evidence summary が "accepted" を参照していたが、loop が "converged" を emit していたため、switch case が一致しなかった（バグ）
 - Rationale: terminology alignment + bug fix
 
-### DR-0099: ModeGuidance "premium" → "full-harness"
+### DR-0287: ModeGuidance "premium" → "full-harness"
 
 - Decision: ModeGuidance.recommend() が返す mode を "premium" から "full-harness" に変更し、有効な PrototypingMode 値にする
 - Context: "premium" は PrototypingMode の有効値ではなく、type mismatch が silent に発生していた
 - Rationale: type safety + terminology alignment
 
-### DR-0100: Prototyping Calibration Config Block
+### DR-0288: Prototyping Calibration Config Block
 
 - Decision: qfai.config.yaml に prototyping.calibration stanza を追加し、デフォルト値（accept: 0.8, refine: 0.5, maxIterations: 15）を設定する
 - Context: calibration thresholds がハードコードされており、プロジェクト固有の調整ができなかった
@@ -1090,31 +1106,31 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 
 ### v1.7.13 補完 (コミット履歴分析由来, 2026-04-04)
 
-### DR-0101: Phase1 Ratchet Mechanism
+### DR-0289: Phase1 Ratchet Mechanism
 
 - Decision: config.uiux.phase1ReleaseDate 設定時、リリース日から 30 日以内の UIX-VAL-\* エラーを warning に降格する
 - Context: canonical UIX validator の初期ロールアウト期間中に hard failure が多発すると採用障壁が高くなる
 - Rationale: 30 日の grace period で段階的な移行を可能にし、期限後は full enforcement に移行
 
-### DR-0102: DDH Validator Sidecar Source Mapping
+### DR-0290: DDH Validator Sidecar Source Mapping
 
 - Decision: discussionDesignHardening の 7 バリデータを sidecar-first モデルに完全書き換え。読み取り先を 03_Story-Workshop.md DDS セクションから uiux/ sidecar ファイルに変更
 - Context: DDS セクションは monolithic で保守性が低く、sidecar ファイルは modular
 - Rationale: 各バリデータが明確な sidecar ファイルを primary source として参照することで、責務分離と保守性向上
 
-### DR-0103: State Coverage Required States Change
+### DR-0291: State Coverage Required States Change
 
 - Decision: state coverage 必須状態を ["empty","loading","error","populated"] から ["default","loading","empty","error"] に変更
 - Context: "populated" は "default" の部分集合であり、"default" が初期表示状態としてより正確
 - Rationale: "default" は画面の初期表示を意味し、populated/empty は default の variant として扱う方が概念的に正しい
 
-### DR-0104: Nested Bullet Canonical Format with CSV Fallback
+### DR-0292: Nested Bullet Canonical Format with CSV Fallback
 
 - Decision: strategy と screen contract の list-type フィールドに nested bullet list を canonical format とし、CSV inline を legacy fallback として維持
 - Context: CSV format では複雑なデータ構造の表現力が不足
 - Rationale: nested bullet は可読性と構造化に優れ、CSV fallback は既存パックの後方互換性を維持
 
-### DR-0105: QFAI-VIS-002 Severity Downgrade to Info
+### DR-0293: QFAI-VIS-002 Severity Downgrade to Info
 
 - Decision: HTML+CSS visual mock 不在の QFAI-VIS-002 を warning → info に降格
 - Context: sidecar-first モデルで HTML mock は primary truth ではなく optional fallback
@@ -1134,7 +1150,7 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Context: barrel export に legacy validator が混入すると production path の信頼性が低下
 - Rationale: 明確な module boundary により、意図しない legacy validator の production path 混入を構造的に防止
 
-### DR-0108: compatibility IssueCategory 完全削除 (v1.7.14)
+### DR-0294: compatibility IssueCategory 完全削除 (v1.7.14)
 
 - Decision: IssueCategory union type から "compatibility" を完全削除し、"canonical" | "change" のみとする
 - Context: v1.7.13 で canonical/legacy validator 分離を導入したが、IssueCategory に "compatibility" が残存しており意味が曖昧だった
@@ -1142,7 +1158,7 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Rejected-A: "compatibility" を "legacy" にリネームして残す（legacy 自体が current-only SSOT に反する）
   - DO NOT: IssueCategory に compatibility/legacy/migration を意味するカテゴリを再導入しない。Temptation: 後方互換チェックのためにカテゴリを残したい
 
-### DR-0109: Canonical Prototyping Surfaces — -ui suffix 廃止 (v1.7.14)
+### DR-0295: Canonical Prototyping Surfaces — -ui suffix 廃止 (v1.7.14)
 
 - Decision: PrototypingSurface を web-ui/mobile-ui/desktop-ui から web/mobile/desktop/cli/mixed の 5 値に変更。"non-ui" は prototyping surface 外の分類とする
 - Context: v1.7.13 では web-ui 等の -ui suffix 付き surface が存在し、"non-ui" も prototyping surface に含まれていた
@@ -1169,7 +1185,7 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 ### DR-0112: Namespaced-Only Schema — legacy top-level keys hard-reject (v1.7.14)
 
 - Decision: prototyping.yaml の legacy top-level recommendation keys（recommended_mode, allowed_modes 等）が存在する場合、namespaced `prototyping:` ブロックの有無に関わらず hard error とする
-- Context: v1.7.13 の existence-based precedence（DR-0095）では namespaced block 優先だが legacy keys は warning（QFAI-PROT-231/232）で許容していた
+- Context: v1.7.13 の existence-based precedence（DR-0283）では namespaced block 優先だが legacy keys は warning（QFAI-PROT-231/232）で許容していた
 - Rationale: current-only SSOT リリースとして、legacy schema の存在自体を構造的に禁止する。warning→error 昇格により、migration 期間を明確に終了させる
 - Rejected-A: warning を維持し v1.8.0 で error に昇格（migration 延長は convergence を遅延させる）
   - DO NOT: legacy top-level keys の存在を warning で許容しない。Temptation: 既存プロジェクトへの影響を緩和したい

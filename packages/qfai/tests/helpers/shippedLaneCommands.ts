@@ -1175,8 +1175,12 @@ export const ALLOWED_WORKFLOW_SHAPE: ReadonlyMap<string, string> = new Map([
 
 export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   [
+    "qfai-docs.yml#checks",
+    '{"name":"qfai docs check (${{ matrix.check }})","strategy":{"fail-fast":false,"matrix":{"check":["shape","mermaid"]}},"runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":15}',
+  ],
+  [
     "qfai-docs.yml#docs",
-    '{"name":"qfai docs (document shape and Mermaid syntax)","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":15}',
+    '{"name":"qfai docs (document shape and Mermaid syntax)","needs":"checks","if":"${{ always() }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -1208,7 +1212,11 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"qfai validate (full profile, fail on error)","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10}',
+    '{"name":"qfai validate check (${{ matrix.profile }})","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10,"strategy":{"fail-fast":false,"matrix":{"profile":"${{ fromJSON(github.event_name == \'pull_request\' && \'[\\"full\\",\\"drift\\"]\' || \'[\\"full\\"]\') }}"}}}',
+  ],
+  [
+    "qfai-validate.yml#summary",
+    '{"name":"qfai validate (full profile, fail on error)","needs":"validate","if":"${{ always() }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
 ]);
 
@@ -1232,11 +1240,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
+  ["qfai-docs.yml", "ee8967d86820163e7cba03165bec9cf4b9290bea2d5df1e4cca6d318ae7d904c"],
   ["qfai-tests.yml", "e3d534f0e816fdc42db85265b56e4a77343d3679bb8944d3b441bffe5c874345"],
-  // Re-pinned when the lane gained the drift gate and the conditional checkout
-  // depth that gate needs.
-  ["qfai-validate.yml", "d4968abdb0951ff7210fc400aaecb3bea8cb52e3a46f4bbb23941b55f6a6df37"],
-  ["qfai-docs.yml", "43c5d722c44a9d5fc24cd65477782a66ca143293c2074ed698718494d1262d5d"],
+  ["qfai-validate.yml", "2f3ff776c510fe2b3d4dd736b5d6dc4413bfdd0409b8239a9c26841cf9c8d159"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1327,8 +1333,26 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // message — then drop the added bullet and confirm the previous digest comes back byte for
     // byte. That check is what keeps a re-pin a review of one line rather than a re-blessing of
     // the whole file.
+    //
+    // Re-pinned for the grilling bullet, which now says a session ends in one of four named
+    // endings instead of on an empty frontier and the user's confirmation. Derived by running
+    // `qfai init` into a temp root; restoring the old wording in the written file reproduces
+    // `a246e728…` byte for byte.
+    //
+    // Re-pinned for the review directive the run now writes into the golden rules: one line
+    // pointing at the project's own review policy. Derived the same way; removing that line
+    // from the written file reproduces `0dbc8fe1…` byte for byte.
+    //
+    // Re-pinned for the grilling bullet, which now says agents grill each other outside the
+    // discussion stage and only a critical decision reaches the user. Derived by running
+    // `qfai init` into a temp root; restoring the old wording reproduces `fe028cb8…` byte for byte.
+    //
+    // Re-pinned for one more bullet on that same list, naming `.agents/rules/api-budget.md` — the
+    // rule the run now seeds beside the other masters, which orders the surfaces a question about
+    // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what
+    // it wrote; dropping that one bullet reproduces `7f4f473a…` byte for byte.
     ".github/copilot-instructions.md",
-    "a246e728b78099a29460764aaa7e09f3b11cdb420f0ffe061a1812e9fa8c38c2",
+    "c7e5457bbe1001e950531e09588830fc180afcc45ef08ce032291bfe0c377cb8",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1457,16 +1481,49 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // the project deleted stays deleted. Restoring the old sentence in both files
   // reproduces `fff9e210…` and `7203ba75…` byte for byte, which is what makes
   // this a review of one sentence per file.
-  ["AGENTS.md", "d3d39ba436dfbb657845fd0f339e18a174cba0ad38ca8137c116415ca8efa64a"],
-  ["CLAUDE.md", "5b6487bad9c1b9f46901650be64f04cb3aaf000d9d3c51327ec7c62653f64001"],
+  //
+  // Re-pinned for the grilling bullet in the same block, which now says a session ends in one
+  // of four named endings. Derived by running `qfai init` into a temp root; restoring the old
+  // wording in both written files reproduces `d3d39ba4…` and `5b6487ba…` byte for byte.
+  //
+  // Re-pinned for the sentence on later runs, which now says a run rewords a bullet still as an
+  // earlier release wrote it. Derived by running `qfai init` into a temp root; restoring the old
+  // sentence in both written files reproduces `04f04e43…` and `8da8af3f…` byte for byte.
+  //
+  // Re-pinned for the review directive the run now writes: a line pointing at the
+  // project's own review policy, and the sentence in the managed section that says
+  // a later run adds it when it is missing. Derived by running `qfai init` into a
+  // temp root; dropping the line and restoring the old sentence in both written
+  // files reproduces `4317f660…` and `40e0888f…` byte for byte.
+  //
+  // Re-pinned for the grilling bullet, which now says agents grill each other outside the
+  // discussion stage and only a critical decision reaches the user. Derived by running `qfai init`
+  // into a temp root; restoring the old wording in both written files reproduces `d2a68a94…` and
+  // `cbcc6841…` byte for byte.
+  //
+  // Re-pinned for one more bullet in the same block, naming `.agents/rules/api-budget.md` — the
+  // rule the run now seeds beside the other masters, which orders the surfaces a question about
+  // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what it
+  // wrote; dropping that one bullet from both written files reproduces `66f2f506…` and
+  // `bf6a52af…` byte for byte.
+  ["AGENTS.md", "474a294c5789627a609e7fc5a765606f68d204b8e78aaf8412e53cceaab0e7cc"],
+  ["CLAUDE.md", "32299fd56a097bc4c930d2fe50b53f0cadfdefb6b76aad56b7572cd57d8cb420"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
   // and after a Markdown file is written, and the implementation rule after any
   // file is written or edited. Each entry runs `node` in exec form — no shell, no
-  // file reads, no network — and prints one constant JSON envelope, which
+  // network — and prints one JSON envelope, which
   // `tests/assets/documentationClarityHooks.test.ts` executes and parses. The
   // bytes are what an adopter's agent runs, so the bytes are the pin.
+  //
+  // Re-pinned when the messages left this file. Every entry now runs the same
+  // fixed `node -e` reader with two more arguments: the path
+  // `${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json` and the key of one
+  // message. The reader prints that message, and prints nothing when the file or
+  // the key is missing. Events, matchers, `if` conditions and markers are
+  // unchanged, so a changed message now moves `reminders.json` and not this pin.
+  // Derived by running `qfai init` into a temp root and hashing what it wrote.
   //
   // Re-pinned for the three grilling groups. Derived by running `qfai init` into
   // a temp root and hashing what it wrote. Each group is one `node -e` entry
@@ -1476,7 +1533,22 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // is silently absent in a project that moved them. The `UserPromptSubmit`
   // group is one more entry of the same shape, on every turn rather than
   // every write.
-  [".claude/settings.json", "a5f0f0e088022672b869c566a2a4d05cecc7aa7904b9fbde699140e88f5f4827"],
+  //
+  // The grilling groups were also reworded to say who answers: agents outside the discussion
+  // stage, and the user only for a critical decision (`2fc70e4a…` with the text inline). The
+  // merged file carries both changes: that wording lives in `reminders.json`, so the settings
+  // file is the reader layout above, and the digest is the one that layout already had. Derived
+  // again by running `qfai init` into a temp root after the merge.
+  //
+  // Re-pinned for one more `PreToolUse` group, which restates the API-budget rule before a shell
+  // command. It is the only entry here whose program decides whether to print: it reads the command
+  // out of the hook's own input and stays silent unless that command names the forge's CLI or its
+  // API host. The matcher alone is `Bash`, which fires on every compound command, so the filter has
+  // to sit in the program. Everything else is the shape every reminder here takes — one `node -e`
+  // reader, the `reminders.json` path and one message key, no shell and no network. Derived by
+  // running `qfai init` into a temp root and hashing what it wrote; dropping that one group
+  // reproduces `a7547fbe…` byte for byte.
+  [".claude/settings.json", "65be5439b8425a2bec1e68e7084263c25abb82fb0b396dd6583116764bcca665"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1620,11 +1692,13 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * with `sh <file>` — the execution path `initMustNotShip`'s own docstring names. Recorded as gap 11.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
+  "root/.agents/rules/api-budget.md",
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/documentation-clarity.md",
   "root/.agents/rules/grilling.md",
   "root/.agents/rules/interface-clarity.md",
   "root/.agents/rules/minimal-implementation.md",
+  "root/.agents/rules/reminders.json",
   "root/.agents/rules/root-additions-policy.md",
   "root/.agents/rules/temporary-files.md",
   "root/.agents/rules/user-questions.md",
@@ -1869,44 +1943,48 @@ export function initMustNotShip(
  */
 export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false}}',
   ],
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Resolve the package manager (pnpm route fails closed)","id":"package-manager","shell":"bash","run":"<body 40fe24c29a485dc5d462406646b7643a05f5ab2227b9c60a559c9d997b42e7a7>"}',
   ],
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Set up pnpm via pnpm/action-setup 4.4.0 (if project uses pnpm)","if":"${{ hashFiles(\'pnpm-lock.yaml\') != \'\' }}","uses":"pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320"}',
   ],
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Resolve the Node version (adopter file wins, else fall open)","id":"node-version","shell":"bash","run":"<body ef4d36759a58da6e28134d1f67caf0596e88d7509a7d340a1602fa8bb40140d8>"}',
   ],
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Choose a package-manager cache setup-node can actually resolve","id":"node-cache","shell":"bash","run":"<body 8531578b6eba24fc357402381471266984ad26a65f864cb15d4a1f17c7054e1f>"}',
   ],
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Set up Node via actions/setup-node 5.0.0","uses":"actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Install dependencies (lockfile-aware)","shell":"bash","run":"<body a01a22aea86949331e27fdf13eef7fcfddeada4edfeda0b10af48c1e674dfd02>"}',
   ],
   [
-    "qfai-docs.yml#docs",
+    "qfai-docs.yml#checks",
     '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body b761d8e879323adfa7ac7e179e70eaca46078c9768673fd7e850d4d331296d29>"}',
   ],
   [
-    "qfai-docs.yml#docs",
-    '{"name":"Check SDD document shape","shell":"bash","run":"<body 34a9e3456d446848663e72cd3d055a826e9b817e9e027722a461ed682955178e>"}',
+    "qfai-docs.yml#checks",
+    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body 34a9e3456d446848663e72cd3d055a826e9b817e9e027722a461ed682955178e>"}',
+  ],
+  [
+    "qfai-docs.yml#checks",
+    '{"name":"Check Mermaid diagram syntax","if":"matrix.check == \'mermaid\'","shell":"bash","run":"<body 1255663d291ad8e0951cdc1eeba102fcd20f9fa27a484a52c55b196cb033d517>"}',
   ],
   [
     "qfai-docs.yml#docs",
-    '{"name":"Check Mermaid diagram syntax","shell":"bash","run":"<body 1255663d291ad8e0951cdc1eeba102fcd20f9fa27a484a52c55b196cb033d517>"}',
+    '{"name":"Require every document check to succeed","env":{"CHECK_RESULT":"${{ needs.checks.result }}"},"shell":"bash","run":"<body 8e8c3a23f87d1f0cbe19cf75d718fee8047e478cd11a4cc88a581a7696666c8a>"}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -1945,10 +2023,6 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
     '{"name":"Aggregate lane results (green on skip)","env":{"QFAI_NEEDS_JSON":"${{ toJSON(needs) }}"},"shell":"bash","run":"<body 7ee82953e37be82d81440045826adfa89282355c973d6e7dacf80bc0ed381fe8>"}',
   ],
   [
-    // Re-pinned when the drift gate below was added. The checkout asks for full
-    // history on a pull request, because the gate compares this branch against
-    // its base and a shallow clone has no merge base to compare from. A push
-    // keeps the shallow fetch, where the gate does not run.
     "qfai-validate.yml#validate",
     '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":"${{ github.event_name == \'pull_request\' && \'0\' || \'1\' }}"}}',
   ],
@@ -1978,15 +2052,15 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"qfai validate","run":"<body cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9>"}',
+    '{"name":"qfai validate","if":"matrix.profile == \'full\'","run":"<body cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9>"}',
   ],
   [
-    // The `full` profile above evaluates every gate group except drift, so on
-    // its own the lane cannot fail on a downstream edit to upstream SSOT. Pull
-    // requests only: the gate compares against a base branch and says nothing
-    // when it cannot resolve one.
     "qfai-validate.yml#validate",
-    '{"name":"qfai validate (drift protocol)","if":"github.event_name == \'pull_request\'","run":"<body 995eb7509a0aa6e91297702f51ec1bdd4f4f5b3cfac4c354edcfa9b28b2303cc>"}',
+    '{"name":"qfai validate (drift protocol)","if":"matrix.profile == \'drift\' && github.event_name == \'pull_request\'","run":"<body 995eb7509a0aa6e91297702f51ec1bdd4f4f5b3cfac4c354edcfa9b28b2303cc>"}',
+  ],
+  [
+    "qfai-validate.yml#summary",
+    '{"name":"Require every validation profile to succeed","shell":"bash","env":{"PROFILE_RESULT":"${{ needs.validate.result }}"},"run":"<body b00785d5001b9e242eb84c75e9e2dc866ead1b1adafe804c8a752ee379347043>"}',
   ],
 ];
 
@@ -2019,6 +2093,7 @@ export const ALLOWED_JOB_KEYS: ReadonlySet<string> = new Set([
   "permissions",
   "runs-on",
   "steps",
+  "strategy",
   "timeout-minutes",
 ]);
 
@@ -2226,6 +2301,8 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
  * a variable nobody wrote down is refused whether or not anyone has worked out what it would do.
  */
 export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
+  ["CHECK_RESULT", "${{ needs.checks.result }}"],
+  ["PROFILE_RESULT", "${{ needs.validate.result }}"],
   ["QFAI_BASE_REF", "${{ github.event.pull_request.base.sha || github.event.before }}"],
   // Which event started the run, so the detection body can take a two-dot diff on a push and a
   // three-dot one on a pull request. Its value comes from `github.event_name`, a closed set

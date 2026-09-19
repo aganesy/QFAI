@@ -1,6 +1,8 @@
+import { readdirSync, readFileSync, statSync, type Dirent } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "./config.js";
@@ -11,9 +13,11 @@ import { collectApiContractFiles, collectDbContractFiles } from "./discovery.js"
 import {
   collectFilesByGlobs,
   DEFAULT_GLOB_FILE_LIMIT,
+  isFileSystemError,
   unusableGlobReason,
   type CollectFilesByGlobsResult,
 } from "./fs.js";
+import { braceRangeMembers, BraceRangeRefused } from "./globBraceRange.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { resolveSurfaceUnion } from "./prototyping/specResolution.js";
 import {
@@ -23,8 +27,9 @@ import {
   resolveTestCaseTables,
 } from "./specPackParsers.js";
 import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
-import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
-import { maskJsNonCode } from "./validators/jsSourceMask.js";
+import { isGlobExclusion, namedTestFileMatcher } from "./testGlobExtensions.js";
+import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "./traceability.js";
+import { maskJsNonCode, type JsMaskOptions } from "./validators/jsSourceMask.js";
 
 // The short form carries `(?!-)`; the long form does not.
 //
@@ -51,23 +56,340 @@ import { maskJsNonCode } from "./validators/jsSourceMask.js";
 // annotation (`TC-0001-0002-foo`) still matches and is still reported as an
 // unknown reference. Trading a false report for a silent miss is the worse
 // direction in a validator.
+/** A literal in double quotes, on one line. */
+const DOUBLE_QUOTED = String.raw`"(?:[^"\\\n]|\\.)*"`;
+/** A literal in double or single quotes, on one line. */
+const QUOTED = String.raw`${DOUBLE_QUOTED}|'(?:[^'\\\n]|\\.)*'`;
+
 /**
- * Extensions whose literals {@link maskTestSource} can blank.
+ * A C# string literal in any of its three forms: ordinary, verbatim, and raw.
  *
- * The scan walks whatever a project puts under its test roots. A JS lexer over
- * a `.py` or `.rb` file would blank spans by JS's rules, and over-blanking here
- * hides a real annotation — the one failure this must not introduce.
+ * A display name is written in whichever the author reached for, and the
+ * masking reads all three — so a restoration pattern reading only the first
+ * loses the annotation in the other two.
  */
-const JS_TEST_EXTENSIONS: ReadonlySet<string> = new Set([
-  ".ts",
-  ".tsx",
-  ".mts",
-  ".cts",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".cjs",
+const CSHARP_QUOTED = String.raw`@"(?:[^"]|"")*"|(?<csharpFence>"{3,})[\s\S]*?\k<csharpFence>|${DOUBLE_QUOTED}`;
+
+/**
+ * A Ruby string literal, including the percent forms a name may be written in.
+ *
+ * The delimiter rules are the masking scanner's: a paired bracket nests, and
+ * any other punctuation closes on its own repeat. Reading only the brackets
+ * left `%q!…!` masked and never restored, so the name it held was reported
+ * as uncovered.
+ */
+const RUBY_PERCENT = String.raw`%[qQ]?(?:\((?:[^()\\]|\\.)*\)|\{(?:[^{}\\]|\\.)*\}|\[(?:[^\[\]\\]|\\.)*\]|<(?:[^<>\\]|\\.)*>|(?<rubyFence>[^A-Za-z0-9\s(\[{<])(?:[^\\]|\\.)*?\k<rubyFence>)`;
+const RUBY_QUOTED = String.raw`${RUBY_PERCENT}|${QUOTED}`;
+
+/**
+ * The words a Ruby `/` opens a pattern after.
+ *
+ * A value ends before each of them, so the shared JavaScript set left a
+ * regex written after `if` or `unless` read as a division.
+ */
+const RUBY_REGEX_AFTER: ReadonlySet<string> = new Set([
+  "if",
+  "elsif",
+  "unless",
+  "while",
+  "until",
+  "when",
+  "case",
+  "and",
+  "or",
+  "not",
+  "return",
+  "match",
+  "then",
+  "do",
+  "in",
+  // A command call takes its argument with no parentheses, so the method
+  // name stands where an operator would and the `/` after it opens a
+  // pattern rather than dividing.
+  "split",
+  "gsub",
+  "sub",
+  "scan",
+  "grep",
+  "grep_v",
+  "index",
+  "rindex",
+  "partition",
+  "rpartition",
 ]);
+
+/**
+ * The line after which a Ruby file is data.
+ *
+ * Everything past it is a payload `DATA` reads, so a fixture written there
+ * is not source and an annotation-shaped id in it is not a reference.
+ */
+const RUBY_DATA_SECTION = /^__END__[ \t]*\r?$/m;
+
+/** The call after which a PHP file is data, as `__END__` is Ruby's. */
+const PHP_DATA_SECTION = /^[ \t]*__halt_compiler\s*\(\s*\)\s*;/m;
+
+/** A Java string literal: one line, or a text block. */
+/** A Java string literal: one line, or a text block, whose fence no escape reaches. */
+const JAVA_QUOTED = String.raw`"""(?:[^\\]|\\[\s\S])*?"""|${DOUBLE_QUOTED}`;
+
+/** A Scala string literal: one line, or triple-quoted. */
+/** A Scala string literal: one line, or triple-quoted, which is raw. */
+const SCALA_QUOTED = String.raw`"""[\s\S]*?"""|${QUOTED}`;
+
+/**
+ * Where a language's tests carry a name written as a literal.
+ *
+ * Each pattern has two named groups: `name`, the literal, and `anchor`, the
+ * code beside it that makes it a declaration. The anchor must survive masking
+ * for the name to count, so a declaration quoted inside a fixture stays data.
+ */
+function namePattern(source: string): RegExp {
+  return new RegExp(source, "dg");
+}
+
+/** A runner call taking the name as its first argument, as JavaScript writes it. */
+const JS_TEST_NAME = namePattern(
+  String.raw`\b(?<anchor>it|test|describe|suite|bench|scenario)(?:\s*\.\s*[A-Za-z_$][\w$]*(?:\s*\([^()]*\))?)*\s*\(\s*(?<name>${QUOTED}|` +
+    "`(?:[^`\\\\]|\\\\.)*`)",
+);
+
+/**
+ * How the scan reads one language's test source: the lexer settings that find
+ * its literals and comments, and where its tests carry a literal name.
+ */
+type TestSourceDialect = {
+  readonly mask: JsMaskOptions;
+  readonly names: readonly RegExp[];
+};
+
+/**
+ * The dialects the scan can mask, by extension.
+ *
+ * A language is listed only where its literals and its comments can both be
+ * told apart, and every form its tests write a literal name in is named: a name
+ * the table misses is blanked with the data around it, and the annotation in it
+ * stops counting.
+ *
+ * SIMPLIFIED: Visual Basic, whose comments open with the quote a string does,
+ * and every extension not listed are read unmasked, so an id a test in one of
+ * them holds as data still counts as a reference.
+ * Lift when: a project's suite in one of them reports such an id.
+ */
+const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
+  (
+    [
+      [["ts", "tsx", "mts", "cts", "js", "jsx", "mjs", "cjs"], { comments: false }, [JS_TEST_NAME]],
+      // A test's name is its identifier, and a docstring is a literal: the
+      // stage counts an annotation in a comment or a test's name, not in one.
+      [
+        ["py"],
+        {
+          comments: false,
+          hashComments: true,
+          tripleQuoted: true,
+          slashComments: false,
+          regexLiterals: false,
+          hashBracketComments: true,
+        },
+        [
+          // A parameterized case takes its collected name from the id, so a
+          // reference there is the test's name and not fixture data.
+          namePattern(
+            // Every element of the list, not the first alone: the scan resumes
+            // after each literal and cannot rediscover the call ahead of it.
+            String.raw`(?<=(?<anchor>parametrize)[\s\S]{0,400}?\bids\s*=\s*\[[^\]]{0,400}?)(?<name>${QUOTED})`,
+          ),
+          namePattern(
+            // A parameter is often built by a call, and a span stopping at the
+            // first `)` never reached the `id` argument beyond it.
+            String.raw`(?<anchor>pytest\.param)\s*\((?:[^()]|\((?:[^()]|\([^()]*\))*\)){0,400}?\bid\s*=\s*(?<name>${QUOTED})`,
+          ),
+        ],
+      ],
+      [
+        ["rb"],
+        // Ruby writes a regex between slashes as JavaScript does, and `%r{…}`
+        // is one of its percent literals, so both forms are read.
+        {
+          comments: false,
+          hashComments: true,
+          percentLiterals: true,
+          equalsBlockComments: true,
+          multilineQuoted: true,
+          dataSectionMarker: RUBY_DATA_SECTION,
+          // A value ends before each of these in Ruby, so the shared set — which
+          // is JavaScript's — never opened a pattern after one.
+          regexAfterWords: RUBY_REGEX_AFTER,
+        },
+        [
+          namePattern(
+            String.raw`\b(?<anchor>it|test|describe|context|specify|example|scenario|feature)\s*\(?\s*(?<name>${RUBY_QUOTED})`,
+          ),
+        ],
+      ],
+      [
+        ["go"],
+        { comments: false, rawBacktick: true, regexLiterals: false },
+        [
+          // The receiver is part of the anchor: an ordinary helper named
+          // `Run` takes a first argument too, and restoring that literal
+          // cleared an obligation nothing covers.
+          namePattern(
+            String.raw`\b(?<anchor>[tbf]\s*\.\s*Run)\s*\(\s*(?<name>${DOUBLE_QUOTED}|` + "`[^`]*`)",
+          ),
+        ],
+      ],
+      [
+        // Java's block comments do not nest, and `test` / `describe` / `should`
+        // are not declarations there — its tests are named by annotations.
+        ["java"],
+        { comments: false, tripleQuoted: true, regexLiterals: false },
+        [
+          namePattern(
+            String.raw`(?<anchor>@DisplayName)\s*\(\s*(?:value\s*=\s*)?(?<name>${JAVA_QUOTED})`,
+          ),
+          namePattern(
+            String.raw`(?<anchor>@(?:ParameterizedTest|RepeatedTest))\s*\([^)]*?\bname\s*=\s*(?<name>${JAVA_QUOTED})`,
+          ),
+        ],
+      ],
+      [
+        // Groovy's block comments close at the first `*/`, as Java's do, and it
+        // keeps the slash rule for its slashy strings with the dollar form
+        // beside it.
+        ["groovy"],
+        { comments: false, tripleQuoted: true, dollarSlashyStrings: true, multilineSlashy: true },
+        [
+          namePattern(
+            String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${QUOTED})`,
+          ),
+          namePattern(String.raw`\b(?<anchor>def)\s+(?<name>${QUOTED})\s*\(`),
+        ],
+      ],
+      [
+        ["kt", "kts"],
+        {
+          comments: false,
+          tripleQuoted: true,
+          // Kotlin nests its block comments and takes no escape inside a raw
+          // triple-quoted string, where a trailing backslash is a character.
+          nestedBlockComments: true,
+          rawTripleQuoted: true,
+          regexLiterals: false,
+        },
+        [
+          namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${DOUBLE_QUOTED})`),
+          namePattern(
+            String.raw`(?<anchor>@ParameterizedTest)\s*\([^)]*?\bname\s*=\s*(?<name>${DOUBLE_QUOTED})`,
+          ),
+          namePattern(
+            String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${QUOTED})`,
+          ),
+          // Kotlin names a function in backticks, and Spock a method in quotes.
+          // A backtick name counts where an annotation declares the function a
+          // test; `fun` alone also names an ordinary helper.
+          namePattern(
+            String.raw`(?<anchor>@(?:Test|ParameterizedTest|RepeatedTest|TestFactory))[^{};]{0,200}?\bfun\s+(?<name>` +
+              "`[^`\\n]+`)",
+          ),
+          namePattern(String.raw`\b(?<anchor>def)\s+(?<name>${QUOTED})\s*\(`),
+          // Kotest's string spec opens a block, which no membership test does.
+          namePattern(String.raw`(?<name>${DOUBLE_QUOTED})\s*(?<anchor>\{)`),
+        ],
+      ],
+      [
+        // Scala keeps the word-spec forms. `in` is a membership operator in
+        // Kotlin, so reading `"…" in ids` there as a test name put a data
+        // string back into the source and cleared an obligation nothing covers.
+        ["scala"],
+        {
+          comments: false,
+          tripleQuoted: true,
+          regexLiterals: false,
+          nestedBlockComments: true,
+          rawTripleQuoted: true,
+          // `'fixture` is a symbol, with no closing apostrophe after it.
+          lifetimes: true,
+        },
+        [
+          namePattern(String.raw`(?<anchor>@DisplayName)\s*\(\s*(?<name>${SCALA_QUOTED})`),
+          namePattern(
+            String.raw`\b(?<anchor>it|test|describe|context|should|feature|scenario)\s*\(\s*(?<name>${SCALA_QUOTED})`,
+          ),
+          namePattern(
+            String.raw`(?<name>${SCALA_QUOTED})\s*(?<anchor>\{|\b(?:in|should|must|can|when)\b)`,
+          ),
+        ],
+      ],
+      [
+        ["cs"],
+        { comments: false, verbatimStrings: true, regexLiterals: false },
+        [
+          namePattern(
+            String.raw`\[(?:Fact|Theory|Test|TestCase|TestMethod|DataTestMethod|Description)[^\]]*?\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${CSHARP_QUOTED})`,
+          ),
+        ],
+      ],
+      [
+        // Expecto and the attribute form both, since an F# suite may use
+        // either. Masked without the first, a real annotation in a test's own
+        // name disappeared and the obligation read as uncovered.
+        ["fs"],
+        {
+          comments: false,
+          verbatimStrings: true,
+          parenStarComments: true,
+          regexLiterals: false,
+          // `'T` is a type parameter, and no closing apostrophe follows it.
+          lifetimes: true,
+        },
+        [
+          namePattern(
+            String.raw`\[(?:Fact|Theory|Test|TestCase|TestMethod|DataTestMethod|Description)[^\]]*?\b(?<anchor>DisplayName|TestName)\s*=\s*(?<name>${CSHARP_QUOTED})`,
+          ),
+          namePattern(
+            String.raw`\b(?<anchor>testCase|testCaseAsync|ftestCase|ptestCase|testList|testProperty|testTheory)\s+(?<name>${CSHARP_QUOTED})`,
+          ),
+        ],
+      ],
+      // Rust's apostrophe opens a lifetime as often as a character, and paired
+      // as a quote it swallowed the trailing comment an annotation sits in.
+      [
+        ["rs"],
+        {
+          comments: false,
+          lifetimes: true,
+          regexLiterals: false,
+          rustRawStrings: true,
+          nestedBlockComments: true,
+        },
+        [],
+      ],
+      [
+        ["php"],
+        {
+          comments: false,
+          hashComments: true,
+          regexLiterals: false,
+          phpHeredocs: true,
+          multilineQuoted: true,
+          dataSectionMarker: PHP_DATA_SECTION,
+        },
+        [
+          namePattern(String.raw`\b(?<anchor>it|test|describe)\s*\(\s*(?<name>${QUOTED})`),
+          // PHPUnit names a test in an attribute, which the hash-comment rule
+          // leaves as code while the literal inside it is masked.
+          namePattern(
+            String.raw`#\[[^\]]*?(?<anchor>TestDox|DataProvider)\s*\(\s*(?:[A-Za-z_]\w*\s*:\s*)?(?<name>${QUOTED})`,
+          ),
+        ],
+      ],
+    ] satisfies [string[], JsMaskOptions, RegExp[]][]
+  ).flatMap(([extensions, mask, names]) =>
+    extensions.map((extension): [string, TestSourceDialect] => [extension, { mask, names }]),
+  ),
+);
 
 /**
  * A test file's text with its string, template and regex literals blanked.
@@ -82,22 +404,12 @@ const JS_TEST_EXTENSIONS: ReadonlySet<string> = new Set([
  * line a finding names are unchanged.
  */
 function maskTestSource(file: string, text: string): string {
-  if (!JS_TEST_EXTENSIONS.has(path.extname(file).toLowerCase())) {
+  const dialect = TEST_SOURCE_DIALECTS.get(path.extname(file).slice(1).toLowerCase());
+  if (dialect === undefined) {
     return text;
   }
-  return restoreTestNames(maskJsNonCode(text, { comments: false }), text);
+  return restoreTestNames(maskJsNonCode(text, dialect.mask), text, dialect.names);
 }
-
-/**
- * A test's own name, in three parts: the runner, the call up to the name, and
- * the name itself.
- *
- * The runner may carry modifiers before the call that takes the name
- * (`it.each(rows)`, `describe.skipIf(x)`), and the name may be written in any
- * of the three quote forms.
- */
-const TEST_NAME_RE =
-  /\b(it|test|describe|suite|bench|scenario)((?:\s*\.\s*[A-Za-z_$][\w$]*(?:\s*\([^()]*\))?)*\s*\(\s*)("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)/g;
 
 /**
  * Puts each test's name back into the masked text.
@@ -123,15 +435,19 @@ const TEST_NAME_RE =
  * The mask replaces one character for one, so a restored name goes back at the
  * offset it came from and every later offset is unmoved.
  */
-function restoreTestNames(masked: string, original: string): string {
+function restoreTestNames(masked: string, original: string, patterns: readonly RegExp[]): string {
   let restored = masked;
-  for (const match of original.matchAll(TEST_NAME_RE)) {
-    const [, runner = "", call = "", name = ""] = match;
-    if (!restored.startsWith(runner, match.index)) {
-      continue;
+  for (const pattern of patterns) {
+    for (const match of original.matchAll(pattern)) {
+      const anchor = match.indices?.groups?.anchor;
+      const name = match.indices?.groups?.name;
+      if (anchor === undefined || name === undefined) continue;
+      if (restored.slice(anchor[0], anchor[1]) !== original.slice(anchor[0], anchor[1])) {
+        continue;
+      }
+      restored =
+        restored.slice(0, name[0]) + original.slice(name[0], name[1]) + restored.slice(name[1]);
     }
-    const start = match.index + runner.length + call.length;
-    restored = restored.slice(0, start) + name + restored.slice(start + name.length);
   }
   return restored;
 }
@@ -167,7 +483,20 @@ const DB_CONTRACT_ID_RE = /^CON-DB-\d+$/;
  * nothing at all.) `QFAI-ATDD-111/112/113` therefore reported obligations as
  * uncovered no matter how many correctly annotated tests existed.
  */
-const DEFAULT_TEST_FILE_GLOB = "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}";
+const DEFAULT_TEST_FILE_EXTENSIONS = [
+  "ts",
+  "tsx",
+  "js",
+  "jsx",
+  "mjs",
+  "cjs",
+  "mts",
+  "cts",
+  "feature",
+  "md",
+  "markdown",
+] as const;
+const DEFAULT_TEST_FILE_GLOB = `**/*.{${DEFAULT_TEST_FILE_EXTENSIONS.join(",")}}`;
 
 export type AtddTestKind = "e2e" | "api" | "integration";
 
@@ -188,9 +517,29 @@ export type AtddSpecRefs = Map<string, Map<string, Set<string>>>;
 
 export type AtddTraceabilityScan = {
   globs: string[];
+  /**
+   * Files collected, which is also the number an acceptance layer owns.
+   *
+   * The collector drops a file in no acceptance layer before it is counted,
+   * so this is the count the coverage rules are computed from rather than a
+   * match total a reader has to discount.
+   */
   matchedFileCount: number;
   truncated: boolean;
   limit: number;
+  /**
+   * The selecting patterns whose files could not all be read, each with the
+   * reason. The others were still scanned, so a reference missing from the
+   * tests only these select is not evidence those tests hold none.
+   */
+  unreadable: string[];
+  /**
+   * Directories the scan could not read and read past, in POSIX form: relative
+   * to the repository, or absolute where a scanned root lies outside it. The
+   * rest of each pattern reaching one was still read, but no test inside the
+   * directory is counted.
+   */
+  unreadableDirectories: string[];
 };
 
 /**
@@ -234,6 +583,12 @@ export type AtddCodeTraceabilityResult = {
    * send the CLI report and the GitHub annotation at a file that is not there.
    */
   declaredSpecDirs: Map<string, string>;
+  /**
+   * Scanned test file, normalised as the findings name it -> the spec whose
+   * `<layer>/spec-NNNN/` directory holds it, at `paths.testsDir` or at a
+   * package's own test root. A file in no such directory has no entry.
+   */
+  testFileSpecOwners: Map<string, string>;
   /**
    * Every declared `US-*`, active and deferred alike — the same
    * declared-not-owed distinction the contract sets draw. A deferred story is
@@ -313,8 +668,10 @@ export type AtddCodeTraceabilityResult = {
    * renaming the ledger cannot clear the obligation. Skip state is out of
    * scope, so this asserts a test is *declared*, never that it is enabled.
    *
-   * Empty whenever `scan.truncated` is set: an executable carrier may sit past
-   * the file limit, so the claim is unproven and suppressed rather than guessed.
+   * Empty whenever `scan.truncated` is set or `scan.unreadable` or
+   * `scan.unreadableDirectories` is not empty: an executable carrier may sit
+   * past the file limit or in what was not read, so the claim is unproven and
+   * suppressed rather than guessed.
    */
   coveredByCarrierOnly: AtddObligationRefs;
   /**
@@ -450,12 +807,52 @@ export async function evaluateAtddCodeTraceability(
   const apiRoot = path.join(testsRoot, "api");
   const integrationRoot = path.join(testsRoot, "integration");
 
-  const scanGlobs = buildAtddTestGlobs(
+  const scanTestsDirName = testsDirName(root, config);
+  const scanGlobs = buildAtddScanGlobs(
     root,
     testsRoot,
     deriveAtddFilePattern(config.validation.traceability.testFileGlobs),
+    config.validation.traceability.testFileGlobs,
   );
-  const scanResult = await collectTestFiles(root, scanGlobs);
+  const acceptanceLayer = atddAcceptanceLayerFilter(root, config);
+  const acceptanceSource = acceptanceSourceFilter(root, scanGlobs);
+  // One probe for the whole scan, so a manifest is stat-ed once however many
+  // files sit under the directory that carries it.
+  const scanPackageRoot = packageRootProbe();
+  // Trimmed and emptied the way every other scan of this list is, so a padded
+  // entry excludes here exactly what it excludes there.
+  const scanExcludes = normalizeGlobs(config.validation.traceability.testFileExcludeGlobs);
+  // A project glob may match a whole monorepo. Charging the limit for files no
+  // acceptance rule reads would spend it on the first packages and never reach
+  // the later ones, and the truncation that reports it is an `info`.
+  const scanKeeps = (file: string): boolean =>
+    acceptanceSource(file) && acceptanceLayer(path.relative(root, file));
+  let scanResult: CollectFilesByGlobsResult;
+  let unreadable: string[] = [];
+  let unreadableDirectories: string[] = [];
+  try {
+    scanResult = await collectTestFiles(root, scanGlobs, scanExcludes, scanKeeps);
+  } catch (error) {
+    if (isFileSystemError(error)) {
+      ({ scanResult, unreadable, unreadableDirectories } = await collectReadableTestFiles(
+        root,
+        scanGlobs,
+        scanExcludes,
+        scanKeeps,
+      ));
+    } else {
+      // A malformed `testFileGlobs` entry is the user's to fix and already has a
+      // finding: `QFAI-TRACE-124`, from the validator that reads the same list.
+      // Rejecting here instead would abort the whole batch and replace every
+      // other result with a generic incomplete run.
+      scanResult = {
+        files: [],
+        truncated: false,
+        matchedFileCount: 0,
+        limit: DEFAULT_GLOB_FILE_LIMIT,
+      };
+    }
+  }
 
   const usRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
   const tcRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
@@ -469,6 +866,8 @@ export async function evaluateAtddCodeTraceability(
   // Scanned files that declare a test a runner would collect. Filled while the
   // bodies are already in hand, and read only by `buildCarrierOnlyRefs`.
   const executableCarriers = new Set<string>();
+
+  const testFileSpecOwners = new Map<string, string>();
 
   const forbiddenTcInApi = new Map<string, Set<string>>();
   const forbiddenTcInE2e = new Map<string, Set<string>>();
@@ -485,17 +884,25 @@ export async function evaluateAtddCodeTraceability(
   const flowStories = storiesByFlow(await scanBusinessFlows(root, config));
 
   for (const file of scanResult.files) {
-    const kind = resolveTestKind(file, {
+    const layer = resolveTestLayer(file, {
+      root,
+      testsDirName: scanTestsDirName,
       e2eRoot,
       apiRoot,
       integrationRoot,
+      isPackageRoot: scanPackageRoot,
     });
-    if (!kind) {
-      // Recorded, not dropped. A correctly annotated test outside the three
-      // scanned roots contributes nothing to coverage and used to vanish with
-      // no diagnostic — which is how `qfai atdd scaffold` could write files
-      // that every gate then reported as zero coverage.
-      skippedTestFiles.push(toPosixPath(path.relative(root, file)));
+    if (!layer) {
+      // Dropped, not recorded. A unit or component suite owes ATDD nothing
+      // wherever it sits, and every conventional `tests/unit` tree is matched
+      // by an ordinary `tests/**` glob — so recording them here would tell an
+      // operator to move each one into `integration/`, which is the
+      // all-integration collapse `catalog/test-layers.md` lists as an
+      // anti-pattern.
+      //
+      // A generated file outside every acceptance layer is reported by
+      // `collectUncountedTestFiles` alone: it reads the directories qfai itself
+      // writes to, which is where such a file lands.
       continue;
     }
 
@@ -505,6 +912,11 @@ export async function evaluateAtddCodeTraceability(
     // tokenizer and that one knows a `/.../` after a control header is a regex
     // rather than a division. Handing it the masked text let a blanked span
     // swallow the `it(` beside it and reported a real test as annotation-only.
+    const { kind } = layer;
+    const owner = layerSpecNumber(layer, file);
+    if (owner !== null) {
+      testFileSpecOwners.set(path.normalize(file), owner);
+    }
     const raw = await readSafe(file);
     const text = maskTestSource(file, raw);
     const usAnnotations = extractSpecScopedAnnotations(text, US_TEST_ANNOTATION_RE);
@@ -632,7 +1044,17 @@ export async function evaluateAtddCodeTraceability(
   // scan is glob-scoped to the three roots and never sees them. `tcLevels` is
   // passed because "contributes nothing" is not the same as "should be moved":
   // an L1/L2 annotation is owed to no ATDD directory at all.
-  skippedTestFiles.push(...(await collectUncountedTestFiles(root, testsRoot, tcLevels)));
+  skippedTestFiles.push(
+    ...(await collectUncountedTestFiles(
+      root,
+      testsRoot,
+      tcLevels,
+      normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
+      normalizeGlobs(config.validation.traceability.testFileGlobs)
+        .map((glob) => toPosixPath(glob))
+        .filter(isGlobExclusion),
+    )),
+  );
 
   // Active = declared minus deferred, mirroring the contract collectors:
   // `x-qfai-status: planned` suspends the E2E obligation for that one story, it
@@ -669,28 +1091,33 @@ export async function evaluateAtddCodeTraceability(
   } = partitionMissingTcByStatus(owedTc, specRefs.tcStatuses);
   missing.tc = stillOwedTc;
   const missingTcHomes = buildMissingTcHomes(missing.tc, tcLevels);
-  // A truncated scan cannot support the negative claim this partition makes.
+  // A truncated or partly unreadable scan cannot support the negative claim
+  // this partition makes.
   // `collectFilesByGlobs` stops at the limit, so the executable test that
   // references the same ID may simply sit past the cut — reporting the
   // obligation as carrier-only would then be a false "nothing runs for this".
-  // Suppressed rather than guessed; `scan.truncated` is already warned on by
-  // the CLI and persisted into the summary artifact, so a downstream gate reads
-  // an indeterminate scan there instead of an empty list it can trust.
-  const coveredByCarrierOnly = scanResult.truncated
-    ? { us: [], tc: [], conApi: [], conDb: [] }
-    : buildCarrierOnlyRefs({
-        usRefs,
-        usObligationScope: uiBearingSpecs,
-        tcRefs,
-        apiRefs,
-        apiContractIds: activeApiContractIds,
-        dbRefs,
-        dbContractIds: activeDbContractIds,
-        executableCarriers,
-      });
+  // Suppressed rather than guessed; the truncation is reported as
+  // `QFAI-ATDD-134` and persisted into the summary artifact, so a downstream
+  // gate reads an indeterminate scan there instead of an empty list it can
+  // trust. A pattern the scan could not read (`QFAI-ATDD-134`) and a directory
+  // it read past (`QFAI-ATDD-135`) leave the same gap.
+  const coveredByCarrierOnly =
+    scanResult.truncated || unreadable.length > 0 || unreadableDirectories.length > 0
+      ? { us: [], tc: [], conApi: [], conDb: [] }
+      : buildCarrierOnlyRefs({
+          usRefs,
+          usObligationScope: uiBearingSpecs,
+          tcRefs,
+          apiRefs,
+          apiContractIds: activeApiContractIds,
+          dbRefs,
+          dbContractIds: activeDbContractIds,
+          executableCarriers,
+        });
 
   return {
     declaredSpecDirs: specRefs.declaredSpecDirs,
+    testFileSpecOwners,
     unitComponentTcIds: unitComponentTc,
     misfiledLevelTcIds: collectMisfiledLevelTcIds(specTcIds, tcLevels),
     deferredTcIds: deferredTc,
@@ -730,8 +1157,132 @@ export async function evaluateAtddCodeTraceability(
       matchedFileCount: scanResult.matchedFileCount,
       truncated: scanResult.truncated,
       limit: scanResult.limit,
+      unreadable,
+      unreadableDirectories,
     },
   };
+}
+
+/**
+ * Why a pattern could not be read, in a form the report may carry.
+ *
+ * A file-system error's own message embeds the absolute path the call was made
+ * with, so the raw text put a checkout path — and with it a machine and a user
+ * name — into the summary artifact and into an operator-facing finding, and made
+ * the same failure read differently on two machines. The code is what a reader
+ * acts on; the pattern beside it already says where.
+ */
+function scanFailureReason(failure: unknown): string {
+  if (isFileSystemError(failure) && failure instanceof Error && "code" in failure) {
+    const { code } = failure;
+    if (typeof code === "string") return code;
+  }
+  return failure instanceof Error ? failure.name : "unknown error";
+}
+
+/**
+ * The scan, one selecting pattern at a time, after the combined scan met a
+ * directory it could not read. Each pattern reads past every directory the
+ * failure names, and those directories are returned. A pattern that still
+ * fails is named with its reason. The patterns that read are unioned, so the
+ * missing references that follow have a cause beside them. A negative entry
+ * travels with every pattern, since on its own it selects nothing.
+ */
+async function collectReadableTestFiles(
+  root: string,
+  globs: string[],
+  excludeGlobs: readonly string[],
+  filter: (absolutePath: string) => boolean,
+): Promise<{
+  scanResult: CollectFilesByGlobsResult;
+  unreadable: string[];
+  unreadableDirectories: string[];
+}> {
+  const exclusions = globs.filter(isGlobExclusion);
+  const outcomes = await Promise.all(
+    globs
+      .filter((glob) => !isGlobExclusion(glob))
+      .map(async (glob) => {
+        const directories: string[] = [];
+        try {
+          const scan = await collectPatternPastUnreadable(
+            root,
+            [glob, ...exclusions],
+            excludeGlobs,
+            filter,
+            directories,
+          );
+          return { kind: "scanned" as const, scan, directories };
+        } catch (failure) {
+          return {
+            kind: "failed" as const,
+            reason: `${glob}: ${scanFailureReason(failure)}`,
+            directories,
+          };
+        }
+      }),
+  );
+  const scans = outcomes.flatMap((outcome) => (outcome.kind === "scanned" ? [outcome.scan] : []));
+  const files = [...new Set(scans.flatMap((scan) => scan.files))];
+  return {
+    scanResult: {
+      files: files.slice(0, DEFAULT_GLOB_FILE_LIMIT),
+      truncated: files.length > DEFAULT_GLOB_FILE_LIMIT || scans.some((scan) => scan.truncated),
+      matchedFileCount: Math.min(files.length, DEFAULT_GLOB_FILE_LIMIT),
+      limit: DEFAULT_GLOB_FILE_LIMIT,
+    },
+    unreadable: outcomes.flatMap((outcome) => (outcome.kind === "failed" ? [outcome.reason] : [])),
+    unreadableDirectories: [...new Set(outcomes.flatMap((outcome) => outcome.directories))].sort(),
+  };
+}
+
+/**
+ * One pattern's scan, taken again past each directory the account running it
+ * cannot read. Every such directory is pushed onto `directories` as it is met,
+ * so a caller still holds the ones already passed when a later failure rejects.
+ *
+ * SIMPLIFIED: one more walk per unreadable directory.
+ * Lift when: a tree holds enough unreadable directories for the repeated walks
+ * to be measured as slow.
+ */
+async function collectPatternPastUnreadable(
+  root: string,
+  globs: string[],
+  excludeGlobs: readonly string[],
+  filter: (absolutePath: string) => boolean,
+  directories: string[],
+): Promise<CollectFilesByGlobsResult> {
+  for (;;) {
+    try {
+      return await collectTestFiles(
+        root,
+        globs,
+        [...excludeGlobs, ...directories.map((directory) => `${fg.escapePath(directory)}/**`)],
+        filter,
+      );
+    } catch (error) {
+      const directory = unreadableDirectoryOf(root, error);
+      // A failure that names no directory, or one the walk already passes over,
+      // is not one reading past can clear.
+      if (directory === null || directories.includes(directory)) throw error;
+      directories.push(directory);
+    }
+  }
+}
+
+/**
+ * The directory a file-system error names, in POSIX form: relative to `root`
+ * where it lies inside, and absolute where it does not, since a configured
+ * `paths.testsDir` or test glob may point outside the repository.
+ */
+function unreadableDirectoryOf(root: string, error: unknown): string | null {
+  if (!isFileSystemError(error) || !(error instanceof Error)) return null;
+  if (!("path" in error) || typeof error.path !== "string") return null;
+  const absolute = path.resolve(root, error.path);
+  const relative = path.relative(root, absolute);
+  if (relative === "") return null;
+  const outside = relative.startsWith("..") || path.isAbsolute(relative);
+  return toPosixPath(outside ? absolute : relative);
 }
 
 /**
@@ -785,16 +1336,33 @@ async function collectUncountedTestFiles(
   root: string,
   testsRoot: string,
   tcLevels: Map<string, Map<string, string>>,
+  excludeGlobs: readonly string[] = [],
+  withdrawnGlobs: readonly string[] = [],
 ): Promise<string[]> {
+  // Repository-relative, like every other glob here. An absolute pattern
+  // produces absolute entries, and a project's own `testFileExcludeGlobs` are
+  // written relative to the repository root, so an absolute scan could not be
+  // filtered by them at all.
+  const relativeTestsRoot = path.relative(root, testsRoot);
+  const base =
+    relativeTestsRoot.length === 0 ||
+    (!relativeTestsRoot.startsWith("..") && !path.isAbsolute(relativeTestsRoot))
+      ? toPosixPath(relativeTestsRoot.length === 0 ? "." : relativeTestsRoot)
+      : toPosixPath(testsRoot);
   const patterns = UNCOUNTED_TEST_DIRS.map(
     (dir) =>
-      `${toPosixPath(path.join(testsRoot, dir)).replace(/\/+$/, "")}/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}`,
+      `${base.replace(/\/+$/, "")}/${dir}/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}`,
   );
   let files: string[];
   try {
     const collected = await collectFilesByGlobs(root, {
-      globs: patterns,
-      ignore: DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+      // The project's own exclusions apply here as well, both kinds: its
+      // `testFileExcludeGlobs` and the negative entries of its `testFileGlobs`,
+      // which the acceptance scan honours as patterns. A path it withdrew is
+      // withdrawn from every lane, and reporting an excluded scaffold as a file
+      // to move would ask the operator to act on something they took out.
+      globs: [...patterns, ...withdrawnGlobs],
+      ignore: [...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, ...excludeGlobs],
       limit: DEFAULT_GLOB_FILE_LIMIT,
     });
     files = collected.files;
@@ -2046,6 +2614,20 @@ const DOTNET_ATTRIBUTE_PATTERN = /^\s*\[\s*(?:Test|TestCase|TestCaseSource|Fact|
 const RUST_ATTRIBUTE_PATTERN = /^\s*#\[\s*(?:\w+::)?test\s*\]/m;
 
 /**
+ * Expecto's entry points, which name a case in the call rather than an attribute.
+ *
+ * An F# suite reads the attribute form or this one, and reading only the
+ * first reported a whole Expecto file as declaring no test.
+ *
+ * Read off the masked body, where the name literal beside the call is already
+ * blanked — so the form is the call and its application, never the quote. The
+ * lookahead keeps a binding of the same name out: `let testCase = …` declares a
+ * value, and only an applied one declares a case.
+ */
+const EXPECTO_CALL_PATTERN =
+  /\b(?:testCase|testCaseAsync|ftestCase|ptestCase|testList|testProperty|testTheory)\s+(?![=:])/;
+
+/**
  * The `def test...` convention pytest and minitest both collect on.
  *
  * The form stops at the name rather than requiring `(`, because Ruby's
@@ -2116,7 +2698,8 @@ const TEST_PATTERNS_BY_LANGUAGE: readonly (readonly [readonly string[], readonly
     ["java", "kt", "kts", "groovy", "scala"],
     [JVM_ANNOTATION_PATTERN, CALL_FORM_PATTERN],
   ],
-  [["cs", "fs", "vb"], [DOTNET_ATTRIBUTE_PATTERN]],
+  [["cs", "vb"], [DOTNET_ATTRIBUTE_PATTERN]],
+  [["fs"], [DOTNET_ATTRIBUTE_PATTERN, EXPECTO_CALL_PATTERN]],
   [["rs"], [RUST_ATTRIBUTE_PATTERN]],
   [["php"], [PHP_NAMING_PATTERN]],
 ];
@@ -2279,31 +2862,158 @@ function isAnnotationOnlyCarrier(
  * tests and the scan that CONSUMES them must read this config key identically,
  * or the writer emits an extension the scan never opens.
  */
-export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<string> {
+/**
+ * The most candidates one glob may expand into.
+ *
+ * Ranges multiply, so a ceiling on how many are read is what keeps a pattern
+ * from expanding into more strings than there is reason to hold. A glob past it
+ * yields no extension at all: a set read from part of an expansion names
+ * extensions the matcher does not select, which is the mistake reading the
+ * ranges exists to avoid.
+ */
+const RANGE_CANDIDATES = 4096;
+
+/**
+ * The glob with its brace ranges written out, as fast-glob expands them before
+ * it matches anything.
+ *
+ * `tests/**\/*.{p..p}y` names Python files, and read as text it names an
+ * extension nothing recognises, so the stage fell back to its JavaScript
+ * default and scanned a tree the project does not keep its tests in.
+ *
+ * Lists are left alone: the caller reads `.{a,b}` itself, keeping a member's
+ * wildcards, which expansion here would lose.
+ */
+function withRangesExpanded(glob: string): string[] | null {
+  let expanded = [glob];
+  // Each round writes out one range per candidate, so a candidate holding a
+  // range still holds one fewer afterwards and the loop reaches a pattern with
+  // none. Stopping at a fixed number of rounds instead left the ranges past it
+  // as text, and a pattern whose extension is spelled by the last of them read
+  // as one whose extension nothing supports.
+  for (;;) {
+    const next: string[] = [];
+    let changed = false;
+    for (const candidate of expanded) {
+      const written = firstRangeWrittenOut(candidate);
+      if (written === null) {
+        next.push(candidate);
+        continue;
+      }
+      changed = true;
+      next.push(...written);
+    }
+    if (next.length > RANGE_CANDIDATES) return null;
+    expanded = next;
+    if (!changed) break;
+  }
+  return expanded;
+}
+
+/**
+ * The candidate with its first brace range written out, or `null` when it holds
+ * none.
+ *
+ * Every group is looked at, not only the first: a directory list can stand
+ * ahead of a range in the extension, as `tests/{unit,integration}/**\/*.{p..p}y`
+ * does, and stopping at the list left the extension unread.
+ *
+ * A range fast-glob refuses is left as it stands, and the groups after it are
+ * read all the same. The pattern then selects nothing, and whoever compiles it
+ * says so; dropping it here would leave a configured project looking like one
+ * that configured no glob at all.
+ */
+function firstRangeWrittenOut(candidate: string): string[] | null {
+  for (let open = candidate.indexOf("{"); open !== -1; open = candidate.indexOf("{", open + 1)) {
+    const close = candidate.indexOf("}", open);
+    if (close === -1) return null;
+    let members: readonly string[] | null;
+    try {
+      members = braceRangeMembers(candidate.slice(open + 1, close));
+    } catch (error) {
+      // A range fast-glob refuses stays as it stands, and the groups after it
+      // are still read: the pattern selects nothing either way, and the one
+      // that spells the extension is what the stage needs from it.
+      if (!(error instanceof BraceRangeRefused)) throw error;
+      continue;
+    }
+    if (members === null) continue;
+    // A group in the last segment decides the extension, so every member of it
+    // is read. One further up gives every member the same tail, so one member
+    // answers for all of them — and reading more multiplies the candidates a
+    // pattern expands into without reaching a different extension.
+    const inLastSegment = !candidate.slice(open).includes("/");
+    const read = inLastSegment ? members : members.slice(0, 1);
+    return read.map((member) => candidate.slice(0, open) + member + candidate.slice(close + 1));
+  }
+  return null;
+}
+
+/**
+ * The extensions a set of globs names, and whether any of them was too large to
+ * write out.
+ *
+ * The two are reported apart because they call for opposite answers. A project
+ * that configured nothing has no extension and takes the default; a glob whose
+ * expansion passed the bound has extensions this read could not recover, and a
+ * caller that treats it as the first writes a file the project's own scan will
+ * not collect.
+ */
+export type TestFileExtensions = {
+  readonly extensions: Set<string>;
+  readonly overBound: boolean;
+};
+
+export function readTestFileExtensions(testFileGlobs: readonly string[]): TestFileExtensions {
+  let overBound = false;
   const extensions = new Set<string>();
-  for (const glob of testFileGlobs) {
+  for (const entry of testFileGlobs) {
+    // Trimmed as the scan trims it, or a trailing space hides the extension.
+    const glob = entry.trim();
     // A leading `!` excludes. Its extension names files the scan must not read,
     // and counted, `!tests/legacy/**/*.ts` beside a Python glob added TypeScript
     // to what the stage scans. `!(` opens a negated extglob instead, which
     // selects: `!(fixtures)/**/*.py` is a Python selector, as fast-glob reads it.
-    const trimmed = glob.trimStart();
-    if (trimmed.startsWith("!") && !trimmed.startsWith("!(")) continue;
-    for (const match of glob.matchAll(/\.\{([^}]+)\}$/g)) {
-      for (const ext of (match[1] ?? "").split(",")) {
-        // A member is copied into the generated scan pattern whole, wildcards
-        // included, since the matcher reads `test-*.js` there as it does here.
-        // One the matcher cannot use is left out: a NUL byte copied in made the
-        // scan throw before any finding was reported.
-        const trimmed = ext.trim();
-        if (trimmed.length > 0 && unusableGlobReason(trimmed) === null) extensions.add(trimmed);
+    if (isGlobExclusion(glob)) continue;
+    // Read off the patterns fast-glob matches with, which are the pattern with
+    // its ranges written out. Both shapes are read from each of them: a range
+    // inside a list — `*.{{p..p}y,rb}` — is a list only once the range is
+    // written out, and the list pattern cannot parse it before that.
+    // A glob too large to write out yields nothing, and says so: what a partial
+    // expansion names is not what the matcher selects, and an empty answer on
+    // its own reads as a project that configured nothing.
+    const candidates = withRangesExpanded(glob);
+    if (candidates === null) {
+      overBound = true;
+      continue;
+    }
+    for (const candidate of candidates) {
+      for (const match of candidate.matchAll(/\.\{([^}]+)\}$/g)) {
+        for (const ext of (match[1] ?? "").split(",")) {
+          // A member is copied into the generated scan pattern whole, wildcards
+          // included, since the matcher reads `test-*.js` there as it does here.
+          // One the matcher cannot use is left out: a NUL byte copied in made the
+          // scan throw before any finding was reported.
+          const trimmed = ext.trim();
+          if (trimmed.length > 0 && unusableGlobReason(trimmed) === null) extensions.add(trimmed);
+        }
+      }
+      const single = /\.([A-Za-z0-9]+)$/.exec(candidate);
+      if (single?.[1]) {
+        extensions.add(single[1]);
       }
     }
-    const single = /\.([A-Za-z0-9]+)$/.exec(glob);
-    if (single?.[1]) {
-      extensions.add(single[1]);
-    }
   }
-  return extensions;
+  return { extensions, overBound };
+}
+
+/**
+ * The extensions alone, for a caller whose answer to an unreadable glob is the
+ * same as its answer to no glob at all: the scan's own pattern, which widens
+ * rather than narrows and so reads more files rather than fewer.
+ */
+export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<string> {
+  return readTestFileExtensions(testFileGlobs).extensions;
 }
 
 /**
@@ -2331,6 +3041,29 @@ export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string 
   return `**/*.{${sorted.join(",")}}`;
 }
 
+/**
+ * Whether a collected file is a source this scan reads for annotations.
+ *
+ * A project glob used as written may be extension-broad, and such a glob
+ * collects a data file inside an acceptance layer as readily as a test. A
+ * fixture value is not an annotation, so a file counts only when its extension
+ * is one the scan reads where no glob names one, or when a scan glob naming its
+ * files matches its whole path. `packages/b/tests/**\/*.json` vouches for a
+ * `.json` file under `packages/b/tests`, and never for one only
+ * `packages/a/tests/**\/*` collected.
+ */
+function acceptanceSourceFilter(
+  root: string,
+  scanGlobs: readonly string[],
+): (absolutePath: string) => boolean {
+  const defaults = new Set(DEFAULT_TEST_FILE_EXTENSIONS.map((ext) => `.${ext}`));
+  const namedTestFile = namedTestFileMatcher(scanGlobs);
+  return (absolutePath) =>
+    defaults.has(path.extname(absolutePath).toLowerCase()) ||
+    namedTestFile(toPosixPath(path.relative(root, absolutePath))) ||
+    namedTestFile(toPosixPath(absolutePath));
+}
+
 function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
   const relativeTestsRoot = path.relative(root, testsRoot);
   const isInsideRoot =
@@ -2348,45 +3081,511 @@ function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string
 }
 
 /**
- * The acceptance-test globs this stage owns, for a scanner that brings its own
+ * Every glob the scan collects from.
+ *
+ * Two sources, because one of them cannot answer for a monorepo.
+ * `paths.testsDir` is a single value, so in a repository whose suites live one
+ * per package there is no second `testsDir` for the other packages to be named
+ * by, and the three layer globs built from it match a directory holding no
+ * tests at all. The project's own `validation.traceability.testFileGlobs` name
+ * those suites already.
+ *
+ * The project's globs are used as written, never sliced for a base to build a
+ * layer glob under. A glob whose directory part carries a wildcard slices to a
+ * base with the wildcard still in it, and the layer glob synthesized under that
+ * base addresses a directory the project never configured.
+ */
+function buildAtddScanGlobs(
+  root: string,
+  testsRoot: string,
+  filePattern: string,
+  projectTestFileGlobs: readonly string[],
+): string[] {
+  const globs = new Set(buildAtddTestGlobs(root, testsRoot, filePattern));
+  for (const glob of projectTestFileGlobs) {
+    const normalized = toPosixPath(glob).trim();
+    if (normalized.length > 0) {
+      globs.add(normalized);
+    }
+  }
+  return [...globs];
+}
+
+/**
+ * The acceptance-test globs this stage reads, for a scanner that brings its own
  * file pattern.
  *
- * `/qfai-atdd` owns `tests/{e2e,api,integration}/**` and nothing else, so a
- * validator wired into `--profile atdd` must select files the same way the
- * ATDD scan does — following `paths.testsDir` — rather than reusing
- * `validation.traceability.testFileGlobs`, which describes the whole
- * repository's tests.
+ * Two sources, the same two the ATDD scan uses: the layer directories under
+ * `paths.testsDir`, built from the pattern, and the project's own
+ * `validation.traceability.testFileGlobs`, which is where a monorepo's other
+ * packages keep their acceptance suites.
+ *
+ * **The result is not acceptance-only.** The project globs describe the whole
+ * repository's tests, unit and component suites included, so a caller must
+ * apply `atddAcceptanceLayerFilter` to what these globs collect. The globs
+ * decide what can be read; the filter decides what this stage owns.
  */
 export function atddAcceptanceTestGlobs(
   root: string,
   config: QfaiConfig,
   filePattern: string,
 ): string[] {
-  return buildAtddTestGlobs(root, resolvePath(root, config, "testsDir"), filePattern);
+  return buildAtddScanGlobs(
+    root,
+    resolvePath(root, config, "testsDir"),
+    filePattern,
+    config.validation.traceability.testFileGlobs,
+  );
 }
 
-async function collectTestFiles(root: string, globs: string[]): Promise<CollectFilesByGlobsResult> {
+async function collectTestFiles(
+  root: string,
+  globs: string[],
+  excludeGlobs: readonly string[] = [],
+  filter?: (absolutePath: string) => boolean,
+): Promise<CollectFilesByGlobsResult> {
   return collectFilesByGlobs(root, {
+    ...(filter ? { filter } : {}),
     globs,
-    ignore: DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+    // The project's own exclusions travel with its own globs. Without them a
+    // path the project declared and then withdrew is collected here alone, and
+    // the annotations in it count towards coverage no other lane reads.
+    ignore: [...DEFAULT_TEST_FILE_EXCLUDE_GLOBS, ...excludeGlobs],
     limit: DEFAULT_GLOB_FILE_LIMIT,
   });
 }
 
-function resolveTestKind(
-  filePath: string,
-  roots: { e2eRoot: string; apiRoot: string; integrationRoot: string },
-): AtddTestKind | null {
+/**
+ * Directory names that declare an acceptance layer.
+ *
+ * The same three the contract names. A file outside `paths.testsDir` already
+ * says which layer it is by sitting in one of them; reading that is what lets
+ * a second package's acceptance tests count.
+ */
+const ATDD_LAYER_SEGMENTS = new Map<string, AtddTestKind>([
+  ["e2e", "e2e"],
+  ["api", "api"],
+  ["integration", "integration"],
+]);
+
+type TestLayerRoots = {
+  root: string;
+  testsDirName: string;
+  e2eRoot: string;
+  apiRoot: string;
+  integrationRoot: string;
+  isPackageRoot: (absoluteDir: string) => boolean;
+};
+
+/** An acceptance layer a file answers, and the layer directory it sits in. */
+type TestLayer = { kind: AtddTestKind; layerDir: string };
+
+function resolveTestKind(filePath: string, roots: TestLayerRoots): AtddTestKind | null {
+  return resolveTestLayer(filePath, roots)?.kind ?? null;
+}
+
+function resolveTestLayer(filePath: string, roots: TestLayerRoots): TestLayer | null {
   if (isWithinPath(roots.e2eRoot, filePath)) {
-    return "e2e";
+    return { kind: "e2e", layerDir: roots.e2eRoot };
   }
   if (isWithinPath(roots.apiRoot, filePath)) {
-    return "api";
+    return { kind: "api", layerDir: roots.apiRoot };
   }
   if (isWithinPath(roots.integrationRoot, filePath)) {
-    return "integration";
+    return { kind: "integration", layerDir: roots.integrationRoot };
   }
-  return null;
+  return resolveTestLayerFromPath(roots.root, filePath, roots.testsDirName, roots.isPackageRoot);
+}
+
+/**
+ * The spec that owns a test file by where it sits: a `spec-NNNN` directory
+ * directly inside the layer directory the file answers, holding the file.
+ *
+ * The layout `qfai atdd scaffold` writes, `<layer>/spec-NNNN/**`, read at every
+ * test root the scan reads rather than at `paths.testsDir` alone, so a
+ * package's own `tests/integration/spec-0002/pay.test.ts` belongs to spec-0002
+ * as the central one does. Read positionally for the same reason as the layer:
+ * a `spec-NNNN` segment above the layer directory, or deeper inside it, names a
+ * checkout or a fixture tree rather than the file's spec.
+ */
+function layerSpecNumber(layer: TestLayer, filePath: string): string | null {
+  const [specDir, ...rest] = toPosixPath(path.relative(layer.layerDir, filePath)).split("/");
+  if (specDir === undefined || rest.length === 0) {
+    return null;
+  }
+  return /^spec-(\d{4})$/i.exec(specDir)?.[1] ?? null;
+}
+
+/**
+ * The owning spec of a test file, read as {@link layerSpecNumber} reads it, for
+ * callers outside the scan. `null` for a file in no acceptance layer.
+ */
+export function atddTestOwnerProbe(
+  root: string,
+  config: QfaiConfig,
+): (absolutePath: string) => string | null {
+  const testsRoot = resolvePath(root, config, "testsDir");
+  const roots: TestLayerRoots = {
+    root,
+    testsDirName: testsDirName(root, config),
+    e2eRoot: path.join(testsRoot, "e2e"),
+    apiRoot: path.join(testsRoot, "api"),
+    integrationRoot: path.join(testsRoot, "integration"),
+    isPackageRoot: packageRootProbe(),
+  };
+  return (absolutePath) => {
+    const layer = resolveTestLayer(absolutePath, roots);
+    return layer === null ? null : layerSpecNumber(layer, absolutePath);
+  };
+}
+
+/**
+ * Directory names a test suite is rooted at.
+ *
+ * The layer is read from the segment **after** one of these, not from any
+ * ancestor that happens to share a layer's name. Scanning ancestors put every
+ * test of a package called `api` — including its unit suite — in the API layer,
+ * and `packages/api/tests/helpers/` has no deeper layer segment to correct it.
+ *
+ * The configured `paths.testsDir` basename joins this set per project, so a
+ * project that renamed the directory is read the same way.
+ */
+const TEST_ROOT_SEGMENTS = new Set(["tests", "test", "__tests__"]);
+
+/**
+ * The layer a file outside `paths.testsDir` declares by where it sits.
+ *
+ * One segment decides it: the one immediately inside the deepest test root on
+ * the path. That is the shape the contract describes — `<testsDir>/<layer>/**` —
+ * and reading it there rather than anywhere in the path keeps a package name
+ * out of the answer.
+ *
+ * `null` for a path outside the repository root, for one with no test root on
+ * it, and for a file sitting directly in a test root with no layer directory
+ * between them.
+ *
+ * The second of those is the reason a configured glob does not get its own
+ * rule. A colocated `src/api/client.spec.ts` is a unit test, and answering from
+ * the file's own directory would read it as an API acceptance one — after which
+ * an annotation in it discharges an obligation, and an unfilled stub blocks a
+ * gate that owns none of it. A project whose suites sit outside a directory
+ * named here anchors them by naming their root `tests`, `test` or `__tests__`,
+ * or by pointing `paths.testsDir` at one; missing such a file is the safe
+ * direction, and claiming one is not.
+ */
+function resolveTestLayerFromPath(
+  root: string,
+  filePath: string,
+  testsDirName: string,
+  isPackageRoot: (absoluteDir: string) => boolean,
+): TestLayer | null {
+  const relative = path.relative(root, filePath);
+  if (relative.length === 0 || relative.startsWith("..") || path.isAbsolute(relative)) {
+    return null;
+  }
+  const directories = toPosixPath(relative).split("/").slice(0, -1);
+  let testRoot = -1;
+  directories.forEach((directory, index) => {
+    if (!TEST_ROOT_SEGMENTS.has(directory) && directory !== testsDirName) {
+      return;
+    }
+    // A package may be called `tests`, and `packages/tests/api/client.spec.ts`
+    // is then a source tree whose second segment reads as a layer. What
+    // separates the two is the manifest: a workspace package has one, a suite
+    // directory inside a package does not.
+    if (isPackageRoot(path.join(root, ...directories.slice(0, index + 1)))) {
+      // A package root clears every outer candidate, because the directories
+      // below it belong to that package rather than to the outer layout. In
+      // `packages/app/tests/integration/fixtures/tests/api/client.test.ts`,
+      // with a manifest in the inner `tests`, the file answers no layer of the
+      // outer suite: its annotation discharges nothing there, and its stub
+      // gates nothing that package owns.
+      //
+      // The scan continues, so a genuine test root deeper still is reached.
+      testRoot = -1;
+      return;
+    }
+    // A deeper root answers or invalidates; it never leaves an outer one
+    // standing over a suite that declares something else.
+    const below = directories[index + 1];
+    if (below === undefined) {
+      // A terminal container: `<pkg>/tests/integration/__tests__/pay.test.ts`
+      // is the documented layout with one more directory inside it, and the
+      // outer root's layer is still the file's.
+      return;
+    }
+    if (!ATDD_LAYER_SEGMENTS.has(below)) {
+      // The deeper root declares a layer this stage does not own —
+      // `.../fixtures/tests/unit/pay.test.ts` is a unit suite — so the outer
+      // candidate goes too. The file belongs to that unit suite, which owes
+      // ATDD nothing, so neither its annotation nor its stub answers the outer
+      // `integration` layer.
+      //
+      // The scan continues: a still deeper root may be the real one, as in
+      // `examples/test/projects/app/tests/integration/**`, where the first
+      // pair is a fixture path and the second is the suite.
+      testRoot = -1;
+      return;
+    }
+    testRoot = index;
+  });
+  if (testRoot < 0) {
+    return null;
+  }
+  const layer = directories[testRoot + 1];
+  const kind = layer === undefined ? undefined : ATDD_LAYER_SEGMENTS.get(layer);
+  return kind === undefined
+    ? null
+    : { kind, layerDir: path.join(root, ...directories.slice(0, testRoot + 2)) };
+}
+
+/**
+ * The basename `resolveTestLayerFromPath` reads as a test root for this project.
+ *
+ * Empty when `paths.testsDir` is the repository root: there the layer directories
+ * sit at the top level and the containment check answers for them, so taking
+ * the checkout's own directory name as a test root would only let an unrelated
+ * path match it.
+ */
+function testsDirName(root: string, config: QfaiConfig): string {
+  const testsRoot = resolvePath(root, config, "testsDir");
+  if (path.relative(root, testsRoot) === "") {
+    return "";
+  }
+  const base = toPosixPath(testsRoot).replace(/\/+$/, "");
+  return base.slice(base.lastIndexOf("/") + 1);
+}
+
+/**
+ * Package-manifest basenames that name a package whatever they hold, across the
+ * ecosystems this toolkit reads tests in.
+ *
+ * The list follows the ecosystems a workspace declares packages in, not the
+ * languages the stub validator has a dialect for: a package called `tests` has
+ * to be told apart from a test root in any of them, and the discriminator has
+ * to be its own manifest, not Node's.
+ */
+const PACKAGE_MANIFEST_NAMES = new Set([
+  "setup.py",
+  "go.mod",
+  "Cargo.toml",
+  "pom.xml",
+  "build.gradle",
+  "build.gradle.kts",
+  "build.sbt",
+  "Gemfile",
+  "composer.json",
+  "Package.swift",
+  "pubspec.yaml",
+]);
+
+/** Manifest extensions whose basename a project chooses. */
+const PACKAGE_MANIFEST_EXTENSIONS = new Set([".gemspec", ".csproj", ".vbproj", ".fsproj"]);
+
+/** Whether a JSON manifest's top level declares a string `name`. */
+function declaresName(content: string): boolean {
+  try {
+    const parsed: unknown = JSON.parse(content);
+    return (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "name" in parsed &&
+      typeof parsed.name === "string"
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * JSONC with its comments and trailing commas taken out, so `JSON.parse` reads
+ * it. A `//` or `/*` inside a string is text, not a comment.
+ */
+function withoutJsoncSyntax(content: string): string {
+  let out = "";
+  let inString = false;
+  for (let i = 0; i < content.length; i += 1) {
+    const char = content[i] ?? "";
+    const next = content[i + 1] ?? "";
+    if (inString) {
+      out += char;
+      if (char === "\\") {
+        out += next;
+        i += 1;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+      out += char;
+    } else if (char === "/" && next === "/") {
+      const end = content.indexOf("\n", i);
+      i = end === -1 ? content.length : end - 1;
+    } else if (char === "/" && next === "*") {
+      const end = content.indexOf("*/", i + 2);
+      i = end === -1 ? content.length : end + 1;
+    } else if (char === "," && /^\s*[}\]]/.test(withoutLeadingComments(content.slice(i + 1)))) {
+      // A trailing comma: the next thing that is not a comment closes the value.
+    } else {
+      out += char;
+    }
+  }
+  return out;
+}
+
+/** Text with leading whitespace and comments removed, up to its first token. */
+function withoutLeadingComments(text: string): string {
+  let rest = text;
+  for (;;) {
+    const trimmed = rest.trimStart();
+    if (trimmed.startsWith("//")) {
+      const end = trimmed.indexOf("\n");
+      rest = end === -1 ? "" : trimmed.slice(end + 1);
+    } else if (trimmed.startsWith("/*")) {
+      const end = trimmed.indexOf("*/");
+      rest = end === -1 ? "" : trimmed.slice(end + 2);
+    } else {
+      return trimmed;
+    }
+  }
+}
+
+/**
+ * Manifests a test root also keeps for its runner's settings, with what makes
+ * one a package's.
+ *
+ * A suite may hold `setup.cfg` or a tool-only `pyproject.toml` for pytest, or a
+ * `package.json` holding only `"type"` to set its module format, so each of
+ * these counts only when its contents name a package. Anything else would make
+ * the suite's own directory a package, and no acceptance file below it would
+ * answer a layer.
+ */
+const CONFIGURABLE_MANIFESTS = new Map<string, (content: string) => boolean>([
+  ["package.json", declaresName],
+  ["deno.json", declaresName],
+  ["deno.jsonc", (content) => declaresName(withoutJsoncSyntax(content))],
+  // A TOML or INI table header may carry a trailing comment, so the line is
+  // read to the comment rather than to its end: `[project] # package metadata`
+  // declares a package as plainly as `[project]` does.
+  ["pyproject.toml", (content) => /^\s*\[(?:project|tool\.poetry)\]\s*(?:#.*)?$/m.test(content)],
+  ["setup.cfg", (content) => /^\s*\[metadata\]\s*(?:[#;].*)?$/m.test(content)],
+  // A test directory keeps a `CMakeLists.txt` to add its targets; only a
+  // `project()` command declares a package — and only an active one, so the
+  // comments go first. A bracket comment spans lines, which a line-oriented
+  // read cannot see, and a directory whose only `project(` sits inside one was
+  // taken for a package, dropping every acceptance file below it.
+  ["CMakeLists.txt", (content) => /^\s*project\s*\(/im.test(withoutCMakeComments(content))],
+]);
+
+/**
+ * CMake source with its comments blanked, line endings kept.
+ *
+ * A bracket comment opens `#[` followed by any number of `=` and a `[`, and
+ * closes on the matching `]=…=]`; everything from `#` to the end of the line is
+ * a comment otherwise. Blanked rather than removed, so a command the file really
+ * runs keeps the line it is on.
+ */
+function withoutCMakeComments(content: string): string {
+  return content
+    .replace(/#\[(=*)\[[\s\S]*?\]\1\]/g, (comment) => comment.replace(/[^\n]/g, " "))
+    .replace(/#[^\n]*/g, (comment) => " ".repeat(comment.length));
+}
+
+function isPackageManifest(absoluteDir: string, entry: string): boolean {
+  const namesPackage = CONFIGURABLE_MANIFESTS.get(entry);
+  if (namesPackage) {
+    try {
+      return namesPackage(readFileSync(path.join(absoluteDir, entry), "utf-8"));
+    } catch {
+      // A manifest that cannot be read leaves the question open, and the two
+      // answers are not equally safe. Read as no package, the directory becomes
+      // a test root, and a source under its `api`, `e2e` or `integration`
+      // subdirectory then satisfies an obligation it was never written for —
+      // a silent pass. Read as a package, the path answers no layer and the
+      // obligation stays reported. So an unreadable manifest counts as one.
+      return true;
+    }
+  }
+  return (
+    PACKAGE_MANIFEST_NAMES.has(entry) ||
+    PACKAGE_MANIFEST_EXTENSIONS.has(path.extname(entry).toLowerCase())
+  );
+}
+
+/**
+ * Whether a directory entry is a file, or a link to one. A fixture directory
+ * that happens to be called `go.mod` is not a manifest, and taking it for one
+ * would clear a genuine test root.
+ */
+function isFileEntry(absoluteDir: string, entry: Dirent): boolean {
+  if (entry.isFile()) return true;
+  if (!entry.isSymbolicLink()) return false;
+  try {
+    return statSync(path.join(absoluteDir, entry.name)).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether a directory carries a package manifest, memoised per scan.
+ *
+ * One `readdirSync` per candidate directory — the same cost class as a stat,
+ * and it answers the named manifests and the ones whose basename the project
+ * chooses in one read; a manifest a suite may keep for configuration is read
+ * as well. A scan asks about the same few directories over and
+ * over, so the answer is cached. Synchronous because the layer question is
+ * asked from a predicate the file stream calls per file, which cannot await.
+ */
+export function packageRootProbe(): (absoluteDir: string) => boolean {
+  const seen = new Map<string, boolean>();
+  return (absoluteDir: string): boolean => {
+    const cached = seen.get(absoluteDir);
+    if (cached !== undefined) {
+      return cached;
+    }
+    let answer: boolean;
+    try {
+      answer = readdirSync(absoluteDir, { withFileTypes: true }).some(
+        (entry) => isFileEntry(absoluteDir, entry) && isPackageManifest(absoluteDir, entry.name),
+      );
+    } catch {
+      // Unreadable, or a path that is not a directory at all. Neither is a
+      // package root, and neither is this function's to report.
+      answer = false;
+    }
+    seen.set(absoluteDir, answer);
+    return answer;
+  };
+}
+
+/**
+ * Whether a repository-relative path sits in an acceptance layer.
+ *
+ * The stub gate's filter. It asks the same question the scan asks and gets it
+ * from the same function, so a file the scan declines cannot be a file the gate
+ * reads — which is what keeps a unit test's stub from blocking a gate that owns
+ * none of it.
+ */
+export function atddAcceptanceLayerFilter(
+  root: string,
+  config: QfaiConfig,
+): (relativePath: string) => boolean {
+  const testsRoot = resolvePath(root, config, "testsDir");
+  const roots = {
+    root,
+    testsDirName: testsDirName(root, config),
+    e2eRoot: path.join(testsRoot, "e2e"),
+    apiRoot: path.join(testsRoot, "api"),
+    integrationRoot: path.join(testsRoot, "integration"),
+    isPackageRoot: packageRootProbe(),
+  };
+  // The whole of `resolveTestKind`, not the path half. A layout rooted at the
+  // repository (`testsDir: "."`) puts the layer directories at the top level,
+  // where no test-root segment precedes them and only containment answers.
+  return (relativePath) => resolveTestKind(path.resolve(root, relativePath), roots) !== null;
 }
 
 function isWithinPath(base: string, target: string): boolean {

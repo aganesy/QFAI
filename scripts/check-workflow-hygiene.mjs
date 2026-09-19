@@ -776,10 +776,10 @@ const SCRIPT_NAME_RE = /^[A-Za-z0-9_][\w:.-]*$/;
 const MANIFEST_DIR_FLAGS = new Set(["-C", "--dir", "--prefix"]);
 
 /**
- * The `pnpm` / `npm` script invocations in one shell body, as `{ dir, name }` pairs.
+ * Package script and root-relative `bash ./scripts/*.sh` references in one shell body.
  *
  * A deliberately small shell reading: fragments split on the separators a CI `run:` actually
- * uses, and only a fragment whose first word is the package manager is considered. `pnpm x` and
+ * uses. Package invocations must start a fragment. `pnpm x` and
  * `pnpm run x` are the same invocation to pnpm and are treated as one here; `-C` / `--dir` /
  * `--prefix` move the manifest. Anything this does not recognise resolves to nothing, which
  * costs coverage and never costs correctness — the digest still pins the `run:` text itself.
@@ -791,6 +791,14 @@ function collectScriptInvocations(text, defaultDir, out) {
       .trim()
       .split(/\s+/)
       .filter((token) => token.length > 0);
+    if (
+      tokens[0] === "bash" &&
+      defaultDir === "." &&
+      /^\.\/scripts\/[a-zA-Z0-9_/-]+\.sh$/.test(tokens[1] ?? "")
+    ) {
+      out.push({ dir: defaultDir, name: tokens[1].slice(2), bash: true });
+      continue;
+    }
     if (tokens[0] !== "pnpm" && tokens[0] !== "npm") continue;
     let dir = defaultDir;
     let index = 1;
@@ -834,7 +842,7 @@ function manifestScripts(root, dir, cache) {
 }
 
 /**
- * Every package script a `run:` body reaches, transitively, as a sorted `[key, body]` list.
+ * Reachable package scripts and root-relative Bash helpers, as a sorted `[key, body]` list.
  *
  * Sorted and array-shaped so the digest does not depend on the order the walk happened to find
  * them in — an object's key order is a property of the traversal, and a pin whose value moved
@@ -847,7 +855,16 @@ export function invokedScriptBodies(runText, root, baseDir = ".") {
   const seen = new Set();
   const resolved = [];
   while (pending.length > 0) {
-    const { dir, name } = pending.shift();
+    const { dir, name, bash } = pending.shift();
+    if (bash === true) {
+      const key = `${dir}#bash:${name}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const body = readBoundedText(path.join(root, name), MAX_WORKFLOW_BYTES);
+      resolved.push([key, body === undefined ? null : body.replace(/\r\n/g, "\n").trim()]);
+      if (body !== undefined) collectScriptInvocations(body, dir, pending);
+      continue;
+    }
     const scripts = manifestScripts(root, dir, cache);
     const body = scripts !== undefined && typeof scripts[name] === "string" ? scripts[name] : null;
     // The LIFECYCLE SIBLINGS run with it. `pnpm run x` runs `prex` before and `postx` after,

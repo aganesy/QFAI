@@ -9,17 +9,25 @@
  * merged in as well, by the same shape `ensureAgentEntryPointRules` uses for
  * the rule section in `AGENTS.md` and `CLAUDE.md`.
  *
- * The merge is additive and narrow. It only appends to the arrays under
- * `hooks.<event>`, never reorders or removes what is there, and it refuses the
- * whole file rather than guess whenever a value has an unexpected shape: a
- * settings file is the project's own configuration, and a half-understood merge
- * into it is worse than leaving it alone and saying so.
+ * The merge is narrow. It appends to the arrays under `hooks.<event>`, and it
+ * rewrites a group in place only when the group is exactly one an earlier
+ * release wrote. It never reorders or removes anything, and it refuses the whole
+ * file rather than guess whenever a value has an unexpected shape: a settings
+ * file is the project's own configuration, and a half-understood merge into it
+ * is worse than leaving it alone and saying so.
  *
  * The decision is taken per group, not per file. A file-wide one would mean
  * that the moment a project carries any group, every group added afterwards
  * reaches it no longer — and a project that installed an earlier set is exactly
  * the one an upgrade is for.
+ *
+ * The groups carry no message text. Each runs a fixed reader over
+ * `.agents/rules/reminders.json`, which `qfai init` refreshes wherever the
+ * project has not edited it, so a changed message reaches an existing project
+ * without this file changing at all.
  */
+
+import { createHash } from "node:crypto";
 
 /** Identity of the hook entries seeded here, carried in each entry's spinner label. */
 export const DOCUMENTATION_CLARITY_HOOK_MARKER = "QFAI documentation-clarity reminder";
@@ -58,20 +66,65 @@ export const GRILLING_PLAN_HOOK_MARKER = "QFAI grilling reminder: plan";
  */
 export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminder";
 
+/**
+ * Identity of the group that restates the API-budget rule before a shell command.
+ *
+ * It is the one entry whose program decides whether to print: it reads the
+ * command out of the hook's own input and stays silent unless the command
+ * mentions the forge. The matcher alone would fire on every compound command,
+ * which is the reason the writing rule's hook stays off the shell entirely.
+ */
+export const API_BUDGET_HOOK_MARKER = "QFAI api-budget reminder";
+
 /** Where both the template and the project keep the file, relative to the root. */
 export const CLAUDE_SETTINGS_RELATIVE_PATH = ".claude/settings.json";
 
 export type ClaudeSettings = Record<string, unknown>;
 
+/**
+ * Every hook group an earlier template shipped, as the SHA-256 of
+ * `JSON.stringify(group)` read from that template.
+ *
+ * Those groups carried their message inline, so a project that installed one
+ * keeps that release's text for good unless the merge replaces it. A group that
+ * hashes to one of these is text a release wrote and nobody changed, so it takes
+ * the template's group of the same identity; any other content under that
+ * identity is the project's. A project can skip releases, so every spelling that
+ * shipped stays listed.
+ */
+const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
+  // documentation clarity, before a GitHub post
+  "83272cd6a7fc8d0e56f67552005f8b6439098c96b64da26cbc25b4b9fc648f4a",
+  // documentation clarity, after a Markdown write or edit
+  "d998f68524cf18e997ccef824296889de6a963b0d45ab4318e86d68aca46edbb",
+  "a2ef0a2c3dacc3438a9aa5f396a8ea25d2953ab18722f3dbaca04fc16376b803",
+  // minimal implementation
+  "3c112325b980d6ed9863ae413cbd50562fafe2ea270cda16e73367fed66d5635",
+  "ce6a181d3a30a3458dc7886d6cf725aacb8a5d0e65bd58143204adba172a2621",
+  // grilling: design artifact, delegation, plan
+  "f9b1ad386f2975b1b8124a708c1b944cb1cf230335af27777ce0c32b47901491",
+  "c36d673ed2a64f228b5575550d3d1bb75737ec830f1707e83c1ede4a5d232e12",
+  "8fdbeff2b19a3e9c2a073fdc6056ed1fdaa4da0ae090b4e62ca76e45c840ea54",
+  "87c5aaa089c2b3ceec57c9f1596fbe3f91edf51f6f8bd0544b7ab6fe82cd0149",
+  "1337d0a1d6d9e60ce742c202e809220d2c380d6f7f372ca338141131782d1cc7",
+  "18aefbcf40d6b8f8ea4d9ec1653c071adb11b0ec63830c460204896c00297af3",
+  // structured question
+  "50b1cbf2727d6fd0ad6561847e11bcb70090aa4dca4f7571ca30add9139617b4",
+]);
+
 export type HookMergeResult =
-  /** The project file gained the entries; `events` names the hook events touched. */
+  /**
+   * The project file gained or refreshed groups. `events` names the hook events
+   * touched, and `edited` the groups left alone because the project changed them.
+   */
   | {
       readonly outcome: "merged";
       readonly settings: ClaudeSettings;
       readonly events: readonly string[];
+      readonly edited: readonly string[];
     }
   /** The project already carries every group the template declares. */
-  | { readonly outcome: "already-present" }
+  | { readonly outcome: "already-present"; readonly edited: readonly string[] }
   /** Nothing was changed; `reason` says what could not be read. */
   | { readonly outcome: "unreadable"; readonly reason: string };
 
@@ -195,7 +248,8 @@ function templateGroups(templateText: string): Map<string, readonly unknown[]> |
 }
 
 /**
- * `existingText` with the template's hook entries appended.
+ * `existingText` with the template's hook groups added, and each group an
+ * earlier release wrote replaced by this release's.
  *
  * The result is a fresh object; the caller serializes it. Both inputs are read
  * as text rather than as objects so a project file that is not JSON at all is
@@ -226,38 +280,97 @@ export function mergeDocumentationClarityHooks(
   const merged: ClaudeSettings = structuredClone(existing);
   const mergedHooks: Record<string, unknown> = isRecord(merged.hooks) ? merged.hooks : {};
   const events: string[] = [];
+  const edited: string[] = [];
 
   for (const [event, groups] of groupsByEvent) {
     const current = mergedHooks[event];
     if (current !== undefined && !isUnknownArray(current)) {
       return { outcome: "unreadable", reason: `\`hooks.${event}\` is not an array` };
     }
-    const carried = carriedIdentities(current ?? []);
-    const missing: unknown[] = [];
-    for (const group of groups) {
-      const identity = groupIdentity(group);
-      if (identity === null) {
-        return {
-          outcome: "unreadable",
-          reason: `a \`hooks.${event}\` group in the shipped template carries no status message`,
-        };
-      }
-      if (!carried.has(identity)) {
-        missing.push(structuredClone(group));
-      }
+    const shipped = shippedByIdentity(groups);
+    if (shipped === null) {
+      return {
+        outcome: "unreadable",
+        reason: `a \`hooks.${event}\` group in the shipped template carries no status message`,
+      };
     }
-    if (missing.length === 0) {
-      continue;
+    const refreshed = refreshEvent(event, current ?? [], shipped, edited);
+    if (refreshed !== null) {
+      mergedHooks[event] = refreshed;
+      events.push(event);
     }
-    mergedHooks[event] = [...(current ?? []), ...missing];
-    events.push(event);
   }
 
   if (events.length === 0) {
-    return { outcome: "already-present" };
+    return { outcome: "already-present", edited };
   }
   merged.hooks = mergedHooks;
-  return { outcome: "merged", settings: merged, events };
+  return { outcome: "merged", settings: merged, events, edited };
+}
+
+/** The template's groups for one event by identity, or `null` when one has no marker. */
+function shippedByIdentity(groups: readonly unknown[]): Map<string, unknown> | null {
+  const shipped = new Map<string, unknown>();
+  for (const group of groups) {
+    const identity = groupIdentity(group);
+    if (identity === null) return null;
+    shipped.set(identity, group);
+  }
+  return shipped;
+}
+
+/**
+ * One event's groups brought to the template, or `null` when nothing changed.
+ *
+ * A group the template also declares is replaced in place when it is exactly
+ * one an earlier release wrote, and added to `edited` when it is anything
+ * else. A template group the project has no group for is appended.
+ */
+function refreshEvent(
+  event: string,
+  current: readonly unknown[],
+  shipped: ReadonlyMap<string, unknown>,
+  edited: string[],
+): unknown[] | null {
+  const refreshed = [...current];
+  let touched = false;
+  for (const [index, group] of refreshed.entries()) {
+    const identity = groupIdentity(group);
+    const release = identity === null ? undefined : shipped.get(identity);
+    if (identity === null || release === undefined) continue;
+    if (JSON.stringify(group) === JSON.stringify(release)) continue;
+    if (SUPERSEDED_HOOK_GROUPS.has(groupDigest(group))) {
+      refreshed[index] = structuredClone(release);
+      touched = true;
+    } else {
+      edited.push(groupLabel(event, identity));
+    }
+  }
+
+  const carried = carriedIdentities(refreshed);
+  for (const [identity, group] of shipped) {
+    if (!carried.has(identity)) {
+      refreshed.push(structuredClone(group));
+      touched = true;
+    }
+  }
+  return touched ? refreshed : null;
+}
+
+function groupDigest(group: unknown): string {
+  return createHash("sha256").update(JSON.stringify(group)).digest("hex");
+}
+
+/**
+ * How the run output names a group: its event and its markers.
+ *
+ * Built from the template's identity, never from the project's own text, so
+ * nothing the project wrote reaches the terminal through it.
+ */
+function groupLabel(event: string, identity: string): string {
+  const markers: unknown = JSON.parse(identity);
+  const names = isUnknownArray(markers) ? [...new Set(markers.map(String))] : [];
+  return `${event} "${names.join('", "')}"`;
 }
 
 /** The text to write back: two-space JSON with a trailing newline. */

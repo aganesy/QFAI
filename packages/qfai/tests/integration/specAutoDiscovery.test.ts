@@ -74,12 +74,10 @@ async function seedLayeredSpec(specDir: string): Promise<void> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Group 1: specDiffDetector file operations (TC-0013-0001..0005)
+// Group 1: specDiffDetector file operations
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TC-0013-0001
-// QFAI:SPEC-0013:TC-0013-0001
-describe("TC-0013-0001: extractSpecIdsFromPaths — real file paths", () => {
+describe("extractSpecIdsFromPaths — real file paths", () => {
   it("extracts spec IDs from paths containing spec directories", () => {
     const paths = [
       ".qfai/specs/spec-0001/01_Spec.md",
@@ -98,9 +96,7 @@ describe("TC-0013-0001: extractSpecIdsFromPaths — real file paths", () => {
   });
 });
 
-// TC-0013-0002
-// QFAI:SPEC-0013:TC-0013-0002
-describe("TC-0013-0002: extractSpecIdsFromPaths — staged file paths", () => {
+describe("extractSpecIdsFromPaths — staged file paths", () => {
   it("extracts spec IDs from staged-style paths", () => {
     const paths = [
       ".qfai/specs/spec-0010/02_Scenario.md",
@@ -122,9 +118,7 @@ describe("TC-0013-0002: extractSpecIdsFromPaths — staged file paths", () => {
   });
 });
 
-// TC-0013-0003
-// QFAI:SPEC-0013:TC-0013-0003
-describe("TC-0013-0003: Source C — stale detection via mtime comparison", () => {
+describe("Source C — stale detection via mtime comparison", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -179,9 +173,7 @@ describe("TC-0013-0003: Source C — stale detection via mtime comparison", () =
   });
 });
 
-// TC-0013-0004
-// QFAI:SPEC-0013:TC-0013-0004
-describe("TC-0013-0004: Source D — delta.md parse", () => {
+describe("Source D — delta.md parse", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -235,9 +227,7 @@ describe("TC-0013-0004: Source D — delta.md parse", () => {
   });
 });
 
-// TC-0013-0005
-// QFAI:SPEC-0013:TC-0013-0005
-describe("TC-0013-0005: Union integration — combine multiple sources, no duplicates", () => {
+describe("Union integration — combine multiple sources, no duplicates", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -288,12 +278,10 @@ describe("TC-0013-0005: Union integration — combine multiple sources, no dupli
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Group 2: Fallback and edge cases (TC-0013-0006..0009)
+// Group 2: Fallback and edge cases
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TC-0013-0006
-// QFAI:SPEC-0013:TC-0013-0006
-describe("TC-0013-0006: detectSpecChanges with fullScan: true", () => {
+describe("detectSpecChanges with fullScan: true", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -325,9 +313,7 @@ describe("TC-0013-0006: detectSpecChanges with fullScan: true", () => {
   });
 });
 
-// TC-0013-0007
-// QFAI:SPEC-0013:TC-0013-0007
-describe("TC-0013-0007: git unavailable — Source A and B empty, C/D still work", () => {
+describe("git unavailable — Source A and B empty, C/D still work", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -365,9 +351,9 @@ describe("TC-0013-0007: git unavailable — Source A and B empty, C/D still work
   });
 });
 
-// TC-0013-0008
-// QFAI:SPEC-0013:TC-0013-0008
-describe("TC-0013-0008: full pipeline — all options, verify result structure", () => {
+// TC-0013-0014
+// QFAI:SPEC-0013:TC-0013-0014
+describe("TC-0013-0014: full pipeline — all options, verify result structure", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -395,6 +381,11 @@ describe("TC-0013-0008: full pipeline — all options, verify result structure",
 
     const result = await detectSpecChanges(tmpRoot, stubConfig);
 
+    // The seeded change is what the shape below is a shape of. Without this, a
+    // detector returning two empty arrays satisfies every assertion here.
+    expect(result.entries.map((entry) => entry.specId)).toContain("spec-0001");
+    expect(result.allSpecs).toContain("spec-0001");
+
     // Verify SpecDiffResult structure
     expect(result).toHaveProperty("entries");
     expect(result).toHaveProperty("allSpecs");
@@ -415,9 +406,7 @@ describe("TC-0013-0008: full pipeline — all options, verify result structure",
   });
 });
 
-// TC-0013-0009
-// QFAI:SPEC-0013:TC-0013-0009
-describe("TC-0013-0009: full pipeline — custom baseBranch via options", () => {
+describe("full pipeline — custom baseBranch via options", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -456,12 +445,10 @@ describe("TC-0013-0009: full pipeline — custom baseBranch via options", () => 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Group 3: traceabilityIntegrity (TC-0013-0010..0012)
+// Group 3: traceabilityIntegrity
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TC-0013-0010
-// QFAI:SPEC-0013:TC-0013-0010
-describe("TC-0013-0010: spec BR changed + impl unchanged → QFAI-TRACE-001", () => {
+describe("spec BR changed + impl unchanged → QFAI-TRACE-001", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -499,9 +486,7 @@ describe("TC-0013-0010: spec BR changed + impl unchanged → QFAI-TRACE-001", ()
   });
 });
 
-// TC-0013-0011
-// QFAI:SPEC-0013:TC-0013-0011
-describe("TC-0013-0011: spec BR changed + impl changed → PASS", () => {
+describe("spec BR changed + impl changed → PASS", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -542,9 +527,7 @@ describe("TC-0013-0011: spec BR changed + impl changed → PASS", () => {
   });
 });
 
-// TC-0013-0012
-// QFAI:SPEC-0013:TC-0013-0012
-describe("TC-0013-0012: missing traceability ledger → QFAI-TRACE-002 warning", () => {
+describe("missing traceability ledger → QFAI-TRACE-002 warning", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -755,10 +738,10 @@ describe("TC-0013-0017: old evidence without Diff Context remains parseable", ()
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// spec-0035: Routing determinism (TC-0012-0019..0022)
+// Routing determinism
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe("TC-0012-0019: explicit flag routing determinism", () => {
+describe("explicit flag routing determinism", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -784,7 +767,7 @@ describe("TC-0012-0019: explicit flag routing determinism", () => {
   });
 });
 
-describe("TC-0012-0020: routing idempotency", () => {
+describe("routing idempotency", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -814,7 +797,7 @@ describe("TC-0012-0020: routing idempotency", () => {
   });
 });
 
-describe("TC-0012-0021: precedence chain doc-impl match", () => {
+describe("precedence chain doc-impl match", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
@@ -849,7 +832,7 @@ describe("TC-0012-0021: precedence chain doc-impl match", () => {
   });
 });
 
-describe("TC-0012-0022: cross-doc routing consistency", () => {
+describe("cross-doc routing consistency", () => {
   it("prototyping SKILL.md references routing precedence chain", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const skillPath = path.join(
@@ -873,10 +856,10 @@ describe("TC-0012-0022: cross-doc routing consistency", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// spec-0037: Vocabulary, fixture alignment, integration (TC-0014-0023..0029)
+// Vocabulary, fixture alignment, integration
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe("TC-0014-0023: vocabulary pass scan", () => {
+describe("vocabulary pass scan", () => {
   it("SKILL.md uses canonical spec-related vocabulary", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const skillPath = path.join(
@@ -898,7 +881,7 @@ describe("TC-0014-0023: vocabulary pass scan", () => {
   });
 });
 
-describe("TC-0014-0024: contradiction detection", () => {
+describe("contradiction detection", () => {
   it("detectSpecChanges result structure has no contradictions", async () => {
     const tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-vocab-"));
     try {
@@ -921,7 +904,7 @@ describe("TC-0014-0024: contradiction detection", () => {
   });
 });
 
-describe("TC-0014-0025: vocabulary fail — prohibited terms", () => {
+describe("vocabulary fail — prohibited terms", () => {
   it("specDiffDetector source does not use prohibited legacy terms", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const srcPath = path.join(repoRoot, "packages", "qfai", "src", "core", "specDiffDetector.ts");
@@ -932,7 +915,7 @@ describe("TC-0014-0025: vocabulary fail — prohibited terms", () => {
   });
 });
 
-describe("TC-0014-0026: fixture alignment — exploration-first model", () => {
+describe("fixture alignment — exploration-first model", () => {
   it("discussion SKILL.md references exploration brief and rubric artifacts", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const skillPath = path.join(
@@ -952,7 +935,7 @@ describe("TC-0014-0026: fixture alignment — exploration-first model", () => {
   });
 });
 
-describe("TC-0014-0027: fixture 4-axis reject", () => {
+describe("fixture 4-axis reject", () => {
   it("discussion SKILL.md completion conditions do not use 4-axis model keyword", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const skillPath = path.join(

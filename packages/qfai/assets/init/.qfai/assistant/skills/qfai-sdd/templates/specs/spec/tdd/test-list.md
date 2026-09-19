@@ -6,7 +6,7 @@ Red/Green/Refactor cycle one row at a time.
 
 ## Producer
 
-`/qfai-sdd` seeds the rows at Phase 2b, in **four groups**:
+`/qfai-sdd` seeds the rows at Phase 2b, in **five groups**:
 
 - **one row per coverage-target TC** from `06_Test-Cases.md` — `Layer` from the
   TC's declared `Level`, obligation in `TC-Refs`;
@@ -17,7 +17,11 @@ Red/Green/Refactor cycle one row at a time.
 - **one `Layer = E2E` row per active `US-*`** from `02_User-stories.md` —
   obligation in `US-Refs`, `TC-Refs` is `-`;
 - **one `Layer = API` row per active `CON-API-*`** the spec **owns** —
-  obligation in `CON-API-Refs`, `TC-Refs` is `-`.
+  obligation in `CON-API-Refs`, `TC-Refs` is `-`;
+- **one `Layer = Integration` row per active `CON-DB-*`** the spec **owns** —
+  obligation in `CON-DB-Refs`, `TC-Refs` is `-`. A contract declares failures
+  whether or not a user story names it, and the constitution routes `CON-DB-*`
+  to Integration, so a contract-only flow has a row of its own.
 
 Without the E2E / API groups the ledger has nowhere to hold a `US-*` /
 `CON-API-*` obligation, so an all-`done` ledger can sit beside a
@@ -25,6 +29,14 @@ Without the E2E / API groups the ledger has nowhere to hold a `US-*` /
 Without the integration group an integration-level TC has no row at all, and
 nothing reports its absence — the whole integration layer then sits outside the
 micro-cycle while `validate` stays quiet.
+
+**A UI contract has no group and no column.** A `CON-UI-*` reaches this ledger
+only through test cases: each screen obligation the contract declares is a
+`TC-*` in `06_Test-Cases.md` of the spec that owns the screen, and that TC's row
+carries it. A spec binds the contract with a business rule's `Contract-Refs`
+cell or a `QFAI-CONTRACT-REF:` line, and `QFAI-CONTRACT-043` (warning) reports a
+UI contract no live spec binds. Nothing checks that every screen obligation of a
+bound contract has its own test case, so write it when the contract is written.
 
 The two TC groups are exclusive, and membership is decided by **where the
 annotation goes, not by whether the word is familiar**. `system` and

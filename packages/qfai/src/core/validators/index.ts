@@ -5,6 +5,7 @@
 export { validateDiscussionPackReadiness } from "./discussionPack.js";
 export { validateDiscussionVisuals } from "./discussionVisuals.js";
 export { validateDensityHints } from "./densityHints.js";
+export { validateDesignDirectionProposal } from "./designDirectionProposal.js";
 export { validateImportLiteEvidencePresence } from "./importLite.js";
 export { validateLayerCoverage } from "./layerCoverage.js";
 export { validateLayeredTraceability } from "./layeredTraceability.js";
@@ -39,6 +40,7 @@ export { validateBpApDb } from "./bpApDb.js";
 export { detectPlatform } from "./platformDetection.js";
 export { validateUiDefinitionConsistency } from "./uiDefinitionConsistency.js";
 export { validateUiScreenEntries } from "./uiScreenEntries.js";
+export { validateUiContractParse } from "./contracts.js";
 export { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 export { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 export { validateResearchSummary } from "./researchSummary.js";
@@ -47,7 +49,6 @@ export { validateSkillRoles } from "./skillRoles.js";
 export { validateTddList, validateTddListSeedShape } from "./tddList.js";
 export { validateNavigationFlow } from "./navigationFlow.js";
 export { validateRenderCritique } from "./renderCritique.js";
-export { validateDesignFidelity } from "./designFidelity.js";
 export { validateDesignAudit } from "./designAudit.js";
 export { loadLayoutAntiPatterns, findLayoutAntiPatterns } from "./layoutAntiPatterns.js";
 export type { LayoutAntiPattern, LayoutAntiPatternScope } from "./layoutAntiPatterns.js";
@@ -77,7 +78,11 @@ export { validateTraceability } from "./traceability.js";
 export { validateTraceabilityIntegrity } from "./traceabilityIntegrity.js";
 export { validateUpstreamSsotGuard } from "./upstreamSsotGuard.js";
 export { validatePrototypingSkillContent } from "./skill/prototypingSkill.js";
-export { STUB_SOURCE_FILE_PATTERN, validateTestTodoStubs } from "./testTodoStubs.js";
+export {
+  STUB_SOURCE_FILE_PATTERN,
+  stubSourceFilePattern,
+  validateTestTodoStubs,
+} from "./testTodoStubs.js";
 export { validateWorklogSurface } from "./worklogSurface.js";
 export { validateAssistantTreeMigration } from "./assistantTreeMigration.js";
 export { validateAssistantAnchorReferences } from "./assistantAnchorReferences.js";

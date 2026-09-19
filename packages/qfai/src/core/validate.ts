@@ -25,8 +25,9 @@ import type {
 } from "./types.js";
 import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
-import { validateContracts } from "./validators/contracts.js";
+import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
+import { validateDesignDirectionProposal } from "./validators/designDirectionProposal.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
@@ -41,10 +42,13 @@ import {
 } from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
-import { evaluateAtddCodeTraceability } from "./atddTraceability.js";
+import { atddTestOwnerProbe, evaluateAtddCodeTraceability } from "./atddTraceability.js";
 import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
 import { validateAtddCoverageDepth } from "./validators/atddCoverageDepth.js";
-import { validateScaffoldPlaceholder } from "./validators/scaffoldPlaceholder.js";
+import {
+  scaffoldPlaceholderReportedFilter,
+  validateScaffoldPlaceholder,
+} from "./validators/scaffoldPlaceholder.js";
 import {
   detectPlatform,
   validateAgentDefinition,
@@ -80,7 +84,6 @@ import {
   validateDesignAudit,
   validateNavigationFlow,
   validateRenderCritique,
-  validateDesignFidelity,
   validateFrozenSurfaceReachability,
   validatePrototypingDesignContractReadiness,
   validateRootDesignMdParse,
@@ -107,9 +110,10 @@ import {
   runPackageSelfGovernanceValidators,
   validateStaleReferences,
   validateImportLiteEvidencePresence,
-  STUB_SOURCE_FILE_PATTERN,
+  stubSourceFilePattern,
 } from "./validators/index.js";
-import { atddAcceptanceTestGlobs } from "./atddTraceability.js";
+import type { TestTodoStubOptions } from "./validators/testTodoStubs.js";
+import { atddAcceptanceLayerFilter, atddAcceptanceTestGlobs } from "./atddTraceability.js";
 import type { HtmlMockTiming } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -150,7 +154,12 @@ export async function validateProject(
   // `testsRoot` as well as `specsRoot`: a file under the canonical test layout
   // is owned by the spec whose directory it sits in, so a scoped run drops a
   // sibling's stub the way it already drops a sibling's broken reference.
-  const scopeRoots = { root, specsRoot, testsRoot: resolvePath(root, config, "testsDir") };
+  const scopeRoots = {
+    root,
+    specsRoot,
+    testsRoot: resolvePath(root, config, "testsDir"),
+    testOwner: atddTestOwnerProbe(root, config),
+  };
   const { scope: requestedScope, invalid: invalidSpecValues } = resolveSpecScope(options.specIds);
   const scopeIssues = await buildSpecScopeIssues(
     specsRoot,
@@ -612,6 +621,7 @@ async function runDiscussionValidators(
     // later stages.
     ...(await validateRootDesignMdParse(root)),
     ...(await validateDiscussionMermaid(root)),
+    ...(await validateDesignDirectionProposal(root, config)),
     ...(await validateDiscussionPackReadiness(root, config)),
     ...(await validateDiscussionVisuals(root)),
     ...(await validateResearchSummary(root, config)),
@@ -845,7 +855,6 @@ async function runPrototypingValidators(
     ...(await validateScreenIdCasing(root, config.paths.contractsDir)),
     ...(await validateUiEvidenceArtifacts(root, config)),
     ...(await validateRenderCritique(root, config)),
-    ...(await validateDesignFidelity(root, config)),
     ...(await validatePrototypingDesignContractReadiness(root, config)),
     ...(await validateCompletionCertificateIssues(root, config)),
     ...(await validateConfigReferenceIntegrity(root, config)),
@@ -877,9 +886,11 @@ async function runPrototypingProfileValidators(
   const raw = [
     ...(await runPrototypingValidators(root, config, timings, platformOption)),
     // The profile certification accepts, so an entry no screen is read from is
-    // reported here too. Kept out of `runPrototypingValidators`: `full` also
-    // runs `validateContracts`, which composes it already.
+    // reported here too, and so is a UI contract that does not parse. Kept out
+    // of `runPrototypingValidators`: `full` also runs `validateContracts`, which
+    // reports both already.
     ...(await validateUiScreenEntries(root, config)),
+    ...(await validateUiContractParse(root, config)),
   ];
   return await relaxPrototypingIssuesIfExploration(root, raw);
 }
@@ -937,15 +948,82 @@ async function runAtddValidators(
     // skill instructs the operator to run. Unscoped like the contract rules:
     // the finding names a test file, which no spec owns.
     //
-    // Selection is the stage's own three directories, not
-    // `validation.traceability.testFileGlobs`: that list is repo-wide, so a
-    // `tests/**/*.test.ts` project would have had a `tests/unit/**` stub block
-    // a gate that owns none of it, and the shipped `qfai.config.yaml` leaves
-    // it empty, which made the validator return before reading anything.
+    // Selection is the stage's own, and the stage reads two glob sets: the
+    // three layer directories under `paths.testsDir`, and the project's own
+    // `validation.traceability.testFileGlobs`, which is where a monorepo's other
+    // packages keep their acceptance suites. The second set also matches unit
+    // and component files, and a unit test's stub must not block a gate that
+    // owns none of it — so the layer filter, not the globs, is what keeps them
+    // out. Neither set suffices alone: the configured globs reach unit suites,
+    // and the shipped `qfai.config.yaml` leaves them empty, where the layer
+    // directories are the only acceptance tests there are.
+    //
+    // The marker exemption is handed the same stage's scan boundary. A marked
+    // skeleton under `paths.testsDir` is `D-SCAFFOLD-PLACEHOLDER`'s to report;
+    // one in a package-local suite is outside that validator, so exempting it
+    // here would leave it reported by neither.
     ...(await validateTestTodoStubs(root, config, {
-      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+      ...acceptanceStubScan(root, config),
+      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
     })),
   ];
+}
+
+/**
+ * The selection the ATDD stage's stub scan reads: the layer directories under
+ * `paths.testsDir` and the project's own `testFileGlobs`, kept to the
+ * acceptance layers.
+ */
+function acceptanceStubScan(root: string, config: ConfigLoadResult["config"]): TestTodoStubOptions {
+  return {
+    // The pattern carries the project's own extensions as well. The layer
+    // globs this builds under `paths.testsDir` are generated from it, and an
+    // extension named only by a package glob — `packages/**/*.sol` beside a
+    // `tests/integration/pay.sol` — reaches that path through them alone,
+    // because the package glob does not. A source the gate never collects
+    // cannot be reported as unscanned either.
+    globs: atddAcceptanceTestGlobs(
+      root,
+      config,
+      stubSourceFilePattern(config.validation.traceability.testFileGlobs),
+    ),
+    projectGlobs: config.validation.traceability.testFileGlobs,
+    fileFilter: atddAcceptanceLayerFilter(root, config),
+  };
+}
+
+/**
+ * The TDD profile's acceptance stub selection: the ATDD stage's, plus the
+ * legacy `<testsDir>/atdd/` scaffold directory.
+ *
+ * Older `qfai atdd scaffold` runs wrote their skeletons there, and it is no
+ * acceptance layer, so the ATDD selection passes it over. Under `full` the
+ * placeholder validator reads it; `--profile tdd` runs no such validator, so a
+ * skeleton there, one for an L1/L2 test case above all, whose placement is
+ * deliberately not reported, was read by nothing in the stage's completion gate.
+ */
+function tddAcceptanceStubScan(
+  root: string,
+  config: ConfigLoadResult["config"],
+): TestTodoStubOptions {
+  const scan = acceptanceStubScan(root, config);
+  const legacyDir = path.join(resolvePath(root, config, "testsDir"), "atdd");
+  const relative = path.relative(root, legacyDir);
+  const base =
+    relative.length > 0 && !relative.startsWith("..") && !path.isAbsolute(relative)
+      ? relative
+      : legacyDir;
+  const pattern = stubSourceFilePattern(config.validation.traceability.testFileGlobs);
+  const inLegacyDir = (relativePath: string): boolean => {
+    const inside = path.relative(legacyDir, path.resolve(root, relativePath));
+    return inside.length > 0 && !inside.startsWith("..") && !path.isAbsolute(inside);
+  };
+  return {
+    ...scan,
+    globs: [...(scan.globs ?? []), `${base.replace(/\\/g, "/")}/${pattern}`],
+    fileFilter: (relativePath) =>
+      (scan.fileFilter?.(relativePath) ?? true) || inLegacyDir(relativePath),
+  };
 }
 
 async function runTddValidators(
@@ -978,7 +1056,24 @@ async function runTddValidators(
     // profile `qfai-implement` gates on can see the corruption at all.
     ...(includeTableArity ? await validateMarkdownTableArity(root, config) : []),
     ...(await validateTddList(root, config)),
-    ...(await validateTestTodoStubs(root, config)),
+    // A marked skeleton is left to `D-SCAFFOLD-PLACEHOLDER` only in a run that
+    // has that validator. `full` runs the ATDD profile beside this one, which is
+    // what the opt-out above says; `--profile tdd` runs no such validator, so
+    // there a skeleton whose tests never run is this gate's to report.
+    //
+    // `--profile tdd` also runs the acceptance check below, which reads the
+    // acceptance directories whatever `testFileGlobs` holds, so a skeleton's
+    // annotation there clears a missing reference. Those directories are read
+    // here as well: the configured globs alone never reach them where the
+    // shipped config lists none. `full` reads them in the ATDD profile.
+    ...(includeAtddCodeTraceability
+      ? dedupeStubFindings([
+          ...(await validateTestTodoStubs(root, config)),
+          ...(await validateTestTodoStubs(root, config, tddAcceptanceStubScan(root, config))),
+        ])
+      : await validateTestTodoStubs(root, config, {
+          placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
+        })),
     // `qfai-implement` names `--profile tdd` as its only completion gate, and
     // it is the stage that creates test-routing obligations. Without this the
     // profile was structurally incapable of observing QFAI-ATDD-111/112/113/

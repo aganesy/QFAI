@@ -6,6 +6,249 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The tag push is held to the decision before it, and four workflows say what
+  keeps each of them serial** (#1870). Nothing pinned that `tag-release.yml`
+  pushes a tag only where its decision step wrote `push=true`, and every "nothing
+  to tag" answer ends that step successfully with the version output already
+  written — so an ungated push tags any merge that moved the manifest and happened
+  to carry a matching CHANGELOG heading, and a tag starts the release workflow.
+  The new row reads the gate from the step or from the job around it, so giving
+  the push a job of its own still passes. `tag-release.yml`,
+  `release-notes-drift.yml`, `prepare-release.yml` and `renovate.yml` now each
+  record what stops them dividing further: one tag ref plus an early exit that
+  spends no API call on an ordinary merge; an account-wide API allowance that
+  per-version shards would multiply while dividing the work; an edit step whose
+  only product is the work tree, with no install anywhere to amortize a second
+  runner; and a re-pin chain whose guard must precede the toolchain it protects.
+- **A rule on which surface answers a question about the hosted repository, and
+  how often it is asked** (#2009). An API allowance belongs to the account, so
+  every session and sub-agent draws on one pool and none of them can see what the
+  others spent; one agent asking the expensive way returns a refusal to all of
+  them. `api-budget.md` states the order — git, then REST, then GraphQL — one call
+  for the set rather than one per member, a payload saved once and searched
+  locally, and an interval that follows the subject rather than the impatience.
+  It also records that a dedicated rate-limit endpoint can misreport the budget,
+  and names the response header as the instrument. A `PreToolUse` hook puts it in
+  front of a shell command that mentions the forge's CLI or its API host; the
+  filter is in the program, so `documentation-clarity.md`'s decision to keep its
+  own hook off the shell still stands. `scripts/gh-budget.mjs` is this
+  repository's own cheap path: the CI state of every branch from one call, a job
+  log saved once, the remaining count reported on every invocation, and a refusal
+  rather than a degradation once a reserve is reached.
+- **A README only where a page is published** (#2010). Four were tracked; two were
+  pages nobody lands on. `.agents/rules/README.md` held the rules register, which
+  a second file can only keep in step by hand — the surface suite now reads each
+  rule's own first heading, so a rule cannot be missing from a list. Its
+  "Adding a rule" steps moved to `root-additions-policy.local.md`, and its
+  Windows symlink section is gone: `check-tracked-symlinks.mjs` prints the same
+  steps when it fails. `.instruction/README.md` ruled on that directory, so the
+  ruling is a rule — `.agents/rules/instruction-tree.md`.
+  `scripts/check-tracked-readmes.mjs` fails on a tracked README outside the
+  project's own page and the one npm publishes, and on a listed page that stops
+  being tracked.
+
+- **The root assistant tree is linked at the assets the package ships** (#1915, #1916).
+  `.qfai/assistant/**` was a byte copy of `packages/qfai/assets/init/.qfai/assistant/**`,
+  kept in step by a sync script and a tracked-tree diff. It is thirteen symlinks
+  now, so an improvement to a shipped skill reaches the agents working in this
+  repository with no sync step and the two cannot disagree. Seven paths stay real
+  files: the four Stage 0 catalog documents a project owns, named by
+  `ADOPTER_OWNED_ASSETS`, and the migration memos an upgrade writes here.
+  `scripts/link-assistant-tree.mjs` creates and verifies the links and reports a
+  path that exists here and nowhere in the package; `pnpm ci:lint` runs its check.
+  `scripts/sync-init-to-root.mjs` is reduced to seeding the two files a project
+  owns.
+
+- **`QFAI-CONTRACT-043` reports a UI contract no live spec binds** (#1967). A
+  UI contract has no ledger row and no test directory of its own. Its screen
+  obligations reach a test case through the business rule that binds it, which
+  owes acceptance criteria and test cases under `QFAI-COV-*`, and nothing
+  reported a UI contract no rule bound. An API contract has `QFAI-ATDD-113` for
+  the same gap. The SDD profile now warns on a `CON-UI-*` that no live spec
+  names in a business rule's `Contract-Refs` cell or a `QFAI-CONTRACT-REF:`
+  line. A retired spec's binding does not count, and a mention elsewhere, such
+  as in `Notes`, does not bind.
+
+- **A guard on the mode a link is staged with** (#1920). `ln -s` in Git Bash on
+  Windows copies the target instead of linking to it unless
+  `MSYS=winsymlinks:nativestrict` is set, and the copy is byte-identical — so
+  every check that reads content passes, and nothing says so until the master
+  moves and the copy stays behind. `scripts/check-tracked-symlinks.mjs` reads
+  the index, where `120000` tells a link from a regular file, and runs in
+  `ci:lint:scans`. Which paths must be links is derived from the shipped rules
+  directory and the entry point onto it, so a rule added later is covered
+  without a second list. A checkout that materialised links as text files is a
+  property of the machine and is not reported.
+
+- **A canonical assistant tree may be vendored by link** (#1927). `QFAI-LINK-001`
+  read any symlink in `.qfai/assistant/**` as damage, so a project that points
+  the tree at documents it keeps elsewhere was told its skills and agents were
+  not applied at all. A link that stays inside the project and keeps the name it
+  was written under is now a layout. The three shapes the rule was written for
+  still fail: a target outside the project, a link that does not resolve, and a
+  link that renames — `skills/qfai-atdd` pointed at `skills/qfai-verify` means
+  the wrapper says one skill and the agent reads another. An integration
+  directory such as `.claude/skills` is unchanged: its wrappers carry relative
+  targets, so a link there re-bases every one of them. `QFAI-LINK-002` follows a
+  linked directory inside the tree, so citations into a vendored layer resolve.
+
+- **`qfai init` refuses a destination that resolves into its own assets** (#1919).
+  A repository that vendors the assistant tree by link has `.qfai/assistant/**`
+  resolving to `assets/init/.qfai/assistant/**`, so a run there wrote the shipped
+  documents through the link — an edit to the package's own assets, made by the
+  command that installs a copy of them. The run now stops and says which path
+  resolved where. Detection is by resolution rather than by a path or a
+  repository name, and it fails open when either side cannot be resolved, so an
+  ordinary project is unaffected.
+
+- **An adoption bar for a change that adds a rule, skill or gate** (#1813). Every
+  improvement to this framework has added one, and nothing asked whether the
+  addition beat the one-line instruction it replaces. A pull request proposing
+  one now records three things in its description: the one-line form carrying
+  the operative clause, what the proposal adds beyond that line, and the
+  safety-floor items it touches. Where nothing goes beyond the line, the line is
+  what ships. `REVIEW.md` states it and the pull-request template asks for it;
+  the body reader that already preserved an authored removal list now preserves
+  this answer by the same route, so neither is rewritten from the template. It
+  binds this repository, not what an adopter builds.
+
+- **Repository-specific halves of four rules split into overlays** (#1917).
+  `distributed-surface`, `version-discipline`, `temporary-files` and
+  `root-additions-policy` each governed an adopter's repository and this one
+  from two files that had drifted with nothing to notice. What generalises
+  stays in the shipped master; what names a path under `packages/qfai/`, a
+  guard script, a CI job or an identifier shape this project mints moves to
+  `<name>.local.md` beside it. The suffix is the overlay convention the
+  assistant tree already uses, so an overlay is never shipped. Registered in
+  `.agents/rules/README.md`, `AGENTS.md`, `CLAUDE.md` and
+  `.github/copilot-instructions.md`, and linked from `.claude/rules/`.
+  Every rule the package ships is now read here through its shipped copy:
+  the nine entries in `.agents/rules/` are links, so the file this repository
+  follows is the file an adopter receives. The shipped `version-discipline.md`
+  states the precedence that makes an overlay usable — an overlay beside a
+  master supersedes the master's default.
+
+- **Markdown lint for the documents the package ships** (#1914). `assets/**`
+  was excluded from the lint lane, so the skills, agent definitions, constitution
+  and templates an adopter receives were checked by markdownlint nowhere. They now
+  run in `ci:lint:structure` and `ci:gate:structure` under their own rule set.
+  Five rules are off for these documents because they read them as the wrong kind
+  of text: line length, inline HTML, spaces in code spans, blank lines between
+  blockquotes, and ordered-list prefixes. Duplicate headings are compared among
+  siblings, so a template may repeat a subsection name under each category.
+  Bare code fences, heading-level jumps and unescaped emphasis markers in the
+  shipped documents are corrected.
+
+- **Reviewer cards file excess as a blocking code-quality defect** (#1798).
+  All six reviewer roles trace excess to Article VII, require a concrete cut
+  and replacement, and refuse cuts that remove or weaken a referenced
+  safety-floor obligation. The route uses installed Article VII authority;
+  refreshed cards cannot override a retained older constitution.
+
+- **Article VII makes cutting the governing doctrine** (#1794). The least
+  that satisfies a requirement is the right amount; additional scope or code
+  needs justification. The article ranks above other articles and conflicting
+  constitution instructions, below the referenced safety floor. The absolute
+  output-language rule, required evidence and fact verification, mandatory
+  approvals, irreversible-action confirmations and prototyping scope floor
+  remain protected. Required
+  traceability, repository gates, and their evidence are protected in the
+  safety floor rather than repeated in the article. Every missing governed
+  asset uses exclusive full-byte publication, shipped permissions, destination
+  identity and byte verification, and pinned staging cleanup with inspection
+  causes. Unchanged governed assets stay in the verbose skipped report.
+  Forced repairs publish exclusively after displacing an unreadable occupant.
+  Creation probes precede displacement; publication preserves later regular files.
+  An unreadable shipped set stops before copies or migration. Edited masters
+  retain their customizations with manual constitution reconciliation or a
+  backed-up restoration of the exact shipped master for automatic installation.
+
+- **Implementation agent cards name repository-first reuse** (#1797). Backend,
+  frontend and DevOps agents check this codebase before the standard library,
+  platform or installed dependencies. Their operating, catalog and Codex copies
+  carry the same guidance. Planning cards retain their first-rung scope.
+
+- **Preflight uses repository-first reuse order** (#1796). Article IX checks
+  existing code, including duplicates or overlap, before the standard library,
+  platform and installed dependencies. One bullet covers detection and reuse.
+
+- **The minimal-implementation reminder points at the floor instead of listing
+  it** (#1815). After each write, the hook asks about repository reuse, refers to
+  the entire floor in the rule's § 2 and names `interface-clarity.md` for screen
+  or terminal changes. Referring to the floor keeps the reminder from promising
+  a shorter obligation set. Existing projects keep their old reminder text.
+
+- **Repository reuse is the second of seven minimal-implementation rungs**
+  (#1795). Check the codebase before the standard library, platform and installed
+  dependencies. Existing repository code can answer the accepted behavior
+  without a duplicate implementation. The shipped copy has the same order.
+
+- Define a trust boundary by uncontrolled callers and sources, including public
+  library exports and plugin or tenant contexts (#1803).
+
+- **A batch `/qfai-sdd` run records its shared phases once, in
+  `.qfai/evidence/sdd-batch-<timestamp>.md`** (#1906). With no argument, the
+  skill runs Phase 0 Contracts-first and Phase 1 Outline once for every spec,
+  but the per-spec evidence template required their grilling rows and work
+  orders in each spec's file. That left three choices: eleven copies that must
+  agree in `Ended at` and differ in `Wrote at`, one file with the other ten
+  incomplete, or an undocumented batch file no reviewer checks. A new
+  template, `templates/evidence/sdd-batch.md`, carries those two phases' rows
+  and work orders with the per-spec columns. Each spec's file names it on a
+  `Batch record` line, and the skill's batch section says so.
+
+- **Retained failures keep unit-level coverage** (#1793). The
+  minimal-implementation safety floor protects coverage of the failure paths
+  production code retains.
+
+- Record observed failures on the test cases that exercise them. Preserve
+  scenario types; reuse a row only when behavior, boundary, oracle and layer
+  match (#1801).
+
+- Carry answered review demands into the next existing review request, so a
+  repeated demand can close against its recorded response without suppressing reports (#1810).
+
+- Require architectural elements to cite concrete usages before SDD sign-off,
+  preserving safety-floor obligations and the actual third-caller sharing limit
+  (#1807). The plan template says what an architectural element is — a thing the
+  plan introduces for other things to go through — and the gate covers every run
+  that finalizes a plan, a no-argument batch included. Because the usages are
+  cited before implementation, the implementation reviewer counts the callers
+  again as they exist when the element lands.
+
+- Verify repository-fact sources, use planning-stage precision and apply targeted
+  edits in discussion review cycles (#1818).
+
+- **The discussion profile reads a pack's design direction against the
+  `DESIGN.md` schema** (#1905). On a visual surface a discussion pack records
+  the direction `/qfai-sdd` Phase 0 turns into `DESIGN.md`, and nothing
+  checked it until Phase 0 wrote the file, after the pack had closed. A pack
+  could propose `visual.colors.highlight` or an archetype outside the eight,
+  and `validate --profile discussion` passed. `QFAI-DPACK-011` (warning) now
+  reads the forms that name a key without doubt — a fenced YAML block under a
+  `DESIGN.md` section, a code span holding a dotted key path, and an
+  `archetype:` list item — against the same key tree the parser rejects
+  unknown keys with, and names each key or value the schema lacks. Prose is
+  not read, and cli-only and non-ui packs are skipped.
+
+- **A reviewer may demand more work only on the concrete artifacts** (#1809).
+  A reviewer could ask for another business rule, quality target, policy or
+  piece of architecture without limit, and each such demand made the next review
+  cycle larger. The delegation baseline now admits a demand for more on business
+  flows, user stories, acceptance criteria, examples and test cases, and not on
+  business rules, non-functional requirements, policies and decisions, or
+  architecture. Two demands stay admissible anywhere: a recorded item carrying
+  its mandatory pair, and a safety-floor item. Any other demand is recorded as
+  advisory. The drift protocol and the six reviewer cards point at the rule.
+
+- **A triage row can say what it waits on** (#1900). The triage table had no
+  column for one row's work waiting on another's, or on an open question, so the
+  dependency went into `Rationale` prose. There no fan-out could read it, and
+  three authors worded it three ways. The table format in `sdd-triage.md` now
+  defines an optional `Depends-On` column, holding another row's `Source` or an
+  `OQ-*`, and both delta templates carry it. The `qfai-sdd` batch section holds
+  a dependent row back until what it names is done or resolved.
+
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
   `US-Refs` and `CON-API-Refs` columns are the only place its obligation can
@@ -21,7 +264,534 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it. It follows the reasoning the backfilled-evidence warning already gives, and
   the SDD profile hears it, since the columns are that stage's to write.
 
+- **`QFAI-TRIAGE-010` reports a requirement triaged onto `_policies` alone**
+  (#1901). `_policies/**` holds no user story, criterion, rule, example or test
+  case, and the execution ledger is seeded from those per-spec files, so a
+  requirement whose every triage row targets `_policies` was specified,
+  approved and validated, and no implementer could ever select it. The SDD
+  profile now warns on such a source, reading every triage table across the
+  spec deltas and the policy delta. A policy row beside a spec row for the same
+  source, a `CREATE` row, and a source that names no `REQ-` or `NFR-` ID are
+  not reported. The policy-row entry in `sdd-triage.md` says so.
+
+### Changed
+
+- **Grilling outside the discussion stage is delegated between agents.** A
+  griller interviews the authors, and every decision the user does not have to
+  make takes the griller's recommendation. Only a critical decision reaches the
+  user: one that contradicts a spec, a contract or a recorded decision, one
+  whose effect cannot be taken back, or product intent nothing written states.
+  Each adopted decision is recorded, and the stage's final report lists them,
+  so the user can overturn one later. Reviewers no longer return REVISE for an
+  adopted decision that is not critical. The request bounds the tree: a
+  decision that would only add something the request did not ask for is not
+  asked. A delegated session ends in the new ending `adopted`. The discussion
+  stage, and a session the user starts, still put every decision to the user.
+
+- **The worker-setting comparison is re-measured, on the project that is now the
+  largest** (#1887). The artifact recorded `core` at 145 test files against a tree
+  holding 174 — the twenty-percent bound exactly — so the next core test file any
+  branch added failed the row that re-counts it, and with it three CI jobs on
+  every open pull request. Re-measuring found more than a count out of date:
+  `e2e` is now the largest project, and where the old table had four workers
+  fastest and fourteen worst, the new one runs the other way. The adopted value
+  is unchanged at ten, 6.01% behind the fastest measured and inside the ten
+  percent the rule allows.
+
+- **The size check counts the files a project collects** (#1887). A project's
+  `include` is not always its own directory: `e2e` also collects
+  `tests/assets/**`, and `integration` three trees beside its own. Walking
+  `tests/<project>` alone measured a seventh of `e2e`, so drift anywhere else in
+  it was invisible.
+
+- Run the release gate's checks and its test suite as separate jobs, each over
+  the slices the pull-request lanes already use. Every check that ran before a
+  publication still runs before one. The engines-floor job now asserts that the
+  pinned floor is the runtime it is using, which it did not (#1870).
+
+- Start the lint gate's independent commands as five concurrent lanes instead of
+  two. Every command still runs, exactly once, and a failure in any lane reaches
+  the gate's result. Workflow hygiene still runs first. The formatter is now the
+  gate's floor (#1877).
+
+- Bound how many cases run at once inside one test file, at the smaller of the
+  declared start and the machine's parallelism. Above the core count a run is
+  slower and noisier, which the worker axis already showed and this axis now
+  measures (#1877).
+
+- Run the engines-floor test lane over the same seven slices the resolved-Node
+  lane uses. The slices partition the suite, so the floor claim is unchanged;
+  each leg pins and asserts the floor for itself, and the aggregate verdict still
+  reads one rolled-up result. This lane set the wall clock for the whole run
+  (#1870).
+
+- Run shipped document checks and full/drift validation in independent CI jobs.
+  Stable external verdicts require every selected check to succeed. New projects
+  receive the workflow assets through `qfai init`; existing workflow ownership
+  and package-manager, Node and lockfile handling are unchanged (#1870).
+
+- Run static lint checks and the complete mirror surface concurrently in the
+  existing lint runner. Both checks must succeed. Required check names, test
+  coverage and the documentation-only runner ceiling are unchanged (#1870).
+
+- **`QFAI-DENSITY-005` names cutting before splitting** (#1808). The warning for an
+  oversized business-rule cell told the author to split the row into two rules,
+  which adds an abstract item where the cell most often carries examples,
+  rationale or history rather than a second rule. It now asks the author to cut
+  what the cell carries beyond its rule first, and to split only when what remains
+  is two rules that can each be falsified on their own. The warning, its threshold
+  and its severity are unchanged, and its message is now in English.
+
+- **Every grilling session leaves a record, and the stage's gate reads it**
+  (#1601). A run that held the session and a run that skipped it produced the
+  same spec, the same ledger and the same code, so a reviewer could only block
+  every run or accept a claim it could not check.
+
+  `/qfai-implement`, `/qfai-atdd` and `/qfai-verify` now write a
+  `## Grilling Session` section into their stage evidence, one row per session:
+  the preflight one and any that detection opened. It is the shape
+  `/qfai-discussion` already writes, with a `Subject` column in place of that
+  stage's single `Authoring began`, because these stages hold more than one
+  session. The open questions go under the same table, so the count and the
+  questions it counts are in one place.
+
+  The section opens with `Run started`, and every row ends at or after it. That
+  is what bounds the invocation: an evidence file is updated in place, and a
+  rerun over an unchanged tree produces the same `Revision`, because that
+  address excludes `.qfai/evidence/**`. A line under the heading, `Preflight`, says whether
+  the confidence check opened a session at all, so a run that needed none is
+  distinguishable from one that skipped it.
+
+  One block per stage as well as per run, because two stages share an evidence
+  file: an `E2E` / `API` / `Integration` row's proof lives in the ATDD evidence,
+  which `/qfai-atdd` wrote its own sessions into and `/qfai-implement` later
+  writes to. One table for both would have each stage's gate rejecting the
+  other's rows.
+
+  A row carries both times — when the session ended, and when the stage next
+  wrote — and this run's `Revision` beside them. A row holding only the ending
+  reads the same whether the session ran before the work or after it, because it
+  is written at the end either way; and the times alone bound no invocation,
+  since an evidence file is updated in place and last week's row satisfies them
+  too. It still cannot prove a session happened; the agent writes its own record.
+
+  `.agents/rules/grilling.md` names the four endings a row may hold, so a gate
+  and a record share one vocabulary.
+
+  | Ending        | The work may proceed                                     |
+  | ------------- | -------------------------------------------------------- |
+  | `confirmed`   | Yes                                                      |
+  | `user-closed` | Yes                                                      |
+  | `no-question` | Yes, and whatever gates the work reports those questions |
+  | `stopped`     | No. Report every open decision as open                   |
+
+  Each stage's Reviewer Gate reads the rows and gives each ending a verdict: a
+  `no-question` row with an open decision is a REVISE, because nobody was asked;
+  the same count under `user-closed` passes, because the user saw them and
+  closed the asking.
+  The gate also refuses a `Preflight` that is neither `session opened` nor
+  `confidence high`, and two rows sharing one `Session` key. It checks each
+  row's `Decisions` against the Work Orders Summary rows keyed to that session
+  and this run, and refuses a reply from the user recorded under a `no-question`
+  row. A mutation-only `/qfai-implement` run writes no block, since that branch writes nothing to its
+  rows' evidence, and reports its sessions in its output.
+
+  A session between agents reaches none of the four on its own. Its budget ends
+  the rounds between agents, and every decision the user has not settled goes to
+  the user, the ones the agents agreed on included, and the user ends it — which the primitive said the other way round, so an agent could
+  terminate a session before the user saw what it escalated.
+
+  `qfai init` also brings the one-line summary of this rule up to date in an
+  existing `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md`. It
+  replaces the line only while it is exactly what 1.12.0 wrote, and leaves a line
+  the project edited as it is.
+
+### Removed
+
+- **The design-fidelity check and its eleven rule codes.** `QFAI-FID-001`
+  through `QFAI-FID-011` ran in the `prototyping` and `full` profiles and could
+  not fire on anything QFAI produces. The check read `.qfai/evidence/**` and
+  `.qfai/review/**` for Markdown under a `Fidelity Scorecard` heading, and no
+  command, skill or template writes that heading. The prototyping capture the
+  codes were meant to gate is covered by the `taskFidelity` keywords instead.
+
+  The eleven numbers are retired rather than freed. Taking one back would make
+  a published code mean two different checks across releases.
+
+  `uiux.warning_as_error_override` goes with it, its only reader. An unknown key
+  under `uiux` is ignored, so a configuration that still sets it keeps loading.
+
 ### Fixed
+
+- **The evidence citation guard reads citations into `.qfai/evidence/`**
+  (#1686). A record that named a sibling evidence file the tree does not carry
+  passed, because the guard read only the ignored trees. Three records name
+  `.qfai/evidence/README.md`, a format guide written while it existed and
+  retired afterwards in favour of skill references. Those lines, and two that
+  describe a path rather than cite one, now carry the `qfai:not-a-citation`
+  marker. The README is not restored: shipped skills forbid `.qfai/**/README.md`
+  format documents.
+
+- **A reminder hook's message reaches a project that installed an earlier
+  release** (#2003). `qfai init` wrote each message into `.claude/settings.json`
+  and never touched a group that was already there, so an upgraded project kept
+  the old text for good, even after the rule it restates changed. The settings
+  file now holds only the event, the matcher, the marker and a fixed `node -e`
+  reader. The messages live in `.agents/rules/reminders.json`, which `qfai init`
+  refreshes like a rule master, wherever the project has not edited it. On the
+  next run a group still exactly as an earlier release wrote it is replaced
+  where it stands. A group the project edited is kept, and the run names it. A
+  missing or unreadable message file prints nothing and exits 0.
+
+- **A refused citation is retried once the entry point can be rewritten**
+  (#1687). `qfai init` cites a rule master only in the run that copied it, because
+  that run alone knows no entry point can have cited it yet. When the rewrite was
+  refused, because the file was not UTF-8, was a link, changed during the run, or
+  was a Copilot file past the read ceiling, the citation was lost for good. The
+  master was on disk, so the next copy skipped it and no later run offered the
+  citation again.
+
+  A refused run now records, per entry point, the masters it could not cite, in
+  `.agents/rules/.qfai-citations.pending.json`, and the warning says they are
+  kept. A later run cites the recorded masters that are still on disk once the
+  file can be rewritten, then clears the record. A bullet the project deleted on
+  purpose was never recorded, so it is still not restored.
+
+- **Test titles and comments name only declared test cases and stories**
+  (#1836). Twenty-five titles and comments in the package's tests cited a
+  `TC-` or `US-` identifier no spec declares, and two annotations in a unit
+  suite named undeclared test cases. `QFAI-ATDD-101` and `-102` read only the
+  annotation form in the acceptance layers, so nothing reported them. They are
+  removed, and a repository check now fails on any bare identifier in a test
+  title or comment that no spec declares. An identifier the same file also
+  uses in code is read as fixture data.
+
+- **A removal answer written as a heading is pinned** (#1893). A heading deeper
+  than the section's own does not end that section, so the reader that judges
+  the answer and the rebuild that replaces it have to stop at the same place.
+  Three forms now stand in the release-body cases, each with prose after the
+  section: an ATX heading at level three and at level six, and a setext one.
+
+- **A procurement row must name a screen a UI contract declares** (#1777). A
+  `prototype-handoff.yaml#procurement` row whose `screen` was a typo, or a
+  screen renamed since, passed the shape check while naming a region nobody
+  could locate. The row is now reported under `QFAI-DCON-013` unless its
+  screen is one the contracts under `<contractsDir>/ui/` declare. A project
+  with no UI contract is left to the readiness gate, which already reports it,
+  and `region` stays prose: a screen contract names a screen, not its parts.
+
+- **A completed row's verdicts have to come from one review pack** (#1742).
+  `review-artifact-layout.md` writes one pack per review round, and the gate
+  checked each verdict's pack on its own. A row could present the completion,
+  implementation and product-surface verdicts from three unrelated review
+  requests as one round. `QFAI-TDDLIST-008` now reports a row whose
+  `Spec review pack`, `Code quality review pack` and `Prototype parity review
+pack` name different paths or seals. The layout says a round after a REVISE
+  asks every routed reviewer again, since each verdict has to name the final
+  tree.
+
+- **The Markdown and Mermaid lanes skip other checkouts** (#1895).
+  `pnpm lint:md` walked `.claude/worktrees/**`, so a worktree of another branch
+  had its findings reported against this one. That happened locally and never
+  in a fresh CI clone. The Markdown lint now ignores `.claude/worktrees/**`, and
+  the Mermaid lane (shipped, and used by adopters' docs workflow) no longer
+  descends into a directory that holds its own `.git`, which is how a worktree
+  or a nested clone is marked. Prettier already skips the path through
+  `.gitignore`, and the schema lane matches paths from the tree's root.
+
+- **A lowercase CDATA lookalike hides what follows it** (#1866). GitHub renders
+  `<![cdata[` exactly as it renders the spelled form: the content is hidden, and
+  an unclosed opener hides the rest of the document. The body readers matched
+  only the uppercase spelling, so a removal answer written inside a lowercase
+  block was accepted while no reader of the rendered body could see it, and an
+  entry-point directive after one was read as operative while `qfai init` added
+  no visible copy. The three readers that dispatch an HTML block now match the
+  opener without regard to case; the inline raw-HTML forms are unchanged.
+
+- **A package that keeps the scaffold layout owns its own test files** (#1702).
+  The ATDD scan reads each package's acceptance suites, but a test's owning spec
+  was read only from `<paths.testsDir>/<layer>/spec-NNNN/`. A file at
+  `packages/checkout/tests/integration/spec-0002/pay.test.ts` had no owner, so a
+  mistyped annotation in it reached only the run of the spec the typo named,
+  and `--spec 0002` never reported it. The owner is now the `spec-NNNN`
+  directory directly inside the layer directory the scan resolves for the file,
+  at any test root. The ATDD findings and the scope filter every scoped run
+  applies both read it. A `spec-NNNN` directory above the layer directory, or
+  deeper inside it, still owns nothing.
+
+- **The entry points no longer say this repository installs its own package**
+  (#1921). `CLAUDE.md` and `AGENTS.md` both described `.qfai/` as the result of
+  an npm install of QFAI. There is no such dependency, and
+  `scripts/check-not-a-dependency.mjs` refuses one. They now say where each tree
+  comes from: the assistant tree is generated from the init assets by
+  `pnpm sync:ssot`, and the rule masters are symlinks to their shipped copies.
+
+- **Three gaps the ATDD scan-root change left** (#1938).
+  - A test-name glob with a negated group now selects what fast-glob selects.
+    `!(fixture|data).json` passes over every name that starts with a member,
+    `fixture-old.json` included, where it passed over only the exact names and
+    so vouched for a fixture another glob collected. A negated group that ends
+    the pattern still excludes only the exact name, so `*.!(json)` selects
+    `fixture.old.json`.
+  - `--profile tdd` reads the legacy `<testsDir>/atdd/` scaffold directory for
+    skipped tests. Older scaffold runs wrote there, the directory is no
+    acceptance layer, and the profile runs no placeholder rule, so a skeleton
+    there was read by nothing in the stage's completion gate.
+  - The story and contract remediations (`QFAI-ATDD-111`, `-113`, `-114`) name
+    the directories under the configured `paths.testsDir` rather than a
+    literal `tests/e2e/**` or `tests/api/**`, which no scan reads in a project
+    that moved it.
+
+- **The imported requirement count no longer counts a prose mention** (#1897).
+  `qfai sdd preflight` counts the IDs in `06_REQ.md`'s `REQ-ID` column, and
+  when that column held none it scanned the whole file. A pack numbering its
+  requirements `REQ-D-0001` reported a count of 1, from a sentence saying the
+  pack did not use `REQ-0001`. A `REQ-ID` column that holds no `REQ-NNNN` now
+  makes the count unknown. Only a file with no such column still falls back to
+  the distinct IDs in its text. The `06_REQ.md` template says a pack numbers
+  from `REQ-0001`, because specs cite a requirement with the pack's id, and
+  that a prefixed form is not read.
+
+- The release-notes drift check reads the published bodies from the release
+  list, a hundred to a page, instead of asking for one release per changelog
+  section. The list carries each release's tag and body together, so the number
+  of requests follows the number of pages rather than the number of sections,
+  and it no longer rises with every release. A draft is skipped: it is readable
+  only to whoever can push, and a read by tag never returned one. A page that
+  fails ends the run and names the request, and nothing is compared in that
+  case, because a partial list would make the sections it lacks look unreleased.
+  The report still reads by version, newest first, and the exit codes are
+  unchanged.
+
+- **The audited-evidence-hash reference calls the three hashes evidence-entry
+  fields** (#1939). It called them ledger fields, which could send a reader to
+  add `test-list.md` columns the ledger contract does not have, while the
+  completion gate reads the three hashes from each row's `### TDD-NNNN`
+  evidence entry.
+
+- **The DESIGN.md lock says what checks `frozenAt`: nothing** (#1898). Gates
+  compare the lock's hash with `DESIGN.md`, and none reads `frozenAt`, so a
+  re-freeze that rewrote only the hash passed. A green run was then read as
+  evidence that the timestamp had moved with it. The `qfai-sdd` freeze step
+  now says a re-freeze writes every field again, never the hash alone, and that
+  a stale `frozenAt` passes. The lock sample's header says the same.
+
+- Refuse a scaffold destination where the extensions could not be read, where
+  an exclude glob's range stops the scan, or where a brace range's endpoints
+  are not whole numbers, rather than writing a file the project's own runner
+  does not collect.
+
+- **The spec-0002 conflict record's options can each be carried out** (#1937).
+  `CR-20260912-0003` now requires the single-winner finding through the
+  canonical validator list `qfai validate` runs, blocks a pack whose
+  classification does not validate under `2B`, has `2a` fail closed on an
+  absent `DESIGN.md.lock.yaml` as `spec-0012/TC-0012-0347` already requires,
+  and runs `/qfai-atdd spec-0010` for the acceptance rows that pack's
+  re-derivation leaves at `todo`.
+
+- Read a brace range that generates either half of an extglob, and write out
+  every range a pattern holds rather than a fixed number of them, so the
+  scaffold names a file the project's own runner collects.
+
+- **The evidence-layout record orders itself and schedules what option 1
+  leaves** (#1941). `CR-20260913-0002` now states that option 1 runs after
+  `CR-20260912-0003`, which edits the same `spec-0012` and policy files, and is
+  restated if that record is rejected. Option 1 also refreshes
+  `spec-0012/10_Plan.md` and runs `/qfai-atdd` and `/qfai-implement` for
+  `spec-0012/TDD-0384`. The record no longer says a cycle-0 reset keeps the
+  aggregate captures: the reset now moves them aside, and what remains is a
+  stale copy nested below the evidence root.
+
+- Excess tags cover code, controls, settings and explanatory copy in both the
+  review definitions and shipped reviewer cards. `delete` also covers reuse of
+  code already present (#1800).
+
+- **The band-drift and template-name records name their ledger repair, and own
+  the work it leaves** (#1940). `CR-20260913-0001` and `CR-20260913-0010` name
+  `CR-20260913-0009` as the `spec-0013` ledger repair, and bring the rows it
+  seeds into their scope and costs. `CR-20260913-0001` runs the `spec-0004`
+  acceptance pass under every option and states that no record repairs that
+  ledger yet, so it stays open until one does. `CR-20260913-0010` is applied
+  only once its own `TDD-0027` reset has run, whatever the other record
+  decides, and its `DR-0267` reproduction names the current line.
+
+- The implementation reviewer flags promises neither awaited nor returned rather
+  than requiring catches on propagated async failures. A dropped rejection keeps
+  its correctness class (#1805).
+
+- **The spec-0013 ledger repair keeps each split row's case on its own
+  boundary and execution path** (#1944). In `CR-20260913-0009`, `TDD-0003`'s
+  cases run the SDD preflight rather than search `SKILL.md`, `TDD-0026`'s enter
+  through `qfai sdd lint` and drop the already-declared-frontmatter case,
+  `TDD-0029`'s drop their band and empty-list assertions, the no-file-times row
+  observes metadata reads at run time instead of searching source text, and
+  `TC-0013-0014`'s row checks the result's values, not only its fields.
+
+- **The token docs say a scale key can contain digits, and what a project's
+  own token check must do** (#1908). QFAI checks the prototype against
+  `DESIGN.md`, not a product stylesheet or Tailwind config, so each project
+  writes that check itself. The natural name pattern, letters and hyphens,
+  never captures `2xl` or `3xl`, which `typography.scale` declares, and a
+  check that captures nothing for a key passes both ways. The schema comment
+  now says scale keys contain digits. The `design-system.yaml` contract says
+  QFAI does not check the implementation, that a project's check asserts both
+  directions, and that its name pattern has to admit digits.
+
+- Completion and implementation review stop conditions now include demonstrated
+  regressions against named constitution or catalog rules (#1799). New upstream
+  product obligations remain advisory.
+
+- **The spec-0013 template-slot record has an ID of its own** (#1942). It was
+  filed as `CR-20260913-0007`, an ID an approved record for `spec-0015` already
+  carries, so every reference to it was ambiguous. It is now
+  `CR-20260913-0011`, with every reference moved. `CR-20260913-0003` also
+  orders itself behind the other open `spec-0013` records, names
+  `CR-20260913-0009` as the ledger repair, appends no row under option `1c`
+  while that option holds its new requirement `planned`, and authorises the
+  `spec-0013/07_Decisions.md` write option `2c` needs.
+
+  Three records hold them. `CR-20260913-0011` and `CR-20260913-0008` are
+
+- Generated TypeScript review guidance flags dropped promises and preserves
+  propagation rather than requiring catches for unnamed failures. The repository
+  copy matches the generated block (#1806).
+
+- **The active-pointer record can be carried out in the order it states**
+  (#1943). `CR-20260913-0004` puts `spec-0010/TDD-0017` and its split sibling in
+  its blocked set, says their split waits on a `spec-0010` ledger repair no
+  record carries yet, and hands both through `/qfai-atdd` before
+  `/qfai-implement`. Its ATDD pass splits the Integration case that runs the
+  absent and missing pointer together, takes `spec-0013/TDD-0016` only once the
+  record blocking it is applied, and says how the preflight releases this
+  record's own rows before it is applied. It also names the writer-side
+  contradiction it leaves, raised on its own.
+
+- Repository async guidance requires awaited or returned promises and points to
+  the shared implementation rule for consuming callers, kept failures and
+  callback boundaries. Required handling and incomplete error messages remain
+  review findings (#1804).
+
+- The implementation rule handles only failures not excluded by types or schemas
+  and named by a specification, contract or observation, subject to the safety
+  floor. Other failures propagate; promises must be awaited or returned to a
+  consuming caller. Callback hosts that ignore returns require an explicit
+  adapter that adopts the asynchronous result and handles boundary rejections (#1802).
+
+- **Every reviewer verdict attempt needs its review pack pair** (#1949). The
+  completion gate checked a round's `Round N: Review pack` pairs only where the
+  round recorded at least one, so a `done` row whose rounds recorded verdicts
+  and no pair passed, keeping each outcome and none of the reviews behind it.
+  A verdict attempt with no pair beside it is now reported, as
+  `round-evidence.md` requires. A verdict written as a label with its answer in
+  the fenced block below reads its outcome from that block, as before.
+
+- **A UI contract template name the package does not ship is recorded where the
+  Drift Protocol looks for it** (#1758). Nine statements, eight in `spec-0013`
+  and the shared decision `DR-0267`, name `templates/contracts/ui-spec.yaml` as
+  the file that documents the `primary_tasks` count guidance. No file of that
+  name ships. The UI contract template is `ui-contract.sample.yaml`, which the
+  same pack names elsewhere, and a completed ledger row certifies a test case
+  naming the missing file while its test reads the shipped one.
+
+  `CR-20260913-0010` proposes correcting the file name in each statement, with
+  nothing else in them changing, and resetting that row for the acceptance-test
+  stage to re-execute. It is applied ahead of the record that settles the band
+  itself.
+
+- `spec-0013` declares `AC-0013-0008`, `AC-0013-0009` and `AC-0013-0010`
+  twice each, and every test case citing them means the first heading, so the
+  second of each has had no test case of its own (#1704). `CR-20260913-0012`
+  raises the repair: the first headings keep their ids, the side-artifact
+  criterion takes a new id with a chain of its own, and the other two go with
+  the requirements beneath them. One restates the stop the approved
+  `CR-20260903-0001` retired, and the other names design contracts
+  `AC-0013-0016` removed.
+
+- **The skill citation scan reads a document in one pass** (#1788). It read a
+  run of path characters with no `.md`, `.yml` or `.yaml` ending once from every
+  position in the run, so the time grew with the square of the run's length: a
+  100 000-character token took half a minute. A single line of about nine
+  mebibytes, such as an embedded `data:` URI, stopped `qfai validate` with
+  `RangeError: Maximum call stack size exceeded`. The scan now reads each run
+  once and skips it whole when it holds no citation. It finds the same
+  citations, which a test checks against the previous pattern over generated
+  text.
+
+- `spec-0010` makes `/qfai-discussion` the writer of the active-pack pointer,
+  but only `qfai discussion use` writes it, and `spec-0010/TDD-0016` stands
+  `done` on that command's test (#1961). `CR-20260913-0013` raises the repair:
+  the discussion skill runs `qfai discussion use` on the pack it has just
+  authored, no statement in the spec changes, and `TDD-0016` is reset onto a
+  test that proves the stage makes the write.
+
+- **Test annotations that name a different test's obligation are re-pointed or
+  removed** (#1736). An annotation can name an obligation that exists while it
+  sits on a test about something else, and resolving the identifier cannot tell
+  the two apart. In the package suite, 28 annotations now name the obligation
+  that states their test's subject, and 114 were removed because no declared
+  obligation states it. The identifiers in the test titles and section comments
+  beside them changed the same way. Whole files were affected: the codex agent
+  profile checks carried `qfai init` cases, and the navigation-flow and
+  design-fidelity validator tests carried discussion-pack cases. Annotations
+  that a TDD ledger, an evidence record, the E2E annotation ledger or another
+  test depends on are unchanged. No check was added: whether a test is about
+  what its obligation says is a comparison of two texts, and no validator can
+  make that judgment reliably.
+
+- Two skipped integration test files for `qfai atdd scaffold` and
+  `qfai doctor --clean` / `--autoremediate` are removed (#1436). They were
+  written before those commands existed and never enabled. Their test cases
+  are now covered by the separate tests each ledger row names. The files ran
+  against the repository itself rather than a temporary tree, so enabling them
+  was never the repair. Their four `QFAI-TEST-003` errors leave the dogfooding
+  backlog. The two E2E files beside them stay: they are what the E2E
+  annotation ledger counts for three stories.
+
+- **`qfai atdd scaffold` reads a brace range in a test glob as fast-glob does**
+  (#1752). A range has no comma, so the check that decides whether the file it
+  writes is one the project collects read `{0001..0999}` as the literal text
+  between the braces. It refused, as a naming mismatch, a name the glob selects.
+  A numeric range, zero-padded or not, with or without an increment, ascending
+  or descending, and a single-character range now match the members fast-glob
+  expands them to, padded to the widest part, the increment included. A range
+  fast-glob refuses, one of a thousand steps or more written without an
+  increment, leaves the scan collecting nothing at all, whether the glob is one
+  the scan includes or one it ignores, so the scaffold refuses rather than
+  writing under it. A member the expansion produces is glob syntax, as it is to
+  fast-glob, which expands a range before it compiles, and a range anywhere in
+  the pattern is read when the extension is derived. A wildcard that opens a
+  path segment no longer matches a name beginning with a dot, which is how the
+  scan reads one. A list member is text,
+  not a range, and so is a brace body that is neither. Because a range can make
+  a glob depend on a test case id's digits, the scaffold checks the file it
+  would write for every test case in scope, not a representative one.
+
+- **The layer derivation procedure says, where the layer is chosen, that a
+  test case never takes L4 or L5** (#1904). The restriction sat in the
+  crosswalk seventy lines above, and the procedure — which readers reach
+  through its anchor — offered both layers in step 3 and its worked examples.
+  Step 3 now says an oracle landing on either means the obligation is filed as
+  `CON-API-*` or `US-*`, and the two worked examples say which.
+
+- Six shipped checks have tests but no test case in any spec, so nothing says
+  what they must do and no ledger row traces them (#1837).
+  `CR-20260913-0014` raises the repair:
+  - Navigation flow, UI-bearing classification and the test stub check go to
+    `spec-0004`.
+  - Traceability integrity goes to `spec-0013`.
+  - The provenance lock's handling of two writers at once goes to `spec-0003`.
+  - The design-fidelity scorecard is recorded as owned by no spec, because
+    nothing the package ships writes the input it reads.
+
+- **A screen property measured on rendered output has a layer: L3** (#1909).
+  A test case may take L1, L2 or L3, and none of them named a browser, so an
+  obligation read off painted pixels or computed layout had no legal layer.
+  The nearest-sounding bullet at the decision point was L5, which a test case
+  may never take. `catalog/test-layers.md` now counts what a real browser
+  rendered as real infrastructure state: the L3 definition, the L3 bullet of
+  step 3 and a worked example say so, and step 3 says such a property is L3,
+  not L5, because it is not a journey. The `06_Test-Cases.md` template's L3
+  summary follows.
 
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
@@ -34,6 +804,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the address unchanged; the step now asks the filesystem for them and stops on
   any it finds. A test runs the step's own commands in a temporary repository.
 
+- Two tests now hold the skill check's handling of a skill directory reached
+  through a link (#1754). A document that a linked skill's step names, and that
+  is not valid UTF-8, is reported as `QFAI-SKILLS-014`. A link that loops back
+  into its own skill ends the run without a finding. The walk reads a document
+  under a link when a skill cites it, which is the document the host opens.
+
+- **Generated agent review instructions retain the project's review policy**
+  (#1814). Fresh, existing and forced init output points to `REVIEW.md` when the
+  project has that file. Existing entry-point text stays intact. The package
+  does not supply the repository's own review policy. PR readers reject
+  placeholder answers, preserve literal comment markers in code and refuse
+  release-body repairs hidden by unfinished Markdown blocks.
+  Existing list-item directives are reused without rewriting project text.
+  A heading that interrupts a paragraph remains visible to description readers.
+  Raw HTML examples do not supply description headings. Top-level indented
+  examples do not supply review guidance. Project bytes and authored answers
+  stay intact.
+
+- **A missing `jq` is named, not read as a broken release workflow** (#1689). The
+  test that runs the release workflow's tag gate reported, on a machine without
+  `jq`, that the workflow would not tag a release merge, while the negative
+  cases beside it passed for no reason: the gate's `jq` call failed, it printed
+  nothing, and the case read that silence as a verdict. The case now fails
+  naming the tool that is not installed.
+
 - **The completion gate recomputes the checkpoint seal over the checkpoint's own
   revision** (#1738). `checkpoint-verification.md` seals the checkpoint command
   and result together with `Checkpoint verification revision`, the tree that
@@ -44,6 +839,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `Revision` for a row that records none. The contract also says each value
   enters the seal without a code span around it.
 
+- **The post-build leakage guard scans what npm publishes, the manifest
+  included** (#1931). The guard built its scan list from `package.json#files`,
+  and npm adds files that list never names — the published `package.json`
+  above all. A `schemaVersion` or a private version marker there shipped with
+  every guard green, and a filter meant for the repository's own manifest
+  dropped the `schemaVersion` finding for the published one too. The guard now
+  asks `npm pack --dry-run` for the list, scans the manifest with no filter, and
+  still passes its `version` field. A glob in `files` is now scanned as npm
+  expands it instead of being refused.
+
+- **The evidence revision reference says how a revision is read after a squash
+  merge** (#1696). A squash merge lands a commit with no branch revision among
+  its ancestors, so a recorded `<git rev>` did not resolve in a clone of the
+  default branch, and staleness had nothing to start from.
+  `evidence-revision.md` now says the rev resolves by fetching the pull
+  request's ref, and staleness is computed from it as before. It also says a
+  `working-tree+` address does not survive the merge, so a record meant to
+  outlive the branch is taken on a commit.
+
 - **The grilling-trace check accepts the template it was written to reject**
   (#1739). `QFAI-GRILL-001` counted any table row under `## Pre-draft Grilling`
   as a record, and the shipped evidence template carries three worked rows. So
@@ -51,6 +865,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   one state the check names as the reason it exists. A row still holding a
   template placeholder no longer counts, and the finding says which of the two
   states the file is in.
+
+- **The completion gate checks an `n/a (not UI-affecting)` against the clauses**
+  (#1735). A row that records `n/a` owes no product-surface review, no capture
+  manifest and no parity hash, and the gate took the value as given. It now
+  evaluates the clauses of `ui-affecting.md` it can read from the tree, and
+  refuses the `n/a` naming the first that holds: clause 1 where `Owning module`
+  is declared, clause 2 on `Test file`, and clause 3 on an obligation a UI
+  contract names or whose entry names a UI contract id. Clause 1's fallback,
+  which reads the row's own change, is not evaluated, and `ui-affecting.md` says
+  so.
 
 - **The grilling-trace check reads the discussion stage's record too** (#1740).
   It was written when no stage but the spec stage named a file to write a
@@ -94,6 +918,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout can see is one the check could only ever report nothing about, and a
   negation alone does not stage a file.
 
+- **A procurement row a reader cannot act on is reported** (#1744).
+  `prototype-handoff.yaml#procurement` is what `/qfai-implement` installs from
+  rather than rebuilding, and what a reviewer reads instead of judging a
+  resemblance. Nothing checked it, so a `procured` row naming no item and an
+  `authored` row recording no reason both passed — the second satisfying the
+  reviewer's last-resort criterion on its face while recording none of what that
+  criterion asks for.
+
+  Each row now carries its cells or is reported, one finding per row. The key
+  itself stays optional: the handoff contract lets a screen drawn entirely from
+  what the project already had omit both lists.
+
+- **When the aggregate prototyping mirror runs is recorded as a Change
+  Request** (#1766). `spec-0012`, from its requirement down to its test case,
+  and both prototyping command contracts place the mirror into `screenshots/`
+  and `html/` on convergence, copying the accepted iteration. The command runs
+  it at the end of every capture pass, before that capture is reviewed, and the
+  test for it pins that reading. While a loop runs, and after one stops at its
+  iteration limit, the directories hold a capture nobody accepted.
+
+  `CR-20260913-0030` records both sides, blocks the ledger row and the
+  statements the options reword, and puts the choice: reword the documents to
+  match the command, move the mirror to the converged stop as the documents
+  already say, or keep the per-capture mirror and move the directories aside
+  when a loop stops without converging.
+
 - **The prototyping preflight refuses a screen with no primary task** (#1698).
   The audit lane reported an empty `primary_tasks` as `QFAI-AUD-001`, but
   `qfai prototyping preflight` never read the field, so the stage started on a
@@ -104,6 +954,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   preflight refusing, and a structured task missing `label`. Before these
   cases, dropping `label` from the required keys, or letting the stage start,
   left every case passing.
+
+- **Triage says how to file a source file no spec owns** (#1903). The
+  `Existing Spec` cell names a spec, several specs or `_policies`, and shared
+  code such as a navigation shell or an error boundary belongs to none of them.
+  Each project had to choose between naming an unrelated spec, a policy row
+  that schedules nothing, and a new spec for something that is not a
+  capability. `sdd-triage.md` now says to split the file's obligations by
+  behaviour onto the specs that own each behaviour, says what the other moves
+  cost, and routes a behaviour no spec owns to a new requirement.
+
+- **The prototyping profile reports a UI contract that does not parse**
+  (#1767). Every reader of UI contracts skips a file it cannot parse, so its
+  screens are absent from every screen check. `sdd`, `tdd` and `full` report
+  the file as `QFAI-CONTRACT-021`, but `--profile prototyping`, the one
+  certification accepts, ran none of the contract checks and reported nothing.
+  It now runs the parse check over the UI contracts, and keeps the finding an
+  error in exploration mode; `full` still reports the file once.
 
 - **The completion gate recomputes the product-surface review's hash** (#1713).
   A UI-affecting row carries three reviewer hashes, and the gate recomputed only
@@ -127,6 +994,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   come before the verdicts, like the other phase-authored fields. Captures are
   ignored stage evidence, so where one is absent from the checkout, as on a fresh
   clone, the gate skips the recomputation. It does the same for a review pack.
+
+- **The UI evidence check reads the captures where iterate writes them**
+  (#1769). `qfai prototyping iterate` writes screenshots and HTML under
+  `.qfai/evidence/prototyping`, and every other evidence reader looks under
+  `.qfai/evidence`. `QFAI-UIE-001` and `QFAI-UIE-002` alone looked beside
+  `paths.specsDir`, so with the specs directory moved they reported every
+  captured screen missing, and were satisfied by files iterate never wrote. The
+  check now reads `.qfai/evidence/prototyping` too, and its suggested action
+  names that path.
 
 - **The working-tree address is written one way** (#1651). The procedure said
   "a hash over HEAD and the working tree", and that is not one value: a
@@ -194,6 +1070,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is unchanged until it is applied. `CR-20260913-0006` puts the one row whose
   evidence has no form it can take to the user.
 
+- **An unreadable directory under the acceptance test directories is reported,
+  and the run finishes** (#1755). A directory the account running
+  `qfai validate` cannot read stopped the ATDD scan's glob walk, and the
+  rejection ended `--profile atdd` with no finding and none of its other
+  results. The scan now reads past each such directory and
+  `QFAI-ATDD-135` names it. No test inside is counted, so the carrier-only
+  partition is suppressed as it is for a truncated scan, and the summary
+  artifact lists the directories. The scaffold placeholder scan reads past
+  them too.
+
 - **The completion gate holds reviewers to the tree after the refactor** (#1732).
   `evidence-revision.md` says the reviews judge the final tree, which
   `Refactor verify revision` names, while a round's `Revision` names the tree
@@ -206,6 +1092,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   after the review fields is refused. `ui-affecting.md`,
   `parallelization-policy.md` and the skill now say items 6, 7 and 8 share the
   revision. No completed row in this repository changes result.
+
+- Ten spec ledgers now use the template's columns, and each has a `todo` E2E
+  row for every story that had none: `spec-0001`, `-0003`, `-0005`, `-0006`,
+  `-0007`, `-0008`, `-0009`, `-0011`, `-0016` and `-0017` (#1750). Before
+  this, a Change Request that re-derived one of these packs would also add the
+  rows through Phase 2b, and nothing recorded or authorized them. Existing rows
+  keep every cell they had. The columns they lacked read `-`, which the
+  validators read the same as the absent column. The ledgers of packs with an
+  open Change Request are left for those records to repair.
 
 - **A UI contract entry no screen is read from is reported** (#1734). Every
   consumer of UI contracts reads screens the same way: it keeps the first entry
@@ -223,6 +1118,455 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   prototyping loop captures from and the design audit reads keeps only the
   first, and the second is named. The prototyping profile, which certification
   accepts, reports the finding as well.
+
+- **The completion gate reads `RED failure mode` as the round field the skill
+  writes** (#1633). `round-evidence.md` puts the field under the round prefix,
+  because a blocking revision opens a round on its own tree, and one row-level
+  field cannot hold a falsifiability proof for one round and an observed RED for
+  the next. The gate read only the row-level form, so an entry written as the
+  skill says was reported as having no failure mode. Each round's
+  `Round N: RED failure mode` is now checked against that round's RED. An
+  entry that states the field once, without the prefix, still answers for every
+  round that states none.
+
+- **The execution ledger says how a UI contract reaches it** (#1902). The ledger
+  has obligation columns for test cases, user stories and API contracts, and
+  none for a UI contract, with nothing saying why. The template now says a
+  `CON-UI-*` has no group and no column: each screen obligation it declares is
+  a test case in the spec that owns the screen, carried by that test case's
+  row. It also says no gate reports an untested UI contract the way
+  `QFAI-ATDD-113` reports an API one, so the test case is written with the
+  contract.
+
+- **A ledger row observes the property it owns** (#1700). One prototyping-loop
+  test asserted five properties of the cycle-0 hard reset in a single case, and
+  a ledger row owning one of them, the `fullHarness` deletion, named no case at
+  all: its selector, `cycle 0 deletes fullHarness`, matched no title. A case
+  stops at its first failing assertion, and the row's property came second, so
+  a regression in the `reviewerGate` deletion before it failed the case without
+  reaching the row's property, and a failing case did not say which of the five
+  had regressed.
+
+  The case is split into five, one per property, over the same seeded state, and
+  the row's selector now names the case that asserts its property alone.
+
+- **A committed record is held to the artifacts the repository carries**
+  (#1652). Evidence files name paths under the generated trees — a review pack,
+  a validate report, a discussion pack — and those trees are ignored. On every
+  clone but the author's the claim arrives without its subject: a reader cannot
+  open what the record points at, and neither can the stage seal, which
+  resolves the recorded review pack under the repository root. A guard now
+  measures every citation in the committed evidence against the tracked tree,
+  with the names that do not resolve today held as a list that may only shrink.
+
+  A citation is read as the dialect writes it — a brace list, an extended
+  group, a bracket expression, a one-character wildcard — and each is resolved
+  through the repository's own glob compiler rather than a second
+  implementation of the same notation. A citation opens only where the text
+  before it is not path text, so a runner's temporary directory or another
+  clone's path is not read as this repository's file, whether written with `/` or
+  `\`, and a wildcard does not stand in for a dot-leading name that has to be
+  written. A brace range names every member between its ends, braces with no list
+  or range in them are literal text, and a JSON or YAML record is read as its
+  decoded keys and strings.
+
+  A record that explains why an artifact is absent says so with
+  `<!-- qfai:not-a-citation -->` on the line, or on the line before a fenced
+  block for the paths it names inside it.
+
+- **Step 2 of the layer derivation says how a test case reaches its parent
+  business rule** (#1907). The step restricts the oracle to the parent BR's
+  obligations, and no test-case column names a BR, so each reader picked a
+  parent, usually the nearest `AC-Refs`. Step 2 now gives the route the
+  ledger's `BR-Ref` check already uses: the TC's `EX-Ref` to that example's
+  `BR-Ref`, or, where `EX-Ref` names no example, the BRs whose `AC-Refs` name
+  one of the TC's `AC-Refs`.
+
+- **Article XI no longer sends toolchain output to `tmp/`** (#1929). The
+  article required "intermediate build artifacts" under `tmp/`. The shipped
+  temporary-files rule says build, test and cache output (`dist/`, coverage
+  reports, package tarballs) stays where the toolchain writes it. An article
+  outranks a rule, so an agent reading both was told to move `dist/`. Article
+  XI now covers the scratch files an agent creates, names toolchain output as
+  outside its scope, and gives the same list the rule does.
+
+- **A glob's bracket expression names a set on both sides** (#1652). A class
+  was compiled by scanning for the first `]`, which stops inside a named class
+  such as `[[:digit:]]` and leaves a pattern matching the letters of the name.
+  The class's real terminator is found now, and each named class is written out
+  as the members a regular expression takes — so a project whose test glob uses
+  one is no longer told the file it generated does not match it. A backslash in
+  a class escapes the member after it, so `[\-T]` names a hyphen and `T`.
+
+- **The ATDD traceability scan reads every package's acceptance tests, not only
+  the one under `paths.testsDir`** (#1588, #1745). That setting holds a single path, so
+  a repository whose suites live one per package could name at most one of them.
+  The three globs the scan built from it matched whatever was under the
+  configured root, and in this repository that was two prose annotation carriers
+  and no test at all. Every obligation was then satisfied by a list of IDs, and
+  `QFAI-ATDD-111` and `-112` could not report a coverage gap.
+
+  The scan now also collects from the project's own
+  `validation.traceability.testFileGlobs`, minus its `testFileExcludeGlobs` and
+  any negative entry in the list itself, which the scan used to read anyway, and
+  a file collected that way is answered by the segment **inside its test
+  root** — `<package>/tests/<layer>/**`. Read from any ancestor instead, every
+  test of a package called `api` lands in the API layer, including its unit
+  suite. The globs are used as written: a base is
+  never derived by slicing one, because a glob whose directory part carries a
+  wildcard slices to a base with the wildcard still in it, and a layer glob
+  synthesized under that base addresses a directory the project never
+  configured.
+
+  Measured on this repository: obligations covered by an annotation carrier
+  alone fall from 781 to 384 — 93 user stories and 304 test cases move to a test
+  that exists and runs — with no new finding at any severity.
+
+  A collected file in none of the three directories answers nothing and is not
+  reported as misplaced. A unit suite owes ATDD nothing wherever it sits, so
+  `QFAI-ATDD-105` keeps its subject: a file under `paths.testsDir` that no layer
+  owns. It skips a file the project withdrew, whether through
+  `testFileExcludeGlobs` or a negative `testFileGlobs` entry.
+
+  The stub gate collects the extensions its own pattern names, plus any a
+  project glob names outright — and those reach the layer globs it generates
+  under `paths.testsDir` as well, so an extension named only by a package glob
+  is collected from the configured root too. A glob used as written may be extension-broad, so
+  a fixture beside the suite — `tests/integration/data.json` — reached a scan
+  that had nothing to say about it and was reported as an unscanned language;
+  and a glob naming `.zig` selects a language with no dialect on purpose, which
+  is what that report is for. The same holds for a glob naming a file with no
+  extension, such as `tests/integration/test_pay`, or an extension through a
+  short character class, such as `*.[z]ig`, or a glob that names the file itself
+  and leaves the extension open, such as `*.test.*`, `*.{test,spec}.*` or
+  `test_[0-9].*`. A negative entry names no extension, either for the stub gate
+  or for the scan's own file pattern; one opening a negated extglob, such as
+  `!(fixtures)/**/*.zig`, selects, and names its extension to both. A negated
+  group in the file name, as in `*.!(json)`, keeps every file it selects. A glob
+  that names the file or its extension, such as `*.test.*` or `*.zig`, is read
+  against the whole path it selects, so a file only another package's broad
+  glob collected passes on neither. A numeric or character brace range in such
+  a glob, as in `test_{1..3}.*`, selects the names fast-glob expands it to.
+  Its wildcards skip a name that starts with a dot, as the scan's do, so
+  `packages/*/tests/**/*.test.*` names nothing under `.generated/`. Each glob is
+  trimmed before its extension is read.
+
+  The coverage scan reads a collected file the same way: a data file an
+  extension-broad glob sweeps into an acceptance layer is not a source, so an
+  annotation-shaped fixture value in `tests/integration/data.json` discharges
+  nothing, even where another package's glob names `.json`.
+
+  A file in no acceptance layer is dropped while the stream runs, before it is
+  counted against the collection limit. A project glob may match a whole
+  monorepo, and files no acceptance rule reads would otherwise spend the limit
+  on the first packages and never reach the later ones — reported only as an
+  `info`, which `--fail-on error` passes. `scan.matchedFileCount` therefore
+  counts acceptance files rather than glob matches.
+
+  A `validation.traceability.testFileGlobs` entry naming a range no pattern
+  engine compiles, such as `test_[z-a].*`, no longer ends the run. It selects
+  nothing, and every other glob is still read. A directory one of the globs
+  reaches that cannot be read no longer empties the ATDD scan either: the other
+  patterns are read, and `QFAI-ATDD-134` names each pattern it could not read.
+  A scan that stops at the file limit is an error under the same code, where it
+  was only a flag in the summary artifact. A partly unreadable scan claims no
+  obligation is covered by a carrier alone, as a truncated one does, and the
+  summary artifact lists the globs it could not read.
+  A stub-scan notice about a project glob names
+  `validation.traceability.testFileGlobs` rather than `paths.testsDir`.
+
+  A misplaced test-case reference is fixed in the file that carries it, and the
+  remediation now names that file, whichever package's suite it sits in. Every
+  remediation that names a layer directory, the missing-coverage ones and
+  the deferral notices alike, names the package's own suite as well as
+  `paths.testsDir`, so an author following the canonical fix does not build a
+  parallel central suite the shipped skill tells them not to build.
+
+  A collected file answers a layer only from inside a test root — a directory
+  named `tests`, `test` or `__tests__`, or the one `paths.testsDir` points at,
+  and in either case one that carries no package manifest, since a workspace
+  package named `tests` is a package rather than a suite root. The manifest is
+  read for the ecosystems a workspace declares packages in, not Node's alone: a
+  Python or Go workspace can name a package that way too. Only a file counts as
+  a manifest, so a fixture directory called `go.mod` does not. A file a
+  suite also keeps for its runner — `package.json`, `deno.json`, `deno.jsonc`,
+  `pyproject.toml`, `setup.cfg`, `CMakeLists.txt` — counts only when it names a
+  package, as a CMake `project()` command does, and
+  `deno.jsonc` is parsed with its comments and trailing commas, so a `name`
+  nested in another object or left in a comment names nothing.
+  The glob `qfai init` derives reaches colocated sources, so reading the file's
+  own parent instead would have made every `src/api/client.spec.ts` an API
+  acceptance test: its annotation could then discharge an obligation, and an
+  unfilled stub in it could block a gate that owns no unit test. A suite kept
+  outside those roots is reported as uncovered until its root is named, which
+  is the safe direction of the two.
+
+  The scaffold marker still hands an unfilled skeleton to
+  `D-SCAFFOLD-PLACEHOLDER`, but only where that validator looks — both halves of
+  its scan, the four directories under `paths.testsDir` and the writer's own
+  basename patterns. A marked skeleton outside either was exempt from this gate
+  and uncollected by that one, leaving the ATDD gate green over a suite that
+  does not run. A skeleton naming only test cases at `L1` or `L2` stays this
+  gate's too, since that validator reports nothing for them.
+  `--profile tdd` runs no such validator, so there the stub gate
+  reports every marked skeleton it reads, and it reads the acceptance
+  directories as well as `testFileGlobs`, as the coverage check it runs does.
+
+- **A shared decision record can cite the spec items it rests on** (#1899).
+  `QFAI-LAYER-100` and `TRACE_SHARED_SCOPE_VIOLATION` forbid spec-local IDs
+  anywhere in `_policies`, prose included. A cross-spec decision could not
+  name the rules it was measured against, and a rationale rewritten to avoid
+  them could not be checked. Inside a `### DR-*` record of
+  `_policies/08_Decisions.md`, the `Context` and a new `Evidence` bullet may
+  now name those items. Every other place in `_policies` stays under both
+  rules. The template says so, and says a table applying one judgement across
+  many specs' test cases belongs under `.qfai/evidence/`, cited from
+  `Evidence`.
+
+- **The audited evidence hash says what its extraction produces, not only which
+  fields it reads** (#1616). Naming the fields settled which lines are taken and
+  left open what they become, so two readers taking the same fields computed
+  different digests: the list marker, the `Round N: ` prefix, a field's fenced
+  value, the heading line, the field order and the separator were each
+  undetermined. A recorded value was reproducible only inside the run that wrote
+  it, which is not a check.
+
+  The extraction is a region of the entry rather than a selection out of it: it
+  runs from the row's heading to the first field the subject could not have
+  read, keeps every line inside verbatim including a field's fenced value, drops
+  a reviewer's own verdict line, and synthesizes the heading. That is what
+  `npx qfai validate` gate item 10 computes today, so a second party recomputing
+  a recorded digest gets the recorded digest. A selection would have had to fix
+  an order, a separator and a spelling as well, each a further way to disagree.
+
+  Four values share these words and are not one: three ledger fields carrying
+  three reviewer roles' verdicts by these same four steps — the third is the
+  parity hash a UI-affecting row owes — and the working-tree revision, which
+  addresses a tree rather than a subject. The reference now names all four.
+
+  A round with several review attempts qualifies its verdict field, and the
+  extraction now drops that form too: the contract said every verdict line goes
+  and the code matched only the unqualified one, so a multi-attempt round gave
+  the reviewer and the gate two digests. The `Round N: Review pack` pair written
+  beside each attempt is dropped the same way, and the gate recomputes each
+  attempt's seal from the pack it names instead, so a pack edited after its
+  attempt closed is still reported. A round that records any pair owes one for
+  every verdict attempt, a pair's path must have the canonical pack shape even
+  when the pack is absent, and a present pack must name the row in its request
+  and carry responses that agree with the attempt's verdict. It must also review
+  this row's spec at one revision, and the attempt the last round closed on must
+  hold one response per reviewer the row records, at the tree and audited hash
+  that reviewer's verdict records. A request names the row once and otherwise only T1
+  rows sharing its `BR-Ref`, and each response in a pack states its verdict. Every
+  review pack's seal now hashes Markdown and HTML normalized and every other file
+  as its bytes, as the audit-hash procedure does, so a producer's seal over a
+  `summary.json` with a carriage return recomputes. The completion gate also holds those
+  attempts to the numbering the contract gives them, from 1 in review order,
+  and reads the attempt a round ends on: a round before the last has to end on
+  a `REVISE`, and the last round of a done row on exactly `PASS`. Within a
+  round, every attempt before the last is a `REVISE`. A blank attempt counts as
+  one.
+
+  Every response in a present round pack must state one visible SHA-256
+  `Audited evidence hash` per `TDD-ID` its request lists, and a T1 group
+  member's hash is read from the line naming it, in round and row-level packs
+  alike. No two review attempts of a row may name one pack, and a
+  `reviewer verdict` or `Round N: Review pack` label may not share a table row
+  with another field's label, since the audited subject drops that row whole.
+  A round pack pair needs its attempt's `PASS` or `REVISE` verdict even when
+  the pack is absent, and a present pack's `summary.json` must record that
+  verdict: `overall_status` `PASS` or `FAIL`, and each responding reviewer's
+  status in `reviewers[]`, or `reviewers: []` for a round no reviewer answered.
+  Review pack responses are read only from the pack's own directory, and a
+  round pack must name its revision in a form `evidence-revision.md` defines
+  under `revision_form: "content-hash"` and declare `producer: "implement"` in
+  `summary.json` and `Producer: implement` in its request.
+
+- **The `primary_tasks` band drift is recorded where the Drift Protocol looks
+  for it** (#1621). `QFAI-AUD-020` lost its lower bound as product work, and
+  `spec-0013` still specifies the band: its test case says one task warns and
+  the test pinning it says nothing is emitted, with a `done` ledger row joining
+  the two.
+
+  `CR-20260913-0001` records both sides, blocks the three rows whose
+  obligations the product contradicts — two of one pack and one of another that
+  shares the decision — and says which it leaves alone, and puts the part
+  a rerun cannot settle by following the product: three decision records chose
+  the band, the removal overturned them on the opposite rationale, and whether a
+  reversed decision is rewritten or superseded was left to the user to choose.
+
+- **The prototyping evidence layout is recorded where the Drift Protocol looks
+  for it** (#1626). One acceptance criterion and the test case restating it say
+  the aggregate `screenshots/` and `html/` directories are not accepted as an
+  evidence source. The required-path check reads them first — and the iterate
+  command contract calls them the SSOT for handoff, the shared policy defines
+  the mandatory evidence by those paths, and another spec pack requires the
+  mirror that writes them. A loop reset also leaves the previous loop's copies
+  there, where the check accepts them.
+
+  `CR-20260913-0002` records both sides, blocks the ledger row whose obligation
+  turns on the disputed clause and the contract and policy terms the options
+  reword, and puts the choice: keep the mirror but stop reading it; narrow the
+  criterion to what the check reads, a restarted loop passing on the previous
+  loop's copies included; or withdraw the criterion together with the rule that
+  depends on it. No option stops the mirror.
+
+- **Four spec-0013 rules the product states otherwise are recorded where the
+  Drift Protocol looks for them** (#1629). Two test cases in one pack require
+  opposite things of one value: the UI contract template must ship an empty
+  task list, and the validate lane must fail at error on exactly that value.
+  A legacy-contract rule is written without the sunset condition its business
+  rule carries, three lines below a file comment describing the behaviour that
+  sunset replaced. An obligation naming a stage is covered by a test that
+  drives a helper no code calls. And a finding specified as a warning inside a
+  deprecation window is emitted as an unconditional error, because the
+  version-keyed severity mechanism those layers name was retired.
+
+  Three records hold them. `CR-20260913-0007` and `CR-20260913-0008` are
+  defects the pack shows on its own, each with its one correction: the template
+  slot restated as a key holding authored tasks, and the legacy-contract test
+  case given the sunset its business rule already carries. `CR-20260913-0003`
+  puts the other two to the user with options: the unwired helper, whose
+  resolver half every option restates to the fallback `spec-0012` specifies,
+  and the finding's severity, where restoring a window needs a release only the
+  user can name. Each blocks the ledger rows its items change, and no rule or
+  code changes until it is applied.
+
+- **An unresolved merge in a pinned file is named as one** (#1722). A conflict
+  block changes a pinned file's bytes like any other edit, so the byte guard
+  that opens the lint job failed it as a digest mismatch and named resealing as
+  the repair. The scan that would have named the real cause runs later in the
+  same job, and a job stops at its first failure, so the cause arrived a CI
+  round late, after the operator had followed the wrong advice once.
+
+  The guard now scans the pinned paths for marker lines before comparing
+  digests, and says that resealing is not the repair. The re-pin program
+  refuses the same tree rather than sealing a conflict block as the reviewed
+  bytes. Both read markers as the tracked-file scan does, so a fenced example
+  in a Markdown file is not one.
+
+  One path had no later reader at all: the pinned-bytes list is rewritten from
+  the tree rather than edited, so a conflict inside it was discarded by the
+  reseal and the only trace was a routine-looking re-pin commit. Both checks
+  read that file too, although the list does not name itself, and the two other
+  lists the workflow step pins. That step now scans its pinned inputs before it
+  checks their digests, so a conflict in one of them is named there as well.
+  The re-pin program also scans the files it writes the new digests into, the
+  status-context declaration and the workflow, before it writes anything.
+
+- **An active-pointer state no directory can be in is recorded where the Drift
+  Protocol looks for it** (#1693). A shared decision and both packs that follow
+  it say a recovery error is raised when the pointer resolves to a duplicate
+  pack. The helper and the `discussion list --active` command both take their
+  candidates from one directory listing and match on an exact name, so no two
+  can match, and that has been true since the branch was written: it has never
+  been reachable.
+
+  `CR-20260913-0004`, a defect-class request awaiting approval, proposes
+  removing the duplicate state from the rule, keeping its absent and missing
+  conditions — at the shared decision first, then in both packs — while keeping the command's
+  single-candidate read, and lists both unreachable branches for removal. No
+  rule or code changes until it is applied, after the record that repairs
+  spec-0013's ledger. It blocks the ledger rows whose obligation names the
+  duplicate state, and proposes correcting a completed row's evidence that claims its run
+  covered that state.
+
+- **spec-0013's ledger repair is recorded where the Drift Protocol looks for it**
+  (#1750). The ledger has nine of the template's fifteen columns, no row for six
+  integration-level test cases, one for fourteen stories, and twelve rows past
+  `todo` whose selector runs several boundaries, which Phase 2b splits only under
+  an approved Change Request. Every rerun that re-derives the pack runs that
+  phase, so any of them would make those writes unrecorded and stop at those
+  rows.
+
+  `CR-20260913-0009` proposes re-deriving the ledger with no statement of the
+  pack moving: the columns filled, the owed rows seeded at `todo`, the twelve
+  rows split with each keeping the boundary its evidence observed, and the kept
+  rows reset. The ledger is unchanged until it is applied.
+
+- **A skill the gate accepts is one the host accepts** (#1707). Four cases
+  parted company with the host `QFAI-SKILLS-015` is modelled on: a description
+  past 1024 characters, a skill directory whose own name is not a legal one, a
+  dot-prefixed directory the host does not list, and an entry point holding a
+  byte that is not valid UTF-8. Each is now decided the way the host decides
+  it — reported where the host refuses the skill, and passed over where the
+  host never loads it. A description is measured trimmed and in characters, and
+  one holding `<` or `>` is refused, as the host's validator refuses it.
+
+  A directory that has to be renamed gets an action that can be followed: no
+  value in `name:` clears both the form and the directory match, so the rename
+  comes first.
+
+  A fifth case was not a host disagreement. A value read out of a `SKILL.md` now
+  reaches an operator-facing message with its control characters escaped. The
+  document is a file the run did not write, and the text formatter prints a
+  message straight to the terminal.
+
+  The check still does not walk a hidden skill directory or a dependency or
+  build tree. A document in one that a step names is now read, because the host
+  opens it, so a step naming one that cannot be read is reported.
+
+- **A loop restarted at cycle 0 holds no evidence until it captures again**
+  (#1765). The cycle-0 reset backed up `iter-00` and removed the other
+  iteration directories, but left the aggregate `screenshots/` and `html/`
+  directories a capture pass mirrors into. The required-path check reads those
+  first, so after `iterate --cycle 0 --force` without `--capture`, and after a
+  cycle 0 in a project holding only aggregate files, `qfai validate` passed on
+  the previous loop's captures. Every cycle-0 reset now moves the two directories
+  into `aggregate.backup-<ISO>/`, beside the `iter-00` backup, and logs each
+  moved file to `mutation-log.jsonl`. They are moved rather than deleted
+  because the same reset removes the iteration directories they were copied
+  from.
+
+  The gate that decides whether a reset is destructive reads the `iter-00`
+  entry itself rather than what it points at, so a link there is backed up like
+  a directory. Read through the link, a dangling one looked like an absent
+  `iter-00`: the reset moved the aggregates and then failed to create `iter-00`
+  over the link still sitting in its place.
+
+  Both backups a reset writes, this one and the `iter-00` backup, are left out
+  of the completion certificate's evidence digests. They hold the previous
+  loop's evidence, and sealed into the next certificate, removing one failed
+  `certify --check` although nothing of the new loop had changed.
+
+- **A rule summary stays with the master it describes** (#1889). Five gaps
+  remained after `init` stopped refreshing the summary of a master the adopter
+  edited:
+  - `--force` rebuilt the Copilot instructions from the release's summaries
+    whatever the masters held. The rebuilt file now keeps its own bullet for a
+    master the adopter kept.
+  - The set of masters counted as installed came from a plan made before the
+    update pass, so a planned replacement that then kept the adopter's master
+    still moved its summary. The entry points are now refreshed from what the
+    update pass actually did.
+  - A `---` under a list item was read as a setext heading and ended the
+    managed Copilot rule list early. A thematic break now ends nothing.
+  - Where one `/qfai-implement` run writes its grilling block into two
+    evidence files, the gate now also compares that run's `grilling(…)` rows
+    and `none` marker in each file's Work Orders Summary.
+  - The execution skills load the grilling primitive before the confidence
+    check, not only before a preflight round.
+
+- **An id a non-JavaScript test holds as data is not a reference** (#1770). The
+  ATDD scan counts an annotation in a comment or in a test's name, and blanks
+  every other literal first, so a table of ids in a test is not read as covering
+  them. It did that for JavaScript and TypeScript only: in a Python, Ruby, Go,
+  Java, Kotlin, Rust or C# test an annotation-shaped string counted, so a list
+  of cases marked its obligations covered. Those languages, and PHP, Groovy,
+  Scala and F#, are now masked with their own comment and string rules, and the
+  literal names their tests take — an RSpec `it "…"`, a Go `t.Run("…")`, a
+  JUnit `@DisplayName("…")`, a Kotlin backtick name, an xUnit `DisplayName` —
+  still count. A Python docstring is a literal and does not count. Visual
+  Basic, whose comments open with a quote, and any other extension are read as
+  before.
+
+- **The capability-ID guards read every ID from `CAP-0010` up** (#1928). The
+  pre-build lint, the post-build guard and the smoke test all required a leading
+  `0`, so they caught `CAP-0010` to `CAP-0999` and let `CAP-1000` and every
+  later four-digit ID ship. The three now read the number as a value, any
+  leading zeros then 10 or more, which is how the spec-ID pattern already reads
+  it. `CAP-0009` and below still pass. Each guard has cases at `CAP-0009`,
+  `CAP-0999` and `CAP-1000`.
 
 ## [1.12.0] - 2026-09-12
 

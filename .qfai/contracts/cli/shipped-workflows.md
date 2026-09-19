@@ -193,8 +193,11 @@ call:
 4. Per matrix: `fail-fast: false`.
 5. Per lane that invokes QFAI: the subcommand, the `--profile` value, and the
    `--fail-on` threshold.
-6. Per lane: what makes it inert — the condition that keeps it declared but
-   skipped when the adopter has not opted in.
+6. Per lane: the condition that governs whether it runs. For an ordinary lane
+   that is what makes it inert — the condition that keeps it declared but
+   skipped when the adopter has not opted in. For an aggregate lane, which must
+   run whatever the jobs it aggregates concluded, it is the always-run condition
+   and the exact `needs` list.
 7. The third-party `uses:` set, asserted as an **allow-list** against the closed
    sanctioned set (one entry today, the package-manager setup action). Never as
    a count of zero: a count fails on the entry the policy legitimately keeps.
@@ -205,9 +208,16 @@ call:
    path under create-only install).
 
 Dimension 5 has a subject in exactly one shipped file: `qfai-validate.yml`,
-where its lane runs the validate subcommand twice — the wide scan, and the
-drift gate the wide scan does not evaluate. A lane's runs are pinned together,
-in order, so a run that is added or removed is drift whichever one it is.
+whose lane carries both invocations of the validate subcommand — the wide scan,
+and the drift gate the wide scan does not evaluate. Each invocation runs in its
+own matrix leg, selected by profile, and the drift leg exists on pull requests
+only. What this dimension pins is the list of invocations the lane carries, in the
+order the file declares them, so an invocation added, removed or reordered is
+drift whichever one it is. It says nothing about the order they run in, and two
+invocations in separate legs run concurrently. Which leg runs an invocation, and
+which event selects that leg, are pinned by
+`ALLOWED_JOB_SHAPE` and `ALLOWED_STEP_SHAPE` in
+`packages/qfai/tests/helpers/shippedLaneCommands.ts` rather than here.
 Those values are asserted today as ad-hoc strings in
 `packages/qfai/tests/assets/assets.test.ts` (`DTC-26`); the gate **subsumes and
 replaces** those assertions rather than running alongside them, and the moved

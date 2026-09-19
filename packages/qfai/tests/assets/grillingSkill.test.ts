@@ -96,9 +96,19 @@ describe("the grilling primitive", () => {
       // worth widening is the one that stops the agent answering its own
       // questions, which is the whole of what this skill does.
       const text = flat(await read(tree));
-      expect(text).toMatch(/every decision on the frontier — that is what a round is/);
+      expect(text).toMatch(
+        /every decision on the frontier of a user session — that is what a round is/,
+      );
+      // A critical decision is asked in a delegated session too, so the bucket
+      // cannot lose it when the session has no user answering the rounds.
+      expect(text).toMatch(/a critical decision, in every session/);
       expect(text).toMatch(/not a tuning surface/);
       expect(text).toMatch(/the agent answering its own question/);
+      // Adoption is the one sanctioned way a decision closes without the user,
+      // and it is set apart from auto-decide by the rounds before it and the
+      // record after it.
+      expect(text).toMatch(/A delegated session's adoption is not that/);
+      expect(text).toMatch(/the griller interviewed the authors first, and the record carries why/);
       // The subject is the one input with no default: a session must be about
       // something, and picking that is answering the first question.
       expect(text).toMatch(/grilling subject/);
@@ -266,8 +276,24 @@ describe("the primitive carries the master's clauses", () => {
       // No user is present to satisfy the second condition, so an unconditional
       // end condition makes the session uncompletable.
       const text = flat(await readSkill(tree, SKILL));
-      expect(text).toMatch(/session between agents cannot reach condition 2/);
-      expect(text).toMatch(/two rounds, then every decision still open goes to the user/);
+      expect(text).toMatch(/A delegated session has no condition 2/);
+      // After the budget, a non-critical decision takes the griller's
+      // recommendation, agreed or not; a critical one goes to the user without
+      // spending a round.
+      expect(text).toMatch(
+        /two, then every decision that is not critical takes the griller's recommendation/,
+      );
+      expect(text).toMatch(/the ones the agents agreed on and the ones still open alike/);
+      expect(text).toMatch(
+        /every critical decision goes to the user at once, without spending a round/,
+      );
+      expect(text).toMatch(/It ends `adopted` once no node is open/);
+      // The budget bounds the rounds; an unanswered critical decision keeps the
+      // session open.
+      expect(text).toMatch(/The budget ends the rounds, not the session/);
+      expect(text).toMatch(/While a critical decision is unanswered the session is still open/);
+      // Under a no-question mode the register write ends it instead.
+      expect(text).toMatch(/under a no-question mode, the register write ends it `no-question`/);
       expect(text).toMatch(/review-convergence\.md/);
     });
   }

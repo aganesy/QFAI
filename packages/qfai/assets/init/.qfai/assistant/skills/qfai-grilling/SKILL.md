@@ -18,8 +18,22 @@ method to review when it changes and one behaviour an operator learns.
 
 A design has open decisions. Left open, they are decided anyway — by the agent,
 silently, at the moment the code needs an answer. This method surfaces them
-first, in an order where each can be answered honestly, and stops only when the
-user agrees the understanding is shared.
+first, in an order where each can be answered honestly,
+and stops at one of five named endings: the user confirms the understanding is
+shared, closes the asking, or stops the session, a delegated session adopts the
+griller's recommendations, or a run that may not ask writes every node left
+where its stage's gate reads it.
+
+**Which kind of session runs is the invoking stage's to say.** A stage whose
+work is the interview holds a user session; every other stage holds a delegated
+one, where a griller interviews the authors and the user is asked only a
+critical decision (`.agents/rules/grilling.md` § Two kinds of session). A stage
+that says nothing holds a delegated session.
+
+**The request bounds the tree** (`.agents/rules/grilling.md`). A decision whose
+only outcome is whether to add something the request did not ask for is left
+out, not asked. Among the options for a real node, recommend the one that adds
+least beyond the request.
 
 ## Non-goals
 
@@ -204,14 +218,18 @@ There is no question cap. A design is not finished being interrogated because a
 number was reached, and a short session is not evidence that the design was
 simple.
 
-**A session between agents cannot reach condition 2**, because no user is there
-to confirm. It ends on a budget instead: two rounds, then every decision still
-open goes to the user, with three subjects escalating at once —
-product or business intent no authoritative artifact answers, a decision
-contradicting a spec, a contract or a recorded decision, and a decision resting
-on nothing authoritative. That is the one place a session ends on a count, and
-it counts rounds between agents rather than questions put to a user
-(`.qfai/assistant/constitution/review-convergence.md`).
+**A delegated session has no condition 2**, because no user is there to
+confirm. A budget bounds its rounds: two, then every decision that is not
+critical takes the griller's recommendation — the ones the agents agreed on and
+the ones still open alike — and every critical decision goes to the user at
+once, without spending a round
+(`.qfai/assistant/constitution/review-convergence.md`). It ends `adopted` once
+no node is open and the user has answered every critical decision.
+
+**The budget ends the rounds, not the session.** While a critical decision is
+unanswered the session is still open: the user answers it, or ends the session
+another way — or, under a no-question mode, the register write ends it
+`no-question`. How many went is a count a record carries, never an ending.
 
 **A session under a no-question mode cannot reach condition 2 either**, because
 there is a user and the mode forbids asking them. It ends when nothing on the
@@ -220,6 +238,13 @@ every one it did not is opened as a question where the stage's own gate reads it
 (`.qfai/assistant/constitution/constitution.md` Article X, rule 6). The register
 write is the ending — without one, a stage that resolved its whole frontier by
 inspection would wait forever for a confirmation nobody may give.
+
+**Those endings have names, and there are five of them.**
+`.agents/rules/grilling.md` carries them under **The five endings**:
+`confirmed` when the user confirms an empty tree, `user-closed` when they close
+the asking, `adopted` when a delegated session settles its tree, `no-question`
+for the register write above, and `stopped` when they stop the session. A stage that records a session names one of them, and this
+skill adds none of its own — the agent never confirms on the user's behalf.
 
 ### The user ends it whenever they say so
 
@@ -287,8 +312,11 @@ decisions belonging to different drafting roles.
 - **Every answer is collected before the frontier is recomputed.** Recomputing
   on the first reply settles the rest against a tree that moved under them.
 - **Two authors answering one question differently is itself a decision**, and
-  it joins the frontier rather than being averaged or decided by the griller. If
-  the budget ends with it open, it escalates like any other.
+  it joins the frontier rather than being averaged. If the budget ends with it
+  open, it takes the griller's recommendation like any other non-critical
+  decision, with both positions recorded.
+- **An addition an author proposes is asked what part of the request needs
+  it.** One nobody can point to is dropped, not adopted.
 - **A fact only the user holds goes to the user, not to an author.** No author
   can answer an unpublished constraint or an intention nobody wrote down, and
   the convergence rules escalate decisions rather than facts — so without this
@@ -316,17 +344,16 @@ decisions belonging to different drafting roles.
   the round cannot be recomputed, a disagreement cannot be kept, and an
   escalation cannot carry the positions to the user unless the answers are
   held.
-- **Agreement closes a node; it does not settle a decision.** Where the authors
-  and the griller land on one answer, the node leaves the frontier — there is
-  nothing left to put in a further round, and a rule that kept it there would
-  re-ask a question everyone has answered. It is not settled: only the user's
-  answer or authoritative evidence settles one, and an agreed answer nobody
-  adjudicated is what a stage records as `agents` and puts to the user.
+- **In a delegated session the griller's recommendation settles a decision that
+  is not critical.** Where the authors and the griller land on one answer, or
+  the budget ends first, the recommendation is taken and the stage records it as
+  `agents`, with the reason and every disagreeing position. The stage's final
+  report lists it; nothing waits for the user to read it.
 
-  The two are one state read for two purposes. _Open_ is about the round — is
-  there anything to ask. _Settled_ is about the decision — has anyone with the
-  standing to take it done so. Conflating them is how an agreed answer reaches a
-  draft as though it were chosen.
+  A critical decision is the exception: agreement closes its node for the
+  round, and only the user's answer settles it. Recording an agreed critical
+  decision as settled is how a choice nobody with the standing made reaches a
+  draft.
 
 ### Capability Probe (MUST)
 
@@ -364,13 +391,17 @@ the `Agent instance` column.
 This skill produces no artifact, so the gate that covers a session is the
 invoking stage's. What it confirms about the session is:
 
-- no decision was recorded that the user did not answer, and none was assumed
-  that the assumption path excludes;
+- no decision was recorded as the user's that the user did not answer, no
+  critical decision was adopted without them, and none was assumed that the
+  assumption path excludes;
+- every adopted decision has its `agents` row, and none of them adds what the
+  request did not need;
 - a fact taken as settled names where it was read;
-- the session ended on its own condition or on the user's word — or, between
-  agents, on the round budget that is the one place a count ends a session
-  (`.qfai/assistant/constitution/review-convergence.md`). A count anywhere else
-  is the finding.
+- the session ended on its own condition or on the user's word, in one of the
+  five endings `.agents/rules/grilling.md` names. Between agents a round budget
+  bounds the rounds (`.qfai/assistant/constitution/review-convergence.md`), and
+  a session recorded as ended while a critical decision it escalated is still
+  unanswered is the finding.
 
 - Reviewer independence is defined normatively in
   `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`.
@@ -394,8 +425,9 @@ Every decision this skill meets falls in one of three named buckets.
   - output formatting
   - equivalent-option pick
 - ask-user:
-  - every decision on the frontier — that is what a round is
-  - the confirmation that closes the session
+  - every decision on the frontier of a user session — that is what a round is
+  - a critical decision, in every session
+  - the confirmation that closes a user session
 - hard-required:
   - grilling subject (the design to interrogate; a session has no default for
     what it is about)
@@ -410,8 +442,9 @@ enumerate that for a skill it does not know. Otherwise a skill MUST NOT introduc
 entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 The buckets are the method, not a tuning surface. Moving a frontier decision to
-`auto-decide` is the agent answering its own question, which this skill exists
-to stop.
+`auto-decide` is the agent answering its own question without the rounds. A
+delegated session's adoption is not that: the griller interviewed the authors
+first, and the record carries why.
 
 ## Related
 
@@ -423,7 +456,8 @@ to stop.
 
 project_memory:
 
-- A grilling question spends no clarification budget, and the confirmation that closes a session is exempt with it. A session ends on its own condition, never at a count.
-- A decision the user owns is asked, never assumed. A fact the environment holds is read, never asked.
+- A grilling question spends no clarification budget, and the confirmation that closes a session is exempt with it. A session ends at one of five endings — `confirmed`, `user-closed`, `adopted`, `no-question` or `stopped` — never at a count.
+- A session is delegated unless its stage says it is a user session. A delegated session adopts the griller's recommendation and asks the user only a critical decision. A fact the environment holds is read, never asked.
+- The request bounds the tree: a decision that only adds what the request did not ask for is left out, not asked.
 - A no-question mode silences the questions, not the session: such a run settles what the evidence settles and opens every node left over as a question — facts only the user holds among them — with a labelled value beside it where a document requires one. The assumption alone is forbidden, and a fact declared undefaultable stops the run.
 - A user's `stop` ends a session immediately and the open decisions are reported as open. A mandatory approval and a `hard-required` input are never assumed, whatever the user answered.

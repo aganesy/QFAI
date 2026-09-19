@@ -16,6 +16,7 @@ import {
   findLatestDiscussionPackDir,
   resolveActiveDiscussionPack,
 } from "../discussionPack.js";
+import { readUiContractScreenContracts } from "../contracts/screenContracts.js";
 import { resolveAllUiBearingSpecs } from "../prototyping/specResolution.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
@@ -1033,6 +1034,235 @@ async function validatePrototypeHandoff(
     }
   }
 
+  // The screens a row may name are the ones the UI contracts declare, read
+  // where the prototyping loop reads them.
+  const declaredScreens = new Set(
+    (await readUiContractScreenContracts(root, config.paths.contractsDir)).map(
+      (screen) => screen.screenId,
+    ),
+  );
+  issues.push(...procurementIssues(parsed.value, filePathRel, declaredScreens));
+
+  return issues;
+}
+
+/**
+ * The cells each `procurement` row carries, by list.
+ *
+ * `procured` says what realises a region so the implementer installs rather
+ * than reconstructs. `authored` says what was written instead, and why: the
+ * procurement ladder's last rung is the only one that has to explain itself,
+ * and a row with no reason is what an unexplained rung looks like once it
+ * reaches the handoff.
+ */
+const PROCUREMENT_ROW_CELLS: Readonly<Record<string, readonly string[]>> = {
+  procured: ["screen", "region", "item"],
+  authored: ["screen", "region", "why"],
+};
+
+/**
+ * The values the shipped handoff example writes in a `procurement` row.
+ *
+ * Named literally rather than matched by shape. A cell in these columns is
+ * free text — a component is named `<DataTable>` and invoked
+ * `<DataTable density="compact">` — so any pattern wide enough to cover the
+ * example's phrases covers a component somebody chose, and a row that was
+ * written is reported.
+ *
+ * A test holds this set against the block the shipped file carries, so a
+ * placeholder reworded there is a failing test rather than a value nothing
+ * recognises.
+ */
+export const PROCUREMENT_PLACEHOLDERS: ReadonlySet<string> = new Set([
+  "<screen id>",
+  "<what part of the screen>",
+  "<catalogue item, or the project component it already had>",
+  "<what was looked for and did not serve>",
+]);
+
+/**
+ * The words a cell carries when nobody has decided yet, beyond
+ * {@link PLACEHOLDER_RE}'s. `tba` and `fixme` are the two an author reaches for
+ * where `tbd` and `todo` would do, and `xxx` is the marker left where a value
+ * belongs.
+ */
+const UNDECIDED_WORD = /^(?:tba|fixme|xxx|\?+)$/i;
+
+/**
+ * A cell's text with the decoration around it removed: a code span, a quoted
+ * string, the brackets a template uses.
+ *
+ * A placeholder is written as often with decoration as without —
+ * `` `TBD` ``, `"TODO"`, `[tbd]` — and read whole, each of those is a value
+ * nothing recognises, so the row passed carrying nothing to act on.
+ */
+function undecorated(value: string): string {
+  let text = value.trim();
+  for (;;) {
+    const stripped = text
+      .replace(/^[`"'*_[({]+/, "")
+      .replace(/[`"'*_\])}]+$/, "")
+      .replace(/[.;!]+$/, "")
+      .trim();
+    if (stripped === text) return text;
+    text = stripped;
+  }
+}
+
+/**
+ * Whether a cell holds something a later reader can act on.
+ *
+ * The decoration is removed first, and a value that opens with a placeholder
+ * and a colon — `TODO: choose a component` — is one too: it names the decision
+ * rather than making it, which is the state this check exists to report.
+ */
+function cellIsWritten(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return false;
+  // Angle brackets are not stripped and no shape rule reads them: a component is
+  // named that way — `<DataTable density="compact">` — so the template's own
+  // phrases are the set below and nothing wider. The set is read against the
+  // undecorated text as well, since a shipped phrase is quoted and punctuated
+  // like any other placeholder.
+  const bare = undecorated(trimmed);
+  if (PLACEHOLDER_RE.test(bare) || UNDECIDED_WORD.test(bare)) return false;
+  const opener = /^([^\s:]+)\s*:/.exec(bare)?.[1] ?? "";
+  if (opener !== "" && (PLACEHOLDER_RE.test(opener) || UNDECIDED_WORD.test(opener))) return false;
+  return ![trimmed, bare].some((form) => PROCUREMENT_PLACEHOLDERS.has(form.toLowerCase()));
+}
+
+/**
+ * Shape findings for `prototype-handoff.yaml#procurement`.
+ *
+ * The key itself is optional: the handoff contract lets a screen drawn
+ * entirely from what the project already had omit both lists, so an absent
+ * `procurement` is not reported here. What is reported is a present one a
+ * reader cannot act on. `/qfai-implement` installs what this names rather than
+ * rebuilding it, so a row with no `item` names nothing to install, and a row
+ * with no `why` satisfies the reviewer's last-resort criterion on its face
+ * while recording none of what that criterion asks for. A row's `screen` has to
+ * be one a UI contract declares, or neither consumer can locate the region.
+ */
+function procurementIssues(
+  handoff: Record<string, unknown>,
+  filePathRel: string,
+  declaredScreens: ReadonlySet<string>,
+): Issue[] {
+  // Absent, not empty. The contract lets a screen drawn entirely from what the
+  // project already had omit the key; a bare `procurement:` parses as `null`,
+  // which is a declaration present and saying nothing, and reading the two as
+  // one let the second past the shape check below.
+  if (!("procurement" in handoff)) return [];
+  const procurement = handoff.procurement;
+  const report = (message: string): Issue =>
+    issue(
+      "QFAI-DCON-013",
+      `prototype-handoff.yaml ${message}`,
+      "error",
+      filePathRel,
+      "designContractReadiness.prototypeHandoffProcurement",
+      undefined,
+      "canonical",
+      "Repair `procurement` in prototype-handoff.yaml: it is a mapping of a `procured` and an " +
+        "`authored` list, each row naming one screen region and what realises it — `screen`, " +
+        "`region`, `item` for a procured region and `screen`, `region`, `why` for an authored " +
+        "one, with one row per region across both lists.",
+    );
+  if (!isRecord(procurement)) {
+    return [
+      report(
+        `field 'procurement' must be a mapping carrying 'procured' and 'authored' lists (got ${describeValueForDiagnostic(procurement)}).`,
+      ),
+    ];
+  }
+
+  const issues: Issue[] = [];
+  /**
+   * Where each screen region was realised, and the pairs realised twice.
+   *
+   * One realisation per region: the contract says each region names what
+   * realises it, singular. Two rows for one region tell the implementer to
+   * install and to author the same part, so the pairs are collected across both
+   * lists rather than judged a row at a time.
+   */
+  const realised = new Map<string, string>();
+  const duplicates: { key: string; first: string; second: string }[] = [];
+  // A closed key set, as `prototyping/handoff.ts` keeps for the schema beside
+  // this one: "closed schema; protects against schema drift and typos". A
+  // misspelling leaves both contract names absent, which is a manifest that
+  // exposes nothing to either consumer while reading as one that does.
+  const unknown = Object.keys(procurement).filter(
+    (key) => !Object.hasOwn(PROCUREMENT_ROW_CELLS, key),
+  );
+  if (unknown.length > 0) {
+    issues.push(
+      report(
+        `field 'procurement' carries ${unknown.map((key) => `'${key}'`).join(", ")}, which ` +
+          `nothing reads. The lists are 'procured' and 'authored'.`,
+      ),
+    );
+  }
+  for (const [list, cells] of Object.entries(PROCUREMENT_ROW_CELLS)) {
+    // An own key. `key in` reaches the prototype, where `constructor` and
+    // `toString` answer to a name the contract never defined and hold a
+    // function rather than a list.
+    if (!Object.hasOwn(procurement, list)) continue;
+    const rows = procurement[list];
+    // A list declared and left empty is present rather than omitted: `procured:`
+    // with nothing under it parses as `null`, and a declaration saying nothing
+    // is the shape this reports. It is the distinction the key itself carries
+    // one level up.
+    if (!Array.isArray(rows)) {
+      issues.push(
+        report(
+          `field 'procurement.${list}' must be a list (got ${describeValueForDiagnostic(rows)}).`,
+        ),
+      );
+      continue;
+    }
+    rows.forEach((row: unknown, index) => {
+      const where = `procurement.${list}[${index}]`;
+      const missing = isRecord(row) ? cells.filter((cell) => !cellIsWritten(row[cell])) : cells;
+      if (missing.length === 0 && isRecord(row)) {
+        const screen = String(row.screen).trim();
+        const region = String(row.region).trim();
+        const key = `${screen} / ${region}`;
+        const seen = realised.get(key);
+        if (seen === undefined) realised.set(key, where);
+        else duplicates.push({ key, first: seen, second: where });
+        // With no UI contract at all there is no list to hold the row to, and
+        // the readiness gate already reports that project. `region` is not
+        // resolved: a screen contract names a screen, not its parts.
+        if (declaredScreens.size > 0 && !declaredScreens.has(screen)) {
+          issues.push(
+            report(
+              `row '${where}' names screen '${screen}', which no UI contract declares. ` +
+                `An implementer and a reviewer locate the region through the screen, so a ` +
+                `row naming one that does not exist gives neither of them anything to act on.`,
+            ),
+          );
+        }
+      }
+      if (missing.length > 0) {
+        issues.push(
+          report(
+            `row '${where}' names no ${missing.join(", ")}. Each row carries ${cells.join(", ")}, ` +
+              `because an implementer reads this to install rather than to reconstruct.`,
+          ),
+        );
+      }
+    });
+  }
+  for (const { key, first, second } of duplicates) {
+    issues.push(
+      report(
+        `names '${key}' at both '${first}' and '${second}'. Each screen region names one ` +
+          `thing that realises it, so two rows for it leave an implementer without an answer ` +
+          `to what to install.`,
+      ),
+    );
+  }
   return issues;
 }
 

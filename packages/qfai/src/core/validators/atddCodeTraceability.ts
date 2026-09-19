@@ -45,7 +45,7 @@ function narrowToScope(
   result: AtddCodeTraceabilityResult,
   scope: SpecScope | undefined,
 ): AtddCodeTraceabilityResult {
-  const { testsRoot } = result;
+  const ownerOf = testFileOwner(result);
   if (scope === undefined) {
     return result;
   }
@@ -69,7 +69,7 @@ function narrowToScope(
         // of the spec whose tests hold the misplaced annotation — never saw it,
         // and only an unrelated spec's run did. The unknown-reference path
         // already treats that file as `0002`'s; this one has to agree.
-        const own = testPathSpecNumber(entry.file, testsRoot);
+        const own = ownerOf(entry.file);
         if (own !== null && scope.has(own)) return entry;
         return { ...entry, ids: entry.ids.filter(inScope) };
       })
@@ -107,7 +107,7 @@ function narrowToScope(
       const owners = new Set<string>();
       const fromToken = OWNING_SPEC_RE.exec(entry.token)?.[1];
       if (fromToken !== undefined && declaredSpecs.has(fromToken)) owners.add(fromToken);
-      const fromPath = testPathSpecNumber(entry.file, testsRoot);
+      const fromPath = ownerOf(entry.file);
       if (fromPath !== null && declaredSpecs.has(fromPath)) owners.add(fromPath);
       if (owners.size === 0) return true;
       return Array.from(owners).some((owner) => scope.has(owner));
@@ -223,10 +223,10 @@ function unknownOwnerDirs(
   refs: readonly string[],
   specsRoot: string,
   declaredSpecs: ReadonlyMap<string, string>,
-  testsRoot: string,
+  ownerOf: (file: string) => string | null,
 ): string[] {
   const dirs = owningSpecDirs(refs, specsRoot, declaredSpecs);
-  const fromPath = testPathSpecNumber(file, testsRoot);
+  const fromPath = ownerOf(file);
   const own = fromPath === null ? undefined : declaredSpecs.get(fromPath);
   return own === undefined || dirs.includes(own) ? dirs : [...dirs, own];
 }
@@ -261,6 +261,23 @@ function testPathSpecNumber(file: string, testsRoot: string): string | null {
     return null;
   }
   return LAYER_DIRS.has(layer.toLowerCase()) ? (/^spec-(\d{4})$/i.exec(spec)?.[1] ?? null) : null;
+}
+
+/**
+ * The spec a test file's own directory names, at `paths.testsDir` or at a
+ * package's own test root.
+ *
+ * The scan reads every package's acceptance suites, so a package that keeps the
+ * scaffold layout, `packages/checkout/tests/integration/spec-0002/pay.test.ts`,
+ * owns its files the way the central layout does. Reading `paths.testsDir`
+ * alone left such a file ownerless, and a mistyped annotation in it reached
+ * only the run of the spec the typo named.
+ */
+function testFileOwner(result: AtddCodeTraceabilityResult): (file: string) => string | null {
+  return (file) =>
+    testPathSpecNumber(file, result.testsRoot) ??
+    result.testFileSpecOwners.get(path.normalize(file)) ??
+    null;
 }
 
 /** The per-layer directories `qfai atdd scaffold` writes under the tests root. */
@@ -327,8 +344,9 @@ type AtddTraceabilitySummary = {
    * `missing.<kind>` empty **and** this empty.
    *
    * Two limits a gate must read with it, both in `scan` below: the partition is
-   * empty when `truncated` is set (unproven, so suppressed), and a declared but
-   * skipped test still counts as a declaration.
+   * empty when `truncated` is set or `unreadable` or `unreadableDirectories` is
+   * not empty (unproven, so suppressed), and a declared but skipped test still
+   * counts as a declaration.
    */
   coveredByCarrierOnly: {
     us: string[];
@@ -385,6 +403,10 @@ type AtddTraceabilitySummary = {
     truncated: boolean;
     limit: number;
     globs: string[];
+    /** Each glob the scan could not read, with the reason. */
+    unreadable: string[];
+    /** Directories the scan could not read and read past. */
+    unreadableDirectories: string[];
   };
 };
 
@@ -418,9 +440,9 @@ async function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Pro
     });
     return [];
   } catch (error) {
-    // A directory the globs reach that cannot be read is not this stage's to
-    // report: it scans only its own acceptance directories, rebuilt from the
-    // extensions, and a `tests/unit` it never opens cannot fail the stage.
+    // A directory the globs reach that cannot be read is reported by the scan
+    // itself, which names each pattern it could not read. This probe stops at
+    // the first match, so its failure says nothing about which one.
     if (isFileSystemError(error)) return [];
     const reason = error instanceof Error ? error.message : String(error);
     return [
@@ -436,6 +458,28 @@ async function collectUnreadableTestGlobs(root: string, config: QfaiConfig): Pro
       ),
     ];
   }
+}
+
+/**
+ * A directory under the acceptance test roots the scan could not read.
+ *
+ * The scan reads past it, so every other result of the stage still stands, but
+ * no test inside it is counted: an obligation one of them carries reads as
+ * missing, and an annotation in one is checked by nothing.
+ */
+function unreadableTestDirectoryIssues(root: string, directories: readonly string[]): Issue[] {
+  return directories.map((directory) =>
+    issue(
+      "QFAI-ATDD-135",
+      `The acceptance test scan could not read ${JSON.stringify(directory)}, so no test inside it is counted. A coverage finding in this run may name an obligation a test there carries.`,
+      "error",
+      path.resolve(root, directory),
+      "atddCodeTraceability.scan.readable",
+      [directory],
+      "canonical",
+      "Make the directory readable to the account running `qfai validate`, or exclude it with `validation.traceability.testFileExcludeGlobs` where it holds no acceptance test.",
+    ),
+  );
 }
 
 export async function validateAtddCodeTraceability(
@@ -459,13 +503,50 @@ export async function validateAtddCodeTraceability(
   const issues: Issue[] = [];
 
   issues.push(...(await collectUnreadableTestGlobs(root, config)));
+  issues.push(...unreadableTestDirectoryIssues(root, result.scan.unreadableDirectories));
+  if (result.scan.unreadable.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-ATDD-134",
+        `The ATDD scan could not read part of the test globs: ${result.scan.unreadable.join("; ")}. The other patterns were scanned, and a reference missing from the tests only these select is not evidence that they hold none.`,
+        "error",
+        path.join(root, "qfai.config.yaml"),
+        "atddCodeTraceability.testFileGlobs",
+        result.scan.unreadable,
+        "canonical",
+        "A directory the test globs reach could not be read. Make it readable to the account running `qfai validate`, or exclude it with `validation.traceability.testFileExcludeGlobs` where it holds no test.",
+      ),
+    );
+  }
+
+  if (result.scan.truncated) {
+    // Narrowing `testFileGlobs` shrinks the selection only where it contributed.
+    const projectGlobs = normalizeGlobs(config.validation.traceability.testFileGlobs).length > 0;
+    const key = projectGlobs
+      ? "validation.traceability.testFileGlobs"
+      : "validation.traceability.testFileExcludeGlobs";
+    issues.push(
+      issue(
+        "QFAI-ATDD-134",
+        `The ATDD scan read the first ${result.scan.limit} test files its globs select and stopped at that limit, so the rest were never opened. A reference missing from what was read is not evidence that the tests hold none, and a test past the limit was not checked for its layer.`,
+        "error",
+        path.join(root, "qfai.config.yaml"),
+        "atddCodeTraceability.testFileGlobs",
+        [key],
+        "canonical",
+        projectGlobs
+          ? "Narrow `validation.traceability.testFileGlobs`, or widen `validation.traceability.testFileExcludeGlobs`, so the selection fits under the limit and every acceptance test is read."
+          : "Widen `validation.traceability.testFileExcludeGlobs` so the selection fits under the limit and every acceptance test is read.",
+      ),
+    );
+  }
 
   issues.push(
     ...buildUnknownIssues(
       result.unknown,
       result.specsRoot,
       result.declaredSpecDirs,
-      result.testsRoot,
+      testFileOwner(result),
     ),
   );
 
@@ -490,7 +571,8 @@ export async function validateAtddCodeTraceability(
         // that have not opted in — while the unscoped reading must not become
         // "annotate every US in the repository", which is the annotation-only
         // E2E tree `catalog/test-layers.md` forbids.
-        "tests/e2e/** に `QFAI:SPEC-XXXX:US-YYYY` 注釈を追加し、上記の US を少なくとも1回参照してください。surface typing を宣言している場合、対象は user-facing surface の spec のみです。どの spec も宣言していない場合は全 spec が対象のままです（`.qfai/assistant/catalog/test-layers.md#atdd-annotation-hard-gate`）。",
+        `Add a \`QFAI:SPEC-XXXX:US-YYYY\` annotation under \`${dirs.e2e}\` referencing each user story above at least once. Where any spec declares a user-facing surface, the obligation covers user-facing specs only; where none does, it covers every spec (\`.qfai/assistant/catalog/test-layers.md#atdd-annotation-hard-gate\`).` +
+          ATDD_PACKAGE_SUITE_HINT,
         { relatedFiles: usAttribution.relatedFiles },
       ),
     );
@@ -508,7 +590,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.usDeferred",
         deferred,
         "canonical",
-        `スライス実装時に \`- ${PLANNED_CONTRACT_KEY}: planned\` を外し、${dirs.e2e} で \`QFAI:SPEC-XXXX:US-YYYY\` 注釈を追加してください。`,
+        `When the slice is implemented, remove \`- ${PLANNED_CONTRACT_KEY}: planned\` and add a \`QFAI:SPEC-XXXX:US-YYYY\` annotation under ${dirs.e2e}.${ATDD_PACKAGE_SUITE_HINT}`,
         { relatedFiles: deferredHome.relatedFiles },
       ),
     );
@@ -718,7 +800,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.conApiDeferred",
         deferred,
         "canonical",
-        "スライス実装時に `x-qfai-status` を planned 以外へ戻し、tests/api/** で参照してください。",
+        `When the slice is implemented, set \`x-qfai-status\` to something other than planned and reference the contract under \`${dirs.api}\`.${ATDD_PACKAGE_SUITE_HINT}`,
       ),
     );
   }
@@ -733,7 +815,8 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.conApiToApiTests",
         result.missing.conApi,
         "change",
-        "tests/api/** に `QFAI:CON-API-XXXX` 注釈を追加し、`.qfai/contracts/api` の宣言済み CON-API を全件参照してください。",
+        `Add a \`QFAI:CON-API-XXXX\` annotation under \`${dirs.api}\` referencing every CON-API declared in \`.qfai/contracts/api\`.` +
+          ATDD_PACKAGE_SUITE_HINT,
       ),
     );
   }
@@ -772,7 +855,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.conDbDeferred",
         deferred,
         "canonical",
-        `スライス実装時に \`-- x-qfai-status: planned\` を外し、${dirs.integration} で参照してください。`,
+        `When the slice is implemented, remove \`-- x-qfai-status: planned\` and reference the contract under ${dirs.integration}.${ATDD_PACKAGE_SUITE_HINT}`,
       ),
     );
   }
@@ -787,7 +870,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.conDbToIntegrationTests",
         result.missing.conDb,
         "change",
-        `${dirs.integration} に \`QFAI:CON-DB-XXXX\` 注釈を追加し、\`.qfai/contracts/db\` の宣言済み CON-DB を全件参照してください。まだスライスに含まれない契約は \`-- x-qfai-status: planned\` で延期できます。`,
+        `Add a \`QFAI:CON-DB-XXXX\` annotation under ${dirs.integration} referencing every CON-DB declared in \`.qfai/contracts/db\`. A contract outside the current slice is deferred with \`-- x-qfai-status: planned\`.${ATDD_PACKAGE_SUITE_HINT}`,
       ),
     );
   }
@@ -802,7 +885,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.forbidden.tcInApi",
         forbidden.ids,
         "change",
-        `${dirs.api} から TC 参照を削除して契約ID（\`QFAI:CON-API-XXXX\`）を使うか、その TC の \`Level\` を \`L4\`/\`API\` に修正してください。`,
+        `Remove the TC reference from ${repoRelative(root, forbidden.file)} and use the contract id (\`QFAI:CON-API-XXXX\`), or set that TC's \`Level\` to \`L4\`/\`API\`.`,
         // Attributed to the specs the misplaced ids name. `file` stays the
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
@@ -813,7 +896,7 @@ export async function validateAtddCodeTraceability(
             forbidden.ids,
             result.specsRoot,
             result.declaredSpecDirs,
-            result.testsRoot,
+            testFileOwner(result),
           ),
         },
       ),
@@ -830,7 +913,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.forbidden.tcInE2e",
         forbidden.ids,
         "change",
-        `${dirs.e2e} から TC 参照を削除して US 参照（\`QFAI:SPEC-XXXX:US-YYYY\`）を使うか、その TC の \`Level\` を \`L5\`/\`E2E\` に修正してください。`,
+        `Remove the TC reference from ${repoRelative(root, forbidden.file)} and use a US reference (\`QFAI:SPEC-XXXX:US-YYYY\`), or set that TC's \`Level\` to \`L5\`/\`E2E\`.`,
         // Attributed to the specs the misplaced ids name. `file` stays the
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
@@ -841,7 +924,7 @@ export async function validateAtddCodeTraceability(
             forbidden.ids,
             result.specsRoot,
             result.declaredSpecDirs,
-            result.testsRoot,
+            testFileOwner(result),
           ),
         },
       ),
@@ -858,7 +941,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.forbidden.tcInIntegration",
         forbidden.ids,
         "change",
-        `TC 注釈は宣言 Level が指す1ディレクトリだけに置きます。${dirs.integration} に残存する TC 参照を削除するか、その TC の \`Level\` を \`L3\`/\`Integration\` に戻してください。`,
+        `A TC annotation belongs in the one directory its declared \`Level\` routes to. Remove the TC reference left in ${repoRelative(root, forbidden.file)}, or set that TC's \`Level\` back to \`L3\`/\`Integration\`.`,
         // Attributed to the specs the misplaced ids name. `file` stays the
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
@@ -869,7 +952,7 @@ export async function validateAtddCodeTraceability(
             forbidden.ids,
             result.specsRoot,
             result.declaredSpecDirs,
-            result.testsRoot,
+            testFileOwner(result),
           ),
         },
       ),
@@ -946,7 +1029,7 @@ function buildCarrierOnlyIssues(
       "atddCodeTraceability.coverage.carrierOnly",
       refs,
       "change",
-      `これらの ID を参照しているファイルは、\`.md\` の散文か、テスト宣言（\`it\` / \`test\` / \`describe\`、Gherkin の \`Scenario:\`、\`def test_\` 等）を含まないファイルだけです。${dirs.integration} / ${dirs.api} / ${dirs.e2e} の実際のテストへ注釈を移すか、その状態を意図的な placeholder として記録してください。判定するのは「テストが宣言されているか」までで、skip されているかまでは見ません。`,
+      `Every file referencing these ids is either \`.md\` prose or a file that declares no test (\`it\` / \`test\` / \`describe\`, Gherkin's \`Scenario:\`, \`def test_\` and the like). Move the annotation to a real test under ${dirs.integration} / ${dirs.api} / ${dirs.e2e}, or record the state as a deliberate placeholder. The check reads whether a test is declared, never whether it is skipped.${ATDD_PACKAGE_SUITE_HINT}`,
       { relatedFiles: attribution.relatedFiles },
     ),
   ];
@@ -989,6 +1072,26 @@ function formatMissingTcGroups(
     .join(" / ");
 }
 
+/**
+ * A scanned file's path as the operator would type it. A forbidden-reference
+ * fix names the file that carries the reference, which may sit in any package's
+ * suite, rather than the configured layer directory.
+ */
+function repoRelative(root: string, file: string): string {
+  return path.relative(root, file).split(path.sep).join("/");
+}
+
+/**
+ * Added to every remediation that names a layer directory.
+ *
+ * The scan reads each package's own test root as well as `paths.testsDir`, so a
+ * fix naming only the configured one sends an author to build a parallel
+ * central suite — which `catalog/test-layers.md` and the `qfai-atdd` skill both
+ * tell them not to do.
+ */
+const ATDD_PACKAGE_SUITE_HINT =
+  " A package with a suite of its own answers from the same layer directory inside that package's own test root, selected by `validation.traceability.testFileGlobs`. The path above is where a project with one suite writes; do not add a second central suite beside a package that already has one.";
+
 function buildMissingTcFix(
   grouped: Map<AtddTestKind, string[]>,
   dirs: Record<AtddTestKind, string>,
@@ -996,14 +1099,14 @@ function buildMissingTcFix(
   const perHome = orderedMissingTcGroups(grouped)
     .map(([kind, refs]) => `${dirs[kind]}: ${refs.join(", ")}`)
     .join(" / ");
-  return `各 TC の宣言 Level が指すディレクトリに \`QFAI:SPEC-XXXX:TC-YYYY\` 注釈を追加してください（L3/Integration -> ${dirs.integration}、L4/API -> ${dirs.api}、L5/E2E -> ${dirs.e2e}、Level 未宣言は ${dirs.integration}）: ${perHome}`;
+  return `Add a \`QFAI:SPEC-XXXX:TC-YYYY\` annotation in the directory each TC's declared Level routes to (L3/Integration -> ${dirs.integration}, L4/API -> ${dirs.api}, L5/E2E -> ${dirs.e2e}, and an undeclared Level -> ${dirs.integration}): ${perHome}.${ATDD_PACKAGE_SUITE_HINT}`;
 }
 
 function buildUnknownIssues(
   unknown: AtddUnknownRef[],
   specsRoot: string,
   declaredSpecs: ReadonlyMap<string, string>,
-  testsRoot: string,
+  ownerOf: (file: string) => string | null,
 ): Issue[] {
   if (unknown.length === 0) {
     return [];
@@ -1040,7 +1143,7 @@ function buildUnknownIssues(
           // `file` is the test carrying the typo — what the operator edits —
           // but a `tests/**` path has no spec owner, so without this the
           // finding survived every `--spec` filter.
-          { relatedFiles: unknownOwnerDirs(entry.file, refs, specsRoot, declaredSpecs, testsRoot) },
+          { relatedFiles: unknownOwnerDirs(entry.file, refs, specsRoot, declaredSpecs, ownerOf) },
         );
       }
       if (entry.kind === "tc") {
@@ -1053,7 +1156,7 @@ function buildUnknownIssues(
           refs,
           "change",
           "spec 側に TC を定義するか、テスト注釈を正しい ID へ修正してください。",
-          { relatedFiles: unknownOwnerDirs(entry.file, refs, specsRoot, declaredSpecs, testsRoot) },
+          { relatedFiles: unknownOwnerDirs(entry.file, refs, specsRoot, declaredSpecs, ownerOf) },
         );
       }
       if (entry.kind === "conDb") {
@@ -1149,6 +1252,8 @@ async function writeAtddTraceabilityReport(
       truncated: result.scan.truncated,
       limit: result.scan.limit,
       globs: result.scan.globs,
+      unreadable: result.scan.unreadable,
+      unreadableDirectories: result.scan.unreadableDirectories,
     },
   };
 
@@ -1193,6 +1298,16 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
     // carrier-only", when the scan simply stopped before it could tell.
     lines.push(
       "> Scan truncated at the file limit: this partition is indeterminate and was suppressed. Treat it as unknown, not as empty.",
+    );
+    lines.push("");
+  } else if (summary.scan.unreadable.length > 0) {
+    lines.push(
+      "> Part of the test globs could not be read: this partition is indeterminate and was suppressed. Treat it as unknown, not as empty.",
+    );
+    lines.push("");
+  } else if (summary.scan.unreadableDirectories.length > 0) {
+    lines.push(
+      "> A directory under the scanned roots could not be read: this partition is indeterminate and was suppressed. Treat it as unknown, not as empty.",
     );
     lines.push("");
   }
@@ -1245,6 +1360,16 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   lines.push("- globs:");
   for (const glob of summary.scan.globs) {
     lines.push(`  - ${glob}`);
+  }
+  lines.push(`- unreadable:${summary.scan.unreadable.length === 0 ? " none" : ""}`);
+  for (const entry of summary.scan.unreadable) {
+    lines.push(`  - ${entry}`);
+  }
+  lines.push(
+    `- unreadableDirectories:${summary.scan.unreadableDirectories.length === 0 ? " none" : ""}`,
+  );
+  for (const directory of summary.scan.unreadableDirectories) {
+    lines.push(`  - ${directory}`);
   }
   lines.push("");
   return `${lines.join("\n")}\n`;

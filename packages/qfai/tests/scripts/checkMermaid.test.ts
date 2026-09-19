@@ -7,6 +7,7 @@
  *   - a ```mermaid nested inside a wider fence       -> not a diagram
  *   - `<!-- mermaid-lint:ignore -->` above a fence   -> that block is skipped
  *   - unknown flag / unreadable path                 -> exit 2
+ *   - a directory holding its own `.git`             -> not scanned (another checkout)
  *
  * Spawned rather than imported: the exit code is half the contract, and a lane
  * that reports failures on stdout while exiting 0 is the failure mode a CI check
@@ -15,7 +16,7 @@
  * said about them — that one needs no Mermaid boot at all.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -95,6 +96,27 @@ describe("check-mermaid lane", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("broken.md:3");
     expect(result.stderr).toContain("1 of 1 diagram(s) failed to parse");
+  });
+
+  it("does not descend into another checkout below the scan root", async () => {
+    // A git worktree under `.claude/worktrees/` holds another branch's
+    // Markdown. Read here, its broken diagram failed this tree locally and
+    // never in a fresh CI clone.
+    const dir = await newTempDir();
+    await writeFile(path.join(dir, "ok.md"), `# Fine\n\n${GOOD_DIAGRAM}\n`, "utf-8");
+    const worktree = path.join(dir, ".claude", "worktrees", "other-branch");
+    await mkdir(worktree, { recursive: true });
+    await writeFile(path.join(worktree, ".git"), "gitdir: /elsewhere/.git/worktrees/x\n", "utf-8");
+    await writeFile(path.join(worktree, "broken.md"), `# B\n\n${BROKEN_DIAGRAM}\n`, "utf-8");
+    // A plain directory beside it is still read.
+    const plain = path.join(dir, "docs");
+    await mkdir(plain, { recursive: true });
+    await writeFile(path.join(plain, "fine.md"), `# Fine\n\n${GOOD_DIAGRAM}\n`, "utf-8");
+
+    const result = runLane([dir]);
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("2 diagram(s) parsed");
   });
 
   it("reports every broken diagram rather than stopping at the first", async () => {
@@ -236,5 +258,49 @@ describe("check-mermaid fence scanning", () => {
     const source = ["```ts", "const a = 1;", "```", ""].join("\n");
 
     expect(extractMermaidBlocks(source)).toHaveLength(0);
+  });
+});
+
+describe("another repository checked out inside the scanned tree", () => {
+  /**
+   * A directory holding a `.git` entry is a checkout of its own: a clone, a
+   * submodule, or a git worktree, which carries `.git` as a file rather than a
+   * directory. Its documents belong to whatever is checked out there.
+   *
+   * Both halves matter. Without the skip the lane reports a diagram this tree does
+   * not own, and the same commit passes wherever no such directory exists — a
+   * check that disagrees with itself depending on what else is on disk. Without
+   * the sibling assertion the skip could be a scan that stopped early and read
+   * nothing at all.
+   */
+  it("reads neither its documents nor a broken diagram inside one", async () => {
+    const dir = await newTempDir();
+    await writeFile(path.join(dir, "own.md"), `# Own\n\n${GOOD_DIAGRAM}\n`, "utf-8");
+    const nested = path.join(dir, "nested");
+    await mkdir(nested, { recursive: true });
+    // A file, which is the shape a worktree and a submodule both use.
+    await writeFile(
+      path.join(nested, ".git"),
+      "gitdir: /elsewhere/.git/worktrees/nested\n",
+      "utf-8",
+    );
+    await writeFile(path.join(nested, "broken.md"), `# Nested\n\n${BROKEN_DIAGRAM}\n`, "utf-8");
+
+    const result = runLane([dir]);
+
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(result.stdout + result.stderr).not.toContain("broken.md");
+  });
+
+  it("still reads a broken diagram in a directory that is not a checkout", async () => {
+    const dir = await newTempDir();
+    const nested = path.join(dir, "nested");
+    await mkdir(nested, { recursive: true });
+    await writeFile(path.join(nested, "broken.md"), `# Nested\n\n${BROKEN_DIAGRAM}\n`, "utf-8");
+
+    const result = runLane([dir]);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout + result.stderr).toContain("broken.md");
   });
 });

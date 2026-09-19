@@ -21,6 +21,7 @@ import {
   HANDOFF_WRITER_PAIRS,
 } from "../../../../src/core/validators/handoffSchemaPairs.js";
 import { SKILL_MANIFEST_PAIRS } from "../../../../src/core/validators/skillManifestPairs.js";
+import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../../../src/core/atdd/scaffold.js";
 
 const CANONICAL_REL = ".qfai/report/validate.json";
 
@@ -30,6 +31,7 @@ const CANONICAL_REL = ".qfai/report/validate.json";
  * trip the very gate it exercises when qfai validates its own repository.
  */
 const TODO = ".todo";
+const SKIP = ".skip";
 
 type Finding = { code: string; severity: string; message: string };
 
@@ -94,6 +96,22 @@ async function seedStub(root: string, relDir: string): Promise<void> {
   await writeFile(
     path.join(testDir, "us-0001.test.ts"),
     [`it${TODO}("QFAI:SPEC-0001:US-0001 covers the login flow");`, ""].join("\n"),
+    "utf-8",
+  );
+}
+
+/** An unfilled `qfai atdd scaffold` skeleton at `relDir`, as the writer leaves it. */
+async function seedScaffold(root: string, relDir: string): Promise<void> {
+  const testDir = path.join(root, ...relDir.split("/"));
+  await mkdir(testDir, { recursive: true });
+  await writeFile(
+    path.join(testDir, "tc-0001.test.ts"),
+    [
+      `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
+      "// TODO: implement assertion for TC-0001-0001",
+      `it${SKIP}("QFAI:SPEC-0001:TC-0001-0001 pending", () => {});`,
+      "",
+    ].join("\n"),
     "utf-8",
   );
 }
@@ -406,6 +424,91 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
       await runValidate({ root, strict: false });
       const stubs = (await findings(root)).filter((entry) => entry.code === "QFAI-TEST-001");
       expect(stubs).toHaveLength(1);
+    });
+  });
+
+  it("reports an unfilled scaffold under --profile tdd, which runs no placeholder rule", async () => {
+    // `D-SCAFFOLD-PLACEHOLDER` owns a marked skeleton only in a run that has
+    // it. `--profile tdd` does not, so standing aside there passed the stage's
+    // completion gate over a test that never runs. `full` has it, and the
+    // skeleton stays that rule's.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await seedRepoWideTestGlobs(root);
+        await seedScaffold(root, "tests/integration/spec-0001");
+        await runValidate({ root, strict: false, profile: "tdd" });
+        expect((await findings(root)).map((entry) => entry.code)).toContain("QFAI-TEST-003");
+        await runValidate({ root, strict: false });
+        const full = (await findings(root)).map((entry) => entry.code);
+        expect(full).not.toContain("QFAI-TEST-003");
+        expect(full).toContain("D-SCAFFOLD-PLACEHOLDER");
+      });
+    });
+  });
+
+  it("reports a skeleton for an L1 TC under --profile atdd and full, where the placeholder rule passes it over", async () => {
+    // `D-SCAFFOLD-PLACEHOLDER` says nothing about a TC whose `Level` owes no
+    // ATDD annotation. Standing aside for its skeleton left the skipped case
+    // reported by neither rule.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await writeFile(
+          path.join(root, ".qfai", "specs", "spec-0001", "06_Test-Cases.md"),
+          [
+            "# 06 Test Cases",
+            "",
+            "## Test Case Table",
+            "",
+            "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+            "| ----- | ----- | ------- | ------ | ----- | -------- |",
+            "| TC-0001-0001 | L1 | AC-0001 | - | s | e |",
+            "",
+          ].join("\n"),
+          "utf-8",
+        );
+        await seedRepoWideTestGlobs(root);
+        await seedScaffold(root, "tests/integration/spec-0001");
+        for (const profile of ["atdd", undefined] as const) {
+          await runValidate({ root, strict: false, ...(profile ? { profile } : {}) });
+          const codes = (await findings(root)).map((entry) => entry.code);
+          expect(codes.filter((code) => code === "QFAI-TEST-003")).toHaveLength(1);
+          expect(codes).not.toContain("D-SCAFFOLD-PLACEHOLDER");
+        }
+      });
+    });
+  });
+
+  it("reads the legacy scaffold directory for skeletons under --profile tdd", async () => {
+    // Older scaffold runs wrote to `<testsDir>/atdd/`, which is no acceptance
+    // layer. `--profile tdd` runs no placeholder rule, so the stub gate is the
+    // only reader a skeleton there has in the stage's completion gate.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await seedScaffold(root, "tests/atdd/spec-0001");
+        await runValidate({ root, strict: false, profile: "tdd" });
+        const skipped = (await findings(root)).filter((entry) => entry.code === "QFAI-TEST-003");
+        expect(skipped).toHaveLength(1);
+      });
+    });
+  });
+
+  it("reads the acceptance directories for skeletons under --profile tdd whatever testFileGlobs holds", async () => {
+    // The coverage check `--profile tdd` runs reads those directories on the
+    // config `qfai init` ships, so a skeleton's annotation clears its missing
+    // reference there. The stub gate reads them too, and reports it once when
+    // the configured globs select it as well.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await seedScaffold(root, "tests/integration/spec-0001");
+        await runValidate({ root, strict: false, profile: "tdd" });
+        const shipped = (await findings(root)).filter((entry) => entry.code === "QFAI-TEST-003");
+        expect(shipped).toHaveLength(1);
+
+        await seedRepoWideTestGlobs(root);
+        await runValidate({ root, strict: false, profile: "tdd" });
+        const both = (await findings(root)).filter((entry) => entry.code === "QFAI-TEST-003");
+        expect(both).toHaveLength(1);
+      });
     });
   });
 

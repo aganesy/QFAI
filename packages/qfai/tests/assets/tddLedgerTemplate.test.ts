@@ -268,7 +268,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(checklists).toContain("Seed each row's `Tier` alongside its `Layer`");
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
-      expect(skill).toContain("**Seed `Tier` with the\n   row**");
+      expect(unwrap(skill)).toContain("**Seed `Tier` with the row**");
     });
 
     it(`${tree}: the ledger FORMAT SSOT carries Tier so Phase 2b cannot drop it`, async () => {
@@ -430,6 +430,22 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(template).not.toContain("are **not** rows here");
       expect(template).toContain("**one `Layer = E2E` row per active `US-*`**");
       expect(template).toContain("**one `Layer = API` row per active `CON-API-*`**");
+    });
+
+    it(`${tree}: the template says how a UI contract reaches the ledger`, async () => {
+      // A reader who knows `CON-API-Refs` looks for the UI column, finds none,
+      // and is left to guess whether screen obligations are carried at all.
+      const template = unwrap(await read(tree, TEMPLATE));
+      expect(template).toContain("**A UI contract has no group and no column.**");
+      expect(template).toContain(
+        "each screen obligation the contract declares is a `TC-*` in `06_Test-Cases.md` of the spec that owns the screen",
+      );
+      expect(template).toContain(
+        "`QFAI-CONTRACT-043` (warning) reports a UI contract no live spec binds",
+      );
+      expect(template).toContain(
+        "Nothing checks that every screen obligation of a bound contract has its own test case",
+      );
     });
 
     it(`${tree}: Phase 2b seeds obligation rows only for active obligations`, async () => {
@@ -828,8 +844,8 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(preconditions).toContain("**one `Layer = Integration` row per integration-level TC**");
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
-      expect(skill).toContain(
-        "**one `Layer = Integration` row per integration-level TC** from the same file\n   (every `Level` whose ATDD annotation routes to",
+      expect(unwrap(skill)).toContain(
+        "**one `Layer = Integration` row per integration-level TC** from the same file (every `Level` whose ATDD annotation routes to",
       );
 
       const checklists = await read(
@@ -1156,9 +1172,10 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         // not know the row was its work, and Phase Red step 3b found no handoff.
         ["assistant/skills/qfai-atdd/SKILL.md", "and `system` / `acceptance`"],
       ] as const) {
-        expect(await read(tree, file), `${file} does not route system / acceptance`).toContain(
-          needle,
-        );
+        expect(
+          unwrap(await read(tree, file)),
+          `${file} does not route system / acceptance`,
+        ).toContain(unwrap(needle));
       }
     });
 
@@ -1311,7 +1328,9 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(template).toContain("Reseeding is a **delta**, never a regeneration");
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
-      expect(skill).toContain("**Seeding is a delta,\n   not a regeneration, in both directions**");
+      expect(unwrap(skill)).toContain(
+        "**Seeding is a delta, not a regeneration, in both directions**",
+      );
 
       const checklists = await read(
         tree,
@@ -1736,12 +1755,12 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       ).toBeGreaterThan(0);
     });
 
-    it(`${tree}: an empty ledger is only "nothing to do" when 06_Test-Cases.md agrees`, async () => {
+    it(`${tree}: an empty ledger is only "nothing to do" when all obligation sources agree`, async () => {
       // The rule is stated in SKILL.md; the procedure behind it lives in the
       // reference, where the progressive-disclosure split put it.
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
       expect(skill).toContain(
-        "**An empty ledger is a fault only when `06_Test-Cases.md` disagrees.**",
+        "**An empty ledger is a fault when any active obligation source requires a row.**",
       );
       expect(skill).toContain("references/ledger-preconditions.md");
 
@@ -1844,7 +1863,8 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       // SKILL.md still names the producer and forbids inventing rows — those
       // bind the agent before it opens anything else.
       expect(skill).toContain("**Producer**");
-      expect(skill).toContain("do **not** invent rows that no TC backs");
+      expect(skill).toContain("do **not** invent rows that no TC, US or CON-API backs");
+      expect(skill).toContain("one `Layer = Integration` row per integration-level TC");
 
       const preconditions = await read(
         tree,
@@ -1860,7 +1880,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       );
       expect(preconditions).toContain("## Recovery when it is missing");
       expect(preconditions).toContain(
-        "## An empty ledger is a fault only when `06_Test-Cases.md` disagrees",
+        "## Check all four obligation sources before an empty-ledger exit",
       );
       expect(preconditions).toContain('Report\n  "nothing to do" and exit');
     });

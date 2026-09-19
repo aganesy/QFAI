@@ -15,13 +15,14 @@ does an ambiguity found while implementing.
 | Target                            | Applies                                                            |
 | --------------------------------- | ------------------------------------------------------------------ |
 | A session, once entered           | Every round, until it ends                                         |
-| A decision the user owns          | Asked, never assumed                                               |
+| A critical decision               | Asked, never assumed, in every session                             |
+| Any other decision                | Asked in a user session; in a delegated one, the recommendation    |
 | A fact the environment can settle | Never asked; looked up                                             |
 | A fact only the user holds        | Asked as a value, never with a recommended answer                  |
 | A question outside a session      | Not a grilling question — an ordinary clarification, capped as one |
 | Work already specified            | Outside this rule; the spec is the authority                       |
 
-The fifth row is what keeps the rest from being a way around a question budget.
+The sixth row is what keeps the rest from being a way around a question budget.
 It also makes the class decidable when the question is asked rather than
 arguable afterwards.
 
@@ -35,16 +36,85 @@ ends the need is the decision being settled, not the subject being easy to
 state: a choice between two fully specified options is precise and still open,
 and precision is no help whatever in making it.
 
+## Two kinds of session
+
+| Kind      | Held by                                                       | Who answers                           | What reaches the user   |
+| --------- | ------------------------------------------------------------- | ------------------------------------- | ----------------------- |
+| User      | A stage whose work is the interview, or the user invoking one | The user                              | Every decision          |
+| Delegated | Every other stage                                             | The authors, interviewed by a griller | Critical decisions only |
+
+**Delegated is the default.** A stage holds a user session only where its own
+definition says so. The discussion stage is that stage: there the interview is
+the work.
+
+A user asked every design question of a routine stage answers most of them by
+accepting the recommendation. Each round trip costs their time and settles
+nothing the recommendation had not. Their attention is spent where their answer
+can differ from it: the discussion stage, and the critical decisions below.
+
+**A delegated session runs the same method with a different answerer.** The
+griller builds the tree, computes the frontier and puts each round to the
+authors whose decisions it holds. After two rounds every decision that is not
+critical takes the griller's recommendation, whether the authors agreed with it
+or not. Each critical one goes to the user.
+
+### Critical decisions
+
+A decision is critical, and goes to the user in every session, when it is one of
+these.
+
+| Class                                                                                                                                                    | Why agents cannot take it                                           |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| It contradicts a spec, a contract or a recorded decision                                                                                                 | Changing settled input is a change request, which the user approves |
+| Its effect cannot be taken back: a security exposure, lost or corrupted data, a broken released contract, spending, a legal commitment, a public release | A wrong recommendation here is not repaired by the next run         |
+| It rests on product or business intent that the request, the discussion pack, the specs and the contracts all leave unstated                             | The agents would be inventing what the user wants                   |
+
+Two more nodes reach the user in every session, and neither is a decision the
+agents could recommend: a decision some document requires the user to make and
+record, and a fact only the user holds.
+
+Nothing else is critical. Doubt about a recommendation is not criticality: the
+rounds are where the agents weigh it, and the record lets the user overturn it.
+
+### What an adopted decision owes
+
+- **A record** in the stage's evidence: the decision, the recommendation taken,
+  the agent that made it, and why. A position that disagreed stays beside it.
+- **A line in the stage's final report**, with every other adopted decision, so
+  the user sees all of them without being stopped for any.
+
+The report does not wait for an answer. A user who disagrees overturns the
+decision the ordinary way: a change request, or a rerun with the decision
+stated.
+
+## The request bounds the tree
+
+A node belongs on the tree only when the requested work cannot go ahead without
+its answer.
+
+A decision whose only outcome is whether to add something the request did not
+ask for — a control, a setting, a code path, a layer of abstraction, a case
+nobody named — is not a node. Leave the thing out, and do not ask. Asking turns
+a request into a menu, and a menu answered "as recommended" builds all of it.
+
+- Among the options for a real node, recommend the one that adds least beyond
+  what was asked.
+- In a delegated session the griller asks, of every addition an author
+  proposes, which part of the request needs it. An addition nobody can point to
+  is dropped, not adopted.
+- The discussion stage is where the request is shaped, so a question about scope
+  is a node there. Its recommendation still favours the smaller scope.
+
 ## The design tree
 
 The subject sits at the root, and below it hang nodes, each on whatever it
 depends on.
 
-| Node                       | Settled by                        | State while open |
-| -------------------------- | --------------------------------- | ---------------- |
-| Decision                   | The user, when asked              | Open             |
-| Fact the environment holds | The agent, by reading or a lookup | Open, in flight  |
-| Fact only the user holds   | The user, when asked              | Open             |
+| Node                       | Settled by                                                     | State while open |
+| -------------------------- | -------------------------------------------------------------- | ---------------- |
+| Decision                   | The user, or in a delegated session the adopted recommendation | Open             |
+| Fact the environment holds | The agent, by reading or a lookup                              | Open, in flight  |
+| Fact only the user holds   | The user, when asked                                           | Open             |
 
 **A fact the environment does not hold is still a fact.** An unpublished date, a
 constraint that lives in a contract, a number only the user knows: no lookup
@@ -82,8 +152,8 @@ One round is one frontier: asked in full, answered in full.
 
 - Two questions never share a round when one depends on the other. The dependent
   one belongs to a later round.
-- Every question in the round is put at once, so the user sees the whole of what
-  is being decided together.
+- Every question in the round is put at once, so whoever answers sees the whole
+  of what is being decided together.
 - The next round is recomputed from the answers, never written ahead of them.
 
 Count rounds, not questions. Forty questions across four rounds is an ordinary
@@ -94,7 +164,10 @@ not to ask, no round is put at all, so nothing here applies and _Under a
 no-question mode_ below governs. A mode that withholds the tool while still
 permitting questions is a different thing, and is the fallback's case.
 
-Ask through the host's structured question tool. Three things send a round to
+In a delegated session the griller puts each round to the authors, and only a
+critical decision reaches the user, asked the way the rest of this section says.
+
+Ask the user through the host's structured question tool. Three things send a round to
 plain text instead: the host has no such tool, the current mode withholds it
 while still permitting questions, or it cannot carry the answer shape of some
 question in the round — a question
@@ -154,8 +227,13 @@ dispatch a sub-agent. Never ask the user for something you could look up.
 Do not block on it either. A running exploration is an unsettled prerequisite,
 so only the questions downstream of it wait; ask the rest of the frontier now.
 
-A decision is the user's, and you wait for it. An agent that answers its own
-decisions has not read this rule liberally — it has stopped following it.
+In a user session a decision is the user's, and you wait for it. An agent that
+answers its own decisions there has not read this rule liberally — it has
+stopped following it.
+
+In a delegated session a decision takes the griller's recommendation, reached in
+rounds and recorded. The agent holding the session still never skips the rounds,
+and never takes a critical decision.
 
 ## When a session ends
 
@@ -172,10 +250,46 @@ questions it was dispatched to answer.
 Running out of questions is not the same as being finished. Do not act on what
 was agreed until the confirmation in step 2.
 
+A delegated session has no confirmation to wait for. It **completes** when no
+node is open and every critical decision has the user's answer, and it ends
+`adopted`.
+
 There is no question cap, and adding one would not help: some plans need three
 questions and some need fifty, so a fixed ceiling either truncates the hard case
 or looks arbitrary on the easy one. When a session runs long the cause is
 usually a subject too large to hold at once. Break it up and grill the pieces.
+
+### The five endings
+
+A session ends in exactly one of these, and a record of one names which:
+
+| Ending        | Reached when                                                                                                   | The work may proceed                                     |
+| ------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `confirmed`   | Both conditions above: no node open, and the user confirms                                                     | Yes                                                      |
+| `user-closed` | The user answered `proceed` or `done`; each decision still open is recorded as an assumption and labelled      | Yes                                                      |
+| `adopted`     | A delegated session: no node open, every critical decision answered by the user, the rest adopted and recorded | Yes, and the final report lists what was adopted         |
+| `no-question` | A no-question mode was active: the evidence settled what it could and every node left over is an open question | Yes, and whatever gates the work reports those questions |
+| `stopped`     | The user stopped the session                                                                                   | No. Report every open decision as open                   |
+
+**`no-question` is an ending, not an exemption.** The completing condition needs
+the user's confirmation, and an invocation told not to ask cannot obtain one —
+so without a name for how such a run finishes, a session it was required to hold
+could never end, and the rule would forbid the mode it elsewhere describes. What
+stops that run from being treated as agreed is the open questions it leaves, not
+the absence of an ending.
+
+**A session between agents is a delegated session, and ends `adopted`.** Its
+budget ends the rounds: after two, every decision that is not critical takes the
+griller's recommendation, and every critical one goes to the user, who answers
+it or ends the session another way. **Under a no-question mode there is nobody
+to send them to**: they are opened as questions where the work's gates read
+them, and that register write ends the session `no-question`, as it ends any
+session the mode holds. How many went is a count a record carries, never an
+ending of its own.
+
+**`stopped` is the one that does not let the work continue.** The other four
+close the asking; this one ends the session, and an agent that carried on
+because the frontier happened to be empty has read the stop as an answer.
 
 ### When the user ends it
 
@@ -200,22 +314,22 @@ than inventing it.
 
 ### A session between agents
 
-A session with no user answering has neither half of the end condition above
-available to it, so it ends on a budget instead: two rounds, then every decision
-still open goes to the user. Three subjects skip the rounds and go at once —
-product or business intent no authoritative artifact answers, a decision
-contradicting a spec, a contract or a recorded decision, and a decision resting
-on nothing authoritative.
+Two rounds, then every decision that is not critical takes the griller's
+recommendation. A critical decision skips the rounds and goes to the user at
+once: rounds between agents produce agreement, and agreement is not what that
+class lacks. Under a no-question mode the critical decisions reach no user: they
+are opened as questions, and the session ends `no-question` on that write.
 
-That is the one place a session ends on a count, and it is a count of rounds
-between agents rather than of questions put to a user. The rules are in
+The count bounds the rounds between agents. It does not end the session while a
+critical decision is unanswered. The rules are in
 `.qfai/assistant/constitution/review-convergence.md`.
 
 ## Under a no-question mode
 
 A run told not to ask the user does not ask, and a session inside it does not
-either. It settles what the evidence settles, and opens **every node left over**
-as a question, where whatever gates the work will see it. Every node, not every
+either. It settles what the evidence settles — and in a delegated session what
+adoption settles — and opens **every node left over** as a question, where
+whatever gates the work will see it. Every node, not every
 decision: a fact only the user holds cannot be settled from evidence either, and
 a mode that opens the decisions and drops the facts loses exactly the nodes no
 lookup could have reached.
@@ -237,6 +351,9 @@ Some questions need something to react to. "How should this feel" and "one long
 form or three pages" are of that kind, and no amount of rephrasing turns them
 into answerable ones. Stop grilling and build the throwaway version.
 
+In a delegated session such a question is one of product intent unless the
+discussion stage's design direction already answers it, so it is critical.
+
 Then put it in front of the user and ask the question again against it. The
 prototype is what makes the decision answerable; it does not transfer the
 decision. An agent that builds one, judges it, and carries on has settled a
@@ -249,14 +366,22 @@ uncertainty.
 
 ## It is working when
 
-- Every decision the session opened is either settled by the user or left open on
-  purpose, and they said which. Agreeing with every recommendation is a fine
-  outcome; a decision that closed without them is not, however sound it was.
+- In a user session, every decision the session opened is either settled by the
+  user or left open on purpose, and they said which. Agreeing with every
+  recommendation is a fine outcome; a decision that closed without them is not,
+  however sound it was.
+- In a delegated session, the user was asked the critical decisions and nothing
+  else, and every adopted decision is in the record and the final report.
+- Nothing entered the tree that the request did not need.
 - Later rounds ask what the first round could not have asked.
 - Facts were looked up rather than asked for.
 - Work running in the background did not stall the round — only the questions
   downstream of it waited.
-- The session ended by asking for confirmation, not by starting work.
+- The session reached one of the five endings on purpose. `confirmed` is the
+  one that asks for confirmation rather than starting work; the other four are
+  reached when the user closes the asking, when a delegated session adopts, when
+  a no-question mode forbids asking, and when the user stops — and a run that
+  could not have asked is not failing this list by not asking.
 
 ## Related
 

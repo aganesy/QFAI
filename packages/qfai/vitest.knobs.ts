@@ -77,11 +77,46 @@ export const DECLARED_START = 10;
  * `.qfai/evidence/timing-workers-spec-0017.md` is where ten was adopted in the first
  * place — this cap never lowers the value on a machine that can hold it. `DR-0017-0010`
  * carries the decision and the rest of the numbers.
- *
- * The within-file concurrency axis is not capped. It bounds `it.concurrent` cases inside
- * one process, which are not forks, and no measurement has been taken on it.
  */
 export const DECLARED_WORKERS = Math.min(DECLARED_START, availableParallelism());
+
+/**
+ * The within-file concurrency ceiling handed to the runner: the declared value, held to the
+ * cores the machine actually has.
+ *
+ * The axis bounds concurrent cases inside one process rather than forks, so the cap above
+ * does not cover it and needed its own measurement. Taken on
+ * `tests/pr-fix/prFixMonitor.test.ts`, whose cases each spawn a shell that runs a script
+ * through its poll loop and shells out once per poll. That file and
+ * `tests/pr-merge/prMergePlan.test.ts` are the two this axis is for, each in a runner project
+ * of its own, and no other file in the suite carries that cost.
+ * One full run per setting, on four cores, the count `ubuntu-latest` gives:
+ *
+ * ```text
+ * concurrent  wall
+ * 1           58.4 s
+ * 2           42.7 s
+ * 4           36.1 s
+ * 5           36.8 s
+ * 8           39.8 s
+ * 10          47.0 s
+ * 15          44.1 s
+ * ```
+ *
+ * The curve turns at the core count. Ten is 30% slower than four, well outside the ten per
+ * cent `EX-0017-0049` allows, and an independent pair gave 45.2 s against 37.9 s — the same
+ * verdict. Past the cores, the extra shells wait for a core while holding the memory and the
+ * scheduler slots of shells that are running.
+ *
+ * On fourteen cores the same sweep is flat from four upwards: 25.2 s at four against 27.7 s
+ * at ten, a spread inside the same ten per cent. So the cap is about the small machine, and a
+ * machine that can hold ten still runs ten.
+ *
+ * `DECLARED_START` is untouched and the override is still honoured as asked, which is the
+ * whole of what `BR-0017-0048` requires. `DR-0017-0010` records that reasoning for the worker
+ * axis and `DR-0017-0013` for this one, with the sweep above.
+ */
+export const DECLARED_CONCURRENCY = Math.min(DECLARED_START, availableParallelism());
 
 /**
  * A positive integer from `name`, or `declared`.
@@ -176,7 +211,7 @@ export const projectKnobs = {
   hookTimeout: DECLARED_TEST_TIMEOUT,
   pool: "forks",
   poolOptions: { forks: { singleFork: false, isolate: true } },
-  maxConcurrency: tunable(CONCURRENCY_ENV),
+  maxConcurrency: tunable(CONCURRENCY_ENV, DECLARED_CONCURRENCY),
 } as const;
 
 /**
@@ -192,7 +227,7 @@ export const projectKnobs = {
  *
  * The lesson is the file's own docblock: this is the PARALLELISM knob set. `setupFiles` is not a
  * parallelism knob, and anything spread into a foreign root has to be about that root. Kept here
- * as a separate export rather than inlined seven times in `vitest.workspace.ts`, so there is
+ * as a separate export rather than inlined nine times in `vitest.workspace.ts`, so there is
  * still one definition — it is the SPREAD that had to stop, not the sharing.
  *
  * ## Why every project and not one

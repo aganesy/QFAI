@@ -20,12 +20,8 @@
  * (every TC must be referenced at least once from tests/integration/**).
  */
 
-// QFAI:SPEC-0004:TC-0004-0017
-// QFAI:SPEC-0004:TC-0004-0018
-// QFAI:SPEC-0004:TC-0004-0019
-// QFAI:SPEC-0004:TC-0004-0020
-// QFAI:SPEC-0004:TC-0004-0021
-// QFAI:SPEC-0004:TC-0004-0022
+// QFAI:SPEC-0004:TC-0004-0002
+// QFAI:SPEC-0002:TC-0002-0010
 // QFAI:SPEC-0004:TC-0004-0023
 // QFAI:SPEC-0004:TC-0004-0024
 // QFAI:SPEC-0004:TC-0004-0025
@@ -80,11 +76,10 @@ async function createNonUiPack(root: string): Promise<void> {
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
 // ---------------------------------------------------------------------------
-// TC-0004-0017: Canonical UIX aggregator path verification
+// The aggregator validate.ts calls, read from its source
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0004:TC-0004-0017
-describe("TC-0004-0017: Canonical UIX aggregator path verification", () => {
+describe("the canonical UIX aggregator is the one validate.ts names", () => {
   it("validate.ts calls runCanonicalUixValidators (not a legacy wrapper)", async () => {
     const validateSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -96,10 +91,10 @@ describe("TC-0004-0017: Canonical UIX aggregator path verification", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0004-0018: exploration-first family filename expectations
+// exploration-first family filename expectations
 // ---------------------------------------------------------------------------
 
-describe("TC-0004-0018: canonical sidecar family filename expectations", () => {
+describe("canonical sidecar family filename expectations", () => {
   it("threeLayer validator recognizes the canonical screen-level sidecar family", async () => {
     const validatorSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validators", "uix", "threeLayer.ts"),
@@ -127,11 +122,10 @@ describe("TC-0004-0018: canonical sidecar family filename expectations", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0004-0019: Old 4-axis format is error
+// Old 4-axis format is error
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0004:TC-0004-0019
-describe("TC-0004-0019: Old 4-axis format is error", () => {
+describe("Old 4-axis format is error", () => {
   it("legacy 4-axis headings in exploration artifacts trigger legacy format error", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
@@ -153,11 +147,10 @@ describe("TC-0004-0019: Old 4-axis format is error", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0004-0020: Non-UI pack UIX skip
+// A non-UI pack raises no UIX finding from the three-layer validator
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0004:TC-0004-0020
-describe("TC-0004-0020: Non-UI pack UIX skip", () => {
+describe("a non-UI pack raises no UIX finding from threeLayer", () => {
   it("non-UI pack produces zero UIX-VAL issues from threeLayer", async () => {
     const root = await newTempDir();
     await createNonUiPack(root);
@@ -168,10 +161,10 @@ describe("TC-0004-0020: Non-UI pack UIX skip", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0014-0004: UIX-VAL determinism
+// UIX-VAL determinism
 // ---------------------------------------------------------------------------
 
-describe("TC-0014-0004: UIX-VAL determinism", () => {
+describe("UIX-VAL determinism", () => {
   it("same input produces identical output on repeated runs", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
@@ -193,12 +186,11 @@ describe("TC-0014-0004: UIX-VAL determinism", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0004-0021: render-evidence truthful state
+// render-evidence truthful state
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0004:TC-0004-0021
-describe("TC-0004-0021: render-evidence truthful state", () => {
-  it("TC-0004-0021: captured/skipped/failed states verified — no placeholder pass", async () => {
+describe("render-evidence truthful state", () => {
+  it("captured/skipped/failed states verified — no placeholder pass", async () => {
     const { captureRenderEvidence } = await import("../../src/core/uiux/renderEvidence.js");
 
     // Test with available environment
@@ -222,12 +214,11 @@ describe("TC-0004-0021: render-evidence truthful state", () => {
 });
 
 // ---------------------------------------------------------------------------
-// TC-0004-0022: Browser QA minimal runner truthful
+// Browser QA minimal runner truthful
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0004:TC-0004-0022
-describe("TC-0004-0022: Browser QA minimal runner truthful", () => {
-  it("TC-0004-0022: browser QA runner reports truthful results (not pass-all)", async () => {
+describe("Browser QA minimal runner truthful", () => {
+  it("browser QA runner reports truthful results (not pass-all)", async () => {
     const { runBrowserQaOrchestrated, validateBrowserQaBundle } =
       await import("../../src/core/browserQa/index.js");
 

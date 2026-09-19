@@ -1,7 +1,11 @@
+import path from "node:path";
+
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex, type ContractIndex } from "../contractIndex.js";
-import { collectSpecEntries } from "../specLayout.js";
+import { parseContractRefs } from "../parse/contractRefs.js";
+import { isTerminalSpecStatus } from "../parse/spec.js";
+import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import {
   isTableSeparator,
   looksLikeTableRow,
@@ -17,6 +21,8 @@ const CONTRACT_INDEX_HEADER_KEYS = new Set(["contractid", "declaredid", "shortid
 const DECLARED_ID_HEADER_KEY = "declaredid";
 const DEPENDS_ON_HEADER_KEY = "dependson";
 const FILE_HEADER_KEY = "file";
+/** The business-rule column that binds a rule to the contracts it is held by. */
+const CONTRACT_REFS_HEADER_KEY = "contractrefs";
 /**
  * Columns holding a contract's canonical id, as opposed to an abbreviation of it.
  *
@@ -107,8 +113,69 @@ export async function validateContractReferences(
 
   if (contractIndexFiles.size > 0) {
     issues.push(...validateIndexCoverage(mirroredIds, contractIndex));
+    issues.push(
+      ...validateUiContractBinding(await collectBoundContractIds(entries), contractIndex),
+    );
   }
 
+  return issues;
+}
+
+/**
+ * Every contract a live spec binds: a `QFAI-CONTRACT-REF:` line in its
+ * `01_Spec.md`, or a `Contract-Refs` cell of its business-rule table.
+ *
+ * A retired spec binds nothing: its rules no longer owe test cases.
+ */
+async function collectBoundContractIds(entries: readonly SpecEntry[]): Promise<Set<string>> {
+  const bound = new Set<string>();
+  for (const entry of entries) {
+    if (entry.layout !== "layered" && entry.layout !== "spec-pack") continue;
+    if (isTerminalSpecStatus(entry.status)) continue;
+    const spec = await readSafe(path.join(entry.dir, "01_Spec.md"));
+    for (const id of parseContractRefs(spec).ids) extractCellContractIds(id, bound);
+    const rules = await readSafe(path.join(entry.dir, "04_Business-Rules.md"));
+    for (const table of parseIndexTables(rules)) {
+      const column = table.headers.findIndex(
+        (header) => normalizeHeaderKey(header) === CONTRACT_REFS_HEADER_KEY,
+      );
+      if (column < 0) continue;
+      for (const row of table.rows) extractCellContractIds(row.cells[column] ?? "", bound);
+    }
+  }
+  return bound;
+}
+
+/**
+ * A UI contract no live spec binds (`QFAI-CONTRACT-043`, warning).
+ *
+ * A UI contract has no ledger row and no test directory of its own. Its screen
+ * obligations reach a test case through the business rule that binds it, and
+ * that rule owes acceptance criteria and test cases under `QFAI-COV-*`. A UI
+ * contract nothing binds has no route to any test case, and no other rule
+ * reports it: an API contract has `QFAI-ATDD-113` for the same gap.
+ */
+function validateUiContractBinding(bound: ReadonlySet<string>, index: ContractIndex): Issue[] {
+  const issues: Issue[] = [];
+  for (const contractId of Array.from(index.ids).sort((a, b) => a.localeCompare(b))) {
+    if (!contractId.startsWith("CON-UI-") || bound.has(contractId)) continue;
+    const files = Array.from(index.idToFiles.get(contractId) ?? []).sort((a, b) =>
+      a.localeCompare(b),
+    );
+    issues.push(
+      issue(
+        "QFAI-CONTRACT-043",
+        `No live spec binds the UI contract ${contractId}, so none of its screen obligations reaches a test case.`,
+        "warning",
+        files[0],
+        "contracts.ui.bound",
+        [contractId],
+        "change",
+        "Name the contract in the `Contract-Refs` cell of the business rule it holds, in the spec that owns the screen.",
+        files.length > 1 ? { relatedFiles: files.slice(1) } : undefined,
+      ),
+    );
+  }
   return issues;
 }
 

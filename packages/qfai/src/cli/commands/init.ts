@@ -1,7 +1,7 @@
 import path from "node:path";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import type { Dirent, Stats } from "node:fs";
+import type { BigIntStats, Dirent, Stats } from "node:fs";
 import {
   access,
   chmod,
@@ -31,6 +31,7 @@ import {
   ADOPTER_OWNED_ASSETS,
   ASSISTANT_ASSETS_LOCK_BASENAME,
   ASSISTANT_STAGING_PREFIX,
+  GOVERNED_ASSISTANT_LAYERS,
   aliasesShippedGovernedAsset,
   buildShippedAssistantHashes,
   hasRealGovernedAssistantParents,
@@ -70,12 +71,16 @@ import {
   QFAI_AGENT_RULES_END,
   addRuleCitations,
   addRuleCitationsToList,
+  addReviewPointer,
   citedRuleMasters,
   citedRuleMastersOutsideCode,
   hasUnclosedRulesSection,
   extractManagedRulesSection,
+  keepSummariesOfKeptMasters,
   needsManagedRulesSection,
   newlyWrittenRuleMasters,
+  refreshSupersededRuleBullets,
+  refreshSupersededRuleBulletsInList,
 } from "../../core/agentEntryPoints.js";
 import {
   CLAUDE_SETTINGS_RELATIVE_PATH,
@@ -115,6 +120,11 @@ import {
   readRuleLock,
   writeRuleLock,
 } from "../../core/ruleMasterUpdates.js";
+import {
+  type PendingCitations,
+  readPendingCitations,
+  writePendingCitations,
+} from "../../core/pendingRuleCitations.js";
 import { resolveToolVersion } from "../../core/version.js";
 import {
   RETIRED_WORKFLOW_NAMES,
@@ -191,6 +201,53 @@ export type InitOptions = {
   toolVersionOverride?: string;
 };
 
+/**
+ * Refuses a run whose destination assistant tree resolves into the assets this
+ * command copies from.
+ *
+ * `init` writes `.qfai/assistant/**` from `assets/init/.qfai/assistant/**`. A
+ * repository that vendors the tree by link has the destination resolving to the
+ * source, so the write lands in the package's own assets — an edit to the
+ * shipped documents, made by the command whose job is to install a copy of
+ * them, and indistinguishable afterwards from an ordinary asset change.
+ *
+ * Detected by resolution rather than by a path or a name, so it holds wherever
+ * the repository is checked out. An ordinary project resolves nowhere near the
+ * installed package and is unaffected; the check fails open when either side
+ * cannot be resolved, for the same reason the dependency guard does — a guard
+ * that mistakes a normal project for this one breaks the product.
+ */
+async function refuseWritingThroughToOwnAssets(
+  destRoot: string,
+  assistantAssets: string,
+): Promise<void> {
+  const resolve = async (target: string): Promise<string | null> => {
+    try {
+      return await realpath(target);
+    } catch {
+      return null;
+    }
+  };
+  const [destAssistant, sourceAssistant] = await Promise.all([
+    resolve(path.join(destRoot, ASSISTANT_DIR)),
+    resolve(assistantAssets),
+  ]);
+  if (destAssistant === null || sourceAssistant === null) return;
+  const relative = path.relative(sourceAssistant, destAssistant);
+  const inside = relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  if (!inside) return;
+  throw new Error(
+    [
+      `qfai init: ${formatReportPath(path.join(destRoot, ASSISTANT_DIR))} resolves to ${formatReportPath(destAssistant)},`,
+      "which is inside the assets this command copies from. Writing there would edit the",
+      "package's own shipped documents rather than install a copy of them.",
+      "",
+      "This is the repository that builds the package, with its assistant tree vendored by",
+      "link. Edit the assets directly — they are the file the link points at.",
+    ].join("\n"),
+  );
+}
+
 export async function runInit(options: InitOptions): Promise<void> {
   const toolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
   const assetsRoot = getInitAssetsDir();
@@ -207,10 +264,16 @@ export async function runInit(options: InitOptions): Promise<void> {
   // 中断・失敗した実行でも対象がスクロールバックに残る。
   info(`qfai init: dest=${formatReportPath(destRoot)}`);
 
+  await refuseWritingThroughToOwnAssets(destRoot, assistantAssets);
+
   if (options.force) {
     info(
       "NOTE: --force regenerates .qfai/assistant/skills/**, assistant/agents/** and the symlink assets (.agents/.claude/.github/.codex), and removes the legacy 10_workflow.md and the old wrappers. It also regenerates the qfai-provided plain files .github/copilot-instructions.md and .github/instructions/** (the code-review / principles review instructions) from the shipped templates, so local edits to those are lost. assistant/constitution/** and assistant/catalog/** are refreshed to the installed release only where the file still matches its .assets.lock.json record (a file this release no longer ships is likewise removed only when it matches the record); a diverged file is left untouched and reported as a manual merge (specs/contracts/steering and assistant/manifest/** are not overwritten — the manifest is user configuration edited by `qfai-configure`). Only agent-routing.yml is merged additively, filling in the skills / phases it is missing (existing phases are not rewritten).",
     );
+  }
+
+  if (!options.dryRun) {
+    await preflightGovernedCreation(assistantAssets, rootAssets, destRoot, options.force);
   }
 
   // If --upgrade-assistant-tree is supplied, run the migration FIRST.
@@ -395,31 +458,50 @@ export async function runInit(options: InitOptions): Promise<void> {
   if (!options.dryRun && rootResult.copied.includes(configPath)) {
     await aimTestFileGlobsAtRepository(destRoot, configPath);
   }
-  // Runs immediately AFTER the create-only root copy, and before anything else
-  // that can throw. The files it repairs are exactly the ones that copy skipped
-  // because the project already had them, and the signal it reads — which
-  // masters this run wrote — is available only in the run that wrote them. A
-  // step between the two that failed would leave the master on disk and its
-  // citation unwritten, with the next run seeing a master it did not write.
+  // The entry-point repair runs right after the create-only root copy and the
+  // rule-master update pass. The files it repairs are exactly the ones that
+  // copy skipped because the project already had them, and the signal it reads
+  // — which masters this run wrote — is available only in the run that wrote
+  // them. A step between the two that failed would leave the master on disk and
+  // its citation unwritten, with the next run seeing a master it did not write.
   //
-  // SIMPLIFIED: the window is one operation wide rather than closed.
+  // The update pass is the one step allowed in between, because a summary may
+  // only move to the release's wording where its master did, and a planned
+  // replacement can still end with the adopter's master kept. The citation
+  // repair reads this run's own copy report, so a master replaced here — already
+  // on disk before the run — is not one it is looking for.
+  //
+  // SIMPLIFIED: the window is the update pass wide rather than closed.
   // Lift when: init records per-master provenance, which the rule-master upgrade
   // path needs for its own reasons.
+  const newlyWritten = newlyWrittenRuleMasters(rootResult.copied, destRoot);
+  const ruleMasterResult = await updateUneditedRuleMasters(rootAssets, destRoot, options.dryRun);
+  const installedMasters: ReadonlySet<string> = new Set([
+    ...newlyWritten,
+    ...ruleMasterResult.installed,
+  ]);
   const entryPointRulesResult = await ensureAgentEntryPointRules(
     rootAssets,
     destRoot,
     options.dryRun,
     options.force,
-    newlyWrittenRuleMasters(rootResult.copied, destRoot),
+    newlyWritten,
+    installedMasters,
   );
-  // After the citation repair, which reads this run's own copy report: a master
-  // replaced here was already on disk, so it is not one that pass is looking for.
-  const ruleMasterResult = await updateUneditedRuleMasters(rootAssets, destRoot, options.dryRun);
+  const minimumMaster = path.join(destRoot, AGENTS_RULES_DIR_REL, "minimal-implementation.md");
+  const plannedSafetyFloor =
+    options.dryRun &&
+    (rootResult.copied.includes(minimumMaster) || ruleMasterResult.copied.includes(minimumMaster));
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    exclude: [...STANDARD_ASSET_PATHS],
+    exclude: [
+      ...STANDARD_ASSET_PATHS,
+      ...GOVERNED_ASSISTANT_LAYERS.map((layer) =>
+        path.relative(destQfai, joinAssistantLayer(destRoot, layer)),
+      ),
+    ],
   });
   const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, [...STANDARD_ASSET_PATHS], {
     force: options.force,
@@ -433,6 +515,8 @@ export async function runInit(options: InitOptions): Promise<void> {
   const governedResult = await syncGovernedAssistantAssets(assistantAssets, destRoot, {
     force: options.force,
     dryRun: options.dryRun,
+    rootAssets,
+    plannedSafetyFloor,
   });
 
   // The routing manifest is user configuration, so it is never overwritten —
@@ -456,6 +540,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   const wrappersResult = await syncIntegrationWrappers(assistantAssets, destRoot, {
     force: options.force,
     dryRun: options.dryRun,
+    installedRuleMasters: installedMasters,
   });
   const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
   const legacyEvidenceIgnoreResult = await ensureLegacyEvidenceIgnoreNegations(
@@ -641,6 +726,170 @@ function withoutPaths(paths: string[], excluded: ReadonlySet<string>): string[] 
   return paths.filter((candidate) => !excluded.has(candidate));
 }
 
+/** Reject unsupported exclusive creation before copying or migrating any assets. */
+async function preflightGovernedCreation(
+  assistantAssets: string,
+  rootAssets: string,
+  destRoot: string,
+  force: boolean,
+): Promise<void> {
+  let shipped: Record<string, string>;
+  try {
+    shipped = await buildShippedAssistantHashes(assistantAssets);
+  } catch (cause: unknown) {
+    throw new Error(
+      `qfai init cannot verify shipped governed assets in ${JSON.stringify(assistantAssets)}. Reinstall QFAI or restore its complete readable package assets, then rerun; no package assets were copied or migrated.`,
+      { cause },
+    );
+  }
+  const isContained = makeGovernedContainmentGuard(destRoot);
+  const probed = new Set<string>();
+  for (const relative of Object.keys(shipped)) {
+    if (!(await isContained(relative))) continue;
+    const dest = path.join(destRoot, ...ASSISTANT_DIR.split("/"), ...relative.split("/"));
+    if (
+      relative === "constitution/constitution.md" &&
+      !(await canPlanConstitutionCreation(rootAssets, destRoot))
+    ) {
+      continue;
+    }
+    try {
+      await lstat(dest);
+      if (!force || (await hashAssistantAssetFile(dest)) !== null) continue;
+    } catch (cause: unknown) {
+      if (!isEnoent(cause)) {
+        if (!force) continue;
+        throw new Error(
+          `qfai init cannot inspect ${JSON.stringify(dest)} for a force repair. Restore access and rerun; no package assets were copied or migrated.`,
+          { cause },
+        );
+      }
+    }
+    let directory = path.dirname(dest);
+    for (;;) {
+      try {
+        await stat(directory);
+        break;
+      } catch (cause: unknown) {
+        if (!isEnoent(cause) || directory === path.dirname(directory)) throw cause;
+        directory = path.dirname(directory);
+      }
+    }
+    if (probed.has(directory)) continue;
+    await probeExclusiveLink(directory);
+    probed.add(directory);
+  }
+}
+
+async function canPlanConstitutionCreation(rootAssets: string, destRoot: string): Promise<boolean> {
+  if (await canSyncConstitution(rootAssets, destRoot, false)) return true;
+  const name = "minimal-implementation.md";
+  const relative = path.join(AGENTS_RULES_DIR_REL, name);
+  if (!(await hasRealGovernedAssistantParents(destRoot, relative.split(path.sep).join("/")))) {
+    return false;
+  }
+  try {
+    await lstat(path.join(destRoot, relative));
+  } catch (cause: unknown) {
+    if (isEnoent(cause)) {
+      return (
+        (await hashAssistantAssetFile(path.join(rootAssets, relative), { allowSymlink: true })) !==
+        null
+      );
+    }
+    return false;
+  }
+  try {
+    const plans = await planRuleMasterUpdates(
+      path.join(rootAssets, AGENTS_RULES_DIR_REL),
+      path.join(destRoot, AGENTS_RULES_DIR_REL),
+    );
+    return plans.some((plan) => plan.name === name && plan.verdict === "update");
+  } catch {
+    return false;
+  }
+}
+
+async function probeExclusiveLink(directory: string): Promise<void> {
+  const source = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  const dest = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  let ownsSource = false;
+  let ownsDest = false;
+  let identity: BigIntStats | undefined;
+  const probeFailures: unknown[] = [];
+  try {
+    const handle = await open(source, "wx");
+    ownsSource = true;
+    try {
+      identity = await handle.stat({ bigint: true });
+    } catch (statCause: unknown) {
+      try {
+        await handle.close();
+      } catch (closeCause: unknown) {
+        throw new AggregateError(
+          [statCause, closeCause],
+          "Creation probe inspection and close failed.",
+          { cause: closeCause },
+        );
+      }
+      throw statCause;
+    }
+    await handle.close();
+    await link(source, dest);
+    ownsDest = true;
+  } catch (cause: unknown) {
+    probeFailures.push(
+      new Error(
+        `qfai init cannot prepare creation probes in ${JSON.stringify(directory)}. Restore write access and ensure the filesystem supports hard links, then rerun; no package assets were copied or migrated.`,
+        { cause },
+      ),
+    );
+  }
+  const cleanupFailures: Error[] = [];
+  const protectedEntries: Error[] = [];
+  for (const file of [ownsDest ? dest : null, ownsSource ? source : null]) {
+    if (file === null) continue;
+    try {
+      const current = await lstat(file, { bigint: true });
+      if (
+        identity === undefined ||
+        !current.isFile() ||
+        current.dev !== identity.dev ||
+        current.ino !== identity.ino
+      ) {
+        protectedEntries.push(new Error(JSON.stringify(file)));
+        continue;
+      }
+    } catch (cause: unknown) {
+      if (isEnoent(cause)) continue;
+      protectedEntries.push(new Error(JSON.stringify(file), { cause }));
+      continue;
+    }
+    try {
+      await rm(file, { force: true });
+    } catch (cause: unknown) {
+      cleanupFailures.push(new Error(JSON.stringify(file), { cause }));
+    }
+  }
+  if (protectedEntries.length > 0) {
+    const cleanupNote =
+      cleanupFailures.length === 0
+        ? ""
+        : ` Other probe cleanup failed at ${cleanupFailures.map((failure) => failure.message).join(", ")}; remove only verified, unchanged probe files before retrying.`;
+    throw new AggregateError(
+      [...probeFailures, ...protectedEntries, ...cleanupFailures],
+      `qfai init could not verify creation probe ownership at ${protectedEntries.map((entry) => entry.message).join(", ")}. Do not delete these occupied paths. Restore access and inspect ownership before rerunning; no package assets were copied or migrated.${cleanupNote}`,
+    );
+  }
+  if (cleanupFailures.length > 0) {
+    throw new AggregateError(
+      [...probeFailures, ...cleanupFailures],
+      `qfai init could not remove creation probes: ${cleanupFailures.map((failure) => failure.message).join(", ")}. Restore access, remove only these probe files, then rerun; no package assets were copied or migrated.`,
+    );
+  }
+  if (probeFailures.length > 0) throw probeFailures[0];
+}
+
 type GovernedAssetsResult = {
   copied: string[];
   skipped: string[];
@@ -666,7 +915,7 @@ type GovernedAssetsResult = {
 async function syncGovernedAssistantAssets(
   assistantAssets: string,
   destRoot: string,
-  options: { force: boolean; dryRun: boolean },
+  options: { force: boolean; dryRun: boolean; rootAssets: string; plannedSafetyFloor: boolean },
 ): Promise<GovernedAssetsResult> {
   // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree segments
   // come from `assistantPaths.ts` in init and in validate alike, so a future
@@ -708,20 +957,46 @@ async function syncGovernedAssistantAssets(
     }
     const currentHash = await hashAssistantAssetFile(dest);
     const previousHash = previous[relative];
+    if (
+      relative === "constitution/constitution.md" &&
+      !(await canSyncConstitution(options.rootAssets, destRoot, options.plannedSafetyFloor))
+    ) {
+      skipped.push(dest);
+      if (previousHash !== undefined) recorded[relative] = previousHash;
+      const recovery =
+        currentHash !== null
+          ? "A manual merge of the safety master and existing constitution is needed; keep adopter edits protected."
+          : (await pathExists(dest).catch(() => true))
+            ? "The constitution path is occupied or unreadable. Restore access to any existing constitution, or remove or relocate the non-file occupant while protecting adopter content. A manual merge of existing policy is needed. Keep master edits by manually installing and reconciling the constitution. To install automatically, back up customizations, restore the exact shipped master, then rerun `qfai init`."
+            : "Keep master edits by manually installing and reconciling the constitution. To install automatically, back up customizations, restore the exact shipped master, then rerun `qfai init`.";
+      manualMergeNotes.push(
+        `NOTE: ${formatReportPath(dest)} was not installed or refreshed: .agents/rules/minimal-implementation.md could not be verified as the shipped master for the safety floor. ${recovery}`,
+      );
+      continue;
+    }
 
     if (currentHash === shippedHash) {
+      skipped.push(dest);
       recorded[relative] = shippedHash;
       continue;
     }
 
     if (currentHash === null) {
-      await restoreUnreadableGovernedAsset(source, dest, shippedHash, previousHash, options, {
-        copied,
-        skipped,
-        recorded,
-        manualMergeNotes,
-        relative,
-      });
+      await restoreUnreadableGovernedAsset(
+        destRoot,
+        source,
+        dest,
+        shippedHash,
+        previousHash,
+        options,
+        {
+          copied,
+          skipped,
+          recorded,
+          manualMergeNotes,
+          relative,
+        },
+      );
       continue;
     }
 
@@ -830,25 +1105,11 @@ function escapedGovernedPathNote(dest: string): string {
 }
 
 /**
- * Writes `source` onto the governed path `dest` atomically.
- *
- * The copy lands on a temporary beside the target first and is then `rename`d
- * over it, so a failure — a full disk, a read fault, a process killed between
- * the two steps — leaves the previous rule in place instead of a hole where a
- * normative file was. Deleting first and copying second would open exactly that
- * window, on a file qfai had already vouched for.
- *
- * `rename` also replaces the directory entry itself, so a governed path left as
- * a symlink is replaced, never followed to overwrite whatever it points at.
- *
- * `expectedHash`, where the caller has one, is re-read immediately before the
- * `rename`. The refresh decides what to do from a hash taken earlier, and the
- * atomic staging only protects the *old* content from a failed copy — it does
- * nothing about an editor, or a concurrent `init`, that rewrote the target in
- * between, whose work the unconditional `rename` then discarded. Re-reading
- * does not make the swap atomic — POSIX has no conditional `rename` — but it
- * closes the window down to the two syscalls, and a target that moved is
- * reported instead of overwritten.
+ * Copies to a sibling staging file before publishing complete bytes.
+ * Replacement renames the directory entry, never following a target symlink.
+ * An expected hash is rechecked immediately before publication; this narrows,
+ * but cannot eliminate, the race with an editor. Create-only publication uses
+ * an exclusive hard link and never overwrites a path created concurrently.
  */
 export type GovernedWriteOutcome = "replaced" | "target-changed";
 
@@ -862,10 +1123,95 @@ export async function replaceGovernedAsset(
   source: string,
   dest: string,
   expectedHash?: string,
+  mode: "replace" | "create-only" = "replace",
 ): Promise<GovernedWriteOutcome> {
   const directory = path.dirname(dest);
   await mkdir(directory, { recursive: true });
   const staging = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  if (mode === "create-only") {
+    let handle: FileHandle;
+    try {
+      handle = await open(staging, "wx");
+    } catch (cause: unknown) {
+      throw new Error(
+        `qfai init cannot create staging file ${JSON.stringify(staging)} for ${JSON.stringify(dest)}. Restore write access and inspect ownership before rerunning; preserve any occupied staging path and existing destination content.`,
+        { cause },
+      );
+    }
+    let identity: BigIntStats | undefined;
+    let outcome: GovernedWriteOutcome = "replaced";
+    let published = false;
+    const failures: unknown[] = [];
+    const ownsPath = async (target: string): Promise<boolean> => {
+      const current = await lstat(target, { bigint: true });
+      return (
+        identity !== undefined &&
+        current.isFile() &&
+        current.dev === identity.dev &&
+        current.ino === identity.ino
+      );
+    };
+    try {
+      identity = await handle.stat({ bigint: true });
+      await handle.writeFile(await readFile(source));
+      await handle.chmod((await stat(source)).mode & 0o7777);
+      if (expectedHash !== undefined && (await hashAssistantAssetFile(dest)) !== expectedHash) {
+        outcome = "target-changed";
+      } else {
+        if (!(await ownsPath(staging))) {
+          throw new Error(
+            `qfai init cannot publish ${JSON.stringify(dest)} because staging ownership changed at ${JSON.stringify(staging)}. Inspect ownership before retrying.`,
+          );
+        }
+        await link(staging, dest);
+        published = true;
+        if (!(await ownsPath(dest))) outcome = "target-changed";
+      }
+    } catch (cause: unknown) {
+      failures.push(cause);
+    }
+    let closed = true;
+    try {
+      await handle.close();
+    } catch (cause: unknown) {
+      closed = false;
+      failures.push(cause);
+    }
+    let present = true;
+    let removable = false;
+    let inspectionNote = "";
+    try {
+      removable = await ownsPath(staging);
+    } catch (cause: unknown) {
+      if (isEnoent(cause)) present = false;
+      else inspectionNote = ` Inspection failed: ${JSON.stringify(String(cause))}.`;
+    }
+    if (present && !removable) {
+      warn(
+        `NOTE: qfai init could not verify staging ownership at ${JSON.stringify(staging)}.${inspectionNote} Do not delete this occupied path. Restore access and inspect ownership before rerunning; keep any existing destination content at ${JSON.stringify(dest)}.`,
+      );
+    }
+    if (removable && !closed) {
+      warn(
+        `NOTE: qfai init retained staging file ${JSON.stringify(staging)} because its handle could not be closed. Restore access and close the handle before removing only this verified staging file; keep any existing destination content at ${JSON.stringify(dest)}.`,
+      );
+    }
+    if (removable && closed) {
+      await rm(staging, { force: true }).catch(() => {
+        const result = published ? "created" : "could not create";
+        warn(
+          `NOTE: qfai init ${result} ${JSON.stringify(dest)}, but could not remove staging file ${JSON.stringify(staging)}. Restore access, remove only this staging file, then rerun qfai init; keep any existing destination content.`,
+        );
+      });
+    }
+    if (failures.length > 1) {
+      throw new AggregateError(failures, "Governed asset creation and handle close failed.", {
+        cause: failures.at(-1),
+      });
+    }
+    if (failures.length === 1) throw failures[0];
+    return outcome;
+  }
   try {
     await copyFile(source, staging, constants.COPYFILE_EXCL);
     if (expectedHash !== undefined && (await hashAssistantAssetFile(dest)) !== expectedHash) {
@@ -878,7 +1224,7 @@ export async function replaceGovernedAsset(
     return "replaced";
   } catch (error: unknown) {
     await rm(staging, { force: true }).catch(() => {
-      // Best effort: the write fault below is the one worth reporting.
+      // Best effort; preserve the original replacement failure.
     });
     throw error;
   }
@@ -1018,6 +1364,7 @@ const PRESERVED_BODY_HEADING = "## The README that was here before qfai init";
  * put there is not a decision `qfai init` gets to make silently.
  */
 async function restoreUnreadableGovernedAsset(
+  destRoot: string,
   source: string,
   dest: string,
   shippedHash: string,
@@ -1035,45 +1382,63 @@ async function restoreUnreadableGovernedAsset(
   // parent, say) reads as occupied: what could not be inspected must not be
   // clobbered.
   const occupied = await pathExists(dest).catch(() => true);
-  if (!occupied) {
-    if (!options.dryRun) {
-      await replaceGovernedAsset(source, dest);
+  if (occupied && options.force && !options.dryRun) {
+    // Recheck the displaced occupant before discarding it. A concurrent
+    // readable regular file belongs to the adopter even under --force.
+    const outcome = await displaceUnreadableGovernedAsset(dest);
+    if (outcome !== "displaced") {
+      // This readable regular file is not the occupant the repair may replace.
+      out.skipped.push(dest);
+      if (previousHash !== undefined) {
+        out.recorded[out.relative] = previousHash;
+      }
+      out.manualMergeNotes.push(
+        typeof outcome === "object"
+          ? `NOTE: ${dest} was replaced by a regular file just before the repair, so the repair was rolled back; the original content could not be restored and is parked at ${outcome.orphaned}.`
+          : `NOTE: ${dest} was replaced by a regular file just before the repair, so it was left as it is (run \`qfai init --force\` again).`,
+      );
+      return;
     }
-    out.copied.push(dest);
-    out.recorded[out.relative] = shippedHash;
+  }
+
+  if (occupied && !options.force) {
+    out.skipped.push(dest);
+    if (previousHash !== undefined) out.recorded[out.relative] = previousHash;
     return;
   }
 
-  if (options.force) {
-    if (!options.dryRun) {
-      // The occupant is moved aside and re-examined before anything is
-      // destroyed, for the reason the refresh and the retire were given the
-      // same treatment: `rm` acts on a pathname, and a process that put an
-      // ordinary project-owned file there between the probe above and this
-      // line lost it to a deletion justified by an entry nobody re-read. The
-      // rename carries whatever inode is at the path at that instant; the
-      // check then runs against the moved entry, whose name nothing else
-      // knows.
-      const outcome = await displaceUnreadableGovernedAsset(dest);
-      if (outcome !== "displaced") {
-        // It is a readable regular file now. That is not the occupied path
-        // this branch was entered for, and overwriting it here would discard
-        // content this run never inspected.
-        out.skipped.push(dest);
-        if (previousHash !== undefined) {
-          out.recorded[out.relative] = previousHash;
-        }
-        out.manualMergeNotes.push(
-          typeof outcome === "object"
-            ? `NOTE: ${dest} was replaced by a regular file just before the repair, so the repair was rolled back; the original content could not be restored and is parked at ${outcome.orphaned}.`
-            : `NOTE: ${dest} was replaced by a regular file just before the repair, so it was left as it is (run \`qfai init --force\` again).`,
-        );
+  if (!options.dryRun) {
+    let concurrent: boolean;
+    try {
+      const outcome = await replaceGovernedAsset(source, dest, undefined, "create-only");
+      concurrent =
+        outcome === "target-changed" || (await hashAssistantAssetFile(dest)) !== shippedHash;
+    } catch (error: unknown) {
+      if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST") {
+        throw error;
+      }
+      concurrent = true;
+    }
+    if (concurrent) {
+      out.skipped.push(dest);
+      const contained = await hasRealGovernedAssistantParents(
+        destRoot,
+        `${ASSISTANT_DIR}/${out.relative}`,
+      );
+      if (contained && (await hashAssistantAssetFile(dest)) === shippedHash) {
+        out.recorded[out.relative] = shippedHash;
         return;
       }
-      await replaceGovernedAsset(source, dest);
+      if (previousHash !== undefined) out.recorded[out.relative] = previousHash;
+      out.manualMergeNotes.push(
+        `NOTE: ${formatReportPath(dest)} was created during initialization and left unchanged; keep adopter edits protected.`,
+      );
+      return;
     }
-    out.copied.push(dest);
-    out.recorded[out.relative] = shippedHash;
+  }
+  out.copied.push(dest);
+  out.recorded[out.relative] = shippedHash;
+  if (occupied) {
     // Tense follows the run: under `--dry-run` nothing was removed and nothing
     // was written, and an operator who reads only the preview must not come
     // away believing the occupied path has already been repaired.
@@ -1082,12 +1447,6 @@ async function restoreUnreadableGovernedAsset(
         ? `NOTE: ${dest} is occupied by something other than a regular file (a directory, a special file, a broken symlink), so it will be replaced with the shipped file (not done: --dry-run).`
         : `NOTE: ${dest} was occupied by something other than a regular file (a directory, a special file, a broken symlink), so it was replaced with the shipped file.`,
     );
-    return;
-  }
-
-  out.skipped.push(dest);
-  if (previousHash !== undefined) {
-    out.recorded[out.relative] = previousHash;
   }
 }
 
@@ -2920,6 +3279,26 @@ async function ensureLegacyEvidenceIgnoreNegations(
  */
 /** The masters' directory, relative to a project root and to the shipped tree alike. */
 const AGENTS_RULES_DIR_REL = path.join(".agents", "rules");
+/** The same directory as a citation spells it: with `/` on every platform. */
+const AGENTS_RULES_DIR_CITATION = ".agents/rules";
+
+/** The constitution cannot demote obligations an older or edited floor still omits. */
+async function canSyncConstitution(
+  rootAssets: string,
+  destRoot: string,
+  plannedSafetyFloor: boolean,
+): Promise<boolean> {
+  const relative = path.join(AGENTS_RULES_DIR_REL, "minimal-implementation.md");
+  if (!(await hasRealGovernedAssistantParents(destRoot, relative.split(path.sep).join("/")))) {
+    return false;
+  }
+  if (plannedSafetyFloor) return true;
+  const [shipped, installed] = await Promise.all([
+    hashAssistantAssetFile(path.join(rootAssets, relative), { allowSymlink: true }),
+    hashAssistantAssetFile(path.join(destRoot, relative)),
+  ]);
+  return shipped !== null && shipped === installed;
+}
 
 /**
  * Brings each shipped rule master the project has not edited up to this
@@ -2946,11 +3325,14 @@ async function updateUneditedRuleMasters(
   rootAssets: string,
   destRoot: string,
   dryRun: boolean,
-): Promise<{ copied: string[]; skipped: string[] }> {
+): Promise<{ copied: string[]; skipped: string[]; installed: ReadonlySet<string> }> {
   const shippedRulesDir = path.join(rootAssets, AGENTS_RULES_DIR_REL);
   const projectRulesDir = path.join(destRoot, AGENTS_RULES_DIR_REL);
   const copied: string[] = [];
   const skipped: string[] = [];
+  // The masters whose file carries the release's text once this pass is done,
+  // spelled with `/` as a citation is. A summary moves only for these.
+  const installed = new Set<string>();
 
   let plans: readonly RuleMasterPlan[];
   try {
@@ -2958,9 +3340,11 @@ async function updateUneditedRuleMasters(
   } catch (error: unknown) {
     // A tree this run cannot read is one it must not rewrite. Say so and leave
     // every master where it is: the copy above already put the missing ones
-    // there, and nothing here is required for the run to be correct.
+    // there, and nothing here is required for the run to be correct. With no
+    // way to tell which masters are the release's, none is reported installed,
+    // which withholds every summary refresh rather than guessing one.
     info(`  NOTE: rule masters were not checked for updates (${describeError(error)})`);
-    return { copied, skipped };
+    return { copied, skipped, installed };
   }
 
   const recorded: Record<string, string> = {};
@@ -2977,10 +3361,12 @@ async function updateUneditedRuleMasters(
     }
     if (plan.verdict !== "update") {
       recorded[plan.name] = plan.shippedHash;
+      installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
       continue;
     }
     if (dryRun) {
       copied.push(target);
+      installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
       info(`  would update: ${formatReportPath(target)} (rule master, unedited here)`);
       continue;
     }
@@ -2996,6 +3382,7 @@ async function updateUneditedRuleMasters(
     }
     copied.push(target);
     recorded[plan.name] = plan.shippedHash;
+    installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
   }
 
   if (!dryRun && plans.length > 0) {
@@ -3003,7 +3390,7 @@ async function updateUneditedRuleMasters(
     // state that keeps it unreplaceable for ever.
     await writeRuleLock(projectRulesDir, { ...(await readRuleLock(projectRulesDir)), ...recorded });
   }
-  return { copied, skipped };
+  return { copied, skipped, installed };
 }
 
 async function ensureAgentEntryPointRules(
@@ -3012,24 +3399,49 @@ async function ensureAgentEntryPointRules(
   dryRun: boolean,
   force: boolean,
   newlyWritten: readonly string[],
+  installed: ReadonlySet<string>,
 ): Promise<{ copied: string[]; skipped: string[] }> {
   const copied: string[] = [];
   const skipped: string[] = [];
 
   if (!dryRun) await reclaimEntryPointStaging(destRoot);
 
+  // A master an earlier run wrote and could not cite is owed alongside the ones
+  // this run wrote. A master the project has since removed is owed nothing.
+  const rulesDir = path.join(destRoot, ".agents", "rules");
+  const pending = await readPendingCitations(rulesDir);
+  const owed = async (entryPoint: string): Promise<string[]> => {
+    const recorded = await Promise.all(
+      (pending[entryPoint] ?? []).map(async (master) =>
+        (await lstat(path.join(destRoot, ...master.split("/"))).then(
+          () => true,
+          () => false,
+        ))
+          ? [master]
+          : [],
+      ),
+    );
+    return [...new Set([...newlyWritten, ...recorded.flat()])].sort();
+  };
+
   // Under `--force` the wrapper sync writes the Copilot file whole, from the
-  // same source, later in this run. Adding a line here first is work thrown
-  // away, and its refusals would name a file this run goes on to replace.
+  // same source, later in this run. Editing it here first is work thrown away,
+  // and its refusals would name a file this run goes on to replace.
   if (!force) {
-    await citeNewMastersInCopilotInstructions(rootAssets, destRoot, dryRun, newlyWritten, {
-      copied,
-      skipped,
-    });
+    await updateCopilotRuleList(
+      rootAssets,
+      destRoot,
+      dryRun,
+      await owed(COPILOT_INSTRUCTIONS_ENTRY),
+      installed,
+      { copied, skipped },
+      pending,
+    );
   }
 
   for (const name of AGENT_ENTRY_POINT_FILES) {
     const target = path.join(destRoot, name);
+    const toCite = await owed(name);
     const existing = await readTextFileIfPresent(target);
     if (existing === null) {
       // Absent: the create-only copy above owns this case, and on a dry run
@@ -3070,38 +3482,40 @@ async function ensureAgentEntryPointRules(
 
     if (!needsManagedRulesSection(existing, section)) {
       // The section is already there. A master this run wrote is one the file
-      // cannot have cited, so its bullet is added; everything else is left as
-      // the project has it, including a bullet the project deleted.
-      const merged = addRuleCitations(existing, section, newlyWritten);
+      // cannot have cited, and so is one an earlier run recorded as owed, so its
+      // bullet is added. A bullet a release wrote and the project never edited
+      // takes the template's wording, as an unedited master takes the release's
+      // text. Everything else is left as the project has it, including a bullet
+      // it deleted or reworded.
+      const refreshed = refreshSupersededRuleBullets(existing, section, installed);
+      reportWithheldSummaries(target, refreshed.withheld);
+      // The review directive goes in beside the citations; the project's own
+      // text and the bullets it deleted are left as they are.
+      const cited = addRuleCitations(refreshed.text, section, toCite);
+      const merged = addReviewPointer(cited, template);
+      const shown = new Set(citedRuleMastersOutsideCode(existing));
+      const uncited = toCite.filter((master) => !shown.has(master));
       if (merged === existing) {
+        if (uncited.length === 0) pending[name] = [];
         skipped.push(target);
         continue;
       }
-      const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
-      if (refusal !== null) {
-        const shown = new Set(citedRuleMastersOutsideCode(existing));
-        const pending = newlyWritten.filter((master) => !shown.has(master));
-        error(
-          `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(pending)}`,
-        );
+      // Read from the citation step alone. Compared against the text the
+      // pointer was added to as well, a run that only added the pointer
+      // reported citing masters it had not cited, and told an operator whose
+      // rewrite was refused to add citations that were already there.
+      const update = {
+        ...describeRuleListUpdate(cited !== refreshed.text, merged !== cited, refreshed.refreshed),
+        pending: uncited,
+      };
+      const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
+      if (outcome === "refused") {
+        pending[name] = uncited;
         skipped.push(target);
-        continue;
-      }
-      if (dryRun) {
-        info(`  would update: ${formatReportPath(target)} (cite the newly shipped rule masters)`);
+      } else {
+        if (outcome === "written") pending[name] = [];
         copied.push(target);
-        continue;
       }
-      const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
-      if (wrote !== null) {
-        error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
-        skipped.push(target);
-        continue;
-      }
-      info(
-        `  updated: ${formatReportPath(target)} (cited the newly shipped rule masters; nothing else changed)`,
-      );
-      copied.push(target);
       continue;
     }
 
@@ -3113,16 +3527,18 @@ async function ensureAgentEntryPointRules(
     if (citedRuleMastersOutsideCode(existing).length > 0) {
       const cited = new Set(citedRuleMastersOutsideCode(existing));
       const uncited = citedRuleMasters(section).filter((master) => !cited.has(master));
-      const merged = addRuleCitationsToList(existing, section, uncited);
-      if (merged === existing) {
+      const rulesAdded = addRuleCitationsToList(existing, section, uncited);
+      const merged = addReviewPointer(rulesAdded, template);
+      if (rulesAdded === existing && uncited.length > 0) {
         // The file cites rules somewhere this run cannot extend — in prose, a
-        // numbered list, an indented bullet. Appending the whole section would
-        // restate what it already says, which is what this branch exists to
-        // avoid, so the run names the lines instead of writing them.
+        // numbered list, an indented bullet. Name the missing masters instead
+        // of restating existing citations. Review guidance can still be added.
         error(
-          `  WARNING: ${formatReportPath(target)} was left unchanged. It cites rule masters, but not as a ` +
+          `  WARNING: ${formatReportPath(target)} cites rule masters, but not as a ` +
             `bullet list this run can add a line to, so add ${quoteList(uncited)} to it by hand.`,
         );
+      }
+      if (merged === existing) {
         skipped.push(target);
         continue;
       }
@@ -3136,7 +3552,7 @@ async function ensureAgentEntryPointRules(
         continue;
       }
       if (dryRun) {
-        info(`  would update: ${formatReportPath(target)} (cite the uncited rule masters)`);
+        info(`  would update: ${formatReportPath(target)} (agent instructions)`);
       } else {
         const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
         if (wrote !== null) {
@@ -3144,9 +3560,8 @@ async function ensureAgentEntryPointRules(
           skipped.push(target);
           continue;
         }
-        info(
-          `  updated: ${formatReportPath(target)} (cited the uncited rule masters; nothing else changed)`,
-        );
+        pending[name] = [];
+        info(`  updated: ${formatReportPath(target)} (agent instructions; existing content kept)`);
       }
       copied.push(target);
       continue;
@@ -3167,13 +3582,17 @@ async function ensureAgentEntryPointRules(
       continue;
     }
 
-    // Exactly one blank line between the project's last line and the section,
-    // whatever the file happened to end with.
-    const body = existing.replace(/\s*$/, "");
-    const separator = body.length === 0 ? "" : "\n\n";
+    // Keep every project byte; add only the separator the new section needs.
+    const end = /\r\n|\n/.exec(existing)?.[0] ?? "\n";
+    const separator =
+      existing.length === 0 || existing.endsWith(`${end}${end}`)
+        ? ""
+        : existing.endsWith(end)
+          ? end
+          : `${end}${end}`;
     const wrote = await replaceEntryPointFile(
       target,
-      `${body}${separator}${section}\n`,
+      addReviewPointer(`${existing}${separator}${section}${end}`, template),
       destRoot,
       existing,
     );
@@ -3182,12 +3601,15 @@ async function ensureAgentEntryPointRules(
       skipped.push(target);
       continue;
     }
+    pending[name] = [];
     info(
       `  updated: ${formatReportPath(target)} (appended .agents/rules section; existing content kept)`,
     );
     copied.push(target);
   }
 
+  // A dry run records nothing: every change above is to this run's copy alone.
+  if (!dryRun) await writePendingCitations(rulesDir, pending);
   return { copied, skipped };
 }
 
@@ -3200,62 +3622,64 @@ async function ensureAgentEntryPointRules(
  */
 const COPILOT_INSTRUCTIONS_MAX_BYTES = 512 * 1024;
 
+/** The Copilot instruction file, as the record of owed citations names it. */
+const COPILOT_INSTRUCTIONS_ENTRY = ".github/copilot-instructions.md";
+
 /**
- * Cites a newly shipped master in an existing `.github/copilot-instructions.md`.
+ * Keeps the rule list in an existing `.github/copilot-instructions.md` current.
  *
  * That file is generated whole and then skipped, so without this a rule the run
- * shipped reached Codex and Claude Code and not the third agent this repository
- * says loads it. It carries no managed markers — the whole file is qfai's — so
- * the bullet goes after the last rule bullet in it, and the same refusals apply
- * as to the two entry points.
+ * shipped, or a summary the template rewords, reached Codex and Claude Code and
+ * not the third agent this repository says loads it. It carries no managed
+ * markers — the whole file is qfai's — so a new bullet goes after the last rule
+ * bullet in it, a superseded one is replaced where it stands, and the same
+ * refusals apply as to the two entry points.
  */
-async function citeNewMastersInCopilotInstructions(
+/**
+ * Names the masters whose summary this run left as it stands, with why.
+ *
+ * Silence here reads as "the summaries are current", which is the state this
+ * withholding exists because the run could not reach.
+ */
+function reportWithheldSummaries(target: string, withheld: readonly string[]): void {
+  if (withheld.length === 0) return;
+  info(
+    `  NOTE: ${formatReportPath(target)} keeps its summary of ${withheld.join(", ")} ` +
+      `(the master here is not this release's, so the bullet describes the file beside it)`,
+  );
+}
+
+async function updateCopilotRuleList(
   rootAssets: string,
   destRoot: string,
   dryRun: boolean,
-  newlyWritten: readonly string[],
+  owed: readonly string[],
+  installed: ReadonlySet<string>,
   report: { copied: string[]; skipped: string[] },
+  pending: PendingCitations,
 ): Promise<void> {
-  // Nothing to cite: no read, no stat, no risk of blocking on a path that is
-  // not an ordinary file.
-  if (newlyWritten.length === 0) return;
-
   const target = path.join(destRoot, ".github", "copilot-instructions.md");
-  // Absent — and only absent. `syncIntegrationWrappers` writes the file whole
-  // later in this run, from the same source, so it will carry every master
-  // already. Any other failure means a file is there and something is wrong
-  // with reaching it, which the bounded read below reports rather than passing
-  // over in silence.
-  const present = await lstat(target).then(
-    () => true,
-    (cause: unknown) => !isEnoent(cause),
-  );
-  if (!present) return;
-
-  // One open, one descriptor, a ceiling on the read. The file belongs to the
-  // adopter: a FIFO blocks until a writer closes it, a device never ends, and an
-  // ordinary file of any size would be buffered and decoded whole for the sake
-  // of adding one line. The wrapper sync this path took over from only asked
-  // whether the entry was occupied.
-  const bytes = await readBoundedRegularFile(target, COPILOT_INSTRUCTIONS_MAX_BYTES);
-  if (bytes === undefined) {
-    error(
-      `  WARNING: ${formatReportPath(target)} was left unchanged. It is not an ordinary file this run can ` +
-        `read, or it is larger than ${String(COPILOT_INSTRUCTIONS_MAX_BYTES)} bytes. Add the rule citations by hand.`,
-    );
-    report.skipped.push(target);
+  const read = await readCopilotInstructions(target, owed, report);
+  if (read.state !== "read") {
+    // Absent: the wrapper sync writes it whole later in this run, citing every
+    // master. Unreadable: what it owes stays owed, and a master the project has
+    // since removed drops out with the rest of what is no longer owed.
+    pending[COPILOT_INSTRUCTIONS_ENTRY] = read.state === "absent" ? [] : [...owed];
     return;
   }
-  const existing = bytes.toString("utf-8");
+  const existing = read.text;
 
   const template = await readTextFileIfPresent(path.join(rootAssets, "AGENTS.md"));
   const section = template === null ? null : extractManagedRulesSection(template);
   if (section === null) return;
 
   const shown = new Set(citedRuleMastersOutsideCode(existing));
-  const uncited = newlyWritten.filter((master) => !shown.has(master));
-  const merged = addRuleCitationsToList(existing, section, uncited);
+  const uncited = owed.filter((master) => !shown.has(master));
+  const refreshed = refreshSupersededRuleBulletsInList(existing, section, installed);
+  reportWithheldSummaries(target, refreshed.withheld);
+  const merged = addRuleCitationsToList(refreshed.text, section, uncited);
   if (merged === existing) {
+    if (uncited.length === 0) pending[COPILOT_INSTRUCTIONS_ENTRY] = [];
     if (uncited.length > 0) {
       // A project that wrote its own Copilot instructions: no generated heading
       // and no rule bullet, so there is no list to add a line to. The wrapper
@@ -3270,30 +3694,155 @@ async function citeNewMastersInCopilotInstructions(
     report.skipped.push(target);
     return;
   }
-  const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot);
-  if (refusal !== null) {
-    const pending = uncited;
+  const update = {
+    ...describeRuleListUpdate(merged !== refreshed.text, false, refreshed.refreshed),
+    pending: uncited,
+  };
+  const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
+  if (outcome === "refused") {
+    pending[COPILOT_INSTRUCTIONS_ENTRY] = uncited;
+    report.skipped.push(target);
+  } else {
+    if (outcome === "written") pending[COPILOT_INSTRUCTIONS_ENTRY] = [];
+    report.copied.push(target);
+  }
+}
+
+/** An existing Copilot instruction file as this run finds it. */
+type CopilotInstructions =
+  | { readonly state: "absent" }
+  | { readonly state: "unreadable" }
+  | { readonly state: "read"; readonly text: string };
+
+/**
+ * The text of an existing Copilot instruction file, or why there is none this
+ * run reads.
+ *
+ * Absent — and only absent — is not a failure: `syncIntegrationWrappers` writes
+ * the file whole later in this run, from the same source.
+ *
+ * One open, one descriptor, a ceiling on the read. The file belongs to the
+ * adopter: a FIFO blocks until a writer closes it, a device never ends, and an
+ * ordinary file of any size would be buffered and decoded whole for one line.
+ *
+ * A file this run cannot read is reported only when it owes a citation, because
+ * nothing else carries that citation into it. Without one, the only question is
+ * whether a summary in it is out of date, and it may well not be: a warning on
+ * every run about a file that needs nothing hides the warnings that matter.
+ */
+async function readCopilotInstructions(
+  target: string,
+  owed: readonly string[],
+  report: { skipped: string[] },
+): Promise<CopilotInstructions> {
+  const present = await lstat(target).then(
+    () => true,
+    (cause: unknown) => !isEnoent(cause),
+  );
+  if (!present) return { state: "absent" };
+
+  const bytes = await readBoundedRegularFile(target, COPILOT_INSTRUCTIONS_MAX_BYTES);
+  if (bytes !== undefined) return { state: "read", text: bytes.toString("utf-8") };
+  if (owed.length > 0) {
     error(
-      `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(pending)}`,
+      `  WARNING: ${formatReportPath(target)} was left unchanged. It is not an ordinary file this run can ` +
+        `read, or it is larger than ${String(COPILOT_INSTRUCTIONS_MAX_BYTES)} bytes.${pendingNote(owed)}`,
     );
     report.skipped.push(target);
-    return;
+  }
+  return { state: "unreadable" };
+}
+
+/** An update to a rule list, worded for each place the run reports it. */
+type RuleListUpdate = {
+  /** What a dry run says it would do. */
+  readonly planned: string;
+  /** What the run says it did. */
+  readonly done: string;
+  /** What a refusal leaves to the operator, as a sentence opening. */
+  readonly byHand: string;
+};
+
+/**
+ * The wording for an update that cites newly shipped masters, refreshes
+ * superseded summaries, or both.
+ *
+ * The report names every edit the write makes, so the "nothing else changed" it
+ * closes with stays true.
+ */
+function describeRuleListUpdate(
+  cited: boolean,
+  pointed: boolean,
+  refreshed: readonly string[],
+): RuleListUpdate {
+  const planned: string[] = [];
+  const done: string[] = [];
+  const byHand: string[] = [];
+  if (cited) {
+    planned.push("cite the newly shipped rule masters");
+    done.push("cited the newly shipped rule masters");
+    byHand.push("add the rule citations");
+  }
+  if (pointed) {
+    planned.push("add the review directive");
+    done.push("added the review directive");
+    byHand.push("add the review directive");
+  }
+  if (refreshed.length > 0) {
+    const summaries = `${refreshed.length === 1 ? "summary" : "summaries"} of ${quoteList(refreshed)}`;
+    planned.push(`refresh the unedited ${summaries}`);
+    done.push(`refreshed the unedited ${summaries}`);
+    byHand.push(`refresh the ${summaries}`);
+  }
+  const clause = byHand.join(" and ");
+  return {
+    planned: planned.join("; "),
+    done: done.join("; "),
+    byHand: `${clause.charAt(0).toUpperCase()}${clause.slice(1)}`,
+  };
+}
+
+/** How a rule-list write ended: on disk, only reported on a dry run, or refused. */
+type RuleListWrite = "written" | "planned" | "refused";
+
+/**
+ * Writes an updated rule list through the refusals every entry-point rewrite
+ * takes, and reports the outcome.
+ *
+ * `pending` names the citations a refusal leaves owed, for the refusal to say
+ * they are kept; the caller records them for a later run. A superseded summary
+ * is not among them: a later run finds it again.
+ *
+ * Returns whether the file was written, would be on a dry run, or was refused.
+ */
+async function writeRuleListUpdate(
+  target: string,
+  existing: string,
+  merged: string,
+  update: RuleListUpdate & { readonly pending: readonly string[] },
+  destRoot: string,
+  dryRun: boolean,
+): Promise<RuleListWrite> {
+  const refusal = await refuseUnsafeEntryPointRewrite(target, existing, destRoot, update.byHand);
+  if (refusal !== null) {
+    error(
+      `  WARNING: ${formatReportPath(target)} was left unchanged. ${refusal}${pendingNote(update.pending)}`,
+    );
+    return "refused";
   }
   if (dryRun) {
-    info(`  would update: ${formatReportPath(target)} (cite the newly shipped rule masters)`);
-    report.copied.push(target);
-    return;
+    info(`  would update: ${formatReportPath(target)} (${update.planned})`);
+    return "planned";
   }
   const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
   if (wrote !== null) {
-    error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
-    report.skipped.push(target);
-    return;
+    error(
+      `  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}${pendingNote(update.pending)}`,
+    );
+    return "refused";
   }
-  info(
-    `  updated: ${formatReportPath(target)} (cited the newly shipped rule masters; nothing else changed)`,
-  );
-  report.copied.push(target);
+  info(`  updated: ${formatReportPath(target)} (${update.done}; nothing else changed)`);
+  return "written";
 }
 
 /**
@@ -3317,16 +3866,16 @@ function quoteList(paths: readonly string[]): string {
 }
 
 /**
- * What a refused rewrite leaves undone, appended to the refusal.
+ * What a refused rewrite leaves owed, appended to the refusal.
  *
- * A master this run copied is one no later run will offer again: the file is on
- * disk, so the next copy skips it and the list of newly written masters comes
- * back empty. Repairing the file therefore does not bring the citation with it,
- * and a refusal that does not say so reads as one.
+ * A master this run copied is one no later copy offers again: the file is on
+ * disk, so the next copy skips it. The run records the masters it could not
+ * cite instead, and a later run cites them once the file can be rewritten,
+ * which is what the note tells the reader to expect.
  */
 function pendingNote(masters: readonly string[]): string {
   if (masters.length === 0) return "";
-  return ` A later run does not retry this: add ${quoteList(masters)} to the file yourself.`;
+  return ` The citations of ${quoteList(masters)} are kept, and a later run adds them once the file can be rewritten.`;
 }
 /**
  * The name shape `replaceEntryPointFile` stages under.
@@ -3491,25 +4040,29 @@ async function keepOwner(staging: string, original: Stats): Promise<string | nul
  * between this read and the write below. It narrows a silent overwrite to a race
  * measured in milliseconds, which is what a single-process CLI can honestly
  * offer.
+ *
+ * `byHand` opens the sentence that tells the operator what to do instead, so a
+ * refusal names the edit that was refused rather than one that was not planned.
  */
 async function refuseUnsafeEntryPointRewrite(
   target: string,
   readEarlier: string,
   destRoot: string,
+  byHand = "Add the rule citations",
 ): Promise<string | null> {
   // Every path component, not only the final entry: a linked `.github` with an
   // ordinary file inside it reports that file as regular, and the write then
   // lands in whatever the parent points at.
   const linked = await firstLinkedComponent(target, destRoot);
   if (linked !== null) {
-    return `${formatReportPath(linked)} is a symbolic link, so writing here would change a file outside this project — which may be shared with another repository. Add the rule citations to the link's target by hand.`;
+    return `${formatReportPath(linked)} is a symbolic link, so writing here would change a file outside this project — which may be shared with another repository. ${byHand} in the link's target by hand.`;
   }
   const link = await lstat(target).catch(() => null);
   // A hard link reports as an ordinary file, and a write truncates the inode
   // every name shares — so a file linked into another repository changes there
   // too, with nothing in this run naming it.
   if (link !== null && link.nlink > 1) {
-    return `It is a hard link with ${String(link.nlink)} names, and writing to it would change every one of them. Add the rule citations by hand, or give this project its own copy.`;
+    return `It is a hard link with ${String(link.nlink)} names, and writing to it would change every one of them. ${byHand} by hand, or give this project its own copy.`;
   }
 
   const bytes = await readFile(target).catch(() => null);
@@ -3537,8 +4090,10 @@ async function refuseUnsafeEntryPointRewrite(
  * `.github/instructions/`.
  *
  * So both cases are handled here rather than one here and one in the copy. A
- * project without a settings file gets the whole template; one that has its own
- * gets only the hook entries, appended after whatever it already declares.
+ * project without a settings file gets the whole template. One that has its own
+ * gets the hook groups it lacks, appended after whatever it already declares,
+ * and each group an earlier release wrote is replaced where it stands. A group
+ * the project edited is kept and named in the output.
  *
  * Every refusal is reported rather than silently absorbed, and none of them ends
  * the run. A reminder is worth less than the rest of what `qfai init` writes, so
@@ -3590,9 +4145,6 @@ async function ensureClaudeCodeHooks(
   }
 
   const merged = mergeDocumentationClarityHooks(existing.text, template.text);
-  if (merged.outcome === "already-present") {
-    return { copied: [], skipped: [target] };
-  }
   if (merged.outcome === "unreadable") {
     error(
       `  WARNING: ${shown} was left unchanged (${merged.reason}). Copy the \`hooks\` entries from ` +
@@ -3600,14 +4152,21 @@ async function ensureClaudeCodeHooks(
     );
     return { copied: [], skipped: [target] };
   }
+  // Every run, so an edited reminder is never mistaken for one this release wrote.
+  for (const group of merged.edited) {
+    info(`  kept: ${shown} hook group ${group} (edited here)`);
+  }
+  if (merged.outcome === "already-present") {
+    return { copied: [], skipped: [target] };
+  }
 
   const events = merged.events.join(", ");
   if (dryRun) {
-    info(`  would update: ${shown} (add reminder hooks: ${events})`);
+    info(`  would update: ${shown} (reminder hooks: ${events})`);
     return { copied: [target], skipped: [] };
   }
   await writeFile(target, serializeClaudeSettings(merged.settings), "utf-8");
-  info(`  updated: ${shown} (added reminder hooks: ${events}; existing settings kept)`);
+  info(`  updated: ${shown} (reminder hooks: ${events}; existing settings kept)`);
   return { copied: [target], skipped: [] };
 }
 
@@ -4232,6 +4791,11 @@ type Note = (message: string) => void;
 type WrapperSyncOptions = {
   force: boolean;
   dryRun: boolean;
+  /**
+   * The masters whose file carries the release's text once this run is done.
+   * Given, a rebuilt Copilot file keeps its own bullet for every other master.
+   */
+  installedRuleMasters?: ReadonlySet<string>;
   /** Defaults to stdout, which is what `qfai init` wants. */
   report?: Note;
 };
@@ -4266,8 +4830,14 @@ async function syncIntegrationWrappers(
   } else {
     copied.push(copilotDest);
     if (!options.dryRun) {
+      const existingCopilot = copilotExists ? await readTextFileIfPresent(copilotDest) : null;
+      const generated = buildCopilotInstructions();
+      const contents =
+        existingCopilot === null || options.installedRuleMasters === undefined
+          ? generated
+          : keepSummariesOfKeptMasters(generated, existingCopilot, options.installedRuleMasters);
       await mkdir(path.dirname(copilotDest), { recursive: true });
-      await writeFile(copilotDest, buildCopilotInstructions(), "utf-8");
+      await writeFile(copilotDest, contents, "utf-8");
     }
   }
 
@@ -7518,6 +8088,7 @@ function buildCopilotInstructions(): string {
     "",
     "## Golden rules",
     "",
+    "- Read `REVIEW.md` before reviewing a pull request when that file exists in this repository. Read it before writing the PR description as well.",
     "- Always match the user's language in your outputs.",
     "- Treat `.qfai/` as the canonical source of truth for the QFAI workflow:",
     "  - Skills (SSOT): `.qfai/assistant/skills/`",
@@ -7550,8 +8121,9 @@ function buildCopilotInstructions(): string {
     "- `.agents/rules/documentation-clarity.md` — plain, minimal writing in pull requests, issues, comments and Markdown; no local identifiers, no account of how the work went.",
     "- `.agents/rules/minimal-implementation.md` — the order to try solutions in once a behaviour is agreed; mark a deliberate shortcut with its ceiling and the condition that lifts it.",
     "- `.agents/rules/interface-clarity.md` — what may appear on a screen or in terminal output; text explaining how to work a control is a defect report against that control.",
-    "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.",
+    "- `.agents/rules/grilling.md` — interview the decision tree before a design is fixed; outside the discussion stage agents grill each other, and only a critical decision reaches the user.",
     "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.",
+    "- `.agents/rules/api-budget.md` — ask git before REST and REST before GraphQL; one call for the whole set; the allowance belongs to the account and every session draws on it at once.",
     "",
   ].join("\n");
 }

@@ -76,6 +76,10 @@ number copied from prose goes stale on the next release.
 > You must enable **Developer Mode** (Settings → System → For developers → Developer Mode: ON)
 > before running `npx qfai init`, otherwise symlink creation will fail due to insufficient privileges.
 
+Creating missing governed assistant assets requires filesystem support and
+permission for hard links. Init checks this before copying or migrating assets
+and stops with recovery guidance when the check fails. `--dry-run` does not probe it.
+
 ```bash
 # 1) Initialize QFAI assets in your repository
 npx qfai init
@@ -740,11 +744,22 @@ Claude Code is reminded of it at the two moments it matters, through hooks in
 | Writing or editing a Markdown file                               | PostToolUse |
 
 A project without a settings file receives the whole shipped one. A project that
-already has settings keeps them: only the hook entries are added, after whatever
-is already there, and a second run adds nothing. A settings file that is not
-readable JSON is left untouched and reported. Each hook runs `node` directly and
-prints one fixed message — no shell, no file reads, no network. Remove the
-entries to turn the reminder off; the rule still applies.
+already has settings keeps them: missing hook groups are added after whatever is
+already there, and a second run adds nothing. A settings file that is not
+readable JSON is left untouched and reported.
+
+Each hook runs `node` directly, with no shell and no network, and prints one
+message from `.agents/rules/reminders.json`. A missing or unreadable message
+file prints nothing. `qfai init` refreshes that file wherever the project has
+not edited it, so a new release's wording reaches an existing project without
+changing `.claude/settings.json`. Remove the entries to turn the reminder off;
+the rule still applies.
+
+A hook group an earlier release wrote, still exactly as written, is replaced by
+this release's group on the next `qfai init`. A group the project edited is
+kept, and the run names it. To update one by hand, run
+`npx qfai init --dir <scratch-dir>` in an unused scratch directory and compare
+its `.claude/settings.json` with your project's file, group by group.
 
 ## Contributing (for QFAI maintainers)
 

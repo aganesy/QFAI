@@ -54,6 +54,12 @@
  * measurement-gated adoption of a FINAL value is `TC-0017-0065`, a later change with a
  * timing artifact behind it.
  *
+ * Each axis is then held to the cores the machine has, on a measurement of its own. That is
+ * not the revision `BR-0017-0051` reserves: the declared value is still ten and both
+ * overrides are still honoured as asked, so what the cap changes is the number handed to a
+ * machine that could not have run ten anyway. The rows below therefore compare against the
+ * held value, re-derived from this machine rather than read out of the file under test.
+ *
  * The override is what lets those two rules coexist. A measurement can be taken at any
  * value without editing a declaration, so taking one never looks like adopting one.
  *
@@ -111,6 +117,16 @@ const DECLARED_START = 10;
  * asserting four would pass on the runner and fail on a developer's laptop.
  */
 const DECLARED_WORKERS = Math.min(DECLARED_START, availableParallelism());
+
+/**
+ * The within-file concurrency ceiling the declaration resolves to on this machine.
+ *
+ * The same expression as the worker ceiling and deliberately not the same constant: the two
+ * axes are held to the machine on separate measurements, one over forks and one over
+ * concurrent cases inside a process, so lifting either cap must not silently move the row
+ * guarding the other.
+ */
+const DECLARED_CONCURRENCY = Math.min(DECLARED_START, availableParallelism());
 
 /**
  * The options this runner refuses to scope to a project.
@@ -253,7 +269,7 @@ describe("TC-0017-0060 (TDD-0060): every runner project declares the full knob s
 });
 
 describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both axes", () => {
-  it("defaults both tunable axes to ten, with the worker axis held to the machine", async () => {
+  it("defaults both tunable axes to ten, with each held to the machine", async () => {
     const { projects, root } = await load();
 
     const offAxis: string[] = [];
@@ -263,8 +279,11 @@ describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both ax
       );
     }
     for (const project of projects) {
-      if (project["maxConcurrency"] !== DECLARED_START) {
-        offAxis.push(`${nameOf(project)}: maxConcurrency is ${String(project["maxConcurrency"])}`);
+      if (project["maxConcurrency"] !== DECLARED_CONCURRENCY) {
+        offAxis.push(
+          `${nameOf(project)}: maxConcurrency is ${String(project["maxConcurrency"])}, ` +
+            `expected ${String(DECLARED_CONCURRENCY)}`,
+        );
       }
     }
     expect
@@ -327,7 +346,7 @@ describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both ax
         wrong.push(`root: ${JSON.stringify(bad)} gave ${String(root["maxWorkers"])}`);
       }
       for (const project of projects) {
-        if (project["maxConcurrency"] !== DECLARED_START) {
+        if (project["maxConcurrency"] !== DECLARED_CONCURRENCY) {
           wrong.push(
             `${nameOf(project)}: ${JSON.stringify(bad)} gave ${String(project["maxConcurrency"])}`,
           );
@@ -337,7 +356,7 @@ describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both ax
         .soft(
           wrong,
           `an override of ${JSON.stringify(bad)} must fall back to the declared value — ` +
-            `${DECLARED_WORKERS} workers, ${DECLARED_START} concurrent`,
+            `${DECLARED_WORKERS} workers, ${DECLARED_CONCURRENCY} concurrent`,
         )
         .toEqual([]);
     }
@@ -957,15 +976,21 @@ describe("a ceiling below the declared testTimeout", () => {
 
 describe("the floor lane bounds its forks by the runner it is on", () => {
   /**
-   * The lane that runs the whole suite in one process pool is the only one that
-   * has exited 1 with every test passing: each fork reports progress to the
-   * single main process over an RPC call with a fixed budget, and a main process
-   * that cannot answer in time turns a healthy run red.
+   * The floor lane exits 1 with every test passing when its forks outnumber the
+   * runner's cores: each fork reports progress to the single main process over an
+   * RPC call with a fixed budget, and a main process that cannot answer in time
+   * turns a healthy run red.
    *
    * The budget is not configurable — `ForksOptions` carries no timeout and the
    * default lives inside the RPC library — so what this pins is the other side:
    * the lane states a fork count taken from the machine instead of inheriting the
    * declared ceiling, which on a four-core runner is 2.5x oversubscribed.
+   *
+   * The override is per leg, not per lane. The oversubscription is the declared
+   * ceiling measured against the runner's cores, and every leg gets its own runner
+   * with the same four, so a leg carries the same 2.5x over fewer tests. One step
+   * states the count for all nine legs, which is why this row insists on exactly
+   * one such step rather than tolerating a second that omits it.
    */
   const floorLaneRun = (): string => {
     const doc: unknown = parseYaml(
@@ -977,6 +1002,10 @@ describe("the floor lane bounds its forks by the runner it is on", () => {
     const runs = steps
       .map((step) => (isRecord(step) ? step["run"] : undefined))
       .filter((run): run is string => typeof run === "string")
+      // `test\b` and not `test$`: the lane invokes the per-slice script, so the
+      // command ends in `test:${{ matrix.slice }}` and the boundary sits between the
+      // `t` and the colon. `pnpm -C packages/qfai build`, the other run step, does
+      // not match.
       .filter((run) => /pnpm -C packages\/qfai test\b/.test(run));
     expect(runs, "the floor lane must run the package suite").toHaveLength(1);
     return runs[0] ?? "";
