@@ -8,9 +8,18 @@ set -euo pipefail
 # has no fix flag. The one lane that writes inside the repository is the shipped
 # workflow shape gate, into an ignored report directory nothing else reads.
 #
-# The two shipped-surface gates share a lane with the document checks so that
-# their runners never fork beside the mirror lane's. The package's vitest knobs
-# record that forking past the core count makes a run both slower and noisier.
+# The two shipped-surface gates share a lane with the document checks rather than
+# forking one of their own. The package's vitest knobs record that forking past
+# the core count makes a run both slower and noisier, and these gates are short
+# enough that a lane of their own would buy nothing for that cost.
+#
+# The mirror-surface lane is not here. It is a vitest run over eight files, one of
+# which spawns a process in most of its cases, and inside this aggregate it forked
+# beside the formatter on the same four cores. It has a job of its own in the
+# workflow, where it neither competes with the lanes below nor holds them up.
+# SHIPPED-CI: not-applicable
+# Because: the shipped templates run no mirror-surface lane — the surface it
+# checks is this repository's own rule mirror, which an adopter does not have.
 #
 # ONE argument, the lane profile, because two aggregates run overlapping but
 # unequal sets of these checks and a second copy of the wait-and-collect loop is
@@ -32,8 +41,6 @@ profile="${1:-lint}"
 pids=()
 case "${profile}" in
   lint)
-    pnpm -C packages/qfai lint:mirror-surface &
-    pids+=("$!")
     pnpm format:check &
     pids+=("$!")
     pnpm lint &

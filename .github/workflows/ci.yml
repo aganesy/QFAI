@@ -389,7 +389,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          c4131331582e2139c880083b3e36b588738888b94985b72c158cb8b37663310b  .github/pinned-bytes.txt
+          408c208145ce951fc2b047e35a2ad45a8ea0800371cc6c8ea524fb331180eca3  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -418,6 +418,34 @@ jobs:
       - name: Verify branch name version pin matches package.json#version
         run: bash packages/qfai/scripts/check-branch-version-pin.sh
         shell: bash
+
+  # ── 1b. The mirror-surface lane, in a runner of its own ──────────
+  #
+  # A vitest run over eight files, one of which spawns a process in most of its
+  # cases. Inside `pnpm ci:lint` it forked beside the formatter, the linter and two
+  # scan lanes on the same four cores, and it was the longest of the five — so the
+  # lint job's wall clock was this lane's, slowed by the contention it created.
+  #
+  # It carries NO condition and appears in no `dependencyConditions` entry, which is
+  # what `BR-0017-0011` requires of a lane moved into a job of its own: the surface
+  # it checks — the rule mirror, the skill links, the reviewer vocabulary — is what a
+  # documentation-only change is most likely to break.
+  #
+  # SHIPPED-CI: not-applicable
+  # Because: the surface this lane checks is this repository's own rule mirror, which
+  # an adopter's project does not have, so the shipped templates declare no such job.
+  mirror-surface:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`.
+      - uses: ./.github/actions/setup
+      - name: Run the mirror-surface lane
+        run: pnpm -C packages/qfai lint:mirror-surface
 
   # ── 2. Type checking (current TypeScript) ────────────────────────
   check-types:
@@ -860,7 +888,17 @@ jobs:
     # nothing verified. Failing OPEN is a decision the classifier makes and records;
     # failing HARD must reach the gate.
     needs:
-      [detect, lint, check-types, check-types-future, node-floor, test, scanner-coverage, build]
+      [
+        detect,
+        lint,
+        mirror-surface,
+        check-types,
+        check-types-future,
+        node-floor,
+        test,
+        scanner-coverage,
+        build,
+      ]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
