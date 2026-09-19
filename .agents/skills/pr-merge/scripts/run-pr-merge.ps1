@@ -2,8 +2,6 @@
 param(
   [Parameter(Mandatory = $true)]
   [int]$PrNumber,
-  [string]$Tag,
-  [switch]$NoTag,
   [ValidateSet("merge", "squash", "rebase")]
   [string]$MergeMethod = "merge",
   [string]$HandoffPath,
@@ -118,55 +116,6 @@ function SaveJson([string]$Root, [string]$Name, $Value) {
   return SaveArtifact -Root $Root -Name $Name -Content ($Value | ConvertTo-Json -Depth 10)
 }
 
-function CheckTagExists([string]$Name) {
-  if ([string]::IsNullOrWhiteSpace($Name)) { return $false }
-
-  & git rev-parse -q --verify "refs/tags/$Name" 2>$null | Out-Null
-  $localExists = $LASTEXITCODE -eq 0
-  $remote = (Run "git" @("ls-remote", "--tags", "origin", $Name) "Failed to check remote tags.") -join "`n"
-  return ($localExists -or -not [string]::IsNullOrWhiteSpace($remote))
-}
-
-function BumpPatchVersion([string]$Version) {
-  if ($Version -notmatch '^(\d+)\.(\d+)\.(\d+)$') {
-    throw "Unsupported semantic version format: $Version"
-  }
-
-  return "{0}.{1}.{2}" -f $Matches[1], $Matches[2], ([int]$Matches[3] + 1)
-}
-
-function SuggestReleaseTag([string]$Version) {
-  $candidate = $Version
-  while (CheckTagExists ("v{0}" -f $candidate)) {
-    $candidate = BumpPatchVersion $candidate
-  }
-
-  return "v{0}" -f $candidate
-}
-
-function SuggestAlternativeTag([int]$Number) {
-  return "release-pr-{0}-{1}" -f $Number, (Get-Date -Format "yyyyMMdd")
-}
-
-function IsSemVerTag([string]$Name) {
-  return $Name -match '^v\d+\.\d+\.\d+$'
-}
-
-function ValidateReleaseTag([string]$Name, $PackageJson, [string]$Changelog) {
-  if (-not (IsSemVerTag $Name)) { return }
-
-  $expected = "v{0}" -f [string]$PackageJson.version
-  if ($Name -ne $expected) {
-    throw "SemVer tag '$Name' does not match packages/qfai/package.json version '$($PackageJson.version)'. Update version/changelog first, or choose a non-SemVer tag / no tag."
-  }
-
-  $version = [string]$PackageJson.version
-  $heading = "(?m)^## \[{0}\]" -f [regex]::Escape($version)
-  if ($Changelog -notmatch $heading) {
-    throw "CHANGELOG.md does not contain section [$version]. Update CHANGELOG.md first, or choose a non-SemVer tag / no tag."
-  }
-}
-
 function LoadOptionalJson([string]$Path) {
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
 
@@ -244,30 +193,19 @@ function MergeArgs([string]$Method, [int]$Number) {
   return $args
 }
 
-if ($NoTag -and -not [string]::IsNullOrWhiteSpace($Tag)) {
-  throw "Specify either -Tag <name> or -NoTag, not both."
-}
-
 $root = RepoRoot
 Set-Location -LiteralPath $root
 
 EnsureFile (Join-Path $root "package.json")
-EnsureFile (Join-Path $root "packages/qfai/package.json")
-EnsureFile (Join-Path $root "CHANGELOG.md")
-EnsureFile (Join-Path $root "RELEASE.md")
 
 [void](Run "gh" @("auth", "status") "gh auth status failed.")
 
 $repo = RunJson "gh" @("repo", "view", "--json", "name,owner,url,defaultBranchRef") "Failed to read repository metadata."
 $repoPkg = ReadUtf8File (Join-Path $root "package.json") | ConvertFrom-Json
-$packageJson = ReadUtf8File (Join-Path $root "packages/qfai/package.json") | ConvertFrom-Json
-$changelog = ReadUtf8File (Join-Path $root "CHANGELOG.md")
 $branch = CurrentBranch
 $pr = RunJson "gh" @("pr", "view", "$PrNumber", "--json", "number,title,body,baseRefName,headRefName,statusCheckRollup,url,state,isDraft") "Failed to read PR details."
 $threads = @(Threads -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $PrNumber)
 $badChecks = @(FailingChecks $pr)
-$suggestedReleaseTag = SuggestReleaseTag ([string]$packageJson.version)
-$suggestedAlternativeTag = SuggestAlternativeTag $PrNumber
 $resolvedHandoffPath = if ([string]::IsNullOrWhiteSpace($HandoffPath)) {
   Join-Path $root ("tmp/pr-fix/pr-{0}-handoff.json" -f $PrNumber)
 } else {
@@ -275,16 +213,12 @@ $resolvedHandoffPath = if ([string]::IsNullOrWhiteSpace($HandoffPath)) {
 }
 $handoff = LoadOptionalJson $resolvedHandoffPath
 $ciCommand = ResolveCiCommand $repoPkg.scripts
-$selectedTagMode = if ($NoTag) { "none" } elseif ([string]::IsNullOrWhiteSpace($Tag)) { "unspecified" } else { "tag" }
 $blockers = New-Object System.Collections.Generic.List[string]
 
 Info ("Repository root: {0}" -f $root)
 Info ("Current branch: {0}" -f $branch)
 Info ("PR #{0}: {1}" -f $pr.number, $pr.title)
 Info ("PR URL: {0}" -f $pr.url)
-Info ("Suggested release tag: {0}" -f $suggestedReleaseTag)
-Info ("Suggested alternative tag: {0}" -f $suggestedAlternativeTag)
-Info ("Selected tag mode: {0}" -f $selectedTagMode)
 if ($handoff) {
   Info ("Loaded handoff snapshot: {0}" -f $resolvedHandoffPath)
 } else {
@@ -314,23 +248,7 @@ if ($threads.Count -gt 0) {
 
 $gitStatus = @(GitStatus)
 if (-not $DryRun -and $gitStatus.Count -gt 0) {
-  $blockers.Add("Working tree is dirty before merge/tag. Commit or stash changes first.")
-}
-
-if ($selectedTagMode -eq "tag") {
-  if (CheckTagExists $Tag) {
-    $blockers.Add(("Tag '{0}' already exists locally or on origin." -f $Tag))
-  }
-
-  try {
-    ValidateReleaseTag -Name $Tag -PackageJson $packageJson -Changelog $changelog
-  } catch {
-    $blockers.Add($_.Exception.Message)
-  }
-}
-
-if (-not $DryRun -and $selectedTagMode -eq "unspecified") {
-  $blockers.Add("Select tag policy first. Use -NoTag or -Tag <name> after user confirmation.")
+  $blockers.Add("Working tree is dirty before merge. Commit or stash changes first.")
 }
 
 $plan = [pscustomobject]@{
@@ -345,10 +263,6 @@ $plan = [pscustomobject]@{
   CurrentSha             = HeadSha
   HandoffPath            = $resolvedHandoffPath
   HandoffFound           = [bool]($null -ne $handoff)
-  SuggestedReleaseTag    = $suggestedReleaseTag
-  SuggestedAlternativeTag = $suggestedAlternativeTag
-  SelectedTagMode        = $selectedTagMode
-  SelectedTag            = if ($selectedTagMode -eq "tag") { $Tag } else { $null }
   MergeMethod            = $MergeMethod
   CiCommand              = $ciCommand
   UnresolvedThreads      = $threads.Count
@@ -382,31 +296,10 @@ $result = [ordered]@{
   PrNumber    = $PrNumber
   Url         = [string]$pr.url
   MergeMethod = $MergeMethod
-  Tagged      = $false
-  Tag         = $null
-}
-
-if ($selectedTagMode -eq "tag") {
-  [void](Run "git" @("checkout", "main") "Failed to checkout main.")
-  [void](Run "git" @("pull", "--ff-only") "Failed to pull latest main.")
-
-  if (CheckTagExists $Tag) {
-    throw ("Tag '{0}' already exists locally or on origin after merge." -f $Tag)
-  }
-
-  [void](Run "git" @("tag", $Tag) ("Failed to create tag {0}." -f $Tag))
-  [void](Run "git" @("push", "origin", $Tag) ("Failed to push tag {0}." -f $Tag))
-
-  $result.Tagged = $true
-  $result.Tag = $Tag
 }
 
 $result.OrderedSha = HeadSha
 $resultPath = SaveJson -Root $root -Name ("pr-{0}-merge-result.json" -f $PrNumber) -Value ([pscustomobject]$result)
 
-if ($result.Tagged) {
-  Info ("Merged PR #{0} and pushed tag {1}" -f $PrNumber, $Tag)
-} else {
-  Info ("Merged PR #{0} without tag." -f $PrNumber)
-}
+Info ("Merged PR #{0}." -f $PrNumber)
 Info ("Saved merge result to {0}" -f $resultPath)

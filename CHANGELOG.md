@@ -423,6 +423,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `uiux.warning_as_error_override` goes with it, its only reader. An unknown key
   under `uiux` is ignored, so a configuration that still sets it keeps loading.
 
+- **Tagging from this repository's `pr-merge` skill.** It asked about a tag
+  before every merge and recommended one, though `tag-release.yml` already
+  pushes `vX.Y.Z` when a release commit reaches `main`. The tag it recommended
+  was usually refused by its own check: that version's tag already existed, so
+  the suggestion was the next patch, which did not match the manifest. The skill
+  now only merges, and `run-pr-merge.ps1` no longer takes `-Tag` or `-NoTag`.
+
 ### Fixed
 
 - **The evidence citation guard reads citations into `.qfai/evidence/`**
