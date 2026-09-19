@@ -947,17 +947,31 @@ const DETECT_JOB = "detect";
 const LINT_JOB = "lint";
 const REQUIRED_CONTEXT_JOB = "build";
 
+/** A condition nothing can make false, which is the only one an executing job may carry. */
+const ALWAYS = /^\s*(?:\$\{\{\s*)?always\(\)\s*(?:\}\})?\s*$/;
+
 /**
- * Jobs that must run whatever detection selects.
+ * The jobs a documentation-only pull request executes, and the sum of their declared ceilings.
  *
- * `EX-0017-0007` names the four instances a documentation-only pull request may
- * execute: detection, lint, build and the verdict. `build` is there because it carries
- * the required status context (`BR-0017-0007`), and `BR-0017-0012` forbids a condition
- * on such a job or on anything it depends on. `lint` is there because `BR-0017-0011`
- * exempts it by name — it carries the formatter, the Markdown linter, the leakage
- * guard and the pin guard, every one of which a documentation change can break.
+ * "Executes" means nothing can prevent the job from running: no condition at all, or a condition
+ * whose whole expression is `always()`. The verdict is in the set for that second reason —
+ * `always()` is what makes it run when its needs are skipped, which is this path itself.
  */
-const UNCONDITIONAL_JOBS = [DETECT_JOB, LINT_JOB, REQUIRED_CONTEXT_JOB, VERDICT_JOB] as const;
+function documentationOnlyCost(jobs: Record<string, Record<string, unknown>>): {
+  jobs: string[];
+  timeoutMinutesSum: number;
+} {
+  const executing = Object.entries(jobs).filter(
+    ([, job]) => job["if"] === undefined || ALWAYS.test(String(job["if"])),
+  );
+  return {
+    jobs: executing.map(([id]) => id).sort(),
+    timeoutMinutesSum: executing.reduce((total, [, job]) => {
+      const declared = job["timeout-minutes"];
+      return total + (typeof declared === "number" ? declared : 0);
+    }, 0),
+  };
+}
 
 /** `needs` normalized to an array; a scalar `needs` is legal YAML. */
 function needsOf(job: Record<string, unknown>): string[] {
@@ -1063,27 +1077,46 @@ function runClassifier(input: {
   }
 }
 
-describe("TC-0017-0006 (TDD-0006): a documentation-only change executes at most four instances", () => {
-  it("leaves exactly four jobs unconditional and derives every other job's condition from detection", () => {
+describe("TC-0017-0006 (TDD-0006): the executing set and its declared timeout sum match the pin", () => {
+  it("agrees with the committed pin and derives every other job's condition from detection", () => {
     const jobs = ciJobs();
+    const cost = documentationOnlyCost(jobs);
 
-    // CLAIM 1 — the four that always run are exactly the four `EX-0017-0007` names.
-    // A set equality rather than "at least these", because the ceiling IS the
-    // requirement: a fifth unconditional job breaks it however useful it is.
-    // "Unconditional" means the job cannot be prevented from running, which is not
-    // the same as carrying no `if`. The verdict carries `if: always()` on purpose —
-    // it must run when its needs are SKIPPED, which is precisely the documentation-only
-    // case, and its accepting set treats `skipped` as passing. Counting it as
-    // conditional would have made the ceiling unmeetable for the one job the ceiling
-    // exists to protect.
-    const ALWAYS = /^\s*(?:\$\{\{\s*)?always\(\)\s*(?:\}\})?\s*$/;
-    const unconditional = Object.entries(jobs)
-      .filter(([, job]) => job["if"] === undefined || ALWAYS.test(String(job["if"])))
-      .map(([id]) => id)
-      .sort();
+    // CLAIM 1 — what this path executes agrees with the figure the declaration pins.
+    //
+    // The pin is the subject, not a ceiling. A flat list of four names would refuse a change
+    // that shortens the run and adds no work — splitting one job into two cheaper ones is the
+    // case — so the requirement is that the cost is RECORDED, in runner-minutes, and moves only
+    // in a change that moves the pin with it. `.github/required-status-contexts.json` carries
+    // the figure and the reasons each job is in the set; `scripts/pin-documentation-only-cost.mjs`
+    // rewrites it, and the hygiene lane refuses a tree where the two disagree.
+    //
+    // Asserted here as well as there because the two read the workflow by different routes: the
+    // lane parses it through its own collector, this row through `ciJobs`. Equality between two
+    // independent readings of one tree is what a single implementation cannot give itself.
+    const declaration: unknown = JSON.parse(
+      readFileSync(path.join(REPO_ROOT, ".github", "required-status-contexts.json"), "utf-8"),
+    );
+    const declaredContexts =
+      isRecord(declaration) && Array.isArray(declaration["contexts"])
+        ? declaration["contexts"].filter(isRecord)
+        : [];
+    const pins = declaredContexts
+      .map((context) => context["documentationOnlyCostPin"])
+      .filter(isRecord);
+    expect(pins, "the declaration must carry a documentationOnlyCostPin").toHaveLength(1);
+    expect
+      .soft(pins[0]?.["jobs"], "the pinned job set must be the set this workflow executes")
+      .toEqual(cost.jobs);
+    expect
+      .soft(
+        pins[0]?.["timeoutMinutesSum"],
+        "the pinned sum must be the ceilings this workflow declares",
+      )
+      .toBe(cost.timeoutMinutesSum);
 
-    // And only the verdict may reach the ceiling that way. `always()` on a lane would
-    // satisfy the count while running it on every documentation change, so which job
+    // And only the verdict may reach that set through a condition. `always()` on a lane would
+    // leave the pin satisfied while running the lane on every documentation change, so which job
     // is allowed the escape hatch is asserted rather than left to convention.
     const alwaysJobs = Object.entries(jobs)
       .filter(([, job]) => job["if"] !== undefined && ALWAYS.test(String(job["if"])))
@@ -1091,14 +1124,8 @@ describe("TC-0017-0006 (TDD-0006): a documentation-only change executes at most 
     expect
       .soft(alwaysJobs, "only the verdict may use always() to stay unconditional")
       .toEqual([VERDICT_JOB]);
-    expect
-      .soft(
-        unconditional,
-        "a documentation-only run may execute only detection, lint, build and the verdict",
-      )
-      .toEqual([...UNCONDITIONAL_JOBS].sort());
 
-    const selected = Object.entries(jobs).filter(([id]) => !listHas(UNCONDITIONAL_JOBS, id));
+    const selected = Object.entries(jobs).filter(([id]) => !listHas(cost.jobs, id));
 
     // CLAIM 2 — every conditional job derives its condition from the detection output.
     // A hand-written condition would satisfy CLAIM 1 and still select lanes by a rule

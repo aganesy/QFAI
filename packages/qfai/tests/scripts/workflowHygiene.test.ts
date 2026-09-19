@@ -2030,6 +2030,167 @@ ${run.output}`,
   });
 });
 
+/**
+ * Raises the executing build job's declared ceiling by one minute.
+ *
+ * The needle is the job key rather than the figure: `timeout-minutes: 15` appears twice in
+ * `ci.yml`, and the second belongs to a job a documentation-only run skips, so a plant keyed on
+ * the number could land on the half of the tree this row is not about. `editWorkflow` throws
+ * when the replacement changes nothing, so a moved block is reported rather than passed over.
+ */
+function raiseBuildTimeout(text: string): string {
+  return text.replace(
+    /(\n {2}build:\n(?:[^\n]*\n)*? {4}timeout-minutes: )(\d+)/,
+    (_match, head: string, minutes: string) => `${head}${Number(minutes) + 1}`,
+  );
+}
+
+describe("TC-0017-0084 (TDD-0093): a committed pin disagreeing with the recomputed value exits 1", () => {
+  // What a documentation-only pull request costs is pinned as two figures: the jobs nothing can
+  // prevent from running, and the sum of their declared `timeout-minutes`. The rule reads the
+  // pin and recomputes both from the workflow, so it refuses a DISAGREEMENT rather than a cost —
+  // equality against a value derived from the same tree cannot fail once the pinner has run, and
+  // a clause forbidding a higher figure would therefore assert nothing. What it catches is a
+  // change that moved the cost without re-pinning it, which is what puts the new figure in a diff.
+  //
+  // The plants come from both sides on purpose. Editing only the declaration would pass equally
+  // well against a rule that compared the pin with a second copy of itself; editing the workflow
+  // is what shows the recomputation reads the tree.
+
+  it("rejects a pinned sum the workflow does not declare, naming both figures", () => {
+    let declared = 0;
+    let planted = 0;
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (declaration) => {
+        const context = onlyContext(declaration);
+        const pin = context.documentationOnlyCostPin;
+        if (pin === undefined || typeof pin.timeoutMinutesSum !== "number") {
+          throw new Error("the declaration carries no documentationOnlyCostPin.timeoutMinutesSum");
+        }
+        declared = pin.timeoutMinutesSum;
+        planted = declared + 1;
+        context.documentationOnlyCostPin = { ...pin, timeoutMinutesSum: planted };
+        return declaration;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a pinned sum nothing declares must exit 1:\n${run.output}`)
+        .toBe(1);
+      const findings = run.output
+        .split(/\r?\n/)
+        .filter((line) => line.includes("documentation-only-cost-pin"));
+      // Both figures, because one of them alone leaves the reader to work out the other. A
+      // finding naming only what is pinned does not say what the tree now costs, and one naming
+      // only the recomputed figure does not say the pin is what disagrees with it.
+      expect
+        .soft(findings.join("\n"), "the finding must name the figure the declaration pins")
+        .toContain(String(planted));
+      expect
+        .soft(findings.join("\n"), "and the figure the workflow declares")
+        .toContain(String(declared));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a raised timeout that did not re-pin, and accepts the same raise once it did", () => {
+    // The workflow side of the same equality, and the row that makes the rule falsifiable: the
+    // first tree raises a ceiling and leaves the pin behind, the second raises the same ceiling
+    // and moves the pin with it. A rule that rejected the raise itself would fail both, and a
+    // rule that read the pin against nothing would pass both.
+    const unpinned = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, raiseBuildTimeout);
+    });
+    try {
+      const run = runLane(unpinned);
+      expect.soft(run.exitCode, `a raise with a stale pin must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must attribute the exit to the pin, not to the raise")
+        .toContain("documentation-only-cost-pin");
+    } finally {
+      rmSync(unpinned, { recursive: true, force: true });
+    }
+
+    const repinned = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, raiseBuildTimeout);
+      editDeclaration(d, (declaration) => {
+        const context = onlyContext(declaration);
+        const pin = context.documentationOnlyCostPin;
+        if (pin === undefined || typeof pin.timeoutMinutesSum !== "number") {
+          throw new Error("the declaration carries no documentationOnlyCostPin.timeoutMinutesSum");
+        }
+        context.documentationOnlyCostPin = {
+          ...pin,
+          timeoutMinutesSum: pin.timeoutMinutesSum + 1,
+        };
+        return declaration;
+      });
+    });
+    try {
+      const run = runLane(repinned);
+      expect.soft(run.exitCode, `a raise carrying its re-pin must exit 0:\n${run.output}`).toBe(0);
+    } finally {
+      rmSync(repinned, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a declaration that carries no pin at all", () => {
+    // Absence is the failure a pinned figure is easiest to lose to: deleting the object leaves a
+    // declaration that parses, a lane that finds nothing to compare, and a cost nothing holds.
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (declaration) => {
+        delete onlyContext(declaration).documentationOnlyCostPin;
+        return declaration;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an absent pin must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must name the field that is missing")
+        .toContain("documentationOnlyCostPin");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a pinned job set the workflow does not execute, naming the difference", () => {
+    // The membership half. A job leaving or joining the executing set changes what the path runs
+    // even where the minutes happen to balance, so the set is compared as a set rather than
+    // inferred from the sum.
+    let dropped = "";
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (declaration) => {
+        const context = onlyContext(declaration);
+        const pin = context.documentationOnlyCostPin;
+        const [first] = pin?.jobs ?? [];
+        if (pin === undefined || first === undefined) {
+          throw new Error("the declaration carries no documentationOnlyCostPin.jobs");
+        }
+        dropped = first;
+        context.documentationOnlyCostPin = { ...pin, jobs: (pin.jobs ?? []).slice(1) };
+        return declaration;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a pinned set missing an executing job must exit 1:\n${run.output}`)
+        .toBe(1);
+      const findings = run.output
+        .split(/\r?\n/)
+        .filter((line) => line.includes("documentation-only-cost-pin"));
+      expect
+        .soft(findings.join("\n"), "the finding must name the job the pin stopped listing")
+        .toContain(dropped);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 // ── the rule set, and what a green run is allowed to mean ────────────────────
 //
 // `BR-0017-0037` closes the set over `.github/workflows/**` at exactly five obligations:
@@ -2721,14 +2882,14 @@ describe("TC-0017-0045 (TDD-0045): the own-tree hygiene rule set is closed at ex
         .soft(printed, "the workflow-tree rule set is closed at exactly the five enumerated")
         .toEqual([...WORKFLOW_RULES].sort());
 
-      // And the declaration rule is present in its own scope, so "five" is a scoping claim
-      // rather than a claim that the sixth rule was dropped.
+      // And the declaration rules are present in their own scope, so "five" is a scoping claim
+      // rather than a claim that a rule outside the five was dropped.
       expect
         .soft(
           printedRules(runLane(dir).output, DECLARATION_SCOPE),
-          "the declaration rule must still be evaluated, in its own scope",
+          "the declaration rules must still be evaluated, in their own scope",
         )
-        .toEqual(["required-context"]);
+        .toEqual(["documentation-only-cost-pin", "required-context"]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -3032,6 +3193,21 @@ PLANTS.push({
     editWorkflow(dir, declared.workflow, (text) =>
       text.replace(`\n  ${declared.job}:\n`, `\n  ${declared.job}-renamed:\n`),
     );
+    return declared.job;
+  },
+});
+
+// The second declaration-scope plant, appended for the same reason. It raises a declared ceiling
+// on an executing job and leaves the pin behind, which is the drift the pin exists to catch — and
+// the plant is in the WORKFLOW rather than in the declaration on purpose: a plant that edited the
+// pin alone would also satisfy a rule that compared the pin against a second copy of itself.
+PLANTS.push({
+  rule: "documentation-only-cost-pin",
+  label: "an executing job's declared ceiling rises with no re-pin",
+  file: ".github/required-status-contexts.json",
+  plant: (dir) => {
+    const declared = firstContext(dir);
+    editWorkflow(dir, declared.workflow, raiseBuildTimeout);
     return declared.job;
   },
 });

@@ -145,6 +145,14 @@ export interface Declaration {
     pinnedBytes?: Record<string, string>;
     installLifecycle?: Record<string, Record<string, string>>;
     closureActions?: string[];
+    /**
+     * What a documentation-only pull request costs: the jobs it executes and the sum of their
+     * declared `timeout-minutes`. Optional here and required by the lane, for the reason
+     * `verificationBodies` is — a row that plants a disagreement has to be able to write a
+     * figure the lane will reject, and one that plants the field's absence has to be able to
+     * remove it.
+     */
+    documentationOnlyCostPin?: { jobs?: string[]; timeoutMinutesSum?: number };
   }[];
   // Everything else the artifact carries — `$comment` today — travels through untouched.
   [key: string]: unknown;

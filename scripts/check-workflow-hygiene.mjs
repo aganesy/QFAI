@@ -101,6 +101,11 @@ const RULES = [
     "required-context",
     "the declared required-status-context job exists, its workflow starts on every pull request, it is unskippable through its whole `needs` closure, and it still performs its verification set",
   ],
+  [
+    "declaration",
+    "documentation-only-cost-pin",
+    "the committed documentation-only pin — the jobs that execute on that path and the sum of their declared timeout-minutes — agrees with a fresh recomputation from the workflow tree",
+  ],
 ];
 
 /** The scopes, in print order, with the heading each one is announced under. */
@@ -1722,6 +1727,133 @@ function pullRequestTriggerFindings(rel, declaredJob, workflow) {
       );
 }
 
+/**
+ * Whether nothing can prevent a job from executing.
+ *
+ * No condition at all, or a condition whose whole expression is `always()`. The second is not a
+ * courtesy: `always()` exists to guarantee a job runs when its needs are skipped, which is the
+ * documentation-only case itself, so reading it as "has a condition, therefore skippable" would
+ * put the aggregate verdict outside the set the pin is about.
+ */
+const EXECUTES_UNCONDITIONALLY = /^\s*(?:\$\{\{\s*)?always\(\)\s*(?:\}\})?\s*$/;
+
+function executesUnconditionally(job) {
+  const condition = job.if;
+  if (condition === undefined) return true;
+  return typeof condition === "string" && EXECUTES_UNCONDITIONALLY.test(condition);
+}
+
+/**
+ * The jobs a documentation-only pull request executes, and the sum of their declared
+ * `timeout-minutes`.
+ *
+ * Both are pinned, and a change to either re-pins in the same change. The unit is runner-minutes
+ * rather than job instances because instances charges +1 for a change that shortens the run and
+ * adds no work — which is how the four job names this replaced came to refuse a job the
+ * requirement permits.
+ *
+ * `timeout-minutes` is the DECLARED worst case, not a measurement. `job-guardrails` already
+ * requires one on every job, so the sum is defined; a job that declares none contributes nothing
+ * and is named in `jobsWithoutTimeout`, because counting it as zero would let a job join the set
+ * for free.
+ *
+ * Exported because the pinner writes what this returns and the rule compares against it. One
+ * implementation, so a pin and its check cannot disagree about what they measure.
+ */
+export function documentationOnlyCostFigures(workflow) {
+  const jobs = isRecord(workflow) && isRecord(workflow.jobs) ? workflow.jobs : {};
+  const executing = [];
+  const jobsWithoutTimeout = [];
+  let timeoutMinutesSum = 0;
+  for (const [jobKey, job] of Object.entries(jobs)) {
+    if (!isRecord(job) || !executesUnconditionally(job)) continue;
+    executing.push(jobKey);
+    const declared = job["timeout-minutes"];
+    if (typeof declared === "number" && Number.isFinite(declared)) {
+      timeoutMinutesSum += declared;
+    } else {
+      jobsWithoutTimeout.push(jobKey);
+    }
+  }
+  executing.sort();
+  jobsWithoutTimeout.sort();
+  return { jobs: executing, timeoutMinutesSum, jobsWithoutTimeout };
+}
+
+/**
+ * The committed documentation-only pin against a fresh recomputation from the workflow tree.
+ *
+ * The rule refuses a disagreement rather than a cost: enforcement is equality against a value
+ * derived from the same tree, so a clause forbidding a higher cost could not fail. What it catches
+ * is a change to the executing set or to a declared timeout that did not re-pin — which is what
+ * makes a raise deliberate, and reviewable in a diff.
+ *
+ * The membership half of the rule needs nothing here. It reads `dependencies` and
+ * `dependencyConditions` from this same declaration, and property 2c of `required-context` already
+ * rejects a listed job that drops its condition and an unlisted job that gains one.
+ */
+function checkDocumentationOnlyCostPin(root, jobs) {
+  const { contexts, findings } = readDeclaration(root);
+  for (const context of contexts) {
+    const workflow = typeof context.workflow === "string" ? context.workflow : "(unnamed)";
+    const declaredJob = typeof context.job === "string" ? context.job : "(unnamed)";
+    const rel = `.github/workflows/${workflow}`;
+    const report = (detail) =>
+      findings.push({
+        rule: "documentation-only-cost-pin",
+        file: DECLARATION_REL,
+        job: declaredJob,
+        detail,
+      });
+
+    const pinned = context.documentationOnlyCostPin;
+    if (!isRecord(pinned)) {
+      report(
+        `declares no \`documentationOnlyCostPin\` object, so the jobs executing on that path in ${workflow} and the sum of their declared timeout-minutes are pinned by nothing`,
+      );
+      continue;
+    }
+
+    const parsed = jobs.find((entry) => entry.file === rel)?.workflow;
+    if (parsed === undefined) {
+      report(
+        `names ${workflow}, which this lane collected no job from, so the pin cannot be recomputed`,
+      );
+      continue;
+    }
+
+    const fresh = documentationOnlyCostFigures(parsed);
+    if (fresh.jobsWithoutTimeout.length > 0) {
+      report(
+        `${workflow} has ${fresh.jobsWithoutTimeout.length} unconditional job(s) declaring no timeout-minutes (${fresh.jobsWithoutTimeout.join(", ")}), so the sum understates what that path may cost`,
+      );
+    }
+
+    const declaredJobs = pinned.jobs;
+    const pinnedJobs = Array.isArray(declaredJobs)
+      ? declaredJobs.filter((entry) => typeof entry === "string")
+      : undefined;
+    if (pinnedJobs === undefined || pinnedJobs.length !== declaredJobs.length) {
+      report("declares documentationOnlyCostPin.jobs as something other than an array of strings");
+    } else if (pinnedJobs.join("\u0000") !== fresh.jobs.join("\u0000")) {
+      report(
+        `pins the executing jobs as ${pinnedJobs.join(", ") || "none"} and ${workflow} executes ${fresh.jobs.join(", ") || "none"}; re-pin in the change that moved them`,
+      );
+    }
+
+    if (typeof pinned.timeoutMinutesSum !== "number") {
+      report(
+        "declares documentationOnlyCostPin.timeoutMinutesSum as something other than a number",
+      );
+    } else if (pinned.timeoutMinutesSum !== fresh.timeoutMinutesSum) {
+      report(
+        `pins the declared timeout sum at ${pinned.timeoutMinutesSum} and ${workflow} declares ${fresh.timeoutMinutesSum}; re-pin in the change that moved it`,
+      );
+    }
+  }
+  return findings;
+}
+
 function checkRequiredContexts(root, jobs) {
   const { contexts, findings } = readDeclaration(root);
   for (const context of contexts) {
@@ -2928,6 +3060,7 @@ export function runHygieneLane(root) {
     ...checkShippedVersionMarkers(root),
     ...checkShippedRunnerLabels(jobs),
     ...checkRequiredContexts(root, jobs),
+    ...checkDocumentationOnlyCostPin(root, jobs),
   ];
 }
 

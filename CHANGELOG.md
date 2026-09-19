@@ -4,6 +4,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A committed figure for what a documentation-only pull request costs, and a
+  check that refuses a tree which moved it without re-pinning** (#1870).
+  `.github/required-status-contexts.json` now carries the jobs that path executes
+  and the sum of their declared `timeout-minutes`;
+  `node scripts/pin-documentation-only-cost.mjs` recomputes both from the workflow
+  tree, and the `documentation-only-cost-pin` rule of
+  `scripts/check-workflow-hygiene.mjs` exits 1 while the committed figures and a
+  fresh recomputation disagree, naming both. So a job joining or leaving the set,
+  and a raised ceiling, fail until the tool has run — which puts the new figure in
+  a diff a reviewer reads instead of leaving it to drift. The pinner imports the
+  lane's own computation rather than restating it, so the pin and the check cannot
+  disagree about what they measure, and the topology test compares the pin against
+  its own independent reading of the workflow. Extracting the lint-aggregate lane
+  into a job of its own is the remaining Plan step.
+
 ### Changed
 
 - **The documentation-only path is pinned and re-pinned, not held to a count of
@@ -25,9 +42,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the verdict executes and is not one of its own dependencies. `NFR-0002` keeps
   instance count, its other clauses being quantified in instances, installs and
   builds, and its documentation-only figure moves to five. `DR-0017-0015` records
-  the options, four weaknesses of the adopted unit and the dissent against it. The
-  pinner, the hygiene rule and extracting the lane are Plan steps, not part of
-  this change.
+  the options, four weaknesses of the adopted unit and the dissent against it.
 
 ## [1.12.1] - 2026-09-19
 
