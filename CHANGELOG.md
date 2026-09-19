@@ -44,6 +44,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   builds, and its documentation-only figure moves to five. `DR-0017-0015` records
   the options, four weaknesses of the adopted unit and the dissent against it.
 
+### Fixed
+
+- **A killed test child now names the signal that killed it, and can no longer
+  pass as a script that rejected its input** (#2028). Node calls a `close`
+  listener with two arguments, `(code, signal)`. The three helpers that spawn a
+  process in the test suite took the first and dropped the second, so every kill
+  arrived as `code: null` with its cause thrown away — and a run that failed that
+  way reported `expected null to be +0`, naming no signal, no cause and no child.
+  The quieter half was the other direction: `expect(code).not.toBe(0)` is how the
+  two process-spawning suites say "the script rejected this input", and a killed
+  child satisfies it, so such a test passed while proving nothing. One helper now
+  performs the capture for all three, keeps the signal, and derives one readable
+  outcome from the pair — `exit 0`, `exit 1`, `killed by SIGKILL`. Every
+  assertion reads that value instead of the raw code, so a kill satisfies neither
+  direction by accident, and passes the child's own stderr as the message.
+
 ## [1.12.1] - 2026-09-19
 
 ### Added

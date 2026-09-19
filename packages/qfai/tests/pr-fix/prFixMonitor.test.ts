@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { chmod, mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -8,6 +7,7 @@ import path from "node:path";
 // which under a concurrent suite is rarely the one asserting. Every test here
 // takes `expect` and `onTestFinished` from its own context instead.
 import { describe, it } from "vitest";
+import { EXIT_NONZERO, EXIT_ZERO, type Spawned, spawnCaptured } from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -81,8 +81,7 @@ type FakePageInfo = {
   hasNextPage: boolean;
 };
 
-type RunResult = {
-  code: number | null;
+type RunResult = Spawned & {
   ghState: Record<string, unknown>;
   repoDir: string;
   stderr: string;
@@ -138,7 +137,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
           ],
           { ...process.env, QFAI_TEST_HTML_POLICY: policyPath, QFAI_TEST_HTML_BODY: body },
         );
-        expect(result.code, result.stderr).toBe(0);
+        expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
         const measurement = JSON.parse(result.stdout) as { Attempts: number; KeepsAnswer: boolean };
         expect(measurement.KeepsAnswer).toBe(true);
         expect(measurement.Attempts).toBeGreaterThan(0);
@@ -167,7 +166,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       ],
       process.env,
     );
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
   });
 
   it.for(["removed", "comment only"])(
@@ -186,7 +185,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
           threads: [[]],
         }),
       });
-      expect(result.code).not.toBe(0);
+      expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
       expect(combinedOutput(result)).toContain("PR body is no longer template-compliant");
       expect(combinedOutput(result)).not.toContain("Dry-run completed.");
       expect(result.ghState.prEditCount ?? 0).toBe(0);
@@ -216,7 +215,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
         threads: [[]],
       }),
     });
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(result.ghState.prEditCount ?? 0).toBe(0);
     expect(existsSync(path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md"))).toBe(
       false,
@@ -241,7 +240,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
         threads: [[]],
       }),
     });
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(result.ghState.prEditCount ?? 0).toBe(0);
   });
 
@@ -324,7 +323,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
           threads: [[]],
         }),
       });
-      expect(result.code).toBe(0);
+      expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
       expect(result.ghState.prEditCount ?? 0).toBe(0);
       if (_name.startsWith("code-like reference container")) {
         const preview = await readFile(
@@ -365,7 +364,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
         threads: [[]],
       }),
     });
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(result.ghState.prEditCount ?? 0).toBe(0);
   });
 
@@ -386,7 +385,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
           threads: [[]],
         }),
       });
-      expect(result.code).not.toBe(0);
+      expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
       expect(result.ghState.prEditCount ?? 0).toBe(0);
     },
   );
@@ -405,7 +404,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
         threads: [[]],
       }),
     });
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(result.ghState.prEditCount ?? 0).toBe(0);
   });
 
@@ -426,7 +425,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
           threads: [[]],
         }),
       });
-      expect(result.code).toBe(0);
+      expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
       expect(result.ghState.prEditCount ?? 0).toBe(0);
     },
   );
@@ -450,7 +449,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
         threads: [[]],
       }),
     });
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(combinedOutput(result)).toContain("Dry-run completed.");
     expect(result.ghState.prEditCount ?? 0).toBe(0);
     expect(result.ghState.threadsCount).toBe(1);
@@ -651,7 +650,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
           threads: [[]],
         }),
       });
-      expect(result.code).not.toBe(0);
+      expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
       expect(combinedOutput(result)).toContain("authored removal-list answer");
       const previewPath = path.join(result.repoDir, "tmp", "pr-fix", "pr-166-body-repaired.md");
       expect(combinedOutput(result)).toContain(`gh pr edit 166 --body-file "${previewPath}"`);
@@ -695,7 +694,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
           threads: [[]],
         }),
       });
-      expect(result.code).toBe(0);
+      expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
       expect(combinedOutput(result)).toContain("Dry-run completed.");
       expect(result.ghState.prEditCount ?? 0).toBe(0);
       expect(result.ghState.threadsCount).toBe(1);
@@ -723,7 +722,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).not.toBe(0);
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
     expect(combinedOutput(result)).toContain("Branch version marker resolved v1.8.5");
     expect(combinedOutput(result)).toContain(
       "Version alignment is required before pr-fix can continue.",
@@ -751,7 +750,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(combinedOutput(result)).toContain(
       "Version alignment check passed for branch marker v1.8.5.",
     );
@@ -773,7 +772,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(combinedOutput(result)).toContain(
       "Version alignment check passed for branch marker v1.8.5.",
     );
@@ -797,7 +796,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).not.toBe(0);
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
     expect(combinedOutput(result)).toContain(
       "Live monitor mode fixes SleepSeconds=60 and RequiredZeroStreak=30",
     );
@@ -812,7 +811,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).not.toBe(0);
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
     expect(combinedOutput(result)).toContain("Non-green check: build (COMPLETED/FAILURE)");
 
     const monitorStatus = await readJson(
@@ -837,7 +836,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).not.toBe(0);
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
     expect(combinedOutput(result)).toContain("Unresolved thread:");
 
     const monitorStatus = await readJson(
@@ -861,7 +860,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).not.toBe(0);
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
     expect(combinedOutput(result)).toContain("Unresolved thread [outdated]:");
 
     const monitorStatus = await readJson(
@@ -880,7 +879,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).not.toBe(0);
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
     expect(combinedOutput(result)).toContain(
       "CI checks are pending/in-progress or not yet reported. Resetting clean streak to 0.",
     );
@@ -907,7 +906,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).not.toBe(0);
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
     expect(combinedOutput(result)).toContain("Clean PR poll 29/30");
     expect(combinedOutput(result)).toContain(
       "CI checks are pending/in-progress or not yet reported. Resetting clean streak to 0.",
@@ -931,7 +930,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(combinedOutput(result)).toContain("Clean PR poll 30/30");
     expect(combinedOutput(result)).toContain("PR handoff ready for PR #166");
 
@@ -972,7 +971,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
           threads: [[]],
         }),
       });
-      expect(result.code).not.toBe(0);
+      expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
       expect(combinedOutput(result)).toContain("PR body is no longer template-compliant");
       expect(existsSync(path.join(result.repoDir, "tmp", "pr-fix", "pr-166-handoff.json"))).toBe(
         false,
@@ -1003,7 +1002,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(combinedOutput(result)).toContain("Transient gh failure on attempt 1/3");
     expect(combinedOutput(result)).toContain("PR handoff ready for PR #166");
   });
@@ -1027,7 +1026,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).not.toBe(0);
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
     expect(combinedOutput(result)).toContain("authored removal-list answer");
 
     const preview = await readFile(
@@ -1058,7 +1057,7 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       }),
     });
 
-    expect(result.code).not.toBe(0);
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
     expect(combinedOutput(result)).toContain("authored removal-list answer");
 
     const preview = await readFile(
@@ -1089,7 +1088,7 @@ describe.concurrent("run-pr-fix strict monitor pagination", { timeout: 120000 },
       }),
     });
 
-    expect(result.code).not.toBe(0);
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
     expect(combinedOutput(result)).toContain("Unresolved thread:");
 
     const monitorStatus = await readJson(
@@ -1108,7 +1107,7 @@ describe.concurrent("release PR body repair", () => {
         `Existing notes.\n\n## What this change made unnecessary\n\n${placeholder}\n\n${adoption}`,
         onTestFinished,
       );
-      expect(result.code).toBe(0);
+      expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
       expect(result.body).toContain("Superseded package version and heading.");
       expect(result.body).toContain(adoption);
       expect(result.body).not.toContain(placeholder);
@@ -1121,7 +1120,7 @@ describe.concurrent("release PR body repair", () => {
       const existing =
         "## What this change made unnecessary\n\nRemoved the duplicate selector.\n\n" + suffix;
       const result = await repairReleaseBody(existing, onTestFinished);
-      expect(result.code).toBe(0);
+      expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
       expect(result.body).toBe(existing);
     },
   );
@@ -1137,7 +1136,7 @@ describe.concurrent("release PR body repair", () => {
     "refuses a hidden release repair inside an unclosed %s",
     async ([_name, existing], { expect, onTestFinished }) => {
       const result = await repairReleaseBody(existing, onTestFinished);
-      expect(result.code).not.toBe(0);
+      expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
       expect(result.body).toBe(
         "Release metadata.\n\n## What this change made unnecessary\n\nSuperseded package version and heading.\n",
       );
@@ -1161,7 +1160,7 @@ describe.concurrent("release PR body repair", () => {
         "## Adoption bar\r\n\r\nKeep the existing validator.\r\n\r\n" +
         "## Release metadata\r\n\r\nPrepared date and publication approval stay unchanged.\r\n";
       const result = await repairReleaseBody(existing, onTestFinished);
-      expect(result.code).toBe(0);
+      expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
       expect(result.body).toBe(existing);
     },
   );
@@ -1609,32 +1608,19 @@ function ghStubScript(): string {
   ].join("\n");
 }
 
+/**
+ * Runs a command under the repository root and answers with everything it reported.
+ *
+ * The capture is shared, because the signal a killed child carries has to reach the
+ * assertion. A helper resolving an exit code alone reports a kill as a null code, which
+ * fails the clean-exit assertion with no cause and SATISFIES the rejecting one.
+ */
 async function spawnCommand(
   command: string,
   args: string[],
   env: NodeJS.ProcessEnv,
-): Promise<{ code: number | null; stderr: string; stdout: string }> {
-  return await new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd: repoRoot,
-      env,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout.on("data", (chunk: Buffer | string) => {
-      stdout += chunk.toString();
-    });
-    child.stderr.on("data", (chunk: Buffer | string) => {
-      stderr += chunk.toString();
-    });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      resolve({ code, stderr, stdout });
-    });
-  });
+): Promise<Spawned> {
+  return await spawnCaptured(command, args, { cwd: repoRoot, env });
 }
 
 async function readJson(filePath: string): Promise<Record<string, unknown>> {
