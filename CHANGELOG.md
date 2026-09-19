@@ -23,6 +23,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The mirror-surface lane runs on a runner of its own, and the lint job fell
+  from 265 s to 68 s** (#1870). `pnpm ci:lint` forked five lanes onto one
+  four-core runner, and the mirror-surface lane — a vitest run over eight files,
+  one of which spawns a process in most of its cases — was the longest of them.
+  The lint job's wall clock was that lane's, lengthened by the contention it
+  created for the other four. The lane now has a job of its own, carrying no
+  condition and named in no `dependencyConditions` entry, because the surface it
+  checks is what a documentation-only change is most likely to break. Measured on
+  green CI runs of the same shape, before and after: the lint job 265 s → 68 s,
+  its gate step 243 s → 44 s, and the lane itself 243 s → 116 s once nothing
+  contended with it. Summed runner time rose 1.0 minute, which is the new job's
+  own checkout and setup net of that saving. **No wall-clock claim is made**: the
+  longest job is no longer the lint job, and the job that replaced it measured
+  97 s slower than in the before run for reasons this change does not touch and
+  one run a side cannot attribute. `documentationOnlyCostPin` rises to five jobs
+  and 45 declared minutes, and the pinned check-name set gains the job — no
+  repository setting changed, because only the aggregate verdict is required and
+  the new lane reaches it through that verdict's dependency map.
+
 - **The documentation-only path is pinned and re-pinned, not held to a count of
   four job names** (#2016). `BR-0017-0007` required such a pull request to execute
   at most four job instances, and the topology test asserted that set exactly. Job
