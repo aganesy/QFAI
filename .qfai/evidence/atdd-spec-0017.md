@@ -23,8 +23,8 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
 - `.qfai/specs/spec-0017/tdd/test-list.md` — read, never written. 94 rows: 74 `Integration`,
-  11 `Unit`; **71 `refactor`, 6 `blocked`, 17 `todo`**. The other nine rows are `E2E`, one per story,
-  seeded at `todo`. Eight `todo` rows are `Integration` and are therefore this stage's to route — see
+  11 `Unit`; **73 `refactor`, 6 `blocked`, 15 `todo`**. The other nine rows are `E2E`, one per story,
+  seeded at `todo`. Six `todo` rows are `Integration` and are therefore this stage's to route — see
   § "Ledger rows advanced"
 - `.qfai/assistant/catalog/test-layers.md` — the layer derivation and the directory each `Level`
   routes to
@@ -2949,6 +2949,98 @@ own repairs reviewed, and every round so far has found defects in the previous r
 sentence read "a ninth stage round is owed" for six rounds, in the paragraph that says what completion is
 still waiting for — an ordinal expires every round, and the rule does not, which is the form the callsite
 line two sections up arrived at for the same reason.
+
+## The documentation-only cost pin, and the rule that reads it
+
+`BR-0017-0007` states the obligation as a pin and a re-pin: what a documentation-only pull request
+executes is recorded, and a change that moves it re-pins in the same change. Three artifacts carry
+that, and two rows assert it.
+
+| Artifact                                  | What it holds                                                                     |
+| ----------------------------------------- | --------------------------------------------------------------------------------- |
+| `.github/required-status-contexts.json`   | `documentationOnlyCostPin`, and a note stating the unit and what the pin is not    |
+| `scripts/pin-documentation-only-cost.mjs` | Recomputes both figures from the workflow tree and writes them                     |
+| `scripts/check-workflow-hygiene.mjs`      | `documentation-only-cost-pin`, which exits 1 while pin and recomputation disagree  |
+
+The committed figures: `build, ci-pass, detect, lint`, declaring 35 minutes.
+
+### One computation, two callers
+
+`documentationOnlyCostFigures` is exported from the lane, and the pinner imports it. A second
+implementation of "which jobs execute, and what do they declare" is two answers to one question,
+and the first edit to either is where they begin to disagree — with the pin and the check that reads
+it on opposite sides.
+
+The topology row is the one place a second reading is wanted. It parses `ci.yml` through its own
+reader and compares the result with the committed pin, so what is asserted there is agreement
+between two independent readings of one tree rather than between an implementation and itself.
+
+### What the rule refuses, and what it does not
+
+Enforcement is equality against a value derived from the same tree. A clause forbidding a higher
+cost could therefore not fail: once the pinner has run, no state of the tree violates it. What the
+rule catches is a change that moved the cost and did not re-pin, which is what puts the new figure
+in a diff. Whether that figure is acceptable stays a cost claim, and `BR-0017-0030` already requires
+those to arrive with measured before-and-after numbers.
+
+`timeout-minutes` is the declared worst case rather than a measurement, so the sum sits far above
+what the path really costs. It still catches a runaway job and a forgotten raise, which is the class
+a declared ceiling can catch. A job declaring no `timeout-minutes` is named rather than counted as
+zero: counting it as zero would let a job join the set for free. `job-guardrails` already requires
+one on every job, so that branch is unreachable on a tree this lane passes.
+
+### TDD-0006
+
+`TC-0017-0006`, in `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`.
+
+CLAIM 1 previously asserted the executing set as an equality against four job names held in a
+constant. Job instances charges +1 for a change that shortens the run and adds no work, so that
+measure refused a change the requirement permits — splitting one job into two cheaper ones is the
+case. The constant is gone. CLAIM 1 now reads `documentationOnlyCostPin` out of the expected-context
+declaration and compares it against the executing set and the sum of declared `timeout-minutes`
+computed from `ci.yml` by this file's own reader. The jobs the row treats as unconditional derive
+from that same computation, so no literal in the test can drift from the tree it describes.
+
+The `always()`-belongs-to-the-verdict-alone claim stands, and so do claims 2 to 4. `DR-0017-0015`
+records the options, four weaknesses of the adopted unit and the dissent against it. The earlier
+cycle's record, including the mutation table, is at
+`.qfai/evidence/implement-spec-0017.md#tdd-0006`.
+
+- **RED**: `fail` — with `documentationOnlyCostPin` deleted from the declaration, the row failed on
+  "the declaration must carry a documentationOnlyCostPin: expected [] to have a length of 1".
+- **GREEN**: `pnpm exec vitest run tests/scripts/ownWorkflowTopology.test.ts` → 71 passed (71).
+- **Oracle**: with the pin's `timeoutMinutesSum` set to 36, the row fails on
+  "the pinned sum must be the ceilings this workflow declares: expected 36 to be 35" — on the sum
+  rather than on the field's absence, so the comparison is against the tree and not against the
+  pin's own presence.
+
+### TDD-0093
+
+`TC-0017-0084`, in `packages/qfai/tests/scripts/workflowHygiene.test.ts`.
+
+Four rows, planted from both sides of the equality. A plant that edited the declaration alone would
+pass equally well against a rule comparing the pin with a second copy of itself, which is why the
+workflow side is planted too — and the third row is what keeps the rule from reading as a ban on
+raising a ceiling.
+
+| Plant                                      | Side        | Expected |
+| ------------------------------------------ | ----------- | -------- |
+| A pinned sum the workflow does not declare | Declaration | exit 1   |
+| A raised ceiling with the pin left behind  | Workflow    | exit 1   |
+| The same raise carrying its re-pin         | Both        | exit 0   |
+| The pin object deleted                     | Declaration | exit 1   |
+| A pinned job set missing an executing job  | Declaration | exit 1   |
+
+`TC-0017-0047` derives the evaluated rule set by running each plant and seeing which rule the lane
+reports, so the new rule needed an entry in that table: printed by every green run and demonstrated
+by nothing is exactly the hole it exists to find. `TC-0017-0045`'s declaration scope now holds two
+rules; its five-rule closure claim is unchanged, being scoped to the workflow tree.
+
+- **RED**: `fail` — with the rule's call removed from the lane, all four rows of this selector
+  failed.
+- **GREEN**: `pnpm exec vitest run tests/scripts/workflowHygiene.test.ts` → 88 passed (88).
+- **Oracle**: `detect`'s declared ceiling raised 5 → 6 without re-pinning →
+  `node scripts/check-workflow-hygiene.mjs --root .` exits 1 naming 35 against 36; reverted → 0.
 
 ## Final status (PASS/FAIL) + who confirmed
 

@@ -238,7 +238,7 @@
         "scripts/check-tracked-symlinks.mjs": "1769fe9351bb11fa3c2a1e11a45e665cf46fec970cb6b5abebd63519ba2136b2",
         "scripts/check-tsc-compiler.mjs": "14811d9aa79ca3988a07f3ee51aeac3a4ee825e793e77af69ff05cf55e39e1f1",
         "scripts/check-types-future.mjs": "c5db610e56abad0fe7962384460760915ae1f084936a3c9684656364beb50203",
-        "scripts/check-workflow-hygiene.mjs": "744c35cb79999ba0e45c7ddb6e213c074906cdb7f0f0804ca7e3570abc86f303",
+        "scripts/check-workflow-hygiene.mjs": "25ce494930fc0488a401a0b272b14f783250e7598ab1a77f2f83028edddeb3d9",
         "scripts/derive-cli-message-allowlist-count.mjs": "6c67359c0073519a0fa5b3be5fc9866c49b1ec5bd4bce3feff985ba2fd962d87",
         "scripts/derive-e2e-callsites.mjs": "0185bc5abdcfa2fef223c02362aea44838a3c8dac53157c050d5c3285448c6d3",
         "scripts/dogfood-backlog.json": "fc4da5b98a167f82dd65e60ee64bb57724e2749fa5d8620e9fc4765ca918ed99",
@@ -252,6 +252,7 @@
         "scripts/lib/write-declaration.mjs": "cfdd1a0a2dc37ce06a183338e3550e9d6bd169ef633cc0cfbd1110d19d5e9dc9",
         "scripts/link-assistant-tree.mjs": "75e4742e36f847622eac505365ea28f700295b2699d2d3faf591b8036600bc0e",
         "scripts/pin-cli-message-allowlist-count.mjs": "635753d2a837eba74efc62b11dcc6b2174da26988f899317f4c547b07733d71e",
+        "scripts/pin-documentation-only-cost.mjs": "0aebab2b442118173c0651e1309c403a275e7ed9fc8b3dec8eae5d1540ca1886",
         "scripts/pin-guard-bytes.mjs": "4c914d40d0dc75cf623fe0cab2110a0106a5f519d4a258fa05891b612f929c97",
         "scripts/pin-stage-evidence-counts.mjs": "9cf2034c8ce05387e50b7b22c0cd33f2e5ff4544f3e5913e469786044a201099",
         "scripts/pin-verification-bodies.mjs": "ada370be9bd4d331a705d5a02e01ba4d4f378c862ddc62680af9ad831eb881cf",
@@ -406,7 +407,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ff046bcf7d3956e0",
-        "Verify the toolchain action before running it": "d3cab8dd98f28107",
+        "Verify the toolchain action before running it": "11a8d72071921f0b",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "211656e97a2f3714",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "f98ff7751afa6bbb",
@@ -414,7 +415,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "9efc82ef75f7a622",
         "QFAI self-validate this repo (dogfooding — full profile)": "3537948e49d1d967",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "2930c9aaeb018ee2",
+        "Run lint gate": "3e6a5536c351ce2b",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",
@@ -443,6 +444,38 @@
         "lane. Recompute with `node scripts/pin-verification-bodies.mjs` and land the new digest in",
         "the same change: that is the point, a change to a required verification is a change a",
         "reviewer reads."
+      ],
+      "documentationOnlyCostPin": {
+        "jobs": ["build", "ci-pass", "detect", "lint"],
+        "timeoutMinutesSum": 35
+      },
+      "documentationOnlyCostPinNote": [
+        "What a documentation-only pull request costs, pinned as the jobs it executes and the sum of",
+        "their declared `timeout-minutes`.",
+        "",
+        "A job executes on that path when nothing can prevent it: no condition at all, or a condition",
+        "whose whole expression is `always()`. The aggregate verdict is in the set for that second",
+        "reason — `always()` is what makes it run when its needs are skipped, which is this path.",
+        "",
+        "The unit is runner-minutes rather than job instances. Instances charges +1 for a change that",
+        "shortens the run and adds no work, and the measure this replaced was a set equality over four",
+        "job names, which refused exactly such a change.",
+        "",
+        "This is NOT a cost bound, and the distinction is load-bearing. Enforcement is equality against",
+        "a value recomputed from the same tree, so a clause forbidding a higher cost could not fail:",
+        "once the pinner has run, no state of the tree violates it. What the pin refuses is a change",
+        "that did not re-pin — which is what makes a raise deliberate and puts the new figure in a diff.",
+        "Whether the figure is acceptable is a cost claim, and a cost claim arrives with measured",
+        "before-and-after numbers rather than on argument.",
+        "",
+        "`timeout-minutes` is the declared worst case, not a measurement, so the sum sits far above what",
+        "the path really costs. It still catches a runaway job and a forgotten raise, which is the class",
+        "a declared ceiling can catch.",
+        "",
+        "Re-pinned by `node scripts/pin-documentation-only-cost.mjs`, which imports the lane's own",
+        "computation rather than restating it. `dependencies` and `dependencyConditions` above carry the",
+        "membership half of the same rule, scoped to the jobs this context depends on — a narrower set,",
+        "because the verdict executes and is not one of its own dependencies."
       ]
     }
   ]
