@@ -65,6 +65,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A spawn-bound test that produces no output now says so, instead of reading as
+  the script printing the wrong thing** (#1934). One CI run failed with
+  `expected '' to contain 'authored removal-list answer'` and nothing else. The
+  assertion is about the text, the defect was about the child, and no rerun of
+  the assertion can tell those apart — so the failure had to be reproduced to
+  learn which it was, while a merge gate read the red. Every row that reads a
+  spawned child's output now passes one message: how the child ended, and, when
+  it wrote nothing on either stream, that fact named as a harness failure. A
+  child that did speak hands the reader its stderr, which `toContain` never
+  shows. The two rows that parse a child's stdout as JSON assert it is non-empty
+  first, because `JSON.parse("")` raises `Unexpected end of JSON input` and that
+  names neither the child nor the stream it did not write to.
+
 - **A killed test child now names the signal that killed it, and can no longer
   pass as a script that rejected its input** (#2028). Node calls a `close`
   listener with two arguments, `(code, signal)`. The three helpers that spawn a

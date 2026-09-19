@@ -6,7 +6,13 @@ import path from "node:path";
 // which under a concurrent suite is rarely the one asserting. Every test here
 // takes `expect` and `onTestFinished` from its own context instead.
 import { describe, it } from "vitest";
-import { EXIT_NONZERO, EXIT_ZERO, type Spawned, spawnCaptured } from "../helpers/spawnCaptured.js";
+import {
+  EXIT_NONZERO,
+  EXIT_ZERO,
+  type Spawned,
+  outputContext,
+  spawnCaptured,
+} from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -170,6 +176,9 @@ describe.concurrent("run-pr-merge plan", () => {
           { ...process.env, QFAI_TEST_HTML_POLICY: policyPath, QFAI_TEST_HTML_BODY: body },
         );
         expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
+        // Before the parse, because `JSON.parse("")` raises `Unexpected end of JSON input`
+        // and that names neither the child nor the stream it did not write to.
+        expect(result.stdout, outputContext(result)).not.toBe("");
         const measurement = JSON.parse(result.stdout) as { Attempts: number; KeepsAnswer: boolean };
         expect(measurement.KeepsAnswer).toBe(true);
         expect(measurement.Attempts).toBeGreaterThan(0);
@@ -430,7 +439,9 @@ describe.concurrent("run-pr-merge plan", () => {
         scenario: makeScenario({ prView: { ...baseline.prView, body } }),
       });
       expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-      expect(`${result.stdout}${result.stderr}`).toContain("authored removal-list answer");
+      expect(`${result.stdout}${result.stderr}`, outputContext(result)).toContain(
+        "authored removal-list answer",
+      );
       expect(result.ghState.prMergeCount ?? 0).toBe(0);
     },
   );
@@ -445,7 +456,9 @@ describe.concurrent("run-pr-merge plan", () => {
       scenario: makeScenario({ finalPrBody: "" }),
     });
     expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
-    expect(`${result.stdout}${result.stderr}`).toContain("authored removal-list answer");
+    expect(`${result.stdout}${result.stderr}`, outputContext(result)).toContain(
+      "authored removal-list answer",
+    );
     expect(result.ghState.prViewCount).toBe(2);
     expect(result.ghState.prMergeCount ?? 0).toBe(0);
   });

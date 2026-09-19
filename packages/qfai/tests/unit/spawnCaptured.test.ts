@@ -1,11 +1,17 @@
 /**
  * The spawn helper keeps the cause of a child's ending, and the assertions read it.
  *
- * The defect this covers produced `AssertionError: expected null to be +0` and nothing
- * else: a child was killed, the helper discarded the signal, and the run reported the
- * kill as an exit code that happened to be `null`. The rows below are the two claims
- * that stops — a kill is named, and a kill satisfies neither direction of the exit-code
- * assertion those tests actually make.
+ * Two failures on CI reported nothing a reader could act on, and each was an absence the
+ * helper designed in:
+ *
+ * - `expected null to be +0` — a child was killed, the helper discarded the signal, and the
+ *   run reported the kill as an exit code that happened to be `null`.
+ * - `expected '' to contain '<a phrase>'` — a child wrote nothing, and the message reads as
+ *   the script under test printing the wrong thing.
+ *
+ * Both are the same shape: an assertion about one thing failing over a defect in another. The
+ * rows below hold what each now says instead, including that a kill satisfies NEITHER
+ * direction of the exit-code assertion those suites actually make.
  */
 import { execPath } from "node:process";
 
@@ -16,6 +22,7 @@ import {
   EXIT_ZERO,
   type Spawned,
   outcomeOf,
+  outputContext,
   spawnCaptured,
 } from "../helpers/spawnCaptured.js";
 
@@ -44,6 +51,39 @@ describe("outcomeOf names what ended the child", () => {
     // Not reachable through Node's own `close`, which always supplies one of the two.
     // Named rather than defaulted, because a silent `exit null` would read as a code.
     expect(outcomeOf(null, null)).toBe("closed with neither an exit code nor a signal");
+  });
+});
+
+describe("outputContext tells silence apart from wrong output", () => {
+  it("names silence as silence, and attributes it to the child's ending", async () => {
+    // The failure this exists for reported `expected '' to contain '<a phrase>'` and nothing
+    // else, which reads as the script under test printing the wrong thing. It meant the script
+    // printed nothing at all, and no rerun of that assertion can tell the two apart: the
+    // assertion is about the text, and the defect is about the child.
+    const silent = await node("process.exit(1)");
+    expect(silent.stdout + silent.stderr, "the fixture must produce no bytes").toBe("");
+    expect(outputContext(silent)).toContain("exit 1");
+    expect(outputContext(silent)).toContain("wrote nothing on either stream");
+  });
+
+  it("hands the reader the stderr a child that spoke produced", async () => {
+    // The other half, and the part `toContain` never shows: the child's own account of why its
+    // output is not what the row expected.
+    const spoke = await node("process.stderr.write('the reason'); process.exit(2)");
+    expect(outputContext(spoke)).toContain("exit 2");
+    expect(outputContext(spoke)).toContain("the reason");
+    expect(outputContext(spoke), "a child that spoke is not reported as silent").not.toContain(
+      "wrote nothing",
+    );
+  });
+
+  it("reports a silent kill as both, because either alone is half the diagnosis", () => {
+    // A killed child that wrote nothing is the shape the original failure most likely had. The
+    // signal says the environment removed it; the silence says not to look for wrong output.
+    const killed = { code: null, signal: "SIGKILL", stdout: "", stderr: "", outcome: "" } as const;
+    const context = outputContext({ ...killed, outcome: outcomeOf(killed.code, killed.signal) });
+    expect(context).toContain("killed by SIGKILL");
+    expect(context).toContain("wrote nothing on either stream");
   });
 });
 
