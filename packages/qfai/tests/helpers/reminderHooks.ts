@@ -12,8 +12,9 @@
  * is a hook that never returns.
  */
 
-import { spawn } from "node:child_process";
 import path from "node:path";
+
+import { EXIT_ZERO, spawnCaptured } from "./spawnCaptured.js";
 
 /** The placeholder Claude Code substitutes into each exec-form argument. */
 export const PROJECT_DIR_PLACEHOLDER = "${CLAUDE_PROJECT_DIR}";
@@ -44,38 +45,22 @@ export function projectDirOf(repoRoot: string, settingsRel: string): string {
   return path.join(repoRoot, relative);
 }
 
-/** What the entry prints on stdout when run against `projectDir`. Rejects on a non-zero exit. */
+/**
+ * What the entry prints on stdout when run against `projectDir`.
+ *
+ * Rejects on anything but a clean exit, naming what ended the hook. A signal and a
+ * non-zero exit are different failures — one is the environment removing the hook, the
+ * other is the hook rejecting its input — and the rejection says which.
+ */
 export async function runReminderHook(
   entry: { readonly command?: string; readonly args?: readonly string[] },
   projectDir: string,
   input: string = DEFAULT_HOOK_INPUT,
 ): Promise<string> {
   const args = (entry.args ?? []).map((arg) => arg.split(PROJECT_DIR_PLACEHOLDER).join(projectDir));
-  return await new Promise<string>((resolve, reject) => {
-    const child = spawn(entry.command ?? "", args, { stdio: ["pipe", "pipe", "pipe"] });
-    const { stdin, stdout, stderr } = child;
-    if (stdin === null || stdout === null || stderr === null) {
-      reject(new Error("the hook was spawned without pipes"));
-      return;
-    }
-    let out = "";
-    let err = "";
-    stdout.setEncoding("utf-8");
-    stdout.on("data", (chunk: string) => {
-      out += chunk;
-    });
-    stderr.setEncoding("utf-8");
-    stderr.on("data", (chunk: string) => {
-      err += chunk;
-    });
-    child.on("error", reject);
-    // An entry that ignores its input exits with the pipe still open, so the
-    // write fails. That is the entry finishing, not the entry failing.
-    stdin.on("error", () => {});
-    stdin.end(input);
-    child.on("close", (code) => {
-      if (code === 0) resolve(out);
-      else reject(new Error(`${entry.command ?? "the hook"} exited ${String(code)}: ${err}`));
-    });
-  });
+  const result = await spawnCaptured(entry.command ?? "", args, { input });
+  if (result.outcome !== EXIT_ZERO) {
+    throw new Error(`${entry.command ?? "the hook"} ${result.outcome}: ${result.stderr}`);
+  }
+  return result.stdout;
 }
