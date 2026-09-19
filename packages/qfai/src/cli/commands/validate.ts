@@ -174,10 +174,10 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // for one. Replacing the run made every stage gate that names a narrow
   // profile unreachable in CI.
   const ciProfileIssue = buildCiProfileIssue(options.profile);
-  // Wrapped, because an unhandled rejection here left the operator with one
-  // stderr line and no verdict — no `counts:`, no `run-log:`, no
+  // Wrapped, because an unhandled rejection here would leave the operator with
+  // one stderr line and no verdict — no `counts:`, no `run-log:`, no
   // `validate.json` — and every shipped skill pipes validate through `| tail`,
-  // so that line was all an agent saw. Enumerating the `stat` sites
+  // so that line would be all an agent sees. Enumerating the `stat` sites
   // that can raise reduces the ways in; this is what answers when the next one
   // appears.
   //
@@ -237,7 +237,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   warnIfTruncated(normalized.traceability.testFiles, "validate");
   // The echo above is for a human reading stdout. The finding is what the exit
   // gate, the annotation stream and the run-log can actually see, so a
-  // truncated scan can no longer pass `--fail-on warning` as a clean run.
+  // truncated scan cannot pass `--fail-on warning` as a clean run.
   const truncatedScanIssue = buildTruncatedScanIssue(normalized.traceability.testFiles, "validate");
   if (truncatedScanIssue) {
     normalized.issues.push(truncatedScanIssue);
@@ -251,11 +251,10 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // for explicitly, and there the finding is still in the output and in
   // `validate.json`.
   //
-  // An earlier revision added `runIncomplete || …` here as a second guard. It
-  // was unreachable: removing it changed no row, because the severity is what
-  // decides. The invariant it was protecting — that this finding stays an
-  // `error` — is pinned in `validateRunIncomplete.test.ts` instead, which is
-  // where it can actually fail.
+  // A second guard such as `runIncomplete || …` here would be unreachable,
+  // because the severity is what decides. The invariant it would protect — that
+  // this finding stays an `error` — is pinned in `validateRunIncomplete.test.ts`,
+  // which is where it can fail.
   if (strictSupersededBy(options)) {
     emitStrictSupersededNotice(failOn);
   }
@@ -274,9 +273,9 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
 
   // A `--spec` run is one worker's view of one slice, so it writes its own
   // report rather than the shared one. Resolve it BEFORE the GitHub summary:
-  // pointing that summary at the shared `validate.json` named a file this run
-  // never wrote — either missing, or a stale repo-wide report from another run
-  // — so the findings dropped by the annotation cap were unreachable.
+  // pointed at the shared `validate.json`, that summary would name a file this
+  // run never wrote — either missing, or a stale repo-wide report from another
+  // run — and the findings dropped by the annotation cap would be unreachable.
   const scopedReportRel =
     scopedSpecIds.length > 0 ? scopedReportPath(configuredValidateJsonPath, scopedSpecIds) : null;
 
@@ -530,34 +529,24 @@ export const GATE_GROUP_FAMILIES = {
   // inside `discussion`: a prototyping run would list as unevaluated a family it
   // had just emitted.
   "research-summary": ["QFAI-RESEARCH-*"],
-  // Enumerated. This entry WAS `["UIX-VAL-*"]`, and that glob is a PREFIX of
-  // every `UIX-VAL-SKILL-*` code, which `prototyping-skill` owns — so all
-  // twelve belonged to two groups at once until this list replaced it.
+  // Enumerated, because `UIX-VAL-*` is a prefix of every `UIX-VAL-SKILL-*` code,
+  // which `prototyping-skill` owns, and a glob here would put each of those
+  // codes in two groups at once.
   //
-  // **No profile misreports them today**, and that was worth establishing
-  // before changing anything. `unevaluatedGates` walks the groups a profile
-  // does NOT run and reports their family PATTERNS, so a code in two groups is
-  // still reported exactly once, by whichever group is missing. An output error
-  // needs a profile that runs the narrow group WITHOUT the wildcard one, and
-  // `prototyping-skill` is reachable only from `runFullValidators`, which runs
-  // `canonical-uix` too.
+  // A code in two groups misreports nothing on its own. `unevaluatedGates` walks
+  // the groups a profile does NOT run and reports their family patterns, so the
+  // code is still reported once, by whichever group is missing. A misreport
+  // needs a profile that runs the narrow group without the wildcard one. None
+  // does — `prototyping-skill` is reachable only from `runFullValidators`, which
+  // runs `canonical-uix` too — but one change to the profile map would make one.
+  // `contracts` and `traceability-layered` are enumerated for the same reason.
+  // One group per code is the invariant, and `gateGroupCoverage.test.ts` states
+  // it, so a change that breaks it fails a lane instead of the notice.
   //
-  // So this is a trap rather than a live bug — and the table's own comments are
-  // a record of that trap firing. `contracts` is enumerated because
-  // `QFAI-CONTRACT-*` "would swallow the sdd-only reference codes, letting a
-  // `tdd` run claim a hard gate it never reached"; `traceability-layered`
-  // because `QFAI-TRACE-*` "would count every trace code in two groups at
-  // once". Each was a divergence in the profile map away from the misreport
-  // this is shaped like, and each was repaired the same way. One group per
-  // code is the invariant all three preserve, and `gateGroupCoverage.test.ts`
-  // now states it, so the next divergence fails a lane instead of the notice.
-  //
-  // The family grammar has no negation, so the disjoint set is spelled out.
-  // Safe to maintain by hand only because the coverage case in that same file
-  // fails on a `UIX-VAL-` code no pattern here covers — the drift this list
-  // could otherwise accumulate is what that guard is for. No count is given
-  // here on purpose: the guard is what keeps the list complete, and a number
-  // in a comment would go stale without anything noticing.
+  // The family grammar has no negation, so the disjoint set is spelled out. It is
+  // safe to maintain by hand because the coverage case in that same file fails on
+  // a `UIX-VAL-` code no pattern here covers. No count is given: the guard keeps
+  // the list complete, and a number in a comment would go stale unnoticed.
   "canonical-uix": [
     "UIX-VAL-3LAYER-*",
     "UIX-VAL-CLASSIFICATION-*",
@@ -589,8 +578,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-DECISION-*",
     // Spec-pack structural gates: table arity, density hints, capability
     // split, status leakage, triage approval, status enums, AC / EX / TC
-    // verification and the Traceability Ledger. Absent from the table
-    // entirely before, so NO profile ever reported them as unevaluated.
+    // verification and the Traceability Ledger.
     "QFAI-TABLE-*",
     "QFAI-DENSITY-*",
     "QFAI-SPLIT-*",
@@ -602,8 +590,8 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-TC-*",
     "QFAI-LEDGER-*",
     // The autopilot-policy validator's newer codes take the canonical grammar
-    // (`docs/finding-codes.md`), so they no longer fall under the `R-*` glob
-    // its two legacy siblings still use. Both spellings must be listed or the
+    // (`docs/finding-codes.md`), so they do not fall under the `R-*` glob its
+    // two legacy siblings use. Both spellings must be listed or the
     // partial-profile notice under-states what skipping `sdd` left unchecked.
     "QFAI-AUTOPILOT-*",
     "E_*",
@@ -620,16 +608,15 @@ export const GATE_GROUP_FAMILIES = {
     // `validateLayeredTraceability`, dispatched from `runSddValidators` and
     // nowhere else. Its other codes are filed under `traceability-layered`,
     // which is a different module (`validators/traceability.ts`) despite the
-    // shared subject — so the underscore pair had no group and no profile
-    // reported them. `runLog.ts` counts them into `downstream_violations`,
-    // which is what made them look like run-log bookkeeping rather than a
-    // gate.
+    // shared subject, so the underscore pair is listed here. `runLog.ts` counts
+    // them into `downstream_violations`, which makes them look like run-log
+    // bookkeeping rather than a gate.
     "TRACE_DOWNSTREAM_REF",
     "TRACE_SHARED_SCOPE_VIOLATION",
   ],
-  // Reviewer-gate detectors wired into `runSddValidators`. The `R-*` wildcard
-  // this replaces made `--profile sdd` claim coverage of `detectMockHrefDrift`
-  // and `validateDesignMdPatchZone`, which run only in prototyping.
+  // Reviewer-gate detectors wired into `runSddValidators`. An `R-*` wildcard
+  // would make `--profile sdd` claim coverage of `detectMockHrefDrift` and
+  // `validateDesignMdPatchZone`, which run only in prototyping.
   "reviewer-gate-sdd": [
     "R-CERTIFY-VERIFY-CIRCULAR",
     "R-PROMPT-SCANNER-DRIFT",
@@ -642,8 +629,8 @@ export const GATE_GROUP_FAMILIES = {
   // `validateReviewerJustification` re-emits from `runSddValidators`: an empty
   // `justification:` on a `.qfai/review/**/*.json` finding is reported under
   // the original code (`validators/reviewerJustification.ts`). Both stages can
-  // therefore emit them, so both list this group — filing it as
-  // prototyping-only made an sdd run name a code it had just emitted.
+  // therefore emit them, so both list this group. Filed as prototyping-only, it
+  // would make an sdd run name a code it had just emitted.
   "reviewer-gate-shared": [
     "R-MOCK-HREF-DRIFT",
     "R-DESIGN-MD-PATCH-OUT-OF-ZONE",
@@ -661,7 +648,7 @@ export const GATE_GROUP_FAMILIES = {
   // this group's too. Listed by code, not as `QFAI-CONTRACT-*`: the wildcard
   // would swallow the sdd-only reference codes below, letting a `tdd` run claim
   // a hard gate it never reached. Enumerated from the emitters rather than from
-  // the range, which is how `-015` went missing on the first pass.
+  // the range: a code a range leaves out is still a code a gate emits.
   contracts: [
     "QFAI-CONTRACT-000",
     "QFAI-CONTRACT-010",
@@ -680,10 +667,9 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-037",
     "QFAI-CONTRACT-038",
     "QFAI-CONTRACT-040",
-    // `-041` shipped after this list did, and the explicit enumeration that
-    // keeps the wildcard from over-claiming is also what stops a new code
-    // joining on its own. It comes from the same `validateContractConsistency`
-    // as `-040`, so it has the same two profiles.
+    // The explicit enumeration that keeps the wildcard from over-claiming also
+    // means a new code joins only when it is listed. `-041` comes from the same
+    // `validateContractConsistency` as `-040`, so it has the same two profiles.
     "QFAI-CONTRACT-041",
     "QFAI-DB-*",
   ],
@@ -709,8 +695,7 @@ export const GATE_GROUP_FAMILIES = {
   // `validateContractSsotModules` — `runSddValidators`, and `runTddValidators`
   // behind its `includeContracts` flag: the implementation stage is the one
   // that moves and renames the modules a contract asserts, so its own gate has
-  // to see a `- SSOT modules:` entry it just made dead. Absent from the table
-  // entirely before, so no profile could report it as unevaluated.
+  // to see a `- SSOT modules:` entry it just made dead.
   "contract-ssot-modules": ["QFAI-CONTRACT-050"],
   // Root DESIGN.md sample / identity / lock gates, run by both
   // design-contract-readiness emitters before they branch on stage.
@@ -718,7 +703,7 @@ export const GATE_GROUP_FAMILIES = {
   // `validateRootDesignMdParse` — the parse half of the readiness gate, split
   // out so the stage that AUTHORS the file can see whether it parses. A third
   // composition emits `QFAI-DCON-033` because of it: `runDiscussionValidators`
-  // calls it directly, so filing the code with the readiness gates told a
+  // calls it directly, so filed with the readiness gates, the code would tell a
   // discussion run it had not evaluated a family it had just emitted.
   "root-design-md-parse": ["QFAI-DCON-033"],
   // `validateSddDesignContractReadiness` only — the premature-prototyping-
@@ -783,19 +768,18 @@ export const GATE_GROUP_FAMILIES = {
   // drift protocol names, i.e. the downstream stage the rule binds, and it is
   // where the guard runs.
   //
-  // Absent from this map entirely, the family could not even be REPORTED as
-  // unevaluated, so a `full` PASS looked drift-checked to an operator following
-  // `QFAI-PROFILE-001`'s own advice. Stage-only: see
-  // `STAGE_ONLY_GATE_GROUPS`.
+  // Absent from this map, the family could not be reported as unevaluated, and
+  // a `full` PASS would look drift-checked to an operator following
+  // `QFAI-PROFILE-001`'s own advice. Stage-only: see `STAGE_ONLY_GATE_GROUPS`.
   drift: ["QFAI-DRIFT-*"],
   // The remaining ledger codes report execution state that only exists after
   // `/qfai-implement` has driven rows, so only its profile evaluates them.
   //
   // Both spellings are enumerated, not globbed: `tdd-ledger-seed` holds part
-  // of each prefix, and a glob here claimed that part too — so an `sdd` run,
-  // which DOES evaluate the seed half, was told those codes went unevaluated
-  // while it was emitting exactly them. Derived by subtraction so the two
-  // halves cannot overlap or leave a gap.
+  // of each prefix, and a glob here would claim that part too, telling an `sdd`
+  // run, which DOES evaluate the seed half, that those codes went unevaluated
+  // while it emits exactly them. Derived by subtraction so the two halves cannot
+  // overlap or leave a gap.
   //
   // `QFAI-TRACE-*` is deliberately NOT here for the same reason: the four
   // `traceability-*` groups below split that prefix, and leaving the glob would
@@ -850,9 +834,9 @@ export const GATE_GROUP_FAMILIES = {
   // The two `validateTraceability` gates behind its `includeCodeReferences`
   // option: `QFAI-TRACE-124` (test globs unset) and `QFAI-TRACE-117` (SC with
   // no code reference). `runSddValidators` defaults the option to `false`, so
-  // `--profile sdd` calls the same validator and still evaluates neither —
-  // filing them with the shared codes hid a gate that a `tdd` or `full` run
-  // fails on. `runTddValidators` and `runFullValidators` both pass `true`.
+  // `--profile sdd` calls the same validator and still evaluates neither.
+  // Filed with the shared codes, they would hide a gate that a `tdd` or `full`
+  // run fails on. `runTddValidators` and `runFullValidators` both pass `true`.
   "traceability-code-references": ["QFAI-TRACE-117", "QFAI-TRACE-124"],
   // `runSaasPackageProfile` — reached only from the `saas-package` profile
   // (`core/validate.ts#runSaasPackage`), which `runFullValidators` does not
@@ -878,11 +862,11 @@ const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
  * upstream guard — because a repo-wide audit also covers the stage that
  * legitimately owns the files each gate polices, so firing them there would
  * flag every lawful edit. The third is not disabled but unreachable: `full`
- * never composes `runSaasPackageProfile` at all. Listing any of them under
- * `full` made the notice tell a partial profile to run a scan that never
- * evaluates them, while `full` itself, showing no notice, read as complete
- * coverage. Both halves are fixed by excluding them from `full` and
- * naming their owning profile in the notice.
+ * never composes `runSaasPackageProfile` at all. Listed under `full`, any of
+ * them would make the notice tell a partial profile to run a scan that never
+ * evaluates them, while `full` itself, showing no notice, would read as
+ * complete coverage. So they are left out of `full`, and the notice names the
+ * profile that owns each.
  */
 const STAGE_ONLY_GATE_GROUPS: Partial<Record<GateGroup, ValidationProfile>> = {
   "design-contract-readiness-sdd": "sdd",
@@ -905,7 +889,7 @@ function stageOwnerOf(group: GateGroup): ValidationProfile | undefined {
  *
  * Derived by exclusion rather than enumerated, so a group added to
  * `GATE_GROUP_FAMILIES` still reaches `full` without a second edit — which is
- * the property `ALL_GATE_GROUPS` was there for. The exclusions are named in
+ * the property `ALL_GATE_GROUPS` exists for. The exclusions are named in
  * `STAGE_ONLY_GATE_GROUPS`, and what each one mirrors is recorded there.
  */
 const FULL_GATE_GROUPS: readonly GateGroup[] = ALL_GATE_GROUPS.filter(
@@ -1039,8 +1023,8 @@ type UnevaluatedGates = {
    * the same detectors and its inputs are just as absent, so sending the reader
    * there is advice that cannot be followed. It is also why they must survive
    * the `fullCovered.length === 0` case: `full` and `verify` reach it, and
-   * dropping them there let the notice say a full run had evaluated every gate
-   * it covers while two of its detectors had structurally not run.
+   * dropped there, the notice would say a full run had evaluated every gate it
+   * covers while two of its detectors had structurally not run.
    */
   readonly preconditionGated: readonly string[];
 };
@@ -1345,20 +1329,18 @@ function emitTextRunLog(runLogPath: string): void {
 /**
  * The version and the directory it came from — first line of every run.
  *
- * A validate run printed findings, `counts:` and `run-log:` and nothing about
- * its own provenance, while `toolVersion` lived only inside `validate.json` —
- * which the README calls internal and not a stable external contract. So an
- * `npx qfai` that resolved three directories up, against another branch's
- * lockfile, was indistinguishable in the transcript from one that resolved
- * locally.
+ * Otherwise `toolVersion` is only inside `validate.json`, which the README calls
+ * internal and not a stable external contract, and an `npx qfai` that resolved
+ * three directories up, against another branch's lockfile, is indistinguishable
+ * in the transcript from one that resolved locally.
  *
- * **Before the work, and in every format.** Printed beside `run-log:` it was
- * absent from `--format github`, which is the format the shipped SDD loop
+ * **Before the work, and in every format.** Printed beside `run-log:` it would
+ * be absent from `--format github`, which is the format the shipped SDD loop
  * prescribes (`skills/qfai-sdd/SKILL.md`, `templates/evidence/sdd-spec.md`), so
- * the answer was missing from the path the product actually runs. And printed
- * after `validateProject` returned, it was missing from the run that needs it
- * most: an old externally-resolved qfai throwing on a newer project structure
- * left a stack trace and nothing about which binary produced it.
+ * the answer would be missing from the path the product actually runs. Printed
+ * after `validateProject` returns, it would be missing from the run that needs
+ * it most: an old externally-resolved qfai throwing on a newer project
+ * structure leaves a stack trace and nothing about which binary produced it.
  *
  * stdout is safe in both formats — neither puts machine-readable JSON there.
  */
@@ -1437,11 +1419,11 @@ export function capPerLevel(issues: Issue[]): { emitted: Issue[]; levels: LevelT
 }
 
 /**
- * Whether an issue prints its `expected` / `fix` detail. This was hard-wired to
- * `severity === "error"`, which left the rule-description catalogue unreachable
- * for every warning-severity code: under `--strict` / `--fail-on warning` the
- * warning is exactly what fails the run, yet neither formatter printed its
- * expected state or remedy.
+ * Whether an issue prints its `expected` / `fix` detail: every error, and a
+ * warning when warnings fail the run. Tied to `severity === "error"` alone, the
+ * rule-description catalogue would be unreachable for every warning-severity
+ * code, although under `--strict` / `--fail-on warning` the warning is exactly
+ * what fails the run.
  */
 function shouldEmitIssueDetail(issue: Issue, failOn: FailOn): boolean {
   if (issue.severity === "error") {
@@ -1590,16 +1572,16 @@ function resolveJsonPath(root: string, jsonPath: string): string {
 /**
  * GitHub's own cap on annotations, which is per LEVEL and per STEP.
  *
- * This was 100, applied to the whole run, and the summary printed
- * `annotations=${min(total, 100)}/${total}` — so a run with 40 errors said `annotations=40/40`,
- * which reads as "every finding was emitted", while the runner displayed ten and dropped thirty
- * without saying so. The summary is the only thing an operator sees, and it said the opposite of
- * what happened. Measured on the `test (cli)` lane, all three levels sat at exactly ten, so the
- * truncation was the steady state rather than an edge case.
+ * One cap of 100 over the whole run, with a summary printing
+ * `annotations=${min(total, 100)}/${total}`, would report a run with 40 errors as
+ * `annotations=40/40` — "every finding was emitted" — while the runner displays ten and drops
+ * thirty without saying so. The summary is the only thing an operator sees. Measured on the
+ * `test (cli)` lane, all three levels sat at exactly ten, so the truncation is the steady state
+ * rather than an edge case.
  *
- * Emitting past the cap was the alternative and buys nothing: the runner drops the extras, and a
- * local `--format github` run just prints more lines that no reader gets. What is owed is not a
- * smaller number but an honest report, which is why the per-level tally exists beside this.
+ * Emitting past the cap buys nothing: the runner drops the extras, and a local `--format github`
+ * run just prints more lines that no reader gets. What is owed is not a smaller number but an
+ * honest report, which is why the per-level tally exists beside this.
  *
  * The cap is per STEP, and a step may run `validate` more than once — so this bounds what THIS
  * invocation emits, not what the step ultimately displays. The note says the rule rather than
@@ -1873,8 +1855,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // reports is a contract and a screen that disagree.
   "QFAI-CONTRACT-037":
     "Every `data-qfai` marker a UI contract writes literally is mentioned by at least one file under the configured source directory, so an element the contract declares is one something on the screen renders.",
-  // Nothing has ever rejected a value here, so a project carrying a typo has
-  // been passing and was never told.
+  // Without this entry nothing rejects a value here, so a project carrying a
+  // typo passes and is never told.
   "QFAI-CONTRACT-038":
     "Every `prototype.mode` a UI contract declares is one this tooling knows, so the contract's own words say what kind of prototype the review is walking. A contract that declares no mode is asked nothing.",
   "QFAI-CONTRACT-040":
