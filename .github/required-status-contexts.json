@@ -50,6 +50,7 @@
       "dependencies": [
         "detect",
         "lint",
+        "mirror-surface",
         "check-types",
         "check-types-future",
         "node-floor",
@@ -91,8 +92,12 @@
         "expression, skips the lane, the verdict accepts the skip, and nothing else in the tree",
         "notices.",
         "",
-        "`detect`, `lint` and `build` are deliberately absent, which is the assertion that they run",
-        "on every pull request. The verdict's own `if: always()` is checked by property 2 and is not",
+        "`detect`, `lint`, `mirror-surface` and `build` are deliberately absent, which is the assertion",
+        "that they run on every pull request. `mirror-surface` cannot be skipped because the surface it",
+        "checks — the rule mirror, the skill links, the reviewer vocabulary — is what a change to those",
+        "documents breaks, and such a change is exactly the one a detection-derived condition would",
+        "route past it. `BR-0017-0011` binds that on review: a lane moved into a job of its own gains",
+        "neither a condition nor an entry above.",
         "a dependency condition."
       ],
       "dependencyMatrices": {
@@ -256,7 +261,7 @@
         "scripts/pin-guard-bytes.mjs": "4c914d40d0dc75cf623fe0cab2110a0106a5f519d4a258fa05891b612f929c97",
         "scripts/pin-stage-evidence-counts.mjs": "9cf2034c8ce05387e50b7b22c0cd33f2e5ff4544f3e5913e469786044a201099",
         "scripts/pin-verification-bodies.mjs": "ada370be9bd4d331a705d5a02e01ba4d4f378c862ddc62680af9ad831eb881cf",
-        "scripts/run-lint-checks.sh": "9d58c7ef0a179450657a0839b8ea3a760d28bef6d0b9d1c0b9cde2cc6fb0f8fb",
+        "scripts/run-lint-checks.sh": "8f9e06c267d2bfa5771c54e723555189e55877aa38cb482783ce1d9d5d3642d2",
         "scripts/sync-init-to-root.mjs": "f053272f5a47c1e08fd53112255b52366b4da3bd62718c1ca57d30f7787d3af3",
         "scripts/verify-pack.mjs": "98fe8d88a5b7a130737a0870393d5c69b6a5fe7136903cfc79fd6c9092e62b40"
       },
@@ -407,7 +412,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ff046bcf7d3956e0",
-        "Verify the toolchain action before running it": "11a8d72071921f0b",
+        "Verify the toolchain action before running it": "7036ff1598153f12",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "211656e97a2f3714",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "f98ff7751afa6bbb",
@@ -415,7 +420,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "9efc82ef75f7a622",
         "QFAI self-validate this repo (dogfooding — full profile)": "3537948e49d1d967",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "3e6a5536c351ce2b",
+        "Run lint gate": "4202c861af483756",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",
@@ -446,8 +451,8 @@
         "reviewer reads."
       ],
       "documentationOnlyCostPin": {
-        "jobs": ["build", "ci-pass", "detect", "lint"],
-        "timeoutMinutesSum": 35
+        "jobs": ["build", "ci-pass", "detect", "lint", "mirror-surface"],
+        "timeoutMinutesSum": 45
       },
       "documentationOnlyCostPinNote": [
         "What a documentation-only pull request costs, pinned as the jobs it executes and the sum of",

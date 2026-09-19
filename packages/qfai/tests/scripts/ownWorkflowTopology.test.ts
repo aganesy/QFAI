@@ -1204,6 +1204,112 @@ describe("TC-0017-0007 (TDD-0007): unneeded legs stay declared and are skipped, 
   });
 });
 
+/**
+ * The lanes `BR-0017-0011` exempts from selection, by the command that runs each.
+ *
+ * A literal list, and that is the row's whole point: the rule's subject is the LANE, not the
+ * job hosting it, so a lane keeps its exemption when it moves. Derived from the aggregate
+ * script this list would lose exactly the lane that left the aggregate — which is the case
+ * the rule's own Notes name as satisfying `BR-0017-0007` while the guard stops running.
+ *
+ * Five, one per guard the rule enumerates: the formatter, the linter, the document and
+ * shipped-surface structure checks, the repository scans, and the agent-integration mirror.
+ */
+const EXEMPT_LANES = [
+  "pnpm format:check",
+  "pnpm lint",
+  "pnpm ci:lint:structure",
+  "pnpm ci:lint:scans",
+  "pnpm -C packages/qfai lint:mirror-surface",
+] as const;
+
+/** The lane aggregate a job enters by running it, and the lanes it then hosts. */
+const LANE_AGGREGATE = "pnpm ci:lint";
+
+/** Whether a command appears in a script or step body as a command, not as a prefix. */
+function runsCommand(body: string, command: string): boolean {
+  const escaped = command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[\\s;&|])${escaped}($|[\\s;&|])`, "m").test(body);
+}
+
+describe("TC-0017-0012 (TDD-0012): no lint-aggregate lane's host job is conditioned or listed", () => {
+  it("resolves each exempt lane to one host that carries no condition and is listed nowhere", () => {
+    const jobs = ciJobs();
+    const aggregate = readFileSync(path.join(REPO_ROOT, "scripts", "run-lint-checks.sh"), "utf-8");
+    // Only the pull-request profile. The release profile runs an overlapping but unequal set,
+    // and a lane present there and absent here is not exempt from a selection that profile
+    // never faces.
+    const lintProfile = aggregate.split("  lint)")[1]?.split("  gate)")[0] ?? "";
+
+    // A job hosts a lane either by naming it in a step, or by running the aggregate whose
+    // script names it. Both routes, because the extraction moved one lane from the second to
+    // the first and a check that read only one of them would have gone quiet at that moment.
+    const hostsOf = new Map<string, string[]>(EXEMPT_LANES.map((lane) => [lane, []]));
+    for (const [jobKey, job] of Object.entries(jobs)) {
+      const bodies = (Array.isArray(job["steps"]) ? job["steps"] : [])
+        .filter(isRecord)
+        .map((step) => String(step["run"] ?? ""));
+      for (const lane of EXEMPT_LANES) {
+        const direct = bodies.some((body) => runsCommand(body, lane));
+        const throughAggregate =
+          bodies.some((body) => runsCommand(body, LANE_AGGREGATE)) &&
+          runsCommand(lintProfile, lane);
+        if (direct || throughAggregate) hostsOf.get(lane)?.push(jobKey);
+      }
+    }
+
+    // CLAIM 1 — every lane has exactly one host. A lane with none runs nowhere, and claims 2
+    // and 3 would then pass over an empty set; a lane with two is the same work billed twice.
+    expect
+      .soft(
+        [...hostsOf].map(([lane, hosts]) => `${lane}: ${hosts.join(" and ") || "no host"}`).sort(),
+        "each exempt lane must resolve to exactly one host job",
+      )
+      .toEqual([
+        "pnpm -C packages/qfai lint:mirror-surface: mirror-surface",
+        "pnpm ci:lint:scans: lint",
+        "pnpm ci:lint:structure: lint",
+        "pnpm format:check: lint",
+        "pnpm lint: lint",
+      ]);
+
+    // CLAIM 2 — no host carries a condition. `BR-0017-0011`'s second sentence: a lane moved
+    // into a job of its own MUST NOT acquire one.
+    const conditioned = [...hostsOf.values()]
+      .flat()
+      .filter((jobKey) => jobs[jobKey]?.["if"] !== undefined)
+      .sort();
+    expect
+      .soft(conditioned, "a lane that runs on every pull request may not sit behind a condition")
+      .toEqual([]);
+
+    // CLAIM 3 — and no host appears in `dependencyConditions`. The pair is what the rule
+    // forbids: a condition alone is CLAIM 2's, an entry alone declares a skip the job cannot
+    // take, and together they satisfy `BR-0017-0007` while the guard stops running.
+    const declaration: unknown = JSON.parse(
+      readFileSync(path.join(REPO_ROOT, ".github", "required-status-contexts.json"), "utf-8"),
+    );
+    const listed = new Set<string>();
+    const contexts =
+      isRecord(declaration) && Array.isArray(declaration["contexts"])
+        ? declaration["contexts"].filter(isRecord)
+        : [];
+    for (const context of contexts) {
+      const conditions = context["dependencyConditions"];
+      if (isRecord(conditions)) for (const key of Object.keys(conditions)) listed.add(key);
+    }
+    expect
+      .soft(
+        [...hostsOf.values()]
+          .flat()
+          .filter((jobKey) => listed.has(jobKey))
+          .sort(),
+        "no exempt lane's host may be declared skippable",
+      )
+      .toEqual([]);
+  });
+});
+
 describe("TC-0017-0008 (TDD-0008): a resolvable base ref narrows the lane set with no annotation", () => {
   it("selects the narrow set for a documentation-only list and annotates nothing", () => {
     const result = runClassifier({ paths: ["REVIEW.md", "packages/qfai/docs/anything.md"] });
@@ -1561,6 +1667,12 @@ const CI_CHECK_NAMES = [
   "ci-pass",
   "detect",
   "lint",
+  // The mirror-surface lane, moved out of `pnpm ci:lint` into a runner of its own. It arrived
+  // here the way `node-floor` did: as a failing equality naming the new member, so the
+  // addition is a decision somebody wrote down rather than a diff nobody read. The paragraph
+  // above applies unchanged — only `ci-pass` is required, and the verdict's `needs` map is
+  // what gates this lane, so no repository setting changed.
+  "mirror-surface",
   "node-floor (cli)",
   "node-floor (core)",
   "node-floor (e2e)",
