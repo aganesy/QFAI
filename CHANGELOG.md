@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.12.1] - 2026-09-19
+
 ### Added
 
 - **The tag push is held to the decision before it, and four workflows say what
