@@ -364,3 +364,51 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
     expect(r.stderr).toMatch(/not on disk yet .*: dist missing-asset-dir/);
   });
 });
+
+/**
+ * Put an `npm` on PATH that answers `pack` with `report`, so each shape npm
+ * has printed is read without that npm being installed.
+ */
+async function fakeNpmPrinting(report: unknown): Promise<NodeJS.ProcessEnv> {
+  const bin = await newTempDir();
+  const reportFile = path.join(bin, "pack-report.json");
+  await writeFile(reportFile, JSON.stringify(report), "utf-8");
+  await writeFile(path.join(bin, "npm"), `#!/usr/bin/env bash\ncat '${reportFile}'\n`, {
+    encoding: "utf-8",
+    mode: 0o755,
+  });
+  return { PATH: `${bin}${path.delimiter}${process.env.PATH ?? ""}` };
+}
+
+/** One pack whose only file is `assets/notes.md`, as npm reports it. */
+const NOTES_PACK = {
+  id: "fake@0.0.0",
+  name: "fake",
+  version: "0.0.0",
+  files: [{ path: "assets/notes.md", size: 17, mode: 420 }],
+};
+
+describe("check-no-internal-version-leakage.sh reads every shape npm pack --json prints", () => {
+  // npm 12 prints an object keyed by package name where npm 11 printed an
+  // array. The publish job pins a newer npm than the CI runners carry, so a
+  // guard that read only the array passed CI and failed at release.
+  it.each([
+    ["an array of packs (npm 11 and earlier)", [NOTES_PACK]],
+    ["an object keyed by package name (npm 12 and later)", { fake: NOTES_PACK }],
+  ])("scans what %s lists (exit 1)", async (_shape, report) => {
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["notes.md", "Carries CHG-003.\n"]]);
+    const r = runGuard(tmp, await fakeNpmPrinting(report));
+    expect(r.status, r.stderr).toBe(1);
+    expect(r.stderr).toMatch(/leaked in .*assets/);
+  });
+
+  it("refuses an object naming two packs rather than choosing one (exit 1)", async () => {
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["notes.md", "clean body\n"]]);
+    const report = { fake: NOTES_PACK, other: { ...NOTES_PACK, name: "other" } };
+    const r = runGuard(tmp, await fakeNpmPrinting(report));
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/could not enumerate the files npm would pack/);
+  });
+});

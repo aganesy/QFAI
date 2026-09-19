@@ -305,6 +305,7 @@
     "tests/scripts/vitestWorkspaceKnobs.test.ts",
     "tests/scripts/workflowHygiene.test.ts",
     "tests/scripts/workflowHygieneRequiredContext.test.ts",
+    "tests/scripts/workflowShellSyntax.test.ts",
     "tests/unit/buildCommand.test.ts",
     "tests/core/tddListBrRefKey.test.ts",
     "tests/unit/changelogLanguage.test.ts",

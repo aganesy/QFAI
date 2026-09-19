@@ -83,6 +83,7 @@ type FakeScenario = {
 type RunResult = {
   code: number | null;
   ghState: Record<string, unknown>;
+  gitCalls: string[];
   repoDir: string;
   stderr: string;
   stdout: string;
@@ -460,6 +461,29 @@ describe.concurrent("run-pr-merge plan", () => {
     expect(result.ghState.prMergeCount).toBe(1);
   });
 
+  it("merges without creating or pushing a tag", async ({ expect, onTestFinished }) => {
+    const result = await runPrMerge({ live: true, onTestFinished, scenario: makeScenario({}) });
+    expect(result.code).toBe(0);
+    expect(result.ghState.prMergeCount).toBe(1);
+    expect(result.gitCalls.filter((call) => /^(tag|push|ls-remote)\b/.test(call))).toEqual([]);
+
+    const merged = await readJson(
+      path.join(result.repoDir, "tmp", "pr-merge", "pr-166-merge-result.json"),
+    );
+    expect(Object.keys(merged)).not.toContain("Tag");
+  });
+
+  it("refuses a -Tag argument before anything is merged", async ({ expect, onTestFinished }) => {
+    const result = await runPrMerge({
+      extraArgs: ["-Tag", "v1.5.3"],
+      live: true,
+      onTestFinished,
+      scenario: makeScenario({}),
+    });
+    expect(result.code).not.toBe(0);
+    expect(result.ghState.prMergeCount ?? 0).toBe(0);
+  });
+
   it.for([
     ...[
       "## Adoption bar",
@@ -777,6 +801,7 @@ function successCheck(): FakeCheck {
 }
 
 async function runPrMerge(options: {
+  extraArgs?: string[];
   live?: boolean;
   onTestFinished: RegisterCleanup;
   scenario: FakeScenario;
@@ -786,12 +811,14 @@ async function runPrMerge(options: {
   const binDir = path.join(root, "bin");
   const scenarioPath = path.join(root, "scenario.json");
   const statePath = path.join(root, "state.json");
+  const gitLogPath = path.join(root, "git-calls.log");
 
   await mkdir(repoDir, { recursive: true });
   await mkdir(binDir, { recursive: true });
   await createMinimalRepo(repoDir, options.scenario.packageScripts);
   await writeFile(scenarioPath, JSON.stringify(options.scenario), "utf-8");
   await writeFile(statePath, JSON.stringify({ graphqlCallCount: 0 }), "utf-8");
+  await writeFile(gitLogPath, "", "utf-8");
   await writeCommand(binDir, "git", gitStubScript());
   await writeCommand(binDir, "gh", ghStubScript());
 
@@ -803,37 +830,32 @@ async function runPrMerge(options: {
       prMergeScriptPath,
       "-PrNumber",
       "166",
-      options.live ? "-NoTag" : "-DryRun",
+      ...(options.live ? [] : ["-DryRun"]),
+      ...(options.extraArgs ?? []),
     ],
     {
       ...process.env,
       PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}`,
+      QFAI_FAKE_GIT_LOG_PATH: gitLogPath,
       QFAI_FAKE_REPO_ROOT: repoDir,
       QFAI_FAKE_SCENARIO_PATH: scenarioPath,
       QFAI_FAKE_STATE_PATH: statePath,
     },
   );
 
-  return { ...result, ghState: await readJson(statePath), repoDir };
+  const gitCalls = (await readFile(gitLogPath, "utf-8")).split("\n").filter(Boolean);
+  return { ...result, ghState: await readJson(statePath), gitCalls, repoDir };
 }
 
 async function createMinimalRepo(
   repoDir: string,
   packageScripts: Record<string, string>,
 ): Promise<void> {
-  await mkdir(path.join(repoDir, "packages", "qfai"), { recursive: true });
   await writeFile(
     path.join(repoDir, "package.json"),
     JSON.stringify({ scripts: packageScripts }, null, 2),
     "utf-8",
   );
-  await writeFile(
-    path.join(repoDir, "packages", "qfai", "package.json"),
-    JSON.stringify({ version: "1.5.3" }, null, 2),
-    "utf-8",
-  );
-  await writeFile(path.join(repoDir, "CHANGELOG.md"), "## [1.5.3]\n\n- Test entry\n", "utf-8");
-  await writeFile(path.join(repoDir, "RELEASE.md"), "# Release\n", "utf-8");
 }
 
 async function writeCommand(binDir: string, name: string, scriptBody: string): Promise<void> {
@@ -861,6 +883,7 @@ function gitStubScript(): string {
     'const scenario = JSON.parse(fs.readFileSync(scenarioPath, "utf8"));',
     "const repoRoot = process.env.QFAI_FAKE_REPO_ROOT;",
     "const args = process.argv.slice(2);",
+    'fs.appendFileSync(process.env.QFAI_FAKE_GIT_LOG_PATH, `${args.join(" ")}\\n`);',
     "",
     'if (args[0] === "rev-parse" && args[1] === "--show-toplevel") {',
     "  process.stdout.write(`${repoRoot}\\n`);",
@@ -868,10 +891,6 @@ function gitStubScript(): string {
     "}",
     'if (args[0] === "status" && args[1] === "--short") {',
     '  process.stdout.write(`${(scenario.worktreeStatus ?? []).join("\\n")}${scenario.worktreeStatus?.length ? "\\n" : ""}`);',
-    "  process.exit(0);",
-    "}",
-    'if (args[0] === "ls-remote" && args[1] === "--tags") {',
-    '  process.stdout.write("");',
     "  process.exit(0);",
     "}",
     'if (args[0] === "branch" && args[1] === "--show-current") {',

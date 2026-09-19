@@ -4,6 +4,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The documentation-only path is pinned and re-pinned, not held to a count of
+  four job names** (#2016). `BR-0017-0007` required such a pull request to execute
+  at most four job instances, and the topology test asserted that set exactly. Job
+  instances charges +1 for a change that shortens the run and adds no work, so the
+  measure refused a job the requirement permits. The rule now pins two things —
+  the set of jobs that execute on that path, and the sum of their declared
+  `timeout-minutes` — and requires a change to either to re-pin in the same
+  change, with the measured before-and-after numbers `BR-0017-0030` asks for. The
+  pin is recomputed from the workflow tree rather than written into the rule, so
+  the next split lands in a diff a reviewer reads. It is not a bound: enforcement
+  is equality against a value derived from the same tree, so a clause forbidding a
+  higher cost could not fail, and the rule states the obligation the hygiene lane
+  can enforce instead. Membership is the second claim and reads a narrower set —
+  among the jobs the aggregate verdict depends on, the executing ones must be
+  exactly the expected-context declaration's entries that carry no condition, each
+  named there with the reason it cannot be skipped. The two sets differ, because
+  the verdict executes and is not one of its own dependencies. `NFR-0002` keeps
+  instance count, its other clauses being quantified in instances, installs and
+  builds, and its documentation-only figure moves to five. `DR-0017-0015` records
+  the options, four weaknesses of the adopted unit and the dissent against it. The
+  pinner, the hygiene rule and extracting the lane are Plan steps, not part of
+  this change.
+
+## [1.12.1] - 2026-09-19
+
 ### Added
 
 - **The tag push is held to the decision before it, and four workflows say what
@@ -276,28 +303,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **The documentation-only path is pinned and re-pinned, not held to a count of
-  four job names** (#2016). `BR-0017-0007` required such a pull request to execute
-  at most four job instances, and the topology test asserted that set exactly. Job
-  instances charges +1 for a change that shortens the run and adds no work, so the
-  measure refused a job the requirement permits. The rule now pins two things —
-  the set of jobs that execute on that path, and the sum of their declared
-  `timeout-minutes` — and requires a change to either to re-pin in the same
-  change, with the measured before-and-after numbers `BR-0017-0030` asks for. The
-  pin is recomputed from the workflow tree rather than written into the rule, so
-  the next split lands in a diff a reviewer reads. It is not a bound: enforcement
-  is equality against a value derived from the same tree, so a clause forbidding a
-  higher cost could not fail, and the rule states the obligation the hygiene lane
-  can enforce instead. Membership is the second claim and reads a narrower set —
-  among the jobs the aggregate verdict depends on, the executing ones must be
-  exactly the expected-context declaration's entries that carry no condition, each
-  named there with the reason it cannot be skipped. The two sets differ, because
-  the verdict executes and is not one of its own dependencies. `NFR-0002` keeps
-  instance count, its other clauses being quantified in instances, installs and
-  builds, and its documentation-only figure moves to five. `DR-0017-0015` records
-  the options, four weaknesses of the adopted unit and the dissent against it. The
-  pinner, the hygiene rule and extracting the lane are Plan steps, not part of
-  this change.
 - **Grilling outside the discussion stage is delegated between agents.** A
   griller interviews the authors, and every decision the user does not have to
   make takes the griller's recommendation. Only a critical decision reaches the
@@ -443,7 +448,35 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `uiux.warning_as_error_override` goes with it, its only reader. An unknown key
   under `uiux` is ignored, so a configuration that still sets it keeps loading.
 
+- **Tagging from this repository's `pr-merge` skill.** It asked about a tag
+  before every merge and recommended one, though `tag-release.yml` already
+  pushes `vX.Y.Z` when a release commit reaches `main`. The tag it recommended
+  was usually refused by its own check: that version's tag already existed, so
+  the suggestion was the next patch, which did not match the manifest. The skill
+  now only merges, and `run-pr-merge.ps1` no longer takes `-Tag` or `-NoTag`.
+
 ### Fixed
+
+- **`Prepare release` opens its pull request again.** The step that pushes the
+  release branch and opens the pull request exited 2 with a bash syntax error,
+  after the push and before `gh pr create`. The terminator of the heredoc that
+  repairs an existing pull request body was indented past the `run:` block's
+  base, so after YAML removed that base it still carried two spaces, and a plain
+  `<<` never matched it. Bash parses a whole `if … else … fi` before running
+  either branch, so the step failed even where no pull request was open yet and
+  the heredoc was never reached. The terminator now sits at the base
+  indentation. A new test runs `bash -n` on every bash `run:` block in this
+  repository's workflows and actions and in the shipped workflow templates, and
+  fails on any diagnostic, including the warning bash prints for a heredoc left
+  open at the end of a script.
+
+- **The release job's leakage guard reads what npm 12 prints** (#2023). The guard asks
+  `npm pack --dry-run --json` what will ship, and read only the array npm 11
+  and earlier print. npm 12 prints an object keyed by package name instead. The
+  CI runners carry an older npm and the publish job pins npm 12, so the guard passed
+  on every pull request and then refused to publish. It now reads both shapes,
+  and so does the tarball proof in `check-publish-dry-run.mjs`, which read the
+  same report the same way.
 
 - **The evidence citation guard reads citations into `.qfai/evidence/`**
   (#1686). A record that named a sibling evidence file the tree does not carry
