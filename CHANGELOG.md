@@ -4,21 +4,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-### Fixed
-
-- **`Prepare release` opens its pull request again.** The step that pushes the
-  release branch and opens the pull request exited 2 with a bash syntax error,
-  after the push and before `gh pr create`. The terminator of the heredoc that
-  repairs an existing pull request body was indented past the `run:` block's
-  base, so after YAML removed that base it still carried two spaces, and a plain
-  `<<` never matched it. Bash parses a whole `if … else … fi` before running
-  either branch, so the step failed even where no pull request was open yet and
-  the heredoc was never reached. The terminator now sits at the base
-  indentation. A new test runs `bash -n` on every bash `run:` block in this
-  repository's workflows and actions and in the shipped workflow templates, and
-  fails on any diagnostic, including the warning bash prints for a heredoc left
-  open at the end of a script.
-
 ## [1.12.1] - 2026-09-19
 
 ### Added
@@ -446,6 +431,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now only merges, and `run-pr-merge.ps1` no longer takes `-Tag` or `-NoTag`.
 
 ### Fixed
+
+- **`Prepare release` opens its pull request again.** The step that pushes the
+  release branch and opens the pull request exited 2 with a bash syntax error,
+  after the push and before `gh pr create`. The terminator of the heredoc that
+  repairs an existing pull request body was indented past the `run:` block's
+  base, so after YAML removed that base it still carried two spaces, and a plain
+  `<<` never matched it. Bash parses a whole `if … else … fi` before running
+  either branch, so the step failed even where no pull request was open yet and
+  the heredoc was never reached. The terminator now sits at the base
+  indentation. A new test runs `bash -n` on every bash `run:` block in this
+  repository's workflows and actions and in the shipped workflow templates, and
+  fails on any diagnostic, including the warning bash prints for a heredoc left
+  open at the end of a script.
 
 - **The release job's leakage guard reads what npm 12 prints** (#2023). The guard asks
   `npm pack --dry-run --json` what will ship, and read only the array npm 11
