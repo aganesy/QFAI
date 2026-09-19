@@ -1184,7 +1184,7 @@ async function repairReleaseBody(
     path.join(repoRoot, ".github", "workflows", "prepare-release.yml"),
     "utf-8",
   );
-  const script = /<<'REPAIR_BODY'\r?\n([\s\S]*?)^ {12}REPAIR_BODY\r?$/m.exec(workflow)?.[1];
+  const script = /<<'REPAIR_BODY'\r?\n([\s\S]*?)^ {10}REPAIR_BODY\r?$/m.exec(workflow)?.[1];
   // Thrown rather than asserted: the rejection reaches the test that awaited
   // this helper, and a helper takes no test context.
   if (script === undefined) throw new Error("Release repair heredoc is missing");

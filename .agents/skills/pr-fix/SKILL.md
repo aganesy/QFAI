@@ -1,11 +1,11 @@
 ---
 name: "pr-fix"
-description: "PR本文修正、review thread 解消、CI 修復に加え、追加レビュー指摘の遅延到着を検知するため live monitor を完了まで回す skill。GitHub CLI と PowerShell が使える repo で、PR 修正から handoff 生成まで進めるときに使う。merge/tag は `pr-merge` skill で扱う。"
+description: "Fixes a pull request body, resolves review threads, repairs CI, and runs a live monitor to completion so late review findings are caught. Use it in a repo with the GitHub CLI and PowerShell to take a pull request from fixes to a handoff. Merging belongs to the `pr-merge` skill."
 ---
 
 # pr-fix
 
-この skill は、PR の本文整形、review thread の確認、CI 修復、late review 指摘を拾うための live monitor、handoff 生成までを扱う。merge/tag は `pr-merge` skill に委譲する。
+This skill covers the pull request body, review threads, CI repair, a live monitor for late review findings, and the handoff. Merging is left to the `pr-merge` skill.
 
 ## まず読むファイル
 
@@ -129,7 +129,9 @@ after saving a repair preview with an authored answer.
 powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/pr-fix/scripts/run-pr-fix.ps1
 ```
 
-- 60 秒間隔で `RequiredZeroStreak` 回連続の clean poll を満たしたら、script は handoff 情報を出して終了する。`handoff.json` が無い状態で `pr-fix` を完了扱いにしない。merge/tag は `pr-merge` skill に引き継ぐ。
+- Once `RequiredZeroStreak` consecutive clean polls pass at 60-second intervals,
+  the script prints the handoff and exits. `pr-fix` is not complete without
+  `handoff.json`. Merging passes to the `pr-merge` skill.
 
 ## stop 条件
 

@@ -286,6 +286,13 @@ jobs:
             existing_body="tmp/existing-release-pr-body.md"
             trap 'rm -f "${body_file}" "${existing_body}"' EXIT
             gh pr view "${existing_pr}" --json body --jq .body > "${existing_body}"
+            # The terminator sits at the block's base indentation, not the body's. YAML
+            # strips only the base, and a plain `<<` matches its terminator at column zero
+            # alone. One indented further leaves the heredoc open, and bash rejects this whole
+            # `if … else … fi` before running either branch, `gh pr create` included.
+            # SHIPPED-CI: not-applicable
+            # Because: the shipped templates carry no heredoc, and a test parses every bash
+            # step in both trees.
             node - "${existing_body}" "${body_file}" <<'REPAIR_BODY'
             const { readFileSync, writeFileSync } = require('node:fs');
             const [existingPath, bodyPath] = process.argv.slice(2);
@@ -884,7 +891,7 @@ jobs:
             if (!hasAnswer(section.exec(maskExamples(next).visible)))
               throw new Error('Release body lacks a visible authored removal answer after repair');
             writeFileSync(bodyPath, next, 'utf8');
-            REPAIR_BODY
+          REPAIR_BODY
             if ! cmp -s "${existing_body}" "${body_file}"; then
               latest_body="${existing_body}.latest"
               trap 'rm -f "${body_file}" "${existing_body}" "${latest_body}"' EXIT
