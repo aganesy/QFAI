@@ -3,13 +3,13 @@
  * the workflow templates `qfai init` ships, parses as bash.
  *
  * GitHub dedents a `run: |` block to its base indentation and hands the result
- * to bash, which parses the whole script before running a line of it. A heredoc
- * terminator indented past that base survives the dedent with leading spaces,
- * and a plain `<<` never matches it: the heredoc swallows the rest of the
- * script, the enclosing `if` is never closed, and the step exits 2 on every
- * path, including those that never reach the heredoc. Nothing else in the suite
- * runs these bodies through bash's parser, so a step like that stays green here
- * and fails only when a release is being prepared.
+ * to bash, which parses each compound command whole before running any of it.
+ * A heredoc terminator indented past that base survives the dedent with leading
+ * spaces, and a plain `<<` never matches it: the heredoc swallows the rest of
+ * the script, the enclosing `if` is never closed, and the step exits 2 on every
+ * branch of that `if`, including those that never reach the heredoc. Nothing
+ * else in the suite runs these bodies through bash's parser, so a step like
+ * that stays green here and fails only when a release is being prepared.
  *
  * `bash -n` parses without executing. A heredoc left open at the very end of a
  * script is only a warning with exit 0, so any output on stderr fails too.
