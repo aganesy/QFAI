@@ -621,6 +621,55 @@ function manifestScript(manifestPath: string, name: string): string {
   return typeof value === "string" ? value : "";
 }
 
+// QFAI:SPEC-0017:TC-0017-0085
+describe("TC-0017-0085 (TDD-0094): exempt lint hosts cannot be declared skippable", () => {
+  it.each(["lint", "mirror-surface"])(
+    "rejects a matching condition and declaration on %s",
+    (host) => {
+      const condition = "${{ needs.detect.outputs.full == 'true' }}";
+      const dir = plantedTree((d) => {
+        editWorkflow(d, "ci.yml", (text) =>
+          text.replace(`  ${host}:\n`, `  ${host}:\n    if: ${condition}\n`),
+        );
+        editDeclaration(d, (decl) => {
+          const context = onlyContext(decl);
+          context.dependencyConditions = { ...context.dependencyConditions, [host]: condition };
+          return decl;
+        });
+      });
+      try {
+        const run = runLane(dir);
+        expect.soft(run.exitCode, run.output).toBe(1);
+        expect(run.output).toContain(`unconditional dependency ${host}`);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.each([undefined, [], ["absent-job"], ["lint", "lint"], [null]].map((value) => ({ value })))(
+    "rejects a missing or invalid exemption list $value",
+    ({ value }) => {
+      const dir = plantedTree((d) => {
+        const target = path.join(d, ".github", "required-status-contexts.json");
+        const decl: unknown = JSON.parse(readFileSync(target, "utf-8"));
+        if (!isRecord(decl) || !Array.isArray(decl.contexts) || !isRecord(decl.contexts[0])) {
+          throw new Error("fixture declaration has no context");
+        }
+        decl.contexts[0].unconditionalDependencies = value;
+        writeFileSync(target, JSON.stringify(decl), "utf-8");
+      });
+      try {
+        const run = runLane(dir);
+        expect.soft(run.exitCode, run.output).toBe(1);
+        expect(run.output).toMatch(/unconditional dependenc/);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
+});
+
 describe("TC-0017-0057 (TDD-0057): the expected-context declaration is read from the tree", () => {
   it("takes the job name from the file rather than from anything compiled in", () => {
     // The row's real claim is that the declaration is INPUT, not decoration. Asserting the

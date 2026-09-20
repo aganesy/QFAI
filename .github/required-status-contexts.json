@@ -72,6 +72,12 @@
         "file is that a change to what the required context means is a change a reviewer reads.",
         "Adding a lane is two edits on purpose."
       ],
+      "unconditionalDependencies": ["lint", "mirror-surface"],
+      "unconditionalDependenciesNote": [
+        "These jobs host the lint lanes that run on every pull request.",
+        "Each must remain in needs, carry no condition, and stay absent from dependencyConditions.",
+        "The topology test independently resolves every exempt lane to its host and checks this list."
+      ],
       "dependencyConditions": {
         "check-types": "${{ needs.detect.outputs.full == 'true' }}",
         "check-types-future": "${{ needs.detect.outputs.full == 'true' }}",
@@ -243,7 +249,7 @@
         "scripts/check-tracked-symlinks.mjs": "1769fe9351bb11fa3c2a1e11a45e665cf46fec970cb6b5abebd63519ba2136b2",
         "scripts/check-tsc-compiler.mjs": "14811d9aa79ca3988a07f3ee51aeac3a4ee825e793e77af69ff05cf55e39e1f1",
         "scripts/check-types-future.mjs": "c5db610e56abad0fe7962384460760915ae1f084936a3c9684656364beb50203",
-        "scripts/check-workflow-hygiene.mjs": "a1d9395ebed49b32e5e120cfd1670e337633d4bcd2b3e0cac0a4fad01ca349d7",
+        "scripts/check-workflow-hygiene.mjs": "58a6fd7de5fa5f97bd6ac703a52eed5fbac0a9388204baa55eb1366ff9830cd7",
         "scripts/derive-cli-message-allowlist-count.mjs": "6c67359c0073519a0fa5b3be5fc9866c49b1ec5bd4bce3feff985ba2fd962d87",
         "scripts/derive-e2e-callsites.mjs": "0185bc5abdcfa2fef223c02362aea44838a3c8dac53157c050d5c3285448c6d3",
         "scripts/dogfood-backlog.json": "fc4da5b98a167f82dd65e60ee64bb57724e2749fa5d8620e9fc4765ca918ed99",
@@ -414,7 +420,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ff046bcf7d3956e0",
-        "Verify the toolchain action before running it": "7ccfc83d209feb34",
+        "Verify the toolchain action before running it": "f22271584e9e12e9",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "211656e97a2f3714",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "f98ff7751afa6bbb",
@@ -422,7 +428,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "9efc82ef75f7a622",
         "QFAI self-validate this repo (dogfooding — full profile)": "3537948e49d1d967",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "9b02a119da542c12",
+        "Run lint gate": "c6c25d583bf94392",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",

@@ -2143,6 +2143,39 @@ function checkRequiredContexts(root, jobs) {
     const declaredConditions = isRecord(context.dependencyConditions)
       ? context.dependencyConditions
       : {};
+    // Exempt lint hosts cannot opt into change detection by changing both declarations.
+    const unconditional = context.unconditionalDependencies;
+    if (
+      !Array.isArray(unconditional) ||
+      unconditional.length === 0 ||
+      unconditional.some((name) => typeof name !== "string" || name.length === 0) ||
+      new Set(unconditional).size !== unconditional.length
+    ) {
+      findings.push({
+        rule: "required-context",
+        file: DECLARATION_REL,
+        job: declaredJob,
+        detail: "unconditional dependencies must be a non-empty array of distinct job names",
+      });
+    } else {
+      const dependencies = declaredDependencyList(jobsByKey.get(declaredJob));
+      for (const name of unconditional) {
+        const host = jobsByKey.get(name);
+        if (
+          host === undefined ||
+          !dependencies.includes(name) ||
+          host.if !== undefined ||
+          Object.hasOwn(declaredConditions, name)
+        ) {
+          findings.push({
+            rule: "required-context",
+            file: rel,
+            job: declaredJob,
+            detail: `unconditional dependency ${name} must exist in needs, carry no condition, and be absent from dependencyConditions`,
+          });
+        }
+      }
+    }
     for (const name of declaredDependencyList(jobsByKey.get(declaredJob))) {
       const job = jobsByKey.get(name);
       if (job === undefined) continue;
