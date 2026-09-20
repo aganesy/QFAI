@@ -182,7 +182,9 @@ because the setup dedup is what changes its arithmetic.
   The baseline does not exist today, so capturing it is a precondition of steps 6, 7 and 8, not a
   follow-up. A breach shows as an aggregate-verdict duration worse than the recorded baseline on
   a code-path pull request, as more than five executed instances on a documentation-only one, or as
-  the committed documentation-only pin disagreeing with what the workflow tree recomputes.
+  either committed pin disagreeing with what the workflow tree recomputes. `NFR-0002` claims no
+  fall on a code path, so there is no instance breach to watch for there: that path's figures are
+  recorded and re-pinned, and the breach is a change that moved them and did not.
   Because the evidence tree is version-control-ignored, every number is also quoted in the
   pull-request description and in `07_Decisions.md` (OC-80, BR-0017-0030).
 - **NFR-0004 (flake budget) is met by refusing the easy fix.** Three consecutive green verdicts

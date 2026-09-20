@@ -153,6 +153,17 @@ export interface Declaration {
      * remove it.
      */
     documentationOnlyCostPin?: { jobs?: string[]; timeoutMinutesSum?: number };
+    /**
+     * What a code-path pull request costs: the instances the tree expands to, their declared
+     * timeout sum, the installs they perform and the jobs that declare a build. Optional for the
+     * reason the sibling above is.
+     */
+    codePathCostPin?: {
+      instances?: number;
+      timeoutMinutesSum?: number;
+      installInstances?: number;
+      buildJobs?: string[];
+    };
   }[];
   // Everything else the artifact carries — `$comment` today — travels through untouched.
   [key: string]: unknown;
