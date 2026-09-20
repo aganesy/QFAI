@@ -1718,7 +1718,7 @@ const OWN_WORKFLOW_FILES = [
 ] as const;
 
 /**
- * Every check name the own-CI workflow reports, as literals.
+ * Check names for each selection state, as literals.
  *
  * Derived once by hand from the job keys and the matrix expansion, and then frozen. No job
  * in this file declares a `name:` override, so each check name is its job key — which is
@@ -1736,9 +1736,9 @@ const OWN_WORKFLOW_FILES = [
  * promises; an API present in Node 24 and absent in 20.19 passes every gate and breaks
  * exactly the supported users.
  *
- * It is sliced over the same nine values as `test`, so it reports nine check names and no
- * bare `node-floor`: no job produces that name, and pinning it would hold this list against
- * a check that cannot appear.
+ * Both sliced jobs report expanded names on a full run. When their job-level condition
+ * is false, GitHub reports one skipped check under each bare job name. The observation
+ * and complete API counts are recorded in `packages/qfai/docs/ci-check-names.md`.
  *
  * Creating a check name is normally a repository-settings problem. It is not one here, which
  * is what lets a required lane be sliced without a settings change: only `ci-pass` is
@@ -1746,7 +1746,7 @@ const OWN_WORKFLOW_FILES = [
  * rolled-up `result` to that map however many legs it expands to. So the nine legs are
  * gated by the context that already exists.
  */
-const CI_CHECK_NAMES = [
+const FULL_CI_CHECK_NAMES = [
   "build",
   "check-types",
   "check-types-future",
@@ -1780,14 +1780,33 @@ const CI_CHECK_NAMES = [
   "test (validators)",
 ] as const;
 
+const CI_CHECK_NAMES = {
+  full: FULL_CI_CHECK_NAMES,
+  "documentation-only": [
+    "build",
+    "check-types",
+    "check-types-future",
+    "ci-pass",
+    "detect",
+    "lint",
+    "mirror-surface",
+    "node-floor",
+    "scanner-coverage",
+    "test",
+  ],
+} as const;
+
+type CiSelection = keyof typeof CI_CHECK_NAMES;
+
 /**
  * The check names one workflow file reports.
  *
  * A job's check name is its `name:` when it declares one and its key otherwise; a matrix
- * job reports one per leg. Both are modelled, so a future `name:` override is visible to
+ * job reports one per leg when selected, or one bare name when skipped before expansion.
+ * Both states are modelled, so a future `name:` override is visible to
  * `TC-0017-0043` rather than silently renaming a check.
  */
-function checkNames(file: string): string[] {
+function checkNames(file: string, selection: CiSelection): string[] {
   const doc: unknown = parseYaml(readFileSync(path.join(WORKFLOWS_DIR, file), "utf-8"));
   if (!isRecord(doc) || !isRecord(doc["jobs"])) {
     throw new Error(`${file} declares no jobs`);
@@ -1799,7 +1818,16 @@ function checkNames(file: string): string[] {
     const strategy = job["strategy"];
     const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
     const legs = isRecord(matrix) ? Object.values(matrix).filter(isStringArray).flat() : [];
-    if (legs.length > 0) {
+    const condition = job["if"];
+    if (
+      legs.length > 0 &&
+      condition !== undefined &&
+      condition !== "${{ needs.detect.outputs.full == 'true' }}"
+    ) {
+      throw new Error(`${id} has an unmodelled matrix selection condition: ${String(condition)}`);
+    }
+    const selected = selection === "full" || condition === undefined;
+    if (legs.length > 0 && selected) {
       for (const leg of legs) names.push(`${label} (${leg})`);
     } else {
       names.push(label);
@@ -2161,17 +2189,13 @@ describe("TC-0017-0042 (TDD-0042): the aggregate verdict check name is immutable
   });
 });
 
-describe("TC-0017-0043 (TDD-0043): selection creates, removes and renames no check name", () => {
-  it("reports exactly the pinned check-name set", () => {
-    // The whole set, as one equality. Selection landed in change 8 and added conditions to
-    // four jobs; a condition changes whether a check REPORTS success or skipped, never
-    // whether it exists. This is the assertion that says so.
-    expect
-      .soft(
-        checkNames("ci.yml"),
-        "no check name may be created, removed or renamed — each one is a repository setting no agent can configure",
-      )
-      .toEqual([...CI_CHECK_NAMES].sort());
+describe("TC-0017-0043 (TDD-0043): each selection state preserves its reported check names", () => {
+  it("reports the complete pinned set for full and documentation-only runs", () => {
+    for (const selection of ["full", "documentation-only"] as const) {
+      expect
+        .soft(checkNames("ci.yml", selection), `${selection} must retain its observed check names`)
+        .toEqual([...CI_CHECK_NAMES[selection]].sort());
+    }
   });
 });
 
