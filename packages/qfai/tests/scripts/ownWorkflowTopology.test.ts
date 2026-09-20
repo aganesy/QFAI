@@ -4339,7 +4339,10 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     }
   });
 
-  type ReleaseNeed = { result?: string; outputs?: { "suite-shape"?: string } };
+  type ReleaseNeed = {
+    result?: string | undefined;
+    outputs?: { "suite-shape"?: string | undefined };
+  };
   type ReleaseNeeds = Record<string, ReleaseNeed>;
 
   /** Evaluates the release conditions' lowercase string fixtures and Boolean operators only. */

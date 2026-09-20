@@ -3502,3 +3502,29 @@ a65a209bbfd37911c5b4ef2424adf605057d9029 R02_completion-reviewer.md
 ba2f2c08e56c777846ca904c072db8e2a4922dec review_request.md
 39c7e5072cfa7b0d0409c454548ce6948f9fe94c summary.json
 ```
+
+
+### TDD-0097
+
+- TC: TC-0017-0088. Implementation revision: `bc4edcb08`.
+- Command: `pnpm -C packages/qfai exec vitest run --project scripts tests/scripts/ownWorkflowTopology.test.ts -t 'release prerequisites'`.
+- GREEN: exit 0, three selected tests passed against that revision. Both gate
+  shapes retain push and manual-dispatch behavior for their publication jobs.
+- RED / oracle: changing both `needs.gate.result == 'success'` comparisons to
+  `failure` made the normal-path test exit 1. The workflow was restored from a
+  saved copy. This is a falsifiability probe; the normal path also passed before
+  the fix.
+
+### TDD-0098
+
+- TC: TC-0017-0089. Implementation revision: `bc4edcb08`.
+- Command: the same targeted command as TDD-0097.
+- RED / oracle: before the workflow fix, the new rejection test reported 116
+  wrongly accepted cases and exited 1. The unsupported-expression test passed.
+  After separating normal and rejection cases and adding timeout inputs, the
+  implementation revision reports three selected tests passed, exit 0.
+- The fixtures remove needs and result fields and replace each path's results
+  with failure, cancellation, timeout, skip, unknown or empty states. They also
+  reject an inconsistent shape and whole-run cancellation. The evaluator reads
+  the actual YAML conditions and refuses unsupported syntax; it is not a general
+  implementation of GitHub's expression language.
