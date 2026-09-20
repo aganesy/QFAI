@@ -22,8 +22,8 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
 - `.qfai/specs/spec-0017/07_Decisions.md` — `DR-0017-*`, read for the rejected alternatives this
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
-- `.qfai/specs/spec-0017/tdd/test-list.md` — read, never written. 94 rows: 74 `Integration`,
-  11 `Unit`; **73 `refactor`, 6 `blocked`, 15 `todo`**. The other nine rows are `E2E`, one per story,
+- `.qfai/specs/spec-0017/tdd/test-list.md` — read, never written. 96 rows: 76 `Integration`,
+  11 `Unit`; **75 `refactor`, 6 `blocked`, 15 `todo`**. The other nine rows are `E2E`, one per story,
   seeded at `todo`. Six `todo` rows are `Integration` and are therefore this stage's to route — see
   § "Ledger rows advanced"
 - `.qfai/assistant/catalog/test-layers.md` — the layer derivation and the directory each `Level`
@@ -3041,6 +3041,99 @@ rules; its five-rule closure claim is unchanged, being scoped to the workflow tr
 - **GREEN**: `pnpm exec vitest run tests/scripts/workflowHygiene.test.ts` → 88 passed (88).
 - **Oracle**: `detect`'s declared ceiling raised 5 → 6 without re-pinning →
   `node scripts/check-workflow-hygiene.mjs --root .` exits 1 naming 35 against 36; reverted → 0.
+
+## The code-path cost pin, and the falling claim it replaced
+
+`NFR-0002` capped a code-path pull request at 12 job instances / 8 frozen-lockfile installs /
+3-or-5 bundler builds, against a baseline of 14 / 13 / 6. Derived from the tree, a code path runs
+**26 instances / 24 installs / 5 build executions**, declaring **350 minutes** of ceiling.
+
+Nothing regressed, and the reason the figure could go stale in silence is the finding: no test
+anywhere asserted any of the three counts. The code-path half had no falsifiable artifact behind it.
+
+| Artifact                                | What it holds                                                                    |
+| --------------------------------------- | -------------------------------------------------------------------------------- |
+| `.github/required-status-contexts.json` | `codePathCostPin`, and a note stating the unit and the three limits               |
+| `scripts/pin-code-path-cost.mjs`        | Recomputes the four figures from the workflow tree and writes them                |
+| `scripts/lib/pin-cost.mjs`              | The walk both pinners share: read, recompute per context, write formatted         |
+| `scripts/check-workflow-hygiene.mjs`    | `code-path-cost-pin`, which exits 1 while pin and recomputation disagree          |
+
+The committed figures: 26 instances, 350 declared minutes, 24 installs, and `build`, `node-floor`
+and `test` declaring a build.
+
+### Why the requirement let the code path go
+
+Nine legs finishing together cost fewer runner minutes than one leg running them in series, and
+count more instances. So an instance figure on a code path moves against the very thing `NFR-0002`
+is named for — consumption falling. A requirement claiming a fall there would be false on the tree
+that satisfies the design. `NFR-0002` keeps the documentation-only claim, where consumption does
+fall and the figure is five executed instances; the wall clock the widening buys is `NFR-0001`'s.
+
+`DR-0017-0015` settled that this requirement's figures stay quantified in instances, installs and
+builds. That is not reopened: the minutes sum the pin also carries lives in the declaration beside
+them, never in the requirement, which is where the documentation-only half already keeps its own.
+
+### Three limits, stated rather than hidden
+
+- **`buildJobs` counts jobs, not executions.** Two of the three condition their build step on
+  `matrix.slice == 'e2e' || matrix.slice == 'integration'`, so an execution count needs a workflow
+  expression evaluated and neither reader evaluates one. The five executions are real and unpinned.
+  The jobs figure still moves when a build is added to or removed from a job.
+- **No figure is compared with a run.** Reading what a run consumed needs the forge's API and a
+  finished run, which no lint lane has. A tree that was always more expensive than it declared is
+  outside the rule.
+- **It is not a cost bound.** Enforcement is equality against a value recomputed from the same
+  tree, so a clause forbidding a higher cost could not fail once the pinner has run.
+
+### TDD-0095
+
+`TC-0017-0086`, in `packages/qfai/tests/scripts/workflowHygiene.test.ts`.
+
+Six rows, planted from the declaration's side except the last, which plants the workflow.
+
+| Plant                                          | Expected                                            |
+| ---------------------------------------------- | --------------------------------------------------- |
+| `instances` set to a value nothing declares    | exit 1, the finding naming the figure and the value  |
+| `timeoutMinutesSum` the same                   | exit 1, likewise                                    |
+| `installInstances` the same                    | exit 1, likewise                                    |
+| A build-declaring job dropped from the set     | exit 1, the finding naming the job                   |
+| The pin object deleted                         | exit 1, the finding naming the field                 |
+| A matrix widened by one leg, the pin left      | exit 1, the finding naming both instance counts      |
+
+One row per numeric figure rather than one row planting all three: a single row would pass against
+a rule that compared the first and stopped, which is the failure the loop inside the rule was
+written to avoid, so the row set has to be able to see it. The last row is the one figure a reader
+cannot check by eye — a tree whose matrix grew by a leg costs one more instance and one more
+ceiling, and a rule counting job keys would see neither. Its expectation reads the pinned figure
+off the declaration rather than restating it, because a literal would be one more copy of the
+number this mechanism exists to keep in one place.
+
+- **RED**: the rule's call removed from the lane — all six rows failed.
+- **GREEN**: `pnpm exec vitest run tests/scripts/workflowHygiene.test.ts` → 94 passed (94).
+- **Oracle**: `scanner-coverage`'s declared ceiling raised 15 → 16 without re-pinning →
+  `node scripts/check-workflow-hygiene.mjs --root .` exits 1 with
+  `pins timeoutMinutesSum at 350 and ci.yml declares 351`; reverted → exit 0. That job is one a
+  documentation-only run skips, so the finding belongs to this rule alone.
+
+### TDD-0096
+
+`TC-0017-0087`, in `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`.
+
+One row, comparing all four committed figures against that file's own parse of `ci.yml`. Compared
+as a whole rather than figure by figure, so a pin agreeing on three fails on the fourth instead of
+passing on the three.
+
+The second reading is the point. The hygiene lane computes the same figures through its own
+collector, and equality between two independent readings of one tree is what a single
+implementation cannot give itself. Nothing here asserts a bound: both sides are read from the same
+tree, so a bound would be a claim no state of the tree could fail.
+
+- **RED**: `codePathCostPin` deleted from the declaration — the row failed on
+  "the declaration must carry a codePathCostPin: expected false to be true".
+- **GREEN**: `pnpm exec vitest run tests/scripts/ownWorkflowTopology.test.ts` → 73 passed (73).
+- **Oracle**: `installInstances` set to 23 — the row failed on the figure rather than on the
+  field's absence, its diff reading `- "installInstances": 24` against `+ "installInstances": 23`.
+  So the comparison is against the tree and not against the pin's own presence.
 
 ## Final status (PASS/FAIL) + who confirmed
 
