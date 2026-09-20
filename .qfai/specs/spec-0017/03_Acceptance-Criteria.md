@@ -376,6 +376,19 @@ Scenario: The repository-root path resolves to the packaged asset, so there is n
   Then reading the repository-root path returns the same bytes, with no synchronization step
   And the link check reports no drift
   And a repository-root path that is a regular file where the link check expects a link fails that check
+
+# AC-0017-0035: Release uploads require every gate on the selected path to succeed
+# Parent: US-0017-0005
+# Source: discussion-20260804173914356#DSC-019
+Scenario: Splitting release checks preserves the publication barrier
+  Given verify selects the sliced or whole suite shape for the tagged tree
+  When the publication jobs evaluate their prerequisites
+  Then verify and gate must have succeeded
+  And every gate selected by that shape must have succeeded
+  And only the other shape's gates may be skipped
+  And a missing, failed, cancelled, skipped or unknown required result refuses publication
+  And an unknown shape or cancelled run refuses publication
+  And GitHub Release remains push-only while npm publication also supports manual dispatch
 ```
 
 ## AC Catalog (optional)
@@ -416,6 +429,7 @@ Scenario: The repository-root path resolves to the packaged asset, so there is n
 | AC-0017-0032 | The mapping file exists, is cross-linked, disclaims the loader     | Happy path, US-0017-0009, REQ-0014                                              | Should   |
 | AC-0017-0033 | The layer vocabulary is unchanged after the mapping file lands     | Edge / boundary, US-0017-0009, REQ-0014                                         | Should   |
 | AC-0017-0034 | The mapping file has one copy, reached from either path            | Negative path (an unlinked root path is rejected), US-0017-0009, REQ-0014       | Should   |
+| AC-0017-0035 | Release uploads require successful gates on the selected path      | Normal and rejection paths, US-0017-0005                                        | Must     |
 
 > This catalog is a human-facing index. It deliberately carries no `Source` column: provenance
 > has exactly one home, the `# Source:` comment in the required Gherkin block above, so the two
