@@ -23,8 +23,8 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
 - `.qfai/specs/spec-0017/tdd/test-list.md` — 101 rows: 81 `Integration`,
-  11 `Unit`; **77 `refactor`, 6 `blocked`, 18 `todo`**. The other nine rows are `E2E`, one per story,
-  seeded at `todo`. Nine `todo` rows are `Integration` and are therefore this stage's to route — see
+  11 `Unit`; **80 `refactor`, 6 `blocked`, 15 `todo`**. The other nine rows are `E2E`, one per story,
+  seeded at `todo`. Six `todo` rows are `Integration` and are therefore this stage's to route — see
   § "Ledger rows advanced"
 - `.qfai/assistant/catalog/test-layers.md` — the layer derivation and the directory each `Level`
   routes to
@@ -3528,3 +3528,45 @@ ba2f2c08e56c777846ca904c072db8e2a4922dec review_request.md
   reject an inconsistent shape and whole-run cancellation. The evaluator reads
   the actual YAML conditions and refuses unsupported syntax; it is not a general
   implementation of GitHub's expression language.
+
+
+### TDD-0099
+
+- TC: TC-0017-0090. Implementation revision: `9c9febc3c`.
+- Command: `pnpm -C packages/qfai exec vitest run --project scripts tests/scripts/ownWorkflowTopology.test.ts -t 'TC-0017-009[012]'`.
+- RED: before the workflow and manifest implementation, all five new tests
+  failed. The classifier emitted no checks shape and the operation scripts were
+  absent.
+- GREEN: the same selection passed all five tests against the named revision.
+  The complete release describe also passed all 16 selected cases. Both the
+  ordered aggregate and the operations path retain every original command.
+- Oracle: replacing `ci:gate:types` with `echo omitted` made the ordered
+  coverage test fail, exit 1. Restoring the saved manifest returned the test green.
+
+### TDD-0100
+
+- TC: TC-0017-0091. Implementation revision: `9c9febc3c`.
+- Command and GREEN: the same five-test selection as TDD-0099, exit 0.
+- RED: before implementation, incomplete capability fixtures had no checks
+  output and invalid checks outputs could pass the publication conditions.
+- Oracle: replacing the all-operation-scripts predicate with `true` made
+  the incomplete-capability test fail, exit 1. The saved workflow was restored.
+- Fixtures include each absent or non-string operation declaration, legacy
+  whole and sliced manifests, missing and unknown outputs, and the forbidden
+  whole/operations combination. Existing prerequisite cases cover every added
+  job's failed, cancelled, timed-out, skipped, unknown, empty and missing result.
+
+### TDD-0101
+
+- TC: TC-0017-0092. Implementation revision: `9c9febc3c`.
+- Command and GREEN: the same five-test selection as TDD-0099, exit 0.
+- RED: the isolated-job test failed before implementation because the operation
+  jobs did not exist.
+- Oracle: adding `gate` to `gate-types.needs` made the isolation test fail,
+  exit 1. The saved workflow was restored.
+- Assertions cover verify-only dependencies, immutable tag and sidecar
+  checkouts, shared setup, read-only permissions, sidecar credentials and sparse
+  scope, the tag-time lint exemption and build-before-scan ordering.
+- These are executable classification and topology checks. They do not measure
+  actual hosted overlap or a wall-clock improvement; DR-0017-0020 records that
+  remaining measurement obligation.
