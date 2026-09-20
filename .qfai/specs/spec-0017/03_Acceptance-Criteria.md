@@ -385,10 +385,24 @@ Scenario: Splitting release checks preserves the publication barrier
   When the publication jobs evaluate their prerequisites
   Then verify and gate must have succeeded
   And every gate selected by that shape must have succeeded
-  And only the other shape's gates may be skipped
+  And only gates outside the selected suite and checks shapes may be skipped
   And a missing, failed, cancelled, skipped or unknown required result refuses publication
   And an unknown shape or cancelled run refuses publication
   And GitHub Release remains push-only while npm publication also supports manual dispatch
+
+# AC-0017-0036: Independent release checks use separate workspaces on capable tags
+# Parent: US-0017-0005
+# Source: discussion-20260804173914356#DSC-019
+Scenario: Release checks run independently without abandoning older tags
+  Given verify reads the tagged manifests as data
+  When all four operation scripts and all suite slice scripts are declared
+  Then SSOT sync, lint, types and the build chain each need only verify
+  And each job uses an isolated checkout of the verified tag and the shared setup
+  And the build, pack verification and leakage scan remain ordered in one workspace
+  And the local aggregate still invokes exactly the original checks in their original order
+  And a tag missing any operation script uses its complete existing aggregate
+  And a whole-suite tag never enters the operation path
+  And an unknown checks shape or an unsuccessful required operation refuses upload
 ```
 
 ## AC Catalog (optional)
@@ -430,6 +444,7 @@ Scenario: Splitting release checks preserves the publication barrier
 | AC-0017-0033 | The layer vocabulary is unchanged after the mapping file lands     | Edge / boundary, US-0017-0009, REQ-0014                                         | Should   |
 | AC-0017-0034 | The mapping file has one copy, reached from either path            | Negative path (an unlinked root path is rejected), US-0017-0009, REQ-0014       | Should   |
 | AC-0017-0035 | Release uploads require successful gates on the selected path      | Normal and rejection paths, US-0017-0005                                        | Must     |
+| AC-0017-0036 | Independent release checks preserve complete old-tag gates         | Normal, error and isolation boundaries, US-0017-0005                            | Must     |
 
 > This catalog is a human-facing index. It deliberately carries no `Source` column: provenance
 > has exactly one home, the `# Source:` comment in the required Gherkin block above, so the two

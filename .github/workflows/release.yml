@@ -66,6 +66,7 @@ jobs:
       tag: ${{ steps.pin.outputs.tag }}
       sha: ${{ steps.pin.outputs.sha }}
       suite-shape: ${{ steps.shape.outputs.suite-shape }}
+      checks-shape: ${{ steps.shape.outputs.checks-shape }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -244,9 +245,15 @@ jobs:
           // tag chose.
           const absent = slices.filter((slice) => !declares(pkg, `test:${slice}`));
 
+          const operationScripts = [
+            "ci:gate:ssot", "ci:gate:lint", "ci:gate:types", "ci:gate:build",
+          ];
           const emit = (shape, why) => {
+            const checks = shape === "sliced" && operationScripts.every((name) => declares(root, name))
+              ? "operations" : "aggregate";
             console.log(`release gate shape: ${shape} — ${why}`);
-            appendFileSync(process.env.GITHUB_OUTPUT, `suite-shape=${shape}\n`);
+            console.log(`release checks shape: ${checks}`);
+            appendFileSync(process.env.GITHUB_OUTPUT, `suite-shape=${shape}\nchecks-shape=${checks}\n`);
             process.exit(0);
           };
 
@@ -294,13 +301,8 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ needs.verify.outputs.sha }}
-          # Full history, because the gate is not a self-contained check.
-          # `pnpm ci:gate` runs `scripts/check-prompt-scanner-pair.mjs`, which
-          # takes a three-dot diff between `origin/main` and `HEAD`. At the
-          # default depth of 1 the tag and the branch share no reachable merge
-          # base, the script exits 2, and the re-publish path this workflow
-          # opens with — re-running a failed publish for an older tag — could
-          # never get past this job.
+          # Older tags' aggregates include a scanner using a three-dot diff
+          # against origin/main. Their re-publication path still needs full history.
           fetch-depth: 0
       # ── The composite action, taken from THIS workflow's revision ────────────────────
       # The checkout above put the TAG's tree in the workspace, and `uses: ./…` resolves
@@ -350,15 +352,16 @@ jobs:
       # passed `ci.yml`, whose `node-floor` lane runs the package suite on the floor. Seven lanes on
       # the newest, one on the floor, and this gate re-runs the aggregate on the newest.
       - uses: ./.ci-actions/.github/actions/setup
-      # Exactly one of the next two steps runs, and which one is `verify`'s answer rather than
-      # this job's. Two steps and not one branching script: the step that ran is the step a reader
-      # of the run sees, so the path a release took is legible from the log without reading the
-      # workflow, and no value from the tag's manifest reaches a shell here at all.
+      # The tag's declared entry points decide which complete gate runs.
+      - name: Build and verify the release package
+        if: needs.verify.outputs.checks-shape == 'operations'
+        run: pnpm ci:gate:build
+        shell: bash
       - name: Run the release gate's checks
         # Everything in the aggregate `main` is held to except the package suite: SSOT sync,
         # format, lint, types and pack verification. The suite runs beside this job, sliced, so
         # the two halves take the wall clock of the longer rather than the sum.
-        if: needs.verify.outputs.suite-shape == 'sliced'
+        if: needs.verify.outputs.suite-shape == 'sliced' && needs.verify.outputs.checks-shape == 'aggregate'
         run: pnpm ci:gate:checks
         shell: bash
       - name: Run the whole release gate, suite included
@@ -373,6 +376,78 @@ jobs:
         # because some identifiers only appear in `dist/`. Without it here, a
         # leak that is invisible in source reaches an irreversible publish.
         run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh
+        shell: bash
+
+  # Independent checks use separate workspaces: tsc writes dist and the
+  # bundler cleans it. Only verify's immutable tag decision is shared.
+  # SHIPPED-CI: not-applicable
+  # Because: the shipped templates do not build or publish this package.
+  gate-ssot:
+    needs: verify
+    if: needs.verify.outputs.checks-shape == 'operations'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+          ref: ${{ needs.verify.outputs.sha }}
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .ci-actions
+          clean: false
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+      - uses: ./.ci-actions/.github/actions/setup
+      - run: pnpm ci:gate:ssot
+        shell: bash
+
+  gate-lint:
+    needs: verify
+    if: needs.verify.outputs.checks-shape == 'operations'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      VERSION_PIN_SKIP: "1"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+          ref: ${{ needs.verify.outputs.sha }}
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .ci-actions
+          clean: false
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+      - uses: ./.ci-actions/.github/actions/setup
+      - run: pnpm ci:gate:lint
+        shell: bash
+
+  gate-types:
+    needs: verify
+    if: needs.verify.outputs.checks-shape == 'operations'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+          ref: ${{ needs.verify.outputs.sha }}
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .ci-actions
+          clean: false
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+      - uses: ./.ci-actions/.github/actions/setup
+      - run: pnpm ci:gate:types
         shell: bash
 
   # ── 2a. The package suite, sliced, on the tagged tree ────────────
@@ -604,8 +679,18 @@ jobs:
       || (needs.verify.outputs.suite-shape == 'whole'
       && needs.gate-floor-whole.result == 'success'
       && needs.gate-tests.result == 'skipped'
-      && needs.gate-floor.result == 'skipped')) }}
-    needs: [verify, gate, gate-tests, gate-floor, gate-floor-whole]
+      && needs.gate-floor.result == 'skipped'))
+      && ((needs.verify.outputs.checks-shape == 'operations'
+      && needs.verify.outputs.suite-shape == 'sliced'
+      && needs.gate-ssot.result == 'success'
+      && needs.gate-lint.result == 'success'
+      && needs.gate-types.result == 'success')
+      || (needs.verify.outputs.checks-shape == 'aggregate'
+      && needs.gate-ssot.result == 'skipped'
+      && needs.gate-lint.result == 'skipped'
+      && needs.gate-types.result == 'skipped')) }}
+    needs:
+      [verify, gate, gate-ssot, gate-lint, gate-types, gate-tests, gate-floor, gate-floor-whole]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -703,8 +788,18 @@ jobs:
       || (needs.verify.outputs.suite-shape == 'whole'
       && needs.gate-floor-whole.result == 'success'
       && needs.gate-tests.result == 'skipped'
-      && needs.gate-floor.result == 'skipped')) }}
-    needs: [verify, gate, gate-tests, gate-floor, gate-floor-whole]
+      && needs.gate-floor.result == 'skipped'))
+      && ((needs.verify.outputs.checks-shape == 'operations'
+      && needs.verify.outputs.suite-shape == 'sliced'
+      && needs.gate-ssot.result == 'success'
+      && needs.gate-lint.result == 'success'
+      && needs.gate-types.result == 'success')
+      || (needs.verify.outputs.checks-shape == 'aggregate'
+      && needs.gate-ssot.result == 'skipped'
+      && needs.gate-lint.result == 'skipped'
+      && needs.gate-types.result == 'skipped')) }}
+    needs:
+      [verify, gate, gate-ssot, gate-lint, gate-types, gate-tests, gate-floor, gate-floor-whole]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: release

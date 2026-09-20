@@ -3924,7 +3924,14 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     return `${lines.slice(open + 1, close).join("\n")}\n`;
   };
 
-  type Classification = { status: number; shape: string; output: string };
+  type Classification = { status: number; shape: string; checks: string; output: string };
+  const operationScripts = ["ci:gate:ssot", "ci:gate:lint", "ci:gate:types", "ci:gate:build"];
+  const operationJobs = ["gate-ssot", "gate-lint", "gate-types"];
+  const gatePaths = [
+    { shape: "whole", checks: "aggregate" },
+    { shape: "sliced", checks: "aggregate" },
+    { shape: "sliced", checks: "operations" },
+  ];
 
   /**
    * The classifier, run against two manifests.
@@ -3960,6 +3967,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
       return {
         status: run.status ?? -1,
         shape: match?.[1] ?? "",
+        checks: /^checks-shape=(.*)$/m.exec(written)?.[1] ?? "",
         output: `${run.stdout ?? ""}${run.stderr ?? ""}`,
       };
     } finally {
@@ -3988,26 +3996,32 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
    *
    * A condition that never mentions the decision is orthogonal to it — the two build steps select
    * on `matrix.slice` — and counts as running under both. A condition that DOES mention it must
-   * be one of the two forms, and throws otherwise: a shape condition rewritten into something
-   * this reader does not understand is exactly when the rows below would silently start agreeing
-   * with whatever it now means.
+   * use the restricted release-condition grammar. Unknown syntax throws rather than silently
+   * treating an unrecognized condition as an unconditional step.
    */
-  const SHAPE_CONDITION = /^needs\.verify\.outputs\.suite-shape == '(sliced|whole)'$/;
-
-  const runsUnder = (owner: Record<string, unknown>, where: string, shape: string): boolean => {
+  const runsUnder = (
+    owner: Record<string, unknown>,
+    where: string,
+    shape: string,
+    checks: string,
+  ): boolean => {
     const condition = owner["if"];
     if (condition === undefined) return true;
     if (typeof condition !== "string") throw new Error(`${where} carries a non-string condition`);
     const text = condition.trim();
-    if (!text.includes("suite-shape")) return true;
-    const match = SHAPE_CONDITION.exec(text);
-    if (match === null) {
-      throw new Error(`${where} selects on the shape in a form this row cannot classify: ${text}`);
+    if (!text.includes("suite-shape") && !text.includes("checks-shape")) return true;
+    try {
+      return acceptsRelease(
+        text,
+        { verify: { outputs: { "suite-shape": shape, "checks-shape": checks } } },
+        "push",
+      );
+    } catch (error) {
+      throw new Error(`${where} has an unsupported shape condition`, { cause: error });
     }
-    return match[1] === shape;
   };
 
-  /** The gate jobs, discovered by prefix and held at the four this workflow declares. */
+  /** The gate jobs, discovered by prefix and checked against the declared set below. */
   const gateJobs = (): Record<string, Record<string, unknown>> =>
     Object.fromEntries(Object.entries(releaseJobs()).filter(([id]) => id.startsWith("gate")));
 
@@ -4038,14 +4052,14 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
    * package's. No gate step calls a pnpm built-in, so every match is a script that has to exist;
    * a `-C` naming any other directory throws rather than being dropped.
    */
-  const invocations = (shape: string): Invocation[] => {
+  const invocations = (shape: string, checks: string): Invocation[] => {
     const out: Invocation[] = [];
     for (const [jobId, job] of Object.entries(gateJobs())) {
-      if (!runsUnder(job, `release.yml#${jobId}`, shape)) continue;
+      if (!runsUnder(job, `release.yml#${jobId}`, shape, checks)) continue;
       for (const step of steps(job)) {
         const name = String(step["name"] ?? "(unnamed)");
         const where = `release.yml#${jobId}: ${name}`;
-        if (!runsUnder(step, where, shape)) continue;
+        if (!runsUnder(step, where, shape, checks)) continue;
         const body = step["run"];
         if (typeof body !== "string") continue;
         for (const slice of matrixSlices(job)) {
@@ -4083,15 +4097,14 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
    * What the root aggregate a gate step names would itself run.
    *
    * On the old path it is the tag's own `ci:gate`, recorded above. On the sliced path the gate
-   * names `ci:gate:checks`, which is THIS tree's script, so it is resolved transitively by the
-   * reader the hygiene lane already uses: a checks script that started reaching the suite through
-   * something it calls would make the sliced path a double run, and one hop would not see it.
+   * names either the checks aggregate or an operation entry point. Each invoked script is
+   * resolved transitively so a check reaching the suite through another script is counted too.
    */
-  const aggregateBody = (shape: string): string => {
+  const aggregateBody = (shape: string, script: string): string => {
     if (shape === "whole") return TAGGED_AGGREGATE_BODY;
-    const resolved: unknown = invokedScriptBodies("pnpm ci:gate:checks", REPO_ROOT);
+    const resolved: unknown = invokedScriptBodies(`pnpm ${script}`, REPO_ROOT);
     if (!Array.isArray(resolved)) {
-      throw new Error("the script reader returned no list for pnpm ci:gate:checks");
+      throw new Error(`the script reader returned no list for pnpm ${script}`);
     }
     return resolved.map((entry) => (Array.isArray(entry) ? String(entry[1] ?? "") : "")).join("\n");
   };
@@ -4105,14 +4118,14 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
    * suite and a sliced leg are the same suite arriving by two routes, and a set would swallow the
    * second.
    */
-  const suiteRuns = (shape: string, floor: boolean): string[] => {
+  const suiteRuns = (shape: string, checks: string, floor: boolean): string[] => {
     const onFloor = new Set(
       Object.entries(gateJobs())
         .filter(([, job]) => pinsFloor(job) === floor)
         .map(([id]) => id),
     );
     const runs: string[] = [];
-    for (const invocation of invocations(shape)) {
+    for (const invocation of invocations(shape, checks)) {
       if (!onFloor.has(invocation.jobId)) continue;
       if (invocation.manifest === "package") {
         if (invocation.script === "test" || invocation.script.startsWith("test:")) {
@@ -4121,7 +4134,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
         continue;
       }
       if (!invocation.script.startsWith("ci:gate")) continue;
-      for (const match of aggregateBody(shape).matchAll(
+      for (const match of aggregateBody(shape, invocation.script).matchAll(
         /\bpnpm -C packages\/qfai (test(?::[\w-]+)?)\b/g,
       )) {
         const script = match[1];
@@ -4130,6 +4143,154 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     }
     return runs.sort();
   };
+
+  // QFAI:SPEC-0017:TC-0017-0090
+  it("TC-0017-0090 (TDD-0099): classifies complete operation capabilities and legacy trees", () => {
+    const current = classify(currentRoot(), currentPackage());
+    expect(current.status, current.output).toBe(0);
+    expect([current.shape, current.checks]).toEqual(["sliced", "operations"]);
+    for (const tag of TAGS) expect(classifyTag(tag).checks, tag).toBe("aggregate");
+    const legacy = classify(
+      manifestWith(scriptKeys(currentRoot()).filter((key) => !operationScripts.includes(key))),
+      currentPackage(),
+    );
+    expect([legacy.shape, legacy.checks]).toEqual(["sliced", "aggregate"]);
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0090
+  it("TC-0017-0090 (TDD-0099): preserves the complete ordered release checks", () => {
+    const parsed: unknown = JSON.parse(currentRoot());
+    if (!isRecord(parsed) || !isRecord(parsed["scripts"])) throw new Error("root scripts missing");
+    const scripts = parsed["scripts"];
+    expect(scripts["ci:gate:checks"]).toBe(
+      operationScripts.map((script) => `pnpm ${script}`).join(" && "),
+    );
+    const bodies = operationScripts.map((script) => {
+      const body = scripts[script];
+      if (typeof body !== "string") throw new Error(`${script} missing`);
+      return body;
+    });
+    expect(bodies.join(" && ")).toBe(
+      "pnpm sync:ssot && git diff --exit-code .qfai/ qfai.config.yaml packages/qfai/assets/init/.qfai/ && bash ./scripts/run-lint-checks.sh gate && pnpm check-types && node ./scripts/check-build-warnings.mjs && pnpm verify:pack",
+    );
+    const selected = invocations("sliced", "operations")
+      .filter((entry) => entry.manifest === "root")
+      .map((entry) => entry.script);
+    expect(selected.sort()).toEqual([...operationScripts].sort());
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0091
+  it("TC-0017-0091 (TDD-0100): incomplete operation capabilities retain aggregate checks", () => {
+    const root = scriptKeys(currentRoot());
+    for (const dropped of operationScripts) {
+      expect(root).toContain(dropped);
+      for (const value of [undefined, 1, null, {}]) {
+        const scripts = Object.fromEntries(
+          root.map((key) => [key, key === dropped ? value : "declared"]),
+        );
+        const result = classify(JSON.stringify({ scripts }), currentPackage());
+        expect(result.status, `${dropped}: ${result.output}`).toBe(0);
+        expect([result.shape, result.checks]).toEqual(["sliced", "aggregate"]);
+      }
+    }
+    const whole = classify(currentRoot(), manifestWith(["test"]));
+    expect([whole.shape, whole.checks]).toEqual(["whole", "aggregate"]);
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0091
+  it("TC-0017-0091 (TDD-0100): refuses missing unknown and incompatible checks outputs", () => {
+    for (const id of ["github-release", "publish"]) {
+      const condition = releaseJobs()[id]?.["if"];
+      if (typeof condition !== "string") throw new Error(`${id} has no release condition`);
+      for (const { shape, checks } of gatePaths) {
+        const needs: ReleaseNeeds = {
+          verify: { result: "success", outputs: { "suite-shape": shape, "checks-shape": checks } },
+          gate: { result: "success" },
+          "gate-tests": { result: shape === "sliced" ? "success" : "skipped" },
+          "gate-floor": { result: shape === "sliced" ? "success" : "skipped" },
+          "gate-floor-whole": { result: shape === "whole" ? "success" : "skipped" },
+          ...Object.fromEntries(
+            operationJobs.map((name) => [
+              name,
+              { result: checks === "operations" ? "success" : "skipped" },
+            ]),
+          ),
+        };
+        for (const invalid of [
+          undefined,
+          "",
+          "unknown",
+          checks === "operations" ? "aggregate" : "operations",
+        ]) {
+          const changed = {
+            ...needs,
+            verify: {
+              result: "success",
+              outputs: { "suite-shape": shape, "checks-shape": invalid },
+            },
+          };
+          expect
+            .soft(
+              acceptsRelease(condition, changed, "push"),
+              `${id} ${shape} ${checks} -> ${invalid}`,
+            )
+            .toBe(false);
+        }
+      }
+      const impossible: ReleaseNeeds = Object.fromEntries(
+        Object.keys(gateJobs()).map((name) => [
+          name,
+          { result: ["gate-tests", "gate-floor"].includes(name) ? "skipped" : "success" },
+        ]),
+      );
+      impossible["verify"] = {
+        result: "success",
+        outputs: { "suite-shape": "whole", "checks-shape": "operations" },
+      };
+      expect(acceptsRelease(condition, impossible, "push"), `${id} whole operations`).toBe(false);
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0092
+  it("TC-0017-0092 (TDD-0101): runs independent checks in isolated verified workspaces", () => {
+    for (const id of ["gate", ...operationJobs]) {
+      const job = gateJobs()[id];
+      if (job === undefined) throw new Error(`${id} missing`);
+      expect(job["needs"], id).toBe("verify");
+      expect(job["timeout-minutes"], id).toBeGreaterThan(0);
+      expect(job["permissions"] ?? releaseDocument()["permissions"], id).toEqual({
+        contents: "read",
+      });
+      const actions = steps(job).filter((step) => typeof step["uses"] === "string");
+      const checkout = actions[0]?.["with"];
+      const sidecar = actions[1]?.["with"];
+      expect(isRecord(checkout) ? checkout["ref"] : undefined, id).toBe(
+        "${{ needs.verify.outputs.sha }}",
+      );
+      expect(isRecord(checkout) ? checkout["persist-credentials"] : undefined, id).toBe(false);
+      expect(isRecord(sidecar) ? sidecar["ref"] : undefined, id).toBe("${{ github.sha }}");
+      expect(isRecord(sidecar) ? sidecar["path"] : undefined, id).toBe(".ci-actions");
+      expect(isRecord(sidecar) ? sidecar["persist-credentials"] : undefined, id).toBe(false);
+      expect(isRecord(sidecar) ? sidecar["sparse-checkout"] : undefined, id).toBe(
+        ".github/actions",
+      );
+      expect(isRecord(sidecar) ? sidecar["clean"] : undefined, id).toBe(false);
+      expect(isRecord(sidecar) ? sidecar["sparse-checkout-cone-mode"] : undefined, id).toBe(false);
+      expect(actions[2]?.["uses"], id).toBe("./.ci-actions/.github/actions/setup");
+    }
+    const lintEnv = gateJobs()["gate-lint"]?.["env"];
+    expect(isRecord(lintEnv) ? lintEnv["VERSION_PIN_SKIP"] : undefined).toBe("1");
+    const gate = gateJobs()["gate"];
+    if (gate === undefined) throw new Error("gate missing");
+    const commands = steps(gate)
+      .filter((step) => runsUnder(step, "gate", "sliced", "operations"))
+      .map((step) => step["run"])
+      .filter((value): value is string => typeof value === "string");
+    expect(commands).toEqual([
+      "pnpm ci:gate:build",
+      "bash packages/qfai/scripts/check-no-internal-version-leakage.sh",
+    ]);
+  });
 
   it("reads every existing tag as the shape its tree can actually run", () => {
     const seen = new Map<string, string>();
@@ -4152,28 +4313,35 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
   });
 
   /**
-   * Every tree the gate has to work against: the three tagged shapes, and this one.
-   *
-   * This tree is in the list because it is the only tree that takes the sliced path — no tag has
-   * been cut on it yet — so without it the sliced half of the workflow is walked by nothing and
-   * both rows below would pass on a sliced path that named scripts nobody declares.
+   * The recorded tags, a sliced tree without operation entry points, and this tree.
+   * Together they exercise every runnable combination of suite and checks capabilities.
    */
   const subjects = (): Array<{
     label: string;
     shape: string;
+    checks: string;
     root: string[];
     package: string[];
   }> => [
     ...TAGS.map((tag) => ({
       label: tag,
       shape: classifyTag(tag).shape,
+      checks: classifyTag(tag).checks,
       root: [...TAGGED_MANIFESTS[tag].root],
       package: [...TAGGED_MANIFESTS[tag].package],
     })),
     {
       label: "this tree",
       shape: classify(currentRoot(), currentPackage()).shape,
+      checks: classify(currentRoot(), currentPackage()).checks,
       root: scriptKeys(currentRoot()),
+      package: scriptKeys(currentPackage()),
+    },
+    {
+      label: "sliced tree before operation extraction",
+      shape: "sliced",
+      checks: "aggregate",
+      root: scriptKeys(currentRoot()).filter((script) => !operationScripts.includes(script)),
       package: scriptKeys(currentPackage()),
     },
   ];
@@ -4186,7 +4354,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
         root: new Set<string>(subject.root),
         package: new Set<string>(subject.package),
       };
-      const found = invocations(subject.shape);
+      const found = invocations(subject.shape, subject.checks);
       expect(
         found.length,
         `${subject.label} takes the ${subject.shape} path and runs no pnpm script`,
@@ -4211,9 +4379,9 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
   it("runs the suite exactly once for one tree, on the range and on the floor", () => {
     const slices = [...declaredSlices()].map((slice) => `test:${slice}`).sort();
     const covers = [["test"], slices];
-    for (const { label: tag, shape } of subjects()) {
+    for (const { label: tag, shape, checks } of subjects()) {
       for (const floor of [false, true]) {
-        const runs = suiteRuns(shape, floor);
+        const runs = suiteRuns(shape, checks, floor);
         const isCover = covers.some(
           (cover) => cover.length === runs.length && cover.every((s, i) => s === runs[i]),
         );
@@ -4292,6 +4460,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
         )
         .not.toBe(0);
       expect.soft(result.shape, `${why}: nothing may be published as the decision`).toBe("");
+      expect.soft(result.checks, `${why}: neither output may be published on refusal`).toBe("");
     }
   });
 
@@ -4305,27 +4474,34 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
       "the decision must be published by `verify`, which every other job already waits for",
     ).toBe("${{ steps.shape.outputs.suite-shape }}");
 
-    // Exactly the four gate jobs, and each one's path stated on the job or on its steps. A fifth
-    // gate job, or one whose condition stopped naming a shape, reaches `runsUnder` and throws.
+    // Every gate must be counted here and in both upload barriers.
     const gates = Object.keys(gateJobs()).sort();
     expect(
       gates,
-      "the gate jobs are a closed set; a fifth is a change someone should read",
-    ).toEqual(["gate", "gate-floor", "gate-floor-whole", "gate-tests"]);
-    for (const shape of ["sliced", "whole"]) {
+      "the gate jobs are a closed set; an addition must update the publication barrier",
+    ).toEqual(["gate", "gate-floor", "gate-floor-whole", ...operationJobs, "gate-tests"].sort());
+    expect(isRecord(outputs) ? outputs["checks-shape"] : undefined).toBe(
+      "${{ steps.shape.outputs.checks-shape }}",
+    );
+    for (const { shape, checks } of gatePaths) {
       const running = gates.filter((id) => {
         const job = jobs[id];
         if (job === undefined) throw new Error(`release.yml lost its ${id} job`);
-        return runsUnder(job, `release.yml#${id}`, shape);
+        return runsUnder(job, `release.yml#${id}`, shape, checks);
       });
       expect
         .soft(running, `the ${shape} path must run a gate on the range and a gate on the floor`)
         .toEqual(
-          shape === "sliced" ? ["gate", "gate-floor", "gate-tests"] : ["gate", "gate-floor-whole"],
+          [
+            ...(shape === "sliced"
+              ? ["gate", "gate-floor", "gate-tests"]
+              : ["gate", "gate-floor-whole"]),
+            ...(checks === "operations" ? operationJobs : []),
+          ].sort(),
         );
     }
 
-    // Publication waits on all four whichever path ran. Without a condition that accepts a
+    // Publication waits on every gate whichever path ran. Without a condition that accepts a
     // skipped dependency, the jobs the other path skipped would skip these too and no tag could
     // be published at all; with `always()` instead of these terms, a RED gate would be published
     // over.
@@ -4335,13 +4511,22 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
       const needs = job["needs"];
       expect
         .soft([...(Array.isArray(needs) ? needs : [])].sort(), `${id} must wait on every gate`)
-        .toEqual(["gate", "gate-floor", "gate-floor-whole", "gate-tests", "verify"]);
+        .toEqual(
+          [
+            "gate",
+            "gate-floor",
+            "gate-floor-whole",
+            ...operationJobs,
+            "gate-tests",
+            "verify",
+          ].sort(),
+        );
     }
   });
 
   type ReleaseNeed = {
     result?: string | undefined;
-    outputs?: { "suite-shape"?: string | undefined };
+    outputs?: { "suite-shape"?: string | undefined; "checks-shape"?: string | undefined };
   };
   type ReleaseNeeds = Record<string, ReleaseNeed>;
 
@@ -4354,7 +4539,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
   ): boolean => {
     const expression = condition.trim().replace(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/, "$1");
     const token =
-      /\s+|contains\(needs\.\*\.result,\s*'([^']*)'\)|cancelled\(\)|github\.event_name|needs\.([a-z][a-z-]*)\.(result|outputs\.suite-shape)|'[^']*'|&&|\|\||==|!=|[!()]/gy;
+      /\s+|contains\(needs\.\*\.result,\s*'([^']*)'\)|cancelled\(\)|github\.event_name|needs\.([a-z][a-z-]*)\.(result|outputs\.(?:suite|checks)-shape)|'[^']*'|&&|\|\||==|!=|[!()]/gy;
     const translated: string[] = [];
     let offset = 0;
     while (offset < expression.length) {
@@ -4374,14 +4559,25 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
         translated.push(JSON.stringify(event));
       } else if (match[2] !== undefined) {
         if (
-          !["verify", "gate", "gate-tests", "gate-floor", "gate-floor-whole"].includes(match[2])
+          ![
+            "verify",
+            "gate",
+            "gate-tests",
+            "gate-floor",
+            "gate-floor-whole",
+            ...operationJobs,
+          ].includes(match[2])
         ) {
           throw new Error(`Unsupported release need ${match[2]}`);
         }
         const need = needs[match[2]];
         translated.push(
           JSON.stringify(
-            (match[3] === "result" ? need?.result : need?.outputs?.["suite-shape"]) ?? "",
+            (match[3] === "result"
+              ? need?.result
+              : need?.outputs?.[
+                  match[3] === "outputs.checks-shape" ? "checks-shape" : "suite-shape"
+                ]) ?? "",
           ),
         );
       } else if (text.startsWith("'")) {
@@ -4401,13 +4597,19 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     for (const id of ["github-release", "publish"]) {
       const condition = releaseJobs()[id]?.["if"];
       if (typeof condition !== "string") throw new Error(`${id} has no release condition`);
-      for (const shape of ["sliced", "whole"]) {
+      for (const { shape, checks } of gatePaths) {
         const needs: ReleaseNeeds = {
-          verify: { result: "success", outputs: { "suite-shape": shape } },
+          verify: { result: "success", outputs: { "suite-shape": shape, "checks-shape": checks } },
           gate: { result: "success" },
           "gate-tests": { result: shape === "sliced" ? "success" : "skipped" },
           "gate-floor": { result: shape === "sliced" ? "success" : "skipped" },
           "gate-floor-whole": { result: shape === "whole" ? "success" : "skipped" },
+          ...Object.fromEntries(
+            operationJobs.map((name) => [
+              name,
+              { result: checks === "operations" ? "success" : "skipped" },
+            ]),
+          ),
         };
         for (const event of ["push", "workflow_dispatch"]) {
           expect(acceptsRelease(condition, needs, event), `${id} ${shape} ${event}`).toBe(
@@ -4423,17 +4625,21 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     for (const id of ["github-release", "publish"]) {
       const condition = releaseJobs()[id]?.["if"];
       if (typeof condition !== "string") throw new Error(`${id} has no release condition`);
-      for (const shape of ["sliced", "whole"]) {
+      for (const { shape, checks } of gatePaths) {
         const required =
           shape === "sliced"
             ? ["verify", "gate", "gate-tests", "gate-floor"]
             : ["verify", "gate", "gate-floor-whole"];
         const inactive = shape === "sliced" ? ["gate-floor-whole"] : ["gate-tests", "gate-floor"];
+        (checks === "operations" ? required : inactive).push(...operationJobs);
         const needs: ReleaseNeeds = Object.fromEntries([
           ...required.map((name) => [name, { result: "success" }]),
           ...inactive.map((name) => [name, { result: "skipped" }]),
         ]);
-        needs["verify"] = { result: "success", outputs: { "suite-shape": shape } };
+        needs["verify"] = {
+          result: "success",
+          outputs: { "suite-shape": shape, "checks-shape": checks },
+        };
         expect(acceptsRelease(condition, needs, "push", true), `${id} cancelled`).toBe(false);
         for (const name of [...required, ...inactive]) {
           const invalidStates = required.includes(name)
@@ -4458,7 +4664,10 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
         ]) {
           const changed = {
             ...needs,
-            verify: { result: "success", outputs: { "suite-shape": invalidShape } },
+            verify: {
+              result: "success",
+              outputs: { "suite-shape": invalidShape, "checks-shape": checks },
+            },
           };
           expect
             .soft(
