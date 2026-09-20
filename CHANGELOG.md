@@ -39,9 +39,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that the default merge method is `merge`, and where the plan is written. None
   of that was checked before. This is the split #1982 made for `pr-fix`,
   finished for the other half of the pair.
-  Measured over the lane's eight files, 321 s before and 9 s after; the
-  `mirror-surface` job itself was 201 s on the last green `main` run before
-  this change.
+  Measured over the lane's eight files, 321 s before and 9 s after. On CI the
+  `mirror-surface` job was 201 s on the last green `main` run before this
+  change and 20 s on the run that carries it.
 
 - **A code-path pull request no longer claims its runner cost fell, and what it does
   cost is pinned** (#2017). The requirement capped such a run at 12 job instances,
