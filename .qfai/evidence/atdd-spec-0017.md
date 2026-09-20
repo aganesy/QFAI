@@ -23,8 +23,8 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
 - `.qfai/specs/spec-0017/tdd/test-list.md` — 101 rows: 81 `Integration`,
-  11 `Unit`; **80 `refactor`, 6 `blocked`, 15 `todo`**. The other nine rows are `E2E`, one per story,
-  seeded at `todo`. Six `todo` rows are `Integration` and are therefore this stage's to route — see
+  11 `Unit`; **81 `refactor`, 6 `blocked`, 14 `todo`**. The other nine rows are `E2E`, one per story,
+  seeded at `todo`. Five `todo` rows are `Integration` and are therefore this stage's to route — see
   § "Ledger rows advanced"
 - `.qfai/assistant/catalog/test-layers.md` — the layer derivation and the directory each `Level`
   routes to
@@ -3570,3 +3570,22 @@ ba2f2c08e56c777846ca904c072db8e2a4922dec review_request.md
 - These are executable classification and topology checks. They do not measure
   actual hosted overlap or a wall-clock improvement; DR-0017-0020 records that
   remaining measurement obligation.
+
+### TDD-0094
+
+- Revision: `7816cc489`.
+- RED: the seven new regression cases failed before the unconditional-host rule
+  was implemented. Matching skip declarations produced no unconditional-host
+  finding; missing and malformed exemption declarations were accepted.
+- GREEN: `pnpm exec vitest run tests/scripts/workflowHygiene.test.ts -t 'TDD-0094|TDD-0057'`
+  from `packages/qfai`: nine passed, including the unchanged clean-tree acceptance.
+  The seven regression cases cover both current lint hosts and missing, empty,
+  unknown, duplicate and non-string declarations.
+- The independent host-mapping assertion also passed:
+  `pnpm exec vitest run tests/scripts/ownWorkflowTopology.test.ts -t TDD-0012`.
+- ORACLE: removing only the unconditional-host check made all seven regression
+  cases fail. The source bytes were restored from an in-memory backup, and
+  `git diff --exit-code scripts/check-workflow-hygiene.mjs` passed afterward.
+- Format, lint, type checking and workflow hygiene passed. The cost declarations
+  remain five documentation-path jobs and 26 full-path instances. Full-suite
+  validation belongs to the pull request's CI.
