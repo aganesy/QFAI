@@ -845,3 +845,53 @@ file, so an entry here is what makes that citation checkable.
   isolated checkouts and tag-declared entry points. Checkout precedes the sidecar,
   setup precedes its consumers, and artifact generation precedes artifact scans.
 - Related: AC-0017-0035, BR-0017-0068, TC-0017-0088, TC-0017-0089
+
+### DR-0017-0020: release checks use isolated jobs when the tag declares their entry points
+
+- Status: accepted
+- Decision: `verify` publishes both suite and checks capabilities from the tagged
+  manifests. The checks capability is `operations` only when the suite is sliced
+  and all four operation scripts are declared. Every other runnable tag uses
+  `aggregate`. The manifests are data; their command bodies are never evaluated
+  by the classifier.
+- The three valid paths are sliced/operations, sliced/aggregate and
+  whole/aggregate. Publication requires successful selected jobs and skipped
+  inactive jobs. An unknown output or whole/operations refuses publication.
+- Each operation job checks out the verified tag before fetching the shared setup
+  action at the workflow revision. The sidecar keeps `clean: false`. No new job
+  has write permissions or publication credentials. Lint skips the branch-name
+  version pin because `verify` already checked the tag version.
+- Local `ci:gate:checks` calls the four entry points serially, in its original
+  order. The workflow changes scheduling, not the set or order of commands inside
+  each operation. The suite runs exactly once per runtime on every valid path.
+
+| Operation                            | Inputs and effects                                                      | Dependency retained                                                                        |
+| ------------------------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Verify tag and classify capabilities | Tag ref and manifests; publishes immutable SHA, version and both shapes | All consumers wait for this trust decision                                                 |
+| SSOT sync and tracked-tree diff      | Tag tree; sync may rewrite tracked assistant files                      | The diff must read the synchronized tree                                                   |
+| Lint                                 | Tag tree; existing four lanes start together                            | Setup precedes each lane; existing lane command ordering is preserved                      |
+| Types                                | Tag source and declarations; tsc writes dist and incremental state      | Compiler verification precedes compilation; source compilation precedes test type checking |
+| Build, pack and leakage scan         | Tag source and assets; bundler and pack both rebuild dist               | The two writers stay serial, and leakage scanning reads the final build                    |
+| Sliced package suites                | Tag source; integration and e2e also read a local build                 | Each relevant slice builds before its tests, on both runtime ranges                        |
+| Whole-tag fallback                   | The old tag's complete aggregate and floor suite                        | Its scripts define the checks that tag supports; operation scripts cannot be assumed       |
+| GitHub Release and npm publication   | Successful selected gates, verified tag and inspected package           | All selected gates precede upload; approval precedes npm publication                       |
+
+- Isolation is required: tsc writes `dist/` while the bundler cleans it. Running
+  both in one checkout would race. SSOT also writes files that lint reads; separate
+  checkouts let lint inspect the committed source while the sync job independently
+  refuses any drift. No generated output passes between the operation jobs.
+- Cost declaration for a tag-push sliced path, counting publication after approval:
+  22 executed job instances become 25; declared timeout minutes sum from 520 to 545. The added jobs each install their own dependencies. These are topology
+  counts, not runner-minute measurements or cost ceilings. Whole and older sliced
+  paths retain their previous executing jobs; the added jobs are skipped.
+- Measurement boundary: the baseline is `DR-0017-0019`. The roughly 61-second lint
+  interval is independent of types and build/pack work, but the baseline does not
+  isolate every operation's duration. The topology and execution fixtures prove
+  eligibility, complete coverage, isolation and refusal paths; they do not measure
+  hosted runner scheduling. A comparable completed release run is still needed
+  for actual overlap, per-operation duration, setup overhead, deadline headroom,
+  total runner-minutes and a before/after wall-clock claim. No release is created
+  or published to obtain that measurement.
+- Scope: these jobs build this repository's package. The shipped workflow
+  templates have no corresponding release checks.
+- Related: AC-0017-0036, BR-0017-0069, TC-0017-0090, TC-0017-0091, TC-0017-0092

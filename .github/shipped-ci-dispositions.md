@@ -35,3 +35,5 @@ the next one against.
   Because: the lane this entry adds verifies links into this package's own assets, which an adopter's tree does not have.
 - SHIPPED-CI: not-applicable for package.json
   Because: the lane this entry adds names the two pages this repository publishes, and an adopter publishes their own.
+- SHIPPED-CI: not-applicable for package.json
+  Because: these entry points split the checks for this package's release; the shipped templates neither build nor publish this package.
