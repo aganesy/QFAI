@@ -732,3 +732,57 @@ file, so an entry here is what makes that citation checkable.
     where the lane can read it, which is a decision of its own.
 - Related: AC-0017-0014, BR-0017-0007, BR-0017-0011, BR-0017-0030, NFR-0001, NFR-0002,
   NFR-0004, `DR-0017-0011`, `DR-0017-0012`, `DR-0017-0013`, `DR-0017-0015`, `DR-0017-0016`
+
+### DR-0017-0018: the code path leaves NFR-0002, and what it costs is pinned instead
+
+- Status: accepted
+- Context: `NFR-0002` capped a code-path pull request at 12 job instances / 8 frozen-lockfile
+  installs / 3-or-5 bundler builds, against a baseline of 14 / 13 / 6. Measured from the tree, a
+  code path runs **26 instances / 24 installs / 5 build executions**, declaring **350 minutes** of
+  ceiling. Nothing regressed: the `test` and `node-floor` matrices were each widened to nine legs
+  to shorten the wall clock, and each widening was recorded. What was never re-priced is the
+  requirement's own figure, and `.qfai/evidence/sdd-spec-0017.md` had already noted the gap and
+  left it alone because correcting it read as a cost claim.
+- Decision, the unit: the code-path figures stay in instances, installs and builds. `DR-0017-0015`
+  settled that for this requirement — converting one part of it to minutes would leave one
+  requirement carrying two units — and this record does not reopen it. The minutes figure the pin
+  also carries lives in the declaration beside them, never in `NFR-0002`, which is exactly where
+  the documentation-only half already keeps its own minutes sum.
+- Decision, the shape: a pin with a re-pin obligation, not a ceiling. Enforcement is equality
+  against a value recomputed from the same tree, so a clause forbidding a higher cost could not
+  fail; what the pin refuses is a change that moved the cost and did not move the figure.
+  `scripts/pin-code-path-cost.mjs` writes it and the hygiene lane's `code-path-cost-pin` rule
+  reads it, both importing one computation.
+- Decision, the requirement: the code path **leaves `NFR-0002`**, whose subject is consumption
+  falling. On a code path it did not fall. It rose, on purpose, and the reason is the requirement
+  next door: nine legs finishing together cost fewer runner minutes than one leg running them in
+  series, and count more instances — so an instance figure on a code path moves against the very
+  thing `NFR-0002` is named for, while the wall clock it buys is `NFR-0001`'s subject. A
+  requirement that claimed a fall here would be false on the tree that satisfies the design.
+  `NFR-0002` keeps the documentation-only claim, where consumption does fall and the figure is
+  five executed instances.
+- Decision, what is NOT claimed: that the figures are acceptable. This record prices the code path;
+  it does not argue the price. `BR-0017-0030` governs a cost claim, and none is made here.
+- Decision, three limits of the measure, named rather than smoothed over:
+  - **`buildJobs` counts jobs, not executions.** Two of the three condition their build step on
+    `matrix.slice == 'e2e' || matrix.slice == 'integration'`, so an execution count needs a GitHub
+    expression evaluated and the lane evaluates none. The five executions are real and no lane
+    counts them. The jobs figure still moves when a build is added to or removed from a job.
+  - **The pin is not compared with a run.** Reading what a run actually cost needs the forge's API
+    and a finished run, which no lint lane has. A tree that was always more expensive than it
+    declared is therefore outside the rule, and that gap is deliberate: it is the one
+    `.qfai/specs/spec-0017/10_Plan.md` leaves to the wall-clock reading of a pull request.
+  - **`timeout-minutes` is a declared worst case.** The 350-minute sum sits far above what the path
+    costs — two green runs measured 38.0 and 39.0 runner-minutes. It still catches a runaway job
+    and a forgotten raise, which is the class a declared ceiling can catch.
+- Consequences:
+  - `NFR-0002`'s code-path ceiling is gone, and every artifact that read it is corrected in the
+    same change. Nothing in the tree asserted those numbers, so no test changes because of the
+    removal — which is itself the finding: the code-path half had no falsifiable artifact behind
+    it, and the figure went stale in silence.
+  - Two readers compute the figures independently: the hygiene lane through its own collector, and
+    the topology test through its own parse of `ci.yml`. Equality between two readings of one tree
+    is what a single implementation cannot give itself.
+  - A slice added to either matrix, a ceiling raised, an install introduced or a build moved
+    between jobs now fails until the pinner has run.
+- Related: BR-0017-0030, NFR-0001, NFR-0002, OC-80, `DR-0017-0012`, `DR-0017-0015`, `DR-0017-0017`

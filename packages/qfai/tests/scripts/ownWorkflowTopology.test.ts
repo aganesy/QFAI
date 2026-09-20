@@ -1094,16 +1094,7 @@ describe("TC-0017-0006 (TDD-0006): the executing set and its declared timeout su
     // Asserted here as well as there because the two read the workflow by different routes: the
     // lane parses it through its own collector, this row through `ciJobs`. Equality between two
     // independent readings of one tree is what a single implementation cannot give itself.
-    const declaration: unknown = JSON.parse(
-      readFileSync(path.join(REPO_ROOT, ".github", "required-status-contexts.json"), "utf-8"),
-    );
-    const declaredContexts =
-      isRecord(declaration) && Array.isArray(declaration["contexts"])
-        ? declaration["contexts"].filter(isRecord)
-        : [];
-    const pins = declaredContexts
-      .map((context) => context["documentationOnlyCostPin"])
-      .filter(isRecord);
+    const pins = [firstDeclaredContext()["documentationOnlyCostPin"]].filter(isRecord);
     expect(pins, "the declaration must carry a documentationOnlyCostPin").toHaveLength(1);
     expect
       .soft(pins[0]?.["jobs"], "the pinned job set must be the set this workflow executes")
@@ -1529,7 +1520,101 @@ describe("TC-0017-0011 (TDD-0011): a path in no recognized directory selects eve
   });
 });
 
-describe("TC-0017-0012 (TDD-0012): the lint lane carries no selection condition", () => {
+/**
+ * The first declared required-status context, read off disk.
+ *
+ * Two rows compare a pinned figure with what this file reads from `ci.yml`, and both need the
+ * same side of that comparison. A shared reader rather than two inline parses: the parses would
+ * drift, and one of them would then be comparing against a shape nothing checked.
+ */
+function firstDeclaredContext(): Record<string, unknown> {
+  const declaration: unknown = JSON.parse(
+    readFileSync(path.join(REPO_ROOT, ".github", "required-status-contexts.json"), "utf-8"),
+  );
+  const contexts =
+    isRecord(declaration) && Array.isArray(declaration["contexts"])
+      ? declaration["contexts"].filter(isRecord)
+      : [];
+  const [first] = contexts;
+  if (first === undefined) throw new Error("the declaration holds no context");
+  return first;
+}
+
+/**
+ * What a code-path pull request costs, read from the tree by this file's own reader.
+ *
+ * A second reading of the same tree, on purpose: the hygiene lane computes the same figures
+ * through its own collector, and equality between two independent readings is what a single
+ * implementation cannot give itself.
+ *
+ * `buildJobs` counts JOBS rather than executions, matching the pin. Two of the three condition
+ * their build step on the matrix leg, and resolving that needs a GitHub expression evaluated —
+ * which neither reader does.
+ */
+function codePathCost(jobs: Record<string, Record<string, unknown>>): {
+  instances: number;
+  timeoutMinutesSum: number;
+  installInstances: number;
+  buildJobs: string[];
+} {
+  let instances = 0;
+  let timeoutMinutesSum = 0;
+  let installInstances = 0;
+  const buildJobs: string[] = [];
+  for (const [id, job] of Object.entries(jobs)) {
+    const strategy = job["strategy"];
+    const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
+    const axes = isRecord(matrix) ? Object.values(matrix).filter(isStringArray) : [];
+    const legs = axes.length === 0 ? 1 : Math.max(...axes.map((axis) => axis.length), 1);
+    const declared = job["timeout-minutes"];
+    const steps = Array.isArray(job["steps"]) ? job["steps"].filter(isRecord) : [];
+    instances += legs;
+    if (typeof declared === "number") timeoutMinutesSum += declared * legs;
+    if (steps.some((step) => String(step["uses"] ?? "").includes(".github/actions/setup"))) {
+      installInstances += legs;
+    }
+    if (steps.some((step) => /(?:^|\s)pnpm\s[^\n]*\bbuild\b/.test(String(step["run"] ?? "")))) {
+      buildJobs.push(id);
+    }
+  }
+  buildJobs.sort();
+  return { instances, timeoutMinutesSum, installInstances, buildJobs };
+}
+
+describe("TC-0017-0087 (TDD-0096): the code path's cost agrees with the committed pin", () => {
+  it("matches every pinned figure against this file's own reading of the workflow", () => {
+    const cost = codePathCost(ciJobs());
+    const pinned = firstDeclaredContext()["codePathCostPin"];
+    expect(isRecord(pinned), "the declaration must carry a codePathCostPin").toBe(true);
+    if (!isRecord(pinned)) return;
+
+    // The figures are compared as a WHOLE, so a pin that agreed on three and drifted on the
+    // fourth fails on the fourth rather than passing on the three.
+    expect
+      .soft(
+        {
+          instances: pinned["instances"],
+          timeoutMinutesSum: pinned["timeoutMinutesSum"],
+          installInstances: pinned["installInstances"],
+          buildJobs: pinned["buildJobs"],
+        },
+        "the pin must be what this workflow declares; re-pin in the change that moved it",
+      )
+      .toEqual(cost);
+
+    // Agreement is the whole claim. The pin is not a ceiling: `NFR-0002` no longer says a
+    // code-path run costs less than some number, because the widening that raised these figures
+    // bought wall clock, which is `NFR-0001`'s subject. A row asserting a bound here would be one
+    // no state of the tree could fail, since both sides are read from the same tree.
+  });
+});
+
+// `TC-0017-0012`'s own row is the lane-host one further up: `BR-0017-0011` was restated over
+// every lane of the lint aggregate, whichever job hosts it, so the claim that reads one job's
+// condition is no longer the whole of what that test case asks for. What survives here is the
+// half about `BR-0017-0012` — the required-context job and its closure — plus the lint lane read
+// directly, which is the cheapest check on the tree and needs no lane resolution to make.
+describe("the required-context job and the lint lane both stay unconditional", () => {
   it("leaves the lint lane and the required-context job unconditional", () => {
     const jobs = ciJobs();
     const lint = jobs[LINT_JOB];

@@ -640,3 +640,5 @@ either. See `.qfai/evidence/atdd-CHG-005-prototyping-defect-remediation.md`.
 - QFAI:SPEC-0017:TC-0017-0065
 - QFAI:SPEC-0017:TC-0017-0084
 - QFAI:SPEC-0017:TC-0017-0085
+- QFAI:SPEC-0017:TC-0017-0086
+- QFAI:SPEC-0017:TC-0017-0087

@@ -106,6 +106,11 @@ const RULES = [
     "documentation-only-cost-pin",
     "the committed documentation-only pin — the jobs that execute on that path and the sum of their declared timeout-minutes — agrees with a fresh recomputation from the workflow tree",
   ],
+  [
+    "declaration",
+    "code-path-cost-pin",
+    "the committed code-path pin — the instances the tree expands to, their declared timeout sum, the installs they perform and the jobs that declare a build — agrees with a fresh recomputation from the workflow tree",
+  ],
 ];
 
 /** The scopes, in print order, with the heading each one is announced under. */
@@ -1781,6 +1786,75 @@ export function documentationOnlyCostFigures(workflow) {
 }
 
 /**
+ * How many instances a job expands to.
+ *
+ * A matrix job reports one check per leg and is billed per leg, so a job's cost is its own
+ * declaration times the widest list its matrix declares. `include` and `exclude` are not read:
+ * neither appears in this tree, and reading them would mean resolving a list of objects against
+ * the axes, which is the arithmetic a pin exists to keep out of a reviewer's head.
+ */
+function instancesOf(job) {
+  const strategy = isRecord(job) ? job.strategy : undefined;
+  const matrix = isRecord(strategy) ? strategy.matrix : undefined;
+  if (!isRecord(matrix)) return 1;
+  const lengths = Object.values(matrix)
+    .filter((axis) => Array.isArray(axis))
+    .map((axis) => axis.length);
+  return lengths.length === 0 ? 1 : Math.max(...lengths, 1);
+}
+
+/**
+ * What a code-path pull request costs: every job runs, so this counts the whole tree.
+ *
+ * Three figures, and each is derivable by READING the tree rather than by evaluating a GitHub
+ * expression — which is the property that makes them enforceable here, because this lane
+ * deliberately evaluates none:
+ *
+ * - `instances`, a job's legs summed over the tree. What a check-name list and a bill both count.
+ * - `timeoutMinutesSum`, the declared ceiling per instance summed the same way. A declared worst
+ *   case, not a measurement, so it sits far above what the path really costs.
+ * - `installInstances`, the instances that run the toolchain action, which performs one
+ *   frozen-lockfile install each.
+ * - `buildJobs`, the jobs that DECLARE a build step. Jobs rather than instances, and that is a
+ *   limit stated rather than hidden: two of the three condition their build step on the matrix
+ *   leg, so an instance count needs `matrix.slice == 'e2e' || matrix.slice == 'integration'`
+ *   evaluated, and this lane evaluates no expression. The jobs figure still moves when a build
+ *   is added to or removed from a job, which is the change a pin has to catch.
+ *
+ * Exported for the same reason the documentation-only figures are: the pinner writes what this
+ * returns and the rule compares against it, so a pin and its check cannot disagree.
+ */
+export function codePathCostFigures(workflow) {
+  const jobs = isRecord(workflow) && isRecord(workflow.jobs) ? workflow.jobs : {};
+  const jobsWithoutTimeout = [];
+  const buildJobs = [];
+  let instances = 0;
+  let timeoutMinutesSum = 0;
+  let installInstances = 0;
+  for (const [jobKey, job] of Object.entries(jobs)) {
+    if (!isRecord(job)) continue;
+    const legs = instancesOf(job);
+    instances += legs;
+    const declared = job["timeout-minutes"];
+    if (typeof declared === "number" && Number.isFinite(declared)) {
+      timeoutMinutesSum += declared * legs;
+    } else {
+      jobsWithoutTimeout.push(jobKey);
+    }
+    const steps = Array.isArray(job.steps) ? job.steps.filter(isRecord) : [];
+    if (steps.some((step) => String(step.uses ?? "").includes(".github/actions/setup"))) {
+      installInstances += legs;
+    }
+    if (steps.some((step) => /(?:^|\s)pnpm\s[^\n]*\bbuild\b/.test(String(step.run ?? "")))) {
+      buildJobs.push(jobKey);
+    }
+  }
+  buildJobs.sort();
+  jobsWithoutTimeout.sort();
+  return { instances, timeoutMinutesSum, installInstances, buildJobs, jobsWithoutTimeout };
+}
+
+/**
  * The committed documentation-only pin against a fresh recomputation from the workflow tree.
  *
  * The rule refuses a disagreement rather than a cost: enforcement is equality against a value
@@ -1848,6 +1922,82 @@ function checkDocumentationOnlyCostPin(root, jobs) {
     } else if (pinned.timeoutMinutesSum !== fresh.timeoutMinutesSum) {
       report(
         `pins the declared timeout sum at ${pinned.timeoutMinutesSum} and ${workflow} declares ${fresh.timeoutMinutesSum}; re-pin in the change that moved it`,
+      );
+    }
+  }
+  return findings;
+}
+
+/**
+ * The committed code-path pin against a fresh recomputation from the workflow tree.
+ *
+ * The same shape as its sibling above and the same limits: it refuses a disagreement rather than a
+ * cost, because enforcement is equality against a value derived from the same tree. What it catches
+ * is a slice added, a ceiling raised, an install introduced or a build moved between jobs without
+ * the pin moving with it.
+ *
+ * It also does not compare the pin with a RUN. Nothing here reads what a run cost — that needs the
+ * forge's API and a finished run, which no lint lane has — so a tree that was always more expensive
+ * than it declared is outside this rule. That gap is stated rather than left for a reader to find.
+ */
+function checkCodePathCostPin(root, jobs) {
+  const { contexts, findings } = readDeclaration(root);
+  for (const context of contexts) {
+    const workflow = typeof context.workflow === "string" ? context.workflow : "(unnamed)";
+    const declaredJob = typeof context.job === "string" ? context.job : "(unnamed)";
+    const rel = `.github/workflows/${workflow}`;
+    const report = (detail) =>
+      findings.push({
+        rule: "code-path-cost-pin",
+        file: DECLARATION_REL,
+        job: declaredJob,
+        detail,
+      });
+
+    const pinned = context.codePathCostPin;
+    if (!isRecord(pinned)) {
+      report(
+        `declares no \`codePathCostPin\` object, so what a code-path pull request costs in ${workflow} is pinned by nothing`,
+      );
+      continue;
+    }
+
+    const parsed = jobs.find((entry) => entry.file === rel)?.workflow;
+    if (parsed === undefined) {
+      report(
+        `names ${workflow}, which this lane collected no job from, so the pin cannot be recomputed`,
+      );
+      continue;
+    }
+
+    const fresh = codePathCostFigures(parsed);
+    if (fresh.jobsWithoutTimeout.length > 0) {
+      report(
+        `${workflow} has ${fresh.jobsWithoutTimeout.length} job(s) declaring no timeout-minutes (${fresh.jobsWithoutTimeout.join(", ")}), so the sum understates what a code path may cost`,
+      );
+    }
+
+    // One loop over the three numbers, because a second copy of "is it a number, and does it
+    // agree" is where the third figure would quietly go unchecked.
+    for (const key of ["instances", "timeoutMinutesSum", "installInstances"]) {
+      if (typeof pinned[key] !== "number") {
+        report(`declares codePathCostPin.${key} as something other than a number`);
+      } else if (pinned[key] !== fresh[key]) {
+        report(
+          `pins ${key} at ${pinned[key]} and ${workflow} declares ${fresh[key]}; re-pin in the change that moved it`,
+        );
+      }
+    }
+
+    const declaredBuilds = pinned.buildJobs;
+    const pinnedBuilds = Array.isArray(declaredBuilds)
+      ? declaredBuilds.filter((entry) => typeof entry === "string")
+      : undefined;
+    if (pinnedBuilds === undefined || pinnedBuilds.length !== declaredBuilds.length) {
+      report("declares codePathCostPin.buildJobs as something other than an array of strings");
+    } else if (JSON.stringify(pinnedBuilds) !== JSON.stringify(fresh.buildJobs)) {
+      report(
+        `pins the build-declaring jobs as ${pinnedBuilds.join(", ") || "none"} and ${workflow} declares them in ${fresh.buildJobs.join(", ") || "none"}; re-pin in the change that moved them`,
       );
     }
   }
@@ -3061,6 +3211,7 @@ export function runHygieneLane(root) {
     ...checkShippedRunnerLabels(jobs),
     ...checkRequiredContexts(root, jobs),
     ...checkDocumentationOnlyCostPin(root, jobs),
+    ...checkCodePathCostPin(root, jobs),
   ];
 }
 

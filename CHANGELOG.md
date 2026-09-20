@@ -23,6 +23,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A code-path pull request no longer claims its runner cost fell, and what it does
+  cost is pinned** (#2017). The requirement capped such a run at 12 job instances,
+  8 frozen-lockfile installs and 3-or-5 bundler builds, against a baseline of 14 /
+  13 / 6. The tree runs **26 / 24 / 5**. Nothing regressed: both test matrices were
+  widened to nine legs to shorten the wall clock, and each widening was recorded —
+  but nine legs finishing together cost fewer runner minutes than one leg running
+  them in series while counting more instances, so an instance figure on a code path
+  moves against the very thing that requirement is named for. The requirement
+  therefore keeps the documentation-only claim, where consumption does fall, and
+  hands the code path to the wall-clock requirement next to it. What a code path
+  costs is recorded instead: `.github/required-status-contexts.json` carries the
+  instances, their declared timeout sum, the installs they perform and the jobs that
+  declare a build; `node scripts/pin-code-path-cost.mjs` recomputes all four from
+  the workflow tree; and the `code-path-cost-pin` rule of the hygiene lane exits 1
+  while the committed figures and a fresh recomputation disagree, naming the figure
+  that moved. Three limits are stated rather than hidden. The build figure counts
+  jobs and not executions, because two of the three condition their build step on
+  the matrix slice and the lane evaluates no workflow expression. No figure is
+  compared with what a run consumed, which needs the forge's API and a finished run.
+  And it is not a cost bound: enforcement is equality against a value recomputed
+  from the same tree, so it catches a change nobody recorded, never an expensive
+  one. Before this, no test asserted any of the three counts, which is how the
+  figure went stale in silence.
+
 - **The mirror-surface lane runs on a runner of its own, and the lint job fell
   from 265 s to 68 s** (#1870). `pnpm ci:lint` forked five lanes onto one
   four-core runner, and the mirror-surface lane — a vitest run over eight files,

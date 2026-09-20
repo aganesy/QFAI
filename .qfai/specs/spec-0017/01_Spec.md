@@ -91,12 +91,16 @@ shipped half of NFR-0012, belong to `spec-0003`.
 - NFR-0001: Pull-request wall clock does not regress — no worse than the captured baseline on a
   code-path pull request; at most 3 minutes end to end on a documentation-only one. The baseline
   is unmeasured today and capturing it is a precondition of any cost-shaping change.
-- NFR-0002: Runner-minute consumption falls — from 14 job instances / 13 frozen-lockfile
-  installs / 6 bundler builds per pull request to at most 12 / 8 / 3-or-5 on a code path, and to
-  at most 5 executed instances on a documentation-only path, 4 once the job named `build` may
-  carry a condition, which `OQ-0022` releases. The fifth instance is the lane running the
+- NFR-0002: Runner-minute consumption falls on a documentation-only pull request — from a baseline
+  of 14 job instances / 13 frozen-lockfile installs / 6 bundler builds per pull request to at most
+  5 executed instances on a documentation-only path, 4 once the job named `build` may carry a
+  condition, which `OQ-0022` releases. The fifth instance is the lane running the
   agent-integration mirror guards: it takes a runner of its own because five lint lanes on one
-  four-core runner made it the run's critical path, and lane selection may never skip it.
+  four-core runner made it the run's critical path, and lane selection may never skip it. A code
+  path makes no falling claim here. Its lane set was widened on purpose, so a code-path pull
+  request expands to more job instances and more frozen-lockfile installs than the baseline. What
+  that path costs is recorded as a pin instead, re-pinned by the change that moves it. The shorter
+  wall clock the widening buys is NFR-0001's claim.
 - NFR-0003: Credential-free layers structurally cannot require a secret — zero secret-inheritance
   uses anywhere in `.github/workflows/**`.
 - NFR-0004: Flake budget — 3 consecutive green aggregate-verdict runs on every parallelism
@@ -284,7 +288,8 @@ this spec owns the own-CI half only.
 - REQ-0015: Retire the repository's duplicate of the shipped validate workflow — the repository's
   own copy is removed and its full-profile run is folded into the existing `build` job, which
   already has a locally built binary. It is the thirteenth frozen-lockfile install and the sixth
-  bundler build per pull request; it is the second unconditionally pull-request-triggered workflow
+  bundler build of the baseline `NFR-0002` names, and not of the tree as it stands; it is the second
+  unconditionally pull-request-triggered workflow
   with no path filter, so while it exists a documentation-only pull request cannot reach its
   minimum however well lane selection works; and it has silently diverged from the shipped copy.
   Repointing it at the shipped file was rejected: the root manifest declares no dependency on the
