@@ -703,16 +703,35 @@ file, so an entry here is what makes that citation checkable.
   per-file measurement that opened this line of work, 111.7 s alone against 250.1 s under
   contention.
 
-- Decision, what is NOT claimed: the run's wall clock. The longest job is no longer `lint`; it
-  is `node-floor (pr-fix)`, which measured 274 s here against 177 s in the before run. Nothing
-  in this change touches that slice, and one run a side cannot attribute a difference of that
-  size — so no wall-clock claim is made, in either direction. Summed runner time rose 1.0 min,
-  which is the new job's own checkout and setup net of the lane's saving.
-- Decision, what this measurement is not: `DR-0017-0012` took three runs per shape on one
-  machine and rested its claim on the two ranges not overlapping, which is the stronger form. A
-  CI run cannot be repeated on an identical machine, and repeating a twenty-six-job workflow to
-  establish a range costs more than the claim is worth. So what is recorded is the direction and
-  the magnitude of one comparison, stated as that rather than as a distribution.
+- Decision, the distribution, because one run a side could attribute nothing. Six default-branch
+  runs of the same workflow, four before the extraction and two after, read from the runs API:
+
+  | Revision   | Set    | Wall  | Longest job                    | Summed   | `lint` | `mirror-surface` | `node-floor (pr-fix)` |
+  | ---------- | ------ | ----- | ------------------------------ | -------- | ------ | ---------------- | --------------------- |
+  | `51d14bec` | before | 289 s | `lint`, 270 s                  | 40.5 min | 270 s  | —                | 260 s                 |
+  | `4fc27188` | before | 275 s | `lint`, 268 s                  | 39.7 min | 268 s  | —                | 202 s                 |
+  | `4a91bfa6` | before | 251 s | `test (pr-fix)`, 206 s         | 35.6 min | 188 s  | —                | 161 s                 |
+  | `9752a701` | before | 310 s | `lint`, 265 s                  | 40.8 min | 265 s  | —                | 258 s                 |
+  | `b960b49a` | after  | 317 s | `test (pr-fix)`, 265 s         | 39.8 min | 88 s   | 181 s            | 262 s                 |
+  | `7b8945ac` | after  | 224 s | `node-floor (pr-merge)`, 204 s | 38.7 min | 85 s   | 195 s            | 158 s                 |
+
+- Decision, what the distribution establishes: the `lint` job fell from 265–270 s to **85–88 s**,
+  the two ranges do not overlap, and the run's longest job is `lint` in three of the four before
+  runs and in neither after run. The critical path no longer runs through the lint aggregate.
+  Against the job's ten-minute ceiling that is headroom of about 85 percent, where the job
+  previously exceeded the ceiling on the retry this work began from.
+- Decision, the region with no measured improvement, named because the acceptance asks for it:
+  **the run's wall clock and its summed runner minutes.** Before: 251–310 s and 35.6–40.8 min.
+  After: 224 s and 317 s, 38.7 and 39.8 min. Both after values sit inside the before range, so
+  neither supports a claim in either direction. The cause is visible in the table: the run is set
+  by the `pr-fix` and `pr-merge` slices, and `node-floor (pr-fix)` alone spans 158–262 s across
+  six runs of unchanged code. That spread is larger than any effect this change could have, so
+  the extraction moved work off the critical path without shortening the run. Shortening it is a
+  separate subject — those slices — and belongs to whatever measures them.
+- Decision, what this measurement is not: a controlled comparison. `DR-0017-0012` took three runs
+  per shape on one machine; a CI run cannot be repeated on an identical machine, and the six runs
+  above differ in their trees as well as their hardware. What the non-overlap of the `lint` ranges
+  supports is that job's fall. Nothing here supports a claim about the run.
 - Consequences:
   - `documentationOnlyCostPin` rises from four jobs / 35 declared minutes to five / 45. That is
     a declared ceiling rather than a measurement, so it moves by the new job's
