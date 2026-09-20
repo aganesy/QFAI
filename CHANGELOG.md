@@ -23,6 +23,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The mirror-surface lane no longer runs the `pr-merge` plan suite, and the
+  `pr-merge` skill document gains the guard it never had** (#1877). The lane
+  exists so that guards over the agent-integration mirrors keep running on a
+  change the documentation-only classification lets skip the test job. It
+  carried `tests/pr-merge/prMergePlan.test.ts`, which spawns a PowerShell
+  process per case and reads nothing from a mirror tree but two `.ps1` files —
+  executables, which the classifier already keeps out of the documentation-only
+  set, so a change to either selects the full matrix and runs that suite there
+  regardless. The lane paid the file's whole cost for coverage no prose change
+  could break. The prose assertions the lane does need are now a file of their
+  own, `tests/core/prMergeSkillDocs.test.ts`: it holds the four `pr-merge`
+  `SKILL.md` copies identical and pins the promises the document makes about the
+  command an operator runs — that it never tags, that the dry run comes first,
+  that the default merge method is `merge`, and where the plan is written. None
+  of that was checked before. This is the split #1982 made for `pr-fix`,
+  finished for the other half of the pair.
+  Measured over the lane's eight files, 321 s before and 9 s after. On CI the
+  `mirror-surface` job was 201 s on the last green `main` run before this
+  change and 20 s on the run that carries it.
+
 - **A code-path pull request no longer claims its runner cost fell, and what it does
   cost is pinned** (#2017). The requirement capped such a run at 12 job instances,
   8 frozen-lockfile installs and 3-or-5 bundler builds, against a baseline of 14 /

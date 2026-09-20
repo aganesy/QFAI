@@ -182,6 +182,7 @@
     "tests/core/htmlMockLazyLoad.test.ts",
     "tests/core/platformOptionProfileScope.test.ts",
     "tests/core/prFixSkillDocs.test.ts",
+    "tests/core/prMergeSkillDocs.test.ts",
     "tests/core/prototyping/specResolution.test.ts",
     "tests/core/reportDeltaScanDisclosure.test.ts",
     "tests/core/skillRegistrationContract.test.ts",
