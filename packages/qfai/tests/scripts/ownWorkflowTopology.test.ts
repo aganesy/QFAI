@@ -1664,18 +1664,13 @@ describe("the required-context job and the lint lane both stay unconditional", (
 // invariant that repartition will have to satisfy, landed BEFORE it rather than after —
 // which is the only order in which a guard can reject the change it guards against.
 //
-// ## Why literals rather than a before-and-after comparison
+// ## Why each state has a literal inventory
 //
-// `EX-0017-0013` describes "the set of check names a run reports, derived before lane
-// selection lands and after it lands". A test cannot derive the earlier set without
-// reading history, and a history-dependent assertion inside the main suite breaks under a
-// shallow clone — this repository already keeps its one history-dependent check out of the
-// aggregate gate for that reason.
-//
-// Pinning the set as literals gets the same guarantee and a better failure. A check name
-// is a repository-settings surface no agent can configure, so what matters is that the set
-// does not move; a literal list makes any creation, removal or rename a failing test that
-// names which one, instead of a diff someone has to interpret.
+// `EX-0017-0013` describes the names reported by full and documentation-only runs.
+// Separate literal inventories catch a created, removed or renamed check in either
+// state without reading Git history. A skipped matrix contributes its bare name;
+// an expanded matrix contributes one name per slice. The required context is the
+// same in both states.
 
 /**
  * The own-CI workflow files.
@@ -1718,33 +1713,14 @@ const OWN_WORKFLOW_FILES = [
 ] as const;
 
 /**
- * Check names for each selection state, as literals.
+ * The full-run check names, pinned independently of the workflow parser.
  *
- * Derived once by hand from the job keys and the matrix expansion, and then frozen. No job
- * in this file declares a `name:` override, so each check name is its job key — which is
- * exactly what makes `EX-0017-0004`'s falsifying observation work: "a rename shows as a
- * diff on the job key".
+ * Both sliced jobs report expanded names on a full run. When their job-level
+ * condition is false, GitHub reports one skipped check under each bare job name.
+ * `packages/qfai/docs/ci-check-names.md` records both observations and API totals.
  *
- * A matrix job reports one check per leg, named `<job> (<value>)`. That is why the legs
- * appear here individually: each is a check name, and removing a leg removes one — the
- * thing `BR-0017-0006` forbids and `TC-0017-0007` also guards from the matrix side.
- *
- * `node-floor` was added deliberately, which is what this pin is for: it made the addition a
- * failing test naming the new member rather than a diff to interpret. Every toolchain job
- * resolves `engines.node` (`>=20.19.0`, no ceiling), so `setup-node`
- * gives all of them the newest satisfying release and nothing runs on the floor the package
- * promises; an API present in Node 24 and absent in 20.19 passes every gate and breaks
- * exactly the supported users.
- *
- * Both sliced jobs report expanded names on a full run. When their job-level condition
- * is false, GitHub reports one skipped check under each bare job name. The observation
- * and complete API counts are recorded in `packages/qfai/docs/ci-check-names.md`.
- *
- * Creating a check name is normally a repository-settings problem. It is not one here, which
- * is what lets a required lane be sliced without a settings change: only `ci-pass` is
- * required, the verdict is derived from its `needs` map, and a matrix job contributes ONE
- * rolled-up `result` to that map however many legs it expands to. So the nine legs are
- * gated by the context that already exists.
+ * Only `ci-pass` is required. Its needs map receives one rolled-up result per
+ * matrix, so neither selection state requires a branch-protection change.
  */
 const FULL_CI_CHECK_NAMES = [
   "build",
@@ -1753,11 +1729,6 @@ const FULL_CI_CHECK_NAMES = [
   "ci-pass",
   "detect",
   "lint",
-  // The mirror-surface lane, moved out of `pnpm ci:lint` into a runner of its own. It arrived
-  // here the way `node-floor` did: as a failing equality naming the new member, so the
-  // addition is a decision somebody wrote down rather than a diff nobody read. The paragraph
-  // above applies unchanged — only `ci-pass` is required, and the verdict's `needs` map is
-  // what gates this lane, so no repository setting changed.
   "mirror-surface",
   "node-floor (cli)",
   "node-floor (core)",
