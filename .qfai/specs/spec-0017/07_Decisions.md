@@ -910,7 +910,29 @@ file, so an entry here is what makes that citation checkable.
 - The declaration owns job names; the rule does not hard-code today's hosts.
   Removing a host from this declaration is a reviewed exemption change, and the
   topology equality still refuses it while the host runs an exempt command.
-- Delegated design: `completion_design` recommended this declaration plus host
-  equality after two rounds. Adopted because it implements the existing exemption
-  without adding a second workflow parser or changing allowed skip conditions.
+- The declaration plus independent host equality enforces the existing exemption
+  without a second workflow parser or changed allowed skip conditions.
 - Related: BR-0017-0011, TC-0017-0012, TC-0017-0085
+
+### DR-0017-0022: conditional matrix check names are pinned by selection state
+
+- Status: accepted
+- Decision: the check-name inventory models full and documentation-only runs
+  separately. A selected matrix reports one check per declared slice; a matrix
+  skipped by its job-level condition reports one check under its bare job name.
+  Both sliced lanes follow the same rule. The required `ci-pass` context and
+  declared matrix values remain unchanged.
+- Observation: the documentation-only run
+  <https://github.com/aganesy/QFAI/actions/runs/35492666770> at
+  `dad4384dced73d5fde5d619a9644503932da9ea9` reported ten checks: five successful
+  unconditional jobs and five skipped jobs, including bare `test` and
+  `node-floor`. Paginated jobs and commit check-runs responses both contained
+  ten entries, matching their totals. The full run
+  <https://github.com/aganesy/QFAI/actions/runs/35479590985> at
+  `bf473648c3f32ff61f63a7de6587c4db4f1e5346` reported 26 successful checks in
+  both APIs, including nine expanded checks per sliced lane.
+- The inventories are literals so an added, removed or renamed job remains a
+  failing equality. Matrix conditions outside the model are rejected rather
+  than silently interpreted as the observed detection condition.
+- Related: AC-0017-0003, AC-0017-0006, AC-0017-0018, BR-0017-0006,
+  BR-0017-0013, TC-0017-0007, TC-0017-0043

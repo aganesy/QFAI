@@ -3574,6 +3574,9 @@ ba2f2c08e56c777846ca904c072db8e2a4922dec review_request.md
 ### TDD-0094
 
 - Revision: `7816cc489`.
+- Design recommendation: the delegated reviewer `completion_design` recommended
+  the declaration plus independent host equality after two rounds. Adopted to
+  enforce the existing exemption without another parser or changed skip rules.
 - RED: the seven new regression cases failed before the unconditional-host rule
   was implemented. Matching skip declarations produced no unconditional-host
   finding; missing and malformed exemption declarations were accepted.
@@ -3589,3 +3592,28 @@ ba2f2c08e56c777846ca904c072db8e2a4922dec review_request.md
 - Format, lint, type checking and workflow hygiene passed. The cost declarations
   remain five documentation-path jobs and 26 full-path instances. Full-suite
   validation belongs to the pull request's CI.
+
+## Conditional matrix check names
+
+- Revised obligation: TC-0017-0043, under DR-0017-0022, pins one complete
+  check-name set per selection state. No test case or ledger row is added.
+- Revision: `efcfd25605dc007a89064069698f8e4ecc12eb28`.
+- Hosted documentation-only observation: run
+  <https://github.com/aganesy/QFAI/actions/runs/35492666770> at
+  `dad4384dced73d5fde5d619a9644503932da9ea9`; both paginated APIs return ten
+  checks, including bare `test` and `node-floor`, each `skipped`.
+- Hosted full observation: run
+  <https://github.com/aganesy/QFAI/actions/runs/35479590985> at
+  `bf473648c3f32ff61f63a7de6587c4db4f1e5346`; both paginated APIs return 26
+  successful checks, with nine expanded names per sliced lane.
+- GREEN: `pnpm exec vitest run --project scripts tests/scripts/ownWorkflowTopology.test.ts -t TC-0017-0043`
+  from `packages/qfai`: 1 passed, 80 skipped, exit 0.
+- Adjacent topology verification at the recorded revision:
+  `pnpm exec vitest run --project scripts tests/scripts/ownWorkflowTopology.test.ts -t 'TC-0017-004[123]'`:
+  3 passed, 78 skipped, exit 0.
+- Falsifiability: remove the `test` job's selection condition, then independently
+  remove the `node-floor` condition. Each mutation makes the documentation-only
+  equality fail with the expanded names replacing the expected bare name, exit
+  1. The saved workflow is restored after each mutation.
+- The same helper evaluates both sliced jobs. An unmodelled matrix condition
+  fails explicitly; it cannot silently turn into a successful inventory check.
