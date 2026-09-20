@@ -39,13 +39,13 @@ Scenario: The verdict distinguishes "nothing needed running" from "nothing was v
 # Source: discussion-20260804173914356#DAC-001-01
 Scenario: A Markdown-only change runs the jobs the pin records, and skips the rest
   Given the repository's duplicate validate workflow has already been retired
-  And every test matrix leg is declared and carries a condition derived from the detection output
+  And every test matrix leg is declared and its job carries a condition derived from the detection output
   When a pull request touches only Markdown files outside the recognized source directories
   Then the jobs that execute are the ones carrying no condition plus the aggregate verdict, whose condition is always
   And that set, and the sum of its members' declared timeout-minutes, are the values pinned for this path
   And of the jobs the verdict depends on, the executing ones are exactly the declared dependencies that carry no pinned condition, each named with the reason it cannot be skipped
-  And every unneeded leg reports as skipped, so its check name persists
-  And no skipped leg consumes runner minutes
+  And each unneeded matrix job reports one skipped check under its bare job name before matrix expansion
+  And no skipped matrix job consumes runner minutes
   And the aggregate verdict reports success
 
 # AC-0017-0004: Detection fails open with a warning annotation
@@ -78,7 +78,7 @@ Scenario: A lane is exempt when skipping it would leave a gate with nothing to c
   Then the lint lane still runs, so the formatter and Markdown gates are not vacuous for a documentation change
   And the lane carrying the agent-integration mirror guards still runs, whichever job hosts it
   And the job carrying a required status context still runs unconditionally while it carries it
-  And no check name is created or renamed by selection, so no repository setting has to change
+  And the required ci-pass context is unchanged; full runs report expanded matrix names and documentation-only runs report skipped bare job names
 
 # AC-0017-0007: Every own-CI job has a reachable permission block
 # Parent: US-0017-0002
