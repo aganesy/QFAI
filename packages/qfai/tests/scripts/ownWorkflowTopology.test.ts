@@ -1287,6 +1287,11 @@ describe("TC-0017-0012 (TDD-0012): no lint-aggregate lane's host job is conditio
         ? declaration["contexts"].filter(isRecord)
         : [];
     for (const context of contexts) {
+      if (context["workflow"] === "ci.yml") {
+        expect(context["unconditionalDependencies"]).toEqual(
+          [...new Set([...hostsOf.values()].flat())].sort(),
+        );
+      }
       const conditions = context["dependencyConditions"];
       if (isRecord(conditions)) for (const key of Object.keys(conditions)) listed.add(key);
     }

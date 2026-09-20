@@ -136,6 +136,7 @@ export interface Declaration {
      */
     dependencies?: string[];
     dependencyConditions?: Record<string, string>;
+    unconditionalDependencies?: string[];
     gateOutputs?: Record<string, Record<string, string>>;
     commandFiles?: string[];
     preflight?: { job?: string; step?: string; mayPrecede?: string[] };

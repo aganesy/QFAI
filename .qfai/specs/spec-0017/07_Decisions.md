@@ -895,3 +895,22 @@ file, so an entry here is what makes that citation checkable.
 - Scope: these jobs build this repository's package. The shipped workflow
   templates have no corresponding release checks.
 - Related: AC-0017-0036, BR-0017-0069, TC-0017-0090, TC-0017-0091, TC-0017-0092
+
+### DR-0017-0021: exempt lint hosts remain unconditional in the hygiene declaration
+
+- Status: accepted
+- Decision: `unconditionalDependencies` names the jobs hosting the exempt lint
+  lanes. Each must exist in the verdict's direct dependencies, carry no condition,
+  and be absent from `dependencyConditions`. A missing, empty, malformed or
+  duplicate list is invalid.
+- The independent topology assertion resolves every exempt command to its host
+  and compares those hosts with the declaration. The hygiene lane can therefore
+  reject a matching workflow condition and skip declaration even on a path that
+  does not run the topology tests.
+- The declaration owns job names; the rule does not hard-code today's hosts.
+  Removing a host from this declaration is a reviewed exemption change, and the
+  topology equality still refuses it while the host runs an exempt command.
+- Delegated design: `completion_design` recommended this declaration plus host
+  equality after two rounds. Adopted because it implements the existing exemption
+  without adding a second workflow parser or changing allowed skip conditions.
+- Related: BR-0017-0011, TC-0017-0012, TC-0017-0085
