@@ -588,17 +588,23 @@ jobs:
 
   # ── 3. GitHub Release, on the tag push ───────────────────────────
   github-release:
-    # Every gate job, both paths. Three of the four are conditional and exactly two of those three
-    # run for any one tag, so the default rule — a job whose dependency skipped skips too — would
-    # stop the release on whichever path it was not written for. `!cancelled()` replaces that rule
-    # and the two `contains` put back what it was doing: `skipped` is accepted, `failure` and
-    # `cancelled` are not. Without them this job would treat a red gate as a green one, which is
-    # the whole of what it is here to prevent.
+    # Only the gates outside the selected suite shape may be skipped.
+    # Every gate on the selected path must have succeeded before an upload starts.
+    # SHIPPED-CI: not-applicable
+    # Because: the shipped templates have no release or registry publication jobs.
     if: >-
       ${{ github.event_name == 'push'
       && !cancelled()
-      && !contains(needs.*.result, 'failure')
-      && !contains(needs.*.result, 'cancelled') }}
+      && needs.verify.result == 'success'
+      && needs.gate.result == 'success'
+      && ((needs.verify.outputs.suite-shape == 'sliced'
+      && needs.gate-tests.result == 'success'
+      && needs.gate-floor.result == 'success'
+      && needs.gate-floor-whole.result == 'skipped')
+      || (needs.verify.outputs.suite-shape == 'whole'
+      && needs.gate-floor-whole.result == 'success'
+      && needs.gate-tests.result == 'skipped'
+      && needs.gate-floor.result == 'skipped')) }}
     needs: [verify, gate, gate-tests, gate-floor, gate-floor-whole]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -685,13 +691,19 @@ jobs:
   #   - the `release` environment carries a required reviewer, which is what
   #     keeps tagging and publishing separate decisions.
   publish:
-    # Every gate job, both paths, on the same condition `github-release` carries and for the same
-    # reason. A publication is irreversible, so the one thing this must never do is read a gate
-    # that was skipped by the path the tag did not take as a gate that passed.
+    # The same gate results as github-release, on both supported triggers.
     if: >-
       ${{ !cancelled()
-      && !contains(needs.*.result, 'failure')
-      && !contains(needs.*.result, 'cancelled') }}
+      && needs.verify.result == 'success'
+      && needs.gate.result == 'success'
+      && ((needs.verify.outputs.suite-shape == 'sliced'
+      && needs.gate-tests.result == 'success'
+      && needs.gate-floor.result == 'success'
+      && needs.gate-floor-whole.result == 'skipped')
+      || (needs.verify.outputs.suite-shape == 'whole'
+      && needs.gate-floor-whole.result == 'success'
+      && needs.gate-tests.result == 'skipped'
+      && needs.gate-floor.result == 'skipped')) }}
     needs: [verify, gate, gate-tests, gate-floor, gate-floor-whole]
     runs-on: ubuntu-latest
     timeout-minutes: 20

@@ -805,3 +805,43 @@ file, so an entry here is what makes that citation checkable.
   - A slice added to either matrix, a ceiling raised, an install introduced or a build moved
     between jobs now fails until the pinner has run.
 - Related: BR-0017-0030, NFR-0001, NFR-0002, OC-80, `DR-0017-0012`, `DR-0017-0015`, `DR-0017-0017`
+
+### DR-0017-0019: release uploads require a complete successful gate path
+
+- Status: accepted
+- Context: release prerequisites have two valid result maps. The sliced path runs
+  `gate-tests` and `gate-floor`; the whole path runs `gate-floor-whole`. Both require
+  `verify` and `gate`. Excluding failure and cancellation alone also accepts a
+  required gate that was skipped or supplied no result.
+- Decision: each upload condition accepts only the successful selected path and
+  skipped inactive gates. An unknown shape refuses upload. GitHub Release remains
+  push-only, and npm publication retains manual dispatch. Environment approval,
+  permissions, tag identity and packed-artifact verification are unchanged.
+- Scope: this is the release publication barrier. The change-detected `ci-pass`
+  verdict still permits its declared skips. The shipped templates have no release
+  or registry publication jobs.
+- Sequencing: harden this barrier before adding release gate jobs. Operation
+  extraction must extend tag capability detection and these result-map tests.
+- Baseline: [successful release run 35414209463](https://github.com/aganesy/QFAI/actions/runs/35414209463),
+  source `4fc271880d30ea7ab66f6584dbdfee722f3afb7f`, on 2026-09-19. The jobs API
+  reports `gate` at 137 seconds, its checks step at 112 seconds, and its post-build
+  leakage scan at 4 seconds. The remaining 21 seconds cover setup, cleanup and
+  step boundaries. Against the declared 30-minute timeout, headroom is 1,663
+  seconds (92.4 percent).
+- The gate log places the lint lane starts near 01:58:01 UTC and the type check
+  start at 01:59:02 UTC. Type checking and the first build together end near
+  01:59:29 UTC; pack verification ends near 01:59:52 UTC. These are approximate
+  log intervals, not separate operation timers: the first build wrapper buffers
+  its output until completion, so type checking cannot be separated from that
+  build using line timestamps.
+- The last gate to finish is `gate-tests (pr-fix)`, at 02:03:42 UTC after 261
+  seconds on its runner. `verify` started at 01:57:27 UTC, so the gate phase
+  spans 375 seconds including scheduling. All job durations sum to 2,118 seconds
+  (35.3 runner-minutes). Publication starts at 03:57:42 UTC behind approval;
+  that wait must not be credited to gate execution. This is one baseline run,
+  not a before/after comparison or evidence of a performance improvement.
+- Remaining independent blocks: SSOT sync plus its diff; the four lint lanes;
+  type checking; and the build, pack and post-build scan chain. Extraction needs
+  isolated checkouts and tag-declared entry points. Checkout precedes the sidecar,
+  setup precedes its consumers, and artifact generation precedes artifact scans.
+- Related: AC-0017-0035, BR-0017-0068, TC-0017-0088, TC-0017-0089

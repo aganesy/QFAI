@@ -23,21 +23,19 @@ ID, and a binding moves up in the same change that creates its file.
 
 ## Ledger Table (required when this file exists)
 
-| BR/AC        | Implementation File                   | Test File                                             | Notes                                                                                                                                                              |
-| ------------ | ------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| AC-0017-0011 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts | The criterion's satisfying artifact **is** a durable repository record, and DR-0017-0003 is it. No bump configuration may be created without user approval (OC-3). |
-| BR-0017-0005 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts | Sequencing rule. Its only durable realization is DR-0017-0005, which is what a reviewer cites to reject an inverted merge order.                                   |
-| BR-0017-0022 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts | DR-0017-0003 names the owner and binds the obligation to release preparation. A pull-request description is explicitly not an acceptable home.                     |
-| BR-0017-0023 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts | The prohibition's realization is the absence of a root configuration plus the recorded reason. DR-0017-0003 carries the reason.                                    |
-| BR-0017-0045 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts | Sequencing rule, DR-0017-0005 edge 5. Crosses into `spec-0003`, so the record is the only place the edge is stated on this side.                                   |
-| BR-0017-0061 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts | Sequencing rule, DR-0017-0005 edge 4. The recorded justification is the lost manual cross-check, not an absent mirror.                                             |
+| BR/AC        | Implementation File                   | Test File                                               | Notes                                                                                                                                                              |
+| ------------ | ------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| AC-0017-0011 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts   | The criterion's satisfying artifact **is** a durable repository record, and DR-0017-0003 is it. No bump configuration may be created without user approval (OC-3). |
+| BR-0017-0068 | .github/workflows/release.yml         | packages/qfai/tests/scripts/ownWorkflowTopology.test.ts | Selected release gates must succeed; only inactive gates may be skipped.                                                                                           |
+| BR-0017-0005 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts   | Sequencing rule. Its only durable realization is DR-0017-0005, which is what a reviewer cites to reject an inverted merge order.                                   |
+| BR-0017-0022 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts   | DR-0017-0003 names the owner and binds the obligation to release preparation. A pull-request description is explicitly not an acceptable home.                     |
+| BR-0017-0023 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts   | The prohibition's realization is the absence of a root configuration plus the recorded reason. DR-0017-0003 carries the reason.                                    |
+| BR-0017-0045 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts   | Sequencing rule, DR-0017-0005 edge 5. Crosses into `spec-0003`, so the record is the only place the edge is stated on this side.                                   |
+| BR-0017-0061 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts   | Sequencing rule, DR-0017-0005 edge 4. The recorded justification is the lost manual cross-check, not an absent mirror.                                             |
 
-Six live rows, one implementation file. The coupling is deliberate and its cost is stated rather
-than discovered: every one of these six obligations is a governance rule whose only durable
-artifact is the decision record, so a change to the rule set that leaves `07_Decisions.md`
-untouched is a change that should be revisited — which is exactly what `QFAI-TRACE-001` will say.
-The test file is named once because one test asserts all six properties of that record; the
-test-design agent owns its `TC-*` binding and may split it.
+Six governance obligations bind to the decision record. A rule change that leaves
+`07_Decisions.md` untouched triggers `QFAI-TRACE-001`. The release prerequisite rule
+binds to `release.yml`, whose conditions the topology tests evaluate directly.
 
 ### Column rules
 

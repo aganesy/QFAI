@@ -82,6 +82,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { runInNewContext } from "node:vm";
 
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
@@ -4335,17 +4336,150 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
       expect
         .soft([...(Array.isArray(needs) ? needs : [])].sort(), `${id} must wait on every gate`)
         .toEqual(["gate", "gate-floor", "gate-floor-whole", "gate-tests", "verify"]);
-      const condition = String(job["if"] ?? "");
-      expect
-        .soft(condition, `${id} must run when a gate the other path owns was skipped`)
-        .toContain("!cancelled()");
-      expect
-        .soft(condition, `${id} must not treat a failed gate as a passed one`)
-        .toContain("!contains(needs.*.result, 'failure')");
-      expect
-        .soft(condition, `${id} must not treat a cancelled gate as a passed one`)
-        .toContain("!contains(needs.*.result, 'cancelled')");
-      expect.soft(condition, `${id} must not publish over a red gate`).not.toContain("always()");
+    }
+  });
+
+  type ReleaseNeed = {
+    result?: string | undefined;
+    outputs?: { "suite-shape"?: string | undefined };
+  };
+  type ReleaseNeeds = Record<string, ReleaseNeed>;
+
+  /** Evaluates the release conditions' lowercase string fixtures and Boolean operators only. */
+  const acceptsRelease = (
+    condition: string,
+    needs: ReleaseNeeds,
+    event: string,
+    cancelled = false,
+  ): boolean => {
+    const expression = condition.trim().replace(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/, "$1");
+    const token =
+      /\s+|contains\(needs\.\*\.result,\s*'([^']*)'\)|cancelled\(\)|github\.event_name|needs\.([a-z][a-z-]*)\.(result|outputs\.suite-shape)|'[^']*'|&&|\|\||==|!=|[!()]/gy;
+    const translated: string[] = [];
+    let offset = 0;
+    while (offset < expression.length) {
+      token.lastIndex = offset;
+      const match = token.exec(expression);
+      if (match === null) {
+        throw new Error(`Unsupported release condition syntax at ${expression.slice(offset)}`);
+      }
+      offset = token.lastIndex;
+      const text = match[0];
+      if (/^\s+$/.test(text)) continue;
+      if (match[1] !== undefined) {
+        translated.push(String(Object.values(needs).some((need) => need.result === match[1])));
+      } else if (text === "cancelled()") {
+        translated.push(String(cancelled));
+      } else if (text === "github.event_name") {
+        translated.push(JSON.stringify(event));
+      } else if (match[2] !== undefined) {
+        if (
+          !["verify", "gate", "gate-tests", "gate-floor", "gate-floor-whole"].includes(match[2])
+        ) {
+          throw new Error(`Unsupported release need ${match[2]}`);
+        }
+        const need = needs[match[2]];
+        translated.push(
+          JSON.stringify(
+            (match[3] === "result" ? need?.result : need?.outputs?.["suite-shape"]) ?? "",
+          ),
+        );
+      } else if (text.startsWith("'")) {
+        translated.push(JSON.stringify(text.slice(1, -1)));
+      } else {
+        translated.push(text);
+      }
+    }
+    // Only literals and the operators above reach the VM; unsupported syntax never evaluates.
+    const result: unknown = runInNewContext(translated.join(" "), {}, { timeout: 100 });
+    if (typeof result !== "boolean") throw new Error("Release condition must return a Boolean");
+    return result;
+  };
+
+  // QFAI:SPEC-0017:TC-0017-0088
+  it("TC-0017-0088 (TDD-0097): release prerequisites accept complete gate paths", () => {
+    for (const id of ["github-release", "publish"]) {
+      const condition = releaseJobs()[id]?.["if"];
+      if (typeof condition !== "string") throw new Error(`${id} has no release condition`);
+      for (const shape of ["sliced", "whole"]) {
+        const needs: ReleaseNeeds = {
+          verify: { result: "success", outputs: { "suite-shape": shape } },
+          gate: { result: "success" },
+          "gate-tests": { result: shape === "sliced" ? "success" : "skipped" },
+          "gate-floor": { result: shape === "sliced" ? "success" : "skipped" },
+          "gate-floor-whole": { result: shape === "whole" ? "success" : "skipped" },
+        };
+        for (const event of ["push", "workflow_dispatch"]) {
+          expect(acceptsRelease(condition, needs, event), `${id} ${shape} ${event}`).toBe(
+            id === "publish" || event === "push",
+          );
+        }
+      }
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0089
+  it("TC-0017-0089 (TDD-0098): release prerequisites reject invalid gate paths", () => {
+    for (const id of ["github-release", "publish"]) {
+      const condition = releaseJobs()[id]?.["if"];
+      if (typeof condition !== "string") throw new Error(`${id} has no release condition`);
+      for (const shape of ["sliced", "whole"]) {
+        const required =
+          shape === "sliced"
+            ? ["verify", "gate", "gate-tests", "gate-floor"]
+            : ["verify", "gate", "gate-floor-whole"];
+        const inactive = shape === "sliced" ? ["gate-floor-whole"] : ["gate-tests", "gate-floor"];
+        const needs: ReleaseNeeds = Object.fromEntries([
+          ...required.map((name) => [name, { result: "success" }]),
+          ...inactive.map((name) => [name, { result: "skipped" }]),
+        ]);
+        needs["verify"] = { result: "success", outputs: { "suite-shape": shape } };
+        expect(acceptsRelease(condition, needs, "push", true), `${id} cancelled`).toBe(false);
+        for (const name of [...required, ...inactive]) {
+          const invalidStates = required.includes(name)
+            ? ["failure", "cancelled", "skipped", "timed_out", "unknown", "", undefined]
+            : ["success", "failure", "cancelled", "timed_out", "unknown", "", undefined];
+          for (const result of invalidStates) {
+            const changed = { ...needs, [name]: { ...needs[name], result } };
+            expect
+              .soft(acceptsRelease(condition, changed, "push"), `${id} ${shape} ${name}: ${result}`)
+              .toBe(false);
+          }
+          const missing = Object.fromEntries(Object.entries(needs).filter(([key]) => key !== name));
+          expect
+            .soft(acceptsRelease(condition, missing, "push"), `${id} ${shape} missing ${name}`)
+            .toBe(false);
+        }
+        for (const invalidShape of [
+          "unknown",
+          "",
+          undefined,
+          shape === "sliced" ? "whole" : "sliced",
+        ]) {
+          const changed = {
+            ...needs,
+            verify: { result: "success", outputs: { "suite-shape": invalidShape } },
+          };
+          expect
+            .soft(
+              acceptsRelease(condition, changed, "push"),
+              `${id} ${shape} shape ${invalidShape}`,
+            )
+            .toBe(false);
+        }
+      }
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0089
+  it("TC-0017-0089 release prerequisites evaluator refuses unsupported expressions", () => {
+    for (const expression of [
+      "always()",
+      "true || unknown()",
+      "needs.future.result == 'success'",
+      "'yes'",
+    ]) {
+      expect(() => acceptsRelease(expression, {}, "push"), expression).toThrow();
     }
   });
 

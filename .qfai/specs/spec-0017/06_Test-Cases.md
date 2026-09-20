@@ -4,7 +4,7 @@
 
 - Verify examples and acceptance criteria with explicit refs.
 - Cover not only normal paths but also error paths, boundary values and edge cases.
-- Every one of the 34 acceptance criteria carries at least one `normal` row **and** at least one
+- Every one of the 35 acceptance criteria carries at least one `normal` row **and** at least one
   `error` or `boundary` row. A criterion covered only by a happy path cannot falsify the
   requirement it belongs to, and every gate in this spec has a failure direction that is itself
   load-bearing.
@@ -150,15 +150,17 @@ set is one table and is never split into two.
 | TC-0017-0085 | integration | AC-0017-0006               | EX-0017-0011 | error    | A lane job with a condition and a declaration entry fails        | The lane exits 1 for a tree in which a lint-aggregate lane's host job carries a detection-derived condition and the declaration lists that job in `dependencyConditions`, a pair `BR-0017-0007` alone accepts                                                                                                                                                                                  |
 | TC-0017-0086 | integration | AC-0017-0003, AC-0017-0018 | EX-0017-0068 | error    | A committed code-path pin the tree does not declare exits 1      | The hygiene lane exits 1 for six plants on the code-path pin: the instance count, the declared-timeout sum and the install count each set to a value the tree does not declare, one job dropped from the build-declaring set, the pin removed, and a matrix widened by a leg whose finding names both instance counts. The build figure counts jobs declaring a build, never build executions  |
 | TC-0017-0087 | integration | AC-0017-0003, AC-0017-0018 | EX-0017-0068 | normal   | The code path's cost agrees with the committed pin               | All four committed figures — instances, installs, jobs declaring a build, declared-timeout sum — equal the topology reader's own independent reading of the workflow, compared as a whole so a pin agreeing on three fails on the fourth. Neither side is a run: no lint lane can read what a run consumed. The pin records the figures and obliges a re-pin, and is not a ceiling             |
+| TC-0017-0088 | integration | AC-0017-0035               | EX-0017-0069 | normal   | Release prerequisites accept both complete gate paths            | The actual YAML conditions accept the sliced and whole success maps, with inactive gates skipped; GitHub Release accepts push only, and npm publication accepts push and manual dispatch                                                                                                                                                                                                       |
+| TC-0017-0089 | integration | AC-0017-0035               | EX-0017-0069 | error    | Release prerequisites reject incomplete or invalid gate paths    | Evaluating the actual YAML conditions rejects each required gate's failure, cancellation, timeout, skip, empty, unknown or missing result; inactive gates with any result other than skipped, unknown shapes and cancellation also refuse upload. Unsupported evaluator syntax throws                                                                                                          |
 
 ## Coverage summary
 
-- 87 test cases against 34 acceptance criteria and 68 examples.
+- 89 test cases against 35 acceptance criteria and 69 examples.
 - Every acceptance criterion in `03_Acceptance-Criteria.md` is referenced by at least one row's
   `AC-Refs`, and every example in `05_Examples.md` by at least one row's `EX-Ref`.
-- Type distribution: 38 `normal`, 21 `error`, 28 `boundary`. Every acceptance criterion carries at
+- Type distribution: 39 `normal`, 22 `error`, 28 `boundary`. Every acceptance criterion carries at
   least one `normal` row and at least one `error` or `boundary` row.
-- Level distribution: 11 `unit`, 76 `integration`. The skew is a property of the subject, not of
+- Level distribution: 11 `unit`, 78 `integration`. The skew is a property of the subject, not of
   the test design — a rule about what a checked-in workflow, script or manifest contains is only
   falsifiable against the real tree. The eleven `unit` rows are exactly the obligations whose
   oracle is a value the test supplies rather than a file it reads.
