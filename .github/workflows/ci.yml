@@ -1,4 +1,4 @@
-name: Release scheduling diagnostic (aggregate 1)
+name: Release scheduling diagnostic (operations 1)
 on:
   pull_request: {}
 permissions:
@@ -15,10 +15,10 @@ jobs:
     outputs:
       sha: 41d656a6c80c7e53bc00b5f30830472523768bba
       suite-shape: sliced
-      checks-shape: aggregate
+      checks-shape: operations
     steps:
       - name: Pin diagnostic source and selected scheduling shape
-        run: "printf '%s\\n' 'DIAGNOSTIC ONLY: source=41d656a6c80c7e53bc00b5f30830472523768bba checks=aggregate iteration=1; publication jobs absent'"
+        run: "printf '%s\\n' 'DIAGNOSTIC ONLY: source=41d656a6c80c7e53bc00b5f30830472523768bba checks=operations iteration=1; publication jobs absent'"
   gate:
     needs: verify
     runs-on: ubuntu-latest
