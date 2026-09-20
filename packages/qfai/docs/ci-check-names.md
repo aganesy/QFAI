@@ -33,3 +33,27 @@ Keep the full and documentation-only observations separate. Both sliced lanes
 must follow the same naming rule for the same selection state. A change to
 check names belongs in the topology inventory; it does not require adding each
 matrix leg to branch protection because `ci-pass` remains the required context.
+
+## Observed documentation-only run
+
+The [documentation-only CI run](https://github.com/aganesy/QFAI/actions/runs/35492666770)
+on commit `dad4384dced73d5fde5d619a9644503932da9ea9` completed successfully on
+2026-09-20. It was a pull-request event with only this guide changed.
+
+Both the jobs and commit check-runs APIs returned ten entries, matching their
+reported totals after pagination. The names and conclusions were:
+
+| Conclusion | Check names                                                                   |
+| ---------- | ----------------------------------------------------------------------------- |
+| Success    | `build`, `ci-pass`, `detect`, `lint`, `mirror-surface`                        |
+| Skipped    | `check-types`, `check-types-future`, `node-floor`, `scanner-coverage`, `test` |
+
+Neither sliced lane reported expanded leg names. Their job-level condition was
+false before matrix expansion, so both reported a single skipped check under
+the bare job name. The required `ci-pass` check still ran and succeeded.
+
+For comparison, the [full CI run](https://github.com/aganesy/QFAI/actions/runs/35479590985)
+on commit `bf473648c3f32ff61f63a7de6587c4db4f1e5346` reported 26 successful
+checks, including nine expanded names for each sliced lane. The jobs and commit
+check-runs APIs both returned all 26 entries. The two selection states therefore
+have different reported name sets while retaining the same required context.
