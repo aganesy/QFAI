@@ -77,8 +77,8 @@ designMdSha256: "<hex from DESIGN.md.lock.yaml>"
 designSystemMirror: ".qfai/contracts/design/design-system.yaml"
 procurement:
   # What realises each screen region, so the implementer installs rather
-  # than reconstructs. Omit both lists for a screen drawn entirely from
-  # what the project already had.
+  # than reconstructs. Every screen a UI contract declares appears in one
+  # of the three lists.
   procured:
     - screen: "<screen id>"
       region: "<what part of the screen>"
@@ -87,6 +87,12 @@ procurement:
     - screen: "<screen id>"
       region: "<what part of the screen>"
       why: "<what was looked for and did not serve>"
+  # A screen drawn entirely from what the project already had. Say it
+  # here rather than leaving the screen out: an omitted screen reads the
+  # same as one the loop recorded nothing for, and an implementer taking
+  # the second for the first rebuilds by hand what the loop procured.
+  drawn-from-project:
+    - screen: "<screen id>"
 implementationNotes: |
   Plain prose, for what is genuinely prose: why a flow is ordered as it
   is, and usability decisions worth carrying into /qfai-implement. Not a
