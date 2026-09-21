@@ -42,7 +42,7 @@ The dry run writes `tmp/pr-merge/pr-<PR number>-merge-plan.json`.
 - The working tree is dirty
 - The pull request's base is not `main`
 - The pull request is a draft, closed or merged
-- An unresolved review thread remains
+- An unresolved review thread remains, outdated or not
 - A CI check is not green
 - The live PR body lacks an authored removal-list answer. Check it again
   immediately before merging, even when a handoff exists.

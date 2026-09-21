@@ -738,10 +738,9 @@ export function missingRecommendedGitignoreEntries(content: string): string[] {
  * {@link gitignorePatternMatches}.
  *
  * A negation is itself a glob, and glob-vs-glob overlap has no cheap exact answer. The two
- * directions of error are NOT symmetric, and this docblock used to have it backwards: a false
- * "conflict" only re-appends a negation that was already last, which is where it belongs
- * anyway — but a MISSED conflict leaves a file git is ignoring outside version control, with
- * nothing to notice it afterwards.
+ * directions of error are NOT symmetric: a false "conflict" only re-appends a negation that was
+ * already last, which is where it belongs anyway — but a MISSED conflict leaves a file git is
+ * ignoring outside version control, with nothing to notice it afterwards.
  *
  * So the caller instantiates BOTH patterns and asks the question both ways round; see
  * {@link negationsOutrankLaterIgnores}.
@@ -749,8 +748,8 @@ export function missingRecommendedGitignoreEntries(content: string): string[] {
 export function negationSamplePath(negation: string): string {
   const body = negation.replace(/^!/, "");
   // These globs are consumed only by canonical `*-spec-NNNN.md` records.
-  // A generic `sample` did not overlap a later `implement-spec-*.md` rule,
-  // so migration incorrectly treated a losing negation as effective.
+  // A generic `sample` does not overlap a later `implement-spec-*.md` rule,
+  // so migration would treat a losing negation as effective.
   if (/(?:^|\/)(?:implement|atdd)-\*\.md$/.test(body)) {
     return body.replace(/\*\.md$/, "spec-0001.md");
   }
@@ -759,8 +758,8 @@ export function negationSamplePath(negation: string): string {
   // gives: inside a bracket expression the alphabet is different, and the same
   // parser has to read it. Left as text, `[0-9]` instantiates as the four
   // characters `[0-9]` — a path no rule written about digits matches, so every
-  // overlap question about the stamped negation answered "no" and a later
-  // `import-lite-[0-9]*.md` looked like no conflict at all.
+  // overlap question about the stamped negation would answer "no" and a later
+  // `import-lite-[0-9]*.md` would look like no conflict at all.
   let sample = "";
   let index = 0;
   while (index < withContents.length) {

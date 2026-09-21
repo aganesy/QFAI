@@ -109,6 +109,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Three obligations now state the behaviour the product has** (#1834).
+  `TC-0012-0402` asked a single-spec flat iter to exit 0 with an info note; that
+  skip sealed a certificate over zero per-screen review evidence, so the gate
+  was tightened and the case is restated to the exit it now produces and the
+  pair it names. `TC-0012-0404` asked cycle 0 to freeze the union of the three
+  scans; freezing a multi-spec union makes every ordinary multi-spec run
+  uncertifiable while the per-spec layout migration is deferred, so the union
+  drives the bypass and drift signals and the single primary spec is what the
+  frozen field holds. `AC-0010-0001` required the five legacy discussion
+  sidecars that `AC-0010-0008` forbids, which no implementation could satisfy;
+  it now names the two screen-level sidecars that are written, and the three
+  decision records that declared the legacy family canonical are marked
+  superseded with what stands in their place. The business rule, example, test
+  case and ledger selector that hung off `AC-0010-0001` follow it.
+
 - **`Oracle proof` is read from the round block the skill writes it in**
   (#2026). `round-evidence.md` puts the field under the round prefix, because a
   later round rewrites the code an earlier proof mutated — one slot for the row
@@ -134,6 +149,38 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   they reached first. The non-goal names the one removal and the conditions it
   waits for, and keeps the guarantee that does hold: a stale review pack is
   renamed into `_archive/` and never removed.
+
+- **A citation the evidence-citation backlog holds is keyed by the section it
+  sits under, not by its position in the file** (#1753). The key counted a
+  path's citations within a file, in order, so deleting one and adding another
+  left every key where it was: the new citation inherited the backlog entry the
+  old one held, and a record written after the census claimed an artifact the
+  tree does not carry while the guard stayed green. That is the growth the
+  backlog exists to refuse. The key now carries the heading the citation sits
+  under and its ordinal inside that heading, which an edit to another section
+  does not move. A `#` run inside a fence is a shell comment rather than a
+  heading and is read as one. The census is re-measured under the new keys and
+  its digest re-pinned, in one list rather than two: it was taken again, so
+  there is no earlier measurement for an addendum to sit beside.
+
+- **An outdated review thread no longer authorizes a merge** (#1855). The merge
+  script dropped a thread when either `isResolved` or `isOutdated` was true, and
+  those are different claims: outdated says the code the reviewer commented on
+  has moved, not that anybody answered them. An unresolved thread on moved code
+  disappeared from the count, so the plan could report every thread resolved
+  while one was not, and the skill's own list of blockers said the same. The
+  count now drops a thread only when it is resolved.
+
+- **The traceability reference no longer tells a reader to delete a row the SDD
+  producer seeds** (#1856). Phase 2b seeds a `Layer = Integration` row for every
+  test case whose annotation routes to `tests/integration/**`, which includes
+  one declaring no `Level` at all. `spec-traceability-rules.md` said that same
+  test case "is not a coverage target and gets no row" — true of the
+  coverage-target group and false of the Integration one, and a reader following
+  it removes the row `/qfai-atdd` hands its work over on, along with the
+  evidence home that row resolves. The reference now says which group the row
+  belongs to, and that what would put one test case on two gates is a
+  coverage-target row beside it, which the two groups being exclusive prevents.
 
 - **`qfai init` no longer deletes a staging file it did not write** (#1857). The
   governed replacement writer takes its staging name exclusively, and removed
