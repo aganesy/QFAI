@@ -224,6 +224,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   table row beside its own heading is one item, not two. Heading definitions
   now also reach `QFAI-ID-001`, so a heading in each of two files is still the
   cross-file duplicate it reports.
+  The check reports three duplicates in this repository's own `spec-0013`
+  criteria, which `CR-20260913-0012` already describes and has not been applied
+  for; those three are recorded in `scripts/dogfood-backlog.json` so the count
+  cannot grow while the repair waits.
 
 - **A canonical assistant tree may be vendored by link** (#1927). `QFAI-LINK-001`
   read any symlink in `.qfai/assistant/**` as damage, so a project that points
