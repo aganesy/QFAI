@@ -109,6 +109,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai init` no longer deletes a staging file it did not write** (#1857). The
+  governed replacement writer takes its staging name exclusively, and removed
+  that path after any copy failure. One of those failures is the exclusive copy
+  refusing because something is already there — which is the one case where the
+  bytes behind the name are not this run's. A name collision does not transfer
+  ownership of them, and on a shared checkout what they belong to is another
+  run's staged asset. The removal now happens for every other failure, including
+  a partial copy, which this run really did write.
+
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
   had two lists, and a screen drawn entirely from what the project already had
