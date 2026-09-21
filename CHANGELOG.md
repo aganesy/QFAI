@@ -133,6 +133,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   identifier, status, test file, selector, decision and evidence exactly as they
   were. Sixteen packs still owe the same migration.
 
+- **The spec-0013 ledger carries the columns its template declares, and a row
+  for every story** (#1750). Thirteen of its fourteen stories had no row, and
+  the ledger held nine columns where the template declares fifteen. The thirteen
+  rows are at `todo`, and every existing row keeps its identifier, status, test
+  file, selector, decision and evidence.
+
 - **A rule master a project deleted is not written back by the next `qfai init`**
   (#1741). The run decided which masters to cite from its own copy report, so a
   master the project had removed on purpose looked exactly like a rule shipped
