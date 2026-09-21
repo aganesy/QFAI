@@ -8,6 +8,17 @@ finalArtifact: ".qfai/prototypes/final/index.html"
 designMdPath: "DESIGN.md"
 designMdSha256: "<hex from .qfai/contracts/design/DESIGN.md.lock.yaml>"
 designSystemMirror: ".qfai/contracts/design/design-system.yaml"
+procurement:
+  procured:
+    - screen: "gallery"
+      region: "result grid"
+      item: '<DataTable density="compact">'
+  authored:
+    - screen: "gallery"
+      region: "spatial canvas"
+      why: "the catalogue's carousels scroll one axis; this pans two"
+  drawn-from-project:
+    - screen: "settings"
 implementationNotes: |
   The final prototype invented a spatial gallery metaphor distinct from
   the AI-default dashboard / card-grid pattern that earlier iterations
