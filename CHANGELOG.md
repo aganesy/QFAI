@@ -109,6 +109,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The historical review-evidence comparison runs on the archive the record
+  identifies, or not at all** (#1874). The two guards over
+  `atdd-spec-0017.md`'s round and response counts read whichever ignored review
+  packs a clone happened to hold, so a checkout carrying six recent packs
+  measured a record certifying twenty and reported it wrong, while a clean CI
+  checkout skipped the comparison entirely. The input set is now the packs the
+  record itself names: the comparison runs where every one of them is present
+  and is skipped by name where any is missing, with the case title saying how
+  many are absent. The half that needs no archive — the certified round count
+  against the number of packs the record names — is a case of its own and runs
+  everywhere, so the number is checked in CI rather than only on the author's
+  machine. A recorded vitest output may now state its skipped cases, and the
+  guard over those outputs holds the total against the file's callsites and
+  requires the passed and skipped halves to account for it.
+
 - **No committed record names a generated artifact the repository does not
   have** (#1652). `.qfai/review/`, `.qfai/report/` and most of `.qfai/discussion/`
   are ignored, and the evidence files citing them are committed, so a clone had

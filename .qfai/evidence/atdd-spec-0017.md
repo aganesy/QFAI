@@ -332,7 +332,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 - **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 6 tests deriving the Coverage
   Depth Matrix's totals, partition, class assignment, per-class justification and row width from the
   table itself
-- **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 13 tests deriving this record's own
+- **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 14 tests deriving this record's own
   counts from the artifacts they describe, after every review round found at least one that the tree
   did not hold. The eighth derives `## Final status`'s own round and response counts, which were correct
   and underived through five findings of exactly that shape
@@ -390,7 +390,9 @@ pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotat
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
   -> Tests 6 passed (6), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
-  -> Tests 13 passed (13), exit 0
+  -> Tests 12 passed | 2 skipped (14), exit 0
+  the two skipped read the review archive and are skipped by name where this
+  checkout does not hold every pack the record certifies
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
   -> Tests 11 passed (11), exit 0
 pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017RunnerParallelismE2E.test.ts
@@ -2262,7 +2264,7 @@ a merge can invalidate has no author to hold responsible for it.
 The count and its split across the two include roots are on one line, and both are derived by the same
 walk:
 
-e2e callsites at this tree: 2395 (packages/qfai/tests/assets 2218, packages/qfai/tests/e2e 177)
+e2e callsites at this tree: 2396 (packages/qfai/tests/assets 2219, packages/qfai/tests/e2e 177)
 
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is
