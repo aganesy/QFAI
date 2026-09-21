@@ -858,6 +858,13 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
     expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
     expect(combinedOutput(result), outputContext(result)).toContain("Unresolved thread:");
 
+    // The reply endpoint takes the pull request number as a path parameter.
+    // Printed without it, the command names a route that posts nothing, and the
+    // operator finds that out by running it.
+    expect(combinedOutput(result), outputContext(result)).toContain(
+      "gh api repos/aganesy/QFAI/pulls/166/comments/",
+    );
+
     const monitorStatus = await readJson(
       path.join(result.repoDir, "tmp", "pr-fix", "pr-166-monitor-status.json"),
     );

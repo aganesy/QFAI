@@ -109,6 +109,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The monitor's reply command names the pull request it is about** (#1864).
+  It printed `repos/OWNER/REPO/pulls/comments/<id>/replies`, and the reply
+  endpoint takes the pull request number as a path parameter — so an operator
+  who copied the command posted nothing and found out by running it. The number
+  is in the command now.
+
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
   had two lists, and a screen drawn entirely from what the project already had
@@ -144,6 +150,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   held eight columns where the template declares fifteen — across two tables,
   both migrated. The five rows are at `todo`, and every existing row keeps its
   identifier, status, test file, selector, decision and evidence.
+
+- **The spec-0004 ledger carries the columns its template declares, and a row
+  for every story** (#1750). Thirteen of its sixteen stories had no row, and the
+  ledger held nine columns where the template declares fifteen — so a Change
+  Request re-deriving this pack would have had Phase 2b migrate it and seed
+  those rows in the same pass, unauthorized and undisposed. The thirteen rows
+  are at `todo`, and every existing row keeps its identifier, status, test file,
+  selector, decision and evidence.
 
 - **The spec-0012 ledger carries the columns its template declares, and a row
   for every story** (#1750). Thirty-three of its fifty-two stories had no row,
