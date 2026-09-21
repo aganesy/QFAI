@@ -219,6 +219,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   run's staged asset. The removal now happens for every other failure, including
   a partial copy, which this run really did write.
 
+- **The provenance lock's heartbeat has a consumer, and a release waits for it**
+  (#1859). The timer's refresh was started and dropped: `setInterval` ignores
+  what its callback returns, so making the callback asynchronous would have
+  moved the drop rather than closed it, and the `void` in front of the call was
+  the drop under another name. Each refresh is now chained onto the one before
+  and `release` awaits the chain, which is the consuming caller the promise rule
+  asks for at a callback boundary. It also closes a race the old shape left
+  open: a release could take the lock apart while a touch of its marker was
+  still in flight. A failed touch still does not end the chain, which is the
+  swallowing the heartbeat's own note describes.
+
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
   had two lists, and a screen drawn entirely from what the project already had
