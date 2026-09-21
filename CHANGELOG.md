@@ -109,6 +109,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Three obligations now state the behaviour the product has** (#1834).
+  `TC-0012-0402` asked a single-spec flat iter to exit 0 with an info note; that
+  skip sealed a certificate over zero per-screen review evidence, so the gate
+  was tightened and the case is restated to the exit it now produces and the
+  pair it names. `TC-0012-0404` asked cycle 0 to freeze the union of the three
+  scans; freezing a multi-spec union makes every ordinary multi-spec run
+  uncertifiable while the per-spec layout migration is deferred, so the union
+  drives the bypass and drift signals and the single primary spec is what the
+  frozen field holds. `AC-0010-0001` required the five legacy discussion
+  sidecars that `AC-0010-0008` forbids, which no implementation could satisfy;
+  it now names the two screen-level sidecars that are written, and the three
+  decision records that declared the legacy family canonical are marked
+  superseded with what stands in their place. The business rule, example, test
+  case and ledger selector that hung off `AC-0010-0001` follow it.
+
 - **`Oracle proof` is read from the round block the skill writes it in**
   (#2026). `round-evidence.md` puts the field under the round prefix, because a
   later round rewrites the code an earlier proof mutated — one slot for the row
