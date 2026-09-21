@@ -136,6 +136,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   have written test files and escalation counters into this repository. The file
   is struck from the dogfooding backlog, which held it for the skip.
 
+- **Every row of the spec-0002 ledger names a test that exists and proves what
+  the row claims** (#1585). Four rows carried a test title from before the
+  release that retired the exploration-sidecar family and moved the surface onto
+  `DESIGN.md`; the titles moved with it and the ledger kept the old wording. A
+  fifth named a validator suite for an obligation about shipped wording, and that
+  suite reads no shipped document at all — it now points at the case that holds
+  the discussion skill and its artifact rules to the same `prototyping.yaml`
+  requiredness sentence. The validator suite's own annotation for that obligation
+  is removed, so the criterion is claimed once, by the test that discharges it.
+  Nothing failed on any of this: an unresolved selector is reported at `warning`,
+  so a full run stayed green while the ledger named tests that were not there.
+
 - **A spawn-bound test that produces no output now says so, instead of reading as
   the script printing the wrong thing** (#1934). One CI run failed with
   `expected '' to contain 'authored removal-list answer'` and nothing else. The
