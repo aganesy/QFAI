@@ -15,8 +15,8 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.10.0)
       '@jackchuka/mdschema':
-        specifier: 0.15.3
-        version: 0.15.3
+        specifier: 0.15.4
+        version: 0.15.4
       '@types/node':
         specifier: ^18.19.41
         version: 18.19.130
@@ -603,44 +603,44 @@ packages:
     resolution: {integrity: sha512-+Sg6GCR/wy1oSmQDFq4LQDAhm3ETKnorxN+y5nbLULOR3P0c14f2Wurzj3/xqPXtasLFfHd5iRFQ7AJt4KH2cw==}
     engines: {node: '>=8'}
 
-  '@jackchuka/mdschema-darwin-arm64@0.15.3':
-    resolution: {integrity: sha512-448w/Mknl6f2iUyoLs2QJZW7K/f12bAsCVtjAovEBZWVfAn2RGXN1vTqwOwFxz1nGHZYi9OnN2ORuBrVGQ16Xg==}
+  '@jackchuka/mdschema-darwin-arm64@0.15.4':
+    resolution: {integrity: sha512-wzeENSL7k2ss/iZbUjnAK0gbKks028q87JoqzP14R9G2cA+9mDA7XhMFZIobad+oUpSATZ214tQlSMpkddsSqQ==}
     cpu: [arm64]
     os: [darwin]
     hasBin: true
 
-  '@jackchuka/mdschema-darwin-x64@0.15.3':
-    resolution: {integrity: sha512-V3W2DKy/7MQnI4NS524h3DS1QWpK9RR/vqSLVJB5pMXwp2ZqwaVvtApE0YPP/tKnlALdpAg6HEWCyC1/1lV5vg==}
+  '@jackchuka/mdschema-darwin-x64@0.15.4':
+    resolution: {integrity: sha512-vMsdVI592f00KCWjB5waANvdL171nYGCEssh09h8s4jf1qAHddVvET006zUiKNWF1ntFwartXwea8Mb7ArOSgA==}
     cpu: [x64]
     os: [darwin]
     hasBin: true
 
-  '@jackchuka/mdschema-linux-arm64@0.15.3':
-    resolution: {integrity: sha512-d/DhkIJ8ovsji5KFFMBEXj0ZWqiVH3RW3Pcf+ovypw0J31bv86zCywymZwtRv5WKK4lytNK01Ce6ZxTL6O4y3g==}
+  '@jackchuka/mdschema-linux-arm64@0.15.4':
+    resolution: {integrity: sha512-rBX9Icvl18ZAvfhjyx75p/ixTScorxjqCT4IB9bjrAGHQHtpeeM/HtTToO1z+oTe6Q1ToozuHwffnJBTgfDW1g==}
     cpu: [arm64]
     os: [linux]
     hasBin: true
 
-  '@jackchuka/mdschema-linux-x64@0.15.3':
-    resolution: {integrity: sha512-rvXA7SEjMUN4W8tUC3OnGl+YKJFdeocjWojKW+8hYStOQZLn0Tt1DmneGAWplCtOJnC+awIjLCxf7ma5Xa7b4Q==}
+  '@jackchuka/mdschema-linux-x64@0.15.4':
+    resolution: {integrity: sha512-J3DD/Lm6mQLznf7PkJjfNluxXU84P4yncqE16XJi0gcm9IA2ym0z4biSL1MN3CTet2liTJd8BpJO6GjDqW4sbA==}
     cpu: [x64]
     os: [linux]
     hasBin: true
 
-  '@jackchuka/mdschema-windows-arm64@0.15.3':
-    resolution: {integrity: sha512-YNQbGZZJY83iPz9eCGbxHpH0mM60WTOMo274psrXLj+F/i8taFlr9AUzbC6f8kprjQzTPylRI+cKYtmUxFNolw==}
+  '@jackchuka/mdschema-windows-arm64@0.15.4':
+    resolution: {integrity: sha512-0PtSCg5Vyti/w4E1HiPIiVUP/gaU5/Qyg99gn58OmM1NjRpYPygMc7PyKpIDk7iQZ1EtouNcwJdfGL9JJ0DZuA==}
     cpu: [arm64]
     os: [win32]
     hasBin: true
 
-  '@jackchuka/mdschema-windows-x64@0.15.3':
-    resolution: {integrity: sha512-fa0Lr43aUOA87qN3GsZZ3C6QUGV1mefNz/MolCCa24RZi5mZgSxc2lbtAqEaSzR4xFN1WufIFs4kaSTAvWsGQw==}
+  '@jackchuka/mdschema-windows-x64@0.15.4':
+    resolution: {integrity: sha512-BOb7/5X15HKzjurkJTkf4oIdTSBwBR19ITEZ4fiDevLGgmKf6ivY+3QNCDLyYyEIj4VziALFEk+XD3N6Ls5wHw==}
     cpu: [x64]
     os: [win32]
     hasBin: true
 
-  '@jackchuka/mdschema@0.15.3':
-    resolution: {integrity: sha512-R2ozK6hYm6Mne3d+am82s78cKT33qLhGflNoyaMs47/Z+48zrk578j3JGift4jmKt0+cpzZOZK8dRSn7r5LRJg==}
+  '@jackchuka/mdschema@0.15.4':
+    resolution: {integrity: sha512-bR5+eOV7wWMYB7SITWjjjrBLOW7vmn3Es7jx/sFQ3CI9xsE64/tLW8ar7UcocQ80E061IuYU8YsTRfNV1qoUNw==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -2723,32 +2723,32 @@ snapshots:
 
   '@istanbuljs/schema@0.1.6': {}
 
-  '@jackchuka/mdschema-darwin-arm64@0.15.3':
+  '@jackchuka/mdschema-darwin-arm64@0.15.4':
     optional: true
 
-  '@jackchuka/mdschema-darwin-x64@0.15.3':
+  '@jackchuka/mdschema-darwin-x64@0.15.4':
     optional: true
 
-  '@jackchuka/mdschema-linux-arm64@0.15.3':
+  '@jackchuka/mdschema-linux-arm64@0.15.4':
     optional: true
 
-  '@jackchuka/mdschema-linux-x64@0.15.3':
+  '@jackchuka/mdschema-linux-x64@0.15.4':
     optional: true
 
-  '@jackchuka/mdschema-windows-arm64@0.15.3':
+  '@jackchuka/mdschema-windows-arm64@0.15.4':
     optional: true
 
-  '@jackchuka/mdschema-windows-x64@0.15.3':
+  '@jackchuka/mdschema-windows-x64@0.15.4':
     optional: true
 
-  '@jackchuka/mdschema@0.15.3':
+  '@jackchuka/mdschema@0.15.4':
     optionalDependencies:
-      '@jackchuka/mdschema-darwin-arm64': 0.15.3
-      '@jackchuka/mdschema-darwin-x64': 0.15.3
-      '@jackchuka/mdschema-linux-arm64': 0.15.3
-      '@jackchuka/mdschema-linux-x64': 0.15.3
-      '@jackchuka/mdschema-windows-arm64': 0.15.3
-      '@jackchuka/mdschema-windows-x64': 0.15.3
+      '@jackchuka/mdschema-darwin-arm64': 0.15.4
+      '@jackchuka/mdschema-darwin-x64': 0.15.4
+      '@jackchuka/mdschema-linux-arm64': 0.15.4
+      '@jackchuka/mdschema-linux-x64': 0.15.4
+      '@jackchuka/mdschema-windows-arm64': 0.15.4
+      '@jackchuka/mdschema-windows-x64': 0.15.4
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
