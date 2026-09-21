@@ -122,6 +122,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   required, and a screen named both as needing nothing and as needing something
   is reported. The handoff reference and the shipped sample carry the list.
 
+- **The spec-0002 ledger carries the columns its template declares, and a row
+  for every story** (#1750). `/qfai-sdd` Phase 2b seeds one `E2E` row per active
+  user story and migrates an eight-column ledger to the template's fifteen. No
+  pack had been re-seeded since that contract was written, so a Change Request
+  re-deriving one could not keep its rerun to the statements it changed: Phase
+  2b would migrate the ledger and seed every missing row in the same pass, rows
+  the Change Request neither authorized nor gave a disposition. This pack's
+  seven stories now have a row each, at `todo`, and every existing row keeps its
+  identifier, status, test file, selector, decision and evidence exactly as they
+  were. Sixteen packs still owe the same migration.
+
 - **A rule master a project deleted is not written back by the next `qfai init`**
   (#1741). The run decided which masters to cite from its own copy report, so a
   master the project had removed on purpose looked exactly like a rule shipped
