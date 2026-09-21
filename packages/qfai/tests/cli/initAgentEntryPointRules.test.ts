@@ -2002,6 +2002,24 @@ describe("a marker pair inside an example is an example", () => {
 
     expect(citedRuleMastersOutsideCode(existing)).toEqual([]);
   });
+
+  it("keeps a fence open past a bullet whose text is the fence character", async () => {
+    // Every line inside a block is literal, and the scanner stripped a list
+    // marker from one before testing it as a delimiter. `- ~~~` then closed
+    // the example on its own first line, the real closing fence opened
+    // another, and the citations between them were read as real.
+    const text = [
+      "~~~md",
+      "- ~~~",
+      ".agents/rules/minimal-implementation.md",
+      "~~~",
+      "",
+      ".agents/rules/temporary-files.md",
+      "",
+    ].join("\n");
+
+    expect(citedRuleMastersOutsideCode(text)).toEqual([".agents/rules/temporary-files.md"]);
+  });
 });
 
 describe("the Copilot file this run cannot extend", () => {

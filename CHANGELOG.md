@@ -109,6 +109,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A bullet whose text is a run of the fence character no longer closes the
+  example it sits in** (#1865). The agent-entry scanner stripped a list marker
+  from every line before testing it as a fence delimiter, so a line like
+  `- ~~~` inside a tilde block closed it on its own first line, the real closing
+  fence opened another, and everything between them was read as live: citations
+  that were examples counted as citations, and the managed rule section after
+  them stopped being recognised. The marker comes off only while no block is
+  open, which is the one place a fence can follow one.
+
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
   had two lists, and a screen drawn entirely from what the project already had
