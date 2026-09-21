@@ -109,6 +109,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`Oracle proof` is read from the round block the skill writes it in**
+  (#2026). `round-evidence.md` puts the field under the round prefix, because a
+  later round rewrites the code an earlier proof mutated — one slot for the row
+  either overwrote that proof or left the row reusing a stale one. The
+  completion gate read the row level only, so an entry written as the reference
+  says was refused for carrying no proof at all, and one that passed the gate
+  contradicted the reference. The latest round's field is read first and the
+  row-level one is the fallback, which is what every entry written before the
+  prefix carries. That is the shape `RED failure mode` already had, and the
+  field joins it among the round-scoped ones, so a round cannot carry two.
+
 - **The monitor's reply command names the pull request it is about** (#1864).
   It printed `repos/OWNER/REPO/pulls/comments/<id>/replies`, and the reply
   endpoint takes the pull request number as a path parameter — so an operator
