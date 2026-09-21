@@ -109,6 +109,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A prototype handoff can say a screen needed nothing, and one that says
+  nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
+  had two lists, and a screen drawn entirely from what the project already had
+  was written by omitting both. So an absent manifest carried two different
+  claims — every screen needed nothing, or the loop recorded nothing — and the
+  implementer reading the second as the first rebuilds by hand what the loop had
+  procured, which is the failure the manifest exists to prevent. An empty
+  `procured: []` does not separate them either: "nothing was found" is not
+  "nothing was needed". A third list, `drawn-from-project`, says it, one row per
+  screen. On a target whose UI contracts declare screens the key is now
+  required, and a screen named both as needing nothing and as needing something
+  is reported. The handoff reference and the shipped sample carry the list.
+
 - **The spec-0008 scaffold acceptance suite runs, instead of standing by as a
   skeleton** (#1436). It was authored test-first against a command that did not
   exist yet, every case `.skip`ped, and the command shipped without the skip
