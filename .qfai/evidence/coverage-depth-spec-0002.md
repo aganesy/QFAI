@@ -494,7 +494,9 @@ it says so and names what carries it now.
    than its repair; and `done` is not a status a row can be blocked at, so the ledger has no edge
    that records the wait. The Change Request and its work-log entry carry it instead.
 5. **Every obligation in this pack is reported carrier-only.** All five `TC-0002-*` appear under
-   `coveredByCarrierOnly.tc` in `.qfai/report/atdd-traceability/summary.json`, referenced only from
+   `coveredByCarrierOnly.tc` of the report `qfai validate --profile atdd` writes at
+   `.qfai/report/atdd-traceability/summary.json`, generated and not carried here. <!-- qfai:not-a-citation .qfai/report/atdd-traceability/summary.json -->
+   They are referenced only from
    `tests/integration/qfai-traceability.md`, a file that documents itself as an annotation carrier
    and not a test. The cause is structural: the configured `testsDir` is the repository-root
    `tests/`, whose scan matched two files, both of them carriers. The package's real suite lives at

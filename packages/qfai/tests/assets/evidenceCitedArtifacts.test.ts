@@ -563,7 +563,14 @@ const INITIAL_CENSUS: ReadonlyArray<Citation> = [
  * list is the progress the census is meant to produce, and it is the only list
  * that grows.
  */
-const CLEARED: ReadonlyArray<Citation> = [];
+const CLEARED: ReadonlyArray<Citation> = [
+  [".qfai/evidence/coverage-depth-spec-0002.md", ".qfai/report/atdd-traceability/summary.json", 1],
+  [".qfai/evidence/coverage-depth-spec-0014.md", ".qfai/report/atdd-traceability/summary.json", 1],
+  [".qfai/evidence/discussion-20260415161758193.md", ".qfai/discussion/README.md", 1],
+  [".qfai/evidence/discussion-20260415203030886.md", ".qfai/review/review-20260415203030887", 1],
+  [".qfai/evidence/discussion-20260416092414328.md", ".qfai/review/review-20260416092414328", 1],
+  [".qfai/evidence/implement-spec-0017.md", ".qfai/review/review-20260820140000000", 1],
+];
 
 /**
  * How many citations entered the tree between the census and this branch's
