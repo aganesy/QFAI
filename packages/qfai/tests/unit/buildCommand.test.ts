@@ -2015,7 +2015,11 @@ describe("the real workflow trees", () => {
         // `ci:gate:checks` runs `check-types`, whose `tsc -b` emits into `dist`. It was `heuristic`
         // here for three rounds because the chain was read as far as a script NAME and no further.
         "build::release.yml::pnpm ci:gate:checks",
+        // The independent types job reaches the same tsc build through its entry point.
+        "build::release.yml::pnpm ci:gate:types",
         "heuristic::ci.yml::pnpm ci:build-verify",
+        // This entry point reaches the bundler through a Node wrapper, not a package script.
+        "heuristic::release.yml::pnpm ci:gate:build",
       ]);
   });
 });

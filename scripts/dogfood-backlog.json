@@ -12,17 +12,17 @@
       ".qfai/specs/spec-0014/tdd/test-list.md": 14,
       ".qfai/specs/spec-0015/tdd/test-list.md": 42,
       ".qfai/specs/spec-0016/tdd/test-list.md": 56,
-      ".qfai/specs/spec-0017/tdd/test-list.md": 144,
+      ".qfai/specs/spec-0017/tdd/test-list.md": 140,
       "packages/qfai/tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts": 3,
       "packages/qfai/tests/e2e/spec0006DoctorRemediationE2E.test.ts": 3,
-      "packages/qfai/tests/e2e/spec0008AtddScaffoldE2E.test.ts": 1,
       "packages/qfai/tests/integration/spec0004SaasPackageAndPackLocation.test.ts": 3
     },
     "sdd": {
       ".qfai/specs/spec-0002/tdd/test-list.md": 1,
       ".qfai/specs/spec-0006/tdd/test-list.md": 2,
       ".qfai/specs/spec-0010/tdd/test-list.md": 2,
-      ".qfai/specs/spec-0012/tdd/test-list.md": 89
+      ".qfai/specs/spec-0012/tdd/test-list.md": 89,
+      ".qfai/specs/spec-0013/03_Acceptance-Criteria.md": 3
     },
     "full": {
       ".qfai/assistant/catalog/manifest.md": 1,
@@ -47,16 +47,16 @@
       ".qfai/specs/spec-0011": 1,
       ".qfai/specs/spec-0012": 1,
       ".qfai/specs/spec-0012/tdd/test-list.md": 453,
+      ".qfai/specs/spec-0013/03_Acceptance-Criteria.md": 3,
       ".qfai/specs/spec-0013/tdd/test-list.md": 16,
       ".qfai/specs/spec-0014/tdd/test-list.md": 14,
       ".qfai/specs/spec-0015": 1,
       ".qfai/specs/spec-0015/tdd/test-list.md": 42,
       ".qfai/specs/spec-0016": 1,
       ".qfai/specs/spec-0016/tdd/test-list.md": 56,
-      ".qfai/specs/spec-0017/tdd/test-list.md": 144,
+      ".qfai/specs/spec-0017/tdd/test-list.md": 140,
       "packages/qfai/tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts": 3,
       "packages/qfai/tests/e2e/spec0006DoctorRemediationE2E.test.ts": 3,
-      "packages/qfai/tests/e2e/spec0008AtddScaffoldE2E.test.ts": 1,
       "packages/qfai/tests/integration/spec0004SaasPackageAndPackLocation.test.ts": 3
     }
   }

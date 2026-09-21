@@ -621,6 +621,55 @@ function manifestScript(manifestPath: string, name: string): string {
   return typeof value === "string" ? value : "";
 }
 
+// QFAI:SPEC-0017:TC-0017-0085
+describe("TC-0017-0085 (TDD-0094): exempt lint hosts cannot be declared skippable", () => {
+  it.each(["lint", "mirror-surface"])(
+    "rejects a matching condition and declaration on %s",
+    (host) => {
+      const condition = "${{ needs.detect.outputs.full == 'true' }}";
+      const dir = plantedTree((d) => {
+        editWorkflow(d, "ci.yml", (text) =>
+          text.replace(`  ${host}:\n`, `  ${host}:\n    if: ${condition}\n`),
+        );
+        editDeclaration(d, (decl) => {
+          const context = onlyContext(decl);
+          context.dependencyConditions = { ...context.dependencyConditions, [host]: condition };
+          return decl;
+        });
+      });
+      try {
+        const run = runLane(dir);
+        expect.soft(run.exitCode, run.output).toBe(1);
+        expect(run.output).toContain(`unconditional dependency ${host}`);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.each([undefined, [], ["absent-job"], ["lint", "lint"], [null]].map((value) => ({ value })))(
+    "rejects a missing or invalid exemption list $value",
+    ({ value }) => {
+      const dir = plantedTree((d) => {
+        const target = path.join(d, ".github", "required-status-contexts.json");
+        const decl: unknown = JSON.parse(readFileSync(target, "utf-8"));
+        if (!isRecord(decl) || !Array.isArray(decl.contexts) || !isRecord(decl.contexts[0])) {
+          throw new Error("fixture declaration has no context");
+        }
+        decl.contexts[0].unconditionalDependencies = value;
+        writeFileSync(target, JSON.stringify(decl), "utf-8");
+      });
+      try {
+        const run = runLane(dir);
+        expect.soft(run.exitCode, run.output).toBe(1);
+        expect(run.output).toMatch(/unconditional dependenc/);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
+});
+
 describe("TC-0017-0057 (TDD-0057): the expected-context declaration is read from the tree", () => {
   it("takes the job name from the file rather than from anything compiled in", () => {
     // The row's real claim is that the declaration is INPUT, not decoration. Asserting the
@@ -2030,6 +2079,306 @@ ${run.output}`,
   });
 });
 
+/**
+ * Raises the executing build job's declared ceiling by one minute.
+ *
+ * The needle is the job key rather than the figure: `timeout-minutes: 15` appears twice in
+ * `ci.yml`, and the second belongs to a job a documentation-only run skips, so a plant keyed on
+ * the number could land on the half of the tree this row is not about. `editWorkflow` throws
+ * when the replacement changes nothing, so a moved block is reported rather than passed over.
+ */
+function raiseBuildTimeout(text: string): string {
+  return text.replace(
+    /(\n {2}build:\n(?:[^\n]*\n)*? {4}timeout-minutes: )(\d+)/,
+    (_match, head: string, minutes: string) => `${head}${Number(minutes) + 1}`,
+  );
+}
+
+describe("TC-0017-0084 (TDD-0093): a committed pin disagreeing with the recomputed value exits 1", () => {
+  // What a documentation-only pull request costs is pinned as two figures: the jobs nothing can
+  // prevent from running, and the sum of their declared `timeout-minutes`. The rule reads the
+  // pin and recomputes both from the workflow, so it refuses a DISAGREEMENT rather than a cost —
+  // equality against a value derived from the same tree cannot fail once the pinner has run, and
+  // a clause forbidding a higher figure would therefore assert nothing. What it catches is a
+  // change that moved the cost without re-pinning it, which is what puts the new figure in a diff.
+  //
+  // The plants come from both sides on purpose. Editing only the declaration would pass equally
+  // well against a rule that compared the pin with a second copy of itself; editing the workflow
+  // is what shows the recomputation reads the tree.
+
+  it("rejects a pinned sum the workflow does not declare, naming both figures", () => {
+    let declared = 0;
+    let planted = 0;
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (declaration) => {
+        const context = onlyContext(declaration);
+        const pin = context.documentationOnlyCostPin;
+        if (pin === undefined || typeof pin.timeoutMinutesSum !== "number") {
+          throw new Error("the declaration carries no documentationOnlyCostPin.timeoutMinutesSum");
+        }
+        declared = pin.timeoutMinutesSum;
+        planted = declared + 1;
+        context.documentationOnlyCostPin = { ...pin, timeoutMinutesSum: planted };
+        return declaration;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a pinned sum nothing declares must exit 1:\n${run.output}`)
+        .toBe(1);
+      const findings = run.output
+        .split(/\r?\n/)
+        .filter((line) => line.includes("documentation-only-cost-pin"));
+      // Both figures, because one of them alone leaves the reader to work out the other. A
+      // finding naming only what is pinned does not say what the tree now costs, and one naming
+      // only the recomputed figure does not say the pin is what disagrees with it.
+      expect
+        .soft(findings.join("\n"), "the finding must name the figure the declaration pins")
+        .toContain(String(planted));
+      expect
+        .soft(findings.join("\n"), "and the figure the workflow declares")
+        .toContain(String(declared));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a raised timeout that did not re-pin, and accepts the same raise once it did", () => {
+    // The workflow side of the same equality, and the row that makes the rule falsifiable: the
+    // first tree raises a ceiling and leaves the pin behind, the second raises the same ceiling
+    // and moves the pin with it. A rule that rejected the raise itself would fail both, and a
+    // rule that read the pin against nothing would pass both.
+    const unpinned = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, raiseBuildTimeout);
+    });
+    try {
+      const run = runLane(unpinned);
+      expect.soft(run.exitCode, `a raise with a stale pin must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must attribute the exit to the pin, not to the raise")
+        .toContain("documentation-only-cost-pin");
+    } finally {
+      rmSync(unpinned, { recursive: true, force: true });
+    }
+
+    const repinned = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, raiseBuildTimeout);
+      editDeclaration(d, (declaration) => {
+        const context = onlyContext(declaration);
+        const pin = context.documentationOnlyCostPin;
+        if (pin === undefined || typeof pin.timeoutMinutesSum !== "number") {
+          throw new Error("the declaration carries no documentationOnlyCostPin.timeoutMinutesSum");
+        }
+        context.documentationOnlyCostPin = {
+          ...pin,
+          timeoutMinutesSum: pin.timeoutMinutesSum + 1,
+        };
+        // BOTH pins. `build` executes on the documentation-only path and is part of the tree the
+        // code-path pin prices, so one raise moves two figures. Re-pinning one and calling the
+        // tree green would assert the lane passes when it does not — and would make this row's
+        // accepting half quietly unreachable the moment the second pin arrived.
+        const codePath = context.codePathCostPin;
+        if (codePath === undefined || typeof codePath.timeoutMinutesSum !== "number") {
+          throw new Error("the declaration carries no codePathCostPin.timeoutMinutesSum");
+        }
+        context.codePathCostPin = {
+          ...codePath,
+          timeoutMinutesSum: codePath.timeoutMinutesSum + 1,
+        };
+        return declaration;
+      });
+    });
+    try {
+      const run = runLane(repinned);
+      expect.soft(run.exitCode, `a raise carrying its re-pin must exit 0:\n${run.output}`).toBe(0);
+    } finally {
+      rmSync(repinned, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a declaration that carries no pin at all", () => {
+    // Absence is the failure a pinned figure is easiest to lose to: deleting the object leaves a
+    // declaration that parses, a lane that finds nothing to compare, and a cost nothing holds.
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (declaration) => {
+        delete onlyContext(declaration).documentationOnlyCostPin;
+        return declaration;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an absent pin must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must name the field that is missing")
+        .toContain("documentationOnlyCostPin");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a pinned job set the workflow does not execute, naming the difference", () => {
+    // The membership half. A job leaving or joining the executing set changes what the path runs
+    // even where the minutes happen to balance, so the set is compared as a set rather than
+    // inferred from the sum.
+    let dropped = "";
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (declaration) => {
+        const context = onlyContext(declaration);
+        const pin = context.documentationOnlyCostPin;
+        const [first] = pin?.jobs ?? [];
+        if (pin === undefined || first === undefined) {
+          throw new Error("the declaration carries no documentationOnlyCostPin.jobs");
+        }
+        dropped = first;
+        context.documentationOnlyCostPin = { ...pin, jobs: (pin.jobs ?? []).slice(1) };
+        return declaration;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a pinned set missing an executing job must exit 1:\n${run.output}`)
+        .toBe(1);
+      const findings = run.output
+        .split(/\r?\n/)
+        .filter((line) => line.includes("documentation-only-cost-pin"));
+      expect
+        .soft(findings.join("\n"), "the finding must name the job the pin stopped listing")
+        .toContain(dropped);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-0017-0086 (TDD-0095): a committed code-path pin the tree does not declare exits 1", () => {
+  // The code path runs the whole tree, so its cost is a property of the tree and not of a
+  // condition. Four figures are pinned, and each is derivable by READING the tree: the instances
+  // it expands to, their declared ceiling sum, the installs those instances perform, and the jobs
+  // that declare a build. The rule refuses a disagreement rather than a cost, for the reason its
+  // sibling above does — equality against a value derived from the same tree cannot fail on a
+  // clause about the value being too high.
+
+  /** Each pinned figure, and a value the workflow does not declare. */
+  const FIGURES = [
+    ["instances", 99],
+    ["timeoutMinutesSum", 9999],
+    ["installInstances", 99],
+  ] as const;
+
+  for (const [figure, planted] of FIGURES) {
+    it(`rejects a pinned ${figure} the workflow does not declare`, () => {
+      // One row per figure rather than one row planting all three. A single row would pass against
+      // a rule that compared the first and stopped, and that is the failure the loop inside the
+      // rule was written to avoid — so the row set has to be able to see it.
+      const dir = plantedTree((d) => {
+        editDeclaration(d, (declaration) => {
+          const context = onlyContext(declaration);
+          const pin = context.codePathCostPin;
+          if (pin === undefined) throw new Error("the declaration carries no codePathCostPin");
+          context.codePathCostPin = { ...pin, [figure]: planted };
+          return declaration;
+        });
+      });
+      try {
+        const run = runLane(dir);
+        expect.soft(run.exitCode, `a pinned ${figure} nothing declares must exit 1`).toBe(1);
+        const findings = run.output
+          .split(/\r?\n/)
+          .filter((line) => line.includes("code-path-cost-pin"));
+        expect.soft(findings.join("\n"), `the finding must name ${figure}`).toContain(figure);
+        expect
+          .soft(findings.join("\n"), "and the figure the declaration pins")
+          .toContain(String(planted));
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
+  it("rejects a build-declaring job the pin stopped listing", () => {
+    // The set half. A build moved out of one job and into another leaves the count unchanged, so
+    // the jobs are compared as a set rather than counted.
+    let dropped = "";
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (declaration) => {
+        const context = onlyContext(declaration);
+        const pin = context.codePathCostPin;
+        const [first] = pin?.buildJobs ?? [];
+        if (pin === undefined || first === undefined) {
+          throw new Error("the declaration carries no codePathCostPin.buildJobs");
+        }
+        dropped = first;
+        context.codePathCostPin = { ...pin, buildJobs: (pin.buildJobs ?? []).slice(1) };
+        return declaration;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a pinned build set missing a job must exit 1`).toBe(1);
+      expect
+        .soft(run.output, "the finding must name the job the pin stopped listing")
+        .toContain(dropped);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a declaration that carries no code-path pin at all", () => {
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (declaration) => {
+        delete onlyContext(declaration).codePathCostPin;
+        return declaration;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, "an absent pin must exit 1").toBe(1);
+      expect
+        .soft(run.output, "the finding must name the field that is missing")
+        .toContain("codePathCostPin");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("counts a matrix job once per leg, which is what a bill and a check-name list both do", () => {
+    // The one figure a reader cannot check by eye. A tree whose matrix grew by one leg costs one
+    // more instance and one more ceiling, and a rule that counted job KEYS would see neither.
+    // Planted by widening a matrix rather than by editing the pin, so the recomputation is what
+    // has to notice.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        // The slice list is a YAML flow sequence on one line. Planting a tenth member is the
+        // smallest edit that adds an instance, and it adds exactly one.
+        const slices = /\n( *slice: \[)([^\]\n]+)\]/;
+        const match = slices.exec(text);
+        if (match === null) throw new Error("no sliced matrix found — the needle is stale");
+        return text.replace(slices, `\n${match[1]}${match[2]}, planted]`);
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, "a widened matrix with a stale pin must exit 1").toBe(1);
+      const findings = run.output
+        .split(/\r?\n/)
+        .filter((line) => line.includes("code-path-cost-pin"));
+      // The pinned figure is READ, not written here. A literal would be one more copy of the
+      // number this whole mechanism exists to keep in one place.
+      const pinned = firstContext(REPO_ROOT).codePathCostPin?.instances;
+      expect(pinned, "the declaration must pin an instance count").toBeTypeOf("number");
+      expect
+        .soft(findings.join("\n"), "the finding must name both instance counts")
+        .toContain(
+          `instances at ${String(pinned)} and ci.yml declares ${String((pinned ?? 0) + 1)}`,
+        );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 // ── the rule set, and what a green run is allowed to mean ────────────────────
 //
 // `BR-0017-0037` closes the set over `.github/workflows/**` at exactly five obligations:
@@ -2721,14 +3070,14 @@ describe("TC-0017-0045 (TDD-0045): the own-tree hygiene rule set is closed at ex
         .soft(printed, "the workflow-tree rule set is closed at exactly the five enumerated")
         .toEqual([...WORKFLOW_RULES].sort());
 
-      // And the declaration rule is present in its own scope, so "five" is a scoping claim
-      // rather than a claim that the sixth rule was dropped.
+      // And the declaration rules are present in their own scope, so "five" is a scoping claim
+      // rather than a claim that a rule outside the five was dropped.
       expect
         .soft(
           printedRules(runLane(dir).output, DECLARATION_SCOPE),
-          "the declaration rule must still be evaluated, in its own scope",
+          "the declaration rules must still be evaluated, in their own scope",
         )
-        .toEqual(["required-context"]);
+        .toEqual(["code-path-cost-pin", "documentation-only-cost-pin", "required-context"]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -3032,6 +3381,45 @@ PLANTS.push({
     editWorkflow(dir, declared.workflow, (text) =>
       text.replace(`\n  ${declared.job}:\n`, `\n  ${declared.job}-renamed:\n`),
     );
+    return declared.job;
+  },
+});
+
+// The second declaration-scope plant, appended for the same reason. It raises a declared ceiling
+// on an executing job and leaves the pin behind, which is the drift the pin exists to catch — and
+// the plant is in the WORKFLOW rather than in the declaration on purpose: a plant that edited the
+// pin alone would also satisfy a rule that compared the pin against a second copy of itself.
+PLANTS.push({
+  rule: "documentation-only-cost-pin",
+  label: "an executing job's declared ceiling rises with no re-pin",
+  file: ".github/required-status-contexts.json",
+  plant: (dir) => {
+    const declared = firstContext(dir);
+    editWorkflow(dir, declared.workflow, raiseBuildTimeout);
+    return declared.job;
+  },
+});
+
+// The third declaration-scope plant. It raises a ceiling on a job the documentation-only path
+// SKIPS, so the finding it produces belongs to the code-path rule alone — a plant on a job both
+// paths execute would trip both rules, and `TC-0017-0047` would then credit this rule with a
+// finding its sibling could equally have produced.
+PLANTS.push({
+  rule: "code-path-cost-pin",
+  label: "a selected job's declared ceiling rises with no re-pin",
+  file: ".github/required-status-contexts.json",
+  plant: (dir) => {
+    const declared = firstContext(dir);
+    editWorkflow(dir, declared.workflow, (text) => {
+      const ceiling = /(\n {2}scanner-coverage:\n(?:[^\n]*\n)*? {4}timeout-minutes: )(\d+)/;
+      if (!ceiling.test(text)) {
+        throw new Error("scanner-coverage declares no timeout-minutes — the needle is stale");
+      }
+      return text.replace(
+        ceiling,
+        (_match, head: string, minutes: string) => `${head}${Number(minutes) + 1}`,
+      );
+    });
     return declared.job;
   },
 });

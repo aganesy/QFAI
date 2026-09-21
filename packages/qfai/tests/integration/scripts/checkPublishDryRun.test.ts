@@ -24,6 +24,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   classifyDryRun,
+  packReportEntry,
   verifyTarballIndependently,
 } from "../../../../../scripts/check-publish-dry-run.mjs";
 
@@ -277,5 +278,32 @@ describe("the npm it proves anything with is the toolchain's, not the one on PAT
       body,
       "and the message names what it looked for, because a refusal nobody can act on is a crash",
     ).toMatch(/candidates\.join/);
+  });
+});
+
+describe("the pack report is read in every shape npm prints", () => {
+  // npm 12 prints an object keyed by package name where npm 11 printed an array. Which one
+  // arrives depends on the npm that runs, so a reader of one breaks when that npm moves.
+  const entry = { filename: "fake-0.0.0.tgz", files: [{ path: "package.json" }] };
+
+  it.each([
+    ["an array of packs (npm 11 and earlier)", [entry]],
+    ["an object keyed by package name (npm 12 and later)", { fake: entry }],
+  ])("finds the one entry in %s", (_shape, report) => {
+    expect(packReportEntry(JSON.stringify(report))).toEqual({ ok: true, entry });
+  });
+
+  it.each([
+    ["two packs in an array", [entry, entry]],
+    ["two packs in an object", { fake: entry, other: entry }],
+    ["no pack at all", []],
+    ["a bare string", "fake-0.0.0.tgz"],
+    ["a pack that is not an object", ["fake-0.0.0.tgz"]],
+  ])("refuses %s", (_shape, report) => {
+    expect(packReportEntry(JSON.stringify(report)).ok).toBe(false);
+  });
+
+  it("refuses stdout that is not one JSON document", () => {
+    expect(packReportEntry('[]\n{"extra": true}').ok).toBe(false);
   });
 });

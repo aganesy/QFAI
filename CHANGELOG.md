@@ -6,6 +6,238 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A committed figure for what a documentation-only pull request costs, and a
+  check that refuses a tree which moved it without re-pinning** (#1870).
+  `.github/required-status-contexts.json` now carries the jobs that path executes
+  and the sum of their declared `timeout-minutes`;
+  `node scripts/pin-documentation-only-cost.mjs` recomputes both from the workflow
+  tree, and the `documentation-only-cost-pin` rule of
+  `scripts/check-workflow-hygiene.mjs` exits 1 while the committed figures and a
+  fresh recomputation disagree, naming both. So a job joining or leaving the set,
+  and a raised ceiling, fail until the tool has run — which puts the new figure in
+  a diff a reviewer reads instead of leaving it to drift. The pinner imports the
+  lane's own computation rather than restating it, so the pin and the check cannot
+  disagree about what they measure, and the topology test compares the pin against
+  its own independent reading of the workflow. Extracting the lint-aggregate lane
+  into a job of its own is the remaining Plan step.
+
+### Changed
+
+- **The mirror-surface lane no longer runs the `pr-merge` plan suite, and the
+  `pr-merge` skill document gains the guard it never had** (#1877). The lane
+  exists so that guards over the agent-integration mirrors keep running on a
+  change the documentation-only classification lets skip the test job. It
+  carried `tests/pr-merge/prMergePlan.test.ts`, which spawns a PowerShell
+  process per case and reads nothing from a mirror tree but two `.ps1` files —
+  executables, which the classifier already keeps out of the documentation-only
+  set, so a change to either selects the full matrix and runs that suite there
+  regardless. The lane paid the file's whole cost for coverage no prose change
+  could break. The prose assertions the lane does need are now a file of their
+  own, `tests/core/prMergeSkillDocs.test.ts`: it holds the four `pr-merge`
+  `SKILL.md` copies identical and pins the promises the document makes about the
+  command an operator runs — that it never tags, that the dry run comes first,
+  that the default merge method is `merge`, and where the plan is written. None
+  of that was checked before. This is the split #1982 made for `pr-fix`,
+  finished for the other half of the pair.
+  Measured over the lane's eight files, 321 s before and 9 s after. On CI the
+  `mirror-surface` job was 201 s on the last green `main` run before this
+  change and 20 s on the run that carries it.
+
+- **A code-path pull request no longer claims its runner cost fell, and what it does
+  cost is pinned** (#2017). The requirement capped such a run at 12 job instances,
+  8 frozen-lockfile installs and 3-or-5 bundler builds, against a baseline of 14 /
+  13 / 6. The tree runs **26 / 24 / 5**. Nothing regressed: both test matrices were
+  widened to nine legs to shorten the wall clock, and each widening was recorded —
+  but nine legs finishing together cost fewer runner minutes than one leg running
+  them in series while counting more instances, so an instance figure on a code path
+  moves against the very thing that requirement is named for. The requirement
+  therefore keeps the documentation-only claim, where consumption does fall, and
+  hands the code path to the wall-clock requirement next to it. What a code path
+  costs is recorded instead: `.github/required-status-contexts.json` carries the
+  instances, their declared timeout sum, the installs they perform and the jobs that
+  declare a build; `node scripts/pin-code-path-cost.mjs` recomputes all four from
+  the workflow tree; and the `code-path-cost-pin` rule of the hygiene lane exits 1
+  while the committed figures and a fresh recomputation disagree, naming the figure
+  that moved. Three limits are stated rather than hidden. The build figure counts
+  jobs and not executions, because two of the three condition their build step on
+  the matrix slice and the lane evaluates no workflow expression. No figure is
+  compared with what a run consumed, which needs the forge's API and a finished run.
+  And it is not a cost bound: enforcement is equality against a value recomputed
+  from the same tree, so it catches a change nobody recorded, never an expensive
+  one. Before this, no test asserted any of the three counts, which is how the
+  figure went stale in silence.
+
+- **The mirror-surface lane runs on a runner of its own, and the lint job fell
+  from 265 s to 68 s** (#1870). `pnpm ci:lint` forked five lanes onto one
+  four-core runner, and the mirror-surface lane — a vitest run over eight files,
+  one of which spawns a process in most of its cases — was the longest of them.
+  The lint job's wall clock was that lane's, lengthened by the contention it
+  created for the other four. The lane now has a job of its own, carrying no
+  condition and named in no `dependencyConditions` entry, because the surface it
+  checks is what a documentation-only change is most likely to break. Measured on
+  green CI runs of the same shape, before and after: the lint job 265 s → 68 s,
+  its gate step 243 s → 44 s, and the lane itself 243 s → 116 s once nothing
+  contended with it. Summed runner time rose 1.0 minute, which is the new job's
+  own checkout and setup net of that saving. **No wall-clock claim is made**: the
+  longest job is no longer the lint job, and the job that replaced it measured
+  97 s slower than in the before run for reasons this change does not touch and
+  one run a side cannot attribute. `documentationOnlyCostPin` rises to five jobs
+  and 45 declared minutes, and the pinned check-name set gains the job — no
+  repository setting changed, because only the aggregate verdict is required and
+  the new lane reaches it through that verdict's dependency map.
+
+- **The documentation-only path is pinned and re-pinned, not held to a count of
+  four job names** (#2016). `BR-0017-0007` required such a pull request to execute
+  at most four job instances, and the topology test asserted that set exactly. Job
+  instances charges +1 for a change that shortens the run and adds no work, so the
+  measure refused a job the requirement permits. The rule now pins two things —
+  the set of jobs that execute on that path, and the sum of their declared
+  `timeout-minutes` — and requires a change to either to re-pin in the same
+  change, with the measured before-and-after numbers `BR-0017-0030` asks for. The
+  pin is recomputed from the workflow tree rather than written into the rule, so
+  the next split lands in a diff a reviewer reads. It is not a bound: enforcement
+  is equality against a value derived from the same tree, so a clause forbidding a
+  higher cost could not fail, and the rule states the obligation the hygiene lane
+  can enforce instead. Membership is the second claim and reads a narrower set —
+  among the jobs the aggregate verdict depends on, the executing ones must be
+  exactly the expected-context declaration's entries that carry no condition, each
+  named there with the reason it cannot be skipped. The two sets differ, because
+  the verdict executes and is not one of its own dependencies. `NFR-0002` keeps
+  instance count, its other clauses being quantified in instances, installs and
+  builds, and its documentation-only figure moves to five. `DR-0017-0015` records
+  the options, four weaknesses of the adopted unit and the dissent against it.
+
+### Fixed
+
+- **The monitor's reply command names the pull request it is about** (#1864).
+  It printed `repos/OWNER/REPO/pulls/comments/<id>/replies`, and the reply
+  endpoint takes the pull request number as a path parameter — so an operator
+  who copied the command posted nothing and found out by running it. The number
+  is in the command now.
+
+- **A prototype handoff can say a screen needed nothing, and one that says
+  nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
+  had two lists, and a screen drawn entirely from what the project already had
+  was written by omitting both. So an absent manifest carried two different
+  claims — every screen needed nothing, or the loop recorded nothing — and the
+  implementer reading the second as the first rebuilds by hand what the loop had
+  procured, which is the failure the manifest exists to prevent. An empty
+  `procured: []` does not separate them either: "nothing was found" is not
+  "nothing was needed". A third list, `drawn-from-project`, says it, one row per
+  screen. On a target whose UI contracts declare screens the key is now
+  required, and a screen named both as needing nothing and as needing something
+  is reported. The handoff reference and the shipped sample carry the list.
+
+- **The spec-0002 ledger carries the columns its template declares, and a row
+  for every story** (#1750). `/qfai-sdd` Phase 2b seeds one `E2E` row per active
+  user story and migrates an eight-column ledger to the template's fifteen. No
+  pack had been re-seeded since that contract was written, so a Change Request
+  re-deriving one could not keep its rerun to the statements it changed: Phase
+  2b would migrate the ledger and seed every missing row in the same pass, rows
+  the Change Request neither authorized nor gave a disposition. This pack's
+  seven stories now have a row each, at `todo`, and every existing row keeps its
+  identifier, status, test file, selector, decision and evidence exactly as they
+  were. Sixteen packs still owe the same migration.
+
+- **The spec-0013 ledger carries the columns its template declares, and a row
+  for every story** (#1750). Thirteen of its fourteen stories had no row, and
+  the ledger held nine columns where the template declares fifteen. The thirteen
+  rows are at `todo`, and every existing row keeps its identifier, status, test
+  file, selector, decision and evidence.
+
+- **The spec-0014 ledger carries the columns its template declares, and a row
+  for every story** (#1750). None of its five stories had a row, and the ledger
+  held eight columns where the template declares fifteen — across two tables,
+  both migrated. The five rows are at `todo`, and every existing row keeps its
+  identifier, status, test file, selector, decision and evidence.
+
+- **The spec-0004 ledger carries the columns its template declares, and a row
+  for every story** (#1750). Thirteen of its sixteen stories had no row, and the
+  ledger held nine columns where the template declares fifteen — so a Change
+  Request re-deriving this pack would have had Phase 2b migrate it and seed
+  those rows in the same pass, unauthorized and undisposed. The thirteen rows
+  are at `todo`, and every existing row keeps its identifier, status, test file,
+  selector, decision and evidence.
+
+- **The spec-0008 scaffold acceptance suite runs, instead of standing by as a
+  skeleton** (#1436). It was authored test-first against a command that did not
+  exist yet, every case `.skip`ped, and the command shipped without the skip
+  being lifted — so the user story it annotates read as covered by a suite that
+  executed nothing. The cases now drive the production entry points over a
+  temporary project: one skeleton per test case with the runner's primitives,
+  the TODO marker and the case's own references; a filled skeleton left as the
+  operator wrote it on a re-run; and the placeholder finding moving from warning
+  to error at the third validate cycle. Driving them through the installed
+  command against the working directory, which is what the skeleton did, would
+  have written test files and escalation counters into this repository. The file
+  is struck from the dogfooding backlog, which held it for the skip.
+
+- **Every row of the spec-0002 ledger names a test that exists and proves what
+  the row claims** (#1585). Four rows carried a test title from before the
+  release that retired the exploration-sidecar family and moved the surface onto
+  `DESIGN.md`; the titles moved with it and the ledger kept the old wording. A
+  fifth named a validator suite for an obligation about shipped wording, and that
+  suite reads no shipped document at all — it now points at the case that holds
+  the discussion skill and its artifact rules to the same `prototyping.yaml`
+  requiredness sentence. The validator suite's own annotation for that obligation
+  is removed, so the criterion is claimed once, by the test that discharges it.
+  Nothing failed on any of this: an unresolved selector is reported at `warning`,
+  so a full run stayed green while the ledger named tests that were not there.
+
+- **Twenty-seven citations stop pointing at artifacts a clone does not have**
+  (#1652). `.qfai/review/` and `.qfai/report/` are ignored and the evidence that
+  cites them is committed, so a reader arriving later gets the claim without its
+  subject: the name reads as provenance and costs a search to find out
+  otherwise. Each of the six now says what the reader has instead — for a
+  review pack, that the name locates the run and the verdicts beside it are what
+  the pack held, and that this stage recorded no reviewed revision where it did
+  not; for a generated report, the command that writes it. The census the
+  citation guard holds is unchanged and the twenty-seven move to its cleared
+  list, so the remaining backlog is still counted.
+
+- **A spawn-bound test that produces no output now says so, instead of reading as
+  the script printing the wrong thing** (#1934). One CI run failed with
+  `expected '' to contain 'authored removal-list answer'` and nothing else. The
+  assertion is about the text, the defect was about the child, and no rerun of
+  the assertion can tell those apart — so the failure had to be reproduced to
+  learn which it was, while a merge gate read the red. Every row that reads a
+  spawned child's output now passes one message: how the child ended, and, when
+  it wrote nothing on either stream, that fact named as a harness failure. A
+  child that did speak hands the reader its stderr, which `toContain` never
+  shows. The two rows that parse a child's stdout as JSON assert it is non-empty
+  first, because `JSON.parse("")` raises `Unexpected end of JSON input` and that
+  names neither the child nor the stream it did not write to.
+
+- **A killed test child now names the signal that killed it, and can no longer
+  pass as a script that rejected its input** (#2028). Node calls a `close`
+  listener with two arguments, `(code, signal)`. The three helpers that spawn a
+  process in the test suite took the first and dropped the second, so every kill
+  arrived as `code: null` with its cause thrown away — and a run that failed that
+  way reported `expected null to be +0`, naming no signal, no cause and no child.
+  The quieter half was the other direction: `expect(code).not.toBe(0)` is how the
+  two process-spawning suites say "the script rejected this input", and a killed
+  child satisfies it, so such a test passed while proving nothing. One helper now
+  performs the capture for all three, keeps the signal, and derives one readable
+  outcome from the pair — `exit 0`, `exit 1`, `killed by SIGKILL`. Every
+  assertion reads that value instead of the raw code, so a kill satisfies neither
+  direction by accident, and passes the child's own stderr as the message.
+
+- **`qfai sdd preflight` continues on an incomplete discussion pack** (#1973).
+  The approved usable-source criterion says SDD continues on a pack that is
+  incomplete, contradictory or carries a blocking open question, since the pack
+  is reference material. The `qfai-sdd` skill says the same. The preflight
+  still stopped on each of them, and the skill runs it with
+  `--fail-on error`, so a pack missing one file stopped SDD. Now only a missing
+  or misnamed pack blocks. A missing file, a side artifact, content under the
+  minimum, a blocking open question, a deferral without details and a Story
+  Workshop without a diagram are listed under a new `## Pack Gaps` section of
+  the summary (`packGaps` in the JSON result), and the result is `ready`. The
+  skill, the summary template and both READMEs say so.
+
+## [1.12.1] - 2026-09-19
+
+### Added
+
 - **The tag push is held to the decision before it, and four workflows say what
   keeps each of them serial** (#1870). Nothing pinned that `tag-release.yml`
   pushes a tag only where its decision step wrote `push=true`, and every "nothing
@@ -79,6 +311,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   directory and the entry point onto it, so a rule added later is covered
   without a second list. A checkout that materialised links as text files is a
   property of the machine and is not reported.
+
+- **`QFAI-ID-002` reports one ID declared by two headings of one pack file**
+  (#1971). `QFAI-ID-001` keys each ID on the set of files that define it, so a
+  second definition in the same file added nothing and was never reported.
+  Two headings sharing an ID make every citation of it ambiguous, and a test
+  case written for the first then counted as coverage for the second. The new
+  check reads the `##` headings of a layered spec's user stories, criteria,
+  rules, examples and test cases and names the ID and both headings. A summary
+  table row beside its own heading is one item, not two. Heading definitions
+  now also reach `QFAI-ID-001`, so a heading in each of two files is still the
+  cross-file duplicate it reports.
+  The check reports three duplicates in this repository's own `spec-0013`
+  criteria, which `CR-20260913-0012` already describes and has not been applied
+  for; those three are recorded in `scripts/dogfood-backlog.json` so the count
+  cannot grow while the repair waits.
 
 - **A canonical assistant tree may be vendored by link** (#1927). `QFAI-LINK-001`
   read any symlink in `.qfai/assistant/**` as damage, so a project that points
@@ -421,7 +668,35 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `uiux.warning_as_error_override` goes with it, its only reader. An unknown key
   under `uiux` is ignored, so a configuration that still sets it keeps loading.
 
+- **Tagging from this repository's `pr-merge` skill.** It asked about a tag
+  before every merge and recommended one, though `tag-release.yml` already
+  pushes `vX.Y.Z` when a release commit reaches `main`. The tag it recommended
+  was usually refused by its own check: that version's tag already existed, so
+  the suggestion was the next patch, which did not match the manifest. The skill
+  now only merges, and `run-pr-merge.ps1` no longer takes `-Tag` or `-NoTag`.
+
 ### Fixed
+
+- **`Prepare release` opens its pull request again.** The step that pushes the
+  release branch and opens the pull request exited 2 with a bash syntax error,
+  after the push and before `gh pr create`. The terminator of the heredoc that
+  repairs an existing pull request body was indented past the `run:` block's
+  base, so after YAML removed that base it still carried two spaces, and a plain
+  `<<` never matched it. Bash parses a whole `if … else … fi` before running
+  either branch, so the step failed even where no pull request was open yet and
+  the heredoc was never reached. The terminator now sits at the base
+  indentation. A new test runs `bash -n` on every bash `run:` block in this
+  repository's workflows and actions and in the shipped workflow templates, and
+  fails on any diagnostic, including the warning bash prints for a heredoc left
+  open at the end of a script.
+
+- **The release job's leakage guard reads what npm 12 prints** (#2023). The guard asks
+  `npm pack --dry-run --json` what will ship, and read only the array npm 11
+  and earlier print. npm 12 prints an object keyed by package name instead. The
+  CI runners carry an older npm and the publish job pins npm 12, so the guard passed
+  on every pull request and then refused to publish. It now reads both shapes,
+  and so does the tarball proof in `check-publish-dry-run.mjs`, which read the
+  same report the same way.
 
 - **The evidence citation guard reads citations into `.qfai/evidence/`**
   (#1686). A record that named a sibling evidence file the tree does not carry

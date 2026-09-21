@@ -1753,6 +1753,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Legacy discussion naming is deprecated; canonical naming should be used for new outputs.",
   "QFAI-DPACK-011":
     "On a visual surface, every `DESIGN.md` key and archetype a discussion pack proposes is one the front-matter schema accepts.",
+  "QFAI-ID-002":
+    "Within one pack file, each `US`, `AC`, `BR`, `EX` or `TC` ID is declared by at most one heading.",
   "QFAI-IMPLITE-001":
     "A project that has spec packs also has a traceable input source: a `discussion-*/06_REQ.md` under the configured discussion directory, or an `.qfai/evidence/import-lite-*.md`.",
   "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
@@ -1806,7 +1808,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-009": "design-system.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-012": "prototype-handoff.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-013":
-    "prototype-handoff.yaml must carry `finalIterIndex` as a non-negative integer, and `finalArtifact`, `designMdPath`, `designMdSha256`, `designSystemMirror` and `implementationNotes` each as a non-empty string — the first two and the fourth a path, the third the frozen DESIGN.md sha256, the last the prose the loop hands on. Where it carries `procurement`, that key is a mapping of a `procured` and an `authored` list and nothing else, each row naming what realises one screen region — `screen`, `region`, `item` for a procured one and `screen`, `region`, `why` for an authored one — with one row per region across both lists.",
+    "prototype-handoff.yaml must carry `finalIterIndex` as a non-negative integer, and `finalArtifact`, `designMdPath`, `designMdSha256`, `designSystemMirror` and `implementationNotes` each as a non-empty string — the first two and the fourth a path, the third the frozen DESIGN.md sha256, the last the prose the loop hands on. On a target whose UI contracts declare screens it carries `procurement`, a mapping of a `procured`, an `authored` and a `drawn-from-project` list and nothing else. A `procured` row names `screen`, `region` and `item` and an `authored` row `screen`, `region` and `why`, one row per region across the two; a `drawn-from-project` row names the `screen` that needed nothing. Every declared screen appears in one of the three, and none appears both as needing nothing and as needing something.",
   "QFAI-DCON-019":
     "design-system.yaml and prototype-handoff.yaml are produced by /qfai-prototyping, not /qfai-sdd.",
   "QFAI-DCON-030":
