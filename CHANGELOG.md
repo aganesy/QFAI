@@ -109,6 +109,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The spec-0012 ledger carries the columns its template declares, and a row
+  for every story** (#1750). Thirty-three of its fifty-two stories had no row,
+  and its eight tables held nine columns where the template declares fifteen.
+  The thirty-three rows are at `todo`, and every existing row keeps its
+  identifier, status, test file, selector, decision and evidence. This was the
+  last pack that owed the migration.
+
 - **The spec-0008 scaffold acceptance suite runs, instead of standing by as a
   skeleton** (#1436). It was authored test-first against a command that did not
   exist yet, every case `.skip`ped, and the command shipped without the skip
