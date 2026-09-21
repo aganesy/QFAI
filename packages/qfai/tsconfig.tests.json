@@ -175,6 +175,7 @@
     "tests/core/capCatalogSpecColumn.test.ts",
     "tests/core/designDirectionProposal.test.ts",
     "tests/core/discussionDesignMdParse.test.ts",
+    "tests/core/duplicateHeadingIds.test.ts",
     "tests/core/evidenceRevisionStale.test.ts",
     "tests/core/findingCodeGrammar.test.ts",
     "tests/core/frozenSurfaceReachability.test.ts",
