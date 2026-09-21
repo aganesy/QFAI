@@ -44,16 +44,16 @@ what that path asks for.
 ## Commands executed + key outputs
 
 Every command ran from `packages/qfai`. The clean-tree runs were taken at
-revision `955d78ccf4323d25c9eba36c1586da746c48203a`. The mutation was reverted
+revision `84081298686311832c7e7ac3b7da08eb542b40b0`. The mutation was reverted
 from a copy of the pre-mutation bytes, and the tree re-addressed afterwards to
 confirm it had returned to the clean value.
 
 | Run                       | Command                                                                                                                                     | Result               |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
 | `TDD-0001` GREEN          | `npx vitest run tests/core/sddPreflight.test.ts`                                                                                            | 26 passed            |
-| `TDD-0001` falsifiability | `npx vitest run tests/core/sddPreflight.test.ts`                                                                                            | 14 failed, 12 passed |
+| `TDD-0001` falsifiability | `npx vitest run tests/core/sddPreflight.test.ts`                                                                                            | 1 failed, 25 passed  |
 | Refactor verify           | `npx vitest run tests/core/sddPreflight.test.ts tests/validators/uix/threeLayer.test.ts`                                                    | 36 passed            |
-| Checkpoint                | `npx vitest run --project core --project validators --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'` | 4121 passed          |
+| Checkpoint                | `npx vitest run --project core --project validators --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'` | 4601 passed          |
 
 ## Test volume estimate
 
@@ -87,34 +87,35 @@ evidence its cell points at.
 
 #### Round 1
 
-- Round 1: Revision: 955d78ccf4323d25c9eba36c1586da746c48203a
+- Round 1: Revision: 84081298686311832c7e7ac3b7da08eb542b40b0
 - Round 1: Satisfied-by: packages/qfai/src/core/discussionPack.ts, REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES — the fifteen names a pack must hold for readiness to report no missing file.
 - Round 1: Falsifiability command: npx vitest run tests/core/sddPreflight.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 14 failed, 12 passed (26). The row's own case fails on `expect(result.status).toBe("ready")`, an assertion inside its selector.
-- Round 1: Falsifiability revision: working-tree+07809600906897d63380808641f2288d0e880dff0aae9eb94d170ee493112cee
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 25 passed (26). The row's own case fails on `expect(result.packGaps).toEqual([])`, an assertion inside its selector.
+- Round 1: Falsifiability revision: working-tree+1ef4f7bef2f8c031f9e09e181e9f5c1f7bd86c9c25ad1cf8ea6e5bdc82d3fc51
 - Round 1: GREEN command: npx vitest run tests/core/sddPreflight.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 26 passed (26)
-- Round 1: RED test hash: f5cedfb3dce8f430517a4288c839b7cd6b7c2574bfdf34079ca21b27fe4ba854
+- Round 1: RED test hash: 35c8ceeb6d77cd1886af8be635186cb03f08822b8b3f28937d5635744e335089
 - Round 1: RED test manifest: packages/qfai/tests/core/sddPreflight.test.ts
 
-The mutation added a sixteenth name to the required list. Fourteen of the
-file's twenty-six cases die, which is what the obligation's shape predicts:
-every case that seeds a pack and expects it to be readable reads that list.
+The mutation added a sixteenth name to the required list. One of the file's
+twenty-six cases dies, and it is the row's own: a missing required file is
+recorded as a pack gap and leaves `status` at `ready`, so the assertion that
+discriminates on the list is the one holding a complete pack to no gap.
 
 - Refactor verify command: npx vitest run tests/core/sddPreflight.test.ts tests/validators/uix/threeLayer.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 36 passed (36)
-- Refactor verify revision: 955d78ccf4323d25c9eba36c1586da746c48203a
+- Refactor verify revision: 84081298686311832c7e7ac3b7da08eb542b40b0
 - Checkpoint verification command: npx vitest run --project core --project validators --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
-- Checkpoint verification result: PASS — exit 0; Test Files 222 passed (222); Tests 4121 passed (4126)
-- Checkpoint verification revision: 955d78ccf4323d25c9eba36c1586da746c48203a
+- Checkpoint verification result: PASS — exit 0; Test Files 233 passed (233); Tests 4601 passed (4636)
+- Checkpoint verification revision: 84081298686311832c7e7ac3b7da08eb542b40b0
 
 The two excluded files, `tests/core/prFixMonitor.test.ts` and
-`tests/core/prMergePlan.test.ts`, both drive a PowerShell script. This container
-has no `pwsh`, so eighteen of their nineteen cases fail on `spawn pwsh ENOENT`
-whatever the tree holds, and the command carries the exclusion so that a reader
-running it gets the result above rather than those eighteen failures. They run in
-continuous integration, which does have `pwsh`. Five further cases in the
-projects above declare themselves inactive and did not run.
+`tests/core/prMergePlan.test.ts`, both drive a PowerShell script, and fail on
+`spawn pwsh ENOENT` wherever `pwsh` is absent whatever the tree holds. The
+command carries the exclusion so that the result above is the same on a host
+that has it and one that does not. Both files run in continuous integration.
+Thirty-five further cases in the projects above declare themselves inactive and
+did not run.
 
 ## Coverage Depth Matrix
 

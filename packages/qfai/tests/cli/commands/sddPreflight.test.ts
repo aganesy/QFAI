@@ -291,8 +291,9 @@ describe("qfai sdd preflight", () => {
       await runSddPreflightCommand({ root, write: second.write, writeErr: second.writeErr }),
     ).toBe(0);
     const summary = await readFile(summaryPath, { encoding: "utf-8" });
-    expect(summary).toContain("- OQ-0001 は次フェーズへ持ち越し");
-    expect(summary).not.toContain("- none");
+    const carryOver = summary.slice(summary.indexOf("## Open Questions (Carry-over)"));
+    expect(carryOver).toContain("- OQ-0001 は次フェーズへ持ち越し");
+    expect(carryOver).not.toContain("- none");
   });
 
   it("keeps --assume carry-over across a blocked re-run", async () => {
