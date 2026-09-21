@@ -135,6 +135,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   waits for, and keeps the guarantee that does hold: a stale review pack is
   renamed into `_archive/` and never removed.
 
+- **A citation the evidence-citation backlog holds is keyed by the section it
+  sits under, not by its position in the file** (#1753). The key counted a
+  path's citations within a file, in order, so deleting one and adding another
+  left every key where it was: the new citation inherited the backlog entry the
+  old one held, and a record written after the census claimed an artifact the
+  tree does not carry while the guard stayed green. That is the growth the
+  backlog exists to refuse. The key now carries the heading the citation sits
+  under and its ordinal inside that heading, which an edit to another section
+  does not move. A `#` run inside a fence is a shell comment rather than a
+  heading and is read as one. The census is re-measured under the new keys and
+  its digest re-pinned, in one list rather than two: it was taken again, so
+  there is no earlier measurement for an addendum to sit beside.
+
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
   had two lists, and a screen drawn entirely from what the project already had
