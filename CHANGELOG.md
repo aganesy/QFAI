@@ -109,6 +109,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The doctor contract stops denying the one deletion it declares** (#1860).
+  Its `--clean` section prunes TTL-expired validate run logs and tabulates the
+  preconditions that clearance requires; its non-goals said the command deletes
+  nothing and that no path is removed on any flag. A reader deciding whether a
+  doctor run is reversible got the opposite answer depending on which section
+  they reached first. The non-goal names the one removal and the conditions it
+  waits for, and keeps the guarantee that does hold: a stale review pack is
+  renamed into `_archive/` and never removed.
+
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
   had two lists, and a screen drawn entirely from what the project already had
