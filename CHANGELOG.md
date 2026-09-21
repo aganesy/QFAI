@@ -134,6 +134,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Nothing failed on any of this: an unresolved selector is reported at `warning`,
   so a full run stayed green while the ledger named tests that were not there.
 
+- **Twenty-seven citations stop pointing at artifacts a clone does not have**
+  (#1652). `.qfai/review/` and `.qfai/report/` are ignored and the evidence that
+  cites them is committed, so a reader arriving later gets the claim without its
+  subject: the name reads as provenance and costs a search to find out
+  otherwise. Each of the six now says what the reader has instead — for a
+  review pack, that the name locates the run and the verdicts beside it are what
+  the pack held, and that this stage recorded no reviewed revision where it did
+  not; for a generated report, the command that writes it. The census the
+  citation guard holds is unchanged and the twenty-seven move to its cleared
+  list, so the remaining backlog is still counted.
+
 - **A spawn-bound test that produces no output now says so, instead of reading as
   the script printing the wrong thing** (#1934). One CI run failed with
   `expected '' to contain 'authored removal-list answer'` and nothing else. The

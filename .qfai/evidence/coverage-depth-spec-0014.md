@@ -177,7 +177,8 @@ Five negative results are load-bearing and were checked directly rather than inf
 
 ### Annotation coverage
 
-The repository's ATDD scan reads two files and no tests. `.qfai/report/atdd-traceability/summary.json`
+The repository's ATDD scan reads two files and no tests. The report `qfai validate --profile atdd`
+writes at `.qfai/report/atdd-traceability/summary.json` — generated, not carried here — <!-- qfai:not-a-citation .qfai/report/atdd-traceability/summary.json -->
 records `scan.matchedFileCount: 2`, and both matches are annotation carriers —
 `tests/integration/qfai-traceability.md` and `tests/e2e/qfai-traceability.md` — under the repo-root
 `tests/` tree, while the package's real suite lives at `packages/qfai/tests/**` and is not scanned
