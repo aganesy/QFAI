@@ -466,8 +466,14 @@ returns 0; the summary is the signal, not the exit code.
   `npm install <name>` the autoremediate install phase shells out to
   runs the target package's lifecycle scripts, whose writes are
   unbounded — see "Install scripts are an UNBOUNDED side effect".
-- `qfai doctor` does NOT delete anything. `--clean` renames stale
-  review packs into `_archive/`; no path is removed on any flag.
+- `qfai doctor` deletes ONE thing, under `--clean` and nothing else: a
+  TTL-expired validate run log, and only once the preconditions the
+  `--clean` section states have cleared — the config loaded without
+  issues, no other project root in the monorepo resolves
+  `paths.outDir` to the same directory, the run is outside the newest
+  `report.keepLatestRuns`, and `validate.log` does not point at it.
+  Stale review packs are RENAMED into `_archive/` and never removed.
+  Nothing else is deleted on any flag.
 - `qfai doctor` does NOT remediate in a detected CI environment
   (any truthy `CI` value, or `GITHUB_ACTIONS=true`): that disables
   `--autoremediate` (AC-0006-0018).
