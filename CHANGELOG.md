@@ -163,6 +163,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   prefix carries. That is the shape `RED failure mode` already had, and the
   field joins it among the round-scoped ones, so a round cannot carry two.
 
+- **The prototyping contract stops excluding the capture outputs it specifies**
+  (#1861). Its non-goals put the capture pipeline's PNG and HTML out of
+  contract, and its "Capture & Serve Flags" section specifies both — their
+  paths, their writers and the `evidenceRefs[]` obligation they carry under
+  `--capture`. The same output was therefore required and out of scope, and a
+  reader reconciling the two got whichever answer they reached first. The
+  non-goal says what is true: those artifacts are out of contract on the
+  default path, in contract wherever the flag is, and the per-action
+  interaction transcript is the one that is out of it either way.
+
 - **The monitor's reply command names the pull request it is about** (#1864).
   It printed `repos/OWNER/REPO/pulls/comments/<id>/replies`, and the reply
   endpoint takes the pull request number as a path parameter — so an operator
