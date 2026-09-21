@@ -109,6 +109,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A comment marker quoted in code is read as the text it is** (#1863). The
+  specification masking looked for `<!--` anywhere on a line and hid everything
+  after it, so a document that quotes the marker — a pack explaining its own
+  opt-out comment does — lost every heading and table below that sentence, and
+  the readers downstream saw a document that had stopped specifying anything. A
+  marker inside a code span is now text, and a fence's info string is read as a
+  label before the comment scan runs, so a marker there opens a sample rather
+  than a comment. A marker outside both still opens one.
+
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
   had two lists, and a screen drawn entirely from what the project already had
