@@ -39,6 +39,10 @@ describe("runSddPreflight", () => {
       expect(result.source).toBe("discussion-pack");
       expect(result.importedReqCount).toBe(2);
       expect(result.blockers).toHaveLength(0);
+      // A complete pack owes no gap either. Without this the case reads only
+      // `status`, and every pack discrepancy now leaves that at `ready` — so a
+      // required file the pack does not hold would pass unremarked.
+      expect(result.packGaps).toEqual([]);
       expect(result.selectedInputPath).toContain("discussion-20260216010102003");
 
       const summary = await readFile(result.preflightSummaryPath, "utf-8");
