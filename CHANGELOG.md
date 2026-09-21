@@ -109,6 +109,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A substituted matrix leg, a disabled step condition and a renamed aggregate
+  are each reported by the obligation they break** (#1876). The shipped shape
+  gate pinned `fail-fast: false` and nothing about the axis, so
+  `check: [shape, shape]` ran one checker twice, reported two green legs and
+  passed the gate — caught only as a byte difference by a digest pin, which
+  says which file moved and not which obligation. Dimension 4 now pins the axis
+  and its values, dimension 5 pins the condition that selects each invocation,
+  and a tenth dimension pins the external check name each aggregate carries,
+  which is the string an adopter's branch protection names. Each dimension
+  title is held against the numbered item it belongs to in
+  `.qfai/contracts/cli/shipped-workflows.md`, so the gate and the contract
+  cannot word an obligation differently. A dependent of an installing job that
+  declares no condition is a violation as well: it defaults to `success()`, a
+  failed install skips it, and a skipped job satisfies branch protection.
+
 - **The historical review-evidence comparison runs on the archive the record
   identifies, or not at all** (#1874). The two guards over
   `atdd-spec-0017.md`'s round and response counts read whichever ignored review
