@@ -139,6 +139,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   rows are at `todo`, and every existing row keeps its identifier, status, test
   file, selector, decision and evidence.
 
+- **The spec-0014 ledger carries the columns its template declares, and a row
+  for every story** (#1750). None of its five stories had a row, and the ledger
+  held eight columns where the template declares fifteen — across two tables,
+  both migrated. The five rows are at `todo`, and every existing row keeps its
+  identifier, status, test file, selector, decision and evidence.
+
 - **The spec-0004 ledger carries the columns its template declares, and a row
   for every story** (#1750). Thirteen of its sixteen stories had no row, and the
   ledger held nine columns where the template declares fifteen — so a Change
