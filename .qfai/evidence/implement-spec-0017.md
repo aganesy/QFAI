@@ -3570,7 +3570,9 @@ nothing else, which all three verified.
 | `Prototype parity`     | not applicable — no row of this spec affects a UI surface           |
 | `Gatekeeper`           | **REVISE** — `qa-gatekeeper`, `Reviewed revision: 90a33ee5`         |
 
-Pack: `.qfai/review/review-20260820140000000/`. Rounds 1 through 4 have **no pack** — their verdicts
+Pack: `.qfai/review/review-20260820140000000/`, <!-- qfai:not-a-citation .qfai/review/review-20260820140000000/ -->
+which `.qfai/review/` being ignored keeps out of the repository: the name locates the round, and the
+verdicts and reviewed revisions above are what it held. Rounds 1 through 4 have **no pack** — their verdicts
 were returned to the orchestrator and recorded only in commit messages and in this file's prose,
 which `completion-reviewer` raised as BL-2. That is not repairable retroactively: the reports no
 longer exist to file. Round 5 onward writes a pack, and the gap is recorded rather than papered over.

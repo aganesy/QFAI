@@ -109,6 +109,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A prototype handoff can say a screen needed nothing, and one that says
+  nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
+  had two lists, and a screen drawn entirely from what the project already had
+  was written by omitting both. So an absent manifest carried two different
+  claims — every screen needed nothing, or the loop recorded nothing — and the
+  implementer reading the second as the first rebuilds by hand what the loop had
+  procured, which is the failure the manifest exists to prevent. An empty
+  `procured: []` does not separate them either: "nothing was found" is not
+  "nothing was needed". A third list, `drawn-from-project`, says it, one row per
+  screen. On a target whose UI contracts declare screens the key is now
+  required, and a screen named both as needing nothing and as needing something
+  is reported. The handoff reference and the shipped sample carry the list.
+
 - **A rule master a project deleted is not written back by the next `qfai init`**
   (#1741). The run decided which masters to cite from its own copy report, so a
   master the project had removed on purpose looked exactly like a rule shipped
@@ -147,6 +160,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is removed, so the criterion is claimed once, by the test that discharges it.
   Nothing failed on any of this: an unresolved selector is reported at `warning`,
   so a full run stayed green while the ledger named tests that were not there.
+
+- **Twenty-seven citations stop pointing at artifacts a clone does not have**
+  (#1652). `.qfai/review/` and `.qfai/report/` are ignored and the evidence that
+  cites them is committed, so a reader arriving later gets the claim without its
+  subject: the name reads as provenance and costs a search to find out
+  otherwise. Each of the six now says what the reader has instead — for a
+  review pack, that the name locates the run and the verdicts beside it are what
+  the pack held, and that this stage recorded no reviewed revision where it did
+  not; for a generated report, the command that writes it. The census the
+  citation guard holds is unchanged and the twenty-seven move to its cleared
+  list, so the remaining backlog is still counted.
 
 - **A spawn-bound test that produces no output now says so, instead of reading as
   the script printing the wrong thing** (#1934). One CI run failed with
