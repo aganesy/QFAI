@@ -116,8 +116,10 @@ import {
 } from "../../core/manifest/manifestWriteGuard.js";
 import type { RuleMasterPlan } from "../../core/ruleMasterUpdates.js";
 import {
+  deletedRuleMasters,
   planRuleMasterUpdates,
   readRuleLock,
+  RULE_LOCK_BASENAME,
   writeRuleLock,
 } from "../../core/ruleMasterUpdates.js";
 import {
@@ -438,11 +440,23 @@ export async function runInit(options: InitOptions): Promise<void> {
   //
   // Every shipped workflow name is excluded here, whatever this run decided about it: the ones
   // it writes were written above, and the ones it declined must not arrive by another route.
+  // A master the record says an earlier run wrote, and the project has since
+  // deleted, is not copied again. Asked before the copy, because once the file
+  // is back the deletion is indistinguishable from a rule shipped for the first
+  // time — which is how every upgrade undid the removal.
+  const removedMasters = await deletedRuleMasters(
+    path.join(rootAssets, AGENTS_RULES_DIR_REL),
+    path.join(destRoot, AGENTS_RULES_DIR_REL),
+  );
+  reportRemovedRuleMasters(removedMasters);
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    exclude: [...SHIPPED_WORKFLOW_NAMES].map((name) => path.join(".github", "workflows", name)),
+    exclude: [
+      ...[...SHIPPED_WORKFLOW_NAMES].map((name) => path.join(".github", "workflows", name)),
+      ...removedMasters.map((name) => path.join(AGENTS_RULES_DIR_REL, name)),
+    ],
   });
   // …and the summary counts them together, as one copy, which is what an operator sees.
   rootResult.copied = [...workflowResult.copied, ...rootResult.copied];
@@ -3370,6 +3384,13 @@ async function updateUneditedRuleMasters(
       // the adopter's text as this run's write and replace it.
       continue;
     }
+    if (plan.verdict === "removed") {
+      // Not `installed`: a master that is not there has no summary to refresh
+      // and no bullet to add. Its record entry is left as it stands, which is
+      // what keeps the removal durable across the next run.
+      skipped.push(target);
+      continue;
+    }
     if (plan.verdict !== "update") {
       recorded[plan.name] = plan.shippedHash;
       installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
@@ -3646,6 +3667,24 @@ const COPILOT_INSTRUCTIONS_ENTRY = ".github/copilot-instructions.md";
  * bullet in it, a superseded one is replaced where it stands, and the same
  * refusals apply as to the two entry points.
  */
+/**
+ * Names the rules this run left deleted, and how to take one back.
+ *
+ * Silence would read as "every shipped rule is installed", which is the state
+ * the exclusion exists because the run is not in. The way back is the record
+ * itself rather than a flag: the entry is what says the run wrote the file, so
+ * removing it puts the master in the same position as one shipped today, and a
+ * second way to say that is a second thing to keep in step.
+ */
+function reportRemovedRuleMasters(removed: readonly string[]): void {
+  if (removed.length === 0) return;
+  const named = removed.map((name) => `${AGENTS_RULES_DIR_CITATION}/${name}`).join(", ");
+  info(
+    `  kept deleted: ${named} (an earlier run wrote them and this project removed them; ` +
+      `delete the entry from ${AGENTS_RULES_DIR_CITATION}/${RULE_LOCK_BASENAME} to take one back)`,
+  );
+}
+
 /**
  * Names the masters whose summary this run left as it stands, with why.
  *

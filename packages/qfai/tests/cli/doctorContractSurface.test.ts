@@ -91,6 +91,24 @@ function commandShapeHeading(contract: string): string {
 }
 
 describe("`qfai doctor` CLI contract surface", () => {
+  it("does not promise elsewhere that nothing is ever deleted", async () => {
+    // The `--clean` section deletes a TTL-expired run log and tabulates the
+    // preconditions; the non-goals said no path is removed on any flag. A
+    // reader deciding whether the command is reversible got the opposite
+    // answer depending on which section they reached first.
+    const contract = await readFile(CONTRACT, "utf-8");
+
+    expect(contract, "the clean section must still declare the removal").toMatch(
+      /\| `<outDir>\/run-<ts>\/` +\| removed/,
+    );
+    expect(contract, "and the non-goals must not deny it").not.toMatch(
+      /does NOT delete anything|no path is removed on any flag/,
+    );
+    expect(contract, "the guarantee that does hold is the one about review packs").toMatch(
+      /RENAMED into `_archive\/` and never removed/,
+    );
+  });
+
   it("declares every flag the doctor branch threads into runDoctor", async () => {
     const contract = await readFile(CONTRACT, "utf-8");
     const heading = commandShapeHeading(contract);

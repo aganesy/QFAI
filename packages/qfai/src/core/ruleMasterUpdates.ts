@@ -31,9 +31,10 @@ export const RULE_LOCK_BASENAME = ".qfai-rules.lock.json";
  * What a re-init may do with one master.
  *
  * `written` and `current` need no write; the first is a file this run created,
- * the second one already holding the shipped text.
+ * the second one already holding the shipped text. `removed` is the project's
+ * own decision to drop a rule, and the run leaves it dropped.
  */
-export type RuleMasterVerdict = "written" | "current" | "update" | "keep";
+export type RuleMasterVerdict = "written" | "current" | "update" | "keep" | "removed";
 
 export type RuleMasterPlan = {
   /** The master's basename, which is also its key in the record. */
@@ -49,6 +50,14 @@ export type RuleMasterPlan = {
    * edit made in the window it was deciding.
    */
   readonly currentHash: string | null;
+  /**
+   * The hash the record holds for this master, or `null` when it has none.
+   *
+   * A `removed` plan keeps it rather than the shipped hash: the record says
+   * which release's text the project deleted, and re-recording today's would
+   * lose that.
+   */
+  readonly recordedHash: string | null;
 };
 
 /** The recorded hashes, or an empty record when there is nothing readable. */
@@ -112,6 +121,7 @@ export async function planRuleMasterUpdates(
       name,
       shippedHash,
       currentHash,
+      recordedHash: recorded[name] ?? null,
       verdict: verdictFor(shippedHash, currentHash, recorded[name]),
     });
   }
@@ -123,9 +133,12 @@ function verdictFor(
   currentHash: string | null,
   recordedHash: string | undefined,
 ): RuleMasterVerdict {
-  // No readable file: the create-only copy in the same run wrote it, or nothing
-  // did. Either way there is no adopter text to weigh.
-  if (currentHash === null) return "written";
+  // No readable file. With a record behind it, an earlier run wrote the master
+  // and the project has since removed it — a decision the project is entitled
+  // to make, and one every later run undid while the two cases were one.
+  // Without a record, the create-only copy in the same run wrote it, or nothing
+  // did; either way there is no adopter text to weigh.
+  if (currentHash === null) return recordedHash === undefined ? "written" : "removed";
   if (currentHash === shippedHash) return "current";
   // The bytes are what the last recorded write left, so nobody has touched them
   // since, and the difference is the release moving rather than an edit.
@@ -145,4 +158,40 @@ async function shippedMasterNames(shippedRulesDir: string): Promise<string[]> {
     .filter((entry) => entry.isFile() && entry.name !== "README.md")
     .map((entry) => entry.name)
     .sort();
+}
+
+/**
+ * The masters a run wrote and the project has since deleted.
+ *
+ * Read before the create-only copy, whose exclusions this answers: a master the
+ * project removed on purpose is indistinguishable from a rule shipped for the
+ * first time once it has been copied again, so the question has to be asked
+ * while the file is still absent.
+ *
+ * Basenames, as the record keys them. A record entry naming a file the package
+ * no longer ships is not one of these: nothing would copy it anyway, and
+ * reporting it would name a rule the project never had a say about.
+ */
+export async function deletedRuleMasters(
+  shippedRulesDir: string,
+  projectRulesDir: string,
+): Promise<string[]> {
+  const recorded = await readRuleLock(projectRulesDir);
+  if (Object.keys(recorded).length === 0) return [];
+  let shipped: string[];
+  try {
+    shipped = await shippedMasterNames(shippedRulesDir);
+  } catch {
+    // An unreadable shipped tree answers nothing, and the copy that follows
+    // will fail on its own terms rather than through an exclusion list.
+    return [];
+  }
+  const deleted: string[] = [];
+  for (const name of shipped) {
+    if (recorded[name] === undefined) continue;
+    if ((await hashAssistantAssetFile(path.join(projectRulesDir, name))) === null) {
+      deleted.push(name);
+    }
+  }
+  return deleted;
 }
