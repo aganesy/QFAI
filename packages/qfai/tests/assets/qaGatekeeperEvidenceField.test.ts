@@ -47,7 +47,7 @@ describe("the qa-gatekeeper verdict the completion gate reads", () => {
     const skill = await readFile(SKILL, "utf-8");
 
     expect(skill, "the contract must name it among the row-level fields").toMatch(
-      /The \*\*row-level\*\* fields do not: `TDD-ID`, `TC-ref` and the `qa-gatekeeper` verdict/,
+      /`TDD-ID` and `TC-ref` are recorded once for the row, as is the `qa-gatekeeper` verdict/,
     );
   });
 
