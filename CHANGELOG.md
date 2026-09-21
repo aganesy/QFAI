@@ -238,6 +238,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   without a second list. A checkout that materialised links as text files is a
   property of the machine and is not reported.
 
+- **`QFAI-ID-002` reports one ID declared by two headings of one pack file**
+  (#1971). `QFAI-ID-001` keys each ID on the set of files that define it, so a
+  second definition in the same file added nothing and was never reported.
+  Two headings sharing an ID make every citation of it ambiguous, and a test
+  case written for the first then counted as coverage for the second. The new
+  check reads the `##` headings of a layered spec's user stories, criteria,
+  rules, examples and test cases and names the ID and both headings. A summary
+  table row beside its own heading is one item, not two. Heading definitions
+  now also reach `QFAI-ID-001`, so a heading in each of two files is still the
+  cross-file duplicate it reports.
+  The check reports three duplicates in this repository's own `spec-0013`
+  criteria, which `CR-20260913-0012` already describes and has not been applied
+  for; those three are recorded in `scripts/dogfood-backlog.json` so the count
+  cannot grow while the repair waits.
+
 - **A canonical assistant tree may be vendored by link** (#1927). `QFAI-LINK-001`
   read any symlink in `.qfai/assistant/**` as damage, so a project that points
   the tree at documents it keeps elsewhere was told its skills and agents were
