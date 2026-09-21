@@ -109,6 +109,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An outdated review thread no longer authorizes a merge** (#1855). The merge
+  script dropped a thread when either `isResolved` or `isOutdated` was true, and
+  those are different claims: outdated says the code the reviewer commented on
+  has moved, not that anybody answered them. An unresolved thread on moved code
+  disappeared from the count, so the plan could report every thread resolved
+  while one was not, and the skill's own list of blockers said the same. The
+  count now drops a thread only when it is resolved.
+
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
   had two lists, and a screen drawn entirely from what the project already had
