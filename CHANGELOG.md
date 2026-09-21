@@ -109,6 +109,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A prototype handoff can say a screen needed nothing, and one that says
+  nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
+  had two lists, and a screen drawn entirely from what the project already had
+  was written by omitting both. So an absent manifest carried two different
+  claims — every screen needed nothing, or the loop recorded nothing — and the
+  implementer reading the second as the first rebuilds by hand what the loop had
+  procured, which is the failure the manifest exists to prevent. An empty
+  `procured: []` does not separate them either: "nothing was found" is not
+  "nothing was needed". A third list, `drawn-from-project`, says it, one row per
+  screen. On a target whose UI contracts declare screens the key is now
+  required, and a screen named both as needing nothing and as needing something
+  is reported. The handoff reference and the shipped sample carry the list.
+
+- **The spec-0002 ledger carries the columns its template declares, and a row
+  for every story** (#1750). `/qfai-sdd` Phase 2b seeds one `E2E` row per active
+  user story and migrates an eight-column ledger to the template's fifteen. No
+  pack had been re-seeded since that contract was written, so a Change Request
+  re-deriving one could not keep its rerun to the statements it changed: Phase
+  2b would migrate the ledger and seed every missing row in the same pass, rows
+  the Change Request neither authorized nor gave a disposition. This pack's
+  seven stories now have a row each, at `todo`, and every existing row keeps its
+  identifier, status, test file, selector, decision and evidence exactly as they
+  were. Sixteen packs still owe the same migration.
+
 - **The spec-0004 ledger carries the columns its template declares, and a row
   for every story** (#1750). Thirteen of its sixteen stories had no row, and the
   ledger held nine columns where the template declares fifteen — so a Change
@@ -141,6 +165,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is removed, so the criterion is claimed once, by the test that discharges it.
   Nothing failed on any of this: an unresolved selector is reported at `warning`,
   so a full run stayed green while the ledger named tests that were not there.
+
+- **Twenty-seven citations stop pointing at artifacts a clone does not have**
+  (#1652). `.qfai/review/` and `.qfai/report/` are ignored and the evidence that
+  cites them is committed, so a reader arriving later gets the claim without its
+  subject: the name reads as provenance and costs a search to find out
+  otherwise. Each of the six now says what the reader has instead — for a
+  review pack, that the name locates the run and the verdicts beside it are what
+  the pack held, and that this stage recorded no reviewed revision where it did
+  not; for a generated report, the command that writes it. The census the
+  citation guard holds is unchanged and the twenty-seven move to its cleared
+  list, so the remaining backlog is still counted.
 
 - **A spawn-bound test that produces no output now says so, instead of reading as
   the script printing the wrong thing** (#1934). One CI run failed with
