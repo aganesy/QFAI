@@ -109,6 +109,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The spec-0008 scaffold acceptance suite runs, instead of standing by as a
+  skeleton** (#1436). It was authored test-first against a command that did not
+  exist yet, every case `.skip`ped, and the command shipped without the skip
+  being lifted — so the user story it annotates read as covered by a suite that
+  executed nothing. The cases now drive the production entry points over a
+  temporary project: one skeleton per test case with the runner's primitives,
+  the TODO marker and the case's own references; a filled skeleton left as the
+  operator wrote it on a re-run; and the placeholder finding moving from warning
+  to error at the third validate cycle. Driving them through the installed
+  command against the working directory, which is what the skeleton did, would
+  have written test files and escalation counters into this repository. The file
+  is struck from the dogfooding backlog, which held it for the skip.
+
 - **Every row of the spec-0002 ledger names a test that exists and proves what
   the row claims** (#1585). Four rows carried a test title from before the
   release that retired the exploration-sidecar family and moved the surface onto
