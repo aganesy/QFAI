@@ -109,6 +109,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The CLI entry awaits the command instead of handing it to a catch nobody
+  reads** (#1862). The bootstrap handled the command's rejection and then
+  dropped the promise that handling returned, which is the shape the promise
+  rule refuses: a `.catch` is a consumer of the failure, not of the chain. The
+  command is awaited inside a function that turns every failure into an exit
+  code, and the entry adopts that function. A top-level `await` would have been
+  the shorter answer and does not compile, because this entry is built for
+  CommonJS as well as for ESM. No behaviour changes: the same message reaches
+  stderr and the same exit code is set.
+
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
   had two lists, and a screen drawn entirely from what the project already had
