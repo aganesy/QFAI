@@ -45,7 +45,7 @@
     "@asamuzakjp/css-color": "3.2.0",
     "@eslint/js": "^10.0.1",
     "@jackchuka/mdschema": "0.15.4",
-    "@types/node": "^18.19.41",
+    "@types/node": "^24.0.0",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "jsdom": "^29.1.1",
