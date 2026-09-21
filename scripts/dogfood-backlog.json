@@ -15,7 +15,6 @@
       ".qfai/specs/spec-0017/tdd/test-list.md": 140,
       "packages/qfai/tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts": 3,
       "packages/qfai/tests/e2e/spec0006DoctorRemediationE2E.test.ts": 3,
-      "packages/qfai/tests/e2e/spec0008AtddScaffoldE2E.test.ts": 1,
       "packages/qfai/tests/integration/spec0004SaasPackageAndPackLocation.test.ts": 3
     },
     "sdd": {
@@ -58,7 +57,6 @@
       ".qfai/specs/spec-0017/tdd/test-list.md": 140,
       "packages/qfai/tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts": 3,
       "packages/qfai/tests/e2e/spec0006DoctorRemediationE2E.test.ts": 3,
-      "packages/qfai/tests/e2e/spec0008AtddScaffoldE2E.test.ts": 1,
       "packages/qfai/tests/integration/spec0004SaasPackageAndPackLocation.test.ts": 3
     }
   }
