@@ -179,6 +179,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   identifier, status, test file, selector, decision and evidence. This was the
   last pack that owed the migration.
 
+- **A rule master a project deleted is not written back by the next `qfai init`**
+  (#1741). The run decided which masters to cite from its own copy report, so a
+  master the project had removed on purpose looked exactly like a rule shipped
+  for the first time: the run copied it again and added its bullet back, and the
+  only sign was a diff in the entry point. Removing a shipped rule is a decision
+  a project is entitled to make, and it could not be made durable. The record of
+  what `init` last wrote — already kept, per master, for the upgrade path — now
+  answers the question: an entry with no file behind it is a rule the project
+  removed, and the run copies neither it nor its citation and names it on
+  stderr. A master with no entry is a rule shipped for the first time and
+  arrives as before. `--force` does not restore one either; it rewrites what the
+  project has. The way back is to delete the master's entry from that record,
+  which puts it in the same position as a rule shipped today.
+
 - **The spec-0008 scaffold acceptance suite runs, instead of standing by as a
   skeleton** (#1436). It was authored test-first against a command that did not
   exist yet, every case `.skip`ped, and the command shipped without the skip
