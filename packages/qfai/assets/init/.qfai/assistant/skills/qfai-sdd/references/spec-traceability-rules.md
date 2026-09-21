@@ -329,7 +329,14 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   mandated directory, so this ledger row is their whole obligation and
   `TDDLIST_TC_NOT_COVERED` is the gate that enforces it. See
   `catalog/test-layers.md`.
-- A TC with no declared `Level` — a blank cell, or a `06_Test-Cases.md` with no test-case classification column at all — is **not** a coverage target and gets no row. It is owned by `QFAI-ATDD-112`, which routes it to `tests/integration/**`; seeding a row for it as well would put one TC on two gates with two owners and two evidence files, and give the row a `Layer` the spec does not support.
+- A TC with no declared `Level` — a blank cell, or a `06_Test-Cases.md` with no
+  test-case classification column at all — is **not** a coverage target, so it
+  gets no coverage-target row. It gets the `Layer = Integration` row instead:
+  `QFAI-ATDD-112` routes it to `tests/integration/**`, and Phase 2b's second
+  seed group is that routing written down, so `/qfai-atdd` has a row to hand
+  over and its evidence has a home. What would put one TC on two gates with two
+  owners and two evidence files is a coverage-target row **beside** that one,
+  and the two groups being exclusive is what stops it.
 - A ledger seeded before that rule may still carry such a row.
   `QFAI-TCLEVEL-001` reports every coverage row whose
   `TC-Refs` names a `Level`-less TC; clear it by declaring the TC's `Level` in

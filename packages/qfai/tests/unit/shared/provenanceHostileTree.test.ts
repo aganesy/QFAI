@@ -820,6 +820,21 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
       "and stop renewing when it releases, or a released lock keeps looking alive",
     ).toMatch(/clearInterval\(/);
 
+    // Every refresh the timer starts has a consumer. `setInterval` ignores what
+    // its callback returns, so an `async` callback drops its own promise and a
+    // `void` on the call drops it under another name; each refresh is chained
+    // onto the one before, and `release` awaits the chain. That is also what
+    // stops a release from taking the lock apart under a touch still in flight.
+    expect(body, "each refresh must be chained onto the one before it").toMatch(
+      /refreshed = refreshed\.then\(/,
+    );
+    expect(body, "the heartbeat's promise must not be dropped at the timer").not.toMatch(
+      /void utimes\(/,
+    );
+    expect(body, "and release must await the chain before it dismantles the lock").toMatch(
+      /clearInterval\(heartbeat\);[\s\S]{0,400}?await refreshed;/,
+    );
+
     // The interval has to be strictly under the ceiling, and by enough that losing one renewal is
     // not enough to be reclaimed. Read from the constants rather than restated, so the two cannot
     // drift apart in a later edit.

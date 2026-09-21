@@ -1216,6 +1216,54 @@ describe("QFAI-TDDLIST-008", () => {
     });
   }
 
+  describe("Oracle proof is a round field", () => {
+    const entryWith = (line: string): string =>
+      completeEntry("Unit").replace(/- Oracle proof: .*/, line);
+
+    it("reads the round form the skill writes", async () => {
+      // `round-evidence.md` puts the field under the round prefix, because a
+      // later round rewrites the code an earlier proof mutated. An entry
+      // written that way was read as carrying no proof at all.
+      const roundEvidence = await readFile(
+        path.join(
+          __dirname,
+          "..",
+          "..",
+          "assets",
+          "init",
+          ".qfai",
+          "assistant",
+          "skills",
+          "qfai-implement",
+          "references",
+          "round-evidence.md",
+        ),
+        "utf-8",
+      );
+      expect(roundEvidence).toContain("`Round N: Oracle proof`");
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": entryWith(
+            "- Round 1: Oracle proof: equivalent-mutant — TC-0001 permits any non-empty result",
+          ),
+        });
+        expect(codes).not.toContain("QFAI-TDDLIST-008");
+      });
+    });
+
+    it("still reads the row form an earlier entry carries", async () => {
+      // The fallback. Every entry written before the prefix holds the field at
+      // row level, and refusing those would have been the same defect from the
+      // other side.
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
+        });
+        expect(codes).not.toContain("QFAI-TDDLIST-008");
+      });
+    });
+  });
+
   describe("RED failure mode is a round field", () => {
     const entryWith = (line: string | null): string =>
       completeEntry("Unit").replace(
