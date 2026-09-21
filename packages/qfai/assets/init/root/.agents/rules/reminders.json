@@ -46,5 +46,11 @@
       "hookEventName": "PostToolUse",
       "additionalContext": "QFAI minimal implementation (.agents/rules/minimal-implementation.md). For the file just changed, if it is source: could it not exist at all, is it already in this codebase, or does the standard library, the platform or an already-installed dependency do it? Otherwise the least code that works. Mark a deliberate shortcut with both its ceiling and the condition that lifts it. The ladder never removes what § 2 of that rule lists. For a change to a screen or to terminal output, .agents/rules/interface-clarity.md governs what may appear."
     }
+  },
+  "api-budget": {
+    "hookSpecificOutput": {
+      "hookEventName": "PreToolUse",
+      "additionalContext": "QFAI API budget (.agents/rules/api-budget.md). Before this call: can git answer it instead? Then REST, then GraphQL — the forge's own pull-request and issue subcommands take the GraphQL path, a separate allowance counted in points. One call for the whole set, not one per branch. Save a payload once and search the file; a second grep is not a second download. Poll no faster than the thing being polled changes. A rate-limit endpoint misreports the budget: read the remaining count off this response's own headers. The allowance belongs to the account, and every session and sub-agent draws on it at once. Read the rule rather than working from this line."
+    }
   }
 }

@@ -448,22 +448,27 @@ function normalizeTextList(values: string[] | undefined): string[] {
 }
 
 /**
- * Requirement intake は `06_REQ.md` が宣言した REQ の件数であり、
- * `REQ-NNNN` トークンの出現回数ではない。Description が兄弟要件を参照する
- * （`REQ-0001 に依存` 等）通常の書き方で件数が水増しされると、Stage 1 が
- * 照合に使う machine-computed 件数が壊れる。`REQ-ID` 列を持つ表があれば
- * その列の宣言行だけを数え、表を持たない pack では一意な ID を数える。
+ * The requirement intake: how many requirements `06_REQ.md` declares, not how
+ * often a `REQ-NNNN` token appears. A description citing a sibling requirement
+ * would otherwise inflate the count Stage 1 reconciles against.
+ *
+ * With a `REQ-ID` column, only that column's declarations count. A column that
+ * holds none — a different ID scheme, a renamed cell — makes the count unknown
+ * (`null`) rather than a scan of the prose, which counts mentions: a sentence
+ * saying the pack does not use `REQ-0001` counted as one requirement. Only a
+ * file with no `REQ-ID` column at all falls back to distinct IDs in the text.
  */
-function countReqIds(text: string): number {
-  const fromTable = collectTableReqIds(text);
-  if (fromTable.size > 0) {
-    return fromTable.size;
+function countReqIds(text: string): number | null {
+  const table = collectTableReqIds(text);
+  if (table.hasColumn) {
+    return table.ids.size > 0 ? table.ids.size : null;
   }
   return collectDistinctReqIds(text).size;
 }
 
-function collectTableReqIds(text: string): Set<string> {
+function collectTableReqIds(text: string): { hasColumn: boolean; ids: Set<string> } {
   const ids = new Set<string>();
+  let hasColumn = false;
   const lines = text.replace(/\r\n/g, "\n").split("\n");
 
   for (let index = 0; index + 1 < lines.length; index += 1) {
@@ -475,6 +480,7 @@ function collectTableReqIds(text: string): Set<string> {
     if (column < 0 || !isTableSeparator(lines[index + 1] ?? "", headers.length)) {
       continue;
     }
+    hasColumn = true;
 
     for (let row = index + 2; row < lines.length; row += 1) {
       const cells = parseTableCells(lines[row] ?? "");
@@ -488,7 +494,7 @@ function collectTableReqIds(text: string): Set<string> {
     }
   }
 
-  return ids;
+  return { hasColumn, ids };
 }
 
 function collectDistinctReqIds(text: string): Set<string> {

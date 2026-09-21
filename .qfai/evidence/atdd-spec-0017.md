@@ -22,9 +22,10 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
 - `.qfai/specs/spec-0017/07_Decisions.md` — `DR-0017-*`, read for the rejected alternatives this
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
-- `.qfai/specs/spec-0017/tdd/test-list.md` — read, never written. 83 rows: 72 `Integration`,
-  11 `Unit`; **73 `refactor`, 6 `blocked`, 4 `todo`**. The four `todo` rows are `Integration` and are
-  therefore this stage's to route — see § "Ledger rows advanced"
+- `.qfai/specs/spec-0017/tdd/test-list.md` — 101 rows: 81 `Integration`,
+  11 `Unit`; **81 `refactor`, 6 `blocked`, 14 `todo`**. The other nine rows are `E2E`, one per story,
+  seeded at `todo`. Five `todo` rows are `Integration` and are therefore this stage's to route — see
+  § "Ledger rows advanced"
 - `.qfai/assistant/catalog/test-layers.md` — the layer derivation and the directory each `Level`
   routes to
 - `packages/qfai/assets/init/root/.github/workflows/**` — the shipped surface, measured before any
@@ -2261,7 +2262,7 @@ a merge can invalidate has no author to hold responsible for it.
 The count and its split across the two include roots are on one line, and both are derived by the same
 walk:
 
-e2e callsites at this tree: 2372 (packages/qfai/tests/assets 2195, packages/qfai/tests/e2e 177)
+e2e callsites at this tree: 2394 (packages/qfai/tests/assets 2217, packages/qfai/tests/e2e 177)
 
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is
@@ -2949,6 +2950,191 @@ sentence read "a ninth stage round is owed" for six rounds, in the paragraph tha
 still waiting for — an ordinal expires every round, and the rule does not, which is the form the callsite
 line two sections up arrived at for the same reason.
 
+## The documentation-only cost pin, and the rule that reads it
+
+`BR-0017-0007` states the obligation as a pin and a re-pin: what a documentation-only pull request
+executes is recorded, and a change that moves it re-pins in the same change. Three artifacts carry
+that, and two rows assert it.
+
+| Artifact                                  | What it holds                                                                     |
+| ----------------------------------------- | --------------------------------------------------------------------------------- |
+| `.github/required-status-contexts.json`   | `documentationOnlyCostPin`, and a note stating the unit and what the pin is not    |
+| `scripts/pin-documentation-only-cost.mjs` | Recomputes both figures from the workflow tree and writes them                     |
+| `scripts/check-workflow-hygiene.mjs`      | `documentation-only-cost-pin`, which exits 1 while pin and recomputation disagree  |
+
+The committed figures: `build, ci-pass, detect, lint`, declaring 35 minutes.
+
+### One computation, two callers
+
+`documentationOnlyCostFigures` is exported from the lane, and the pinner imports it. A second
+implementation of "which jobs execute, and what do they declare" is two answers to one question,
+and the first edit to either is where they begin to disagree — with the pin and the check that reads
+it on opposite sides.
+
+The topology row is the one place a second reading is wanted. It parses `ci.yml` through its own
+reader and compares the result with the committed pin, so what is asserted there is agreement
+between two independent readings of one tree rather than between an implementation and itself.
+
+### What the rule refuses, and what it does not
+
+Enforcement is equality against a value derived from the same tree. A clause forbidding a higher
+cost could therefore not fail: once the pinner has run, no state of the tree violates it. What the
+rule catches is a change that moved the cost and did not re-pin, which is what puts the new figure
+in a diff. Whether that figure is acceptable stays a cost claim, and `BR-0017-0030` already requires
+those to arrive with measured before-and-after numbers.
+
+`timeout-minutes` is the declared worst case rather than a measurement, so the sum sits far above
+what the path really costs. It still catches a runaway job and a forgotten raise, which is the class
+a declared ceiling can catch. A job declaring no `timeout-minutes` is named rather than counted as
+zero: counting it as zero would let a job join the set for free. `job-guardrails` already requires
+one on every job, so that branch is unreachable on a tree this lane passes.
+
+### TDD-0006
+
+`TC-0017-0006`, in `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`.
+
+CLAIM 1 previously asserted the executing set as an equality against four job names held in a
+constant. Job instances charges +1 for a change that shortens the run and adds no work, so that
+measure refused a change the requirement permits — splitting one job into two cheaper ones is the
+case. The constant is gone. CLAIM 1 now reads `documentationOnlyCostPin` out of the expected-context
+declaration and compares it against the executing set and the sum of declared `timeout-minutes`
+computed from `ci.yml` by this file's own reader. The jobs the row treats as unconditional derive
+from that same computation, so no literal in the test can drift from the tree it describes.
+
+The `always()`-belongs-to-the-verdict-alone claim stands, and so do claims 2 to 4. `DR-0017-0015`
+records the options, four weaknesses of the adopted unit and the dissent against it. The earlier
+cycle's record, including the mutation table, is at
+`.qfai/evidence/implement-spec-0017.md#tdd-0006`.
+
+- **RED**: `fail` — with `documentationOnlyCostPin` deleted from the declaration, the row failed on
+  "the declaration must carry a documentationOnlyCostPin: expected [] to have a length of 1".
+- **GREEN**: `pnpm exec vitest run tests/scripts/ownWorkflowTopology.test.ts` → 71 passed (71).
+- **Oracle**: with the pin's `timeoutMinutesSum` set to 36, the row fails on
+  "the pinned sum must be the ceilings this workflow declares: expected 36 to be 35" — on the sum
+  rather than on the field's absence, so the comparison is against the tree and not against the
+  pin's own presence.
+
+### TDD-0093
+
+`TC-0017-0084`, in `packages/qfai/tests/scripts/workflowHygiene.test.ts`.
+
+Four rows, planted from both sides of the equality. A plant that edited the declaration alone would
+pass equally well against a rule comparing the pin with a second copy of itself, which is why the
+workflow side is planted too — and the third row is what keeps the rule from reading as a ban on
+raising a ceiling.
+
+| Plant                                      | Side        | Expected |
+| ------------------------------------------ | ----------- | -------- |
+| A pinned sum the workflow does not declare | Declaration | exit 1   |
+| A raised ceiling with the pin left behind  | Workflow    | exit 1   |
+| The same raise carrying its re-pin         | Both        | exit 0   |
+| The pin object deleted                     | Declaration | exit 1   |
+| A pinned job set missing an executing job  | Declaration | exit 1   |
+
+`TC-0017-0047` derives the evaluated rule set by running each plant and seeing which rule the lane
+reports, so the new rule needed an entry in that table: printed by every green run and demonstrated
+by nothing is exactly the hole it exists to find. `TC-0017-0045`'s declaration scope now holds two
+rules; its five-rule closure claim is unchanged, being scoped to the workflow tree.
+
+- **RED**: `fail` — with the rule's call removed from the lane, all four rows of this selector
+  failed.
+- **GREEN**: `pnpm exec vitest run tests/scripts/workflowHygiene.test.ts` → 88 passed (88).
+- **Oracle**: `detect`'s declared ceiling raised 5 → 6 without re-pinning →
+  `node scripts/check-workflow-hygiene.mjs --root .` exits 1 naming 35 against 36; reverted → 0.
+
+## The code-path cost pin, and the falling claim it replaced
+
+`NFR-0002` capped a code-path pull request at 12 job instances / 8 frozen-lockfile installs /
+3-or-5 bundler builds, against a baseline of 14 / 13 / 6. Derived from the tree, a code path runs
+**26 instances / 24 installs / 5 build executions**, declaring **350 minutes** of ceiling.
+
+Nothing regressed, and the reason the figure could go stale in silence is the finding: no test
+anywhere asserted any of the three counts. The code-path half had no falsifiable artifact behind it.
+
+| Artifact                                | What it holds                                                                    |
+| --------------------------------------- | -------------------------------------------------------------------------------- |
+| `.github/required-status-contexts.json` | `codePathCostPin`, and a note stating the unit and the three limits               |
+| `scripts/pin-code-path-cost.mjs`        | Recomputes the four figures from the workflow tree and writes them                |
+| `scripts/lib/pin-cost.mjs`              | The walk both pinners share: read, recompute per context, write formatted         |
+| `scripts/check-workflow-hygiene.mjs`    | `code-path-cost-pin`, which exits 1 while pin and recomputation disagree          |
+
+The committed figures: 26 instances, 350 declared minutes, 24 installs, and `build`, `node-floor`
+and `test` declaring a build.
+
+### Why the requirement let the code path go
+
+Nine legs finishing together cost fewer runner minutes than one leg running them in series, and
+count more instances. So an instance figure on a code path moves against the very thing `NFR-0002`
+is named for — consumption falling. A requirement claiming a fall there would be false on the tree
+that satisfies the design. `NFR-0002` keeps the documentation-only claim, where consumption does
+fall and the figure is five executed instances; the wall clock the widening buys is `NFR-0001`'s.
+
+`DR-0017-0015` settled that this requirement's figures stay quantified in instances, installs and
+builds. That is not reopened: the minutes sum the pin also carries lives in the declaration beside
+them, never in the requirement, which is where the documentation-only half already keeps its own.
+
+### Three limits, stated rather than hidden
+
+- **`buildJobs` counts jobs, not executions.** Two of the three condition their build step on
+  `matrix.slice == 'e2e' || matrix.slice == 'integration'`, so an execution count needs a workflow
+  expression evaluated and neither reader evaluates one. The five executions are real and unpinned.
+  The jobs figure still moves when a build is added to or removed from a job.
+- **No figure is compared with a run.** Reading what a run consumed needs the forge's API and a
+  finished run, which no lint lane has. A tree that was always more expensive than it declared is
+  outside the rule.
+- **It is not a cost bound.** Enforcement is equality against a value recomputed from the same
+  tree, so a clause forbidding a higher cost could not fail once the pinner has run.
+
+### TDD-0095
+
+`TC-0017-0086`, in `packages/qfai/tests/scripts/workflowHygiene.test.ts`.
+
+Six rows, planted from the declaration's side except the last, which plants the workflow.
+
+| Plant                                          | Expected                                            |
+| ---------------------------------------------- | --------------------------------------------------- |
+| `instances` set to a value nothing declares    | exit 1, the finding naming the figure and the value  |
+| `timeoutMinutesSum` the same                   | exit 1, likewise                                    |
+| `installInstances` the same                    | exit 1, likewise                                    |
+| A build-declaring job dropped from the set     | exit 1, the finding naming the job                   |
+| The pin object deleted                         | exit 1, the finding naming the field                 |
+| A matrix widened by one leg, the pin left      | exit 1, the finding naming both instance counts      |
+
+One row per numeric figure rather than one row planting all three: a single row would pass against
+a rule that compared the first and stopped, which is the failure the loop inside the rule was
+written to avoid, so the row set has to be able to see it. The last row is the one figure a reader
+cannot check by eye — a tree whose matrix grew by a leg costs one more instance and one more
+ceiling, and a rule counting job keys would see neither. Its expectation reads the pinned figure
+off the declaration rather than restating it, because a literal would be one more copy of the
+number this mechanism exists to keep in one place.
+
+- **RED**: the rule's call removed from the lane — all six rows failed.
+- **GREEN**: `pnpm exec vitest run tests/scripts/workflowHygiene.test.ts` → 94 passed (94).
+- **Oracle**: `scanner-coverage`'s declared ceiling raised 15 → 16 without re-pinning →
+  `node scripts/check-workflow-hygiene.mjs --root .` exits 1 with
+  `pins timeoutMinutesSum at 350 and ci.yml declares 351`; reverted → exit 0. That job is one a
+  documentation-only run skips, so the finding belongs to this rule alone.
+
+### TDD-0096
+
+`TC-0017-0087`, in `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`.
+
+One row, comparing all four committed figures against that file's own parse of `ci.yml`. Compared
+as a whole rather than figure by figure, so a pin agreeing on three fails on the fourth instead of
+passing on the three.
+
+The second reading is the point. The hygiene lane computes the same figures through its own
+collector, and equality between two independent readings of one tree is what a single
+implementation cannot give itself. Nothing here asserts a bound: both sides are read from the same
+tree, so a bound would be a claim no state of the tree could fail.
+
+- **RED**: `codePathCostPin` deleted from the declaration — the row failed on
+  "the declaration must carry a codePathCostPin: expected false to be true".
+- **GREEN**: `pnpm exec vitest run tests/scripts/ownWorkflowTopology.test.ts` → 73 passed (73).
+- **Oracle**: `installInstances` set to 23 — the row failed on the figure rather than on the
+  field's absence, its diff reading `- "installInstances": 24` against `+ "installInstances": 23`.
+  So the comparison is against the tree and not against the pin's own presence.
+
 ## Final status (PASS/FAIL) + who confirmed
 
 **FAIL — incomplete by this skill's own Definition of Done.**
@@ -3316,3 +3502,118 @@ a65a209bbfd37911c5b4ef2424adf605057d9029 R02_completion-reviewer.md
 ba2f2c08e56c777846ca904c072db8e2a4922dec review_request.md
 39c7e5072cfa7b0d0409c454548ce6948f9fe94c summary.json
 ```
+
+
+### TDD-0097
+
+- TC: TC-0017-0088. Implementation revision: `bc4edcb08`.
+- Command: `pnpm -C packages/qfai exec vitest run --project scripts tests/scripts/ownWorkflowTopology.test.ts -t 'release prerequisites'`.
+- GREEN: exit 0, three selected tests passed against that revision. Both gate
+  shapes retain push and manual-dispatch behavior for their publication jobs.
+- RED / oracle: changing both `needs.gate.result == 'success'` comparisons to
+  `failure` made the normal-path test exit 1. The workflow was restored from a
+  saved copy. This is a falsifiability probe; the normal path also passed before
+  the fix.
+
+### TDD-0098
+
+- TC: TC-0017-0089. Implementation revision: `bc4edcb08`.
+- Command: the same targeted command as TDD-0097.
+- RED / oracle: before the workflow fix, the new rejection test reported 116
+  wrongly accepted cases and exited 1. The unsupported-expression test passed.
+  After separating normal and rejection cases and adding timeout inputs, the
+  implementation revision reports three selected tests passed, exit 0.
+- The fixtures remove needs and result fields and replace each path's results
+  with failure, cancellation, timeout, skip, unknown or empty states. They also
+  reject an inconsistent shape and whole-run cancellation. The evaluator reads
+  the actual YAML conditions and refuses unsupported syntax; it is not a general
+  implementation of GitHub's expression language.
+
+
+### TDD-0099
+
+- TC: TC-0017-0090. Implementation revision: `9c9febc3c`.
+- Command: `pnpm -C packages/qfai exec vitest run --project scripts tests/scripts/ownWorkflowTopology.test.ts -t 'TC-0017-009[012]'`.
+- RED: before the workflow and manifest implementation, all five new tests
+  failed. The classifier emitted no checks shape and the operation scripts were
+  absent.
+- GREEN: the same selection passed all five tests against the named revision.
+  The complete release describe also passed all 16 selected cases. Both the
+  ordered aggregate and the operations path retain every original command.
+- Oracle: replacing `ci:gate:types` with `echo omitted` made the ordered
+  coverage test fail, exit 1. Restoring the saved manifest returned the test green.
+
+### TDD-0100
+
+- TC: TC-0017-0091. Implementation revision: `9c9febc3c`.
+- Command and GREEN: the same five-test selection as TDD-0099, exit 0.
+- RED: before implementation, incomplete capability fixtures had no checks
+  output and invalid checks outputs could pass the publication conditions.
+- Oracle: replacing the all-operation-scripts predicate with `true` made
+  the incomplete-capability test fail, exit 1. The saved workflow was restored.
+- Fixtures include each absent or non-string operation declaration, legacy
+  whole and sliced manifests, missing and unknown outputs, and the forbidden
+  whole/operations combination. Existing prerequisite cases cover every added
+  job's failed, cancelled, timed-out, skipped, unknown, empty and missing result.
+
+### TDD-0101
+
+- TC: TC-0017-0092. Implementation revision: `9c9febc3c`.
+- Command and GREEN: the same five-test selection as TDD-0099, exit 0.
+- RED: the isolated-job test failed before implementation because the operation
+  jobs did not exist.
+- Oracle: adding `gate` to `gate-types.needs` made the isolation test fail,
+  exit 1. The saved workflow was restored.
+- Assertions cover verify-only dependencies, immutable tag and sidecar
+  checkouts, shared setup, read-only permissions, sidecar credentials and sparse
+  scope, the tag-time lint exemption and build-before-scan ordering.
+- These are executable classification and topology checks. They do not measure
+  actual hosted overlap or a wall-clock improvement; DR-0017-0020 records that
+  remaining measurement obligation.
+
+### TDD-0094
+
+- Revision: `7816cc489`.
+- Design recommendation: the delegated reviewer `completion_design` recommended
+  the declaration plus independent host equality after two rounds. Adopted to
+  enforce the existing exemption without another parser or changed skip rules.
+- RED: the seven new regression cases failed before the unconditional-host rule
+  was implemented. Matching skip declarations produced no unconditional-host
+  finding; missing and malformed exemption declarations were accepted.
+- GREEN: `pnpm exec vitest run tests/scripts/workflowHygiene.test.ts -t 'TDD-0094|TDD-0057'`
+  from `packages/qfai`: nine passed, including the unchanged clean-tree acceptance.
+  The seven regression cases cover both current lint hosts and missing, empty,
+  unknown, duplicate and non-string declarations.
+- The independent host-mapping assertion also passed:
+  `pnpm exec vitest run tests/scripts/ownWorkflowTopology.test.ts -t TDD-0012`.
+- ORACLE: removing only the unconditional-host check made all seven regression
+  cases fail. The source bytes were restored from an in-memory backup, and
+  `git diff --exit-code scripts/check-workflow-hygiene.mjs` passed afterward.
+- Format, lint, type checking and workflow hygiene passed. The cost declarations
+  remain five documentation-path jobs and 26 full-path instances. Full-suite
+  validation belongs to the pull request's CI.
+
+## Conditional matrix check names
+
+- Revised obligation: TC-0017-0043, under DR-0017-0022, pins one complete
+  check-name set per selection state. No test case or ledger row is added.
+- Revision: `efcfd25605dc007a89064069698f8e4ecc12eb28`.
+- Hosted documentation-only observation: run
+  <https://github.com/aganesy/QFAI/actions/runs/35492666770> at
+  `dad4384dced73d5fde5d619a9644503932da9ea9`; both paginated APIs return ten
+  checks, including bare `test` and `node-floor`, each `skipped`.
+- Hosted full observation: run
+  <https://github.com/aganesy/QFAI/actions/runs/35479590985> at
+  `bf473648c3f32ff61f63a7de6587c4db4f1e5346`; both paginated APIs return 26
+  successful checks, with nine expanded names per sliced lane.
+- GREEN: `pnpm exec vitest run --project scripts tests/scripts/ownWorkflowTopology.test.ts -t TC-0017-0043`
+  from `packages/qfai`: 1 passed, 80 skipped, exit 0.
+- Adjacent topology verification at the recorded revision:
+  `pnpm exec vitest run --project scripts tests/scripts/ownWorkflowTopology.test.ts -t 'TC-0017-004[123]'`:
+  3 passed, 78 skipped, exit 0.
+- Falsifiability: remove the `test` job's selection condition, then independently
+  remove the `node-floor` condition. Each mutation makes the documentation-only
+  equality fail with the expanded names replacing the expected bare name, exit
+  1. The saved workflow is restored after each mutation.
+- The same helper evaluates both sliced jobs. An unmodelled matrix condition
+  fails explicitly; it cannot silently turn into a successful inventory check.

@@ -22,6 +22,17 @@ name: Tag release commit
 # raises no workflow events for pushes made with `GITHUB_TOKEN`, so a tag pushed with the job token
 # would sit there without starting `release.yml`. It also keeps this workflow's `permissions:` at the
 # minimal `{ contents: read }`, leaving `BR-0017-0016`'s closed departure set untouched.
+#
+# One job of two steps, and neither the order nor the grouping is a leftover. The push is gated on
+# the decide step's output, so the two are one data dependency; what it writes is a single tag ref,
+# which two runs of the same version would race for. Giving the push a job of its own would repeat
+# the checkout and the runner start for two git commands, and it would move the gate from a step
+# output to a job output — where dropping it pushes a tag on every manifest change.
+#
+# The two lookups inside the decide step are serial for a related reason. Asking which pull request
+# carried the commit comes first because most pushes here are not releases, and that answer ends the
+# run before the tag lookup is reached. Asked at the same time, both would be spent on every
+# ordinary merge.
 on:
   push:
     branches:

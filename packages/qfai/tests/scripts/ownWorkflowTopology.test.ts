@@ -82,6 +82,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { runInNewContext } from "node:vm";
 
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
@@ -947,17 +948,31 @@ const DETECT_JOB = "detect";
 const LINT_JOB = "lint";
 const REQUIRED_CONTEXT_JOB = "build";
 
+/** A condition nothing can make false, which is the only one an executing job may carry. */
+const ALWAYS = /^\s*(?:\$\{\{\s*)?always\(\)\s*(?:\}\})?\s*$/;
+
 /**
- * Jobs that must run whatever detection selects.
+ * The jobs a documentation-only pull request executes, and the sum of their declared ceilings.
  *
- * `EX-0017-0007` names the four instances a documentation-only pull request may
- * execute: detection, lint, build and the verdict. `build` is there because it carries
- * the required status context (`BR-0017-0007`), and `BR-0017-0012` forbids a condition
- * on such a job or on anything it depends on. `lint` is there because `BR-0017-0011`
- * exempts it by name — it carries the formatter, the Markdown linter, the leakage
- * guard and the pin guard, every one of which a documentation change can break.
+ * "Executes" means nothing can prevent the job from running: no condition at all, or a condition
+ * whose whole expression is `always()`. The verdict is in the set for that second reason —
+ * `always()` is what makes it run when its needs are skipped, which is this path itself.
  */
-const UNCONDITIONAL_JOBS = [DETECT_JOB, LINT_JOB, REQUIRED_CONTEXT_JOB, VERDICT_JOB] as const;
+function documentationOnlyCost(jobs: Record<string, Record<string, unknown>>): {
+  jobs: string[];
+  timeoutMinutesSum: number;
+} {
+  const executing = Object.entries(jobs).filter(
+    ([, job]) => job["if"] === undefined || ALWAYS.test(String(job["if"])),
+  );
+  return {
+    jobs: executing.map(([id]) => id).sort(),
+    timeoutMinutesSum: executing.reduce((total, [, job]) => {
+      const declared = job["timeout-minutes"];
+      return total + (typeof declared === "number" ? declared : 0);
+    }, 0),
+  };
+}
 
 /** `needs` normalized to an array; a scalar `needs` is legal YAML. */
 function needsOf(job: Record<string, unknown>): string[] {
@@ -1063,27 +1078,37 @@ function runClassifier(input: {
   }
 }
 
-describe("TC-0017-0006 (TDD-0006): a documentation-only change executes at most four instances", () => {
-  it("leaves exactly four jobs unconditional and derives every other job's condition from detection", () => {
+describe("TC-0017-0006 (TDD-0006): the executing set and its declared timeout sum match the pin", () => {
+  it("agrees with the committed pin and derives every other job's condition from detection", () => {
     const jobs = ciJobs();
+    const cost = documentationOnlyCost(jobs);
 
-    // CLAIM 1 — the four that always run are exactly the four `EX-0017-0007` names.
-    // A set equality rather than "at least these", because the ceiling IS the
-    // requirement: a fifth unconditional job breaks it however useful it is.
-    // "Unconditional" means the job cannot be prevented from running, which is not
-    // the same as carrying no `if`. The verdict carries `if: always()` on purpose —
-    // it must run when its needs are SKIPPED, which is precisely the documentation-only
-    // case, and its accepting set treats `skipped` as passing. Counting it as
-    // conditional would have made the ceiling unmeetable for the one job the ceiling
-    // exists to protect.
-    const ALWAYS = /^\s*(?:\$\{\{\s*)?always\(\)\s*(?:\}\})?\s*$/;
-    const unconditional = Object.entries(jobs)
-      .filter(([, job]) => job["if"] === undefined || ALWAYS.test(String(job["if"])))
-      .map(([id]) => id)
-      .sort();
+    // CLAIM 1 — what this path executes agrees with the figure the declaration pins.
+    //
+    // The pin is the subject, not a ceiling. A flat list of four names would refuse a change
+    // that shortens the run and adds no work — splitting one job into two cheaper ones is the
+    // case — so the requirement is that the cost is RECORDED, in runner-minutes, and moves only
+    // in a change that moves the pin with it. `.github/required-status-contexts.json` carries
+    // the figure and the reasons each job is in the set; `scripts/pin-documentation-only-cost.mjs`
+    // rewrites it, and the hygiene lane refuses a tree where the two disagree.
+    //
+    // Asserted here as well as there because the two read the workflow by different routes: the
+    // lane parses it through its own collector, this row through `ciJobs`. Equality between two
+    // independent readings of one tree is what a single implementation cannot give itself.
+    const pins = [firstDeclaredContext()["documentationOnlyCostPin"]].filter(isRecord);
+    expect(pins, "the declaration must carry a documentationOnlyCostPin").toHaveLength(1);
+    expect
+      .soft(pins[0]?.["jobs"], "the pinned job set must be the set this workflow executes")
+      .toEqual(cost.jobs);
+    expect
+      .soft(
+        pins[0]?.["timeoutMinutesSum"],
+        "the pinned sum must be the ceilings this workflow declares",
+      )
+      .toBe(cost.timeoutMinutesSum);
 
-    // And only the verdict may reach the ceiling that way. `always()` on a lane would
-    // satisfy the count while running it on every documentation change, so which job
+    // And only the verdict may reach that set through a condition. `always()` on a lane would
+    // leave the pin satisfied while running the lane on every documentation change, so which job
     // is allowed the escape hatch is asserted rather than left to convention.
     const alwaysJobs = Object.entries(jobs)
       .filter(([, job]) => job["if"] !== undefined && ALWAYS.test(String(job["if"])))
@@ -1091,14 +1116,8 @@ describe("TC-0017-0006 (TDD-0006): a documentation-only change executes at most 
     expect
       .soft(alwaysJobs, "only the verdict may use always() to stay unconditional")
       .toEqual([VERDICT_JOB]);
-    expect
-      .soft(
-        unconditional,
-        "a documentation-only run may execute only detection, lint, build and the verdict",
-      )
-      .toEqual([...UNCONDITIONAL_JOBS].sort());
 
-    const selected = Object.entries(jobs).filter(([id]) => !listHas(UNCONDITIONAL_JOBS, id));
+    const selected = Object.entries(jobs).filter(([id]) => !listHas(cost.jobs, id));
 
     // CLAIM 2 — every conditional job derives its condition from the detection output.
     // A hand-written condition would satisfy CLAIM 1 and still select lanes by a rule
@@ -1174,6 +1193,117 @@ describe("TC-0017-0007 (TDD-0007): unneeded legs stay declared and are skipped, 
     expect
       .soft(JSON.stringify(strategy ?? null), "no selection condition may live inside the matrix")
       .not.toContain("needs.");
+  });
+});
+
+/**
+ * The lanes `BR-0017-0011` exempts from selection, by the command that runs each.
+ *
+ * A literal list, and that is the row's whole point: the rule's subject is the LANE, not the
+ * job hosting it, so a lane keeps its exemption when it moves. Derived from the aggregate
+ * script this list would lose exactly the lane that left the aggregate — which is the case
+ * the rule's own Notes name as satisfying `BR-0017-0007` while the guard stops running.
+ *
+ * Five, one per guard the rule enumerates: the formatter, the linter, the document and
+ * shipped-surface structure checks, the repository scans, and the agent-integration mirror.
+ */
+const EXEMPT_LANES = [
+  "pnpm format:check",
+  "pnpm lint",
+  "pnpm ci:lint:structure",
+  "pnpm ci:lint:scans",
+  "pnpm -C packages/qfai lint:mirror-surface",
+] as const;
+
+/** The lane aggregate a job enters by running it, and the lanes it then hosts. */
+const LANE_AGGREGATE = "pnpm ci:lint";
+
+/** Whether a command appears in a script or step body as a command, not as a prefix. */
+function runsCommand(body: string, command: string): boolean {
+  const escaped = command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[\\s;&|])${escaped}($|[\\s;&|])`, "m").test(body);
+}
+
+describe("TC-0017-0012 (TDD-0012): no lint-aggregate lane's host job is conditioned or listed", () => {
+  it("resolves each exempt lane to one host that carries no condition and is listed nowhere", () => {
+    const jobs = ciJobs();
+    const aggregate = readFileSync(path.join(REPO_ROOT, "scripts", "run-lint-checks.sh"), "utf-8");
+    // Only the pull-request profile. The release profile runs an overlapping but unequal set,
+    // and a lane present there and absent here is not exempt from a selection that profile
+    // never faces.
+    const lintProfile = aggregate.split("  lint)")[1]?.split("  gate)")[0] ?? "";
+
+    // A job hosts a lane either by naming it in a step, or by running the aggregate whose
+    // script names it. Both routes, because the extraction moved one lane from the second to
+    // the first and a check that read only one of them would have gone quiet at that moment.
+    const hostsOf = new Map<string, string[]>(EXEMPT_LANES.map((lane) => [lane, []]));
+    for (const [jobKey, job] of Object.entries(jobs)) {
+      const bodies = (Array.isArray(job["steps"]) ? job["steps"] : [])
+        .filter(isRecord)
+        .map((step) => String(step["run"] ?? ""));
+      for (const lane of EXEMPT_LANES) {
+        const direct = bodies.some((body) => runsCommand(body, lane));
+        const throughAggregate =
+          bodies.some((body) => runsCommand(body, LANE_AGGREGATE)) &&
+          runsCommand(lintProfile, lane);
+        if (direct || throughAggregate) hostsOf.get(lane)?.push(jobKey);
+      }
+    }
+
+    // CLAIM 1 — every lane has exactly one host. A lane with none runs nowhere, and claims 2
+    // and 3 would then pass over an empty set; a lane with two is the same work billed twice.
+    expect
+      .soft(
+        [...hostsOf].map(([lane, hosts]) => `${lane}: ${hosts.join(" and ") || "no host"}`).sort(),
+        "each exempt lane must resolve to exactly one host job",
+      )
+      .toEqual([
+        "pnpm -C packages/qfai lint:mirror-surface: mirror-surface",
+        "pnpm ci:lint:scans: lint",
+        "pnpm ci:lint:structure: lint",
+        "pnpm format:check: lint",
+        "pnpm lint: lint",
+      ]);
+
+    // CLAIM 2 — no host carries a condition. `BR-0017-0011`'s second sentence: a lane moved
+    // into a job of its own MUST NOT acquire one.
+    const conditioned = [...hostsOf.values()]
+      .flat()
+      .filter((jobKey) => jobs[jobKey]?.["if"] !== undefined)
+      .sort();
+    expect
+      .soft(conditioned, "a lane that runs on every pull request may not sit behind a condition")
+      .toEqual([]);
+
+    // CLAIM 3 — and no host appears in `dependencyConditions`. The pair is what the rule
+    // forbids: a condition alone is CLAIM 2's, an entry alone declares a skip the job cannot
+    // take, and together they satisfy `BR-0017-0007` while the guard stops running.
+    const declaration: unknown = JSON.parse(
+      readFileSync(path.join(REPO_ROOT, ".github", "required-status-contexts.json"), "utf-8"),
+    );
+    const listed = new Set<string>();
+    const contexts =
+      isRecord(declaration) && Array.isArray(declaration["contexts"])
+        ? declaration["contexts"].filter(isRecord)
+        : [];
+    for (const context of contexts) {
+      if (context["workflow"] === "ci.yml") {
+        expect(context["unconditionalDependencies"]).toEqual(
+          [...new Set([...hostsOf.values()].flat())].sort(),
+        );
+      }
+      const conditions = context["dependencyConditions"];
+      if (isRecord(conditions)) for (const key of Object.keys(conditions)) listed.add(key);
+    }
+    expect
+      .soft(
+        [...hostsOf.values()]
+          .flat()
+          .filter((jobKey) => listed.has(jobKey))
+          .sort(),
+        "no exempt lane's host may be declared skippable",
+      )
+      .toEqual([]);
   });
 });
 
@@ -1293,7 +1423,7 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
     // measurement was right and the conclusion was not: the CR had already been decided, by the
     // user, the other way. So the fix was to FINISH option A, and the lane now runs every test
     // whose subject is a root mirror tree — the three that were missing are `codex/agents`,
-    // `core/prFixSkillDocs` and `pr-merge/prMergePlan`.
+    // `core/prFixSkillDocs` and `core/prMergeSkillDocs`.
     const mirrors = runClassifier({
       paths: [".claude/rules/temporary-files.md", ".codex/skills/whatever.md"],
     });
@@ -1325,7 +1455,8 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
       // the script — an executable, which the classifier keeps out of the
       // documentation-only set, so the test job runs for a change to it.
       "tests/core/prFixSkillDocs.test.ts",
-      "tests/pr-merge/prMergePlan.test.ts",
+      // The `pr-merge` prose assertions, in their own file, for the same reason.
+      "tests/core/prMergeSkillDocs.test.ts",
     ]) {
       expect
         .soft(
@@ -1396,7 +1527,101 @@ describe("TC-0017-0011 (TDD-0011): a path in no recognized directory selects eve
   });
 });
 
-describe("TC-0017-0012 (TDD-0012): the lint lane carries no selection condition", () => {
+/**
+ * The first declared required-status context, read off disk.
+ *
+ * Two rows compare a pinned figure with what this file reads from `ci.yml`, and both need the
+ * same side of that comparison. A shared reader rather than two inline parses: the parses would
+ * drift, and one of them would then be comparing against a shape nothing checked.
+ */
+function firstDeclaredContext(): Record<string, unknown> {
+  const declaration: unknown = JSON.parse(
+    readFileSync(path.join(REPO_ROOT, ".github", "required-status-contexts.json"), "utf-8"),
+  );
+  const contexts =
+    isRecord(declaration) && Array.isArray(declaration["contexts"])
+      ? declaration["contexts"].filter(isRecord)
+      : [];
+  const [first] = contexts;
+  if (first === undefined) throw new Error("the declaration holds no context");
+  return first;
+}
+
+/**
+ * What a code-path pull request costs, read from the tree by this file's own reader.
+ *
+ * A second reading of the same tree, on purpose: the hygiene lane computes the same figures
+ * through its own collector, and equality between two independent readings is what a single
+ * implementation cannot give itself.
+ *
+ * `buildJobs` counts JOBS rather than executions, matching the pin. Two of the three condition
+ * their build step on the matrix leg, and resolving that needs a GitHub expression evaluated —
+ * which neither reader does.
+ */
+function codePathCost(jobs: Record<string, Record<string, unknown>>): {
+  instances: number;
+  timeoutMinutesSum: number;
+  installInstances: number;
+  buildJobs: string[];
+} {
+  let instances = 0;
+  let timeoutMinutesSum = 0;
+  let installInstances = 0;
+  const buildJobs: string[] = [];
+  for (const [id, job] of Object.entries(jobs)) {
+    const strategy = job["strategy"];
+    const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
+    const axes = isRecord(matrix) ? Object.values(matrix).filter(isStringArray) : [];
+    const legs = axes.length === 0 ? 1 : Math.max(...axes.map((axis) => axis.length), 1);
+    const declared = job["timeout-minutes"];
+    const steps = Array.isArray(job["steps"]) ? job["steps"].filter(isRecord) : [];
+    instances += legs;
+    if (typeof declared === "number") timeoutMinutesSum += declared * legs;
+    if (steps.some((step) => String(step["uses"] ?? "").includes(".github/actions/setup"))) {
+      installInstances += legs;
+    }
+    if (steps.some((step) => /(?:^|\s)pnpm\s[^\n]*\bbuild\b/.test(String(step["run"] ?? "")))) {
+      buildJobs.push(id);
+    }
+  }
+  buildJobs.sort();
+  return { instances, timeoutMinutesSum, installInstances, buildJobs };
+}
+
+describe("TC-0017-0087 (TDD-0096): the code path's cost agrees with the committed pin", () => {
+  it("matches every pinned figure against this file's own reading of the workflow", () => {
+    const cost = codePathCost(ciJobs());
+    const pinned = firstDeclaredContext()["codePathCostPin"];
+    expect(isRecord(pinned), "the declaration must carry a codePathCostPin").toBe(true);
+    if (!isRecord(pinned)) return;
+
+    // The figures are compared as a WHOLE, so a pin that agreed on three and drifted on the
+    // fourth fails on the fourth rather than passing on the three.
+    expect
+      .soft(
+        {
+          instances: pinned["instances"],
+          timeoutMinutesSum: pinned["timeoutMinutesSum"],
+          installInstances: pinned["installInstances"],
+          buildJobs: pinned["buildJobs"],
+        },
+        "the pin must be what this workflow declares; re-pin in the change that moved it",
+      )
+      .toEqual(cost);
+
+    // Agreement is the whole claim. The pin is not a ceiling: `NFR-0002` no longer says a
+    // code-path run costs less than some number, because the widening that raised these figures
+    // bought wall clock, which is `NFR-0001`'s subject. A row asserting a bound here would be one
+    // no state of the tree could fail, since both sides are read from the same tree.
+  });
+});
+
+// `TC-0017-0012`'s own row is the lane-host one further up: `BR-0017-0011` was restated over
+// every lane of the lint aggregate, whichever job hosts it, so the claim that reads one job's
+// condition is no longer the whole of what that test case asks for. What survives here is the
+// half about `BR-0017-0012` — the required-context job and its closure — plus the lint lane read
+// directly, which is the cheapest check on the tree and needs no lane resolution to make.
+describe("the required-context job and the lint lane both stay unconditional", () => {
   it("leaves the lint lane and the required-context job unconditional", () => {
     const jobs = ciJobs();
     const lint = jobs[LINT_JOB];
@@ -1445,18 +1670,13 @@ describe("TC-0017-0012 (TDD-0012): the lint lane carries no selection condition"
 // invariant that repartition will have to satisfy, landed BEFORE it rather than after —
 // which is the only order in which a guard can reject the change it guards against.
 //
-// ## Why literals rather than a before-and-after comparison
+// ## Why each state has a literal inventory
 //
-// `EX-0017-0013` describes "the set of check names a run reports, derived before lane
-// selection lands and after it lands". A test cannot derive the earlier set without
-// reading history, and a history-dependent assertion inside the main suite breaks under a
-// shallow clone — this repository already keeps its one history-dependent check out of the
-// aggregate gate for that reason.
-//
-// Pinning the set as literals gets the same guarantee and a better failure. A check name
-// is a repository-settings surface no agent can configure, so what matters is that the set
-// does not move; a literal list makes any creation, removal or rename a failing test that
-// names which one, instead of a diff someone has to interpret.
+// `EX-0017-0013` describes the names reported by full and documentation-only runs.
+// Separate literal inventories catch a created, removed or renamed check in either
+// state without reading Git history. A skipped matrix contributes its bare name;
+// an expanded matrix contributes one name per slice. The required context is the
+// same in both states.
 
 /**
  * The own-CI workflow files.
@@ -1499,41 +1719,23 @@ const OWN_WORKFLOW_FILES = [
 ] as const;
 
 /**
- * Every check name the own-CI workflow reports, as literals.
+ * The full-run check names, pinned independently of the workflow parser.
  *
- * Derived once by hand from the job keys and the matrix expansion, and then frozen. No job
- * in this file declares a `name:` override, so each check name is its job key — which is
- * exactly what makes `EX-0017-0004`'s falsifying observation work: "a rename shows as a
- * diff on the job key".
+ * Both sliced jobs report expanded names on a full run. When their job-level
+ * condition is false, GitHub reports one skipped check under each bare job name.
+ * `packages/qfai/docs/ci-check-names.md` records both observations and API totals.
  *
- * A matrix job reports one check per leg, named `<job> (<value>)`. That is why the legs
- * appear here individually: each is a check name, and removing a leg removes one — the
- * thing `BR-0017-0006` forbids and `TC-0017-0007` also guards from the matrix side.
- *
- * `node-floor` was added deliberately, which is what this pin is for: it made the addition a
- * failing test naming the new member rather than a diff to interpret. Every toolchain job
- * resolves `engines.node` (`>=20.19.0`, no ceiling), so `setup-node`
- * gives all of them the newest satisfying release and nothing runs on the floor the package
- * promises; an API present in Node 24 and absent in 20.19 passes every gate and breaks
- * exactly the supported users.
- *
- * It is sliced over the same nine values as `test`, so it reports nine check names and no
- * bare `node-floor`: no job produces that name, and pinning it would hold this list against
- * a check that cannot appear.
- *
- * Creating a check name is normally a repository-settings problem. It is not one here, which
- * is what lets a required lane be sliced without a settings change: only `ci-pass` is
- * required, the verdict is derived from its `needs` map, and a matrix job contributes ONE
- * rolled-up `result` to that map however many legs it expands to. So the nine legs are
- * gated by the context that already exists.
+ * Only `ci-pass` is required. Its needs map receives one rolled-up result per
+ * matrix, so neither selection state requires a branch-protection change.
  */
-const CI_CHECK_NAMES = [
+const FULL_CI_CHECK_NAMES = [
   "build",
   "check-types",
   "check-types-future",
   "ci-pass",
   "detect",
   "lint",
+  "mirror-surface",
   "node-floor (cli)",
   "node-floor (core)",
   "node-floor (e2e)",
@@ -1555,14 +1757,33 @@ const CI_CHECK_NAMES = [
   "test (validators)",
 ] as const;
 
+const CI_CHECK_NAMES = {
+  full: FULL_CI_CHECK_NAMES,
+  "documentation-only": [
+    "build",
+    "check-types",
+    "check-types-future",
+    "ci-pass",
+    "detect",
+    "lint",
+    "mirror-surface",
+    "node-floor",
+    "scanner-coverage",
+    "test",
+  ],
+} as const;
+
+type CiSelection = keyof typeof CI_CHECK_NAMES;
+
 /**
  * The check names one workflow file reports.
  *
  * A job's check name is its `name:` when it declares one and its key otherwise; a matrix
- * job reports one per leg. Both are modelled, so a future `name:` override is visible to
+ * job reports one per leg when selected, or one bare name when skipped before expansion.
+ * Both states are modelled, so a future `name:` override is visible to
  * `TC-0017-0043` rather than silently renaming a check.
  */
-function checkNames(file: string): string[] {
+function checkNames(file: string, selection: CiSelection): string[] {
   const doc: unknown = parseYaml(readFileSync(path.join(WORKFLOWS_DIR, file), "utf-8"));
   if (!isRecord(doc) || !isRecord(doc["jobs"])) {
     throw new Error(`${file} declares no jobs`);
@@ -1574,7 +1795,16 @@ function checkNames(file: string): string[] {
     const strategy = job["strategy"];
     const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
     const legs = isRecord(matrix) ? Object.values(matrix).filter(isStringArray).flat() : [];
-    if (legs.length > 0) {
+    const condition = job["if"];
+    if (
+      legs.length > 0 &&
+      condition !== undefined &&
+      condition !== "${{ needs.detect.outputs.full == 'true' }}"
+    ) {
+      throw new Error(`${id} has an unmodelled matrix selection condition: ${String(condition)}`);
+    }
+    const selected = selection === "full" || condition === undefined;
+    if (legs.length > 0 && selected) {
       for (const leg of legs) names.push(`${label} (${leg})`);
     } else {
       names.push(label);
@@ -1936,17 +2166,13 @@ describe("TC-0017-0042 (TDD-0042): the aggregate verdict check name is immutable
   });
 });
 
-describe("TC-0017-0043 (TDD-0043): selection creates, removes and renames no check name", () => {
-  it("reports exactly the pinned check-name set", () => {
-    // The whole set, as one equality. Selection landed in change 8 and added conditions to
-    // four jobs; a condition changes whether a check REPORTS success or skipped, never
-    // whether it exists. This is the assertion that says so.
-    expect
-      .soft(
-        checkNames("ci.yml"),
-        "no check name may be created, removed or renamed — each one is a repository setting no agent can configure",
-      )
-      .toEqual([...CI_CHECK_NAMES].sort());
+describe("TC-0017-0043 (TDD-0043): each selection state preserves its reported check names", () => {
+  it("reports the complete pinned set for full and documentation-only runs", () => {
+    for (const selection of ["full", "documentation-only"] as const) {
+      expect
+        .soft(checkNames("ci.yml", selection), `${selection} must retain its observed check names`)
+        .toEqual([...CI_CHECK_NAMES[selection]].sort());
+    }
   });
 });
 
@@ -2770,6 +2996,35 @@ describe("release automation performs decisions rather than making them", () => 
     ).toBe(true);
   });
 
+  it("pushes the tag only where the decision that precedes it said to", () => {
+    // Every "nothing to tag" answer writes `push=false` and ends the step successfully. The gate
+    // is what makes those answers mean anything: the version output is written on all of those
+    // paths too, so an ungated push tags any merge that moved the manifest and happens to carry a
+    // matching CHANGELOG heading. A tag starts `release.yml`, so that is not a mistake a rerun
+    // undoes.
+    //
+    // Matched on the OUTPUT NAME, and read from the step or from the job around it. Pinning
+    // `steps.version` would fail a split that gave the push a job of its own and carried the gate
+    // as `needs.<job>.outputs.push` — correct, and this row would have called it a regression.
+    const tagWorkflow = workflow("tag-release.yml");
+    const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
+    const gates: string[] = [];
+    for (const job of Object.values(jobs)) {
+      if (!isRecord(job) || !Array.isArray(job["steps"])) continue;
+      for (const step of job["steps"]) {
+        if (!isRecord(step)) continue;
+        if (!/git push[^\n]*refs\/tags\//.test(String(step["run"] ?? ""))) continue;
+        gates.push(`${String(step["if"] ?? "")} ${String(job["if"] ?? "")}`);
+      }
+    }
+    expect(gates, "exactly one step may push a tag ref").toHaveLength(1);
+    expect(
+      gates[0],
+      "the tag push must be conditional on the `push` output the step before it wrote: the " +
+        "version output is set on every path, so an ungated push tags an ordinary merge",
+    ).toMatch(/outputs\.push\b/);
+  });
+
   it("tags from the manifest, and only when the CHANGELOG names that version", () => {
     const tagWorkflow = workflow("tag-release.yml");
     const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
@@ -3345,6 +3600,16 @@ describe("release automation performs decisions rather than making them", () => 
         );
         const run = spawnSync("bash", [script], { encoding: "utf-8" });
         if (run.error !== undefined) throw run.error;
+        // A tool the gate calls and this machine lacks leaves the gate silent,
+        // which reads as a verdict: the positive case failed saying the workflow
+        // would not tag a release, and the negative ones passed for no reason.
+        // The GitHub runner ships `jq`; a contributor's machine need not.
+        const missing = /: ([\w.+-]+): command not found/.exec(run.stderr)?.[1];
+        if (missing !== undefined) {
+          throw new Error(
+            `the association gate calls \`${missing}\`, which is not installed here; install it to run this case`,
+          );
+        }
         return `${run.stdout}${run.stderr}`.includes("TAGGED");
       } finally {
         rmSync(dir, { recursive: true, force: true });
@@ -3660,7 +3925,14 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     return `${lines.slice(open + 1, close).join("\n")}\n`;
   };
 
-  type Classification = { status: number; shape: string; output: string };
+  type Classification = { status: number; shape: string; checks: string; output: string };
+  const operationScripts = ["ci:gate:ssot", "ci:gate:lint", "ci:gate:types", "ci:gate:build"];
+  const operationJobs = ["gate-ssot", "gate-lint", "gate-types"];
+  const gatePaths = [
+    { shape: "whole", checks: "aggregate" },
+    { shape: "sliced", checks: "aggregate" },
+    { shape: "sliced", checks: "operations" },
+  ];
 
   /**
    * The classifier, run against two manifests.
@@ -3696,6 +3968,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
       return {
         status: run.status ?? -1,
         shape: match?.[1] ?? "",
+        checks: /^checks-shape=(.*)$/m.exec(written)?.[1] ?? "",
         output: `${run.stdout ?? ""}${run.stderr ?? ""}`,
       };
     } finally {
@@ -3724,26 +3997,32 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
    *
    * A condition that never mentions the decision is orthogonal to it — the two build steps select
    * on `matrix.slice` — and counts as running under both. A condition that DOES mention it must
-   * be one of the two forms, and throws otherwise: a shape condition rewritten into something
-   * this reader does not understand is exactly when the rows below would silently start agreeing
-   * with whatever it now means.
+   * use the restricted release-condition grammar. Unknown syntax throws rather than silently
+   * treating an unrecognized condition as an unconditional step.
    */
-  const SHAPE_CONDITION = /^needs\.verify\.outputs\.suite-shape == '(sliced|whole)'$/;
-
-  const runsUnder = (owner: Record<string, unknown>, where: string, shape: string): boolean => {
+  const runsUnder = (
+    owner: Record<string, unknown>,
+    where: string,
+    shape: string,
+    checks: string,
+  ): boolean => {
     const condition = owner["if"];
     if (condition === undefined) return true;
     if (typeof condition !== "string") throw new Error(`${where} carries a non-string condition`);
     const text = condition.trim();
-    if (!text.includes("suite-shape")) return true;
-    const match = SHAPE_CONDITION.exec(text);
-    if (match === null) {
-      throw new Error(`${where} selects on the shape in a form this row cannot classify: ${text}`);
+    if (!text.includes("suite-shape") && !text.includes("checks-shape")) return true;
+    try {
+      return acceptsRelease(
+        text,
+        { verify: { outputs: { "suite-shape": shape, "checks-shape": checks } } },
+        "push",
+      );
+    } catch (error) {
+      throw new Error(`${where} has an unsupported shape condition`, { cause: error });
     }
-    return match[1] === shape;
   };
 
-  /** The gate jobs, discovered by prefix and held at the four this workflow declares. */
+  /** The gate jobs, discovered by prefix and checked against the declared set below. */
   const gateJobs = (): Record<string, Record<string, unknown>> =>
     Object.fromEntries(Object.entries(releaseJobs()).filter(([id]) => id.startsWith("gate")));
 
@@ -3774,14 +4053,14 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
    * package's. No gate step calls a pnpm built-in, so every match is a script that has to exist;
    * a `-C` naming any other directory throws rather than being dropped.
    */
-  const invocations = (shape: string): Invocation[] => {
+  const invocations = (shape: string, checks: string): Invocation[] => {
     const out: Invocation[] = [];
     for (const [jobId, job] of Object.entries(gateJobs())) {
-      if (!runsUnder(job, `release.yml#${jobId}`, shape)) continue;
+      if (!runsUnder(job, `release.yml#${jobId}`, shape, checks)) continue;
       for (const step of steps(job)) {
         const name = String(step["name"] ?? "(unnamed)");
         const where = `release.yml#${jobId}: ${name}`;
-        if (!runsUnder(step, where, shape)) continue;
+        if (!runsUnder(step, where, shape, checks)) continue;
         const body = step["run"];
         if (typeof body !== "string") continue;
         for (const slice of matrixSlices(job)) {
@@ -3819,15 +4098,14 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
    * What the root aggregate a gate step names would itself run.
    *
    * On the old path it is the tag's own `ci:gate`, recorded above. On the sliced path the gate
-   * names `ci:gate:checks`, which is THIS tree's script, so it is resolved transitively by the
-   * reader the hygiene lane already uses: a checks script that started reaching the suite through
-   * something it calls would make the sliced path a double run, and one hop would not see it.
+   * names either the checks aggregate or an operation entry point. Each invoked script is
+   * resolved transitively so a check reaching the suite through another script is counted too.
    */
-  const aggregateBody = (shape: string): string => {
+  const aggregateBody = (shape: string, script: string): string => {
     if (shape === "whole") return TAGGED_AGGREGATE_BODY;
-    const resolved: unknown = invokedScriptBodies("pnpm ci:gate:checks", REPO_ROOT);
+    const resolved: unknown = invokedScriptBodies(`pnpm ${script}`, REPO_ROOT);
     if (!Array.isArray(resolved)) {
-      throw new Error("the script reader returned no list for pnpm ci:gate:checks");
+      throw new Error(`the script reader returned no list for pnpm ${script}`);
     }
     return resolved.map((entry) => (Array.isArray(entry) ? String(entry[1] ?? "") : "")).join("\n");
   };
@@ -3841,14 +4119,14 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
    * suite and a sliced leg are the same suite arriving by two routes, and a set would swallow the
    * second.
    */
-  const suiteRuns = (shape: string, floor: boolean): string[] => {
+  const suiteRuns = (shape: string, checks: string, floor: boolean): string[] => {
     const onFloor = new Set(
       Object.entries(gateJobs())
         .filter(([, job]) => pinsFloor(job) === floor)
         .map(([id]) => id),
     );
     const runs: string[] = [];
-    for (const invocation of invocations(shape)) {
+    for (const invocation of invocations(shape, checks)) {
       if (!onFloor.has(invocation.jobId)) continue;
       if (invocation.manifest === "package") {
         if (invocation.script === "test" || invocation.script.startsWith("test:")) {
@@ -3857,7 +4135,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
         continue;
       }
       if (!invocation.script.startsWith("ci:gate")) continue;
-      for (const match of aggregateBody(shape).matchAll(
+      for (const match of aggregateBody(shape, invocation.script).matchAll(
         /\bpnpm -C packages\/qfai (test(?::[\w-]+)?)\b/g,
       )) {
         const script = match[1];
@@ -3866,6 +4144,154 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     }
     return runs.sort();
   };
+
+  // QFAI:SPEC-0017:TC-0017-0090
+  it("TC-0017-0090 (TDD-0099): classifies complete operation capabilities and legacy trees", () => {
+    const current = classify(currentRoot(), currentPackage());
+    expect(current.status, current.output).toBe(0);
+    expect([current.shape, current.checks]).toEqual(["sliced", "operations"]);
+    for (const tag of TAGS) expect(classifyTag(tag).checks, tag).toBe("aggregate");
+    const legacy = classify(
+      manifestWith(scriptKeys(currentRoot()).filter((key) => !operationScripts.includes(key))),
+      currentPackage(),
+    );
+    expect([legacy.shape, legacy.checks]).toEqual(["sliced", "aggregate"]);
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0090
+  it("TC-0017-0090 (TDD-0099): preserves the complete ordered release checks", () => {
+    const parsed: unknown = JSON.parse(currentRoot());
+    if (!isRecord(parsed) || !isRecord(parsed["scripts"])) throw new Error("root scripts missing");
+    const scripts = parsed["scripts"];
+    expect(scripts["ci:gate:checks"]).toBe(
+      operationScripts.map((script) => `pnpm ${script}`).join(" && "),
+    );
+    const bodies = operationScripts.map((script) => {
+      const body = scripts[script];
+      if (typeof body !== "string") throw new Error(`${script} missing`);
+      return body;
+    });
+    expect(bodies.join(" && ")).toBe(
+      "pnpm sync:ssot && git diff --exit-code .qfai/ qfai.config.yaml packages/qfai/assets/init/.qfai/ && bash ./scripts/run-lint-checks.sh gate && pnpm check-types && node ./scripts/check-build-warnings.mjs && pnpm verify:pack",
+    );
+    const selected = invocations("sliced", "operations")
+      .filter((entry) => entry.manifest === "root")
+      .map((entry) => entry.script);
+    expect(selected.sort()).toEqual([...operationScripts].sort());
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0091
+  it("TC-0017-0091 (TDD-0100): incomplete operation capabilities retain aggregate checks", () => {
+    const root = scriptKeys(currentRoot());
+    for (const dropped of operationScripts) {
+      expect(root).toContain(dropped);
+      for (const value of [undefined, 1, null, {}]) {
+        const scripts = Object.fromEntries(
+          root.map((key) => [key, key === dropped ? value : "declared"]),
+        );
+        const result = classify(JSON.stringify({ scripts }), currentPackage());
+        expect(result.status, `${dropped}: ${result.output}`).toBe(0);
+        expect([result.shape, result.checks]).toEqual(["sliced", "aggregate"]);
+      }
+    }
+    const whole = classify(currentRoot(), manifestWith(["test"]));
+    expect([whole.shape, whole.checks]).toEqual(["whole", "aggregate"]);
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0091
+  it("TC-0017-0091 (TDD-0100): refuses missing unknown and incompatible checks outputs", () => {
+    for (const id of ["github-release", "publish"]) {
+      const condition = releaseJobs()[id]?.["if"];
+      if (typeof condition !== "string") throw new Error(`${id} has no release condition`);
+      for (const { shape, checks } of gatePaths) {
+        const needs: ReleaseNeeds = {
+          verify: { result: "success", outputs: { "suite-shape": shape, "checks-shape": checks } },
+          gate: { result: "success" },
+          "gate-tests": { result: shape === "sliced" ? "success" : "skipped" },
+          "gate-floor": { result: shape === "sliced" ? "success" : "skipped" },
+          "gate-floor-whole": { result: shape === "whole" ? "success" : "skipped" },
+          ...Object.fromEntries(
+            operationJobs.map((name) => [
+              name,
+              { result: checks === "operations" ? "success" : "skipped" },
+            ]),
+          ),
+        };
+        for (const invalid of [
+          undefined,
+          "",
+          "unknown",
+          checks === "operations" ? "aggregate" : "operations",
+        ]) {
+          const changed = {
+            ...needs,
+            verify: {
+              result: "success",
+              outputs: { "suite-shape": shape, "checks-shape": invalid },
+            },
+          };
+          expect
+            .soft(
+              acceptsRelease(condition, changed, "push"),
+              `${id} ${shape} ${checks} -> ${invalid}`,
+            )
+            .toBe(false);
+        }
+      }
+      const impossible: ReleaseNeeds = Object.fromEntries(
+        Object.keys(gateJobs()).map((name) => [
+          name,
+          { result: ["gate-tests", "gate-floor"].includes(name) ? "skipped" : "success" },
+        ]),
+      );
+      impossible["verify"] = {
+        result: "success",
+        outputs: { "suite-shape": "whole", "checks-shape": "operations" },
+      };
+      expect(acceptsRelease(condition, impossible, "push"), `${id} whole operations`).toBe(false);
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0092
+  it("TC-0017-0092 (TDD-0101): runs independent checks in isolated verified workspaces", () => {
+    for (const id of ["gate", ...operationJobs]) {
+      const job = gateJobs()[id];
+      if (job === undefined) throw new Error(`${id} missing`);
+      expect(job["needs"], id).toBe("verify");
+      expect(job["timeout-minutes"], id).toBeGreaterThan(0);
+      expect(job["permissions"] ?? releaseDocument()["permissions"], id).toEqual({
+        contents: "read",
+      });
+      const actions = steps(job).filter((step) => typeof step["uses"] === "string");
+      const checkout = actions[0]?.["with"];
+      const sidecar = actions[1]?.["with"];
+      expect(isRecord(checkout) ? checkout["ref"] : undefined, id).toBe(
+        "${{ needs.verify.outputs.sha }}",
+      );
+      expect(isRecord(checkout) ? checkout["persist-credentials"] : undefined, id).toBe(false);
+      expect(isRecord(sidecar) ? sidecar["ref"] : undefined, id).toBe("${{ github.sha }}");
+      expect(isRecord(sidecar) ? sidecar["path"] : undefined, id).toBe(".ci-actions");
+      expect(isRecord(sidecar) ? sidecar["persist-credentials"] : undefined, id).toBe(false);
+      expect(isRecord(sidecar) ? sidecar["sparse-checkout"] : undefined, id).toBe(
+        ".github/actions",
+      );
+      expect(isRecord(sidecar) ? sidecar["clean"] : undefined, id).toBe(false);
+      expect(isRecord(sidecar) ? sidecar["sparse-checkout-cone-mode"] : undefined, id).toBe(false);
+      expect(actions[2]?.["uses"], id).toBe("./.ci-actions/.github/actions/setup");
+    }
+    const lintEnv = gateJobs()["gate-lint"]?.["env"];
+    expect(isRecord(lintEnv) ? lintEnv["VERSION_PIN_SKIP"] : undefined).toBe("1");
+    const gate = gateJobs()["gate"];
+    if (gate === undefined) throw new Error("gate missing");
+    const commands = steps(gate)
+      .filter((step) => runsUnder(step, "gate", "sliced", "operations"))
+      .map((step) => step["run"])
+      .filter((value): value is string => typeof value === "string");
+    expect(commands).toEqual([
+      "pnpm ci:gate:build",
+      "bash packages/qfai/scripts/check-no-internal-version-leakage.sh",
+    ]);
+  });
 
   it("reads every existing tag as the shape its tree can actually run", () => {
     const seen = new Map<string, string>();
@@ -3888,28 +4314,35 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
   });
 
   /**
-   * Every tree the gate has to work against: the three tagged shapes, and this one.
-   *
-   * This tree is in the list because it is the only tree that takes the sliced path — no tag has
-   * been cut on it yet — so without it the sliced half of the workflow is walked by nothing and
-   * both rows below would pass on a sliced path that named scripts nobody declares.
+   * The recorded tags, a sliced tree without operation entry points, and this tree.
+   * Together they exercise every runnable combination of suite and checks capabilities.
    */
   const subjects = (): Array<{
     label: string;
     shape: string;
+    checks: string;
     root: string[];
     package: string[];
   }> => [
     ...TAGS.map((tag) => ({
       label: tag,
       shape: classifyTag(tag).shape,
+      checks: classifyTag(tag).checks,
       root: [...TAGGED_MANIFESTS[tag].root],
       package: [...TAGGED_MANIFESTS[tag].package],
     })),
     {
       label: "this tree",
       shape: classify(currentRoot(), currentPackage()).shape,
+      checks: classify(currentRoot(), currentPackage()).checks,
       root: scriptKeys(currentRoot()),
+      package: scriptKeys(currentPackage()),
+    },
+    {
+      label: "sliced tree before operation extraction",
+      shape: "sliced",
+      checks: "aggregate",
+      root: scriptKeys(currentRoot()).filter((script) => !operationScripts.includes(script)),
       package: scriptKeys(currentPackage()),
     },
   ];
@@ -3922,7 +4355,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
         root: new Set<string>(subject.root),
         package: new Set<string>(subject.package),
       };
-      const found = invocations(subject.shape);
+      const found = invocations(subject.shape, subject.checks);
       expect(
         found.length,
         `${subject.label} takes the ${subject.shape} path and runs no pnpm script`,
@@ -3947,9 +4380,9 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
   it("runs the suite exactly once for one tree, on the range and on the floor", () => {
     const slices = [...declaredSlices()].map((slice) => `test:${slice}`).sort();
     const covers = [["test"], slices];
-    for (const { label: tag, shape } of subjects()) {
+    for (const { label: tag, shape, checks } of subjects()) {
       for (const floor of [false, true]) {
-        const runs = suiteRuns(shape, floor);
+        const runs = suiteRuns(shape, checks, floor);
         const isCover = covers.some(
           (cover) => cover.length === runs.length && cover.every((s, i) => s === runs[i]),
         );
@@ -4028,6 +4461,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
         )
         .not.toBe(0);
       expect.soft(result.shape, `${why}: nothing may be published as the decision`).toBe("");
+      expect.soft(result.checks, `${why}: neither output may be published on refusal`).toBe("");
     }
   });
 
@@ -4041,27 +4475,34 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
       "the decision must be published by `verify`, which every other job already waits for",
     ).toBe("${{ steps.shape.outputs.suite-shape }}");
 
-    // Exactly the four gate jobs, and each one's path stated on the job or on its steps. A fifth
-    // gate job, or one whose condition stopped naming a shape, reaches `runsUnder` and throws.
+    // Every gate must be counted here and in both upload barriers.
     const gates = Object.keys(gateJobs()).sort();
     expect(
       gates,
-      "the gate jobs are a closed set; a fifth is a change someone should read",
-    ).toEqual(["gate", "gate-floor", "gate-floor-whole", "gate-tests"]);
-    for (const shape of ["sliced", "whole"]) {
+      "the gate jobs are a closed set; an addition must update the publication barrier",
+    ).toEqual(["gate", "gate-floor", "gate-floor-whole", ...operationJobs, "gate-tests"].sort());
+    expect(isRecord(outputs) ? outputs["checks-shape"] : undefined).toBe(
+      "${{ steps.shape.outputs.checks-shape }}",
+    );
+    for (const { shape, checks } of gatePaths) {
       const running = gates.filter((id) => {
         const job = jobs[id];
         if (job === undefined) throw new Error(`release.yml lost its ${id} job`);
-        return runsUnder(job, `release.yml#${id}`, shape);
+        return runsUnder(job, `release.yml#${id}`, shape, checks);
       });
       expect
         .soft(running, `the ${shape} path must run a gate on the range and a gate on the floor`)
         .toEqual(
-          shape === "sliced" ? ["gate", "gate-floor", "gate-tests"] : ["gate", "gate-floor-whole"],
+          [
+            ...(shape === "sliced"
+              ? ["gate", "gate-floor", "gate-tests"]
+              : ["gate", "gate-floor-whole"]),
+            ...(checks === "operations" ? operationJobs : []),
+          ].sort(),
         );
     }
 
-    // Publication waits on all four whichever path ran. Without a condition that accepts a
+    // Publication waits on every gate whichever path ran. Without a condition that accepts a
     // skipped dependency, the jobs the other path skipped would skip these too and no tag could
     // be published at all; with `always()` instead of these terms, a RED gate would be published
     // over.
@@ -4071,18 +4512,184 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
       const needs = job["needs"];
       expect
         .soft([...(Array.isArray(needs) ? needs : [])].sort(), `${id} must wait on every gate`)
-        .toEqual(["gate", "gate-floor", "gate-floor-whole", "gate-tests", "verify"]);
-      const condition = String(job["if"] ?? "");
-      expect
-        .soft(condition, `${id} must run when a gate the other path owns was skipped`)
-        .toContain("!cancelled()");
-      expect
-        .soft(condition, `${id} must not treat a failed gate as a passed one`)
-        .toContain("!contains(needs.*.result, 'failure')");
-      expect
-        .soft(condition, `${id} must not treat a cancelled gate as a passed one`)
-        .toContain("!contains(needs.*.result, 'cancelled')");
-      expect.soft(condition, `${id} must not publish over a red gate`).not.toContain("always()");
+        .toEqual(
+          [
+            "gate",
+            "gate-floor",
+            "gate-floor-whole",
+            ...operationJobs,
+            "gate-tests",
+            "verify",
+          ].sort(),
+        );
+    }
+  });
+
+  type ReleaseNeed = {
+    result?: string | undefined;
+    outputs?: { "suite-shape"?: string | undefined; "checks-shape"?: string | undefined };
+  };
+  type ReleaseNeeds = Record<string, ReleaseNeed>;
+
+  /** Evaluates the release conditions' lowercase string fixtures and Boolean operators only. */
+  const acceptsRelease = (
+    condition: string,
+    needs: ReleaseNeeds,
+    event: string,
+    cancelled = false,
+  ): boolean => {
+    const expression = condition.trim().replace(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/, "$1");
+    const token =
+      /\s+|contains\(needs\.\*\.result,\s*'([^']*)'\)|cancelled\(\)|github\.event_name|needs\.([a-z][a-z-]*)\.(result|outputs\.(?:suite|checks)-shape)|'[^']*'|&&|\|\||==|!=|[!()]/gy;
+    const translated: string[] = [];
+    let offset = 0;
+    while (offset < expression.length) {
+      token.lastIndex = offset;
+      const match = token.exec(expression);
+      if (match === null) {
+        throw new Error(`Unsupported release condition syntax at ${expression.slice(offset)}`);
+      }
+      offset = token.lastIndex;
+      const text = match[0];
+      if (/^\s+$/.test(text)) continue;
+      if (match[1] !== undefined) {
+        translated.push(String(Object.values(needs).some((need) => need.result === match[1])));
+      } else if (text === "cancelled()") {
+        translated.push(String(cancelled));
+      } else if (text === "github.event_name") {
+        translated.push(JSON.stringify(event));
+      } else if (match[2] !== undefined) {
+        if (
+          ![
+            "verify",
+            "gate",
+            "gate-tests",
+            "gate-floor",
+            "gate-floor-whole",
+            ...operationJobs,
+          ].includes(match[2])
+        ) {
+          throw new Error(`Unsupported release need ${match[2]}`);
+        }
+        const need = needs[match[2]];
+        translated.push(
+          JSON.stringify(
+            (match[3] === "result"
+              ? need?.result
+              : need?.outputs?.[
+                  match[3] === "outputs.checks-shape" ? "checks-shape" : "suite-shape"
+                ]) ?? "",
+          ),
+        );
+      } else if (text.startsWith("'")) {
+        translated.push(JSON.stringify(text.slice(1, -1)));
+      } else {
+        translated.push(text);
+      }
+    }
+    // Only literals and the operators above reach the VM; unsupported syntax never evaluates.
+    const result: unknown = runInNewContext(translated.join(" "), {}, { timeout: 100 });
+    if (typeof result !== "boolean") throw new Error("Release condition must return a Boolean");
+    return result;
+  };
+
+  // QFAI:SPEC-0017:TC-0017-0088
+  it("TC-0017-0088 (TDD-0097): release prerequisites accept complete gate paths", () => {
+    for (const id of ["github-release", "publish"]) {
+      const condition = releaseJobs()[id]?.["if"];
+      if (typeof condition !== "string") throw new Error(`${id} has no release condition`);
+      for (const { shape, checks } of gatePaths) {
+        const needs: ReleaseNeeds = {
+          verify: { result: "success", outputs: { "suite-shape": shape, "checks-shape": checks } },
+          gate: { result: "success" },
+          "gate-tests": { result: shape === "sliced" ? "success" : "skipped" },
+          "gate-floor": { result: shape === "sliced" ? "success" : "skipped" },
+          "gate-floor-whole": { result: shape === "whole" ? "success" : "skipped" },
+          ...Object.fromEntries(
+            operationJobs.map((name) => [
+              name,
+              { result: checks === "operations" ? "success" : "skipped" },
+            ]),
+          ),
+        };
+        for (const event of ["push", "workflow_dispatch"]) {
+          expect(acceptsRelease(condition, needs, event), `${id} ${shape} ${event}`).toBe(
+            id === "publish" || event === "push",
+          );
+        }
+      }
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0089
+  it("TC-0017-0089 (TDD-0098): release prerequisites reject invalid gate paths", () => {
+    for (const id of ["github-release", "publish"]) {
+      const condition = releaseJobs()[id]?.["if"];
+      if (typeof condition !== "string") throw new Error(`${id} has no release condition`);
+      for (const { shape, checks } of gatePaths) {
+        const required =
+          shape === "sliced"
+            ? ["verify", "gate", "gate-tests", "gate-floor"]
+            : ["verify", "gate", "gate-floor-whole"];
+        const inactive = shape === "sliced" ? ["gate-floor-whole"] : ["gate-tests", "gate-floor"];
+        (checks === "operations" ? required : inactive).push(...operationJobs);
+        const needs: ReleaseNeeds = Object.fromEntries([
+          ...required.map((name) => [name, { result: "success" }]),
+          ...inactive.map((name) => [name, { result: "skipped" }]),
+        ]);
+        needs["verify"] = {
+          result: "success",
+          outputs: { "suite-shape": shape, "checks-shape": checks },
+        };
+        expect(acceptsRelease(condition, needs, "push", true), `${id} cancelled`).toBe(false);
+        for (const name of [...required, ...inactive]) {
+          const invalidStates = required.includes(name)
+            ? ["failure", "cancelled", "skipped", "timed_out", "unknown", "", undefined]
+            : ["success", "failure", "cancelled", "timed_out", "unknown", "", undefined];
+          for (const result of invalidStates) {
+            const changed = { ...needs, [name]: { ...needs[name], result } };
+            expect
+              .soft(acceptsRelease(condition, changed, "push"), `${id} ${shape} ${name}: ${result}`)
+              .toBe(false);
+          }
+          const missing = Object.fromEntries(Object.entries(needs).filter(([key]) => key !== name));
+          expect
+            .soft(acceptsRelease(condition, missing, "push"), `${id} ${shape} missing ${name}`)
+            .toBe(false);
+        }
+        for (const invalidShape of [
+          "unknown",
+          "",
+          undefined,
+          shape === "sliced" ? "whole" : "sliced",
+        ]) {
+          const changed = {
+            ...needs,
+            verify: {
+              result: "success",
+              outputs: { "suite-shape": invalidShape, "checks-shape": checks },
+            },
+          };
+          expect
+            .soft(
+              acceptsRelease(condition, changed, "push"),
+              `${id} ${shape} shape ${invalidShape}`,
+            )
+            .toBe(false);
+        }
+      }
+    }
+  });
+
+  // QFAI:SPEC-0017:TC-0017-0089
+  it("TC-0017-0089 release prerequisites evaluator refuses unsupported expressions", () => {
+    for (const expression of [
+      "always()",
+      "true || unknown()",
+      "needs.future.result == 'success'",
+      "'yes'",
+    ]) {
+      expect(() => acceptsRelease(expression, {}, "push"), expression).toThrow();
     }
   });
 

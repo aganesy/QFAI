@@ -27,6 +27,7 @@ import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
+  API_BUDGET_HOOK_MARKER,
   DOCUMENTATION_CLARITY_HOOK_MARKER,
   GRILLING_DELEGATION_HOOK_MARKER,
   GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
@@ -47,6 +48,15 @@ const MESSAGES_ARG = `${PROJECT_DIR_PLACEHOLDER}/.agents/rules/reminders.json`;
 /** The shipped message file. */
 const SHIPPED_MESSAGES = "packages/qfai/assets/init/root/.agents/rules/reminders.json";
 
+/** What the host writes to a `Bash` hook's stdin for one command. */
+function hookInput(command: string): string {
+  return JSON.stringify({
+    hook_event_name: "PreToolUse",
+    tool_name: "Bash",
+    tool_input: { command },
+  });
+}
+
 /**
  * The rule master each reminder restates, by the marker its entries carry.
  *
@@ -62,6 +72,7 @@ const RESTATES: ReadonlyMap<string, string> = new Map([
   [GRILLING_DELEGATION_HOOK_MARKER, "grilling.md"],
   [GRILLING_PLAN_HOOK_MARKER, "grilling.md"],
   [STRUCTURED_QUESTION_HOOK_MARKER, "user-questions.md"],
+  [API_BUDGET_HOOK_MARKER, "api-budget.md"],
 ]);
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -209,7 +220,56 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
-    expect(readers.size, "every entry runs the same reader").toBe(1);
+    // Two readers. One prints the named message; the other reads the hook's own
+    // input first and prints only for a command that names the forge, which is
+    // what lets a `Bash` matcher exist at all. A third would mean a reminder had
+    // grown logic of its own, which is the thing kept out of this file.
+    expect(readers.size, "a reminder runs one of the two pinned readers").toBe(2);
+    for (const reader of readers) {
+      expect(reader).toContain("process.argv[1]");
+      expect(reader).toContain("process.argv[2]");
+    }
+  });
+
+  // The matcher fires on every shell command, so the program is what narrows it.
+  // `documentation-clarity.md` keeps its own hook off the shell for exactly the
+  // over-matching this filter prevents, and that decision is unchanged.
+  it("prints the budget reminder only for a command that names the forge", async () => {
+    const group = (hooks.get("PreToolUse") ?? []).find((candidate) => candidate.matcher === "Bash");
+    expect(group, "no PreToolUse group matches Bash").toBeDefined();
+    expect(group?.hooks.map((entry) => entry.statusMessage)).toEqual([API_BUDGET_HOOK_MARKER]);
+    const entry = group?.hooks[0];
+    if (entry === undefined) return;
+    const project = projectDirOf(repoRoot, rel);
+
+    for (const command of [
+      "gh api repos/owner/repo/actions/runs",
+      "gh pr checks",
+      "curl https://api.github.com/rate_limit",
+    ]) {
+      const printed = await runReminderHook(entry, project, hookInput(command));
+      expect(printed, `${command} printed nothing`).toContain("api-budget.md");
+    }
+
+    for (const command of [
+      "git status && pnpm check-types",
+      "node scripts/check-bidi.mjs --highlight",
+      "echo ghost",
+    ]) {
+      await expect(runReminderHook(entry, project, hookInput(command))).resolves.toBe("");
+    }
+  });
+
+  // The host's payload is not part of this repository, so the entry prints
+  // nothing for input it does not recognise rather than guessing at a shape.
+  it("prints nothing for input that carries no command", async () => {
+    const group = (hooks.get("PreToolUse") ?? []).find((candidate) => candidate.matcher === "Bash");
+    const entry = group?.hooks[0];
+    if (entry === undefined) return;
+    const project = projectDirOf(repoRoot, rel);
+    for (const input of ["", "{ not json", "{}", JSON.stringify({ tool_name: "Bash" })]) {
+      await expect(runReminderHook(entry, project, input)).resolves.toBe("");
+    }
   });
 
   it("names only messages the shipped file carries, and every one of them", async () => {

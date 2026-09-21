@@ -82,6 +82,22 @@
             ]
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI api-budget reminder",
+            "command": "node",
+            "args": [
+              "-e",
+              "try{const c=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.command;if(typeof c==='string'&&/(^|[^\\w.-])gh([^\\w.-]|$)|api\\.github\\.com/.test(c)){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+              "api-budget"
+            ]
+          }
+        ]
       }
     ],
     "PostToolUse": [

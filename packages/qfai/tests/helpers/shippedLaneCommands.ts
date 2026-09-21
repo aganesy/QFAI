@@ -1346,8 +1346,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned for the grilling bullet, which now says agents grill each other outside the
     // discussion stage and only a critical decision reaches the user. Derived by running
     // `qfai init` into a temp root; restoring the old wording reproduces `fe028cb8…` byte for byte.
+    //
+    // Re-pinned for one more bullet on that same list, naming `.agents/rules/api-budget.md` — the
+    // rule the run now seeds beside the other masters, which orders the surfaces a question about
+    // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what
+    // it wrote; dropping that one bullet reproduces `7f4f473a…` byte for byte.
     ".github/copilot-instructions.md",
-    "7f4f473a71660f6fe887ca1ee706af54fa34566d443120a0729256c3c0f02fcc",
+    "c7e5457bbe1001e950531e09588830fc180afcc45ef08ce032291bfe0c377cb8",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1495,8 +1500,14 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // discussion stage and only a critical decision reaches the user. Derived by running `qfai init`
   // into a temp root; restoring the old wording in both written files reproduces `d2a68a94…` and
   // `cbcc6841…` byte for byte.
-  ["AGENTS.md", "66f2f506c9a2e5c219efc85665e09dbeec271d127fc28e1d10428beb6e71550f"],
-  ["CLAUDE.md", "bf6a52afb3cd0ed63fbb7f6f9ad18cb9b9309d103a6a8d23d87022b66816ab1d"],
+  //
+  // Re-pinned for one more bullet in the same block, naming `.agents/rules/api-budget.md` — the
+  // rule the run now seeds beside the other masters, which orders the surfaces a question about
+  // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what it
+  // wrote; dropping that one bullet from both written files reproduces `66f2f506…` and
+  // `bf6a52af…` byte for byte.
+  ["AGENTS.md", "474a294c5789627a609e7fc5a765606f68d204b8e78aaf8412e53cceaab0e7cc"],
+  ["CLAUDE.md", "32299fd56a097bc4c930d2fe50b53f0cadfdefb6b76aad56b7572cd57d8cb420"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1528,7 +1539,16 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // merged file carries both changes: that wording lives in `reminders.json`, so the settings
   // file is the reader layout above, and the digest is the one that layout already had. Derived
   // again by running `qfai init` into a temp root after the merge.
-  [".claude/settings.json", "a7547fbeb12d71170058c068b6fc136353679330bf06c53b6308319c3be6a523"],
+  //
+  // Re-pinned for one more `PreToolUse` group, which restates the API-budget rule before a shell
+  // command. It is the only entry here whose program decides whether to print: it reads the command
+  // out of the hook's own input and stays silent unless that command names the forge's CLI or its
+  // API host. The matcher alone is `Bash`, which fires on every compound command, so the filter has
+  // to sit in the program. Everything else is the shape every reminder here takes — one `node -e`
+  // reader, the `reminders.json` path and one message key, no shell and no network. Derived by
+  // running `qfai init` into a temp root and hashing what it wrote; dropping that one group
+  // reproduces `a7547fbe…` byte for byte.
+  [".claude/settings.json", "65be5439b8425a2bec1e68e7084263c25abb82fb0b396dd6583116764bcca665"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1672,6 +1692,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * with `sh <file>` — the execution path `initMustNotShip`'s own docstring names. Recorded as gap 11.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
+  "root/.agents/rules/api-budget.md",
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/documentation-clarity.md",
   "root/.agents/rules/grilling.md",

@@ -36,6 +36,19 @@ import {
 
 const TEST_FILE = "tests/unit/sample.test.ts";
 
+/**
+ * The review pack pair a round's verdict attempt is written beside, naming a
+ * pack absent from the checkout, as review packs are local-only.
+ */
+function packPair(round: number, attempt?: number): string[] {
+  const qualifier = attempt === undefined ? "" : ` (attempt ${String(attempt)})`;
+  const stamp = String(20260102000000000 + round * 100 + (attempt ?? 0));
+  return [
+    `- Round ${String(round)}: Review pack${qualifier}: .qfai/review/review-${stamp}`,
+    `- Round ${String(round)}: Review pack seal${qualifier}: sha256:${"c".repeat(64)}`,
+  ];
+}
+
 function digest(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -230,6 +243,8 @@ function roundSummary(
 }
 
 /** A full-length git rev: the form `evidence-revision.md` asks for. */
+/** The review round's one pack, which every routed reviewer answers in. */
+const REVIEW_PACK_PATH = ".qfai/review/review-20260811000000001";
 const DEFAULT_REVISION = "abc1230000000000000000000000000000000000";
 
 /** The line a request written by the implement stage opens with. */
@@ -468,34 +483,24 @@ async function materializeEvidence(
   );
   content = content.replaceAll("{{PARITY_AUDIT_HASH}}", parityAuditHash);
 
-  const packs: Array<readonly [string, string, string, string]> = [
-    ["20260811000000001", "completion-reviewer", "{{SPEC_PACK_SEAL}}", auditHash],
-    ["20260811000000002", "implementation-reviewer", "{{CODE_PACK_SEAL}}", auditHash],
+  // One pack per review round, holding every routed reviewer's response.
+  const reviews: Array<readonly [string, string]> = [
+    ["completion-reviewer", auditHash],
+    ["implementation-reviewer", auditHash],
   ];
   if (content.includes("{{PARITY_PACK_SEAL}}")) {
-    packs.push([
-      "20260811000000003",
-      "product-surface-reviewer",
-      "{{PARITY_PACK_SEAL}}",
-      parityAuditHash,
-    ]);
+    reviews.push(["product-surface-reviewer", parityAuditHash]);
   }
-  for (const [name, role, placeholder, packAuditHash] of packs) {
-    const packPath = `.qfai/review/review-${name}`;
-    const packDir = path.join(root, packPath);
-    await mkdir(packDir, { recursive: true });
+  const packDir = path.join(root, REVIEW_PACK_PATH);
+  await mkdir(packDir, { recursive: true });
+  const responseDir = path.join(packDir, options.responseDirectory ?? "");
+  await mkdir(responseDir, { recursive: true });
+  const request = [`TDD-ID: ${options.reviewRequestTddId ?? "TDD-0001"}\n`];
+  for (const [role, packAuditHash] of reviews) {
     const hashLines =
       options.auditedHashLines?.(packAuditHash) ?? `Audited evidence hash: ${packAuditHash}\n`;
     const passRecord = `Result: PASS\nReviewed revision: ${revision}\n${hashLines}`;
-    await writeFile(
-      path.join(packDir, "review_request.md"),
-      options.requestOnlyPassRole === role
-        ? `TDD-ID: ${options.reviewRequestTddId ?? "TDD-0001"}\n${passRecord}`
-        : `TDD-ID: ${options.reviewRequestTddId ?? "TDD-0001"}\n`,
-      "utf8",
-    );
-    const responseDir = path.join(packDir, options.responseDirectory ?? "");
-    await mkdir(responseDir, { recursive: true });
+    if (options.requestOnlyPassRole === role) request.push(passRecord);
     await writeFile(
       path.join(responseDir, `R01_${role}.md`),
       withReviewerRole(role, responseBody(role, passRecord, options)),
@@ -511,24 +516,28 @@ async function materializeEvidence(
         "utf8",
       );
     }
-    await writeFile(
-      path.join(packDir, "summary.json"),
-      `${JSON.stringify(
-        {
-          overall_status: "PASS",
-          revision,
-          target: {
-            kind: "spec",
-            path: options.summaryTargetPath ?? ".qfai/specs/spec-0001",
-          },
-          reviewers: [{ reviewer: role, status: "PASS" }],
+  }
+  await writeFile(path.join(packDir, "review_request.md"), request.join(""), "utf8");
+  await writeFile(
+    path.join(packDir, "summary.json"),
+    `${JSON.stringify(
+      {
+        overall_status: "PASS",
+        revision,
+        target: {
+          kind: "spec",
+          path: options.summaryTargetPath ?? ".qfai/specs/spec-0001",
         },
-        null,
-        2,
-      )}\n`,
-      "utf8",
-    );
-    content = content.replaceAll(placeholder, await packSeal(root, packPath));
+        reviewers: reviews.map(([role]) => ({ reviewer: role, status: "PASS" })),
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  const seal = await packSeal(root, REVIEW_PACK_PATH);
+  for (const placeholder of ["{{SPEC_PACK_SEAL}}", "{{CODE_PACK_SEAL}}", "{{PARITY_PACK_SEAL}}"]) {
+    content = content.replaceAll(placeholder, seal);
   }
   if (options.stagePack !== undefined) {
     content = content.replaceAll("{{STAGE_PACK_SEAL}}", await packSeal(root, STAGE_PACK_PATH));
@@ -1107,7 +1116,7 @@ describe("QFAI-TDDLIST-008", () => {
 - Code quality review: PASS
 - Code quality reviewed revision: abc1230000000000000000000000000000000000
 - Code quality audited evidence hash: {{AUDIT_HASH}}
-- Code quality review pack: .qfai/review/review-20260811000000002
+- Code quality review pack: .qfai/review/review-20260811000000001
 - Code quality review pack seal: {{CODE_PACK_SEAL}}
 - Checkpoint verification command: npm test
 - Checkpoint verification result: PASS
@@ -1742,6 +1751,8 @@ describe("QFAI-TDDLIST-008", () => {
           "```text",
           "PASS",
           "```",
+          ...packPair(1, 1),
+          ...packPair(1, 2),
           "- Refactor verify command: npm test",
         ].join("\n"),
       );
@@ -1854,6 +1865,7 @@ describe("QFAI-TDDLIST-008", () => {
         .replace(
           "- Refactor verify command: npm test",
           `- Round 1: reviewer verdict: REVISE — needs new production behaviour
+${packPair(1).join("\n")}
 - Round 2: Revision: ${secondRoundRevision}
 - Round 2: RED revision: def7890000000000000000000000000000000000
 - Round 2: RED command: npm test
@@ -1888,6 +1900,8 @@ describe("QFAI-TDDLIST-008", () => {
           [
             "- Round 1: reviewer verdict (attempt 1): REVISE — re-reviewed in this round",
             "- Round 1: reviewer verdict (attempt 2): REVISE — needs new production behaviour",
+            ...packPair(1, 1),
+            ...packPair(1, 2),
             "- Round 2: Revision: " + secondRoundRevision,
             "- Round 2: RED revision: def7890000000000000000000000000000000000",
             "- Round 2: RED command: npm test",
@@ -1921,6 +1935,7 @@ describe("QFAI-TDDLIST-008", () => {
           "- Refactor verify command: npm test",
           [
             "- **Round 1: reviewer verdict:** REVISE — needs new production behaviour",
+            ...packPair(1),
             "- Round 2: Revision: " + secondRoundRevision,
             "- Round 2: RED revision: def7890000000000000000000000000000000000",
             "- Round 2: RED command: npm test",
@@ -2139,7 +2154,7 @@ describe("QFAI-TDDLIST-008", () => {
     });
   });
 
-  it("requires a pack pair for every verdict attempt once a round records one", async () => {
+  it("requires a pack pair for every verdict attempt when a round records some", async () => {
     // The last attempt's pack is the one the round closed on, so a round that
     // recorded the first attempt's pair and not the closing one's is missing
     // the review it rests on.
@@ -2160,6 +2175,33 @@ describe("QFAI-TDDLIST-008", () => {
         { ".qfai/evidence/implement-spec-0001.md": evidence },
       );
       expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: Review pack (attempt 2) beside that attempt's reviewer verdict",
+      );
+    });
+  });
+
+  it("requires a pack pair for a verdict in a round that records none", async () => {
+    // A round with verdicts and no pair at all kept every outcome and the
+    // audit trail of none of them, while the row-level packs still passed.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict (attempt 1): REVISE — the assertion names no boundary",
+          "- Round 1: reviewer verdict (attempt 2): PASS",
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      const messages = issues.map((issue) => issue.message).join("\n");
+      expect(messages).toContain(
+        "Round 1: Review pack (attempt 1) beside that attempt's reviewer verdict",
+      );
+      expect(messages).toContain(
         "Round 1: Review pack (attempt 2) beside that attempt's reviewer verdict",
       );
     });
@@ -3379,6 +3421,7 @@ describe("QFAI-TDDLIST-008", () => {
             "```text",
             "REVISE — needs new production behaviour",
             "```",
+            ...packPair(1),
             "- Round 2: Revision: " + secondRoundRevision,
             "- Round 2: RED revision: def7890000000000000000000000000000000000",
             "- Round 2: RED command: npm test",
@@ -3465,6 +3508,7 @@ describe("QFAI-TDDLIST-008", () => {
 \`\`\`text
 REVISE — needs new production behaviour
 \`\`\`
+${packPair(1).join("\n")}
 - Round 2: Revision: ${secondRoundRevision}
 - Round 2: RED revision: def7890000000000000000000000000000000000
 - Round 2: RED command: npm test
@@ -3501,7 +3545,7 @@ REVISE — needs new production behaviour
       "- Prototype parity: PASS (clause 1)",
       `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
       "- Prototype parity audited evidence hash: {{PARITY_AUDIT_HASH}}",
-      "- Prototype parity review pack: .qfai/review/review-20260811000000003",
+      "- Prototype parity review pack: .qfai/review/review-20260811000000001",
       "- Prototype parity review pack seal: {{PARITY_PACK_SEAL}}",
     ];
     const FENCE = "`".repeat(3);
@@ -3563,6 +3607,68 @@ REVISE — needs new production behaviour
           ]),
         );
         expect(issues).toEqual([]);
+      });
+    });
+
+    describe("an n/a verdict a clause of ui-affecting.md contradicts", () => {
+      const NOT_APPLICABLE = [
+        "- Prototype parity: n/a (not UI-affecting)",
+        `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
+      ];
+
+      async function seed(root: string, files: Readonly<Record<string, string>>): Promise<void> {
+        for (const [relative, body] of Object.entries(files)) {
+          const file = path.join(root, ...relative.split("/"));
+          await mkdir(path.dirname(file), { recursive: true });
+          await writeFile(file, body, "utf8");
+        }
+      }
+
+      const structure = (glob: string): string =>
+        [
+          "## UI surface paths (SSOT)",
+          "",
+          "ui_paths:",
+          "",
+          `- \`${glob}\``,
+          "",
+          "## Quality gates",
+          "",
+        ].join("\n");
+
+      it("refuses n/a on a row whose Test file matches a declared UI path", async () => {
+        await withProject(async (root) => {
+          await seed(root, {
+            ".qfai/assistant/catalog/structure.md": structure("tests/unit/**"),
+          });
+          const [issue] = await unresolved(root, withParity(NOT_APPLICABLE));
+          expect(issue?.message).toContain(
+            "a product-surface review rather than n/a (not UI-affecting), since clause 2 holds: Test file tests/unit/sample.test.ts matches tests/unit/**",
+          );
+        });
+      });
+
+      it("refuses n/a on a row whose obligation a UI contract names", async () => {
+        await withProject(async (root) => {
+          await seed(root, {
+            ".qfai/contracts/ui/home.yaml":
+              "screens:\n  - id: home\n    route: /\n    notes: TC-0001\n",
+          });
+          const [issue] = await unresolved(root, withParity(NOT_APPLICABLE));
+          expect(issue?.message).toContain(
+            "since clause 3 holds: TC-0001 occurs in .qfai/contracts/ui/home.yaml",
+          );
+        });
+      });
+
+      it("accepts n/a where no declaration names the row", async () => {
+        await withProject(async (root) => {
+          await seed(root, {
+            ".qfai/assistant/catalog/structure.md": structure("src/ui/**"),
+            ".qfai/contracts/ui/home.yaml": "screens:\n  - id: home\n    route: /\n",
+          });
+          expect(await unresolved(root, withParity(NOT_APPLICABLE))).toEqual([]);
+        });
       });
     });
 
@@ -3990,6 +4096,7 @@ REVISE — needs new production behaviour
         .replace(
           "- Refactor verify command: npm test",
           `- Round 1: reviewer verdict: REVISE — update the shared fixture
+${packPair(1).join("\n")}
 - Round 2: Revision: abc1230000000000000000000000000000000000
 - Round 2: RED revision: def7890000000000000000000000000000000000
 - Round 2: RED test hash: {{RED_TEST_HASH}}
@@ -4079,11 +4186,11 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")
         "- Spec review pack: .qfai/review/review-20260811000000003",
       )
       .replace(
-        "- Code quality review pack: .qfai/review/review-20260811000000002",
-        "- Code quality review pack: .qfai/review/review-20260811000000004",
+        "- Code quality review pack: .qfai/review/review-20260811000000001",
+        "- Code quality review pack: .qfai/review/review-20260811000000003",
       )
       .replace("{{SPEC_PACK_SEAL}}", "a".repeat(64))
-      .replace("{{CODE_PACK_SEAL}}", "b".repeat(64))
+      .replace("{{CODE_PACK_SEAL}}", "a".repeat(64))
       .replaceAll("{{AUDIT_HASH}}", options.auditHash ?? "{{EDITING_AUDIT_HASH}}")
       .replace("- Spec review: PASS", record);
   }
@@ -4876,6 +4983,48 @@ result, so the assertion cannot be tightened without drift.
       );
       await withProject(async (root) => {
         expect(await unresolvedFor(root, evidence)).toBeUndefined();
+      });
+    });
+  });
+
+  describe("one review pack per round", () => {
+    async function unresolvedFor(root: string, evidence: string): Promise<string> {
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        },
+      );
+      return issues.find((issue) => issue.code === "QFAI-TDDLIST-008")?.message ?? "";
+    }
+
+    it("refuses verdicts that name different packs", async () => {
+      // Each pack is sealed and holds its reviewer's PASS, so nothing but the
+      // comparison says the two verdicts came from different review requests.
+      await withProject(async (root) => {
+        const evidence = completeEntry("Unit").replace(
+          "- Code quality review pack: .qfai/review/review-20260811000000001",
+          "- Code quality review pack: .qfai/review/review-20260811000000002",
+        );
+        expect(await unresolvedFor(root, evidence)).toContain(
+          "Code quality review pack matching Spec review pack",
+        );
+      });
+    });
+
+    it("refuses a seal that differs between verdicts naming one pack", async () => {
+      await withProject(async (root) => {
+        const evidence = completeEntry("Unit").replace("{{CODE_PACK_SEAL}}", "f".repeat(64));
+        expect(await unresolvedFor(root, evidence)).toContain(
+          "Code quality review pack seal matching Spec review pack seal",
+        );
+      });
+    });
+
+    it("accepts every verdict in the round's one pack", async () => {
+      await withProject(async (root) => {
+        expect(await unresolvedFor(root, completeEntry("Unit"))).toBe("");
       });
     });
   });

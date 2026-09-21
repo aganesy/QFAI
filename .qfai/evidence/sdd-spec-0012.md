@@ -495,7 +495,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev4 discussion pack content ad
 ### FORMAT SSOT files read
 - `.qfai/discussion/README.md`
 - `.qfai/specs/README.md`
-- `.qfai/evidence/README.md`
+- `.qfai/evidence/README.md` <!-- qfai:not-a-citation -->
 - `.qfai/assistant/steering/agent-catalog.yml`
 - `.qfai/assistant/steering/agent-routing.yml`
 - `.qfai/assistant/steering/review-profiles.yml`
@@ -641,7 +641,7 @@ qfai validate --fail-on error --format github | tee .qfai/report/validate.log
 
 - [x] FORMAT SSOT files read before artifact authoring
 - [x] spec-0012 files follow `.qfai/specs/README.md` format
-- [x] Evidence follows `.qfai/evidence/README.md` format
+- [x] Evidence follows `.qfai/evidence/README.md` format <!-- qfai:not-a-citation -->
 
 ## Work Orders Summary
 
@@ -943,7 +943,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev7 discussion pack content cl
 ### FORMAT SSOT files read
 - `.qfai/discussion/README.md`
 - `.qfai/specs/README.md`
-- `.qfai/evidence/README.md`
+- `.qfai/evidence/README.md` <!-- qfai:not-a-citation -->
 - `.qfai/assistant/steering/agent-routing.yml`
 - `.qfai/assistant/steering/review-profiles.yml`
 - `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`

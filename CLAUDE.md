@@ -32,6 +32,12 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   package ships or says in the diff why it does not, in the form
   `.claude/rules/shipped-ci-parity.md` (master:
   `.agents/rules/shipped-ci-parity.md`) sets out. `pnpm ci:lint` runs the guard.
+- Ask the cheapest surface that can answer a question about the repository's
+  hosted side, in the order `.claude/rules/api-budget.md` (master:
+  `.agents/rules/api-budget.md`) sets out: git, then REST, then GraphQL. One
+  call for the whole set. The remaining budget is in the response's headers, not
+  in a rate-limit endpoint. `scripts/gh-budget.mjs` answers the two questions
+  that cost the most when asked the expensive way.
 - All temporary/scratch files go in `tmp/` — working-tree files only; a test's
   `mkdtemp` sandbox under `os.tmpdir()` is out of scope (see
   `.claude/rules/temporary-files.md`, master: `.agents/rules/temporary-files.md`,

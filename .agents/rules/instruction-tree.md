@@ -1,23 +1,19 @@
----
-category: universal
-update-frequency: rare
-dependencies: none
-version: 1.0.0
----
+# Instruction Tree
 
-# .instruction/
+What `.instruction/` may say, and what it may not.
 
-Operating guidance for an agent working in this repository, routed to from
-`AGENTS.md`. Nothing loads it automatically; an agent reaches a file here
-because `AGENTS.md` sent it.
+The directory holds operating guidance an agent reads because `AGENTS.md` sent
+it there. Nothing loads it automatically.
 
-Repository-only. `qfai init` does not ship this tree, and no shipped agent card
-may cite a path under it — `agentSelectionReferenceTargets.test.ts` holds that,
-because a pointer into a directory an adopter does not have resolves to nothing.
+## Repository-only
 
-## This directory states no rule of its own
+`qfai init` does not ship this tree, and no shipped agent card may cite a path
+under it. `agentSelectionReferenceTargets.test.ts` holds that: a pointer into a
+directory an adopter does not have resolves to nothing.
 
-Four documents own rules, and a file here restates none of them. It points.
+## It states no rule of its own
+
+Four places own rules, and a file here restates none of them. It points.
 
 | Owner                             | Owns                                                  |
 | --------------------------------- | ----------------------------------------------------- |
@@ -36,12 +32,11 @@ This directory pins none. `.qfai/assistant/constitution/constitution.md` states
 the Absolute Rule — output in the user's working language — and that rule
 decides, here as everywhere.
 
-Every file here used to open with a block fixing output to one language. That
+Every file here once opened with a block fixing output to one language. That
 block reached `constitution/agent-selection.md` by being copied out of this
-directory, where it overrode the Absolute Rule for every operator who worked in
-another language. It was removed there and is removed here, and
-`outputLanguageSingleSource.test.ts` now sweeps this tree with the same matcher
-that guards the shipped one.
+directory, where it overrode the Absolute Rule for every operator working in
+another language. `outputLanguageSingleSource.test.ts` sweeps this tree with the
+same matcher that guards the shipped one.
 
 The prose here is in whatever language its author used. That says nothing about
 what an agent writes back.
@@ -49,8 +44,8 @@ what an agent writes back.
 ## Adding a file
 
 A new file earns its place by saying something no rule master, no constitution
-article, no agent card and no skill says. If the sentence exists elsewhere,
-link to it.
+article, no agent card and no skill says. If the sentence exists elsewhere, link
+to it.
 
 ## Project facts
 

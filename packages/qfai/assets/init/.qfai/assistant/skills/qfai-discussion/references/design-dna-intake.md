@@ -80,3 +80,8 @@ into `uiux/`.
 Root `DESIGN.md` is written later, by `/qfai-sdd` Phase 0, which reads
 those records. The mapping from answer to field is
 `qfai-sdd/references/design-md-authoring.md`.
+
+Where the direction names a `DESIGN.md` key or an archetype — in a code span,
+a `yaml` block or an `archetype:` item — `npx qfai validate --profile
+discussion` reads it against the front-matter schema and reports one the
+schema lacks as `QFAI-DPACK-011`, while the choice is still cheap to change.

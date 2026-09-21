@@ -1,6 +1,6 @@
 {
   "name": "qfai",
-  "version": "1.12.0",
+  "version": "1.12.1",
   "description": "Quality-first AI-driven development toolkit (SDD × ATDD × TDD).",
   "license": "MIT",
   "repository": {
@@ -40,7 +40,7 @@
     "lint:md:shipped": "markdownlint-cli2 --config shipped.markdownlint-cli2.jsonc \"assets/**/*.md\" \"assets/**/*.md.sample\"",
     "lint:shipping": "vitest run tests/scripts/lintShipping.test.ts",
     "lint:workflow-shape": "vitest run tests/integration/shippedWorkflowShapeGate.test.ts",
-    "lint:mirror-surface": "vitest run tests/integration/agentsRulesSurface.test.ts tests/integration/skillLinkSurface.test.ts tests/core/integrationSurface.test.ts tests/core/integrationSurfaceReadErrors.test.ts tests/assets/reviewerVerdictVocabulary.test.ts tests/codex/agents.test.ts tests/core/prFixSkillDocs.test.ts tests/pr-merge/prMergePlan.test.ts",
+    "lint:mirror-surface": "vitest run tests/integration/agentsRulesSurface.test.ts tests/integration/skillLinkSurface.test.ts tests/core/integrationSurface.test.ts tests/core/integrationSurfaceReadErrors.test.ts tests/assets/reviewerVerdictVocabulary.test.ts tests/codex/agents.test.ts tests/core/prFixSkillDocs.test.ts tests/core/prMergeSkillDocs.test.ts",
     "generate:rule-codes": "node scripts/generate-emitted-rule-codes.mjs",
     "generate:governed-manifest": "node scripts/generate-governed-assistant-manifest.mjs",
     "check-types": "tsc --noEmit",

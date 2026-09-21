@@ -44,14 +44,12 @@ interface Profile {
 const LINT_PROFILE: Profile = {
   name: "lint",
   lanes: [
-    ["-C packages/qfai lint:mirror-surface", "mirror"],
     ["format:check", "format"],
     ["lint", "eslint"],
     ["ci:lint:structure", "structure"],
     ["ci:lint:scans", "scans"],
   ],
   conserved: [
-    "pnpm -C packages/qfai lint:mirror-surface",
     "pnpm format:check",
     "pnpm lint",
     "pnpm lint:md",
@@ -65,6 +63,7 @@ const LINT_PROFILE: Profile = {
     "node ./scripts/check-conflict-markers.mjs",
     "node ./scripts/check-tracked-scratch.mjs",
     "node ./scripts/check-tracked-symlinks.mjs",
+    "node ./scripts/check-tracked-readmes.mjs",
     "node ./scripts/check-readme-alignment.mjs",
     "node ./scripts/check-instructions-size.mjs",
     "node ./scripts/check-review-profile-consistency.mjs",
@@ -76,7 +75,6 @@ const LINT_PROFILE: Profile = {
     "node ./packages/qfai/scripts/check-pack-locations.mjs",
   ],
   groups: [
-    ["pnpm -C packages/qfai lint:mirror-surface"],
     ["pnpm format:check"],
     ["pnpm lint"],
     [
@@ -93,6 +91,7 @@ const LINT_PROFILE: Profile = {
       "node ./scripts/check-conflict-markers.mjs",
       "node ./scripts/check-tracked-scratch.mjs",
       "node ./scripts/check-tracked-symlinks.mjs",
+      "node ./scripts/check-tracked-readmes.mjs",
       "node ./scripts/check-readme-alignment.mjs",
       "node ./scripts/check-instructions-size.mjs",
       "node ./scripts/check-review-profile-consistency.mjs",
@@ -109,9 +108,11 @@ const LINT_PROFILE: Profile = {
 /**
  * The release profile, which is not the lint profile with a filter.
  *
- * The mirror lane and the two shipped-surface gates are absent because their
- * home is the pull-request aggregate: a divergence they catch has to red a pull
- * request, and one caught here arrives after the pull request is already green.
+ * The two shipped-surface gates are absent because their home is the pull-request
+ * aggregate: a divergence they catch has to red a pull request, and one caught
+ * here arrives after the pull request is already green. The mirror lane is absent
+ * from both profiles now — it runs in a job of its own, for the same reason and
+ * on a runner nothing else contends for.
  */
 const GATE_PROFILE: Profile = {
   name: "gate",
@@ -452,12 +453,28 @@ describe("script resolution through the helper", () => {
       ".#preci:lint:scans",
       ".#format:check",
       ".#lint",
+    ]) {
+      expect(
+        bodies.some(([name]) => name === key),
+        `${key} is not reachable from pnpm ci:lint`,
+      ).toBe(true);
+    }
+  });
+
+  it("resolves the mirror lane through the command its own job runs", () => {
+    // The lane left the aggregate for a runner of its own, so `pnpm ci:lint` no longer
+    // reaches it. Its body still has to be reachable from something: a workflow's
+    // verification digest covers the package scripts a step invokes, and a lane nothing
+    // resolves is a lane whose body no digest covers. What resolves it now is the step
+    // command in the `mirror-surface` job, which is what this row reads.
+    const bodies = invokedScriptBodies("pnpm -C packages/qfai lint:mirror-surface", root);
+    for (const key of [
       "packages/qfai#lint:mirror-surface",
       "packages/qfai#prelint:mirror-surface",
     ]) {
       expect(
         bodies.some(([name]) => name === key),
-        `${key} is not reachable from pnpm ci:lint`,
+        `${key} is not reachable from the mirror-surface job's step`,
       ).toBe(true);
     }
   });

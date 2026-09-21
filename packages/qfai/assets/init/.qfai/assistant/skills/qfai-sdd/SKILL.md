@@ -195,8 +195,8 @@ routing phase's mandatory agents run inside its span, and its blocking agents MU
 ### No-argument batch delegation (MUST)
 
 - Without argument: target all capabilities in `_policies/03_Capabilities.md`.
-- Run Contracts-first and Outline once per batch.
-- Delegate Slice in parallel per spec.
+- Run Contracts-first and Outline once per batch, and record them once, in `.qfai/evidence/sdd-batch-<timestamp>.md` from `templates/evidence/sdd-batch.md`. Each spec's evidence names that file on its `Batch record` line rather than copying the two phases' rows.
+- Delegate Slice in parallel per spec. A Triage row whose `Depends-On` names a source or an open question is not dispatched until every row of that source is done or the question is resolved (`references/sdd-triage.md#triage-table-format`).
 - Parallel delegation here is bound by the stage-independent Concurrency rules in `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory`: worktree separation, or the declared degraded mode, plus mandatory commit scoping (`git add <paths>`; never `git add -A` / `git add .` / `git commit -a`).
 - Validate gate and Review gate run once at batch tail after all target specs are integrated.
 - The Plan gate is **this skill's own step**, not a routed reviewer, and runs per target: each
@@ -405,7 +405,7 @@ a root `DESIGN.md`, a design contract or a prototype, so assuming visual leaves 
 5. Write `.qfai/contracts/design/DESIGN.md.lock.yaml` from the template at `templates/contracts/design-md-lock.sample.yaml` with these fields:
    - `designMdPath: "DESIGN.md"`
    - `designMdSha256: <hex>`
-   - `frozenAt: <UTC ISO-8601>`
+   - `frozenAt: <UTC ISO-8601>`, the time of this freeze. A re-freeze writes every field again, never the hash alone: gates compare `designMdSha256` with `DESIGN.md`, and no gate reads `frozenAt`, so a stale one passes and records a freeze that did not happen then.
    - `schemaTokens.colors`, `fontFamilies`, `radii`, `shadows` enumerated per the sample.
 6. Record the freeze in `_policies/05_Contracts.md` under the Contract Index. The lock yaml plus root `DESIGN.md` are the only brand contract; per-aspect brand yaml contracts have been removed.
 

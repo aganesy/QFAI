@@ -671,7 +671,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-014",
     "QFAI-CONTRACT-015",
     "QFAI-CONTRACT-020",
-    "QFAI-CONTRACT-021",
     "QFAI-CONTRACT-031",
     // `validateDbContractApplyOrder`, composed by `validateContracts` beside
     // `-031` and reachable from the same two profiles.
@@ -692,15 +691,20 @@ export const GATE_GROUP_FAMILIES = {
   // reach it, and run by the prototyping profile on its own, since that is the
   // profile certification accepts.
   "ui-screen-entries": ["QFAI-CONTRACT-042"],
-  // `validateContractReferences` — `runSddValidators` only. Five codes, not
-  // one: the gate reports a missing reference, and four shapes of a reference
-  // that resolves to the wrong thing.
+  // A contract that does not parse: `validateContracts` reports it for every
+  // kind, so sdd and tdd reach it, and the prototyping profile runs the UI
+  // contracts' part on its own, since it reads its screens from them.
+  "contract-parse": ["QFAI-CONTRACT-021"],
+  // `validateContractReferences` — `runSddValidators` only. It reports a missing
+  // reference, four shapes of a reference that resolves to the wrong thing, and
+  // a UI contract no live spec binds.
   "contract-references": [
     "QFAI-CONTRACT-030",
     "QFAI-CONTRACT-032",
     "QFAI-CONTRACT-033",
     "QFAI-CONTRACT-034",
     "QFAI-CONTRACT-035",
+    "QFAI-CONTRACT-043",
   ],
   // `validateContractSsotModules` — `runSddValidators`, and `runTddValidators`
   // behind its `includeContracts` flag: the implementation stage is the one
@@ -912,6 +916,7 @@ const FULL_GATE_GROUPS: readonly GateGroup[] = ALL_GATE_GROUPS.filter(
 const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
   "prototyping",
   "ui-screen-entries",
+  "contract-parse",
   "reviewer-gate-shared",
   "design-contract-readiness",
   "design-contract-readiness-prototyping",
@@ -960,6 +965,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "reviewer-justification-only",
     "contracts",
     "ui-screen-entries",
+    "contract-parse",
     "contract-references",
     "contract-ssot-modules",
     "design-contract-readiness",
@@ -993,6 +999,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "drift",
     "contracts",
     "ui-screen-entries",
+    "contract-parse",
     "contract-ssot-modules",
     "traceability-ledger",
     "traceability-impl-drift",
@@ -1659,6 +1666,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every Triage section is introduced by the canonical `## Triage` H2, optionally naming its round in parentheses, so the triage rules read the rows under it.",
   "QFAI-TRIAGE-009":
     "`Existing Spec` names its target in one grammar: `spec-NNNN` (multiple joined by `+`), `_policies` for a policy-only row, or `-` on a CREATE row. Every named spec must exist on disk; ranges are not a form.",
+  "QFAI-TRIAGE-010":
+    "A requirement reaches the execution ledger through a spec: at least one of its triage rows targets a spec, not `_policies` alone.",
   "QFAI-SPLIT-106":
     "Every `CAP-NNNN` row in the CAP Catalog appears exactly once and its `Spec` cell names exactly one spec directory, and no two rows name the same one.",
   "QFAI-TEST-001":
@@ -1727,6 +1736,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`## Coverage Depth Matrix` in `.qfai/evidence/atdd-<spec-id>.md` exists and is a link plus counted totals.",
   "QFAI-ATDD-134":
     "The ATDD scan reads every test its globs select: the glob matcher accepts every pattern, every directory the patterns reach is readable, and the selection fits under the file limit.",
+  "QFAI-ATDD-135":
+    "Every directory under the acceptance test roots can be read by the account running `qfai validate`, so every test there is counted.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-BFLOW-005":
@@ -1758,6 +1769,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`03_Story-Workshop.md` Mermaid content should include `flowchart` or `sequenceDiagram`.",
   "QFAI-DPACK-010":
     "Legacy discussion naming is deprecated; canonical naming should be used for new outputs.",
+  "QFAI-DPACK-011":
+    "On a visual surface, every `DESIGN.md` key and archetype a discussion pack proposes is one the front-matter schema accepts.",
   "QFAI-IMPLITE-001":
     "A project that has spec packs also has a traceable input source: a `discussion-*/06_REQ.md` under the configured discussion directory, or an `.qfai/evidence/import-lite-*.md`.",
   "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
@@ -1870,6 +1883,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
   "QFAI-CONTRACT-042":
     "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, no two entries of one contract share an `id` (each spec's own contract is one), and contracts sharing an `id` state it with the same `title`, `route` and `primary_tasks`, so each entry is a screen every consumer reads.",
+  "QFAI-CONTRACT-043":
+    "Every UI contract is bound by a live spec, through a business rule's `Contract-Refs` cell or a `QFAI-CONTRACT-REF:` line, so its screen obligations reach a test case.",
   // Same rule as `QFAI-BPAP-001` below: `paths.contractsDir` is configurable, so
   // the expected state names the contracts root by role. Pinning the default
   // path sent a project that moved its contracts to repair a directory it does

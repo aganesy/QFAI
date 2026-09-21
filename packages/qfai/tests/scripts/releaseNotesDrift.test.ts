@@ -1006,6 +1006,45 @@ describe("resuming a release pull-request description", () => {
     expect(await readFile(bodyPath, "utf-8")).toBe(`${generated}\n${later}`);
   });
 
+  it.each(["### TODO", "#### TBD", "### TODO ###", "> ### TODO", "### TODO\n### TBD"])(
+    "keeps the sections after a heading-shaped placeholder answer %j",
+    async (placeholder) => {
+      // A level-three heading sits inside the removal section, where the masked
+      // reading and the original once measured the section differently, and
+      // the rebuild cut prose from the sections after it.
+      const workflow = await readFile(
+        path.join(REPO_ROOT, ".github/workflows/prepare-release.yml"),
+        "utf-8",
+      );
+      const script = workflow.match(
+        /^\s*node - .* <<'REPAIR_BODY'\r?\n([\s\S]*?)^\s*REPAIR_BODY[ \t]*$/m,
+      )?.[1];
+      if (script === undefined) throw new Error("Release body repair script is absent");
+      const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-release-body-"));
+      tempDirs.push(dir);
+      const existingPath = path.join(dir, "existing.md");
+      const bodyPath = path.join(dir, "generated.md");
+      const prefix = "# Prepared release\n\nKeep the corrected date.\n\n";
+      const suffix =
+        "## Adoption bar\n\nKeep this authored adoption answer.\n\n## Risks\n\nRetain publication approval.\n";
+      const replacement =
+        "## What this change made unnecessary\n\nSuperseded version. Release notes stay.\n";
+      await writeFile(
+        existingPath,
+        `${prefix}## What this change made unnecessary\n\n${placeholder}\n\n${suffix}`,
+        "utf-8",
+      );
+      await writeFile(bodyPath, replacement, "utf-8");
+      const result = spawnSync(process.execPath, ["-", existingPath, bodyPath], {
+        input: script,
+        encoding: "utf-8",
+      });
+      if (result.error !== undefined) throw result.error;
+      expect(result.status, result.stderr).toBe(0);
+      expect(await readFile(bodyPath, "utf-8")).toBe(`${prefix}${replacement}\n${suffix}`);
+    },
+  );
+
   it.each(
     [1, 2, 3].flatMap((indent) =>
       ["#", "##"].map((level) => `${" ".repeat(indent)}${level} Adoption bar`),

@@ -119,6 +119,51 @@ export function verifyAlreadyPublished(pkgDir) {
 }
 
 /**
+ * The one tarball entry in the stdout of `npm pack --json`.
+ *
+ * npm has printed two shapes. Up to npm 11 it is an array of entries; from npm 12 it is an object
+ * keyed by package name. Which one arrives depends on the npm that runs, not on this repository,
+ * so a reader of only one breaks the day that npm crosses the line.
+ *
+ * @param {string} stdout the whole of npm's stdout
+ * @returns {{ ok: true, entry: object } | { ok: false, reason: string }}
+ */
+export function packReportEntry(stdout) {
+  let report;
+  try {
+    report = JSON.parse(stdout.trim());
+  } catch {
+    return {
+      ok: false,
+      reason: "`npm pack --json` printed something other than one JSON document on stdout",
+    };
+  }
+  const entries = Array.isArray(report)
+    ? report
+    : typeof report === "object" && report !== null
+      ? Object.values(report)
+      : undefined;
+  if (entries === undefined) {
+    return {
+      ok: false,
+      reason:
+        "`npm pack --json` printed neither a JSON array nor an object to account for the pack",
+    };
+  }
+  if (entries.length !== 1) {
+    return {
+      ok: false,
+      reason: `\`npm pack --json\` accounted for ${String(entries.length)} tarballs; exactly one is the only shape this proof reads`,
+    };
+  }
+  const [entry] = entries;
+  if (typeof entry !== "object" || entry === null) {
+    return { ok: false, reason: "`npm pack --json` accounted for no tarball" };
+  }
+  return { ok: true, entry };
+}
+
+/**
  * Whether a tarball was really built, established by a SEPARATE process and by a file on disk.
  *
  * The tolerated case rests on "the pack itself built", and reading
@@ -187,31 +232,9 @@ export function verifyTarballIndependently(pkgDir) {
     // Searching — walking back from the last `]` for a slice that parses, to skip past a build
     // log `prepack` (tsup, ANSI colour codes containing `[`) writes in front of npm's array — is
     // what would make a second, attacker-supplied array indistinguishable from the first.
-    let report;
-    try {
-      report = JSON.parse((packed.stdout ?? "").trim());
-    } catch {
-      return {
-        ok: false,
-        reason: "`npm pack --json` printed something other than one JSON document on stdout",
-      };
-    }
-    if (!Array.isArray(report)) {
-      return {
-        ok: false,
-        reason: "`npm pack --json` printed no JSON array to account for the pack",
-      };
-    }
-    if (report.length !== 1) {
-      return {
-        ok: false,
-        reason: `\`npm pack --json\` accounted for ${String(report.length)} tarballs; exactly one is the only shape this proof reads`,
-      };
-    }
-    const entry = Array.isArray(report) ? report[0] : undefined;
-    if (entry === undefined || typeof entry !== "object" || entry === null) {
-      return { ok: false, reason: "`npm pack --json` accounted for no tarball" };
-    }
+    const read = packReportEntry(packed.stdout ?? "");
+    if (!read.ok) return { ok: false, reason: read.reason };
+    const { entry } = read;
     const filename = Reflect.get(entry, "filename");
     const files = Reflect.get(entry, "files");
     const entrySize = Reflect.get(entry, "size");

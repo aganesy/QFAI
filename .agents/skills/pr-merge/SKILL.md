@@ -1,75 +1,55 @@
 ---
 name: "pr-merge"
-description: "PR の最終確認、merge 実行、必要なら tag 作成/push を行う skill。`pr-fix` handoff 後に、GitHub CLI と PowerShell が使える repo で、タグ有無をユーザー確認して main へ merge するときに使う。"
+description: "Final check and merge of a pull request into main after the `pr-fix` handoff, in a repo with the GitHub CLI and PowerShell. It never creates or pushes a tag."
 ---
 
 # pr-merge
 
-この skill は `pr-fix` handoff 後の merge/tag を扱う。タグ方針は実行前に必ずユーザー確認し、SemVer release tag を選ぶ場合は `packages/qfai/package.json` と `CHANGELOG.md` の整合を確認する。
+This skill takes a pull request from the `pr-fix` handoff to a merge into
+`main`. It does not tag. `tag-release.yml` pushes `vX.Y.Z` when a release commit
+reaches `main`, so no merge here needs a tag and none is offered.
 
-## まず読むファイル
+## Read first
 
-- `tmp/pr-fix/pr-<PR番号>-handoff.json`（あれば）
-- `RELEASE.md`
-- `CHANGELOG.md`
-- `packages/qfai/package.json`
+- `tmp/pr-fix/pr-<PR number>-handoff.json`, if present
 
-## 最初の実行
+## First run
 
-最初は必ず dry-run で実行する。
+Always start with a dry run.
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/pr-merge/scripts/run-pr-merge.ps1 -PrNumber <PR番号> -DryRun
+powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/pr-merge/scripts/run-pr-merge.ps1 -PrNumber <PR number> -DryRun
 ```
 
-dry-run は `tmp/pr-merge/pr-<PR番号>-merge-plan.json` を生成し、`SuggestedReleaseTag` と `SuggestedAlternativeTag` を出力する。
+The dry run writes `tmp/pr-merge/pr-<PR number>-merge-plan.json`.
 
-## ユーザー確認
+## Merge
 
-1. dry-run の提案値を読み取り、`AskUserQuestion` が使える実装ではそれを使ってタグ方針を確認する。
-2. 質問は 1 問に絞り、選択肢は次の 3 つにする。
-   - `<SuggestedReleaseTag> (Recommended)`:
-     既存 tag を避けた次パッチ候補。SemVer release tag として使う場合だけ選ぶ。`packages/qfai/package.json` と `CHANGELOG.md` が一致していないなら停止して先に整合を取る。
-   - `<SuggestedAlternativeTag>`:
-     非 SemVer の追跡用 tag。release version を進めずに識別用 tag を残したい場合に使う。
-   - `タグなし`:
-     merge のみ実行し、tag は作らない。
-3. `AskUserQuestion` が `Other` / 自由記述を提供する実装なら、それで任意 tag を受ける。
-4. `AskUserQuestion` が使えない実装では、同じ 3 択と自由記述許可を通常メッセージで確認する。
-
-## 実行
-
-1. `タグなし` を選んだら、次を実行する。
+1. When the dry run reports no blocker, run the merge.
 
    ```powershell
-   powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/pr-merge/scripts/run-pr-merge.ps1 -PrNumber <PR番号> -NoTag
+   powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/pr-merge/scripts/run-pr-merge.ps1 -PrNumber <PR number>
    ```
 
-2. tag を選んだら、次を実行する。
+2. Add `-MergeMethod merge|squash|rebase` only when a method was named. The
+   default is `merge`.
+3. On success, read `tmp/pr-merge/pr-<PR number>-merge-result.json` and report
+   the result.
 
-   ```powershell
-   powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/pr-merge/scripts/run-pr-merge.ps1 -PrNumber <PR番号> -Tag <tag>
-   ```
+## Stop conditions
 
-3. merge method を明示指定された場合だけ `-MergeMethod merge|squash|rebase` を付ける。指定が無ければ `merge` を使う。
-4. 成功したら `tmp/pr-merge/pr-<PR番号>-merge-result.json` を確認し、結果を報告する。
-
-## stop 条件
-
-- `gh auth status` が失敗
-- worktree が dirty
-- PR の base が `main` ではない
-- PR が draft / closed / merged
-- unresolved review thread が残っている
-- CI check が green ではない
+- `gh auth status` fails
+- The working tree is dirty
+- The pull request's base is not `main`
+- The pull request is a draft, closed or merged
+- An unresolved review thread remains
+- A CI check is not green
 - The live PR body lacks an authored removal-list answer. Check it again
   immediately before merging, even when a handoff exists.
-- 指定 tag が既存
-- SemVer tag を選んだが `packages/qfai/package.json` / `CHANGELOG.md` と整合しない
 
-## 補足
+## Notes
 
-- `pr-fix` handoff がなくても live の PR 状態から実行できるが、可能なら handoff JSON を優先して読む。
-- unresolved review thread 判定は `first:100` 固定に依存せず、GraphQL `after` で全ページ走査してから判定する。
-- custom tag は `Other` / 自由記述で受けた値をそのまま `-Tag` に渡す。
-- tag 不要を選べるようにすることが必須で、tag を前提に進めない。
+- The script runs from the live pull request state without a handoff, but reads
+  the handoff JSON when one exists.
+- Unresolved review threads are counted across every page, following the
+  GraphQL `after` cursor, rather than from the first 100.

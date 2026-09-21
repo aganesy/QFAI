@@ -8,14 +8,14 @@
  * cover the *negative* defense branches that prevent the guard from
  * silently passing when its inputs are malformed:
  *
- *   - node failure fail-loud (L57-L68): package.json parse failure or
- *     files[] missing must exit 1 (not silently pass via mapfile).
- *   - glob entry rejection (L79-L85): `dist/**` style globs in
- *     package.json#files must be refused so the guard does not
- *     silently miss leakage in unexpanded globs.
- *   - empty SCAN_PATHS WARN (L97-L102): if every files[] entry is
- *     missing on disk, the guard emits a WARN but exits 0 (lint-only
- *     CI passes legitimately have no `dist/`).
+ *   - packlist fail-loud: when `npm pack --dry-run` cannot list the
+ *     package, the guard must exit 1 (not silently pass via mapfile).
+ *   - packlist scope: the surface is what npm packs, so the manifest, a
+ *     file npm always adds, and whatever a glob in files[] expands to are
+ *     all scanned.
+ *   - not-yet-built WARN: a files[] entry with nothing on disk is named in
+ *     a WARN, and the guard still exits 0 (lint-only CI passes
+ *     legitimately have no `dist/`).
  *   - filename pass: `grep -rn` only ever matches line content, so a
  *     marker encoded in a path component used to ship green. The name
  *     scan must report it with its own message, while honouring the
@@ -96,7 +96,7 @@ async function stageAssets(root: string, files: ReadonlyArray<[string, string]>)
 }
 
 describe("check-no-internal-version-leakage.sh defense branches", () => {
-  it("fails loudly when package.json is unparseable (node exit -> exit 1)", async () => {
+  it("fails loudly when npm cannot list the package (exit 1)", async () => {
     // Regression: an earlier draft used `mapfile < <(node -e '...')`
     // which silently swallowed node failures, masking corrupt
     // package.json. The capture-then-mapfile pattern must surface it.
@@ -104,70 +104,91 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
     await writeFile(path.join(tmp, "package.json"), "{ this is not valid json", "utf-8");
     const r = runGuard(tmp);
     expect(r.status).toBe(1);
-    expect(r.stderr).toMatch(/could not enumerate package\.json#files/);
+    expect(r.stderr).toMatch(/could not enumerate the files npm would pack/);
   });
 
-  it("fails loudly when package.json is missing files[] field (exit 1)", async () => {
+  it("fails on a schemaVersion in the published manifest (exit 1)", async () => {
+    // npm adds package.json to every package whatever files[] says, so the
+    // manifest is shipped surface like any file the list names.
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["clean.md", "clean body\n"]]);
+    await writeFile(
+      path.join(tmp, "package.json"),
+      JSON.stringify({ name: "fake", version: "0.0.0", files: ["assets"], schemaVersion: 2 }),
+      "utf-8",
+    );
+    const r = runGuard(tmp);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/schemaVersion field present in distributed surface .*package\.json/);
+  });
+
+  it("fails on a private version marker in the published manifest (exit 1)", async () => {
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["clean.md", "clean body\n"]]);
+    await writeFile(
+      path.join(tmp, "package.json"),
+      JSON.stringify({
+        name: "fake",
+        version: "0.0.0",
+        description: "the v2.0 cut",
+        files: ["assets"],
+      }),
+      "utf-8",
+    );
+    const r = runGuard(tmp);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/leaked in .*package\.json/);
+    expect(r.stderr).toContain("v2.0");
+  });
+
+  it("passes the manifest's own version field (exit 0)", async () => {
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["clean.md", "clean body\n"]]);
+    await writeFile(
+      path.join(tmp, "package.json"),
+      JSON.stringify({ name: "fake", version: "3.12.0", files: ["assets"] }),
+      "utf-8",
+    );
+    const r = runGuard(tmp);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toMatch(/OK: no internal spec ids/);
+  });
+
+  it("scans a file npm adds that files[] does not name (exit 1)", async () => {
+    // npm always packs README; the include list below names only assets.
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["clean.md", "clean body\n"]]);
+    await writeFile(path.join(tmp, "README.md"), "See DR-0007.\n", "utf-8");
+    const r = runGuard(tmp);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/leaked in .*README\.md/);
+  });
+
+  it("scans every file npm packs when package.json has no files[] field (exit 1)", async () => {
     const tmp = await newTempDir();
     await writeFile(
       path.join(tmp, "package.json"),
       JSON.stringify({ name: "fake", version: "0.0.0" }),
       "utf-8",
     );
+    await writeFile(path.join(tmp, "notes.md"), "Carries CHG-003.\n", "utf-8");
     const r = runGuard(tmp);
     expect(r.status).toBe(1);
-    expect(r.stderr).toMatch(/missing files\[\] field|could not enumerate/);
+    expect(r.stderr).toMatch(/leaked in .*notes\.md/);
   });
 
-  it("fails loudly when package.json#files is not an array (exit 1)", async () => {
-    const tmp = await newTempDir();
-    await writeFile(
-      path.join(tmp, "package.json"),
-      JSON.stringify({ name: "fake", version: "0.0.0", files: "dist" }),
-      "utf-8",
-    );
-    const r = runGuard(tmp);
-    expect(r.status).toBe(1);
-    expect(r.stderr).toMatch(/missing files\[\] field|could not enumerate/);
-  });
-
-  it("rejects glob '**' patterns in package.json#files (exit 1)", async () => {
-    // Globs like `dist/**` would be treated as literal paths and silently
-    // skipped by the on-disk existence check, leaking unscanned content.
-    const tmp = await newTempDir();
-    await writeFile(
-      path.join(tmp, "package.json"),
-      JSON.stringify({ name: "fake", version: "0.0.0", files: ["dist/**"] }),
-      "utf-8",
-    );
-    const r = runGuard(tmp);
-    expect(r.status).toBe(1);
-    expect(r.stderr).toMatch(/glob pattern 'dist\/\*\*'/);
-    expect(r.stderr).toMatch(/literal file\/directory paths only/);
-  });
-
-  it("rejects glob '*' patterns in package.json#files (exit 1)", async () => {
+  it("scans what a glob in package.json#files packs (exit 1)", async () => {
     const tmp = await newTempDir();
     await writeFile(
       path.join(tmp, "package.json"),
       JSON.stringify({ name: "fake", version: "0.0.0", files: ["assets/*.md"] }),
       "utf-8",
     );
+    await mkdir(path.join(tmp, "assets"), { recursive: true });
+    await writeFile(path.join(tmp, "assets", "notes.md"), "Carries CHG-003.\n", "utf-8");
     const r = runGuard(tmp);
     expect(r.status).toBe(1);
-    expect(r.stderr).toMatch(/glob pattern 'assets\/\*\.md'/);
-  });
-
-  it("rejects glob '?' patterns in package.json#files (exit 1)", async () => {
-    const tmp = await newTempDir();
-    await writeFile(
-      path.join(tmp, "package.json"),
-      JSON.stringify({ name: "fake", version: "0.0.0", files: ["asset?/file.md"] }),
-      "utf-8",
-    );
-    const r = runGuard(tmp);
-    expect(r.status).toBe(1);
-    expect(r.stderr).toMatch(/glob pattern 'asset\?\/file\.md'/);
+    expect(r.stderr).toMatch(/leaked in .*assets/);
   });
 
   it("flags an internal version marker carried by a file NAME (exit 1)", async () => {
@@ -197,6 +218,18 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(/leaked in a FILE NAME/);
     expect(r.stderr).toMatch(/DR-0007/);
+  });
+
+  it.each([
+    ["CAP-0009", 0],
+    ["CAP-0999", 1],
+    ["CAP-1000", 1],
+  ])("reads %s in shipped content as a capability ID only from CAP-0010 up", async (id, status) => {
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["notes.md", `Implements ${id}.\n`]]);
+    const r = runGuard(tmp);
+    expect(r.status, r.stderr).toBe(status);
+    if (status === 1) expect(r.stderr).toContain(id);
   });
 
   it("exempts version-stamped migration memo names from the name pass (exit 0)", async () => {
@@ -314,8 +347,8 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
 
   it("warns and passes when every files[] entry is absent on disk (exit 0)", async () => {
     // Lint-only CI passes legitimately have no `dist/` yet. The guard
-    // should emit a WARN naming what was skipped and exit 0 — without
-    // pretending the scan was complete.
+    // should emit a WARN naming what was not scanned and exit 0 — without
+    // pretending the scan was complete. The manifest is still scanned.
     const tmp = await newTempDir();
     await writeFile(
       path.join(tmp, "package.json"),
@@ -328,6 +361,54 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
     );
     const r = runGuard(tmp);
     expect(r.status).toBe(0);
-    expect(r.stderr).toMatch(/no distributed surfaces found|nothing scanned/);
+    expect(r.stderr).toMatch(/not on disk yet .*: dist missing-asset-dir/);
+  });
+});
+
+/**
+ * Put an `npm` on PATH that answers `pack` with `report`, so each shape npm
+ * has printed is read without that npm being installed.
+ */
+async function fakeNpmPrinting(report: unknown): Promise<NodeJS.ProcessEnv> {
+  const bin = await newTempDir();
+  const reportFile = path.join(bin, "pack-report.json");
+  await writeFile(reportFile, JSON.stringify(report), "utf-8");
+  await writeFile(path.join(bin, "npm"), `#!/usr/bin/env bash\ncat '${reportFile}'\n`, {
+    encoding: "utf-8",
+    mode: 0o755,
+  });
+  return { PATH: `${bin}${path.delimiter}${process.env.PATH ?? ""}` };
+}
+
+/** One pack whose only file is `assets/notes.md`, as npm reports it. */
+const NOTES_PACK = {
+  id: "fake@0.0.0",
+  name: "fake",
+  version: "0.0.0",
+  files: [{ path: "assets/notes.md", size: 17, mode: 420 }],
+};
+
+describe("check-no-internal-version-leakage.sh reads every shape npm pack --json prints", () => {
+  // npm 12 prints an object keyed by package name where npm 11 printed an
+  // array. The publish job pins a newer npm than the CI runners carry, so a
+  // guard that read only the array passed CI and failed at release.
+  it.each([
+    ["an array of packs (npm 11 and earlier)", [NOTES_PACK]],
+    ["an object keyed by package name (npm 12 and later)", { fake: NOTES_PACK }],
+  ])("scans what %s lists (exit 1)", async (_shape, report) => {
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["notes.md", "Carries CHG-003.\n"]]);
+    const r = runGuard(tmp, await fakeNpmPrinting(report));
+    expect(r.status, r.stderr).toBe(1);
+    expect(r.stderr).toMatch(/leaked in .*assets/);
+  });
+
+  it("refuses an object naming two packs rather than choosing one (exit 1)", async () => {
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["notes.md", "clean body\n"]]);
+    const report = { fake: NOTES_PACK, other: { ...NOTES_PACK, name: "other" } };
+    const r = runGuard(tmp, await fakeNpmPrinting(report));
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/could not enumerate the files npm would pack/);
   });
 });
