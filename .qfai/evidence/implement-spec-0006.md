@@ -6724,7 +6724,7 @@ code and the `Satisfied-by` path are sound and need no change. The three blockin
 1. **`TC-0006-0029`'s coverage annotation was missing** (`completion-reviewer`). `qfai validate
    --profile tdd --fail-on error` exits 1 at `counts: info=4 warning=353 error=2`, and `QFAI-ATDD-112`
    named `SPEC-0006:TC-0006-0029` among 94 unreferenced TCs. Root-caused by measurement rather than
-   inference: the ATDD scanner's globs (`.qfai/report/atdd-traceability/summary.json#scan`) are
+   inference: the ATDD scanner's globs (`.qfai/report/atdd-traceability/summary.json#scan`) are <!-- qfai:not-a-citation -->
    `tests/{e2e,api,integration}/**` resolved against the **repository root**, `matchedFileCount: 2`, so
    the `// QFAI:SPEC-0006:TC-0006-0029` marker inside `packages/qfai/tests/integration/**` is invisible
    to it. The annotation surface it does read is the root `tests/integration/qfai-traceability.md`,
@@ -7039,7 +7039,7 @@ group and every member transitions in the same ledger write.
   0 except `validate`, whose exit 1 is structurally unavoidable against a standing `error=2` baseline.
   Counts `info=4 warning=352 error=2` — **delta 0 / 0 / 0** against the Stage 0 baseline, checked three
   independent ways: the `counts:` line of the as-found run, the `counts:` line of a **freshly rebuilt**
-  run, and the `git diff` of `.qfai/report/validate.log`, in which the `errors:` and `warnings:` lines do
+  run, and the `git diff` of `.qfai/report/validate.log`, in which the `errors:` and `warnings:` lines do <!-- qfai:not-a-citation -->
   not appear as changed at all. `TDDLIST_TEST_FILE_MISSING = 0`, spec-0006 `TDDLIST_SELECTOR_UNRESOLVED
   = 0`, `QFAI-TEST-001 = 0`.
 
@@ -7256,7 +7256,7 @@ a repair step, and every repair is minimal and reads off the check's own conditi
 | `paths.srcDir`           | `exists(resolved)`                  | `mkdir src`                           |
 | `paths.testsDir`         | `exists(resolved)`                  | `mkdir tests`                         |
 | `paths.outDir`           | `exists(resolved)`                  | `mkdir .qfai/report`                  |
-| `output.validateJson`    | `exists(validateJsonAbs)`           | write `.qfai/report/validate.json`    |
+| `output.validateJson`    | `exists(validateJsonAbs)`           | write `.qfai/report/validate.json`    | <!-- qfai:not-a-citation -->
 | `traceability.testGlobs` | `globs.length === 0`                | one non-matching glob entry           |
 
 Three things measured about that table rather than assumed:
@@ -7460,7 +7460,7 @@ F1  base 6be8de00  mutant 7c376acb  Tests 2 failed (2), exit 1
   `refactor`.** Recorded as a gate result rather than waived, because waiving a clause on my own
   judgement is the move the whole gate exists to prevent.
 - **`validate --profile verify --fail-on error`**: zero `QFAI-REVIEW` findings over every pack under
-  `.qfai/review/review-20260818*` — one per round per row, naming `3dbeeef6`, `5ea28793`,
+  `.qfai/review/review-20260818*` — one per round per row, naming `3dbeeef6`, `5ea28793`, <!-- qfai:not-a-citation -->
   `d3f4318a` and `1da38e12`. Deliberately no count: a pack tally is a file-content derivative and
   this slice has already had two numerals rot, one of them in a paragraph about keeping records
   current. Recorded at all because this is the only profile that reports `QFAI-REVIEW-*`.
@@ -7604,7 +7604,7 @@ F1  base 6be8de00  mutant 7c376acb  also reddens this row at
   `refactor`.** Recorded as a gate result rather than waived, because waiving a clause on my own
   judgement is the move the whole gate exists to prevent.
 - **`validate --profile verify --fail-on error`**: zero `QFAI-REVIEW` findings over every pack under
-  `.qfai/review/review-20260818*` — one per round per row, naming `3dbeeef6`, `5ea28793`,
+  `.qfai/review/review-20260818*` — one per round per row, naming `3dbeeef6`, `5ea28793`, <!-- qfai:not-a-citation -->
   `d3f4318a` and `1da38e12`. Deliberately no count: a pack tally is a file-content derivative and
   this slice has already had two numerals rot, one of them in a paragraph about keeping records
   current. Recorded at all because this is the only profile that reports `QFAI-REVIEW-*`.
@@ -7942,7 +7942,7 @@ M-C  base 6be8de00  mutant f3853988  Tests 2 failed (2), exit 1
   `refactor`.** Recorded as a gate result rather than waived, because waiving a clause on my own
   judgement is the move the whole gate exists to prevent.
 - **`validate --profile verify --fail-on error`**: zero `QFAI-REVIEW` findings over every pack under
-  `.qfai/review/review-20260818*` — one per round per row, naming `3dbeeef6`, `5ea28793`,
+  `.qfai/review/review-20260818*` — one per round per row, naming `3dbeeef6`, `5ea28793`, <!-- qfai:not-a-citation -->
   `d3f4318a` and `1da38e12`. Deliberately no count: a pack tally is a file-content derivative and
   this slice has already had two numerals rot, one of them in a paragraph about keeping records
   current. Recorded at all because this is the only profile that reports `QFAI-REVIEW-*`.
@@ -8194,7 +8194,7 @@ M-C base 6be8de00  mutant f3853988  Tests 2 failed (2), exit 1
   `refactor`.** Recorded as a gate result rather than waived, because waiving a clause on my own
   judgement is the move the whole gate exists to prevent.
 - **`validate --profile verify --fail-on error`**: zero `QFAI-REVIEW` findings over every pack under
-  `.qfai/review/review-20260818*` — one per round per row, naming `3dbeeef6`, `5ea28793`,
+  `.qfai/review/review-20260818*` — one per round per row, naming `3dbeeef6`, `5ea28793`, <!-- qfai:not-a-citation -->
   `d3f4318a` and `1da38e12`. Deliberately no count: a pack tally is a file-content derivative and
   this slice has already had two numerals rot, one of them in a paragraph about keeping records
   current. Recorded at all because this is the only profile that reports `QFAI-REVIEW-*`.
@@ -8219,7 +8219,7 @@ applies to its suite counts was simply not applied to this one.
 **`validate --profile verify --fail-on error`** — recorded because it is the ONLY profile that
 reports `QFAI-REVIEW-*`, so neither `--profile tdd` nor `--profile sdd` can see whether a review
 pack is well-formed. Re-run at `6be8de00`: **zero** `QFAI-REVIEW` findings over every pack under
-`.qfai/review/review-20260818*` — one per round per row, the round stamps being `…06000N000`
+`.qfai/review/review-20260818*` — one per round per row, the round stamps being `…06000N000` <!-- qfai:not-a-citation -->
 (`3dbeeef6`), `…08000N000` (`5ea28793`), `…10000N000` (`d3f4318a`) and `…12000N000`
 (`1da38e12`). This sentence said *eight* for one revision and then *twelve* for the next, which is
 why it now names no number at all. Previously the claim existed only in a commit message, which is

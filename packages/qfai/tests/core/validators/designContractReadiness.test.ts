@@ -255,6 +255,19 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     await seedUiBearingProject(root);
     await seedDesignMdAndLock(root);
     await seedPrototypingDesignYamls(root);
+    // A target whose UI contracts declare screens owes a `procurement`, so the
+    // seeded handoff carries the one that says the screen needed nothing.
+    await writeFile(
+      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      `${(
+        await readFile(path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"), "utf-8")
+      ).trimEnd()}
+procurement:
+  drawn-from-project:
+    - screen: "home"
+`,
+      "utf-8",
+    );
     const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
     const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
     expect(dcon013).toEqual([]);
@@ -623,10 +636,69 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
       });
     });
 
-    it("says nothing when the key is absent", async () => {
-      // The handoff contract lets a screen drawn entirely from what the
-      // project already had omit both lists, so absence is legal here.
-      expect(await seeded([])).toEqual([]);
+    it("reports the key absent on a target whose UI contracts declare screens", async () => {
+      // Absence used to be legal, for a project that had drawn every screen
+      // from what it already had. It reads the same as a loop that recorded
+      // nothing, and an implementer taking the second for the first rebuilds
+      // by hand what the loop procured. `drawn-from-project` is where the
+      // first case is now said.
+      const messages = await seeded([]);
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("'procurement' is absent");
+    });
+
+    it("says nothing when a screen that needed nothing is named as such", async () => {
+      expect(
+        await seeded(["procurement:", "  drawn-from-project:", '    - screen: "dashboard"']),
+      ).toEqual([]);
+    });
+
+    it("reports a drawn-from-project row naming a screen no UI contract declares", async () => {
+      const messages = await seeded([
+        "procurement:",
+        "  drawn-from-project:",
+        '    - screen: "nowhere"',
+      ]);
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("names screen 'nowhere'");
+    });
+
+    it("reports a drawn-from-project row naming no screen", async () => {
+      const messages = await seeded([
+        "procurement:",
+        "  drawn-from-project:",
+        '    - region: "summary cards"',
+      ]);
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("procurement.drawn-from-project[0]");
+      expect(messages[0]).toContain("names no screen");
+    });
+
+    it("reports one screen said to have needed nothing and to have needed something", async () => {
+      const messages = await seeded([
+        ...rowFor("procured", "dashboard"),
+        "  drawn-from-project:",
+        '    - screen: "dashboard"',
+      ]);
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("needed nothing");
+      expect(messages[0]).toContain("names something it needed");
+    });
+
+    it("reports one screen named twice as having needed nothing", async () => {
+      const messages = await seeded([
+        "procurement:",
+        "  drawn-from-project:",
+        '    - screen: "dashboard"',
+        '    - screen: "dashboard"',
+      ]);
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain("'dashboard'");
     });
 
     it("reports a key present and saying nothing", async () => {
@@ -663,8 +735,14 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
       const messages = await seeded(block);
 
       // Every row of the example, each named for the cells it does not carry.
+      // `drawn-from-project` carries only a screen, so it is named for that
+      // alone; the other two lists carry a region as well.
       expect(messages.length).toBeGreaterThan(0);
-      for (const message of messages) expect(message).toContain("names no screen, region");
+      for (const message of messages) {
+        expect(message).toContain(
+          message.includes("drawn-from-project") ? "names no screen" : "names no screen, region",
+        );
+      }
     });
 
     it("reports a list name nothing reads", async () => {
