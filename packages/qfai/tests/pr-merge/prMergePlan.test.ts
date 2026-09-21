@@ -736,6 +736,29 @@ describe.concurrent("run-pr-merge pagination", () => {
     expect(plan.UnresolvedThreads).toBe(2);
   });
 
+  it("counts an unresolved thread on a later page that is outdated", async ({
+    expect,
+    onTestFinished,
+  }) => {
+    // Outdated is not resolved. The code the reviewer commented on moved; the
+    // finding stands until somebody answers it, and skipping it here let the
+    // plan report every thread resolved while one was not.
+    const outdated: FakeThread = { ...makeThread(), id: "PRRT_kwDOQuL-page2", isOutdated: true };
+    const result = await runPrMerge({
+      onTestFinished,
+      scenario: makeScenario({
+        threadPages: [[makeThread()], [outdated]],
+      }),
+    });
+
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
+    const plan = await readJson(
+      path.join(result.repoDir, "tmp", "pr-merge", "pr-166-merge-plan.json"),
+    );
+    expect(plan.ReadyToMerge).toBe(false);
+    expect(plan.UnresolvedThreads).toBe(2);
+  });
+
   it("fails fast when pagination reports next page without endCursor", async ({
     expect,
     onTestFinished,

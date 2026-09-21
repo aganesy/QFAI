@@ -135,6 +135,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   waits for, and keeps the guarantee that does hold: a stale review pack is
   renamed into `_archive/` and never removed.
 
+- **A citation the evidence-citation backlog holds is keyed by the section it
+  sits under, not by its position in the file** (#1753). The key counted a
+  path's citations within a file, in order, so deleting one and adding another
+  left every key where it was: the new citation inherited the backlog entry the
+  old one held, and a record written after the census claimed an artifact the
+  tree does not carry while the guard stayed green. That is the growth the
+  backlog exists to refuse. The key now carries the heading the citation sits
+  under and its ordinal inside that heading, which an edit to another section
+  does not move. A `#` run inside a fence is a shell comment rather than a
+  heading and is read as one. The census is re-measured under the new keys and
+  its digest re-pinned, in one list rather than two: it was taken again, so
+  there is no earlier measurement for an addendum to sit beside.
+
+- **An outdated review thread no longer authorizes a merge** (#1855). The merge
+  script dropped a thread when either `isResolved` or `isOutdated` was true, and
+  those are different claims: outdated says the code the reviewer commented on
+  has moved, not that anybody answered them. An unresolved thread on moved code
+  disappeared from the count, so the plan could report every thread resolved
+  while one was not, and the skill's own list of blockers said the same. The
+  count now drops a thread only when it is resolved.
+
 - **The traceability reference no longer tells a reader to delete a row the SDD
   producer seeds** (#1856). Phase 2b seeds a `Layer = Integration` row for every
   test case whose annotation routes to `tests/integration/**`, which includes
