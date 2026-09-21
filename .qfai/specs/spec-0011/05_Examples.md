@@ -38,19 +38,19 @@
 - And the mere existence of a shared read-only fixture module, which neither
   item writes and each consumes as-is, is not a deny on its own
 
-## EX-0011-0006: Coverage Placeholder for BR-0011-0004
+## EX-0011-0006: Minimal Code For The One Failing Test
 
 - BR-Ref: BR-0011-0004
-- Given the consolidated rule BR-0011-0004
-- When layer coverage is evaluated
-- Then at least one example exists for BR-0011-0004
+- Given a failing test that asserts one field of a response
+- When Phase Green writes production code for it
+- Then that field is what the code adds, and a second case no test asks for is not generalized ahead of its own RED
 
-## EX-0011-0007: Coverage Placeholder for BR-0011-0006
+## EX-0011-0007: Reviewer Separation Before `done`
 
 - BR-Ref: BR-0011-0006
-- Given the consolidated rule BR-0011-0006
-- When layer coverage is evaluated
-- Then at least one example exists for BR-0011-0006
+- Given the implementation worker that wrote the item
+- When the item is put forward for `done`
+- Then `completion-reviewer` and `implementation-reviewer` each return PASS first, and the worker's own approval is neither of them
 
 ## EX-0011-0008: Simplified Handoff Parse
 

@@ -120,3 +120,26 @@ describe("TC-0011-0008: All Done Reports Nothing To Do", () => {
     expect(content).toMatch(/nothing to do/i);
   });
 });
+
+// TC-0011-0009: Minimal Code For The One Failing Test
+// QFAI:SPEC-0011:TC-0011-0009
+describe("TC-0011-0009: Minimal Code For The One Failing Test", () => {
+  it("SKILL.md asks Phase Green for the minimum production code", async () => {
+    const content = await readFile(SKILL_PATH, "utf-8");
+    expect(content).toContain("### Phase: Green (Make It Pass)");
+    expect(content).toMatch(
+      /Write the \*\*minimum production code\*\* to make the failing test pass/,
+    );
+  });
+
+  it("SKILL.md puts that code after the failure has been watched", async () => {
+    // Minimal is about the amount and this is about the order: code written
+    // before the RED is code no failing test bounded.
+    const content = await readFile(SKILL_PATH, "utf-8");
+    const red = content.indexOf("### Phase: Red");
+    const green = content.indexOf("### Phase: Green (Make It Pass)");
+    expect(red).toBeGreaterThan(-1);
+    expect(green).toBeGreaterThan(red);
+    expect(content).toMatch(/watch it fail/i);
+  });
+});
