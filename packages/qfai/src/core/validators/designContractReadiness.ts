@@ -1058,7 +1058,19 @@ async function validatePrototypeHandoff(
 const PROCUREMENT_ROW_CELLS: Readonly<Record<string, readonly string[]>> = {
   procured: ["screen", "region", "item"],
   authored: ["screen", "region", "why"],
+  "drawn-from-project": ["screen"],
 };
+
+/**
+ * The list that says a screen needed nothing.
+ *
+ * Its rows name a screen and no region, because there is no region to name:
+ * the claim is about the whole screen. An empty `procured` would not say it —
+ * that reads as "nothing was found", which is a different answer from "nothing
+ * was needed" — and omitting the screen says least of all, which is the state
+ * this list exists to remove.
+ */
+const DRAWN_FROM_PROJECT = "drawn-from-project";
 
 /**
  * The values the shipped handoff example writes in a `procurement` row.
@@ -1133,6 +1145,30 @@ function cellIsWritten(value: unknown): boolean {
 }
 
 /**
+ * The finding for a screen the manifest answers nothing about.
+ *
+ * Separate from the shape findings because the repair is different: nothing in
+ * the file is malformed, and what it owes is a row saying which of the two
+ * cases the screen is in.
+ */
+function missingProcurement(filePathRel: string, screens: readonly string[], what: string): Issue {
+  return issue(
+    "QFAI-DCON-013",
+    `prototype-handoff.yaml ${what}, and this target's UI contracts declare screens. An ` +
+      `implementer cannot tell a screen that needed nothing from one the loop recorded nothing ` +
+      `for, and reading the second as the first rebuilds by hand what the loop had procured.`,
+    "error",
+    filePathRel,
+    "designContractReadiness.prototypeHandoffProcurement",
+    undefined,
+    "canonical",
+    `Give ${screens.map((screen) => `'${screen}'`).join(", ")} a row in prototype-handoff.yaml's ` +
+      "`procurement`: under `procured` or `authored` for a region it needed, or under " +
+      "`drawn-from-project` where the screen was drawn entirely from what the project already had.",
+  );
+}
+
+/**
  * Shape findings for `prototype-handoff.yaml#procurement`.
  *
  * The key itself is optional: the handoff contract lets a screen drawn
@@ -1149,11 +1185,18 @@ function procurementIssues(
   filePathRel: string,
   declaredScreens: ReadonlySet<string>,
 ): Issue[] {
-  // Absent, not empty. The contract lets a screen drawn entirely from what the
-  // project already had omit the key; a bare `procurement:` parses as `null`,
-  // which is a declaration present and saying nothing, and reading the two as
-  // one let the second past the shape check below.
-  if (!("procurement" in handoff)) return [];
+  // A target with no UI contract has no screen list to hold a manifest to, and
+  // the readiness gate already reports that project. Everywhere else the key is
+  // required: an absent `procurement` could mean every screen was drawn from
+  // what the project already had, or that the loop recorded nothing, and an
+  // implementer reading the second as the first rebuilds by hand what the loop
+  // had procured.
+  if (!("procurement" in handoff)) {
+    if (declaredScreens.size === 0) return [];
+    return [
+      missingProcurement(filePathRel, [...declaredScreens].sort(), "field 'procurement' is absent"),
+    ];
+  }
   const procurement = handoff.procurement;
   const report = (message: string): Issue =>
     issue(
@@ -1188,6 +1231,9 @@ function procurementIssues(
    */
   const realised = new Map<string, string>();
   const duplicates: { key: string; first: string; second: string }[] = [];
+  /** Screens claimed to have needed nothing, and screens with a row that needed something. */
+  const drawnFromProject = new Map<string, string>();
+  const needed = new Map<string, string>();
   // A closed key set, as `prototyping/handoff.ts` keeps for the schema beside
   // this one: "closed schema; protects against schema drift and typos". A
   // misspelling leaves both contract names absent, which is a manifest that
@@ -1226,8 +1272,12 @@ function procurementIssues(
       const missing = isRecord(row) ? cells.filter((cell) => !cellIsWritten(row[cell])) : cells;
       if (missing.length === 0 && isRecord(row)) {
         const screen = String(row.screen).trim();
-        const region = String(row.region).trim();
-        const key = `${screen} / ${region}`;
+        if (list === DRAWN_FROM_PROJECT) drawnFromProject.set(screen, where);
+        else needed.set(screen, where);
+        // A `drawn-from-project` row names the screen and nothing under it, so
+        // the pair a duplicate is judged on is the screen itself.
+        const key =
+          list === DRAWN_FROM_PROJECT ? screen : `${screen} / ${String(row.region).trim()}`;
         const seen = realised.get(key);
         if (seen === undefined) realised.set(key, where);
         else duplicates.push({ key, first: seen, second: where });
@@ -1253,6 +1303,17 @@ function procurementIssues(
         );
       }
     });
+  }
+  for (const [screen, where] of drawnFromProject) {
+    const other = needed.get(screen);
+    if (other === undefined) continue;
+    issues.push(
+      report(
+        `row '${where}' says screen '${screen}' needed nothing, and '${other}' names something ` +
+          `it needed. A screen is one or the other, so an implementer is told both to install ` +
+          `and that there is nothing to install.`,
+      ),
+    );
   }
   for (const { key, first, second } of duplicates) {
     issues.push(
