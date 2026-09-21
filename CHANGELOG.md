@@ -156,6 +156,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   while one was not, and the skill's own list of blockers said the same. The
   count now drops a thread only when it is resolved.
 
+- **The traceability reference no longer tells a reader to delete a row the SDD
+  producer seeds** (#1856). Phase 2b seeds a `Layer = Integration` row for every
+  test case whose annotation routes to `tests/integration/**`, which includes
+  one declaring no `Level` at all. `spec-traceability-rules.md` said that same
+  test case "is not a coverage target and gets no row" — true of the
+  coverage-target group and false of the Integration one, and a reader following
+  it removes the row `/qfai-atdd` hands its work over on, along with the
+  evidence home that row resolves. The reference now says which group the row
+  belongs to, and that what would put one test case on two gates is a
+  coverage-target row beside it, which the two groups being exclusive prevents.
+
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
   had two lists, and a screen drawn entirely from what the project already had
