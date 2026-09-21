@@ -1237,9 +1237,18 @@ export async function replaceGovernedAsset(
     await rename(staging, dest);
     return "replaced";
   } catch (error: unknown) {
-    await rm(staging, { force: true }).catch(() => {
-      // Best effort; preserve the original replacement failure.
-    });
+    // An occupied staging path is not this run's to remove. `COPYFILE_EXCL`
+    // refuses with `EEXIST` precisely because something is already there, and
+    // a name collision does not transfer ownership of the bytes behind it —
+    // removing them destroys whatever wrote them, which on a shared checkout
+    // is another run's staged asset. Every other failure leaves behind at most
+    // what this copy wrote, including a partial one, and that is this run's to
+    // clear.
+    if (!hasErrnoCode(error) || error.code !== "EEXIST") {
+      await rm(staging, { force: true }).catch(() => {
+        // Best effort; preserve the original replacement failure.
+      });
+    }
     throw error;
   }
 }
