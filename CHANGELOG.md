@@ -109,6 +109,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Ten user stories the E2E annotation ledger counted as covered are now backed
+  by tests about what they state** (#1833). Each of them had exactly one
+  annotation, and it sat on a test about something else: the Copilot review
+  instructions were backed by a block on migration and upgrade support, the
+  implement skill's micro-cycle rules by blocks on the sub-agent roster and the
+  evidence contract, the research allowlist by the phrase guardrails, and the
+  anchor-form mock by the discussion active pointer. Four new E2E files carry
+  the annotations now — the instruction files init distributes and what `--force`
+  does to them, the five rules the shipped implement skill states, the
+  default-deny research allowlist, and the mock template read both as text and
+  through the validator that rejects a same-origin absolute path. The eleventh
+  story, README files in each integration directory, describes behaviour no
+  release still has, so its ledger claim is withdrawn and the unbacked-count
+  limit is re-pinned to what the ledger now holds.
+
 - **`Oracle proof` is read from the round block the skill writes it in**
   (#2026). `round-evidence.md` puts the field under the round prefix, because a
   later round rewrites the code an earlier proof mutated — one slot for the row
