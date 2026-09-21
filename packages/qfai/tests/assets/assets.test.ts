@@ -2939,6 +2939,7 @@ describe("assets guardrails", () => {
     expect(content).toMatch(/brand direction is the exception/i);
   });
 
+  // QFAI:SPEC-0002:TC-0002-0011
   it("artifact rules and SKILL.md share namespaced-only semantics for prototyping.yaml", async () => {
     const rulesPath = path.join(
       templateQfaiDir,
