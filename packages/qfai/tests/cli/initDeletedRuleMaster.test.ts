@@ -91,8 +91,8 @@ describe("a rule master the project deleted", () => {
     await rm(masterPath(root));
 
     const lock = JSON.parse(await readFile(lockPath(root), "utf-8")) as Record<string, string>;
-    delete lock[SUBJECT];
-    await writeFile(lockPath(root), `${JSON.stringify(lock, null, 2)}\n`, "utf-8");
+    const without = Object.fromEntries(Object.entries(lock).filter(([name]) => name !== SUBJECT));
+    await writeFile(lockPath(root), `${JSON.stringify(without, null, 2)}\n`, "utf-8");
 
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
