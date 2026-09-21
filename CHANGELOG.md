@@ -115,6 +115,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   who copied the command posted nothing and found out by running it. The number
   is in the command now.
 
+- **The doctor contract stops denying the one deletion it declares** (#1860).
+  Its `--clean` section prunes TTL-expired validate run logs and tabulates the
+  preconditions that clearance requires; its non-goals said the command deletes
+  nothing and that no path is removed on any flag. A reader deciding whether a
+  doctor run is reversible got the opposite answer depending on which section
+  they reached first. The non-goal names the one removal and the conditions it
+  waits for, and keeps the guarantee that does hold: a stale review pack is
+  renamed into `_archive/` and never removed.
+
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
   had two lists, and a screen drawn entirely from what the project already had
@@ -142,6 +151,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The spec-0013 ledger carries the columns its template declares, and a row
   for every story** (#1750). Thirteen of its fourteen stories had no row, and
   the ledger held nine columns where the template declares fifteen. The thirteen
+
+- **The spec-0010 ledger carries the columns its template declares, and a row
+  for every story** (#1750). None of its twelve stories had a row, and the
+  ledger held eight columns where the template declares fifteen. The twelve
   rows are at `todo`, and every existing row keeps its identifier, status, test
   file, selector, decision and evidence.
 
@@ -158,6 +171,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   those rows in the same pass, unauthorized and undisposed. The thirteen rows
   are at `todo`, and every existing row keeps its identifier, status, test file,
   selector, decision and evidence.
+
+- **The spec-0012 ledger carries the columns its template declares, and a row
+  for every story** (#1750). Thirty-three of its fifty-two stories had no row,
+  and its eight tables held nine columns where the template declares fifteen.
+  The thirty-three rows are at `todo`, and every existing row keeps its
+  identifier, status, test file, selector, decision and evidence. This was the
+  last pack that owed the migration.
 
 - **A rule master a project deleted is not written back by the next `qfai init`**
   (#1741). The run decided which masters to cite from its own copy report, so a
