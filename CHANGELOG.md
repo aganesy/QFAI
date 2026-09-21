@@ -6,6 +6,181 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A committed figure for what a documentation-only pull request costs, and a
+  check that refuses a tree which moved it without re-pinning** (#1870).
+  `.github/required-status-contexts.json` now carries the jobs that path executes
+  and the sum of their declared `timeout-minutes`;
+  `node scripts/pin-documentation-only-cost.mjs` recomputes both from the workflow
+  tree, and the `documentation-only-cost-pin` rule of
+  `scripts/check-workflow-hygiene.mjs` exits 1 while the committed figures and a
+  fresh recomputation disagree, naming both. So a job joining or leaving the set,
+  and a raised ceiling, fail until the tool has run — which puts the new figure in
+  a diff a reviewer reads instead of leaving it to drift. The pinner imports the
+  lane's own computation rather than restating it, so the pin and the check cannot
+  disagree about what they measure, and the topology test compares the pin against
+  its own independent reading of the workflow. Extracting the lint-aggregate lane
+  into a job of its own is the remaining Plan step.
+
+### Changed
+
+- **The mirror-surface lane no longer runs the `pr-merge` plan suite, and the
+  `pr-merge` skill document gains the guard it never had** (#1877). The lane
+  exists so that guards over the agent-integration mirrors keep running on a
+  change the documentation-only classification lets skip the test job. It
+  carried `tests/pr-merge/prMergePlan.test.ts`, which spawns a PowerShell
+  process per case and reads nothing from a mirror tree but two `.ps1` files —
+  executables, which the classifier already keeps out of the documentation-only
+  set, so a change to either selects the full matrix and runs that suite there
+  regardless. The lane paid the file's whole cost for coverage no prose change
+  could break. The prose assertions the lane does need are now a file of their
+  own, `tests/core/prMergeSkillDocs.test.ts`: it holds the four `pr-merge`
+  `SKILL.md` copies identical and pins the promises the document makes about the
+  command an operator runs — that it never tags, that the dry run comes first,
+  that the default merge method is `merge`, and where the plan is written. None
+  of that was checked before. This is the split #1982 made for `pr-fix`,
+  finished for the other half of the pair.
+  Measured over the lane's eight files, 321 s before and 9 s after. On CI the
+  `mirror-surface` job was 201 s on the last green `main` run before this
+  change and 20 s on the run that carries it.
+
+- **A code-path pull request no longer claims its runner cost fell, and what it does
+  cost is pinned** (#2017). The requirement capped such a run at 12 job instances,
+  8 frozen-lockfile installs and 3-or-5 bundler builds, against a baseline of 14 /
+  13 / 6. The tree runs **26 / 24 / 5**. Nothing regressed: both test matrices were
+  widened to nine legs to shorten the wall clock, and each widening was recorded —
+  but nine legs finishing together cost fewer runner minutes than one leg running
+  them in series while counting more instances, so an instance figure on a code path
+  moves against the very thing that requirement is named for. The requirement
+  therefore keeps the documentation-only claim, where consumption does fall, and
+  hands the code path to the wall-clock requirement next to it. What a code path
+  costs is recorded instead: `.github/required-status-contexts.json` carries the
+  instances, their declared timeout sum, the installs they perform and the jobs that
+  declare a build; `node scripts/pin-code-path-cost.mjs` recomputes all four from
+  the workflow tree; and the `code-path-cost-pin` rule of the hygiene lane exits 1
+  while the committed figures and a fresh recomputation disagree, naming the figure
+  that moved. Three limits are stated rather than hidden. The build figure counts
+  jobs and not executions, because two of the three condition their build step on
+  the matrix slice and the lane evaluates no workflow expression. No figure is
+  compared with what a run consumed, which needs the forge's API and a finished run.
+  And it is not a cost bound: enforcement is equality against a value recomputed
+  from the same tree, so it catches a change nobody recorded, never an expensive
+  one. Before this, no test asserted any of the three counts, which is how the
+  figure went stale in silence.
+
+- **The mirror-surface lane runs on a runner of its own, and the lint job fell
+  from 265 s to 68 s** (#1870). `pnpm ci:lint` forked five lanes onto one
+  four-core runner, and the mirror-surface lane — a vitest run over eight files,
+  one of which spawns a process in most of its cases — was the longest of them.
+  The lint job's wall clock was that lane's, lengthened by the contention it
+  created for the other four. The lane now has a job of its own, carrying no
+  condition and named in no `dependencyConditions` entry, because the surface it
+  checks is what a documentation-only change is most likely to break. Measured on
+  green CI runs of the same shape, before and after: the lint job 265 s → 68 s,
+  its gate step 243 s → 44 s, and the lane itself 243 s → 116 s once nothing
+  contended with it. Summed runner time rose 1.0 minute, which is the new job's
+  own checkout and setup net of that saving. **No wall-clock claim is made**: the
+  longest job is no longer the lint job, and the job that replaced it measured
+  97 s slower than in the before run for reasons this change does not touch and
+  one run a side cannot attribute. `documentationOnlyCostPin` rises to five jobs
+  and 45 declared minutes, and the pinned check-name set gains the job — no
+  repository setting changed, because only the aggregate verdict is required and
+  the new lane reaches it through that verdict's dependency map.
+
+- **The documentation-only path is pinned and re-pinned, not held to a count of
+  four job names** (#2016). `BR-0017-0007` required such a pull request to execute
+  at most four job instances, and the topology test asserted that set exactly. Job
+  instances charges +1 for a change that shortens the run and adds no work, so the
+  measure refused a job the requirement permits. The rule now pins two things —
+  the set of jobs that execute on that path, and the sum of their declared
+  `timeout-minutes` — and requires a change to either to re-pin in the same
+  change, with the measured before-and-after numbers `BR-0017-0030` asks for. The
+  pin is recomputed from the workflow tree rather than written into the rule, so
+  the next split lands in a diff a reviewer reads. It is not a bound: enforcement
+  is equality against a value derived from the same tree, so a clause forbidding a
+  higher cost could not fail, and the rule states the obligation the hygiene lane
+  can enforce instead. Membership is the second claim and reads a narrower set —
+  among the jobs the aggregate verdict depends on, the executing ones must be
+  exactly the expected-context declaration's entries that carry no condition, each
+  named there with the reason it cannot be skipped. The two sets differ, because
+  the verdict executes and is not one of its own dependencies. `NFR-0002` keeps
+  instance count, its other clauses being quantified in instances, installs and
+  builds, and its documentation-only figure moves to five. `DR-0017-0015` records
+  the options, four weaknesses of the adopted unit and the dissent against it.
+
+### Fixed
+
+- **A spawn-bound test that produces no output now says so, instead of reading as
+  the script printing the wrong thing** (#1934). One CI run failed with
+  `expected '' to contain 'authored removal-list answer'` and nothing else. The
+  assertion is about the text, the defect was about the child, and no rerun of
+  the assertion can tell those apart — so the failure had to be reproduced to
+  learn which it was, while a merge gate read the red. Every row that reads a
+  spawned child's output now passes one message: how the child ended, and, when
+  it wrote nothing on either stream, that fact named as a harness failure. A
+  child that did speak hands the reader its stderr, which `toContain` never
+  shows. The two rows that parse a child's stdout as JSON assert it is non-empty
+  first, because `JSON.parse("")` raises `Unexpected end of JSON input` and that
+  names neither the child nor the stream it did not write to.
+
+- **A killed test child now names the signal that killed it, and can no longer
+  pass as a script that rejected its input** (#2028). Node calls a `close`
+  listener with two arguments, `(code, signal)`. The three helpers that spawn a
+  process in the test suite took the first and dropped the second, so every kill
+  arrived as `code: null` with its cause thrown away — and a run that failed that
+  way reported `expected null to be +0`, naming no signal, no cause and no child.
+  The quieter half was the other direction: `expect(code).not.toBe(0)` is how the
+  two process-spawning suites say "the script rejected this input", and a killed
+  child satisfies it, so such a test passed while proving nothing. One helper now
+  performs the capture for all three, keeps the signal, and derives one readable
+  outcome from the pair — `exit 0`, `exit 1`, `killed by SIGKILL`. Every
+  assertion reads that value instead of the raw code, so a kill satisfies neither
+  direction by accident, and passes the child's own stderr as the message.
+
+## [1.12.1] - 2026-09-19
+
+### Added
+
+- **The tag push is held to the decision before it, and four workflows say what
+  keeps each of them serial** (#1870). Nothing pinned that `tag-release.yml`
+  pushes a tag only where its decision step wrote `push=true`, and every "nothing
+  to tag" answer ends that step successfully with the version output already
+  written — so an ungated push tags any merge that moved the manifest and happened
+  to carry a matching CHANGELOG heading, and a tag starts the release workflow.
+  The new row reads the gate from the step or from the job around it, so giving
+  the push a job of its own still passes. `tag-release.yml`,
+  `release-notes-drift.yml`, `prepare-release.yml` and `renovate.yml` now each
+  record what stops them dividing further: one tag ref plus an early exit that
+  spends no API call on an ordinary merge; an account-wide API allowance that
+  per-version shards would multiply while dividing the work; an edit step whose
+  only product is the work tree, with no install anywhere to amortize a second
+  runner; and a re-pin chain whose guard must precede the toolchain it protects.
+- **A rule on which surface answers a question about the hosted repository, and
+  how often it is asked** (#2009). An API allowance belongs to the account, so
+  every session and sub-agent draws on one pool and none of them can see what the
+  others spent; one agent asking the expensive way returns a refusal to all of
+  them. `api-budget.md` states the order — git, then REST, then GraphQL — one call
+  for the set rather than one per member, a payload saved once and searched
+  locally, and an interval that follows the subject rather than the impatience.
+  It also records that a dedicated rate-limit endpoint can misreport the budget,
+  and names the response header as the instrument. A `PreToolUse` hook puts it in
+  front of a shell command that mentions the forge's CLI or its API host; the
+  filter is in the program, so `documentation-clarity.md`'s decision to keep its
+  own hook off the shell still stands. `scripts/gh-budget.mjs` is this
+  repository's own cheap path: the CI state of every branch from one call, a job
+  log saved once, the remaining count reported on every invocation, and a refusal
+  rather than a degradation once a reserve is reached.
+- **A README only where a page is published** (#2010). Four were tracked; two were
+  pages nobody lands on. `.agents/rules/README.md` held the rules register, which
+  a second file can only keep in step by hand — the surface suite now reads each
+  rule's own first heading, so a rule cannot be missing from a list. Its
+  "Adding a rule" steps moved to `root-additions-policy.local.md`, and its
+  Windows symlink section is gone: `check-tracked-symlinks.mjs` prints the same
+  steps when it fails. `.instruction/README.md` ruled on that directory, so the
+  ruling is a rule — `.agents/rules/instruction-tree.md`.
+  `scripts/check-tracked-readmes.mjs` fails on a tracked README outside the
+  project's own page and the one npm publishes, and on a listed page that stops
+  being tracked.
+
 - **The root assistant tree is linked at the assets the package ships** (#1915, #1916).
   `.qfai/assistant/**` was a byte copy of `packages/qfai/assets/init/.qfai/assistant/**`,
   kept in step by a sync script and a tracked-tree diff. It is thirteen symlinks
@@ -17,6 +192,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   path that exists here and nowhere in the package; `pnpm ci:lint` runs its check.
   `scripts/sync-init-to-root.mjs` is reduced to seeding the two files a project
   owns.
+
+- **`QFAI-CONTRACT-043` reports a UI contract no live spec binds** (#1967). A
+  UI contract has no ledger row and no test directory of its own. Its screen
+  obligations reach a test case through the business rule that binds it, which
+  owes acceptance criteria and test cases under `QFAI-COV-*`, and nothing
+  reported a UI contract no rule bound. An API contract has `QFAI-ATDD-113` for
+  the same gap. The SDD profile now warns on a `CON-UI-*` that no live spec
+  names in a business rule's `Contract-Refs` cell or a `QFAI-CONTRACT-REF:`
+  line. A retired spec's binding does not count, and a mention elsewhere, such
+  as in `Notes`, does not bind.
 
 - **A guard on the mode a link is staged with** (#1920). `ln -s` in Git Bash on
   Windows copies the target instead of linking to it unless
@@ -146,6 +331,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Define a trust boundary by uncontrolled callers and sources, including public
   library exports and plugin or tenant contexts (#1803).
 
+- **A batch `/qfai-sdd` run records its shared phases once, in
+  `.qfai/evidence/sdd-batch-<timestamp>.md`** (#1906). With no argument, the
+  skill runs Phase 0 Contracts-first and Phase 1 Outline once for every spec,
+  but the per-spec evidence template required their grilling rows and work
+  orders in each spec's file. That left three choices: eleven copies that must
+  agree in `Ended at` and differ in `Wrote at`, one file with the other ten
+  incomplete, or an undocumented batch file no reviewer checks. A new
+  template, `templates/evidence/sdd-batch.md`, carries those two phases' rows
+  and work orders with the per-spec columns. Each spec's file names it on a
+  `Batch record` line, and the skill's batch section says so.
+
 - **Retained failures keep unit-level coverage** (#1793). The
   minimal-implementation safety floor protects coverage of the failure paths
   production code retains.
@@ -168,6 +364,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Verify repository-fact sources, use planning-stage precision and apply targeted
   edits in discussion review cycles (#1818).
 
+- **The discussion profile reads a pack's design direction against the
+  `DESIGN.md` schema** (#1905). On a visual surface a discussion pack records
+  the direction `/qfai-sdd` Phase 0 turns into `DESIGN.md`, and nothing
+  checked it until Phase 0 wrote the file, after the pack had closed. A pack
+  could propose `visual.colors.highlight` or an archetype outside the eight,
+  and `validate --profile discussion` passed. `QFAI-DPACK-011` (warning) now
+  reads the forms that name a key without doubt — a fenced YAML block under a
+  `DESIGN.md` section, a code span holding a dotted key path, and an
+  `archetype:` list item — against the same key tree the parser rejects
+  unknown keys with, and names each key or value the schema lacks. Prose is
+  not read, and cli-only and non-ui packs are skipped.
+
 - **A reviewer may demand more work only on the concrete artifacts** (#1809).
   A reviewer could ask for another business rule, quality target, policy or
   piece of architecture without limit, and each such demand made the next review
@@ -177,6 +385,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   architecture. Two demands stay admissible anywhere: a recorded item carrying
   its mandatory pair, and a safety-floor item. Any other demand is recorded as
   advisory. The drift protocol and the six reviewer cards point at the rule.
+
+- **A triage row can say what it waits on** (#1900). The triage table had no
+  column for one row's work waiting on another's, or on an open question, so the
+  dependency went into `Rationale` prose. There no fan-out could read it, and
+  three authors worded it three ways. The table format in `sdd-triage.md` now
+  defines an optional `Depends-On` column, holding another row's `Source` or an
+  `OQ-*`, and both delta templates carry it. The `qfai-sdd` batch section holds
+  a dependent row back until what it names is done or resolved.
 
 - **A legacy ledger outside the obligation-column protection is reported**
   (#1663). A seeded `E2E` or `API` row has `TC-Refs` forbidden to it, so the
@@ -350,7 +566,35 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `uiux.warning_as_error_override` goes with it, its only reader. An unknown key
   under `uiux` is ignored, so a configuration that still sets it keeps loading.
 
+- **Tagging from this repository's `pr-merge` skill.** It asked about a tag
+  before every merge and recommended one, though `tag-release.yml` already
+  pushes `vX.Y.Z` when a release commit reaches `main`. The tag it recommended
+  was usually refused by its own check: that version's tag already existed, so
+  the suggestion was the next patch, which did not match the manifest. The skill
+  now only merges, and `run-pr-merge.ps1` no longer takes `-Tag` or `-NoTag`.
+
 ### Fixed
+
+- **`Prepare release` opens its pull request again.** The step that pushes the
+  release branch and opens the pull request exited 2 with a bash syntax error,
+  after the push and before `gh pr create`. The terminator of the heredoc that
+  repairs an existing pull request body was indented past the `run:` block's
+  base, so after YAML removed that base it still carried two spaces, and a plain
+  `<<` never matched it. Bash parses a whole `if … else … fi` before running
+  either branch, so the step failed even where no pull request was open yet and
+  the heredoc was never reached. The terminator now sits at the base
+  indentation. A new test runs `bash -n` on every bash `run:` block in this
+  repository's workflows and actions and in the shipped workflow templates, and
+  fails on any diagnostic, including the warning bash prints for a heredoc left
+  open at the end of a script.
+
+- **The release job's leakage guard reads what npm 12 prints** (#2023). The guard asks
+  `npm pack --dry-run --json` what will ship, and read only the array npm 11
+  and earlier print. npm 12 prints an object keyed by package name instead. The
+  CI runners carry an older npm and the publish job pins npm 12, so the guard passed
+  on every pull request and then refused to publish. It now reads both shapes,
+  and so does the tarball proof in `check-publish-dry-run.mjs`, which read the
+  same report the same way.
 
 - **The evidence citation guard reads citations into `.qfai/evidence/`**
   (#1686). A record that named a sibling evidence file the tree does not carry
@@ -386,6 +630,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file can be rewritten, then clears the record. A bullet the project deleted on
   purpose was never recorded, so it is still not restored.
 
+- **Test titles and comments name only declared test cases and stories**
+  (#1836). Twenty-five titles and comments in the package's tests cited a
+  `TC-` or `US-` identifier no spec declares, and two annotations in a unit
+  suite named undeclared test cases. `QFAI-ATDD-101` and `-102` read only the
+  annotation form in the acceptance layers, so nothing reported them. They are
+  removed, and a repository check now fails on any bare identifier in a test
+  title or comment that no spec declares. An identifier the same file also
+  uses in code is read as fixture data.
+
 - **A removal answer written as a heading is pinned** (#1893). A heading deeper
   than the section's own does not end that section, so the reader that judges
   the answer and the rebuild that replaces it have to stop at the same place.
@@ -400,6 +653,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with no UI contract is left to the readiness gate, which already reports it,
   and `region` stays prose: a screen contract names a screen, not its parts.
 
+- **A completed row's verdicts have to come from one review pack** (#1742).
+  `review-artifact-layout.md` writes one pack per review round, and the gate
+  checked each verdict's pack on its own. A row could present the completion,
+  implementation and product-surface verdicts from three unrelated review
+  requests as one round. `QFAI-TDDLIST-008` now reports a row whose
+  `Spec review pack`, `Code quality review pack` and `Prototype parity review
+pack` name different paths or seals. The layout says a round after a REVISE
+  asks every routed reviewer again, since each verdict has to name the final
+  tree.
+
+- **The Markdown and Mermaid lanes skip other checkouts** (#1895).
+  `pnpm lint:md` walked `.claude/worktrees/**`, so a worktree of another branch
+  had its findings reported against this one. That happened locally and never
+  in a fresh CI clone. The Markdown lint now ignores `.claude/worktrees/**`, and
+  the Mermaid lane (shipped, and used by adopters' docs workflow) no longer
+  descends into a directory that holds its own `.git`, which is how a worktree
+  or a nested clone is marked. Prettier already skips the path through
+  `.gitignore`, and the schema lane matches paths from the tree's root.
+
 - **A lowercase CDATA lookalike hides what follows it** (#1866). GitHub renders
   `<![cdata[` exactly as it renders the spelled form: the content is hidden, and
   an unclosed opener hides the rest of the document. The body readers matched
@@ -408,6 +680,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   entry-point directive after one was read as operative while `qfai init` added
   no visible copy. The three readers that dispatch an HTML block now match the
   opener without regard to case; the inline raw-HTML forms are unchanged.
+
+- **A package that keeps the scaffold layout owns its own test files** (#1702).
+  The ATDD scan reads each package's acceptance suites, but a test's owning spec
+  was read only from `<paths.testsDir>/<layer>/spec-NNNN/`. A file at
+  `packages/checkout/tests/integration/spec-0002/pay.test.ts` had no owner, so a
+  mistyped annotation in it reached only the run of the spec the typo named,
+  and `--spec 0002` never reported it. The owner is now the `spec-NNNN`
+  directory directly inside the layer directory the scan resolves for the file,
+  at any test root. The ATDD findings and the scope filter every scoped run
+  applies both read it. A `spec-NNNN` directory above the layer directory, or
+  deeper inside it, still owns nothing.
 
 - **The entry points no longer say this repository installs its own package**
   (#1921). `CLAUDE.md` and `AGENTS.md` both described `.qfai/` as the result of
@@ -432,6 +715,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     literal `tests/e2e/**` or `tests/api/**`, which no scan reads in a project
     that moved it.
 
+- **The imported requirement count no longer counts a prose mention** (#1897).
+  `qfai sdd preflight` counts the IDs in `06_REQ.md`'s `REQ-ID` column, and
+  when that column held none it scanned the whole file. A pack numbering its
+  requirements `REQ-D-0001` reported a count of 1, from a sentence saying the
+  pack did not use `REQ-0001`. A `REQ-ID` column that holds no `REQ-NNNN` now
+  makes the count unknown. Only a file with no such column still falls back to
+  the distinct IDs in its text. The `06_REQ.md` template says a pack numbers
+  from `REQ-0001`, because specs cite a requirement with the pack's id, and
+  that a prefixed form is not read.
+
 - The release-notes drift check reads the published bodies from the release
   list, a hundred to a page, instead of asking for one release per changelog
   section. The list carries each release's tag and body together, so the number
@@ -448,6 +741,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   add `test-list.md` columns the ledger contract does not have, while the
   completion gate reads the three hashes from each row's `### TDD-NNNN`
   evidence entry.
+
+- **The DESIGN.md lock says what checks `frozenAt`: nothing** (#1898). Gates
+  compare the lock's hash with `DESIGN.md`, and none reads `frozenAt`, so a
+  re-freeze that rewrote only the hash passed. A green run was then read as
+  evidence that the timestamp had moved with it. The `qfai-sdd` freeze step
+  now says a re-freeze writes every field again, never the hash alone, and that
+  a stale `frozenAt` passes. The lock sample's header says the same.
 
 - Refuse a scaffold destination where the extensions could not be read, where
   an exclude glob's range stops the scan, or where a brace range's endpoints
@@ -500,9 +800,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   observes metadata reads at run time instead of searching source text, and
   `TC-0013-0014`'s row checks the result's values, not only its fields.
 
+- **The token docs say a scale key can contain digits, and what a project's
+  own token check must do** (#1908). QFAI checks the prototype against
+  `DESIGN.md`, not a product stylesheet or Tailwind config, so each project
+  writes that check itself. The natural name pattern, letters and hyphens,
+  never captures `2xl` or `3xl`, which `typography.scale` declares, and a
+  check that captures nothing for a key passes both ways. The schema comment
+  now says scale keys contain digits. The `design-system.yaml` contract says
+  QFAI does not check the implementation, that a project's check asserts both
+  directions, and that its name pattern has to admit digits.
+
 - Completion and implementation review stop conditions now include demonstrated
   regressions against named constitution or catalog rules (#1799). New upstream
   product obligations remain advisory.
+
+- **The spec-0013 template-slot record has an ID of its own** (#1942). It was
+  filed as `CR-20260913-0007`, an ID an approved record for `spec-0015` already
+  carries, so every reference to it was ambiguous. It is now
+  `CR-20260913-0011`, with every reference moved. `CR-20260913-0003` also
+  orders itself behind the other open `spec-0013` records, names
+  `CR-20260913-0009` as the ledger repair, appends no row under option `1c`
+  while that option holds its new requirement `planned`, and authorises the
+  `spec-0013/07_Decisions.md` write option `2c` needs.
+
+  Three records hold them. `CR-20260913-0011` and `CR-20260913-0008` are
 
 - Generated TypeScript review guidance flags dropped promises and preserves
   propagation rather than requiring catches for unnamed failures. The repository
@@ -618,6 +939,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a glob depend on a test case id's digits, the scaffold checks the file it
   would write for every test case in scope, not a representative one.
 
+- **The layer derivation procedure says, where the layer is chosen, that a
+  test case never takes L4 or L5** (#1904). The restriction sat in the
+  crosswalk seventy lines above, and the procedure — which readers reach
+  through its anchor — offered both layers in step 3 and its worked examples.
+  Step 3 now says an oracle landing on either means the obligation is filed as
+  `CON-API-*` or `US-*`, and the two worked examples say which.
+
 - Six shipped checks have tests but no test case in any spec, so nothing says
   what they must do and no ledger row traces them (#1837).
   `CR-20260913-0014` raises the repair:
@@ -627,6 +955,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - The provenance lock's handling of two writers at once goes to `spec-0003`.
   - The design-fidelity scorecard is recorded as owned by no spec, because
     nothing the package ships writes the input it reads.
+
+- **A screen property measured on rendered output has a layer: L3** (#1909).
+  A test case may take L1, L2 or L3, and none of them named a browser, so an
+  obligation read off painted pixels or computed layout had no legal layer.
+  The nearest-sounding bullet at the decision point was L5, which a test case
+  may never take. `catalog/test-layers.md` now counts what a real browser
+  rendered as real infrastructure state: the L3 definition, the L3 bullet of
+  step 3 and a worked example say so, and step 3 says such a property is L3,
+  not L5, because it is not a journey. The `06_Test-Cases.md` template's L3
+  summary follows.
 
 - **The working-tree address excludes a nested project's own records, and stops on
   a FIFO or socket git does not list** (#1747). The collection reads the lists
@@ -673,6 +1011,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkpoint revision, checks that it names a revision, and keeps the round's
   `Revision` for a row that records none. The contract also says each value
   enters the seal without a code span around it.
+
+- **The post-build leakage guard scans what npm publishes, the manifest
+  included** (#1931). The guard built its scan list from `package.json#files`,
+  and npm adds files that list never names — the published `package.json`
+  above all. A `schemaVersion` or a private version marker there shipped with
+  every guard green, and a filter meant for the repository's own manifest
+  dropped the `schemaVersion` finding for the published one too. The guard now
+  asks `npm pack --dry-run` for the list, scans the manifest with no filter, and
+  still passes its `version` field. A glob in `files` is now scanned as npm
+  expands it instead of being refused.
 
 - **The evidence revision reference says how a revision is read after a squash
   merge** (#1696). A squash merge lands a commit with no branch revision among
@@ -779,6 +1127,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   preflight refusing, and a structured task missing `label`. Before these
   cases, dropping `label` from the required keys, or letting the stage start,
   left every case passing.
+
+- **Triage says how to file a source file no spec owns** (#1903). The
+  `Existing Spec` cell names a spec, several specs or `_policies`, and shared
+  code such as a navigation shell or an error boundary belongs to none of them.
+  Each project had to choose between naming an unrelated spec, a policy row
+  that schedules nothing, and a new spec for something that is not a
+  capability. `sdd-triage.md` now says to split the file's obligations by
+  behaviour onto the specs that own each behaviour, says what the other moves
+  cost, and routes a behaviour no spec owns to a new requirement.
 
 - **The prototyping profile reports a UI contract that does not parse**
   (#1767). Every reader of UI contracts skips a file it cannot parse, so its
@@ -909,6 +1266,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `parallelization-policy.md` and the skill now say items 6, 7 and 8 share the
   revision. No completed row in this repository changes result.
 
+- Ten spec ledgers now use the template's columns, and each has a `todo` E2E
+  row for every story that had none: `spec-0001`, `-0003`, `-0005`, `-0006`,
+  `-0007`, `-0008`, `-0009`, `-0011`, `-0016` and `-0017` (#1750). Before
+  this, a Change Request that re-derived one of these packs would also add the
+  rows through Phase 2b, and nothing recorded or authorized them. Existing rows
+  keep every cell they had. The columns they lacked read `-`, which the
+  validators read the same as the absent column. The ledgers of packs with an
+  open Change Request are left for those records to repair.
+
 - **A UI contract entry no screen is read from is reported** (#1734). Every
   consumer of UI contracts reads screens the same way: it keeps the first entry
   for each `id`, skips an entry with no `id` or no `route`, and reads no screen
@@ -935,6 +1301,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `Round N: RED failure mode` is now checked against that round's RED. An
   entry that states the field once, without the prefix, still answers for every
   round that states none.
+
+- **The execution ledger says how a UI contract reaches it** (#1902). The ledger
+  has obligation columns for test cases, user stories and API contracts, and
+  none for a UI contract, with nothing saying why. The template now says a
+  `CON-UI-*` has no group and no column: each screen obligation it declares is
+  a test case in the spec that owns the screen, carried by that test case's
+  row. It also says no gate reports an untested UI contract the way
+  `QFAI-ATDD-113` reports an API one, so the test case is written with the
+  contract.
 
 - **A ledger row observes the property it owns** (#1700). One prototyping-loop
   test asserted five properties of the cycle-0 hard reset in a single case, and
@@ -971,6 +1346,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A record that explains why an artifact is absent says so with
   `<!-- qfai:not-a-citation -->` on the line, or on the line before a fenced
   block for the paths it names inside it.
+
+- **Step 2 of the layer derivation says how a test case reaches its parent
+  business rule** (#1907). The step restricts the oracle to the parent BR's
+  obligations, and no test-case column names a BR, so each reader picked a
+  parent, usually the nearest `AC-Refs`. Step 2 now gives the route the
+  ledger's `BR-Ref` check already uses: the TC's `EX-Ref` to that example's
+  `BR-Ref`, or, where `EX-Ref` names no example, the BRs whose `AC-Refs` name
+  one of the TC's `AC-Refs`.
+
+- **Article XI no longer sends toolchain output to `tmp/`** (#1929). The
+  article required "intermediate build artifacts" under `tmp/`. The shipped
+  temporary-files rule says build, test and cache output (`dist/`, coverage
+  reports, package tarballs) stays where the toolchain writes it. An article
+  outranks a rule, so an agent reading both was told to move `dist/`. Article
+  XI now covers the scratch files an agent creates, names toolchain output as
+  outside its scope, and gives the same list the rule does.
 
 - **A glob's bracket expression names a set on both sides** (#1652). A class
   was compiled by scanning for the first `]`, which stops inside a named class
@@ -1093,6 +1484,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `--profile tdd` runs no such validator, so there the stub gate
   reports every marked skeleton it reads, and it reads the acceptance
   directories as well as `testFileGlobs`, as the coverage check it runs does.
+
+- **A shared decision record can cite the spec items it rests on** (#1899).
+  `QFAI-LAYER-100` and `TRACE_SHARED_SCOPE_VIOLATION` forbid spec-local IDs
+  anywhere in `_policies`, prose included. A cross-spec decision could not
+  name the rules it was measured against, and a rationale rewritten to avoid
+  them could not be checked. Inside a `### DR-*` record of
+  `_policies/08_Decisions.md`, the `Context` and a new `Evidence` bullet may
+  now name those items. Every other place in `_policies` stays under both
+  rules. The template says so, and says a table applying one judgement across
+  many specs' test cases belongs under `.qfai/evidence/`, cited from
+  `Evidence`.
 
 - **The audited evidence hash says what its extraction produces, not only which
   fields it reads** (#1616). Naming the fields settled which lines are taken and
@@ -1299,6 +1701,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   of the completion certificate's evidence digests. They hold the previous
   loop's evidence, and sealed into the next certificate, removing one failed
   `certify --check` although nothing of the new loop had changed.
+
+- **A rule summary stays with the master it describes** (#1889). Five gaps
+  remained after `init` stopped refreshing the summary of a master the adopter
+  edited:
+  - `--force` rebuilt the Copilot instructions from the release's summaries
+    whatever the masters held. The rebuilt file now keeps its own bullet for a
+    master the adopter kept.
+  - The set of masters counted as installed came from a plan made before the
+    update pass, so a planned replacement that then kept the adopter's master
+    still moved its summary. The entry points are now refreshed from what the
+    update pass actually did.
+  - A `---` under a list item was read as a setext heading and ended the
+    managed Copilot rule list early. A thematic break now ends nothing.
+  - Where one `/qfai-implement` run writes its grilling block into two
+    evidence files, the gate now also compares that run's `grilling(…)` rows
+    and `none` marker in each file's Work Orders Summary.
+  - The execution skills load the grilling primitive before the confidence
+    check, not only before a preflight round.
 
 - **An id a non-JavaScript test holds as data is not a reference** (#1770). The
   ATDD scan counts an annotation in a comment or in a test's name, and blanks

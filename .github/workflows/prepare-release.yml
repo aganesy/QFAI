@@ -19,6 +19,18 @@ name: Prepare release
 # `permissions:` stays at the minimal `{ contents: read }` and `BR-0017-0016`'s closed departure set
 # is untouched. The same token is what lets the tag this eventually produces start `release.yml`:
 # GitHub does not raise workflow events for pushes made with `GITHUB_TOKEN`.
+#
+# One job of four steps, and the chain between them is data rather than habit. The refusals produce
+# the version and the branch name the two steps after them read. The edit step produces nothing but
+# the two rewritten files, so a separate job for the pull request would either redo the edit or
+# carry the work tree across as an artifact. Nothing here installs or builds, so a leg's whole
+# preamble is a shallow checkout and a runner start — more than any one of these steps costs.
+#
+# The one place independent work exists is inside the refusal step, whose four checks read none of
+# each other's results: the version's shape, the comparison with the version in the tree, whether
+# the tag already exists, and whether the section describes anything. They are ordered to fail fast,
+# not by data, and only the tag check spends an API call. Run together they would spend that call on
+# every dispatch, including the ones the other three already refuse.
 on:
   workflow_dispatch:
     inputs:
@@ -274,6 +286,13 @@ jobs:
             existing_body="tmp/existing-release-pr-body.md"
             trap 'rm -f "${body_file}" "${existing_body}"' EXIT
             gh pr view "${existing_pr}" --json body --jq .body > "${existing_body}"
+            # The terminator sits at the block's base indentation, not the body's. YAML
+            # strips only the base, and a plain `<<` matches its terminator at column zero
+            # alone. One indented further leaves the heredoc open, and bash rejects this whole
+            # `if … else … fi` before running either branch, `gh pr create` included.
+            # SHIPPED-CI: not-applicable
+            # Because: the shipped templates carry no heredoc, and a test parses every bash
+            # step in both trees.
             node - "${existing_body}" "${body_file}" <<'REPAIR_BODY'
             const { readFileSync, writeFileSync } = require('node:fs');
             const [existingPath, bodyPath] = process.argv.slice(2);
@@ -872,7 +891,7 @@ jobs:
             if (!hasAnswer(section.exec(maskExamples(next).visible)))
               throw new Error('Release body lacks a visible authored removal answer after repair');
             writeFileSync(bodyPath, next, 'utf8');
-            REPAIR_BODY
+          REPAIR_BODY
             if ! cmp -s "${existing_body}" "${body_file}"; then
               latest_body="${existing_body}.latest"
               trap 'rm -f "${body_file}" "${existing_body}" "${latest_body}"' EXIT

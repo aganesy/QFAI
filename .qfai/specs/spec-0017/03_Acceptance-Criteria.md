@@ -34,17 +34,18 @@ Scenario: The verdict distinguishes "nothing needed running" from "nothing was v
   And when every need was skipped because change detection selected no lane, the verdict exits 0
   And an unrecognized need state fails closed rather than being read as success
 
-# AC-0017-0003: Documentation-only pull request executes the minimum lane set
+# AC-0017-0003: Documentation-only pull request executes the pinned unconditional set
 # Parent: US-0017-0001
 # Source: discussion-20260804173914356#DAC-001-01
-Scenario: A Markdown-only change runs detection, lint, build and the verdict, and nothing else
+Scenario: A Markdown-only change runs the jobs the pin records, and skips the rest
   Given the repository's duplicate validate workflow has already been retired
-  And every test matrix leg is declared and carries a condition derived from the detection output
+  And every test matrix leg is declared and its job carries a condition derived from the detection output
   When a pull request touches only Markdown files outside the recognized source directories
-  Then at most four job instances execute while the build job carries the required status context
-  And that floor falls to three once the required context moves off the build job
-  And every unneeded leg reports as skipped, so its check name persists
-  And no skipped leg consumes runner minutes
+  Then the jobs that execute are the ones carrying no condition plus the aggregate verdict, whose condition is always
+  And that set, and the sum of its members' declared timeout-minutes, are the values pinned for this path
+  And of the jobs the verdict depends on, the executing ones are exactly the declared dependencies that carry no pinned condition, each named with the reason it cannot be skipped
+  And each unneeded matrix job reports one skipped check under its bare job name before matrix expansion
+  And no skipped matrix job consumes runner minutes
   And the aggregate verdict reports success
 
 # AC-0017-0004: Detection fails open with a warning annotation
@@ -67,16 +68,17 @@ Scenario: The exclusion set is a closed list, and the assistant tree is not docu
   And when a pull request touches Markdown under the assistant catalog tree, the full lane set is selected
   And when a pull request touches only the agent-integration mirrors, they are treated as documentation-only
 
-# AC-0017-0006: Lint lane and required-context job are never skipped by selection
+# AC-0017-0006: A lane whose gate selection would empty is exempt from selection
 # Parent: US-0017-0001
 # Source: discussion-20260804173914356#DAC-001-04
-Scenario: Two lanes are structurally exempt from change-derived selection
-  Given the lint lane carries the formatter, the Markdown linter, the leakage guard and the pin guard
+Scenario: A lane is exempt when skipping it would leave a gate with nothing to check, or report a green nobody earned
+  Given the lint aggregate's lanes carry the formatter, the Markdown linter, the leakage guard, the pin guard and the agent-integration mirror guards
   And a skipped job reports success to branch protection
   When change detection selects no test lane at all
   Then the lint lane still runs, so the formatter and Markdown gates are not vacuous for a documentation change
+  And the lane carrying the agent-integration mirror guards still runs, whichever job hosts it
   And the job carrying a required status context still runs unconditionally while it carries it
-  And no check name is created or renamed by selection, so no repository setting has to change
+  And the required ci-pass context is unchanged; full runs report expanded matrix names and documentation-only runs report skipped bare job names
 
 # AC-0017-0007: Every own-CI job has a reachable permission block
 # Parent: US-0017-0002
@@ -374,6 +376,33 @@ Scenario: The repository-root path resolves to the packaged asset, so there is n
   Then reading the repository-root path returns the same bytes, with no synchronization step
   And the link check reports no drift
   And a repository-root path that is a regular file where the link check expects a link fails that check
+
+# AC-0017-0035: Release uploads require every gate on the selected path to succeed
+# Parent: US-0017-0005
+# Source: discussion-20260804173914356#DSC-019
+Scenario: Splitting release checks preserves the publication barrier
+  Given verify selects the sliced or whole suite shape for the tagged tree
+  When the publication jobs evaluate their prerequisites
+  Then verify and gate must have succeeded
+  And every gate selected by that shape must have succeeded
+  And only gates outside the selected suite and checks shapes may be skipped
+  And a missing, failed, cancelled, skipped or unknown required result refuses publication
+  And an unknown shape or cancelled run refuses publication
+  And GitHub Release remains push-only while npm publication also supports manual dispatch
+
+# AC-0017-0036: Independent release checks use separate workspaces on capable tags
+# Parent: US-0017-0005
+# Source: discussion-20260804173914356#DSC-019
+Scenario: Release checks run independently without abandoning older tags
+  Given verify reads the tagged manifests as data
+  When all four operation scripts and all suite slice scripts are declared
+  Then SSOT sync, lint, types and the build chain each need only verify
+  And each job uses an isolated checkout of the verified tag and the shared setup
+  And the build, pack verification and leakage scan remain ordered in one workspace
+  And the local aggregate still invokes exactly the original checks in their original order
+  And a tag missing any operation script uses its complete existing aggregate
+  And a whole-suite tag never enters the operation path
+  And an unknown checks shape or an unsuccessful required operation refuses upload
 ```
 
 ## AC Catalog (optional)
@@ -382,10 +411,10 @@ Scenario: The repository-root path resolves to the packaged asset, so there is n
 | ------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------- | -------- |
 | AC-0017-0001 | Verdict fails on a failed need and on a cancelled need             | Negative path, US-0017-0001, REQ-0006                                           | Must     |
 | AC-0017-0002 | Verdict succeeds on all-succeeded and on all-skipped needs         | Happy path plus boundary (all-skipped), US-0017-0001, REQ-0006                  | Must     |
-| AC-0017-0003 | Documentation-only pull request executes the minimum lane set      | Happy path, US-0017-0001, REQ-0007                                              | Should   |
+| AC-0017-0003 | Documentation-only pull request runs the pinned unconditional set  | Happy path, US-0017-0001, REQ-0007                                              | Should   |
 | AC-0017-0004 | Detection fails open with a warning annotation                     | Error path (fail-open), US-0017-0001, REQ-0007                                  | Should   |
 | AC-0017-0005 | Unrecognized path and assistant-tree Markdown run everything       | Edge / boundary (exclusion set), US-0017-0001, REQ-0007                         | Should   |
-| AC-0017-0006 | Lint lane and required-context job are never skipped               | Edge / boundary (non-skippability), US-0017-0001, REQ-0007                      | Should   |
+| AC-0017-0006 | A lane whose gate selection would empty is exempt                  | Edge / boundary (non-skippability), US-0017-0001, REQ-0007                      | Should   |
 | AC-0017-0007 | Every own-CI job has a reachable permission block                  | Happy path, US-0017-0002, REQ-0001                                              | Must     |
 | AC-0017-0008 | Removing both permission blocks fails the hygiene run              | Negative path (planted removal), US-0017-0002, REQ-0001                         | Must     |
 | AC-0017-0009 | Every checkout refuses to persist credentials                      | Happy path plus boundary (job-scoped full history), US-0017-0002, REQ-0002      | Must     |
@@ -414,6 +443,8 @@ Scenario: The repository-root path resolves to the packaged asset, so there is n
 | AC-0017-0032 | The mapping file exists, is cross-linked, disclaims the loader     | Happy path, US-0017-0009, REQ-0014                                              | Should   |
 | AC-0017-0033 | The layer vocabulary is unchanged after the mapping file lands     | Edge / boundary, US-0017-0009, REQ-0014                                         | Should   |
 | AC-0017-0034 | The mapping file has one copy, reached from either path            | Negative path (an unlinked root path is rejected), US-0017-0009, REQ-0014       | Should   |
+| AC-0017-0035 | Release uploads require successful gates on the selected path      | Normal and rejection paths, US-0017-0005                                        | Must     |
+| AC-0017-0036 | Independent release checks preserve complete old-tag gates         | Normal, error and isolation boundaries, US-0017-0005                            | Must     |
 
 > This catalog is a human-facing index. It deliberately carries no `Source` column: provenance
 > has exactly one home, the `# Source:` comment in the required Gherkin block above, so the two

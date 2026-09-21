@@ -41,6 +41,21 @@ name: Renovate
 #
 # `permissions:` therefore stays at the minimal `{ contents: read }` in both jobs, leaving
 # `BR-0017-0016`'s closed departure set untouched.
+#
+# ## Why it is two jobs and not more
+#
+# The two conditions partition the event space, so the update pass and a re-pin of a pushed branch
+# never coexist. Neither job divides further.
+#
+# In the update job the token check reads one environment variable and produces nothing — the action
+# beside it takes the secret directly — so a job of its own would buy a runner start to test one
+# value, against an action whose cost is a container pull and a whole resolution pass.
+#
+# In the re-pin job every edge is load-bearing. The guard has to run before the toolchain it
+# protects, the two pinners have to run in the order their own step states, and the push reads both
+# the pinners' verdict and the tree they wrote. The install serves only the pinners, so the push
+# could run without it — and would then need that tree carried between jobs, trading the install for
+# a second checkout and an artifact transfer.
 on:
   schedule:
     # Daily, and this cron is the ONLY schedule. `.github/renovate.json5` used to narrow it

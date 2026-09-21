@@ -59,7 +59,8 @@ the summaries below are a reading aid, not a second definition.
 - `L2` — Component. The oracle observes collaboration with a port through a
   fixture adapter, with no real infrastructure.
 - `L3` — Integration. The oracle observes real infrastructure state
-  (DB / queue / filesystem). Tests live in `<testsDir>/integration/**`.
+  (DB / queue / filesystem, or what a real browser rendered). Tests live in
+  `<testsDir>/integration/**`.
 - `L4` — API. The oracle observes service-boundary values (status, body, auth,
   error contracts). Tests live in `<testsDir>/api/**`.
 - `L5` — E2E. The oracle observes a full-system journey. Tests live in

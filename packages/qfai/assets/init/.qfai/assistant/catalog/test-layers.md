@@ -92,7 +92,8 @@ writer targets a declared layer instead.
 
 ### L3 Integration
 
-- Scope: real infrastructure integration (for example DB/queue/filesystem) within service boundaries.
+- Scope: real infrastructure integration (for example DB/queue/filesystem, or a
+  real browser rendering the UI) within service boundaries.
 - Goal: verify `TC-*` obligations from specs.
 - Location rule: `<testsDir>/integration/**`.
 
@@ -118,25 +119,40 @@ falsifying-oracle rule:
    TC verifies.
 2. **Restrict it to the parent BR's obligations.** Anything the oracle observes
    that the parent business rule does not own is incidental and does not raise
-   the layer.
+   the layer. No `TC` column names a `BR`, so reach the parent through the TC's
+   `EX-Ref` and that example's `BR-Ref`. Where the `EX-Ref` cell names no `EX`
+   — an empty cell as much as `—` — the parents are the BRs whose `AC-Refs`
+   name one of the TC's `AC-Refs`.
 3. **Read the layer off what the oracle observes:**
    - inputs and return values only → **L1 Unit**
    - collaboration with a port through a fixture adapter (no real
      infrastructure) → **L2 Component**
-   - real infrastructure state — DB rows, queue messages, files → **L3 Integration**
+   - real infrastructure state — DB rows, queue messages, files, or what a real
+     browser rendered (painted pixels, computed layout) → **L3 Integration**.
+     A property of one screen measured on its rendered output is L3, not L5:
+     the browser is the infrastructure the oracle reads, and the obligation is
+     not a journey.
    - values at the service boundary — status codes, response bodies, auth and
      error contracts → **L4 API**
    - a full-system journey across UI/API/data → **L5 E2E**
 
+   **A `TC-*` never takes L4 or L5.** An oracle that lands on either means the
+   obligation is misfiled: record it as `CON-API-*` (L4) or `US-*` (L5)
+   instead, as [re-filing](#annotation-routing) describes.
+
 ### Worked examples
 
-| Oracle asserts                                                                | Layer          |
-| ----------------------------------------------------------------------------- | -------------- |
-| `price(order) === 1250` for a given input                                     | L1 Unit        |
-| the repository port was called with the normalized key, via a fixture adapter | L2 Component   |
-| the row is present in the database after commit                               | L3 Integration |
-| `POST /orders` returns `422` with `code: "OUT_OF_AREA"`                       | L4 API         |
-| a user can register, order, and see the order in their history                | L5 E2E         |
+The last two rows are not `TC-*` rows: they show where an oracle lands, and
+the obligation is then filed under the ID type that layer verifies.
+
+| Oracle asserts                                                                    | Layer                       |
+| --------------------------------------------------------------------------------- | --------------------------- |
+| `price(order) === 1250` for a given input                                         | L1 Unit                     |
+| the repository port was called with the normalized key, via a fixture adapter     | L2 Component                |
+| the row is present in the database after commit                                   | L3 Integration              |
+| the focused control's rendered border has 3:1 contrast with the surface behind it | L3 Integration              |
+| `POST /orders` returns `422` with `code: "OUT_OF_AREA"`                           | L4 API: file as `CON-API-*` |
+| a user can register, order, and see the order in their history                    | L5 E2E: file as `US-*`      |
 
 ### Obligation spanning more than one layer
 

@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import { chmod, mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -7,6 +6,13 @@ import path from "node:path";
 // which under a concurrent suite is rarely the one asserting. Every test here
 // takes `expect` and `onTestFinished` from its own context instead.
 import { describe, it } from "vitest";
+import {
+  EXIT_NONZERO,
+  EXIT_ZERO,
+  type Spawned,
+  outputContext,
+  spawnCaptured,
+} from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -80,9 +86,9 @@ type FakeScenario = {
   worktreeStatus: string[];
 };
 
-type RunResult = {
-  code: number | null;
+type RunResult = Spawned & {
   ghState: Record<string, unknown>;
+  gitCalls: string[];
   repoDir: string;
   stderr: string;
   stdout: string;
@@ -169,7 +175,10 @@ describe.concurrent("run-pr-merge plan", () => {
           ],
           { ...process.env, QFAI_TEST_HTML_POLICY: policyPath, QFAI_TEST_HTML_BODY: body },
         );
-        expect(result.code, result.stderr).toBe(0);
+        expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
+        // Before the parse, because `JSON.parse("")` raises `Unexpected end of JSON input`
+        // and that names neither the child nor the stream it did not write to.
+        expect(result.stdout, outputContext(result)).not.toBe("");
         const measurement = JSON.parse(result.stdout) as { Attempts: number; KeepsAnswer: boolean };
         expect(measurement.KeepsAnswer).toBe(true);
         expect(measurement.Attempts).toBeGreaterThan(0);
@@ -193,7 +202,7 @@ describe.concurrent("run-pr-merge plan", () => {
         onTestFinished,
         scenario: makeScenario({ prView: { ...baseline.prView, body } }),
       });
-      expect(result.code).not.toBe(0);
+      expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
       expect(result.ghState.prMergeCount ?? 0).toBe(0);
     },
   );
@@ -212,7 +221,7 @@ describe.concurrent("run-pr-merge plan", () => {
         onTestFinished,
         scenario: makeScenario({ prView: { ...baseline.prView, body } }),
       });
-      expect(result.code).toBe(0);
+      expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
       expect(result.ghState.prMergeCount).toBe(1);
     },
   );
@@ -429,8 +438,10 @@ describe.concurrent("run-pr-merge plan", () => {
         onTestFinished,
         scenario: makeScenario({ prView: { ...baseline.prView, body } }),
       });
-      expect(result.code).not.toBe(0);
-      expect(`${result.stdout}${result.stderr}`).toContain("authored removal-list answer");
+      expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
+      expect(`${result.stdout}${result.stderr}`, outputContext(result)).toContain(
+        "authored removal-list answer",
+      );
       expect(result.ghState.prMergeCount ?? 0).toBe(0);
     },
   );
@@ -444,8 +455,10 @@ describe.concurrent("run-pr-merge plan", () => {
       onTestFinished,
       scenario: makeScenario({ finalPrBody: "" }),
     });
-    expect(result.code).not.toBe(0);
-    expect(`${result.stdout}${result.stderr}`).toContain("authored removal-list answer");
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
+    expect(`${result.stdout}${result.stderr}`, outputContext(result)).toContain(
+      "authored removal-list answer",
+    );
     expect(result.ghState.prViewCount).toBe(2);
     expect(result.ghState.prMergeCount ?? 0).toBe(0);
   });
@@ -455,9 +468,32 @@ describe.concurrent("run-pr-merge plan", () => {
     onTestFinished,
   }) => {
     const result = await runPrMerge({ live: true, onTestFinished, scenario: makeScenario({}) });
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(result.ghState.prViewCount).toBe(2);
     expect(result.ghState.prMergeCount).toBe(1);
+  });
+
+  it("merges without creating or pushing a tag", async ({ expect, onTestFinished }) => {
+    const result = await runPrMerge({ live: true, onTestFinished, scenario: makeScenario({}) });
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
+    expect(result.ghState.prMergeCount).toBe(1);
+    expect(result.gitCalls.filter((call) => /^(tag|push|ls-remote)\b/.test(call))).toEqual([]);
+
+    const merged = await readJson(
+      path.join(result.repoDir, "tmp", "pr-merge", "pr-166-merge-result.json"),
+    );
+    expect(Object.keys(merged)).not.toContain("Tag");
+  });
+
+  it("refuses a -Tag argument before anything is merged", async ({ expect, onTestFinished }) => {
+    const result = await runPrMerge({
+      extraArgs: ["-Tag", "v1.5.3"],
+      live: true,
+      onTestFinished,
+      scenario: makeScenario({}),
+    });
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
+    expect(result.ghState.prMergeCount ?? 0).toBe(0);
   });
 
   it.for([
@@ -536,7 +572,7 @@ describe.concurrent("run-pr-merge plan", () => {
         onTestFinished,
         scenario: makeScenario({ prView: { ...baseline.prView, body } }),
       });
-      expect(result.code).toBe(0);
+      expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
       expect(result.ghState.prMergeCount).toBe(1);
     },
   );
@@ -567,7 +603,7 @@ describe.concurrent("run-pr-merge plan", () => {
       onTestFinished,
       scenario: makeScenario({ prView: { ...baseline.prView, body } }),
     });
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(result.ghState.prMergeCount).toBe(1);
   });
 
@@ -585,7 +621,7 @@ describe.concurrent("run-pr-merge plan", () => {
       onTestFinished,
       scenario: makeScenario({ prView: { ...baseline.prView, body } }),
     });
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(result.ghState.prMergeCount).toBe(1);
   });
 
@@ -600,7 +636,7 @@ describe.concurrent("run-pr-merge plan", () => {
       onTestFinished,
       scenario: makeScenario({ prView: { ...baseline.prView, body } }),
     });
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(result.ghState.prViewCount).toBe(2);
     expect(result.ghState.prMergeCount).toBe(1);
   });
@@ -619,7 +655,7 @@ describe.concurrent("run-pr-merge plan", () => {
       onTestFinished,
       scenario: makeScenario({ prView: { ...baseline.prView, body } }),
     });
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(result.ghState.prMergeCount).toBe(1);
   });
 
@@ -634,7 +670,7 @@ describe.concurrent("run-pr-merge plan", () => {
       onTestFinished,
       scenario: makeScenario({ prView: { ...baseline.prView, body } }),
     });
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
     expect(result.ghState.prMergeCount).toBe(1);
   });
 
@@ -651,7 +687,7 @@ describe.concurrent("run-pr-merge plan", () => {
       }),
     });
 
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
 
     const plan = await readJson(
       path.join(result.repoDir, "tmp", "pr-merge", "pr-166-merge-plan.json"),
@@ -667,7 +703,7 @@ describe.concurrent("run-pr-merge plan", () => {
       }),
     });
 
-    expect(result.code).toBe(0);
+    expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
 
     const plan = await readJson(
       path.join(result.repoDir, "tmp", "pr-merge", "pr-166-merge-plan.json"),
@@ -692,7 +728,7 @@ describe.concurrent("run-pr-merge pagination", () => {
     });
 
     // the script throws after saving the plan when there are blockers
-    expect(result.code).not.toBe(0);
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
     const plan = await readJson(
       path.join(result.repoDir, "tmp", "pr-merge", "pr-166-merge-plan.json"),
     );
@@ -712,7 +748,7 @@ describe.concurrent("run-pr-merge pagination", () => {
       }),
     });
 
-    expect(result.code).not.toBe(0);
+    expect(result.outcome, result.stderr).toMatch(EXIT_NONZERO);
   });
 });
 
@@ -777,6 +813,7 @@ function successCheck(): FakeCheck {
 }
 
 async function runPrMerge(options: {
+  extraArgs?: string[];
   live?: boolean;
   onTestFinished: RegisterCleanup;
   scenario: FakeScenario;
@@ -786,12 +823,14 @@ async function runPrMerge(options: {
   const binDir = path.join(root, "bin");
   const scenarioPath = path.join(root, "scenario.json");
   const statePath = path.join(root, "state.json");
+  const gitLogPath = path.join(root, "git-calls.log");
 
   await mkdir(repoDir, { recursive: true });
   await mkdir(binDir, { recursive: true });
   await createMinimalRepo(repoDir, options.scenario.packageScripts);
   await writeFile(scenarioPath, JSON.stringify(options.scenario), "utf-8");
   await writeFile(statePath, JSON.stringify({ graphqlCallCount: 0 }), "utf-8");
+  await writeFile(gitLogPath, "", "utf-8");
   await writeCommand(binDir, "git", gitStubScript());
   await writeCommand(binDir, "gh", ghStubScript());
 
@@ -803,37 +842,32 @@ async function runPrMerge(options: {
       prMergeScriptPath,
       "-PrNumber",
       "166",
-      options.live ? "-NoTag" : "-DryRun",
+      ...(options.live ? [] : ["-DryRun"]),
+      ...(options.extraArgs ?? []),
     ],
     {
       ...process.env,
       PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}`,
+      QFAI_FAKE_GIT_LOG_PATH: gitLogPath,
       QFAI_FAKE_REPO_ROOT: repoDir,
       QFAI_FAKE_SCENARIO_PATH: scenarioPath,
       QFAI_FAKE_STATE_PATH: statePath,
     },
   );
 
-  return { ...result, ghState: await readJson(statePath), repoDir };
+  const gitCalls = (await readFile(gitLogPath, "utf-8")).split("\n").filter(Boolean);
+  return { ...result, ghState: await readJson(statePath), gitCalls, repoDir };
 }
 
 async function createMinimalRepo(
   repoDir: string,
   packageScripts: Record<string, string>,
 ): Promise<void> {
-  await mkdir(path.join(repoDir, "packages", "qfai"), { recursive: true });
   await writeFile(
     path.join(repoDir, "package.json"),
     JSON.stringify({ scripts: packageScripts }, null, 2),
     "utf-8",
   );
-  await writeFile(
-    path.join(repoDir, "packages", "qfai", "package.json"),
-    JSON.stringify({ version: "1.5.3" }, null, 2),
-    "utf-8",
-  );
-  await writeFile(path.join(repoDir, "CHANGELOG.md"), "## [1.5.3]\n\n- Test entry\n", "utf-8");
-  await writeFile(path.join(repoDir, "RELEASE.md"), "# Release\n", "utf-8");
 }
 
 async function writeCommand(binDir: string, name: string, scriptBody: string): Promise<void> {
@@ -861,6 +895,7 @@ function gitStubScript(): string {
     'const scenario = JSON.parse(fs.readFileSync(scenarioPath, "utf8"));',
     "const repoRoot = process.env.QFAI_FAKE_REPO_ROOT;",
     "const args = process.argv.slice(2);",
+    'fs.appendFileSync(process.env.QFAI_FAKE_GIT_LOG_PATH, `${args.join(" ")}\\n`);',
     "",
     'if (args[0] === "rev-parse" && args[1] === "--show-toplevel") {',
     "  process.stdout.write(`${repoRoot}\\n`);",
@@ -868,10 +903,6 @@ function gitStubScript(): string {
     "}",
     'if (args[0] === "status" && args[1] === "--short") {',
     '  process.stdout.write(`${(scenario.worktreeStatus ?? []).join("\\n")}${scenario.worktreeStatus?.length ? "\\n" : ""}`);',
-    "  process.exit(0);",
-    "}",
-    'if (args[0] === "ls-remote" && args[1] === "--tags") {',
-    '  process.stdout.write("");',
     "  process.exit(0);",
     "}",
     'if (args[0] === "branch" && args[1] === "--show-current") {',
@@ -957,32 +988,19 @@ function ghStubScript(): string {
   ].join("\n");
 }
 
+/**
+ * Runs a command under the repository root and answers with everything it reported.
+ *
+ * The capture is shared, because the signal a killed child carries has to reach the
+ * assertion. A helper resolving an exit code alone reports a kill as a null code, which
+ * fails the clean-exit assertion with no cause and SATISFIES the rejecting one.
+ */
 async function spawnCommand(
   command: string,
   args: string[],
   env: NodeJS.ProcessEnv,
-): Promise<{ code: number | null; stderr: string; stdout: string }> {
-  return await new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd: repoRoot,
-      env,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout.on("data", (chunk: Buffer | string) => {
-      stdout += chunk.toString();
-    });
-    child.stderr.on("data", (chunk: Buffer | string) => {
-      stderr += chunk.toString();
-    });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      resolve({ code, stderr, stdout });
-    });
-  });
+): Promise<Spawned> {
+  return await spawnCaptured(command, args, { cwd: repoRoot, env });
 }
 
 async function readJson(filePath: string): Promise<Record<string, unknown>> {

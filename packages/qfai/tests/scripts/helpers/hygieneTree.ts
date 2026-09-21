@@ -136,6 +136,7 @@ export interface Declaration {
      */
     dependencies?: string[];
     dependencyConditions?: Record<string, string>;
+    unconditionalDependencies?: string[];
     gateOutputs?: Record<string, Record<string, string>>;
     commandFiles?: string[];
     preflight?: { job?: string; step?: string; mayPrecede?: string[] };
@@ -145,6 +146,25 @@ export interface Declaration {
     pinnedBytes?: Record<string, string>;
     installLifecycle?: Record<string, Record<string, string>>;
     closureActions?: string[];
+    /**
+     * What a documentation-only pull request costs: the jobs it executes and the sum of their
+     * declared `timeout-minutes`. Optional here and required by the lane, for the reason
+     * `verificationBodies` is — a row that plants a disagreement has to be able to write a
+     * figure the lane will reject, and one that plants the field's absence has to be able to
+     * remove it.
+     */
+    documentationOnlyCostPin?: { jobs?: string[]; timeoutMinutesSum?: number };
+    /**
+     * What a code-path pull request costs: the instances the tree expands to, their declared
+     * timeout sum, the installs they perform and the jobs that declare a build. Optional for the
+     * reason the sibling above is.
+     */
+    codePathCostPin?: {
+      instances?: number;
+      timeoutMinutesSum?: number;
+      installInstances?: number;
+      buildJobs?: string[];
+    };
   }[];
   // Everything else the artifact carries — `$comment` today — travels through untouched.
   [key: string]: unknown;

@@ -91,9 +91,16 @@ shipped half of NFR-0012, belong to `spec-0003`.
 - NFR-0001: Pull-request wall clock does not regress — no worse than the captured baseline on a
   code-path pull request; at most 3 minutes end to end on a documentation-only one. The baseline
   is unmeasured today and capturing it is a precondition of any cost-shaping change.
-- NFR-0002: Runner-minute consumption falls — from 14 job instances / 13 frozen-lockfile
-  installs / 6 bundler builds per pull request to at most 12 / 8 / 3-or-5 on a code path, and to
-  at most 4 executed instances (3 after `OQ-0022`) on a documentation-only path.
+- NFR-0002: Runner-minute consumption falls on a documentation-only pull request — from a baseline
+  of 14 job instances / 13 frozen-lockfile installs / 6 bundler builds per pull request to at most
+  5 executed instances on a documentation-only path, 4 once the job named `build` may carry a
+  condition, which `OQ-0022` releases. The fifth instance is the lane running the
+  agent-integration mirror guards: it takes a runner of its own because five lint lanes on one
+  four-core runner made it the run's critical path, and lane selection may never skip it. A code
+  path makes no falling claim here. Its lane set was widened on purpose, so a code-path pull
+  request expands to more job instances and more frozen-lockfile installs than the baseline. What
+  that path costs is recorded as a pin instead, re-pinned by the change that moves it. The shorter
+  wall clock the widening buys is NFR-0001's claim.
 - NFR-0003: Credential-free layers structurally cannot require a secret — zero secret-inheritance
   uses anywhere in `.github/workflows/**`.
 - NFR-0004: Flake budget — 3 consecutive green aggregate-verdict runs on every parallelism
@@ -218,10 +225,13 @@ this spec owns the own-CI half only.
   job derives which slices must run; every matrix leg stays **declared** and an unneeded leg is
   _skipped_ by a derived condition rather than removed, so its check name persists and it consumes
   no runner minutes. Any diff failure fails open with a warning annotation and runs everything, as
-  does a change outside the recognized directories. Two lanes are exempt from selection and always
-  run: the job carrying a required status context (temporary, released by `OQ-0022`; the general
-  rule that outlives it is that no job carrying a required status context may be skippable while
-  it carries it) and the lint lane. Pairs mandatorily with REQ-0006.
+  does a change outside the recognized directories. A lane is exempt from selection when skipping
+  it would leave a gate with nothing to check, or report a green nobody earned. Exempt today are
+  the job carrying a required status context (temporary, released by `OQ-0022`; the general rule
+  that outlives it is that no job carrying a required status context may be skippable while it
+  carries it), the lint lane, and the lane running the agent-integration mirror guards — the
+  mirrors count as documentation-only, so their guards must run where selection cannot reach them.
+  Pairs mandatorily with REQ-0006.
   (upstream: `discussion-20260804173914356#REQ-0007`, `own-CI`, should)
 - REQ-0008: Own-CI layer-separated test lanes inside one file — the layer taxonomy is mapped onto
   own-CI jobs and matrix legs by cost and duration, because QFAI's suite is a single credential
@@ -278,7 +288,8 @@ this spec owns the own-CI half only.
 - REQ-0015: Retire the repository's duplicate of the shipped validate workflow — the repository's
   own copy is removed and its full-profile run is folded into the existing `build` job, which
   already has a locally built binary. It is the thirteenth frozen-lockfile install and the sixth
-  bundler build per pull request; it is the second unconditionally pull-request-triggered workflow
+  bundler build of the baseline `NFR-0002` names, and not of the tree as it stands; it is the second
+  unconditionally pull-request-triggered workflow
   with no path filter, so while it exists a documentation-only pull request cannot reach its
   minimum however well lane selection works; and it has silently diverged from the shipped copy.
   Repointing it at the shipped file was rejected: the root manifest declares no dependency on the

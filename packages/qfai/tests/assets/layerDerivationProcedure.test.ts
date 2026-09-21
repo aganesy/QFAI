@@ -72,6 +72,58 @@ describe("deriving a TC's layer is a published procedure", () => {
       );
     });
 
+    it(`${tree}: a screen property measured on rendered output reads as L3`, async () => {
+      // Read at step 3, where the layer is chosen: the nearest-sounding bullet
+      // there was L5, which a TC may never take.
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      const procedure = catalog.slice(
+        catalog.indexOf("## Layer derivation procedure (normative)"),
+        catalog.indexOf("### Obligation spanning more than one layer"),
+      );
+      expectPhrase(
+        procedure,
+        "or what a real browser rendered (painted pixels, computed layout) → **L3 Integration**",
+      );
+      expectPhrase(procedure, "measured on its rendered output is L3, not L5");
+      expect(procedure).toMatch(/rendered border .*\| L3 Integration +\|/);
+      expectPhrase(catalog, "or a real browser rendering the UI) within service boundaries");
+
+      const template = await read(
+        tree,
+        "assistant/skills/qfai-sdd/templates/specs/spec/06_Test-Cases.md",
+      );
+      expectPhrase(template, "(DB / queue / filesystem, or what a real browser rendered)");
+    });
+
+    it(`${tree}: step 2 says how to reach the parent BR from a TC`, async () => {
+      // A TC row has no BR column, so a step naming "the parent BR" with no
+      // route to it left each reader to pick one, and the AC was nearest.
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      const step2 = catalog.slice(
+        catalog.indexOf("2. **Restrict it to the parent BR's obligations.**"),
+        catalog.indexOf("3. **Read the layer off what the oracle observes:**"),
+      );
+      expectPhrase(step2, "reach the parent through the TC's `EX-Ref` and that example's `BR-Ref`");
+      expectPhrase(step2, "the parents are the BRs whose `AC-Refs` name one of the TC's `AC-Refs`");
+    });
+
+    it(`${tree}: step 3 says a TC never takes L4 or L5, where the layer is chosen`, async () => {
+      // The restriction sat seventy lines above the procedure, which readers
+      // reach through its anchor, so the procedure alone offered both layers.
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      const procedure = catalog.slice(
+        catalog.indexOf("## Layer derivation procedure (normative)"),
+        catalog.indexOf("### Obligation spanning more than one layer"),
+      );
+      expectPhrase(procedure, "**A `TC-*` never takes L4 or L5.**");
+      expectPhrase(procedure, "record it as `CON-API-*` (L4) or `US-*` (L5) instead");
+      expect(procedure).toMatch(/\| L4 API: file as `CON-API-\*` +\|/);
+      expect(procedure).toMatch(/\| L5 E2E: file as `US-\*` +\|/);
+      // No worked example reads as a TC landing at L4 or L5.
+      expect(procedure).not.toMatch(/\| L4 API +\|/);
+      expect(procedure).not.toMatch(/\| L5 E2E +\|/);
+    });
+
     it(`${tree}: step 2 is declared to outrank step 3`, async () => {
       const catalog = await read(tree, "assistant/catalog/test-layers.md");
       expect(catalog).toContain("**Step 2 outranks step 3.**");

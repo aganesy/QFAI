@@ -469,18 +469,25 @@ This article survives context compaction because `.qfai/assistant/constitution/c
 
 ## Article XI — Temporary files MUST use `tmp/`
 
-All temporary files, scratch scripts, and intermediate build artifacts **MUST** be placed under the repository‑root `tmp/` directory.
+Scratch files an agent creates for its own convenience — working notes, one-off
+scripts, captured command output, downloaded samples, intermediate data —
+**MUST** be placed under the repository‑root `tmp/` directory.
 
-Scope: this article is about files written **into the working tree** — scratch
-scripts, intermediate build artifacts, downloaded fixtures, notes. A sandbox a
-test creates with `mkdtemp` under the OS temporary directory is **not** covered:
-it lives outside the repository, so it cannot put a file in any of the
-directories Rule 1 protects, and the test that created it removes it.
+Scope: this article is about files written **into the working tree**. Two kinds
+of output are outside it:
+
+- A sandbox a test creates with `mkdtemp` under the OS temporary directory. It
+  lives outside the repository, so it cannot put a file in any of the
+  directories Rule 1 protects, and the test that created it removes it.
+- Build, test and cache output the project's own toolchain emits (`dist/`,
+  `build/`, `.next/`, `target/`, coverage reports, package tarballs). Those
+  paths belong to the packaging, deploy and test contracts. Leave them where the
+  tooling puts them and never redirect them to `tmp/`.
 
 Rules:
 
-1. **Never** create temporary files in the repository root, `src/`, `.qfai/specs/`, or any other production/artifact directory.
-2. Use `tmp/` (repository root) as the sole staging area. Create subdirectories as needed (e.g., `tmp/glossary/`, `tmp/build/`).
+1. **Never** create a scratch file in the repository root, `src/`, `.qfai/specs/`, or any other production/artifact directory.
+2. Use `tmp/` (repository root) as the sole staging area. Create subdirectories as needed (e.g., `tmp/notes/`, `tmp/capture/`).
 3. `tmp/` MUST be listed in `.gitignore` so temporary files are never committed.
 4. Clean up `tmp/` contents when the task that created them is complete.
-5. If a temporary file is found outside `tmp/` **in the working tree**, treat it as a defect and move or delete it immediately. A test's `mkdtemp` sandbox is not one — see Scope above.
+5. If a scratch file is found outside `tmp/` **in the working tree**, treat it as a defect and move or delete it immediately. A test's `mkdtemp` sandbox and configured toolchain output are not scratch files — see Scope above.

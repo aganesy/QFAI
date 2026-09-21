@@ -236,14 +236,25 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     // two ways to get one — a moved directory, a filter that matches nothing —
     // look identical to a green run.
     expect(RULE_MASTERS.length, ".agents/rules holds no rule master").toBeGreaterThan(0);
-    expect(RULE_MASTERS, "README.md is the register, not a rule").not.toContain("README.md");
+    expect(RULE_MASTERS, "a README is not a rule").not.toContain("README.md");
   });
 
-  it(".agents/rules/README.md lists every rule in the directory", async () => {
-    const text = await readFile(path.join(ROOT, ".agents/rules/README.md"), "utf-8");
-    for (const name of RULE_MASTERS) {
-      expect(text, `${name} is a rule master that README.md does not register`).toContain(name);
-    }
+  /**
+   * Each rule says what it is, in its own first heading.
+   *
+   * A register held in a second file is a list that can go stale: a rule added
+   * and not written down was a rule nobody applied, and the list said nothing.
+   * Read from the rules themselves there is nothing to keep in step — a rule
+   * that cannot name itself is the only failure left, and it is the file's own.
+   */
+  it.each(RULE_MASTERS)("%s names itself in its first heading", async (fileName) => {
+    const text = await readFile(path.join(ROOT, ".agents/rules", fileName), "utf-8");
+    const first = text.split(/\r?\n/).find((line) => line.trim() !== "");
+
+    expect(first, `${fileName} is empty`).toBeDefined();
+    expect(first ?? "", `${fileName} must open with a level-1 heading naming the rule`).toMatch(
+      /^# \S/,
+    );
   });
 
   it.each(RULE_MASTERS)(".claude/rules/%s resolves to the master", async (fileName) => {
@@ -1052,6 +1063,80 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toContain("grilling.md");
     });
   });
+
+  // An agent in an adopter's repository calls the same API against their own
+  // repository, and spends an allowance their other sessions share. So the
+  // master ships, and both copies are held to the same clauses.
+  describe("api-budget rule", () => {
+    const MASTERS = [
+      ".agents/rules/api-budget.md",
+      "packages/qfai/assets/init/root/.agents/rules/api-budget.md",
+    ];
+
+    it.each(MASTERS)("%s states every clause", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      // One token per clause that no other clause in the file carries, so a
+      // clause cannot be dropped and still leave the master looking complete.
+      for (const clause of [
+        // The order, and each surface's own reason for its place in it.
+        /Ask\s+the\s+cheapest\s+surface\s+that\s+can\s+answer/,
+        /\*\*git\.\*\*/,
+        /\*\*REST\.\*\*/,
+        /\*\*GraphQL\.\*\*\s+A\s+separate\s+allowance,\s+counted\s+in\s+points/,
+        // The set, the saved payload, and the interval.
+        /One\s+call\s+for\s+the\s+set,\s+not\s+one\s+per\s+member/,
+        /A\s+second\s+`grep`\s+is\s+not\s+a\s+second\s+download/,
+        /Poll\s+no\s+faster\s+than\s+the\s+thing\s+changes/,
+        // The instrument, and the endpoint that misreports it.
+        /`rate_limit`\s+is\s+not\s+the\s+budget/,
+        /the\s+response\s+to\s+a\s+call\s+that\s+was\s+going\s+to\s+be\s+made\s+anyway/,
+        // Whose allowance it is, which is why one agent's habits reach the rest.
+        /every\s+session,\s+sub-agent\s+and\s+background\s+task\s+draws\s+on\s+the\s+same/,
+        // The command that makes the cheap path the default.
+        /scripts\/gh-budget\.mjs/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    // The writing rule keeps its own hook off the shell because a tool-name
+    // matcher fires on every compound command. This hook takes that matcher and
+    // filters in the program instead. Without the sentence saying so, the next
+    // reader cannot tell the two apart from a reversal of that decision.
+    it.each(MASTERS)("%s keeps the writing rule's hook decision intact", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(
+        /documentation-clarity\.md`\s+keeps\s+its\s+own\s+hook\s+off\s+the\s+shell/,
+      );
+      expect(text).toMatch(/that\s+decision\s*\n?\s*stands/);
+      expect(text).toMatch(
+        /filter\s+is\s+in\s+the\s*\n?\s*program\s+rather\s+than\s+in\s+the\s+matcher/,
+      );
+      // A reminder that could fail the session it is attached to is worse than
+      // no reminder, so the three properties every entry keeps are stated here.
+      expect(text).toMatch(/no\s+shell\s+and\s+no\s*\n?\s*network/);
+      expect(text).toMatch(/Input\s+it\s*\n?\s*does\s+not\s+recognise\s+prints\s+nothing/);
+    });
+
+    it("ships to adopters", async () => {
+      const shipped = path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/api-budget.md");
+      expect((await lstat(shipped)).isFile()).toBe(true);
+    });
+
+    it.each([
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      // The list `qfai init` appends to a project that already has an entry
+      // point, and the only rule list a populated project ever sees.
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("api-budget.md");
+    });
+  });
 });
 
 describe("the question shape has one owner", () => {
@@ -1233,7 +1318,7 @@ describe("rule overlays", () => {
       clauses: [
         // The surface, and which of the three guards reads it.
         "package.json#files",
-        "Only the post-build guard reads `files`",
+        "Only the post-build guard follows `files`",
         // The identifier shapes, one token each for the two that no other
         // clause names.
         "CAP-0010",
