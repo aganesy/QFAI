@@ -109,11 +109,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`Oracle proof` is read from the round block the skill writes it in**
+  (#2026). `round-evidence.md` puts the field under the round prefix, because a
+  later round rewrites the code an earlier proof mutated — one slot for the row
+  either overwrote that proof or left the row reusing a stale one. The
+  completion gate read the row level only, so an entry written as the reference
+  says was refused for carrying no proof at all, and one that passed the gate
+  contradicted the reference. The latest round's field is read first and the
+  row-level one is the fallback, which is what every entry written before the
+  prefix carries. That is the shape `RED failure mode` already had, and the
+  field joins it among the round-scoped ones, so a round cannot carry two.
+
 - **The monitor's reply command names the pull request it is about** (#1864).
   It printed `repos/OWNER/REPO/pulls/comments/<id>/replies`, and the reply
   endpoint takes the pull request number as a path parameter — so an operator
   who copied the command posted nothing and found out by running it. The number
   is in the command now.
+
+- **The doctor contract stops denying the one deletion it declares** (#1860).
+  Its `--clean` section prunes TTL-expired validate run logs and tabulates the
+  preconditions that clearance requires; its non-goals said the command deletes
+  nothing and that no path is removed on any flag. A reader deciding whether a
+  doctor run is reversible got the opposite answer depending on which section
+  they reached first. The non-goal names the one removal and the conditions it
+  waits for, and keeps the guarantee that does hold: a stale review pack is
+  renamed into `_archive/` and never removed.
 
 - **An outdated review thread no longer authorizes a merge** (#1855). The merge
   script dropped a thread when either `isResolved` or `isOutdated` was true, and
@@ -150,6 +170,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The spec-0013 ledger carries the columns its template declares, and a row
   for every story** (#1750). Thirteen of its fourteen stories had no row, and
   the ledger held nine columns where the template declares fifteen. The thirteen
+
+- **The spec-0010 ledger carries the columns its template declares, and a row
+  for every story** (#1750). None of its twelve stories had a row, and the
+  ledger held eight columns where the template declares fifteen. The twelve
   rows are at `todo`, and every existing row keeps its identifier, status, test
   file, selector, decision and evidence.
 
@@ -173,6 +197,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The thirty-three rows are at `todo`, and every existing row keeps its
   identifier, status, test file, selector, decision and evidence. This was the
   last pack that owed the migration.
+
+- **A rule master a project deleted is not written back by the next `qfai init`**
+  (#1741). The run decided which masters to cite from its own copy report, so a
+  master the project had removed on purpose looked exactly like a rule shipped
+  for the first time: the run copied it again and added its bullet back, and the
+  only sign was a diff in the entry point. Removing a shipped rule is a decision
+  a project is entitled to make, and it could not be made durable. The record of
+  what `init` last wrote — already kept, per master, for the upgrade path — now
+  answers the question: an entry with no file behind it is a rule the project
+  removed, and the run copies neither it nor its citation and names it on
+  stderr. A master with no entry is a rule shipped for the first time and
+  arrives as before. `--force` does not restore one either; it rewrites what the
+  project has. The way back is to delete the master's entry from that record,
+  which puts it in the same position as a rule shipped today.
 
 - **The spec-0008 scaffold acceptance suite runs, instead of standing by as a
   skeleton** (#1436). It was authored test-first against a command that did not

@@ -1518,8 +1518,11 @@ describe("the workflows parent is pinned across the copy, not only before it", (
     const rootCopy = source.indexOf("const rootResult = await copyTemplateTree(rootAssets");
     expect(rootCopy, "the root copy must exist").toBeGreaterThan(-1);
     const call = source.slice(rootCopy, source.indexOf("});", rootCopy));
+    // The list carries a second entry — the rule masters this project deleted —
+    // so the shipped names are matched where they sit in it rather than as the
+    // whole of it.
     expect(call, "every shipped name must be excluded, whatever this run decided about it").toMatch(
-      /exclude: \[\.\.\.SHIPPED_WORKFLOW_NAMES\]/,
+      /exclude: \[[\s\S]*\.\.\.\[\.\.\.SHIPPED_WORKFLOW_NAMES\]\.map\(/,
     );
   });
 });
