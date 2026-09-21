@@ -14,9 +14,11 @@
 - `tmp/concrete-pattern-review/{requirements-phase2,tests-phase2,architect-plan,requirements-phase4,legacy-upgrade-author,catalog-key-author}.md`: actual producer responses and owner execution logs.
 - `tmp/concrete-pattern-review/{architecture-review-round-one,completion-review-round-one,completion-review-round-two,qa-review-round-two}.md`: historical independent responses at the revisions recorded below.
 
-## Preflight summary path
+## Preflight summary
 
-- `.qfai/report/preflight/run-20260913233536479/preflight_summary.md` (run id: run-20260913233536479): ready, 16 imported requirements, no blockers or open questions.
+The report tree is not tracked, so a run is named by its id and the result is recorded here.
+
+- Run `run-20260913233536479`: ready, 16 imported requirements, no blockers or open questions.
 - This is the actual run-scoped local record. The tracked latest pointer retains its baseline fields and publishes no new private user path.
 
 ## Triage decisions
@@ -76,18 +78,18 @@
 - Primary post-metadata validation: scoped SDD PASS, zero errors, 16 warnings and four info; `run-20260914004835925`. Scoped full FAIL, 61 errors, 67 warnings and six info; `run-20260914004837695`. Global SDD FAIL, 96 errors, 76 warnings and five info; `run-20260914004842675`. Both error sets are identical to the previous observed records; `tmp/concrete-pattern-review/post-metadata-validation-delta.log`.
 - Primary explicit-ignore-path Prettier over all changed Markdown and `git diff --check`: exit 0. The preservation comparator still passes after formatting. Logs: `tmp/concrete-pattern-review/current-markdown-{format,check}.log`.
 
-## Validate evidence paths
+## Validate evidence
 
-- `.qfai/report/run-20260913234628207/summary.md` (run id: run-20260913234628207, status: fail, 96 errors).
-- `.qfai/report/run-20260913234645842/summary.md` (run id: run-20260913234645842, status: fail, 61 errors).
-- `.qfai/report/run-20260914001125022/summary.md`: scoped SDD PASS, zero errors, 16 warnings and four info.
-- `.qfai/report/run-20260914001126669/summary.md`: scoped full FAIL, 61 errors, 67 warnings and six info.
-- `.qfai/report/run-20260914001402839/summary.md`: global SDD FAIL, 96 errors, 77 warnings and five info.
+- Run `run-20260913234628207`: fail, 96 errors.
+- Run `run-20260913234645842`: fail, 61 errors.
+- `run-20260914001125022`: scoped SDD PASS, zero errors, 16 warnings and four info.
+- `run-20260914001126669`: scoped full FAIL, 61 errors, 67 warnings and six info.
+- `run-20260914001402839`: global SDD FAIL, 96 errors, 77 warnings and five info.
 - `tmp/concrete-pattern-review/{red,green,related,green-phase2,preserved-ledger,selector,ledger-oracles}.log`.
 - `tmp/concrete-pattern-review/{validate-final-sdd,validate-final-full,validate-final-global-sdd,validation-delta,git-aware-assets,frozen-assets,frozen-gates,current-gates,current-related}.log`.
 - `tmp/concrete-pattern-review/{legacy-upgrade-control,legacy-upgrade-mutant,legacy-upgrade-restored,legacy-upgrade-full}.log`.
 - `tmp/concrete-pattern-review/{current-ledger-oracles,current-preserved-ledger}.log`.
-- `.qfai/report/run-20260914004835925/summary.md`, `.qfai/report/run-20260914004837695/summary.md` and `.qfai/report/run-20260914004842675/summary.md`: actual post-metadata runs.
+- `run-20260914004835925`, `run-20260914004837695` and `run-20260914004842675`: actual post-metadata runs.
 - `tmp/concrete-pattern-review/{post-metadata-sdd,post-metadata-full,post-metadata-global-sdd,post-metadata-validation-delta,current-markdown-format,current-markdown-check}.log`.
 
 ## Pre-draft Grilling
@@ -140,10 +142,10 @@
 
 - Final status: REVISE
 - Rationale: the bounded behavioral checks pass, but R03 QA found a missing BR-0015-0005 to AC-0015-0009 edge. Required full scoped/global validation and Stage 0 refresh also remain incomplete. Observed GREEN and partial-profile PASS do not clear these obligations.
-- Historical SDD review pack R01: `.qfai/review/review-20260913154239034`, revision `c56caf1ab6d085eea439d4745245cef99ef6ab1f`, seal `bd45ca609d97b9174661c998312972ee280aa19564a2a2d0a2e387c3a3a60c4f`, status FAIL for whole-workflow REVISE.
-- Historical SDD review pack R02: `.qfai/review/review-20260913154239035`, revision `fa981919a4be88f30e01b90cdfbcf54a17000952`, seal `22daf8008489b4a660bddbf61c20017417ec864dda8eeaa6fae3e2e90301e4b5`, status FAIL for whole-workflow REVISE. These packs capture actual older responses without changing their revisions or hashes.
+- Historical SDD review pack R01: `review-20260913154239034`, revision `c56caf1ab6d085eea439d4745245cef99ef6ab1f`, seal `bd45ca609d97b9174661c998312972ee280aa19564a2a2d0a2e387c3a3a60c4f`, status FAIL for whole-workflow REVISE.
+- Historical SDD review pack R02: `review-20260913154239035`, revision `fa981919a4be88f30e01b90cdfbcf54a17000952`, seal `22daf8008489b4a660bddbf61c20017417ec864dda8eeaa6fae3e2e90301e4b5`, status FAIL for whole-workflow REVISE. These packs capture actual older responses without changing their revisions or hashes.
 - Recorded validation: scoped SDD PASS; full scoped and global SDD REVISE with the same complete 61/96 error records. This is not whole-workflow completion.
-- Collected sequential R03 pack: `.qfai/review/review-20260913155129301`, reviewed revision `a16657d8b43f96a973e79b228d292346d518ed51`, five-file seal `d5339b3afd384ab977701512b51532e49fec5e652f06a8252b3f5febc66039e2`, overall FAIL. Later fixes do not rewrite this immutable reviewed revision or its verdicts.
+- Collected sequential R03 pack: `review-20260913155129301`, reviewed revision `a16657d8b43f96a973e79b228d292346d518ed51`, five-file seal `d5339b3afd384ab977701512b51532e49fec5e652f06a8252b3f5febc66039e2`, overall FAIL. Later fixes do not rewrite this immutable reviewed revision or its verdicts.
 - Work Order 21 return: `/root/sdd_concrete_architecture_review`, `R03_architecture-reviewer.md`, bounded acceptance PASS; whole-workflow REVISE distinguished in the response. All writes STOPPED before the next role.
 - Work Order 22 return: `/root/sdd_concrete_completion_review`, `R03_completion-reviewer.md`, REVISE with two required whole-workflow findings. All writes STOPPED before the next role.
 - Work Order 23 return: `/root/sdd_concrete_qa_review`, `R03_qa-gatekeeper.md`, REVISE with three blocking and three advisory findings. Policy/catalog/runtime checks pass; the missing AC-to-BR edge blocks acceptance. All writes STOPPED before correction ownership proceeds.

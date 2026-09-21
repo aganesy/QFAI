@@ -109,6 +109,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **No committed record names a generated artifact the repository does not
+  have** (#1652). `.qfai/review/`, `.qfai/report/` and most of `.qfai/discussion/`
+  are ignored, and the evidence files citing them are committed, so a clone had
+  the claim without its subject: 118 citations across five records resolved
+  nowhere, and a reader spent a search finding that out. A run is now named by
+  its id rather than by a path — the reviewer role, verdict, revision and seal
+  are already recorded beside it, so the record stands without the directory.
+  A file a command writes is named by the command that writes it, with the
+  `qfai:not-a-citation` marker saying so. The census in
+  `evidenceCitedArtifacts.test.ts` is unchanged and every entry is cleared, so
+  its length and digest still refuse a citation added later taking a repaired
+  entry's slot.
+
 - **Five coverage placeholders now state a behaviour, and the exception that
   closed spec-0011's backfill names the tests it actually rests on** (#1835).
   `TC-0011-0009`, `TC-0011-0010` and `TC-0013-0010` to `TC-0013-0012` were

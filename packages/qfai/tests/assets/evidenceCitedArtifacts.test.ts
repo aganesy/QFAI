@@ -1011,8 +1011,14 @@ const CENSUS: ReadonlyArray<Citation> = [
  * it really is repaired — the path resolves, or the record no longer cites it
  * that many times under that heading. The list is the progress the census is
  * meant to produce, and it is the only list that grows.
+ *
+ * Every entry is here: no committed record names a generated artifact as a path
+ * any more. A run is named by its id, the file a command writes is named by the
+ * command, and a path that is mentioned rather than cited carries the marker.
+ * The census stays beside it, because the length and the digest are what stop a
+ * citation added later from taking a repaired entry's slot.
  */
-const CLEARED: ReadonlyArray<Citation> = [];
+const CLEARED: ReadonlyArray<Citation> = CENSUS;
 
 /**
  * Every path git tracks, and every directory one of them lies under, read from
