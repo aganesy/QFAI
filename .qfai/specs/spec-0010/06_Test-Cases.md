@@ -2,7 +2,7 @@
 
 | TC-ID        | AC-Refs      | EX-Ref       | Steps                                                             | Expected                                                                     |
 | ------------ | ------------ | ------------ | ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| TC-0010-0001 | AC-0010-0001 | EX-0010-0001 | generate UI-bearing discussion sidecars                           | new sidecar family exists                                                    |
+| TC-0010-0001 | AC-0010-0001 | EX-0010-0001 | generate UI-bearing discussion sidecars                           | the two screen-level sidecars exist and no legacy one does                   |
 | TC-0010-0002 | AC-0010-0002 | EX-0010-0002 | validate exploration brief headings                               | required heading error                                                       |
 | TC-0010-0003 | AC-0010-0003 | EX-0010-0003 | validate exploration rubric headings                              | rubric passes                                                                |
 | TC-0010-0004 | AC-0010-0004 | EX-0010-0004 | validate evaluator calibration headings                           | calibration passes                                                           |
