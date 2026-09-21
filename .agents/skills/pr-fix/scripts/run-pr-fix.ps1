@@ -400,14 +400,16 @@ function SaveMonitorStatus(
   return SaveJson -Root $Root -Name ("pr-{0}-monitor-status.json" -f $Number) -Value $status
 }
 
-function PrintThreads([string]$Root, [string]$Owner, [string]$Repo, $Items) {
+function PrintThreads([string]$Root, [string]$Owner, [string]$Repo, [int]$Number, $Items) {
   foreach ($item in $Items) {
     $outdatedTag = if ($item.IsOutdated) { " [outdated]" } else { "" }
     Warn ("Unresolved thread{0}: {1}" -f $outdatedTag, $item.Url)
     Write-Host ("  Author: {0}" -f $item.Author)
     Write-Host ("  Path:   {0}" -f $item.Path)
     Write-Host ("  Body:   {0}" -f (($item.Body -replace "`r", " " -replace "`n", " ").Trim()))
-    Write-Host ("  Reply command: gh api repos/{0}/{1}/pulls/comments/{2}/replies -f body=""Addressed in <sha>.""" -f $Owner, $Repo, $item.CommentId)
+    # The pull request number is a path parameter of the reply endpoint, not an
+    # optional one: without it the command names a route that posts nothing.
+    Write-Host ("  Reply command: gh api repos/{0}/{1}/pulls/{2}/comments/{3}/replies -f body=""Addressed in <sha>.""" -f $Owner, $Repo, $Number, $item.CommentId)
     Write-Host ("  Resolve command: gh api graphql -f query=""mutation(`$threadId: ID!) {{ resolveReviewThread(input: {{ threadId: `$threadId }}) {{ thread {{ isResolved }} }} }}"" -f threadId=""{0}""" -f $item.ThreadId)
   }
   Info ("Saved review thread snapshot to {0}" -f (SaveJson -Root $Root -Name "pr-review-threads.json" -Value $Items))
@@ -543,7 +545,7 @@ while ($streak -lt $effectiveRequiredZeroStreak) {
 
   if ((CountOf $threads) -gt 0) {
     $streak = 0
-    [void](PrintThreads -Root $root -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Items $threads)
+    [void](PrintThreads -Root $root -Owner ([string]$repo.owner.login) -Repo ([string]$repo.name) -Number $targetPrNumber -Items $threads)
     $statusPath = SaveMonitorStatus -Root $root -Number $targetPrNumber -Mode $mode -EffectiveSleep $effectiveSleepSeconds -EffectiveStreak $effectiveRequiredZeroStreak -CurrentStreak $streak -State "action_required_threads" -BlockingArtifact "pr-review-threads.json" -NextAction "Remediate review feedback, commit/push, resolve threads, then rerun the live monitor."
     Info ("Saved monitor status to {0}" -f $statusPath)
     if ($DryRun) { throw "Unresolved review threads remain. Dry-run stopped before remediation." }
