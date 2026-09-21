@@ -2003,7 +2003,7 @@ describe("a marker pair inside an example is an example", () => {
     expect(citedRuleMastersOutsideCode(existing)).toEqual([]);
   });
 
-  it("keeps a fence open past a bullet whose text is the fence character", async () => {
+  it("keeps a fence open past a bullet whose text is the fence character", () => {
     // Every line inside a block is literal, and the scanner stripped a list
     // marker from one before testing it as a delimiter. `- ~~~` then closed
     // the example on its own first line, the real closing fence opened
