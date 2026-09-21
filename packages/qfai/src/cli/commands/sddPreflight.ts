@@ -68,6 +68,12 @@ function renderText(root: string, result: SddPreflightResult): string {
       lines.push(`    - ${blocker}`);
     }
   }
+  if (result.packGaps.length > 0) {
+    lines.push("  pack gaps (recorded, not blocking):");
+    for (const gap of result.packGaps) {
+      lines.push(`    - ${gap}`);
+    }
+  }
   if (result.openQuestions.length > 0) {
     lines.push("  open questions (carry-over):");
     for (const question of result.openQuestions) {

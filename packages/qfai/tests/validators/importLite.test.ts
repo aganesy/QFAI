@@ -435,7 +435,9 @@ describe("runSddPreflight import-lite entrypoint", () => {
 
   // Evidence is an entrypoint, not an override: a pack that exists but is
   // incomplete must still block.
-  it("stays blocked when a discussion pack exists but is incomplete", async () => {
+  it("reads an incomplete discussion pack as it is, not the import-lite evidence", async () => {
+    // Evidence is an entrypoint, never an override: the pack is present, so it
+    // is the source, and what it lacks is listed rather than stopping the run.
     const root = await newRoot();
     await seedSpec(root);
     await seedDiscussionReq(root);
@@ -443,8 +445,9 @@ describe("runSddPreflight import-lite entrypoint", () => {
 
     const result = await runSddPreflight(root, defaultConfig);
 
-    expect(result.status).toBe("blocked");
+    expect(result.status).toBe("ready");
     expect(result.source).toBe("discussion-pack");
+    expect(result.packGaps.length).toBeGreaterThan(0);
   });
 });
 
