@@ -109,6 +109,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Five coverage placeholders now state a behaviour, and the exception that
+  closed spec-0011's backfill names the tests it actually rests on** (#1835).
+  `TC-0011-0009`, `TC-0011-0010` and `TC-0013-0010` to `TC-0013-0012` were
+  titled "Coverage Placeholder for EX-…" and stated nothing observable, so no
+  test could exercise them while ledger rows named test files for them. Each is
+  restated against the rule behind its example — minimum production code in
+  Phase Green, reviewer separation before `done`, batch mode over every
+  capability, Plan finalize after a grounded slice, and a contract stub that
+  parses — and each now has a test that reads it, with the annotation on the
+  block that does the reading. The two spec-0011 annotations had drifted onto
+  each other's subject and are swapped back. `DR-0011-0001` justified the
+  `TDD-0001` to `TDD-0008` exception with five test files that carry none of
+  those annotations; it now names `implementSkillSpec0011.test.ts`, which does,
+  and says why the rows stay at `exception` rather than `done`.
+
 - **Three obligations now state the behaviour the product has** (#1834).
   `TC-0012-0402` asked a single-spec flat iter to exit 0 with an info note; that
   skip sealed a certificate over zero per-screen review evidence, so the gate
