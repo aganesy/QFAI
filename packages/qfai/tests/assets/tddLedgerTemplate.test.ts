@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -171,6 +171,62 @@ const codesFor = async (ledger: string): Promise<Array<{ code: string; severity:
     await rm(root, { recursive: true, force: true });
   }
 };
+
+/** A document's `## Producer` section, heading included, or `null` where it has none. */
+function producerSection(text: string): string | null {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const start = lines.indexOf("## Producer");
+  if (start === -1) return null;
+  let end = start + 1;
+  while (end < lines.length && !lines[end]?.startsWith("## ")) end += 1;
+  return lines.slice(start, end).join("\n").trimEnd();
+}
+
+/**
+ * The producer preamble a pack ledger carries, where it carries one.
+ *
+ * `/qfai-sdd` copies the template when the ledger does not exist, so a pack's
+ * preamble is the template's — and a ledger written before the template grew
+ * one carries none. Both are the same rule: what is there is the template's
+ * text, and nothing else is.
+ *
+ * One pack drifted three seeding groups behind while saying, above a table of
+ * nine `Layer = E2E` rows, that `US-*` is not a row here. A preamble nothing
+ * checks is one that drifts, and it drifts where a reader consults it to read
+ * the table under it.
+ */
+describe("a ledger's producer preamble is the template's", () => {
+  it("carries the template's section wherever a pack has one", async () => {
+    const template = producerSection(await read(QFAI_TREES[0] ?? "", TEMPLATE));
+    expect(template, "the template must carry the section this rule is about").not.toBeNull();
+
+    const specsDir = path.join(repoRoot, ".qfai", "specs");
+    const packs = (await readdir(specsDir, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith("spec-"))
+      .map((entry) => path.join(specsDir, entry.name, "tdd", "test-list.md"));
+
+    const drifted: string[] = [];
+    let carried = 0;
+    for (const ledger of packs) {
+      let text: string;
+      try {
+        text = await readFile(ledger, "utf-8");
+      } catch {
+        // A pack with no ledger yet is not a pack with a drifted preamble.
+        continue;
+      }
+      const section = producerSection(text);
+      if (section === null) continue;
+      carried += 1;
+      if (section !== template) drifted.push(path.relative(specsDir, ledger));
+    }
+    expect(
+      carried,
+      "no pack ledger carries the section, so this rule reads nothing",
+    ).toBeGreaterThan(0);
+    expect(drifted.sort(), "a pack preamble that is not the template's").toEqual([]);
+  });
+});
 
 describe("tdd/test-list.md has a shipped template and a named producer", () => {
   for (const tree of QFAI_TREES) {
