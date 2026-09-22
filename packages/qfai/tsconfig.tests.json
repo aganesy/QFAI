@@ -45,6 +45,7 @@
     "tests/assets/blockedRowChangeRequest.test.ts",
     "tests/assets/openRowAlreadyTested.test.ts",
     "tests/assets/completedRowNamesItsTestCase.test.ts",
+    "tests/assets/blockedRowNamesAnOpenDecision.test.ts",
     "tests/assets/rowNamesItsTestFile.test.ts",
     "tests/assets/atddConDbOwnership.test.ts",
     "tests/assets/atddDbContractObligationLists.test.ts",
