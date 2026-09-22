@@ -2301,6 +2301,32 @@ ${packPair(1).join("\n")}
     });
   });
 
+  it("reads a round pack written as the directory the skill's template records", async () => {
+    // `pack-seal.md` records the field as `.qfai/review/review-<timestamp>/`,
+    // and the canonical form carries no trailing separator — so a record
+    // written exactly as the skill instructs was refused for its shape, and no
+    // test drove the template's own spelling through this reader.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict: PASS",
+          "- Round 1: Review pack: .qfai/review/review-20260101000000000/",
+          `- Round 1: Review pack seal: sha256:${"a".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).not.toContain(
+        "Round 1: Review pack: canonical .qfai/review/review-<17-digit timestamp> path",
+      );
+    });
+  });
+
   it("binds a present round pack to this row and to the verdict it records", async () => {
     // A sealed pack from another review keeps every hash unchanged, because the
     // pair is outside the audited subject, so its contents are what can refuse it.
