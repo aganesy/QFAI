@@ -557,16 +557,18 @@ describe("missing traceability ledger → QFAI-TRACE-002 warning", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Group 4: Config and flags (TC-0013-0013..0017)
+// Group 4: Config and flags (TC-0013-0014..0017, plus the full-scan branch)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// The full-scan case carries no TC annotation. `TC-0013-0013` asks for a
-// `Type` column on every test-case row and a non-normal case per criterion,
-// and this suite exercises `detectSpecChanges({ full: true })` — it reads no
-// column and no coverage applicability, so the annotation claimed evidence the
-// assertions do not produce. The obligation is carried by
-// `tests/integration/qfai-traceability.md` until a test for it exists.
-describe("TC-0013-0013: --full flag bypasses diff detection", () => {
+// The full-scan case carries no TC annotation and no TC in its name.
+// `TC-0013-0013` asks for a `Type` column on every test-case row and a
+// non-normal case per criterion, and this suite exercises
+// `detectSpecChanges({ full: true })` — it reads no column and no coverage
+// applicability. That obligation is verified in
+// `tests/integration/sddSkillSpec0013.test.ts`; what is left here is the
+// full-scan behaviour itself, kept because nothing else exercises the branch
+// that skips the diff.
+describe("full scan bypasses diff detection", () => {
   let tmpRoot: string;
 
   beforeEach(async () => {

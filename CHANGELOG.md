@@ -312,6 +312,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The Type-column obligation is verified by a test that reads a Type column**
+  (#1858). The spec-0013 ledger row for that obligation named a suite about
+  full-scan discovery, and the describe it selected was named for the obligation
+  while asserting that `detectSpecChanges({ full: true })` returns every spec.
+  A green run therefore said the column was checked when nothing had read one.
+  The obligation now has its own case against the template a generated pack
+  starts from: the table authors fill carries the column, each of the four
+  types it admits is defined, no sample row declares a type the template does
+  not define, and one criterion is shown with both a normal row and a non-normal
+  one. The full-scan suite keeps its assertions and drops the name it had no
+  claim to. How much non-normal coverage a criterion owes is deliberately not
+  asserted: an approved change request narrows that clause, and the template
+  already reads the narrower way.
+
 - **A ledger's producer preamble is the template's, and a check holds it there**
   (#2024). One execution ledger carried a preamble saying `US-*` and
   `CON-API-*` are not rows there, two screens above a table holding nine
