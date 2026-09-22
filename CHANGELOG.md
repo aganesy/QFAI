@@ -33,6 +33,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   like every other block start, and the fixture that pinned the old reading
   states what GitHub renders instead.
 
+- **The document lane says why it runs as two jobs, and the README says how to
+  take a corrected workflow** (#1876). Each leg of `qfai-docs.yml` installs the
+  dependencies again before one short checker, which buys no speed; what it buys
+  is both results from one run, where a single job would end at the first
+  failure and never report the second. The file now says so, and says what to do
+  if the duplicated install costs more than the second result is worth. The
+  README adds the step the create-only rule leaves out: a shipped workflow
+  corrected in a later release does not arrive on its own, and `qfai doctor`
+  reporting one says nothing about how to replace it.
+
 - **The evidence-staleness rule now runs where a merge is blocked, and says so
   when it cannot compute an answer** (#2019). `QFAI-TDDLIST-009` asks whether
   anything a recorded observation covered has moved since the revision it names.
