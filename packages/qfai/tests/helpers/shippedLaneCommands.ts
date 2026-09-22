@@ -1153,7 +1153,7 @@ export const ALLOWED_ACTION_COMMITS: ReadonlyMap<string, string> = new Map([
  *
  * **Four execution channels in four rounds were the same finding**: a key is on the allowed list, and
  * until something reads its VALUE, appearing is all that is checked. `defaults.run.working-directory`,
- * a second `setup-node`, `on:` with `permissions:`, and `needs:` with `QFAI_NEEDS_JSON` were found one
+ * a second `setup-node`, `on:` with `permissions:`, and `needs:` with an env binding were found one
  * at a time, each by a reviewer, each after the previous one was closed by naming it.
  *
  * So this stops naming them. A workflow is pinned as everything it says except its jobs, and a job as
