@@ -23,6 +23,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The evidence citation guard opens a `.jsonl` record** (#1764). The filter
+  that picks evidence files took `.md`, `.json`, `.yaml` and `.yml`, so a record
+  written one line at a time — a mutation log is — was never opened, and a
+  generated-artifact path in one of its fields reached neither the census nor
+  the backlog. Each line is now decoded as its own record, which also keeps a
+  disclaimer ending one line out of the next. The second gap the issue names is
+  already closed: `.qfai/evidence/` is a generated root, so a capture under
+  `.qfai/evidence/prototyping/` that a clone does not carry is counted, while a
+  tracked record beside it resolves.
+
 - **A comment opener inside a code span ends the paragraph, as GitHub renders
   it** (#1869). `qfai init` writes the review pointer into an agent entry point
   only where no operative copy is there already, and a multiline code span was
