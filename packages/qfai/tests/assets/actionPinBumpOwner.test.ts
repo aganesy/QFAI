@@ -365,6 +365,7 @@ describe("TC-0017-0067 (TDD-0067): revising the declared starting value needs th
   });
 });
 
+// QFAI:SPEC-0017:TC-0017-0065
 describe("TC-0017-0065 (TDD-0065): the adopted worker value matches the recorded measurement", () => {
   it("compares at least two settings on the largest project and places the adopted value", () => {
     // `EX-0017-0049` fixes both halves: a timing artifact comparing at least two worker

@@ -167,6 +167,7 @@ describe("prototyping skill validator", () => {
   });
 });
 
+// QFAI:SPEC-0012:TC-0012-0356
 describe("prototyping skill asset — multi-spec wiring (spec-0012 CHG-002)", () => {
   // TC-0012-0356: SKILL.md and the iteration-loop reference must no
   // longer prompt for a per-invocation primary spec; instead they must

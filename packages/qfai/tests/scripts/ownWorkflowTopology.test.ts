@@ -1588,6 +1588,7 @@ function codePathCost(jobs: Record<string, Record<string, unknown>>): {
   return { instances, timeoutMinutesSum, installInstances, buildJobs };
 }
 
+// QFAI:SPEC-0017:TC-0017-0087
 describe("TC-0017-0087 (TDD-0096): the code path's cost agrees with the committed pin", () => {
   it("matches every pinned figure against this file's own reading of the workflow", () => {
     const cost = codePathCost(ciJobs());

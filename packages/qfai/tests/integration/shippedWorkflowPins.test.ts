@@ -77,6 +77,7 @@ const SHA_PIN_RE = /^[0-9a-f]{40}$/;
 // tag is still not a SHA pin and is caught by the 40-hex assertion.
 const FLOATING_REF_RES: readonly RegExp[] = [/^v[0-9]+$/, /^v[0-9]+\.[0-9]+$/, /^(?:main|master)$/];
 
+// QFAI:SPEC-0003:TC-0003-0030
 describe("TC-0003-0030 (TDD-0030): every shipped uses value is a 40-hex SHA pin", () => {
   it("every uses: value in every shipped workflow is pinned to a 40-hex commit SHA", async () => {
     const violations: string[] = [];
@@ -127,6 +128,7 @@ describe("TC-0003-0030 (TDD-0030): every shipped uses value is a 40-hex SHA pin"
   });
 });
 
+// QFAI:SPEC-0003:TC-0003-0031
 describe("TC-0003-0031 (TDD-0031): readable version lives in the step name without a leading letter", () => {
   // The readable form: digits-dot-digits(-dot-digits). This pattern asserts
   // version PRESENCE in each pinned step's name and nothing more — it can

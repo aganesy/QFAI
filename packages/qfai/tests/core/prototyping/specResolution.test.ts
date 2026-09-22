@@ -174,6 +174,7 @@ async function seedUiContract(root: string, specNumber: string, filename?: strin
   );
 }
 
+// QFAI:SPEC-0012:TC-0012-0354
 describe("resolveAllUiBearingSpecs", () => {
   // TC-0012-0354 — basic: 3 UI-bearing + 2 non-UI fixture → 3 specs
   it("returns every UI-bearing spec in the consumer project in one call", async () => {
@@ -378,6 +379,7 @@ describe("resolveAllUiBearingSpecs", () => {
   });
 
   // TC-0012-0391 — property: set equality over arbitrary fixtures
+  // QFAI:SPEC-0012:TC-0012-0391
   it("property: for every fixture, result ≡ project.specs.filter(s => s.ui_bearing === true)", async () => {
     type FixtureSpec = { specNumber: string; ui_bearing: boolean; via: "marker" | "contract" };
     const fixtures: FixtureSpec[][] = [
@@ -493,6 +495,7 @@ describe("checkSpecsCoveredDrift", () => {
   // TC-0012-0386 — drift check reads frozen set, not live filesystem.
   // The fixture mutates the live filesystem mid-test; the drift comparison
   // must still reflect only the values passed in at call time.
+  // QFAI:SPEC-0012:TC-0012-0386
   it("reads the cycle-0 frozen set even when the live filesystem mutates mid-test", async () => {
     const root = await newTempDir();
     // Seed two UI-bearing specs and freeze their IDs.

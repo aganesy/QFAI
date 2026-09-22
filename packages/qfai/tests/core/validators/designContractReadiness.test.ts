@@ -174,6 +174,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(issues).toEqual([]);
   });
 
+  // QFAI:SPEC-0004:TC-0004-0008
   it("TC-3.8.2: missing root DESIGN.md → DCON-030", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
