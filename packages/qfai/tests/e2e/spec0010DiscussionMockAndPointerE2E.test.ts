@@ -9,7 +9,6 @@
  * Requires a built dist (pnpm --filter qfai build) so dist/cli/index.cjs
  * reflects the wired `discussion` command.
  */
-// QFAI:SPEC-0010:US-0010-0011
 // QFAI:SPEC-0010:US-0010-0012
 
 import { execFile } from "node:child_process";
