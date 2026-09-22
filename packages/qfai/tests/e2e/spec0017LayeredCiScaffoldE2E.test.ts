@@ -989,7 +989,6 @@ describe(
           "echo",
           "exit",
           "git",
-          "grep",
           "node",
           "npm",
           "npx",

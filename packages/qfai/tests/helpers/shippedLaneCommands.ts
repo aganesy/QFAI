@@ -1050,17 +1050,19 @@ export const HARMLESS_PROGRAMS: ReadonlySet<string> = new Set([
   "exit",
   "true",
   "read",
-  "grep",
   "cut",
   "tr",
   "printf",
   // `[` evaluates a condition and runs nothing. It is here rather than among the keywords because it IS
   // a program, and the shipped tree writes `[ -f package.json ]`.
   //
-  // `[[`, `test` and `false` were here too and the shipped tree invokes none of them. For an allowlist
-  // over a fixed surface an unused entry is not harmless breadth — it is a slot a future edit can fill
-  // without anyone reading it. The test below requires every member to be invoked by the shipped tree, so
-  // re-adding one is a deliberate act with an assertion to change rather than a line to append.
+  // `[[`, `test`, `false` and `grep` were here too and the shipped tree invokes none of them. For an
+  // allowlist over a fixed surface an unused entry is not harmless breadth — it is a slot a future edit
+  // can fill without anyone reading it. The test below requires every member to be invoked by the shipped
+  // tree, so re-adding one is a deliberate act with an assertion to change rather than a line to append.
+  //
+  // `grep` left when the test verdict stopped scanning a serialized needs map for a failure and started
+  // reading the one lane's result by name.
   "[",
 ]);
 

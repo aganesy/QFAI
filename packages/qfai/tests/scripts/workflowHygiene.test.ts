@@ -3456,7 +3456,7 @@ describe("TC-0017-0050 (TDD-0050): the lane scans both roots and reports shipped
       // to a number no job had to keep: the lane's own budget moved from ten minutes to
       // thirty when it started installing, and the plant then matched nothing.
       editShipped(d, SHIPPED_FILE, (text) =>
-        text.replace(/      contents: read\n    timeout-minutes: \d+\n/, "      contents: read\n"),
+        text.replace(/ {6}contents: read\n {4}timeout-minutes: \d+\n/, "      contents: read\n"),
       );
     });
     try {
