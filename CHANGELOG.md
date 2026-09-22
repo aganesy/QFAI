@@ -367,6 +367,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A counted skip in an evidence result is data, not a lane that did not run**
+  (#2131). The result a completed row records was refused wherever the word
+  `skipped` appeared, so a checkpoint over a suite that declares skips had no
+  honest spelling: the fuller record failed and the terser one passed, which is
+  the wrong way round for a field whose purpose is provenance. A count beside
+  the word is now read the way `0 failed` already was — as what the runner
+  reported. A bare `skipped` still refuses the row, and a run that passed
+  nothing is still refused however it counts its skips, because that guard reads
+  the untouched text.
+
 - **Six more selectors name the case whose title opens with their identifier**
   (#1436). The earlier repair required a colon after the identifier, so a title
   reading `TC-0003-0023 (TDD-0023): …` was left behind although it names its
