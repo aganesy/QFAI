@@ -74,6 +74,30 @@ const RELEASED_HEADING_RE = /^## \[(\d+\.\d+\.\d+)\][ \t]+-[ \t]+\d{4}-\d{2}-\d{
 export const TRUNCATION_MARKER = "**These notes are not the whole section.**";
 
 /**
+ * Every sentence a cut body may carry, this one and the ones releases before
+ * it were published with.
+ *
+ * A published body is not repository text and cannot be reworded: it is what
+ * the release said on the day it was built. `release.yml` wrote the note in
+ * Japanese until it was translated, so every release cut before that carries
+ * the older sentence — and read against the current one alone, such a body
+ * looks complete and its missing tail reads as drift. `v1.10.1` reported 77
+ * entries that way, which is most of a section nobody had edited.
+ *
+ * The Japanese line here is data rather than writing, in the sense
+ * `repository-language.md` gives an allowlist: it records a published string
+ * so a check can recognise it. The list only grows when the sentence changes
+ * again, and never shrinks while a release carrying an entry is still
+ * published.
+ */
+const TRUNCATION_MARKERS = [TRUNCATION_MARKER, "**このリリースノートは全文ではありません。**"];
+
+/** Whether a published body says it is a cut of its section. */
+export function saysItWasCut(releaseBody) {
+  return TRUNCATION_MARKERS.some((marker) => releaseBody.includes(marker));
+}
+
+/**
  * Every released section of a changelog, newest first, as `{ version, body }`.
  *
  * `[Unreleased]` is skipped: it has no tag and therefore no published body to
@@ -148,7 +172,7 @@ export function entryTitles(markdown) {
 export function missingEntries(sectionBody, releaseBody) {
   const wanted = entryTitles(sectionBody);
   const published = new Set(entryTitles(releaseBody));
-  const truncated = releaseBody.includes(TRUNCATION_MARKER);
+  const truncated = saysItWasCut(releaseBody);
   if (!truncated) {
     return wanted.filter((title) => !published.has(title));
   }

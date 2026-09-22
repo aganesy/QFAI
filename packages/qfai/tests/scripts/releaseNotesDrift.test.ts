@@ -29,6 +29,7 @@ import {
   nextPageUrl,
   releasedSections,
   run,
+  saysItWasCut,
 } from "../../../../scripts/check-release-notes.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
@@ -278,6 +279,20 @@ describe("what the published body is allowed to be missing", () => {
     const body = ["- **First**", "- **Third**", "", TRUNCATION_MARKER].join("\n");
 
     expect(missingEntries(section, body)).toEqual(["- **Second**"]);
+  });
+
+  it("the tail of a body cut before the note was translated", () => {
+    // A published body is what the release said on the day it was built and
+    // cannot be reworded. `release.yml` wrote the note in Japanese until it
+    // was translated, so a body cut before that carries the older sentence —
+    // and read against the current one alone it looks complete, with its
+    // missing tail reported as drift. One release reported 77 entries that
+    // way, out of a section nobody had edited.
+    const section = ["- **First**", "- **Second**", "- **Third**"].join("\n");
+    const body = ["- **First**", "", "**このリリースノートは全文ではありません。**"].join("\n");
+
+    expect(saysItWasCut(body)).toBe(true);
+    expect(missingEntries(section, body)).toEqual([]);
   });
 
   it("and an entry the body adds is not reported", () => {
