@@ -1066,6 +1066,7 @@ procurement:
     expect(dcon005).toEqual([]);
   });
 
+  // QFAI:SPEC-0012:TC-0012-0346
   it("design-system.yaml mirror with diverging color value → DCON-005 with diff diagnostic", async () => {
     // The mirror is contractually a verbatim DESIGN.md
     // copy. A hand-authored mirror that disagrees with DESIGN.md must
