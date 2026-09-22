@@ -372,6 +372,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   own failing run — was stated in no shipped document; it is now in the Phase
   Green step that already asked for the minimum, and a case asserts it.
 
+- **The Stage 0 catalog is filled and the Skeleton phase has run** (#2029).
+  The implementation skill opens with a stage that takes every gate command from
+  the tech steering rather than inventing one, and a phase that proves each
+  declared entrypoint answers a boot obligation before the first row is selected.
+  Neither had been satisfied here: the steering still carried the shipped
+  placeholders and no skeleton record existed, so rows advanced over both. The
+  runtime, package manager, language, build tool, test runner, dependencies and
+  constraints are now this repository's real ones, taken from the manifests; the
+  interface section records that there is none rather than leaving a slot; and
+  the one entrypoint declares the obligation its startup serves, with the
+  reasoning beside it because the phase's exit criterion follows from that
+  choice. `scripts/smoke-qfai-cli.mjs` starts the built tool over standard
+  input and output in a directory outside this repository and asserts two
+  strings only the initialization surface produces — neither appears in the usage
+  output or in an unknown-command error, so a process that merely started does
+  not pass. The run and its output are recorded. The rule that already reported
+  the placeholders now finds none in either document the stage reads.
+
 - **The Type-column obligation is verified by a test that reads a Type column**
   (#1858). The spec-0013 ledger row for that obligation named a suite about
   full-scan discovery, and the describe it selected was named for the obligation
