@@ -466,6 +466,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A PowerShell host crash names the processor it happened on** (#2181). A
+  leg can lose one case to the host crash or nearly all of them, and a rerun
+  on another runner recovers both. Whether the second mode follows the
+  runner's processor is what the log could not answer, so each crash warning
+  now names the CPU model.
+
 - **A PowerShell test case whose .NET host crashed runs once more instead of
   failing the leg** (#2068). The pull-request helper suites spawn `pwsh` per
   case, and on the hosted runners the host intermittently dies before
