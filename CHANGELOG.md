@@ -169,6 +169,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A ledger's producer preamble is the template's, and a check holds it there**
+  (#2024). One execution ledger carried a preamble saying `US-*` and
+  `CON-API-*` are not rows there, two screens above a table holding nine
+  `Layer = E2E` rows — the template it was copied from seeds them in five
+  groups, and the copy had drifted three groups behind. `/qfai-sdd` copies the
+  template where the ledger does not exist, so a pack's preamble is the
+  template's text and a ledger written before the template grew one carries
+  none; both are the same rule, and the check reads every pack for it. The
+  drifted copy is replaced by the template's section. Its `## Seeding notes`
+  already opens by saying every figure under it is the table as it stood at one
+  change, so a reader does not take those figures for the table's.
+
 - **Three shapes the evidence-citation scan read wrongly, each of which let an
   absent artifact past** (#1885). A backslash counted as a separator only
   before a name character, so a Windows-spelled `.qfai/report/run-1/[0-9].json`
