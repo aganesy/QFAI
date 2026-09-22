@@ -5,10 +5,10 @@
 - Raised by: `qfai-implement`
 - Raised at: `2026-09-18T03:05:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
+- Status: `approved`
+- Approved by: `claude-code` — under the user's standing instruction to process every issue of this session with its own judgment; NOT a user decision on these options
+- Approved at: `2026-09-22T22:00:00Z`
+- Approved option: `1`
 - Applied at: `-`
 - Superseded by: `-`
 
@@ -221,4 +221,14 @@ requirements beneath them?
 
 ## Resolution
 
-Not yet resolved.
+Approved under option 1, the recommendation. It removes the two criteria the
+rest of the pack already contradicts or supersedes, and keeps the one that is
+live, so it adds the least of the three and restores nothing an approved record
+retired. Not yet applied.
+
+One precondition for action 3.2, found when approving. `packages/qfai/tests/core/sddPreflight.test.ts`
+is the file the two new rows bind to, and `.qfai/evidence/atdd-spec-0002.md`
+records a hash of that whole file as spec-0002 `TDD-0001`'s RED test hash. An
+annotation added there moves the hash, and `--profile tdd` then reports
+`QFAI-TDDLIST-008` on that row. The pass that binds the new rows re-records that
+evidence in the same run, or binds them to a test in another file.
