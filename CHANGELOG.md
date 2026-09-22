@@ -23,6 +23,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The label-scan table is measured once instead of once per row, and what the
+  two spawn-heavy suites actually spawn is recorded** (#2044). Both files
+  carried the same table verbatim: nine openers under two line endings, each
+  starting a `pwsh` to instrument `pr-body-policy.ps1` and count how many times
+  the label matcher is entered. The subject there is the policy function, not
+  the script, so a process per row bought nothing — a `pwsh` start is about
+  622 ms around a call of about 25 ms. One run now answers every row of both
+  files, through `tests/helpers/labelScanProbe.ts`, and each row keeps its own
+  case and its own failure.
+  Counted at the spawn, which is where the issue's estimate was out by an order
+  of magnitude: `prMergePlan.test.ts` makes 234 spawns across 225 cases, not
+  four, and `prFixMonitor.test.ts` makes 277 across 268. Of those, 18 and 18
+  are this table; 216 and 235 drive the scripts end to end, which is what a
+  spawn is for and what no batching may remove. After the change the two files
+  make 217 and 260.
+
 - **The mirror-surface lane no longer runs the `pr-merge` plan suite, and the
   `pr-merge` skill document gains the guard it never had** (#1877). The lane
   exists so that guards over the agent-integration mirrors keep running on a

@@ -14,6 +14,12 @@ import {
   spawnCaptured,
 } from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
+import {
+  HTML_LABEL_ENDINGS,
+  HTML_LABEL_ROWS,
+  labelScanIndex,
+  labelScanMeasurements,
+} from "../helpers/labelScanProbe.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const prMergeScriptPath = path.join(
@@ -134,52 +140,19 @@ type RegisterCleanup = (fn: () => void | Promise<void>) => void;
  * lower it.
  */
 describe.concurrent("run-pr-merge plan", () => {
-  it.for(
-    (
-      [
-        ["instruction", "<?aaaa", "?>"],
-        ["CDATA", "<![CDATA[aaaa", "]]>"],
-        ["declaration", "<!DOCTYPE aaaa ", ">"],
-      ] as const
-    ).flatMap(([name, opener, closer]) =>
-      ["absent", "blank", "table"].map((boundary) => [name, opener, closer, boundary] as const),
-    ),
-  )(
+  it.for(HTML_LABEL_ROWS)(
     "bounds unmatched HTML label scans for %s / %s / %s / %s",
     async ([_name, opener, closer, boundary], { expect }) => {
-      const policyPath = path.join(repoRoot, ".agents/skills/pr-fix/scripts/pr-body-policy.ps1");
-      for (const end of ["\n", "\r\n"]) {
-        const suffix =
-          boundary === "absent"
-            ? ""
-            : boundary === "blank"
-              ? `${end}prefix ${opener}closed${closer}${end}`
-              : `head | detail${end}--- | ---${end}prefix ${opener}closed${closer}${end}`;
-        const body = `\uFEFF## What this change made unnecessary${end}${end}prefix ${opener.repeat(256)}${end}${suffix}Nothing removed.${end}`;
-        const result = await spawnCommand(
-          "pwsh",
-          [
-            "-NoProfile",
-            "-Command",
-            [
-              "$ErrorActionPreference = 'Stop'",
-              "$policy = [IO.File]::ReadAllText($env:QFAI_TEST_HTML_POLICY)",
-              "$marker = '$html = $labelHtml.Match($Body, $labelIndex)'",
-              "if (($policy.Split($marker).Length - 1) -ne 1) { throw 'Expected one label matcher' }",
-              "$instrumented = $policy.Replace($marker, '$script:labelHtmlAttempts += 1; ' + $marker)",
-              ". ([scriptblock]::Create($instrumented))",
-              "$script:labelHtmlAttempts = 0",
-              "$masked = MaskBodyExamples (NormalizeBody $env:QFAI_TEST_HTML_BODY)",
-              "@{ Attempts = $script:labelHtmlAttempts; KeepsAnswer = $masked.Contains('Nothing removed.') } | ConvertTo-Json -Compress",
-            ].join("; "),
-          ],
-          { ...process.env, QFAI_TEST_HTML_POLICY: policyPath, QFAI_TEST_HTML_BODY: body },
-        );
-        expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
-        // Before the parse, because `JSON.parse("")` raises `Unexpected end of JSON input`
-        // and that names neither the child nor the stream it did not write to.
-        expect(result.stdout, outputContext(result)).not.toBe("");
-        const measurement = JSON.parse(result.stdout) as { Attempts: number; KeepsAnswer: boolean };
+      const measured = await labelScanMeasurements();
+      const row = HTML_LABEL_ROWS.findIndex(
+        (candidate) =>
+          candidate[1] === opener && candidate[2] === closer && candidate[3] === boundary,
+      );
+      expect(row, "the row must be one the shared probe measured").toBeGreaterThanOrEqual(0);
+      for (const [ending] of HTML_LABEL_ENDINGS.entries()) {
+        const measurement = measured[labelScanIndex(row, ending)];
+        expect(measurement, "the shared probe must carry this row's ending").toBeDefined();
+        if (measurement === undefined) return;
         expect(measurement.KeepsAnswer).toBe(true);
         expect(measurement.Attempts).toBeGreaterThan(0);
         expect(measurement.Attempts).toBeLessThanOrEqual(2);
