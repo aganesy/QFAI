@@ -338,14 +338,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **Thirty-two ledger selectors name the case they were always about** (#1436).
+- **Thirty-one ledger selectors name the case they were always about** (#1436).
   A selector that matches no case makes a completed row unrepeatable: the status
   says a test passed and nothing can be run to see it again. Of the rows in that
   state, every one names a test file and every file exists, so none is a missing
   test — the row points at the right file and the wrong case inside it. For these
-  thirty-two the right case is derivable with no judgement, because its own title
+  thirty-one the right case is derivable with no judgement, because its own title
   opens with the row's test case identifier, and the cell is now that title. The
-  rule's backlog falls from 145 to 113. The remaining rows are left alone: their
+  rule's backlog falls from 145 to 114. One more could have been read the same
+  way and is not: its title carries angle brackets, which a Markdown cell reads
+  as an element, and neither escape survives — a backslash and a code span are
+  both literal to the containment check the selector is matched by. The remaining
+  rows are left alone: their
   case carries no identifier, so placing it means reading what each case
   asserts, and a selector matched wrongly reads as verified.
 
