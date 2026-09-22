@@ -417,6 +417,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A spec-0010 ledger row names the case its test file holds** (#1436). The
+  selector described the test — `asymmetric template/validator edit →
+R-MOCK-HREF-DRIFT` — rather than naming it, so the command the row prints ran
+  nothing. It now names the block that asserts that finding. The dogfooding
+  backlog falls by one.
+
 - **Six spec-0006 ledger rows name the case their test file holds** (#1436).
   Each selector restated the row's test-case line rather than naming a test, so
   the command the row prints ran nothing — `TC-0006-0023: review.staleTtlDays
