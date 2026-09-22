@@ -79,7 +79,7 @@ the evidence their cells point at.
 - TDD-ID: TDD-0013
 - Layer: integration
 - Test file: packages/qfai/tests/integration/atddScaffoldSkeleton.test.ts
-- Selector: TC-0008-0013: scaffold emits per-TC skeleton with TODO + Refs (US/AC/TC)
+- Selector: atdd scaffold — per-TC skeleton emission
 - TC-ref: TC-0008-0013
 - Run output retained: no
 - Backfill note: the original cycle ran on 2026-06-01 and its output was not kept. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
@@ -126,7 +126,7 @@ inactive and did not run.
 - TDD-ID: TDD-0014
 - Layer: integration
 - Test file: packages/qfai/tests/integration/atddScaffoldEscalation.test.ts
-- Selector: TC-0008-0014: scaffold idempotency + 3-cycle escalation (atdd.scaffoldEscalateCycles)
+- Selector: atdd scaffold — idempotency + 3-cycle escalation
 - TC-ref: TC-0008-0014
 - Run output retained: no
 - Backfill note: the original cycle ran on 2026-06-01 and its output was not kept. The test was re-run for the GREEN below, and the mutation below was applied and reverted to establish that the test discriminates. No reviewer verdict is recorded because none can be reconstructed.
