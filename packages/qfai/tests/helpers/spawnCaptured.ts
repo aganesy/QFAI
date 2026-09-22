@@ -54,6 +54,16 @@ export function outcomeOf(code: number | null, signal: NodeJS.Signals | null): s
 }
 
 /**
+ * A runtime that died before it could run the program, as it opens its report.
+ *
+ * .NET opens with `Unhandled exception.` and follows it with the exception's own type and
+ * message; other runtimes name the type first. Both shapes are anchored to the start of a
+ * line, because the words are ordinary enough to appear inside a message a script chose to
+ * print — and a script's own line about an exception is the script answering.
+ */
+const RUNTIME_ABORT_RE = /^(?:Unhandled exception\.|[A-Za-z_][\w.]*(?:Exception|Error): )/m;
+
+/**
  * What to show when an assertion about a child's OUTPUT fails.
  *
  * `expected '' to contain 'authored removal-list answer'` is the whole of what one such
@@ -64,8 +74,19 @@ export function outcomeOf(code: number | null, signal: NodeJS.Signals | null): s
  * So a row that reads the output passes this as its message. Silence is named as silence and
  * attributed to the child's ending, and a child that spoke hands the reader its stderr, which
  * is the part `toContain` never shows.
+ *
+ * A child that spoke can still have said nothing about the script. When a runtime aborts
+ * before the program starts, its report is the whole of stderr — and the assertion, being
+ * about the text, reads it as the script printing the wrong thing.
+ * `System.IO.FileLoadException: The given assembly name was invalid.` arrived that way on a
+ * leg whose change touched no PowerShell, and the message that reached the reader named no
+ * file, no case and no script. So that case is named, and named FIRST, because what the
+ * reader does next differs: a wrong answer is the script's, and a dead runtime is not.
  */
 export function outputContext(result: Spawned): string {
+  if (result.stdout.length === 0 && RUNTIME_ABORT_RE.test(result.stderr)) {
+    return `${result.outcome}, and the child's runtime aborted before the script wrote anything — what follows is the runtime's report, not the script's answer\n${result.stderr}`;
+  }
   if (result.stdout.length + result.stderr.length > 0) {
     return `${result.outcome}\n${result.stderr}`;
   }
