@@ -179,6 +179,21 @@ describe("qfai --help exit-code section", () => {
     );
   });
 
+  it("awaits the command rather than handing it to a catch nobody reads", async () => {
+    // The entry is the last place a promise can be consumed, and it handed the
+    // command's to a `.catch` whose own promise reached no one. The rule asks
+    // for a consuming caller; on a module top level with no caller, and an
+    // entry built for CommonJS as well as ESM, that is a function the call
+    // below adopts rather than a top-level await.
+    const entry = await readFile(path.resolve(here, "..", "..", "src", "cli", "index.ts"), "utf-8");
+
+    expect(entry, "the command must be awaited").toMatch(/await run\(process\.argv/);
+    expect(entry, "and its failure must still become exit 1").toMatch(/process\.exitCode = 1;/);
+    expect(entry, "the chain the rule refuses must be gone").not.toMatch(
+      /run\(process\.argv[\s\S]{0,40}\)\.catch\(/,
+    );
+  });
+
   it("rejects a corrupt validate.json instead of exiting 0 or 2", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "qfai-report-corrupt-"));
     tempDirs.push(dir);

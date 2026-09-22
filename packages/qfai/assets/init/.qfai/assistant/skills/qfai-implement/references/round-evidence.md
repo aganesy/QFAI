@@ -351,6 +351,37 @@ a bare value left beside a prefixed one for the same round is a duplicate, not
 two rounds. A row that never opens another round keeps the unprefixed form and
 reaches `done` on it.
 
+## The row-level `qa-gatekeeper` verdict
+
+`qa-gatekeeper` is **not** on the list above. It is written once for the row,
+takes no `Round N:` prefix, and the completion gate reads it there.
+
+`PASS` is the only value it takes: the gate refuses any other, so a row that did
+not clear the gate has no value to record rather than a failing one to write
+down. It names the attempt that gave it, the round it was given in and the
+revision that attempt reviewed:
+
+```text
+- qa-gatekeeper: PASS (qa-gatekeeper#1, Round 1, reviewed revision working-tree+<hash> at HEAD <rev>)
+```
+
+Where the row was gated twice — in the RED phase before any production code
+existed, and again at the build-phase GREEN — it records both and says which
+gate each was:
+
+```text
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1 — RED phase gate pre-production-code; build-phase GREEN + oracle proof)
+```
+
+Those two are items 3 and 5 of the twelve. This field is the row-level summary
+of them, which is why it carries no prefix: it answers for the row rather than
+for a round, and a row that opened three rounds still has one verdict at the
+end.
+
+A backfilled entry does not owe it, for the reason the review verdicts do not:
+the run that would have produced it is gone, and writing one anyway would be a
+false audit record rather than a missing one.
+
 ## A round whose RED predates a field
 
 That last sentence binds fields added later, and
