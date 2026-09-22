@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A row reporting work as outstanding is read against the test that exists**
+  (#2015). `todo`, `blocked` and `red` all tell a reader the row is not
+  finished, while the annotation gate reads the test file instead — so once a
+  test carries the case's annotation the obligation is discharged as far as that
+  gate is concerned, whatever the row's own status says, and nothing compared the
+  two. One pack answered "what is left" with nineteen where nine were open. A
+  case now reports every open row whose test case a real test file annotates,
+  and carries the twenty-three it finds as a backlog that may only shrink.
+  An annotation carrier is deliberately not counted: it lists obligations and
+  declares no test, and reading it here would report another twenty-four rows
+  whose only coverage is the thing that document exists to record.
+
 - **What the shipped workflows cost an adopter is pinned** (#2095). This
   repository pins the cost of its own CI twice over; the templates `qfai init`
   writes had no equivalent, and they are the surface where the money is somebody
