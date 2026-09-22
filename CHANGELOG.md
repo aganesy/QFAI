@@ -53,10 +53,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   why the check asks for the identifier's shape rather than for the cell to be
   non-empty: `REQ-0012-0075 (REQ-0109 follow-up)` fills the column, reads as a
   reference, and ties the row to no case at all. A case now reports every
-  completed row whose `TC-Refs` holds no `TC-NNNN-NNNN`, and carries the
-  thirty-four it finds as a backlog that may only shrink. A row that has not
-  claimed completion is outside it: 191 of those hold no case either, and
-  reporting them would bury the thirty-four that claim one.
+  completed row whose `TC-Refs` holds no `TC-NNNN-NNNN`, and carries the seven
+  it finds as a backlog that may only shrink. Two kinds of row are outside it:
+  - A row that has not claimed completion. 191 of those hold no case either,
+    and reporting them would bury the few that claim one.
+  - A row whose obligation is a user story or a contract. The spec stage seeds
+    those with `TC-Refs` = `-` and the obligation in `US-Refs`, `CON-API-Refs`
+    or `CON-DB-Refs`, which is the column they trace through.
 
 - **A blocked ledger row is read against the decision it names** (#2015).
   `blocked` says the row waits on something, and a Change Request at a terminal
