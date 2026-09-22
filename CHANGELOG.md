@@ -23,6 +23,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The evidence citation guard opens a `.jsonl` record** (#1764). The filter
+  that picks evidence files took `.md`, `.json`, `.yaml` and `.yml`, so a record
+  written one line at a time — a mutation log is — was never opened, and a
+  generated-artifact path in one of its fields reached neither the census nor
+  the backlog. Each line is now decoded as its own record, which also keeps a
+  disclaimer ending one line out of the next. The second gap the issue names is
+  already closed: `.qfai/evidence/` is a generated root, so a capture under
+  `.qfai/evidence/prototyping/` that a clone does not carry is counted, while a
+  tracked record beside it resolves.
+
 - **A comment opener inside a code span ends the paragraph, as GitHub renders
   it** (#1869). `qfai init` writes the review pointer into an agent entry point
   only where no operative copy is there already, and a multiline code span was
@@ -32,6 +42,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   counted it as present and wrote nothing. The opener now interrupts a code span
   like every other block start, and the fixture that pinned the old reading
   states what GitHub renders instead.
+
+- **The document lane says why it runs as two jobs, and the README says how to
+  take a corrected workflow** (#1876). Each leg of `qfai-docs.yml` installs the
+  dependencies again before one short checker, which buys no speed; what it buys
+  is both results from one run, where a single job would end at the first
+  failure and never report the second. The file now says so, and says what to do
+  if the duplicated install costs more than the second result is worth. The
+  README adds the step the create-only rule leaves out: a shipped workflow
+  corrected in a later release does not arrive on its own, and `qfai doctor`
+  reporting one says nothing about how to replace it.
+
+- **A release body cut before its note was translated is read as the cut it is**
+  (#2045). The release workflow appends a sentence when a section is too long
+  for a release body, and the drift check allows such a body to be missing its
+  tail. The sentence was written in Japanese until it was translated, so every
+  release cut before that looked complete to the check and its missing tail read
+  as drift: `v1.10.1` reported 77 entries out of a section nobody had edited.
+  The check now recognises the sentence of the day as well as today's, which is
+  what a published body can carry — it is what the release said when it was
+  built, and cannot be reworded.
 
 - **The evidence-staleness rule now runs where a merge is blocked, and says so
   when it cannot compute an answer** (#2019). `QFAI-TDDLIST-009` asks whether

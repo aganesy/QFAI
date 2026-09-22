@@ -480,6 +480,21 @@ copy, not even with `--force` — so edit them freely. Deleting one is a choice
 `.qfai/install-provenance.json` (keep that file committed), and never recreates
 a workflow you removed.
 
+Those two rules together mean a corrected template does not arrive on its own.
+`qfai doctor` reports an installed workflow whose content no longer matches the
+packaged one; taking the new copy is yours to do, either way round:
+
+```bash
+# Take the packaged file directly, leaving the record alone.
+cp node_modules/qfai/assets/init/root/.github/workflows/qfai-docs.yml .github/workflows/
+
+# Or let init write it: remove the file and its entry from the record first,
+# otherwise the deletion reads as a decision and init writes nothing.
+```
+
+Read your own edits out of the old copy before you replace it. Neither route
+merges them.
+
 On any other CI platform, configure the job yourself and run:
 
 ```bash
