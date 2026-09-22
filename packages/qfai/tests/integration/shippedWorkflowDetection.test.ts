@@ -10,7 +10,7 @@
  * verdict stays green over an empty matrix. The detection shell and the
  * verdict body are extracted from the REAL shipped orchestrator and
  * executed with bash against git fixture repositories built in temp dirs —
- * env stubs (GITHUB_OUTPUT, QFAI_BASE_REF, QFAI_NEEDS_JSON) stand in for
+ * env stubs (GITHUB_OUTPUT, QFAI_BASE_REF, QFAI_TESTS_RESULT) stand in for
  * the runner context.
  *
  * This file grows row by row; each describe block is one ledger row.
@@ -483,7 +483,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
 
 describe("TC-0003-0040 (TDD-0040): verdict exits 0 on an empty matrix and carries an empty permission map", () => {
   // One it() per TC-0003-0040 verify bullet. The verdict body is the REAL
-  // shipped run: block, executed via bash with QFAI_NEEDS_JSON stubs. This
+  // shipped run: block, executed via bash with env stubs. This
   // row also discharges the GB3 conditional oracles: once the verdict job
   // lands, TDD-0027's verdict-empty-map it becomes non-vacuous.
 
@@ -505,32 +505,36 @@ describe("TC-0003-0040 (TDD-0040): verdict exits 0 on an empty matrix and carrie
     return { verdict, body };
   }
 
-  /** A needs-context stub: detection succeeded, every lane as given. */
-  function needsStub(laneResult: string, lanes: string): string {
-    const needs: Record<string, unknown> = {
-      detection: { result: "success", outputs: { lanes } },
-    };
-    for (const lane of FULL_LANES) {
-      needs[lane] = { result: laneResult, outputs: {} };
-    }
-    return JSON.stringify(needs, null, 2);
-  }
-
   it("the verdict runs under an always-run condition and exits 0 on an empty matrix", async () => {
     const { verdict, body } = await verdictJobAndBody();
     expect(String(verdict["if"])).toContain("always()");
-    // Empty matrix: detection selected zero lanes, every lane skipped.
     const stage = await newTempDir();
+
+    // Empty axis: detection selected nothing, so the lane never ran and there is
+    // nothing for the verdict to report on.
     const emptyMatrix = await runShell(body, stage, {
-      QFAI_NEEDS_JSON: needsStub("skipped", "[]"),
+      QFAI_TESTS_RESULT: "skipped",
+      QFAI_SELECTED: "[]",
     });
     expect(emptyMatrix.status).toBe(0);
+
     // Discriminating control of the same predicate: green-on-skip is not
     // green-on-anything — a failed lane must turn the verdict red.
     const failedLane = await runShell(body, stage, {
-      QFAI_NEEDS_JSON: needsStub("failure", '["unit"]'),
+      QFAI_TESTS_RESULT: "failure",
+      QFAI_SELECTED: '["unit"]',
     });
     expect(failedLane.status).toBe(1);
+
+    // And the second control the axis makes possible: the same skip with work on
+    // the axis is a lane that was asked to run and did not. Without this row the
+    // green-on-skip rule would swallow a failed install, which skips nothing but
+    // can leave the lane with no result at all.
+    const skippedWithWork = await runShell(body, stage, {
+      QFAI_TESTS_RESULT: "skipped",
+      QFAI_SELECTED: '["unit"]',
+    });
+    expect(skippedWithWork.status).toBe(1);
   });
 
   it("the verdict permissions block is an empty map", async () => {

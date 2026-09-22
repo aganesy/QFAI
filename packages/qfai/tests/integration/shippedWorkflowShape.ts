@@ -110,6 +110,18 @@ type LaneInertness =
   /** Gated: the job's `if:` condition names the lane. */
   | { readonly jobId: string; readonly kind: "opt-in" }
   /**
+   * Gated on an axis: one job whose matrix legs ARE the lanes, so the opt-in
+   * is the list the axis reads rather than a layer name in the condition.
+   *
+   * Its own kind rather than a looser `opt-in`, because the two answers are
+   * checked differently. A lane named in its condition is opted into by that
+   * name; a lane selected by an axis is opted into by the list, and the guard
+   * has to read both the condition and the axis to see it — a condition that
+   * stopped naming the list would leave the job running on every change with
+   * the axis still correct, and the old check could not tell.
+   */
+  | { readonly jobId: string; readonly kind: "opt-in-axis"; readonly reads: string }
+  /**
    * Never inert: the file is always on and DELETION is the opt-out. A legal
    * answer to this dimension, not a gap — the validate lane's header says
    * exactly this, so a shape demanding a gate from every lane would read the
@@ -162,13 +174,20 @@ interface FileExpectation {
 const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
   {
     name: "qfai-tests.yml",
-    matrices: [],
+    // One lane per layer, as legs rather than as jobs. The axis is the list
+    // the detection job publishes, so a leg exists only for a layer the
+    // adopter declared a script for — which is what makes the lane opt-in
+    // while the job itself carries a plain condition.
+    matrices: [
+      {
+        jobId: "tests",
+        axis: "layer",
+        values: '"${{ fromJSON(needs.detection.outputs.selected) }}"',
+      },
+    ],
     checkNames: [{ jobId: "verdict", name: "verdict" }],
     invocations: [],
-    lanes: ["unit", "component", "integration", "api", "e2e"].map((jobId) => ({
-      jobId,
-      kind: "opt-in",
-    })),
+    lanes: [{ jobId: "tests", kind: "opt-in-axis", reads: "needs.detection.outputs.selected" }],
   },
   {
     name: "qfai-validate.yml",
@@ -829,6 +848,7 @@ function conditionText(condition: unknown): string {
 function laneInertnessPins(): ShapePin[] {
   return SHIPPED_FILE_EXPECTATIONS.map((file) => {
     const gated = file.lanes.filter((lane) => lane.kind === "opt-in").map((lane) => lane.jobId);
+    const axisGated = file.lanes.filter((lane) => lane.kind === "opt-in-axis");
     const always = file.lanes
       .filter((lane) => lane.kind === "never-inert")
       .map((lane) => lane.jobId);
@@ -836,6 +856,12 @@ function laneInertnessPins(): ShapePin[] {
     if (gated.length > 0) {
       clauses.push(
         `inert until opted in: ${gated.join(", ")} each gate on an if: condition naming the lane`,
+      );
+    }
+    for (const lane of axisGated) {
+      clauses.push(
+        `inert until opted in: ${lane.jobId} runs one leg per member of ${lane.reads}, and its if: ` +
+          `condition requires that list to be non-empty`,
       );
     }
     if (always.length > 0) {
@@ -874,6 +900,20 @@ function laneInertnessViolations(file: FileExpectation, found: WorkflowFile): st
         problems.push(`${lane.jobId}: no if: condition`);
       } else if (!condition.includes(lane.jobId)) {
         problems.push(`${lane.jobId}: if: condition does not name the lane`);
+      }
+      continue;
+    }
+    if (lane.kind === "opt-in-axis") {
+      const strategy = job["strategy"];
+      const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
+      const axis = isRecord(matrix) ? Object.values(matrix).map(String).join(" ") : "";
+      if (!axis.includes(lane.reads)) {
+        problems.push(`${lane.jobId}: matrix axis does not read ${lane.reads}`);
+      }
+      if (typeof condition !== "string") {
+        problems.push(`${lane.jobId}: no if: condition`);
+      } else if (!condition.includes(lane.reads)) {
+        problems.push(`${lane.jobId}: if: condition does not read ${lane.reads}`);
       }
       continue;
     }

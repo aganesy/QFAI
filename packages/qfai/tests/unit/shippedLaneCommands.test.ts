@@ -127,13 +127,17 @@ const PLANTED = [
 
 /** Shapes the shipped tree actually contains, which must pass. */
 const SHIPPED = [
-  'echo "unit lane placeholder - opted in, but the test-lane body ships in a later revision"',
+  'echo "qfai tests verdict: green - every selected lane passed"',
   "npx qfai validate --profile full --fail-on error",
-  // The two real `node -e` payloads are covered where they live: the `US-0017-0004` row runs `refusals()`
+  // The real `node -e` payloads are covered where they live: the `US-0017-0004` row runs `refusals()`
   // over every shipped step body. A PARAPHRASE of one used to sit here, in a list documented as shapes the
   // tree actually contains, and it is refused now — correctly, because an unenumerated payload is refused
   // even when it is harmless. That is the cost of failing closed, and it belongs in the refused direction.
-  'if printf \'%s\' "$X" | grep -Eq \'"result": *"(failure|cancelled)"\'; then exit 1; fi',
+  //
+  // The line above it used to be the test verdict's `grep` over a serialized needs map. The verdict now
+  // reads the lane's result by name, so no shipped lane invokes `grep` at all — and a fixture documented
+  // as shapes the tree contains cannot keep one the tree dropped.
+  'pnpm run "test:${QFAI_LAYER}"',
   "corepack enable",
   "npm ci",
   'if [ -f package.json ]; then echo "yes"; fi',
