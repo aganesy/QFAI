@@ -1085,6 +1085,26 @@ describe("QFAI-TDDLIST-011", () => {
   });
 });
 
+/**
+ * Fills the role-pack seals with the round pack's, for a case whose row names
+ * that pack.
+ *
+ * The fixture builder seals `REVIEW_PACK_PATH` into those placeholders, and a
+ * completed row's verdicts name its LAST ROUND's pack — so a case that moves
+ * the row to the round's directory has to move the seal with it, or it is
+ * measuring a seal over a directory the row no longer names.
+ *
+ * `roundSeal` arrives as `sha256:<digest>`; the role placeholders take the
+ * bare digest, which the value form accepts either way.
+ */
+function roleSealed(entry: string, roundSeal: string): string {
+  let filled = entry;
+  for (const placeholder of ["{{SPEC_PACK_SEAL}}", "{{CODE_PACK_SEAL}}"]) {
+    filled = filled.replaceAll(placeholder, roundSeal);
+  }
+  return filled;
+}
+
 describe("QFAI-TDDLIST-008", () => {
   const IMPLEMENT_POINTER =
     "RED fail / GREEN pass — evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0001`";
@@ -2954,6 +2974,8 @@ ${packPair(1).join("\n")}
       const evidenceFile = ".qfai/evidence/implement-spec-0001.md";
       const closing = ".qfai/review/review-20260101010000000";
       const entry = completeEntry("Unit")
+        // The role packs name the round's pack, as the layout requires.
+        .replaceAll(REVIEW_PACK_PATH, closing)
         .replace("{{RED_TEST_HASH}}", "e".repeat(64))
         .replace(
           "- Refactor verify command: npm test",
@@ -2974,7 +2996,7 @@ ${packPair(1).join("\n")}
       const codes = await runOn(
         root,
         GROUP_LEDGER,
-        { [evidenceFile]: entry.replace("{{ROUND_PACK_SEAL}}", seal) },
+        { [evidenceFile]: roleSealed(entry, seal).replace("{{ROUND_PACK_SEAL}}", seal) },
         { reviewRequestTddId: "TDD-0001, TDD-0002", auditedHashLines: lines },
       );
       expect(codes.includes("QFAI-TDDLIST-008")).toBe(!completes);
@@ -2989,6 +3011,10 @@ ${packPair(1).join("\n")}
       const shared = ".qfai/review/review-20260101010000000";
       const member = (tddId: string, auditHash: string): string =>
         completeEntry("Unit")
+          // Each member names the pack they shared, which is the round's pack —
+          // so the role-level fields name it too, as the layout requires of a
+          // completed row's verdicts.
+          .replaceAll(REVIEW_PACK_PATH, shared)
           .replace("# Evidence\n\n", "")
           .replaceAll("TDD-0001", tddId)
           .replaceAll("{{AUDIT_HASH}}", auditHash)
@@ -3019,7 +3045,7 @@ ${packPair(1).join("\n")}
           ]),
           "BR-0001",
         ),
-        { [evidenceFile]: content.replaceAll("{{ROUND_PACK_SEAL}}", seal) },
+        { [evidenceFile]: roleSealed(content, seal).replaceAll("{{ROUND_PACK_SEAL}}", seal) },
         { reviewRequestTddId: "TDD-0001, TDD-0002", auditedHashLines: () => lines },
       );
       expect(codes).not.toContain("QFAI-TDDLIST-008");
@@ -3037,6 +3063,10 @@ ${packPair(1).join("\n")}
       const shared = ".qfai/review/review-20260101010000000";
       const member = (tddId: string, auditHash: string): string =>
         completeEntry("Unit")
+          // Each member names the pack they shared, which is the round's pack —
+          // so the role-level fields name it too, as the layout requires of a
+          // completed row's verdicts.
+          .replaceAll(REVIEW_PACK_PATH, shared)
           .replace("# Evidence\n\n", "")
           .replaceAll("TDD-0001", tddId)
           .replaceAll("{{AUDIT_HASH}}", auditHash)
@@ -3068,9 +3098,43 @@ ${packPair(1).join("\n")}
           ]),
           "BR-0001",
         ),
-        { [evidenceFile]: content.replaceAll("{{ROUND_PACK_SEAL}}", seal) },
+        { [evidenceFile]: roleSealed(content, seal).replaceAll("{{ROUND_PACK_SEAL}}", seal) },
         { reviewRequestTddId: "TDD-0001", auditedHashLines: () => lines },
       );
+      expect(codes).toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it("refuses a row whose role pack is not the pack its closing round names", async () => {
+    // The layout requires the reviewer turns that close a round to share that
+    // round’s one pack. Nothing compared them, so a row could point its two role
+    // packs at one valid sealed directory while its closing round named another,
+    // and each of the three checks passed on its own.
+    await withProject(async (root) => {
+      const evidenceFile = ".qfai/evidence/implement-spec-0001.md";
+      const closing = ".qfai/review/review-20260101010000000";
+      // Deliberately NOT repointed at `closing`: the role packs keep the
+      // builder’s directory, which is the divergence under test.
+      const entry = completeEntry("Unit")
+        .replace("{{RED_TEST_HASH}}", "e".repeat(64))
+        .replace(
+          "- Refactor verify command: npm test",
+          [
+            "- Round 1: reviewer verdict: PASS",
+            `- Round 1: Review pack: ${closing}`,
+            "- Round 1: Review pack seal: {{ROUND_PACK_SEAL}}",
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        );
+      const response = `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: ${phaseAuditHash(evidenceFile, entry)}\n`;
+      await writeRoundPack(root, closing, "TDD-ID: TDD-0001\n", {
+        "completion-reviewer": response,
+        "implementation-reviewer": response,
+      });
+      const seal = `sha256:${await packSeal(root, closing)}`;
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        [evidenceFile]: entry.replace("{{ROUND_PACK_SEAL}}", seal),
+      });
       expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
@@ -3421,6 +3485,9 @@ ${packPair(1).join("\n")}
         const evidenceFile = ".qfai/evidence/implement-spec-0001.md";
         const closing = ".qfai/review/review-20260101010000000";
         const entry = completeEntry("Unit")
+          // The role packs name the round's pack: a completed row's verdicts
+          // name its last round's pack, so the two are one directory.
+          .replaceAll(REVIEW_PACK_PATH, closing)
           .replace("{{RED_TEST_HASH}}", "e".repeat(64))
           .replace(
             "- Refactor verify command: npm test",
@@ -3449,7 +3516,7 @@ ${packPair(1).join("\n")}
         );
         const seal = `sha256:${await packSeal(root, closing)}`;
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
-          [evidenceFile]: entry.replace("{{ROUND_PACK_SEAL}}", seal),
+          [evidenceFile]: roleSealed(entry, seal).replace("{{ROUND_PACK_SEAL}}", seal),
         });
         expect(codes.includes("QFAI-TDDLIST-008")).toBe(!completes);
       });
