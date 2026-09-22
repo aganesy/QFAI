@@ -21,8 +21,10 @@ import {
   EXIT_NONZERO,
   EXIT_ZERO,
   type Spawned,
+  hostCrashed,
   outcomeOf,
   outputContext,
+  retryOnHostCrash,
   spawnCaptured,
 } from "../helpers/spawnCaptured.js";
 
@@ -171,5 +173,70 @@ describe("spawnCaptured reports what the child did", () => {
     expect(result.signal, "the signal must survive the close listener").toBe("SIGKILL");
     expect(result.outcome).toBe("killed by SIGKILL");
     expect(result.code, "a killed child reports no exit code").toBeNull();
+  });
+});
+
+describe("a crashed runtime reruns the case once, and a script's own answer never does", () => {
+  /** A finished child with the given ending, as the case runners report it. */
+  function ended(signal: NodeJS.Signals | null, code: number | null = null): Spawned {
+    return {
+      code,
+      signal,
+      stdout: "",
+      stderr: "Unhandled exception.",
+      outcome: outcomeOf(code, signal),
+    };
+  }
+
+  it("reads the crash signals as the runtime's and every exit as the script's", () => {
+    for (const signal of ["SIGABRT", "SIGBUS", "SIGSEGV"] as const) {
+      expect(hostCrashed(ended(signal)), signal).toBe(true);
+    }
+    // A timeout's kill is the harness ending the child, and an exit is the script answering.
+    expect(hostCrashed(ended("SIGKILL")), "a kill is not a crash").toBe(false);
+    expect(hostCrashed(ended("SIGTERM")), "nor is a termination").toBe(false);
+    expect(hostCrashed(ended(null, 1)), "a rejecting exit is the script's answer").toBe(false);
+  });
+
+  it("runs the case a second time after a crash, says so, and returns the second answer", async () => {
+    const answers = [ended("SIGABRT"), ended(null, 0)];
+    const warnings: string[] = [];
+    let attempts = 0;
+    const result = await retryOnHostCrash(
+      () => Promise.resolve(answers[attempts++] ?? ended(null, 9)),
+      (message) => warnings.push(message),
+    );
+    expect(attempts).toBe(2);
+    expect(result.outcome).toBe(EXIT_ZERO);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("killed by SIGABRT");
+  });
+
+  it("reports a second crash as it happened rather than retrying again", async () => {
+    let attempts = 0;
+    const result = await retryOnHostCrash(
+      () => {
+        attempts += 1;
+        return Promise.resolve(ended("SIGSEGV"));
+      },
+      () => {},
+    );
+    expect(attempts).toBe(2);
+    expect(result.outcome).toBe("killed by SIGSEGV");
+  });
+
+  it("never reruns a case whose script answered, whatever it answered", async () => {
+    let attempts = 0;
+    const result = await retryOnHostCrash(
+      () => {
+        attempts += 1;
+        return Promise.resolve(ended(null, 1));
+      },
+      () => {
+        throw new Error("no warning is due for a script's own exit");
+      },
+    );
+    expect(attempts).toBe(1);
+    expect(result.outcome).toBe("exit 1");
   });
 });

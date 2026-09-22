@@ -466,6 +466,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A PowerShell test case whose .NET host crashed runs once more instead of
+  failing the leg** (#2068). The pull-request helper suites spawn `pwsh` per
+  case, and on the hosted runners the host intermittently dies before
+  answering. The report it leaves is an assembly name that is intact up to a
+  point and garbage after it, followed by `SIGABRT` or `SIGSEGV` — the host's
+  own memory, not the script under test. One such case in 225 failed the leg,
+  and `ci-pass` with it, on changes that touched no PowerShell. A case now
+  reruns once, from its own fixture, when its child ends on one of those
+  signals, and the run prints the host's report when it does. A second crash,
+  and every exit code, is still reported as it happened.
+
 - **68 completed ledger rows name the test that already runs their case**
   (#2160). Each row's own `Test file` and `Selector` pointed at a test that
   exists and passes, and that test never carried the case's annotation, so the

@@ -11,6 +11,7 @@ import {
   EXIT_ZERO,
   type Spawned,
   outputContext,
+  retryOnHostCrash,
   spawnCaptured,
 } from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
@@ -808,12 +809,19 @@ function successCheck(): FakeCheck {
   };
 }
 
-async function runPrMerge(options: {
+type RunPrMergeOptions = {
   extraArgs?: string[];
   live?: boolean;
   onTestFinished: RegisterCleanup;
   scenario: FakeScenario;
-}): Promise<RunResult> {
+};
+
+/** One case's run of the script, rebuilt from scratch when its PowerShell host crashed. */
+async function runPrMerge(options: RunPrMergeOptions): Promise<RunResult> {
+  return await retryOnHostCrash(() => runPrMergeOnce(options));
+}
+
+async function runPrMergeOnce(options: RunPrMergeOptions): Promise<RunResult> {
   const root = await makeTempDir("qfai-pr-merge-", options.onTestFinished);
   const repoDir = path.join(root, "repo");
   const binDir = path.join(root, "bin");
