@@ -7,8 +7,8 @@ excludeAgent: "coding-agent"
 
 Goal:
 
-- Provide high-quality, line-level PR review comments that improve code health.
-- Base the review on the PR description and the diff against the merge target.
+- Give line-level review comments that improve code health.
+- Base it on the PR description and the diff against the merge target.
 
 Language:
 
@@ -26,17 +26,17 @@ Read `REVIEW.md` if present, from the branch the pull request targets rather tha
    - Intended behavior change
    - Design decisions and alternatives
    - Risks and tests
-2. Compare the description with the diff. If missing or inconsistent, leave a single top-level review comment requesting clarification.
-3. Review every changed line and surrounding context. Prefer inline comments for concrete issues.
+2. Compare the description with the diff; if inconsistent, leave one top-level comment asking for clarification.
+3. Review every changed line and its context; prefer inline comments for concrete issues.
 
 Comment format:
 
-- Prefix severity: [BLOCKER], [MAJOR], [MINOR], [NIT], or [FYI] (if other labels are used, map critical -> [BLOCKER], moderate -> [MAJOR], nit -> [NIT]).
+- Prefix severity: [BLOCKER], [MAJOR], [MINOR], [NIT], or [FYI] (map critical -> [BLOCKER], moderate -> [MAJOR], nit -> [NIT]).
 - Include: Issue -> Why (impact/risk) -> Suggestion (concrete fix or test).
 - Use respectful, code-focused language and explain reasoning.
 - Provide positive feedback when something is notably well done.
 
-Review checklist (from code review best practices):
+Review checklist:
 
 - Design: fits existing architecture/patterns; avoid over-engineering.
 - Correctness: edge cases, error handling, input validation, concurrency safety.
@@ -54,7 +54,7 @@ Review checklist (from code review best practices):
 Specific checks:
 
 - If the PR claims "no behavior change," verify the diff matches; otherwise raise [MAJOR].
-- For documentation-only PRs, validate that steps are self-consistent and have no contradicting prerequisites.
+- For documentation-only PRs, check the steps are self-consistent and free of contradicting prerequisites.
 
 Library/CLI compatibility checks:
 

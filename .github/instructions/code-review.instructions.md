@@ -7,8 +7,8 @@ excludeAgent: "coding-agent"
 
 Goal:
 
-- Provide high-quality, line-level PR review comments that improve code health.
-- Base the review on the PR description and the diff against the merge target.
+- Give line-level review comments that improve code health.
+- Base it on the PR description and the diff against the merge target.
 
 Language:
 
@@ -26,17 +26,17 @@ Read `REVIEW.md` if present, from the branch the pull request targets rather tha
    - Intended behavior change
    - Design decisions and alternatives
    - Risks and tests
-2. Compare the description with the diff. If missing or inconsistent, leave a single top-level review comment requesting clarification.
-3. Review every changed line and surrounding context. Prefer inline comments for concrete issues.
+2. Compare the description with the diff; if inconsistent, leave one top-level comment asking for clarification.
+3. Review every changed line and its context; prefer inline comments for concrete issues.
 
 Comment format:
 
-- Prefix severity: [BLOCKER], [MAJOR], [MINOR], [NIT], or [FYI] (if other labels are used, map critical -> [BLOCKER], moderate -> [MAJOR], nit -> [NIT]).
+- Prefix severity: [BLOCKER], [MAJOR], [MINOR], [NIT], or [FYI] (map critical -> [BLOCKER], moderate -> [MAJOR], nit -> [NIT]).
 - Include: Issue -> Why (impact/risk) -> Suggestion (concrete fix or test).
 - Use respectful, code-focused language and explain reasoning.
 - Provide positive feedback when something is notably well done.
 
-Review checklist (from code review best practices):
+Review checklist:
 
 - Design: fits existing architecture/patterns; avoid over-engineering.
 - Correctness: edge cases, error handling, input validation, concurrency safety.
@@ -54,17 +54,20 @@ Review checklist (from code review best practices):
 Specific checks:
 
 - If the PR claims "no behavior change," verify the diff matches; otherwise raise [MAJOR].
-- For documentation-only PRs, validate that steps are self-consistent and have no contradicting prerequisites.
+- For documentation-only PRs, check the steps are self-consistent and free of contradicting prerequisites.
 
 TypeScript specific checks:
 
 - Avoid `as` type assertions unless a preceding type guard or runtime check justifies them; prefer type narrowing.
 - Prefer discriminated unions over plain string-literal unions when branching logic depends on the variant.
 - In catch blocks, narrow `unknown` errors before accessing properties; flag bare `(error as Error).message`.
-- Flag a Promise neither awaited nor returned; returning propagates only where its caller awaits or adopts it.
-  Under the safety floor of `.agents/rules/minimal-implementation.md` § 2: no catch for a failure
-  nothing names, and an adapter at a callback boundary that ignores return values.
-- Keep generic parameters few; complex generics cost more readability than they buy type safety.
+- Flag a Promise that is neither awaited nor returned.
+  Returning propagates only when its caller awaits or adopts the Promise.
+  Subject to the safety floor in `.agents/rules/minimal-implementation.md` § 2, do not ask for a catch
+  around a failure that no specification, contract or observation names.
+  At a callback boundary that ignores return values, require an adapter that
+  adopts asynchronous work and handles rejections under the same floor.
+- Keep generic type parameters to a minimum; overly complex generics hurt readability more than they help type safety.
 
 Library/CLI compatibility checks:
 
