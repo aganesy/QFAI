@@ -182,6 +182,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the absent artifact beside it. Each has a case, and each case fails only on
   its own repair being removed.
 
+- **A reviewer response is a verdict only with the fields that make it one**
+  (#1886). `shared-skill-delegation-baseline.md` requires `Reviewed artifact`,
+  `Review series`, `Authored/edited under review` and `Recommended and
+unadjudicated` on a visible line, and says a response omitting any of them
+  may not satisfy a completion gate. The validator read the role, the result,
+  the revision and the hash and accepted the rest unread, so a pack of four
+  lines was a verdict to every check after it — a ruling with no bounded
+  artifact, no place in the reviewer's series, no statement of what the
+  reviewer edited and nothing said about what it left unadjudicated. A response
+  missing one is no longer read as that role's answer, so the row fails for
+  having no verdict rather than closing on a malformed one.
+
 - **A stage record written as the skill instructs seals** (#2097).
   `pack-seal.md` records the pack as the directory it is, with a trailing
   separator, and the canonical form the completion gate requires carries none —

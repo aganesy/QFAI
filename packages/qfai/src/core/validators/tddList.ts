@@ -2204,8 +2204,36 @@ function packResponseFiles(
       ? /^R\d{2}_([^/]+)\.md$/.exec(relativePath.slice(packPath.length + 1))?.[1]
       : undefined;
     if (named === undefined || !exactLineField(content, "Reviewer role", named)) return [];
+    if (REQUIRED_RESPONSE_FIELDS.some((field) => !statesField(content, field))) return [];
     return [{ role: named, content }];
   });
+}
+
+/**
+ * The fields a reviewer response owes besides its role and its result.
+ *
+ * `shared-skill-delegation-baseline.md` requires each on a visible line and
+ * says a response omitting any of them may not satisfy a completion gate. Read
+ * for the role, the result, the revision and the hash alone, a pack holding
+ * four lines was a verdict to every check after it — the ruling had no bounded
+ * artifact, no series placing it among the reviewer's turns, no statement of
+ * what the reviewer edited, and nothing said about what it recommended and did
+ * not adjudicate.
+ *
+ * A response missing one is not read as that role's answer at all, which is
+ * what the baseline's sentence asks for: the row then fails for having no
+ * verdict from the reviewer rather than closing on a malformed one.
+ */
+const REQUIRED_RESPONSE_FIELDS: readonly string[] = [
+  "Reviewed artifact",
+  "Review series",
+  "Authored/edited under review",
+  "Recommended and unadjudicated",
+];
+
+/** Whether a response states `field` on a visible line, whatever its value. */
+function statesField(content: string, field: string): boolean {
+  return visibleLineFieldValues(content, field).length > 0;
 }
 
 /**
