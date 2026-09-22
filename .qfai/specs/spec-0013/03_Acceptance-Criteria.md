@@ -142,3 +142,11 @@ Given a traceability validator declared in `packages/qfai/src/core/validators/`,
 - Given a UI contract whose `primary_tasks` entries are string-only (legacy) OR structured `{id, label, acceptance}` (all-required, closed schema per DR-0268),
 - When `auditProfile.ts` evaluates them during the deprecation window,
 - Then both shapes are accepted (string-only continues to PASS); a structured item missing any of `id` / `label` / `acceptance`, or carrying extra keys, is rejected.
+
+## AC-0013-0026: Contract Stub Validity
+
+Given a contract stub the Contracts-first phase wrote, when it is validated, then a stub that does not parse is reported, a stub that parses but declares no interface is reported, and `none` stands only where the change has no contract impact and the reason is written down.
+
+## AC-0013-0027: Batch Mode Capability Mapping Is Stable
+
+Given an invocation with no argument, when capabilities are assigned spec identifiers, then the order in `_policies/03_Capabilities.md` decides the assignment and an identifier already assigned keeps it; reordering is a Change Request.

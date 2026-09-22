@@ -358,6 +358,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Four spec-0013 rules cite the criterion they are about** (#2133). Five rules
+  pointed at a criterion on another subject, with the numbering lining up one for
+  one — which is what made it read as correct. Two now point at the criterion
+  that states their subject. Two more had no criterion at all, so one each is
+  added, and the two test cases that already prove those subjects are repointed
+  from the catch-all they shared, which keeps its own case. The rule about a
+  stub declared `none` had no shipped text behind its second clause; the skill now
+  says the clause and a case asserts it, because an undeclared `none` and one
+  with no reason read identically to a later reader.
+
+  The fifth rule is left as it stands. Its subject is stated by a criterion
+  whose identifier two headings declare, so repointing it would name an
+  ambiguous target; the change request that separates them is open.
+
 - **A review request names its whole review unit, not a subset of it** (#1886).
   A coherent group is reviewed in one round over the whole group, so its request
   names every member. The check asked only that each named identifier belong

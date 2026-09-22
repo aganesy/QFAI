@@ -246,6 +246,15 @@ describe("TC-0013-0012: Contract Stub Is Parseable Or Declared `none`", () => {
     expect(await findingsFor(noApi)).toContain("QFAI-CONTRACT-020");
   });
 
+  it("SKILL.md admits `none` only with no contract impact and a reason", async () => {
+    // The rule's second clause had no shipped text behind it, so a stub
+    // declared `none` was bounded by nothing a reader could follow. An
+    // undeclared `none` and one with no reason read identically later on.
+    const content = await readFile(SKILL_PATH, "utf-8");
+    expect(content).toContain("`none` stands only where the change has no contract impact");
+    expect(content).toMatch(/the reason is written beside it/);
+  });
+
   it("leaves a parseable API stub alone", async () => {
     const good = [
       "# QFAI-CONTRACT-ID: CON-API-0001",
