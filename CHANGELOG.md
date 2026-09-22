@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A `blocked` ledger row is held against the decision it names** (#2015).
+  `blocked` says a row waits on something, and the row names it: a `CR-*` whose
+  record carries a `Status`. Once that record is decided the block is over, and
+  nothing moved the row or reported it — six rows of one pack sat that way while
+  their tests existed and ran in CI, so the ledger answered "what is left" with
+  nineteen where nine were open. A case now reads every blocked row against the
+  decision records, and reports a row whose request is decided, a row naming no
+  request at all, and a row naming one with no record. The six are carried as a
+  backlog that may only shrink, because moving a row out of `blocked` is
+  `/qfai-implement`'s write rather than an edit.
+
 - **A released changelog section may not gain an entry** (#2045). The release
   workflow cuts the section out at its tag and builds the page once, so an entry
   appended afterwards is in the repository and in no page anybody reads. Nothing
