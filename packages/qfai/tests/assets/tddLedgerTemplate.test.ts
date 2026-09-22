@@ -521,25 +521,56 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       }
     });
 
-    it(`${tree}: every phase-order surface states the four seeded groups`, async () => {
+    it(`${tree}: every phase-order surface states the five seeded groups`, async () => {
       // SKILL.md, its `project_memory` block and the phase checklist all
       // described the seeding, and all three said "one row per coverage-target
       // TC" and nothing else — so no surface an agent follows produced a
       // `Layer = E2E` / `Layer = API` row.
+      //
+      // The template and the implement reference joined them once the count
+      // disagreed: the template said five and named the `CON-DB-*` group, the
+      // four surfaces an agent reads said four, and the reference listed five
+      // bullets under the word four. A producer checks its work against the
+      // count, so a contract-only flow got no row and nothing reported it.
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
-      expect(skill).toContain("in **four groups**");
+      expect(skill).toContain("in **five groups**");
       const memory = skill.slice(skill.indexOf("project_memory:"));
-      expect(memory, "project_memory still describes one group").toContain("four groups");
+      expect(memory, "project_memory still describes one group").toContain("five groups");
       expect(memory).toContain("`Layer = E2E` row per active `US-*`");
       expect(memory).toContain("`Layer = API` row per active `CON-API-*`");
+      expect(memory).toContain("`Layer = Integration` row per active `CON-DB-*`");
 
       const checklists = await read(
         tree,
         "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
       );
-      expect(checklists).toContain("Seed four groups of rows");
+      expect(checklists).toContain("Seed five groups of rows");
       expect(checklists).toContain("one `Layer = E2E` row per **active** `US-*`");
       expect(checklists).toContain("one `Layer = API` row per **active** `CON-API-*`");
+      expect(checklists).toContain("one `Layer = Integration` row per **active** `CON-DB-*`");
+
+      expect(await read(tree, TEMPLATE)).toContain("in **five groups**");
+
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+      );
+      expect(preconditions).toContain("seeds this ledger in **five** groups");
+      expect(preconditions).toContain("**one `Layer = Integration` row per active `CON-DB-*`**");
+
+      // No surface may still say four, whichever sentence it says it in.
+      for (const surface of [
+        TEMPLATE,
+        "assistant/skills/qfai-sdd/SKILL.md",
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+        "assistant/skills/qfai-implement/references/plan-phase.md",
+        "assistant/skills/qfai-implement/SKILL.md",
+      ]) {
+        expect(await read(tree, surface), surface).not.toMatch(
+          /(?:\*\*four\*\*|four) (?:seed )?groups/,
+        );
+      }
     });
 
     it(`${tree}: the ledger names who writes production code for an E2E/API row`, async () => {
@@ -850,14 +881,14 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(implement).toContain("On a legacy eight-column ledger that column does not exist");
     });
 
-    it(`${tree}: manual recovery restores all four groups, not only the TC one`, async () => {
+    it(`${tree}: manual recovery restores all five groups, not only the TC one`, async () => {
       // Copying the template and deriving from `06_Test-Cases.md` alone
       // reproduces the missing-acceptance-row state the recovery exists to fix.
       const preconditions = await read(
         tree,
         "assistant/skills/qfai-implement/references/ledger-preconditions.md",
       );
-      expect(preconditions).toContain("must restore the **same four groups**");
+      expect(preconditions).toContain("must restore the **same five groups**");
       expect(preconditions).toContain('"No TC backs it" is not a reason to drop an\nE2E / API row');
       expect(preconditions).toContain("read **all four** Phase 2b sources");
     });
