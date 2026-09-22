@@ -43,6 +43,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   corrected in a later release does not arrive on its own, and `qfai doctor`
   reporting one says nothing about how to replace it.
 
+- **A release body cut before its note was translated is read as the cut it is**
+  (#2045). The release workflow appends a sentence when a section is too long
+  for a release body, and the drift check allows such a body to be missing its
+  tail. The sentence was written in Japanese until it was translated, so every
+  release cut before that looked complete to the check and its missing tail read
+  as drift: `v1.10.1` reported 77 entries out of a section nobody had edited.
+  The check now recognises the sentence of the day as well as today's, which is
+  what a published body can carry — it is what the release said when it was
+  built, and cannot be reworded.
+
 - **The evidence-staleness rule now runs where a merge is blocked, and says so
   when it cannot compute an answer** (#2019). `QFAI-TDDLIST-009` asks whether
   anything a recorded observation covered has moved since the revision it names.
