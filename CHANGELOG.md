@@ -6,6 +6,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A blocked ledger row is read against the decision it names** (#2015).
+  `blocked` says the row waits on something, and a Change Request at a terminal
+  status is something somebody already decided — so a row still naming one
+  reports work as waiting on nothing. Six rows of one pack read that way while
+  the test files they are about said in their own headers that both requests had
+  been approved, and the ledger is what a reader consults to answer "what is
+  left". Nothing had the two side by side: the existing check reads the `DR-ID`
+  cell against the design-rationale records, which a row can satisfy with that
+  cell empty. A case now reports every blocked row whose named request has been
+  decided, and carries the six it finds as a backlog that may only shrink. A
+  second case reports a row naming a request no record declares at all — the
+  disagreement the backlog cannot hold, because it blocks on nothing rather than
+  on something settled.
+
 - **A ledger row is read against the file that carries its annotation** (#2015).
   Two columns answer where a row's test is: `Test file`, which a reader
   follows, and the annotation, which the acceptance gate reads. Nothing compared
