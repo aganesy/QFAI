@@ -367,6 +367,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+<<<<<<< HEAD
 - **Four spec-0013 rules cite the criterion they are about** (#2133). Five rules
   pointed at a criterion on another subject, with the numbering lining up one for
   one — which is what made it read as correct. Two now point at the criterion
@@ -380,6 +381,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The fifth rule is left as it stands. Its subject is stated by a criterion
   whose identifier two headings declare, so repointing it would name an
   ambiguous target; the change request that separates them is open.
+=======
+- **A counted skip in an evidence result is data, not a lane that did not run**
+  (#2131). The result a completed row records was refused wherever the word
+  `skipped` appeared, so a checkpoint over a suite that declares skips had no
+  honest spelling: the fuller record failed and the terser one passed, which is
+  the wrong way round for a field whose purpose is provenance. A count beside
+  the word is now read the way `0 failed` already was — as what the runner
+  reported. A bare `skipped` still refuses the row, and a run that passed
+  nothing is still refused however it counts its skips, because that guard reads
+  the untouched text.
+>>>>>>> origin/main
 
 - **A review request names its whole review unit, not a subset of it** (#1886).
   A coherent group is reviewed in one round over the whole group, so its request
