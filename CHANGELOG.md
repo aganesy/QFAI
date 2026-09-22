@@ -23,6 +23,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The ladder's sourcing rungs reach the stage that decides where something
+  comes from** (#2007). `minimal-implementation.md` gave requirements and design
+  rung 1 alone, and rungs 2 to 5 — this codebase, the standard library, the
+  platform, an installed dependency — to source changes. Contracts-first
+  authors the contract before any source exists, so by the time those rungs were
+  in scope the contract had already settled the shape, and reopening it cost a
+  Change Request. Rung 1 does not reach it either: "does this need to exist at
+  all?" is answered yes, correctly. A decision that selects where a capability
+  or a body of reference data comes from now runs rungs 2 to 5 at the stage that
+  selects it, and records what each returned. Nothing else widens: how much code
+  answers an agreed behaviour is still the implementation's, and an objection to
+  the behaviour is still a Change Request. `grilling.md` gains the node such a
+  decision opens before its options, and says that what a standard library, a
+  platform, a dependency or a maintained package provides is a fact a session
+  looks up rather than asks. The reminder now reads its source-file clause as
+  the trigger it is rather than as the rule's whole scope.
+
 - **The citation expansion carries a queue instead of re-walking the graph**
   (#1888). The skill-asset validator crawls the skill tree once and then
   expands into the trees the crawl skips, reading a document there only where a
