@@ -219,6 +219,11 @@ const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
 const REQUIRED_HEADER_ROWS: readonly string[] = [
   "Covered layer",
   "Runner selector",
+  // The second class is required as well, not merely permitted: the check
+  // below reports what is missing, so a row nobody requires is a row that can
+  // be dropped with nothing to say so — and an adopter who never learns the
+  // light variable exists pays the heavy class for every aggregate.
+  "Light runner selector",
   "Inert when",
   "Fail-open behaviour",
 ];
@@ -230,8 +235,23 @@ const REQUIRED_HEADER_ROWS: readonly string[] = [
  */
 const SANCTIONED_THIRD_PARTY_USES: readonly string[] = ["pnpm/action-setup"];
 
-/** The `runs-on` form dimension 3 requires: a repository-variable read with a literal default. */
-const RUNNER_SELECTOR_FORM_RE = /^\$\{\{\s*vars\.[A-Za-z_][A-Za-z0-9_]*\s*\|\|\s*'([^']*)'\s*\}\}$/;
+/**
+ * The `runs-on` form dimension 3 requires: one or more repository-variable
+ * reads, then a literal default.
+ *
+ * More than one because a job that does no execution reads a light selector
+ * first and falls back to the heavy one, so an adopter who sets neither, or only
+ * the heavy one, still gets a label that exists. The literal at the end is what
+ * dimension 3 has always required, and it is checked the same way whichever
+ * variable precedes it.
+ *
+ * Which variable a given job reads is its CLASS, and that is pinned per job by
+ * `ALLOWED_JOB_SHAPE` rather than here — a job moved between classes changes its
+ * `runs-on` string and fails that pin, which is where a reader sees which job
+ * moved.
+ */
+const RUNNER_SELECTOR_FORM_RE =
+  /^\$\{\{\s*(?:vars\.[A-Za-z_][A-Za-z0-9_]*\s*\|\|\s*)+'([^']*)'\s*\}\}$/;
 
 /** A public GitHub-hosted runner label by naming form (the label LIST is the runner row's SSOT). */
 const PUBLIC_HOSTED_LABEL_RE = /^(?:ubuntu|windows|macos)-[a-z0-9.]+$/;

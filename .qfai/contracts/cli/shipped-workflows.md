@@ -191,6 +191,20 @@ call:
 3. Per job: a reachable permissions block, timeout-minutes, and a runner
    selector in the repository-variable form with a public GitHub-hosted
    default.
+
+   The form admits a chain of variables before that default, because the set
+   carries two runner classes. A job that installs nothing and runs no test —
+   change detection, and the aggregates — reads the light variable first and
+   falls back to the heavy one; every other job reads the heavy one. An adopter
+   who sets neither variable, or only the heavy one, still gets a label that
+   exists, which is why the default at the end of the chain is public and
+   GitHub-hosted whichever class the job is in. An unknown label does not fail a
+   run; it queues it forever.
+
+   Which class a given job is in is not pinned here. It is the job's `runs-on`
+   string, which `ALLOWED_JOB_SHAPE` holds per job, so a job moved between
+   classes fails that pin and the failure names the job.
+
 4. Per matrix: fail-fast: false, the axis and its values. The cancel rule alone
    leaves a substituted leg — `check: [shape, shape]` runs one checker twice
    and reports two green legs — indistinguishable from the declared set.
