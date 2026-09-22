@@ -116,6 +116,16 @@ depends on.
 | Fact the environment holds | The agent, by reading or a lookup                              | Open, in flight  |
 | Fact only the user holds   | The user, when asked                                           | Open             |
 
+**A decision that selects a source opens one node before the options.** Where a
+node decides where a capability or a body of reference data comes from, the tree
+carries a node above it asking what already provides it: the standard library,
+the platform, a dependency the project already carries, or a package somebody
+maintains. It is settled by looking, not by asking, and its answer is recorded
+with its evidence like any other. Without it a session enumerates the shapes the
+repository holds, reaches an empty frontier across them, and escalates a choice
+among three in-repository options while the answer nobody built sits outside the
+tree. `minimal-implementation.md` holds the rungs that node runs.
+
 **A fact the environment does not hold is still a fact.** An unpublished date, a
 constraint that lives in a contract, a number only the user knows: no lookup
 reaches it. Ask for it as the value it is, and **with no recommended answer** —
@@ -223,6 +233,13 @@ already settles.
 
 A fact the environment can settle is your job. Read the file, run the command,
 dispatch a sub-agent. Never ask the user for something you could look up.
+
+**The environment is not only this repository.** What a standard library, a
+platform, an installed dependency or a maintained package already provides is a
+fact of the same kind, and it is looked up rather than asked. A session whose
+evidence stops at the repository's own edge cannot reach the answer somebody
+else already built, and that answer is the one the sourcing node above exists
+for.
 
 Do not block on it either. A running exploration is an unsettled prerequisite,
 so only the questions downstream of it wait; ask the rest of the frontier now.

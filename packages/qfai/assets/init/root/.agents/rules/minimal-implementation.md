@@ -8,11 +8,11 @@ of code that answers a requirement already accepted.
 
 ## Scope
 
-| Target                        | Applies                                    |
-| ----------------------------- | ------------------------------------------ |
-| Source, scripts and workflows | Every change                               |
-| Tests                         | How a test is built, never how many exist  |
-| Requirements and design       | Rung 1 only, before the spec row is agreed |
+| Target                        | Applies                                          |
+| ----------------------------- | ------------------------------------------------ |
+| Source, scripts and workflows | Every change                                     |
+| Tests                         | How a test is built, never how many exist        |
+| Requirements and design       | Rung 1, and rungs 2 to 5 for a sourcing decision |
 
 ## 1. The ladder
 
@@ -33,6 +33,29 @@ Try these in order and stop at the first that holds.
 Rung 1 belongs to requirements and design. Once a spec row is agreed, asking
 whether it should exist is a Change Request, not a choice made later in the
 implementation.
+
+### A sourcing decision reaches rungs 2 to 5
+
+**Whether a capability should exist** and **where it comes from** are different
+questions, and only the first is a Change Request. The second is what rungs 2 to
+5 answer, and a design stage is where it is decided: contracts-first authors the
+contract before any source exists, so a contract that mandates a shape has
+already settled the source. By the time a source file is written, reopening it
+costs a Change Request.
+
+So a decision that selects where a capability or a body of reference data comes
+from — a holiday calendar, a currency table, a locale list, a timezone database,
+an algorithm somebody maintains — runs rungs 2 to 5 at the stage that selects
+it, and records what each returned.
+
+Rung 1 does not reach this. "Does this need to exist at all?" is answered yes,
+and correctly: the capability is required. The question that reaches it is rung
+5's, and a stage that may not ask it enumerates the shapes the repository
+already has and picks among them.
+
+This widens nothing else. A decision about how much code answers a behaviour
+already agreed is still the implementation's, and an objection to the behaviour
+is still a Change Request.
 
 ## 2. What the ladder never removes
 
