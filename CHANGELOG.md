@@ -43,6 +43,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `mirror-surface` job was 201 s on the last green `main` run before this
   change and 20 s on the run that carries it.
 
+  The lint gate's own figures, from the three most recent green `main` runs on
+  the same runner class:
+
+  |                      | Before              | After                         |
+  | -------------------- | ------------------- | ----------------------------- |
+  | `lint` job           | 121 s               | 86 s, 79 s, 84 s              |
+  | the check chain      | 84 s serial         | 65 s as four concurrent lanes |
+  | `mirror-surface` job | inside `lint`, 56 s | 17 s, 37 s, 19 s              |
+
+  Forks, by construction rather than by sampling: `scripts/run-lint-checks.sh`
+  starts four children, and one of them — the structure lane — is the only one
+  that starts a test runner, one file at a time. That pool is capped at the
+  machine's core count by `packages/qfai/vitest.knobs.ts`, whose own sweep is
+  why the mirror lane has a job of its own rather than a fifth child here.
+  Peak memory is not in the run record and no figure is claimed for it: GitHub
+  reports neither RSS nor a process tree, so getting one means a CI step that
+  measures it on every pull request from then on, which is a cost taken for a
+  number read once.
+
 - **A code-path pull request no longer claims its runner cost fell, and what it does
   cost is pinned** (#2017). The requirement capped such a run at 12 job instances,
   8 frozen-lockfile installs and 3-or-5 bundler builds, against a baseline of 14 /
@@ -108,6 +127,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the options, four weaknesses of the adopted unit and the dissent against it.
 
 ### Fixed
+
+- **What the release-notes comparison costs is stated where the reader is**
+  (#1882). Its docblock said the comparison costs two requests "at the current
+  count of sections", which read as though the section count still decided it
+  and named a figure the tree no longer holds. The list carries `tag_name` and
+  `body` together, so the count that decides is the number of published
+  releases: 7 against 192 released sections, one request, about 1.2 s, against
+  a ten-minute budget. A second request joins on the hundredth release after
+  this one, so the margin moves per hundred releases rather than per release —
+  which is what the per-section loop it replaced did.
+
+- **A substituted matrix leg, a disabled step condition and a renamed aggregate
+  are each reported by the obligation they break** (#1876). The shipped shape
+  gate pinned `fail-fast: false` and nothing about the axis, so
+  `check: [shape, shape]` ran one checker twice, reported two green legs and
+  passed the gate — caught only as a byte difference by a digest pin, which
+  says which file moved and not which obligation. Dimension 4 now pins the axis
+  and its values, dimension 5 pins the condition that selects each invocation,
+  and a tenth dimension pins the external check name each aggregate carries,
+  which is the string an adopter's branch protection names. Each dimension
+  title is held against the numbered item it belongs to in
+  `.qfai/contracts/cli/shipped-workflows.md`, so the gate and the contract
+  cannot word an obligation differently. A dependent of an installing job that
+  declares no condition is a violation as well: it defaults to `success()`, a
+  failed install skips it, and a skipped job satisfies branch protection.
 
 - **`DR-0017-0010` names one decision** (#1880). Two records carried it: the
   spec pack's entry, that the declared ten stands and is held to the cores the
@@ -266,6 +310,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   open: a release could take the lock apart while a touch of its marker was
   still in flight. A failed touch still does not end the chain, which is the
   swallowing the heartbeat's own note describes.
+
+- **The release guide names the Node floor the package declares** (#1867). It
+  said `>= 20.0.0` where the manifest says `>= 20.19.0`, so a release taken on a
+  Node the package refuses to install on read as supported. The floor is now
+  checked against `package.json#engines.node` by the suite that already holds
+  the project layer to the same rule, which is what stopped it drifting there.
+
+- **The CLI entry awaits the command instead of handing it to a catch nobody
+  reads** (#1862). The bootstrap handled the command's rejection and then
+  dropped the promise that handling returned, which is the shape the promise
+  rule refuses: a `.catch` is a consumer of the failure, not of the chain. The
+  command is awaited inside a function that turns every failure into an exit
+  code, and the entry adopts that function. A top-level `await` would have been
+  the shorter answer and does not compile, because this entry is built for
+  CommonJS as well as for ESM. No behaviour changes: the same message reaches
+  stderr and the same exit code is set.
 
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
