@@ -157,6 +157,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Three shapes the evidence-citation scan read wrongly, each of which let an
+  absent artifact past** (#1885). A backslash counted as a separator only
+  before a name character, so a Windows-spelled `.qfai/report/run-1/[0-9].json`
+  ended at the `[`, recorded the pack directory and resolved against it — the
+  file set it names was never asked about. The file shape was read off the raw
+  last segment, so `*.jso[n]` ends in `]`, answered "not a file", and a tracked
+  `validate.json/summary.txt` then answered a citation no JSON file satisfies;
+  the bracket syntax is accounted for before the question is asked now. And a
+  marker inside a four-space indented block was honoured, though Markdown
+  renders that block like a fence, so a transcript written that way disclaimed
+  the absent artifact beside it. Each has a case, and each case fails only on
+  its own repair being removed.
+
 - **A stage record written as the skill instructs seals** (#2097).
   `pack-seal.md` records the pack as the directory it is, with a trailing
   separator, and the canonical form the completion gate requires carries none —
