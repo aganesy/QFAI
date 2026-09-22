@@ -109,6 +109,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **What the release-notes comparison costs is stated where the reader is**
+  (#1882). Its docblock said the comparison costs two requests "at the current
+  count of sections", which read as though the section count still decided it
+  and named a figure the tree no longer holds. The list carries `tag_name` and
+  `body` together, so the count that decides is the number of published
+  releases: 7 against 192 released sections, one request, about 1.2 s, against
+  a ten-minute budget. A second request joins on the hundredth release after
+  this one, so the margin moves per hundred releases rather than per release —
+  which is what the per-section loop it replaced did.
+
 - **A substituted matrix leg, a disabled step condition and a renamed aggregate
   are each reported by the obligation they break** (#1876). The shipped shape
   gate pinned `fail-fast: false` and nothing about the axis, so
