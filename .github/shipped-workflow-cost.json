@@ -1,0 +1,124 @@
+{
+  "$comment": [
+    "What the workflows `qfai init` writes cost an adopter, per path, derived from the templates.",
+    "",
+    "Not a bound: enforcement is equality against a value recomputed from the same templates, so a",
+    "clause forbidding a higher cost could not fail once this has been re-pinned. What it refuses is",
+    "a change that moved an adopter's cost and did not move the figure.",
+    "",
+    "Not a measurement either. Wall time and billed minutes belong to a run, and no lint has one.",
+    "`billableFloorMinutes` is what the per-job rounding costs before any work happens: GitHub bills",
+    "a job that allocated a runner at one minute even when it finishes in four seconds.",
+    "",
+    "Re-pin with `node scripts/pin-shipped-workflow-cost.mjs`."
+  ],
+  "billableJobFloorMinutes": 1,
+  "paths": [
+    {
+      "path": "documentation-only-pull-request",
+      "what": "a pull request that touches documents and no source",
+      "jobs": [
+        "qfai-docs.yml#checks x2",
+        "qfai-docs.yml#docs",
+        "qfai-tests.yml#detection",
+        "qfai-tests.yml#verdict",
+        "qfai-validate.yml#summary",
+        "qfai-validate.yml#validate x2"
+      ],
+      "runnerJobs": 8,
+      "runners": ["${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"],
+      "timeoutMinutesSum": 70,
+      "billableFloorMinutes": 8
+    },
+    {
+      "path": "code-pull-request",
+      "what": "a pull request that touches source",
+      "jobs": [
+        "qfai-docs.yml#checks x2",
+        "qfai-docs.yml#docs",
+        "qfai-tests.yml#detection",
+        "qfai-tests.yml#verdict",
+        "qfai-validate.yml#summary",
+        "qfai-validate.yml#validate x2"
+      ],
+      "runnerJobs": 8,
+      "runners": ["${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"],
+      "timeoutMinutesSum": 70,
+      "billableFloorMinutes": 8
+    },
+    {
+      "path": "no-test-scripts",
+      "what": "an adopter whose manifest declares no test:<layer> script",
+      "jobs": [
+        "qfai-docs.yml#checks x2",
+        "qfai-docs.yml#docs",
+        "qfai-tests.yml#detection",
+        "qfai-tests.yml#verdict",
+        "qfai-validate.yml#summary",
+        "qfai-validate.yml#validate x2"
+      ],
+      "runnerJobs": 8,
+      "runners": ["${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"],
+      "timeoutMinutesSum": 70,
+      "billableFloorMinutes": 8
+    },
+    {
+      "path": "all-test-scripts",
+      "what": "an adopter whose manifest declares all five test:<layer> scripts",
+      "jobs": [
+        "qfai-docs.yml#checks x2",
+        "qfai-docs.yml#docs",
+        "qfai-tests.yml#api",
+        "qfai-tests.yml#component",
+        "qfai-tests.yml#detection",
+        "qfai-tests.yml#e2e",
+        "qfai-tests.yml#integration",
+        "qfai-tests.yml#unit",
+        "qfai-tests.yml#verdict",
+        "qfai-validate.yml#summary",
+        "qfai-validate.yml#validate x2"
+      ],
+      "runnerJobs": 13,
+      "runners": ["${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"],
+      "timeoutMinutesSum": 120,
+      "billableFloorMinutes": 13
+    },
+    {
+      "path": "pull-request-close",
+      "what": "a pull request closing while its last push is still being tested",
+      "jobs": [
+        "qfai-docs.yml#checks x2",
+        "qfai-docs.yml#docs",
+        "qfai-tests.yml#detection",
+        "qfai-tests.yml#verdict",
+        "qfai-validate.yml#summary",
+        "qfai-validate.yml#validate x2"
+      ],
+      "runnerJobs": 8,
+      "runners": ["${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"],
+      "timeoutMinutesSum": 70,
+      "billableFloorMinutes": 8
+    },
+    {
+      "path": "default-branch-push",
+      "what": "a push to the default branch",
+      "jobs": [
+        "qfai-docs.yml#checks x2",
+        "qfai-docs.yml#docs",
+        "qfai-tests.yml#api",
+        "qfai-tests.yml#component",
+        "qfai-tests.yml#detection",
+        "qfai-tests.yml#e2e",
+        "qfai-tests.yml#integration",
+        "qfai-tests.yml#unit",
+        "qfai-tests.yml#verdict",
+        "qfai-validate.yml#summary",
+        "qfai-validate.yml#validate"
+      ],
+      "runnerJobs": 12,
+      "runners": ["${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"],
+      "timeoutMinutesSum": 110,
+      "billableFloorMinutes": 12
+    }
+  ]
+}

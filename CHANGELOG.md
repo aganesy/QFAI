@@ -6,6 +6,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **What the shipped workflows cost an adopter is pinned** (#2095). This
+  repository pins the cost of its own CI twice over; the templates `qfai init`
+  writes had no equivalent, and they are the surface where the money is somebody
+  else's — a template change that adds a runner-allocating job spends an
+  adopter's minutes on every pull request they open, and nothing put that number
+  in front of a reviewer. `.github/shipped-workflow-cost.json` records, for six
+  adopter paths, which jobs allocate a runner, on which class, under what
+  declared timeout, and what the per-job billing floor costs before any work
+  happens. A case holds the committed figures against a fresh recomputation, so a
+  moved cost fails until `node scripts/pin-shipped-workflow-cost.mjs` has run.
+  The reader refuses a job condition or a matrix axis it does not recognise
+  rather than guessing at one, because a figure nobody can check is worse than
+  none.
+
 - **A `blocked` ledger row is held against the decision it names** (#2015).
   `blocked` says a row waits on something, and the row names it: a `CR-*` whose
   record carries a `Status`. Once that record is decided the block is over, and
