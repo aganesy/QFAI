@@ -6,6 +6,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The shipped test workflow runs the adopter's declared test scripts**
+  (#1872). Its five layer lanes each emitted a warning saying the lane had been
+  selected and had run nothing; a lane that reports and establishes nothing is
+  worse than no lane, because a green verdict over it reads as a passing suite.
+  Each selected layer now checks out, resolves the package manager and the Node
+  version the adopter's own files name, installs from the lockfile and runs
+  `test:<layer>` exactly once. A layer with no such script is not on the axis, so
+  a project that opted into none still starts no runner and the verdict is green
+  over nothing, as it was. No argument is appended to the script: it belongs to
+  the adopter and its runner is unknown here, so a shard or reporter flag that
+  suits one framework is a syntax error in the next.
+
+  The five lanes became one matrixed job, whose axis is the intersection the
+  detection job now publishes. That is what keeps one copy of the install
+  sequence rather than five: a shipped file may not reference another under
+  create-only install, so the sequence cannot be shared, and five copies of it
+  would drift apart. The shape contract's matrix, lane and cost pins move with
+  it, and the lane-inertness dimension gains the kind a lane selected by an axis
+  needs — a condition that stopped naming the list would leave the job running on
+  every change with the axis still correct, which the old check could not tell.
+
 - **The shipped workflows carry a second runner class for the jobs that run no
   test** (#2095). Change detection and the three aggregates install nothing, check
   nothing out in two of the four cases, and read only what other jobs concluded —

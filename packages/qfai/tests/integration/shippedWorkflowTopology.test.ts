@@ -40,12 +40,21 @@ const LAYER_NAMES: readonly string[] = ["unit", "component", "integration", "api
 const newTempDir = useTempDirPool("qfai-wftopo-");
 
 /**
- * Collects the layer names a parsed workflow document declares, either as a
- * job id equal to the layer name or as a string matrix-leg value equal to
- * it. Returns an empty array for non-workflow-shaped documents so the
- * caller's assertion is what fails, not a crash here.
+ * Collects the layer names a workflow declares: as a job id equal to the layer
+ * name, as a string matrix-leg value equal to it, or — where a matrix axis is an
+ * expression rather than a list — as a layer the file's own text names.
+ *
+ * The third case is the shipped orchestrator's. Its axis is the list its
+ * detection job builds from the adopter's manifest, so the legs do not exist in
+ * the file; what does exist is the probe that decides which layers can ever be
+ * on it, and that probe names all five. Reading the text is what keeps this
+ * predicate answering the question it asks — which file the layer lanes live in
+ * — rather than answering whether they are spelled as literals.
+ *
+ * Returns an empty array for non-workflow-shaped documents so the caller's
+ * assertion is what fails, not a crash here.
  */
-function collectDeclaredLayers(doc: unknown): string[] {
+function collectDeclaredLayers(doc: unknown, body = ""): string[] {
   if (!isRecord(doc)) {
     return [];
   }
@@ -76,6 +85,16 @@ function collectDeclaredLayers(doc: unknown): string[] {
       for (const leg of legValues) {
         if (typeof leg === "string" && LAYER_NAMES.includes(leg)) {
           declared.add(leg);
+        }
+      }
+    }
+    for (const legValues of Object.values(matrix)) {
+      if (typeof legValues !== "string") {
+        continue;
+      }
+      for (const layer of LAYER_NAMES) {
+        if (body.includes(`"${layer}"`)) {
+          declared.add(layer);
         }
       }
     }
@@ -120,7 +139,7 @@ describe("TC-0003-0035 (TDD-0035): zero cross-file references; layer separation 
     // not one-file-per-layer.
     const layerDeclarationsByFile = new Map<string, string[]>();
     for (const [name, body] of await loadShippedWorkflows()) {
-      const declared = collectDeclaredLayers(parse(body));
+      const declared = collectDeclaredLayers(parse(body), body);
       if (declared.length > 0) {
         layerDeclarationsByFile.set(name, declared);
       }

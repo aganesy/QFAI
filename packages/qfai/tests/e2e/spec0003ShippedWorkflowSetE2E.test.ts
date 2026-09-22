@@ -585,18 +585,27 @@ describe(
   "E2E: the layer lanes arrive declared, inert and credential-free (US-0003-0023)",
   { timeout: 120000 },
   () => {
-    const LAYERS = ["unit", "component", "integration", "api", "e2e"] as const;
-
     it("delivers one lane per layer inside one prefixed, self-contained file", async () => {
       const files = await deliveredWorkflowFiles();
       for (const file of files) {
         expect(file, `${file} is delivered without the reserved prefix`).toMatch(/^qfai-/);
       }
 
+      // One lane, whose legs are the layers. The axis is what carries them, so the delivery claim
+      // is that the axis reads the list the detection job builds — a job per layer would satisfy
+      // "one lane per layer" too, and the file ships neither shape by accident.
       const jobs = await jobsOf(ORCHESTRATOR);
-      for (const layer of LAYERS) {
-        expect(jobs[`${ORCHESTRATOR}#${layer}`], `${layer} lane was not delivered`).toBeDefined();
-      }
+      const lane = jobs[`${ORCHESTRATOR}#tests`];
+      expect(lane, "the test lane was not delivered").toBeDefined();
+      const strategy = lane?.["strategy"];
+      const matrix =
+        typeof strategy === "object" && strategy !== null
+          ? (strategy as Record<string, unknown>)["matrix"]
+          : undefined;
+      expect(
+        JSON.stringify(matrix),
+        "the lane's matrix axis does not read the detection job's selection",
+      ).toContain("needs.detection.outputs.selected");
 
       // Self-containment is what keeps a partial install merely incomplete: a delivered file that
       // named a sibling would become a parse error the moment the sibling is absent, and create-only
@@ -611,18 +620,18 @@ describe(
     });
 
     it("keeps every lane conditional on the adopter's own opt-in", async () => {
+      // BOTH conjuncts still, moved one step back: the intersection the axis reads is computed from
+      // the script probe (the adopter's opt-in) AND the diff selection, and a lane keyed on either
+      // alone would execute in a tree that declared no such script or that changed nothing near it.
+      const body = await stepBody(ORCHESTRATOR, "detection", "selected");
+      expect(body, "the selection is not computed from the script probe").toContain("QFAI_SCRIPTS");
+      expect(body, "the selection is not computed from the diff").toContain("QFAI_LANES");
+
       const jobs = await jobsOf(ORCHESTRATOR);
-      for (const layer of LAYERS) {
-        const condition = String(jobs[`${ORCHESTRATOR}#${layer}`]?.["if"] ?? "");
-        // BOTH conjuncts: the script probe (the adopter's opt-in) and the diff selection. A lane
-        // keyed on selection alone would execute in a tree that declared no such script.
-        expect(condition, `${layer} lane is not gated on the script probe`).toContain(
-          `needs.detection.outputs.scripts, '${layer}'`,
-        );
-        expect(condition, `${layer} lane is not gated on lane selection`).toContain(
-          `needs.detection.outputs.lanes, '${layer}'`,
-        );
-      }
+      const condition = String(jobs[`${ORCHESTRATOR}#tests`]?.["if"] ?? "");
+      expect(condition, "the lane is not gated on the computed selection").toContain(
+        "needs.detection.outputs.selected",
+      );
     });
 
     it("resolves the opt-in from the adopter's package.json, executed", async () => {

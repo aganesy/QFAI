@@ -256,8 +256,9 @@ replaces** those assertions rather than running alongside them, and the moved
 assertions keep their test-case annotation.
 
 The other two shipped files invoke no QFAI subcommand — the test orchestrator's
-lanes are placeholders, and the document lane runs the two checkers the package
-ships as `node` programs. For them the declared shape states an EMPTY invocation
+lane runs a script the adopter declared, through the adopter's own package
+manager, and the document lane runs the two checkers the package ships as `node`
+programs. For them the declared shape states an EMPTY invocation
 list rather than a value, because "this file has no lane result to pin" is an
 answer to dimension 5 and an omission is not. A file that gained a QFAI
 invocation without gaining an entry would fail the gate, which is the property

@@ -1216,14 +1216,16 @@ describe(
   () => {
     it("ships exactly one orchestrator carrying every test lane", async () => {
       // "Without a new check name" is about not adding a workflow FILE, which is what would add check
-      // names an adopter's branch protection does not know. Measured: the shipped set separates layers
-      // into five jobs rather than the matrix legs the own tree uses — a divergence recorded as `❌` in
-      // the Coverage Depth Matrix, not asserted here, because either shape satisfies "one file".
-      const map = await jobs();
-      const lanes = ["unit", "component", "integration", "api", "e2e"].filter((id) => id in map);
+      // names an adopter's branch protection does not know. The shipped set now separates layers into
+      // the matrix legs the own tree uses, so a layer is reached through the axis rather than through
+      // a job id — and either shape satisfies "one file", which is what this story claims.
+      const orchestrator = await workflowText(ORCHESTRATOR);
+      const reached = ["unit", "component", "integration", "api", "e2e"].filter((layer) =>
+        orchestrator.includes(`"${layer}"`),
+      );
       expect
-        .soft(lanes.length, "every test layer must be a job of the one orchestrator")
-        .toBeGreaterThanOrEqual(5);
+        .soft(reached, "every test layer must be reachable from the one orchestrator")
+        .toEqual(["unit", "component", "integration", "api", "e2e"]);
 
       const dir = path.join(await project(), ".github", "workflows");
       const { readdir } = await import("node:fs/promises");

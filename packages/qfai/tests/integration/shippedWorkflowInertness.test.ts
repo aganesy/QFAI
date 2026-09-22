@@ -87,7 +87,11 @@ interface ShellRun {
  * stubbed GITHUB_OUTPUT file, returning exit status, streams and the
  * parsed `key=value` outputs the shell wrote.
  */
-async function runShell(body: string, cwd: string): Promise<ShellRun> {
+async function runShell(
+  body: string,
+  cwd: string,
+  env: Record<string, string> = {},
+): Promise<ShellRun> {
   const stage = await newTempDir();
   const scriptPath = path.join(stage, "step.sh");
   const outputPath = path.join(stage, "github-output.txt");
@@ -96,7 +100,7 @@ async function runShell(body: string, cwd: string): Promise<ShellRun> {
   const child = spawnSync("bash", ["-e", "-o", "pipefail", scriptPath], {
     cwd,
     encoding: "utf-8",
-    env: { ...process.env, GITHUB_OUTPUT: outputPath },
+    env: { ...process.env, ...env, GITHUB_OUTPUT: outputPath },
   });
   if (child.error) {
     throw child.error;
@@ -156,6 +160,20 @@ function laneExecutes(condition: unknown, outputs: Record<string, string>): bool
     if (conjunct === "false") {
       return false;
     }
+    // `needs.detection.outputs.<key> != '<literal>'`, which is how the one
+    // matrixed lane asks whether its axis has anything on it. Read here rather
+    // than treated as unrecognised, because an unrecognised conjunct returns
+    // `true` — the lane would score as executing whatever the output held, and
+    // the zero this suite asserts would be unearned.
+    const comparison = /^needs\.detection\.outputs\.([a-z]+)\s*(!=|==)\s*'([^']*)'$/.exec(conjunct);
+    if (comparison !== null) {
+      const actual = outputs[comparison[1] ?? ""] ?? "";
+      const matches = actual === (comparison[3] ?? "");
+      if (comparison[2] === "!=" ? matches : !matches) {
+        return false;
+      }
+      continue;
+    }
     const containsCall = /^contains\(needs\.detection\.outputs\.([a-z]+),\s*'([^']+)'\)$/.exec(
       conjunct,
     );
@@ -169,6 +187,21 @@ function laneExecutes(condition: unknown, outputs: Record<string, string>): bool
     }
   }
   return true;
+}
+
+/** The detection job's selection step body, which computes the matrix axis. */
+function selectionStepBody(doc: unknown): string | undefined {
+  const detection = findWorkflowJob(doc, "detection");
+  if (detection === undefined) {
+    return undefined;
+  }
+  for (const step of collectJobSteps(detection)) {
+    const run = step["run"];
+    if (step["id"] === "selected" && typeof run === "string") {
+      return run;
+    }
+  }
+  return undefined;
 }
 
 /** Runs init over a scriptless adopter tree and parses its orchestrator. */
@@ -196,15 +229,19 @@ describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing
   it("every test lane stays declared with its check name in the init-written orchestrator", async () => {
     const { doc } = await initScriptlessTree();
     const violations: string[] = [];
-    for (const layer of LANE_LAYERS) {
-      const job = findWorkflowJob(doc, layer);
-      if (job === undefined) {
-        violations.push(`lane job "${layer}" is not declared`);
-        continue;
-      }
+    // One job, whose legs are the lanes. A check name per lane is still what
+    // this asserts: the name has to vary with the leg, or five lanes would
+    // report under one name and an adopter's branch protection could not tell
+    // which layer failed.
+    const job = findWorkflowJob(doc, "tests");
+    if (job === undefined) {
+      violations.push('lane job "tests" is not declared');
+    } else {
       const name = job["name"];
       if (typeof name !== "string" || name.length === 0) {
-        violations.push(`lane job "${layer}" carries no check name`);
+        violations.push('lane job "tests" carries no check name');
+      } else if (!name.includes("matrix.layer")) {
+        violations.push(`lane job "tests" check name does not vary by layer: ${name}`);
       }
     }
     expect(violations).toEqual([]);
@@ -225,12 +262,30 @@ describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing
     expect(fixtureRun.status).toBe(0);
     expect(JSON.parse(fixtureRun.outputs["scripts"] ?? "null")).toEqual([]);
 
-    const outputs = { scripts: fixtureRun.outputs["scripts"] ?? "", lanes: FULL_LANES_JSON };
-    const executing = LANE_LAYERS.filter((layer) => {
-      const job = findWorkflowJob(doc, layer);
-      return job === undefined ? true : laneExecutes(job["if"], outputs);
-    });
+    // The selection step is what turns the two probes into the matrix axis, so
+    // the lanes that would execute are the members of what it emits — not a
+    // condition per layer any more. It is EXECUTED here for the same reason the
+    // probe is: a body that stopped intersecting would still parse.
+    const selection = selectionStepBody(doc);
+    expect(
+      selection,
+      "the init-written orchestrator declares no selection step (detection step id: selected)",
+    ).toBeTypeOf("string");
+    if (typeof selection !== "string") {
+      throw new Error("unreachable: asserted above");
+    }
+    const select = async (scripts: string, lanes: string): Promise<string[]> => {
+      const run = await runShell(selection, dir, { QFAI_SCRIPTS: scripts, QFAI_LANES: lanes });
+      expect(run.status).toBe(0);
+      return JSON.parse(run.outputs["selected"] ?? "null") as string[];
+    };
+
+    const executing = await select(fixtureRun.outputs["scripts"] ?? "", FULL_LANES_JSON);
     expect(executing, "no test lane may execute without its opt-in script").toEqual([]);
+    expect(
+      laneExecutes(findWorkflowJob(doc, "tests")?.["if"], { selected: JSON.stringify(executing) }),
+      "the lane must not run on an empty axis",
+    ).toBe(false);
 
     // Discriminating control of the same predicate: ONE declared layer
     // script must flip exactly that lane to executing, proving the zero
@@ -240,15 +295,14 @@ describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing
     const controlRun = await runShell(probe, controlDir);
     expect(controlRun.status).toBe(0);
     expect(JSON.parse(controlRun.outputs["scripts"] ?? "null")).toEqual(["unit"]);
-    const controlOutputs = {
-      scripts: controlRun.outputs["scripts"] ?? "",
-      lanes: FULL_LANES_JSON,
-    };
-    const controlExecuting = LANE_LAYERS.filter((layer) => {
-      const job = findWorkflowJob(doc, layer);
-      return job === undefined ? true : laneExecutes(job["if"], controlOutputs);
-    });
+    const controlExecuting = await select(controlRun.outputs["scripts"] ?? "", FULL_LANES_JSON);
     expect(controlExecuting).toEqual(["unit"]);
+    expect(
+      laneExecutes(findWorkflowJob(doc, "tests")?.["if"], {
+        selected: JSON.stringify(controlExecuting),
+      }),
+      "the lane must run once the axis has a member",
+    ).toBe(true);
 
     // Second control, for the OTHER conjunct. Both cases above hold `lanes` at
     // the full set, so nothing here had yet shown the lane set suppressing
@@ -258,11 +312,7 @@ describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing
     // while a documentation-only change, which is exactly when `lanes` is
     // empty, would run the lane. Same script presence, empty lane set, zero
     // executing lanes.
-    const unselectedOutputs = { scripts: controlRun.outputs["scripts"] ?? "", lanes: "[]" };
-    const unselectedExecuting = LANE_LAYERS.filter((layer) => {
-      const job = findWorkflowJob(doc, layer);
-      return job === undefined ? true : laneExecutes(job["if"], unselectedOutputs);
-    });
+    const unselectedExecuting = await select(controlRun.outputs["scripts"] ?? "", "[]");
     expect(
       unselectedExecuting,
       "a declared layer script must not execute a lane the detection step did not select",
@@ -272,25 +322,33 @@ describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing
   it("each lane condition references layer-script presence and the detection lane set, never a credential attribute", async () => {
     const { doc } = await initScriptlessTree();
     const violations: string[] = [];
-    for (const layer of LANE_LAYERS) {
-      const job = findWorkflowJob(doc, layer);
-      if (job === undefined) {
-        violations.push(`lane job "${layer}" is not declared`);
-        continue;
+
+    // Both keys are still required, one step earlier. The lane's condition
+    // reads the intersection; the step that computes it reads the script probe
+    // and the lane set. Asserting only the condition would leave a selection
+    // body that dropped one of them entirely invisible.
+    const selection = selectionStepBody(doc);
+    if (typeof selection !== "string") {
+      violations.push("the detection job declares no selection step");
+    } else {
+      if (!selection.includes("QFAI_SCRIPTS")) {
+        violations.push("the selection does not key on layer-script presence");
       }
-      const condition = job["if"];
-      if (typeof condition !== "string") {
-        violations.push(`lane "${layer}" declares no if: condition`);
-        continue;
+      if (!selection.includes("QFAI_LANES")) {
+        violations.push("the selection does not key on the detection lane set");
       }
-      if (!condition.includes(`contains(needs.detection.outputs.scripts, '${layer}')`)) {
-        violations.push(`lane "${layer}" condition does not key on its own layer-script presence`);
-      }
-      if (!condition.includes(`contains(needs.detection.outputs.lanes, '${layer}')`)) {
-        violations.push(`lane "${layer}" condition does not key on the detection lane set`);
+    }
+
+    const job = findWorkflowJob(doc, "tests");
+    const condition = job?.["if"];
+    if (typeof condition !== "string") {
+      violations.push('lane "tests" declares no if: condition');
+    } else {
+      if (!condition.includes("needs.detection.outputs.selected")) {
+        violations.push('lane "tests" condition does not key on the computed selection');
       }
       if (/secret|credential|token|password/i.test(condition)) {
-        violations.push(`lane "${layer}" condition references a credential attribute`);
+        violations.push('lane "tests" condition references a credential attribute');
       }
     }
     expect(violations).toEqual([]);
@@ -301,14 +359,11 @@ describe("TC-0003-0037 (TDD-0037): two installing job declarations, four and thr
   // Setup is TC-0003-0036's init output tree (the scriptless adopter);
   // every count below is taken over EVERY workflow file init wrote.
   // Scope notes, disclosed:
-  // - The five test lanes ship install-less by the skeleton's staging
-  //   design (their bodies land with later revisions of the file), so
-  //   the installing declarations are the document checks and the
-  //   validation profiles today. The oracle names install-bearing jobs
-  //   rather than counting them, so it reports any job the moment one
-  //   gains an install step; whether an enabled lane's future body may
-  //   install is that revision's scoping call, judged then against this
-  //   AC's counts.
+  // - The test lane installs, because the script it runs is the
+  //   adopter's own and an adopter's test script needs the adopter's
+  //   dependencies. The oracle names install-bearing jobs rather than
+  //   counting them, so a job that gains or loses an install is reported
+  //   by name rather than absorbed into a total.
   // - Born-green disclosure: all three its pass first-run — the set
   //   never carried a secret, and detection/verdict shipped with
   //   timeouts and without installs. The falsifiability path is taken
@@ -338,6 +393,14 @@ describe("TC-0003-0037 (TDD-0037): two installing job declarations, four and thr
       /^\$\{\{\s*fromJSON\(\s*github\.event_name\s*==\s*'([^']+)'\s*&&\s*'(.+?)'\s*\|\|\s*'(.+?)'\s*\)\s*\}\}$/.exec(
         value.trim(),
       );
+    // The test orchestrator's axis reads a list its own detection job built from the adopter's
+    // manifest, so the file alone does not fix its width. What the file DOES fix is the bound:
+    // the probe that fills it looks for five layer-named scripts and nothing else. Counting the
+    // bound is the honest reading — it is what an adopter who declares every layer starts, and
+    // it cannot silently grow, because a sixth layer would have to be added to that probe.
+    if (/^\$\{\{\s*fromJSON\(needs\.detection\.outputs\.selected\)\s*\}\}$/.test(value.trim())) {
+      return LANE_LAYERS.length;
+    }
     if (selection === null) {
       throw new Error(`matrix axis "${key}" uses an expression this count cannot read: ${value}`);
     }
@@ -426,11 +489,14 @@ describe("TC-0003-0037 (TDD-0037): two installing job declarations, four and thr
     //
     // The docs lane installs for the same reason the validate lane does: it
     // runs a program out of the adopter's `node_modules`, and the package has
-    // to be there first. The test lanes still install nothing — they are
-    // placeholders, and a placeholder that installed would be paying for a
-    // toolchain it never uses.
+    // to be there first. The test lane installs for a third reason — the
+    // script it runs is the adopter's own, and an adopter's test script needs
+    // the adopter's dependencies. It reaches that install only on a leg the
+    // adopter's manifest put on the axis, so a project declaring no
+    // layer-named script still pays for no toolchain.
     expect(installing.map(({ file, jobId }) => ({ file, jobId }))).toEqual([
       { file: "qfai-docs.yml", jobId: "checks" },
+      { file: "qfai-tests.yml", jobId: "tests" },
       { file: "qfai-validate.yml", jobId: "validate" },
     ]);
 
@@ -441,8 +507,13 @@ describe("TC-0003-0037 (TDD-0037): two installing job declarations, four and thr
     // reads a leg that stopped expanding as unchanged.
     const instances = (event: string): number =>
       installing.reduce((total, entry) => total + matrixInstances(entry.job, event), 0);
-    expect(instances("pull_request"), "a pull request does not expand to four installs").toBe(4);
-    expect(instances("push"), "a push does not expand to three installs").toBe(3);
+    // Nine and eight rather than four and three: the test lane's axis is
+    // bounded by the five layer-named scripts its probe looks for, and this
+    // count reads that bound. An adopter declaring none of them starts none
+    // of those five, which is what the condition above the matrix decides and
+    // this count deliberately does not.
+    expect(instances("pull_request"), "a pull request does not expand to nine installs").toBe(9);
+    expect(instances("push"), "a push does not expand to eight installs").toBe(8);
   });
 
   it("zero secret declarations, secret-context references and secrets: inherit across the set", async () => {

@@ -1078,6 +1078,13 @@ export const ALLOWED_INVOCATIONS: ReadonlySet<string> = new Set([
   "corepack enable",
   "npm ci",
   "npm install",
+  // A package manager running a script the ADOPTER declared. The third token is the script's name
+  // and not a package, so `TAKES_NO_PACKAGE` deliberately omits all three: `npm run test:unit` has
+  // to carry it. What bounds the act is the name's shape — `test:<layer>` for a layer the probe
+  // found in the adopter's own `package.json` — rather than the token count.
+  "npm run",
+  "pnpm run",
+  "yarn run",
   "pnpm install",
   "yarn install",
   "yarn",
@@ -1184,31 +1191,15 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"change detection","if":"${{ github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"lanes":"${{ steps.diff.outputs.lanes }}","scripts":"${{ steps.scripts.outputs.scripts }}"}}',
+    '{"name":"change detection","if":"${{ github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"lanes":"${{ steps.diff.outputs.lanes }}","scripts":"${{ steps.scripts.outputs.scripts }}","selected":"${{ steps.selected.outputs.selected }}"}}',
   ],
   [
-    "qfai-tests.yml#unit",
-    '{"name":"unit tests","needs":"detection","if":"${{ contains(needs.detection.outputs.scripts, \'unit\') && contains(needs.detection.outputs.lanes, \'unit\') }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10}',
-  ],
-  [
-    "qfai-tests.yml#component",
-    '{"name":"component tests","needs":"detection","if":"${{ contains(needs.detection.outputs.scripts, \'component\') && contains(needs.detection.outputs.lanes, \'component\') }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10}',
-  ],
-  [
-    "qfai-tests.yml#integration",
-    '{"name":"integration tests","needs":"detection","if":"${{ contains(needs.detection.outputs.scripts, \'integration\') && contains(needs.detection.outputs.lanes, \'integration\') }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10}',
-  ],
-  [
-    "qfai-tests.yml#api",
-    '{"name":"api tests","needs":"detection","if":"${{ contains(needs.detection.outputs.scripts, \'api\') && contains(needs.detection.outputs.lanes, \'api\') }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10}',
-  ],
-  [
-    "qfai-tests.yml#e2e",
-    '{"name":"e2e tests","needs":"detection","if":"${{ contains(needs.detection.outputs.scripts, \'e2e\') && contains(needs.detection.outputs.lanes, \'e2e\') }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10}',
+    "qfai-tests.yml#tests",
+    '{"name":"qfai tests (${{ matrix.layer }})","needs":"detection","if":"${{ needs.detection.outputs.selected != \'[]\' && needs.detection.outputs.selected != \'\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":30,"strategy":{"fail-fast":false,"matrix":{"layer":"${{ fromJSON(needs.detection.outputs.selected) }}"}}}',
   ],
   [
     "qfai-tests.yml#verdict",
-    '{"name":"verdict","needs":["detection","unit","component","integration","api","e2e"],"if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"verdict","needs":["detection","tests"],"if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -1241,7 +1232,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-docs.yml", "356a49f7a250f3328cfd809bbb6839a8e5ffd797e5e3e428cd807f84700f0ba8"],
-  ["qfai-tests.yml", "5b393a8361f6db75e7e523781e4918b29a6efe5ab4ce2e639c36f8c011f8e957"],
+  ["qfai-tests.yml", "6eeff7916b36bed56053fe2be47735fd8e2153d7172b3a921e14addcafacd1bc"],
   ["qfai-validate.yml", "313e6d0c1a24c3e49e9ee781a8a687c1632dbd2fbb5f1165202658d1eaeb00a7"],
 ]);
 
@@ -1999,28 +1990,44 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
     '{"name":"Probe layer-named test scripts","id":"scripts","shell":"bash","run":"<body 678c2db6a736f883ce9a17182e0e8d8d5a9de25dd9e16c56dfcf8e6e5062c79e>"}',
   ],
   [
-    "qfai-tests.yml#unit",
-    '{"name":"unit lane placeholder","run":"<body 80ddf0eabd4949e55790dc261767cc41ce6a96f6dcd292977fbef1bb70af34f6>"}',
+    "qfai-tests.yml#detection",
+    '{"name":"Intersect the selected lanes with the declared scripts","id":"selected","shell":"bash","env":{"QFAI_LANES":"${{ steps.diff.outputs.lanes }}","QFAI_SCRIPTS":"${{ steps.scripts.outputs.scripts }}"},"run":"<body 639686a9ca818ced81b11d89c008e12ab896f8622c7bfde7d4d3eed2971a74f7>"}',
   ],
   [
-    "qfai-tests.yml#component",
-    '{"name":"component lane placeholder","run":"<body 8a14724fe711d2daed40f27f79952a694a954f3fccb67c4fe3cbd646c33edce5>"}',
+    "qfai-tests.yml#tests",
+    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":1}}',
   ],
   [
-    "qfai-tests.yml#integration",
-    '{"name":"integration lane placeholder","run":"<body f32bed20d2e09b1d95f9840c5ea03bf777cbafd21a14c8b09bfb875f46f1c292>"}',
+    "qfai-tests.yml#tests",
+    '{"name":"Resolve the package manager (pnpm route fails closed)","id":"package-manager","shell":"bash","run":"<body 7b711da5de420bd4c6bd283431d5458c99906a3d34732e0c044ee615759ad5ea>"}',
   ],
   [
-    "qfai-tests.yml#api",
-    '{"name":"api lane placeholder","run":"<body 9f27850887734772352bf11156187445f61960ccab31678fc6d63d1ee807c21b>"}',
+    "qfai-tests.yml#tests",
+    '{"name":"Set up pnpm via pnpm/action-setup 4.4.0 (if project uses pnpm)","if":"${{ hashFiles(\'pnpm-lock.yaml\') != \'\' }}","uses":"pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320"}',
   ],
   [
-    "qfai-tests.yml#e2e",
-    '{"name":"e2e lane placeholder","run":"<body a9bf316460124eabe53fa90651283d3ec5a4766b167cbccd721a363a7aa55001>"}',
+    "qfai-tests.yml#tests",
+    '{"name":"Resolve the Node version (adopter file wins, else fall open)","id":"node-version","shell":"bash","run":"<body b0edae207c1c3c52b64714d1918eea13cf3c5bde788309418b1b076d7c599d43>"}',
+  ],
+  [
+    "qfai-tests.yml#tests",
+    '{"name":"Choose a package-manager cache setup-node can actually resolve","id":"node-cache","shell":"bash","run":"<body 7f09f4b58602542c262cafc1001cefa63a38c0c30ec4d8a5a87e79a5849ca711>"}',
+  ],
+  [
+    "qfai-tests.yml#tests",
+    '{"name":"Set up Node via actions/setup-node 5.0.0","uses":"actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+  ],
+  [
+    "qfai-tests.yml#tests",
+    '{"name":"Install dependencies (lockfile-aware)","shell":"bash","run":"<body a01a22aea86949331e27fdf13eef7fcfddeada4edfeda0b10af48c1e674dfd02>"}',
+  ],
+  [
+    "qfai-tests.yml#tests",
+    '{"name":"Run the declared test script","shell":"bash","env":{"QFAI_LAYER":"${{ matrix.layer }}"},"run":"<body 029f642cae62a15af5b0ca6154524d1286395314f8687c66cc9de1da2bdf44b6>"}',
   ],
   [
     "qfai-tests.yml#verdict",
-    '{"name":"Aggregate lane results (green on skip)","env":{"QFAI_NEEDS_JSON":"${{ toJSON(needs) }}"},"shell":"bash","run":"<body 7ee82953e37be82d81440045826adfa89282355c973d6e7dacf80bc0ed381fe8>"}',
+    '{"name":"Aggregate lane results (green on skip)","env":{"QFAI_NEEDS_JSON":"${{ toJSON(needs) }}"},"shell":"bash","run":"<body dbb3eec2ea78f2208a6f9866d8634d2daacf6ac94820ef206ab7fc0e67cb0ef5>"}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -2143,6 +2150,10 @@ export const ALLOWED_ACTION_INPUTS: ReadonlyMap<string, ReadonlySet<string>> = n
 export const ALLOWED_NODE_PAYLOADS: ReadonlySet<string> = new Set([
   // `qfai-tests.yml#detection` — reads `scripts` out of `package.json`. 630 characters.
   "7f72970abbe4e9a0fe876e3e0bd57468fc86bab5e3a3cd5076f09fb3653292cc",
+  // `qfai-tests.yml#detection` — intersects the selected lanes with the declared scripts, which is
+  // the matrix axis the lane runs on. Reads two environment variables, writes one line. 412
+  // characters.
+  "5bd9604195a53333576a969be91256204039c0c7db2e3cebb8b34bcaf0891530",
   // `qfai-validate.yml#validate` — reads `packageManager` out of `package.json`. 1039 characters.
   "9cc40c1d1704f836361c2a47e780e0fa393307a55f01c129f2da50fc97f57230",
   // `qfai-validate.yml#validate` — asks `crypto.getHashes()` whether the integrity algorithm the
@@ -2308,6 +2319,14 @@ export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   // three-dot one on a pull request. Its value comes from `github.event_name`, a closed set
   // GitHub controls, and the body compares it to one literal. It reaches no program.
   ["QFAI_EVENT_NAME", "${{ github.event_name }}"],
+  // The two lists the detection job intersects into its matrix axis. Both are outputs of earlier
+  // steps in the same job, each a JSON array this file's own probes built, and the body that reads
+  // them parses them as JSON and compares strings. Neither reaches a program.
+  ["QFAI_LANES", "${{ steps.diff.outputs.lanes }}"],
+  ["QFAI_SCRIPTS", "${{ steps.scripts.outputs.scripts }}"],
+  // The matrix leg's layer, which names the script the lane runs. Its value is a member of the
+  // array above, so it is one of the five layer words and nothing else.
+  ["QFAI_LAYER", "${{ matrix.layer }}"],
   ["QFAI_NEEDS_JSON", "${{ toJSON(needs) }}"],
 ]);
 

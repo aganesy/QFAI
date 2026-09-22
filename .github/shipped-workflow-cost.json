@@ -77,12 +77,8 @@
       "jobs": [
         "qfai-docs.yml#checks x2",
         "qfai-docs.yml#docs",
-        "qfai-tests.yml#api",
-        "qfai-tests.yml#component",
         "qfai-tests.yml#detection",
-        "qfai-tests.yml#e2e",
-        "qfai-tests.yml#integration",
-        "qfai-tests.yml#unit",
+        "qfai-tests.yml#tests x5",
         "qfai-tests.yml#verdict",
         "qfai-validate.yml#summary",
         "qfai-validate.yml#validate x2"
@@ -92,7 +88,7 @@
         "${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
         "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"
       ],
-      "timeoutMinutesSum": 120,
+      "timeoutMinutesSum": 220,
       "billableFloorMinutes": 13
     },
     {
@@ -110,12 +106,8 @@
       "jobs": [
         "qfai-docs.yml#checks x2",
         "qfai-docs.yml#docs",
-        "qfai-tests.yml#api",
-        "qfai-tests.yml#component",
         "qfai-tests.yml#detection",
-        "qfai-tests.yml#e2e",
-        "qfai-tests.yml#integration",
-        "qfai-tests.yml#unit",
+        "qfai-tests.yml#tests x5",
         "qfai-tests.yml#verdict",
         "qfai-validate.yml#summary",
         "qfai-validate.yml#validate"
@@ -125,7 +117,7 @@
         "${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
         "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"
       ],
-      "timeoutMinutesSum": 110,
+      "timeoutMinutesSum": 210,
       "billableFloorMinutes": 12
     }
   ]
