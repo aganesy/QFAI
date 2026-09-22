@@ -587,6 +587,42 @@ describe("constitution creation preserves a path it cannot claim", () => {
     });
   });
 
+  it("leaves an occupied staging path to whoever wrote it", async () => {
+    // `COPYFILE_EXCL` refuses with EEXIST because something is already at the
+    // path. A name collision does not make those bytes this run's, and the catch
+    // removed them anyway — which on a shared checkout destroys another run's
+    // staged asset.
+    await withProject(async (root) => {
+      const target = path.join(root, CONSTITUTION);
+      const source = path.join(
+        ROOT,
+        "packages/qfai/assets/init/.qfai/assistant",
+        "constitution",
+        "constitution.md",
+      );
+      await mkdir(path.dirname(target), { recursive: true });
+      // The replacement path, not the create-only one: it is the copy that takes
+      // a staging name exclusively.
+      await writeFile(target, "# the project owns this\n", "utf-8");
+      const concurrent = "# another run staged this\n";
+      let occupied = "";
+
+      copyFileSpy.mockImplementation(async (actual, ...args) => {
+        if (String(args[0]) !== source) return actual.copyFile(...args);
+        occupied = String(args[1]);
+        await actual.writeFile(occupied, concurrent);
+        throw Object.assign(new Error("staging path is occupied"), { code: "EEXIST" });
+      });
+
+      await expect(replaceGovernedAsset(source, target)).rejects.toThrow(
+        "staging path is occupied",
+      );
+
+      expect(occupied, "the copy must have reached a staging path").not.toBe("");
+      expect(await readFile(occupied, "utf-8")).toBe(concurrent);
+    });
+  });
+
   it.each(["catalog/test-layers.md", "constitution/drift-protocol.md"])(
     "keeps a missing %s unpublished when its staged write fails",
     async (relative) => {

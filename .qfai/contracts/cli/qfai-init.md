@@ -376,10 +376,22 @@ An out-of-date summary needs no record: it is still in the file, so the next run
 finds it again. Where the refusal asks for an edit by hand, it names the edit it
 refused.
 
-**What the signal cannot tell.** A project that deleted both the bullet and the
-master gets both back: the same run writes the file again, so the citation
-follows it. Separating that from a first-time rule needs a record of what an
-earlier run wrote, which init does not keep.
+**A rule the project deleted stays deleted.** `.agents/rules/.qfai-rules.lock.json`
+records, per master, the hash of what `init` last wrote there. A master with an
+entry in that record and no file on disk is one an earlier run wrote and the
+project removed, so the run copies neither it nor its citation, and names it on
+stderr. A master with no entry is a rule shipped for the first time and arrives
+as before.
+
+`--force` does not restore one. It rewrites what the project has; it is not a
+request to reinstate what the project removed. The way back is to delete the
+master's entry from that record, which puts it in the same position as a rule
+shipped today.
+
+The record began after some projects had already run `init`, so a master it does
+not name is treated as the adopter's — the same conservative side the update
+path takes. Deleting such a master gets it back once, and the run that restores
+it records it, so the next deletion holds.
 
 Reporting drift on an already-installed shipped workflow is **not** this
 command's job — it belongs to `qfai doctor`

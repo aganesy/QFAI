@@ -743,7 +743,7 @@
 - AC-Refs: AC-0012-0047
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
-- Verify the single-spec flat-iter info-skip: certify with `frozenSpecsCovered: ["0012"]` (single spec) and no per-spec subdirs at the accepted iter must exit 0 and surface an info note containing `per-spec`, `layout not detected`, `skipping`. Codifies the legacy backward-compatibility path while the per-spec layout migration (TDD-0384 / OQ-0012-0006) is pending.
+- Verify that a single-spec flat iter goes through the per-(spec × screen) gate like any other: certify with `frozenSpecsCovered: ["0012"]` (single spec), a declared UI screen and no per-spec subdirs at the accepted iter must exit 64 with a diagnostic naming the missing `(spec, screen)` pair. The info-skip this case once codified sealed a certificate over zero per-screen review evidence whenever the frozen set held one spec, which is the same hole TC-0012-0403 closes for a multi-spec set. A project that declares no UI screens has nothing to require and still seals on the flat layout.
 
 ## TC-0012-0403
 
@@ -759,7 +759,7 @@
 - AC-Refs: AC-0012-0037, AC-0012-0049
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify the cycle-0 frozen spec set is the UNION of (strict frontmatter scan) + (legacy title-marker scan) + (configured `prototyping.primarySpecId` on disk), independent of which sub-scan finds anything: seed spec-0003 with `surface_type: ui-bearing` (strict), pin `primarySpecId: "0002"` (no strict signal on spec-0002), run cycle 0 with `--target-url`, and assert `prototyping.json#frozenSpecsCovered === ["0002","0003"]`. Pre-fix the strict-non-empty branch returned strict-only `["0003"]` (the primarySpecId bypass branch was reached only when strict was empty), letting certify validate the wrong scope for the loop driver's primary spec.
+- Verify that cycle 0 computes the union of (strict frontmatter scan) + (legacy title-marker scan) + (configured `prototyping.primarySpecId` on disk) independently of which sub-scan finds anything, and freezes the single primary spec out of it: seed spec-0003 with `surface_type: ui-bearing` (strict), pin `primarySpecId: "0002"` (no strict signal on spec-0002), run cycle 0 with `--target-url`, and assert `prototyping.json#frozenSpecsCovered === ["0002"]`. The union is what the bypass and drift signals read; writing it into the frozen field instead is what made every ordinary multi-spec run uncertifiable, because the certify gate hard-fails a multi-spec frozen set on the flat-iter layout while the per-spec layout migration is deferred (TC-0012-0403, OQ-0012-0006). The multi-spec baseline the drift gate compares against is `frozenSurfaceUnion` (AC-0012-0049), not this field.
 
 ## TC-0012-0405
 

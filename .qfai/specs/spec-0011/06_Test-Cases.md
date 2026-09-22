@@ -50,17 +50,21 @@
 - AC-Refs: AC-0011-0008
 - Verify that re-running implement with all items done produces "nothing to do".
 
-## TC-0011-0009: Coverage Placeholder for EX-0011-0006
+## TC-0011-0009: Minimal Code For The One Failing Test
 
 - EX-Ref: EX-0011-0006
 - AC-Refs: AC-0011-0001
-- Verify that migrated example EX-0011-0006 is covered by at least one test case.
+- Verify that Phase Green asks for the minimum production code that makes the
+  failing test pass, and that it is written after the failure has been watched
+  rather than before.
 
-## TC-0011-0010: Coverage Placeholder for EX-0011-0007
+## TC-0011-0010: Reviewer Separation Before `done`
 
 - EX-Ref: EX-0011-0007
-- AC-Refs: AC-0011-0001
-- Verify that migrated example EX-0011-0007 is covered by at least one test case.
+- AC-Refs: AC-0011-0006
+- Verify that the item is reviewed by `completion-reviewer` and
+  `implementation-reviewer`, and that `done` is reachable only once every
+  required reviewer has passed.
 
 ## TC-0011-0011: Simplified Handoff Schema Parse
 

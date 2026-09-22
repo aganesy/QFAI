@@ -697,10 +697,17 @@ describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with
       );
       if (installNeeds.length === 0) continue;
       const condition = job.job["if"];
-      if (
-        typeof condition === "string" &&
-        /always\(\)|!\s*cancelled\(\)|failure\(\)/.test(condition)
-      ) {
+      if (typeof condition !== "string" || condition.trim() === "") {
+        // A dependent with no condition defaults to `success()`, so a failed
+        // install SKIPS it — and a skipped job satisfies branch protection.
+        // The required check then passes over work that never ran, which is
+        // the failure this whole block exists to refuse.
+        violations.push(
+          `${job.file}: job "${job.jobId}" declares no condition, so a failed install skips it and its required check passes`,
+        );
+        continue;
+      }
+      if (/always\(\)|!\s*cancelled\(\)|failure\(\)/.test(condition)) {
         violations.push(...(await aggregateFailureViolations(job, installNeeds)));
       }
     }
