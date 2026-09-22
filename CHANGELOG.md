@@ -73,6 +73,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The dependency workflow says what stays serial in it, and why** (#1870).
+  Every other workflow this repository runs states the reasoning behind its
+  shape; this one did not, so a reader could not tell a deliberate ordering from
+  one nobody revisited. Its two jobs never run together — one declines a push
+  and the other runs on nothing else — so there is no wall-clock between them to
+  win, and each job's steps read what the step before them wrote.
+
 - **A closed pull request now ends the run it superseded, in every shipped
   workflow** (#2095). The three templates keyed concurrency on `github.ref`,
   which cancels a superseded push and does nothing when a pull request closes:
