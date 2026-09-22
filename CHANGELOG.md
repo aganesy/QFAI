@@ -395,6 +395,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing is still refused however it counts its skips, because that guard reads
   the untouched text.
 
+- **Six more selectors name the case whose title opens with their identifier**
+  (#1436). The earlier repair required a colon after the identifier, so a title
+  reading `TC-0003-0023 (TDD-0023): …` was left behind although it names its
+  case as plainly as one reading `TC-0003-0023: …`. The match is now the
+  identifier at the start of the title, whatever follows it, and the rule's
+  backlog falls from 111 to 105. The guards are unchanged: a row with more than
+  one candidate title, or one whose title a Markdown cell cannot carry, is
+  still left alone.
+
 - **A completed row's verdicts name the pack its closing round names** (#1886).
   The layout requires the reviewer turns that close a round to share that round's
   one pack, and nothing compared them: a row could point its two role packs at
