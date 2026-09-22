@@ -1845,32 +1845,50 @@ async function collectReferenceGraphIssues(
     return identities.get(await fileIdentity(candidate));
   };
   let reachable = collectReachableDocuments(context, graph);
-  for (
-    let unresolved = unresolvedCitations(context, graph, reachable);
-    unresolved.length > 0;
-    unresolved = unresolvedCitations(context, graph, reachable)
-  ) {
+  // A document this expansion reads is reachable by construction — it was found
+  // because a reachable document cited it — so the work is a queue rather than a
+  // re-walk. Re-walking made a chain of N documents under an excluded tree cost
+  // 1 + 2 + … + N: each pass discovered one more link and re-scanned every
+  // document before it.
+  //
+  // The outer round exists because the crawl resolves a citation its own way,
+  // through `resolveCitations`, and can reach a document the candidate list
+  // below does not. It runs again only while that has happened, so a chain
+  // costs one round and N scans rather than N rounds.
+  const scanned = new Set<string>();
+  for (;;) {
+    const queue = [...reachable].filter((file) => !scanned.has(file));
+    if (queue.length === 0) break;
     let added = false;
-    for (const candidates of unresolved) {
-      for (const candidate of candidates) {
-        if (graph.has(candidate)) break;
-        if (attempted.has(candidate)) continue;
-        attempted.add(candidate);
-        const same = await knownAs(candidate);
-        if (same !== undefined) {
-          graph.set(candidate, graph.get(same) ?? "");
-          aliasOf.set(candidate, same);
+    while (queue.length > 0) {
+      const file = queue.shift();
+      if (file === undefined || scanned.has(file)) continue;
+      scanned.add(file);
+      for (const candidates of unresolvedCitationsIn(context, graph, file)) {
+        for (const candidate of candidates) {
+          if (graph.has(candidate)) break;
+          if (attempted.has(candidate)) continue;
+          attempted.add(candidate);
+          const same = await knownAs(candidate);
+          if (same !== undefined) {
+            graph.set(candidate, graph.get(same) ?? "");
+            aliasOf.set(candidate, same);
+            added = true;
+            break;
+          }
+          const read = await readCitedDocument(candidate);
+          if (read.kind === "missing") continue;
+          graph.set(candidate, read.kind === "text" ? read.text : "");
+          identities?.set(await fileIdentity(candidate), candidate);
+          if (read.kind === "unreadable") reported.push(read.finding);
+          if (read.kind === "unreadable" || read.kind === "unread") unreadableFiles.push(candidate);
+          // Reachable because a reachable document cited it, and queued so what
+          // IT cites is followed in the same round.
+          reachable.add(candidate);
+          queue.push(candidate);
           added = true;
           break;
         }
-        const read = await readCitedDocument(candidate);
-        if (read.kind === "missing") continue;
-        graph.set(candidate, read.kind === "text" ? read.text : "");
-        identities?.set(await fileIdentity(candidate), candidate);
-        if (read.kind === "unreadable") reported.push(read.finding);
-        if (read.kind === "unreadable" || read.kind === "unread") unreadableFiles.push(candidate);
-        added = true;
-        break;
       }
     }
     if (!added) break;
@@ -1916,24 +1934,22 @@ async function collectReferenceGraphIssues(
  * space, is not read here.
  * Lift when: a step names such a document inside a directory the crawl passes over.
  */
-function unresolvedCitations(
+function unresolvedCitationsIn(
   context: CitationContext,
   graph: ReadonlyMap<string, string>,
-  reachable: ReadonlySet<string>,
+  file: string,
 ): string[][] {
   const unresolved: string[][] = [];
-  for (const file of reachable) {
-    const content = graph.get(file) ?? "";
-    for (const token of citationTokensIn(content)) {
-      const candidates = citationCandidates(context, file, token);
-      // The host opens the first candidate that exists, so one the crawl passed
-      // over ahead of a crawled fallback is the document the step names.
-      const known = candidates.findIndex((candidate) => graph.has(candidate));
-      const ahead = (known === -1 ? candidates : candidates.slice(0, known)).filter(
-        (candidate) => !escapesRoot(toPosixRelative(context.skillsDir, candidate)),
-      );
-      if (ahead.length > 0) unresolved.push(ahead);
-    }
+  const content = graph.get(file) ?? "";
+  for (const token of citationTokensIn(content)) {
+    const candidates = citationCandidates(context, file, token);
+    // The host opens the first candidate that exists, so one the crawl passed
+    // over ahead of a crawled fallback is the document the step names.
+    const known = candidates.findIndex((candidate) => graph.has(candidate));
+    const ahead = (known === -1 ? candidates : candidates.slice(0, known)).filter(
+      (candidate) => !escapesRoot(toPosixRelative(context.skillsDir, candidate)),
+    );
+    if (ahead.length > 0) unresolved.push(ahead);
   }
   return unresolved;
 }

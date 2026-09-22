@@ -23,6 +23,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The citation expansion carries a queue instead of re-walking the graph**
+  (#1888). The skill-asset validator crawls the skill tree once and then
+  expands into the trees the crawl skips, reading a document there only where a
+  reachable step names it. Each pass re-walked the whole graph from the entry
+  points and re-scanned every reachable document, so a chain of N documents cost
+  1 + 2 + … + N and every prefix was walked again for each new link — which a
+  long chain an adopter controls turned into a quadratic `qfai validate`. A
+  document the expansion reads is reachable by construction, so it is queued and
+  scanned in the same round. The outer round remains because the crawl resolves
+  a citation its own way and can reach a document the candidate list does not;
+  it runs again only while that has happened.
+
 - **A stage record says its pack is not a path to follow** (#1883). The ATDD
   stage records `Review pack: `.qfai/review/review-<timestamp>/``, and that tree
   is not tracked — so every record it writes claims an artifact a clone does not
@@ -156,6 +168,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the options, four weaknesses of the adopted unit and the dissent against it.
 
 ### Fixed
+
+- **Three shapes the evidence-citation scan read wrongly, each of which let an
+  absent artifact past** (#1885). A backslash counted as a separator only
+  before a name character, so a Windows-spelled `.qfai/report/run-1/[0-9].json`
+  ended at the `[`, recorded the pack directory and resolved against it — the
+  file set it names was never asked about. The file shape was read off the raw
+  last segment, so `*.jso[n]` ends in `]`, answered "not a file", and a tracked
+  `validate.json/summary.txt` then answered a citation no JSON file satisfies;
+  the bracket syntax is accounted for before the question is asked now. And a
+  marker inside a four-space indented block was honoured, though Markdown
+  renders that block like a fence, so a transcript written that way disclaimed
+  the absent artifact beside it. Each has a case, and each case fails only on
+  its own repair being removed.
 
 - **A reviewer response is a verdict only with the fields that make it one**
   (#1886). `shared-skill-delegation-baseline.md` requires `Reviewed artifact`,
@@ -397,6 +422,16 @@ unadjudicated` on a visible line, and says a response omitting any of them
   that were examples counted as citations, and the managed rule section after
   them stopped being recognised. The marker comes off only while no block is
   open, which is the one place a fence can follow one.
+
+- **The review directive names the revision a reviewer trusts** (#1868). Every
+  generated reviewer entry point told an agent to read `REVIEW.md`, and said
+  nothing about which revision. A pull request's head is a place its author
+  controls, so a reviewer that reached for the file there would have taken its
+  review policy from the work it was reviewing. The four entry points — the two
+  agent instruction files, the Copilot one and the code-review instruction —
+  now say to read it from the branch the pull request targets, and say why. The
+  delegation itself is unchanged: where the file is absent there is still
+  nothing to read.
 
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
