@@ -54,14 +54,13 @@ This section is the single home for gate commands.
 `.qfai/assistant/constitution/quality.md` owns the capability list they must
 cover; a capability with no entry here is UNRUN.
 
-- Install: `<install command>`
-- Format: `<format check command>`
-- Test: `<test command>`
-- Lint: `<lint command>`
-- Typecheck: `<typecheck command>`
-- Build: `<build command>`
-- Pack / distribution: `<pack command>` (when publishing or distribution
-  matters)
+- Install: `pnpm install --frozen-lockfile`
+- Format: `pnpm format:check`
+- Test: `pnpm -C packages/qfai test`
+- Lint: `pnpm lint`
+- Typecheck: `pnpm check-types`
+- Build: `pnpm build`
+- Pack / distribution: `pnpm verify:pack`
 - Smoke: one line per entrypoint named under `structure.md#key-packages--entrypoints`,
   as `<entrypoint> -> <command that starts it and proves it answers>` (the
   `Skeleton command` of `skills/qfai-implement/references/walking-skeleton.md`).
