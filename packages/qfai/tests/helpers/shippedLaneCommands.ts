@@ -1176,15 +1176,15 @@ export const ALLOWED_WORKFLOW_SHAPE: ReadonlyMap<string, string> = new Map([
 export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   [
     "qfai-docs.yml#checks",
-    '{"name":"qfai docs check (${{ matrix.check }})","strategy":{"fail-fast":false,"matrix":{"check":["shape","mermaid"]}},"runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":15}',
+    '{"name":"qfai docs check (${{ matrix.check }})","if":"${{ github.event.action != \'closed\' }}","strategy":{"fail-fast":false,"matrix":{"check":["shape","mermaid"]}},"runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":15}',
   ],
   [
     "qfai-docs.yml#docs",
-    '{"name":"qfai docs (document shape and Mermaid syntax)","needs":"checks","if":"${{ always() }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"qfai docs (document shape and Mermaid syntax)","needs":"checks","if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"change detection","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"lanes":"${{ steps.diff.outputs.lanes }}","scripts":"${{ steps.scripts.outputs.scripts }}"}}',
+    '{"name":"change detection","if":"${{ github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"lanes":"${{ steps.diff.outputs.lanes }}","scripts":"${{ steps.scripts.outputs.scripts }}"}}',
   ],
   [
     "qfai-tests.yml#unit",
@@ -1208,15 +1208,15 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "qfai-tests.yml#verdict",
-    '{"name":"verdict","needs":["detection","unit","component","integration","api","e2e"],"if":"${{ always() }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"verdict","needs":["detection","unit","component","integration","api","e2e"],"if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"qfai validate check (${{ matrix.profile }})","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10,"strategy":{"fail-fast":false,"matrix":{"profile":"${{ fromJSON(github.event_name == \'pull_request\' && \'[\\"full\\",\\"drift\\"]\' || \'[\\"full\\"]\') }}"}}}',
+    '{"name":"qfai validate check (${{ matrix.profile }})","if":"${{ github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10,"strategy":{"fail-fast":false,"matrix":{"profile":"${{ fromJSON(github.event_name == \'pull_request\' && \'[\\"full\\",\\"drift\\"]\' || \'[\\"full\\"]\') }}"}}}',
   ],
   [
     "qfai-validate.yml#summary",
-    '{"name":"qfai validate (full profile, fail on error)","needs":"validate","if":"${{ always() }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"qfai validate (full profile, fail on error)","needs":"validate","if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
 ]);
 
