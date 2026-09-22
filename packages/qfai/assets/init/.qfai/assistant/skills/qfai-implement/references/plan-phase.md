@@ -100,7 +100,7 @@ Returns **coverage and layer-ownership findings**:
   `Integration` row hanging off a `US-*`;
 - an in-scope **coverage-target `TC-*`** or integration-level `TC-*` with no TC row,
   an active `US-*` with no E2E row, or an active, owned `CON-API-*` with no API row.
-  `/qfai-sdd` Phase 2b seeds all four groups; zero E2E/API rows is valid only when those obligations are exempt or absent.
+  `/qfai-sdd` Phase 2b seeds all five groups; zero E2E/API rows is valid only when those obligations are exempt or absent.
   A story deferred on its own — a `- x-qfai-status: planned` meta line in its `US-XXXX` block of
   `02_User-stories.md` — owes no E2E test (`catalog/test-layers.md`), so it owes no E2E row either
   and is not counted here. Whole-spec surface scoping is the other exemption, and

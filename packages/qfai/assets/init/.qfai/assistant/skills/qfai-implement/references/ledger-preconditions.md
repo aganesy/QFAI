@@ -7,9 +7,10 @@ one.
 
 ## Producer
 
-`/qfai-sdd` Phase 2b seeds this ledger in **four** groups — one from
+`/qfai-sdd` Phase 2b seeds this ledger in **five** groups — one from
 `06_Test-Cases.md` per coverage-target TC, one from `06_Test-Cases.md` per
-integration-level TC, one per active `US-*` and one per active `CON-API-*`.
+integration-level TC, one per active `US-*`, one per active `CON-API-*` and
+one per active `CON-DB-*`.
 **Read each TC's `Level` once and route it to exactly one of the two TC
 groups** — those two are exclusive, and a TC in both is a TC whose test two
 skills write.
@@ -26,8 +27,8 @@ skills write.
   `US-Refs`;
 - **one `Layer = API` row per active `CON-API-*`** the spec owns, the obligation
   in `CON-API-Refs`.
-- A row for an active, owned `CON-DB-*` the spec binds, carrying its ID in
-  `CON-DB-Refs`. A contract declares failures whether or not a user story names
+- **one `Layer = Integration` row per active `CON-DB-*`** the spec owns, the
+  obligation in `CON-DB-Refs`. A contract declares failures whether or not a user story names
   it, and those are covered at the Integration layer the constitution routes
   `CON-DB-*` to; seeded from test cases alone, a contract-only flow has no row
   for the coverage checklist to map its failures to.
@@ -116,10 +117,10 @@ those rows were unwanted.
 ## Recovery when it is missing
 
 Rerun `/qfai-sdd <spec-id>` for the target spec. That is the preferred route:
-Phase 2b is the producer, and rerunning it restores all four groups by the same
+Phase 2b is the producer, and rerunning it restores all five groups by the same
 rule that seeds them.
 
-The manual fallback must restore the **same four groups**, not just the
+The manual fallback must restore the **same five groups**, not just the
 coverage-target one. Copy
 `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.md`
 into the spec directory — its header already carries `US-Refs` and

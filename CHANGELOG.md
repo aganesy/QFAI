@@ -74,6 +74,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   what a published body can carry — it is what the release said when it was
   built, and cannot be reworded.
 
+- **Every surface that describes Phase 2b seeding names the same five row
+  groups** (#2104). The template `/qfai-sdd` copies says five and names the
+  `CON-DB-*` group; the SKILL, its `project_memory` block, the phase checklist
+  and the implement reference all said four, and the reference listed five
+  bullets under the word four. A producer checks its work against the count, so
+  a contract-only flow got no row — and nothing reports a `CON-DB-*` with no
+  row. All six surfaces now state five and name the group in the enumeration,
+  and the case that held three of them holds all six, including a sweep that
+  fails on any surface still saying four.
+
 - **The evidence-staleness rule now runs where a merge is blocked, and says so
   when it cannot compute an answer** (#2019). `QFAI-TDDLIST-009` asks whether
   anything a recorded observation covered has moved since the revision it names.
