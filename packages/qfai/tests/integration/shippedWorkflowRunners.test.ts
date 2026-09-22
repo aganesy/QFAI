@@ -39,11 +39,20 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 type ShippedFile = readonly [string, string];
 
 /**
- * The repository variable every shipped runner selector reads. ONE variable
- * for the whole set, not one per file: an adopter retargets CI with a single
+ * The repository variable a shipped job that executes reads. One variable for
+ * every such job, not one per file: an adopter retargets CI with a single
  * knob. Value SSOT is this suite per CLI-WFSET §5.
  */
 const RUNNER_VARIABLE = "QFAI_CI_RUNNER";
+
+/**
+ * The variable a job that installs nothing and runs no test reads first.
+ *
+ * It falls back to the heavy variable rather than straight to the literal, so
+ * an adopter who sets only the heavy one still gets their own class for every
+ * job. The fallback is required below, not merely tolerated.
+ */
+const LIGHT_RUNNER_VARIABLE = "QFAI_CI_LIGHT_RUNNER";
 
 /**
  * The public GitHub-hosted labels a shipped selector default may name.
@@ -65,11 +74,26 @@ const PUBLIC_HOSTED_LABELS: readonly string[] = [
 /** The default the shipped set pins today (a member of the list above). */
 const SHIPPED_RUNNER_DEFAULT = "ubuntu-latest";
 
-/** The exact selector expression the whole shipped set carries. */
-const SHIPPED_SELECTOR = `\${{ vars.${RUNNER_VARIABLE} || '${SHIPPED_RUNNER_DEFAULT}' }}`;
+/** The selector a job that executes carries. */
+const HEAVY_SELECTOR = `\${{ vars.${RUNNER_VARIABLE} || '${SHIPPED_RUNNER_DEFAULT}' }}`;
 
-/** The sanctioned selector form: a `vars.` read with a literal default. */
-const SELECTOR_FORM_RE = /^\$\{\{\s*vars\.([A-Za-z_][A-Za-z0-9_]*)\s*\|\|\s*'([^']*)'\s*\}\}$/;
+/** The selector a job that runs no test carries. */
+const LIGHT_SELECTOR = `\${{ vars.${LIGHT_RUNNER_VARIABLE} || vars.${RUNNER_VARIABLE} || '${SHIPPED_RUNNER_DEFAULT}' }}`;
+
+/** Both, as the set carries them. A third would be a class nobody declared. */
+const SHIPPED_SELECTORS: readonly string[] = [HEAVY_SELECTOR, LIGHT_SELECTOR].sort();
+
+/**
+ * The sanctioned selector form: one or more `vars.` reads, then a literal
+ * default. More than one because the set carries two runner classes and the
+ * light one falls back to the heavy one before the literal.
+ */
+const SELECTOR_FORM_RE = /^\$\{\{\s*((?:vars\.[A-Za-z_][A-Za-z0-9_]*\s*\|\|\s*)+)'([^']*)'\s*\}\}$/;
+
+/** The variable names a selector's chain reads, in order. */
+function chainVariables(chain: string): string[] {
+  return [...chain.matchAll(/vars\.([A-Za-z_][A-Za-z0-9_]*)/g)].map((m) => m[1] ?? "");
+}
 
 /** A `runs-on:` mapping line, for the raw-text accounting scan. */
 const RUNS_ON_LINE_RE = /^\s*runs-on\s*:/;
@@ -133,10 +157,19 @@ function selectorFormViolations(files: readonly ShippedFile[]): SelectorViolatio
       violations.push({ site, rule: RULE_FORM, detail: value.trim() });
       continue;
     }
-    const variable = form[1] ?? "";
+    const variables = chainVariables(form[1] ?? "");
     const fallback = form[2] ?? "";
-    if (variable !== RUNNER_VARIABLE) {
-      violations.push({ site, rule: RULE_FORM, detail: `reads vars.${variable}` });
+    // The chain a job may read: the heavy variable alone, or the light one
+    // falling back to it. A light selector that skipped the fallback would
+    // send an adopter who set only the heavy variable to the literal default
+    // instead of to their own class.
+    const sanctioned =
+      (variables.length === 1 && variables[0] === RUNNER_VARIABLE) ||
+      (variables.length === 2 &&
+        variables[0] === LIGHT_RUNNER_VARIABLE &&
+        variables[1] === RUNNER_VARIABLE);
+    if (!sanctioned) {
+      violations.push({ site, rule: RULE_FORM, detail: `reads ${variables.join(" then ")}` });
     }
     if (!PUBLIC_HOSTED_LABELS.includes(fallback)) {
       violations.push({ site, rule: RULE_PUBLIC_DEFAULT, detail: fallback });
@@ -335,7 +368,7 @@ describe("TC-0003-0041 (TDD-0041): planted organization-private label literal is
         ),
       ),
     ].sort();
-    expect(distinct, "the clean set's runner selectors").toEqual([SHIPPED_SELECTOR]);
+    expect(distinct, "the clean set's runner selectors").toEqual(SHIPPED_SELECTORS);
   });
 
   it("no non-public runner label literal appears anywhere in the set", async () => {

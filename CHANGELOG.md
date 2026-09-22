@@ -6,6 +6,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The shipped workflows carry a second runner class for the jobs that run no
+  test** (#2095). Change detection and the three aggregates install nothing, check
+  nothing out in two of the four cases, and read only what other jobs concluded —
+  yet they asked for the same runner class as the lanes that build and test. They
+  now read `QFAI_CI_LIGHT_RUNNER` and fall back to the heavy variable, so an
+  adopter with a lighter class gets it by setting one repository variable.
+  **Both defaults stay `ubuntu-latest`.** An unknown runner label does not fail
+  a run — GitHub queues it indefinitely — so a default nobody is sure of would
+  hang an adopter's control jobs with nothing in the log to say why. The class is
+  what this establishes; the value behind it is the adopter's. The shape
+  contract admits the variable chain and requires the new header row, and the
+  per-job pin is where a job moved between classes is reported.
+
 - **A row reporting work as outstanding is read against the test that exists**
   (#2015). `todo`, `blocked` and `red` all tell a reader the row is not
   finished, while the annotation gate reads the test file instead — so once a

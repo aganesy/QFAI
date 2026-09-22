@@ -19,6 +19,8 @@
 # | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
 # | Covered layer                 | specification and repository validation (`qfai validate`); it runs none of your own tests                |
 # | Runner selector               | `vars.QFAI_CI_RUNNER`, default `ubuntu-latest`                                                           |
+# | Light runner selector         | `vars.QFAI_CI_LIGHT_RUNNER`, falling back to `vars.QFAI_CI_RUNNER`, default `ubuntu-latest`              |
+# | What reads the light one      | the jobs that install nothing and run no test - change detection and the aggregates                      |
 # | Wrong runner value            | GitHub does not fail fast: an unknown label leaves the job queued indefinitely, never red                |
 # | `packageManager` precondition | a `pnpm-lock.yaml` needs `"packageManager": "pnpm@<version>"` in package.json, or this lane stops CLOSED |
 # | Inert when                    | never inert; delete this file to opt out - `qfai init` will not recreate a file you removed              |
@@ -419,7 +421,7 @@ jobs:
     name: qfai validate (full profile, fail on error)
     needs: validate
     if: ${{ always() && github.event.action != 'closed' }}
-    runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     permissions: {}
     timeout-minutes: 5
     steps:

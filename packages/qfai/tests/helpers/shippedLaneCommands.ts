@@ -1180,11 +1180,11 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "qfai-docs.yml#docs",
-    '{"name":"qfai docs (document shape and Mermaid syntax)","needs":"checks","if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"qfai docs (document shape and Mermaid syntax)","needs":"checks","if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"change detection","if":"${{ github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"lanes":"${{ steps.diff.outputs.lanes }}","scripts":"${{ steps.scripts.outputs.scripts }}"}}',
+    '{"name":"change detection","if":"${{ github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"lanes":"${{ steps.diff.outputs.lanes }}","scripts":"${{ steps.scripts.outputs.scripts }}"}}',
   ],
   [
     "qfai-tests.yml#unit",
@@ -1208,7 +1208,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "qfai-tests.yml#verdict",
-    '{"name":"verdict","needs":["detection","unit","component","integration","api","e2e"],"if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"verdict","needs":["detection","unit","component","integration","api","e2e"],"if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -1216,7 +1216,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "qfai-validate.yml#summary",
-    '{"name":"qfai validate (full profile, fail on error)","needs":"validate","if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"qfai validate (full profile, fail on error)","needs":"validate","if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
 ]);
 
@@ -1240,9 +1240,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "5b5bcd950fa4f8983199907147e63b1a0e44d92b00dac7e6128f66c609a15f1b"],
-  ["qfai-tests.yml", "618bb94a2e61699e414d7c5eb7993d1c25da3c325190f8c4c161e7a287dbdba2"],
-  ["qfai-validate.yml", "314a3d71ea40d8984917ece995e9ecc071790ece4db3e64eacc413de5de76165"],
+  ["qfai-docs.yml", "356a49f7a250f3328cfd809bbb6839a8e5ffd797e5e3e428cd807f84700f0ba8"],
+  ["qfai-tests.yml", "5b393a8361f6db75e7e523781e4918b29a6efe5ab4ce2e639c36f8c011f8e957"],
+  ["qfai-validate.yml", "313e6d0c1a24c3e49e9ee781a8a687c1632dbd2fbb5f1165202658d1eaeb00a7"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */

@@ -26,7 +26,10 @@
         "qfai-validate.yml#validate x2"
       ],
       "runnerJobs": 8,
-      "runners": ["${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"],
+      "runners": [
+        "${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
+        "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"
+      ],
       "timeoutMinutesSum": 70,
       "billableFloorMinutes": 8
     },
@@ -42,7 +45,10 @@
         "qfai-validate.yml#validate x2"
       ],
       "runnerJobs": 8,
-      "runners": ["${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"],
+      "runners": [
+        "${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
+        "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"
+      ],
       "timeoutMinutesSum": 70,
       "billableFloorMinutes": 8
     },
@@ -58,7 +64,10 @@
         "qfai-validate.yml#validate x2"
       ],
       "runnerJobs": 8,
-      "runners": ["${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"],
+      "runners": [
+        "${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
+        "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"
+      ],
       "timeoutMinutesSum": 70,
       "billableFloorMinutes": 8
     },
@@ -79,7 +88,10 @@
         "qfai-validate.yml#validate x2"
       ],
       "runnerJobs": 13,
-      "runners": ["${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"],
+      "runners": [
+        "${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
+        "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"
+      ],
       "timeoutMinutesSum": 120,
       "billableFloorMinutes": 13
     },
@@ -109,7 +121,10 @@
         "qfai-validate.yml#validate"
       ],
       "runnerJobs": 12,
-      "runners": ["${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"],
+      "runners": [
+        "${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
+        "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"
+      ],
       "timeoutMinutesSum": 110,
       "billableFloorMinutes": 12
     }
