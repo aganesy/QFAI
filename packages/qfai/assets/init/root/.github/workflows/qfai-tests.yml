@@ -262,6 +262,13 @@ jobs:
             const scripts = parse(process.env.QFAI_SCRIPTS ?? "[]");
             process.stdout.write(JSON.stringify(lanes.filter((lane) => scripts.includes(lane))));
           ')" || selected="[]"
+          # The matrix reads this through `fromJSON`, and `fromJSON("")` is an
+          # error rather than an empty list — an error with no repair path in an
+          # adopter's repository. Nothing above can produce an empty value, and
+          # this line is what keeps that true of whatever is written next.
+          if [ -z "$selected" ]; then
+            selected="[]"
+          fi
           echo "selected=${selected}" >> "$GITHUB_OUTPUT"
           echo "qfai tests: lanes to run ${selected}"
   tests:

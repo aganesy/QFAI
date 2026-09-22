@@ -1232,7 +1232,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-docs.yml", "356a49f7a250f3328cfd809bbb6839a8e5ffd797e5e3e428cd807f84700f0ba8"],
-  ["qfai-tests.yml", "c4e1fb2bd86de2a44796f83e13bcf814381b0baf939bd219f4672ed6566860cc"],
+  ["qfai-tests.yml", "00c0901fd22993b2853a21c4a9dffe6ad07fe2db058f1046a537d59950b3a9dd"],
   ["qfai-validate.yml", "313e6d0c1a24c3e49e9ee781a8a687c1632dbd2fbb5f1165202658d1eaeb00a7"],
 ]);
 
@@ -1991,7 +1991,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"Intersect the selected lanes with the declared scripts","id":"selected","shell":"bash","env":{"QFAI_LANES":"${{ steps.diff.outputs.lanes }}","QFAI_SCRIPTS":"${{ steps.scripts.outputs.scripts }}"},"run":"<body 639686a9ca818ced81b11d89c008e12ab896f8622c7bfde7d4d3eed2971a74f7>"}',
+    '{"name":"Intersect the selected lanes with the declared scripts","id":"selected","shell":"bash","env":{"QFAI_LANES":"${{ steps.diff.outputs.lanes }}","QFAI_SCRIPTS":"${{ steps.scripts.outputs.scripts }}"},"run":"<body 29613a742aaa8d4100a81736c15168aa1a93806b50f351d53b45e13e542da665>"}',
   ],
   [
     "qfai-tests.yml#tests",
