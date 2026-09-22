@@ -783,6 +783,7 @@ describe("qfai prototyping show-spec", () => {
   // operators and automation making recovery decisions from show-spec
   // output. show-spec instead consumes the SSOT classifier and fails
   // closed on `malformed`.
+  // QFAI:SPEC-0012:TC-0012-0428
   it("TC-0012-0428: exits 2 with a 'present but malformed' diagnostic when frozenSpecsCovered is present but invalid (does NOT fall back to legacy specsCovered)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });

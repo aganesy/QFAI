@@ -102,6 +102,7 @@ function collectDeclaredLayers(doc: unknown, body = ""): string[] {
   return [...declared];
 }
 
+// QFAI:SPEC-0003:TC-0003-0035
 describe("TC-0003-0035 (TDD-0035): zero cross-file references; layer separation is jobs inside the orchestrator", () => {
   it("no shipped file references another shipped file, including the uses: ./.github/workflows/ form", async () => {
     const files = await loadShippedWorkflows();
@@ -160,6 +161,7 @@ describe("TC-0003-0035 (TDD-0035): zero cross-file references; layer separation 
   });
 });
 
+// QFAI:SPEC-0003:TC-0003-0034
 describe("TC-0003-0034 (TDD-0034): planted actions directory and non-prefixed filename are both rejected", () => {
   // Recorded deviation (delivery-planner ruling for this row): the TC's
   // literal Action — running `pnpm verify:pack` against a planted and a
