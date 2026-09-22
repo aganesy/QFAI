@@ -170,7 +170,13 @@ first: the pack's last are `US-0012-0142`, `AC-0012-0082`, `BR-0012-0065`,
    repository is:
 
    ```markdown
-   - REQ-0012-0078 (REQ-0129 follow-up): `qfai prototyping iterate --check-convergence` MUST report the recorded state of the loop without running a cycle. It reads `.qfai/evidence/prototyping/prototyping.json`, prints `stopReason`, `acceptedIterationIndex` and the number of recorded iterations, writes nothing, and exits 0 only when `stopReason` is `converged` and `acceptedIterationIndex` is a non-negative integer. Every other state, and a missing or unreadable file, exits 2. `--cycle` may be omitted and then defaults to 9. This is the command the `--cycle` out-of-range hint (REQ-0012-0073) recommends.
+   - REQ-0012-0078 (REQ-0129 follow-up): `qfai prototyping iterate --check-convergence` MUST report
+     the recorded state of the loop without running a cycle. It reads
+     `.qfai/evidence/prototyping/prototyping.json`, prints `stopReason`, `acceptedIterationIndex`
+     and the number of recorded iterations, writes nothing, and exits 0 only when `stopReason` is
+     `converged` and `acceptedIterationIndex` is a non-negative integer. Every other state, and a
+     missing or unreadable file, exits 2. `--cycle` may be omitted and then defaults to 9. This is
+     the command the `--cycle` out-of-range hint (REQ-0012-0073) recommends.
    ```
 
 4. **`02_User-stories.md`** gains one story after `US-0012-0142`, and one
@@ -183,7 +189,9 @@ first: the pack's last are `US-0012-0142`, `AC-0012-0082`, `BR-0012-0065`,
    ```markdown
    ## US-0012-0143
 
-   As an `/qfai-prototyping` operator, I want `qfai prototyping iterate --check-convergence` to report whether the loop has converged without running a cycle, so that I can choose between `certify` and another cycle from the recorded state. (REQ-0012-0078)
+   As an `/qfai-prototyping` operator, I want `qfai prototyping iterate --check-convergence` to
+   report whether the loop has converged without running a cycle, so that I can choose between
+   `certify` and another cycle from the recorded state. (REQ-0012-0078)
    ```
 
 5. **`03_Acceptance-Criteria.md`** gains one criterion after `AC-0012-0082`,
@@ -196,7 +204,9 @@ first: the pack's last are `US-0012-0142`, `AC-0012-0082`, `BR-0012-0065`,
    - REQ-Refs: REQ-0012-0078
    - Given a prototyping evidence tree whose `prototyping.json` records a loop state,
    - When `qfai prototyping iterate --check-convergence` runs, with or without `--cycle`,
-   - Then it MUST print `stopReason`, `acceptedIterationIndex` and the number of recorded iterations, and exit 0 only when `stopReason` is `converged` and `acceptedIterationIndex` is a non-negative integer.
+   - Then it MUST print `stopReason`, `acceptedIterationIndex` and the number of recorded
+     iterations, and exit 0 only when `stopReason` is `converged` and `acceptedIterationIndex` is a
+     non-negative integer.
    - And every other state, including a missing or unreadable `prototyping.json`, MUST exit 2 and print the reason.
    - And the run MUST write nothing and MUST NOT start a cycle.
    ```
@@ -208,7 +218,9 @@ first: the pack's last are `US-0012-0142`, `AC-0012-0082`, `BR-0012-0065`,
    ## BR-0012-0066: `iterate --capture` navigation — the URL opened and the answer accepted (REQ-0012-0075)
 
    - AC-Refs: AC-0012-0059
-   - A `screens[].url` beginning `http://` or `https://` MUST be opened as written. A route-relative one MUST be joined to `--target-url` with WHATWG `new URL(route, base)`. A screen with no URL falls back to `--target-url`, or to no URL when that is absent.
+   - A `screens[].url` beginning `http://` or `https://` MUST be opened as written. A route-relative
+     one MUST be joined to `--target-url` with WHATWG `new URL(route, base)`. A screen with no URL
+     falls back to `--target-url`, or to no URL when that is absent.
    - A route-relative `screens[].url` with no `--target-url`, or a pair that does not compose into a URL, MUST fail that screen with a reason naming the screen and `--target-url`, and iterate exits 2.
    - The default capture runner MUST treat a navigation that answers HTTP 400 or above, or answers nothing, as a capture failure for that screen, and MUST NOT take its screenshot.
 
@@ -217,7 +229,10 @@ first: the pack's last are `US-0012-0142`, `AC-0012-0082`, `BR-0012-0065`,
    - AC-Refs: AC-0012-0083
    - `--check-convergence` MUST read `.qfai/evidence/prototyping/prototyping.json`, and MUST NOT write a file, launch Playwright or start a cycle. It does not require `--target-url`.
    - `--cycle` MAY be omitted under `--check-convergence`, and then defaults to 9. A `--cycle` given is reported back and does not change what is read.
-   - Converged means `stopReason` is `converged` and `acceptedIterationIndex` is a non-negative integer. That state exits 0. Every other state exits 2 and names why: `max-iterations`, `license-verify-fail`, `input-error`, no terminal state yet, a `converged` record with no accepted iteration, or no readable `prototyping.json`.
+   - Converged means `stopReason` is `converged` and `acceptedIterationIndex` is a non-negative
+     integer. That state exits 0. Every other state exits 2 and names why: `max-iterations`,
+     `license-verify-fail`, `input-error`, no terminal state yet, a `converged` record with no
+     accepted iteration, or no readable `prototyping.json`.
    ```
 
 7. **`05_Examples.md`** gains three examples after `EX-0012-0185`, the file's
@@ -229,7 +244,10 @@ first: the pack's last are `US-0012-0142`, `AC-0012-0082`, `BR-0012-0065`,
    - BR-Ref: BR-0012-0066
    - Given `screens[]` declaring `home` at `/`, `settings` at `settings` and `docs` at `https://docs.example.com/start`, and `--target-url http://localhost:5173/app/`,
    - When `qfai prototyping iterate --capture` composes each capture URL,
-   - Then `home` opens `http://localhost:5173/`, `settings` opens `http://localhost:5173/app/settings`, and `docs` opens `https://docs.example.com/start` unchanged. A cycle-1 run with `--capture` and no `--target-url` stops at `home` with a reason naming `home` and `--target-url`, and exits 2.
+   - Then `home` opens `http://localhost:5173/`, `settings` opens
+     `http://localhost:5173/app/settings`, and `docs` opens `https://docs.example.com/start`
+     unchanged. A cycle-1 run with `--capture` and no `--target-url` stops at `home` with a reason
+     naming `home` and `--target-url`, and exits 2.
 
    ## EX-0012-0188: A Screen Answering HTTP 404 Is Not Captured (REQ-0012-0075)
 
@@ -243,7 +261,10 @@ first: the pack's last are `US-0012-0142`, `AC-0012-0082`, `BR-0012-0065`,
    - BR-Ref: BR-0012-0067
    - Given `.qfai/evidence/prototyping/prototyping.json` recording `stopReason: "max-iterations"` and `acceptedIterationIndex: null`,
    - When `qfai prototyping iterate --check-convergence` runs without `--cycle`,
-   - Then it reports cycle 9, `stopReason: max-iterations` and `acceptedIterationIndex: null`, prints `Not converged` with the reason, exits 2, and leaves `prototyping.json` byte-for-byte unchanged. The same run against a record of `stopReason: "converged"` and `acceptedIterationIndex: 3` prints `Converged` and exits 0.
+   - Then it reports cycle 9, `stopReason: max-iterations` and `acceptedIterationIndex: null`,
+     prints `Not converged` with the reason, exits 2, and leaves `prototyping.json` byte-for-byte
+     unchanged. The same run against a record of `stopReason: "converged"` and
+     `acceptedIterationIndex: 3` prints `Converged` and exits 0.
    ```
 
    `EX-0012-0187` is named once in `.qfai/evidence/sdd-spec-0012.md`, a
@@ -263,7 +284,11 @@ first: the pack's last are `US-0012-0142`, `AC-0012-0082`, `BR-0012-0065`,
    - AC-Refs: AC-0012-0059
    - Type: integration
    - Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts`
-   - Verify REQ-0012-0075: `--capture` on the command line turns capture on, and its absence leaves it off. With no screens injected, iterate captures every `screens[]` entry of the project's UI contracts, whether the contract file ends `.yaml` or `.yml`. With no runner injected, iterate uses the default Playwright runner, and a run where Playwright is not installed exits 2 with a reason naming Playwright.
+   - Verify REQ-0012-0075: `--capture` on the command line turns capture on, and its absence leaves
+     it off. With no screens injected, iterate captures every `screens[]` entry of the project's UI
+     contracts, whether the contract file ends `.yaml` or `.yml`. With no runner injected, iterate
+     uses the default Playwright runner, and a run where Playwright is not installed exits 2 with a
+     reason naming Playwright.
 
    ## TC-0012-0485
 
@@ -271,7 +296,10 @@ first: the pack's last are `US-0012-0142`, `AC-0012-0082`, `BR-0012-0065`,
    - AC-Refs: AC-0012-0060
    - Type: integration
    - Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts`
-   - Verify REQ-0012-0076: `--auto-serve` on the command line turns serving on, and its absence starts no server. With no runner injected, iterate uses the default server runner, whose teardown resolves within 2000 ms. When the port is already bound, the default runner refuses without touching its owner, and iterate exits 2 with a reason saying the port is in use.
+   - Verify REQ-0012-0076: `--auto-serve` on the command line turns serving on, and its absence
+     starts no server. With no runner injected, iterate uses the default server runner, whose
+     teardown resolves within 2000 ms. When the port is already bound, the default runner refuses
+     without touching its owner, and iterate exits 2 with a reason saying the port is in use.
 
    ## TC-0012-0486
 
@@ -280,7 +308,11 @@ first: the pack's last are `US-0012-0142`, `AC-0012-0082`, `BR-0012-0065`,
    - Type: unit
    - Level: L1
    - Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts`
-   - Verify REQ-0012-0075 capture URL composition: `http://` and `https://` screen URLs pass unchanged; a route-relative URL, with or without a leading slash, is joined to `--target-url` by `new URL(route, base)`; a screen with no URL falls back to `--target-url`, or to none; a route-relative URL with no `--target-url`, and a pair that does not compose, fail with a reason naming `--target-url`.
+   - Verify REQ-0012-0075 capture URL composition: `http://` and `https://` screen URLs pass
+     unchanged; a route-relative URL, with or without a leading slash, is joined to `--target-url`
+     by `new URL(route, base)`; a screen with no URL falls back to `--target-url`, or to none; a
+     route-relative URL with no `--target-url`, and a pair that does not compose, fail with a reason
+     naming `--target-url`.
 
    ## TC-0012-0487
 
@@ -289,7 +321,9 @@ first: the pack's last are `US-0012-0142`, `AC-0012-0082`, `BR-0012-0065`,
    - Type: unit
    - Level: L1
    - Test file: `packages/qfai/tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts`
-   - Verify REQ-0012-0075 default runner response guard: a navigation answering 200, 204 or 399 is captured; one answering 404 or 500 fails with a reason naming the status, and one returning no response fails with `no response`; no failing navigation is screenshotted.
+   - Verify REQ-0012-0075 default runner response guard: a navigation answering 200, 204 or 399 is
+     captured; one answering 404 or 500 fails with a reason naming the status, and one returning no
+     response fails with `no response`; no failing navigation is screenshotted.
 
    ## TC-0012-0488
 
@@ -297,7 +331,12 @@ first: the pack's last are `US-0012-0142`, `AC-0012-0082`, `BR-0012-0065`,
    - AC-Refs: AC-0012-0083
    - Type: integration
    - Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts`
-   - Verify REQ-0012-0078: `--check-convergence` exits 0 and reports `stopReason` and `acceptedIterationIndex` for a record of `converged` with a non-negative accepted index; exits 2 with `Not converged` and the reason for `max-iterations`, `license-verify-fail`, a negative accepted index and a missing `prototyping.json`; parses without `--cycle` and reports cycle 9, or the cycle given; and leaves `prototyping.json` unchanged, writing no `iter-NN/` directory and no `iterate-plan.json`.
+   - Verify REQ-0012-0078: `--check-convergence` exits 0 and reports `stopReason` and
+     `acceptedIterationIndex` for a record of `converged` with a non-negative accepted index; exits
+     2 with `Not converged` and the reason for `max-iterations`, `license-verify-fail`, a negative
+     accepted index and a missing `prototyping.json`; parses without `--cycle` and reports cycle 9,
+     or the cycle given; and leaves `prototyping.json` unchanged, writing no `iter-NN/` directory
+     and no `iterate-plan.json`.
    ```
 
 9. **`tdd/test-list.md`**: the five remaining rows are pointed at the new
