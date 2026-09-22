@@ -204,6 +204,15 @@ call:
    skipped when the adopter has not opted in. For an aggregate lane, which must
    run whatever the jobs it aggregates concluded, it is the always-run condition
    and the exact `needs` list.
+
+   One clause is admitted beside either of those and is neither: the close gate,
+   `github.event.action != 'closed'`. A closed pull request starts a run only to
+   cancel the one its last push left going, so every lane that costs a runner
+   declines it — including an aggregate, whose `always()` would otherwise outlive
+   the cancellation and report a verdict on a pull request nobody is merging. It
+   gates on the event rather than on the adopter's opt-in, so a lane carrying it
+   and nothing else is still an ordinary lane whose opt-out is deletion.
+
 7. The third-party `uses:` set, as an **allow-list** against the closed
    sanctioned set (one entry today, the package-manager setup action). Never as
    a count of zero: a count fails on the entry the policy legitimately keeps.

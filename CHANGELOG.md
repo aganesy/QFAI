@@ -61,6 +61,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A closed pull request now ends the run it superseded, in every shipped
+  workflow** (#2095). The three templates keyed concurrency on `github.ref`,
+  which cancels a superseded push and does nothing when a pull request closes:
+  the close carries a different ref expression, so it opened a group of its own
+  and the expensive run started by the last push kept going with nobody waiting
+  for it. An adopter paying per runner-minute paid for all of it. The group is
+  now keyed on the pull request's number, `closed` joins the triggering types so
+  the close produces a run at all, and every job that costs a runner declines it
+  — including each aggregate, whose `always()` would otherwise report a verdict
+  on a cancelled dependency. The close allocates a queued run and no minutes,
+  and the external check names are unchanged.
+
 - **An unresolved `Selector` on a row past `todo` is an error** (#2047).
   `TDDLIST_SELECTOR_UNRESOLVED` names a row whose `Selector` is not in the file
   the row points at, and it reported at `warning` — so a full run stayed green

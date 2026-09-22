@@ -257,6 +257,7 @@
     "tests/integration/scripts/checkPromptScannerPair.textScope.test.ts",
     "tests/integration/scripts/checkPublishDryRun.test.ts",
     "tests/integration/sddSkillTriagePhase.test.ts",
+    "tests/integration/shippedWorkflowCloseCancels.test.ts",
     "tests/integration/shippedWorkflowDetection.test.ts",
     "tests/integration/shippedWorkflowInertness.test.ts",
     "tests/integration/shippedWorkflowOwnership.test.ts",

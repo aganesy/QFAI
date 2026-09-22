@@ -20,6 +20,37 @@ name: Release
 # `workflow_dispatch` stays for re-publishing a tag that already exists (a
 # failed upload, an approval that lapsed) without cutting a new tag.
 #
+# ## What stays serial here, and why
+#
+# Ten jobs, and the shape is one fan-out and one fan-in: `verify` decides, seven
+# gate jobs run concurrently off it, and `github-release` and `publish` wait on
+# all eight. What is left serial is serial for one of four reasons, none of them
+# a leftover.
+#
+# **`verify` is a prerequisite of everything, and its two steps of each other.**
+# Between them `pin` and `shape` set all five outputs — the version, the tag, the
+# sha, and the two shapes that decide which gate runs — and every job downstream
+# reads one. A gate that started beside `verify` would be gating a tag nobody had
+# checked, which is the whole of what `verify` is for.
+#
+# **The gate jobs fan in to the publish, within this run.** `github-release` and
+# `publish` name all eight in `needs`, so an upload nobody can take back cannot
+# read a gate that was skipped, cancelled, or ran somewhere else. That is a trust
+# dependency rather than an ordering convenience, and it is why a new gate job
+# belongs in this file and in both of those lists — never in a workflow of its
+# own.
+#
+# **`publish` cannot move out of this file at all.** npm binds the trusted-publishing
+# exchange to this workflow's filename, and only `publish` performs it.
+#
+# **What is left inside `gate` is shape-dependent, not unsplit.** `gate-ssot`,
+# `gate-lint`, `gate-types`, `gate-tests` and the two floor jobs are already jobs
+# of their own. `gate` holds what a tag's own declared entry points decide: an
+# `operations` tag builds, an `aggregate` tag runs the checks, a `whole` tag runs
+# the suite with them — and the post-build leak grep reads the `dist/` whichever
+# of those produced. Splitting the grep from the build would give it no build to
+# read on two of the three shapes.
+#
 # Publishing authenticates by **trusted publishing** (OIDC): the job exchanges a
 # short-lived GitHub identity token for a registry credential. There is no
 # `NPM_TOKEN` to store, leak, or rotate. npm binds that exchange to this
