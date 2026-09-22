@@ -322,6 +322,21 @@ unadjudicated` on a visible line, and says a response omitting any of them
   default path, in contract wherever the flag is, and the per-action
   interaction transcript is the one that is out of it either way.
 
+- **The evidence contract defines the `qa-gatekeeper` verdict the completion
+  gate reads** (#2027). The gate put that field among a completed row's required
+  ones, and the shipped per-item evidence contract listed every other
+  gate-completed field and not this one — so an entry written against the
+  contract failed `QFAI-TDDLIST-008` naming a field the contract gave no way to
+  write. It is defined now from what the records already do: `PASS` and nothing
+  else, naming the attempt, the round and the reviewed revision, `PASS x2` where
+  the row was gated in the RED phase and again at the build-phase GREEN, and no
+  `Round N:` form because it answers for the row. A backfilled entry does not
+  owe it, for the reason the review verdicts do not. The definition is in
+  `round-evidence.md`, which is where round and row scope are already settled,
+  because `qfai-implement/SKILL.md` ships at its line ceiling and a bullet there
+  fails the budget rather than the reader; the contract names the field among
+  the row-level ones and points at it.
+
 - **The monitor's reply command names the pull request it is about** (#1864).
   It printed `repos/OWNER/REPO/pulls/comments/<id>/replies`, and the reply
   endpoint takes the pull request number as a path parameter — so an operator
