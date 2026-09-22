@@ -24,7 +24,7 @@
 
 ## BR-0011-0004: Minimal Code Principle
 
-- AC-Refs: AC-0011-0004
+- AC-Refs: AC-0011-0011
 
 - Write the minimum production code to make the failing test pass.
 - Speculative generalization is prohibited.
