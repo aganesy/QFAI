@@ -23,6 +23,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The evidence-staleness rule now runs where a merge is blocked, and says so
+  when it cannot compute an answer** (#2019). `QFAI-TDDLIST-009` asks whether
+  anything a recorded observation covered has moved since the revision it names.
+  A revision a clone does not hold cannot be diffed, and the rule returned the
+  same "nothing to report" it returns for a fresh row — so on the depth-1
+  checkout `actions/checkout` gives by default, it reported on no row at all
+  while reading as though it had cleared every one of them. Two changes: the
+  `build` job, whose result blocks a merge, now checks out the full history, so
+  the rule computes what it is there to compute; and a run that still cannot
+  resolve a revision reports the revisions it could not reach, once per ledger,
+  at `info`. The dogfooding pin for `spec-0002` rises by one as a result: the
+  row `TDD-0011` has named a stale revision since the test it covers was last
+  edited, and only the blind run made it look current. That row owes a
+  re-observation, which is `/qfai-implement`'s to record.
+
 - **The ladder's sourcing rungs reach the stage that decides where something
   comes from** (#2007). `minimal-implementation.md` gave requirements and design
   rung 1 alone, and rungs 2 to 5 — this codebase, the standard library, the

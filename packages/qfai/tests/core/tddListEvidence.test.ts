@@ -1501,6 +1501,32 @@ describe("QFAI-TDDLIST-008", () => {
     });
   });
 
+  it("says so when the recorded Revision names no commit this clone holds", async () => {
+    // The third answer the git question has, and the one that read like the
+    // second: `DEFAULT_REVISION` names no commit here, so no interval can be
+    // computed and no row resting on it was checked. Until this was reported,
+    // that run and a run which cleared every row produced the same output —
+    // which is what a depth-1 CI checkout produces for a whole repository.
+    //
+    // `info` and once per ledger: the ledger is not wrong, the run could not
+    // look, and on a shallow clone every row would otherwise repeat it.
+    await withProject(async (root) => {
+      await repoWithRevision(root);
+      await seedProject(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), [], {
+        ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
+      });
+
+      const issues = await validateTddList(root, defaultConfig);
+      const reported = issues.filter((i) => i.code === "QFAI-TDDLIST-009");
+      expect(reported).toHaveLength(1);
+      expect(reported[0]?.severity, "a rule that could not run has found nothing wrong").toBe(
+        "info",
+      );
+      expect(reported[0]?.message).toContain(DEFAULT_REVISION);
+      expect(reported[0]?.rule).toBe("tddList.evidenceRevisionUnresolved");
+    });
+  });
+
   it("accepts an anchor that resolves to the row's evidence heading", async () => {
     await withProject(async (root) => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {

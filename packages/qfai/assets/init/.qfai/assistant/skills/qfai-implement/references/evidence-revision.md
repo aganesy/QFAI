@@ -723,6 +723,13 @@ Consequences:
   reading that produces a stale field, and it produces one that looks exactly
   like a fresh one.
 
+- **A clone that does not hold the revision cannot answer this at all.** The diff
+  above fails on an unreachable commit, which is not the same as returning
+  nothing, and `actions/checkout` fetches one commit by default. A lane that is
+  meant to check staleness asks for the whole history (`fetch-depth: 0`);
+  without it the check reports on no row and says so, at `info`, naming the
+  revisions it could not reach.
+
 - **Read that bullet by what it says: _any file the observation covered_.** A commit that changes only
   the record — this evidence file, the ledger's `Status` / `DR-ID` / `Evidence` cells — covers no file
   any observation ran against, so it does not stale one. This is what allows an item's anchors to be
