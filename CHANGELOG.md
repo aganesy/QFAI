@@ -358,6 +358,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Six more selectors name the case whose title opens with their identifier**
+  (#1436). The earlier repair required a colon after the identifier, so a title
+  reading `TC-0003-0023 (TDD-0023): …` was left behind although it names its
+  case as plainly as one reading `TC-0003-0023: …`. The match is now the
+  identifier at the start of the title, whatever follows it, and the rule's
+  backlog falls from 111 to 105. The guards are unchanged: a row with more than
+  one candidate title, or one whose title a Markdown cell cannot carry, is
+  still left alone.
+
 - **A review request names its whole review unit, not a subset of it** (#1886).
   A coherent group is reviewed in one round over the whole group, so its request
   names every member. The check asked only that each named identifier belong
