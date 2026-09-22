@@ -32,6 +32,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   installs is one a failed install can stop, which is the case a green-on-skip
   rule would have swallowed.
 
+- **A ledger row that claims completion names the test case it discharges**
+  (#2156). `TC-Refs` carries the ledger's half of the traceability chain, and a
+  completed row naming no case is one nothing can trace — every check built on
+  the column reads the refs the cell holds, so a cell holding none has nothing
+  to disagree with. Six of the rows found name a requirement instead, which is
+  why the check asks for the identifier's shape rather than for the cell to be
+  non-empty: `REQ-0012-0075 (REQ-0109 follow-up)` fills the column, reads as a
+  reference, and ties the row to no case at all. A case now reports every
+  completed row whose `TC-Refs` holds no `TC-NNNN-NNNN`, and carries the
+  thirty-four it finds as a backlog that may only shrink. A row that has not
+  claimed completion is outside it: 191 of those hold no case either, and
+  reporting them would bury the thirty-four that claim one.
+
 - **A blocked ledger row is read against the decision it names** (#2015).
   `blocked` says the row waits on something, and a Change Request at a terminal
   status is something somebody already decided — so a row still naming one
