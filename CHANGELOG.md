@@ -374,6 +374,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   membership, which is what tells a group reviewed together from a group
   reviewed one row at a time.
 
+- **Five spec-0010 stories name where their obligation is recorded now**
+  (#2135). The pack forbids five legacy sidecars, and five user stories were
+  written around them: two named a forbidden file outright, three asked for the
+  content one carried. None of the five is retired, because every obligation is
+  still owed — only the file that carried it moved, and the canonical sidecar
+  index records where each went. Product intent, reference signals and anti-goals
+  are recorded in the sources document; the axes a critique is scored on, and
+  the examples that calibrate them, are fixed by the tool rather than authored
+  per pack. Retiring them would have dropped five live requirements because
+  their vehicle changed.
+
 - **Thirty-one ledger selectors name the case they were always about** (#1436).
   A selector that matches no case makes a completed row unrepeatable: the status
   says a test passed and nothing can be run to see it again. Of the rows in that

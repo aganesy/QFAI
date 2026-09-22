@@ -17,23 +17,23 @@
 
 ## US-0010-0001: Exploration Brief Authoring
 
-As a discussion facilitator, I want `30_exploration_brief.md` to define product intent, must-keep interactions, brand signals, and differentiation targets, so that prototyping starts from explicit exploration constraints.
+As a discussion facilitator, I want product intent, must-keep interactions, brand signals and differentiation targets recorded in `04_Sources.md`, so that prototyping starts from explicit exploration constraints.
 
 ## US-0010-0002: Reference Pool Authoring
 
-As a designer, I want `31_reference_pool.md` to separate adopted and rejected reference signals, so that downstream remixing does not blindly follow a single template.
+As a designer, I want adopted and rejected reference signals separated in `04_Sources.md`, framed as inputs to deviate from, so that downstream remixing does not blindly follow a single template.
 
 ## US-0010-0003: Design Anti-Goals
 
-As a reviewer, I want explicit anti-goals and recurrence prevention notes, so that bland or generic directions are easier to reject later.
+As a reviewer, I want explicit anti-goals and recurrence prevention notes recorded in `04_Sources.md`, so that bland or generic directions are easier to reject later.
 
 ## US-0010-0004: Exploration Rubric
 
-As an evaluator, I want a rubric centered on design quality, originality, craft, and functionality, so that critique is aligned to the exploration-first harness.
+As an evaluator, I want the axes a critique is scored on fixed by the tool rather than authored per pack — design quality, originality, craft and functionality, in `.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md` — so that critique is aligned to the exploration-first harness.
 
 ## US-0010-0005: Evaluator Calibration
 
-As a maintainer, I want examples of good critique and overly lenient critique, so that evaluation quality can be calibrated before prototyping.
+As a maintainer, I want examples of good critique and of overly lenient critique carried with those fixed axes in `.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md`, so that evaluation quality can be calibrated before prototyping.
 
 ## US-0010-0006: Screen Contracts
 
