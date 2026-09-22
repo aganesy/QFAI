@@ -439,13 +439,13 @@ describe(
       }
       // The loop above is only an oracle while it has something to iterate: a delivery that dropped
       // every checkout step would otherwise satisfy it silently.
-      // One per job that reads the tree: the validate lane, the docs lane, the
-      // orchestrator's detection job and its test lane. The number is asserted
+      // One per job that reads the tree: the validate lane, the docs lane and
+      // its scope job, the orchestrator's detection job and its test lane. The number is asserted
       // rather than merely required to be non-zero because the loop above is
       // only an oracle while it has something to iterate — a delivery that
       // dropped every checkout step would otherwise satisfy it silently.
       expect(checkouts, "no delivered job checks out — the assertion above ran over nothing").toBe(
-        4,
+        5,
       );
     });
 

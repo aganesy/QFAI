@@ -162,6 +162,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped document workflow runs only when the change could reach what
+  it checks** (#2095). Both document checks installed the adopter's dependencies
+  on every pull request, so a change touching one source file paid two complete
+  installs to re-check documents it could not have moved. A scope job now reads
+  the name-only diff first, on the light runner class. The checks are skipped
+  only when every changed path is code no document check reads — a `.ts` file,
+  a stylesheet, an image. A Markdown file anywhere, anything under `.qfai/`,
+  `qfai.config.yaml`, a package manifest or lockfile (they decide which QFAI
+  version, and so which schemas, run), a workflow, and any path the scope does
+  not recognise all run them, and so does a diff that cannot be taken. The
+  aggregate reads the scope as well as the checks' result and treats a skip as
+  green only where the scope said, explicitly, that nothing changed, so a scope
+  job that failed cannot turn checks that never ran into a pass. The external
+  check name is unchanged. Costed from the templates, a pull request touching
+  source and no document starts seven runner jobs instead of eight, with 45
+  declared timeout-minutes instead of 70; one touching documents starts one more
+  job than before, the light scope job. The shipped-workflow contract admits the
+  new kind of lane condition, and its shape gate holds that the lane's condition
+  reads the scope.
+
 - **The shipped runner-selector form has one home** (#2143). Three rows parse a
   job's runner selector — the declared shape, the runner row that owns the
   literal, and the end-to-end row that reads the tree the tool writes — and each

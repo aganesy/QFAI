@@ -122,6 +122,17 @@ type LaneInertness =
    */
   | { readonly jobId: string; readonly kind: "opt-in-axis"; readonly reads: string }
   /**
+   * Scoped to the change: never inert — deleting the file is still the opt-out — but
+   * skipped on a change its scope job found could not reach anything it reads.
+   *
+   * Its own kind because it is neither of the other two. It has a condition, so
+   * `never-inert` would report it as gated; and the condition is not the adopter's
+   * opt-in, so `opt-in` would read a lane that runs in every repository as one nobody
+   * asked for. What the guard holds is that the condition reads the scope's output,
+   * which is the one thing that makes the skip a decision rather than an accident.
+   */
+  | { readonly jobId: string; readonly kind: "change-scoped"; readonly reads: string }
+  /**
    * Never inert: the file is always on and DELETION is the opt-out. A legal
    * answer to this dimension, not a gap — the validate lane's header says
    * exactly this, so a shape demanding a gate from every lane would read the
@@ -229,8 +240,8 @@ const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
     checkNames: [{ jobId: "docs", name: "qfai docs (document shape and Mermaid syntax)" }],
     invocations: [],
     lanes: [
-      { jobId: "checks", kind: "never-inert" },
-      { jobId: "docs", kind: "aggregate", needs: ["checks"] },
+      { jobId: "checks", kind: "change-scoped", reads: "needs.scope.outputs.run" },
+      { jobId: "docs", kind: "aggregate", needs: ["scope", "checks"] },
     ],
   },
 ];
@@ -849,6 +860,7 @@ function laneInertnessPins(): ShapePin[] {
   return SHIPPED_FILE_EXPECTATIONS.map((file) => {
     const gated = file.lanes.filter((lane) => lane.kind === "opt-in").map((lane) => lane.jobId);
     const axisGated = file.lanes.filter((lane) => lane.kind === "opt-in-axis");
+    const scoped = file.lanes.filter((lane) => lane.kind === "change-scoped");
     const always = file.lanes
       .filter((lane) => lane.kind === "never-inert")
       .map((lane) => lane.jobId);
@@ -862,6 +874,12 @@ function laneInertnessPins(): ShapePin[] {
       clauses.push(
         `inert until opted in: ${lane.jobId} runs one leg per member of ${lane.reads}, and its if: ` +
           `condition requires that list to be non-empty`,
+      );
+    }
+    for (const lane of scoped) {
+      clauses.push(
+        `never inert, scoped to the change: ${lane.jobId} runs unless ${lane.reads} says, ` +
+          `explicitly, that nothing it reads changed`,
       );
     }
     if (always.length > 0) {
@@ -900,6 +918,14 @@ function laneInertnessViolations(file: FileExpectation, found: WorkflowFile): st
         problems.push(`${lane.jobId}: no if: condition`);
       } else if (!condition.includes(lane.jobId)) {
         problems.push(`${lane.jobId}: if: condition does not name the lane`);
+      }
+      continue;
+    }
+    if (lane.kind === "change-scoped") {
+      if (typeof condition !== "string") {
+        problems.push(`${lane.jobId}: no if: condition`);
+      } else if (!condition.includes(lane.reads)) {
+        problems.push(`${lane.jobId}: if: condition does not read ${lane.reads}`);
       }
       continue;
     }

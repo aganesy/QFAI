@@ -314,7 +314,18 @@ describe("TC-0003-0038 (TDD-0038): docs-only diff selects the minimal lane set, 
     const DRIFT_GATE_DEPTH = "${{ github.event_name == 'pull_request' && '0' || '1' }}";
     const VALIDATE = "qfai-validate.yml";
 
-    let detectionFullHistoryRequests = 0;
+    /**
+     * The jobs that take a name-only diff, one per file that scopes its work to
+     * the change: the test orchestrator's lane selection and the document
+     * lane's scope. Each needs the base commit reachable, and each is named, so
+     * full history anywhere else is still a violation.
+     */
+    const DIFF_JOBS: ReadonlyMap<string, string> = new Map([
+      [ORCHESTRATOR, "detection"],
+      ["qfai-docs.yml", "scope"],
+    ]);
+
+    const fullHistoryRequests = new Map<string, number>();
     let driftGateDepthRequests = 0;
     const violations: string[] = [];
     for (const [name, body] of await loadShippedWorkflows()) {
@@ -331,9 +342,9 @@ describe("TC-0003-0038 (TDD-0038): docs-only diff selects the minimal lane set, 
             isRecord(withNode) &&
             withNode["fetch-depth"] === 0
           ) {
-            if (jobId === "detection" && name === ORCHESTRATOR) {
+            if (DIFF_JOBS.get(name) === jobId) {
               insideDetectionCheckout += 1;
-              detectionFullHistoryRequests += 1;
+              fullHistoryRequests.set(name, (fullHistoryRequests.get(name) ?? 0) + 1);
             } else {
               violations.push(`${name}: job "${jobId}" requests full history`);
             }
@@ -356,13 +367,15 @@ describe("TC-0003-0038 (TDD-0038): docs-only diff selects the minimal lane set, 
       const total = countKeyOccurrences(doc, "fetch-depth");
       if (total !== insideDetectionCheckout + sanctionedConditionalDepths) {
         violations.push(
-          `${name}: ${total - insideDetectionCheckout - sanctionedConditionalDepths} fetch-depth key(s) that are neither the detection job's checkout nor the drift gate's`,
+          `${name}: ${total - insideDetectionCheckout - sanctionedConditionalDepths} fetch-depth key(s) that are neither a diff job's checkout nor the drift gate's`,
         );
       }
     }
-    // Non-vacuity: the detection job itself must request full history —
+    // Non-vacuity: each diff job itself must request full history, once —
     // the name-only diff needs the base commit locally reachable.
-    expect(detectionFullHistoryRequests).toBe(1);
+    expect(Object.fromEntries(fullHistoryRequests)).toEqual(
+      Object.fromEntries([...DIFF_JOBS.keys()].map((file) => [file, 1])),
+    );
     // Non-vacuity for the second sanctioned request: the drift gate runs on a
     // pull request and cannot answer without the merge base, so the depth has
     // to be asked for where it runs.

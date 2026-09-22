@@ -54,9 +54,10 @@ export const BILLABLE_JOB_FLOOR_MINUTES = 1;
 /**
  * The paths a shipped template is costed over.
  *
- * `event` decides the triggering shape, `documentsOnly` whether a documents change selected the
- * document lanes, and `testScripts` which `test:<layer>` scripts the adopter's manifest declares —
- * the opt-in the test lanes read through the detection job's outputs.
+ * `event` decides the triggering shape, `documentsOnly` whether the change touched documents and
+ * no source, `documentsTouched` whether it touched documents at all — which is what the document
+ * lane's scope reads — and `testScripts` which `test:<layer>` scripts the adopter's manifest
+ * declares, the opt-in the test lanes read through the detection job's outputs.
  */
 export const COST_PATHS = [
   {
@@ -64,13 +65,15 @@ export const COST_PATHS = [
     what: "a pull request that touches documents and no source",
     event: "pull_request",
     documentsOnly: true,
+    documentsTouched: true,
     testScripts: [],
   },
   {
     id: "code-pull-request",
-    what: "a pull request that touches source",
+    what: "a pull request that touches source and no document",
     event: "pull_request",
     documentsOnly: false,
+    documentsTouched: false,
     testScripts: [],
   },
   {
@@ -78,6 +81,7 @@ export const COST_PATHS = [
     what: "an adopter whose manifest declares no test:<layer> script",
     event: "pull_request",
     documentsOnly: false,
+    documentsTouched: false,
     testScripts: [],
   },
   {
@@ -85,6 +89,7 @@ export const COST_PATHS = [
     what: "an adopter whose manifest declares all five test:<layer> scripts",
     event: "pull_request",
     documentsOnly: false,
+    documentsTouched: false,
     testScripts: ["unit", "component", "integration", "api", "e2e"],
   },
   {
@@ -93,6 +98,7 @@ export const COST_PATHS = [
     event: "pull_request",
     action: "closed",
     documentsOnly: false,
+    documentsTouched: true,
     testScripts: ["unit", "component", "integration", "api", "e2e"],
   },
   {
@@ -100,6 +106,9 @@ export const COST_PATHS = [
     what: "a push to the default branch",
     event: "push",
     documentsOnly: false,
+    // A push carries whatever the merged pull request carried, which the path does not know, so
+    // it is costed as touching documents — the figure it states is then an upper bound.
+    documentsTouched: true,
     testScripts: ["unit", "component", "integration", "api", "e2e"],
   },
 ];
@@ -124,6 +133,8 @@ const LANE_GATE =
  * The five per-layer conditions became one matrix axis, so the gate no longer names a layer: it
  * asks whether the axis is non-empty, and `instancesOf` reads the width from the same path spec.
  */
+const SCOPE_GATE = "needs.scope.outputs.run == 'true' && github.event.action != 'closed'";
+
 const SELECTED_GATE =
   "needs.detection.outputs.selected != '[]' && needs.detection.outputs.selected != ''";
 
@@ -140,6 +151,10 @@ export function jobRuns(job, pathSpec) {
   if (text === CLOSE_GATE) return !closed;
   if (text === `always() && ${CLOSE_GATE}`) return !closed;
   if (text === "always()") return true;
+  if (text === SCOPE_GATE) {
+    // The document lane runs when its scope found a change a document check reads.
+    return !closed && pathSpec.documentsTouched === true;
+  }
   if (text === SELECTED_GATE) {
     // The same two halves the per-layer gate read, asked once: a documents-only change selects no
     // lane, and a path declaring no test script has nothing for the axis to hold.

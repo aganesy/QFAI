@@ -30,9 +30,20 @@
 # | Wrong runner value            | GitHub does not fail fast: an unknown label leaves the job queued indefinitely, never red                |
 # | `packageManager` precondition | a `pnpm-lock.yaml` needs `"packageManager": "pnpm@<version>"` in package.json, or this lane stops CLOSED |
 # | Inert when                    | never inert; delete this file to opt out - `qfai init` will not recreate a file you removed              |
+# | Skipped when                  | every changed path is code a document check never reads; anything else, or any doubt, runs both checks   |
 # | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 20, and the lane continues          |
 # | Node support floor            | the package declares `engines: ">=20.19.0"`; the fall-open Node 20 satisfies it                          |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
+#
+# The checks run only when the change could have moved what they read. A change
+# whose every path is code no document check reads - a `.ts` file, a stylesheet,
+# an image - skips both, and saves the two installs they would have paid for.
+# Every other change runs them: a Markdown file anywhere, anything under `.qfai/`,
+# `qfai.config.yaml`, a package manifest or lockfile (they decide which QFAI
+# version, and so which schemas, the checks run), a workflow, and any path the
+# scope step does not recognise. When the diff itself cannot be taken - no base,
+# a shallow clone, a failed diff - the checks run. Skipping is the claim that
+# needs evidence; running is not.
 #
 # A tree with no specs directory is not a failure: both lanes report the zero
 # they found and exit 0. Reporting green over nothing is only wrong when the
@@ -69,9 +80,85 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  scope:
+    name: change scope
+    if: ${{ github.event.action != 'closed' }}
+    runs-on: ${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
+    # Reads the repository only; the name-only diff writes nothing back.
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.diff.outputs.run }}
+    steps:
+      - name: Checkout with full history via actions/checkout 5.1.0
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+          # The name-only diff needs the base commit reachable locally.
+          fetch-depth: 0
+      - name: Decide whether the change can reach a document check
+        id: diff
+        env:
+          QFAI_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+          # A pull request asks what the branch changed (`A...B`); a push asks what
+          # the push changed (`A B`), so a force-push cannot hide what it dropped.
+          QFAI_EVENT_NAME: ${{ github.event_name }}
+        shell: bash
+        run: |
+          # Emits run=false only when every changed path is code no document
+          # check reads. Everything else - and every degraded input - emits
+          # run=true, because a skipped check claims the documents are fine and
+          # a run check only costs its install.
+          emit() { echo "run=$1" >> "$GITHUB_OUTPUT"; }
+          run_anyway() {
+            echo "qfai docs change scope: $1 - running the document checks"
+            emit true
+            exit 0
+          }
+          if [ -z "${QFAI_BASE_REF:-}" ]; then
+            run_anyway "no base reference available"
+          fi
+          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            run_anyway "shallow clone: the base commit may be unreachable"
+          fi
+          if ! git rev-parse --verify --quiet "${QFAI_BASE_REF}^{commit}" > /dev/null; then
+            run_anyway "base reference is not reachable"
+          fi
+          # --no-renames so a document moved or renamed shows both of its paths.
+          if [ "${QFAI_EVENT_NAME:-}" = "pull_request" ]; then
+            if ! changed="$(git diff --name-only --no-renames "${QFAI_BASE_REF}...HEAD")"; then
+              run_anyway "name-only diff failed"
+            fi
+          else
+            if ! changed="$(git diff --name-only --no-renames "${QFAI_BASE_REF}" HEAD)"; then
+              run_anyway "name-only diff failed"
+            fi
+          fi
+          while IFS= read -r changed_path; do
+            [ -z "$changed_path" ] && continue
+            case "$changed_path" in
+              # What a document check reads, or what decides which checker runs.
+              # Matched first, so a `.json` manifest is never taken for code.
+              *.md|*.markdown|*.mdx) run_anyway "a document changed: ${changed_path}" ;;
+              .qfai/*|*/.qfai/*) run_anyway "the QFAI tree changed: ${changed_path}" ;;
+              qfai.config.yaml|*/qfai.config.yaml) run_anyway "the QFAI config changed" ;;
+              package.json|*/package.json|*lock*|.npmrc|*/.npmrc|.yarnrc*|.nvmrc|.node-version)
+                run_anyway "the toolchain changed: ${changed_path}"
+                ;;
+              .github/*) run_anyway "a workflow changed: ${changed_path}" ;;
+              # Code a document check never opens.
+              *.ts|*.tsx|*.mts|*.cts|*.js|*.jsx|*.mjs|*.cjs|*.json|*.css|*.scss|*.sass|*.less) ;;
+              *.html|*.vue|*.svelte|*.png|*.jpg|*.jpeg|*.gif|*.svg|*.ico|*.webp) ;;
+              *) run_anyway "a path outside the recognised set changed: ${changed_path}" ;;
+            esac
+          done <<< "$changed"
+          echo "qfai docs change scope: every changed path is code no document check reads - skipping"
+          emit false
   checks:
     name: qfai docs check (${{ matrix.check }})
-    if: ${{ github.event.action != 'closed' }}
+    needs: scope
+    if: ${{ needs.scope.outputs.run == 'true' && github.event.action != 'closed' }}
     strategy:
       fail-fast: false
       matrix:
@@ -482,7 +569,7 @@ jobs:
 
   docs:
     name: qfai docs (document shape and Mermaid syntax)
-    needs: checks
+    needs: [scope, checks]
     if: ${{ always() && github.event.action != 'closed' }}
     runs-on: ${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     permissions: {}
@@ -491,8 +578,16 @@ jobs:
       - name: Require every document check to succeed
         env:
           CHECK_RESULT: ${{ needs.checks.result }}
+          DOCS_SCOPE: ${{ needs.scope.outputs.run }}
         shell: bash
         run: |
+          # A skip is green only where the scope said, explicitly, that nothing a
+          # document check reads changed. An absent scope says nothing about why
+          # the checks did not run, so it cannot make a skip green.
+          if [ "${CHECK_RESULT}" = "skipped" ] && [ "${DOCS_SCOPE:-}" = "false" ]; then
+            echo "qfai docs: no document could have changed - checks skipped"
+            exit 0
+          fi
           if [ "${CHECK_RESULT}" != "success" ]; then
             echo "::error::qfai docs: document checks concluded ${CHECK_RESULT:-missing}"
             exit 1

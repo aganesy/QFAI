@@ -1184,12 +1184,16 @@ export const ALLOWED_WORKFLOW_SHAPE: ReadonlyMap<string, string> = new Map([
 
 export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   [
+    "qfai-docs.yml#scope",
+    '{"name":"change scope","if":"${{ github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"run":"${{ steps.diff.outputs.run }}"}}',
+  ],
+  [
     "qfai-docs.yml#checks",
-    '{"name":"qfai docs check (${{ matrix.check }})","if":"${{ github.event.action != \'closed\' }}","strategy":{"fail-fast":false,"matrix":{"check":["shape","mermaid"]}},"runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":15}',
+    '{"name":"qfai docs check (${{ matrix.check }})","needs":"scope","if":"${{ needs.scope.outputs.run == \'true\' && github.event.action != \'closed\' }}","strategy":{"fail-fast":false,"matrix":{"check":["shape","mermaid"]}},"runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":15}',
   ],
   [
     "qfai-docs.yml#docs",
-    '{"name":"qfai docs (document shape and Mermaid syntax)","needs":"checks","if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"qfai docs (document shape and Mermaid syntax)","needs":["scope","checks"],"if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -1233,7 +1237,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "356a49f7a250f3328cfd809bbb6839a8e5ffd797e5e3e428cd807f84700f0ba8"],
+  ["qfai-docs.yml", "281d4461d9fda4ded4db506fafc8556be83046d9d51841b250efb6f573091c44"],
   ["qfai-tests.yml", "c7631fef52a826d4fd556b0944a708152dd11972c0d0a6c09e4b41374f651ad4"],
   ["qfai-validate.yml", "313e6d0c1a24c3e49e9ee781a8a687c1632dbd2fbb5f1165202658d1eaeb00a7"],
 ]);
@@ -1936,6 +1940,14 @@ export function initMustNotShip(
  */
 export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   [
+    "qfai-docs.yml#scope",
+    '{"name":"Checkout with full history via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":0}}',
+  ],
+  [
+    "qfai-docs.yml#scope",
+    '{"name":"Decide whether the change can reach a document check","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}","QFAI_EVENT_NAME":"${{ github.event_name }}"},"shell":"bash","run":"<body 749dc7f50e62946ec88828cb8c1222e0f09a1e6628e597e09d9da9d7bde88dd3>"}',
+  ],
+  [
     "qfai-docs.yml#checks",
     '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false}}',
   ],
@@ -1977,7 +1989,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#docs",
-    '{"name":"Require every document check to succeed","env":{"CHECK_RESULT":"${{ needs.checks.result }}"},"shell":"bash","run":"<body 8e8c3a23f87d1f0cbe19cf75d718fee8047e478cd11a4cc88a581a7696666c8a>"}',
+    '{"name":"Require every document check to succeed","env":{"CHECK_RESULT":"${{ needs.checks.result }}","DOCS_SCOPE":"${{ needs.scope.outputs.run }}"},"shell":"bash","run":"<body f871286b4f3baaadb4d3881e59b5a8ba212a79083202654ae20a054c303b0e86>"}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -2315,6 +2327,10 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
  */
 export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   ["CHECK_RESULT", "${{ needs.checks.result }}"],
+  // Whether the document lane's scope job found a change a document check reads. The aggregate
+  // needs it to tell a skip it asked for from a skip it did not, and its value is one of two
+  // literals the scope body writes.
+  ["DOCS_SCOPE", "${{ needs.scope.outputs.run }}"],
   ["PROFILE_RESULT", "${{ needs.validate.result }}"],
   ["QFAI_BASE_REF", "${{ github.event.pull_request.base.sha || github.event.before }}"],
   // Which event started the run, so the detection body can take a two-dot diff on a push and a
