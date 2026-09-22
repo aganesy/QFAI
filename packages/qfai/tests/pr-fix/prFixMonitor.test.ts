@@ -12,6 +12,7 @@ import {
   EXIT_ZERO,
   type Spawned,
   outputContext,
+  retryOnHostCrash,
   spawnCaptured,
 } from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
@@ -139,14 +140,17 @@ describe.concurrent("run-pr-fix strict monitor", { timeout: 120000 }, () => {
       ?.split("if (-not $insideHtml -and $line[$position] -eq '`')")[0];
     expect(branch).toBeDefined();
     expect(branch).not.toContain("$Body.Substring($offset + $position)");
-    const result = await spawnCommand(
-      "pwsh",
-      [
-        "-NoProfile",
-        "-Command",
-        `. '${policyPath.replace(/'/g, "''")}'; $body = '## What this change made unnecessary' + [Environment]::NewLine + ('[ ' + [Environment]::NewLine) * 640 + 'Nothing.'; if ([string]::IsNullOrWhiteSpace((RemovalAnswer $body))) { exit 1 }`,
-      ],
-      process.env,
+    // Nothing on disk to rebuild, so the spawn itself is the case.
+    const result = await retryOnHostCrash(() =>
+      spawnCommand(
+        "pwsh",
+        [
+          "-NoProfile",
+          "-Command",
+          `. '${policyPath.replace(/'/g, "''")}'; $body = '## What this change made unnecessary' + [Environment]::NewLine + ('[ ' + [Environment]::NewLine) * 640 + 'Nothing.'; if ([string]::IsNullOrWhiteSpace((RemovalAnswer $body))) { exit 1 }`,
+        ],
+        process.env,
+      ),
     );
     expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
   });
@@ -1394,12 +1398,19 @@ function makeThread(): FakeThread {
   };
 }
 
-async function runPrFix(options: {
+type RunPrFixOptions = {
   extraArgs?: string[];
   mockSleep?: boolean;
   onTestFinished: RegisterCleanup;
   scenario: FakeScenario;
-}): Promise<RunResult> {
+};
+
+/** One case's run of the script, rebuilt from scratch when its PowerShell host crashed. */
+async function runPrFix(options: RunPrFixOptions): Promise<RunResult> {
+  return await retryOnHostCrash(() => runPrFixOnce(options));
+}
+
+async function runPrFixOnce(options: RunPrFixOptions): Promise<RunResult> {
   const root = await makeTempDir("qfai-pr-fix-", options.onTestFinished);
   const repoDir = path.join(root, "repo");
   const binDir = path.join(root, "bin");

@@ -93,6 +93,48 @@ export function outputContext(result: Spawned): string {
   return `${result.outcome}, and the child wrote nothing on either stream — the harness failed rather than the script printing the wrong thing`;
 }
 
+/**
+ * The signals a runtime dies on when its own process is broken.
+ *
+ * A script cannot raise these by answering: an exit is a code, and a script that means to fail
+ * says so with one. On the PowerShell legs they arrive together with a .NET report of an
+ * assembly name that is intact up to a point and garbage after it —
+ * `System.Collections.Concurrent, Version=10.0.0.0, Culture=neutral, PublicKeyT` and then a
+ * character no assembly name holds — which is the host's own memory, not the script.
+ */
+const HOST_CRASH_SIGNALS: ReadonlySet<NodeJS.Signals> = new Set(["SIGABRT", "SIGBUS", "SIGSEGV"]);
+
+/** Whether the child's runtime crashed, rather than the program it ran giving an answer. */
+export function hostCrashed(result: Pick<Spawned, "signal">): boolean {
+  return result.signal !== null && HOST_CRASH_SIGNALS.has(result.signal);
+}
+
+/**
+ * Runs one case again when the runtime it spawned crashed, and says so.
+ *
+ * The retry is the whole case, not the spawn: a crash can land after the script has already
+ * written to the fixture's stubs, and a second spawn over that state would count one run's
+ * calls twice. So `attempt` rebuilds everything it reads.
+ *
+ * SIMPLIFIED: one retry, on a crash signal only. A second crash, or any exit code, is reported
+ * as it happened.
+ * Lift when: the runner's PowerShell no longer crashes this way — the warning below stops
+ * appearing in the test legs' logs.
+ */
+export async function retryOnHostCrash<T extends Spawned>(
+  attempt: () => Promise<T>,
+  warn: (message: string) => void = (message) => {
+    process.stderr.write(`${message}\n`);
+  },
+): Promise<T> {
+  const first = await attempt();
+  if (!hostCrashed(first)) return first;
+  warn(
+    `the child's runtime crashed (${first.outcome}) before answering; running the case once more. Its report:\n${first.stderr.slice(0, 600)}`,
+  );
+  return await attempt();
+}
+
 export interface SpawnCapturedOptions {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
