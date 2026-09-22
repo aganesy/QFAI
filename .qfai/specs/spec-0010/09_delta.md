@@ -1,5 +1,30 @@
 # 09 Delta
 
+## 2026-09-22 — The five stories whose sidecar moved now name where it went
+
+`AC-0010-0008` forbids five legacy sidecars, and five user stories were written
+around them. Two named a forbidden file outright; three asked for the content one
+carried without naming it.
+
+**None of the five is retired.** Every obligation is still owed — only the file
+that carried it moved, and the canonical sidecar index records where each went.
+
+| Story          | What it asks for                                                               | Where it is recorded now                          |
+| -------------- | ------------------------------------------------------------------------------ | ------------------------------------------------- |
+| `US-0010-0001` | product intent, must-keep interactions, brand signals, differentiation targets | `04_Sources.md`                                   |
+| `US-0010-0002` | adopted and rejected reference signals                                         | `04_Sources.md`, framed as inputs to deviate from |
+| `US-0010-0003` | anti-goals and recurrence prevention notes                                     | `04_Sources.md`                                   |
+| `US-0010-0004` | the axes a critique is scored on                                               | the fixed evaluator axes in the prototyping skill |
+| `US-0010-0005` | examples of good and of lenient critique                                       | the same fixed axes                               |
+
+Retiring them would have dropped five live requirements because their vehicle
+changed. Each is restated against its current home, and none names a file the
+pack forbids.
+
+| Op ID  | Op Type | Target                                  | Summary                                     |
+| ------ | ------- | --------------------------------------- | ------------------------------------------- |
+| OP-001 | UPDATE  | 02_User-stories.md (US-0010-0001..0005) | each story names where its obligation lives |
+
 ## 2026-09-22 — Retired the criteria about sidecars this pack forbids
 
 `AC-0010-0008` states that `30_exploration_brief.md`, `33_exploration_rubric.md` and
@@ -21,10 +46,7 @@ the two sidecars a discussion pack writes today.
 | OP-004 | DELETE  | 06_Test-Cases.md (TC-0010-0002..0004)          | the cases that hung off those examples     |
 | OP-005 | DELETE  | tdd/test-list.md (TDD-0002..0004, TDD-0009)    | the ledger rows citing those cases         |
 
-The user stories `US-0010-0001`, `US-0010-0004` and `US-0010-0005` still name the
-same three files, and each carries an end-to-end ledger row. Two more stories name
-the other two dropped sidecars. That layer is a wider repair than this one and is
-tracked on its own.
+The user-story layer was repaired separately; see the entry above it.
 
 ## 2026-04-22
 
