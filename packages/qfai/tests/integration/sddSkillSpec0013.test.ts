@@ -54,6 +54,22 @@ const SKILL_PATH = path.resolve(
   "SKILL.md",
 );
 
+const TEST_CASES_TEMPLATE_PATH = path.resolve(
+  __dirname,
+  "..",
+  "..",
+  "assets",
+  "init",
+  ".qfai",
+  "assistant",
+  "skills",
+  "qfai-sdd",
+  "templates",
+  "specs",
+  "spec",
+  "06_Test-Cases.md",
+);
+
 // TC-0013-0001: Phase Order Enforcement
 describe("TC-0013-0001: Phase Order Enforcement", () => {
   it("SKILL.md enforces Contracts-first -> Outline -> Slice -> Plan -> Delta", async () => {
@@ -249,5 +265,86 @@ describe("TC-0013-0012: Contract Stub Is Parseable Or Declared `none`", () => {
     const codes = await findingsFor(good);
     expect(codes).not.toContain("QFAI-CONTRACT-021");
     expect(codes).not.toContain("QFAI-CONTRACT-020");
+  });
+});
+
+// TC-0013-0013: Test Case Type Column Presence
+// QFAI:SPEC-0013:TC-0013-0013
+//
+// The obligation is about the document SDD generates, and what this repository
+// ships towards it is the template every generated pack starts from. So the
+// assertions read the template: the column exists on the table authors fill,
+// the four values it admits are each defined, and the sample rows demonstrate
+// the pair EX-0013-0008 describes rather than a lone happy path.
+//
+// How much non-normal coverage a criterion owes is not asserted here. An
+// approved change request narrows it from every criterion to every criterion
+// that keeps a failure, and the template already reads the narrower way, so an
+// assertion on the wider wording would pin the sentence that is on its way out.
+describe("TC-0013-0013: Test Case Type Column Presence", () => {
+  const TYPES = ["normal", "error", "boundary", "edge"];
+
+  function firstTable(content: string): { headers: string[]; rows: Array<Map<string, string>> } {
+    const cells = (line: string): string[] =>
+      line
+        .trim()
+        .replace(/^\||\|$/g, "")
+        .split("|")
+        .map((cell) => cell.trim());
+
+    const lines = content.split(/\r?\n/);
+    const start = lines.findIndex((line) => /^\s*\|.*\|\s*$/.test(line));
+    if (start < 0) throw new Error("the template carries no markdown table");
+
+    const headers = cells(lines[start] ?? "");
+    const rows: Array<Map<string, string>> = [];
+    for (let index = start + 2; index < lines.length; index += 1) {
+      const line = lines[index] ?? "";
+      if (!/^\s*\|.*\|\s*$/.test(line)) break;
+      const row = cells(line);
+      rows.push(new Map(headers.map((header, column) => [header, row[column] ?? ""])));
+    }
+    return { headers, rows };
+  }
+
+  async function template(): Promise<string> {
+    return await readFile(TEST_CASES_TEMPLATE_PATH, "utf-8");
+  }
+
+  it("the table authors fill carries a Type column", async () => {
+    expect(firstTable(await template()).headers).toContain("Type");
+  });
+
+  it("each type the rule admits is defined in the template", async () => {
+    const content = await template();
+    for (const type of TYPES) {
+      expect(content, `${type} is admitted but never defined`).toMatch(
+        new RegExp("^- `" + type + "` — ", "m"),
+      );
+    }
+  });
+
+  it("no sample row declares a type the template does not define", async () => {
+    const { rows } = firstTable(await template());
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(TYPES, "a sample row demonstrates an undefined type").toContain(row.get("Type"));
+    }
+  });
+
+  it("one criterion gets both a normal row and a non-normal one", async () => {
+    // EX-0013-0008 is about a criterion with both a success and a failure
+    // scenario, so a template whose sample rows are all `normal` would show an
+    // author the shape the rule exists to rule out.
+    const { rows } = firstTable(await template());
+    const byCriterion = new Map<string, string[]>();
+    for (const row of rows) {
+      const criterion = row.get("AC-Refs") ?? "";
+      byCriterion.set(criterion, [...(byCriterion.get(criterion) ?? []), row.get("Type") ?? ""]);
+    }
+    const paired = [...byCriterion.values()].filter(
+      (types) => types.includes("normal") && types.some((type) => type !== "normal"),
+    );
+    expect(paired.length, "no criterion is shown with a non-normal case").toBeGreaterThan(0);
   });
 });
