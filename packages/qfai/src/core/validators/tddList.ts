@@ -2493,13 +2493,14 @@ async function hasSealedStageStatus(
   // as it was: the shipped stage-evidence shape does not require the field, and
   // demanding one here would reject every conforming record.
   if (statesBlockingStageOutcome(section)) return false;
-  const pack = rowEvidenceFieldValue(section, "Review pack");
+  const recorded = rowEvidenceFieldValue(section, "Review pack");
+  const pack = recorded === null ? null : recordedPackPath(recorded);
   const seal = rowEvidenceFieldValue(section, "Review pack seal");
   if (
     pack === null ||
     seal === null ||
     !SHA256_VALUE.test(seal) ||
-    !/^\.qfai\/review\/review-\d{17}$/.test(pack)
+    !CANONICAL_REVIEW_PACK.test(pack)
   ) {
     return false;
   }
@@ -3399,7 +3400,7 @@ function missingCompletedEvidenceFields(
     if (auditedHash !== null && !SHA256_VALUE.test(auditedHash)) {
       missing.push(`${prefix} audited evidence hash: sha256`);
     }
-    if (pack !== null && !/^\.qfai\/review\/review-\d{17}$/.test(pack)) {
+    if (pack !== null && !CANONICAL_REVIEW_PACK.test(recordedPackPath(pack))) {
       missing.push(
         `${prefix} review pack: canonical .qfai/review/review-<17-digit timestamp> path`,
       );
@@ -3629,6 +3630,19 @@ async function invalidCompletedEvidenceArtifacts(
 const CANONICAL_REVIEW_PACK = /^\.qfai\/review\/review-\d{17}$/;
 
 /**
+ * A recorded pack path with one trailing separator removed.
+ *
+ * The shipped template records the field as the directory it is, with a
+ * trailing separator, and the canonical form carries none — so a record
+ * written exactly as the skill instructs failed the test and its stage could
+ * not seal. One separator is removed rather than any number: a path ending in
+ * two is not a spelling of the directory, it is one nobody meant to write.
+ */
+function recordedPackPath(pack: string): string {
+  return pack.replace(/\/$/, "");
+}
+
+/**
  * The review pack pairs a round records, one per review attempt, each
  * recomputed from the pack it names and read for the review it records
  * (`record-contract.md`).
@@ -3745,6 +3759,9 @@ async function invalidRoundAttemptPack(root: string, entry: RoundAttemptPack): P
   const qualifier = entry.attempt === null ? "" : ` (attempt ${entry.attempt})`;
   const label = `Round ${entry.round}: Review pack${qualifier}`;
   if (entry.pack === null) return [`${label} beside that attempt's reviewer verdict`];
+  // Normalized once, here, so the canonical test, the `lstat` and the file
+  // collection below all read the same path.
+  const pack = recordedPackPath(entry.pack);
   // A pack absent from the checkout is skipped below, so the attempt's verdict,
   // which the entry itself records, is read before that absence excuses the pair.
   if (attemptOutcome(entry.verdict) === null) {
@@ -3755,17 +3772,17 @@ async function invalidRoundAttemptPack(root: string, entry: RoundAttemptPack): P
   if (entry.seal === null || !SHA256_VALUE.test(entry.seal)) {
     return [`Round ${entry.round}: Review pack seal${qualifier}: sha256`];
   }
-  if (!CANONICAL_REVIEW_PACK.test(entry.pack)) {
+  if (!CANONICAL_REVIEW_PACK.test(pack)) {
     return [`${label}: canonical .qfai/review/review-<17-digit timestamp> path`];
   }
   try {
-    await lstat(path.join(root, ...entry.pack.split("/")));
+    await lstat(path.join(root, ...pack.split("/")));
   } catch (error) {
     return isEnoent(error) ? [] : [`${label} path readable when present`];
   }
-  const packFiles = await collectReviewPackFiles(root, entry.pack);
+  const packFiles = await collectReviewPackFiles(root, pack);
   if (packFiles === null) return [`${label} resolving to regular files`];
-  return invalidPresentRoundPack(packFiles, { ...entry, pack: entry.pack, seal: entry.seal });
+  return invalidPresentRoundPack(packFiles, { ...entry, pack, seal: entry.seal });
 }
 
 /** What is wrong with the contents of a round attempt's pack present in the checkout. */

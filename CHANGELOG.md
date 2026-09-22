@@ -144,6 +144,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A stage record written as the skill instructs seals** (#2097).
+  `pack-seal.md` records the pack as the directory it is, with a trailing
+  separator, and the canonical form the completion gate requires carries none —
+  so `hasSealedStageStatus` refused the value and the stage did not seal.
+  Nothing caught it: the suite wrote the field without the separator, and the
+  two tests that read the template asserted only that it says what it says, so
+  one side pinned the instruction, the other pinned the reader, and no test
+  drove the instruction's spelling through the reader. One trailing separator
+  is removed where the canonical form is required, at all three sites that
+  require it, and a case now drives the template's own spelling through the
+  gate.
+
 - **What the release-notes comparison costs is stated where the reader is**
   (#1882). Its docblock said the comparison costs two requests "at the current
   count of sections", which read as though the section count still decided it
