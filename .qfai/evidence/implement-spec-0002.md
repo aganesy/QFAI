@@ -31,7 +31,7 @@ the falsifiability path.
 ## Commands executed + key outputs
 
 Every command ran from `packages/qfai`. The clean-tree runs were taken at
-revision `955d78ccf4323d25c9eba36c1586da746c48203a`. Each mutation was reverted
+revision `fa483eab391a3f731d93f61b28d35951c697496b`. Each mutation was reverted
 from a copy of the pre-mutation bytes, and the tree re-addressed afterwards to
 confirm it had returned to the clean value.
 
@@ -55,13 +55,24 @@ confirm it had returned to the clean value.
 
 #### Round 1
 
-- Round 1: Revision: 955d78ccf4323d25c9eba36c1586da746c48203a
+- Round 1: Revision: fa483eab391a3f731d93f61b28d35951c697496b
 - Round 1: Satisfied-by: packages/qfai/src/core/validators/uix/threeLayer.ts, validateThreeLayerFamilyCompleteness — the guard that returns early for a pack whose surface is not UI-bearing.
 - Round 1: Falsifiability command: npx vitest run tests/validators/uix/threeLayer.test.ts
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 9 passed (10). The row's own case fails with `expected [ 3 issues ] to have a length of +0` — one per canonical sidecar the non-UI pack does not have.
-- Round 1: Falsifiability revision: working-tree+e025dced9b3e47ccdc6c0eec724792699dddfa919cfe4d2032195acb671e82d2
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed, 9 passed (10). The row's own case fails with `expected [ 3 issues ] to have a length of +0 but got 3` — one per canonical sidecar the non-UI pack does not have.
+- Round 1: Falsifiability revision: working-tree+d4cd3c6fe9339d860562b77fa15f0195adff4b1e1095d11abf972708a0ba676e
 - Round 1: GREEN command: npx vitest run tests/validators/uix/threeLayer.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 10 passed (10)
+- Round 1: Re-taken. The round was first observed at
+  `955d78ccf4323d25c9eba36c1586da746c48203a`, and the test file it names has
+  changed twice since — once to make every row of this ledger name a test that
+  exists, and once to leave only declared identities in test titles. A recorded
+  observation over a file that has moved is evidence for a tree nobody has, so
+  the GREEN, the mutation, the refactor verification and the checkpoint were
+  each taken again on this revision rather than the revision being re-typed.
+  The mutation still kills exactly one case, and it is still this row's. The
+  checkpoint selected 4654 cases, of which 4619 ran and passed and 35 are
+  declared skips in the suite; the field above states the pair the way this
+  file's earlier entry does.
 
 The mutation removed the non-UI guard. Exactly one case dies, which is the
 obligation's own: the other nine seed a UI-bearing pack, where the guard never
@@ -69,10 +80,10 @@ returned early.
 
 - Refactor verify command: npx vitest run tests/core/sddPreflight.test.ts tests/validators/uix/threeLayer.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 36 passed (36)
-- Refactor verify revision: 955d78ccf4323d25c9eba36c1586da746c48203a
+- Refactor verify revision: fa483eab391a3f731d93f61b28d35951c697496b
 - Checkpoint verification command: npx vitest run --project core --project validators --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'
-- Checkpoint verification result: PASS — exit 0; Test Files 222 passed (222); Tests 4121 passed (4126)
-- Checkpoint verification revision: 955d78ccf4323d25c9eba36c1586da746c48203a
+- Checkpoint verification result: PASS — exit 0; Test Files 235 passed (235); Tests 4619 passed (4654)
+- Checkpoint verification revision: fa483eab391a3f731d93f61b28d35951c697496b
 
 The two excluded files, `tests/core/prFixMonitor.test.ts` and
 `tests/core/prMergePlan.test.ts`, both drive a PowerShell script. This container

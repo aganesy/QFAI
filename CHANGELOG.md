@@ -443,6 +443,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   rows claim no ledger coverage and declaring a level would move an ownership
   nobody asked to move.
 
+- **The spec-0002 observation is re-taken against the tree it now names**
+  (#2107). One ledger row recorded its run at a revision the test it covers has
+  moved twice since, so the staleness rule reported it and the error was carried
+  in the backlog rather than cleared. The run was not re-typed: the passing run,
+  the mutation that falsifies it, the refactor verification and the checkpoint
+  were each taken again on the current tree, and the mutation still kills exactly
+  one case — the row's own. The pack's pinned error count falls from ten to nine.
+
 - **A ledger's producer preamble is the template's, and a check holds it there**
   (#2024). One execution ledger carried a preamble saying `US-*` and
   `CON-API-*` are not rows there, two screens above a table holding nine
