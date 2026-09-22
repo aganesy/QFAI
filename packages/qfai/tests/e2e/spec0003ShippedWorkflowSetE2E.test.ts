@@ -439,13 +439,13 @@ describe(
       }
       // The loop above is only an oracle while it has something to iterate: a delivery that dropped
       // every checkout step would otherwise satisfy it silently.
-      // One per job that reads the tree: the validate lane, the docs lane, and
-      // the orchestrator's detection job. The number is asserted rather than
-      // merely required to be non-zero because the loop above is only an oracle
-      // while it has something to iterate — a delivery that dropped every
-      // checkout step would otherwise satisfy it silently.
+      // One per job that reads the tree: the validate lane, the docs lane, the
+      // orchestrator's detection job and its test lane. The number is asserted
+      // rather than merely required to be non-zero because the loop above is
+      // only an oracle while it has something to iterate — a delivery that
+      // dropped every checkout step would otherwise satisfy it silently.
       expect(checkouts, "no delivered job checks out — the assertion above ran over nothing").toBe(
-        3,
+        4,
       );
     });
 
@@ -585,18 +585,27 @@ describe(
   "E2E: the layer lanes arrive declared, inert and credential-free (US-0003-0023)",
   { timeout: 120000 },
   () => {
-    const LAYERS = ["unit", "component", "integration", "api", "e2e"] as const;
-
     it("delivers one lane per layer inside one prefixed, self-contained file", async () => {
       const files = await deliveredWorkflowFiles();
       for (const file of files) {
         expect(file, `${file} is delivered without the reserved prefix`).toMatch(/^qfai-/);
       }
 
+      // One lane, whose legs are the layers. The axis is what carries them, so the delivery claim
+      // is that the axis reads the list the detection job builds — a job per layer would satisfy
+      // "one lane per layer" too, and the file ships neither shape by accident.
       const jobs = await jobsOf(ORCHESTRATOR);
-      for (const layer of LAYERS) {
-        expect(jobs[`${ORCHESTRATOR}#${layer}`], `${layer} lane was not delivered`).toBeDefined();
-      }
+      const lane = jobs[`${ORCHESTRATOR}#tests`];
+      expect(lane, "the test lane was not delivered").toBeDefined();
+      const strategy = lane?.["strategy"];
+      const matrix =
+        typeof strategy === "object" && strategy !== null
+          ? (strategy as Record<string, unknown>)["matrix"]
+          : undefined;
+      expect(
+        JSON.stringify(matrix),
+        "the lane's matrix axis does not read the detection job's selection",
+      ).toContain("needs.detection.outputs.selected");
 
       // Self-containment is what keeps a partial install merely incomplete: a delivered file that
       // named a sibling would become a parse error the moment the sibling is absent, and create-only
@@ -611,18 +620,18 @@ describe(
     });
 
     it("keeps every lane conditional on the adopter's own opt-in", async () => {
+      // BOTH conjuncts still, moved one step back: the intersection the axis reads is computed from
+      // the script probe (the adopter's opt-in) AND the diff selection, and a lane keyed on either
+      // alone would execute in a tree that declared no such script or that changed nothing near it.
+      const body = await stepBody(ORCHESTRATOR, "detection", "selected");
+      expect(body, "the selection is not computed from the script probe").toContain("QFAI_SCRIPTS");
+      expect(body, "the selection is not computed from the diff").toContain("QFAI_LANES");
+
       const jobs = await jobsOf(ORCHESTRATOR);
-      for (const layer of LAYERS) {
-        const condition = String(jobs[`${ORCHESTRATOR}#${layer}`]?.["if"] ?? "");
-        // BOTH conjuncts: the script probe (the adopter's opt-in) and the diff selection. A lane
-        // keyed on selection alone would execute in a tree that declared no such script.
-        expect(condition, `${layer} lane is not gated on the script probe`).toContain(
-          `needs.detection.outputs.scripts, '${layer}'`,
-        );
-        expect(condition, `${layer} lane is not gated on lane selection`).toContain(
-          `needs.detection.outputs.lanes, '${layer}'`,
-        );
-      }
+      const condition = String(jobs[`${ORCHESTRATOR}#tests`]?.["if"] ?? "");
+      expect(condition, "the lane is not gated on the computed selection").toContain(
+        "needs.detection.outputs.selected",
+      );
     });
 
     it("resolves the opt-in from the adopter's package.json, executed", async () => {
@@ -747,23 +756,27 @@ describe(
 
       const cwd = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-0003-verdict-"));
       try {
+        // The empty-axis case: the lane never ran because the adopter declared no
+        // layer-named script, and the verdict exits 0 without claiming a result it
+        // does not have.
         const skipped = await runStep(body, cwd, {
-          QFAI_NEEDS_JSON: JSON.stringify({
-            detection: { result: "success" },
-            unit: { result: "skipped" },
-            e2e: { result: "skipped" },
-          }),
+          QFAI_TESTS_RESULT: "skipped",
+          QFAI_SELECTED: "[]",
         });
         if (skipped.skipped) return;
-        // The empty-matrix case: every lane skipped, and the verdict still exits 0 without claiming
-        // a result it does not have.
         expect(skipped.status).toBe(0);
 
+        // The same skip with work on the axis. Without this row the green-on-skip
+        // rule would swallow a lane that was asked to run and did not.
+        const skippedWithWork = await runStep(body, cwd, {
+          QFAI_TESTS_RESULT: "skipped",
+          QFAI_SELECTED: '["unit"]',
+        });
+        expect(skippedWithWork.status).toBe(1);
+
         const failed = await runStep(body, cwd, {
-          QFAI_NEEDS_JSON: JSON.stringify({
-            detection: { result: "success" },
-            unit: { result: "failure" },
-          }),
+          QFAI_TESTS_RESULT: "failure",
+          QFAI_SELECTED: '["unit"]',
         });
         expect(failed.status).toBe(1);
         expect(failed.stdout).toContain("::error::");
@@ -771,9 +784,16 @@ describe(
         // A cancelled lane is not a skipped lane. Without this the green-on-skip rule would swallow
         // a run someone stopped mid-flight.
         const cancelled = await runStep(body, cwd, {
-          QFAI_NEEDS_JSON: JSON.stringify({ unit: { result: "cancelled" } }),
+          QFAI_TESTS_RESULT: "cancelled",
+          QFAI_SELECTED: '["unit"]',
         });
         expect(cancelled.status).toBe(1);
+
+        // An absent selection says nothing about why the lane did not run, so it
+        // cannot make a skip green. This is the row that keeps the green path from
+        // being reachable by an unset variable.
+        const unknownSelection = await runStep(body, cwd, { QFAI_TESTS_RESULT: "skipped" });
+        expect(unknownSelection.status).toBe(1);
       } finally {
         await removeTempTree(cwd);
       }
