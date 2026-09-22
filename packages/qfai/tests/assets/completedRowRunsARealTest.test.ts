@@ -1,0 +1,285 @@
+/**
+ * A row that claims completion names a test case a TEST carries.
+ *
+ * An annotation carrier — `qfai-traceability.md` under a test tree — is a list
+ * of obligations. It declares no test, and being named on it is what
+ * `QFAI-ATDD-119` already reports. So a case annotated only there is a case no
+ * runner will ever select, while the ledger says the work is finished and the
+ * traceability scan agrees because the annotation it reads is present.
+ *
+ * The two carriers this repository has hold 622 annotations between them and
+ * sit in trees with no test file at all.
+ *
+ * **This is the row's side of a finding that already exists.** `QFAI-ATDD-119`
+ * counts OBLIGATIONS, at `info`, in one notice of several hundred. What a row
+ * adds is the claim: `done` says work happened, and this reports the rows whose
+ * claim rests on a document.
+ *
+ * **Releasing a row is not this check's job.** `Status` is `/qfai-implement`'s
+ * column under the Drift Protocol, so a row moves by a stage run. Reporting the
+ * disagreement is what makes that run happen.
+ */
+import { readFile, readdir } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { describe, expect, it } from "vitest";
+
+// tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+const SPECS = path.join(repoRoot, ".qfai", "specs");
+
+/** The trees scanned for annotations, relative to the repository root. */
+const TEST_TREES = [path.join("packages", "qfai", "tests"), "tests"];
+
+/** The document that lists obligations and declares no test. */
+const CARRIER = "qfai-traceability.md";
+
+/** The statuses that claim the row is finished. */
+const COMPLETED = new Set(["done", "green", "refactor", "review-fix"]);
+
+const ANNOTATION = /QFAI:SPEC-\d{4}:(TC-\d{4}-\d{4})/g;
+
+/**
+ * The completed rows whose case only a carrier names.
+ *
+ * A backlog, not permission. The list may only shrink: the assertion is an
+ * equality, so a row that gains a test without its entry being struck fails
+ * exactly as a new one does.
+ *
+ * One entry per row and case, because a row citing two cases can gain a test
+ * for one of them — and a per-row entry would leave that half invisible.
+ */
+const KNOWN_CARRIER_ONLY: readonly string[] = [
+  // The list is long because the condition is old. It is not a licence to add
+  // to it: a row reaching `done` over a document is the thing this reports.
+  "spec-0002 TDD-0001 TC-0002-0001",
+  "spec-0002 TDD-0008 TC-0002-0008",
+  "spec-0002 TDD-0009 TC-0002-0009",
+  "spec-0002 TDD-0010 TC-0002-0009",
+  "spec-0003 TDD-0027 TC-0003-0027",
+  "spec-0003 TDD-0029 TC-0003-0029",
+  "spec-0003 TDD-0030 TC-0003-0030",
+  "spec-0003 TDD-0031 TC-0003-0031",
+  "spec-0003 TDD-0033 TC-0003-0033",
+  "spec-0003 TDD-0034 TC-0003-0034",
+  "spec-0003 TDD-0035 TC-0003-0035",
+  "spec-0003 TDD-0036 TC-0003-0036",
+  "spec-0003 TDD-0037 TC-0003-0037",
+  "spec-0003 TDD-0038 TC-0003-0038",
+  "spec-0003 TDD-0039 TC-0003-0039",
+  "spec-0003 TDD-0040 TC-0003-0040",
+  "spec-0003 TDD-0041 TC-0003-0041",
+  "spec-0003 TDD-0042 TC-0003-0042",
+  "spec-0003 TDD-0043 TC-0003-0043",
+  "spec-0003 TDD-0044 TC-0003-0044",
+  "spec-0003 TDD-0045 TC-0003-0045",
+  "spec-0003 TDD-0046 TC-0003-0046",
+  "spec-0003 TDD-0047 TC-0003-0047",
+  "spec-0003 TDD-0048 TC-0003-0048",
+  "spec-0003 TDD-0051 TC-0003-0051",
+  "spec-0003 TDD-0052 TC-0003-0052",
+  "spec-0003 TDD-0053 TC-0003-0053",
+  "spec-0003 TDD-0054 TC-0003-0054",
+  "spec-0003 TDD-0055 TC-0003-0028",
+  "spec-0004 TDD-0003 TC-0004-0003",
+  "spec-0004 TDD-0004 TC-0004-0004",
+  "spec-0004 TDD-0005 TC-0004-0005",
+  "spec-0004 TDD-0006 TC-0004-0006",
+  "spec-0004 TDD-0008 TC-0004-0008",
+  "spec-0004 TDD-0009 TC-0004-0009",
+  "spec-0004 TDD-0010 TC-0004-0010",
+  "spec-0004 TDD-0011 TC-0004-0011",
+  "spec-0004 TDD-0012 TC-0004-0012",
+  "spec-0004 TDD-0013 TC-0004-0013",
+  "spec-0004 TDD-0014 TC-0004-0014",
+  "spec-0010 TDD-0001 TC-0010-0001",
+  "spec-0010 TDD-0005 TC-0010-0005",
+  "spec-0010 TDD-0006 TC-0010-0006",
+  "spec-0010 TDD-0007 TC-0010-0006",
+  "spec-0010 TDD-0008 TC-0010-0006",
+  "spec-0012 TDD-0286 TC-0012-0286",
+  "spec-0012 TDD-0293 TC-0012-0293",
+  "spec-0012 TDD-0294 TC-0012-0294",
+  "spec-0012 TDD-0295 TC-0012-0295",
+  "spec-0012 TDD-0336 TC-0012-0319",
+  "spec-0012 TDD-0336 TC-0012-0320",
+  "spec-0012 TDD-0336 TC-0012-0321",
+  "spec-0012 TDD-0336 TC-0012-0329",
+  "spec-0012 TDD-0338 TC-0012-0326",
+  "spec-0012 TDD-0338 TC-0012-0327",
+  "spec-0012 TDD-0339 TC-0012-0328",
+  "spec-0012 TDD-0340 TC-0012-0330",
+  "spec-0012 TDD-0341 TC-0012-0331",
+  "spec-0012 TDD-0342 TC-0012-0332",
+  "spec-0012 TDD-0342 TC-0012-0333",
+  "spec-0012 TDD-0343 TC-0012-0334",
+  "spec-0012 TDD-0344 TC-0012-0335",
+  "spec-0012 TDD-0345 TC-0012-0336",
+  "spec-0012 TDD-0346 TC-0012-0337",
+  "spec-0012 TDD-0348 TC-0012-0339",
+  "spec-0012 TDD-0349 TC-0012-0340",
+  "spec-0012 TDD-0350 TC-0012-0341",
+  "spec-0012 TDD-0351 TC-0012-0342",
+  "spec-0012 TDD-0353 TC-0012-0344",
+  "spec-0012 TDD-0354 TC-0012-0345",
+  "spec-0012 TDD-0355 TC-0012-0346",
+  "spec-0012 TDD-0356 TC-0012-0347",
+  "spec-0012 TDD-0357 TC-0012-0348",
+  "spec-0012 TDD-0358 TC-0012-0349",
+  "spec-0012 TDD-0359 TC-0012-0350",
+  "spec-0012 TDD-0360 TC-0012-0351",
+  "spec-0012 TDD-0361 TC-0012-0352",
+  "spec-0012 TDD-0362 TC-0012-0353",
+  "spec-0012 TDD-0363 TC-0012-0319",
+  "spec-0012 TDD-0364 TC-0012-0320",
+  "spec-0012 TDD-0365 TC-0012-0321",
+  "spec-0012 TDD-0367 TC-0012-0327",
+  "spec-0012 TDD-0368 TC-0012-0328",
+  "spec-0012 TDD-0369 TC-0012-0334",
+  "spec-0012 TDD-0370 TC-0012-0335",
+  "spec-0012 TDD-0378 TC-0012-0375",
+  "spec-0012 TDD-0380 TC-0012-0373",
+  "spec-0012 TDD-0387 TC-0012-0381",
+  "spec-0012 TDD-0395 TC-0012-0354",
+  "spec-0012 TDD-0396 TC-0012-0356",
+  "spec-0012 TDD-0397 TC-0012-0386",
+  "spec-0012 TDD-0398 TC-0012-0391",
+  "spec-0012 TDD-0444 TC-0012-0424",
+  "spec-0012 TDD-0445 TC-0012-0425",
+  "spec-0012 TDD-0446 TC-0012-0426",
+  "spec-0012 TDD-0447 TC-0012-0427",
+  "spec-0012 TDD-0448 TC-0012-0428",
+  "spec-0012 TDD-0449 TC-0012-0429",
+  "spec-0012 TDD-0450 TC-0012-0430",
+  "spec-0012 TDD-0451 TC-0012-0431",
+  "spec-0012 TDD-0452 TC-0012-0432",
+  "spec-0014 TDD-0033 TC-0014-0033",
+  "spec-0014 TDD-0034 TC-0014-0034",
+  "spec-0017 TDD-0013 TC-0017-0013",
+  "spec-0017 TDD-0037 TC-0017-0037",
+  "spec-0017 TDD-0044 TC-0017-0044",
+  "spec-0017 TDD-0045 TC-0017-0045",
+  "spec-0017 TDD-0046 TC-0017-0046",
+  "spec-0017 TDD-0047 TC-0017-0047",
+  "spec-0017 TDD-0048 TC-0017-0048",
+  "spec-0017 TDD-0049 TC-0017-0049",
+  "spec-0017 TDD-0050 TC-0017-0050",
+  "spec-0017 TDD-0051 TC-0017-0051",
+  "spec-0017 TDD-0053 TC-0017-0053",
+  "spec-0017 TDD-0054 TC-0017-0054",
+  "spec-0017 TDD-0055 TC-0017-0055",
+  "spec-0017 TDD-0056 TC-0017-0056",
+  "spec-0017 TDD-0057 TC-0017-0057",
+  "spec-0017 TDD-0058 TC-0017-0058",
+  "spec-0017 TDD-0059 TC-0017-0059",
+  "spec-0017 TDD-0065 TC-0017-0065",
+  "spec-0017 TDD-0093 TC-0017-0084",
+  "spec-0017 TDD-0095 TC-0017-0086",
+  "spec-0017 TDD-0096 TC-0017-0087",
+];
+
+interface Annotations {
+  readonly real: Set<string>;
+  readonly carrier: Set<string>;
+}
+
+/** Which cases a real test annotates, and which only a carrier names. */
+async function annotations(): Promise<Annotations> {
+  const real = new Set<string>();
+  const carrier = new Set<string>();
+  async function walk(dir: string): Promise<void> {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      // A tree this repository does not have is simply not scanned.
+      return;
+    }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === "node_modules" || entry.name === "dist") continue;
+        await walk(full);
+        continue;
+      }
+      if (!entry.name.endsWith(".ts") && !entry.name.endsWith(".md")) continue;
+      const into = entry.name === CARRIER ? carrier : real;
+      for (const match of (await readFile(full, "utf-8")).matchAll(ANNOTATION)) {
+        const testCase = match[1];
+        if (testCase !== undefined) into.add(testCase);
+      }
+    }
+  }
+  for (const tree of TEST_TREES) await walk(path.join(repoRoot, tree));
+  return { real, carrier };
+}
+
+describe("a row claiming completion rests on a test, not on a list of obligations", () => {
+  it("reports every completed row whose case only an annotation carrier names", async () => {
+    const { real, carrier } = await annotations();
+    expect(real.size, "no test annotations were read").toBeGreaterThan(0);
+    expect(carrier.size, "no carrier annotations were read").toBeGreaterThan(0);
+
+    const packs = (await readdir(SPECS, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith("spec-"))
+      .map((entry) => entry.name)
+      .sort();
+
+    const found: string[] = [];
+    for (const pack of packs) {
+      let text: string;
+      try {
+        text = await readFile(path.join(SPECS, pack, "tdd", "test-list.md"), "utf-8");
+      } catch {
+        continue;
+      }
+      let headers: string[] | null = null;
+      for (const line of text.split(/\r?\n/)) {
+        if (!line.trimStart().startsWith("|")) {
+          headers = null;
+          continue;
+        }
+        const cells = line
+          .trim()
+          .replace(/^\||\|$/g, "")
+          .split("|")
+          .map((cell) => cell.trim());
+        if (cells[0] === "TDD-ID") {
+          headers = cells;
+          continue;
+        }
+        if (headers === null) continue;
+        const at = (name: string): string => {
+          const index = headers === null ? -1 : headers.indexOf(name);
+          return index < 0 ? "" : (cells[index] ?? "");
+        };
+        const tdd = at("TDD-ID");
+        if (!/^TDD-\d{4}$/.test(tdd)) continue;
+        if (!COMPLETED.has(at("Status").toLowerCase())) continue;
+        const refs = at("TC-Refs")
+          .split(/[,\s]+/)
+          .filter((token) => /^TC-\d{4}-\d{4}$/.test(token));
+        // A row with a test for ANY of its cases is not this check's subject.
+        // The row's other cases are the annotation gate's to report.
+        if (refs.length === 0 || refs.some((ref) => real.has(ref))) continue;
+        for (const ref of refs.filter((candidate) => carrier.has(candidate))) {
+          found.push(`${pack} ${tdd} ${ref}`);
+        }
+      }
+    }
+
+    expect([...new Set(found)].sort()).toEqual([...KNOWN_CARRIER_ONLY].sort());
+  });
+
+  it("does not read a real test file as a carrier", async () => {
+    // The distinction the whole check rests on. If the carrier name stopped
+    // matching, every annotation would count as a test's and the row above
+    // would report nothing while the condition stood.
+    const { carrier } = await annotations();
+    expect(
+      carrier.size,
+      `no file named ${CARRIER} was read; the check would then find nothing whatever the tree holds`,
+    ).toBeGreaterThan(0);
+  });
+});
