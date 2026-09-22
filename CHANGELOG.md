@@ -360,6 +360,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   case carries no identifier, so placing it means reading what each case
   asserts, and a selector matched wrongly reads as verified.
 
+- **The story asking for a README in each agent directory is retired** (#2111).
+  Nothing wrote those files, and nothing should: the four directories hold agent
+  cards, and what a directory needs to say goes where the reader already is —
+  the entry point that routed them there, or the rule the card cites. A guard
+  in this repository already refuses a tracked README outside the two it
+  publishes, so building the story would have made its own checks fail on the
+  tree it produced. The story, its end-to-end ledger row and the annotation that
+  named it are gone, and the delta log records why. The case that looked like
+  its coverage guarded every assertion behind an existence check and read two of
+  the four directories, so it passed over the empty set and would have passed
+  over any tree; it now reads all four and asserts they carry no README. The
+  count of ledger claims no test carries falls from 127 to 126.
+
 - **The minimal-code rule cites the criterion it is about, and both its clauses
   are carried** (#2088). A spec-0011 business rule about how much code Phase
   Green writes pointed at a criterion about an `exception` row needing a decision

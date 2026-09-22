@@ -323,22 +323,31 @@ describe("E2E: agent wrapper symlink (US-0003-0006)", () => {
     }
   });
 
-  it("README.md in agents directories is a regular file, not a symlink", async () => {
+  it("writes no README into any agent directory", async () => {
+    // The four directories hold agent cards, and what they need to say is said
+    // where the reader already is — the entry points that route there, and the
+    // rule masters those cite. A README beside them is a second place to say it,
+    // and `scripts/check-tracked-readmes.mjs` refuses one in this repository for
+    // that reason.
+    //
+    // This case read two of the four and guarded every assertion behind an
+    // existence check, so it passed over the empty set and would have passed over
+    // any tree at all.
     const tmpDir = await createTempDir();
     try {
       await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
       const readmePaths = [
+        path.join(tmpDir, ".agents", "README.md"),
+        path.join(tmpDir, ".codex", "README.md"),
         path.join(tmpDir, ".claude", "agents", "README.md"),
         path.join(tmpDir, ".github", "agents", "README.md"),
       ];
+      const written: string[] = [];
       for (const p of readmePaths) {
-        if (await pathExists(p)) {
-          const stat = await lstat(p);
-          expect(stat.isSymbolicLink()).toBe(false);
-          expect(stat.isFile()).toBe(true);
-        }
+        if (await pathExists(p)) written.push(path.relative(tmpDir, p));
       }
+      expect(written).toEqual([]);
     } finally {
       await cleanupTempDir(tmpDir);
     }

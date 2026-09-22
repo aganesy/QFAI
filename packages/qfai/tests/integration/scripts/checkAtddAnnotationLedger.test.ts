@@ -1424,16 +1424,18 @@ describe("the guard against this repository's own ledger", () => {
     //
     // What is worth pinning is the direction nobody should travel silently, and that is `unbacked`
     // alone. The claim total belongs in the CR, which is the governance record for it.
-    // 127 rather than 126, and the one that moved is US-0003-0014: the story
-    // is named by no test. The annotation that stood for it sat on a test
-    // about template generation, which is not what the story states. A count
-    // cannot tell a claim newly revealed as unbacked from a claim newly
-    // written, so the figure moves with its reason beside it.
+    // 126. The figure was 127 while one spec-0003 story stood that asked for a
+    // README in each agent directory: nothing wrote one, and the annotation that
+    // had stood for it sat on a test about template generation. That story is
+    // retired, so its claim is gone rather than unbacked — and naming it here
+    // would be naming an identifier no spec declares, which the test-title guard
+    // reports. A count cannot tell a claim newly revealed as unbacked from a
+    // claim newly written, so the figure moves with its reason beside it.
     expect(
       wide.unbacked.length,
       "a NEW unbacked ledger claim is a regression; fixing existing ones must stay green — " +
         "CR-20260820-0011 holds the exact figure",
-    ).toBeLessThanOrEqual(127);
+    ).toBeLessThanOrEqual(126);
     expect(
       wide.unbacked.some((entry) => entry.spec === "0017"),
       "spec-0017 must not be among the unbacked claims",

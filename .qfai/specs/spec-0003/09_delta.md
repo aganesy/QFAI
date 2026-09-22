@@ -1,5 +1,31 @@
 # 09 Delta
 
+## 2026-09-22 — US-0003-0014 retired (README file generation)
+
+- Date: 2026-09-22
+- Primary: retired US-0003-0014 and the end-to-end row that carried it
+- Tags: init, agents, retirement
+
+The story asked for a `README.md` as a regular file in `.agents/`, `.codex/`,
+`.claude/agents/` and `.github/agents/`. Nothing wrote one, and nothing should:
+those directories hold agent cards, and what a directory needs to say goes where
+the reader already is — the entry point that routed them there, or the rule master
+the card cites. `scripts/check-tracked-readmes.mjs` refuses a tracked README outside
+the two this project publishes, so implementing the story would have made this
+repository's own checks fail on the tree it produced.
+
+| Op ID  | Op Type | Target                            | Summary                                   |
+| ------ | ------- | --------------------------------- | ----------------------------------------- |
+| OP-001 | DELETE  | 02_User-stories.md (US-0003-0014) | the story and its catalog entry           |
+| OP-002 | DELETE  | tdd/test-list.md (TDD-0082)       | the end-to-end row that carried it        |
+| OP-003 | DELETE  | tests/e2e/qfai-traceability.md    | the annotation that named the story       |
+| OP-004 | UPDATE  | tests/e2e/initE2E.test.ts         | the case now asserts the files are absent |
+
+The case that looked like the story's coverage guarded every assertion behind an
+existence check and read two of the four directories, so it passed over the empty
+set and would have passed over any tree. It now reads all four and asserts they
+carry no README, which is what this change specifies.
+
 ## Change Summary
 
 - Change ID: DELTA-0001
