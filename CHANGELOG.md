@@ -474,6 +474,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The capture runner's 399 case is named for what it asserts**. It asserted
+  that a 399 response is accepted, the last status below the 400 rejection
+  boundary, and was titled as a rejection. A reader following the title would
+  have taken the boundary to be one status lower than it is.
+
 - **A PowerShell test case whose .NET host crashed runs once more instead of
   failing the leg** (#2068). The pull-request helper suites spawn `pwsh` per
   case, and on the hosted runners the host intermittently dies before
