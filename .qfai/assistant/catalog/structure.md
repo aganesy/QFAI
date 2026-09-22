@@ -28,7 +28,7 @@
 - Core modules: `packages/qfai/src/core` (the validators, the parsers and the
   domain readers), `packages/qfai/src/cli` (argument parsing and the command
   implementations), `packages/qfai/src/shared` (what both use),
-  `packages/qfai/assets` (everything `qfai init` writes into a project, and
+  `packages/qfai/assets` (everything `npx qfai init` writes into a project, and
   the schemas the document lanes read)
 - Project scripts: `scripts/` — the repository's own guards and pinners, each
   invoked by a `package.json` script or a CI lane. The package ships its own
@@ -39,7 +39,7 @@
   - `packages/qfai/assets`
   - `scripts/*.mjs`
     The first two are what `npm pack` publishes, as source and as the tree
-    `qfai init` writes. `scripts/*.mjs` ships nowhere and is production all the
+    `npx qfai init` writes. `scripts/*.mjs` ships nowhere and is production all the
     same: a guard that stops running stops reporting, and nothing else would.
     `packages/qfai/tests`, `tests/`, `tmp/` and `packages/qfai/dist` are not
     production roots — the first two are tests, the third is scratch and the
@@ -59,9 +59,10 @@
   - A validator lives in `src/core/validators/<subject>.ts` and its cases in
     `packages/qfai/tests/core/<subject>*.test.ts`. A test's project comes from
     its directory under `packages/qfai/tests/`, which the vitest projects name.
-  - Everything tracked here is written in English — source, comments,
-    Markdown, commit messages and pull request text
-    (`.agents/rules/repository-language.md`).
+  - Text this repository stores and ships follows
+    `.agents/rules/repository-language.md`, which covers source, comments,
+    Markdown, commit messages and pull request text. It says nothing about
+    what an assistant writes back.
 
 ## UI surface paths (SSOT)
 
