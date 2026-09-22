@@ -34,15 +34,26 @@ on:
   push:
     branches: [main, master]
   pull_request:
+    # `closed` is here to end work, not to start it. A closed pull request
+    # starts a run in the same concurrency group as the one still testing its
+    # last push, which cancels that run; every job below then declines to do
+    # anything, so the close costs a queued run and no runner minutes.
+    types: [opened, synchronize, reopened, closed]
 
-# One live run per ref: a superseded push or PR update cancels the older run.
+# One live run per pull request, and per ref otherwise: a superseded push, a PR
+# update and a PR close each cancel the older run.
+#
+# Keyed on the pull request's number rather than on `github.ref`, because the
+# close event and the pushes before it do not share a ref expression — grouped
+# by ref, the close would open a group of its own and cancel nothing.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   validate:
     name: qfai validate check (${{ matrix.profile }})
+    if: ${{ github.event.action != 'closed' }}
     runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # Least privilege: the job only checks out the repository and runs the
     # validator; it writes nothing back to GitHub.
@@ -407,7 +418,7 @@ jobs:
   summary:
     name: qfai validate (full profile, fail on error)
     needs: validate
-    if: ${{ always() }}
+    if: ${{ always() && github.event.action != 'closed' }}
     runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     permissions: {}
     timeout-minutes: 5

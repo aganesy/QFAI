@@ -67,13 +67,29 @@ afterAll(async () => {
   await removeTempTree(dir);
 });
 
+/**
+ * The condition a shipped lane carries that is not about the adopter's opt-in.
+ *
+ * A closed pull request starts a run in the same concurrency group as the one
+ * its last push left running, which cancels it; every lane that costs a runner
+ * then declines the work, so the close allocates a queued run and no minutes.
+ */
+const CLOSE_GATE = "${{ github.event.action != 'closed' }}";
+
+/** What an aggregate declares: `always()` outlives the cancellation, so it declines too. */
+const ALWAYS_UNLESS_CLOSED = "${{ always() && github.event.action != 'closed' }}";
+
 describe("E2E: delivered document checks run independently and require a complete result", () => {
   it("TC-0003-0056 (TDD-0058): delivers both isolated native matrix units without changing checker commands", async () => {
     const jobs = await jobsOf(DOCS);
     const checks = jobs[`${DOCS}#checks`];
     expect(checks, "the delivered docs workflow has no independent check matrix").toBeDefined();
     expect(checks?.["needs"]).toBeUndefined();
-    expect(checks?.["if"]).toBeUndefined();
+    // The close gate, and nothing else. It gates on the event rather than on
+    // an opt-in, so the lane is still one whose opt-out is deletion — a
+    // closed pull request starts a run only to cancel the one its last push
+    // left going, and this job declines to spend a runner on it.
+    expect(checks?.["if"]).toBe(CLOSE_GATE);
     expect(checks?.["continue-on-error"]).toBeUndefined();
     const strategy = checks?.["strategy"];
     expect(isRecord(strategy)).toBe(true);
@@ -113,7 +129,7 @@ describe("E2E: delivered document checks run independently and require a complet
     const docs = (await jobsOf(DOCS))[`${DOCS}#docs`];
     expect(docs?.["name"]).toBe("qfai docs (document shape and Mermaid syntax)");
     expect(docs?.["needs"]).toBe("checks");
-    expect(docs?.["if"]).toBe("${{ always() }}");
+    expect(docs?.["if"]).toBe(ALWAYS_UNLESS_CLOSED);
     expect(docs?.["permissions"]).toEqual({});
     expect(docs?.["continue-on-error"]).toBeUndefined();
     expect(collectJobSteps(docs ?? {}).some((step) => step["uses"] !== undefined)).toBe(false);
@@ -142,7 +158,11 @@ describe("E2E: delivered validation profiles run independently and require a com
     const validate = (await jobsOf(VALIDATE))[`${VALIDATE}#validate`];
     expect(validate?.["name"]).toBe("qfai validate check (${{ matrix.profile }})");
     expect(validate?.["needs"]).toBeUndefined();
-    expect(validate?.["if"]).toBeUndefined();
+    // The close gate, and nothing else. It gates on the event rather than on
+    // an opt-in, so the lane is still one whose opt-out is deletion — a
+    // closed pull request starts a run only to cancel the one its last push
+    // left going, and this job declines to spend a runner on it.
+    expect(validate?.["if"]).toBe(CLOSE_GATE);
     expect(validate?.["continue-on-error"]).toBeUndefined();
     const strategy = validate?.["strategy"];
     if (!isRecord(strategy))
@@ -179,7 +199,7 @@ describe("E2E: delivered validation profiles run independently and require a com
     const verdict = (await jobsOf(VALIDATE))[`${VALIDATE}#summary`];
     expect(verdict?.["name"]).toBe("qfai validate (full profile, fail on error)");
     expect(verdict?.["needs"]).toBe("validate");
-    expect(verdict?.["if"]).toBe("${{ always() }}");
+    expect(verdict?.["if"]).toBe(ALWAYS_UNLESS_CLOSED);
     expect(verdict?.["permissions"]).toEqual({});
     expect(verdict?.["continue-on-error"]).toBeUndefined();
     expect(collectJobSteps(verdict ?? {}).some((step) => step["uses"] !== undefined)).toBe(false);

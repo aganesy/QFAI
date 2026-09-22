@@ -1161,30 +1161,30 @@ export const ALLOWED_ACTION_COMMITS: ReadonlyMap<string, string> = new Map([
 export const ALLOWED_WORKFLOW_SHAPE: ReadonlyMap<string, string> = new Map([
   [
     "qfai-tests.yml",
-    '{"name":"qfai tests","on":{"push":{"branches":["main","master"]},"pull_request":null},"concurrency":{"group":"${{ github.workflow }}-${{ github.ref }}","cancel-in-progress":true}}',
+    '{"name":"qfai tests","on":{"push":{"branches":["main","master"]},"pull_request":{"types":["opened","synchronize","reopened","closed"]}},"concurrency":{"group":"${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}","cancel-in-progress":true}}',
   ],
   [
     "qfai-validate.yml",
-    '{"name":"qfai validate","on":{"push":{"branches":["main","master"]},"pull_request":null},"concurrency":{"group":"${{ github.workflow }}-${{ github.ref }}","cancel-in-progress":true}}',
+    '{"name":"qfai validate","on":{"push":{"branches":["main","master"]},"pull_request":{"types":["opened","synchronize","reopened","closed"]}},"concurrency":{"group":"${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}","cancel-in-progress":true}}',
   ],
   [
     "qfai-docs.yml",
-    '{"name":"qfai docs","on":{"push":{"branches":["main","master"]},"pull_request":null},"concurrency":{"group":"${{ github.workflow }}-${{ github.ref }}","cancel-in-progress":true}}',
+    '{"name":"qfai docs","on":{"push":{"branches":["main","master"]},"pull_request":{"types":["opened","synchronize","reopened","closed"]}},"concurrency":{"group":"${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}","cancel-in-progress":true}}',
   ],
 ]);
 
 export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   [
     "qfai-docs.yml#checks",
-    '{"name":"qfai docs check (${{ matrix.check }})","strategy":{"fail-fast":false,"matrix":{"check":["shape","mermaid"]}},"runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":15}',
+    '{"name":"qfai docs check (${{ matrix.check }})","if":"${{ github.event.action != \'closed\' }}","strategy":{"fail-fast":false,"matrix":{"check":["shape","mermaid"]}},"runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":15}',
   ],
   [
     "qfai-docs.yml#docs",
-    '{"name":"qfai docs (document shape and Mermaid syntax)","needs":"checks","if":"${{ always() }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"qfai docs (document shape and Mermaid syntax)","needs":"checks","if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"change detection","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"lanes":"${{ steps.diff.outputs.lanes }}","scripts":"${{ steps.scripts.outputs.scripts }}"}}',
+    '{"name":"change detection","if":"${{ github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"lanes":"${{ steps.diff.outputs.lanes }}","scripts":"${{ steps.scripts.outputs.scripts }}"}}',
   ],
   [
     "qfai-tests.yml#unit",
@@ -1208,15 +1208,15 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
   ],
   [
     "qfai-tests.yml#verdict",
-    '{"name":"verdict","needs":["detection","unit","component","integration","api","e2e"],"if":"${{ always() }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"verdict","needs":["detection","unit","component","integration","api","e2e"],"if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"qfai validate check (${{ matrix.profile }})","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10,"strategy":{"fail-fast":false,"matrix":{"profile":"${{ fromJSON(github.event_name == \'pull_request\' && \'[\\"full\\",\\"drift\\"]\' || \'[\\"full\\"]\') }}"}}}',
+    '{"name":"qfai validate check (${{ matrix.profile }})","if":"${{ github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10,"strategy":{"fail-fast":false,"matrix":{"profile":"${{ fromJSON(github.event_name == \'pull_request\' && \'[\\"full\\",\\"drift\\"]\' || \'[\\"full\\"]\') }}"}}}',
   ],
   [
     "qfai-validate.yml#summary",
-    '{"name":"qfai validate (full profile, fail on error)","needs":"validate","if":"${{ always() }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+    '{"name":"qfai validate (full profile, fail on error)","needs":"validate","if":"${{ always() && github.event.action != \'closed\' }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
   ],
 ]);
 
@@ -1240,9 +1240,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "5980c081e8ac282df00624737cef1bc694ec0931fa91c8397dc5a65c96b2a769"],
-  ["qfai-tests.yml", "e3d534f0e816fdc42db85265b56e4a77343d3679bb8944d3b441bffe5c874345"],
-  ["qfai-validate.yml", "2f3ff776c510fe2b3d4dd736b5d6dc4413bfdd0409b8239a9c26841cf9c8d159"],
+  ["qfai-docs.yml", "5b5bcd950fa4f8983199907147e63b1a0e44d92b00dac7e6128f66c609a15f1b"],
+  ["qfai-tests.yml", "618bb94a2e61699e414d7c5eb7993d1c25da3c325190f8c4c161e7a287dbdba2"],
+  ["qfai-validate.yml", "314a3d71ea40d8984917ece995e9ecc071790ece4db3e64eacc413de5de76165"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
