@@ -109,11 +109,151 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The historical review-evidence comparison runs on the archive the record
+  identifies, or not at all** (#1874). The two guards over
+  `atdd-spec-0017.md`'s round and response counts read whichever ignored review
+  packs a clone happened to hold, so a checkout carrying six recent packs
+  measured a record certifying twenty and reported it wrong, while a clean CI
+  checkout skipped the comparison entirely. The input set is now the packs the
+  record itself names: the comparison runs where every one of them is present
+  and is skipped by name where any is missing, with the case title saying how
+  many are absent. The half that needs no archive — the certified round count
+  against the number of packs the record names — is a case of its own and runs
+  everywhere, so the number is checked in CI rather than only on the author's
+  machine. A recorded vitest output may now state its skipped cases, and the
+  guard over those outputs holds the total against the file's callsites and
+  requires the passed and skipped halves to account for it.
+
+- **No committed record names a generated artifact the repository does not
+  have** (#1652). `.qfai/review/`, `.qfai/report/` and most of `.qfai/discussion/`
+  are ignored, and the evidence files citing them are committed, so a clone had
+  the claim without its subject: 118 citations across five records resolved
+  nowhere, and a reader spent a search finding that out. A run is now named by
+  its id rather than by a path — the reviewer role, verdict, revision and seal
+  are already recorded beside it, so the record stands without the directory.
+  A file a command writes is named by the command that writes it, with the
+  `qfai:not-a-citation` marker saying so. The census in
+  `evidenceCitedArtifacts.test.ts` is unchanged and every entry is cleared, so
+  its length and digest still refuse a citation added later taking a repaired
+  entry's slot.
+
+- **Five coverage placeholders now state a behaviour, and the exception that
+  closed spec-0011's backfill names the tests it actually rests on** (#1835).
+  `TC-0011-0009`, `TC-0011-0010` and `TC-0013-0010` to `TC-0013-0012` were
+  titled "Coverage Placeholder for EX-…" and stated nothing observable, so no
+  test could exercise them while ledger rows named test files for them. Each is
+  restated against the rule behind its example — minimum production code in
+  Phase Green, reviewer separation before `done`, batch mode over every
+  capability, Plan finalize after a grounded slice, and a contract stub that
+  parses — and each now has a test that reads it, with the annotation on the
+  block that does the reading. The two spec-0011 annotations had drifted onto
+  each other's subject and are swapped back. `DR-0011-0001` justified the
+  `TDD-0001` to `TDD-0008` exception with five test files that carry none of
+  those annotations; it now names `implementSkillSpec0011.test.ts`, which does,
+  and says why the rows stay at `exception` rather than `done`.
+
+- **Three obligations now state the behaviour the product has** (#1834).
+  `TC-0012-0402` asked a single-spec flat iter to exit 0 with an info note; that
+  skip sealed a certificate over zero per-screen review evidence, so the gate
+  was tightened and the case is restated to the exit it now produces and the
+  pair it names. `TC-0012-0404` asked cycle 0 to freeze the union of the three
+  scans; freezing a multi-spec union makes every ordinary multi-spec run
+  uncertifiable while the per-spec layout migration is deferred, so the union
+  drives the bypass and drift signals and the single primary spec is what the
+  frozen field holds. `AC-0010-0001` required the five legacy discussion
+  sidecars that `AC-0010-0008` forbids, which no implementation could satisfy;
+  it now names the two screen-level sidecars that are written, and the three
+  decision records that declared the legacy family canonical are marked
+  superseded with what stands in their place. The business rule, example, test
+  case and ledger selector that hung off `AC-0010-0001` follow it.
+
+- **`Oracle proof` is read from the round block the skill writes it in**
+  (#2026). `round-evidence.md` puts the field under the round prefix, because a
+  later round rewrites the code an earlier proof mutated — one slot for the row
+  either overwrote that proof or left the row reusing a stale one. The
+  completion gate read the row level only, so an entry written as the reference
+  says was refused for carrying no proof at all, and one that passed the gate
+  contradicted the reference. The latest round's field is read first and the
+  row-level one is the fallback, which is what every entry written before the
+  prefix carries. That is the shape `RED failure mode` already had, and the
+  field joins it among the round-scoped ones, so a round cannot carry two.
+
+- **The prototyping contract stops excluding the capture outputs it specifies**
+  (#1861). Its non-goals put the capture pipeline's PNG and HTML out of
+  contract, and its "Capture & Serve Flags" section specifies both — their
+  paths, their writers and the `evidenceRefs[]` obligation they carry under
+  `--capture`. The same output was therefore required and out of scope, and a
+  reader reconciling the two got whichever answer they reached first. The
+  non-goal says what is true: those artifacts are out of contract on the
+  default path, in contract wherever the flag is, and the per-action
+  interaction transcript is the one that is out of it either way.
+
 - **The monitor's reply command names the pull request it is about** (#1864).
   It printed `repos/OWNER/REPO/pulls/comments/<id>/replies`, and the reply
   endpoint takes the pull request number as a path parameter — so an operator
   who copied the command posted nothing and found out by running it. The number
   is in the command now.
+
+- **The doctor contract stops denying the one deletion it declares** (#1860).
+  Its `--clean` section prunes TTL-expired validate run logs and tabulates the
+  preconditions that clearance requires; its non-goals said the command deletes
+  nothing and that no path is removed on any flag. A reader deciding whether a
+  doctor run is reversible got the opposite answer depending on which section
+  they reached first. The non-goal names the one removal and the conditions it
+  waits for, and keeps the guarantee that does hold: a stale review pack is
+  renamed into `_archive/` and never removed.
+
+- **A citation the evidence-citation backlog holds is keyed by the section it
+  sits under, not by its position in the file** (#1753). The key counted a
+  path's citations within a file, in order, so deleting one and adding another
+  left every key where it was: the new citation inherited the backlog entry the
+  old one held, and a record written after the census claimed an artifact the
+  tree does not carry while the guard stayed green. That is the growth the
+  backlog exists to refuse. The key now carries the heading the citation sits
+  under and its ordinal inside that heading, which an edit to another section
+  does not move. A `#` run inside a fence is a shell comment rather than a
+  heading and is read as one. The census is re-measured under the new keys and
+  its digest re-pinned, in one list rather than two: it was taken again, so
+  there is no earlier measurement for an addendum to sit beside.
+
+- **An outdated review thread no longer authorizes a merge** (#1855). The merge
+  script dropped a thread when either `isResolved` or `isOutdated` was true, and
+  those are different claims: outdated says the code the reviewer commented on
+  has moved, not that anybody answered them. An unresolved thread on moved code
+  disappeared from the count, so the plan could report every thread resolved
+  while one was not, and the skill's own list of blockers said the same. The
+  count now drops a thread only when it is resolved.
+
+- **The traceability reference no longer tells a reader to delete a row the SDD
+  producer seeds** (#1856). Phase 2b seeds a `Layer = Integration` row for every
+  test case whose annotation routes to `tests/integration/**`, which includes
+  one declaring no `Level` at all. `spec-traceability-rules.md` said that same
+  test case "is not a coverage target and gets no row" — true of the
+  coverage-target group and false of the Integration one, and a reader following
+  it removes the row `/qfai-atdd` hands its work over on, along with the
+  evidence home that row resolves. The reference now says which group the row
+  belongs to, and that what would put one test case on two gates is a
+  coverage-target row beside it, which the two groups being exclusive prevents.
+
+- **`qfai init` no longer deletes a staging file it did not write** (#1857). The
+  governed replacement writer takes its staging name exclusively, and removed
+  that path after any copy failure. One of those failures is the exclusive copy
+  refusing because something is already there — which is the one case where the
+  bytes behind the name are not this run's. A name collision does not transfer
+  ownership of them, and on a shared checkout what they belong to is another
+  run's staged asset. The removal now happens for every other failure, including
+  a partial copy, which this run really did write.
+
+- **The provenance lock's heartbeat has a consumer, and a release waits for it**
+  (#1859). The timer's refresh was started and dropped: `setInterval` ignores
+  what its callback returns, so making the callback asynchronous would have
+  moved the drop rather than closed it, and the `void` in front of the call was
+  the drop under another name. Each refresh is now chained onto the one before
+  and `release` awaits the chain, which is the consuming caller the promise rule
+  asks for at a callback boundary. It also closes a race the old shape left
+  open: a release could take the lock apart while a touch of its marker was
+  still in flight. A failed touch still does not end the chain, which is the
+  swallowing the heartbeat's own note describes.
 
 - **The release guide names the Node floor the package declares** (#1867). It
   said `>= 20.0.0` where the manifest says `>= 20.19.0`, so a release taken on a
@@ -148,6 +288,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The spec-0013 ledger carries the columns its template declares, and a row
   for every story** (#1750). Thirteen of its fourteen stories had no row, and
   the ledger held nine columns where the template declares fifteen. The thirteen
+
+- **The spec-0010 ledger carries the columns its template declares, and a row
+  for every story** (#1750). None of its twelve stories had a row, and the
+  ledger held eight columns where the template declares fifteen. The twelve
   rows are at `todo`, and every existing row keeps its identifier, status, test
   file, selector, decision and evidence.
 
@@ -164,6 +308,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   those rows in the same pass, unauthorized and undisposed. The thirteen rows
   are at `todo`, and every existing row keeps its identifier, status, test file,
   selector, decision and evidence.
+
+- **The spec-0012 ledger carries the columns its template declares, and a row
+  for every story** (#1750). Thirty-three of its fifty-two stories had no row,
+  and its eight tables held nine columns where the template declares fifteen.
+  The thirty-three rows are at `todo`, and every existing row keeps its
+  identifier, status, test file, selector, decision and evidence. This was the
+  last pack that owed the migration.
+
+- **A rule master a project deleted is not written back by the next `qfai init`**
+  (#1741). The run decided which masters to cite from its own copy report, so a
+  master the project had removed on purpose looked exactly like a rule shipped
+  for the first time: the run copied it again and added its bullet back, and the
+  only sign was a diff in the entry point. Removing a shipped rule is a decision
+  a project is entitled to make, and it could not be made durable. The record of
+  what `init` last wrote — already kept, per master, for the upgrade path — now
+  answers the question: an entry with no file behind it is a rule the project
+  removed, and the run copies neither it nor its citation and names it on
+  stderr. A master with no entry is a rule shipped for the first time and
+  arrives as before. `--force` does not restore one either; it rewrites what the
+  project has. The way back is to delete the master's entry from that record,
+  which puts it in the same position as a rule shipped today.
 
 - **The spec-0008 scaffold acceptance suite runs, instead of standing by as a
   skeleton** (#1436). It was authored test-first against a command that did not

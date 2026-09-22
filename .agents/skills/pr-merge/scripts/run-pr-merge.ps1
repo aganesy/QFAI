@@ -140,7 +140,10 @@ function Threads([string]$Owner, [string]$Repo, [int]$Number) {
     $data = RunJson "gh" $args "Failed to read review threads."
     $threads = $data.data.repository.pullRequest.reviewThreads
     foreach ($node in @($threads.nodes)) {
-      if ($node.isResolved -or $node.isOutdated) { continue }
+      # Resolved only. An outdated thread is one whose code moved; the reviewer's
+      # finding stands until somebody resolves it, and skipping it here reported
+      # every thread resolved while one was not.
+      if ($node.isResolved) { continue }
       $comment = @($node.comments.nodes)[-1]
       if ($null -eq $comment) { continue }
       $items += [pscustomobject]@{
