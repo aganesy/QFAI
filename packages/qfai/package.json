@@ -70,7 +70,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
-    "@types/jsdom": "^28.0.1",
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^24.0.0",
     "@vitest/coverage-v8": "^2.1.8",
     "smol-toml": "^1.6.0",
