@@ -367,6 +367,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Five spec-0016 ledger rows name the case their annotation announces**
+  (#1436). Each row's selector described its test rather than naming it — "cache
+  staleness 25h re-fetch" against a case titled "specifies cache staleness with
+  24h default TTL" — so the command the row prints ran nothing, and the row's
+  own numbers disagreed with the case it meant. The five are repaired from the
+  file's own annotations, which sit on the line above the case each one is
+  about. The dogfooding backlog falls by five.
+
 - **A counted skip in an evidence result is data, not a lane that did not run**
   (#2131). The result a completed row records was refused wherever the word
   `skipped` appeared, so a checkpoint over a suite that declares skips had no
