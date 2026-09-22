@@ -496,9 +496,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     the `lap-*` catalog;
   - `SKILL.md` delegates generation and evaluation to two different
     sub-agents.
+    Each row's selector now names its test. The carrier-only backlog falls from
+    56 entries to 50.
 
-  Each row's selector now names its test. The carrier-only backlog falls from
-  56 entries to 50.
+- **A PowerShell host crash names the processor it happened on** (#2181). A
+  leg can lose one case to the host crash or nearly all of them, and a rerun
+  on another runner recovers both. Whether the second mode follows the
+  runner's processor is what the log could not answer, so each crash warning
+  now names the CPU model.
 
 - **The capture runner's 399 case is named for what it asserts**. It asserted
   that a 399 response is accepted, the last status below the 400 rejection
