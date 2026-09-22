@@ -23,6 +23,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **An unresolved `Selector` on a row past `todo` is an error** (#2047).
+  `TDDLIST_SELECTOR_UNRESOLVED` names a row whose `Selector` is not in the file
+  the row points at, and it reported at `warning` — so a full run stayed green
+  over a completed row claiming a test that is not there, which is a proof
+  nobody can re-run. The anchor rule already reports the same defect as an
+  error for an evidence pointer that does not resolve. Resolution is
+  containment over each `::`-separated segment, so a title assembled from a
+  template literal is named by any literal fragment of it; there is no waiver,
+  because `QFAI-WAIVER-002` refuses one on an error. The dogfooding pins rise
+  by 196 across eleven packs, which is what the warning was carrying.
+
 - **The evidence citation guard opens a `.jsonl` record** (#1764). The filter
   that picks evidence files took `.md`, `.json`, `.yaml` and `.yml`, so a record
   written one line at a time — a mutation log is — was never opened, and a

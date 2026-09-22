@@ -182,8 +182,12 @@ describe("TDDLIST_SELECTOR_UNRESOLVED — Selector is finally read", () => {
       (issues) => {
         const found = unresolved(issues);
         expect(found).toHaveLength(1);
-        expect(found[0]?.severity).toBe("warning");
-        expect(found[0]?.suggested_action).toContain("TDDLIST-006");
+        // A row past `todo` claiming a test its file does not hold is a proof
+        // nobody can re-run, which is what the anchor rule reports as an error
+        // for an evidence pointer that does not resolve. There is no waiver to
+        // name: `QFAI-WAIVER-002` refuses one on an error.
+        expect(found[0]?.severity).toBe("error");
+        expect(found[0]?.suggested_action).not.toContain("waiver");
       },
     );
   });
@@ -231,7 +235,7 @@ describe("TDDLIST_SELECTOR_UNRESOLVED — Selector is finally read", () => {
       (issues) => {
         const found = unresolved(issues);
         expect(found, "the selector names no test in this file").toHaveLength(1);
-        expect(found[0]?.severity).toBe("warning");
+        expect(found[0]?.severity).toBe("error");
       },
     );
   });
