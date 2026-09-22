@@ -43,6 +43,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `mirror-surface` job was 201 s on the last green `main` run before this
   change and 20 s on the run that carries it.
 
+  The lint gate's own figures, from the three most recent green `main` runs on
+  the same runner class:
+
+  |                      | Before              | After                         |
+  | -------------------- | ------------------- | ----------------------------- |
+  | `lint` job           | 121 s               | 86 s, 79 s, 84 s              |
+  | the check chain      | 84 s serial         | 65 s as four concurrent lanes |
+  | `mirror-surface` job | inside `lint`, 56 s | 17 s, 37 s, 19 s              |
+
+  Forks, by construction rather than by sampling: `scripts/run-lint-checks.sh`
+  starts four children, and one of them — the structure lane — is the only one
+  that starts a test runner, one file at a time. That pool is capped at the
+  machine's core count by `packages/qfai/vitest.knobs.ts`, whose own sweep is
+  why the mirror lane has a job of its own rather than a fifth child here.
+  Peak memory is not in the run record and no figure is claimed for it: GitHub
+  reports neither RSS nor a process tree, so getting one means a CI step that
+  measures it on every pull request from then on, which is a cost taken for a
+  number read once.
+
 - **A code-path pull request no longer claims its runner cost fell, and what it does
   cost is pinned** (#2017). The requirement capped such a run at 12 job instances,
   8 frozen-lockfile installs and 3-or-5 bundler builds, against a baseline of 14 /
