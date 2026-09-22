@@ -390,6 +390,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A child whose runtime died is no longer reported as a script that printed
+  the wrong thing** (#2068). Two test projects spawn a `pwsh` per case, and both
+  fail intermittently on changes touching no PowerShell, with one line:
+  `System.IO.FileLoadException: The given assembly name was invalid.` It arrives
+  on stderr before the script runs, so whichever assertion reads the child's
+  output reports it — and what reaches the reader names no file, no case and no
+  script. The capture now tells that apart: a child that wrote nothing to stdout
+  and whose stderr opens with a runtime's abort report is named as one, with the
+  report itself kept. A child that wrote to stdout ran, whatever its stderr says,
+  so a script whose job is to report an exception is still the script answering.
+  This does not stop the failure; it stops the failure being read as a defect in
+  the script under test.
+
 - **A counted skip in an evidence result is data, not a lane that did not run**
   (#2131). The result a completed row records was refused wherever the word
   `skipped` appeared, so a checkpoint over a suite that declares skips had no

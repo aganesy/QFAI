@@ -77,6 +77,48 @@ describe("outputContext tells silence apart from wrong output", () => {
     );
   });
 
+  it("names a runtime that aborted before the script wrote anything", async () => {
+    // The third case, and the one a leg touching no PowerShell kept hitting: the child spoke,
+    // and what it said was its runtime dying rather than the script answering. Read as output,
+    // `System.IO.FileLoadException: The given assembly name was invalid.` is a script printing
+    // the wrong thing — and the reader's next move is then to look for a script that does not
+    // exist.
+    const aborted = await node(
+      [
+        "process.stderr.write('Unhandled exception.');",
+        "process.stderr.write(String.fromCharCode(10));",
+        "process.stderr.write('System.IO.FileLoadException: The given assembly name was invalid.');",
+        "process.exit(134);",
+      ].join(""),
+    );
+
+    expect(aborted.stdout, "the fixture must write nothing to stdout").toBe("");
+    const context = outputContext(aborted);
+    expect(context).toContain("runtime aborted before the script wrote anything");
+    expect(context, "the runtime's own report still reaches the reader").toContain(
+      "FileLoadException",
+    );
+    expect(context, "a dead runtime is not silence").not.toContain("wrote nothing");
+  });
+
+  it("leaves a script that reports an exception of its own as the script's answer", async () => {
+    // The discriminating control. Without it the clause above would be satisfied by any stderr
+    // mentioning an exception, and a script whose JOB is to report one would be blamed on the
+    // harness — which is the same misattribution, pointed the other way.
+    const reported = await node(
+      [
+        "process.stdout.write('checked');",
+        "process.stderr.write('Unhandled exception.');",
+        "process.exit(1);",
+      ].join(""),
+    );
+
+    expect(
+      outputContext(reported),
+      "a child that wrote to stdout ran, whatever its stderr says",
+    ).not.toContain("runtime aborted");
+  });
+
   it("reports a silent kill as both, because either alone is half the diagnosis", () => {
     // A killed child that wrote nothing is the shape the original failure most likely had. The
     // signal says the environment removed it; the silence says not to look for wrong output.
