@@ -15,7 +15,6 @@
 - US-0003-0011: Copilot review instructions 配布 - .github/instructions/ に create-only で配布
 - US-0003-0012: instructions の force 更新 - --force で instructions を shipped テンプレートへ更新
 - US-0003-0013: instructions アクティベーション案内 - 作成時にガイダンスメッセージ表示
-- US-0003-0014: README ファイル生成 - 各統合ディレクトリに README.md を通常ファイルとして配置
 - US-0003-0015: `.gitignore` 管理ブロック自動追記 (v1.7.18) - `qfai init` 時に QFAI 生成成果物（report/evidence/review-pack/discussion-pack）が自動で gitignore される
 - US-0003-0016: 4-layer asset-tree + work-log surface seeding (v1.9.0) - `qfai init` が `.qfai/assistant/{constitution,manifest,catalog,process}/` の 4 層およびプロジェクトルートに `.qfai/steering/` を seed
 - US-0003-0017: --upgrade-assistant-tree migration helper (v1.9.0) - 旧 `.qfai/assistant/steering/` レイアウトを 4-layer へ一括移行する flag。ユーザー編集を保全
@@ -147,12 +146,6 @@
 - Parent: CAP-0003
 - Goal: instructions ファイルが新規作成された場合にアクティベーションガイダンスを stdout に表示する
 - Non-goals: 自動アクティベーション
-
-## US-0003-0014: README ファイル生成
-
-- Parent: CAP-0003
-- Goal: `.agents/`, `.codex/`, `.claude/agents/`, `.github/agents/` に README.md を通常ファイルとして配置する
-- Non-goals: README の自動更新
 
 ## US-0003-0015: `.gitignore` 管理ブロック自動追記
 
