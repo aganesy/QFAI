@@ -23,6 +23,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A comment opener inside a code span ends the paragraph, as GitHub renders
+  it** (#1869). `qfai init` writes the review pointer into an agent entry point
+  only where no operative copy is there already, and a multiline code span was
+  allowed to run past a line beginning `<!--`. GitHub ends the paragraph at that
+  opener and reads everything after it as the HTML comment the opener began, so
+  a directive written below one reaches no reader — while the reader here
+  counted it as present and wrote nothing. The opener now interrupts a code span
+  like every other block start, and the fixture that pinned the old reading
+  states what GitHub renders instead.
+
 - **The evidence-staleness rule now runs where a merge is blocked, and says so
   when it cannot compute an answer** (#2019). `QFAI-TDDLIST-009` asks whether
   anything a recorded observation covered has moved since the revision it names.
