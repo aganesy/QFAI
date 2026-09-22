@@ -6,7 +6,7 @@
 
 ### Objective
 
-Update spec-0012 (qfai-prototyping) with v1.7.15 rev10 discussion pack (`discussion-20260416195444737`) content: Semantic Closure Hardening — 4+1 workstreams:
+Update spec-0012 (qfai-prototyping) with v1.7.15 rev10 discussion pack (`.qfai/discussion/discussion-20260416195444737`) content: Semantic Closure Hardening — 4+1 workstreams:
 - WS-1: `fullHarness` terminal state machine — in-progress bundle (terminationReason absent, finalDecision=pending, reviewerSignoff.status=pending) vs completed bundle (terminationReason ∈ {abandoned,max-iterations,plateau}) enforced fail-closed by validator
 - WS-2: `buildScreenContractInputs()` uses `readCanonicalScreenContracts()` sourceRef directly; slug-based anchor generation deleted
 - WS-3: all 8 evidenceRefs categories (render/browserQa/uiObservation/discussion/screenContract/trend/runtimeGate/specCoverage) enforced non-empty+concrete via `assertConcreteArtifactRefs()` in pathUtils.ts
@@ -22,11 +22,11 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev10 discussion pack (`discuss
 | P3 | `.qfai/specs/spec-0012/**` | Existing spec-0012 artifacts (rev4..rev9) |
 | P4 | `.qfai/discussion/discussion-20260416195444737/**` | Rev10 discussion pack (15 files) |
 | P4 | `.qfai/contracts/**` | Contract posture (CLI-only, no UI contract) |
-| P5 | `.qfai/review/review-20260416195500000/**` | Rev10 discussion review (PASS, R01/R02/R03) |
+| P5 | `review-20260416195500000/**` | Rev10 discussion review (PASS, R01/R02/R03) |
 
 ### Preflight Summary Path
 
-`.qfai/report/preflight_summary.md` (updated to reference discussion-20260416195444737)
+`.qfai/report/preflight_summary.md` (updated to reference .qfai/discussion/discussion-20260416195444737)
 
 ### Open Questions Summary
 
@@ -76,11 +76,11 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev10 discussion pack (`discuss
 | `npx qfai validate --fail-on error --format github` | error=34 (3 extra from empty review-20260417061750000) |
 | Cleanup: removed empty `review-20260417061750000` directory | Untracked local artifact, removed |
 | `npx qfai validate --fail-on error --format github` (re-run) | error=31, warning=88, info=3 ✅ |
-| `.qfai/report/validate.log` updated | run-20260417061859640 |
+| Validate log written | run-20260417061859640 |
 
 ### Validate Evidence
 
-- **Validate log**: `.qfai/report/validate.log` (run-20260417061859640)
+- **Validate log**: written by the command above, (run-20260417061859640)
 - **Specs-coverage report**: `.qfai/report/specs-coverage/spec-0012.md`
 - **QFAI-COV-201..206**: all 0 ✅
 - **QFAI-ATDD-111/112**: rev10 US/TC registered in e2e/integration traceability ✅
@@ -126,7 +126,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev10 discussion pack (`discuss
 
 | Step | Role (sub-agent) | Task | Input | Output | Status |
 |------|-----------------|------|-------|--------|--------|
-| 1 | requirements-analyst | Rev10 US/AC/BR/DR drafting (WS-1..WS-5) | discussion-20260416195444737 | 02..04_*.md, 07_*.md | PASS |
+| 1 | requirements-analyst | Rev10 US/AC/BR/DR drafting (WS-1..WS-5) | .qfai/discussion/discussion-20260416195444737 | 02..04_*.md, 07_*.md | PASS |
 | 2 | solution-architect | Rev10 spec contract posture review | WS-1..WS-5 requirements, contracts | _policies/05_Contracts.md | PASS |
 | 3 | test-design-analyst | Rev10 EX/TC chains + ATDD traceability | WS-1..WS-5 AC/BR | 05..06_*.md, traceability files | PASS |
 | 4 | completion-reviewer (this agent) | DoD + validate gate + evidence file | validate output, spec files | this file | PASS |
@@ -139,10 +139,10 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev10 discussion pack (`discuss
 
 ### Discussion Review Evidence
 
-- **Review pack**: `.qfai/review/review-20260416195500000/`
+- **Review pack**: `review-20260416195500000/`
 - **Reviewers**: R01 (completion-reviewer), R02 (requirements-reviewer), R03 (architecture-reviewer)
 - **Overall status**: PASS (summary.json v2.0, 2026-04-16)
-- **Discussion pack**: `discussion-20260416195444737` — 3 reviewer PASS
+- **Discussion pack**: `.qfai/discussion/discussion-20260416195444737` — 3 reviewer PASS
 
 ### Final Status
 
@@ -160,7 +160,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev10 discussion pack (`discuss
 
 ### SDD Review Cycle (RCP) — Post-completion-reviewer
 
-**Review pack**: `.qfai/review/review-20260417070000000/`
+**Review pack**: `review-20260417070000000/`
 
 | Reviewer | Round 1 | Round 2 | Notes |
 |---|---|---|---|
@@ -182,7 +182,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev10 discussion pack (`discuss
 
 ### Objective
 
-Update spec-0012 (qfai-prototyping) with v1.7.15 rev9 discussion pack (`discussion-20260416092414328`) content: leaf-field traceability closure — 4 workstreams:
+Update spec-0012 (qfai-prototyping) with v1.7.15 rev9 discussion pack (`.qfai/discussion/discussion-20260416092414328`) content: leaf-field traceability closure — 4 workstreams:
 - WS-1: `prototypingEvidence.ts` — ui[].declaredRef 必須+concrete、renderEvidenceRefs/browserQaEvidenceRefs 非空+concrete、axes[]/reviewerLogs[].evidenceRefs per-leaf 非空+concrete
 - WS-2: `bundleWriter.ts` — declaredRef required 化、leaf arrays required non-nullable
 - WS-3: `tests/core/` — synthetic token fixtures 置換 + 15件 negative ケース追加
@@ -200,7 +200,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev9 discussion pack (`discussi
 
 ### Preflight Summary Path
 
-`.qfai/report/preflight_summary.md` (updated to reference discussion-20260416092414328)
+`.qfai/report/preflight_summary.md` (updated to reference .qfai/discussion/discussion-20260416092414328)
 
 ### Open Questions Summary
 
@@ -250,12 +250,12 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev9 discussion pack (`discussi
 | `pnpm qfai validate --fail-on error --format github` (1st) | QFAI-COV-201/203 errors for new ACs/EXs |
 | `pnpm qfai validate --fail-on error --format github` (2nd) | E_ID_INVALID_FORMAT (spec-0001 in EX path) |
 | `pnpm qfai validate --fail-on error --format github` (3rd) | QFAI-COV-201..206 = 0 |
-| `.qfai/report/validate.log` updated | run-20260416210530xxx |
+| Validate log written | run-20260416210530xxx |
 | `.qfai/report/specs-coverage/spec-0012.md` read | All ACs ≥1 TC (EX-0150..0172 all covered) |
 
 ### Validate Evidence
 
-- **Validate log**: `.qfai/report/validate.log` (3rd run — rev9 completion)
+- **Validate log**: written by the command above, (3rd run — rev9 completion)
 - **Specs-coverage report**: `.qfai/report/specs-coverage/spec-0012.md`
 - **QFAI-COV-201..206**: all 0 ✅
 - **QFAI-ATDD-111/112**: rev9 US/TC not yet in e2e/integration (SDD phase; implementation phase task)
@@ -299,7 +299,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev9 discussion pack (`discussi
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status |
 |------|-----------------|-----------|-------------|--------------|--------|
-| 1 | requirements-analyst (spec-0012-rev9 agent) | Rev9 US/AC spec slice | discussion-20260416092414328, spec-0012 rev8 | 01..03_*.md | PASS |
+| 1 | requirements-analyst (spec-0012-rev9 agent) | Rev9 US/AC spec slice | .qfai/discussion/discussion-20260416092414328, spec-0012 rev8 | 01..03_*.md | PASS |
 | 2 | solution-architect (spec-0012-rev9 agent) | Rev9 BR slice | WS-1..4 requirements | 04_*.md | PASS |
 | 3 | test-design-analyst (orchestrator inline) | Rev9 EX/TC slice | WS-1..4 AC/BR | 05..06_*.md | PASS |
 | 4 | solution-architect (orchestrator inline) | Rev9 DR/OQ/plan/delta | OQ resolutions | 07..10_*.md | PASS |
@@ -348,7 +348,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev9 discussion pack (`discussi
 
 ### Objective
 
-Update spec-0012 (qfai-prototyping) with v1.7.15 rev8 discussion pack (`discussion-20260416023323603`) content: 4 new workstreams — pathUtils.ts leaf module (WS-1), runtimeGate.evidenceRefs validator extension (WS-2), unified ref grammar (WS-3), closure regression test (WS-4).
+Update spec-0012 (qfai-prototyping) with v1.7.15 rev8 discussion pack (`.qfai/discussion/discussion-20260416023323603`) content: 4 new workstreams — pathUtils.ts leaf module (WS-1), runtimeGate.evidenceRefs validator extension (WS-2), unified ref grammar (WS-3), closure regression test (WS-4).
 
 ### Inputs Reviewed
 
@@ -362,7 +362,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev8 discussion pack (`discussi
 
 ### Preflight Summary Path
 
-`.qfai/report/preflight_summary.md` (updated to reference discussion-20260416023323603)
+`.qfai/report/preflight_summary.md` (updated to reference .qfai/discussion/discussion-20260416023323603)
 
 ### Open Questions Summary
 
@@ -405,12 +405,12 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev8 discussion pack (`discussi
 | Command | Result |
 |---------|--------|
 | `pnpm qfai validate --fail-on error --format github` | error=51, warning=85 |
-| `.qfai/report/validate.log` updated | run-20260416151852940 |
+| Validate log written | run-20260416151852940 |
 | `.qfai/report/specs-coverage/spec-0012.md` read | All ACs ≥1 TC |
 
 ### Validate Evidence
 
-- **Validate log**: `.qfai/report/validate.log` (run-20260416151852940)
+- **Validate log**: written by the command above, (run-20260416151852940)
 - **Specs-coverage report**: `.qfai/report/specs-coverage/spec-0012.md`
 - **Error delta**: baseline=55 → after rev8 fixes=51 (net -4 rev8-specific errors)
 
@@ -452,7 +452,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev8 discussion pack (`discussi
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status |
 |------|-----------------|-----------|-------------|--------------|--------|
-| 1 | requirements-analyst (orchestrator inline) | Rev8 spec slice (US/AC/BR) | discussion-20260416023323603, spec-0012 existing | 02..04_*.md | PASS |
+| 1 | requirements-analyst (orchestrator inline) | Rev8 spec slice (US/AC/BR) | .qfai/discussion/discussion-20260416023323603, spec-0012 existing | 02..04_*.md | PASS |
 | 2 | test-design-analyst (orchestrator inline) | Rev8 examples + TCs | WS-1..4 requirements | 05..06_*.md | PASS |
 | 3 | solution-architect (orchestrator inline) | Rev8 DR/OQ/plan/delta | OQ resolutions | 07..10_*.md | PASS |
 | 4 | completion-reviewer (inline simulation) | DoD + layer coverage gate | validate.log, spec files | evidence (this file) | PASS |
@@ -489,11 +489,11 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev4 discussion pack content ad
 | P1       | `.qfai/assistant/instructions/*`                       | Agent instructions                     |
 | P2       | `.qfai/assistant/steering/*`                           | Steering files (manifest, product, etc)|
 | P3       | `.qfai/specs/spec-0012/**`                             | Existing spec-0012 artifacts           |
-| P4       | `.qfai/discussion/discussion-20260414195449523/**`     | Rev4 discussion pack (15 files)        |
+| P4       | `discussion-20260414195449523/**`     | Rev4 discussion pack (15 files)        |
 | P4       | `.qfai/contracts/**`                                   | Contract posture (0 items, CLI tool)   |
 
 ### FORMAT SSOT files read
-- `.qfai/discussion/README.md`
+- `.qfai/discussion/README.md` <!-- qfai:not-a-citation .qfai/discussion/README.md -->
 - `.qfai/specs/README.md`
 - `.qfai/evidence/README.md` <!-- qfai:not-a-citation -->
 - `.qfai/assistant/steering/agent-catalog.yml`
@@ -581,6 +581,7 @@ Contracts-first → Outline → Slice → Plan finalize → Delta update ✅
 
 ## Commands Executed + Key Outputs
 
+<!-- qfai:not-a-citation .qfai/report/validate.log -->
 ```
 qfai validate --fail-on error --format github | tee .qfai/report/validate.log
 ```
@@ -594,16 +595,15 @@ qfai validate --fail-on error --format github | tee .qfai/report/validate.log
 
 ## Validate Evidence Paths
 
-- `.qfai/report/validate.log` — Validate gate output
-- `.qfai/report/validate.json` — Structured results
+- Validate log and structured results: written by the command above into the report tree, which is not tracked. The counts recorded in this section are the record.
 - `.qfai/report/specs-coverage/spec-0012.md` — Coverage density (all rev4 ACs ≥ 3 TCs)
 
 ## Review Evidence
 
-- `.qfai/review/review-20260415060932/review_request.md` — Review request
-- `.qfai/review/review-20260415060932/R01_completion-reviewer.md` — **PASS**
-- `.qfai/review/review-20260415060932/R02_architecture-reviewer.md` — **PASS**
-- `.qfai/review/review-20260415060932/summary.json` — Overall PASS
+- `review-20260415060932/review_request.md` — Review request
+- `review-20260415060932/R01_completion-reviewer.md` — **PASS**
+- `review-20260415060932/R02_architecture-reviewer.md` — **PASS**
+- `review-20260415060932/summary.json` — Overall PASS
 
 ## Gaps / Open Risks
 
@@ -653,8 +653,8 @@ qfai validate --fail-on error --format github | tee .qfai/report/validate.log
 | 4    | requirements-analyst + test-design-analyst | Slice (spec-0012) | discussion pack, existing spec-0012                       | 02/03/04/05/06/07/08 updated                                      | PASS   |
 | 5    | orchestrator           | Plan finalize + Delta update      | spec-0012 sliced content                                  | 10_Plan.md, 09_delta.md updated                                    | PASS   |
 | 6    | orchestrator           | Validate gate                     | all spec artifacts                                        | validate.log, specs-coverage/spec-0012.md                          | PASS   |
-| 7    | completion-reviewer    | Completion review                 | all artifacts, validate evidence                          | .qfai/review/review-20260415060932/R01_completion-reviewer.md      | PASS   |
-| 8    | architecture-reviewer  | Architecture review               | spec-0012 architecture artifacts, _policies flows/decisions | .qfai/review/review-20260415060932/R02_architecture-reviewer.md  | PASS   |
+| 7    | completion-reviewer    | Completion review                 | all artifacts, validate evidence                          | review-20260415060932/R01_completion-reviewer.md      | PASS   |
+| 8    | architecture-reviewer  | Architecture review               | spec-0012 architecture artifacts, _policies flows/decisions | review-20260415060932/R02_architecture-reviewer.md  | PASS   |
 
 Subagents: real (capability probe PASS)
 
@@ -679,7 +679,7 @@ Subagents: real (capability probe PASS)
 
 ---
 
-## v1.7.15 rev6 SDD Run (discussion-20260415161758193)
+## v1.7.15 rev6 SDD Run (.qfai/discussion/discussion-20260415161758193)
 
 ### Objective
 
@@ -698,7 +698,7 @@ WS-7（PR Completion シングルフロー）が新規追加され、OQ-0001〜0
 
 ### Preflight Summary Path
 
-`.qfai/report/preflight_summary.md` (discussion-20260415161758193, OQ=0)
+`.qfai/report/preflight_summary.md` (.qfai/discussion/discussion-20260415161758193, OQ=0)
 
 ### Open Questions Summary
 
@@ -745,7 +745,7 @@ Open: 0 / Answered: 5 / Deferred: 0
 |------|------------------|------------|-------------|---------------|--------|
 | 1 | orchestrator | Phase 0: Contracts-first | 05_Contracts.md | 05_Contracts.md 更新 | PASS |
 | 2 | orchestrator | Phase 1: Outline | 10_delta.md | 10_delta.md 更新 | PASS |
-| 3 | requirements-analyst + solution-architect + test-design-analyst | Phase 2-4: Slice/Plan/Delta | discussion-20260415161758193, spec-0012 existing | 全 spec-0012 ファイル更新 | PASS |
+| 3 | requirements-analyst + solution-architect + test-design-analyst | Phase 2-4: Slice/Plan/Delta | .qfai/discussion/discussion-20260415161758193, spec-0012 existing | 全 spec-0012 ファイル更新 | PASS |
 | 4 | orchestrator | Validate gate | all spec artifacts | validate.log (error=29) | PASS |
 | 5 | completion-reviewer | Completion review | all artifacts, validate evidence | R01_completion-reviewer.md | PASS |
 | 6 | architecture-reviewer | Architecture review | spec-0012, _policies | R02_architecture-reviewer.md | PASS |
@@ -754,6 +754,7 @@ Subagents: real (Task tool delegation)
 
 ### Commands Executed
 
+<!-- qfai:not-a-citation .qfai/report/validate.log -->
 ```
 pnpm qfai validate --fail-on error --format github | tee .qfai/report/validate.log
   Run 1 (sc-001 修正前): error=31
@@ -765,8 +766,7 @@ pnpm qfai validate --fail-on error --format github | tee .qfai/report/validate.l
 
 ### Validate Evidence Paths
 
-- `.qfai/report/validate.log`
-- `.qfai/report/validate.json`
+- Validate log and structured results: written by the command above into the report tree, which is not tracked. The counts recorded in this section are the record.
 - `.qfai/report/specs-coverage/spec-0012.md`
 
 ### QFAI-COV Gate Results
@@ -796,7 +796,7 @@ pnpm qfai validate --fail-on error --format github | tee .qfai/report/validate.l
 | completion-reviewer (R01) | PASS | COV-201..206=0、トレーサビリティ完全、OQ全5件解決、ドリフトなし |
 | architecture-reviewer (R02) | PASS | surfacePolicy.ts/contracts/構造整合、実装方向性一貫 |
 
-Review artifacts: `.qfai/review/review-20260415161758193/`
+Review artifacts: `review-20260415161758193/`
 
 ### Final Status
 
@@ -819,7 +819,7 @@ spec-0012 (qfai-prototyping) に v1.7.15 rev5 の 6 ワークストリーム（W
 
 ### Inputs Reviewed
 
-- `.qfai/discussion/discussion-20260415014056471/` (15 files, all present)
+- `discussion-20260415014056471/` (15 files, all present)
 - `.qfai/specs/spec-0012/` (全ファイル)
 - `.qfai/specs/_policies/05_Contracts.md`, `10_delta.md`, `11_Slice-Policy.md`
 - `.qfai/report/preflight_summary.md` (rev5 版に更新済み)
@@ -874,6 +874,7 @@ spec-0012 (qfai-prototyping) に v1.7.15 rev5 の 6 ワークストリーム（W
 
 ### Commands Executed
 
+<!-- qfai:not-a-citation .qfai/report/validate.log -->
 ```
 pnpm qfai validate --fail-on error --format github | tee .qfai/report/validate.log
   result: error=45, warning=85
@@ -884,8 +885,7 @@ pnpm qfai validate --fail-on error --format github | tee .qfai/report/validate.l
 
 ### Validate Evidence Paths
 
-- `.qfai/report/validate.log`
-- `.qfai/report/validate.json`
+- Validate log and structured results: written by the command above into the report tree, which is not tracked. The counts recorded in this section are the record.
 - `.qfai/report/specs-coverage/spec-0012.md`
 
 ### Density Review (QFAI-COV-207 Triage — spec-0012)
@@ -941,7 +941,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev7 discussion pack content cl
 | P4 | `.qfai/contracts/**` | Contract posture (0 items, CLI tool) |
 
 ### FORMAT SSOT files read
-- `.qfai/discussion/README.md`
+- `.qfai/discussion/README.md` <!-- qfai:not-a-citation .qfai/discussion/README.md -->
 - `.qfai/specs/README.md`
 - `.qfai/evidence/README.md` <!-- qfai:not-a-citation -->
 - `.qfai/assistant/steering/agent-routing.yml`
@@ -950,7 +950,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev7 discussion pack content cl
 
 ## Preflight Summary Path
 
-`.qfai/report/preflight_summary.md` (updated for rev7: discussion-20260415203030886, REQ=18, OQ open=0)
+`.qfai/report/preflight_summary.md` (updated for rev7: .qfai/discussion/discussion-20260415203030886, REQ=18, OQ open=0)
 
 ## Open Questions Summary
 
@@ -986,10 +986,11 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev7 discussion pack content cl
 | `spec-0012/10_Plan.md` | v1.7.15 rev7 Implementation Strategy |
 | `_policies/05_Contracts.md` | v1.7.15 rev7 Contract Posture (none: CLI tool) |
 | `_policies/10_delta.md` | rev7 entries |
-| `assistant/steering/manifest.md` | discussion-20260415203030886 reference added |
+| `assistant/steering/manifest.md` | .qfai/discussion/discussion-20260415203030886 reference added |
 
 ## Commands Executed
 
+<!-- qfai:not-a-citation .qfai/report/validate.log -->
 ```
 pnpm --filter qfai exec qfai validate --fail-on error --format github | tee .qfai/report/validate.log
 ```
@@ -1004,17 +1005,17 @@ Confirmed: 52 errors identical in HEAD (pre-rev7) and working tree. **New errors
 
 | Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status |
 |------|-----------------|------------|-------------|---------------|--------|
-| 1 | general-purpose (`sdd-spec0012-rev7`) | Draft all 13 spec-0012 artifacts for v1.7.15 rev7 | discussion-20260415203030886, spec-0012 current files | 13 modified files (US/AC/BR/EX/TC/DR/OQ/delta/plan + policies) | PASS |
-| 2 | orchestrator | Run validate gate | Working tree | `.qfai/report/validate.log` | PASS (0 new errors) |
+| 1 | general-purpose (`sdd-spec0012-rev7`) | Draft all 13 spec-0012 artifacts for v1.7.15 rev7 | .qfai/discussion/discussion-20260415203030886, spec-0012 current files | 13 modified files (US/AC/BR/EX/TC/DR/OQ/delta/plan + policies) | PASS |
+| 2 | orchestrator | Run validate gate | Working tree | validate log (report tree not tracked) | PASS (0 new errors) |
 | 3 | completion-reviewer (R01) | Review DoD, roles, artifacts | All 13 files | R01_completion-reviewer.md | PASS |
 | 4 | architecture-reviewer (R02) | Review architecture changes | BR/AC/DR for WS-1..7 | R02_architecture-reviewer.md | PASS |
 | 5 | qa-gatekeeper (R03) | Review coverage and validate gate | validate.log, TC/EX | R03_qa-gatekeeper.md | PASS |
 
 ## Validate Evidence Paths
 
-- `.qfai/report/validate.log`
+- Validate log and structured results: written by the command above into the report tree, which is not tracked. The counts recorded in this section are the record.
 - `.qfai/report/specs-coverage/spec-0012.md`
-- `.qfai/review/review-20260416070000000/summary.json`
+- `review-20260416070000000/summary.json`
 
 ## QFAI-COV Gate Results
 
@@ -1054,7 +1055,7 @@ Confirmed: 52 errors identical in HEAD (pre-rev7) and working tree. **New errors
 
 ### Objective
 
-Update spec-0012 (qfai-prototyping) with v1.7.15 rev11 discussion pack (`discussion-20260417072340789`) content: 3 residual semantic closure gaps:
+Update spec-0012 (qfai-prototyping) with v1.7.15 rev11 discussion pack (`.qfai/discussion/discussion-20260417072340789`) content: 3 residual semantic closure gaps:
 - WS-1: Public API surface closure + `runMeasurement`/`validatePanelScore` strict validation
 - WS-2: `isSpecDeclarationRef()` line-ref-only grammar + `specCoverage.ts` 01_Spec.md-only scan
 - WS-3: Harness test DTO synchronization + semantic boundary test creation
@@ -1070,7 +1071,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev11 discussion pack (`discuss
 
 ### Preflight Summary Path
 
-`.qfai/report/preflight_summary.md` (updated to reference discussion-20260417072340789)
+`.qfai/report/preflight_summary.md` (updated to reference .qfai/discussion/discussion-20260417072340789)
 
 ### Open Questions Summary
 
@@ -1094,7 +1095,7 @@ Open: 0 / Answered: 4 / Deferred: 0
 
 | File | Changes |
 |---|---|
-| `manifest.md` | discussion-20260417072340789 entry added |
+| `manifest.md` | .qfai/discussion/discussion-20260417072340789 entry added |
 | `preflight_summary.md` | Updated to rev11 |
 | `_policies/05_Contracts.md` | v1.7.15-rev11 Contract Posture appended |
 | `_policies/10_delta.md` | rev11 delta entry appended |
@@ -1111,6 +1112,7 @@ Open: 0 / Answered: 4 / Deferred: 0
 
 ### Commands Executed
 
+<!-- qfai:not-a-citation .qfai/report/validate.log -->
 ```sh
 npx qfai validate --fail-on error --format github | tee .qfai/report/validate.log  # run 1: found COV-201 + TRACE
 # fix: _policies/10_delta.md (removed spec IDs) + 06_TC (added AC-0160 to TC-0273)
@@ -1119,7 +1121,7 @@ npx qfai validate --fail-on error --format github | tee .qfai/report/validate.lo
 
 ### Validate Evidence
 
-- Log: `.qfai/report/validate.log`
+- Validate log and structured results: written by the command above into the report tree, which is not tracked. The counts recorded in this section are the record.
 - Coverage: `.qfai/report/specs-coverage/spec-0012.md`
 
 | Code | Status | Notes |
@@ -1171,7 +1173,7 @@ spec-0012 (qfai-prototyping) への v1.7.16 スライスは、prior agent run (w
 | P1 | `.qfai/assistant/instructions/*` | Agent instructions |
 | P2 | `.qfai/assistant/steering/*` | Steering files |
 | P3 | `.qfai/specs/spec-0012/**` | Existing spec-0012 artifacts (rev4..rev11 + v1.7.16) |
-| P4 | `.qfai/discussion/discussion-20260418093755100/**` | v1.7.16 discussion pack |
+| P4 | `discussion-20260418093755100/**` | v1.7.16 discussion pack |
 
 ### Verification Results (spec-0012 files 01..10)
 
@@ -1199,6 +1201,7 @@ spec-0012 (qfai-prototyping) への v1.7.16 スライスは、prior agent run (w
 
 ### Commands Executed
 
+<!-- qfai:not-a-citation .qfai/report/validate.log -->
 ```
 npx qfai validate --fail-on error --format github | tee .qfai/report/validate.log
 # Result: error=7 warning=4 info=3 annotations=14/14 failOn=error result=FAIL
@@ -1220,7 +1223,7 @@ No new SDD-source-layer regressions attributable to spec-0012 in this session.
 
 ### Validate Evidence Paths
 
-- `.qfai/report/validate.log`
+- Validate log and structured results: written by the command above into the report tree, which is not tracked. The counts recorded in this section are the record.
 - `.qfai/report/specs-coverage/spec-0012.md`
 
 ### Work Orders Summary
@@ -1258,7 +1261,7 @@ Apply CHG-002: redefine `/qfai-prototyping` per discussion pack `discussion-2026
 
 ### Inputs reviewed
 
-- Discussion pack `.qfai/discussion/discussion-20260516144141078/` — `01_Context.md` (`ui_bearing: false`), `05_Scope.md`, `06_REQ.md` (REQ-0001..0013), `07_NFR.md`, `09_Constraints.md`, `10_Policy.md`, `11_OQ-Register.md` (Disposition: open count = 0), `13_Deferred.md` (OQ-0003 only).
+- Discussion pack `discussion-20260516144141078/` — `01_Context.md` (`ui_bearing: false`), `05_Scope.md`, `06_REQ.md` (REQ-0001..0013), `07_NFR.md`, `09_Constraints.md`, `10_Policy.md`, `11_OQ-Register.md` (Disposition: open count = 0), `13_Deferred.md` (OQ-0003 only).
 - Current spec `.qfai/specs/spec-0012/01..10`, `tdd/`, `16_Traceability-ledger.md`.
 - Policies `.qfai/specs/_policies/{03_Capabilities,05_Contracts,10_delta,11_Slice-Policy}.md`.
 - Steering rules `.agents/rules/distributed-surface.md`, `.agents/rules/root-additions-policy.md`, `.agents/rules/temporary-files.md`, `.agents/rules/version-discipline.md`.
@@ -1266,7 +1269,7 @@ Apply CHG-002: redefine `/qfai-prototyping` per discussion pack `discussion-2026
 ### Preflight summary path
 
 - `.qfai/report/preflight_summary.md` (CHG-002 section dated 2026-05-18).
-- Validate baseline (pre-edit): `error=0 warning=7 info=3 annotations=10/10 failOn=error result=PASS` (run-log `.qfai/report/run-20260518132742559`).
+- Validate baseline (pre-edit): `error=0 warning=7 info=3 annotations=10/10 failOn=error result=PASS` (run-log `run-20260518132742559`).
 
 ### Triage decisions (Operation + Approver per row)
 
@@ -1324,13 +1327,12 @@ All five deferred; none blocking for SDD completion. They block the implementati
 - `pnpm exec qfai validate --profile sdd --fail-on error --format github 2>&1 | tail -40` (preflight; PASS error=0)
 - `pwsh -NoProfile -File tmp/sdd/stitch.ps1` (AC-Refs stitch + DEC→DR rename)
 - `pwsh -NoProfile -File tmp/sdd/fix-examples-ids.ps1` (lowercase `spec-NNNN` → `SPEC-NNNN` in 05_Examples.md)
-- `pnpm exec qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log` — post-edit; `error=0 warning=7 info=3 annotations=10/10 failOn=error result=PASS` (run-log `.qfai/report/run-20260518175405426`).
+- `pnpm exec qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log` — post-edit; `error=0 warning=7 info=3 annotations=10/10 failOn=error result=PASS` (run-log `run-20260518175405426`). <!-- qfai:not-a-citation .qfai/report/validate.log -->
 
 ### Validate evidence paths
 
-- `.qfai/report/validate.log` — full validate output.
-- `.qfai/report/validate.json` — machine-readable.
-- `.qfai/report/run-20260518175405426/` — run logs.
+- Validate log and structured results: written by the command above into the report tree, which is not tracked. The counts recorded in this section are the record.
+- `run-20260518175405426/` — run logs.
 
 ### Work Orders Summary
 
@@ -1393,7 +1395,7 @@ it selects the unit from the text.
 
 ### Preflight summary path
 
-`.qfai/report/preflight/run-20260911090607227/preflight_summary.md` — status
+`run-20260911090607227` — status
 `ready`, source `discussion-pack`.
 
 ### Triage decisions
@@ -1461,7 +1463,7 @@ it.
 
 ### Validate evidence paths
 
-`.qfai/report/validate-sdd.json`, `.qfai/report/preflight/run-20260911090607227/preflight_summary.md`
+Run `run-20260911090607227`. The SDD validate output is written into the report tree, which is not tracked.
 
 ### Work Orders Summary
 

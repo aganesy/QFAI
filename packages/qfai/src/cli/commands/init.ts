@@ -116,8 +116,10 @@ import {
 } from "../../core/manifest/manifestWriteGuard.js";
 import type { RuleMasterPlan } from "../../core/ruleMasterUpdates.js";
 import {
+  deletedRuleMasters,
   planRuleMasterUpdates,
   readRuleLock,
+  RULE_LOCK_BASENAME,
   writeRuleLock,
 } from "../../core/ruleMasterUpdates.js";
 import {
@@ -324,16 +326,15 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
   // The workflows are copied and recorded BEFORE the rest of the root, as one unit.
   //
-  // They used to ride along in the root copy, and the record followed it.
-  // A permission, I/O or disk error anywhere else in that copy — `DESIGN.md`, `qfai.config.yaml`,
-  // any of it — throws out of `copyTemplateTree` before the record runs, and the workflows are
-  // already on disk. An unrecorded shipped workflow reads as `adopter-owned` on every later run:
-  // never recorded again, invisible to doctor's drift detection, and outside the retired prune.
-  // The comment below the record already said nothing unrelated may run in between; the copy
-  // itself was the unrelated thing.
+  // Copied with the rest of the root and recorded after it, the workflows would already be on disk
+  // when a permission, I/O or disk error anywhere else in that copy — `DESIGN.md`,
+  // `qfai.config.yaml`, any of it — throws out of `copyTemplateTree` before the record runs. An
+  // unrecorded shipped workflow reads as `adopter-owned` on every later run: never recorded again,
+  // invisible to doctor's drift detection, and outside the retired prune. The comment below the
+  // record says nothing unrelated may run in between, and the rest of that copy is unrelated.
   //
-  // Rolling back on failure was the alternative and is the wrong one here for the reason the swap
-  // branch gives: this command does not delete what it cannot verify it owns.
+  // Rolling back on failure is the wrong alternative here, for the reason the swap branch gives:
+  // this command does not delete what it cannot verify it owns.
   const workflowCopyPaths = [...SHIPPED_WORKFLOW_NAMES]
     .filter((name) => workflowsDirIsOwn && workflowCopySet.has(name))
     .map((name) => path.join(".github", "workflows", name));
@@ -438,11 +439,23 @@ export async function runInit(options: InitOptions): Promise<void> {
   //
   // Every shipped workflow name is excluded here, whatever this run decided about it: the ones
   // it writes were written above, and the ones it declined must not arrive by another route.
+  // A master the record says an earlier run wrote, and the project has since
+  // deleted, is not copied again. Asked before the copy, because once the file
+  // is back the deletion is indistinguishable from a rule shipped for the first
+  // time — which is how every upgrade undid the removal.
+  const removedMasters = await deletedRuleMasters(
+    path.join(rootAssets, AGENTS_RULES_DIR_REL),
+    path.join(destRoot, AGENTS_RULES_DIR_REL),
+  );
+  reportRemovedRuleMasters(removedMasters);
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    exclude: [...SHIPPED_WORKFLOW_NAMES].map((name) => path.join(".github", "workflows", name)),
+    exclude: [
+      ...[...SHIPPED_WORKFLOW_NAMES].map((name) => path.join(".github", "workflows", name)),
+      ...removedMasters.map((name) => path.join(AGENTS_RULES_DIR_REL, name)),
+    ],
   });
   // …and the summary counts them together, as one copy, which is what an operator sees.
   rootResult.copied = [...workflowResult.copied, ...rootResult.copied];
@@ -1224,9 +1237,18 @@ export async function replaceGovernedAsset(
     await rename(staging, dest);
     return "replaced";
   } catch (error: unknown) {
-    await rm(staging, { force: true }).catch(() => {
-      // Best effort; preserve the original replacement failure.
-    });
+    // An occupied staging path is not this run's to remove. `COPYFILE_EXCL`
+    // refuses with `EEXIST` precisely because something is already there, and
+    // a name collision does not transfer ownership of the bytes behind it —
+    // removing them destroys whatever wrote them, which on a shared checkout
+    // is another run's staged asset. Every other failure leaves behind at most
+    // what this copy wrote, including a partial one, and that is this run's to
+    // clear.
+    if (!hasErrnoCode(error) || error.code !== "EEXIST") {
+      await rm(staging, { force: true }).catch(() => {
+        // Best effort; preserve the original replacement failure.
+      });
+    }
     throw error;
   }
 }
@@ -1473,12 +1495,11 @@ async function readExistingReadme(filePath: string): Promise<PinnedFileRead | nu
  * Removes the governed files a new release withdrew, under `--force`, when the
  * project still holds exactly what qfai wrote there.
  *
- * A file that is deleted or renamed upstream used to survive every upgrade: the
- * refresh loop walks the *current* shipped set, so the old path was never
- * visited and only its lock entry disappeared. From the next `validate` on, an
- * untouched retired rule read as `QFAI-ASSETS-006` — a file the project added —
- * and no number of `qfai init --force` runs could clear it, while a rule qfai
- * had repealed went on sitting in the tree being cited.
+ * The refresh loop walks the *current* shipped set, so it never visits the old
+ * path of a file deleted or renamed upstream, and only its lock entry goes.
+ * Left there, an untouched retired rule reads as `QFAI-ASSETS-006` — a file the
+ * project added — from the next `validate` on, no `qfai init --force` run clears
+ * it, and a rule qfai repealed stays in the tree being cited.
  *
  * A retired file whose content was edited is *not* removed: it stops being
  * qfai's the moment the project changed it, and deleting it would throw away
@@ -3361,6 +3382,13 @@ async function updateUneditedRuleMasters(
       // the adopter's text as this run's write and replace it.
       continue;
     }
+    if (plan.verdict === "removed") {
+      // Not `installed`: a master that is not there has no summary to refresh
+      // and no bullet to add. Its record entry is left as it stands, which is
+      // what keeps the removal durable across the next run.
+      skipped.push(target);
+      continue;
+    }
     if (plan.verdict !== "update") {
       recorded[plan.name] = plan.shippedHash;
       installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
@@ -3637,6 +3665,24 @@ const COPILOT_INSTRUCTIONS_ENTRY = ".github/copilot-instructions.md";
  * bullet in it, a superseded one is replaced where it stands, and the same
  * refusals apply as to the two entry points.
  */
+/**
+ * Names the rules this run left deleted, and how to take one back.
+ *
+ * Silence would read as "every shipped rule is installed", which is the state
+ * the exclusion exists because the run is not in. The way back is the record
+ * itself rather than a flag: the entry is what says the run wrote the file, so
+ * removing it puts the master in the same position as one shipped today, and a
+ * second way to say that is a second thing to keep in step.
+ */
+function reportRemovedRuleMasters(removed: readonly string[]): void {
+  if (removed.length === 0) return;
+  const named = removed.map((name) => `${AGENTS_RULES_DIR_CITATION}/${name}`).join(", ");
+  info(
+    `  kept deleted: ${named} (an earlier run wrote them and this project removed them; ` +
+      `delete the entry from ${AGENTS_RULES_DIR_CITATION}/${RULE_LOCK_BASENAME} to take one back)`,
+  );
+}
+
 /**
  * Names the masters whose summary this run left as it stands, with why.
  *
@@ -4212,33 +4258,31 @@ async function readTextFileIfPresent(target: string): Promise<string | null> {
 /**
  * One past the last line of the managed block that starts at `startIdx`.
  *
- * ## What this replaces, and the bug it closes
+ * ## Why the walk does not stop at the first unknown line
  *
- * Both callers used to walk forward while the line was KNOWN and stop at the first that was
- * not. A line sitting inside the block that the current writer no longer emits and that was
- * never registered as legacy therefore truncated the block at itself — and this repository had
- * one, `.qfai/output/*`, written by an older release. The consequences compound:
+ * A line inside the block that the current writer no longer emits, and that is not registered
+ * as legacy — `.qfai/output/*`, which an older release wrote, is one — would end a walk that
+ * stops at the first line it does not know. The consequences compound:
  *
- *   - `extractManagedBlock` returned the marker plus one line, so the freshness check found the
- *     governance negations "missing" and the early return never fired;
- *   - `removeManagedBlock` stripped that same two-line prefix and left the rest in place;
- *   - the rebuilt block — marker, the one line it saw, and every negation — went back in at the
- *     old position, ABOVE the twenty lines that had never been removed.
+ *   - `extractManagedBlock` returns the marker plus one line, so the freshness check finds the
+ *     governance negations "missing" and the early return never fires;
+ *   - `removeManagedBlock` strips that same two-line prefix and leaves the rest in place;
+ *   - the rebuilt block — marker, the one line it saw, and every negation — goes back in at the
+ *     old position, ABOVE the lines that were never removed.
  *
- * So every `qfai init` appended a second copy of the negations, and appended it above the
- * ignore lines that cancel them, where git's last-match rule makes it inert. Noise that grows
- * by a block per run, and noise is what makes a real change to `.gitignore` unreadable in
- * review.
+ * Every `qfai init` would then append a second copy of the negations, above the ignore lines
+ * that cancel them, where git's last-match rule makes it inert. Noise that grows by a block per
+ * run is what makes a real change to `.gitignore` unreadable in review.
  *
- * ## The rule, and why it still protects a project's own lines
+ * ## The rule, and why it protects a project's own lines
  *
  * The block is terminated by a blank line, by a comment that is not the marker, or by the end
  * of the file — that is how it is written, and how a project's own section is separated from
  * it. Inside that region the block ends at its LAST known line.
  *
  * Both halves matter. Tolerating unknown lines between known ones is what stops a retired line
- * truncating the block. Ending at the last KNOWN line is what keeps the old protection: lines a
- * project appended directly under the block, with no blank between, are still outside it, so
+ * truncating the block. Ending at the last KNOWN line keeps a project's own lines out of it:
+ * lines a project appended directly under the block, with no blank between, stay outside it, so
  * they keep their position relative to the negations and git's last-match verdict for them does
  * not change.
  *
@@ -4648,7 +4692,7 @@ function gitChildEnv(): NodeJS.ProcessEnv {
  * it during the template copy, which runs before this step, so the probes see
  * the enclosing repository and the write lands there. A `--dry-run` creates
  * nothing, and spawning a child in a missing `cwd` fails with ENOENT, so the
- * preview used to stay silent about a write the real run performs. Walking up
+ * preview would stay silent about a write the real run performs. Walking up
  * finds the same repository, because creating a plain directory never starts
  * a new one.
  */
@@ -4874,8 +4918,8 @@ async function syncIntegrationWrappers(
     // handled below by replacing the entry — but an **ancestor** symlink
     // (`.github` or `.github/instructions` pointing at a shared directory)
     // makes `dest` resolve to somebody else's file that lstat reports as an
-    // ordinary one. Before this loop honoured `--force` that file was skipped
-    // as pre-existing; refusing here keeps it that way. Creation is not
+    // ordinary one. Without `--force` that file is skipped as pre-existing, and
+    // refusing here keeps it so under `--force`. Creation is not
     // gated: writing a file where none existed destroys nothing, and gating
     // it would stop init from provisioning a deliberately shared directory.
     const escapesProject =
@@ -4886,10 +4930,10 @@ async function syncIntegrationWrappers(
     // symlink are that. Everything else `lstat` can report is user data this
     // command was never asked to destroy: a real directory holds actual files
     // (a symlink to one reports as a link, not a directory), and a FIFO, a
-    // socket or a device node is replaced outright by the `rename` below —
-    // each of them was preserved as pre-existing before this loop honoured
-    // `--force`, and a refusal list would have had to name every one of them
-    // to keep it that way. Declining leaves the operator to resolve it.
+    // socket or a device node is replaced outright by the `rename` below.
+    // Without `--force` each of them is kept as pre-existing, and a refusal
+    // list would have to name every one of them to keep it so. Declining
+    // leaves the operator to resolve it.
     // `undefined` covers both "not looked at" (no `--force`, or nothing there)
     // and an `lstat` that failed after `pathExists` saw the entry — a vanished
     // entry makes this a creation, which destroys nothing.

@@ -24,7 +24,7 @@
  * compared, only counted. All of that is addressed below.
  */
 import { createHash } from "node:crypto";
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
@@ -181,29 +181,68 @@ async function packsOnDisk(): Promise<string[]> {
 }
 
 /**
- * Whether this checkout carries any pack this stage opened.
+ * The packs the record itself names, oldest first.
  *
- * Review artifacts sit outside version control, so a fresh clone has none while
- * the record that counts them stays tracked. The two guards that read the tree
- * run wherever it exists and are skipped by name where it does not: measuring an
- * absent tree as zero reports a correct record as wrong, and passing silently
- * over an absent subject is the failure this whole file exists to catch.
+ * The record is the identified input set. Asking the directory instead makes
+ * whatever happens to be there the operand, and a clone holding six recent
+ * packs then reports a record that certifies twenty as wrong.
  *
- * Synchronous because `it.skipIf` is decided when the file is collected, and
- * asked with the same predicate the counts use rather than with the directory's
- * existence.
+ * Synchronous because `it.skipIf` is decided when the file is collected.
  */
-const HAS_STAGE_PACKS = ((): boolean => {
+const CERTIFIED_PACKS: readonly string[] = ((): string[] => {
   try {
-    return readdirSync(path.join(ROOT, ".qfai/review"), { withFileTypes: true }).some((entry) =>
-      isStagePack(entry.name, entry.isDirectory()),
+    const record = readFileSync(path.join(ROOT, ".qfai/evidence/atdd-spec-0017.md"), "utf8");
+    const named = new Set(
+      [...record.matchAll(/\breview-\d{17}\b/g)]
+        .map((match) => match[0])
+        .filter((name) => name >= FIRST_PACK),
     );
+    return [...named].sort();
   } catch {
-    // No such directory, or one that cannot be read. Either way there is
-    // nothing for the counts below to be measured against.
-    return false;
+    return [];
   }
 })();
+
+/**
+ * The certified packs this checkout does not hold.
+ *
+ * Review artifacts sit outside version control, so a fresh clone has none while
+ * the record that counts them stays tracked, and a working clone holds the
+ * packs its own rounds wrote and no others.
+ */
+const MISSING_PACKS: readonly string[] = ((): string[] => {
+  let present: ReadonlySet<string>;
+  try {
+    present = new Set(
+      readdirSync(path.join(ROOT, ".qfai/review"), { withFileTypes: true })
+        .filter((entry) => isStagePack(entry.name, entry.isDirectory()))
+        .map((entry) => entry.name),
+    );
+  } catch {
+    // No such directory, or one that cannot be read. Every certified pack is
+    // then missing, which is what the guards below need to know.
+    present = new Set();
+  }
+  return CERTIFIED_PACKS.filter((name) => !present.has(name));
+})();
+
+/**
+ * Whether this checkout holds every pack the record certifies.
+ *
+ * The two guards that read the tree compare the record against the archive, so
+ * they run on a complete archive and are skipped by name on anything else.
+ * Measuring a partial archive reports a correct record as wrong, and measuring
+ * an absent one reports it as wrong too; passing silently over an absent
+ * subject is the failure this whole file exists to catch. The skip names what
+ * is missing, so a run that could not check says so.
+ */
+const HAS_COMPLETE_ARCHIVE = CERTIFIED_PACKS.length > 0 && MISSING_PACKS.length === 0;
+
+/** What a skipped comparison was waiting for, named in the case title. */
+const ARCHIVE_REQUIREMENT =
+  MISSING_PACKS.length === 0
+    ? `all ${String(CERTIFIED_PACKS.length)} certified packs`
+    : `${String(MISSING_PACKS.length)} of ${String(CERTIFIED_PACKS.length)} certified packs absent from this checkout`;
 
 describe("the stage evidence's counts are derived, not typed", () => {
   it("reasons about every file it added against the rejected options", async () => {
@@ -575,7 +614,11 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // file blind to exactly that. `## Commands executed` quotes a command and its output, and the
     // output must match the file the command names.
     const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
-    const RECORDED = /vitest run[^\n]*?(tests\/[\w./-]+\.test\.ts)\n\s*-> Tests (\d+) passed/g;
+    // A recorded run states what it ran, and a case a run could not reach is skipped rather
+    // than absent: the total in parentheses is the file's callsites either way, and the
+    // passed and skipped halves must account for it.
+    const RECORDED =
+      /vitest run[^\n]*?(tests\/[\w./-]+\.test\.ts)\n\s*-> Tests (\d+) passed(?:\s*\|\s*(\d+) skipped)?\s*\((\d+)\)/g;
 
     const rows = [...evidence.matchAll(RECORDED)];
 
@@ -596,8 +639,14 @@ describe("the stage evidence's counts are derived, not typed", () => {
     for (const row of rows) {
       const relative = row[1] ?? "";
       const actual = countCases(await source(`packages/qfai/${relative}`));
-      if (Number(row[2]) !== actual) {
-        wrong.push(`${relative}: recorded ${row[2] ?? "?"} passed, file holds ${String(actual)}`);
+      const total = Number(row[4]);
+      const accounted = Number(row[2]) + Number(row[3] ?? 0);
+      if (total !== actual) {
+        wrong.push(`${relative}: recorded ${String(total)} cases, file holds ${String(actual)}`);
+      } else if (accounted !== total) {
+        wrong.push(
+          `${relative}: recorded ${String(accounted)} of ${String(total)} cases accounted for`,
+        );
       }
     }
     expect(wrong, "a recorded vitest output the file cannot produce").toEqual([]);
@@ -796,8 +845,28 @@ describe("the stage evidence's counts are derived, not typed", () => {
     ).toBe(measuredLine);
   });
 
-  it.skipIf(!HAS_STAGE_PACKS)(
-    "derives the round and response counts `## Final status` certifies with",
+  it("certifies as many rounds as the record names packs", async () => {
+    // The half of the round count that needs no archive. The comparison below
+    // reads the directory and is skipped wherever the directory is short of
+    // it, so without this a clone with no packs checked the number against
+    // nothing at all — and the number going stale after a round is the failure
+    // this file was written for.
+    const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
+    const certified =
+      /\*\*(\w+)\*\* rounds, \*\*(\d+)\*\* reviewer responses, \*\*(\d+) REVISE and (\w+) PASS\*\*/.exec(
+        evidence,
+      );
+    expect(certified, "`## Final status` states the counts in the pinned form").not.toBeNull();
+    if (certified === null) return;
+
+    expect(
+      WORDS[certified[1] ?? ""],
+      "the round count and the packs the record names are two statements of one number",
+    ).toBe(CERTIFIED_PACKS.length);
+  });
+
+  it.skipIf(!HAS_COMPLETE_ARCHIVE)(
+    `derives the round and response counts \`## Final status\` certifies with (${ARCHIVE_REQUIREMENT})`,
     async () => {
       // The three numbers in "**ten** rounds, **29** reviewer responses, **28 REVISE and one PASS**"
       // were correct when checked and derived by nothing — and their correctness has a lifetime of ONE
@@ -932,8 +1001,8 @@ describe("the stage evidence's counts are derived, not typed", () => {
     ]);
   });
 
-  it.skipIf(!HAS_STAGE_PACKS)(
-    "names every pack on disk, with a recomputing seal for each closed one",
+  it.skipIf(!HAS_COMPLETE_ARCHIVE)(
+    `names every pack on disk, with a recomputing seal for each closed one (${ARCHIVE_REQUIREMENT})`,
     async () => {
       // Two rules, because a seal is fixed at "when the last reviewer response lands" while the request
       // is committed BEFORE the reviewers launch — the practice that stopped the tree moving under

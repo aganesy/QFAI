@@ -2,7 +2,7 @@
 
 ## AC-0010-0001
 
-Given a UI-bearing discussion pack, when sidecar generation completes, then `30_exploration_brief.md`, `31_reference_pool.md`, `32_design_anti_goals.md`, `33_exploration_rubric.md`, `34_evaluator_calibration.md`, `40_screen_contracts.md`, and `50_review_input_bundle.md` exist.
+Given a UI-bearing discussion pack, when sidecar generation completes, then `uiux/40_screen_contracts.md` and `uiux/50_review_input_bundle.md` exist, and none of the legacy sidecars AC-0010-0008 forbids is written. Brand-level inputs are in root `DESIGN.md` (AC-0010-0007), not in a sidecar.
 
 ## AC-0010-0002
 

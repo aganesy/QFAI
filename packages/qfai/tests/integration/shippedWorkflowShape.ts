@@ -51,7 +51,7 @@ import {
 
 /** One dimension of the closed set the declared shape must pin. */
 export interface ShapeDimension {
-  /** The contract's dimension ordinal (1..9). */
+  /** The contract's dimension ordinal (1..10). */
   readonly id: number;
   /** The dimension as the contract words it. */
   readonly title: string;
@@ -72,7 +72,7 @@ export interface DeclaredShape {
 export interface ShapeFinding {
   /** Always `SHIPPED_WORKFLOW_SHAPE_DRIFT_CODE`. */
   readonly code: string;
-  /** The dimension ordinal the divergence belongs to (1..9). */
+  /** The dimension ordinal the divergence belongs to (1..10). */
   readonly dimension: number;
   /** `<file>` or `<file>:<job>` — the site named in the report. */
   readonly site: string;
@@ -121,13 +121,39 @@ type LaneInertness =
 interface FileExpectation {
   readonly name: string;
   /**
+   * Dimension 4, one entry per job that declares a matrix. The axis and the
+   * literal that produces its values, because substituting one leg for another
+   * leaves `fail-fast: false` exactly where it was.
+   */
+  readonly matrices: readonly {
+    readonly jobId: string;
+    readonly axis: string;
+    /** The declared value, rendered as JSON — a list or the expression producing one. */
+    readonly values: string;
+  }[];
+  /**
+   * Dimension 10, one entry per aggregate. The string an adopter's branch
+   * protection names, which is the job's `name:` and not its id.
+   */
+  readonly checkNames: readonly { readonly jobId: string; readonly name: string }[];
+  /**
    * Dimension 5. The full operator-facing invocation, held as ONE literal so
    * the value exists in exactly one place; the three pins the gate diffs
    * (subcommand, profile, threshold) are parsed out of it. An empty list means
    * no lane in this file invokes QFAI — dimension 5 has no subject here, which
    * the shape states rather than inventing values for.
    */
-  readonly invocations: readonly { readonly jobId: string; readonly invocation: string }[];
+  readonly invocations: readonly {
+    readonly jobId: string;
+    readonly invocation: string;
+    /**
+     * The step condition that selects this invocation, or `""` where the step
+     * carries none. A matrix leg and an event are what choose between two
+     * invocations of the same subcommand, so the condition is part of which
+     * invocation runs and not decoration around it.
+     */
+    readonly selector: string;
+  }[];
   /** Dimension 6, one entry per lane. */
   readonly lanes: readonly LaneInertness[];
 }
@@ -135,6 +161,8 @@ interface FileExpectation {
 const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
   {
     name: "qfai-tests.yml",
+    matrices: [],
+    checkNames: [{ jobId: "verdict", name: "verdict" }],
     invocations: [],
     lanes: ["unit", "component", "integration", "api", "e2e"].map((jobId) => ({
       jobId,
@@ -145,9 +173,26 @@ const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
     name: "qfai-validate.yml",
     // Independent full and drift profiles. Full excludes drift; the PR-only
     // drift profile checks downstream edits to upstream SSOT.
+    matrices: [
+      {
+        jobId: "validate",
+        axis: "profile",
+        values:
+          '"${{ fromJSON(github.event_name == \'pull_request\' && \'[\\"full\\",\\"drift\\"]\' || \'[\\"full\\"]\') }}"',
+      },
+    ],
+    checkNames: [{ jobId: "summary", name: "qfai validate (full profile, fail on error)" }],
     invocations: [
-      { jobId: "validate", invocation: "qfai validate --profile full --fail-on error" },
-      { jobId: "validate", invocation: "qfai validate --profile drift --fail-on error" },
+      {
+        jobId: "validate",
+        invocation: "qfai validate --profile full --fail-on error",
+        selector: "matrix.profile == 'full'",
+      },
+      {
+        jobId: "validate",
+        invocation: "qfai validate --profile drift --fail-on error",
+        selector: "matrix.profile == 'drift' && github.event_name == 'pull_request'",
+      },
     ],
     lanes: [
       { jobId: "validate", kind: "never-inert" },
@@ -160,6 +205,8 @@ const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
     // dimension 5 has no subject here, which the shape states rather than
     // inventing a value for.
     name: "qfai-docs.yml",
+    matrices: [{ jobId: "checks", axis: "check", values: '["shape","mermaid"]' }],
+    checkNames: [{ jobId: "docs", name: "qfai docs (document shape and Mermaid syntax)" }],
     invocations: [],
     lanes: [
       { jobId: "checks", kind: "never-inert" },
@@ -462,22 +509,113 @@ function jobBoundingPins(): ShapePin[] {
 }
 
 /** Dimension 4: every job matrix disables fail-fast. */
+/** A job's matrix as the shape states it: the axis, its values, and the cancel rule. */
+function renderMatrix(axis: string, values: string): string {
+  return `fail-fast: false; ${axis} = ${values}`;
+}
+
+/**
+ * Dimension 4: per matrix — `fail-fast: false`, the axis, and the values.
+ *
+ * The cancel rule alone let a leg be substituted for another silently:
+ * `check: [shape, shape]` runs the same checker twice, leaves `fail-fast`
+ * where it was, and the lane reports two green legs for one checker. The axis
+ * and its values are what say which work the legs divide.
+ */
 function matrixPins(): ShapePin[] {
-  const expected = "every job matrix sets fail-fast: false";
-  return SHIPPED_FILE_EXPECTATIONS.map((file) =>
-    filePin(4, file.name, expected, (found) => {
-      const problems: string[] = [];
-      for (const { jobId, job } of collectWorkflowJobs(found.doc)) {
-        const strategy = job["strategy"];
-        if (!isRecord(strategy) || !isRecord(strategy["matrix"])) {
-          continue;
+  const pins: ShapePin[] = [];
+  for (const file of SHIPPED_FILE_EXPECTATIONS) {
+    const declared = new Map(file.matrices.map((entry) => [entry.jobId, entry]));
+    for (const [jobId, entry] of declared) {
+      pins.push({
+        dimension: 4,
+        site: `${file.name}:${jobId}`,
+        expected: renderMatrix(entry.axis, entry.values),
+        observe: (tree) => {
+          const found = tree.files.find((candidate) => candidate.name === file.name);
+          // An unparsable file is dimension 1's to diagnose. Reporting it here
+          // too turns one defect into a finding under every dimension that
+          // reads the document.
+          if (found === undefined || found.parseError !== undefined) {
+            return renderMatrix(entry.axis, entry.values);
+          }
+          const job = collectWorkflowJobs(found.doc).find((one) => one.jobId === jobId)?.job;
+          const strategy = job?.["strategy"];
+          if (!isRecord(strategy) || !isRecord(strategy["matrix"])) {
+            return "no matrix";
+          }
+          const matrix = strategy["matrix"];
+          const axes = Object.keys(matrix);
+          const cancel =
+            strategy["fail-fast"] === false ? "fail-fast: false" : "fail-fast: not set";
+          if (axes.length !== 1 || axes[0] !== entry.axis) {
+            return `${cancel}; axes = ${JSON.stringify(axes)}`;
+          }
+          return `${cancel}; ${entry.axis} = ${JSON.stringify(matrix[entry.axis])}`;
+        },
+      });
+    }
+    // The other direction: a job that GAINS a matrix the shape never declared
+    // would otherwise be pinned by nothing at all.
+    pins.push(
+      filePin(
+        4,
+        file.name,
+        declared.size === 0
+          ? "no job declares a matrix"
+          : `matrix jobs: ${[...declared.keys()].join(", ")}`,
+        (found) => {
+          const observed = collectWorkflowJobs(found.doc)
+            .filter(({ job }) => {
+              const strategy = job["strategy"];
+              return isRecord(strategy) && isRecord(strategy["matrix"]);
+            })
+            .map(({ jobId }) => jobId);
+          const rendered =
+            observed.length === 0
+              ? "no job declares a matrix"
+              : `matrix jobs: ${observed.join(", ")}`;
+          return rendered ===
+            (declared.size === 0
+              ? "no job declares a matrix"
+              : `matrix jobs: ${[...declared.keys()].join(", ")}`)
+            ? ""
+            : rendered;
+        },
+      ),
+    );
+  }
+  return pins;
+}
+
+/**
+ * Dimension 10: the external check name each aggregate carries.
+ *
+ * An adopter's branch protection names the string GitHub shows, which is the
+ * job's `name:`. Renaming it leaves every other dimension satisfied and makes
+ * the required check unreachable, so protection passes over a job that no
+ * longer reports under the name it is required by.
+ */
+function checkNamePins(): ShapePin[] {
+  return SHIPPED_FILE_EXPECTATIONS.flatMap((file) =>
+    file.checkNames.map((entry) => ({
+      dimension: 10,
+      site: `${file.name}:${entry.jobId}`,
+      expected: `external check name: ${entry.name}`,
+      observe: (tree: WorkflowTree): string => {
+        const found = tree.files.find((candidate) => candidate.name === file.name);
+        // Dimension 1 owns the unparsable file, here as above.
+        if (found === undefined || found.parseError !== undefined) {
+          return `external check name: ${entry.name}`;
         }
-        if (strategy["fail-fast"] !== false) {
-          problems.push(`${jobId}: matrix does not set fail-fast: false`);
+        const job = collectWorkflowJobs(found.doc).find((one) => one.jobId === entry.jobId)?.job;
+        if (job === undefined) {
+          return `job ${entry.jobId} is absent`;
         }
-      }
-      return problems.length === 0 ? "" : problems.join("; ");
-    }),
+        const name = job["name"];
+        return `external check name: ${typeof name === "string" ? name : "(none)"}`;
+      },
+    })),
   );
 }
 
@@ -485,6 +623,8 @@ interface ParsedInvocation {
   readonly subcommand: string;
   readonly profile: string;
   readonly failOn: string;
+  /** The step condition that selects this invocation, or `(none)`. */
+  readonly selector: string;
 }
 
 /**
@@ -500,7 +640,12 @@ function parseDeclaredInvocation(invocation: string): ParsedInvocation {
       `declared invocation "${invocation}" is not "qfai <subcommand> --profile <value> --fail-on <threshold>"`,
     );
   }
-  return { subcommand: match[1] ?? "", profile: match[2] ?? "", failOn: match[3] ?? "" };
+  return {
+    subcommand: match[1] ?? "",
+    profile: match[2] ?? "",
+    failOn: match[3] ?? "",
+    selector: "",
+  };
 }
 
 /**
@@ -554,6 +699,11 @@ function observedInvocations(job: Record<string, unknown>): ParsedInvocation[] {
     if (typeof run !== "string") {
       continue;
     }
+    // The condition belongs to the step, so every invocation the body carries
+    // is selected by it. A step that loses its condition runs on every leg and
+    // on every event, which is a different invocation set from the declared one.
+    const condition = step["if"];
+    const selector = typeof condition === "string" ? condition.trim() : "(none)";
     let deadCode = false;
     for (const line of executableLines(run)) {
       if (UNCONDITIONAL_EXIT_ZERO.test(line)) {
@@ -568,6 +718,7 @@ function observedInvocations(job: Record<string, unknown>): ParsedInvocation[] {
         ? "an unconditional `exit 0` earlier in the same body — the invocation never runs"
         : failureSuppression(line);
       found.push({
+        selector,
         subcommand: command[1] ?? "",
         profile: /--profile[ =]+(\S+)/.exec(line)?.[1] ?? "(absent)",
         failOn:
@@ -592,6 +743,7 @@ const INVOCATION_ATTRIBUTES: ReadonlyArray<(parsed: ParsedInvocation) => string>
   (parsed) => `qfai ${parsed.subcommand}`,
   (parsed) => `--profile ${parsed.profile}`,
   (parsed) => `--fail-on ${parsed.failOn}`,
+  (parsed) => `selected by: ${parsed.selector === "" ? "(none)" : parsed.selector}`,
 ];
 
 /**
@@ -619,12 +771,12 @@ function laneInvocationPins(): ShapePin[] {
     // a time, a single declared value would be compared against that joined
     // string, and the second run would read as drift even when the contract is
     // what asks for it.
-    const declaredByJob = new Map<string, string[]>();
-    for (const { jobId, invocation } of file.invocations) {
-      declaredByJob.set(jobId, [...(declaredByJob.get(jobId) ?? []), invocation]);
+    const declaredByJob = new Map<string, ParsedInvocation[]>();
+    for (const { jobId, invocation, selector } of file.invocations) {
+      const parsed = { ...parseDeclaredInvocation(invocation), selector };
+      declaredByJob.set(jobId, [...(declaredByJob.get(jobId) ?? []), parsed]);
     }
-    for (const [jobId, invocations] of declaredByJob) {
-      const declared = invocations.map(parseDeclaredInvocation);
+    for (const [jobId, declared] of declaredByJob) {
       for (const render of INVOCATION_ATTRIBUTES) {
         const expected = declared.map(render).join(" + ");
         pins.push({
@@ -862,11 +1014,15 @@ const DIMENSIONS: ReadonlyArray<{
       "Per job: a reachable permissions block, timeout-minutes, and a runner selector in the repository-variable form with a public GitHub-hosted default",
     pins: jobBoundingPins,
   },
-  { id: 4, title: "Per matrix: fail-fast: false", pins: matrixPins },
+  {
+    id: 4,
+    title: "Per matrix: fail-fast: false, the axis and its values",
+    pins: matrixPins,
+  },
   {
     id: 5,
     title:
-      "Per lane that invokes QFAI: the subcommand, the --profile value and the --fail-on threshold",
+      "Per lane that invokes QFAI: the subcommand, the --profile value, the --fail-on threshold and the condition that selects it",
     pins: laneInvocationPins,
   },
   {
@@ -886,6 +1042,11 @@ const DIMENSIONS: ReadonlyArray<{
     pins: zeroSecretPins,
   },
   { id: 9, title: "No shipped file references another shipped file", pins: crossReferencePins },
+  {
+    id: 10,
+    title: "Per aggregate: the external check name adopter branch protection names",
+    pins: checkNamePins,
+  },
 ];
 
 /** Every pin, in dimension order: the diff's operand list and the shape's own table. */
