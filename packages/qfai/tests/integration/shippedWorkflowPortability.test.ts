@@ -81,9 +81,17 @@ const INSTALL_RUN_RE = /\b(?:pnpm|yarn|npm)\s+(?:install|ci)\b/;
  * — and every ordering assertion built on this regex would then have run over
  * nothing while reporting green. Anchored to the packaged path, so a `node`
  * invocation of some other program is still not a lane result.
+ *
+ * The third is the test lane, whose verdict comes from neither: it runs a script
+ * the ADOPTER declared, and the package cannot know what that script is. What it
+ * does know is the name, because the probe that fills the matrix axis looks for
+ * exactly `test:<layer>` — so the alternative is anchored to that name and to the
+ * variable the leg carries it in. A package manager running any other script is
+ * still not a lane result, which is what stops this widening into "any command
+ * the lane happens to run".
  */
 const QFAI_LANE_RE =
-  /^\s*(?:(?:npx|pnpm|yarn|npm)\s+(?:exec\s+|dlx\s+|run\s+)?qfai\s+validate\b|node\s+node_modules\/qfai\/assets\/scripts\/check-[a-z-]+\.mjs\b)/;
+  /^\s*(?:(?:npx|pnpm|yarn|npm)\s+(?:exec\s+|dlx\s+|run\s+)?qfai\s+validate\b|node\s+node_modules\/qfai\/assets\/scripts\/check-[a-z-]+\.mjs\b|(?:pnpm|yarn|npm)\s+run\s+"test:\$\{QFAI_LAYER\}")/;
 
 /** A bash diagnostic line, i.e. an aborted command rather than a chosen exit. */
 const BASH_DIAGNOSTIC_RE = /: line \d+: |command not found|unexpected|syntax error/;
@@ -217,7 +225,14 @@ async function aggregateFailureViolations(
     return [`${site} survives a failed install but is not a result-only aggregate`];
   }
   const bindings = isRecord(step["env"]) ? step["env"] : {};
-  for (const need of installNeeds) {
+  // `toJSON(needs)` carries every need's result into one variable, so an
+  // aggregate binding it consumes all of them. Read here rather than left to the
+  // per-need loop below: that loop looks for one literal per need, and an
+  // aggregate written this way would be reported as ignoring every dependency
+  // while in fact reading all of them — the false direction this guard must not
+  // take, because the repair for it is to stop aggregating.
+  const consumesEveryNeed = Object.values(bindings).includes("${{ toJSON(needs) }}");
+  for (const need of consumesEveryNeed ? [] : installNeeds) {
     const value = `\${{ needs.${need}.result }}`;
     if (!Object.values(bindings).includes(value)) {
       return [`${site} does not consume the result of install-bearing need ${need}`];

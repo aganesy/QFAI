@@ -285,9 +285,6 @@ jobs:
           # Nothing in this job pushes back, so the token never needs to
           # outlive the checkout step.
           persist-credentials: false
-          # Nothing in this lane compares against a base, so the shallow
-          # fetch is all it needs.
-          fetch-depth: 1
       - name: Resolve the package manager (pnpm route fails closed)
         id: package-manager
         shell: bash

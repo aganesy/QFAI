@@ -3448,10 +3448,15 @@ describe("TC-0017-0050 (TDD-0050): the lane scans both roots and reports shipped
           "  lint:\n    runs-on: ubuntu-latest\n",
         ),
       );
-      // The timeout rule, not fail-fast: the shipped tree expresses its lanes as seven
-      // independent jobs rather than matrix legs, so it has no matrix to disable.
+      // The timeout rule, not fail-fast: the plant removes one job's budget, and the
+      // matrix the lane now declares already sets `fail-fast: false` — so disabling it
+      // would be planting the rule's satisfied state rather than its violation.
+      //
+      // The first job with a budget, whichever it is. Naming the value pinned this plant
+      // to a number no job had to keep: the lane's own budget moved from ten minutes to
+      // thirty when it started installing, and the plant then matched nothing.
       editShipped(d, SHIPPED_FILE, (text) =>
-        text.replace("      contents: read\n    timeout-minutes: 10\n", "      contents: read\n"),
+        text.replace(/      contents: read\n    timeout-minutes: \d+\n/, "      contents: read\n"),
       );
     });
     try {
