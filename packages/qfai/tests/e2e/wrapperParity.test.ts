@@ -17,7 +17,6 @@ const implementSkillPath = path.join(
   "SKILL.md",
 );
 
-// QFAI:SPEC-0011:US-0011-0005
 /**
  * Deliberately no `{ timeout: … }`.
  *
@@ -138,7 +137,6 @@ describe("wrapper parity across all three platforms", () => {
   });
 });
 
-// QFAI:SPEC-0011:US-0011-0005
 describe("wrapper behavior-only language", () => {
   it("SKILL.md description frontmatter uses behavior-only language without sub-agent names", async () => {
     const content = await readFile(implementSkillPath, "utf-8");

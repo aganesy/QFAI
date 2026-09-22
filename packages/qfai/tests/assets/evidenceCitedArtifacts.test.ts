@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import MarkdownIt from "markdown-it";
 import { describe, expect, it } from "vitest";
 import { parseAllDocuments, visit } from "yaml";
 
@@ -134,8 +135,13 @@ const IN_GROUP_CHARACTER = /[|,!^:=]/;
  * a longer one, and the Markdown emphasis a record wraps a name in. The run that
  * opened the citation is returned, because it is also what closes it — a
  * trailing `**` is emphasis rather than a wildcard.
+ *
+ * `inCode` says whether a code span or a code block delimits the text here. It
+ * decides what a backslash before the root means: outside code it escapes the
+ * punctuation after it and renders as nothing, so the citation begins the line;
+ * inside code it is a path separator, and the text before it is a longer name.
  */
-function citationOpener(line: string, from: number): string | null {
+function citationOpener(line: string, from: number, inCode = false): string | null {
   let start = from;
   if (start >= 2 && line.slice(start - 2, start) === "./") start -= 2;
   // Markdown emphasis around a path is not part of it. A run of `*` or `_` is
@@ -149,15 +155,23 @@ function citationOpener(line: string, from: number): string | null {
       ? line.slice(opener, start)
       : "";
   const before = emphasis === "" ? start : opener;
-  // A backslash before the root is Windows path text: `C:\run\.qfai/report/…` names
-  // a machine's file, as a POSIX absolute path does. So is a letter outside
-  // ASCII: `/tmp/é.qfai/report/…` is one longer name.
-  const previous = line[before - 1] ?? "";
+  // A backslash before the root is Windows path text inside code: `C:\run\.qfai/…`
+  // names a machine's file, as a POSIX absolute path does. So is a letter
+  // outside ASCII: `/tmp/é.qfai/report/…` is one longer name.
+  //
+  // Outside code a single backslash is a Markdown escape and renders as
+  // nothing, so what stands before the citation is the character before it.
+  // Read as a separator, `\.qfai/report/missing.json` at the start of a line
+  // was discarded, and the absent artifact it names was never counted. A pair
+  // renders as one backslash, which is path text again.
+  const escape = !inCode && line[before - 1] === "\\" && line[before - 2] !== "\\";
+  const boundary = escape ? before - 1 : before;
+  const previous = line[boundary - 1] ?? "";
   const pathText =
     CITATION_CHARACTER.test(previous) ||
     previous === "\\" ||
     ((previous.codePointAt(0) ?? 0) > 0x7f && NAME_CHARACTER.test(previous));
-  if (before !== 0 && pathText) return null;
+  if (boundary !== 0 && pathText) return null;
   return emphasis;
 }
 
@@ -195,11 +209,11 @@ function citationsIn(line: string, spans: readonly CodeSpan[] = codeSpanRanges(l
   for (const start of [...line.matchAll(CITED_GENERATED_ROOT)]) {
     const from = start.index;
     if (from === undefined) continue;
-    const opener = citationOpener(line, from);
-    if (opener === null) continue;
     // Inside a code span a comma or a semicolon is part of the name, since the
     // span delimits it; in prose the same characters end the sentence it is in.
     const span = spans.find(([spanStart, spanEnd]) => from >= spanStart && from < spanEnd);
+    const opener = citationOpener(line, from, span !== undefined);
+    if (opener === null) continue;
     let index = from + start[0].length;
     const closers: string[] = [];
     // Whether each open group was introduced by the dialect: `@(`, `?(`, `+(`,
@@ -1142,18 +1156,23 @@ async function measureCitations(): Promise<Citation[]> {
 }
 
 /**
- * A JSON record's string values, one per line, as the record means them.
+ * A JSON record's string values, each on its own, as the record means them.
  *
  * JSON may write a separator as `\/` or `\u002f`, and the raw text then holds no
  * root to find. A record that does not parse is read as the text it is.
  */
-function decodedJson(text: string): string {
+function decodedJson(text: string): string[] {
   return decodedRecord(text);
 }
 
 /**
- * A JSON or YAML record's keys and string values, one per line, as the record
- * means them. A record that does not parse is read as the text it is.
+ * A JSON or YAML record's keys and string values, each on its own, as the
+ * record means them. A record that does not parse is read as the text it is.
+ *
+ * Each scalar is its own document, because that is what the record placed
+ * there. Joined into one text they were read as consecutive lines, so a
+ * disclaimer ending one scalar covered a fenced block opening in the next —
+ * a pairing the record never wrote.
  *
  * JSON is read as the YAML it also is. Every scalar node counts, keys included,
  * since a manifest often keys its entries by path. An alias is not resolved: it
@@ -1161,13 +1180,13 @@ function decodedJson(text: string): string {
  * `JSON.parse` would keep only the last and leave a citation in an earlier one
  * unread.
  */
-function decodedRecord(text: string): string {
+function decodedRecord(text: string): string[] {
   // Every document of a stream. Read as one, a second document is a parse
   // error, and the record would fall back to its raw text, where an escaped
   // path holds no root.
   const documents = parseAllDocuments(text, { uniqueKeys: false });
   const list = Array.isArray(documents) ? documents : [];
-  if (list.length === 0) return text;
+  if (list.length === 0) return [text];
   const strings: string[] = [];
   for (const document of list) {
     // A document that does not parse is read as its own text, and the others in
@@ -1175,52 +1194,69 @@ function decodedRecord(text: string): string {
     // escaped path in a valid document with no root to find.
     if (document.errors.length > 0) {
       const [start, , end] = document.range;
-      strings.push(...text.slice(start, end).split("\n"));
+      strings.push(text.slice(start, end));
       continue;
     }
     visit(document, {
       Scalar(_key, node) {
-        if (typeof node.value === "string") strings.push(...node.value.split("\n"));
+        if (typeof node.value === "string") strings.push(node.value);
       },
     });
   }
-  return strings.join("\n");
+  return strings;
 }
 
-/** The citations one evidence file's text carries, numbered per path and heading. */
-function citationsOf(file: string, text: string): Citation[] {
+/**
+ * The citations one evidence file carries, numbered per path and heading.
+ *
+ * A Markdown file is one document. A record is as many documents as it holds
+ * scalars, scanned separately so that block structure — a fence, and the
+ * disclaimer the line above it carries — reaches no further than the scalar it
+ * was written in. The numbering and the current heading run across the whole
+ * file either way, so a key means the same thing whichever shape the file has.
+ */
+function citationsOf(file: string, documents: string | readonly string[]): Citation[] {
   const measured: Citation[] = [];
   const occurrences = new Map<string, number>();
-  const lines = text.split("\n");
-  const spans = codeSpansByLine(lines);
-  const disclaimed = disclaimedByLine(text, spans);
-  const fenced = fenceRoles(lines);
   let section = "";
-  lines.forEach((line, index) => {
-    // A `#` run inside a fence is a shell comment or a diff marker, not a
-    // heading, and reading it as one would put the citations after it under a
-    // section no reader sees.
-    if (fenced[index] === undefined) {
-      const heading = HEADING_LINE.exec(line);
-      if (heading !== null) {
-        section = `${heading[1] ?? ""} ${(heading[2] ?? "").replace(CLOSING_HASHES, "").trim()}`;
+  for (const text of typeof documents === "string" ? [documents] : documents) {
+    const lines = text.split("\n");
+    const spans = codeSpansByLine(lines);
+    const disclaimed = disclaimedByLine(text, spans);
+    const fenced = fenceRoles(lines);
+    lines.forEach((line, index) => {
+      // A `#` run inside a fence is a shell comment or a diff marker, not a
+      // heading, and reading it as one would put the citations after it under a
+      // section no reader sees.
+      if (fenced[index] === undefined) {
+        const heading = HEADING_LINE.exec(line);
+        if (heading !== null) {
+          section = `${heading[1] ?? ""} ${(heading[2] ?? "").replace(CLOSING_HASHES, "").trim()}`;
+        }
       }
-    }
-    const covered = disclaimed[index];
-    if (covered === "all") return;
-    for (const cited of citationsIn(line, spans[index])) {
-      // `continue`, not `return`: one line can carry several citations, and
-      // leaving the line on the first one that is root-only or disclaimed loses
-      // every citation after it.
-      if (covered?.has(cited) === true || !namesSomethingInside(cited)) continue;
-      // A heading holds no newline and a path holds none either, so the two
-      // cannot run together into one key that means something else.
-      const within = `${section}\n${cited}`;
-      const occurrence = (occurrences.get(within) ?? 0) + 1;
-      occurrences.set(within, occurrence);
-      measured.push([file, cited, section, occurrence]);
-    }
-  });
+      const covered = disclaimed[index];
+      if (covered === "all") return;
+      // Inside a code block the whole line is code, so a comma or a colon after
+      // a path belongs to the name exactly as it does inside a code span. Read
+      // as prose, a transcript line ended the citation at the comma, the
+      // tracked prefix resolved, and the name the line really held went
+      // unchecked.
+      const code: readonly CodeSpan[] | undefined =
+        fenced[index] === "inside" ? [[0, line.length]] : spans[index];
+      for (const cited of citationsIn(line, code)) {
+        // `continue`, not `return`: one line can carry several citations, and
+        // leaving the line on the first one that is root-only or disclaimed loses
+        // every citation after it.
+        if (covered?.has(cited) === true || !namesSomethingInside(cited)) continue;
+        // A heading holds no newline and a path holds none either, so the two
+        // cannot run together into one key that means something else.
+        const within = `${section}\n${cited}`;
+        const occurrence = (occurrences.get(within) ?? 0) + 1;
+        occurrences.set(within, occurrence);
+        measured.push([file, cited, section, occurrence]);
+      }
+    });
+  }
   return measured;
 }
 
@@ -1247,32 +1283,18 @@ function disclaimedByLine(
       covers = disclaimedPaths(lines[index - 1] ?? "", spans[index - 1] ?? []);
       return undefined;
     }
-    if (role === "close") {
-      covers = null;
-      return undefined;
-    }
     if (role === "inside") return covers ?? undefined;
-    // Only outside a fence, and outside indented code, which Markdown renders
-    // the same way: there the marker is part of what the command printed, and
-    // read as a disclaimer it hid every citation on the line.
-    if (INDENTED_CODE.test(line)) return undefined;
+    // Outside a code block of either kind, so whatever covered the last one is
+    // spent. A fence ends on its closing delimiter; an indented block carries
+    // no delimiter and ends on the first line that is not indented code, which
+    // is this one.
+    covers = null;
+    // A marker inside a code block of either kind is part of what the command
+    // printed. Read as a disclaimer it hid every citation on the line.
+    if (role === "close") return undefined;
     return NOT_A_CITATION.test(withoutCode(line, spans[index] ?? [])) ? "all" : undefined;
   });
 }
-
-/**
- * A line Markdown renders as code because of its indent.
- *
- * Read as prose, a transcript written this way had its marker honoured and
- * the absent artifact beside it bypassed the census — the failure the guard
- * exists to catch.
- *
- * SIMPLIFIED: the indent alone, without asking whether a list item owns it. A
- * marker refused on an indented line inside a list costs a census entry,
- * which is repaired; a marker honoured inside a transcript costs the finding.
- * Lift when: a record needs a marker on a line a list has indented.
- */
-const INDENTED_CODE = /^(?: {4}|\t)/;
 
 /** A Markdown ATX heading: its level, and the text after it. */
 const HEADING_LINE = /^ {0,3}(#{1,6})[^\S\r\n]+(.*)$/;
@@ -1280,39 +1302,51 @@ const HEADING_LINE = /^ {0,3}(#{1,6})[^\S\r\n]+(.*)$/;
 /** The optional closing run of a heading, which is decoration rather than text. */
 const CLOSING_HASHES = /[^\S\r\n]+#*[^\S\r\n]*$/;
 
-/** A line's part in a fenced block. */
+/** A line's part in a block Markdown renders as code. */
 type FenceRole = "open" | "inside" | "close";
 
 /**
- * Each line's part in a fenced block, or `undefined` outside one.
+ * The parser this file reads block structure with.
  *
- * A fence inside a list item or a blockquote is indented past three spaces, or
- * carries the quote marker, and is still a fence.
+ * Which lines render as code is a question about containers, and each part of it
+ * was answered the wrong way by reading a line on its own: a fence opens on a
+ * list item's own marker line, an opener indented four spaces at the top level
+ * is not a fence but the first line of an indented code block, and inside a list
+ * item those same four spaces are the item's content. A marker honoured inside a
+ * transcript, and a citation beside it never checked, is the failure this guard
+ * exists to catch.
+ *
+ * `html: false` keeps a comment in the source rather than passing it through as
+ * raw output; nothing here renders, and the lines are read from the token map.
+ */
+const commonMark = new MarkdownIt("commonmark", { html: false });
+
+/**
+ * Each line's part in a block rendered as code, or `undefined` outside one.
+ *
+ * An indented code block carries no delimiter line, so its first line is `open`
+ * and its last is `inside`: a disclaimer above it covers it exactly as one above
+ * a fence covers the fence, which is what a reader sees.
  */
 function fenceRoles(lines: readonly string[]): Array<FenceRole | undefined> {
-  let open: { character: string; length: number } | null = null;
-  return lines.map((line): FenceRole | undefined => {
-    const fence = /^(?:[ \t]*>)*[ \t]*(`{3,}|~{3,})(.*)$/.exec(line);
-    const run = fence?.[1] ?? "";
-    const rest = fence?.[2] ?? "";
-    if (open === null) {
-      // A backtick run with another backtick after it opens a code span.
-      if (fence === null || (run.startsWith("`") && rest.includes("`"))) return undefined;
-      open = { character: run[0] ?? "`", length: run.length };
-      return "open";
+  const roles: Array<FenceRole | undefined> = lines.map(() => undefined);
+  for (const token of commonMark.parse(lines.join("\n"), {})) {
+    if (token.type !== "fence" && token.type !== "code_block") continue;
+    const [from, to] = token.map ?? [0, 0];
+    // `to` is exclusive and counts the closing fence where the block has one.
+    // An unclosed fence runs to the end of the document, and an indented block
+    // ends on content, so the last line is only `close` when it delimits.
+    const last = Math.min(to, lines.length) - 1;
+    const closed = token.type === "fence" && CLOSES_FENCE.test(lines[last] ?? "");
+    for (let index = from; index <= last; index += 1) {
+      roles[index] = index === from ? "open" : index === last && closed ? "close" : "inside";
     }
-    if (
-      fence !== null &&
-      run[0] === open.character &&
-      run.length >= open.length &&
-      rest.trim() === ""
-    ) {
-      open = null;
-      return "close";
-    }
-    return "inside";
-  });
+  }
+  return roles;
 }
+
+/** A line holding nothing but a fence delimiter, after whatever container prefix it carries. */
+const CLOSES_FENCE = /^[\s>]*(?:`{3,}|~{3,})\s*$/;
 
 /**
  * A line with the content of its code spans blanked. A marker inside one
@@ -2435,6 +2469,69 @@ describe("what the scan counts as a citation", () => {
   });
 });
 
+describe("the scan reads a record the way it renders", () => {
+  const cited = (file: string, documents: string | readonly string[]): string[] =>
+    citationsOf(file, documents).map(([, found]) => found);
+
+  it("keeps a comma-suffixed name whole on a fenced transcript line", () => {
+    // Inside a fence the whole line is code, so the comma belongs to the name
+    // exactly as it does inside a code span. Read as prose, the citation ended
+    // at the comma, the tracked prefix resolved, and the name the transcript
+    // really held was never checked.
+    const text = ["```text", "ls: .qfai/report/summary.json,missing", "```"].join("\n");
+    expect(cited("x.md", text)).toEqual([".qfai/report/summary.json,missing"]);
+    expect(cited("x.md", "ls: .qfai/report/summary.json,missing")).toEqual([
+      ".qfai/report/summary.json",
+    ]);
+  });
+
+  it("reads a fence that opens on a list item's own marker line", () => {
+    // The marker inside the transcript is what the command printed. Read as a
+    // disclaimer it hid the citation on its own line.
+    const text = [
+      "- ```text",
+      "  ls: .qfai/report/other.json <!-- qfai:not-a-citation -->",
+      "  ```",
+    ].join("\n");
+    expect(cited("x.md", text)).toEqual([".qfai/report/other.json"]);
+  });
+
+  it("reads a four-space-indented fence opener as the paragraph text it renders as", () => {
+    // Three spaces open a fence at the top level and four do not, so this line
+    // continues the paragraph above it. Read as a fence opener, everything
+    // after it inherited the disclaimer on the line before — including a
+    // citation the record made in prose.
+    const text = [
+      "<!-- qfai:not-a-citation .qfai/report/other.json -->",
+      "    ```text",
+      ".qfai/report/other.json",
+    ].join("\n");
+    expect(cited("x.md", text)).toEqual([".qfai/report/other.json"]);
+  });
+
+  it("keeps one scalar's disclaimer out of the next scalar's fenced block", () => {
+    // Two entries of a list, which the record never placed on consecutive
+    // lines. Joined into one text they became a marker line followed by a
+    // fence, and the citation inside the fence was covered by a disclaimer
+    // written somewhere else entirely.
+    const record = [
+      "steps:",
+      '  - "<!-- qfai:not-a-citation .qfai/report/other.json -->"',
+      '  - "```text\\n.qfai/report/other.json\\n```"',
+    ].join("\n");
+    expect(cited("x.yaml", decodedRecord(record))).toEqual([".qfai/report/other.json"]);
+  });
+
+  it("reads a backslash before a citation as the escape it renders as", () => {
+    // `\\.` renders as `.`, so the citation begins the line. Read as a path
+    // separator, the line was taken for a longer name belonging to a machine
+    // and the absent artifact was never counted. Inside code the same
+    // backslash is a separator, and there the reading stands.
+    expect(citationsIn("\\.qfai/report/missing.json")).toEqual([".qfai/report/missing.json"]);
+    expect(citationsIn("`C:\\run\\.qfai/report/missing.json`")).toEqual([]);
+  });
+});
+
 describe("a glob is a claim about a set", () => {
   const matchesLine = (line: string): string[] => citationsIn(line);
   /** A pattern compiled the way the writer's own destination check compiles it. */
@@ -3079,8 +3176,11 @@ describe("a glob is a claim about a set", () => {
     const record = ['path: ".qfai\\u002freport\\u002fmissing.json"', "---", "a: [unclosed"].join(
       "\n",
     );
-    expect(decodedRecord(record)).toContain(".qfai/report/missing.json");
-    expect(decodedRecord(record)).toContain("a: [unclosed");
+    // One scalar per entry now, so the stream is read as the joined text it
+    // decodes to rather than compared element by element: the document that
+    // does not parse contributes its own raw slice, delimiters and all.
+    expect(decodedRecord(record).join("\n")).toContain(".qfai/report/missing.json");
+    expect(decodedRecord(record).join("\n")).toContain("a: [unclosed");
   });
 
   it("counts every wildcard a run of stars compiles to", () => {
