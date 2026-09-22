@@ -168,7 +168,29 @@ export function maskLineComments(
       open = false;
       continue;
     }
+    // A backtick run opens a code span, and a `<!--` inside one is text the
+    // document shows rather than a comment hiding everything after it. The run
+    // closes on a run of the same length; an unclosed one is not a span at all,
+    // so the backticks are literal and the scan carries on just past them.
+    //
+    // SIMPLIFIED: a closing run is taken as the first run of that length,
+    // without CommonMark's rule that it be exactly that length.
+    // Lift when: a document writes ``` `` `` ``` around a span holding a
+    // shorter run, which none in this tree does.
+    const tick = line.indexOf("`", index);
     const start = line.indexOf("<!--", index);
+    if (start === -1 && tick === -1) {
+      visible += line.slice(index);
+      break;
+    }
+    if (tick !== -1 && (start === -1 || tick < start)) {
+      const run = /^`+/.exec(line.slice(tick))?.[0] ?? "`";
+      const close = line.indexOf(run, tick + run.length);
+      const end = close === -1 ? tick + run.length : close + run.length;
+      visible += line.slice(index, end);
+      index = end;
+      continue;
+    }
     if (start === -1) {
       visible += line.slice(index);
       break;
@@ -377,6 +399,19 @@ export function maskNonSpecRegions(text: string): string {
         listOpen = false;
       }
       prevBlank = blank;
+
+      // The fence opener is read before the comment scan, because a `<!--` in
+      // an info string labels the sample rather than opening a comment. Only
+      // when a comment is already open does the scan come first: a fence marker
+      // inside one is comment text, and the line may close the comment and open
+      // a fence after it, which the check below still catches.
+      if (!inComment) {
+        const opener = FENCE_LINE.exec(line)?.[1];
+        if (opener) {
+          open = { marker: opener.charAt(0), length: opener.length };
+          return "";
+        }
+      }
 
       const masked = maskLineComments(line, inComment);
       inComment = masked.open;

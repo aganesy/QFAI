@@ -11,7 +11,7 @@
 - main に対象コミットが揃っている
 - 各変更が `CHANGELOG.md` の `## [Unreleased]` に説明を書いている（空、または
   `### Added` のような見出しだけの状態では Prepare release は失敗します）
-- Supported: Node.js >= 20.0.0 / Tested: Node.js 20 / Recommended: Node.js 20 LTS 以上
+- Supported: Node.js >= 20.19.0 / Tested: Node.js 20 / Recommended: Node.js 20 LTS 以上
 
 ### 自動化された経路を使う場合
 

@@ -473,6 +473,17 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(floor).toContain("- Unit-level coverage of the failures the code retains.");
     });
 
+    // A sourcing decision is taken at a design stage, and contracts-first
+    // freezes it before any source file exists — so a rule reaching the
+    // sourcing rungs only from source reaches them after the answer is fixed.
+    it.each(MASTERS)("%s reaches the sourcing rungs at the stage that decides", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("Rung 1, and rungs 2 to 5 for a sourcing decision");
+      expect(text).toContain("### A sourcing decision reaches rungs 2 to 5");
+      // And the restriction the widening must not dissolve.
+      expect(text).toMatch(/objection to the behaviour\s+is still a Change Request/);
+    });
+
     it("keeps the operating and shipped minimal-implementation rules byte-identical", async () => {
       const [master, shipped] = await Promise.all([
         readFile(path.join(ROOT, MASTERS[0])),
@@ -865,6 +876,12 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /recommended answer/i,
         /sub-agent/i,
         /throwaway version/i,
+        // The node a sourcing decision opens before its options, and the
+        // lookup that answers it. Without them a session enumerates the shapes
+        // the repository holds and escalates a choice among them, while the
+        // answer somebody else already built sits outside the tree.
+        /selects a source opens one node/i,
+        /The environment is not only this repository/i,
       ]) {
         expect(text).toMatch(clause);
       }
@@ -1235,12 +1252,20 @@ describe("this repository's pull-request description", () => {
     ]) {
       const entry = await readFile(path.join(ROOT, relative), "utf-8");
       if (relative === ".github/instructions/code-review.instructions.md") {
-        expect(entry).toContain(
-          "Process:\n\nRead `REVIEW.md` if present.\n\n1. Read the PR description",
-        );
+        expect(entry).toContain("Process:\n\nRead `REVIEW.md` if present,");
       } else {
         expect(entry, relative).toContain("Read `REVIEW.md` before reviewing a pull request");
       }
+      // And from a revision the pull request's author does not control. A
+      // reviewer that reads the policy out of the head is taking it from the
+      // work under review, which is the one place it cannot come from.
+      // Either spelling of the second half, and either side of a line break.
+      // The Copilot instructions file is held to a character budget a size
+      // check enforces, so it says the same thing in fewer words than the
+      // entry points do, and the line-length rule wraps the longer ones.
+      expect(entry, relative).toMatch(
+        /from\s+the\s+branch\s+the\s+pull\s+request\s+targets\s+(?:and\s+not\s+from|rather\s+than)\s+its\s+head/,
+      );
     }
     const release = await readFile(
       path.join(ROOT, ".github/workflows/prepare-release.yml"),

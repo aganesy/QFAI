@@ -255,7 +255,20 @@ const DEFAULT_REVISION = "abc1230000000000000000000000000000000000";
  * agree, so a fixture without it is not a response at all.
  */
 function withReviewerRole(role: string, body: string): string {
-  return /^Reviewer role:/m.test(body) ? body : `Reviewer role: ${role}\n${body}`;
+  const withRole = /^Reviewer role:/m.test(body) ? body : `Reviewer role: ${role}\n${body}`;
+  // The four the delegation baseline requires besides the role. A fixture that
+  // leaves them out is not a response the contract admits, so building one
+  // here would test the validator against a shape no reviewer may write.
+  const owed = [
+    ["Reviewed artifact", ".qfai/specs/spec-0001/tdd/test-list.md"],
+    ["Review series", "1 of 1"],
+    ["Authored/edited under review", "none"],
+    ["Recommended and unadjudicated", "none"],
+  ] as const;
+  const missing = owed
+    .filter(([field]) => !new RegExp(`^${field}:`, "m").test(withRole))
+    .map(([field, value]) => `${field}: ${value}`);
+  return missing.length === 0 ? withRole : `${withRole}\n${missing.join("\n")}\n`;
 }
 
 const IMPLEMENT_PRODUCER = "- Producer: implement\n";
@@ -1488,6 +1501,32 @@ describe("QFAI-TDDLIST-008", () => {
     });
   });
 
+  it("says so when the recorded Revision names no commit this clone holds", async () => {
+    // The third answer the git question has, and the one that read like the
+    // second: `DEFAULT_REVISION` names no commit here, so no interval can be
+    // computed and no row resting on it was checked. Until this was reported,
+    // that run and a run which cleared every row produced the same output —
+    // which is what a depth-1 CI checkout produces for a whole repository.
+    //
+    // `info` and once per ledger: the ledger is not wrong, the run could not
+    // look, and on a shallow clone every row would otherwise repeat it.
+    await withProject(async (root) => {
+      await repoWithRevision(root);
+      await seedProject(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), [], {
+        ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
+      });
+
+      const issues = await validateTddList(root, defaultConfig);
+      const reported = issues.filter((i) => i.code === "QFAI-TDDLIST-009");
+      expect(reported).toHaveLength(1);
+      expect(reported[0]?.severity, "a rule that could not run has found nothing wrong").toBe(
+        "info",
+      );
+      expect(reported[0]?.message).toContain(DEFAULT_REVISION);
+      expect(reported[0]?.rule).toBe("tddList.evidenceRevisionUnresolved");
+    });
+  });
+
   it("accepts an anchor that resolves to the row's evidence heading", async () => {
     await withProject(async (root) => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
@@ -2301,6 +2340,32 @@ ${packPair(1).join("\n")}
     });
   });
 
+  it("reads a round pack written as the directory the skill's template records", async () => {
+    // `pack-seal.md` records the field as `.qfai/review/review-<timestamp>/`,
+    // and the canonical form carries no trailing separator — so a record
+    // written exactly as the skill instructs was refused for its shape, and no
+    // test drove the template's own spelling through this reader.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict: PASS",
+          "- Round 1: Review pack: .qfai/review/review-20260101000000000/",
+          `- Round 1: Review pack seal: sha256:${"a".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).not.toContain(
+        "Round 1: Review pack: canonical .qfai/review/review-<17-digit timestamp> path",
+      );
+    });
+  });
+
   it("binds a present round pack to this row and to the verdict it records", async () => {
     // A sealed pack from another review keeps every hash unchanged, because the
     // pair is outside the audited subject, so its contents are what can refuse it.
@@ -2541,6 +2606,56 @@ ${packPair(1).join("\n")}
           { ".qfai/evidence/implement-spec-0001.md": evidence },
         );
         expect(issues.map((issue) => issue.message).join("\n"), JSON.stringify(body)).toContain(
+          "responses agreeing with its verdict",
+        );
+      });
+    }
+  });
+
+  it("refuses a response missing a field the baseline requires of one", async () => {
+    // `shared-skill-delegation-baseline.md` requires `Reviewed artifact`,
+    // `Review series`, `Authored/edited under review` and `Recommended and
+    // unadjudicated`, and says a response omitting any of them may not satisfy
+    // a completion gate. Read for the role, the result, the revision and the
+    // hash alone, a pack of four lines was a verdict to every check after it.
+    const owed = [
+      "Reviewed artifact",
+      "Review series",
+      "Authored/edited under review",
+      "Recommended and unadjudicated",
+    ];
+    for (const omitted of owed) {
+      await withProject(async (root) => {
+        const pack = ".qfai/review/review-20260101000000000";
+        await mkdir(path.join(root, pack), { recursive: true });
+        await writeFile(path.join(root, pack, "review_request.md"), "TDD-ID: TDD-0001\n");
+        const stated = owed
+          .filter((field) => field !== omitted)
+          .map((field) => `${field}: none\n`)
+          .join("");
+        await writeFile(
+          path.join(root, pack, "R01_completion-reviewer.md"),
+          `Reviewer role: completion-reviewer\nResult: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: sha256:${"c".repeat(64)}\n${stated}`,
+        );
+        await writeFile(
+          path.join(root, pack, "summary.json"),
+          roundSummary(DEFAULT_REVISION, { "completion-reviewer": "PASS" }),
+        );
+        const evidence = completeEntry("Unit").replace(
+          "- Refactor verify command: npm test",
+          [
+            "- Round 1: reviewer verdict (attempt 1): PASS",
+            `- Round 1: Review pack (attempt 1): ${pack}`,
+            `- Round 1: Review pack seal (attempt 1): sha256:${await packSeal(root, pack)}`,
+            "- Refactor verify command: npm test",
+          ].join("\n"),
+        );
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+          { ".qfai/evidence/implement-spec-0001.md": evidence },
+        );
+        expect(issues.map((issue) => issue.message).join("\n"), omitted).toContain(
           "responses agreeing with its verdict",
         );
       });

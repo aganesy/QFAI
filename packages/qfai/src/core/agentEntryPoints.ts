@@ -911,7 +911,13 @@ function outsideFences(lines: readonly string[]): boolean[] {
       // The container the fence opened in has ended, and so has the fence.
       open = null;
     }
-    const line = fenceLine(raw);
+    // The list marker is stripped only while no block is open. A fence may
+    // open on the first line of a list item, so the marker has to come off for
+    // that — but inside a block every line is literal, and a bullet whose text
+    // happens to be a run of the fence character is content. Stripped there,
+    // `- ~~~` closed the example on its own first line and the real closing
+    // fence opened another, which left the section after it unrecognised.
+    const line = open === null ? fenceLine(raw) : plainLine(raw);
     const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
     if (fence === null) return open === null;
     const run = fence[1] ?? "";

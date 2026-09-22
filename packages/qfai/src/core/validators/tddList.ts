@@ -2204,8 +2204,36 @@ function packResponseFiles(
       ? /^R\d{2}_([^/]+)\.md$/.exec(relativePath.slice(packPath.length + 1))?.[1]
       : undefined;
     if (named === undefined || !exactLineField(content, "Reviewer role", named)) return [];
+    if (REQUIRED_RESPONSE_FIELDS.some((field) => !statesField(content, field))) return [];
     return [{ role: named, content }];
   });
+}
+
+/**
+ * The fields a reviewer response owes besides its role and its result.
+ *
+ * `shared-skill-delegation-baseline.md` requires each on a visible line and
+ * says a response omitting any of them may not satisfy a completion gate. Read
+ * for the role, the result, the revision and the hash alone, a pack holding
+ * four lines was a verdict to every check after it — the ruling had no bounded
+ * artifact, no series placing it among the reviewer's turns, no statement of
+ * what the reviewer edited, and nothing said about what it recommended and did
+ * not adjudicate.
+ *
+ * A response missing one is not read as that role's answer at all, which is
+ * what the baseline's sentence asks for: the row then fails for having no
+ * verdict from the reviewer rather than closing on a malformed one.
+ */
+const REQUIRED_RESPONSE_FIELDS: readonly string[] = [
+  "Reviewed artifact",
+  "Review series",
+  "Authored/edited under review",
+  "Recommended and unadjudicated",
+];
+
+/** Whether a response states `field` on a visible line, whatever its value. */
+function statesField(content: string, field: string): boolean {
+  return visibleLineFieldValues(content, field).length > 0;
 }
 
 /**
@@ -2493,13 +2521,14 @@ async function hasSealedStageStatus(
   // as it was: the shipped stage-evidence shape does not require the field, and
   // demanding one here would reject every conforming record.
   if (statesBlockingStageOutcome(section)) return false;
-  const pack = rowEvidenceFieldValue(section, "Review pack");
+  const recorded = rowEvidenceFieldValue(section, "Review pack");
+  const pack = recorded === null ? null : recordedPackPath(recorded);
   const seal = rowEvidenceFieldValue(section, "Review pack seal");
   if (
     pack === null ||
     seal === null ||
     !SHA256_VALUE.test(seal) ||
-    !/^\.qfai\/review\/review-\d{17}$/.test(pack)
+    !CANONICAL_REVIEW_PACK.test(pack)
   ) {
     return false;
   }
@@ -3399,7 +3428,7 @@ function missingCompletedEvidenceFields(
     if (auditedHash !== null && !SHA256_VALUE.test(auditedHash)) {
       missing.push(`${prefix} audited evidence hash: sha256`);
     }
-    if (pack !== null && !/^\.qfai\/review\/review-\d{17}$/.test(pack)) {
+    if (pack !== null && !CANONICAL_REVIEW_PACK.test(recordedPackPath(pack))) {
       missing.push(
         `${prefix} review pack: canonical .qfai/review/review-<17-digit timestamp> path`,
       );
@@ -3629,6 +3658,19 @@ async function invalidCompletedEvidenceArtifacts(
 const CANONICAL_REVIEW_PACK = /^\.qfai\/review\/review-\d{17}$/;
 
 /**
+ * A recorded pack path with one trailing separator removed.
+ *
+ * The shipped template records the field as the directory it is, with a
+ * trailing separator, and the canonical form carries none — so a record
+ * written exactly as the skill instructs failed the test and its stage could
+ * not seal. One separator is removed rather than any number: a path ending in
+ * two is not a spelling of the directory, it is one nobody meant to write.
+ */
+function recordedPackPath(pack: string): string {
+  return pack.replace(/\/$/, "");
+}
+
+/**
  * The review pack pairs a round records, one per review attempt, each
  * recomputed from the pack it names and read for the review it records
  * (`record-contract.md`).
@@ -3745,6 +3787,9 @@ async function invalidRoundAttemptPack(root: string, entry: RoundAttemptPack): P
   const qualifier = entry.attempt === null ? "" : ` (attempt ${entry.attempt})`;
   const label = `Round ${entry.round}: Review pack${qualifier}`;
   if (entry.pack === null) return [`${label} beside that attempt's reviewer verdict`];
+  // Normalized once, here, so the canonical test, the `lstat` and the file
+  // collection below all read the same path.
+  const pack = recordedPackPath(entry.pack);
   // A pack absent from the checkout is skipped below, so the attempt's verdict,
   // which the entry itself records, is read before that absence excuses the pair.
   if (attemptOutcome(entry.verdict) === null) {
@@ -3755,17 +3800,17 @@ async function invalidRoundAttemptPack(root: string, entry: RoundAttemptPack): P
   if (entry.seal === null || !SHA256_VALUE.test(entry.seal)) {
     return [`Round ${entry.round}: Review pack seal${qualifier}: sha256`];
   }
-  if (!CANONICAL_REVIEW_PACK.test(entry.pack)) {
+  if (!CANONICAL_REVIEW_PACK.test(pack)) {
     return [`${label}: canonical .qfai/review/review-<17-digit timestamp> path`];
   }
   try {
-    await lstat(path.join(root, ...entry.pack.split("/")));
+    await lstat(path.join(root, ...pack.split("/")));
   } catch (error) {
     return isEnoent(error) ? [] : [`${label} path readable when present`];
   }
-  const packFiles = await collectReviewPackFiles(root, entry.pack);
+  const packFiles = await collectReviewPackFiles(root, pack);
   if (packFiles === null) return [`${label} resolving to regular files`];
-  return invalidPresentRoundPack(packFiles, { ...entry, pack: entry.pack, seal: entry.seal });
+  return invalidPresentRoundPack(packFiles, { ...entry, pack, seal: entry.seal });
 }
 
 /** What is wrong with the contents of a round attempt's pack present in the checkout. */
@@ -5191,12 +5236,15 @@ const REVISION_AT_REST_STATUSES = new Set(["refactor", "done", "review-fix"]);
  * - nothing under the pathspec moved. The observation is current.
  * - the revision cannot be RESOLVED here. It cannot share this code's window,
  *   because `actions/checkout` is depth-1 by default and every CI run on a
- *   shallow clone would then error on every row; and `QFAI-REVIEW-009` already
- *   reports an unresolvable revision, so a per-row copy would be noise on top
- *   of a signal that exists. The residual is real and stated here rather than
- *   hidden: a revision unresolvable because it is WRONG is not told apart from
- *   one unresolvable because the clone is shallow, and telling them apart needs
- *   a signal this check does not have.
+ *   shallow clone would then error on every row.
+ *
+ * The last of those is a skip, not a pass, and the caller says so: it collects
+ * the revisions whose diff came back `unresolvable` and reports them once per
+ * ledger at `info`. Two things stay out of that report. A revision unresolvable
+ * because it is WRONG is not told apart from one unresolvable because the clone
+ * is shallow — telling them apart needs a signal this check does not have — and
+ * the rule still cannot run in a lane that blocks a merge until the checkout
+ * there carries the history the revisions name.
  */
 export function staleEvidenceFiles(
   root: string,
@@ -6862,6 +6910,50 @@ async function validateSpecTddList(
         undefined,
         "change",
         `"Status: PASS" のような判定だけの記述は無効です。実行したコマンドを併記してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。`,
+      ),
+    );
+  }
+
+  // `staleEvidenceFiles` answers `null` both for "nothing moved" and for "this
+  // clone does not hold that commit", so a reader cannot tell a rule that
+  // cleared every row from one that checked none of them. `actions/checkout`
+  // fetches depth 1 by default, which makes the second answer the usual one in
+  // CI: every interval is uncomputable and the ledger reports as though every
+  // observation were current.
+  //
+  // Said once per ledger rather than once per row. On a shallow clone every
+  // row names an unreachable revision, and a per-row copy would bury the rest
+  // of the run under one repeated sentence.
+  //
+  // `info`, because the rule has found nothing wrong — it has found that it
+  // could not look. What is missing is the clone's history, which is the
+  // run's configuration and not the ledger's content.
+  const unresolvedRevisions = [...revisionDiffCache]
+    .filter(([, changed]) => changed.kind === "unresolvable")
+    .map(([revision]) => revision);
+  if (unresolvedRevisions.length > 0) {
+    const shown = unresolvedRevisions.slice(0, 5);
+    const more =
+      unresolvedRevisions.length > shown.length
+        ? ` (+${unresolvedRevisions.length - shown.length})`
+        : "";
+    issues.push(
+      issue(
+        EVIDENCE_REVISION_STALE_CODE,
+        `spec-${specNumber}: the staleness check did not run for ` +
+          `${unresolvedRevisions.length} observation revision(s) this ledger names: ` +
+          `${shown.join(", ")}${more}. Each names a commit this clone does not hold, so the ` +
+          `interval from it to now cannot be computed and no row resting on it was checked. ` +
+          `A skipped check reads exactly like a satisfied one, which is why it is stated.`,
+        "info",
+        relPath,
+        "tddList.evidenceRevisionUnresolved",
+        unresolvedRevisions,
+        "canonical",
+        "Give the run the history it is reading against: `actions/checkout` fetches depth 1 " +
+          "by default, and `fetch-depth: 0` is what makes these revisions reachable. Where the " +
+          "clone already carries the history, the revision is wrong rather than unreachable, " +
+          "and the row that names it owes a re-observation.",
       ),
     );
   }

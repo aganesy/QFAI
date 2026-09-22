@@ -695,9 +695,22 @@ async function acquireRecordLock(recordDir: string): Promise<RecordLock> {
   // failures are swallowed because a heartbeat that throws would abort a write that is going
   // fine. What it does NOT do is make a crashed holder look alive: the process is gone, so the
   // timer is gone, and the reclaim is exactly as before.
+  //
+  // The timer ignores what its callback returns, so an `async` callback would drop its own
+  // promise and a `void` on the call would drop it under a different name. Each refresh is
+  // chained onto the one before instead, and `release` awaits the chain: that is the consuming
+  // caller the promise rule asks for, and it also stops a release from racing a refresh that is
+  // still touching the marker. The `catch` keeps one failed touch from ending the chain, which
+  // is the swallowing the paragraph above describes.
+  let refreshed: Promise<void> = Promise.resolve();
   const heartbeat = setInterval(() => {
     const now = new Date();
-    void utimes(path.join(lockDir, marker), now, now).catch(() => undefined);
+    refreshed = refreshed.then(() =>
+      utimes(path.join(lockDir, marker), now, now).then(
+        () => undefined,
+        () => undefined,
+      ),
+    );
   }, LOCK_HEARTBEAT_MS);
   heartbeat.unref();
 
@@ -753,6 +766,9 @@ async function acquireRecordLock(recordDir: string): Promise<RecordLock> {
 
   const release = async (): Promise<void> => {
     clearInterval(heartbeat);
+    // Every refresh the timer started, adopted here. Without it the last one can still be
+    // touching the marker while the lock is being taken apart underneath it.
+    await refreshed;
     if (held === undefined) return; // never published, so nothing under that name is ours
 
     // The canonical name is never MOVED.

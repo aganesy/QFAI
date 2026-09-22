@@ -650,9 +650,16 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
-Review pack: `.qfai/review/review-<timestamp>/`
+Review pack: `.qfai/review/review-<timestamp>/` <!-- qfai:not-a-citation .qfai/review/review-<timestamp>/ -->
 Review pack seal: <sha256>
 ```
+
+The path in that field is the completion gate's operand, not a pointer a
+reader can follow: the review tree is not tracked, so a clone holds the
+record and not the pack. The marker beside it says so. Everywhere else in
+the record, name the run by its id — `review-<timestamp>` — and record what
+a reader needs from it there: the reviewer role, the verdict, the reviewed
+revision and the audited hash. `references/pack-seal.md` holds the rest.
 
 ## ATDD Work Orders (mandatory)
 

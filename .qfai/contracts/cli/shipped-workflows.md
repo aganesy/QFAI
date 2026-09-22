@@ -183,29 +183,38 @@ fixes is the **closed set of dimensions** the declared shape must pin, so a
 shape that silently omits one is a contract violation rather than a judgement
 call:
 
-1. The file set — exactly `SHIPPED_WORKFLOW_NAMES`, each matching §1's pattern.
-2. Per file: the header block required by `NFR-0011` — the repository variables
-   it reads with their defaults, the layer it covers, what makes it inert, and
-   its fail-open behaviour.
-3. Per job: a `permissions:` block reachable from the job, `timeout-minutes:`,
-   and a runner selector in the repository-variable form with a public
-   GitHub-hosted default.
-4. Per matrix: `fail-fast: false`.
-5. Per lane that invokes QFAI: the subcommand, the `--profile` value, and the
-   `--fail-on` threshold.
+1. The file set — exactly the shipped names, each matching the reserved pattern.
+   `SHIPPED_WORKFLOW_NAMES` holds them and §1 holds the pattern.
+2. Per file: the required header block. `NFR-0011` states its rows: the
+   repository variables the file reads with their defaults, the layer it
+   covers, what makes it inert, and its fail-open behaviour.
+3. Per job: a reachable permissions block, timeout-minutes, and a runner
+   selector in the repository-variable form with a public GitHub-hosted
+   default.
+4. Per matrix: fail-fast: false, the axis and its values. The cancel rule alone
+   leaves a substituted leg — `check: [shape, shape]` runs one checker twice
+   and reports two green legs — indistinguishable from the declared set.
+5. Per lane that invokes QFAI: the subcommand, the `--profile` value, the
+   `--fail-on` threshold and the condition that selects it. Two invocations of
+   one subcommand are told apart by the matrix leg and the event their step
+   names, so a step that loses its condition runs an invocation the shape did
+   not declare.
 6. Per lane: the condition that governs whether it runs. For an ordinary lane
    that is what makes it inert — the condition that keeps it declared but
    skipped when the adopter has not opted in. For an aggregate lane, which must
    run whatever the jobs it aggregates concluded, it is the always-run condition
    and the exact `needs` list.
-7. The third-party `uses:` set, asserted as an **allow-list** against the closed
+7. The third-party `uses:` set, as an **allow-list** against the closed
    sanctioned set (one entry today, the package-manager setup action). Never as
    a count of zero: a count fails on the entry the policy legitimately keeps.
 8. Zero secret declarations, secret-context references and secret-inheritance
-   uses anywhere in the set.
+   uses across the set.
 9. No shipped file references another shipped file (`DTC-25` — the absent
    target would turn the referencing workflow into a parse error with no repair
    path under create-only install).
+10. Per aggregate: the external check name adopter branch protection names.
+    That is the job's `name:` and not its id, so renaming it satisfies every
+    other dimension and makes the required check unreachable.
 
 Dimension 5 has a subject in exactly one shipped file: `qfai-validate.yml`,
 whose lane carries both invocations of the validate subcommand — the wide scan,

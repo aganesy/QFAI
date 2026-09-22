@@ -91,6 +91,9 @@ const CITATION_CHARACTER = /[A-Za-z0-9._/*?+-]/;
  */
 const NAME_CHARACTER = /[^\s`"'<>|,;:()[\]{}\\!#]/u;
 
+/** What may follow a separator: a name character, or a group this dialect opens. */
+const SEPARATED_NEXT = /[^\s`"'<>|,;:()\]}\\!#]/u;
+
 /**
  * Punctuation a file name can hold that ends a citation in prose, and belongs to
  * it inside a code span, which delimits the name.
@@ -272,10 +275,15 @@ function citationsIn(line: string, spans: readonly CodeSpan[] = codeSpanRanges(l
         // A character a file name holds and the dialect gives no meaning, such as
         // the `@` of `@missing.md` or a letter outside ASCII. Stopping before it
         // measured the prefix, which resolved against its directory.
-      } else if (character === "\\" && NAME_CHARACTER.test(line[index + 1] ?? "")) {
+      } else if (character === "\\" && SEPARATED_NEXT.test(line[index + 1] ?? "")) {
         // A separator in a Windows-spelled path, canonicalized where the token
         // is recorded. Inside a bracket expression the backslash is an escape,
         // and the class branch above has already consumed it.
+        //
+        // A group opener counts as well as a name character. Read as name
+        // characters alone, a Windows-spelled `.qfai/report/run-1/[0-9].json`
+        // ended at the `[`, recorded the pack directory, and resolved against
+        // it — so the file set it really names never reached the census.
       } else {
         // Inside a code span a quote the name runs on past is part of a name the
         // scan cannot read, and the prefix before it names a different path.
@@ -1011,8 +1019,14 @@ const CENSUS: ReadonlyArray<Citation> = [
  * it really is repaired — the path resolves, or the record no longer cites it
  * that many times under that heading. The list is the progress the census is
  * meant to produce, and it is the only list that grows.
+ *
+ * Every entry is here: no committed record names a generated artifact as a path
+ * any more. A run is named by its id, the file a command writes is named by the
+ * command, and a path that is mentioned rather than cited carries the marker.
+ * The census stays beside it, because the length and the digest are what stop a
+ * citation added later from taking a repaired entry's slot.
  */
-const CLEARED: ReadonlyArray<Citation> = [];
+const CLEARED: ReadonlyArray<Citation> = CENSUS;
 
 /**
  * Every path git tracks, and every directory one of them lies under, read from
@@ -1238,11 +1252,27 @@ function disclaimedByLine(
       return undefined;
     }
     if (role === "inside") return covers ?? undefined;
-    // Only outside a fence: inside one the marker is part of what the command
-    // printed, and read as a disclaimer it hid every citation on the line.
+    // Only outside a fence, and outside indented code, which Markdown renders
+    // the same way: there the marker is part of what the command printed, and
+    // read as a disclaimer it hid every citation on the line.
+    if (INDENTED_CODE.test(line)) return undefined;
     return NOT_A_CITATION.test(withoutCode(line, spans[index] ?? [])) ? "all" : undefined;
   });
 }
+
+/**
+ * A line Markdown renders as code because of its indent.
+ *
+ * Read as prose, a transcript written this way had its marker honoured and
+ * the absent artifact beside it bypassed the census — the failure the guard
+ * exists to catch.
+ *
+ * SIMPLIFIED: the indent alone, without asking whether a list item owns it. A
+ * marker refused on an indented line inside a list costs a census entry,
+ * which is repaired; a marker honoured inside a transcript costs the finding.
+ * Lift when: a record needs a marker on a line a list has indented.
+ */
+const INDENTED_CODE = /^(?: {4}|\t)/;
 
 /** A Markdown ATX heading: its level, and the text after it. */
 const HEADING_LINE = /^ {0,3}(#{1,6})[^\S\r\n]+(.*)$/;
@@ -1977,8 +2007,21 @@ const NAMES_A_FILE = /\.[A-Za-z0-9]+$/;
 function namesAFile(cited: string): boolean {
   const last = patternSegments(cited).at(-1) ?? "";
   const alternatives = topLevelAlternativesOf(last);
-  if (alternatives === null || alternatives.length === 0) return NAMES_A_FILE.test(last);
-  return alternatives.every((alternative) => NAMES_A_FILE.test(alternative));
+  if (alternatives === null || alternatives.length === 0) return carriesExtension(last);
+  return alternatives.every((alternative) => carriesExtension(alternative));
+}
+
+/**
+ * Whether a segment carries an extension, read after its bracket syntax.
+ *
+ * A class stands for one character of the name, so the answer has to be taken
+ * with it standing for one: `*.jso[n]` ends in `]` and answered “not a file”,
+ * which let the citation be matched against directories too — and a tracked
+ * `validate.json/summary.txt` then answered a citation no JSON file satisfies.
+ * Which member it stands for does not matter here, only that it is one.
+ */
+function carriesExtension(segment: string): boolean {
+  return NAMES_A_FILE.test(segment.replace(/\[[^\]]*\]/g, "a"));
 }
 
 const key = ([file, cited, section, occurrence]: Citation): string =>
@@ -2087,6 +2130,40 @@ describe("a committed record cites what the repository has", () => {
     expect(citationsIn("see `.qfai/report/[\\]]b.json` here")).toEqual([
       ".qfai/report/[\\]]b.json",
     ]);
+  });
+
+  it("reads a Windows-spelled citation whose last segment opens a class", () => {
+    const listing = [
+      "100644 0000000000000000000000000000000000000000 0\t.qfai/report/run-1/a.json",
+      "",
+    ].join("\0");
+    const paths = trackedPaths(listing);
+    // A separator is one whatever follows it. Read as one only before a name
+    // character, the token ended at the `[`, recorded the pack directory, and
+    // resolved against it — so the file set the citation names was never asked
+    // about at all.
+    expect(citationsIn("see `.qfai\\report\\run-1\\[0-9].json` here")).toEqual([
+      ".qfai/report/run-1/[0-9].json",
+    ]);
+    expect(resolves(".qfai/report/run-1/[0-9].json", paths)).toBe(false);
+    // The pack directory it used to record does resolve, which is why the
+    // truncated token passed.
+    expect(resolves(".qfai/report/run-1", paths)).toBe(true);
+  });
+
+  it("answers a citation whose extension holds a class with a file", () => {
+    const listing = [
+      "100644 0000000000000000000000000000000000000000 0\t.qfai/report/validate.json/summary.txt",
+      "",
+    ].join("\0");
+    const paths = trackedPaths(listing);
+    // `*.jso[n]` ends in `]`, so the raw segment answered "not a file" and the
+    // citation was matched against directories too — and the tracked
+    // `validate.json` directory answered a citation no JSON file satisfies.
+    expect(resolves(".qfai/report/*.jso[n]", paths)).toBe(false);
+    // The same class where the segment names no extension still reads as a
+    // name either kind may have, so the directory answers it.
+    expect(resolves(".qfai/report/validate.jso[n]/summary.txt", paths)).toBe(true);
   });
 
   it("answers a file-shaped extended group with a file", () => {
@@ -2331,6 +2408,21 @@ describe("what the scan counts as a citation", () => {
     expect(covered instanceof Set && covered.has(".qfai/report/run-123")).toBe(true);
     // And only that path: the transcript's other citation is still measured.
     expect(covered instanceof Set && covered.has(".qfai/report/validate.json")).toBe(false);
+  });
+
+  it("keeps a marker inside an indented block from disclaiming anything", () => {
+    // Four spaces is a code block, which Markdown renders like a fence — so a
+    // marker there is part of what the command printed. Honoured as a
+    // disclaimer, it hid the absent artifact on its own line.
+    const text = [
+      "## Commands executed",
+      "",
+      "    $ qfai validate",
+      "    wrote .qfai/report/missing.json <!-- qfai:not-a-citation -->",
+    ].join("\n");
+    expect(citationsOf(".qfai/evidence/x.md", text).map((entry) => entry[1])).toEqual([
+      ".qfai/report/missing.json",
+    ]);
   });
 
   it("counts nothing on a line that says the path is not provenance", () => {

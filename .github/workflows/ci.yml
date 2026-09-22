@@ -389,7 +389,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          6808fd38455f76b873e70a38a4592cb3d6b11b60f1d17606ffc7456b3a0e78f2  .github/pinned-bytes.txt
+          4c54fd8fa003b414123ac30d60afb22b28a4c84e4d9c0b186104e73bb9122c49  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -693,6 +693,18 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
+          # The dogfooding lanes below run `QFAI-TDDLIST-009`, which asks
+          # whether anything a recorded observation covered has moved since the
+          # revision it names. On the default depth-1 clone that revision is
+          # unreachable, the interval cannot be computed, and the rule reported
+          # nothing — indistinguishable, in the output, from a ledger it had
+          # cleared. This is the one lane whose result blocks a merge, so it is
+          # the one that needs the history.
+          # SHIPPED-CI: not-applicable
+          # Because: the shipped `qfai-validate.yml` already fetches the full
+          # history on a pull request, so the lane an adopter runs `validate`
+          # in can compute the interval today.
+          fetch-depth: 0
       # The four-step toolchain preamble, defined once in
       # `.github/actions/setup/action.yml`. It stood inline here six times.
       - uses: ./.github/actions/setup
