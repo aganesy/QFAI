@@ -23,6 +23,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The citation expansion carries a queue instead of re-walking the graph**
+  (#1888). The skill-asset validator crawls the skill tree once and then
+  expands into the trees the crawl skips, reading a document there only where a
+  reachable step names it. Each pass re-walked the whole graph from the entry
+  points and re-scanned every reachable document, so a chain of N documents cost
+  1 + 2 + … + N and every prefix was walked again for each new link — which a
+  long chain an adopter controls turned into a quadratic `qfai validate`. A
+  document the expansion reads is reachable by construction, so it is queued and
+  scanned in the same round. The outer round remains because the crawl resolves
+  a citation its own way and can reach a document the candidate list does not;
+  it runs again only while that has happened.
+
 - **A stage record says its pack is not a path to follow** (#1883). The ATDD
   stage records `Review pack: `.qfai/review/review-<timestamp>/``, and that tree
   is not tracked — so every record it writes claims an artifact a clone does not
