@@ -1,10 +1,9 @@
 # 09 Delta
 
-## Change Summary
+## 2026-09-22 — US-0003-0014 retired (README file generation)
 
-- Change ID: DELTA-0002
 - Date: 2026-09-22
-- Primary: retired US-0003-0014 (README file generation)
+- Primary: retired US-0003-0014 and the end-to-end row that carried it
 - Tags: init, agents, retirement
 
 The story asked for a `README.md` as a regular file in `.agents/`, `.codex/`,
