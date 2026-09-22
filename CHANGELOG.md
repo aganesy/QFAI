@@ -443,6 +443,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A spec-0010 and a spec-0015 ledger row name the case their test file
+  holds** (#1436). One selector described its test — `asymmetric
+template/validator edit → R-MOCK-HREF-DRIFT` — and the other quoted a title a
+  table cell cannot carry, so the command each row prints ran nothing. The
+  spec-0010 row now names the block that asserts the finding; the spec-0015 row
+  names its block by the prefix that stops before `<ts>`, which a cell would
+  read as inline HTML. The dogfooding backlog falls by one in each pack.
+
 - **The fifth spec-0013 rule cites the criterion about its own subject**
   (#2133). `BR-0013-0006` requires a rejected option to carry `DO NOT` and
   `Temptation`, and cited the criterion about reference direction. It now cites
