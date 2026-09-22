@@ -1072,6 +1072,7 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
   // One property per case. The reset clears three blocks and re-seeds two, and
   // a single case asserting all five reports only the first that fails, so a
   // change that breaks two of them reads as one.
+  // QFAI:SPEC-0014:TC-0014-0034
   it("cycle 0 deletes fullHarness", async () => {
     const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
     expect("fullHarness" in body).toBe(false);
@@ -1397,6 +1398,7 @@ describe("iterate-plan.json design tokens (TC-3.5.x)", () => {
 // (spec-0012 ledger TDD entry; user batch label TDD-0380)
 // ─────────────────────────────────────────────────────────────────────────
 
+// QFAI:SPEC-0012:TC-0012-0373
 describe("runPrototypingIterate cycle >= 1 lock drift stderr (TC-0012-0373)", () => {
   it("exits 2 with stderr matching /DESIGN\\.md hash mismatch.*re-run from cycle 0/ and writes no review payload for the failed cycle", async () => {
     // TC-0012-0373 pins the canonical operator-facing stderr phrase
@@ -1461,6 +1463,7 @@ describe("runPrototypingIterate cycle >= 1 lock drift stderr (TC-0012-0373)", ()
 // (spec-0012 ledger TDD entry; user batch label TDD-0378)
 // ─────────────────────────────────────────────────────────────────────────
 
+// QFAI:SPEC-0012:TC-0012-0375
 describe("runPrototypingIterate autonomous run (TC-0012-0375)", () => {
   it("does not import or call any interactive prompt API in the iterate code path (source-grep + runtime stdin-closed drive)", async () => {
     // Two-pronged assertion:
@@ -3099,6 +3102,7 @@ describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discr
 // exit 64 instead of the documented exit-2 lock-drift. The drift
 // gates now run BEFORE `shouldStop`, so drift always wins over a
 // stop signal.
+// QFAI:SPEC-0012:TC-0012-0424
 describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop (TC-0012-0424)", () => {
   it("returns exit 2 (spec-set drift) on a converged loop where one UI marker was removed mid-loop", async () => {
     const root = await newTempDir();

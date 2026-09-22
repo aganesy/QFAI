@@ -304,6 +304,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
   });
 });
 
+// QFAI:SPEC-0003:TC-0003-0043
 describe("TC-0003-0043 (TDD-0043): absent Node version file falls open to the documented literal", () => {
   // One it() per TC-0003-0043 verify bullet. Scope notes, disclosed:
   // - `actions/setup-node` cannot run off-runner, so the resolution the
@@ -441,6 +442,7 @@ describe("TC-0003-0043 (TDD-0043): absent Node version file falls open to the do
   });
 });
 
+// QFAI:SPEC-0003:TC-0003-0044
 describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with an actionable annotation", () => {
   // One it() per TC-0003-0044 verify bullet. This is the OPPOSITE degrade
   // direction from TDD-0043 on the same setup-install column. Scope notes,
@@ -802,6 +804,7 @@ describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with
   });
 });
 
+// QFAI:SPEC-0003:TC-0003-0053
 describe("TC-0003-0053 (TDD-0053): version file plus packageManager field is the non-degrading happy path", () => {
   // One it() per TC-0003-0053 verify bullet. This row is the BOUNDARY that
   // keeps TDD-0043's and TDD-0044's degrade oracles from being vacuously

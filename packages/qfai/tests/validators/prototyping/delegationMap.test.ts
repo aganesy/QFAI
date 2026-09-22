@@ -41,6 +41,7 @@ describe("validateDelegationMapIssues (v1.8.4 standard adapter)", () => {
     expect(validateDelegationMapIssues(map, path)).toEqual([]);
   });
 
+  // QFAI:SPEC-0012:TC-0012-0286
   it("emits QFAI-PROT-311 (error, canonical) for an invalid role", () => {
     const map = { UI実装: "qa-gatekeeper" }; // qa-gatekeeper is not allowed for UI実装
     const issues = validateDelegationMapIssues(map, path);
@@ -158,6 +159,7 @@ describe("validatePrototypingDelegationMap (prototyping.json reader)", () => {
     expect(await validatePrototypingDelegationMap(root)).toEqual([]);
   });
 
+  // QFAI:SPEC-0012:TC-0012-0293
   it("emits QFAI-PROT-311 for a role outside the Delegation Scope Table", async () => {
     const root = await seedRoot(
       JSON.stringify({

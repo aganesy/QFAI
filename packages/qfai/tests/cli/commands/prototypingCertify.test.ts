@@ -244,6 +244,7 @@ async function reseal(root: string, evidenceRel: string, body: string): Promise<
   await writeFile(certPath, `${JSON.stringify(cert, null, 2)}\n`, "utf-8");
 }
 
+// QFAI:SPEC-0012:TC-0012-0381
 describe("qfai prototyping certify (TC-0012-0381: per-(spec × screen) review.json presence)", () => {
   it("exits 64 (coverage rejection class) and names the missing (spec, screen) pair in stderr when a frozen-set spec lacks a declared screen's review.json", async () => {
     const root = await newTempDir();
@@ -1542,6 +1543,7 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
   });
 });
 
+// QFAI:SPEC-0012:TC-0012-0425
 describe("qfai prototyping certify (TC-0012-0425: frozenSpecsCovered canonical id validation)", () => {
   // when a hand-edited
   // `prototyping.json` carries non-canonical spec ids in
@@ -1612,6 +1614,7 @@ describe("qfai prototyping certify (TC-0012-0425: frozenSpecsCovered canonical i
   });
 });
 
+// QFAI:SPEC-0012:TC-0012-0426
 describe("qfai prototyping certify (TC-0012-0426: frozenSpecsCovered present-but-malformed fails closed)", () => {
   // when
   // `prototyping.json` carries a present-but-malformed
@@ -1715,6 +1718,7 @@ describe("qfai prototyping certify (TC-0012-0426: frozenSpecsCovered present-but
   });
 });
 
+// QFAI:SPEC-0012:TC-0012-0427
 describe("qfai prototyping certify (TC-0012-0427: shared-screenId multi-file subdir requires full per-spec re-parse)", () => {
   // Pre-fix the `indexPerSpecScreens()`
   // optimisation pre-built a per-spec map from project-wide
@@ -1802,6 +1806,7 @@ describe("qfai prototyping certify (TC-0012-0427: shared-screenId multi-file sub
   });
 });
 
+// QFAI:SPEC-0012:TC-0012-0430
 describe("readPerSpecScreens (TC-0012-0430: absolute paths.contractsDir override)", () => {
   // pin the
   // `path.resolve` switch in `readPerSpecScreens`. Pre-fix the helper
@@ -1841,6 +1846,7 @@ describe("readPerSpecScreens (TC-0012-0430: absolute paths.contractsDir override
   });
 });
 
+// QFAI:SPEC-0012:TC-0012-0431
 describe("readUiContractScreenContracts (TC-0012-0431: absolute paths.contractsDir override — partner-helper consistency)", () => {
   // `readUiContractScreenContracts` (the project-wide screen reader) and
   // `readPerSpecScreens` (the per-spec reader) have the SAME responsibility

@@ -463,6 +463,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **68 completed ledger rows name the test that already runs their case**
+  (#2160). Each row's own `Test file` and `Selector` pointed at a test that
+  exists and passes, and that test never carried the case's annotation, so the
+  only place naming the case was an annotation carrier — a list of obligations
+  that declares no test. The annotation now sits on the test the row names, and
+  the carrier-only backlog falls from 124 entries to 56.
+  Seven rows whose test exists are left alone on purpose:
+
+  | Rows | Why the annotation does not belong there                                                                  |
+  | ---- | --------------------------------------------------------------------------------------------------------- |
+  | 2    | The case is split with an open row, and the finished test covers only its own half                        |
+  | 1    | The row's evidence record hashes the test file, so a new line there breaks the record                     |
+  | 2    | The case is not an end-to-end case, and the only other test naming it is the hashed file                  |
+  | 2    | The finding code the selector names is tested under a different condition from the one the case describes |
+
 - **A spec-0010 and a spec-0015 ledger row name the case their test file
   holds** (#1436). One selector described its test — `asymmetric
 template/validator edit → R-MOCK-HREF-DRIFT` — and the other quoted a title a
