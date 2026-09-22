@@ -560,8 +560,12 @@ describe("missing traceability ledger → QFAI-TRACE-002 warning", () => {
 // Group 4: Config and flags (TC-0013-0013..0017)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TC-0013-0013
-// QFAI:SPEC-0013:TC-0013-0013
+// The full-scan case carries no TC annotation. `TC-0013-0013` asks for a
+// `Type` column on every test-case row and a non-normal case per criterion,
+// and this suite exercises `detectSpecChanges({ full: true })` — it reads no
+// column and no coverage applicability, so the annotation claimed evidence the
+// assertions do not produce. The obligation is carried by
+// `tests/integration/qfai-traceability.md` until a test for it exists.
 describe("TC-0013-0013: --full flag bypasses diff detection", () => {
   let tmpRoot: string;
 
