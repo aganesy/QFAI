@@ -242,9 +242,11 @@ without the mark does. **It can still run none of the row's own tests, so exit 0
 "More than the row, never less" holds for the _file_, not for the row: when several rows share a
 test file and this row's tests have been deleted or renamed, the run executes the siblings',
 exits 0, and nothing has observed that the row's own test is gone. The full suite in step 2
-passes for the same reason, and step 4 does not catch it — `TDDLIST_SELECTOR_UNRESOLVED` is a
-`warning`, so `--fail-on error` lets it through by design. Every gate in the set would report
-success on a row whose test does not exist.
+passes for the same reason. Step 4 catches it where the row is past `todo` —
+`TDDLIST_SELECTOR_UNRESOLVED` is an `error` there, and `--fail-on error` stops on it — and
+nothing catches it before that, because the rule reads neither the file nor the selector
+until the row reaches `green`. So on a row still at `todo` or `blocked`, every gate in the
+set would report success on a test that does not exist.
 
 **Step 1 is not settled by its exit code, in either form.**
 File-scoped it cannot select nothing, but it can select only the _other_ rows sharing the file, so

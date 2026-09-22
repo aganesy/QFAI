@@ -4595,7 +4595,14 @@ export const EVIDENCE_STATUS_ONLY_RULE_ID = "TDDLIST-004";
  */
 export const STALE_STATUS_RULE_ID = "TDDLIST-005";
 
-/** Waiver rule id for `TDDLIST_SELECTOR_UNRESOLVED`. */
+/**
+ * Waiver rule id retired with `TDDLIST_SELECTOR_UNRESOLVED`'s severity.
+ *
+ * The finding is an `error`, and `QFAI-WAIVER-002` refuses a waiver on one, so
+ * the id names a route that is now closed. It is exported for the grammar
+ * suite, which holds every id this validator has ever published against the
+ * `^[A-Z]+-\\d{3}$` shape a waiver file may write.
+ */
 export const SELECTOR_UNRESOLVED_RULE_ID = "TDDLIST-006";
 
 /**
@@ -6537,12 +6544,12 @@ async function validateSpecTddList(
       issue(
         "TDDLIST_SELECTOR_UNRESOLVED",
         `Selector "${selector}" was not found in its Test file for spec-${specNumber} (${ref.label}, Status=${status})`,
-        "warning",
+        "error",
         relPath,
         "tddList.selectorResolves",
         undefined,
         "canonical",
-        `The row claims a completed test the file does not appear to contain — the test was renamed, moved, or the Selector is stale. Update the Selector, or register a \`.qfai/waivers.yml\` waiver with rule: ${SELECTOR_UNRESOLVED_RULE_ID} when the selector is written in a form this check cannot resolve.`,
+        `The row claims a completed test the file does not appear to contain — the test was renamed, moved, or the Selector is stale. Update the Selector so it names text the file holds: the check asks only that each \`::\`-separated segment appears somewhere in it, so a title assembled from a template literal is named by any literal fragment of it.`,
       ),
     );
   }

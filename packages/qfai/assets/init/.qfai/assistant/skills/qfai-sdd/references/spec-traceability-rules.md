@@ -373,11 +373,12 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   a genuinely not-started row are indistinguishable to every downstream
   consumer, including the completion gate that reads the ledger. A project that
   declares test paths and selectors up front waives `TDDLIST-005`.
-- `Selector` is read, not merely required: on a row claiming completion it must
-  resolve inside the named Test file (`TDDLIST_SELECTOR_UNRESOLVED`, `warning`).
+- `Selector` is read, not merely required: on a row past `todo` it must
+  resolve inside the named Test file (`TDDLIST_SELECTOR_UNRESOLVED`, `error`).
   Resolution is a containment check over the selector text and its last
-  identifier token, not a runner-specific parse; waive `TDDLIST-006` for a
-  selector form it cannot resolve.
+  identifier token, not a runner-specific parse, so a title assembled from a
+  template literal is named by any literal fragment of it. There is no waiver:
+  a row claiming a test the file does not hold is a proof nobody can re-run.
 - `Evidence` is a **pointer**, not the payload: one legal shape
   (`RED:… GREEN:pass ORACLE:… [TIER:…] REV:… -> .qfai/evidence/<implement|atdd>-<spec-id>.md#<tdd-nnnn>`),
   capped at 240 characters (`QFAI-TDDLIST-011` /

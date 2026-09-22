@@ -1964,6 +1964,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The governed assistant layers can be read on both sides, so provenance is actually compared rather than assumed clean.",
   "QFAI-ASSETS-009":
     "The assistant layers `qfai init --force` regenerates (`skills/`, `agents/`) hold what the installed release ships, so the project is not running the skill bodies it initialised with.",
+  TDDLIST_SELECTOR_UNRESOLVED:
+    "Every row past `todo` names a `Selector` its `Test file` holds, so the proof the row claims can be re-run by reading the cell. Resolution is containment over each `::`-separated segment, so a title assembled from a template literal is named by any literal fragment of it.",
   "QFAI-TDDLIST-007":
     "A ledger row at `done` states its evidence as a pointer into the evidence file its `Layer` owns, anchored at its own TDD item.",
   "QFAI-TDDLIST-009":

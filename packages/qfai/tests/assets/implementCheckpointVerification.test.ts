@@ -414,10 +414,13 @@ describe("qfai-implement checkpoint verification contract", () => {
   // "It over-runs ... it can only execute more than the row, never less" is true
   // of the FILE, not of the row. Several rows share a test file routinely; when
   // this row's tests are deleted or renamed the file-scoped run executes the
-  // siblings' and exits 0, the full suite passes for the same reason, and step 4
-  // lets it through because TDDLIST_SELECTOR_UNRESOLVED is a warning and the gate
-  // is --fail-on error. Every command in the set reported success on a row whose
-  // test did not exist.
+  // siblings' and exits 0, and the full suite passes for the same reason.
+  //
+  // Step 4 catches it on a row past `todo`, where
+  // TDDLIST_SELECTOR_UNRESOLVED is an error. It catches nothing before that:
+  // the rule reads neither the file nor the selector until the row reaches
+  // `green`, so on a `todo` or `blocked` row every command in the set still
+  // reports success on a test that does not exist.
   it("checks the row's own Selector even on the file-scoped default", async () => {
     for (const dir of SKILL_DIRS) {
       const reference = await readFile(
@@ -427,9 +430,12 @@ describe("qfai-implement checkpoint verification contract", () => {
       expect(reference).toContain(
         "**It can still run none of the row's own tests, so exit 0 is not the whole of it here either.**",
       );
-      // The failure path is named, so the rule cannot be read as belt-and-braces.
-      expect(reference).toContain("`TDDLIST_SELECTOR_UNRESOLVED` is a");
-      expect(reference).toContain("`--fail-on error` lets it through by design");
+      // Both halves are named, so the rule reads as neither belt-and-braces nor
+      // a gate that covers every row.
+      expect(reference).toContain("`TDDLIST_SELECTOR_UNRESOLVED` is an `error` there");
+      expect(reference).toContain(
+        "nothing catches it before that, because the rule reads neither the file nor the selector",
+      );
       // The obligation itself, and its escape hatch for nameless runners.
       expect(reference).toContain("names **every**\n   `Selector` entry among the tests it ran");
       expect(reference).toContain("narrow per entry instead");
