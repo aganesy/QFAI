@@ -15,7 +15,8 @@ import { describe, expect, it } from "vitest";
 
 // tests/assets/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
-const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
+const TEMPLATE_TREE = "packages/qfai/assets/init/.qfai";
+const QFAI_TREES = [TEMPLATE_TREE, ".qfai"];
 
 const IMPLEMENT = "assistant/skills/qfai-implement";
 const SKILL = `${IMPLEMENT}/SKILL.md`;
@@ -121,14 +122,25 @@ describe("declared seam", () => {
     it(`${tree}: structure steering carries an exhaustive Production roots field`, async () => {
       const structure = flat(await read(tree, STRUCTURE));
 
-      // Stage 0 fills `<...>` placeholders, so the field must exist to be filled.
+      // The field has to exist in both trees. What it holds differs by tree,
+      // and asserting the placeholder in both made the one state that
+      // satisfied the suite the one Stage 0 forbids: an unfilled catalog in
+      // the repository whose own rows the phase reads.
       expect(structure).toContain("## Key packages / entrypoints");
-      expect(structure).toContain(
-        "- Production roots: <every shipped-source path, exhaustively, as Git pathspecs",
-      );
-      expect(structure).toContain(
-        "Exclude tests, fixtures, build output, config and documentation>",
-      );
+      if (tree === TEMPLATE_TREE) {
+        expect(structure).toContain(
+          "- Production roots: <every shipped-source path, exhaustively, as Git pathspecs",
+        );
+        expect(structure).toContain(
+          "Exclude tests, fixtures, build output, config and documentation>",
+        );
+        return;
+      }
+      // This repository's own catalog answers the field rather than carrying
+      // the question: a `<...>` left here is what Stage 0 reads as unfilled.
+      expect(structure).toContain("- Production roots:");
+      const field = structure.slice(structure.indexOf("- Production roots:"));
+      expect(field.slice(0, field.indexOf("## "))).not.toMatch(/<[^>]+>/);
     });
 
     it(`${tree}: Production roots expresses pathspecs, so root-level source needs no bare .`, async () => {
@@ -139,15 +151,21 @@ describe("declared seam", () => {
       // production source at the root can write, which drags `go.mod`,
       // `package.json`, config, docs and build output into the production list
       // and makes step 5 call each of them an undeclared seam breach.
-      expect(structure).toContain(
-        "a directory where the whole directory is source (`src/`, `app/`, `lib/`, `internal/`, `cmd/`, `packages/*/src`), a glob where it is not",
-      );
-      expect(structure).toContain(
-        "Production code sitting at the repository root takes globs (`*.go` plus `cmd/` and `internal/`; `*.py` plus the package directory), never a bare `.`",
-      );
-      expect(structure).toContain(
-        "which would sweep `go.mod`, `package.json`, CI config, documentation and build output in as production paths",
-      );
+      //
+      // The three sentences are the template telling a reader how to write the
+      // field. A filled catalog holds the answer instead, so only the template
+      // tree carries them; the consumer clause below is read in both.
+      if (tree === TEMPLATE_TREE) {
+        expect(structure).toContain(
+          "a directory where the whole directory is source (`src/`, `app/`, `lib/`, `internal/`, `cmd/`, `packages/*/src`), a glob where it is not",
+        );
+        expect(structure).toContain(
+          "Production code sitting at the repository root takes globs (`*.go` plus `cmd/` and `internal/`; `*.py` plus the package directory), never a bare `.`",
+        );
+        expect(structure).toContain(
+          "which would sweep `go.mod`, `package.json`, CI config, documentation and build output in as production paths",
+        );
+      }
       // The consumer has to pass a glob entry through, not re-read it as a dir.
       expect(policy).toContain(
         "The field holds **Git pathspecs, not only directory names** — pass every entry through verbatim",
