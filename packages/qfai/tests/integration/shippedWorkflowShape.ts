@@ -47,6 +47,7 @@ import {
   isRecord,
   normalizeHeaderLabel,
   parseHeaderTable,
+  parseRunnerSelector,
 } from "../helpers/shippedWorkflowFixtures.js";
 
 /** One dimension of the closed set the declared shape must pin. */
@@ -234,24 +235,6 @@ const REQUIRED_HEADER_ROWS: readonly string[] = [
  * first-party and are not what this allow-list bounds.
  */
 const SANCTIONED_THIRD_PARTY_USES: readonly string[] = ["pnpm/action-setup"];
-
-/**
- * The `runs-on` form dimension 3 requires: one or more repository-variable
- * reads, then a literal default.
- *
- * More than one because a job that does no execution reads a light selector
- * first and falls back to the heavy one, so an adopter who sets neither, or only
- * the heavy one, still gets a label that exists. The literal at the end is what
- * dimension 3 has always required, and it is checked the same way whichever
- * variable precedes it.
- *
- * Which variable a given job reads is its CLASS, and that is pinned per job by
- * `ALLOWED_JOB_SHAPE` rather than here — a job moved between classes changes its
- * `runs-on` string and fails that pin, which is where a reader sees which job
- * moved.
- */
-const RUNNER_SELECTOR_FORM_RE =
-  /^\$\{\{\s*(?:vars\.[A-Za-z_][A-Za-z0-9_]*\s*\|\|\s*)+'([^']*)'\s*\}\}$/;
 
 /** A public GitHub-hosted runner label by naming form (the label LIST is the runner row's SSOT). */
 const PUBLIC_HOSTED_LABEL_RE = /^(?:ubuntu|windows|macos)-[a-z0-9.]+$/;
@@ -510,13 +493,14 @@ function jobBoundingPins(): ShapePin[] {
           problems.push(`${jobId}: no timeout-minutes`);
         }
         const runsOn = job["runs-on"];
-        const selector =
-          typeof runsOn === "string" ? RUNNER_SELECTOR_FORM_RE.exec(runsOn.trim()) : null;
+        // The form is `shippedWorkflowFixtures`'s; which chains are
+        // sanctioned and which labels are public stay with the runner row.
+        const selector = typeof runsOn === "string" ? parseRunnerSelector(runsOn) : null;
         if (selector === null) {
           problems.push(`${jobId}: runs-on is not the repository-variable form`);
           continue;
         }
-        const fallback = selector[1] ?? "";
+        const fallback = selector.fallback;
         if (!PUBLIC_HOSTED_LABEL_RE.test(fallback)) {
           problems.push(
             `${jobId}: runner default "${fallback}" is not a public GitHub-hosted label`,
