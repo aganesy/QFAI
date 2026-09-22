@@ -37,3 +37,5 @@ the next one against.
   Because: the lane this entry adds names the two pages this repository publishes, and an adopter publishes their own.
 - SHIPPED-CI: not-applicable for package.json
   Because: these entry points split the checks for this package's release; the shipped templates neither build nor publish this package.
+- SHIPPED-CI: not-applicable for package.json
+  Because: the lane this entry adds holds this repository's own `CHANGELOG.md` against the release pages built from it, and an adopter publishes no release from a changelog QFAI writes.
