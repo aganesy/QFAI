@@ -377,6 +377,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Six spec-0006 ledger rows name the case their test file holds** (#1436).
+  Each selector restated the row's test-case line rather than naming a test, so
+  the command the row prints ran nothing — `TC-0006-0023: review.staleTtlDays
+  override changes TTL boundary (boundary)` against a case titled `config
+  override 7 days flags the same 10-day-old pack as archive-eligible`. The six
+  are repaired from the files they already name. The dogfooding backlog falls by
+  six.
+
 - **A child whose runtime died is no longer reported as a script that printed
   the wrong thing** (#2068). Two test projects spawn a `pwsh` per case, and both
   fail intermittently on changes touching no PowerShell, with one line:
