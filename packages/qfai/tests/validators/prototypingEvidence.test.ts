@@ -226,6 +226,7 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
+  // QFAI:SPEC-0004:TC-0004-0013
   it("emits QFAI-PROT-002 when designMdViolations contains a malformed entry", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -552,6 +553,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   // The mirror accepts any string here, so this code is invisible on that
   // surface no matter how it is written. Both sides carry the same value, so
   // the only finding available is the registry check on the reviewer's file.
+  // QFAI:SPEC-0004:TC-0004-0012
   it("emits QFAI-PROT-002 for a lap-* code no registry entry declares", async () => {
     const root = await newTempDir();
     const iter = validIter(0, false, ["lap-999-not-a-real-code"]);
@@ -854,6 +856,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   // and `.agents/rules/distributed-surface.md` forbids introducing one. It
   // means a payload carrying the pre-v3 keys and missing the v3 required ones,
   // which is what the example spells out.
+  // QFAI:SPEC-0004:TC-0004-0011
   it("emits QFAI-PROT-002 listing the required keys a v1.x-shaped review.json omits", async () => {
     const root = await newTempDir();
     const iter = validIter(0);

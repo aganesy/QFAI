@@ -53,10 +53,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   why the check asks for the identifier's shape rather than for the cell to be
   non-empty: `REQ-0012-0075 (REQ-0109 follow-up)` fills the column, reads as a
   reference, and ties the row to no case at all. A case now reports every
-  completed row whose `TC-Refs` holds no `TC-NNNN-NNNN`, and carries the
-  thirty-four it finds as a backlog that may only shrink. A row that has not
-  claimed completion is outside it: 191 of those hold no case either, and
-  reporting them would bury the thirty-four that claim one.
+  completed row whose `TC-Refs` holds no `TC-NNNN-NNNN`, and carries the seven
+  it finds as a backlog that may only shrink. Two kinds of row are outside it:
+  - A row that has not claimed completion. 191 of those hold no case either,
+    and reporting them would bury the few that claim one.
+  - A row whose obligation is a user story or a contract. The spec stage seeds
+    those with `TC-Refs` = `-` and the obligation in `US-Refs`, `CON-API-Refs`
+    or `CON-DB-Refs`, which is the column they trace through.
 
 - **A blocked ledger row is read against the decision it names** (#2015).
   `blocked` says the row waits on something, and a Change Request at a terminal
@@ -473,6 +476,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reruns once, from its own fixture, when its child ends on one of those
   signals, and the run prints the host's report when it does. A second crash,
   and every exit code, is still reported as it happened.
+
+- **68 completed ledger rows name the test that already runs their case**
+  (#2160). Each row's own `Test file` and `Selector` pointed at a test that
+  exists and passes, and that test never carried the case's annotation, so the
+  only place naming the case was an annotation carrier — a list of obligations
+  that declares no test. The annotation now sits on the test the row names, and
+  the carrier-only backlog falls from 124 entries to 56.
+  Seven rows whose test exists are left alone on purpose:
+
+  | Rows | Why the annotation does not belong there                                                                  |
+  | ---- | --------------------------------------------------------------------------------------------------------- |
+  | 2    | The case is split with an open row, and the finished test covers only its own half                        |
+  | 1    | The row's evidence record hashes the test file, so a new line there breaks the record                     |
+  | 2    | The case is not an end-to-end case, and the only other test naming it is the hashed file                  |
+  | 2    | The finding code the selector names is tested under a different condition from the one the case describes |
 
 - **A spec-0010 and a spec-0015 ledger row name the case their test file
   holds** (#1436). One selector described its test — `asymmetric

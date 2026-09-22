@@ -77,6 +77,7 @@ describe("uiux sidecar templates", () => {
     expect(unexpected).toEqual([]);
   });
 
+  // QFAI:SPEC-0010:TC-0010-0001
   it("UI-bearing sidecar family を配布する (brand SSOT は root DESIGN.md)", async () => {
     const files = await fg(["*.md"], { cwd: uiuxDir, absolute: false });
     // Brand-level inputs moved to root DESIGN.md; only screen-level
@@ -98,6 +99,7 @@ describe("uiux sidecar templates", () => {
     expect(content).toMatch(/- required_states:/);
   });
 
+  // QFAI:SPEC-0010:TC-0010-0005
   it("50_review_input_bundle.md が best-of-history を明記する", async () => {
     const content = await readTemplate("50_review_input_bundle.md");
     expect(content).toMatch(/best-of-history/i);

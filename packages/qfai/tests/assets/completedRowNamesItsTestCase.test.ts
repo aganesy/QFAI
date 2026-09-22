@@ -15,7 +15,13 @@
  *
  * **Rows that have not claimed completion are outside this.** A `todo` row may
  * not have its case yet, 191 of them do not, and reporting those would bury the
- * thirty-four that claim one.
+ * few that claim one.
+ *
+ * **Nor are rows whose obligation is not a test case.** `/qfai-sdd` Phase 2b
+ * seeds an `E2E` row per user story, an `API` row per `CON-API-*` contract and
+ * an `Integration` row per `CON-DB-*` contract, each with `TC-Refs` = `-` and
+ * its obligation in `US-Refs`, `CON-API-Refs` or `CON-DB-Refs`. Such a row
+ * traces through that column, so an empty `TC-Refs` is its correct shape.
  */
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -37,6 +43,13 @@ const COMPLETED = new Set(["done", "green", "refactor", "review-fix"]);
 
 const TEST_CASE = /TC-\d{4}-\d{4}/;
 
+/** The columns that carry a row's obligation when it is not a test case. */
+const OTHER_OBLIGATIONS: ReadonlyArray<readonly [string, RegExp]> = [
+  ["US-Refs", /US-\d{4}-\d{4}/],
+  ["CON-API-Refs", /CON-API-/],
+  ["CON-DB-Refs", /CON-DB-/],
+];
+
 /**
  * The completed rows already naming no test case.
  *
@@ -45,40 +58,13 @@ const TEST_CASE = /TC-\d{4}-\d{4}/;
  * new one does.
  */
 const KNOWN_WITHOUT_A_TEST_CASE: readonly string[] = [
-  "spec-0004 TDD-0044 done",
-  "spec-0004 TDD-0045 done",
-  "spec-0004 TDD-0046 done",
-  "spec-0006 TDD-0019 done",
-  "spec-0006 TDD-0020 done",
   "spec-0012 TDD-0420 done",
-  "spec-0012 TDD-0460 done",
-  "spec-0012 TDD-0461 done",
-  "spec-0012 TDD-0462 done",
-  "spec-0012 TDD-0463 done",
-  "spec-0012 TDD-0473 done",
-  "spec-0012 TDD-0474 done",
-  "spec-0012 TDD-0475 done",
-  "spec-0012 TDD-0476 done",
-  "spec-0012 TDD-0490 done",
-  "spec-0012 TDD-0491 done",
-  "spec-0012 TDD-0492 done",
-  "spec-0012 TDD-0493 done",
-  "spec-0012 TDD-0494 done",
-  "spec-0012 TDD-0495 done",
   "spec-0012 TDD-0496 done",
   "spec-0012 TDD-0497 done",
-  "spec-0012 TDD-0509 done",
-  "spec-0012 TDD-0510 done",
-  "spec-0012 TDD-0511 done",
-  "spec-0012 TDD-0512 done",
-  "spec-0012 TDD-0513 done",
   "spec-0012 TDD-0514 done",
   "spec-0012 TDD-0515 done",
   "spec-0012 TDD-0516 done",
   "spec-0012 TDD-0517 done",
-  "spec-0013 TDD-0022 done",
-  "spec-0015 TDD-0020 done",
-  "spec-0015 TDD-0021 done",
 ];
 
 describe("a row claiming completion names the test case it discharges", () => {
@@ -124,6 +110,7 @@ describe("a row claiming completion names the test case it discharges", () => {
         const status = at("Status").toLowerCase();
         if (!COMPLETED.has(status)) continue;
         if (TEST_CASE.test(at("TC-Refs"))) continue;
+        if (OTHER_OBLIGATIONS.some(([column, id]) => id.test(at(column)))) continue;
         found.push(`${pack} ${tdd} ${status}`);
       }
     }
