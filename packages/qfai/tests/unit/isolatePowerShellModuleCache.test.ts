@@ -46,7 +46,7 @@ describe("the setup file, as the runner loads it", () => {
 });
 
 describe("the variable PowerShell reads", () => {
-  it.skipIf(!hasPwsh())("puts a started pwsh's cache at the declared path", () => {
+  it.skipIf(!hasPwsh())("puts a started pwsh's cache at the declared path", async () => {
     // The load-bearing fact the fix rests on: that this variable is the one PowerShell
     // relocates its cache by. A row asserting only that the suite sets some variable
     // would pass against a name PowerShell ignores, and the shared file would still
@@ -63,9 +63,11 @@ describe("the variable PowerShell reads", () => {
 
     expect(run.error).toBeUndefined();
     expect(run.status, run.stderr).toBe(0);
-    expect(
-      existsSync(declared),
-      `pwsh wrote no cache at ${declared}; the variable it reads is not ${CACHE_VARIABLE}`,
-    ).toBe(true);
+
+    // Polled rather than read once. PowerShell saves the cache on a delayed
+    // write, so a process that has exited may not have flushed it yet — and a
+    // bare existence check would be the same race this whole file is about,
+    // reproduced in the test for it.
+    await expect.poll(() => existsSync(declared), { timeout: 15000, interval: 250 }).toBe(true);
   });
 });
