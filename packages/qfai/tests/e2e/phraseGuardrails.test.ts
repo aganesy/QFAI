@@ -56,7 +56,6 @@ function checkForbiddenPhrases(content: string): string[] {
   return found;
 }
 
-// QFAI:SPEC-0016:US-0016-0005
 describe("v1.6.2 required phrase guardrails", () => {
   it("SKILL.md contains all 8 required phrases", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
@@ -71,7 +70,6 @@ describe("v1.6.2 required phrase guardrails", () => {
   });
 });
 
-// QFAI:SPEC-0016:US-0016-0005
 describe("missing required phrase detection", () => {
   it("detects absence of a required phrase from mutated SKILL.md content", async () => {
     const original = await readFile(implementSkillPath, "utf-8");
@@ -92,7 +90,6 @@ describe("missing required phrase detection", () => {
   });
 });
 
-// QFAI:SPEC-0016:US-0016-0005
 describe("v1.6.2 forbidden phrase guardrails", () => {
   it("SKILL.md contains no forbidden phrases", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
@@ -118,7 +115,6 @@ describe("v1.6.2 forbidden phrase guardrails", () => {
   });
 });
 
-// QFAI:SPEC-0016:US-0016-0005
 describe("developer fixes missing phrase; asset tests pass", () => {
   it("all 8 required phrases are present after v1.6.2 changes", async () => {
     const content = await readFile(implementSkillPath, "utf-8");

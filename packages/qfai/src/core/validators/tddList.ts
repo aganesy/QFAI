@@ -5236,12 +5236,15 @@ const REVISION_AT_REST_STATUSES = new Set(["refactor", "done", "review-fix"]);
  * - nothing under the pathspec moved. The observation is current.
  * - the revision cannot be RESOLVED here. It cannot share this code's window,
  *   because `actions/checkout` is depth-1 by default and every CI run on a
- *   shallow clone would then error on every row; and `QFAI-REVIEW-009` already
- *   reports an unresolvable revision, so a per-row copy would be noise on top
- *   of a signal that exists. The residual is real and stated here rather than
- *   hidden: a revision unresolvable because it is WRONG is not told apart from
- *   one unresolvable because the clone is shallow, and telling them apart needs
- *   a signal this check does not have.
+ *   shallow clone would then error on every row.
+ *
+ * The last of those is a skip, not a pass, and the caller says so: it collects
+ * the revisions whose diff came back `unresolvable` and reports them once per
+ * ledger at `info`. Two things stay out of that report. A revision unresolvable
+ * because it is WRONG is not told apart from one unresolvable because the clone
+ * is shallow — telling them apart needs a signal this check does not have — and
+ * the rule still cannot run in a lane that blocks a merge until the checkout
+ * there carries the history the revisions name.
  */
 export function staleEvidenceFiles(
   root: string,
@@ -6907,6 +6910,50 @@ async function validateSpecTddList(
         undefined,
         "change",
         `"Status: PASS" のような判定だけの記述は無効です。実行したコマンドを併記してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。`,
+      ),
+    );
+  }
+
+  // `staleEvidenceFiles` answers `null` both for "nothing moved" and for "this
+  // clone does not hold that commit", so a reader cannot tell a rule that
+  // cleared every row from one that checked none of them. `actions/checkout`
+  // fetches depth 1 by default, which makes the second answer the usual one in
+  // CI: every interval is uncomputable and the ledger reports as though every
+  // observation were current.
+  //
+  // Said once per ledger rather than once per row. On a shallow clone every
+  // row names an unreachable revision, and a per-row copy would bury the rest
+  // of the run under one repeated sentence.
+  //
+  // `info`, because the rule has found nothing wrong — it has found that it
+  // could not look. What is missing is the clone's history, which is the
+  // run's configuration and not the ledger's content.
+  const unresolvedRevisions = [...revisionDiffCache]
+    .filter(([, changed]) => changed.kind === "unresolvable")
+    .map(([revision]) => revision);
+  if (unresolvedRevisions.length > 0) {
+    const shown = unresolvedRevisions.slice(0, 5);
+    const more =
+      unresolvedRevisions.length > shown.length
+        ? ` (+${unresolvedRevisions.length - shown.length})`
+        : "";
+    issues.push(
+      issue(
+        EVIDENCE_REVISION_STALE_CODE,
+        `spec-${specNumber}: the staleness check did not run for ` +
+          `${unresolvedRevisions.length} observation revision(s) this ledger names: ` +
+          `${shown.join(", ")}${more}. Each names a commit this clone does not hold, so the ` +
+          `interval from it to now cannot be computed and no row resting on it was checked. ` +
+          `A skipped check reads exactly like a satisfied one, which is why it is stated.`,
+        "info",
+        relPath,
+        "tddList.evidenceRevisionUnresolved",
+        unresolvedRevisions,
+        "canonical",
+        "Give the run the history it is reading against: `actions/checkout` fetches depth 1 " +
+          "by default, and `fetch-depth: 0` is what makes these revisions reachable. Where the " +
+          "clone already carries the history, the revision is wrong rather than unreachable, " +
+          "and the row that names it owes a re-observation.",
       ),
     );
   }

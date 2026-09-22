@@ -23,6 +23,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A comment opener inside a code span ends the paragraph, as GitHub renders
+  it** (#1869). `qfai init` writes the review pointer into an agent entry point
+  only where no operative copy is there already, and a multiline code span was
+  allowed to run past a line beginning `<!--`. GitHub ends the paragraph at that
+  opener and reads everything after it as the HTML comment the opener began, so
+  a directive written below one reaches no reader — while the reader here
+  counted it as present and wrote nothing. The opener now interrupts a code span
+  like every other block start, and the fixture that pinned the old reading
+  states what GitHub renders instead.
+
+- **The evidence-staleness rule now runs where a merge is blocked, and says so
+  when it cannot compute an answer** (#2019). `QFAI-TDDLIST-009` asks whether
+  anything a recorded observation covered has moved since the revision it names.
+  A revision a clone does not hold cannot be diffed, and the rule returned the
+  same "nothing to report" it returns for a fresh row — so on the depth-1
+  checkout `actions/checkout` gives by default, it reported on no row at all
+  while reading as though it had cleared every one of them. Two changes: the
+  `build` job, whose result blocks a merge, now checks out the full history, so
+  the rule computes what it is there to compute; and a run that still cannot
+  resolve a revision reports the revisions it could not reach, once per ledger,
+  at `info`. The dogfooding pin for `spec-0002` rises by one as a result: the
+  row `TDD-0011` has named a stale revision since the test it covers was last
+  edited, and only the blind run made it look current. That row owes a
+  re-observation, which is `/qfai-implement`'s to record.
+
 - **The evidence citation scan reads a record the way it renders** (#1763). Five
   shapes were read differently from how Markdown renders them or from how the
   record parses: a comma after a path on a fenced transcript line ended the
@@ -343,6 +368,21 @@ unadjudicated` on a visible line, and says a response omitting any of them
   decision records that declared the legacy family canonical are marked
   superseded with what stands in their place. The business rule, example, test
   case and ledger selector that hung off `AC-0010-0001` follow it.
+
+- **Ten user stories the E2E annotation ledger counted as covered are now backed
+  by tests about what they state** (#1833). Each of them had exactly one
+  annotation, and it sat on a test about something else: the Copilot review
+  instructions were backed by a block on migration and upgrade support, the
+  implement skill's micro-cycle rules by blocks on the sub-agent roster and the
+  evidence contract, the research allowlist by the phrase guardrails, and the
+  anchor-form mock by the discussion active pointer. Four new E2E files carry
+  the annotations now — the instruction files init distributes and what `--force`
+  does to them, the five rules the shipped implement skill states, the
+  default-deny research allowlist, and the mock template read both as text and
+  through the validator that rejects a same-origin absolute path. The eleventh
+  story, README files in each integration directory, describes behaviour no
+  release still has, so its ledger claim is withdrawn and the unbacked-count
+  limit is re-pinned to what the ledger now holds.
 
 - **`Oracle proof` is read from the round block the skill writes it in**
   (#2026). `round-evidence.md` puts the field under the round prefix, because a
