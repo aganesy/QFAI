@@ -57,7 +57,7 @@
 ## TC-0013-0010: Batch Mode Targets Every Capability
 
 - EX-Ref: EX-0013-0005
-- AC-Refs: AC-0013-0001
+- AC-Refs: AC-0013-0027
 - Verify that an invocation with no argument targets every capability in
   `_policies/03_Capabilities.md` and delegates Slice per spec.
 
@@ -72,7 +72,7 @@
 ## TC-0013-0012: Contract Stub Is Parseable Or Declared `none`
 
 - EX-Ref: EX-0013-0007
-- AC-Refs: AC-0013-0001
+- AC-Refs: AC-0013-0026
 - Verify that a contract stub which does not parse is reported, that one which
   parses but declares no API is reported as well, and that a well-formed stub
   draws neither finding.
