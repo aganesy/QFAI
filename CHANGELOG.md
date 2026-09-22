@@ -498,6 +498,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   left alone. Its `Test file` would have to move with the annotation, and that
   cell is not writable once it holds a real path.
 
+- **A PowerShell host crash names the processor it happened on** (#2181). A
+  leg can lose one case to the host crash or nearly all of them, and a rerun
+  on another runner recovers both. Whether the second mode follows the
+  runner's processor is what the log could not answer, so each crash warning
+  now names the CPU model.
+
 - **The capture runner's 399 case is named for what it asserts**. It asserted
   that a 399 response is accepted, the last status below the 400 rejection
   boundary, and was titled as a rejection. A reader following the title would

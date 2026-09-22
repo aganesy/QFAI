@@ -21,6 +21,7 @@ import {
   EXIT_NONZERO,
   EXIT_ZERO,
   type Spawned,
+  cpuModel,
   hostCrashed,
   outcomeOf,
   outputContext,
@@ -210,6 +211,8 @@ describe("a crashed runtime reruns the case once, and a script's own answer neve
     expect(result.outcome).toBe(EXIT_ZERO);
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain("killed by SIGABRT");
+    // The processor is named, so a crash can be read against the runner it happened on.
+    expect(warnings[0]).toContain(` on ${cpuModel()} `);
   });
 
   it("reports a second crash as it happened rather than retrying again", async () => {
@@ -238,5 +241,11 @@ describe("a crashed runtime reruns the case once, and a script's own answer neve
     );
     expect(attempts).toBe(1);
     expect(result.outcome).toBe("exit 1");
+  });
+});
+
+describe("cpuModel names the processor a crash happened on", () => {
+  it("answers with a non-empty name on any host", () => {
+    expect(cpuModel().length).toBeGreaterThan(0);
   });
 });

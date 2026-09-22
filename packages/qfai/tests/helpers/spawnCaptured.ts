@@ -19,6 +19,7 @@
  */
 
 import { spawn } from "node:child_process";
+import { cpus } from "node:os";
 
 /** What a spawned child reported, with the cause of its ending kept. */
 export interface Spawned {
@@ -121,6 +122,17 @@ export function hostCrashed(result: Pick<Spawned, "signal">): boolean {
  * Lift when: the runner's PowerShell no longer crashes this way — the warning below stops
  * appearing in the test legs' logs.
  */
+/**
+ * The processor the crash happened on, as the runtime reports it.
+ *
+ * A leg can lose one case to a crash, or nearly all of them, and a rerun of the job on another
+ * runner recovers both. Whether the second mode follows the runner's processor is the question
+ * the log could not answer, so each crash names it.
+ */
+export function cpuModel(): string {
+  return cpus()[0]?.model.trim() || "an unreported processor";
+}
+
 export async function retryOnHostCrash<T extends Spawned>(
   attempt: () => Promise<T>,
   warn: (message: string) => void = (message) => {
@@ -130,7 +142,7 @@ export async function retryOnHostCrash<T extends Spawned>(
   const first = await attempt();
   if (!hostCrashed(first)) return first;
   warn(
-    `the child's runtime crashed (${first.outcome}) before answering; running the case once more. Its report:\n${first.stderr.slice(0, 600)}`,
+    `the child's runtime crashed (${first.outcome}) on ${cpuModel()} before answering; running the case once more. Its report:\n${first.stderr.slice(0, 600)}`,
   );
   return await attempt();
 }
