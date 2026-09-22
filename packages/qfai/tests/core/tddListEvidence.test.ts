@@ -4171,6 +4171,9 @@ ${packPair(1).join("\n")}
     ["Round 1: GREEN result", "not passed"],
     ["Refactor verify result", "FAIL"],
     ["Checkpoint verification result", "FAIL"],
+    // A bare `skipped` is a lane that did not run. It stays rejected, and the
+    // counted form below is what is separated from it.
+    ["Checkpoint verification result", "skipped"],
   ] as const) {
     it(`rejects non-executed or contradictory ${field}`, async () => {
       await withProject(async (root) => {
@@ -4185,6 +4188,42 @@ ${packPair(1).join("\n")}
       });
     });
   }
+
+  it.each([
+    ["a counted skip beside the passes", "PASS — 4619 passed, 35 skipped (4654)"],
+    ["a zero skip count", "PASS — 4654 passed, 0 skipped"],
+  ])("accepts a checkpoint result carrying %s", async (_shape, result) => {
+    // What a runner reports about cases the suite declares skipped is data, on
+    // the same terms as `0 failed`. Rejecting the word wherever it appears made
+    // the fuller record fail and the terser one pass, which is the wrong way
+    // round for a field whose purpose is provenance.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        /(Checkpoint verification result: ).*$/m,
+        `$1${result}`,
+      );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it("still refuses a checkpoint result that ran nothing, however it counts skips", async () => {
+    // The counted form may not become a way past the ran-nothing guard: that
+    // one reads the untouched text, so a run with no passes is refused even
+    // when every remaining case is reported as a skip.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        /(Checkpoint verification result: ).*$/m,
+        "$1PASS — 0 passed, 4654 skipped",
+      );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+      expect(codes).toContain("QFAI-TDDLIST-008");
+    });
+  });
 
   it("does not accept review PASS fields copied into review_request.md", async () => {
     await withProject(async (root) => {

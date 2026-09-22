@@ -358,6 +358,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A counted skip in an evidence result is data, not a lane that did not run**
+  (#2131). The result a completed row records was refused wherever the word
+  `skipped` appeared, so a checkpoint over a suite that declares skips had no
+  honest spelling: the fuller record failed and the terser one passed, which is
+  the wrong way round for a field whose purpose is provenance. A count beside
+  the word is now read the way `0 failed` already was — as what the runner
+  reported. A bare `skipped` still refuses the row, and a run that passed
+  nothing is still refused however it counts its skips, because that guard reads
+  the untouched text.
+
 - **A review request names its whole review unit, not a subset of it** (#1886).
   A coherent group is reviewed in one round over the whole group, so its request
   names every member. The check asked only that each named identifier belong
