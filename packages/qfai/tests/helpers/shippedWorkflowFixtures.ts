@@ -130,6 +130,49 @@ export function normalizeHeaderLabel(label: string): string {
     .trim();
 }
 
+/**
+ * The grammar a shipped `runs-on` selector is written in: one or more
+ * repository-variable reads, then a literal default.
+ *
+ * **One home, three readers.** The declared shape reports dimension 3, the
+ * runner row owns the selector literal and the public-label list, and the
+ * end-to-end row reads the tree `qfai init` actually writes. All three have to
+ * agree on what a selector *looks like*, and each carried its own copy of this
+ * pattern — so widening the form for the second runner class was found one CI
+ * round at a time, because each site rejects on its own and the first failure
+ * hides the next.
+ *
+ * What the form is belongs here. What the values are stays with the row that
+ * owns them: which variable chains are sanctioned, and which labels are public,
+ * are the runner row's and are not restated here.
+ */
+const RUNNER_SELECTOR_RE =
+  /^\$\{\{\s*((?:vars\.[A-Za-z_][A-Za-z0-9_]*\s*\|\|\s*)+)'([^']*)'\s*\}\}$/;
+
+/** A `runs-on` selector taken apart: the variables it reads, and its default. */
+export interface ParsedRunnerSelector {
+  /** The variable names, in the order the selector falls back through them. */
+  readonly variables: readonly string[];
+  /** The literal label the chain ends in. */
+  readonly fallback: string;
+}
+
+/**
+ * A selector parsed into its parts, or `null` when it is not written in the
+ * form above — a bare label, a label array, a runner `group:` mapping, or an
+ * expression with no literal at the end.
+ */
+export function parseRunnerSelector(value: string): ParsedRunnerSelector | null {
+  const match = RUNNER_SELECTOR_RE.exec(value.trim());
+  if (match === null) return null;
+  return {
+    variables: [...(match[1] ?? "").matchAll(/vars\.([A-Za-z_][A-Za-z0-9_]*)/g)].map(
+      (read) => read[1] ?? "",
+    ),
+    fallback: match[2] ?? "",
+  };
+}
+
 /** A table cell holding only a separator run (`---`, `:--:`). */
 const SEPARATOR_CELL_RE = /^:?-{2,}:?$/;
 
