@@ -98,6 +98,24 @@ concurrency:
   group: renovate-${{ github.ref }}
   cancel-in-progress: false
 
+# ## What stays serial here, and why
+#
+# Two jobs, and they never run together: `renovate` declines a `push` and `repin`
+# runs on nothing else, so the events partition them. There is no wall-clock to
+# win between the two — one of them is always skipped — and running them as one
+# job would instead make each event pay for the other's setup.
+#
+# **Inside `renovate`, the token guard is a trust edge.** It refuses when the
+# token is absent rather than letting the bot start and open nothing, so it has
+# to finish before the action it guards. Both read the checkout.
+#
+# **Inside `repin`, every step reads what the step before it wrote.** The branch
+# guard reads the checked-out tree, the setup action prepares the toolchain the
+# re-pin runs on, the re-pin writes the digest files and reports whether anything
+# changed, and the push is conditioned on that report. A step moved out of this
+# order would run against a tree the previous step had not produced.
+#
+
 jobs:
   # ── Open the pull requests ───────────────────────────────────────────────────────────────────
   renovate:
