@@ -56,6 +56,48 @@ describe("maskNonSpecRegions", () => {
       .split("\n")
       .filter((line) => line.trim().length > 0);
 
+  it("reads a comment marker in a code span as the text it is", () => {
+    // The scan found `<!--` anywhere on the line and hid everything after it.
+    // A document that quotes the marker — and a spec pack explaining its own
+    // ignore comment does — lost every heading and table below the sentence.
+    const text = [
+      "# doc",
+      "",
+      "Write `<!-- mdschema:ignore -->` to opt a document out.",
+      "",
+      "## Scope",
+    ].join("\n");
+
+    expect(visible(text)).toEqual([
+      "# doc",
+      "Write `<!-- mdschema:ignore -->` to opt a document out.",
+      "## Scope",
+    ]);
+  });
+
+  it("reads a comment marker in a fence info string as the sample's label", () => {
+    // The comment scan ran before the fence was recognised, so a marker in the
+    // info string opened a comment that swallowed the rest of the document
+    // rather than a fenced sample that ends three lines later.
+    const text = [
+      "# doc",
+      "",
+      "```text <!-- an unclosed marker",
+      "## Risks",
+      "```",
+      "",
+      "## Scope",
+    ].join("\n");
+
+    expect(visible(text)).toEqual(["# doc", "## Scope"]);
+  });
+
+  it("still hides a comment that opens outside a code span", () => {
+    const text = ["# doc", "", "<!-- `not code` -->", "", "## Scope"].join("\n");
+
+    expect(visible(text)).toEqual(["# doc", "## Scope"]);
+  });
+
   it("blanks a raw HTML block and everything it holds", () => {
     const text = [
       "# doc",

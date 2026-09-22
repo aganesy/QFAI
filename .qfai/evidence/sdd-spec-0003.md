@@ -7,7 +7,7 @@
 
 ## Inputs reviewed
 
-- `.qfai/discussion/discussion-20260913135257933`
+- Discussion pack `discussion-20260913135257933` (the discussion tree is not tracked, so this names the session rather than a file to open)
 - `.qfai/contracts/cli/shipped-workflows.md` (CLI-WFSET)
 - `.qfai/specs/spec-0003/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `09_delta.md`, `10_Plan.md`
 - `.qfai/specs/spec-0003/tdd/test-list.md`
@@ -18,9 +18,9 @@
 - `.qfai/assistant/catalog/test-layers.md`
 - `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md`
 
-## Preflight summary path
+## Preflight summary
 
-- `.qfai/report/preflight/run-20260915133056355/preflight_summary.md` (run id: run-20260915133056355)
+- Run id `run-20260915133056355`. The report tree is not tracked; re-running `qfai preflight` writes a new run under it and this id is what identifies the one this record is about.
 
 ## Triage decisions
 
@@ -79,11 +79,10 @@ pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflow tests/e2
 pnpm format:check && pnpm lint && pnpm lint:md && pnpm lint:mdschema && pnpm check-types
 ```
 
-## Validate evidence paths
+## Validate evidence
 
-- `.qfai/report/validate.log`
-- `.qfai/report/run-20260915152200259/` (run id: run-20260915152200259, status: pass)
-- `.qfai/report/specs-coverage/spec-0003.md`
+- Run id `run-20260915152200259`, status pass.
+- Written by `qfai validate --fail-on error --format github`, whose result is the command table above. The report tree is not tracked, so the run id and that result are the record.
 
 ## Pre-draft Grilling
 

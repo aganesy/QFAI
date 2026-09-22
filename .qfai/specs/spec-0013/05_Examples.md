@@ -38,19 +38,21 @@
 - When `/qfai-sdd` runs without arguments
 - Then 対象 spec, 対象 spec, 対象 spec are processed in parallel (slice/plan/delta per spec)
 
-## EX-0013-0006: Coverage Placeholder for BR-0013-0004
+## EX-0013-0006: Plan Finalized After A Slice Is Grounded
 
 - BR-Ref: BR-0013-0004
-- Given the consolidated rule BR-0013-0004
-- When layer coverage is evaluated
-- Then at least one example exists for BR-0013-0004
+- Given a target spec whose user stories have not been sliced yet
+- When `/qfai-sdd` reaches Phase 3
+- Then Plan finalize waits for at least one slice gate to pass, and the plan is
+  written to `spec-XXXX/10_Plan.md` rather than to a `specs/plan.md`
 
-## EX-0013-0007: Coverage Placeholder for BR-0013-0005
+## EX-0013-0007: Contract Stub Is Parseable Or Declared `none`
 
 - BR-Ref: BR-0013-0005
-- Given the consolidated rule BR-0013-0005
-- When layer coverage is evaluated
-- Then at least one example exists for BR-0013-0005
+- Given a slice that touches an API, a UI or a database contract
+- When the slice writes its contract stub
+- Then the stub parses as OpenAPI YAML, UI YAML or an executable SQL skeleton;
+  `none` stands only where the slice has no contract impact and says why
 
 ## EX-0013-0008: Test Case Table with Type Column
 

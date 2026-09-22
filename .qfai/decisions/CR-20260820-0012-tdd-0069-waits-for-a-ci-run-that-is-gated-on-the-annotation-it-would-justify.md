@@ -2,7 +2,7 @@
 
 - ID: `CR-20260820-0012`
 - Title: `TDD-0069 waits for a CI run that is gated on the annotation that row would justify`
-- Raised by: `/qfai-atdd orchestrator, spec-0017; raised by P1d's qa-gatekeeper REVISE on DR-0017-0010, which found the exit condition that record offered to be unreachable`
+- Raised by: `/qfai-atdd orchestrator, spec-0017; raised by P1d's qa-gatekeeper REVISE on DR-0017-0023, which found the exit condition that record offered to be unreachable`
 - Raised at: `2026-08-20T23:00:00Z`
 - Class: `defect`
 - Status: `approved`
@@ -38,7 +38,7 @@ Every link verified at `16f611c7`, against run `32368851703` on that sha:
   quoted".
 
 So the row waits for a green run, and the run is red _because_ the row is unannotated. Waiting cannot
-resolve it. `DR-0017-0010`'s first version offered "becomes implementable once PR #794 has three
+resolve it. `DR-0017-0023`'s first version offered "becomes implementable once PR #794 has three
 consecutive green `ci-pass` runs to cite" as the exit, and that exit does not exist.
 
 ## Why this is a defect and not a note
@@ -103,7 +103,7 @@ is "the strict reading is the intended one and the guard is simply not satisfiab
 
 Accept that `TDD-0069` is post-merge in practice even though its example is pre-merge in wording, and
 treat it like `TDD-0070`. Rejected on the record: it makes the wording of `EX-0017-0053` false rather
-than resolving it, and it is the reading `DR-0017-0010`'s first version implicitly took when it blamed
+than resolving it, and it is the reading `DR-0017-0023`'s first version implicitly took when it blamed
 "unmerged workflow changes" — which P1d showed is not the obstacle.
 
 ### Option 5 — split the conjunction upstream, keeping clause 2's subject bound
@@ -126,7 +126,7 @@ It does **not** close `TDD-0069` on its own. Clause 1 is **unsatisfied** — no 
 made, so there is nothing for "exactly one project is tuned, largest first" to be true of — and clause
 2 stays behind the cycle. (An earlier version of this option said clause 1 was "degenerate against this runner". P1d's third
 pass showed that is false: `maxConcurrency` is project-scoped per this repository's own
-`CR-20260820-0003` site table and `vitest.knobs.ts`'s `projectKnobs`. `DR-0017-0010` records the
+`CR-20260820-0003` site table and `vitest.knobs.ts`'s `projectKnobs`. `DR-0017-0023` records the
 history — two wrong readings and one correction, not, as an earlier version of this sentence had it,
 "wrong about clause 1 three times".)
 
@@ -174,7 +174,7 @@ successively more of it:
   ```
 
   `build` needs all fifteen, not eight. That is the dominant strand and it was absent from both this
-  CR and `DR-0017-0010`.
+  CR and `DR-0017-0023`.
 
   **It does not, however, give option 2 a second independent failure, and an earlier version of this
   paragraph claimed it did.** P1d's fourth pass checked: all seven non-`spec-0017` TCs are themselves
@@ -199,5 +199,5 @@ Recorded so that no option here is read as sufficient by itself.
 - `CR-20260820-0007` — nine rows asserting over numbers `/qfai-implement` may not write into
   `07_Decisions.md`. Same _class_ (an arrangement defect, not a coding defect) and a different cycle;
   `TDD-0069` is not in its blocked set.
-- `DR-0017-0010` — the anomaly record for `TDD-0070`, which is genuinely a timing fact. It keeps the
+- `DR-0017-0023` — the anomaly record for `TDD-0070`, which is genuinely a timing fact. It keeps the
   `TDD-0069` analysis for continuity and points here for the decision.

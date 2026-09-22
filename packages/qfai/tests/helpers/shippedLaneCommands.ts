@@ -1352,7 +1352,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what
     // it wrote; dropping that one bullet reproduces `7f4f473a…` byte for byte.
     ".github/copilot-instructions.md",
-    "c7e5457bbe1001e950531e09588830fc180afcc45ef08ce032291bfe0c377cb8",
+    "754c7708fb3ae107f637700c4e87d68b3743b65801537a3446fb5ae51637faab",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1506,8 +1506,8 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what it
   // wrote; dropping that one bullet from both written files reproduces `66f2f506…` and
   // `bf6a52af…` byte for byte.
-  ["AGENTS.md", "474a294c5789627a609e7fc5a765606f68d204b8e78aaf8412e53cceaab0e7cc"],
-  ["CLAUDE.md", "32299fd56a097bc4c930d2fe50b53f0cadfdefb6b76aad56b7572cd57d8cb420"],
+  ["AGENTS.md", "6083825b716db9e5c68b109b417c4108d80c46197eb333b14af35ad2ae89cf30"],
+  ["CLAUDE.md", "fe88c1229496dbd203993d9e79ec7869334fb77512331e0aba0cdcb1a4ed4d8b"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools

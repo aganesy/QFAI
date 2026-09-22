@@ -1235,12 +1235,20 @@ describe("this repository's pull-request description", () => {
     ]) {
       const entry = await readFile(path.join(ROOT, relative), "utf-8");
       if (relative === ".github/instructions/code-review.instructions.md") {
-        expect(entry).toContain(
-          "Process:\n\nRead `REVIEW.md` if present.\n\n1. Read the PR description",
-        );
+        expect(entry).toContain("Process:\n\nRead `REVIEW.md` if present,");
       } else {
         expect(entry, relative).toContain("Read `REVIEW.md` before reviewing a pull request");
       }
+      // And from a revision the pull request's author does not control. A
+      // reviewer that reads the policy out of the head is taking it from the
+      // work under review, which is the one place it cannot come from.
+      // Either spelling of the second half, and either side of a line break.
+      // The Copilot instructions file is held to a character budget a size
+      // check enforces, so it says the same thing in fewer words than the
+      // entry points do, and the line-length rule wraps the longer ones.
+      expect(entry, relative).toMatch(
+        /from\s+the\s+branch\s+the\s+pull\s+request\s+targets\s+(?:and\s+not\s+from|rather\s+than)\s+its\s+head/,
+      );
     }
     const release = await readFile(
       path.join(ROOT, ".github/workflows/prepare-release.yml"),
