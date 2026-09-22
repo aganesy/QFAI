@@ -17,7 +17,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   over nothing, as it was. No argument is appended to the script: it belongs to
   the adopter and its runner is unknown here, so a shard or reporter flag that
   suits one framework is a syntax error in the next.
-
   The five lanes became one matrixed job, whose axis is the intersection the
   detection job now publishes. That is what keeps one copy of the install
   sequence rather than five: a shipped file may not reference another under
@@ -26,13 +25,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it, and the lane-inertness dimension gains the kind a lane selected by an axis
   needs — a condition that stopped naming the list would leave the job running on
   every change with the axis still correct, which the old check could not tell.
-
   The verdict reads the lane's conclusion rather than scanning every dependency's:
   green on success, green on a skip where the axis was empty, red on everything
   else. A skip is only green where the selection is explicitly empty, because an
   absent selection says nothing about why the lane did not run — and a lane that
   installs is one a failed install can stop, which is the case a green-on-skip
   rule would have swallowed.
+
+- **A ledger row is read against the file that carries its annotation** (#2015).
+  Two columns answer where a row's test is: `Test file`, which a reader
+  follows, and the annotation, which the acceptance gate reads. Nothing compared
+  them, so covering a row silenced that gate whatever its own column said, and
+  the two drifted with nothing between them — one pack sent a reader to the
+  wrong file for eight of its rows. A case now reports every row whose named
+  file carries no annotation for its case, and holds the thirty-four it finds
+  as a backlog that may only shrink. A case nobody annotates is left to the
+  gate that owns it rather than counted here.
 
 - **The shipped workflows carry a second runner class for the jobs that run no
   test** (#2095). Change detection and the three aggregates install nothing, check
