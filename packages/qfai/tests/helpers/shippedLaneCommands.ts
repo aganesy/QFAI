@@ -1239,7 +1239,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-docs.yml", "281d4461d9fda4ded4db506fafc8556be83046d9d51841b250efb6f573091c44"],
   ["qfai-tests.yml", "c7631fef52a826d4fd556b0944a708152dd11972c0d0a6c09e4b41374f651ad4"],
-  ["qfai-validate.yml", "313e6d0c1a24c3e49e9ee781a8a687c1632dbd2fbb5f1165202658d1eaeb00a7"],
+  ["qfai-validate.yml", "ed6adc47dca67488209552100d3e31285b30e3ddb39e9091d5c516d168695893"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
