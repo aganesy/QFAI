@@ -2583,7 +2583,7 @@ describe("what a record can be written as", () => {
     // covered a fenced block opening in the next — a pairing no record wrote.
     const log = [
       JSON.stringify({ note: "<!-- qfai:not-a-citation .qfai/report/other.json -->" }),
-      JSON.stringify({ note: "```text\\n.qfai/report/other.json\\n```" }),
+      JSON.stringify({ note: "```text\n.qfai/report/other.json\n```" }),
     ].join("\n");
 
     expect(cited("x.jsonl", evidenceDocuments("x.jsonl", log))).toEqual([
