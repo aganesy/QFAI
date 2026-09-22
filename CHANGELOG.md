@@ -358,6 +358,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A review request names its whole review unit, not a subset of it** (#1886).
+  A coherent group is reviewed in one round over the whole group, so its request
+  names every member. The check asked only that each named identifier belong
+  to the unit, which two completed members satisfy by each sealing a pack
+  containing itself — two reviews where the layout requires one, with every
+  per-row check passing. The comparison is now on the set rather than on
+  membership, which is what tells a group reviewed together from a group
+  reviewed one row at a time.
+
 - **Five spec-0010 stories name where their obligation is recorded now**
   (#2135). The pack forbids five legacy sidecars, and five user stories were
   written around them: two named a forbidden file outright, three asked for the
