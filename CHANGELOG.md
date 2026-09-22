@@ -367,6 +367,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The PowerShell test legs no longer fail on a cache two workers wrote at once**
+  (#2068). PowerShell writes a binary cache of the module metadata it has
+  analysed, at one path per user, on every start — `-NoProfile` does not turn it
+  off. The two projects that spawn a `pwsh` per case run their files in parallel,
+  so a leg started many of those processes at once and they all wrote that one
+  file. A reader arriving mid-write got a truncated record, and the assembly name
+  it read out of one is not an assembly name:
+  `System.IO.FileLoadException: The given assembly name was invalid.` The line
+  named no file, no module and no script, it arrived before the script ran, and
+  once the file was damaged every later case in that leg failed whatever it
+  asserted — which is why a rerun on a fresh runner was green and the failure
+  looked like it belonged to whichever branch happened to be building. Each
+  worker now has a cache path of its own, so the file has one writer.
+
 - **A review request names its whole review unit, not a subset of it** (#1886).
   A coherent group is reviewed in one round over the whole group, so its request
   names every member. The check asked only that each named identifier belong

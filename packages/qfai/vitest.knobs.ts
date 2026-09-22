@@ -240,11 +240,13 @@ export const projectKnobs = {
  * patches `process.stdout` has to run per file — which is what `setupFiles` does and what a
  * `globalSetup` would not.
  *
- * The same reasoning covers the second entry. It sets git configuration in `process.env`, and a
- * spawned git inherits the environment of the process that started it — which under this pool is
- * the per-file worker, not the runner.
+ * The same reasoning covers the other two entries. Each sets a variable in `process.env`, and a
+ * spawned process inherits the environment of the process that started it — which under this pool
+ * is the per-file worker, not the runner. One reaches every git a test starts, the other every
+ * `pwsh`.
  */
 export const SETUP_FILES: string[] = [
   "./tests/setup/suppressWorkflowCommands.ts",
   "./tests/setup/disableGitAutoMaintenance.ts",
+  "./tests/setup/isolatePowerShellModuleCache.ts",
 ];
