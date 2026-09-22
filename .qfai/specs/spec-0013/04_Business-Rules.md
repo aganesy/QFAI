@@ -8,7 +8,7 @@
 
 ## BR-0013-0002: Upper-to-Lower References Forbidden
 
-- AC-Refs: AC-0013-0002
+- AC-Refs: AC-0013-0006
 
 - Upper-to-lower references are forbidden. Lower-to-upper references are allowed.
 - Connections between layers MUST be represented by IDs and required edges (US->AC->BR->EX->TC).
@@ -22,14 +22,14 @@
 
 ## BR-0013-0004: Plan After Slice
 
-- AC-Refs: AC-0013-0004
+- AC-Refs: AC-0013-0005
 
 - Plan finalize MUST happen after at least one user-story slice is grounded.
 - Do not create `specs/plan.md` (use `spec-XXXX/10_Plan.md` only).
 
 ## BR-0013-0005: Contract Stub Validity
 
-- AC-Refs: AC-0013-0005
+- AC-Refs: AC-0013-0026
 
 - Contract stubs must be syntactically valid (OpenAPI YAML / UI YAML / executable SQL skeleton).
 - `none` is allowed only when there is no contract impact and rationale is written.
@@ -42,7 +42,7 @@
 
 ## BR-0013-0007: Batch Mode Stable Mapping
 
-- AC-Refs: AC-0013-0007
+- AC-Refs: AC-0013-0027
 
 - Capability order in `_policies/03_Capabilities.md` is SSOT for `spec-0001..N` assignment and ID stability.
 - Reordering is a Change Request.
