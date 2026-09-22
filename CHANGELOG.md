@@ -86,6 +86,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped runner-selector form has one home** (#2143). Three rows parse a
+  job's runner selector — the declared shape, the runner row that owns the
+  literal, and the end-to-end row that reads the tree the tool writes — and each
+  carried its own copy of the pattern. Widening the form cost three rounds of
+  red, one per site, because each rejects on its own and the first failure hides
+  the next. The form now lives beside the other shipped-workflow fixtures and
+  the three parse through it. The values stay where they were: which variable
+  chains are sanctioned and which labels are public remain the runner row's.
+
 - **The dependency workflow says what stays serial in it, and why** (#1870).
   Every other workflow this repository runs states the reasoning behind its
   shape; this one did not, so a reader could not tell a deliberate ordering from
