@@ -6,16 +6,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
-- **A ledger row is read against the file that carries its annotation** (#2015).
-  Two columns answer where a row's test is: `Test file`, which a reader
-  follows, and the annotation, which the acceptance gate reads. Nothing compared
-  them, so covering a row silenced that gate whatever its own column said, and
-  the two drifted with nothing between them — one pack sent a reader to the
-  wrong file for eight of its rows. A case now reports every row whose named
-  file carries no annotation for its case, and holds the thirty-four it finds
-  as a backlog that may only shrink. A case nobody annotates is left to the
-  gate that owns it rather than counted here.
-
 - **The shipped workflows carry a second runner class for the jobs that run no
   test** (#2095). Change detection and the three aggregates install nothing, check
   nothing out in two of the four cases, and read only what other jobs concluded —
