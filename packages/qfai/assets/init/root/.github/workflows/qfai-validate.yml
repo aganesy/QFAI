@@ -29,6 +29,16 @@
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
 #
 # `.nvmrc` wins over `.node-version`; both are read before the fall-open.
+#
+# On a pull request the two profiles run as separate jobs, and each installs
+# your dependencies before it runs. That is the cost of the split: a second
+# install and a second job, which GitHub bills at a minute however short it
+# is. The validator itself takes seconds even on a large tree, so the split
+# buys almost no speed. What it buys is isolation: each profile reports on its
+# own, and neither can stop or cancel the other. If the second install costs
+# you more than that is worth, run both profiles as two steps of one job, and
+# give the second the condition `!cancelled()` so a failing first profile
+# still lets it report.
 
 name: qfai validate
 
