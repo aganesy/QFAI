@@ -139,4 +139,24 @@ describe("what the cost reader refuses", () => {
     expect(jobRuns(lane, declaresUnit)).toBe(!declaresUnit.documentsOnly);
     expect(jobRuns(lane, declaresNone)).toBe(false);
   });
+
+  it("reads the document lane's scope as whether the change touched a document", () => {
+    // The document checks run when their scope found a change they read. Costed on
+    // `documentsOnly` instead, a pull request touching source AND a document would be counted as
+    // skipping checks it runs, and the saving the scope buys would be overstated.
+    const lane = {
+      if: "${{ needs.scope.outputs.run == 'true' && github.event.action != 'closed' }}",
+    };
+    const touches = COST_PATHS.find((entry) => entry.documentsTouched === true && !entry.action);
+    const avoids = COST_PATHS.find((entry) => entry.documentsTouched === false);
+    const close = COST_PATHS.find((entry) => entry.action === "closed");
+    expect(touches, "a path touching documents is declared").toBeDefined();
+    expect(avoids, "a path touching no document is declared").toBeDefined();
+    expect(close, "a close path is declared").toBeDefined();
+    if (touches === undefined || avoids === undefined || close === undefined) return;
+
+    expect(jobRuns(lane, touches)).toBe(true);
+    expect(jobRuns(lane, avoids)).toBe(false);
+    expect(jobRuns(lane, close), "the close gate still empties the path").toBe(false);
+  });
 });

@@ -227,6 +227,17 @@ call:
    gates on the event rather than on the adopter's opt-in, so a lane carrying it
    and nothing else is still an ordinary lane whose opt-out is deletion.
 
+   A lane may also be **scoped to the change**: skipped when a job of the same
+   file has read the name-only diff and found nothing the lane reads. That is not
+   an opt-in — the lane runs in every repository whose change can reach it, and
+   deletion stays the opt-out — so it is a third answer rather than a variant of
+   the first. Two things bound it. The scope has to fail open: a missing base, a
+   shallow clone, a failed diff or a path the scope does not recognise runs the
+   lane. And the lane's aggregate reads the scope as well as the lane's result,
+   treating a skip as green only where the scope said, explicitly, that nothing
+   changed — so a scope job that failed or reported nothing cannot turn a lane
+   that did not run into a pass.
+
 7. The third-party `uses:` set, as an **allow-list** against the closed
    sanctioned set (one entry today, the package-manager setup action). Never as
    a count of zero: a count fails on the entry the policy legitimately keeps.

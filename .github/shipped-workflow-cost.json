@@ -20,76 +20,77 @@
       "jobs": [
         "qfai-docs.yml#checks x2",
         "qfai-docs.yml#docs",
+        "qfai-docs.yml#scope",
         "qfai-tests.yml#detection",
         "qfai-tests.yml#verdict",
         "qfai-validate.yml#summary",
         "qfai-validate.yml#validate x2"
       ],
-      "runnerJobs": 8,
+      "runnerJobs": 9,
       "runners": [
         "${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
         "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"
       ],
-      "timeoutMinutesSum": 70,
-      "billableFloorMinutes": 8
+      "timeoutMinutesSum": 75,
+      "billableFloorMinutes": 9
     },
     {
       "path": "code-pull-request",
-      "what": "a pull request that touches source",
+      "what": "a pull request that touches source and no document",
       "jobs": [
-        "qfai-docs.yml#checks x2",
         "qfai-docs.yml#docs",
+        "qfai-docs.yml#scope",
         "qfai-tests.yml#detection",
         "qfai-tests.yml#verdict",
         "qfai-validate.yml#summary",
         "qfai-validate.yml#validate x2"
       ],
-      "runnerJobs": 8,
+      "runnerJobs": 7,
       "runners": [
         "${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
         "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"
       ],
-      "timeoutMinutesSum": 70,
-      "billableFloorMinutes": 8
+      "timeoutMinutesSum": 45,
+      "billableFloorMinutes": 7
     },
     {
       "path": "no-test-scripts",
       "what": "an adopter whose manifest declares no test:<layer> script",
       "jobs": [
-        "qfai-docs.yml#checks x2",
         "qfai-docs.yml#docs",
+        "qfai-docs.yml#scope",
         "qfai-tests.yml#detection",
         "qfai-tests.yml#verdict",
         "qfai-validate.yml#summary",
         "qfai-validate.yml#validate x2"
       ],
-      "runnerJobs": 8,
+      "runnerJobs": 7,
       "runners": [
         "${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
         "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"
       ],
-      "timeoutMinutesSum": 70,
-      "billableFloorMinutes": 8
+      "timeoutMinutesSum": 45,
+      "billableFloorMinutes": 7
     },
     {
       "path": "all-test-scripts",
       "what": "an adopter whose manifest declares all five test:<layer> scripts",
       "jobs": [
-        "qfai-docs.yml#checks x2",
         "qfai-docs.yml#docs",
+        "qfai-docs.yml#scope",
         "qfai-tests.yml#detection",
         "qfai-tests.yml#tests x5",
         "qfai-tests.yml#verdict",
         "qfai-validate.yml#summary",
         "qfai-validate.yml#validate x2"
       ],
-      "runnerJobs": 13,
+      "runnerJobs": 12,
       "runners": [
         "${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
         "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"
       ],
-      "timeoutMinutesSum": 220,
-      "billableFloorMinutes": 13
+      "timeoutMinutesSum": 195,
+      "billableFloorMinutes": 12
     },
     {
       "path": "pull-request-close",
@@ -106,19 +107,20 @@
       "jobs": [
         "qfai-docs.yml#checks x2",
         "qfai-docs.yml#docs",
+        "qfai-docs.yml#scope",
         "qfai-tests.yml#detection",
         "qfai-tests.yml#tests x5",
         "qfai-tests.yml#verdict",
         "qfai-validate.yml#summary",
         "qfai-validate.yml#validate"
       ],
-      "runnerJobs": 12,
+      "runnerJobs": 13,
       "runners": [
         "${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
         "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"
       ],
-      "timeoutMinutesSum": 210,
-      "billableFloorMinutes": 12
+      "timeoutMinutesSum": 215,
+      "billableFloorMinutes": 13
     }
   ]
 }
