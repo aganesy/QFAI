@@ -4171,9 +4171,6 @@ ${packPair(1).join("\n")}
     ["Round 1: GREEN result", "not passed"],
     ["Refactor verify result", "FAIL"],
     ["Checkpoint verification result", "FAIL"],
-    // A bare `skipped` is a lane that did not run. It stays rejected, and the
-    // counted form below is what is separated from it.
-    ["Checkpoint verification result", "skipped"],
   ] as const) {
     it(`rejects non-executed or contradictory ${field}`, async () => {
       await withProject(async (root) => {
@@ -4198,10 +4195,13 @@ ${packPair(1).join("\n")}
     // the fuller record fail and the terser one pass, which is the wrong way
     // round for a field whose purpose is provenance.
     await withProject(async (root) => {
-      const evidence = completeEntry("Unit").replace(
-        /(Checkpoint verification result: ).*$/m,
-        `$1${result}`,
-      );
+      // The seal is a digest over the revision, the command and the RESULT, so
+      // a case that changes the result must re-seal it or it is measuring a
+      // broken seal instead. The fixture builder seals the literal `PASS`, so
+      // the placeholder is filled here before it gets the chance.
+      const evidence = completeEntry("Unit")
+        .replace(/(Checkpoint verification result: ).*$/m, `$1${result}`)
+        .replaceAll("{{CHECKPOINT_SEAL}}", checkpointSeal(DEFAULT_REVISION, "npm test", result));
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
@@ -4209,15 +4209,16 @@ ${packPair(1).join("\n")}
     });
   });
 
-  it("still refuses a checkpoint result that ran nothing, however it counts skips", async () => {
-    // The counted form may not become a way past the ran-nothing guard: that
-    // one reads the untouched text, so a run with no passes is refused even
-    // when every remaining case is reported as a skip.
+  it.each([
+    ["a bare skipped, which is a lane that did not run", "skipped"],
+    ["no passes, however many skips it counts", "PASS — 0 passed, 4654 skipped"],
+  ])("still refuses a checkpoint result stating %s", async (_shape, result) => {
+    // Re-sealed, so each fails for the reason it names rather than for a seal
+    // that no longer covers its own result.
     await withProject(async (root) => {
-      const evidence = completeEntry("Unit").replace(
-        /(Checkpoint verification result: ).*$/m,
-        "$1PASS — 0 passed, 4654 skipped",
-      );
+      const evidence = completeEntry("Unit")
+        .replace(/(Checkpoint verification result: ).*$/m, `$1${result}`)
+        .replaceAll("{{CHECKPOINT_SEAL}}", checkpointSeal(DEFAULT_REVISION, "npm test", result));
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
