@@ -792,9 +792,14 @@ describe(
         const runsOn = job["runs-on"];
         if (runsOn === undefined) continue;
         selectors += 1;
-        const match = /^\$\{\{\s*vars\.([A-Za-z_][A-Za-z0-9_]*)\s*\|\|\s*'([^']*)'\s*\}\}$/.exec(
-          String(runsOn),
-        );
+        // One or more variable reads, then the literal. The set carries two
+        // runner classes, and a job that runs no test reads the light variable
+        // before falling back to the heavy one — so a form admitting exactly
+        // one read would reject the class rather than the hard-coding.
+        const match =
+          /^\$\{\{\s*((?:vars\.[A-Za-z_][A-Za-z0-9_]*\s*\|\|\s*)+)'([^']*)'\s*\}\}$/.exec(
+            String(runsOn),
+          );
         expect(match, `${key} hard-codes its runner: ${String(runsOn)}`).not.toBeNull();
         // The default carries the risk here, not the knob: a wrong label does not fail fast, it
         // queues forever, so the shipped default must be a public GitHub-hosted label.
