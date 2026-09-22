@@ -380,8 +380,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Six spec-0006 ledger rows name the case their test file holds** (#1436).
   Each selector restated the row's test-case line rather than naming a test, so
   the command the row prints ran nothing — `TC-0006-0023: review.staleTtlDays
-  override changes TTL boundary (boundary)` against a case titled `config
-  override 7 days flags the same 10-day-old pack as archive-eligible`. The six
+override changes TTL boundary (boundary)` against a case titled `config
+override 7 days flags the same 10-day-old pack as archive-eligible`. The six
   are repaired from the files they already name. The dogfooding backlog falls by
   six.
 
