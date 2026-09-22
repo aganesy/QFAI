@@ -471,6 +471,12 @@ runner `vars.QFAI_CI_RUNNER` names (`ubuntu-latest` when you set nothing).
   saving nothing to your manifest. If you do depend on QFAI, the lane reports the
   rules of the version you pinned and never replaces it.
 
+A push to `main` or `master` runs the test lanes and the document checks again by
+default, because nothing in the files can tell whether that commit passed a pull
+request first. If your branch protection requires these checks before every merge,
+set the repository variable `QFAI_CI_PUSH_POLICY` to `protected`: the push then runs
+neither, and `qfai validate` still runs as the post-merge check.
+
 All three files are copied create-only — `qfai init` never overwrites an existing
 copy, not even with `--force` — so edit them freely. Deleting one is a choice
 `qfai init` remembers rather than undoes: it records what it installed in
