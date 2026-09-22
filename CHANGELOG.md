@@ -6,6 +6,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A ledger row that claims completion rests on a test, not on a list of
+  obligations** (#2160). An annotation carrier under a test tree declares no
+  test, so a case named only there is one no runner will ever select — while the
+  ledger says the work is finished and the traceability scan agrees, because the
+  annotation it reads is present. 119 rows across seven packs read that way, and
+  the two carriers this repository has hold 622 annotations between them in
+  trees with no test file at all. The condition was already reported, as
+  `QFAI-ATDD-119` at `info`, counting obligations in one notice of several
+  hundred; what a row adds is the claim, because `done` says work happened. A
+  case now reports every completed row whose case only a carrier names, one
+  entry per row and case so that a row citing two cases cannot hide half of
+  itself, and carries what it finds as a backlog that may only shrink.
+
 - **A ledger row that claims completion names the test case it discharges**
   (#2156). `TC-Refs` carries the ledger's half of the traceability chain, and a
   completed row naming no case is one nothing can trace — every check built on
