@@ -1127,13 +1127,23 @@ describe("optional review directive detection", () => {
     }
   });
 
-  it.each(["\n", "\r\n"])("preserves closed code-span comment markers with %j", (end) => {
-    const existing = `\uFEFFUse \`a\n<!--\nb\` literally.\n\n${REVIEW_POINTER}\n`.replace(
-      /\n/g,
-      end,
-    );
-    expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
-  });
+  it.each(["\n", "\r\n"])(
+    "writes the directive below a comment opener inside a code span with %j",
+    (end) => {
+      // GitHub ends the paragraph at the opener and reads the rest as the
+      // HTML block it began: the closing backtick and the directive under it
+      // are both inside the comment, and a reader sees the first line alone.
+      // Read as a closed code span the directive counted as operative, and the
+      // pointer this file exists to carry was never written.
+      const existing = `\uFEFFUse \`a\n<!--\nb\` literally.\n\n${REVIEW_POINTER}\n`.replace(
+        /\n/g,
+        end,
+      );
+      const merged = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      expect(merged).toBe(`\uFEFF${REVIEW_POINTER}${end}${end}${existing.slice(1)}`);
+      expect(addReviewPointer(merged, `${REVIEW_POINTER}\n`)).toBe(merged);
+    },
+  );
 
   it.each([
     ["quote", "> [image]: /image.png\n", true],
@@ -1854,7 +1864,6 @@ describe("optional review directive detection", () => {
     ["ordinary text", "# Project rules\n\n"],
     ["inline comment marker", "Use `<!--` literally.\n\n"],
     ["multi-backtick span", "Use `` `<!--` `` literally.\n\n"],
-    ["multiline code span", "Use `a\n<!--\nb` literally.\n\n"],
     ["fence info comment marker", "~~~ <!--\nExample\n~~~\n\n"],
     ["backticks inside a real comment", "<!-- ` -->\n\n"],
   ])("retains an operative directive after %s byte for byte", (_name, prefix) => {
