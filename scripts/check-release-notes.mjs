@@ -39,9 +39,16 @@
  * ## How the bodies are read
  *
  * From the release list, a hundred to a page, rather than one request per
- * section. The list carries `tag_name` and `body` together, so the comparison
- * costs two requests at the current count of sections and that count is no
- * longer what decides how many requests are sent.
+ * section. The list carries `tag_name` and `body` together, so what decides
+ * the request count is how many releases exist, not how many sections the
+ * changelog holds.
+ *
+ * The figures, so the margin can be read rather than guessed at: 7 published
+ * releases against 192 released sections, which is `ceil(7 / 100)` — one
+ * request, about 1.2 s. The workflow's budget is ten minutes. A request joins
+ * the run on the hundredth release after this one, so the margin moves per
+ * hundred releases and not per release, which is what the per-section loop it
+ * replaced did.
  *
  * A draft is skipped. It carries a tag name and no tag, it is readable only to
  * whoever can push, and it is the one thing the list shows that a read by tag
