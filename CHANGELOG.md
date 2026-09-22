@@ -413,6 +413,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing is still refused however it counts its skips, because that guard reads
   the untouched text.
 
+- **A completed row's verdicts name the pack its closing round names** (#1886).
+  The layout requires the reviewer turns that close a round to share that round's
+  one pack, and nothing compared them: a row could point its two role packs at
+  one valid sealed directory while its closing round named another, and each of
+  the three checks passed on its own. The closing verdict now carries the pack
+  the row records, and a divergence is reported against the role that diverged.
+
 - **A review request names its whole review unit, not a subset of it** (#1886).
   A coherent group is reviewed in one round over the whole group, so its request
   names every member. The check asked only that each named identifier belong
