@@ -153,6 +153,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   declares no condition is a violation as well: it defaults to `success()`, a
   failed install skips it, and a skipped job satisfies branch protection.
 
+- **`DR-0017-0010` names one decision** (#1880). Two records carried it: the
+  spec pack's entry, that the declared ten stands and is held to the cores the
+  machine has, and a standalone anomaly record for `TDD-0070`, that two tuning
+  guard rows cannot be reddened before the history they measure exists. A
+  citation resolved to whichever file the reader opened. The pack keeps the
+  identifier — its series runs `DR-0017-0001` to `DR-0017-0022` with no gaps,
+  and the neighbours cite each other by position — and the anomaly record takes
+  `DR-0017-0023`. Every citation that meant the anomaly record now names it:
+  the change request that raised it, the stage evidence, and the retracted-claim
+  list that reads the file by path. The two records disagree about nothing else;
+  they are about different subjects.
+
 - **The historical review-evidence comparison runs on the archive the record
   identifies, or not at all** (#1874). The two guards over
   `atdd-spec-0017.md`'s round and response counts read whichever ignored review

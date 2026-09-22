@@ -355,7 +355,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   only described, and it took two attempts: the first checked span arithmetic, and three mutations
   reintroducing the old model left it green — the drift is one or two characters, which is exactly why
   round 10 called the defect latent
-- **new** `.qfai/decisions/DR-0017-0010-*.md` — the branch-3 anomaly record for `TDD-0070`
+- **new** `.qfai/decisions/DR-0017-0023-*.md` — the branch-3 anomaly record for `TDD-0070`
 - **new** `.qfai/decisions/CR-20260820-0012-*.md` — the self-referential gate `TDD-0069` waits on
 - **new** `.qfai/decisions/CR-20260820-0011-*.md` — the 127 unbacked ledger claims
 
@@ -675,7 +675,7 @@ TC-0017-0069   CR-20260820-0012  in blocked set    ledger row: todo, Blocked-By:
 TC-0017-0070   NAMED IN NO BLOCKED SET             ledger row: todo, Blocked-By: -
 ```
 
-Seven of the eight are named in an open CR's blocked set. **`TDD-0070` is named in none**: `DR-0017-0010`
+Seven of the eight are named in an open CR's blocked set. **`TDD-0070` is named in none**: `DR-0017-0023`
 is its anomaly record, authorising an `exception` transition that has not been written. And for the last
 **two** the LEDGER — which is where a reader looks — records `-`, so the parking exists in the decision
 records and not in the artifact that indexes it.
@@ -1159,7 +1159,7 @@ that zero was therefore trivially correct. That was false, and it is corrected h
 | `TDD-*`    | `Layer`     | obligation     | branch                         | `DR-ID`        | `Blocked-By`       | anchor       |
 | ---------- | ----------- | -------------- | ------------------------------ | -------------- | ------------------ | ------------ |
 | `TDD-0069` | Integration | `TC-0017-0069` | none — `blocked`, not a branch | `-`            | `CR-20260820-0012` | § `TDD-0069` |
-| `TDD-0070` | Integration | `TC-0017-0070` | 3 — `exception`                | `DR-0017-0010` | `-`                | § `TDD-0070` |
+| `TDD-0070` | Integration | `TC-0017-0070` | 3 — `exception`                | `DR-0017-0023` | `-`                | § `TDD-0070` |
 
 **Neither ledger cell has been written, and this table is the handover, not the ledger.**
 `tdd/test-list.md:107-108` has both rows `todo` with `DR-ID: -` and `Blocked-By: -`; those cells are
@@ -1228,7 +1228,7 @@ that this stage had exercised the same authority in the same round when it wrote
 `TDD-0069` / `TDD-0070` are also **not** in `CR-20260820-0007`'s blocked set, so that CR was not the
 obstacle either. P1d was runnable and was not run.
 
-`.qfai/decisions/DR-0017-0010-two-tuning-guard-rows-cannot-be-reddened-before-the-history-they-measure-exists.md`
+`.qfai/decisions/DR-0017-0023-two-tuning-guard-rows-cannot-be-reddened-before-the-history-they-measure-exists.md`
 now exists and carries the branch-1 and branch-2 attempts, the anomaly per row, and the audit subject
 `references/red-provenance.md` fixes.
 
@@ -1288,12 +1288,12 @@ tracked. What blocks a green run is
 **Branch 2 (falsifiability) is unavailable, for a narrower reason than this record used to give.** The
 procedure requires an obligation already satisfied by state that exists. The sentence here said
 "nothing satisfies this one — there is no run history to mutate", which is true of clause 2 and wrong
-about clause 1: `DR-0017-0010` now records clause 1 as **unsatisfied** — no tuning change has been
+about clause 1: `DR-0017-0023` now records clause 1 as **unsatisfied** — no tuning change has been
 made, so nothing exists for "exactly one runner project is tuned, largest first" to be true of — which
 is not the same as unfalsifiable. That distinction took three P1d passes and two wrong readings to
 arrive at, and the DR keeps all of them.
 
-**`TDD-0070` is branch 3**, recorded in `DR-0017-0010`. **`TDD-0069` is not** — it is `blocked` on
+**`TDD-0070` is branch 3**, recorded in `DR-0017-0023`. **`TDD-0069` is not** — it is `blocked` on
 `CR-20260820-0012`, and `blocked` takes no RED-provenance branch at all. Both rows' identity and
 obligation references were recorded **before** any gate routed, in `58c29d9f`, as the branch-3
 evidence shape requires.
@@ -1328,7 +1328,7 @@ its own repair mechanism. It now names the section that holds the current answer
 `qfai-implement/SKILL.md` step 3b writes `exception` **only when the entry carries the PASS** — it is
 not self-executing, and this is the entry.
 
-- **`TDD-0070` -> `exception`, `DR-ID: DR-0017-0010`**: authorised. Six passes, five refusals. Every
+- **`TDD-0070` -> `exception`, `DR-ID: DR-0017-0023`**: authorised. Six passes, five refusals. Every
   one sustained the row's own account — branch 1 unavailable on the GREEN side, branch 2 with no
   satisfied state to falsify — and every refusal was about the record around it.
 - **`TDD-0069` -> `blocked`, `Blocked-By: CR-20260820-0012`**: released at pass 4 and still released;
@@ -1361,7 +1361,7 @@ after a merge that has not happened. **The row is not satisfiable on the branch 
 tuning, by construction.** No amount of work on this branch changes that; it needs post-merge
 history.
 
-Branch 3, `DR-0017-0010`. **P1d PASSED this row at its sixth pass** (`9a37421c`), so
+Branch 3, `DR-0017-0023`. **P1d PASSED this row at its sixth pass** (`9a37421c`), so
 `/qfai-implement` may write `todo -> exception` with this `DR-ID`; see § "P1d's verdict" below for the
 two conditions attached to that write, both discharged. Every one of the six passes sustained this row's
 own account — post-merge history cannot exist pre-merge, which is branch 3's own named example — and
@@ -1814,7 +1814,7 @@ something is written, believed without reading it.
    `-0066`, `-0067`, `-0074` and `-0075` are `refactor` while `CR-20260820-0007` holds them, and none of
    the five is among the eight.
 
-   Of the two `todo` rows, **only `TDD-0070` is on branch 3** (`DR-0017-0010`, PASS at P1d pass 6).
+   Of the two `todo` rows, **only `TDD-0070` is on branch 3** (`DR-0017-0023`, PASS at P1d pass 6).
    `TDD-0069` is `blocked` on `CR-20260820-0012` and takes **no** RED-provenance branch at all: a
    `blocked` row has not started, which is the distinction § "Ledger rows advanced" turns on and the
    reason the `DR-ID` column was not widened to carry a `Blocked-By` value. An earlier version of this
@@ -1974,13 +1974,13 @@ something is written, believed without reading it.
 8. **`TDD-0069` and `TDD-0070` are parked, and they are parked for two different reasons.**
    **Both are still `todo` in the ledger**, and what follows is the status each is owed rather than
    one it has — round 4 and round 5 each found this item asserting the statuses while `## Final
-status` said neither had been written. `TDD-0070` is owed `exception` against `DR-0017-0010`, whose
+status` said neither had been written. `TDD-0070` is owed `exception` against `DR-0017-0023`, whose
    account P1d sustained through all six passes and passed at the sixth: post-merge history cannot
    exist pre-merge.
    `TDD-0069` is owed `blocked` on `CR-20260820-0012`, and P1d's fourth pass **released** that write
    on the merits — the only ground it had blocked on, a `DR-ID` column carrying a `CR-*` id, is fixed.
    P1d found the exit condition
-   `DR-0017-0010` first offered to be **unreachable**, because a green `ci-pass` requires `build`
+   `DR-0017-0023` first offered to be **unreachable**, because a green `ci-pass` requires `build`
    green, which requires `error=0`, which requires `QFAI-ATDD-112` clear, which requires
    `TC-0017-0069` annotated — which requires the green runs. The row waits for itself. That is an
    unresolved Change Request of this spec, so `blocked` is the correct status and `exception` was not.
@@ -2419,7 +2419,7 @@ had already reported as fixed.
 
 ### P1d's verdicts
 
-P1d has run **six times** on `DR-0017-0010`: five `REVISE` and, at pass 6, **PASS**. Every pass sustained
+P1d has run **six times** on `DR-0017-0023`: five `REVISE` and, at pass 6, **PASS**. Every pass sustained
 `TDD-0070`'s own account; what failed each time was the record around it. Pass 4 **released**
 `todo -> blocked` for `TDD-0069` — the first write any gate has authorised — and pass 5 reported the
 remaining blocking set as two sentences describing the review itself, with **nothing left saying the
@@ -2469,7 +2469,7 @@ falsifiable by tuning a second project in `vitest.knobs.ts`. **That mutation doe
 `maxWorkers` lives in `rootKnobs`, the file's own docstring records that a per-project worker
 declaration "type-checked, it ran, it emitted no warning — and it did nothing" at a ratio of 0.93, and
 open `CR-20260820-0003` adds that the runner drops unknown project options silently. An equivalent
-mutant, written while applying a finding about that clause. `DR-0017-0010` now records clause 1 as
+mutant, written while applying a finding about that clause. `DR-0017-0023` now records clause 1 as
 **unsatisfied** — not, as an earlier version of this line said, "degenerate rather than satisfied",
 which P1d refuted by showing `maxConcurrency` is project-scoped.
 
@@ -3194,7 +3194,7 @@ What is not satisfied:
   `Blocked-By: -`. Nothing has moved, and the two statuses below are what the handover asks
   `/qfai-implement` to write rather than what it has written;
 - `TDD-0070` is **not yet** `exception`, and what it now waits on is the **ledger write**, not the
-  gate. The P1d `qa-gatekeeper` PASS on `DR-0017-0010` was granted at pass 6; P1d returned `REVISE` five
+  gate. The P1d `qa-gatekeeper` PASS on `DR-0017-0023` was granted at pass 6; P1d returned `REVISE` five
   times before it, each time sustaining the row's own account and failing the record around it. An
   earlier version of this line named the gate as the outstanding item and then said in its next clause
   that the gate had passed. Round 3 caught an earlier version of this line asserting the row "is parked at
@@ -3208,7 +3208,7 @@ What is not satisfied:
 
 Confirmed by: **one gate has passed, and it is the narrow one.** Counted from the packs on disk:
 **twenty** rounds, **53** reviewer responses, **52 REVISE and one PASS** — the PASS being P1d's sixth
-pass on `DR-0017-0010`. No stage-level gate has passed. **The response count covers CLOSED rounds**:
+pass on `DR-0017-0023`. No stage-level gate has passed. **The response count covers CLOSED rounds**:
 round 15's three land in it when a further round opens. Counting the in-flight pack made this row red for
 the whole duration of every round — a required CI leg failing because a reviewer wrote a report, which the
 stage could not fix without editing the subject mid-round, the one thing the round's rules forbid. Round
