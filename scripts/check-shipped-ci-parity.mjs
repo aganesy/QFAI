@@ -775,7 +775,13 @@ function reportFaults(faults) {
   return 1;
 }
 
-export { markersIn, isSubstantive, reasonProblem, MARKER_EXCLUDED };
+// `resolveRange` and `blobAt` are exported for
+// `check-changelog-released-sections.mjs`, which asks the same question of a
+// change — what did it add against its base — and would otherwise resolve the
+// base a second time. Two readings of "the base" are two answers on a push,
+// where one compares against the previous head and the other against a branch
+// it has already moved.
+export { markersIn, isSubstantive, reasonProblem, MARKER_EXCLUDED, resolveRange, blobAt };
 
 // `pathToFileURL`, not `file://` + the path: on Windows `argv[1]` is a
 // drive-letter path with backslashes, which concatenation turns into a string no

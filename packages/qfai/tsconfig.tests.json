@@ -294,6 +294,7 @@
     "tests/scripts/assistantTreeLinks.test.ts",
     "tests/scripts/checkTrackedSymlinks.test.ts",
     "tests/scripts/checkShippedCiParity.test.ts",
+    "tests/scripts/changelogReleasedSections.test.ts",
     "tests/scripts/checkSimplificationLedger.test.ts",
     "tests/scripts/deriveE2eCallsites.test.ts",
     "tests/scripts/deriveCliMessageAllowlistCount.test.ts",

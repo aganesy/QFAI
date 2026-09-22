@@ -6,6 +6,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A released changelog section may not gain an entry** (#2045). The release
+  workflow cuts the section out at its tag and builds the page once, so an entry
+  appended afterwards is in the repository and in no page anybody reads. Nothing
+  refused the change that does it, and nothing had to: `## [Unreleased]` is
+  renamed at release time, and a branch cut before the release carries its entry
+  under the heading that was unreleased then — merged after, it lands under the
+  released one. One section reached 77 that way.
+  `scripts/check-changelog-released-sections.mjs` compares each released
+  section's entries against the base and refuses an addition, in the scans lane
+  on every pull request. The release commit that renames the heading is exempt by
+  construction, since the base carries no such section; a removal is a correction
+  and passes.
+
 - **A committed figure for what a documentation-only pull request costs, and a
   check that refuses a tree which moved it without re-pinning** (#1870).
   `.github/required-status-contexts.json` now carries the jobs that path executes
