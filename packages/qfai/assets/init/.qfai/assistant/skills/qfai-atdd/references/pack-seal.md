@@ -32,9 +32,20 @@ differs: there it is the evidence file, here the pack.
 Record it **outside the pack** in the stage evidence file's `## Final status`:
 
 ```md
-Review pack: `.qfai/review/review-<timestamp>/`
+Review pack: `.qfai/review/review-<timestamp>/` <!-- qfai:not-a-citation .qfai/review/review-<timestamp>/ -->
 Review pack seal: <sha256>
 ```
+
+The path is the gate's operand and not a pointer: `.qfai/review/` is not
+tracked, so a clone carries the record without the pack, and a reader who
+follows the path finds nothing. The marker beside it says the path is not
+provenance to open — the record's own verdict, revision and hash are.
+
+Name the run by its id, `review-<timestamp>`, everywhere else in the
+record. The field is the one place the full path belongs, because the gate
+resolves it under the repository root and recomputes the seal from what it
+finds; a run named anywhere else as a path is a dead end for whoever reads
+it next.
 
 That section is the one part excluded from the P8 audit subject, so writing the
 two fields there does not make the verdict stale. It is also the only slot that

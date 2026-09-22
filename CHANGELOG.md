@@ -23,6 +23,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A stage record says its pack is not a path to follow** (#1883). The ATDD
+  stage records `Review pack: `.qfai/review/review-<timestamp>/``, and that tree
+  is not tracked — so every record it writes claims an artifact a clone does not
+  have, and the citation guard over committed evidence refuses exactly that.
+  The path stays, because the completion gate resolves it under the repository
+  root and recomputes the seal from what it finds; it is the gate's operand and
+  not a pointer. What is added is the `qfai:not-a-citation` marker beside it,
+  saying so, and the instruction that everywhere else in the record a run is
+  named by its id with the reviewer role, verdict, revision and audited hash
+  recorded there. Withdrawing the path instead would have left the gate with
+  nothing to resolve, and the committed stage provenance that would replace it
+  is not defined.
+
 - **The label-scan table is measured once instead of once per row, and what the
   two spawn-heavy suites actually spawn is recorded** (#2044). Both files
   carried the same table verbatim: nine openers under two line endings, each
