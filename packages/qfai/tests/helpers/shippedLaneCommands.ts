@@ -1240,7 +1240,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "ee8967d86820163e7cba03165bec9cf4b9290bea2d5df1e4cca6d318ae7d904c"],
+  ["qfai-docs.yml", "5980c081e8ac282df00624737cef1bc694ec0931fa91c8397dc5a65c96b2a769"],
   ["qfai-tests.yml", "e3d534f0e816fdc42db85265b56e4a77343d3679bb8944d3b441bffe5c874345"],
   ["qfai-validate.yml", "2f3ff776c510fe2b3d4dd736b5d6dc4413bfdd0409b8239a9c26841cf9c8d159"],
 ]);

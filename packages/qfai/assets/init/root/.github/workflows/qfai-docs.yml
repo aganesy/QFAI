@@ -35,6 +35,14 @@
 # A tree with no specs directory is not a failure: both lanes report the zero
 # they found and exit 0. Reporting green over nothing is only wrong when the
 # lane does not say so, which is why each one prints its count.
+#
+# The two checks run as separate jobs, and each installs your dependencies
+# again before one short checker. The split buys no speed — it is one install
+# per checker either way. What it buys is both results from one run: in a
+# single job the first checker to fail ends it, and the second never reports,
+# so a document with a shape problem hides whatever its diagrams do. Rejoin
+# them if the duplicated install costs you more than the second result is
+# worth; nothing else in this file depends on the matrix.
 
 name: qfai docs
 
