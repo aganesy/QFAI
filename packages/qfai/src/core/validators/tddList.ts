@@ -1369,13 +1369,22 @@ const EVIDENCE_RESULT_RAN_NOTHING =
 
 function isPassingEvidenceResult(value: string): boolean {
   const outcome = evidenceResultOutcomeText(value);
-  const withoutZeroFailures = outcome.replace(/\b0\s+(?:failed|failures?|errors?)\b/gi, "");
+  // A COUNTED outcome is what a runner reports about the cases it was given:
+  // `0 failed` says there were no failures, and `35 skipped` says the suite
+  // declares that many skips. A BARE `skipped` is a lane that did not run,
+  // which is what the clause below is for. Both counts are stripped on the
+  // same terms, and the counted form cannot hide a run that executed nothing —
+  // `EVIDENCE_RESULT_RAN_NOTHING` reads the untouched text and catches
+  // `0 passed` whatever follows it.
+  const withoutCounts = outcome
+    .replace(/\b0\s+(?:failed|failures?|errors?)\b/gi, "")
+    .replace(/\b\d+\s+skipped\b/gi, "");
   // Asked before the success words, because they are present and true.
   if (EVIDENCE_RESULT_RAN_NOTHING.test(outcome)) return false;
   if (/\b(?:not|never|did\s+not)\s+(?:pass(?:ed|ing)?|succeed(?:ed)?)\b/i.test(outcome)) {
     return false;
   }
-  if (/\b(?:fail(?:ed|ure|ures)?|error|not[ -]?run|skipped)\b/i.test(withoutZeroFailures)) {
+  if (/\b(?:fail(?:ed|ure|ures)?|error|not[ -]?run|skipped)\b/i.test(withoutCounts)) {
     return false;
   }
   return /\b(?:pass(?:ed|ing)?|success(?:ful|fully)?|succeeded|ok)\b|\bexit(?:ed)?\s+0\b/i.test(
