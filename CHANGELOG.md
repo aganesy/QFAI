@@ -165,6 +165,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped validate workflow says what splitting its two profiles costs**
+  (#2095). On a pull request the full and drift profiles run as separate jobs,
+  and each installs the adopter's dependencies first. The validator takes
+  seconds even on a large tree, so the split buys almost no speed; it costs a
+  second install and a second billed minute, and it buys two independent
+  results. The file now says so, and says how to rejoin the two profiles in
+  one job without losing the second result when the first fails.
+
 - **The shipped document workflow runs only when the change could reach what
   it checks** (#2095). Both document checks installed the adopter's dependencies
   on every pull request, so a change touching one source file paid two complete
@@ -472,6 +480,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   summary of all of them, which matches no test. Each selector is now the list
   of those blocks, in the array form a selector cell accepts, so the command the
   row prints runs every case. The dogfooding backlog falls by two in spec-0012.
+
+- **The capture runner's 399 case is named for what it asserts**. It asserted
+  that a 399 response is accepted, the last status below the 400 rejection
+  boundary, and was titled as a rejection. A reader following the title would
+  have taken the boundary to be one status lower than it is.
 
 - **A PowerShell test case whose .NET host crashed runs once more instead of
   failing the leg** (#2068). The pull-request helper suites spawn `pwsh` per
