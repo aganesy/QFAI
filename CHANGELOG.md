@@ -255,6 +255,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   still in flight. A failed touch still does not end the chain, which is the
   swallowing the heartbeat's own note describes.
 
+- **The release guide names the Node floor the package declares** (#1867). It
+  said `>= 20.0.0` where the manifest says `>= 20.19.0`, so a release taken on a
+  Node the package refuses to install on read as supported. The floor is now
+  checked against `package.json#engines.node` by the suite that already holds
+  the project layer to the same rule, which is what stopped it drifting there.
+
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
   had two lists, and a screen drawn entirely from what the project already had
