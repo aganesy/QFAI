@@ -644,9 +644,8 @@ jobs:
   verdict:
     name: verdict
     needs: [detection, tests]
-    # Always-run: the verdict reports even when every lane above was
-    # skipped (the empty-matrix case). Skipped lanes are green - they
-    # established nothing and claim nothing; failed lanes are not.
+    # Always-run: the verdict has to report whatever the lane concluded,
+    # including a conclusion that would skip an ordinary dependent.
     if: ${{ always() && github.event.action != 'closed' }}
     runs-on: ${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # The verdict only aggregates results GitHub already computed; it
@@ -654,16 +653,30 @@ jobs:
     permissions: {}
     timeout-minutes: 5
     steps:
-      - name: Aggregate lane results (green on skip)
+      - name: Report the test lane's conclusion
         env:
-          QFAI_NEEDS_JSON: ${{ toJSON(needs) }}
+          QFAI_TESTS_RESULT: ${{ needs.tests.result }}
+          QFAI_SELECTED: ${{ needs.detection.outputs.selected }}
         shell: bash
         run: |
-          # A failed or cancelled lane turns the verdict red; success and
-          # skipped both stay green, so an empty matrix exits 0 without
-          # claiming results it does not have.
-          if printf '%s' "$QFAI_NEEDS_JSON" | grep -Eq '"result": *"(failure|cancelled)"'; then
-            echo "::error::qfai tests: a selected lane failed"
-            exit 1
+          # The lane's own result decides, and the selection says whether a
+          # skip was asked for. A lane that ran is green only on success. A
+          # lane that never ran is green only where the axis was empty, which
+          # is the adopter declaring no layer-named test script. Everything
+          # else - a failed install, a cancelled run, a lane skipped with work
+          # on the axis - is red.
+          #
+          # The selection has to be EXPLICITLY empty. Absent, it says nothing
+          # about why the lane did not run, and a verdict reading absence as
+          # "nothing was asked for" would report green over a lane that was
+          # stopped.
+          if [ "$QFAI_TESTS_RESULT" = "success" ]; then
+            echo "qfai tests verdict: green - every selected lane passed"
+            exit 0
           fi
-          echo "qfai tests verdict: green (no selected lane reported a failure; a skipped lane establishes nothing and claims nothing)"
+          if [ "$QFAI_TESTS_RESULT" = "skipped" ] && [ "$QFAI_SELECTED" = "[]" ]; then
+            echo "qfai tests verdict: green over nothing - no layer-named test script was selected"
+            exit 0
+          fi
+          echo "::error::qfai tests: the test lane concluded ${QFAI_TESTS_RESULT:-missing}"
+          exit 1

@@ -1097,9 +1097,9 @@ describe(
         const env = holder["env"];
         if (isRecord(env)) {
           for (const [key, value] of Object.entries(env)) {
-            // The VALUE as well as the name. `QFAI_NEEDS_JSON` naming a single lane rather than the
-            // whole `needs` map hands the verdict step one result to aggregate, and the step body then
-            // faithfully reports green over it — a key on the allowed list, saying something else.
+            // The VALUE as well as the name. `QFAI_TESTS_RESULT` bound to a job other than the test
+            // lane hands the verdict a conclusion belonging to something else, and the step body then
+            // faithfully reports on it — a key on the allowed list, saying something else.
             const pinned = ALLOWED_STEP_ENV.get(key);
             if (pinned === undefined) refusedUses.push(`${label}: sets env ${key}`);
             else if (value !== pinned) {

@@ -756,23 +756,27 @@ describe(
 
       const cwd = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-0003-verdict-"));
       try {
+        // The empty-axis case: the lane never ran because the adopter declared no
+        // layer-named script, and the verdict exits 0 without claiming a result it
+        // does not have.
         const skipped = await runStep(body, cwd, {
-          QFAI_NEEDS_JSON: JSON.stringify({
-            detection: { result: "success" },
-            unit: { result: "skipped" },
-            e2e: { result: "skipped" },
-          }),
+          QFAI_TESTS_RESULT: "skipped",
+          QFAI_SELECTED: "[]",
         });
         if (skipped.skipped) return;
-        // The empty-matrix case: every lane skipped, and the verdict still exits 0 without claiming
-        // a result it does not have.
         expect(skipped.status).toBe(0);
 
+        // The same skip with work on the axis. Without this row the green-on-skip
+        // rule would swallow a lane that was asked to run and did not.
+        const skippedWithWork = await runStep(body, cwd, {
+          QFAI_TESTS_RESULT: "skipped",
+          QFAI_SELECTED: '["unit"]',
+        });
+        expect(skippedWithWork.status).toBe(1);
+
         const failed = await runStep(body, cwd, {
-          QFAI_NEEDS_JSON: JSON.stringify({
-            detection: { result: "success" },
-            unit: { result: "failure" },
-          }),
+          QFAI_TESTS_RESULT: "failure",
+          QFAI_SELECTED: '["unit"]',
         });
         expect(failed.status).toBe(1);
         expect(failed.stdout).toContain("::error::");
@@ -780,9 +784,16 @@ describe(
         // A cancelled lane is not a skipped lane. Without this the green-on-skip rule would swallow
         // a run someone stopped mid-flight.
         const cancelled = await runStep(body, cwd, {
-          QFAI_NEEDS_JSON: JSON.stringify({ unit: { result: "cancelled" } }),
+          QFAI_TESTS_RESULT: "cancelled",
+          QFAI_SELECTED: '["unit"]',
         });
         expect(cancelled.status).toBe(1);
+
+        // An absent selection says nothing about why the lane did not run, so it
+        // cannot make a skip green. This is the row that keeps the green path from
+        // being reachable by an unset variable.
+        const unknownSelection = await runStep(body, cwd, { QFAI_TESTS_RESULT: "skipped" });
+        expect(unknownSelection.status).toBe(1);
       } finally {
         await removeTempTree(cwd);
       }

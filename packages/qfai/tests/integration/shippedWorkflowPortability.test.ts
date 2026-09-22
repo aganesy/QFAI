@@ -225,14 +225,7 @@ async function aggregateFailureViolations(
     return [`${site} survives a failed install but is not a result-only aggregate`];
   }
   const bindings = isRecord(step["env"]) ? step["env"] : {};
-  // `toJSON(needs)` carries every need's result into one variable, so an
-  // aggregate binding it consumes all of them. Read here rather than left to the
-  // per-need loop below: that loop looks for one literal per need, and an
-  // aggregate written this way would be reported as ignoring every dependency
-  // while in fact reading all of them — the false direction this guard must not
-  // take, because the repair for it is to stop aggregating.
-  const consumesEveryNeed = Object.values(bindings).includes("${{ toJSON(needs) }}");
-  for (const need of consumesEveryNeed ? [] : installNeeds) {
+  for (const need of installNeeds) {
     const value = `\${{ needs.${need}.result }}`;
     if (!Object.values(bindings).includes(value)) {
       return [`${site} does not consume the result of install-bearing need ${need}`];

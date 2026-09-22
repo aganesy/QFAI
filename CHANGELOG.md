@@ -27,6 +27,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   needs — a condition that stopped naming the list would leave the job running on
   every change with the axis still correct, which the old check could not tell.
 
+  The verdict reads the lane's conclusion rather than scanning every dependency's:
+  green on success, green on a skip where the axis was empty, red on everything
+  else. A skip is only green where the selection is explicitly empty, because an
+  absent selection says nothing about why the lane did not run — and a lane that
+  installs is one a failed install can stop, which is the case a green-on-skip
+  rule would have swallowed.
+
 - **The shipped workflows carry a second runner class for the jobs that run no
   test** (#2095). Change detection and the three aggregates install nothing, check
   nothing out in two of the four cases, and read only what other jobs concluded —
