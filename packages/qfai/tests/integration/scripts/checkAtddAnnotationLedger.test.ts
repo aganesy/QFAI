@@ -1396,7 +1396,7 @@ describe("the guard against this repository's own ledger", () => {
     ).toBe(9);
 
     // Repo-wide the guard does NOT pass, and that is the finding rather than a defect in the guard:
-    // 126 of 207 claims are backed by no annotation in any E2E test file. `CR-20260820-0011`.
+    // 127 of 207 claims are backed by no annotation in any E2E test file. `CR-20260820-0011`.
     //
     // This is a RATCHET, and the shape matters. The first version asserted
     // `unbacked.length > 100`, which round 2's `qa-gatekeeper` broke from both sides: appending 60
@@ -1424,11 +1424,16 @@ describe("the guard against this repository's own ledger", () => {
     //
     // What is worth pinning is the direction nobody should travel silently, and that is `unbacked`
     // alone. The claim total belongs in the CR, which is the governance record for it.
+    // 127 rather than 126, and the one that moved is US-0003-0014: the story
+    // is named by no test. The annotation that stood for it sat on a test
+    // about template generation, which is not what the story states. A count
+    // cannot tell a claim newly revealed as unbacked from a claim newly
+    // written, so the figure moves with its reason beside it.
     expect(
       wide.unbacked.length,
       "a NEW unbacked ledger claim is a regression; fixing existing ones must stay green — " +
         "CR-20260820-0011 holds the exact figure",
-    ).toBeLessThanOrEqual(126);
+    ).toBeLessThanOrEqual(127);
     expect(
       wide.unbacked.some((entry) => entry.spec === "0017"),
       "spec-0017 must not be among the unbacked claims",
