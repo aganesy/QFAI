@@ -1,6 +1,6 @@
 # Decision Record
 
-- ID: `DR-0017-0010`
+- ID: `DR-0017-0023`
 - Title: `Two tuning-guard rows cannot be reddened before the CI history they measure exists`
 - Kind: `anomaly` — the Decision Record a `todo -> exception` transition requires
 - Spec: `spec-0017`
@@ -205,7 +205,7 @@ ledger" — so this record cites its classes and not a figure, which is the seco
 
 ## Decision
 
-**`TDD-0070`** transitions `todo -> exception` against this `DR-0017-0010`, and stays parked.
+**`TDD-0070`** transitions `todo -> exception` against this `DR-0017-0023`, and stays parked.
 
 **`TDD-0069`** does not. P1d's REVISE established that its anomaly is a self-referential gate rather
 than absent history, which is an unresolved Change Request of this spec — `CR-20260820-0012` — and

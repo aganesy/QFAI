@@ -71,7 +71,7 @@ const SPEC_DIR = path.join(repoRoot, ".qfai", "specs", "spec-0003");
  * the contract's own (§5 items 1-9), not shape values; the shape supplies what
  * each one pins.
  */
-const CONTRACT_DIMENSION_IDS: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+const CONTRACT_DIMENSION_IDS: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 /**
  * The dimensions whose subject is a shipped FILE (file set, header block,
@@ -375,6 +375,34 @@ const DIMENSION_PLANTS: readonly DimensionPlant[] = [
     },
   },
   {
+    dimension: 10,
+    // The string an adopter's branch protection names is the job's `name:`.
+    // Renaming it leaves every other dimension satisfied and makes the
+    // required check unreachable, so protection passes over a job that no
+    // longer reports under the name it is required by.
+    label: "aggregate job renamed out from under its required check",
+    plant: async (root) => {
+      const file = await orchestratorFile(root);
+      const lines = (await readWorkflow(root, file)).split("\n");
+      // Structural: the aggregate is the job that runs whatever its
+      // dependencies concluded, and its name is the last `name:` above that
+      // condition.
+      const always = lines.findIndex((line) => /^\s*if:\s*\$\{\{\s*always\(\)\s*\}\}/.test(line));
+      if (always === -1) {
+        throw new Error(`${file} declares no always-run aggregate`);
+      }
+      let index = always;
+      while (index >= 0 && !/^\s{4}name:\s/.test(lines[index] ?? "")) {
+        index -= 1;
+      }
+      if (index < 0) {
+        throw new Error(`${file}'s aggregate carries no name: to rename`);
+      }
+      lines[index] = (lines[index] ?? "").replace(/name:.*$/, "name: renamed aggregate");
+      await writeWorkflow(root, file, lines.join("\n"));
+    },
+  },
+  {
     dimension: 1,
     // Dimension 1 owns diagnosis, not just membership: an unparsable shipped
     // file must be named as unparsable rather than surfacing as "no QFAI
@@ -593,13 +621,71 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
     }).toThrow();
   });
 
-  it("the declared shape pins all nine contract dimensions, and every one of them is actually diffed", async () => {
+  it("words each dimension the way the contract's numbered item does", async () => {
+    // The dimension set is closed and the contract is where it is closed. A
+    // title that drifts from its item leaves the gate reporting one obligation
+    // and the contract stating another, with nothing between them.
+    const contract = await readFile(
+      path.resolve(__dirname, "../../../..", ".qfai/contracts/cli/shipped-workflows.md"),
+      "utf8",
+    );
+    const section = contract.slice(
+      contract.indexOf("## 5. Declared structural shape"),
+      contract.indexOf("## 6. Hygiene rules"),
+    );
+    expect(section, "section 5 must be present to read the items from").not.toEqual("");
+
+    // Each item runs until the next number at the left margin. Continuation
+    // lines are indented, which is what separates an item from its successor.
+    const items = new Map<number, string>();
+    let current = 0;
+    for (const line of section.split("\n")) {
+      const opener = /^(\d+)\.\s+(.*)$/.exec(line);
+      if (opener !== null) {
+        current = Number(opener[1]);
+        items.set(current, opener[2] ?? "");
+        continue;
+      }
+      if (current !== 0 && /^\s+\S/.test(line)) {
+        items.set(current, `${items.get(current) ?? ""} ${line.trim()}`);
+        continue;
+      }
+      current = 0;
+    }
+
+    // Backticks and bold markers are the contract's rendering, not its words.
+    const words = (text: string): string =>
+      text.replace(/[`*]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+
+    const wrong: string[] = [];
+    for (const dimension of SHIPPED_WORKFLOW_SHAPE.dimensions) {
+      const item = items.get(dimension.id);
+      if (item === undefined) {
+        wrong.push(`dimension ${String(dimension.id)} has no numbered item in section 5`);
+        continue;
+      }
+      // The item may carry an explanation after its opening clause; the title
+      // is that clause, so the item must open with it.
+      if (!words(item).startsWith(words(dimension.title))) {
+        wrong.push(
+          `dimension ${String(dimension.id)}: the title "${dimension.title}" does not open item ${String(dimension.id)}`,
+        );
+      }
+    }
+    expect(
+      [...items.keys()].sort((a, b) => a - b),
+      "section 5 must number exactly the closed set",
+    ).toEqual(CONTRACT_DIMENSION_IDS);
+    expect(wrong, "a dimension title and its contract item have separated").toEqual([]);
+  });
+
+  it("the declared shape pins all ten contract dimensions, and every one of them is actually diffed", async () => {
     const declaredIds = SHIPPED_WORKFLOW_SHAPE.dimensions
       .map((dimension) => dimension.id)
       .sort((left, right) => left - right);
     expect(
       declaredIds,
-      "the declared shape must pin the contract's closed set of nine dimensions — one missing is a contract violation",
+      "the declared shape must pin the contract's closed set of ten dimensions — one missing is a contract violation",
     ).toEqual(CONTRACT_DIMENSION_IDS);
 
     // Suite self-consistency: the falsifying plants cover the same closed set.

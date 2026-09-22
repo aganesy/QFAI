@@ -349,8 +349,14 @@ without `EBADF` / `EINTR` on stdin reads (NFR autonomy boundary).
   sub-commands above are public).
 - `--mode` flag or any `low-cost` / `standard` / `full-harness` mode
   selection.
-- Capture pipeline (PNG / HTML / per-action interaction transcript)
-  artifacts.
+- Capture pipeline artifacts on the default path, and the per-action
+  interaction transcript at any setting. `iterate` writes no PNG and no
+  HTML unless `--capture` is passed. What that flag does write is
+  specified under "Capture & Serve Flags" — its output paths, the
+  writers, and the `evidenceRefs[]` obligation it carries — so those
+  artifacts are in contract wherever the flag is, and out of it only by
+  default. The transcript is the one that is out of contract either
+  way.
 - Scripted-interaction generator or AC selector / assertion synthesis.
 - Quantitative AC-pass% / transition-pass% thresholds.
 - Configurable cycle budget (`MAX_ITERATIONS` is a code constant; not

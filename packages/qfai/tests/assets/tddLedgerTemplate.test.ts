@@ -895,6 +895,19 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       // test written twice.
       expect(isCoverageTargetLevel("")).toBe(false);
 
+      // The reference a reader reaches for said the same TC gets no row at all,
+      // which reads as licence to delete the one the producer seeds — and with
+      // it the ATDD row's evidence home. Being outside the coverage-target set
+      // is not being outside the Integration seed group.
+      const traceability = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      expect(traceability).toContain(
+        "gets no coverage-target row. It gets the `Layer = Integration` row instead",
+      );
+      expect(traceability).not.toContain("is **not** a coverage target and gets no row");
+
       const preconditions = await read(
         tree,
         "assistant/skills/qfai-implement/references/ledger-preconditions.md",

@@ -1216,6 +1216,54 @@ describe("QFAI-TDDLIST-008", () => {
     });
   }
 
+  describe("Oracle proof is a round field", () => {
+    const entryWith = (line: string): string =>
+      completeEntry("Unit").replace(/- Oracle proof: .*/, line);
+
+    it("reads the round form the skill writes", async () => {
+      // `round-evidence.md` puts the field under the round prefix, because a
+      // later round rewrites the code an earlier proof mutated. An entry
+      // written that way was read as carrying no proof at all.
+      const roundEvidence = await readFile(
+        path.join(
+          __dirname,
+          "..",
+          "..",
+          "assets",
+          "init",
+          ".qfai",
+          "assistant",
+          "skills",
+          "qfai-implement",
+          "references",
+          "round-evidence.md",
+        ),
+        "utf-8",
+      );
+      expect(roundEvidence).toContain("`Round N: Oracle proof`");
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": entryWith(
+            "- Round 1: Oracle proof: equivalent-mutant — TC-0001 permits any non-empty result",
+          ),
+        });
+        expect(codes).not.toContain("QFAI-TDDLIST-008");
+      });
+    });
+
+    it("still reads the row form an earlier entry carries", async () => {
+      // The fallback. Every entry written before the prefix holds the field at
+      // row level, and refusing those would have been the same defect from the
+      // other side.
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
+        });
+        expect(codes).not.toContain("QFAI-TDDLIST-008");
+      });
+    });
+  });
+
   describe("RED failure mode is a round field", () => {
     const entryWith = (line: string | null): string =>
       completeEntry("Unit").replace(
@@ -2248,6 +2296,32 @@ ${packPair(1).join("\n")}
         { ".qfai/evidence/implement-spec-0001.md": evidence },
       );
       expect(issues.map((issue) => issue.message).join("\n")).toContain(
+        "Round 1: Review pack: canonical .qfai/review/review-<17-digit timestamp> path",
+      );
+    });
+  });
+
+  it("reads a round pack written as the directory the skill's template records", async () => {
+    // `pack-seal.md` records the field as `.qfai/review/review-<timestamp>/`,
+    // and the canonical form carries no trailing separator — so a record
+    // written exactly as the skill instructs was refused for its shape, and no
+    // test drove the template's own spelling through this reader.
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        [
+          "- Round 1: reviewer verdict: PASS",
+          "- Round 1: Review pack: .qfai/review/review-20260101000000000/",
+          `- Round 1: Review pack seal: sha256:${"a".repeat(64)}`,
+          "- Refactor verify command: npm test",
+        ].join("\n"),
+      );
+      const issues = await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(issues.map((issue) => issue.message).join("\n")).not.toContain(
         "Round 1: Review pack: canonical .qfai/review/review-<17-digit timestamp> path",
       );
     });

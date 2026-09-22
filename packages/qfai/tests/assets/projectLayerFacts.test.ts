@@ -125,4 +125,26 @@ describe("the project layer describes the repository it is in", () => {
 
     expect(disagreeing, `the declared Node range is ${String(engines)}`).toEqual([]);
   });
+
+  // The same class of claim, in the document a release operator reads. It said
+  // a floor below the declared one, so a release taken on a Node the package
+  // refuses to install on would have looked supported.
+  it("states no Node floor in the release guide that disagrees with the declared one", async () => {
+    const manifest: unknown = JSON.parse(
+      await readFile(path.join(repoRoot, "package.json"), "utf-8"),
+    );
+    const engines = declaredNodeRange(manifest);
+    expect(engines, "package.json declares no Node range").not.toBeUndefined();
+
+    const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
+    const stated = [...withoutFencedBlocks(guide).matchAll(/>=\s*\d+(?:\.\d+)*/g)].map(([match]) =>
+      match.replace(/\s+/g, ""),
+    );
+
+    expect(stated.length, "the release guide states no Node floor to check").toBeGreaterThan(0);
+    expect(
+      stated.filter((floor) => floor !== engines),
+      `the declared Node range is ${String(engines)}`,
+    ).toEqual([]);
+  });
 });
