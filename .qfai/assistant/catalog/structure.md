@@ -17,21 +17,23 @@
 - Package(s) of interest: `packages/qfai` — the published package, and the
   only one in the workspace. The repository root is private and installs the
   package nowhere (`scripts/check-not-a-dependency.mjs`).
-- CLI / service entry: one line per entrypoint, as
-  `<entrypoint> -> <the boot obligations it answers>` — the `US-*`, or the
-  `CON-API-*` on an API entrypoint, whose surface that entrypoint serves. A
-  project with an API service and a worker states which obligations go through
-  which, so "the entrypoints the in-scope specs reach" is read off this list
-  rather than guessed. Without it a worker can be left out of the phase, or one
-  service's obligation recorded against another's, with nothing to detect
-  either.
+- CLI / service entry: `qfai` (`packages/qfai/dist/cli/index.mjs`) ->
+  `US-0003-0001`. One entrypoint, and workspace initialization is what its
+  startup serves: it is the first command an adopter runs, it runs before the
+  project has a configuration for anything else to read, and every other command
+  reads the tree it writes. The Skeleton phase's exit criterion follows from that
+  choice, so it is recorded in `.qfai/evidence/skeleton.md` rather than left to be
+  re-derived.
+
 - Core modules: `packages/qfai/src/core` (the validators, the parsers and the
   domain readers), `packages/qfai/src/cli` (argument parsing and the command
   implementations), `packages/qfai/src/shared` (what both use),
   `packages/qfai/assets` (everything `npx qfai init` writes into a project, and
   the schemas the document lanes read)
 - Project scripts: `scripts/` — the repository's own guards and pinners, each
-  invoked by a `package.json` script or a CI lane. The package ships its own
+  invoked by a `package.json` script or a CI lane. The Skeleton phase's smoke
+  script is `scripts/smoke-qfai-cli.mjs`.
+  The package ships its own
   under `packages/qfai/assets/scripts/`, which an adopter runs; those are
   distribution rather than operations.
 - Production roots:
@@ -56,8 +58,8 @@
     the bundle, so both reach a user's machine
     (`.agents/rules/distributed-surface.md`).
 - Conventions (naming, file layout):
-  - A validator lives in `src/core/validators/<subject>.ts` and its cases in
-    `packages/qfai/tests/core/<subject>*.test.ts`. A test's project comes from
+  - A validator lives under `src/core/validators/` and its cases under
+    `packages/qfai/tests/core/`, named for the same subject. A test's project comes from
     its directory under `packages/qfai/tests/`, which the vitest projects name.
   - Text this repository stores and ships follows
     `.agents/rules/repository-language.md`, which covers source, comments,
