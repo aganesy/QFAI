@@ -34,16 +34,16 @@ afterAll(async () => {
 
 // QFAI:SPEC-0016:US-0016-0005
 describe("E2E: the research pipeline fetches only allowlisted domains (US-0016-0005)", () => {
-  it("declares the allowlist in the project's own configuration file", async () => {
+  it("declares the allowlist in the project's own configuration file", () => {
     expect(researchSkill).toContain("`qfai.config.yaml` under `webResearch.allowlist`");
   });
 
-  it("defaults to deny, so an unlisted domain is not reachable by omission", async () => {
+  it("defaults to deny, so an unlisted domain is not reachable by omission", () => {
     expect(researchSkill).toContain("default-deny");
     expect(researchSkill).toContain("Only domains listed in the project allowlist may be fetched");
   });
 
-  it("holds the allowlist across a redirect chain", async () => {
+  it("holds the allowlist across a redirect chain", () => {
     // A single-hop check is the hole: an allowlisted host that redirects
     // elsewhere would otherwise fetch the destination the list excludes.
     expect(researchSkill).toContain(
@@ -51,7 +51,7 @@ describe("E2E: the research pipeline fetches only allowlisted domains (US-0016-0
     );
   });
 
-  it("keeps the skip switch away from the allowlist", async () => {
+  it("keeps the skip switch away from the allowlist", () => {
     // Matched across a line break, because the sentence is wrapped prose and a
     // reflow would otherwise read as the rule being gone.
     expect(researchSkill).toMatch(
