@@ -417,11 +417,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **A spec-0010 ledger row names the case its test file holds** (#1436). The
-  selector described the test — `asymmetric template/validator edit →
-R-MOCK-HREF-DRIFT` — rather than naming it, so the command the row prints ran
-  nothing. It now names the block that asserts that finding. The dogfooding
-  backlog falls by one.
+- **A spec-0010 and a spec-0015 ledger row name the case their test file
+  holds** (#1436). One selector described its test — `asymmetric
+template/validator edit → R-MOCK-HREF-DRIFT` — and the other quoted a title a
+  table cell cannot carry, so the command each row prints ran nothing. The
+  spec-0010 row now names the block that asserts the finding; the spec-0015 row
+  names its block by the prefix that stops before `<ts>`, which a cell would
+  read as inline HTML. The dogfooding backlog falls by one in each pack.
 
 - **Eighteen spec-0012 ledger rows name the case their test file holds**
   (#1436). Each selector restated the row's test-case line rather than naming a
