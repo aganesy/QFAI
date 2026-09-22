@@ -32,12 +32,20 @@
 # | Fail-open behaviour           | degraded detection (unreachable base, shallow clone, failed diff, unknown path): warning, then every lane |
 # | Node version                  | your `.nvmrc` / `.node-version` wins; with neither, a warning annotation, Node 20, and the lane continues |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
+# | Default-branch push           | runs the lanes the push selects; with `vars.QFAI_CI_PUSH_POLICY` set to `protected`, runs none            |
 #
 # Every lane is inert until you opt in: with no `test:<layer>` script in your
 # package.json the matrix is empty, the job is skipped and the verdict is
 # green over nothing. A lane that does run executes your script exactly once,
 # through your own package manager, and appends no argument to it - the script
 # is yours and its runner is unknown here.
+#
+# A push to the default branch runs the lanes again by default, because nothing
+# here can tell whether that commit passed a pull request first. If your branch
+# protection requires this workflow's checks before every merge, set the
+# repository variable `QFAI_CI_PUSH_POLICY` to `protected`: the push then runs
+# no lane, since the pull request already ran them, and `qfai validate` still
+# runs as the post-merge check. Any other value, or none, keeps the default.
 #
 # This file is self-contained: it does not reference any other workflow file
 # QFAI ships.
@@ -99,6 +107,9 @@ jobs:
           # A force-push whose new side touches only documentation would otherwise report no
           # lanes, skip every test and accept a default branch that lost a source file.
           QFAI_EVENT_NAME: ${{ github.event_name }}
+          # `protected` declares that every merge passed these checks on a pull
+          # request first; see the header.
+          QFAI_PUSH_POLICY: ${{ vars.QFAI_CI_PUSH_POLICY }}
         shell: bash
         run: |
           # Selects the test-lane matrix from a name-only diff against the
@@ -115,6 +126,12 @@ jobs:
             emit "$FULL_LANES"
             exit 0
           }
+          # Only the exact value skips, so a typo keeps the safe default.
+          if [ "${QFAI_EVENT_NAME:-}" = "push" ] && [ "${QFAI_PUSH_POLICY:-}" = "protected" ]; then
+            echo "qfai tests change detection: default-branch push under the protected push policy - the pull request ran the lanes"
+            emit "[]"
+            exit 0
+          fi
           if [ -z "${QFAI_BASE_REF:-}" ]; then
             fail_open "no base reference available"
           fi
