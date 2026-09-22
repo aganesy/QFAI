@@ -1106,9 +1106,15 @@ const tracked = trackedPaths();
  * Markdown and JSON both: a decision record is written as JSON, its question,
  * answer and scope are free text, and a path cited in one of those fields is a
  * claim about an artifact exactly as a path in a Markdown record is.
+ *
+ * `.jsonl` is one record per line rather than one per file — a mutation log is
+ * written that way — and the extension is the only thing that says so, since
+ * the file as a whole parses as nothing. Left out of this filter it was never
+ * opened, so a path in one of its fields reached neither the census nor the
+ * backlog.
  */
 const evidenceFiles = [...tracked.files]
-  .filter((file) => file.startsWith(".qfai/evidence/") && /\.(?:md|json|ya?ml)$/.test(file))
+  .filter((file) => file.startsWith(".qfai/evidence/") && /\.(?:md|jsonl?|ya?ml)$/.test(file))
   .sort();
 
 /**
@@ -1150,9 +1156,29 @@ async function measureCitations(): Promise<Citation[]> {
   const measured: Citation[] = [];
   for (const file of evidenceFiles) {
     const text = await readFile(path.join(repoRoot, file), "utf-8");
-    measured.push(...citationsOf(file, file.endsWith(".md") ? text : decodedRecord(text)));
+    measured.push(...citationsOf(file, evidenceDocuments(file, text)));
   }
   return measured;
+}
+
+/**
+ * One evidence file as the documents it holds.
+ *
+ * Markdown is one document. A record is its scalars. A `.jsonl` file is one
+ * record per line and parses as nothing whole, so each line is decoded on its
+ * own — which also keeps a disclaimer in one record out of the next, the way
+ * scalars of one record are kept apart.
+ *
+ * A blank line carries no record and is dropped rather than read as an empty
+ * one, since a trailing newline would otherwise add a document to every file.
+ */
+function evidenceDocuments(file: string, text: string): string | string[] {
+  if (file.endsWith(".md")) return text;
+  if (!file.endsWith(".jsonl")) return decodedRecord(text);
+  return text
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .flatMap((line) => decodedRecord(line));
 }
 
 /**
@@ -2529,6 +2555,56 @@ describe("the scan reads a record the way it renders", () => {
     // backslash is a separator, and there the reading stands.
     expect(citationsIn("\\.qfai/report/missing.json")).toEqual([".qfai/report/missing.json"]);
     expect(citationsIn("`C:\\run\\.qfai/report/missing.json`")).toEqual([]);
+  });
+});
+
+describe("what a record can be written as", () => {
+  const cited = (file: string, documents: string | readonly string[]): string[] =>
+    citationsOf(file, documents).map(([, found]) => found);
+
+  it("reads a JSONL record one line at a time", () => {
+    // A mutation log is one record per line, so the file parses as nothing
+    // whole and the extension is the only thing that says so. Left out of the
+    // filter that picks evidence files, it was never opened at all.
+    const log = [
+      JSON.stringify({ step: "seed", artifact: ".qfai/report/missing-one.json" }),
+      JSON.stringify({ step: "mutate", artifact: ".qfai/report/missing-two.json" }),
+      "",
+    ].join("\n");
+
+    expect(cited("x.jsonl", evidenceDocuments("x.jsonl", log))).toEqual([
+      ".qfai/report/missing-one.json",
+      ".qfai/report/missing-two.json",
+    ]);
+  });
+
+  it("keeps one JSONL record's disclaimer out of the next record", () => {
+    // Read as consecutive lines of one text, a marker ending one record
+    // covered a fenced block opening in the next — a pairing no record wrote.
+    const log = [
+      JSON.stringify({ note: "<!-- qfai:not-a-citation .qfai/report/other.json -->" }),
+      JSON.stringify({ note: "```text\\n.qfai/report/other.json\\n```" }),
+    ].join("\n");
+
+    expect(cited("x.jsonl", evidenceDocuments("x.jsonl", log))).toEqual([
+      ".qfai/report/other.json",
+    ]);
+  });
+
+  it("counts a prototyping capture, and not the durable record beside it", () => {
+    // Everything under the prototyping directory is ignored, so a capture a
+    // record names is absent from every clone but the author's. The evidence
+    // tree is a generated root for that reason, and a tracked record under the
+    // same directory resolves and is not counted.
+    expect(namesSomethingInside(".qfai/evidence/prototyping/iter-1/shot.png")).toBe(true);
+    expect(namesSomethingInside(".qfai/evidence/implement-spec-0001.md")).toBe(true);
+    expect(
+      resolves(".qfai/evidence/prototyping/iter-1/shot.png", {
+        files: new Set<string>(),
+        directories: new Set<string>(),
+        links: [],
+      }),
+    ).toBe(false);
   });
 });
 
