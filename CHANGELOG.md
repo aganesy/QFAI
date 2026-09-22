@@ -399,6 +399,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   them stopped being recognised. The marker comes off only while no block is
   open, which is the one place a fence can follow one.
 
+- **The review directive names the revision a reviewer trusts** (#1868). Every
+  generated reviewer entry point told an agent to read `REVIEW.md`, and said
+  nothing about which revision. A pull request's head is a place its author
+  controls, so a reviewer that reached for the file there would have taken its
+  review policy from the work it was reviewing. The four entry points — the two
+  agent instruction files, the Copilot one and the code-review instruction —
+  now say to read it from the branch the pull request targets, and say why. The
+  delegation itself is unchanged: where the file is absent there is still
+  nothing to read.
+
 - **A prototype handoff can say a screen needed nothing, and one that says
   nothing at all is reported** (#1749). `prototype-handoff.yaml#procurement`
   had two lists, and a screen drawn entirely from what the project already had
