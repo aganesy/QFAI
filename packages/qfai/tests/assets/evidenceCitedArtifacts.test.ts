@@ -1225,15 +1225,15 @@ function citationsOf(file: string, documents: string | readonly string[]): Citat
     const disclaimed = disclaimedByLine(text, spans);
     const fenced = fenceRoles(lines);
     lines.forEach((line, index) => {
-    // A `#` run inside a fence is a shell comment or a diff marker, not a
-    // heading, and reading it as one would put the citations after it under a
-    // section no reader sees.
-    if (fenced[index] === undefined) {
-      const heading = HEADING_LINE.exec(line);
-      if (heading !== null) {
-        section = `${heading[1] ?? ""} ${(heading[2] ?? "").replace(CLOSING_HASHES, "").trim()}`;
+      // A `#` run inside a fence is a shell comment or a diff marker, not a
+      // heading, and reading it as one would put the citations after it under a
+      // section no reader sees.
+      if (fenced[index] === undefined) {
+        const heading = HEADING_LINE.exec(line);
+        if (heading !== null) {
+          section = `${heading[1] ?? ""} ${(heading[2] ?? "").replace(CLOSING_HASHES, "").trim()}`;
+        }
       }
-    }
       const covered = disclaimed[index];
       if (covered === "all") return;
       // Inside a code block the whole line is code, so a comma or a colon after
@@ -1244,15 +1244,15 @@ function citationsOf(file: string, documents: string | readonly string[]): Citat
       const code: readonly CodeSpan[] | undefined =
         fenced[index] === "inside" ? [[0, line.length]] : spans[index];
       for (const cited of citationsIn(line, code)) {
-      // `continue`, not `return`: one line can carry several citations, and
-      // leaving the line on the first one that is root-only or disclaimed loses
-      // every citation after it.
-      if (covered?.has(cited) === true || !namesSomethingInside(cited)) continue;
-      // A heading holds no newline and a path holds none either, so the two
-      // cannot run together into one key that means something else.
-      const within = `${section}\n${cited}`;
-      const occurrence = (occurrences.get(within) ?? 0) + 1;
-      occurrences.set(within, occurrence);
+        // `continue`, not `return`: one line can carry several citations, and
+        // leaving the line on the first one that is root-only or disclaimed loses
+        // every citation after it.
+        if (covered?.has(cited) === true || !namesSomethingInside(cited)) continue;
+        // A heading holds no newline and a path holds none either, so the two
+        // cannot run together into one key that means something else.
+        const within = `${section}\n${cited}`;
+        const occurrence = (occurrences.get(within) ?? 0) + 1;
+        occurrences.set(within, occurrence);
         measured.push([file, cited, section, occurrence]);
       }
     });
@@ -2469,6 +2469,69 @@ describe("what the scan counts as a citation", () => {
   });
 });
 
+describe("the scan reads a record the way it renders", () => {
+  const cited = (file: string, documents: string | readonly string[]): string[] =>
+    citationsOf(file, documents).map(([, found]) => found);
+
+  it("keeps a comma-suffixed name whole on a fenced transcript line", () => {
+    // Inside a fence the whole line is code, so the comma belongs to the name
+    // exactly as it does inside a code span. Read as prose, the citation ended
+    // at the comma, the tracked prefix resolved, and the name the transcript
+    // really held was never checked.
+    const text = ["```text", "ls: .qfai/report/summary.json,missing", "```"].join("\n");
+    expect(cited("x.md", text)).toEqual([".qfai/report/summary.json,missing"]);
+    expect(cited("x.md", "ls: .qfai/report/summary.json,missing")).toEqual([
+      ".qfai/report/summary.json",
+    ]);
+  });
+
+  it("reads a fence that opens on a list item's own marker line", () => {
+    // The marker inside the transcript is what the command printed. Read as a
+    // disclaimer it hid the citation on its own line.
+    const text = [
+      "- ```text",
+      "  ls: .qfai/report/other.json <!-- qfai:not-a-citation -->",
+      "  ```",
+    ].join("\n");
+    expect(cited("x.md", text)).toEqual([".qfai/report/other.json"]);
+  });
+
+  it("reads a four-space-indented fence opener as the paragraph text it renders as", () => {
+    // Three spaces open a fence at the top level and four do not, so this line
+    // continues the paragraph above it. Read as a fence opener, everything
+    // after it inherited the disclaimer on the line before — including a
+    // citation the record made in prose.
+    const text = [
+      "<!-- qfai:not-a-citation .qfai/report/other.json -->",
+      "    ```text",
+      ".qfai/report/other.json",
+    ].join("\n");
+    expect(cited("x.md", text)).toEqual([".qfai/report/other.json"]);
+  });
+
+  it("keeps one scalar's disclaimer out of the next scalar's fenced block", () => {
+    // Two entries of a list, which the record never placed on consecutive
+    // lines. Joined into one text they became a marker line followed by a
+    // fence, and the citation inside the fence was covered by a disclaimer
+    // written somewhere else entirely.
+    const record = [
+      "steps:",
+      '  - "<!-- qfai:not-a-citation .qfai/report/other.json -->"',
+      '  - "```text\\n.qfai/report/other.json\\n```"',
+    ].join("\n");
+    expect(cited("x.yaml", decodedRecord(record))).toEqual([".qfai/report/other.json"]);
+  });
+
+  it("reads a backslash before a citation as the escape it renders as", () => {
+    // `\\.` renders as `.`, so the citation begins the line. Read as a path
+    // separator, the line was taken for a longer name belonging to a machine
+    // and the absent artifact was never counted. Inside code the same
+    // backslash is a separator, and there the reading stands.
+    expect(citationsIn("\\.qfai/report/missing.json")).toEqual([".qfai/report/missing.json"]);
+    expect(citationsIn("`C:\\run\\.qfai/report/missing.json`")).toEqual([]);
+  });
+});
+
 describe("a glob is a claim about a set", () => {
   const matchesLine = (line: string): string[] => citationsIn(line);
   /** A pattern compiled the way the writer's own destination check compiles it. */
@@ -3113,8 +3176,11 @@ describe("a glob is a claim about a set", () => {
     const record = ['path: ".qfai\\u002freport\\u002fmissing.json"', "---", "a: [unclosed"].join(
       "\n",
     );
-    expect(decodedRecord(record)).toContain(".qfai/report/missing.json");
-    expect(decodedRecord(record)).toContain("a: [unclosed");
+    // One scalar per entry now, so the stream is read as the joined text it
+    // decodes to rather than compared element by element: the document that
+    // does not parse contributes its own raw slice, delimiters and all.
+    expect(decodedRecord(record).join("\n")).toContain(".qfai/report/missing.json");
+    expect(decodedRecord(record).join("\n")).toContain("a: [unclosed");
   });
 
   it("counts every wildcard a run of stars compiles to", () => {

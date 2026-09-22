@@ -23,6 +23,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The evidence citation scan reads a record the way it renders** (#1763). Five
+  shapes were read differently from how Markdown renders them or from how the
+  record parses: a comma after a path on a fenced transcript line ended the
+  citation, a fence opening on a list item's own marker line was not read as a
+  fence, a line indented four spaces at the top level was read as a fence
+  opener, every scalar of a JSON or YAML record was joined into one text before
+  scanning, and a Markdown escape before a path was read as a Windows
+  separator. Two of them let an absent artifact past the guard. Block structure
+  now comes from a CommonMark parser rather than from a line-by-line reading,
+  each record scalar is scanned as the separate document the record wrote, and
+  a backslash means an escape outside code and a separator inside it. The
+  census is unchanged: the committed tree holds none of the five shapes, which
+  is why the guard passed while being wrong about them.
+
 - **The ladder's sourcing rungs reach the stage that decides where something
   comes from** (#2007). `minimal-implementation.md` gave requirements and design
   rung 1 alone, and rungs 2 to 5 — this codebase, the standard library, the
