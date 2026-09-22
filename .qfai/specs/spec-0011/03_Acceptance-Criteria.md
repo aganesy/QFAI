@@ -39,3 +39,7 @@ Given a finalized `prototype-handoff.yaml`, when `/qfai-implement` parses it, th
 ## AC-0011-0010: Design System As Deterministic DESIGN.md Mirror
 
 Given `extractedDesignSystem` resolves to `.qfai/contracts/design/design-system.yaml`, when `/qfai-implement` reads token tables, then those tables are byte-equivalent to the parsed token tables of root `DESIGN.md` (color / typography / radius / shadow). The mirror invariant is enforced at validate time by the design contract validators owned by spec-0004.
+
+## AC-0011-0011: Minimal Code In Phase Green
+
+Given a failing test, when Phase Green writes production code for it, then the code written is the least that makes that test pass, and behaviour no test yet demands is not generalized ahead of its own RED.

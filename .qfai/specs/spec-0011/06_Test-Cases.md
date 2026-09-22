@@ -53,10 +53,11 @@
 ## TC-0011-0009: Minimal Code For The One Failing Test
 
 - EX-Ref: EX-0011-0006
-- AC-Refs: AC-0011-0001
+- AC-Refs: AC-0011-0011
 - Verify that Phase Green asks for the minimum production code that makes the
-  failing test pass, and that it is written after the failure has been watched
-  rather than before.
+  failing test pass, that it is written after the failure has been watched
+  rather than before, and that it refuses a generalization no test yet asks
+  for.
 
 ## TC-0011-0010: Reviewer Separation Before `done`
 
