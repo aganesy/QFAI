@@ -377,6 +377,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Four spec-0013 rules cite the criterion they are about** (#2133). Five rules
+  pointed at a criterion on another subject, with the numbering lining up one for
+  one — which is what made it read as correct. Two now point at the criterion
+  that states their subject. Two more had no criterion at all, so one each is
+  added, and the two test cases that already prove those subjects are repointed
+  from the catch-all they shared, which keeps its own case. The rule about a
+  stub declared `none` had no shipped text behind its second clause; the skill now
+  says the clause and a case asserts it, because an undeclared `none` and one
+  with no reason read identically to a later reader.
+  The fifth rule is left as it stands. Its subject is stated by a criterion
+  whose identifier two headings declare, so repointing it would name an
+  ambiguous target; the change request that separates them is open.
+
 - **A child whose runtime died is no longer reported as a script that printed
   the wrong thing** (#2068). Two test projects spawn a `pwsh` per case, and both
   fail intermittently on changes touching no PowerShell, with one line:
