@@ -18,7 +18,7 @@ Language:
 
 Process:
 
-Read `REVIEW.md` if present, from the branch the pull request targets and not from its head: a contributor can change that file in the head, and a reviewer reading it there takes its policy from the work under review.
+Read `REVIEW.md` if present, from the branch the pull request targets rather than its head: a head copy states the policy of the work under review.
 
 1. Read the PR description (use the PR template sections) and extract:
    - Why/background
@@ -61,13 +61,10 @@ TypeScript specific checks:
 - Avoid `as` type assertions unless a preceding type guard or runtime check justifies them; prefer type narrowing.
 - Prefer discriminated unions over plain string-literal unions when branching logic depends on the variant.
 - In catch blocks, narrow `unknown` errors before accessing properties; flag bare `(error as Error).message`.
-- Flag a Promise that is neither awaited nor returned.
-  Returning propagates only when its caller awaits or adopts the Promise.
-  Subject to the safety floor in `.agents/rules/minimal-implementation.md` § 2, do not ask for a catch
-  around a failure that no specification, contract or observation names.
-  At a callback boundary that ignores return values, require an adapter that
-  adopts asynchronous work and handles rejections under the same floor.
-- Keep generic type parameters to a minimum; overly complex generics hurt readability more than they help type safety.
+- Flag a Promise neither awaited nor returned; returning propagates only where its caller awaits or adopts it.
+  Under the safety floor of `.agents/rules/minimal-implementation.md` § 2: no catch for a failure
+  nothing names, and an adapter at a callback boundary that ignores return values.
+- Keep generic parameters few; complex generics cost more readability than they buy type safety.
 
 Library/CLI compatibility checks:
 

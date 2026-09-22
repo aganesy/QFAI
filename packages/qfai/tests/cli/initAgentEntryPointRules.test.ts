@@ -229,7 +229,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
         "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository,";
       const pointerFor = (name: string): string =>
         name === ".github/instructions/code-review.instructions.md"
-          ? "Read `REVIEW.md` if present."
+          ? "Read `REVIEW.md` if present, from the branch the pull request targets rather than its head: a head copy states the policy of the work under review."
           : pointer;
       const files = [
         "AGENTS.md",

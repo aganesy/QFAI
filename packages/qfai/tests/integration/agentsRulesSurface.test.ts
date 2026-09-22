@@ -1242,8 +1242,11 @@ describe("this repository's pull-request description", () => {
       // And from a revision the pull request's author does not control. A
       // reviewer that reads the policy out of the head is taking it from the
       // work under review, which is the one place it cannot come from.
-      expect(entry, relative).toContain(
-        "from the branch the pull request targets and not from its head",
+      // Either spelling of the second half. The Copilot instructions file is
+      // held to a character budget a size check enforces, so it says the same
+      // thing in fewer words than the entry points do.
+      expect(entry, relative).toMatch(
+        /from the branch the pull request targets (?:and not from|rather than) its head/,
       );
     }
     const release = await readFile(
