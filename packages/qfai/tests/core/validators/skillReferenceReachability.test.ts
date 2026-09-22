@@ -420,6 +420,44 @@ describe("skill reference reachability", () => {
     }
   });
 
+  it("follows a chain through a tree the crawl skips, to its end", async () => {
+    // The crawl passes over a hidden skill directory, so a document there is read
+    // only where a reachable step names it — and each link is found by
+    // reading the one before it. The expansion has to carry the whole chain,
+    // not the first link: the last document's own citation is what says the
+    // chain was walked to its end.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-chain-"));
+    try {
+      const referencesDir = await writeSkillFixture(root);
+      const vendored = path.join(root, ".qfai", "assistant", "skills", ".vendor");
+      await mkdir(vendored, { recursive: true });
+      const links = 24;
+      for (let step = 0; step < links; step += 1) {
+        const next =
+          step + 1 < links
+            ? `Continue in \`../.vendor/link-${String(step + 1)}.md\`.`
+            : "Ends at `../demo-skill/references/orphan.md`.";
+        await writeFile(
+          path.join(vendored, `link-${String(step)}.md`),
+          [`# Link ${String(step)}`, "", next, ""].join("\n"),
+          "utf-8",
+        );
+      }
+      await writeFile(
+        path.join(referencesDir, "two-hop.md"),
+        ["# Two hop", "", "Vendored detail: `../../.vendor/link-0.md`.", ""].join("\n"),
+        "utf-8",
+      );
+
+      // `orphan.md` is the file the fixture leaves uncited, and the chain's
+      // last link is what names it. No finding means the walk reached the
+      // end; the one finding it used to report means it stopped short.
+      await expect(reachabilityIssues(root)).resolves.toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("validates a skill document holding a line of several mebibytes", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-long-line-"));
     try {
