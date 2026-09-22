@@ -387,7 +387,12 @@ const DIMENSION_PLANTS: readonly DimensionPlant[] = [
       // Structural: the aggregate is the job that runs whatever its
       // dependencies concluded, and its name is the last `name:` above that
       // condition.
-      const always = lines.findIndex((line) => /^\s*if:\s*\$\{\{\s*always\(\)\s*\}\}/.test(line));
+      // `always()` alone, or conjoined with the close gate: a closed pull
+      // request cancels the run it superseded, and the aggregate declines it
+      // too rather than reporting a verdict on a cancelled dependency.
+      const always = lines.findIndex((line) =>
+        /^\s*if:\s*\$\{\{\s*always\(\)(?:\s*&&[^}]*)?\s*\}\}/.test(line),
+      );
       if (always === -1) {
         throw new Error(`${file} declares no always-run aggregate`);
       }

@@ -803,6 +803,24 @@ function laneInvocationPins(): ShapePin[] {
   return pins;
 }
 
+/**
+ * The one condition a lane may carry that is not about the adopter's opt-in.
+ *
+ * A closed pull request starts a run to cancel the one its last push left
+ * going, and every lane that costs a runner declines it. Read as a lane gate it
+ * would look like an ordinary lane that had become inert, which is why the
+ * contract names it separately and this reads it separately.
+ */
+const CLOSE_GATE = "github.event.action != 'closed'";
+
+/** A condition with its `${{ … }}` wrapper removed, so it can be compared. */
+function conditionText(condition: unknown): string {
+  return String(condition ?? "")
+    .trim()
+    .replace(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/, "$1")
+    .trim();
+}
+
 /** Dimension 6: per lane, what keeps it declared but not running. */
 function laneInertnessPins(): ShapePin[] {
   return SHIPPED_FILE_EXPECTATIONS.map((file) => {
@@ -820,12 +838,14 @@ function laneInertnessPins(): ShapePin[] {
       clauses.push(
         `never inert, deletion is the opt-out: ${always.join(", ")} ${
           always.length === 1 ? "declares" : "declare"
-        } no gating if:`,
+        } no gating if: beyond the close gate`,
       );
     }
     for (const lane of file.lanes) {
       if (lane.kind === "aggregate") {
-        clauses.push(`${lane.jobId}: always() with needs: ${lane.needs.join(", ")}`);
+        clauses.push(
+          `${lane.jobId}: always(), optionally with the close gate, and needs: ${lane.needs.join(", ")}`,
+        );
       }
     }
     return filePin(6, file.name, clauses.join("; "), (found) =>
@@ -854,11 +874,8 @@ function laneInertnessViolations(file: FileExpectation, found: WorkflowFile): st
       continue;
     }
     if (lane.kind === "aggregate") {
-      const normalized = String(condition ?? "")
-        .trim()
-        .replace(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/, "$1")
-        .trim();
-      if (normalized !== "always()") {
+      const normalized = conditionText(condition);
+      if (normalized !== "always()" && normalized !== `always() && ${CLOSE_GATE}`) {
         problems.push(`${lane.jobId}: aggregate does not declare always()`);
       }
       const needs = job["needs"];
@@ -868,7 +885,7 @@ function laneInertnessViolations(file: FileExpectation, found: WorkflowFile): st
       }
       continue;
     }
-    if (condition !== undefined) {
+    if (condition !== undefined && conditionText(condition) !== CLOSE_GATE) {
       problems.push(`${lane.jobId}: gated on if: ${String(condition)}`);
     }
   }
