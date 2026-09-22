@@ -86,18 +86,11 @@
     {
       "path": "pull-request-close",
       "what": "a pull request closing while its last push is still being tested",
-      "jobs": [
-        "qfai-docs.yml#checks x2",
-        "qfai-docs.yml#docs",
-        "qfai-tests.yml#detection",
-        "qfai-tests.yml#verdict",
-        "qfai-validate.yml#summary",
-        "qfai-validate.yml#validate x2"
-      ],
-      "runnerJobs": 8,
-      "runners": ["${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"],
-      "timeoutMinutesSum": 70,
-      "billableFloorMinutes": 8
+      "jobs": [],
+      "runnerJobs": 0,
+      "runners": [],
+      "timeoutMinutesSum": 0,
+      "billableFloorMinutes": 0
     },
     {
       "path": "default-branch-push",
