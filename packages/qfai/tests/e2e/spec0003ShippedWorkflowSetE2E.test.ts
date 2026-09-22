@@ -85,12 +85,15 @@ describe("E2E: delivered document checks run independently and require a complet
     const jobs = await jobsOf(DOCS);
     const checks = jobs[`${DOCS}#checks`];
     expect(checks, "the delivered docs workflow has no independent check matrix").toBeDefined();
-    expect(checks?.["needs"]).toBeUndefined();
-    // The close gate, and nothing else. It gates on the event rather than on
-    // an opt-in, so the lane is still one whose opt-out is deletion — a
-    // closed pull request starts a run only to cancel the one its last push
-    // left going, and this job declines to spend a runner on it.
-    expect(checks?.["if"]).toBe(CLOSE_GATE);
+    // The one job the checks wait on is their scope: it reads the name-only
+    // diff and says whether anything a document check reads changed.
+    expect(checks?.["needs"]).toBe("scope");
+    // The scope's answer, and the close gate. Neither is an opt-in, so the
+    // lane is still one whose opt-out is deletion — it runs in every
+    // repository whose change can reach it.
+    expect(checks?.["if"]).toBe(
+      "${{ needs.scope.outputs.run == 'true' && github.event.action != 'closed' }}",
+    );
     expect(checks?.["continue-on-error"]).toBeUndefined();
     const strategy = checks?.["strategy"];
     expect(isRecord(strategy)).toBe(true);
@@ -129,7 +132,7 @@ describe("E2E: delivered document checks run independently and require a complet
   it("TC-0003-0056 (TDD-0059): keeps the existing external check name and always runs its matrix aggregate", async () => {
     const docs = (await jobsOf(DOCS))[`${DOCS}#docs`];
     expect(docs?.["name"]).toBe("qfai docs (document shape and Mermaid syntax)");
-    expect(docs?.["needs"]).toBe("checks");
+    expect(docs?.["needs"]).toEqual(["scope", "checks"]);
     expect(docs?.["if"]).toBe(ALWAYS_UNLESS_CLOSED);
     expect(docs?.["permissions"]).toEqual({});
     expect(docs?.["continue-on-error"]).toBeUndefined();
@@ -144,12 +147,41 @@ describe("E2E: delivered document checks run independently and require a complet
         String(step["run"] ?? "").includes("CHECK_RESULT"),
       );
       expect(verdict, "the delivered docs workflow has no executable aggregate").toBeDefined();
-      expect(verdict?.["env"]).toEqual({ CHECK_RESULT: "${{ needs.checks.result }}" });
+      expect(verdict?.["env"]).toEqual({
+        CHECK_RESULT: "${{ needs.checks.result }}",
+        DOCS_SCOPE: "${{ needs.scope.outputs.run }}",
+      });
+      // With no scope in hand, only a success is green: a skip nobody can
+      // account for is not a skip the scope asked for.
       const executed = await runStep(String(verdict?.["run"] ?? ""), await project(), {
         CHECK_RESULT: result,
       });
       expect(executed.skipped, "bash must execute the delivered aggregate").toBe(false);
       expect(executed.status).toBe(result === "success" ? 0 : 1);
+    },
+  );
+
+  it.each([
+    ["skipped", "false", 0],
+    ["skipped", "true", 1],
+    ["failure", "false", 1],
+    ["success", "false", 0],
+  ] as const)(
+    "executes the delivered aggregate for matrix result %j under scope %j",
+    async (result, scope, status) => {
+      // The one green skip is the one the scope asked for. A skip while the
+      // scope said a document changed is a lane that should have run and did
+      // not, and a failure is a failure whatever the scope said.
+      const docs = (await jobsOf(DOCS))[`${DOCS}#docs`];
+      const verdict = collectJobSteps(docs ?? {}).find((step) =>
+        String(step["run"] ?? "").includes("CHECK_RESULT"),
+      );
+      const executed = await runStep(String(verdict?.["run"] ?? ""), await project(), {
+        CHECK_RESULT: result,
+        DOCS_SCOPE: scope,
+      });
+      expect(executed.skipped, "bash must execute the delivered aggregate").toBe(false);
+      expect(executed.status).toBe(status);
     },
   );
 });
