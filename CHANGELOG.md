@@ -375,6 +375,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   asserted: an approved change request narrows that clause, and the template
   already reads the narrower way.
 
+- **The test cases the spec-0012 ledger owns declare the level that says so**
+  (#1892). A ledger coverage row may only cite a test case that declares a unit
+  or component `Level`; a case declaring none is owned by the acceptance stage
+  under the integration directory instead, so a ledger row still claiming it
+  puts two stages on the same case. No spec-0012 case declared a level at all,
+  which reported every unit-layer row in that pack and pinned the result as a
+  backlog new work could only add to. The level is not a judgement here: each
+  affected case is cited by unit-layer rows and by nothing else, so it is read
+  off the rows that already claim it. Seventy-nine cases now declare `L1`, and
+  the pack's pinned error count falls from 539 to 458 on the full profile and
+  from 89 to 8 on the specification one. The eighty-three cases cited only from
+  integration, contract and property rows are left undeclared, because those
+  rows claim no ledger coverage and declaring a level would move an ownership
+  nobody asked to move.
+
 - **A ledger's producer preamble is the template's, and a check holds it there**
   (#2024). One execution ledger carried a preamble saying `US-*` and
   `CON-API-*` are not rows there, two screens above a table holding nine
