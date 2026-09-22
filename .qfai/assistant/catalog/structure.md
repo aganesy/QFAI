@@ -5,12 +5,18 @@
 
 ## Repo layout (high level)
 
-- Top-level directories: <list main directories>
+- Top-level directories: `packages/` (the workspace), `scripts/` (repository
+  tooling), `tests/` (the annotation carrier and the traceability ledger),
+  `.github/` (this repository's own CI), `.qfai/` (its workflow artifacts and
+  the assistant tree), `.agents/` (the cross-agent rule masters), `tmp/` (the
+  scratch area, untracked)
 - Evidence: repository root listing
 
 ## Key packages / entrypoints
 
-- Package(s) of interest: <list packages>
+- Package(s) of interest: `packages/qfai` — the published package, and the
+  only one in the workspace. The repository root is private and installs the
+  package nowhere (`scripts/check-not-a-dependency.mjs`).
 - CLI / service entry: one line per entrypoint, as
   `<entrypoint> -> <the boot obligations it answers>` — the `US-*`, or the
   `CON-API-*` on an API entrypoint, whose surface that entrypoint serves. A
@@ -19,27 +25,43 @@
   rather than guessed. Without it a worker can be left out of the phase, or one
   service's obligation recorded against another's, with nothing to detect
   either.
-- Core modules: <key module directories>
-- Project scripts: <directory holding committed operational scripts — the
-  smoke script `skills/qfai-implement/references/walking-skeleton.md` requires
-  lives here>
-- Production roots: <every shipped-source path, exhaustively, as Git
-  pathspecs — a directory where the whole directory is source (`src/`, `app/`,
-  `lib/`, `internal/`, `cmd/`, `packages/*/src`), a glob where it is not.
-  Production code sitting at the repository root takes globs (`*.go` plus
-  `cmd/` and `internal/`; `*.py` plus the package directory), never a bare
-  `.`, which would sweep `go.mod`, `package.json`, CI config, documentation
-  and build output in as production paths. Exclude tests, fixtures, build
-  output, config and documentation>
+- Core modules: `packages/qfai/src/core` (the validators, the parsers and the
+  domain readers), `packages/qfai/src/cli` (argument parsing and the command
+  implementations), `packages/qfai/src/shared` (what both use),
+  `packages/qfai/assets` (everything `qfai init` writes into a project, and
+  the schemas the document lanes read)
+- Project scripts: `scripts/` — the repository's own guards and pinners, each
+  invoked by a `package.json` script or a CI lane. The package ships its own
+  under `packages/qfai/assets/scripts/`, which an adopter runs; those are
+  distribution rather than operations.
+- Production roots:
+  - `packages/qfai/src`
+  - `packages/qfai/assets`
+  - `scripts/*.mjs`
+    The first two are what `npm pack` publishes, as source and as the tree
+    `qfai init` writes. `scripts/*.mjs` ships nowhere and is production all the
+    same: a guard that stops running stops reporting, and nothing else would.
+    `packages/qfai/tests`, `tests/`, `tmp/` and `packages/qfai/dist` are not
+    production roots — the first two are tests, the third is scratch and the
+    fourth is build output.
 
 ## Architecture constraints
 
 - Boundaries (what must not depend on what):
-  - <boundary rule 1>
-  - <boundary rule 2>
+  - `src/core` does not import from `src/cli`. The direction is one-way:
+    a command composes core readers, and a core reader knows nothing about
+    how it was invoked. Measured: no file under `src/core` imports `cli`.
+  - `src/**` carries no internal spec, decision or version identifier.
+    `tsup` copies a doc comment into `dist/*.d.ts` and a string literal into
+    the bundle, so both reach a user's machine
+    (`.agents/rules/distributed-surface.md`).
 - Conventions (naming, file layout):
-  - <convention 1>
-  - <convention 2>
+  - A validator lives in `src/core/validators/<subject>.ts` and its cases in
+    `packages/qfai/tests/core/<subject>*.test.ts`. A test's project comes from
+    its directory under `packages/qfai/tests/`, which the vitest projects name.
+  - Everything tracked here is written in English — source, comments,
+    Markdown, commit messages and pull request text
+    (`.agents/rules/repository-language.md`).
 
 ## UI surface paths (SSOT)
 
@@ -78,9 +100,13 @@ rules are fixed here rather than left to whichever matcher an agent reaches for:
 
 ui_paths:
 
-- `<src/ui/**>`
-- `<src/components/**>`
-- `<tests/e2e/**>`
+- `none`
+
+  QFAI ships a command-line tool and no rendered surface, so no path here
+  makes a ledger row UI-affecting. What may appear in terminal output is
+  settled by `.agents/rules/interface-clarity.md`, which is a writing
+  standard rather than a UI surface: it routes no row to a
+  `product-surface-reviewer` and asks for no capture.
 
 ## Quality gates
 
@@ -98,7 +124,7 @@ typecheck / format / pack) belong in
 them here.
 
 ```bash
-<install command>
+pnpm install --frozen-lockfile
 npx qfai validate
 npx qfai doctor
 ```
