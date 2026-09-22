@@ -127,7 +127,7 @@ describe("item completion blocked: reviewer not run", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0009
+// QFAI:SPEC-0011:TC-0011-0010
 describe("implementation review remains independent from the implementation agent", () => {
   it("requires implementation-reviewer evidence instead of self-approval", async () => {
     const c = await loadContent();
@@ -138,7 +138,6 @@ describe("implementation review remains independent from the implementation agen
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0010
 describe("spec-level completion conditions", () => {
   it("defines spec completion conditions", async () => {
     const c = await loadContent();

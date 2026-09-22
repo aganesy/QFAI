@@ -1289,6 +1289,7 @@ const ROUND_SCOPED_EVIDENCE_FIELDS = [
   "GREEN command",
   "GREEN result",
   "RED failure mode",
+  "Oracle proof",
 ] as const;
 
 function evidenceRoundNumbers(section: string): number[] {
@@ -3317,9 +3318,22 @@ function missingCompletedEvidenceFields(
   if (oracleProofOwed) {
     // The proof is taken at the last GREEN, so the run it has to agree with is
     // the latest round's — an earlier round's command was superseded.
+    //
+    // And it is read from that round's block first. `round-evidence.md` puts
+    // the field under the round prefix, because a later round rewrites the code
+    // an earlier proof mutated: one slot for the row either overwrote that
+    // proof or left the row reusing a stale one. Reading the row level only
+    // refused every entry written as the reference says. The row-level value is
+    // the fallback, which is what an entry written before the prefix carries —
+    // the same shape `RED failure mode` takes above.
+    const latestRound = rounds.at(-1);
+    const roundProof =
+      latestRound === undefined
+        ? null
+        : roundEvidenceFieldValue(section, latestRound, "Oracle proof");
     missing.push(
       ...oracleProofDefects(
-        rowEvidenceFieldValue(section, "Oracle proof"),
+        roundProof ?? rowEvidenceFieldValue(section, "Oracle proof"),
         expected.selector,
         latestGreenCommand,
       ),

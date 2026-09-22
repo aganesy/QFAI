@@ -36,6 +36,31 @@ import {
   refreshSupersededRuleBulletsInList,
 } from "../../src/core/agentEntryPoints.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
+import { RULE_LOCK_BASENAME } from "../../src/core/ruleMasterUpdates.js";
+
+/**
+ * The project as it is before a rule is shipped to it for the first time.
+ *
+ * Deleting the file alone no longer says that: `init` records what it wrote,
+ * and a record entry with no file behind it is a rule the project removed on
+ * purpose, which the run leaves removed. A rule the project has never had is
+ * one the record does not name either.
+ */
+async function forgetMaster(root: string, master: string): Promise<void> {
+  await rm(path.join(root, ...master.split("/")), { force: true });
+  const lock = path.join(root, ".agents", "rules", RULE_LOCK_BASENAME);
+  const recorded = await readFile(lock, "utf-8").catch(() => null);
+  if (recorded === null) return;
+  const entries = JSON.parse(recorded) as Record<string, string>;
+  const basename = path.posix.basename(master);
+  const kept = Object.fromEntries(Object.entries(entries).filter(([name]) => name !== basename));
+  await writeFile(
+    lock,
+    `${JSON.stringify(kept, null, 2)}
+`,
+    "utf-8",
+  );
+}
 
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-agent-entry-"));
@@ -127,7 +152,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
                 .filter((line) => !(line.startsWith("- ") && line.includes(master)))
                 .join("\n");
           await writeFile(path.join(root, "AGENTS.md"), before, "utf-8");
-          if (!pointerOnly) await rm(path.join(root, ...master.split("/")), { force: true });
+          if (!pointerOnly) await forgetMaster(root, master);
           const chunks: string[] = [];
           const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
             chunks.push(String(chunk));
@@ -385,7 +410,7 @@ describe("a later init cites a rule master it is shipping for the first time", (
       .filter((line) => !(line.startsWith("- ") && line.includes(master)))
       .join("\n");
     await writeFile(path.join(root, "AGENTS.md"), withoutBullet, "utf-8");
-    await rm(path.join(root, ...master.split("/")), { force: true });
+    await forgetMaster(root, master);
   }
 
   it("adds the bullet for a master the run wrote, and nothing else", async () => {
@@ -476,7 +501,7 @@ describe("the update path refuses a rewrite it cannot make safely", () => {
         .join("\n");
       await writeFile(shared, written, "utf-8");
       await rm(path.join(root, "AGENTS.md"));
-      await rm(path.join(root, ...master.split("/")), { force: true });
+      await forgetMaster(root, master);
       try {
         await symlink(shared, path.join(root, "AGENTS.md"));
       } catch {
@@ -506,7 +531,7 @@ describe("the update path refuses a rewrite it cannot make safely", () => {
       // becomes U+FFFD, and writing that back would corrupt the line.
       const bytes = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(written, "utf-8")]);
       await writeFile(path.join(root, "AGENTS.md"), bytes);
-      await rm(path.join(root, ...master.split("/")), { force: true });
+      await forgetMaster(root, master);
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
@@ -564,7 +589,7 @@ describe("the third agent's instruction file gains the citation too", () => {
         .filter((line) => !(line.startsWith("- ") && line.includes(master)))
         .join("\n");
       await writeFile(copilot, trimmed, "utf-8");
-      await rm(path.join(root, ...master.split("/")), { force: true });
+      await forgetMaster(root, master);
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
@@ -627,7 +652,7 @@ describe("the update refuses a write it cannot make safely", () => {
         await rm(outside, { recursive: true, force: true });
         return;
       }
-      await rm(path.join(root, ...master.split("/")), { force: true });
+      await forgetMaster(root, master);
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
@@ -682,7 +707,7 @@ describe("a managed section that was never closed is reported", () => {
         .filter((line) => !(line.startsWith("- ") && line.includes(master)))
         .join("\n");
       await writeFile(path.join(root, "AGENTS.md"), broken, "utf-8");
-      await rm(path.join(root, ...master.split("/")), { force: true });
+      await forgetMaster(root, master);
 
       const stderr = await initCapturingStderr(root);
 
@@ -1875,7 +1900,7 @@ describe("the staged write keeps the file's own permissions", () => {
         .filter((line) => !(line.startsWith("- ") && line.includes(master)))
         .join("\n");
       await writeFile(target, trimmed, "utf-8");
-      await rm(path.join(root, ...master.split("/")), { force: true });
+      await forgetMaster(root, master);
       await chmod(target, 0o600);
       const before = (await stat(target)).mode & 0o7777;
 
@@ -2034,7 +2059,7 @@ describe("the Copilot file this run cannot extend", () => {
       const copilot = path.join(root, ".github", "copilot-instructions.md");
       const own = ["# House instructions", "", "Run the tests before pushing.", ""].join("\n");
       await writeFile(copilot, own, "utf-8");
-      await rm(path.join(root, ...master.split("/")), { force: true });
+      await forgetMaster(root, master);
 
       const stderr = await initCapturingStderr(root);
 
@@ -2051,7 +2076,7 @@ describe("the Copilot file this run cannot extend", () => {
 
       const copilot = path.join(root, ".github", "copilot-instructions.md");
       await writeFile(copilot, "# House instructions\n", "utf-8");
-      await rm(path.join(root, ...master.split("/")), { force: true });
+      await forgetMaster(root, master);
 
       const chunks: string[] = [];
       const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
@@ -2226,7 +2251,7 @@ describe("a citation a refused rewrite could not write is kept for a later run",
       .split("\n")
       .filter((line) => !(line.startsWith("- ") && line.includes(master)))
       .join("\n");
-    await rm(path.join(root, ...master.split("/")), { force: true });
+    await forgetMaster(root, master);
     return written;
   }
 
@@ -2300,7 +2325,7 @@ describe("a citation a refused rewrite could not write is kept for a later run",
         .filter((line) => !(line.startsWith("- ") && line.includes(master)))
         .join("\n");
       await writeFile(copilot, `${trimmed}\n${"x".repeat(600 * 1024)}\n`, "utf-8");
-      await rm(path.join(root, ...master.split("/")), { force: true });
+      await forgetMaster(root, master);
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
@@ -2508,7 +2533,7 @@ describe("a later init refreshes a rule summary the project never edited", () =>
         .filter((line) => !(line.startsWith("- ") && line.includes(shipped)))
         .join("\n");
       await writeFile(path.join(root, "AGENTS.md"), withoutBullet, "utf-8");
-      await rm(path.join(root, ...shipped.split("/")), { force: true });
+      await forgetMaster(root, shipped);
 
       const { stdout } = await initCapturing(root, { force: false, dryRun: false });
 

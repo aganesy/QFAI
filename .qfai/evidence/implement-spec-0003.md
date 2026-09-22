@@ -209,8 +209,8 @@ both revisions, so the verdicts are composed against `19e45607`.
 
 ## Gate-completed verdicts (Phase 0)
 
-Review packs: `.qfai/review/review-20260805190301000/` (unit G0 = TDD-0018 + TDD-0020) and
-`.qfai/review/review-20260805190302000/` (unit TDD-0019). All three routed blocking reviewers
+Review packs: `review-20260805190301000/` (unit G0 = TDD-0018 + TDD-0020) and
+`review-20260805190302000/` (unit TDD-0019). All three routed blocking reviewers
 returned PASS on Round 1 for both units; findings were advisory-only (registered below).
 
 #### TDD-0018 (gate-completed)
@@ -314,8 +314,8 @@ Per finding-provenance rules, advisory findings are never implemented as code by
 - Checkpoint verification result: PASS (narrow suite; next boundary — 10th row, any true
   cross-package code edit, or spec end — runs `pnpm build` first so dist-spawning suites observe
   src changes, then full suite + static gates + validate, per the gatekeeper's advisory)
-- Review packs: `.qfai/review/review-20260805192001000/` (Round 1, overall FAIL on the
-  completion-reviewer REVISE) and `.qfai/review/review-20260805192002000/` (Round 2, overall PASS)
+- Review packs: `review-20260805192001000/` (Round 1, overall FAIL on the
+  completion-reviewer REVISE) and `review-20260805192002000/` (Round 2, overall PASS)
 
 ## Advisory register (TDD-0052 — recorded, not implemented)
 
@@ -376,7 +376,7 @@ Per finding-provenance rules, advisory findings are never implemented as code by
   ledger judged non-module as recorded at TDD-0052)
 - Checkpoint verification result: PASS (narrow closure suite 15 files 260/260, independently
   re-run by the gatekeeper)
-- Review pack: `.qfai/review/review-20260805193501000/`
+- Review pack: `review-20260805193501000/`
 
 ## Advisory register (TDD-0045 — recorded, not implemented)
 
@@ -436,7 +436,7 @@ Per finding-provenance rules, advisory findings are never implemented as code by
 - Checkpoint verification command: off-boundary (6th completed row)
 - Checkpoint verification result: PASS (narrow closure suite — single-file 10/10, closure shrink
   to the zero-importer module independently verified by the gatekeeper)
-- Review pack: `.qfai/review/review-20260805195501000/`
+- Review pack: `review-20260805195501000/`
 
 ## Advisory register (TDD-0046 — recorded; disposition noted per item)
 
@@ -523,7 +523,7 @@ Per finding-provenance rules, advisory findings are never implemented as code by
 - Checkpoint verification command: off-boundary (7th completed row)
 - Checkpoint verification result: PASS (whole ownership file 15/15 post-relocation,
   independently re-run by gatekeeper and implementation-reviewer)
-- Review pack: `.qfai/review/review-20260805202001000/`
+- Review pack: `review-20260805202001000/`
 - Form fix applied by orchestrator per gatekeeper advisory: the first-run record relabeled from
   `RED command/result` to `First-run command/result` so the falsifiability form stays
   machine-distinguishable (both evidence copies).
@@ -614,7 +614,7 @@ Per finding-provenance rules, advisory findings are never implemented as code by
 - Prototype parity: N/A
 - Checkpoint verification command: off-boundary (8th completed row)
 - Checkpoint verification result: PASS (15-file init closure 272/272, independently re-run)
-- Review pack: `.qfai/review/review-20260805204501000/`
+- Review pack: `review-20260805204501000/`
 
 ## Advisory register (TDD-0054 — recorded; dispositions noted)
 
@@ -716,7 +716,7 @@ TC-0003-0051's third bullet words the control as "create-only 判定を無効化
   the 10th — TDD-0048)
 - Checkpoint verification result: PASS (15-file init closure 276/276 + ownership 22/22,
   independently re-run by both new reviewer instances)
-- Review pack: `.qfai/review/review-20260805210001000/`
+- Review pack: `review-20260805210001000/`
 
 ## Advisory register (TDD-0051 — recorded, not implemented)
 
@@ -803,7 +803,7 @@ TC-0003-0051's third bullet words the control as "create-only 判定を無効化
   /qfai-atdd; QFAI-ATDD-112 entries for TCs of not-yet-implemented rows), zero QFAI-TEST-001.
   All other commands exit 0. Recorded as PASS-with-named-residual per the Stage-0 disclosure;
   the residual burns down as rows complete and ATDD-111 is a later-stage obligation.
-- Review pack: `.qfai/review/review-20260805212001000/`
+- Review pack: `review-20260805212001000/`
 
 ## Advisory register (TDD-0048 — recorded, not implemented)
 
@@ -938,7 +938,7 @@ starts next.
 - Checkpoint verification command: off-boundary (11th-12th completed rows)
 - Checkpoint verification result: PASS (2-file suite 32/32 + assets/leakage 72/72 +
   verify:pack ok=15 + leakage guard, independently re-run by the gatekeeper)
-- Review pack: `.qfai/review/review-20260805214501000/`
+- Review pack: `review-20260805214501000/`
 - Both rows transition refactor -> done in this single ledger write (group rule).
 
 ## Advisory register (GB1 — recorded; dispositions noted)
@@ -1041,7 +1041,7 @@ starts next.
 - Checkpoint verification command: off-boundary (13th completed row)
 - Checkpoint verification result: PASS (4-suite verify 105/105 + leakage guard + verify:pack,
   independently re-run by two reviewers)
-- Review pack: `.qfai/review/review-20260805221501000/`
+- Review pack: `review-20260805221501000/`
 
 ## Advisory register (TDD-0030 — recorded; dispositions noted)
 
@@ -1160,8 +1160,8 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 - Checkpoint verification command: off-boundary (14th completed row)
 - Checkpoint verification result: PASS (5-suite verify 169/169 + leakage guard + verify:pack,
   independently re-run by two reviewers; refreshed pins-file 6/6 after the review-fix)
-- Review packs: `.qfai/review/review-20260805224501000/` (Round 1, overall FAIL on the
-  implementation REVISE) and `.qfai/review/review-20260805224502000/` (Round 2, PASS)
+- Review packs: `review-20260805224501000/` (Round 1, overall FAIL on the
+  implementation REVISE) and `review-20260805224502000/` (Round 2, PASS)
 
 ## Advisory register (GB2 — recorded; dispositions noted)
 
@@ -1272,8 +1272,8 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 - Checkpoint verification result: PASS (pins file 9/9, independently re-run by all three
   reviewers; engineer session-limit interruption occurred AFTER all runs and evidence landed
   on disk — state verified by the orchestrator before resumption)
-- Review packs: `.qfai/review/review-20260806001501000/` (Round 1, overall FAIL on the
-  gatekeeper REVISE) and `.qfai/review/review-20260806001502000/` (Round 2, PASS)
+- Review packs: `review-20260806001501000/` (Round 1, overall FAIL on the
+  gatekeeper REVISE) and `review-20260806001502000/` (Round 2, PASS)
 
 ## Advisory register (TDD-0033 — recorded; dispositions noted)
 
@@ -1411,7 +1411,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 - Checkpoint verification command: off-boundary (16th-17th completed rows)
 - Checkpoint verification result: PASS (6-suite 180/180 + leakage guard + verify:pack,
   independently reproduced by all three reviewers)
-- Review pack: `.qfai/review/review-20260806010001000/`
+- Review pack: `review-20260806010001000/`
 - Both rows transition refactor -> done in this single ledger write (group rule).
 
 ## Advisory register (GB3 — recorded; dispositions noted)
@@ -1505,7 +1505,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 - Checkpoint verification command: off-boundary (18th completed row)
 - Checkpoint verification result: PASS (6-suite 184/184 independently reproduced by all three
   reviewers; leakage guard; verify:pack ok=15)
-- Review pack: `.qfai/review/review-20260806014501000/`
+- Review pack: `review-20260806014501000/`
 
 ## Advisory register (GB4 — recorded)
 
@@ -1688,7 +1688,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 - Checkpoint verification command: off-boundary (19th-21st completed rows)
 - Checkpoint verification result: PASS (7-suite 194/194 + leakage guard + verify:pack,
   independently reproduced by all three reviewers)
-- Review pack: `.qfai/review/review-20260806023001000/`
+- Review pack: `review-20260806023001000/`
 - All three rows transition refactor -> done in this single ledger write (group rule).
 
 ## Advisory register (GC1 — recorded; dispositions noted)
@@ -1798,7 +1798,7 @@ Correction (TDD-0031 turn, disclosed there in full): `init.test.ts:132-133` subs
 - Checkpoint verification command: off-boundary (22nd-23rd completed rows)
 - Checkpoint verification result: PASS (7-file battery 93/93 + assets/init sweep 822/822 +
   leakage guard + verify:pack; battery independently reproduced by both gates)
-- Review pack: `.qfai/review/review-20260806073001000/`
+- Review pack: `review-20260806073001000/`
 - Both rows transition refactor -> done in this single ledger write (group rule).
 
 ## Advisory register (GC2 — recorded; dispositions noted)
@@ -3013,8 +3013,8 @@ the process fix adopted at advisory 81 is now demonstrated to work.
 - Checkpoint verification result: PASS (8-file battery 104/104, reproduced by all three reviewers;
   `tests/assets` 761, `tests/cli/init.test.ts` 61, run SEPARATELY per advisory 89 — no flake this
   round; eslint / tsc / prettier / leakage guard / verify-pack all green)
-- Review packs: `.qfai/review/review-20260806220001000/` (round 1, overall FAIL on the security
-  REVISE) and `.qfai/review/review-20260806220002000/` (round 2, PASS)
+- Review packs: `review-20260806220001000/` (round 1, overall FAIL on the security
+  REVISE) and `review-20260806220002000/` (round 2, PASS)
 - All three rows transition refactor -> done in this single ledger write (group rule).
 
 ## Advisory register (GC3 round 2 — recorded)
@@ -3814,7 +3814,7 @@ as an opportunistic edit for whichever future row next touches these files.
 - Checkpoint verification result: PASS (9-file battery 111/111, independently reproduced by all three
   reviewers; `tests/assets` 761 and `tests/cli/init.test.ts` 61 as separate invocations per advisory
   89; eslint / tsc / prettier / leakage guard / verify-pack all green)
-- Review pack: `.qfai/review/review-20260807030001000/`
+- Review pack: `review-20260807030001000/`
 - Both rows transition refactor -> done in this single ledger write (group rule).
 
 **Phase C is complete**, and with it every implementation group of this run: Phase 0 (3 stale rows),
@@ -4289,7 +4289,7 @@ guarantees every assertion in this repo ends in `;`. **Adopted: F-3's one-token 
 - Checkpoint verification command: off-boundary (29th completed row)
 - Checkpoint verification result: PASS (9-file battery 91/91, `tests/assets` 761,
   `tests/cli/init.test.ts` 61, all independently reproduced by all three reviewers)
-- Review pack: `.qfai/review/review-20260807120001000/`
+- Review pack: `review-20260807120001000/`
 
 ## Advisory register (TDD-0049 code-quality review — recorded; all carried to TDD-0050's work order)
 
@@ -4594,7 +4594,7 @@ scan genuinely closes the self-proof hole.
 - Prototype parity: N/A
 - Checkpoint verification: the SPEC-LEVEL boundary is now owed and is run immediately after this write
   (build -> whole suite -> static gates -> validate), because this is the last row this run completes.
-- Review pack: `.qfai/review/review-20260807180001000/`
+- Review pack: `review-20260807180001000/`
 
 ## Spec-level checkpoint verification (the per-spec boundary, run once at run close)
 

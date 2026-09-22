@@ -20,7 +20,9 @@ Rejected:
 ### DR-0010-0002: Canonical discussion-side UI family is exploration-first
 
 - Date: 2026-04-22
-- Status: Adopted
+- Status: Superseded
+- Superseded by: US-0010-0010 and AC-0010-0008, which withdrew the legacy sidecars
+- In force today: the family is `uiux/40_screen_contracts.md` and `uiux/50_review_input_bundle.md`; brand-level inputs are in root `DESIGN.md`
 
 Decision: discussion-side の active UI sidecar family は以下とする。
 
@@ -43,7 +45,9 @@ Rejected:
 ### DR-0010-0003: Reference research stays in discussion and feeds downstream contracts
 
 - Date: 2026-04-22
-- Status: Adopted
+- Status: Superseded
+- Superseded by: US-0010-0010 and AC-0010-0008, which withdrew the legacy sidecars
+- In force today: the research posture stands, and `04_Sources.md` is the only file it is kept in
 
 Decision: Trend Scan / guideline research / competitive references は discussion の `04_Sources.md` と `31_reference_pool.md` に保持し、`/qfai-sdd` が downstream contracts に正規化する。
 
@@ -52,7 +56,9 @@ Rationale: research provenance を upstream に残したまま、downstream で�
 ### DR-0010-0004: Evaluator calibration is mandatory discussion output
 
 - Date: 2026-04-22
-- Status: Adopted
+- Status: Superseded
+- Superseded by: US-0010-0010 and AC-0010-0008, which withdrew the legacy sidecars
+- In force today: no calibration sidecar is written, and the evaluation posture lives in the prototyping loop
 
 Decision: discussion は `34_evaluator_calibration.md` を必須出力とし、good critique / blandness fail / originality fail の例を handoff に含める。
 

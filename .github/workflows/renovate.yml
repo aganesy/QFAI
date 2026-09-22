@@ -123,7 +123,7 @@ jobs:
           fi
         shell: bash
 
-      - uses: renovatebot/github-action@37beffda261423addd537c33f2d126df7f6ffbab # v46.2.6
+      - uses: renovatebot/github-action@dcfba84a42d1b5d5e49bf131b1bf53511851a123 # v46.3.1
         with:
           token: ${{ secrets.RENOVATE_TOKEN }}
           # Pinned, like every other version in this tree. The action's own default is the
