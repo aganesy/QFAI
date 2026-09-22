@@ -277,13 +277,23 @@ describe(
 
       // The drift-proof half, and the reason this row is not satisfied by a job merely existing:
       // a verdict that enumerates need names by hand goes stale the moment a lane is added, which
-      // is the failure `BR-0017-0001` is written against. Iterating the serialized map cannot.
+      // is the failure `BR-0017-0001` is written against.
+      //
+      // The set answers it by having ONE lane. Its layers are matrix legs, so adding a layer adds
+      // a value to the axis and no need at all — and a `needs` list of one cannot fall behind a
+      // list of lanes that never grows. What the row asserts is therefore that shape: every job
+      // the verdict waits on is declared, and no lane job stands outside it.
       const verdict = map["verdict"];
       expect(verdict, "the shipped orchestrator must carry a verdict job").not.toBeUndefined();
-      const text = await workflowText(ORCHESTRATOR);
+      const needs = isRecord(verdict) ? verdict["needs"] : undefined;
+      const waitedOn = Array.isArray(needs) ? needs.map(String) : [String(needs ?? "")];
+      const laneJobs = Object.keys(map).filter((jobId) => jobId !== "verdict");
       expect
-        .soft(text, "the verdict must iterate the serialized needs map rather than name lanes")
-        .toContain("toJSON(needs)");
+        .soft(
+          [...waitedOn].sort(),
+          "the verdict must wait on every job the orchestrator declares, or a lane can conclude unread",
+        )
+        .toEqual([...laneJobs].sort());
     });
   },
 );
@@ -979,7 +989,6 @@ describe(
           "echo",
           "exit",
           "git",
-          "grep",
           "node",
           "npm",
           "npx",
@@ -1097,9 +1106,9 @@ describe(
         const env = holder["env"];
         if (isRecord(env)) {
           for (const [key, value] of Object.entries(env)) {
-            // The VALUE as well as the name. `QFAI_NEEDS_JSON` naming a single lane rather than the
-            // whole `needs` map hands the verdict step one result to aggregate, and the step body then
-            // faithfully reports green over it — a key on the allowed list, saying something else.
+            // The VALUE as well as the name. `QFAI_TESTS_RESULT` bound to a job other than the test
+            // lane hands the verdict a conclusion belonging to something else, and the step body then
+            // faithfully reports on it — a key on the allowed list, saying something else.
             const pinned = ALLOWED_STEP_ENV.get(key);
             if (pinned === undefined) refusedUses.push(`${label}: sets env ${key}`);
             else if (value !== pinned) {
@@ -1216,14 +1225,16 @@ describe(
   () => {
     it("ships exactly one orchestrator carrying every test lane", async () => {
       // "Without a new check name" is about not adding a workflow FILE, which is what would add check
-      // names an adopter's branch protection does not know. Measured: the shipped set separates layers
-      // into five jobs rather than the matrix legs the own tree uses — a divergence recorded as `❌` in
-      // the Coverage Depth Matrix, not asserted here, because either shape satisfies "one file".
-      const map = await jobs();
-      const lanes = ["unit", "component", "integration", "api", "e2e"].filter((id) => id in map);
+      // names an adopter's branch protection does not know. The shipped set now separates layers into
+      // the matrix legs the own tree uses, so a layer is reached through the axis rather than through
+      // a job id — and either shape satisfies "one file", which is what this story claims.
+      const orchestrator = await workflowText(ORCHESTRATOR);
+      const reached = ["unit", "component", "integration", "api", "e2e"].filter((layer) =>
+        orchestrator.includes(`"${layer}"`),
+      );
       expect
-        .soft(lanes.length, "every test layer must be a job of the one orchestrator")
-        .toBeGreaterThanOrEqual(5);
+        .soft(reached, "every test layer must be reachable from the one orchestrator")
+        .toEqual(["unit", "component", "integration", "api", "e2e"]);
 
       const dir = path.join(await project(), ".github", "workflows");
       const { readdir } = await import("node:fs/promises");

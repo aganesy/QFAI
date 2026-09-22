@@ -6,6 +6,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The shipped test workflow runs the adopter's declared test scripts**
+  (#1872). Its five layer lanes each emitted a warning saying the lane had been
+  selected and had run nothing; a lane that reports and establishes nothing is
+  worse than no lane, because a green verdict over it reads as a passing suite.
+  Each selected layer now checks out, resolves the package manager and the Node
+  version the adopter's own files name, installs from the lockfile and runs
+  `test:<layer>` exactly once. A layer with no such script is not on the axis, so
+  a project that opted into none still starts no runner and the verdict is green
+  over nothing, as it was. No argument is appended to the script: it belongs to
+  the adopter and its runner is unknown here, so a shard or reporter flag that
+  suits one framework is a syntax error in the next.
+  The five lanes became one matrixed job, whose axis is the intersection the
+  detection job now publishes. That is what keeps one copy of the install
+  sequence rather than five: a shipped file may not reference another under
+  create-only install, so the sequence cannot be shared, and five copies of it
+  would drift apart. The shape contract's matrix, lane and cost pins move with
+  it, and the lane-inertness dimension gains the kind a lane selected by an axis
+  needs — a condition that stopped naming the list would leave the job running on
+  every change with the axis still correct, which the old check could not tell.
+  The verdict reads the lane's conclusion rather than scanning every dependency's:
+  green on success, green on a skip where the axis was empty, red on everything
+  else. A skip is only green where the selection is explicitly empty, because an
+  absent selection says nothing about why the lane did not run — and a lane that
+  installs is one a failed install can stop, which is the case a green-on-skip
+  rule would have swallowed.
+
 - **A ledger row that claims completion rests on a test, not on a list of
   obligations** (#2160). An annotation carrier under a test tree declares no
   test, so a case named only there is one no runner will ever select — while the

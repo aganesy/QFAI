@@ -119,6 +119,15 @@ const LANE_GATE =
   /^contains\(needs\.detection\.outputs\.scripts, '([a-z0-9]+)'\) && contains\(needs\.detection\.outputs\.lanes, '\1'\)$/;
 
 /**
+ * The test orchestrator's one lane, gated on the intersection its detection job publishes.
+ *
+ * The five per-layer conditions became one matrix axis, so the gate no longer names a layer: it
+ * asks whether the axis is non-empty, and `instancesOf` reads the width from the same path spec.
+ */
+const SELECTED_GATE =
+  "needs.detection.outputs.selected != '[]' && needs.detection.outputs.selected != ''";
+
+/**
  * Whether a job allocates a runner on this path.
  *
  * Throws on a condition it does not recognise: an unread condition would be counted as running,
@@ -131,6 +140,11 @@ export function jobRuns(job, pathSpec) {
   if (text === CLOSE_GATE) return !closed;
   if (text === `always() && ${CLOSE_GATE}`) return !closed;
   if (text === "always()") return true;
+  if (text === SELECTED_GATE) {
+    // The same two halves the per-layer gate read, asked once: a documents-only change selects no
+    // lane, and a path declaring no test script has nothing for the axis to hold.
+    return !closed && !pathSpec.documentsOnly && pathSpec.testScripts.length > 0;
+  }
   const lane = LANE_GATE.exec(text);
   if (lane !== null) {
     if (closed) return false;
@@ -160,6 +174,12 @@ export function instancesOf(job, pathSpec) {
       continue;
     }
     const text = String(value);
+    if (text.includes("needs.detection.outputs.selected")) {
+      // One leg per layer the path declares a script for. `jobRuns` has already refused the path
+      // where that list is empty, so the axis here is never zero-width.
+      widest = Math.max(widest, pathSpec.testScripts.length);
+      continue;
+    }
     if (text.includes("github.event_name == 'pull_request'")) {
       // `'["full","drift"]'` on a pull request, `'["full"]'` otherwise.
       widest = Math.max(widest, pathSpec.event === "pull_request" ? 2 : 1);
