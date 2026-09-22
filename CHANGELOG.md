@@ -425,6 +425,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not pass. The run and its output are recorded. The rule that already reported
   the placeholders now finds none in either document the stage reads.
 
+- **Three spec-0010 criteria about files the pack forbids are retired** (#2081).
+  One criterion of that pack says three legacy sidecars are never created, and a
+  case holds their absence from the distributed assets. Three others still stated
+  what each of those files must contain, so each was conditioned on a file that
+  does not exist: it could not fail and it could not pass, and a reader counting
+  the pack's criteria counted three that decided nothing. They are retired with
+  the rules, examples, cases and ledger rows that hung off them, and the delta
+  log records what went and why. The annotation carrier no longer names the
+  retired cases, which is what would otherwise have left an annotation pointing
+  at nothing.
+
 - **The Type-column obligation is verified by a test that reads a Type column**
   (#1858). The spec-0013 ledger row for that obligation named a suite about
   full-scan discovery, and the describe it selected was named for the obligation

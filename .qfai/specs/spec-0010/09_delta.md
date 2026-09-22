@@ -1,5 +1,31 @@
 # 09 Delta
 
+## 2026-09-22 — Retired the criteria about sidecars this pack forbids
+
+`AC-0010-0008` states that `30_exploration_brief.md`, `33_exploration_rubric.md` and
+`34_evaluator_calibration.md` are not created, and `packages/qfai/tests/assets/uiuxSidecar.test.ts`
+holds their absence from the distributed assets. Three criteria still said what each
+of those files must contain. A criterion conditioned on a file the pack forbids can
+neither fail nor pass, so a reader counting this pack's criteria counted three that
+decided nothing.
+
+They are not contradictions the way `AC-0010-0001` was, which is why they were left
+standing when that one was restated. `AC-0010-0005` and `AC-0010-0009` already cover
+the two sidecars a discussion pack writes today.
+
+| Op ID  | Op Type | Target                                         | Summary                                    |
+| ------ | ------- | ---------------------------------------------- | ------------------------------------------ |
+| OP-001 | DELETE  | 03_Acceptance-Criteria.md (AC-0010-0002..0004) | the three criteria about the dropped files |
+| OP-002 | DELETE  | 04_Business-Rules.md (BR-0010-0002..0004)      | the rules that hung off them               |
+| OP-003 | DELETE  | 05_Examples.md (EX-0010-0002..0004)            | the examples that hung off those rules     |
+| OP-004 | DELETE  | 06_Test-Cases.md (TC-0010-0002..0004)          | the cases that hung off those examples     |
+| OP-005 | DELETE  | tdd/test-list.md (TDD-0002..0004, TDD-0009)    | the ledger rows citing those cases         |
+
+The user stories `US-0010-0001`, `US-0010-0004` and `US-0010-0005` still name the
+same three files, and each carries an end-to-end ledger row. Two more stories name
+the other two dropped sidecars. That layer is a wider repair than this one and is
+tracked on its own.
+
 ## 2026-04-22
 
 - Clarified: discussion-generated prototyping hints are downstream references only.
