@@ -443,6 +443,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Eighteen spec-0012 ledger rows name the case their test file holds**
+  (#1436). Each selector restated the row's test-case line rather than naming a
+  test, so the command the row prints ran nothing. The eighteen are repaired
+  from the files they already name. Two rows of the same shape are left as they
+  are: their subject spans several blocks in a file that declares one more
+  besides, so any selector covering the subject also selects a case the row does
+  not name — and a selector that resolves while misdescribing which case runs is
+  worse than one that does not resolve. The dogfooding backlog falls by
+  eighteen.
+
 - **Six spec-0006 ledger rows name the case their test file holds** (#1436).
   Each selector restated the row's test-case line rather than naming a test, so
   the command the row prints ran nothing — `TC-0006-0023: review.staleTtlDays
