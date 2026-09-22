@@ -288,11 +288,15 @@ export function addReviewPointer(existing: string, template: string | null): str
     "y",
   );
   const label = String.raw`\[(?<label>(?:\\.|[^\[\]\\\r\n]|${continuation})+)\]`;
-  // SIMPLIFIED: closed code spans retain literal comment openers.
-  // Lift when: block parsing and code-span preservation share paragraph boundaries.
+  // A comment opener at the start of a line ends the paragraph, so a code
+  // span cannot run past one, and the whole interrupt set applies here with
+  // the opener in it. GitHub renders the first line and hides every later
+  // line of that paragraph inside the HTML block the opener began, so a
+  // directive written there reaches no reader. Read as a code span it
+  // counted as operative, and the pointer was never written.
   const codeSpan = new RegExp(
     "^(`+)(?!`)(?:(?!\\r?\\n[ \\t]*\\r?\\n)(?!\\r?\\n" +
-      interrupt.replace("!--|", "").replace(/\$/g, "(?=\\r?\\n|$)") +
+      interrupt.replace(/\$/g, "(?=\\r?\\n|$)") +
       ")[\\s\\S])*?(?<!`)\\1(?!`)",
   );
   const tableDelimiter = /^ {0,3}\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*\r?$/gm;

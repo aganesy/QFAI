@@ -3354,6 +3354,14 @@ function shouldSkipReference(ref: string): boolean {
   if (ref === ".qfai/install-provenance.json") {
     return true;
   }
+  // A path inside the installed package. This repository ships that package
+  // and never installs it — `scripts/check-not-a-dependency.mjs` refuses an
+  // install that would create one — so no checkout of this tree holds the
+  // directory. Naming a file under it is how the README tells an adopter where
+  // the packaged copy of a shipped file sits in THEIR tree.
+  if (ref.startsWith("node_modules/")) {
+    return true;
+  }
   // Same carve-out, same reason: `.qfai/state.json` is written by
   // `qfai discussion use` at runtime and is `.gitignore`d, so it is never in a
   // checkout for this walk to find. Documenting the pointer a command reads is

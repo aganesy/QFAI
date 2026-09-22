@@ -1396,7 +1396,7 @@ describe("the guard against this repository's own ledger", () => {
     ).toBe(9);
 
     // Repo-wide the guard does NOT pass, and that is the finding rather than a defect in the guard:
-    // 127 of 208 claims are backed by no annotation in any E2E test file. `CR-20260820-0011`.
+    // 127 of 207 claims are backed by no annotation in any E2E test file. `CR-20260820-0011`.
     //
     // This is a RATCHET, and the shape matters. The first version asserted
     // `unbacked.length > 100`, which round 2's `qa-gatekeeper` broke from both sides: appending 60
@@ -1409,7 +1409,7 @@ describe("the guard against this repository's own ledger", () => {
     // The exact figure lives in the CR, which is the governance record for it; this pins only the
     // direction nobody should be allowed to travel silently.
     //
-    // One blind spot, stated rather than papered over: a delete-and-add SWAP keeps the count at 127
+    // One blind spot, stated rather than papered over: a delete-and-add SWAP keeps the count at 126
     // while replacing which stories are uncovered, and no aggregate can see that. Catching it needs a
     // per-claim baseline committed next to the CR, which is `CR-20260820-0011` option 1's work — it
     // is where the per-story decisions get made — not a bound this test can tighten.
@@ -1424,6 +1424,11 @@ describe("the guard against this repository's own ledger", () => {
     //
     // What is worth pinning is the direction nobody should travel silently, and that is `unbacked`
     // alone. The claim total belongs in the CR, which is the governance record for it.
+    // 127 rather than 126, and the one that moved is US-0003-0014: the story
+    // is named by no test. The annotation that stood for it sat on a test
+    // about template generation, which is not what the story states. A count
+    // cannot tell a claim newly revealed as unbacked from a claim newly
+    // written, so the figure moves with its reason beside it.
     expect(
       wide.unbacked.length,
       "a NEW unbacked ledger claim is a regression; fixing existing ones must stay green — " +
