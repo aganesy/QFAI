@@ -121,6 +121,25 @@
       ],
       "timeoutMinutesSum": 215,
       "billableFloorMinutes": 13
+    },
+    {
+      "path": "protected-default-branch-push",
+      "what": "a push to the default branch where the adopter declares the protected push policy",
+      "jobs": [
+        "qfai-docs.yml#docs",
+        "qfai-docs.yml#scope",
+        "qfai-tests.yml#detection",
+        "qfai-tests.yml#verdict",
+        "qfai-validate.yml#summary",
+        "qfai-validate.yml#validate"
+      ],
+      "runnerJobs": 6,
+      "runners": [
+        "${{ vars.QFAI_CI_LIGHT_RUNNER || vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
+        "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}"
+      ],
+      "timeoutMinutesSum": 35,
+      "billableFloorMinutes": 6
     }
   ]
 }

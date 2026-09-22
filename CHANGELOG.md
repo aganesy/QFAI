@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **An adopter whose branch protection requires the shipped checks can stop a
+  push from running them again** (#2095). By default a push to `main` or
+  `master` runs the test lanes and the document checks a second time, because
+  nothing in the files can tell whether that commit passed a pull request
+  first. Setting the repository variable `QFAI_CI_PUSH_POLICY` to `protected`
+  declares that it did. The push then runs neither, and `qfai validate` still
+  runs as the post-merge check. Only that exact value skips, so a typo keeps
+  the default. The skip travels through the scope and detection outputs the
+  aggregates already read, so no new way to report green is added. The pinned
+  cost of that push falls from 13 runner jobs to 6, and from 215 declared
+  timeout-minutes to 35.
+
 - **The shipped test workflow runs the adopter's declared test scripts**
   (#1872). Its five layer lanes each emitted a warning saying the lane had been
   selected and had run nothing; a lane that reports and establishes nothing is

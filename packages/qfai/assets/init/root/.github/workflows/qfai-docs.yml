@@ -31,6 +31,7 @@
 # | `packageManager` precondition | a `pnpm-lock.yaml` needs `"packageManager": "pnpm@<version>"` in package.json, or this lane stops CLOSED |
 # | Inert when                    | never inert; delete this file to opt out - `qfai init` will not recreate a file you removed              |
 # | Skipped when                  | every changed path is code a document check never reads; anything else, or any doubt, runs both checks   |
+# | Default-branch push           | runs the checks the push reaches; with `vars.QFAI_CI_PUSH_POLICY` set to `protected`, runs neither       |
 # | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 20, and the lane continues          |
 # | Node support floor            | the package declares `engines: ">=20.19.0"`; the fall-open Node 20 satisfies it                          |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
@@ -44,6 +45,13 @@
 # scope step does not recognise. When the diff itself cannot be taken - no base,
 # a shallow clone, a failed diff - the checks run. Skipping is the claim that
 # needs evidence; running is not.
+#
+# A push to the default branch runs them again by default, because nothing here
+# can tell whether that commit passed a pull request first. If your branch
+# protection requires this workflow's checks before every merge, set the
+# repository variable `QFAI_CI_PUSH_POLICY` to `protected`: the push then skips
+# both checks, and `qfai validate` still runs as the post-merge check. Any other
+# value, or none, keeps the default.
 #
 # A tree with no specs directory is not a failure: both lanes report the zero
 # they found and exit 0. Reporting green over nothing is only wrong when the
@@ -104,10 +112,14 @@ jobs:
           # A pull request asks what the branch changed (`A...B`); a push asks what
           # the push changed (`A B`), so a force-push cannot hide what it dropped.
           QFAI_EVENT_NAME: ${{ github.event_name }}
+          # `protected` declares that every merge passed these checks on a pull
+          # request first; see the header.
+          QFAI_PUSH_POLICY: ${{ vars.QFAI_CI_PUSH_POLICY }}
         shell: bash
         run: |
           # Emits run=false only when every changed path is code no document
-          # check reads. Everything else - and every degraded input - emits
+          # check reads, or when a default-branch push is declared covered by
+          # its pull request. Everything else - and every degraded input - emits
           # run=true, because a skipped check claims the documents are fine and
           # a run check only costs its install.
           emit() { echo "run=$1" >> "$GITHUB_OUTPUT"; }
@@ -116,6 +128,12 @@ jobs:
             emit true
             exit 0
           }
+          # Only the exact value skips, so a typo keeps the safe default.
+          if [ "${QFAI_EVENT_NAME:-}" = "push" ] && [ "${QFAI_PUSH_POLICY:-}" = "protected" ]; then
+            echo "qfai docs change scope: default-branch push under the protected push policy - the pull request ran the checks"
+            emit false
+            exit 0
+          fi
           if [ -z "${QFAI_BASE_REF:-}" ]; then
             run_anyway "no base reference available"
           fi

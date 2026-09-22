@@ -20,7 +20,7 @@
  * the per-job floor costs before any work happens. That last figure is the one the adopter's
  * evidence turned on — a job that runs for four seconds is billed as a minute.
  *
- * ## The six paths
+ * ## The seven paths
  *
  * Each names the facts that decide which jobs run. They are declared rather than inferred,
  * because a path is a claim about an adopter's repository — whether their `package.json`
@@ -57,7 +57,9 @@ export const BILLABLE_JOB_FLOOR_MINUTES = 1;
  * `event` decides the triggering shape, `documentsOnly` whether the change touched documents and
  * no source, `documentsTouched` whether it touched documents at all — which is what the document
  * lane's scope reads — and `testScripts` which `test:<layer>` scripts the adopter's manifest
- * declares, the opt-in the test lanes read through the detection job's outputs.
+ * declares, the opt-in the test lanes read through the detection job's outputs. `pushPolicy` is the
+ * adopter's `QFAI_CI_PUSH_POLICY`: `protected` declares that every merge passed a pull request's
+ * checks first, so a push runs no lane and no document check.
  */
 export const COST_PATHS = [
   {
@@ -111,6 +113,15 @@ export const COST_PATHS = [
     documentsTouched: true,
     testScripts: ["unit", "component", "integration", "api", "e2e"],
   },
+  {
+    id: "protected-default-branch-push",
+    what: "a push to the default branch where the adopter declares the protected push policy",
+    event: "push",
+    pushPolicy: "protected",
+    documentsOnly: false,
+    documentsTouched: true,
+    testScripts: ["unit", "component", "integration", "api", "e2e"],
+  },
 ];
 
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -146,6 +157,8 @@ const SELECTED_GATE =
  */
 export function jobRuns(job, pathSpec) {
   const closed = pathSpec.action === "closed";
+  // The scope and detection bodies answer "run nothing" for this push before they read the diff.
+  const coveredPush = pathSpec.event === "push" && pathSpec.pushPolicy === "protected";
   const text = conditionText(isRecord(job) ? job["if"] : undefined);
   if (text === "") return true;
   if (text === CLOSE_GATE) return !closed;
@@ -153,12 +166,12 @@ export function jobRuns(job, pathSpec) {
   if (text === "always()") return true;
   if (text === SCOPE_GATE) {
     // The document lane runs when its scope found a change a document check reads.
-    return !closed && pathSpec.documentsTouched === true;
+    return !closed && !coveredPush && pathSpec.documentsTouched === true;
   }
   if (text === SELECTED_GATE) {
     // The same two halves the per-layer gate read, asked once: a documents-only change selects no
     // lane, and a path declaring no test script has nothing for the axis to hold.
-    return !closed && !pathSpec.documentsOnly && pathSpec.testScripts.length > 0;
+    return !closed && !coveredPush && !pathSpec.documentsOnly && pathSpec.testScripts.length > 0;
   }
   const lane = LANE_GATE.exec(text);
   if (lane !== null) {

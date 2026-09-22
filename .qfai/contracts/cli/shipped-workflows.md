@@ -238,6 +238,15 @@ call:
    changed — so a scope job that failed or reported nothing cannot turn a lane
    that did not run into a pass.
 
+   A job that reads the diff for its lanes — the document scope, the test
+   detection — may answer "nothing to run" for one more case: a push to the
+   default branch in a repository whose `QFAI_CI_PUSH_POLICY` variable is
+   exactly `protected`. That value is the adopter's statement that every merge
+   passed these checks on a pull request first. Any other value, or none, reads
+   the diff as before. The answer travels through the same output, so the
+   aggregate's rule above is unchanged, and `qfai validate` still runs on that
+   push as the post-merge check.
+
 7. The third-party `uses:` set, as an **allow-list** against the closed
    sanctioned set (one entry today, the package-manager setup action). Never as
    a count of zero: a count fails on the entry the policy legitimately keeps.
