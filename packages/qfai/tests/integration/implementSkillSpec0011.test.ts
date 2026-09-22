@@ -142,4 +142,14 @@ describe("TC-0011-0009: Minimal Code For The One Failing Test", () => {
     expect(green).toBeGreaterThan(red);
     expect(content).toMatch(/watch it fail/i);
   });
+
+  it("SKILL.md refuses a generalization no test yet asks for", async () => {
+    // The rule has two clauses and only the first was asserted. Minimum code for
+    // the failing test and no code for a case nobody has reddened are different
+    // claims, and a skill could ask for the first while saying nothing about the
+    // second.
+    const content = await readFile(SKILL_PATH, "utf-8");
+    expect(content).toContain("Write for the failing test and no further");
+    expect(content).toMatch(/generalization ahead of its own RED/);
+  });
 });
