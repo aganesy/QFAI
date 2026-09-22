@@ -2832,6 +2832,15 @@ ${packPair(1).join("\n")}
   );
   const HASH_LINE = `Audited evidence hash: sha256:${"c".repeat(64)}\n`;
 
+  /**
+   * The same two rows without a shared `BR-Ref`, so each is its own review unit
+   * and a request naming one id names the whole of it.
+   */
+  const SOLO_LEDGER = ledger([
+    { status: "done", evidence: IMPLEMENT_POINTER },
+    { status: "todo", evidence: "-" },
+  ]);
+
   it.each([
     ["omits it", "TDD-ID: TDD-0001\n", "", false],
     ["states it twice", "TDD-ID: TDD-0001\n", HASH_LINE.repeat(2), false],
@@ -2889,7 +2898,14 @@ ${packPair(1).join("\n")}
             "- Refactor verify command: npm test",
           ].join("\n"),
         );
-        const issues = await runIssuesOn(root, GROUP_LEDGER, {
+        // The ledger follows the request rather than the other way round. A
+        // request names its whole review unit, so a one-id request is only
+        // legitimate where that row is the unit — and these cases are about the
+        // hash lines, with the ledger as scaffolding under them. Given a group
+        // ledger, the one-id variants would be reported for naming a subset,
+        // and the shape under test would never be reached.
+        const named = request.match(/TDD-\d{4}/g) ?? [];
+        const issues = await runIssuesOn(root, named.length > 1 ? GROUP_LEDGER : SOLO_LEDGER, {
           ".qfai/evidence/implement-spec-0001.md": evidence,
         });
         const messages = issues.map((issue) => issue.message).join("\n");
@@ -3007,6 +3023,55 @@ ${packPair(1).join("\n")}
         { reviewRequestTddId: "TDD-0001, TDD-0002", auditedHashLines: () => lines },
       );
       expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it("refuses a T1 group member whose request names itself alone", async () => {
+    // A T1 group is reviewed in ONE round over the whole group, so the request
+    // names the group's whole membership. Asking only that each named id belong
+    // to the unit let two members each seal a singleton pack containing
+    // themselves — two reviews where the layout requires one, with every
+    // per-row check passing.
+    await withProject(async (root) => {
+      const evidenceFile = ".qfai/evidence/implement-spec-0001.md";
+      const shared = ".qfai/review/review-20260101010000000";
+      const member = (tddId: string, auditHash: string): string =>
+        completeEntry("Unit")
+          .replace("# Evidence\n\n", "")
+          .replaceAll("TDD-0001", tddId)
+          .replaceAll("{{AUDIT_HASH}}", auditHash)
+          .replace("{{RED_TEST_HASH}}", "e".repeat(64))
+          .replace(
+            "- Refactor verify command: npm test",
+            [
+              "- Round 1: reviewer verdict: PASS",
+              `- Round 1: Review pack: ${shared}`,
+              "- Round 1: Review pack seal: {{ROUND_PACK_SEAL}}",
+              "- Refactor verify command: npm test",
+            ].join("\n"),
+          );
+      const content = `# Evidence\n\n${member("TDD-0001", "{{AUDIT_HASH}}")}\n${member("TDD-0002", "{{EDITING_AUDIT_HASH}}")}`;
+      const lines = `Audited evidence hash: TDD-0001 ${phaseAuditHash(evidenceFile, content)}\nAudited evidence hash: TDD-0002 ${phaseAuditHash(evidenceFile, content, "TDD-0002")}\n`;
+      const response = `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\n${lines}`;
+      // The one difference from the case above: the request names one member.
+      await writeRoundPack(root, shared, "TDD-ID: TDD-0001\n", {
+        "completion-reviewer": response,
+        "implementation-reviewer": response,
+      });
+      const seal = `sha256:${await packSeal(root, shared)}`;
+      const codes = await runOn(
+        root,
+        withBrRef(
+          ledger([
+            { status: "done", evidence: IMPLEMENT_POINTER },
+            { status: "done", evidence: IMPLEMENT_POINTER.replace("#tdd-0001", "#tdd-0002") },
+          ]),
+          "BR-0001",
+        ),
+        { [evidenceFile]: content.replaceAll("{{ROUND_PACK_SEAL}}", seal) },
+        { reviewRequestTddId: "TDD-0001", auditedHashLines: () => lines },
+      );
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 

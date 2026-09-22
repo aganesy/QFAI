@@ -2041,10 +2041,18 @@ interface ReviewPackFile {
 
 /**
  * Whether a request's one visible `TDD-ID` line names this row's review: the
- * row's own id once, and otherwise only ids of rows it could have been reviewed
- * with. The line is a list — one id for a row reviewed alone, the members for
- * a T1 group reviewed in one round (`review-artifact-layout.md`) — so a foreign
- * id, a repeated one or a word that is no id at all names a different review.
+ * row's own id once, and the whole review unit and nothing else. The line is a
+ * list — one id for a row reviewed alone, every member for a T1 group reviewed
+ * in one round (`review-artifact-layout.md`) — so a foreign id, a repeated one
+ * or a word that is no id at all names a different review.
+ *
+ * **The whole unit, not a subset of it.** The layout requires the request to
+ * name "the group's whole membership" for a T1 coherent group. Asking only that
+ * each named id belong to the unit let two completed members of one group each
+ * seal a singleton pack containing itself: every per-row check passed, while
+ * the layout requires one shared pack and one seal for the group's round. The
+ * size comparison is what tells a group reviewed together from a group reviewed
+ * one row at a time, and membership alone cannot.
  */
 function requestNamesReviewUnit(
   request: string,
@@ -2056,6 +2064,7 @@ function requestNamesReviewUnit(
     members !== null &&
     members.filter((member) => member === tddId).length === 1 &&
     new Set(members).size === members.length &&
+    new Set(members).size === reviewUnit.size &&
     members.every((member) => reviewUnit.has(member))
   );
 }

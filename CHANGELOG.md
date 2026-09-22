@@ -345,6 +345,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A review request names its whole review unit, not a subset of it** (#1886).
+  A coherent group is reviewed in one round over the whole group, so its request
+  names every member. The check asked only that each named identifier belong
+  to the unit, which two completed members satisfy by each sealing a pack
+  containing itself — two reviews where the layout requires one, with every
+  per-row check passing. The comparison is now on the set rather than on
+  membership, which is what tells a group reviewed together from a group
+  reviewed one row at a time.
+
 - **Thirty-one ledger selectors name the case they were always about** (#1436).
   A selector that matches no case makes a completed row unrepeatable: the status
   says a test passed and nothing can be run to see it again. Of the rows in that
