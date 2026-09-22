@@ -30,6 +30,7 @@ import {
   isRecord,
   loadShippedWorkflows,
   parseHeaderTable,
+  parseRunnerSelector,
 } from "../helpers/shippedWorkflowFixtures.js";
 
 // tests/integration/<this file> -> tests -> packages/qfai
@@ -82,18 +83,6 @@ const LIGHT_SELECTOR = `\${{ vars.${LIGHT_RUNNER_VARIABLE} || vars.${RUNNER_VARI
 
 /** Both, as the set carries them. A third would be a class nobody declared. */
 const SHIPPED_SELECTORS: readonly string[] = [HEAVY_SELECTOR, LIGHT_SELECTOR].sort();
-
-/**
- * The sanctioned selector form: one or more `vars.` reads, then a literal
- * default. More than one because the set carries two runner classes and the
- * light one falls back to the heavy one before the literal.
- */
-const SELECTOR_FORM_RE = /^\$\{\{\s*((?:vars\.[A-Za-z_][A-Za-z0-9_]*\s*\|\|\s*)+)'([^']*)'\s*\}\}$/;
-
-/** The variable names a selector's chain reads, in order. */
-function chainVariables(chain: string): string[] {
-  return [...chain.matchAll(/vars\.([A-Za-z_][A-Za-z0-9_]*)/g)].map((m) => m[1] ?? "");
-}
 
 /** A `runs-on:` mapping line, for the raw-text accounting scan. */
 const RUNS_ON_LINE_RE = /^\s*runs-on\s*:/;
@@ -152,13 +141,16 @@ function selectorFormViolations(files: readonly ShippedFile[]): SelectorViolatio
       });
       continue;
     }
-    const form = SELECTOR_FORM_RE.exec(value.trim());
+    // The FORM is `shippedWorkflowFixtures`'s, shared with the declared shape
+    // and the end-to-end row. What this row owns is below it: which chains
+    // are sanctioned, and which labels are public.
+    const form = parseRunnerSelector(value);
     if (form === null) {
       violations.push({ site, rule: RULE_FORM, detail: value.trim() });
       continue;
     }
-    const variables = chainVariables(form[1] ?? "");
-    const fallback = form[2] ?? "";
+    const variables = form.variables;
+    const fallback = form.fallback;
     // The chain a job may read: the heavy variable alone, or the light one
     // falling back to it. A light selector that skipped the fallback would
     // send an adopter who set only the heavy variable to the literal default
