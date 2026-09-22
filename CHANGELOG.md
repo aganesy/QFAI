@@ -86,6 +86,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped runner-selector form has one home** (#2143). Three rows parse a
+  job's runner selector — the declared shape, the runner row that owns the
+  literal, and the end-to-end row that reads the tree the tool writes — and each
+  carried its own copy of the pattern. Widening the form cost three rounds of
+  red, one per site, because each rejects on its own and the first failure hides
+  the next. The form now lives beside the other shipped-workflow fixtures and
+  the three parse through it. The values stay where they were: which variable
+  chains are sanctioned and which labels are public remain the runner row's.
+
 - **The dependency workflow says what stays serial in it, and why** (#1870).
   Every other workflow this repository runs states the reasoning behind its
   shape; this one did not, so a reader could not tell a deliberate ordering from
@@ -375,6 +384,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   per-row check passing. The comparison is now on the set rather than on
   membership, which is what tells a group reviewed together from a group
   reviewed one row at a time.
+
+- **Five spec-0010 stories name where their obligation is recorded now**
+  (#2135). The pack forbids five legacy sidecars, and five user stories were
+  written around them: two named a forbidden file outright, three asked for the
+  content one carried. None of the five is retired, because every obligation is
+  still owed — only the file that carried it moved, and the canonical sidecar
+  index records where each went. Product intent, reference signals and anti-goals
+  are recorded in the sources document; the axes a critique is scored on, and
+  the examples that calibrate them, are fixed by the tool rather than authored
+  per pack. Retiring them would have dropped five live requirements because
+  their vehicle changed.
 
 - **Thirty-one ledger selectors name the case they were always about** (#1436).
   A selector that matches no case makes a completed row unrepeatable: the status
