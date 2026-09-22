@@ -326,6 +326,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The minimal-code rule cites the criterion it is about, and both its clauses
+  are carried** (#2088). A spec-0011 business rule about how much code Phase
+  Green writes pointed at a criterion about an `exception` row needing a decision
+  record. The numbering lined up one for one, which is what made it read as
+  correct, and a reader following the rule to its criterion landed on an
+  unrelated obligation while a coverage count over that edge reported it covered.
+  There was no criterion about minimal code at all, so one is added and both the
+  rule and the test case about that subject now cite it. The rule's second
+  clause — that behaviour no test yet demands is not generalized ahead of its
+  own failing run — was stated in no shipped document; it is now in the Phase
+  Green step that already asked for the minimum, and a case asserts it.
+
 - **The Type-column obligation is verified by a test that reads a Type column**
   (#1858). The spec-0013 ledger row for that obligation named a suite about
   full-scan discovery, and the describe it selected was named for the obligation
