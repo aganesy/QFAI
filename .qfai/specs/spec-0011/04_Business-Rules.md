@@ -2,7 +2,7 @@
 
 ## BR-0011-0001: Serial-by-Default Processing
 
-- AC-Refs: AC-0011-0001
+- AC-Refs: AC-0011-0001, AC-0011-0005
 
 - Items are processed one test at a time in `test-list.md` order by default.
 - Parallel processing requires explicit user approval and delivery-planner authorization.
@@ -31,7 +31,7 @@
 
 ## BR-0011-0005: Evidence Hard Rules
 
-- AC-Refs: AC-0011-0005
+- AC-Refs: AC-0011-0007
 
 - Status-only evidence is invalid and MUST be rejected.
 - Both command and result are required for RED and GREEN phases.
