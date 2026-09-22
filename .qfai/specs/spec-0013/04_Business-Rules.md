@@ -36,7 +36,7 @@
 
 ## BR-0013-0006: Delta Rejected Section
 
-- AC-Refs: AC-0013-0006
+- AC-Refs: AC-0013-0009
 
 - Rejected section MUST include `DO NOT` and `Temptation` for each rejection.
 

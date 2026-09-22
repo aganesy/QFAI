@@ -417,6 +417,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The fifth spec-0013 rule cites the criterion about its own subject**
+  (#2133). `BR-0013-0006` requires a rejected option to carry `DO NOT` and
+  `Temptation`, and cited the criterion about reference direction. It now cites
+  `AC-0013-0009`, Delta Rejected Guardrails — the criterion its own example's
+  test case already cites, so the rule's two routes to a criterion now land in
+  the same place. That identifier is declared twice in the pack, which is why
+  the rule was left alone before; every option the open change request about
+  the duplicate offers keeps the first heading's identifier, and the first
+  heading is this one, so the repair does not wait on the decision.
+
 - **Six spec-0006 ledger rows name the case their test file holds** (#1436).
   Each selector restated the row's test-case line rather than naming a test, so
   the command the row prints ran nothing — `TC-0006-0023: review.staleTtlDays
