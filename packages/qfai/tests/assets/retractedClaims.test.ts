@@ -127,7 +127,7 @@ const GOVERNANCE = [
   "packages/qfai/tests/unit/shippedLaneCommands.test.ts",
   "packages/qfai/tests/unit/buildCommand.test.ts",
   "packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
-  ".qfai/decisions/DR-0017-0010-two-tuning-guard-rows-cannot-be-reddened-before-the-history-they-measure-exists.md",
+  ".qfai/decisions/DR-0017-0023-two-tuning-guard-rows-cannot-be-reddened-before-the-history-they-measure-exists.md",
   ".qfai/decisions/CR-20260820-0012-tdd-0069-waits-for-a-ci-run-that-is-gated-on-the-annotation-it-would-justify.md",
   ".qfai/decisions/CR-20260820-0011-the-e2e-annotation-ledger-certifies-127-stories-no-test-carries.md",
 ];
