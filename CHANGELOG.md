@@ -391,6 +391,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Five spec-0016 ledger rows name the case their annotation announces**
+  (#1436). Each row's selector described its test rather than naming it — "cache
+  staleness 25h re-fetch" against a case titled "specifies cache staleness with
+  24h default TTL" — so the command the row prints ran nothing, and the row's
+  own numbers disagreed with the case it meant. The five are repaired from the
+  file's own annotations, which sit on the line above the case each one is
+  about. The dogfooding backlog falls by five.
+
 - **Four spec-0013 rules cite the criterion they are about** (#2133). Five rules
   pointed at a criterion on another subject, with the numbering lining up one for
   one — which is what made it read as correct. Two now point at the criterion
