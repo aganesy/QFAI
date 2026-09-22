@@ -379,8 +379,7 @@ describe("E2E: copilot-instructions.md reference update (US-0003-0010)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0011
-describe("E2E: migration and upgrade support (US-0003-0011)", () => {
+describe("E2E: migration and upgrade support", () => {
   it("init on a fresh directory completes without migration errors", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -394,8 +393,7 @@ describe("E2E: migration and upgrade support (US-0003-0011)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0012
-describe("E2E: version normalization (US-0003-0012)", () => {
+describe("E2E: version normalization", () => {
   it("validate command source imports resolveToolVersion for version consistency", async () => {
     const validateSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -406,8 +404,7 @@ describe("E2E: version normalization (US-0003-0012)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0013
-describe("E2E: internal module workflow documentation (US-0003-0013)", () => {
+describe("E2E: internal module workflow documentation", () => {
   it("validate.ts invokes module-level validators for comprehensive coverage", async () => {
     const validateSrc = await readFile(
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
@@ -421,8 +418,7 @@ describe("E2E: internal module workflow documentation (US-0003-0013)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0014
-describe("E2E: canonical template generation (US-0003-0014)", () => {
+describe("E2E: canonical template generation", () => {
   it("init generates template assets under .qfai/assistant/", async () => {
     const tmpDir = await createTempDir();
     try {
