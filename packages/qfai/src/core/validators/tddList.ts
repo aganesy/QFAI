@@ -3615,7 +3615,12 @@ async function invalidCompletedEvidenceArtifacts(
     const hash = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
     if (hash === null) continue;
     const reviewedRevision = rowEvidenceFieldValue(section, `${prefix} reviewed revision`);
-    closing.set(role, { hash, revision: reviewedRevision });
+    const recordedPack = rowEvidenceFieldValue(section, `${prefix} review pack`);
+    closing.set(role, {
+      hash,
+      revision: reviewedRevision,
+      pack: recordedPack === null ? null : recordedPackPath(recordedPack),
+    });
   }
   const namedPacks = new Set<string>();
   for (const round of rounds) {
@@ -3764,8 +3769,16 @@ function lastAttemptValue(
   return occurrences.filter((occurrence) => occurrence.attempt === attempt).at(-1)?.value ?? null;
 }
 
-/** What a closing reviewer's row-level verdict records. */
-type ClosingVerdict = { hash: string; revision: string | null };
+/**
+ * What a closing reviewer's row-level verdict records.
+ *
+ * `pack` is the row's `<prefix> review pack`. The layout requires the reviewer
+ * turns that close a round to share that round's one pack, and nothing compared
+ * them: a row could point its two role packs at two valid sealed directories
+ * while its closing round named a third, and each of the three checks passed on
+ * its own.
+ */
+type ClosingVerdict = { hash: string; revision: string | null; pack: string | null };
 
 /** The row every round pack of it answers to. */
 type RoundPackRow = {
@@ -3861,6 +3874,15 @@ function invalidPresentRoundPack(
     invalid.push(
       `${label} holding one response per closing reviewer, at the revision and hash its verdict records`,
     );
+  }
+  // The reviewer turns that close a round share that round's pack
+  // (`review-artifact-layout.md`). Each role's row-level field names the
+  // directory its verdict came from, so a value that is not this attempt's is
+  // a verdict taken from a different round.
+  for (const [role, verdict] of entry.closing ?? []) {
+    if (verdict.pack !== null && verdict.pack !== entry.pack) {
+      invalid.push(`${label} named by the ${role} row-level review pack`);
+    }
   }
   return invalid;
 }
