@@ -1980,7 +1980,7 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 
 - Round 1: reviewer verdict: REVISE — qa-gatekeeper#1, RED phase gate: the Round 1 mutation trips the tuning-record check at `:279` and leaves `budgetHolds`, the rate rule this row owns, untested
 - Round 1: Review pack: .qfai/review/review-20260923120009000 <!-- qfai:not-a-citation -->
-- Round 1: Review pack seal: da0e46808d4231a3ba740a90eae6a02ba65435b096343c53ca17323931c42ffb
+- Round 1: Review pack seal: 07d43822881332ac964f230bc584c5e26f13b087af062a4f5aa9d845eba4d704
 
 #### Round 2
 
