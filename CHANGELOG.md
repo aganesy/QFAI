@@ -25,16 +25,43 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **The completion gate reads a `Record re-attestation`** (#2196). Repairing a
-  completed row's evidence record after its review moves the bytes the review
-  hashed, so the recorded `Audited evidence hash` no longer recomputes. The
-  procedure the skill prescribes answers that with a re-attestation in a review
-  pack of its own, but the gate never read it, so a repaired row could not pass
-  `QFAI-TDDLIST-008`. A verdict whose hash disagrees now passes when the entry's
-  `Record re-attestation` equals the recomputed hash. The re-attestation owes a
-  canonical `Record re-attestation pack` and a sha256
-  `Record re-attestation pack seal`, and the seal is recomputed when the pack is
-  in the checkout. The three fields sit outside the audited subject, so writing
+- **spec-0003 states what `qfai init` and the shipped workflows do now**
+  (#2190). Five of its obligations described the product before a deliberate
+  change and the tests asserted the opposite. They said init creates six
+  artifact directories, writes a nine-line `.gitignore` block, and seeds a
+  steering README. They also said a legacy path only warns, and two jobs
+  install. Five more partly disagreed. Each statement now says what the tests
+  and the source do. No test or product code changed, so no ledger row is
+  reopened.
+
+- **spec-0012 states `--auto-serve` as a runner contract, and its five rows
+  are complete** (#2179). The spec said iterate spawns a server, kills child
+  processes with `tree-kill` and force-kills an earlier iterate. The product
+  calls a server runner, invokes the teardown it returns, and by default serves
+  in-process and refuses a port another process holds. The requirement, story,
+  criterion, rule, example and test case now say the same, one ledger row that
+  named four boundaries is split into four, and a new case covers the default
+  runner's refusal. Each row's test is shown to fail when the predicate it pins
+  is broken.
+
+- **The completion gate reads a record re-attestation, one per verdict**
+  (#2196, #2205). Repairing a completed row's evidence record after its review
+  moves the bytes the review hashed, so the recorded `Audited evidence hash` no
+  longer recomputes. The procedure the skill prescribes answers that with a
+  re-attestation in a review pack of its own, but the gate never read it, so a
+  repaired row could not pass `QFAI-TDDLIST-008`. A verdict whose hash disagrees
+  now passes when the re-attestation recorded under that verdict's own prefix —
+  `Spec record re-attestation`, `Code quality record re-attestation` or
+  `Prototype parity record re-attestation` — equals the recomputed hash. Each
+  owes a canonical `<prefix> record re-attestation pack` and a sha256
+  `<prefix> record re-attestation pack seal`, and each seal is recomputed when
+  the pack is in the checkout; two verdicts may name the same pack. The fields
+  are per verdict because one hash cannot answer for two subjects: a
+  `Prototype parity` verdict hashes the captures its `Surface artifacts`
+  manifest names beside the entry's fields, so on a UI-affecting row it never
+  recomputes to the value the other verdicts read. An `n/a` (not UI-affecting)
+  row refuses a parity re-attestation, as it already refuses a parity hash and
+  pack. Every one of these fields sits outside the audited subject, so writing
   them does not move the hash they re-attest.
 
 - **The completion gate accepts the `qa-gatekeeper` forms the skill documents**

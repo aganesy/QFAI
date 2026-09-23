@@ -1,5 +1,12 @@
 # 09 Delta
 
+## Change Requests
+
+| CR ID            | Upstream artifact                                                                                                                     | Mode      | Approved by                                                    | Applied at           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- | --------- | -------------------------------------------------------------- | -------------------- |
+| CR-20260923-0002 | `spec-0012/01_Spec.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md` | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T06:43:33Z |
+| CR-20260923-0005 | `spec-0012/01_Spec.md`, `02_User-stories.md`, `05_Examples.md`                                                                        | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T07:32:21Z |
+
 ## 2026-09-04
 
 - `CR-20260904-0002` (`confirm-only`, `/qfai-sdd 0012`): recorded

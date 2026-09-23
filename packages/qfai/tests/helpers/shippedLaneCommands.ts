@@ -1237,9 +1237,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "a85981ec0e0abce435c2b436ac05f7890475fe1ed5d7741740bf13a270557525"],
-  ["qfai-tests.yml", "9ca5cacd65cca88204a8255fa0e76cb3e5aea5658f351b927d817fa4cae56be0"],
-  ["qfai-validate.yml", "ed6adc47dca67488209552100d3e31285b30e3ddb39e9091d5c516d168695893"],
+  ["qfai-docs.yml", "0ce3c5b45c1b7ed57b26141d922844c1161db4e14ed88a0ce46d0bc5f04993be"],
+  ["qfai-tests.yml", "e896f0ee9d101d64a7b213ca8dc5156c9aa097ddaaf98614660fee628452f13e"],
+  ["qfai-validate.yml", "97bf0b846b2e82a78af0cd8b2b71b44e804cf3fa35dd9013e2b78b400ac40b97"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1961,7 +1961,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Resolve the Node version (adopter file wins, else fall open)","id":"node-version","shell":"bash","run":"<body ef4d36759a58da6e28134d1f67caf0596e88d7509a7d340a1602fa8bb40140d8>"}',
+    '{"name":"Resolve the Node version (adopter file wins, else fall open)","id":"node-version","shell":"bash","run":"<body ec36c46a2894e89b3ee860d1d970fde6608b24441a55538b630e37cfb7cff51a>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2021,7 +2021,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#tests",
-    '{"name":"Resolve the Node version (adopter file wins, else fall open)","id":"node-version","shell":"bash","run":"<body b0edae207c1c3c52b64714d1918eea13cf3c5bde788309418b1b076d7c599d43>"}',
+    '{"name":"Resolve the Node version (adopter file wins, else fall open)","id":"node-version","shell":"bash","run":"<body 05c30d3cc253f524d2e0a7270135ae5bb51c8922f141214af9c4c42420a9e30c>"}',
   ],
   [
     "qfai-tests.yml#tests",
@@ -2057,7 +2057,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Resolve the Node version (adopter file wins, else fall open)","id":"node-version","shell":"bash","run":"<body 49e44c24d0bd88a0bc5a9a720970ff59b5f775a14f36b53a0f45585714c67ece>"}',
+    '{"name":"Resolve the Node version (adopter file wins, else fall open)","id":"node-version","shell":"bash","run":"<body 49bee7a12c5cf4131c8631d4612764c4793907df2cb785c555c3ab006b4cb896>"}',
   ],
   [
     "qfai-validate.yml#validate",
