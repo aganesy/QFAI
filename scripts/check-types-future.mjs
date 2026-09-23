@@ -11,9 +11,24 @@ const futureTscPath = path.join(repoRoot, "node_modules", "typescript-future", "
 const ignoredDirs = new Set([".git", "dist", "node_modules", "tmp"]);
 const tsconfigPattern = /^tsconfig(?:\..+)?\.json$/u;
 
-function collectTsconfigFiles(dirPath) {
+/**
+ * The build configuration, which is scanned on different terms from a tsconfig.
+ *
+ * A tsconfig's compiler options are this repository's own, so a deprecation silenced
+ * there is one this tree relies on. A bundler's are not: it builds its declaration
+ * rollup with options of its own choosing, and the only lever over an option it injects
+ * unconditionally is to silence what the compiler says about it. Refusing that would not
+ * remove the option; it would remove the declarations.
+ *
+ * So one of these is refused and the other is REPORTED. An exemption nobody sees is one
+ * nobody reviews, and the guard that reads only tsconfigs would have reported none.
+ */
+const buildConfigPattern = /^tsup\.config\.(?:ts|mts|cts|js|mjs|cjs)$/u;
+
+function collectConfigFiles(dirPath) {
   const entries = readdirSync(dirPath, { withFileTypes: true });
-  const files = [];
+  const tsconfigs = [];
+  const buildConfigs = [];
 
   for (const entry of entries) {
     const entryPath = path.join(dirPath, entry.name);
@@ -22,22 +37,30 @@ function collectTsconfigFiles(dirPath) {
       if (ignoredDirs.has(entry.name)) {
         continue;
       }
-      files.push(...collectTsconfigFiles(entryPath));
+      const nested = collectConfigFiles(entryPath);
+      tsconfigs.push(...nested.tsconfigs);
+      buildConfigs.push(...nested.buildConfigs);
       continue;
     }
 
-    if (entry.isFile() && tsconfigPattern.test(entry.name)) {
-      files.push(entryPath);
+    if (!entry.isFile()) {
+      continue;
+    }
+    if (tsconfigPattern.test(entry.name)) {
+      tsconfigs.push(entryPath);
+    } else if (buildConfigPattern.test(entry.name)) {
+      buildConfigs.push(entryPath);
     }
   }
 
-  return files;
+  return { tsconfigs, buildConfigs };
 }
 
-const tsconfigFiles = collectTsconfigFiles(repoRoot);
-const ignoredDeprecationFiles = tsconfigFiles.filter((filePath) =>
-  readFileSync(filePath, "utf8").includes('"ignoreDeprecations"'),
-);
+const { tsconfigs: tsconfigFiles, buildConfigs: buildConfigFiles } = collectConfigFiles(repoRoot);
+
+const silences = (filePath) => readFileSync(filePath, "utf8").includes("ignoreDeprecations");
+
+const ignoredDeprecationFiles = tsconfigFiles.filter(silences);
 
 if (ignoredDeprecationFiles.length > 0) {
   console.error("TypeScript deprecations must not be silenced with ignoreDeprecations:");
@@ -45,6 +68,13 @@ if (ignoredDeprecationFiles.length > 0) {
     console.error(`- ${path.relative(repoRoot, filePath)}`);
   }
   process.exit(1);
+}
+
+for (const filePath of buildConfigFiles.filter(silences)) {
+  console.log(
+    `ignoreDeprecations in ${path.relative(repoRoot, filePath)} — a build-tool option, ` +
+      "read the lifting condition beside it",
+  );
 }
 
 const result = spawnSync(process.execPath, [futureTscPath, "-b", "--pretty", "false"], {
