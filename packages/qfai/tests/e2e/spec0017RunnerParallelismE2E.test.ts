@@ -148,6 +148,9 @@ async function fixture(): Promise<{ dir: string; log: string }> {
   // this module exists to record, where the axis is declared at project scope and the runner ignores it.
   // Round 12 measured that: with the axes per project, four files run at once with the override pinned to
   // one. Root config carries `rootKnobs`; the workspace's project carries `projectKnobs`.
+  //
+  // The config imports the project array rather than letting the runner find it, because the runner
+  // stopped discovering a file by that name — which is how the package's own configuration reads it.
   await writeFile(
     path.join(dir, "vitest.config.ts"),
     // **No `vitest/config` import.** `defineConfig` is an identity helper, and the fixture wrote a
@@ -155,13 +158,14 @@ async function fixture(): Promise<{ dir: string; log: string }> {
     // holding vitest, so nothing resolves it. Measured: `require.resolve("vitest/config")` from a
     // fresh temp dir is `MODULE_NOT_FOUND`. Two of round 20's reviewers reproduced the load failure
     // and this stage could not, which is the worst shape a test can have: its outcome depends on the
-    // resolver's mood rather than on the subject. The sibling workspace file next to this one has
-    // always exported a plain object, so the two now agree and neither imports anything but the knobs.
+    // resolver's mood rather than on the subject. The sibling workspace file next to this one exports a
+    // plain array, so the two agree and neither imports anything but the knobs and each other.
     [
       `import { rootKnobs } from "${knobs}";`,
+      `import projects from "./vitest.workspace";`,
       ``,
       `export default {`,
-      `  test: { ...rootKnobs },`,
+      `  test: { ...rootKnobs, projects },`,
       `};`,
       ``,
     ].join("\n"),
