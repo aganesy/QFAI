@@ -18,6 +18,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   in the checkout. The three fields sit outside the audited subject, so writing
   them does not move the hash they re-attest.
 
+- **spec-0003 states the change-scoped document lane, and the rows that pin
+  its matrix, conditions and check names are complete** (#1876). The spec said
+  the document check job depends on nothing and that a skipped dependency
+  always fails the aggregate. The shipped lane skips its checks when no
+  document changed, and its aggregate treats that skip as green only when the
+  scope said so. The spec now says the same, and a new row covers the fourth
+  verify bullet of the aggregate case. The four integration-level cases moved
+  out of the end-to-end file into
+  `tests/integration/shippedWorkflowCheckIndependence.test.ts`, and the seven
+  rows are done: each test is shown to fail when the predicate it pins is
+  broken.
+
 - **`/qfai-implement` says who mutates a predicate that lives in the test
   file** (#2191). Some acceptance tests plant their own broken copy of a
   shipped workflow, so the code they exercise is a checker inside the test and
