@@ -1237,9 +1237,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "281d4461d9fda4ded4db506fafc8556be83046d9d51841b250efb6f573091c44"],
-  ["qfai-tests.yml", "c7631fef52a826d4fd556b0944a708152dd11972c0d0a6c09e4b41374f651ad4"],
-  ["qfai-validate.yml", "313e6d0c1a24c3e49e9ee781a8a687c1632dbd2fbb5f1165202658d1eaeb00a7"],
+  ["qfai-docs.yml", "a85981ec0e0abce435c2b436ac05f7890475fe1ed5d7741740bf13a270557525"],
+  ["qfai-tests.yml", "9ca5cacd65cca88204a8255fa0e76cb3e5aea5658f351b927d817fa4cae56be0"],
+  ["qfai-validate.yml", "ed6adc47dca67488209552100d3e31285b30e3ddb39e9091d5c516d168695893"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1945,7 +1945,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#scope",
-    '{"name":"Decide whether the change can reach a document check","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}","QFAI_EVENT_NAME":"${{ github.event_name }}"},"shell":"bash","run":"<body 749dc7f50e62946ec88828cb8c1222e0f09a1e6628e597e09d9da9d7bde88dd3>"}',
+    '{"name":"Decide whether the change can reach a document check","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}","QFAI_EVENT_NAME":"${{ github.event_name }}","QFAI_PUSH_POLICY":"${{ vars.QFAI_CI_PUSH_POLICY }}"},"shell":"bash","run":"<body d6005f8be5423dcbd8bf3c49a0ecf92aad7745989a85b0f983e1fa6cec3dc2c6>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -1997,7 +1997,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"Select lanes from the name-only diff","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}","QFAI_EVENT_NAME":"${{ github.event_name }}"},"shell":"bash","run":"<body 39e77d7e6e292dc3f06762cd48bedc62e22aa02d35f1504b1e56134023621401>"}',
+    '{"name":"Select lanes from the name-only diff","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}","QFAI_EVENT_NAME":"${{ github.event_name }}","QFAI_PUSH_POLICY":"${{ vars.QFAI_CI_PUSH_POLICY }}"},"shell":"bash","run":"<body b9c9a4f8853d7ee1dbedd57b9e7d2fe52921f1428b1763889582cdd271b89748>"}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -2337,6 +2337,10 @@ export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   // three-dot one on a pull request. Its value comes from `github.event_name`, a closed set
   // GitHub controls, and the body compares it to one literal. It reaches no program.
   ["QFAI_EVENT_NAME", "${{ github.event_name }}"],
+  // The adopter's declaration that every merge passed these checks on a pull request first. The
+  // value is the adopter's own repository variable, and the body only compares it to one literal,
+  // so it reaches no program.
+  ["QFAI_PUSH_POLICY", "${{ vars.QFAI_CI_PUSH_POLICY }}"],
   // The two lists the detection job intersects into its matrix axis. Both are outputs of earlier
   // steps in the same job, each a JSON array this file's own probes built, and the body that reads
   // them parses them as JSON and compares strings. Neither reaches a program.

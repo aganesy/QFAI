@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { DesignMd } from "../../../src/core/design/designMd.js";
 import { findDesignMdViolations } from "../../../src/core/prototyping/designMdViolations.js";
@@ -1127,5 +1127,30 @@ describe("findDesignMdViolations — Tailwind palette/scale utility classes", ()
     const out = findDesignMdViolations(html, sampleDesignMd());
     expect(out.some((v) => v.kind === "color" && v.found === "bg-blue-500")).toBe(true);
     expect(out.some((v) => v.kind === "radius" && v.found === "rounded-xl")).toBe(true);
+  });
+});
+
+describe("findDesignMdViolations is a pure function of its two arguments", () => {
+  // QFAI:SPEC-0012:TC-0012-0328
+  // QFAI:SPEC-0004:TC-0004-0014
+  it("returns the same violations in the same order on every call, reads no clock and changes neither input", () => {
+    const html = '<div style="color:#abcdef"></div><p style="background:#123456"></p>';
+    const designMd = sampleDesignMd();
+    const before = structuredClone(designMd);
+    const dateNow = vi.spyOn(Date, "now");
+    const performanceNow = vi.spyOn(performance, "now");
+    try {
+      const first = findDesignMdViolations(html, designMd);
+      expect(first.length, "the fixture has to produce a violation to compare").toBeGreaterThan(0);
+      for (let call = 0; call < 3; call += 1) {
+        expect(findDesignMdViolations(html, designMd)).toEqual(first);
+      }
+      expect(dateNow).not.toHaveBeenCalled();
+      expect(performanceNow).not.toHaveBeenCalled();
+      expect(designMd).toEqual(before);
+    } finally {
+      dateNow.mockRestore();
+      performanceNow.mockRestore();
+    }
   });
 });

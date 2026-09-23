@@ -159,4 +159,29 @@ describe("what the cost reader refuses", () => {
     expect(jobRuns(lane, avoids)).toBe(false);
     expect(jobRuns(lane, close), "the close gate still empties the path").toBe(false);
   });
+
+  it("reads a protected-policy push as running no lane and no document check", () => {
+    // The scope and detection bodies answer "run nothing" for that push before reading the diff.
+    // Costed from the diff instead, the path would be charged for work its own policy declined.
+    const scoped = {
+      if: "${{ needs.scope.outputs.run == 'true' && github.event.action != 'closed' }}",
+    };
+    const selected = {
+      if: "${{ needs.detection.outputs.selected != '[]' && needs.detection.outputs.selected != '' }}",
+    };
+    const covered = COST_PATHS.find(
+      (entry) => entry.event === "push" && entry.pushPolicy === "protected",
+    );
+    const plain = COST_PATHS.find(
+      (entry) => entry.event === "push" && entry.pushPolicy === undefined,
+    );
+    expect(covered, "a protected-policy push path is declared").toBeDefined();
+    expect(plain, "a default-policy push path is declared").toBeDefined();
+    if (covered === undefined || plain === undefined) return;
+
+    expect(jobRuns(scoped, covered)).toBe(false);
+    expect(jobRuns(selected, covered)).toBe(false);
+    expect(jobRuns(scoped, plain)).toBe(true);
+    expect(jobRuns(selected, plain)).toBe(true);
+  });
 });

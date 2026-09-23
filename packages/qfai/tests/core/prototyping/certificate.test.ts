@@ -90,6 +90,7 @@ describe("buildCompletionCertificate", () => {
 });
 
 describe("write / load round-trip", () => {
+  // QFAI:SPEC-0012:TC-0012-0334
   it("writes to canonical path and load returns the same object", async () => {
     const root = await newTempDir();
     const evidenceRoot = await seedEvidence(root, {

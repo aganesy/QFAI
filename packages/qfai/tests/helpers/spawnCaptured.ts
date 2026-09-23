@@ -19,6 +19,7 @@
  */
 
 import { spawn } from "node:child_process";
+import { cpus } from "node:os";
 
 /** What a spawned child reported, with the cause of its ending kept. */
 export interface Spawned {
@@ -92,6 +93,88 @@ export function outputContext(result: Spawned): string {
   }
   return `${result.outcome}, and the child wrote nothing on either stream — the harness failed rather than the script printing the wrong thing`;
 }
+
+/**
+ * The signals a runtime dies on when its own process is broken.
+ *
+ * A script cannot raise these by answering: an exit is a code, and a script that means to fail
+ * says so with one. On the PowerShell legs they arrive together with a .NET report of an
+ * assembly name that is intact up to a point and garbage after it —
+ * `System.Collections.Concurrent, Version=10.0.0.0, Culture=neutral, PublicKeyT` and then a
+ * character no assembly name holds — which is the host's own memory, not the script.
+ */
+const HOST_CRASH_SIGNALS: ReadonlySet<NodeJS.Signals> = new Set(["SIGABRT", "SIGBUS", "SIGSEGV"]);
+
+/** Whether the child's runtime crashed, rather than the program it ran giving an answer. */
+export function hostCrashed(result: Pick<Spawned, "signal">): boolean {
+  return result.signal !== null && HOST_CRASH_SIGNALS.has(result.signal);
+}
+
+/**
+ * The processor the crash happened on, as the runtime reports it.
+ *
+ * A leg can lose one case to a crash, or nearly all of them, and a rerun of the job on another
+ * runner recovers both. Whether the second mode follows the runner's processor is the question
+ * the log could not answer, so each crash names it.
+ */
+export function cpuModel(): string {
+  return cpus()[0]?.model.trim() || "an unreported processor";
+}
+
+/**
+ * How many crashes one process reruns before it takes the runner's host as broken.
+ *
+ * A host that crashes on one case in two hundred is absorbed by rerunning that case. One that
+ * crashes on nearly every case fails every rerun too, and rerunning two hundred cases there spends
+ * minutes to report the same failure. Past this many, the cases report their crash as it
+ * happened, and one line says what recovers the job.
+ */
+export const HOST_CRASH_LIMIT = 3;
+
+/**
+ * A case runner that reruns a case once when the runtime it spawned crashed, and says so.
+ *
+ * The retry is the whole case, not the spawn: a crash can land after the script has already
+ * written to the fixture's stubs, and a second spawn over that state would count one run's
+ * calls twice. So `attempt` rebuilds everything it reads.
+ *
+ * Each runner counts its own crashes, so a suite shares one and a test can build a fresh one.
+ *
+ * SIMPLIFIED: one retry, on a crash signal only, and none past `HOST_CRASH_LIMIT` crashes. A
+ * second crash, or any exit code, is reported as it happened.
+ * Lift when: the runner's PowerShell no longer crashes this way — the warning below stops
+ * appearing in the test legs' logs.
+ */
+export function hostCrashRetry(
+  warn: (message: string) => void = (message) => {
+    process.stderr.write(`${message}
+`);
+  },
+  limit: number = HOST_CRASH_LIMIT,
+): <T extends Spawned>(attempt: () => Promise<T>) => Promise<T> {
+  let crashes = 0;
+  return async (attempt) => {
+    const first = await attempt();
+    if (!hostCrashed(first)) return first;
+    crashes += 1;
+    if (crashes > limit) {
+      if (crashes === limit + 1) {
+        warn(
+          `the child's runtime has crashed ${crashes} times on ${cpuModel()}; the runner's host is broken, so cases now report their crash without a rerun. Rerun the job on another runner.`,
+        );
+      }
+      return first;
+    }
+    warn(
+      `the child's runtime crashed (${first.outcome}) on ${cpuModel()} before answering; running the case once more. Its report:
+${first.stderr.slice(0, 600)}`,
+    );
+    return await attempt();
+  };
+}
+
+/** The runner the suites share, so one process counts its crashes once. */
+export const retryOnHostCrash = hostCrashRetry();
 
 export interface SpawnCapturedOptions {
   cwd?: string;

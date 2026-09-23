@@ -4,7 +4,90 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The completion gate reads a `Record re-attestation`** (#2196). Repairing a
+  completed row's evidence record after its review moves the bytes the review
+  hashed, so the recorded `Audited evidence hash` no longer recomputes. The
+  procedure the skill prescribes answers that with a re-attestation in a review
+  pack of its own, but the gate never read it, so a repaired row could not pass
+  `QFAI-TDDLIST-008`. A verdict whose hash disagrees now passes when the entry's
+  `Record re-attestation` equals the recomputed hash. The re-attestation owes a
+  canonical `Record re-attestation pack` and a sha256
+  `Record re-attestation pack seal`, and the seal is recomputed when the pack is
+  in the checkout. The three fields sit outside the audited subject, so writing
+  them does not move the hash they re-attest.
+
+- **The completion gate accepts the `qa-gatekeeper` forms the skill documents**
+  (#2197). The skill asks the row-level verdict to name the attempt, round and
+  revision behind it, as in `PASS (qa-gatekeeper#1, Round 1, …)` or
+  `PASS x2 (…)`, and the gate refused any value other than a bare `PASS`. A
+  leading `PASS` is now the verdict; `PASSED` and a leading `REVISE` are still
+  refused.
+
+- **spec-0003 states the change-scoped document lane, and the rows that pin
+  its matrix, conditions and check names are complete** (#1876). The spec said
+  the document check job depends on nothing and that a skipped dependency
+  always fails the aggregate. The shipped lane skips its checks when no
+  document changed, and its aggregate treats that skip as green only when the
+  scope said so. The spec now says the same, and a new row covers the fourth
+  verify bullet of the aggregate case. The four integration-level cases moved
+  out of the end-to-end file into
+  `tests/integration/shippedWorkflowCheckIndependence.test.ts`, and the seven
+  rows are done: each test is shown to fail when the predicate it pins is
+  broken.
+
+- **`/qfai-implement` says who mutates a predicate that lives in the test
+  file** (#2191). Some acceptance tests plant their own broken copy of a
+  shipped workflow, so the code they exercise is a checker inside the test and
+  no production edit can make them fail. The falsifiability step now takes a
+  mutation of that checker as a reverted probe rather than an edit of the
+  acceptance test, and takes the `RED test hash` before the mutation, so the
+  hash matches the restored file.
+
+- **A runner whose PowerShell host crashes on nearly every case stops
+  rerunning them** (#2181). A case whose host crashed reruns once, which
+  absorbs the rare crash. On a host that crashes on nearly every case every
+  rerun fails too, and the leg spent minutes rerunning two hundred cases to
+  report the same failure. Past three crashes in one process the cases report
+  their crash straight away, and one line says the job needs another runner.
+
+- **spec-0012's traceability ledger names the row that holds each case**
+  (#2179). 74 rows of its planning tables named a TDD-ID the test ledger
+  gives to a different case, because the test ledger was renumbered after
+  they were written. Each now names the row that holds its case. Four cases
+  have no row in the test ledger at all, and their rows now say so rather
+  than borrow an id. `REQ-0012-0077` also named a test file that does not
+  exist, and now names the one that does.
+
+- **Four test cases only an annotation carrier named now have a test**
+  (#2160). Six completed rows claimed them, and no test file carried their
+  annotation, so nothing ran them:
+  - `findDesignMdViolations` returns the same violations in the same order on
+    every call, reads no clock and changes neither input;
+  - the prototyping reviewer prompt names the inputs the reviewer reads;
+  - the reviewer prompt leaves brand identity to root `DESIGN.md` and carries
+    the `lap-*` catalog;
+  - `SKILL.md` delegates generation and evaluation to two different
+    sub-agents.
+    Each row's selector now names its test. The carrier-only backlog falls from
+    56 entries to 50.
+
+## [1.12.2] - 2026-09-23
+
 ### Added
+
+- **An adopter whose branch protection requires the shipped checks can stop a
+  push from running them again** (#2095). By default a push to `main` or
+  `master` runs the test lanes and the document checks a second time, because
+  nothing in the files can tell whether that commit passed a pull request
+  first. Setting the repository variable `QFAI_CI_PUSH_POLICY` to `protected`
+  declares that it did. The push then runs neither, and `qfai validate` still
+  runs as the post-merge check. Only that exact value skips, so a typo keeps
+  the default. The skip travels through the scope and detection outputs the
+  aggregates already read, so no new way to report green is added. The pinned
+  cost of that push falls from 13 runner jobs to 6, and from 215 declared
+  timeout-minutes to 35.
 
 - **The shipped test workflow runs the adopter's declared test scripts**
   (#1872). Its five layer lanes each emitted a warning saying the lane had been
@@ -164,6 +247,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   into a job of its own is the remaining Plan step.
 
 ### Changed
+
+- **The shipped validate workflow says what splitting its two profiles costs**
+  (#2095). On a pull request the full and drift profiles run as separate jobs,
+  and each installs the adopter's dependencies first. The validator takes
+  seconds even on a large tree, so the split buys almost no speed; it costs a
+  second install and a second billed minute, and it buys two independent
+  results. The file now says so, and says how to rejoin the two profiles in
+  one job without losing the second result when the first fails.
 
 - **The shipped document workflow runs only when the change could reach what
   it checks** (#2095). Both document checks installed the adopter's dependencies
@@ -465,6 +556,47 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the options, four weaknesses of the adopted unit and the dissent against it.
 
 ### Fixed
+
+- **The spec-0012 capture and serve rows name every case their test case
+  holds** (#1436). Each row's test case is verified by several `it` blocks —
+  three for `--capture`, four for `--auto-serve` — and its selector named a
+  summary of all of them, which matches no test. Each selector is now the list
+  of those blocks, in the array form a selector cell accepts, so the command the
+  row prints runs every case. The dogfooding backlog falls by two in spec-0012.
+
+- **Thirteen more completed ledger rows name the test that runs their case**
+  (#1436). Each row's selector named its test case id rather than a test, and
+  the test that verifies the case, in the file the row names, carried no
+  annotation for it. So the selector resolved to nothing, and the only file
+  naming the case was an annotation carrier. The annotation now sits on that
+  test and the selector names it. The carrier-only backlog falls from 56
+  entries to 39, and the dogfooding backlog by one row in spec-0004 and twelve
+  in spec-0012.
+  A row whose case is verified in a different file from the one it names is
+  left alone. Its `Test file` would have to move with the annotation, and that
+  cell is not writable once it holds a real path.
+
+- **A PowerShell host crash names the processor it happened on** (#2181). A
+  leg can lose one case to the host crash or nearly all of them, and a rerun
+  on another runner recovers both. Whether the second mode follows the
+  runner's processor is what the log could not answer, so each crash warning
+  now names the CPU model.
+
+- **The capture runner's 399 case is named for what it asserts**. It asserted
+  that a 399 response is accepted, the last status below the 400 rejection
+  boundary, and was titled as a rejection. A reader following the title would
+  have taken the boundary to be one status lower than it is.
+
+- **A PowerShell test case whose .NET host crashed runs once more instead of
+  failing the leg** (#2068). The pull-request helper suites spawn `pwsh` per
+  case, and on the hosted runners the host intermittently dies before
+  answering. The report it leaves is an assembly name that is intact up to a
+  point and garbage after it, followed by `SIGABRT` or `SIGSEGV` — the host's
+  own memory, not the script under test. One such case in 225 failed the leg,
+  and `ci-pass` with it, on changes that touched no PowerShell. A case now
+  reruns once, from its own fixture, when its child ends on one of those
+  signals, and the run prints the host's report when it does. A second crash,
+  and every exit code, is still reported as it happened.
 
 - **68 completed ledger rows name the test that already runs their case**
   (#2160). Each row's own `Test file` and `Selector` pointed at a test that
