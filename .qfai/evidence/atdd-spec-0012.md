@@ -484,6 +484,10 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.t
 - Code quality review pack seal: 30730cbffd9f5c8669fc3e6eaa82fedbb7915cd66bd4ebfc9b820d74d4370799
 - Prototype parity: n/a (not UI-affecting)
 - Prototype parity reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts --reporter=verbose && pnpm -C packages/qfai exec vitest run --maxWorkers=7 --testTimeout=600000
+- Checkpoint verification result: PASS — step 1, the Test file: Test Files 1 passed (1); Tests 4 passed (4), naming the TDD-0564 case as passed. Step 2, the full suite: Test Files 770 passed | 3 skipped (773); Tests 14543 passed | 82 skipped (14625), exit 0. The worker count and per-test timeout are raised because two slow suites time out at the default under a full parallel run on this host
+- Checkpoint verification revision: 2d35c540bad7b3ae24611d105b105ce5e63f7f2a
+- Checkpoint verification seal: a8d25651519a0f5a47b1bea669fa3d8e5fda13f859d923e5f9273e2b16539606
 
 ## Coverage Depth Matrix
 
@@ -552,6 +556,12 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.t
 | 23 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0564 RED phase gate on the falsifiability mutation run | #tdd-0564 | the entry omitted a discarded run whose filter selected no test | REVISE |
 | 24 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0564 RED phase gate, resubmitted with that run recorded | #tdd-0564 | Round 1 | PASS |
 | 25 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0564 build-phase GREEN + oracle proof | #tdd-0564 | Round 1 | PASS |
+| 26 | completion-reviewer | completion-reviewer | /qfai-implement: completion review of the five rows, attempt 1 | #tdd-0469 … #tdd-0564 | REQ-0012-0062, which the criterion and the case cite, still contradicts the restated runner contract | REVISE |
+| 27 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of the five rows, attempt 1 | #tdd-0469 … #tdd-0564 | one response per row in that row's attempt-1 pack | PASS |
+| 28 | orchestrator | orchestrator | /qfai-implement: raise, approve and apply CR-20260923-0005, restating REQ-0012-0062, US-0012-0126 and EX-0012-0169's first example | the attempt-1 REVISE | CR-20260923-0005; refactor verify re-taken on the restated tree | PASS |
+| 29 | completion-reviewer | completion-reviewer | /qfai-implement: completion review of the five rows, attempt 2 | #tdd-0469 … #tdd-0564 | one response per row in that row's attempt-2 pack | PASS |
+| 30 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of the five rows, attempt 2 | #tdd-0469 … #tdd-0564 | one response per row in that row's attempt-2 pack | PASS |
+| 31 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0564, its Test file and the full suite | #tdd-0564 | Checkpoint verification fields | PASS |
 
 ## Execution logs
 
