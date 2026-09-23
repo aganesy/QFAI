@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A ledger row that owes a test case and names none is reported**
+  (#2156). `QFAI-TDDLIST-022` (`error`) reports a `Unit`, `Component` or
+  `Integration` row whose `TC-Refs` holds no `TC-*` id: a `-`, `n/a` or a
+  requirement id such as `REQ-0012-0075 (REQ-0109 follow-up)`. The other
+  checks on the column read only the ids it holds, so such a row passed them
+  all. `E2E` and `API` rows, and an `Integration` row carrying a `CON-DB-*`
+  contract, record their obligation in another column and are not reported.
+  The seven spec-0012 rows it reports today are carried as a backlog in
+  `scripts/dogfood-backlog.json`.
+
 - **The shipped-workflow aggregate check has a case for each job-shape
   clause** (#2194). The check rejects an aggregate with a second step, or with
   `continue-on-error` set on the job, and no case failed when either clause

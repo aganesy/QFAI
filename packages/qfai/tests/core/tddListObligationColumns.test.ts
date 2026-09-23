@@ -17,12 +17,13 @@ async function withLedger(
   lines: string[],
   assertion: (issues: Awaited<ReturnType<typeof validateTddList>>) => void,
   testCases = "# TC\n",
+  spec = "# Spec\n",
 ): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tdd-oblig-"));
   try {
     const specDir = path.join(root, ".qfai", "specs", "spec-0001");
     await mkdir(path.join(specDir, "tdd"), { recursive: true });
-    await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n", "utf-8");
+    await writeFile(path.join(specDir, "01_Spec.md"), spec, "utf-8");
     await writeFile(path.join(specDir, "02_User-stories.md"), "# US\n", "utf-8");
     await writeFile(path.join(specDir, "03_Acceptance-Criteria.md"), "# AC\n", "utf-8");
     await writeFile(path.join(specDir, "06_Test-Cases.md"), testCases, "utf-8");
@@ -422,6 +423,95 @@ describe("the Layer enum is checked on every row", () => {
       (issues) => {
         expect(issues.filter((entry) => entry.code === "TDDLIST_UNKNOWN_LAYER")).toEqual([]);
       },
+    );
+  });
+});
+
+describe("a row that owes a test case names one in TC-Refs", () => {
+  const noTestCase = (
+    issues: Awaited<ReturnType<typeof validateTddList>>,
+  ): Awaited<ReturnType<typeof validateTddList>> =>
+    issues.filter((entry) => entry.code === "QFAI-TDDLIST-022");
+
+  it("reports a dash, at every status", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | -       | Unit  | tests/a.test.ts | case a   | done   | -     | -        |",
+        "| TDD-0002 | -       | Unit  | tests/b.test.ts | case b   | todo   | -     | -        |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found.map((entry) => entry.refs?.[0])).toEqual(["TDD-0001", "TDD-0002"]);
+        expect(found[0]?.severity).toBe("error");
+        expect(found[0]?.message).toContain('TC-Refs "-"');
+        expect(found[0]?.suggested_action).toContain("/qfai-sdd");
+        expect(found[0]?.suggested_action).toContain("retire the row");
+      },
+    );
+  });
+
+  it("reports a requirement id, which fills the cell and names no test case", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | REQ-0001-0001 (follow-up) | Integration | tests/a.test.ts | a | done | - | - |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.message).toContain("REQ-0001-0001 (follow-up)");
+      },
+    );
+  });
+
+  it("accepts a test case beside other text", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 (follow-up) | Unit | tests/a.test.ts | a | done | - | - |",
+      ],
+      (issues) => {
+        expect(noTestCase(issues)).toEqual([]);
+      },
+    );
+  });
+
+  it("exempts a row whose Layer records its obligation in another column", async () => {
+    await withLedger(
+      [
+        `${BASE_HEADERS} US-Refs | CON-API-Refs | CON-DB-Refs |`,
+        `${BASE_SEP} ------- | ------------ | ----------- |`,
+        "| TDD-0001 | - | E2E         | tests/e2e/a.ts  | a | done | - | - | US-0001-0001 | -            | -           |",
+        "| TDD-0002 | - | API         | tests/api/a.ts  | b | done | - | - | -            | CON-API-0001 | -           |",
+        "| TDD-0003 | - | Integration | tests/a.test.ts | c | done | - | - | -            | -            | CON-DB-0001 |",
+        "| TDD-0004 | CON-DB-0002 | Integration | tests/b.test.ts | d | todo | - | - | - | - | -  |",
+      ],
+      (issues) => {
+        expect(noTestCase(issues)).toEqual([]);
+      },
+    );
+  });
+
+  it("demotes the finding on a retired spec", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | -       | Unit  | tests/a.test.ts | case a   | done   | -     | -        |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.severity).toBe("info");
+      },
+      "# TC\n",
+      ["# SPEC-0001 Sample", "", "- Status: deprecated", "- Deprecated-at: 2026-01-01", ""].join(
+        "\n",
+      ),
     );
   });
 });
