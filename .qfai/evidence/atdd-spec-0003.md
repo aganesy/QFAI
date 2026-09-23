@@ -99,7 +99,7 @@ Preflight: confidence high
   describe and its count case renamed to the counts the case asserts. No assertion
   changed. `CR-20260923-0011` asked for it.
 - `packages/qfai/tests/integration/initSpec0003.test.ts`: the `TC-0003-0001` case
-  now runs init into an empty directory and asserts verify bullets 1 and 2, for the
+  now runs init into an empty directory and asserts all three verify bullets, for the
   `TDD-0001` row that `CR-20260923-0011` reset.
 
 ## Commands executed + key outputs
@@ -798,15 +798,29 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - Branch: falsifiability — init already writes no artifact directory, so the case passes on its first run and no natural RED can be observed
 - Predicate to break: packages/qfai/src/cli/commands/init.ts:509, `copyTemplateTree(qfaiAssets, destQfai, …)` — it writes under `.qfai/` what `packages/qfai/assets/init/.qfai/` ships, and that tree holds `assistant/` and `waivers.yml` and no artifact directory
 - Mutation: add an empty file `packages/qfai/assets/init/.qfai/specs/.gitkeep`
-- Why it fails: init copies the new `specs/` directory into `.qfai/`, and the case's last assertion finds `specs` among the six artifact directories
+- Why it fails: init copies the new `specs/` directory into `.qfai/`, and the bullet 1 assertion at line 75 finds `specs` among the six artifact directories
 - Other rows: the same mutation fails `tests/e2e/initE2E.test.ts` "creates .qfai/ with assistant assets and no artifact scaffold", the test `TDD-0069` (`US-0003-0001`, `todo`) is expected to take, and `tests/cli/init.test.ts` "does not create artifact scaffold outside assistant assets", which no ledger row names. Both were run under the mutation and failed on an assertion. `TDD-0002` to `TDD-0015` share the Test file and are `exception`; `TDD-0025` shares it and is `done` (see the re-verify below)
 
 The case replaces the backfill test that only read `init.ts` for the string
-`runInit`. It runs `runInit` into an empty temporary directory and asserts verify
-bullets 1 and 2 of `TC-0003-0001`: `.qfai/assistant/` is a directory,
-`qfai.config.yaml` is a file, and none of `specs`, `contracts`, `discussion`,
-`evidence`, `review` and `report` exists under `.qfai/`. The describe title is
-unchanged, so the ledger's `Test file` and `Selector` already name it.
+`runInit`. It runs `runInit` into an empty temporary directory and asserts all
+three verify bullets of `TC-0003-0001`. No other ledger row cites the case.
+
+| Verify bullet | Assertion | Line |
+| ------------- | --------- | ---- |
+| 1 | `.qfai/assistant/` is a directory, and none of `specs`, `contracts`, `discussion`, `evidence`, `review` and `report` exists under `.qfai/` | 70, 75 |
+| 2 | `qfai.config.yaml` is a file | 78 |
+| 3 | every `qfai-*` skill directory under `.qfai/assistant/skills/` is a symlink in each of `.claude/skills`, `.agents/skills`, `.codex/skills` and `.github/skills`, and its target ends in `.qfai/assistant/skills/<skill>`; a guard first requires at least one such skill | 87, 98 |
+
+Bullet 3 is checked the way `tests/cli/init.test.ts` "creates template additions
+with symlinks" checks one skill: `lstat` reports a symbolic link and `readlink`
+names the canonical directory. That file's two helpers are local to it, so the
+check is written inline. It requires a real symlink on every platform, as that
+test does: init has no fallback for a link it cannot create, and on Windows
+without Developer Mode it stops with an error instead.
+
+The describe title is unchanged, so the ledger's `Test file` and `Selector`
+already name the case. The mutation below breaks bullet 1, the obligation the
+change request moved, and it stays the row's predicate.
 
 The two tests the change request names assert the same clause and cannot be this
 row's test. `TC-0003-0001` declares `Level: integration`, so its home is
@@ -820,16 +834,19 @@ is right for the Test file. The file's header already carries
 - First-run command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0001: Empty directory initialization"
 - First-run result: PASS — Test Files 1 passed (1); Tests 1 passed | 23 skipped (24)
 - Mutation trial command: the same command, with the empty file `packages/qfai/assets/init/.qfai/specs/.gitkeep` added
-- Mutation trial result: FAIL — Test Files 1 failed (1); Tests 1 failed | 23 skipped (24). The row's case fails on `AssertionError: init wrote an artifact directory under .qfai/: expected [ 'specs' ] to deeply equal []` at `tests/integration/initSpec0003.test.ts:71:72`
-- Mutation trial revision: working-tree+a94042123cedd6552a73e23067ca252742f883b58c43bf78213e8d24c753da95
+- Mutation trial result: FAIL — Test Files 1 failed (1); Tests 1 failed | 23 skipped (24). The row's case fails on `AssertionError: init wrote an artifact directory under .qfai/: expected [ 'specs' ] to deeply equal []` at `tests/integration/initSpec0003.test.ts:75:72`
+- Mutation trial revision: working-tree+9ba92159e7f398085ba887d31a27152e3353cb5b9f171bea46d6793ab3716d2f
 - Restored GREEN command: the same command, after `rm -rf packages/qfai/assets/init/.qfai/specs`
 - Restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed | 23 skipped (24)
+- Test file command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts
+- Test file result: PASS — Test Files 1 passed (1); Tests 24 passed (24)
+- Test file revision: working-tree+7e98884c7e3c2ab9aa28703507d9661672229d1a78219c693a823672c1bb78b0
 
 The trial shows the mutation discriminates. It is not the row's falsifiability
 trio: `/qfai-implement` Phase Red step 3c applies the mutation, records the
 `Round 1:` fields and routes `qa-gatekeeper` while it is in the tree.
 
-- RED test hash: 4b2a66e3d4750d41608cd697d8e8caa256cc822f85accc1ef322de99ed396206
+- RED test hash: 5944d673da0c6056d3cb765a2a2bb103efe8ab8595e2f0b3d11715a7bb56ecb3
 - RED test manifest:
 
 ```text
@@ -848,7 +865,7 @@ describe is unchanged. Its selector was re-run against the edited file:
 
 - Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0025: assistantPaths.ts SSOT module"
 - Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 23 skipped (24)
-- Re-verify revision: working-tree+e793cf9742da0890faf9551702abf02099f8f7846da9685fa54d073c3b4d20a7
+- Re-verify revision: working-tree+7e98884c7e3c2ab9aa28703507d9661672229d1a78219c693a823672c1bb78b0
 
 ### TDD-0037
 
@@ -961,6 +978,7 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / 
 | 46 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: write the TDD-0001 case and hand the row over on the falsifiability path, with a reverted trial of the mutation | CR-20260923-0011 | packages/qfai/tests/integration/initSpec0003.test.ts; #tdd-0001 | PASS |
 | 47 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: shared-artifact re-verify of TDD-0025 under the edited Test file | #tdd-0001 | #tdd-0001 Shared-artifact re-verify; the selector passes | PASS |
 | 48 | completion-reviewer | - | /qfai-atdd: completion review of TDD-0001 and TDD-0037 | #tdd-0001, #tdd-0037 | not run in this invocation | PENDING |
+| 49 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: add the TC-0003-0001 verify bullet 3 assertion to the TDD-0001 case, re-take the mutation trial and the RED test hash | #tdd-0001 | packages/qfai/tests/integration/initSpec0003.test.ts; #tdd-0001 | PASS |
 
 ## Cross-spec obligations
 
@@ -984,9 +1002,9 @@ Recorded per row under `## Ledger rows advanced`.
 - The `TDD-0093` entry's `Mutation:` line names the single-clause edit its handover
   planned. The run it closed on removes both job-shape clauses, and Round 1 records both
   runs.
-- The `TDD-0001` case asserts verify bullets 1 and 2 of `TC-0003-0001`. Bullet 3, the
-  skill symlinks, is asserted by `tests/e2e/initE2E.test.ts` "creates skill symlinks in
-  integration directories" and not by this case.
+- The `TDD-0001` case asserts all three verify bullets of `TC-0003-0001`. Its one
+  mutation breaks bullet 1; no mutation has been run against the bullet 2 and bullet 3
+  assertions.
 - Row 37's `Selector` still holds the old describe title until `/qfai-implement` copies
   the one in the `TDD-0037` entry, so validate reports `TDDLIST_SELECTOR_UNRESOLVED` on
   it until then.
