@@ -4,6 +4,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A runner whose PowerShell host crashes on nearly every case stops
+  rerunning them** (#2181). A case whose host crashed reruns once, which
+  absorbs the rare crash. On a host that crashes on nearly every case every
+  rerun fails too, and the leg spent minutes rerunning two hundred cases to
+  report the same failure. Past three crashes in one process the cases report
+  their crash straight away, and one line says the job needs another runner.
+
 ## [1.12.2] - 2026-09-23
 
 ### Added
@@ -487,13 +496,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the options, four weaknesses of the adopted unit and the dissent against it.
 
 ### Fixed
-
-- **A runner whose PowerShell host crashes on nearly every case stops
-  rerunning them** (#2181). A case whose host crashed reruns once, which
-  absorbs the rare crash. On a host that crashes on nearly every case every
-  rerun fails too, and the leg spent minutes rerunning two hundred cases to
-  report the same failure. Past three crashes in one process the cases report
-  their crash straight away, and one line says the job needs another runner.
 
 - **Four test cases only an annotation carrier named now have a test**
   (#2160). Six completed rows claimed them, and no test file carried their
