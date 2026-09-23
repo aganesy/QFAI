@@ -111,18 +111,6 @@ export function hostCrashed(result: Pick<Spawned, "signal">): boolean {
 }
 
 /**
- * Runs one case again when the runtime it spawned crashed, and says so.
- *
- * The retry is the whole case, not the spawn: a crash can land after the script has already
- * written to the fixture's stubs, and a second spawn over that state would count one run's
- * calls twice. So `attempt` rebuilds everything it reads.
- *
- * SIMPLIFIED: one retry, on a crash signal only. A second crash, or any exit code, is reported
- * as it happened.
- * Lift when: the runner's PowerShell no longer crashes this way — the warning below stops
- * appearing in the test legs' logs.
- */
-/**
  * The processor the crash happened on, as the runtime reports it.
  *
  * A leg can lose one case to a crash, or nearly all of them, and a rerun of the job on another
@@ -133,19 +121,60 @@ export function cpuModel(): string {
   return cpus()[0]?.model.trim() || "an unreported processor";
 }
 
-export async function retryOnHostCrash<T extends Spawned>(
-  attempt: () => Promise<T>,
+/**
+ * How many crashes one process reruns before it takes the runner's host as broken.
+ *
+ * A host that crashes on one case in two hundred is absorbed by rerunning that case. One that
+ * crashes on nearly every case fails every rerun too, and rerunning two hundred cases there spends
+ * minutes to report the same failure. Past this many, the cases report their crash as it
+ * happened, and one line says what recovers the job.
+ */
+export const HOST_CRASH_LIMIT = 3;
+
+/**
+ * A case runner that reruns a case once when the runtime it spawned crashed, and says so.
+ *
+ * The retry is the whole case, not the spawn: a crash can land after the script has already
+ * written to the fixture's stubs, and a second spawn over that state would count one run's
+ * calls twice. So `attempt` rebuilds everything it reads.
+ *
+ * Each runner counts its own crashes, so a suite shares one and a test can build a fresh one.
+ *
+ * SIMPLIFIED: one retry, on a crash signal only, and none past `HOST_CRASH_LIMIT` crashes. A
+ * second crash, or any exit code, is reported as it happened.
+ * Lift when: the runner's PowerShell no longer crashes this way — the warning below stops
+ * appearing in the test legs' logs.
+ */
+export function hostCrashRetry(
   warn: (message: string) => void = (message) => {
-    process.stderr.write(`${message}\n`);
+    process.stderr.write(`${message}
+`);
   },
-): Promise<T> {
-  const first = await attempt();
-  if (!hostCrashed(first)) return first;
-  warn(
-    `the child's runtime crashed (${first.outcome}) on ${cpuModel()} before answering; running the case once more. Its report:\n${first.stderr.slice(0, 600)}`,
-  );
-  return await attempt();
+  limit: number = HOST_CRASH_LIMIT,
+): <T extends Spawned>(attempt: () => Promise<T>) => Promise<T> {
+  let crashes = 0;
+  return async (attempt) => {
+    const first = await attempt();
+    if (!hostCrashed(first)) return first;
+    crashes += 1;
+    if (crashes > limit) {
+      if (crashes === limit + 1) {
+        warn(
+          `the child's runtime has crashed ${crashes} times on ${cpuModel()}; the runner's host is broken, so cases now report their crash without a rerun. Rerun the job on another runner.`,
+        );
+      }
+      return first;
+    }
+    warn(
+      `the child's runtime crashed (${first.outcome}) on ${cpuModel()} before answering; running the case once more. Its report:
+${first.stderr.slice(0, 600)}`,
+    );
+    return await attempt();
+  };
 }
+
+/** The runner the suites share, so one process counts its crashes once. */
+export const retryOnHostCrash = hostCrashRetry();
 
 export interface SpawnCapturedOptions {
   cwd?: string;
