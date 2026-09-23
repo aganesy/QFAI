@@ -4,6 +4,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The test runner moves to its fourth major, and the coverage provider with
+  it** (#2173). The two move as a pair: the provider's peer range names the
+  runner version exactly, so a provider a major ahead of the runner fails at
+  import rather than at install. Three declarations follow the runner's own
+  changes — the project list is imported by the root configuration instead of
+  being discovered by file name, isolation is declared directly rather than
+  inside a pool block, and `vite` is declared as the peer the runner requires
+  instead of being resolved for it. The supported Node range is unchanged.
+
+- **The type checker moves to TypeScript 6.** The seventh major ships the
+  compiler as a native binary and no longer exposes the classic compiler API
+  from its main entry, which the test tree and the declaration build both read;
+  the linter refuses to load against it at all. The sixth is the newest release
+  every part of this toolchain supports, and it reports the deprecations the
+  seventh turns into errors. The forward lane keeps type-checking against the
+  seventh, so nothing stops tracking it.
+
+  One deprecation is silenced, inside the declaration rollup only: the bundler
+  builds that rollup with `baseUrl` whatever the project declares, and this
+  package declares neither `baseUrl` nor `paths`. The lifting condition is
+  written beside it, and the forward lane now names any such exemption on a
+  passing run instead of reading only the compiler configuration.
+
+## [1.12.3] - 2026-09-24
+
 ### Fixed
 
 - **The rest of spec-0003 states what `qfai init` and the shipped workflows
@@ -15,6 +42,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   runner tier is deferred. Each now says what the tests and the source do. The
   one ledger row whose test case moved, `TDD-0001`, is reopened: its test
   never asserted that init leaves the artifact directories out.
+
+- **spec-0012 states the auto-serve SIGINT path as the runner contract**
+  (#2201). `TC-0012-0462` still described iterate killing child server
+  processes, while iterate only invokes the teardown its server runner
+  returns. The case now names three clauses:
+  - the handler is installed after the runner returns and removed at the end of
+    the cycle;
+  - teardown and removal still run when the cycle fails;
+  - a SIGINT runs the teardown once, within 2 seconds.
+
+  Each clause has its own row. `NFR-0106` now states the 2-second bound the
+  case cites. The first row's test also checks the handler is not installed
+  before the runner is called, and the bound check runs unconditionally.
 
 - **spec-0013 records the change request behind its repointed rules** (#2133).
   Five rules were repointed at the criterion about their own subject with no
