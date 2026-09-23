@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0012 states `--auto-serve` as a runner contract, and its five rows
+  are complete** (#2179). The spec said iterate spawns a server, kills child
+  processes with `tree-kill` and force-kills an earlier iterate. The product
+  calls a server runner, invokes the teardown it returns, and by default serves
+  in-process and refuses a port another process holds. The requirement, story,
+  criterion, rule, example and test case now say the same, one ledger row that
+  named four boundaries is split into four, and a new case covers the default
+  runner's refusal. Each row's test is shown to fail when the predicate it pins
+  is broken.
+
 - **`/qfai-implement` says who mutates a predicate that lives in the test
   file** (#2191). Some acceptance tests plant their own broken copy of a
   shipped workflow, so the code they exercise is a checker inside the test and

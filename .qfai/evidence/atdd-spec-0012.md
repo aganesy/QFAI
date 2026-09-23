@@ -87,6 +87,15 @@ No session opened. The change request fixes both rows, their test cases and the
 test file each case names, and nothing surfaced during the run that the spec or
 the change request leaves open.
 
+
+### /qfai-implement — run started 2026-09-23T06:48:00.000Z
+
+Preflight: confidence high
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-23T07:01:00Z | d310849f2a0d737689212974f479c2007c2a4f27 | 2026-09-23T07:03:00Z | a ledger row whose Selector names four boundaries of one test case | empty | none in flight | 1 | 0 | 0 |
+
 ## Ledger rows advanced
 
 This run takes up the rows `CR-20260923-0002` owes, as `CR-20260923-0004`
@@ -121,6 +130,62 @@ The case's stub runner returns a well-formed `ok: true` result, so a call that
 should not happen is caught by the case's own assertion rather than by iterate
 failing to read an empty result.
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingIterate.ts, `runPrototypingIterate`, the `if (options.autoServe)` guard — with the flag off no runner is called
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts -t "does not invoke the server runner when --auto-serve is absent"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 3 skipped (4). The row's case fails on `AssertionError: expected "spy" to not be called at all, but actually been called 1 times` at `tests/integration/cli/commands/prototypingIterate.autoServe.test.ts:126:24`
+
+The edit:
+
+```diff
+-  if (options.autoServe) {
++  if (options.autoServe ?? options.serverRunner) {
+```
+
+- Round 1: Falsifiability revision: working-tree+7a8f32f6baf1088c4c44836c7d0e23476db662fb1832fcf95dad042a1ec63d5d
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: a1b34eacd9d13660bb4eff8d8471d83e92b692bb92fc9ed252bf1eac53039a77
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts
+```
+
+- Round 1: Revision: 8e198e459f426d6624cbf56808d297bdf2fa78d2
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts -t "does not invoke the server runner when --auto-serve is absent"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+7a8f32f6baf1088c4c44836c7d0e23476db662fb1832fcf95dad042a1ec63d5d; qa-gatekeeper#2 PASS, build-phase GREEN + oracle proof, reviewed revision 8e198e459f426d6624cbf56808d297bdf2fa78d2
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the case and criterion cite REQ-0012-0062, which still contradicts the restated runner contract; CR-20260923-0005 restates it, and no test or production code changes
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923070010000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 56721b3c7b1257d40d353cde24231170975244a804c1394e06f9454a5163ea2c
+
+- Round 1: reviewer verdict (attempt 2): PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260923070020000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): 2d241794cc2e4e64001299328cec9b0a2f193a7acd7ac219e7931d16f9d98182
+- Spec review: PASS
+- Spec reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Spec audited evidence hash: 5e4e86c7e10234e38ba403eae219a23d5d6a3b27a3a560a95277ea92e4b75ec3
+- Spec review pack: .qfai/review/review-20260923070020000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 2d241794cc2e4e64001299328cec9b0a2f193a7acd7ac219e7931d16f9d98182
+- Code quality review: PASS
+- Code quality reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Code quality audited evidence hash: 5e4e86c7e10234e38ba403eae219a23d5d6a3b27a3a560a95277ea92e4b75ec3
+- Code quality review pack: .qfai/review/review-20260923070020000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 2d241794cc2e4e64001299328cec9b0a2f193a7acd7ac219e7931d16f9d98182
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 4 passed (4). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Checkpoint verification seal: 1f2ac512b423453dcb5888136f34104b8c33fb0386a2fb918272833601bcfa41
+
 ### TDD-0561
 
 - TDD-ID: TDD-0561
@@ -152,6 +217,62 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
   Test Files 1 passed (1); Tests 1 passed | 16 skipped (17)
 ```
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/core/prototyping/defaultServerRunner.ts, `bindServer`, the `EADDRINUSE` refusal reason that names the held port
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts -t "TC-0012-0489 \(TDD-0561\): refuses the held port, binds no other and iterate exits 2 naming it"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 16 skipped (17). The row's case fails on `AssertionError: expected 'qfai prototyping iterate --auto-serve…' to contain 'port 54313'` at `tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts:599:37`
+
+The edit:
+
+```diff
+-            `port ${port} already in use; refusing to attach to a foreign process. ` +
++            `port already in use; refusing to attach to a foreign process. ` +
+```
+
+- Round 1: Falsifiability revision: working-tree+4172d4ebd95524128f278757c71f61cb2ff7bc926c3ad409eee0c37c51a21f1c
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 30076a2c4b1382a476d60bb74673f6c13cca1ef4ba8697ac3e3c814389d38f57
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts
+```
+
+- Round 1: Revision: 8e198e459f426d6624cbf56808d297bdf2fa78d2
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts -t "TC-0012-0489 \(TDD-0561\): refuses the held port, binds no other and iterate exits 2 naming it"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 16 skipped (17)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 17 passed (17). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+4172d4ebd95524128f278757c71f61cb2ff7bc926c3ad409eee0c37c51a21f1c; qa-gatekeeper#2 PASS, build-phase GREEN + oracle proof, reviewed revision 8e198e459f426d6624cbf56808d297bdf2fa78d2
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the case and criterion cite REQ-0012-0062, which still contradicts the restated runner contract; CR-20260923-0005 restates it, and no test or production code changes
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923070011000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 61c338610efc9a8a6952864f537c89260b272f62908a7c75fffc30ada5c8eccd
+
+- Round 1: reviewer verdict (attempt 2): PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260923070021000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): 2216fa8157c07ad7e3f91e2844a0bad9d7c99f6e4ed8e3e6beec1d3664f4b60b
+- Spec review: PASS
+- Spec reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Spec audited evidence hash: ca6f856b0b64eeeec4212d88e1003697c9ec07c04c9d252998efa3abe8147ccf
+- Spec review pack: .qfai/review/review-20260923070021000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 2216fa8157c07ad7e3f91e2844a0bad9d7c99f6e4ed8e3e6beec1d3664f4b60b
+- Code quality review: PASS
+- Code quality reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Code quality audited evidence hash: ca6f856b0b64eeeec4212d88e1003697c9ec07c04c9d252998efa3abe8147ccf
+- Code quality review pack: .qfai/review/review-20260923070021000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 2216fa8157c07ad7e3f91e2844a0bad9d7c99f6e4ed8e3e6beec1d3664f4b60b
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 17 passed (17). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Checkpoint verification seal: 70e129296d4d2063f21aaf1c3a094f8f25cafd43fe2c26dc10612dde7b6e9e72
+
 ### TDD-0562
 
 - TDD-ID: TDD-0562
@@ -163,6 +284,62 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 - Predicate to break: packages/qfai/src/cli/commands/prototypingIterate.ts:1369, `runPrototypingIterate` — `await teardownOnce();`, the cycle-end teardown in the `finally` block
 - Mutation: delete line 1369
 - Why it fails: nothing else invokes the teardown during the cycle, so `expect(teardown).toHaveBeenCalledTimes(1)` sees 0 calls
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingIterate.ts, `runPrototypingIterate`, the cycle-end `await teardownOnce();`
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts -t "calls the runner once and invokes the returned teardown at cycle end"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 3 skipped (4). The row's case fails on `AssertionError: expected "spy" to be called 1 times, but got 0 times` at `tests/integration/cli/commands/prototypingIterate.autoServe.test.ts:146:22`
+
+The edit:
+
+```diff
+-    await teardownOnce();
++
+```
+
+- Round 1: Falsifiability revision: working-tree+57d63f74344721fb082af6bd1a6d76b205864c9237c530e1e773f1d61af06486
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: a1b34eacd9d13660bb4eff8d8471d83e92b692bb92fc9ed252bf1eac53039a77
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts
+```
+
+- Round 1: Revision: 8e198e459f426d6624cbf56808d297bdf2fa78d2
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts -t "calls the runner once and invokes the returned teardown at cycle end"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+57d63f74344721fb082af6bd1a6d76b205864c9237c530e1e773f1d61af06486; qa-gatekeeper#2 PASS, build-phase GREEN + oracle proof, reviewed revision 8e198e459f426d6624cbf56808d297bdf2fa78d2
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the case and criterion cite REQ-0012-0062, which still contradicts the restated runner contract; CR-20260923-0005 restates it, and no test or production code changes
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923070012000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 8e3f487b19031aa00a191e4d593f3ed8f7598e7e6c34d28c0ce977dc3efbe62e
+
+- Round 1: reviewer verdict (attempt 2): PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260923070022000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): 3879bd83cd09457da35beee476a185f405d2dcdc653777d88b8568721d8248d7
+- Spec review: PASS
+- Spec reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Spec audited evidence hash: ced20f278f26a7aff4c7f41e8af6c4695b2f38cee810882629dfd449ba838744
+- Spec review pack: .qfai/review/review-20260923070022000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 3879bd83cd09457da35beee476a185f405d2dcdc653777d88b8568721d8248d7
+- Code quality review: PASS
+- Code quality reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Code quality audited evidence hash: ced20f278f26a7aff4c7f41e8af6c4695b2f38cee810882629dfd449ba838744
+- Code quality review pack: .qfai/review/review-20260923070022000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 3879bd83cd09457da35beee476a185f405d2dcdc653777d88b8568721d8248d7
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 4 passed (4). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Checkpoint verification seal: 1f2ac512b423453dcb5888136f34104b8c33fb0386a2fb918272833601bcfa41
 
 ### TDD-0563
 
@@ -180,6 +357,62 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
   `serverTeardown` is initialised to `null` and never assigned again, so `tsc` narrows it to `never` inside `teardownOnce` and rejects the call at line 1276
 - Distinct from `TDD-0562`, whose predicate is the cycle-end call at line 1369
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingIterate.ts, `runPrototypingIterate`, `serverTeardown = serverResult.teardown;` — an ok runner's teardown is adopted
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts -t "accepts runner.ok=true \(recovery path\) and continues to cycle completion"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 3 skipped (4). The row's case fails on `AssertionError: expected "spy" to be called 1 times, but got 0 times` at `tests/integration/cli/commands/prototypingIterate.autoServe.test.ts:167:22`
+
+The edit:
+
+```diff
+-    serverTeardown = serverResult.teardown;
++    serverTeardown = null;
+```
+
+- Round 1: Falsifiability revision: working-tree+e94047bf4e1c76bbaf42f2db7d828e5807c3d2704b8ac779162ab7db879ea8bc
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: a1b34eacd9d13660bb4eff8d8471d83e92b692bb92fc9ed252bf1eac53039a77
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts
+```
+
+- Round 1: Revision: 8e198e459f426d6624cbf56808d297bdf2fa78d2
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts -t "accepts runner.ok=true \(recovery path\) and continues to cycle completion"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+e94047bf4e1c76bbaf42f2db7d828e5807c3d2704b8ac779162ab7db879ea8bc; qa-gatekeeper#2 PASS, build-phase GREEN + oracle proof, reviewed revision 8e198e459f426d6624cbf56808d297bdf2fa78d2
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the case and criterion cite REQ-0012-0062, which still contradicts the restated runner contract; CR-20260923-0005 restates it, and no test or production code changes
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923070013000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 0c622d183a2b0bd5871876ecd0ed3fdfadddca84bf63801235edd043ba50622f
+
+- Round 1: reviewer verdict (attempt 2): PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260923070023000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): 7cb24849bc1ac26124e7c0736662c0aa01593243ba4c61e3c5f7efbfd1cce492
+- Spec review: PASS
+- Spec reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Spec audited evidence hash: d409f65645994178ed17fb2006531ed298cc4ddd854d1e36b9e3b302eab9e940
+- Spec review pack: .qfai/review/review-20260923070023000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 7cb24849bc1ac26124e7c0736662c0aa01593243ba4c61e3c5f7efbfd1cce492
+- Code quality review: PASS
+- Code quality reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Code quality audited evidence hash: d409f65645994178ed17fb2006531ed298cc4ddd854d1e36b9e3b302eab9e940
+- Code quality review pack: .qfai/review/review-20260923070023000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 7cb24849bc1ac26124e7c0736662c0aa01593243ba4c61e3c5f7efbfd1cce492
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 4 passed (4). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Checkpoint verification seal: 1f2ac512b423453dcb5888136f34104b8c33fb0386a2fb918272833601bcfa41
+
 ### TDD-0564
 
 - TDD-ID: TDD-0564
@@ -191,6 +424,66 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 - Predicate to break: packages/qfai/src/cli/commands/prototypingIterate.ts:1318, `runPrototypingIterate` — the refusal `error(...)` that puts the runner's reason on stderr
 - Mutation: ``error(`qfai prototyping iterate --auto-serve: ${serverResult.reason}`);`` to `error("qfai prototyping iterate --auto-serve: refused");`
 - Why it fails: the exit code stays 2, and `expect(joined).toMatch(/foreign process/)` fails because stderr no longer carries the reason
+
+#### Round 1
+
+An earlier run of this gate, discarded:
+
+- Command: `pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts -t "returns exit 2 with PID + owning command on stderr when runner refuses"`, with the same mutation applied
+- Result: `Test Files 1 skipped (1); Tests 4 skipped (4)`, exit 0
+- Cause: the unescaped `+` read as a regular-expression quantifier, so the filter matched no test
+- What followed: the mutation was reverted, the tree was confirmed back at `8e198e459f426d6624cbf56808d297bdf2fa78d2`, and the mutation was re-applied and re-run with every metacharacter escaped, as recorded below
+- The raw output of that run was not kept
+
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingIterate.ts, `runPrototypingIterate`, the refusal `error(...)` that carries the runner's reason
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts -t "returns exit 2 with PID \+ owning command on stderr when runner refuses"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 3 skipped (4). The row's case fails on `AssertionError: expected 'qfai prototyping iterate --auto-serve…' to match /foreign process/` at `tests/integration/cli/commands/prototypingIterate.autoServe.test.ts:199:22`
+
+The edit:
+
+```diff
+-      error(`qfai prototyping iterate --auto-serve: ${serverResult.reason}`);
++      error("qfai prototyping iterate --auto-serve: refused");
+```
+
+- Round 1: Falsifiability revision: working-tree+adb451e843c406c5c0fd26760ad623f4845da5c55423f94a205cc7ccf8201876
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: a1b34eacd9d13660bb4eff8d8471d83e92b692bb92fc9ed252bf1eac53039a77
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts
+```
+
+- Round 1: Revision: 8e198e459f426d6624cbf56808d297bdf2fa78d2
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts -t "returns exit 2 with PID \+ owning command on stderr when runner refuses"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 REVISE, RED phase gate: the entry omitted a discarded run whose filter selected no test; qa-gatekeeper#2 PASS, RED phase gate on the falsifiability mutation run after that run was recorded, reviewed revision working-tree+adb451e843c406c5c0fd26760ad623f4845da5c55423f94a205cc7ccf8201876; qa-gatekeeper#3 PASS, build-phase GREEN + oracle proof, reviewed revision 8e198e459f426d6624cbf56808d297bdf2fa78d2
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the case and criterion cite REQ-0012-0062, which still contradicts the restated runner contract; CR-20260923-0005 restates it, and no test or production code changes
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923070014000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): edd396b930ac9c657e9ca92ff9b3c9f8da067e5c8121ca82be270cb36a4c0bc2
+
+- Round 1: reviewer verdict (attempt 2): PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260923070024000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): 30730cbffd9f5c8669fc3e6eaa82fedbb7915cd66bd4ebfc9b820d74d4370799
+- Spec review: PASS
+- Spec reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Spec audited evidence hash: 2a8e71d28b0d7f5963cc7392d4ee3a746d09319534776cd6031b348c71d4492d
+- Spec review pack: .qfai/review/review-20260923070024000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 30730cbffd9f5c8669fc3e6eaa82fedbb7915cd66bd4ebfc9b820d74d4370799
+- Code quality review: PASS
+- Code quality reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
+- Code quality audited evidence hash: 2a8e71d28b0d7f5963cc7392d4ee3a746d09319534776cd6031b348c71d4492d
+- Code quality review pack: .qfai/review/review-20260923070024000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 30730cbffd9f5c8669fc3e6eaa82fedbb7915cd66bd4ebfc9b820d74d4370799
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: f5fcfba30dc0fe74f61d201cc7282bb8c1132cff
 
 ## Coverage Depth Matrix
 
@@ -242,6 +535,23 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 | 11 | - | n/a | grilling(-@2026-09-23T06:51:05.149Z/none): none | - | - | PASS |
 | 12 | acceptance-test-engineer | acceptance-test-engineer | Give the entry 1 stub a well-formed result, and name a compiling mutation for entry 3 | #tdd-0469, `red-admissibility.md` | `prototypingIterate.autoServe.test.ts`; #tdd-0469 entries 1 and 3 | PASS |
 | 13 | acceptance-test-engineer | acceptance-test-engineer | Re-hand over the split `TDD-0469` as four rows, one boundary each | CR-20260923-0004, `tdd/test-list.md` rows `TDD-0469`, `TDD-0562` to `TDD-0564` | #tdd-0469, #tdd-0562, #tdd-0563, #tdd-0564 | PASS |
+
+### Rows for the /qfai-implement run started 2026-09-23T06:48:00.000Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 14 | qa-gatekeeper | qa-gatekeeper | grilling(S1@2026-09-23T06:48:00.000Z/agents): split `TDD-0469` by boundary through `CR-20260923-0004` rather than narrow its Selector | #tdd-0469, `selector-granularity.md` | `CR-20260923-0004`; narrowing alone would leave three clauses of the case with no row | PASS |
+| 15 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0469 RED phase gate on the falsifiability mutation run | #tdd-0469 | Round 1 | PASS |
+| 16 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0469 build-phase GREEN + oracle proof | #tdd-0469 | Round 1 | PASS |
+| 17 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0561 RED phase gate on the falsifiability mutation run | #tdd-0561 | Round 1 | PASS |
+| 18 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0561 build-phase GREEN + oracle proof | #tdd-0561 | Round 1 | PASS |
+| 19 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0562 RED phase gate on the falsifiability mutation run | #tdd-0562 | Round 1 | PASS |
+| 20 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0562 build-phase GREEN + oracle proof | #tdd-0562 | Round 1 | PASS |
+| 21 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0563 RED phase gate on the falsifiability mutation run | #tdd-0563 | Round 1 | PASS |
+| 22 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0563 build-phase GREEN + oracle proof | #tdd-0563 | Round 1 | PASS |
+| 23 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0564 RED phase gate on the falsifiability mutation run | #tdd-0564 | the entry omitted a discarded run whose filter selected no test | REVISE |
+| 24 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0564 RED phase gate, resubmitted with that run recorded | #tdd-0564 | Round 1 | PASS |
+| 25 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0564 build-phase GREEN + oracle proof | #tdd-0564 | Round 1 | PASS |
 
 ## Execution logs
 
