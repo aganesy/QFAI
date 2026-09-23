@@ -639,10 +639,10 @@ revision given, and each passed. The mutation proofs are handed to
 - Selector: TC-0003-0058 (TDD-0062): rejects a planted green aggregate while accepting its unmodified body
 - Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0062\): rejects a planted green aggregate while accepting its unmodified body"
 - Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 22 skipped (23)
-- Proof command:
-- Proof result:
-- Restored GREEN command:
-- Restored GREEN result:
+- Proof command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0062\): rejects a planted green aggregate while accepting its unmodified body", with `packages/qfai/assets/init/root/.github/workflows/qfai-docs.yml:611` changed from `exit 1` to `exit 0`
+- Proof result: FAIL — Test Files 1 failed (1); Tests 1 failed | 22 skipped (23). The row's case fails on `AssertionError: expected [ …(6) ] to deeply equal []` at `tests/integration/shippedWorkflowPortability.test.ts:269:63`
+- Restored GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0062\): rejects a planted green aggregate while accepting its unmodified body", after `git checkout -- packages/qfai/assets/init/root/.github/workflows/qfai-docs.yml`
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed | 22 skipped (23)
 - RED test manifest:
 
 ```text
@@ -659,10 +659,10 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - Selector: TC-0003-0058 (TDD-0063): rejects a result binding removed from the shipped aggregate
 - Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0063\): rejects a result binding removed from the shipped aggregate"
 - Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 22 skipped (23)
-- Proof command:
-- Proof result:
-- Restored GREEN command:
-- Restored GREEN result:
+- Proof command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0063\): rejects a result binding removed from the shipped aggregate", with `packages/qfai/tests/integration/shippedWorkflowPortability.test.ts:230` changed from `if (!Object.values(bindings).includes(value)) {` to `if (false) {`
+- Proof result: FAIL — Test Files 1 failed (1); Tests 1 failed | 22 skipped (23). The row's case fails on `AssertionError: expected [] to deeply equal [ Array(1) ]` at `tests/integration/shippedWorkflowPortability.test.ts:285:63`
+- Restored GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0063\): rejects a result binding removed from the shipped aggregate", after `git checkout -- packages/qfai/tests/integration/shippedWorkflowPortability.test.ts`
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed | 22 skipped (23)
 - RED test manifest:
 
 ```text
@@ -679,10 +679,10 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - Selector: rejects an aggregate step that cannot preserve failure
 - Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "rejects an aggregate step that cannot preserve failure"
 - Re-verify result: PASS — Test Files 1 passed (1); Tests 7 passed | 16 skipped (23)
-- Proof command:
-- Proof result:
-- Restored GREEN command:
-- Restored GREEN result:
+- Proof command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "rejects an aggregate step that cannot preserve failure", with `packages/qfai/tests/integration/shippedWorkflowPortability.test.ts:225` changed from `return [`${site} survives a failed install but is not a result-only aggregate`];` to `return [];`
+- Proof result: FAIL — Test Files 1 failed (1); Tests 7 failed | 16 skipped (23). The row's case fails on `AssertionError: expected [] to deeply equal [ Array(1) ]` at `tests/integration/shippedWorkflowPortability.test.ts:304:63`
+- Restored GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "rejects an aggregate step that cannot preserve failure", after `git checkout -- packages/qfai/tests/integration/shippedWorkflowPortability.test.ts`
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 7 passed | 16 skipped (23)
 - RED test manifest:
 
 ```text
