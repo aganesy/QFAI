@@ -845,10 +845,12 @@ function propertyValue(ts, objectLiteral, name) {
  * - and in both, an object literal that nothing exports counted the same as the exported one.
  *
  * Each repair moved the hole rather than closing it, because the property is syntactic and a
- * pattern over text cannot express it. So this walks the AST: the DEFAULT EXPORT, its array (a
- * `defineWorkspace(...)` call is unwrapped to its first argument), each element's `test` object,
- * and the `name` and `include` on that. A comment is not a node, a string's contents are not
- * nodes, and an object nothing exports is not reachable.
+ * pattern over text cannot express it. So this walks the AST: the DEFAULT EXPORT, its array, each
+ * element's `test` object, and the `name` and `include` on that. The runner's identity helpers are
+ * unwrapped to their first argument — `defineWorkspace` around the array, `defineProject` around a
+ * project — and each is identified by its binding rather than its spelling, so a local declaration
+ * of either name is refused instead of followed. A comment is not a node, a string's contents are
+ * not nodes, and an object nothing exports is not reachable.
  *
  * A value that is not a literal — an interpolated template, an identifier, a spread of something
  * computed — is refused rather than guessed at. This guard reads a declaration; it does not
@@ -907,56 +909,70 @@ async function e2eIncludeGlobs(text, configPath) {
   //
   // So the name has to be imported from Vitest and shadowed by nothing. Fail closed, because a
   // call this guard cannot identify is a call whose result it cannot predict.
-  const importsDefineWorkspace = source.statements.some(
-    (statement) =>
-      ts.isImportDeclaration(statement) &&
-      ts.isStringLiteral(statement.moduleSpecifier) &&
-      /^vitest(\/|$)/.test(statement.moduleSpecifier.text) &&
-      statement.importClause?.namedBindings !== undefined &&
-      ts.isNamedImports(statement.importClause.namedBindings) &&
-      statement.importClause.namedBindings.elements.some(
-        (element) => element.name.text === "defineWorkspace",
-      ),
-  );
+  const importedFromVitest = (name) =>
+    source.statements.some(
+      (statement) =>
+        ts.isImportDeclaration(statement) &&
+        ts.isStringLiteral(statement.moduleSpecifier) &&
+        /^vitest(\/|$)/.test(statement.moduleSpecifier.text) &&
+        statement.importClause?.namedBindings !== undefined &&
+        ts.isNamedImports(statement.importClause.namedBindings) &&
+        statement.importClause.namedBindings.elements.some((element) => element.name.text === name),
+    );
   // A local declaration of the same name shadows the import wherever it sits - hoisting and
   // block scope both put one in reach of the export below - so ANY of them is a refusal rather
   // than a question this guard tries to answer.
-  let shadowed = false;
-  const walkForShadow = (node) => {
-    if (shadowed) return;
-    const declares =
-      ts.isVariableDeclaration(node) ||
-      ts.isFunctionDeclaration(node) ||
-      ts.isClassDeclaration(node);
-    if (
-      declares &&
-      node.name !== undefined &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === "defineWorkspace"
-    ) {
-      shadowed = true;
-      return;
-    }
-    ts.forEachChild(node, walkForShadow);
+  const shadowedIn = (name) => {
+    let found = false;
+    const walkForShadow = (node) => {
+      if (found) return;
+      const declares =
+        ts.isVariableDeclaration(node) ||
+        ts.isFunctionDeclaration(node) ||
+        ts.isClassDeclaration(node);
+      if (
+        declares &&
+        node.name !== undefined &&
+        ts.isIdentifier(node.name) &&
+        node.name.text === name
+      ) {
+        found = true;
+        return;
+      }
+      ts.forEachChild(node, walkForShadow);
+    };
+    ts.forEachChild(source, walkForShadow);
+    return found;
   };
-  ts.forEachChild(source, walkForShadow);
 
-  if (
-    exported !== undefined &&
-    ts.isCallExpression(exported) &&
-    ts.isIdentifier(exported.expression) &&
-    exported.expression.text === "defineWorkspace"
-  ) {
-    if (!importsDefineWorkspace || shadowed) {
+  /**
+   * The object literal an identity helper wraps, with the same binding check the export takes.
+   *
+   * A call this guard cannot identify is refused rather than unwrapped, because what it returns
+   * is not something the guard may assume.
+   */
+  const unwrapIdentity = (node, name) => {
+    if (
+      !ts.isCallExpression(node) ||
+      !ts.isIdentifier(node.expression) ||
+      node.expression.text !== name
+    ) {
+      return undefined;
+    }
+    if (!importedFromVitest(name) || shadowedIn(name)) {
       throw new Error(
-        `check-atdd-annotation-ledger: ${configPath} calls a defineWorkspace this guard cannot ` +
-          (shadowed
+        `check-atdd-annotation-ledger: ${configPath} calls a ${name} this guard cannot ` +
+          (shadowedIn(name)
             ? "identify as Vitest own: a local declaration of that name shadows the import"
             : "identify as Vitest own: the name is not imported from Vitest") +
           ", so what the call returns is not something this guard may assume",
       );
     }
-    exported = exported.arguments[0];
+    return node.arguments[0];
+  };
+
+  if (exported !== undefined) {
+    exported = unwrapIdentity(exported, "defineWorkspace") ?? exported;
   }
   if (exported === undefined || !ts.isArrayLiteralExpression(exported)) {
     throw new Error(
@@ -966,7 +982,11 @@ async function e2eIncludeGlobs(text, configPath) {
   }
 
   const found = [];
-  for (const element of exported.elements) {
+  for (const entry of exported.elements) {
+    // Each project may arrive bare or through the runner's per-project identity helper. The
+    // helper is unwrapped on the same terms as the one above: identified by its binding, or
+    // refused.
+    const element = unwrapIdentity(entry, "defineProject") ?? entry;
     if (!ts.isObjectLiteralExpression(element)) continue;
     const testNode = propertyValue(ts, element, "test");
     if (testNode === undefined || !ts.isObjectLiteralExpression(testNode)) continue;

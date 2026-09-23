@@ -6,6 +6,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The test runner moves to its fourth major, and the coverage provider with
+  it** (#2173). The two move as a pair: the provider's peer range names the
+  runner version exactly, so a provider a major ahead of the runner fails at
+  import rather than at install. Three declarations follow the runner's own
+  changes — the project list is imported by the root configuration instead of
+  being discovered by file name, isolation is declared directly rather than
+  inside a pool block, and `vite` is declared as the peer the runner requires
+  instead of being resolved for it. The supported Node range is unchanged.
+
 - **The type checker moves to TypeScript 6.** The seventh major ships the
   compiler as a native binary and no longer exposes the classic compiler API
   from its main entry, which the test tree and the declaration build both read;
