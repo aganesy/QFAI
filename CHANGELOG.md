@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0012's traceability ledger names the row that holds each case**
+  (#2179). 74 rows of its planning tables named a TDD-ID the test ledger
+  gives to a different case, because the test ledger was renumbered after
+  they were written. Each now names the row that holds its case. Four cases
+  have no row in the test ledger at all, and their rows now say so rather
+  than borrow an id. `REQ-0012-0077` also named a test file that does not
+  exist, and now names the one that does.
+
 - **Four test cases only an annotation carrier named now have a test**
   (#2160). Six completed rows claimed them, and no test file carried their
   annotation, so nothing ran them:
@@ -16,9 +24,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     the `lap-*` catalog;
   - `SKILL.md` delegates generation and evaluation to two different
     sub-agents.
-
-  Each row's selector now names its test. The carrier-only backlog falls from
-  56 entries to 50.
+    Each row's selector now names its test. The carrier-only backlog falls from
+    56 entries to 50.
 
 ## [1.12.2] - 2026-09-23
 
