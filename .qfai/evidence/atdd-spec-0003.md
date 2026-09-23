@@ -53,6 +53,14 @@ Preflight: confidence high
 | S1 | adopted | 2026-09-23T03:53:00Z | working-tree+0c16e336d92d65224ec37609bd8d897cbb70d42c505d6c0d0adf6c102605203f | 2026-09-23T03:53:07Z | a falsifiability predicate that lives in the row's own Test file, which step 3c assumes is production code | empty | none in flight | 1 | 0 | 0 |
 | S2 | adopted | 2026-09-23T04:08:10Z | 6368454b0f56a50611aa309f82eb80e8cc35b758 | 2026-09-23T04:08:20Z | how to answer the code quality REVISE on the two-consumer workflow-tree helper | empty | none in flight | 1 | 0 | 0 |
 
+### /qfai-atdd — run started 2026-09-23T08:28:13.966Z
+
+Preflight: confidence high
+
+No session opened. `CR-20260923-0007` fixes the row, the verify bullet it covers,
+the test file and the two job shapes, and nothing surfaced during the run that the
+spec or the change request leaves open.
+
 ## Work performed (what changed, where)
 
 - New `packages/qfai/tests/integration/shippedWorkflowCheckIndependence.test.ts`: the
@@ -64,6 +72,10 @@ Preflight: confidence high
 - `packages/qfai/tests/integration/shippedWorkflowPortability.test.ts`: the three
   `TC-0003-0058` cases annotated `QFAI:SPEC-0003:TC-0003-0058`.
 - `packages/qfai/tsconfig.tests.json`: the new file listed.
+- `packages/qfai/tests/integration/shippedWorkflowPortability.test.ts`: a new
+  `TDD-0093` `it.each` in the `TC-0003-0058` describe, annotated
+  `QFAI:SPEC-0003:TC-0003-0058`, with one case per job shape of verify bullet 5.
+  `CR-20260923-0007` asked for it.
 
 ## Commands executed + key outputs
 
@@ -72,6 +84,19 @@ pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowCheckInde
   Test Files 3 passed (3); Tests 66 passed (66)
 npx tsc --noEmit -p packages/qfai/tsconfig.tests.json   -> exit 0
 ```
+
+For `TDD-0093`:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts
+  Test Files 1 passed (1); Tests 23 passed (23)
+pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0093\): rejects an aggregate job whose shape cannot preserve failure"
+  Test Files 1 passed (1); Tests 2 passed | 21 skipped (23)
+npx tsc --noEmit -p packages/qfai/tsconfig.tests.json   -> exit 0
+```
+
+The re-verify runs of `TDD-0062`, `TDD-0063` and `TDD-0092` are in the `TDD-0093`
+entry.
 
 ## Test volume estimate
 
@@ -97,6 +122,7 @@ npx tsc --noEmit -p packages/qfai/tsconfig.tests.json   -> exit 0
 | `TDD-0062` | `TC-0003-0058` | Integration | falsifiability | [TDD-0062](#tdd-0062) |
 | `TDD-0063` | `TC-0003-0058` | Integration | falsifiability | [TDD-0063](#tdd-0063) |
 | `TDD-0092` | `TC-0003-0058` | Integration | falsifiability | [TDD-0092](#tdd-0092) |
+| `TDD-0093` | `TC-0003-0058` | Integration | falsifiability | [TDD-0093](#tdd-0093) |
 
 ### TDD-0058
 
@@ -581,6 +607,91 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - Checkpoint verification revision: 6368454b0f56a50611aa309f82eb80e8cc35b758
 - Checkpoint verification seal: ecd5b72e49e725620486d0370fe1c18deab941ccc61d2159b62402b80904256f
 
+### TDD-0093
+
+- TDD-ID: TDD-0093
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
+- Selector: TC-0003-0058 (TDD-0093): rejects an aggregate job whose shape cannot preserve failure
+- TC-ref: TC-0003-0058
+- Branch: falsifiability — the check this case exercises already rejects both job shapes, so the test passes on its first run and no natural RED can be observed
+- Predicate to break: packages/qfai/tests/integration/shippedWorkflowPortability.test.ts, `aggregateFailureViolations`, the job-shape clauses of the result-only aggregate check — `job.steps.length !== 1` and `job.job["continue-on-error"] !== undefined`; the test plants each unpreservable job shape itself, so no shipped file can make it fail
+- Mutation: delete the clause `job.job["continue-on-error"] !== undefined ||` (line 221)
+
+That mutation fails the `continue-on-error set on the job` case. The second
+mutation, deleting `job.steps.length !== 1 ||` (line 214), fails the
+`a second step that does work of its own` case. Each leaves the other case
+passing, because the other clause still rejects it.
+
+The selector contains `(` and `)`. Escape both when passing it to vitest `-t`.
+
+#### Shared-artifact re-verify
+
+The new case is in the Test file of the three rows below, so it moves their
+`RED test hash`. Each row's selector was re-run against the edited file at the
+revision given, and each passed. The mutation proofs are handed to
+`/qfai-implement` as a mutation-only request.
+
+##### spec-0003/TDD-0062
+
+- Evidence file: .qfai/evidence/atdd-spec-0003.md
+- Revision: 97e6fd6f69f77bd4f04144d9d85d8630b3730717
+- Selector: TC-0003-0058 (TDD-0062): rejects a planted green aggregate while accepting its unmodified body
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0062\): rejects a planted green aggregate while accepting its unmodified body"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 22 skipped (23)
+- Proof command:
+- Proof result:
+- Restored GREEN command:
+- Restored GREEN result:
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/shippedWorkflowFixtures.ts
+packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
+```
+
+- RED test hash: 7e167bba8c93e3d22ead8847a72628e0785aa6b43c994e142e2d2ecf396c7bc2
+
+##### spec-0003/TDD-0063
+
+- Evidence file: .qfai/evidence/atdd-spec-0003.md
+- Revision: 97e6fd6f69f77bd4f04144d9d85d8630b3730717
+- Selector: TC-0003-0058 (TDD-0063): rejects a result binding removed from the shipped aggregate
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0063\): rejects a result binding removed from the shipped aggregate"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 22 skipped (23)
+- Proof command:
+- Proof result:
+- Restored GREEN command:
+- Restored GREEN result:
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/shippedWorkflowFixtures.ts
+packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
+```
+
+- RED test hash: 7e167bba8c93e3d22ead8847a72628e0785aa6b43c994e142e2d2ecf396c7bc2
+
+##### spec-0003/TDD-0092
+
+- Evidence file: .qfai/evidence/atdd-spec-0003.md
+- Revision: 97e6fd6f69f77bd4f04144d9d85d8630b3730717
+- Selector: rejects an aggregate step that cannot preserve failure
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "rejects an aggregate step that cannot preserve failure"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 7 passed | 16 skipped (23)
+- Proof command:
+- Proof result:
+- Restored GREEN command:
+- Restored GREEN result:
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/shippedWorkflowFixtures.ts
+packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
+```
+
+- RED test hash: 7e167bba8c93e3d22ead8847a72628e0785aa6b43c994e142e2d2ecf396c7bc2
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / ⚠️ 130 / ❌ 176, with 365 not applicable, across 909 scored cells.
@@ -620,6 +731,9 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / 
 | 29 | completion-reviewer | completion-reviewer | /qfai-implement: completion review of TDD-0058 to TDD-0061, attempt 2 | #tdd-0058 … #tdd-0061 | one response per row in that row's attempt-2 review pack | PASS |
 | 30 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of TDD-0058 to TDD-0061, attempt 2 | #tdd-0058 … #tdd-0061 | one response per row in that row's attempt-2 review pack | PASS |
 | 31 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0061, the row's Test file and the full suite | #tdd-0061 | Checkpoint verification fields | PASS |
+| 32 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: write the TDD-0093 case for TC-0003-0058 verify bullet 5 and hand the row over on the falsifiability path | CR-20260923-0007 | packages/qfai/tests/integration/shippedWorkflowPortability.test.ts; #tdd-0093 | PASS |
+| 33 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: shared-artifact re-verify of TDD-0062, TDD-0063 and TDD-0092 under the edited Test file | #tdd-0062, #tdd-0063, #tdd-0092 | #tdd-0093 Shared-artifact re-verify; each selector passes | PASS |
+| 34 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: mutation-only request to /qfai-implement for the proofs of TDD-0062, TDD-0063 and TDD-0092, and the falsifiability run of TDD-0093 | #tdd-0093 | the empty Proof and Restored GREEN fields of #tdd-0093; the TDD-0093 Round 1 block | PENDING |
 
 ## Cross-spec obligations
 
@@ -640,9 +754,10 @@ Recorded per row under `## Ledger rows advanced`.
 - The step runner, job reader and delivered tree are copied into several shipped-workflow
   test files, including the two this run touched. Extracting them edits test files other
   specs' completed rows name, so it is a separate change.
-- Two clauses of the result-only aggregate check in `shippedWorkflowPortability.test.ts`,
-  a second step and a job-level `continue-on-error`, have no case that fails when the
-  clause is removed. `TDD-0092` pins the step-level clauses only.
+- The two job-shape clauses of the result-only aggregate check in
+  `shippedWorkflowPortability.test.ts`, a second step and a job-level
+  `continue-on-error`, each have a `TDD-0093` case. Their mutation proofs are still
+  owed by `/qfai-implement`.
 
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
