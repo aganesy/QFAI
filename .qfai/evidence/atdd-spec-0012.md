@@ -560,15 +560,17 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint
 ```
 
 - Round 1: RED test replacement: test-only replacement — completion-reviewer REVISE, Round 1 attempt 1 (the test's runner stub records the SIGINT listener count when it is called, and the test asserts it equals the baseline, so the handler has to be installed after the runner returns); the proof above is stale — test replaced, and /qfai-implement re-takes it under the corrected test
-- Round 1: Replacement proof revision:
+- Round 1: Replacement proof revision: working-tree+dc7ed30d03057e00f34bacc9de31e5f8107a657fafe45e572a6fd565fe99a1dc
+- Round 1: Replacement proof command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts -t "installs a SIGINT handler after the runner returns and removes it after cycle completion"
+- Round 1: Replacement proof result: Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). The same mutation as the proof above, re-run under the corrected test, fails the row's case on `AssertionError: expected +0 to be 1 // Object.is equality` at `tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts:147:36`
 
-- Round 1: Revision: d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- Round 1: Revision: 2ccde8e44d32798e3dafbd2218c39761963fcff9
 - Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts -t "installs a SIGINT handler after the runner returns and removes it after cycle completion"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- Refactor verify revision: 2ccde8e44d32798e3dafbd2218c39761963fcff9
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 REVISE, RED phase gate: the entry said TDD-0566's case passes under this mutation, and it fails; qa-gatekeeper#2 PASS, RED phase gate after that line was corrected, reviewed revision working-tree+69f901bf8a421496ece4dd66d57e4218c7ecec33c71110b2650578ee8a48d567; qa-gatekeeper#3 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
 
@@ -613,15 +615,17 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint
 ```
 
 - Round 1: RED test replacement: test-only replacement — completion-reviewer REVISE, Round 1 attempt 1 (the other two tests of this file changed: the TDD-0471 test gained its order assertion and the TDD-0566 test its unconditional bound check; this row's own test is unchanged); the proof above is stale — test replaced, and /qfai-implement re-takes it under the corrected test
-- Round 1: Replacement proof revision:
+- Round 1: Replacement proof revision: working-tree+71459030efd6be997668c167a428bafb4b6826fac8ecb8ffc81547f3fd9f6948
+- Round 1: Replacement proof command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts -t "auto-serve teardown \+ SIGINT detach happen even when the mirror helper throws"
+- Round 1: Replacement proof result: Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). The same mutation as the proof above, re-run under the corrected test, fails the row's case on `AssertionError: expected "spy" to be called 1 times, but got 0 times` at `tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts:199:22`
 
-- Round 1: Revision: d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- Round 1: Revision: 2ccde8e44d32798e3dafbd2218c39761963fcff9
 - Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts -t "auto-serve teardown \+ SIGINT detach happen even when the mirror helper throws"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- Refactor verify revision: 2ccde8e44d32798e3dafbd2218c39761963fcff9
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+7ea777c3326e31b625df2d4e843ff5befcfe0c0965dfca9caa85cbe320b8e490; qa-gatekeeper#2 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
 
@@ -678,15 +682,17 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint
 ```
 
 - Round 1: RED test replacement: test-only replacement — completion-reviewer REVISE, Round 1 attempt 1 (the 2-second bound check no longer sits inside a condition: the test asserts one SIGINT dispatch and one teardown end, then the elapsed time); the proof above is stale — test replaced, and /qfai-implement re-takes it under the corrected test
-- Round 1: Replacement proof revision:
+- Round 1: Replacement proof revision: working-tree+1e1f2aa94ad8a0f4cc4f479e5a8af05f3991e2bc5f4e4024bb987440f43f6b82
+- Round 1: Replacement proof command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts -t "teardown executes within 2s when SIGINT is dispatched mid-run"
+- Round 1: Replacement proof result: Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). The same mutation as the proof above, re-run under the corrected test, fails the row's case on `AssertionError: expected +0 to be 1 // Object.is equality` at `tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts:247:41`
 
-- Round 1: Revision: d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- Round 1: Revision: 2ccde8e44d32798e3dafbd2218c39761963fcff9
 - Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts -t "teardown executes within 2s when SIGINT is dispatched mid-run"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- Refactor verify revision: 2ccde8e44d32798e3dafbd2218c39761963fcff9
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+89fda95e1794e7f57f9c47efc86b0b6657ff52a3c0cee006d3bb98c6a69572b6; qa-gatekeeper#2 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
 
