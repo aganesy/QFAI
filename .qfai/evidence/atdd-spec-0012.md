@@ -682,8 +682,10 @@ packages/qfai/tests/e2e/spec0012PrototypingRemediationE2E.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 19 skipped (20)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/e2e/spec0012PrototypingRemediationE2E.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 20 passed (20). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: da96f2d57cf5ee5ffb422dedb2269c27fa7b7143
+- Refactor verify result: Test Files 1 passed (1); Tests 20 passed (20). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree d21a70a8… (shared with TDD-0572) matches; E2E selector fails :565:35 on the closing return 2; hash cbc624eb… recomputes; GREEN and file 20/20 at HEAD
 
 #### Done rows on the same Test file
 
@@ -692,6 +694,23 @@ to `TDD-0476`, `TDD-0490` to `TDD-0495` and `TDD-0509` to `TDD-0513`. None
 records a `RED test manifest`, so this edit moves no recorded hash and there is
 no re-verify record to write. The whole file passed after the edit: Test Files 1
 passed (1); Tests 20 passed (20).
+
+- Spec review: PASS
+- Spec reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Spec audited evidence hash: faa1315fa7983ee6781af66e5fcbb199b71a40e8d7776bf4b86924a41fc7a57c
+- Spec review pack: .qfai/review/review-20260923140012000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 256f2d746f219b4ace5b483d14077a306050065adbc0202442680e242794a992
+- Code quality review: PASS
+- Code quality reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Code quality audited evidence hash: faa1315fa7983ee6781af66e5fcbb199b71a40e8d7776bf4b86924a41fc7a57c
+- Code quality review pack: .qfai/review/review-20260923140012000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 256f2d746f219b4ace5b483d14077a306050065adbc0202442680e242794a992
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/e2e/spec0012PrototypingRemediationE2E.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 20 passed (20). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification seal: eb97d7d06b754f67804fdab308bd0266d8eabe11bb665e783fac3669e00343e4
 
 ### TDD-0514
 
@@ -787,8 +806,14 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 - Round 1: GREEN result: One run per entry. Entry 1: Test Files 1 passed (1); Tests 1 passed | 17 skipped (18). Entry 2: Test Files 1 passed (1); Tests 1 passed | 17 skipped (18)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 18 passed (18). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: da96f2d57cf5ee5ffb422dedb2269c27fa7b7143
+- Refactor verify result: Test Files 1 passed (1); Tests 18 passed (18). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree ab99c390… matches; both entries fail on their own AssertionError (:139:47, :146:47); both edits inside parseArgs; hash 112bea3e… recomputes; GREEN 2/2 and file 18/18 at HEAD
+
+- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer: TDD-0514's sdd-profile routing of the new check has no test; TDD-0575's Test 6b bypasses the CLI default at main.ts:398 through a cast; the row goes to review-fix
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923140000000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 83fb1d8e77aa7df6c063cff233f7cbb9456146ebc8e82ba4881009cbff8b9a3e
 
 ### TDD-0515
 
@@ -885,8 +910,10 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 - Round 1: GREEN result: One run per entry. Entry 1: Test Files 1 passed (1); Tests 1 passed | 16 skipped (17). Entry 2: Test Files 1 passed (1); Tests 1 passed | 16 skipped (17)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 17 passed (17). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: da96f2d57cf5ee5ffb422dedb2269c27fa7b7143
+- Refactor verify result: Test Files 1 passed (1); Tests 17 passed (17). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree bf35a854… matches; both entries fail on their own AssertionError (:147:49, :154:49); both edits inside parseArgs; hash f800ebeb… recomputes; GREEN 2/2 and file 17/17 at HEAD
 
 #### Shared-artifact re-verify
 
@@ -919,6 +946,23 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.tes
 - RED test hash: f800ebeb6792b20caa6994b1527742d4a83af8279eceae2888e172f5da5ba616
 
 The record is read as evidence once this entry is a completed, reviewed item.
+
+- Spec review: PASS
+- Spec reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Spec audited evidence hash: 568fc51fd911a9b319be758edb15da97824ccef588d9de2a3efcdcd03b3d01cc
+- Spec review pack: .qfai/review/review-20260923140003000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 698d60faac0a741d6fc8b9bc8e5f5b0e50865a0a997055f1b02597e0e73c869e
+- Code quality review: PASS
+- Code quality reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Code quality audited evidence hash: 568fc51fd911a9b319be758edb15da97824ccef588d9de2a3efcdcd03b3d01cc
+- Code quality review pack: .qfai/review/review-20260923140003000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 698d60faac0a741d6fc8b9bc8e5f5b0e50865a0a997055f1b02597e0e73c869e
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 17 passed (17). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification seal: 845d63183d803803ee4802c394343e08366727b0b82d52c229d1a210eae32e20
 
 ### TDD-0497
 
@@ -978,8 +1022,27 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: da96f2d57cf5ee5ffb422dedb2269c27fa7b7143
+- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree fc39f9e4… matches; converged-branch edit at line 3297 fails :80:20 inside runCheckConvergencePeek; hash 9d4193a2… recomputes; GREEN and file 9/9 at HEAD
+
+- Spec review: PASS
+- Spec reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Spec audited evidence hash: 805e35dd94f1909c364eaae449915ee60b6d38b90b9e3e29ff7100bd10a00cdf
+- Spec review pack: .qfai/review/review-20260923140006000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 131b50c7d244f55f1dacbcded56dec0a9cf06fd0a1019a9d059115000129f62a
+- Code quality review: PASS
+- Code quality reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Code quality audited evidence hash: 805e35dd94f1909c364eaae449915ee60b6d38b90b9e3e29ff7100bd10a00cdf
+- Code quality review pack: .qfai/review/review-20260923140006000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 131b50c7d244f55f1dacbcded56dec0a9cf06fd0a1019a9d059115000129f62a
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 9 passed (9). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification seal: 60f7209cf2387cb5916af472e9d68f116fa462cc0c9e4138daa2ad3ef90d4422
 
 ### TDD-0568
 
@@ -1053,8 +1116,27 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.cliCapture.test.
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 2 passed | 16 skipped (18)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 18 passed (18). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: da96f2d57cf5ee5ffb422dedb2269c27fa7b7143
+- Refactor verify result: Test Files 1 passed (1); Tests 18 passed (18). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree e1d118bd… matches; line 1845 fails both selected tests (:438:26, :633:26) inside collectScreensForCapture; hash 112bea3e… recomputes; GREEN and file 18/18 at HEAD
+
+- Spec review: PASS
+- Spec reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Spec audited evidence hash: 2bc33755fe7f51c8464b1dbb3fceffb5163961e3aab1bcfc360ce2d4fa8b159a
+- Spec review pack: .qfai/review/review-20260923140001000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 8e0f0529338dcde56082a0b66f546ebda7c72de5ba538786a8ff4e3644d8118a
+- Code quality review: PASS
+- Code quality reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Code quality audited evidence hash: 2bc33755fe7f51c8464b1dbb3fceffb5163961e3aab1bcfc360ce2d4fa8b159a
+- Code quality review pack: .qfai/review/review-20260923140001000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 8e0f0529338dcde56082a0b66f546ebda7c72de5ba538786a8ff4e3644d8118a
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 18 passed (18). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification seal: 5884f0850b92bbda283c82c693ec79cbb7829d498556dc02ad107639bbdd482e
 
 ### TDD-0569
 
@@ -1117,8 +1199,27 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.cliCapture.test.
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 17 skipped (18)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 18 passed (18). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: da96f2d57cf5ee5ffb422dedb2269c27fa7b7143
+- Refactor verify result: Test Files 1 passed (1); Tests 18 passed (18). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree f8f8a484… matches; stubbed defaultCaptureScreen fallback fails :680:20 inside runCapturePath; hash 112bea3e… recomputes; GREEN and file 18/18 at HEAD
+
+- Spec review: PASS
+- Spec reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Spec audited evidence hash: 0cd1f3f4e35d8bcf6eed9b4b97e76ea1fb44c2af637dc72e90a0ec773db1224a
+- Spec review pack: .qfai/review/review-20260923140002000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 2276b26301d3e00a739d0a7f5644a38e0da646a6b9f9e04c264605773255d167
+- Code quality review: PASS
+- Code quality reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Code quality audited evidence hash: 0cd1f3f4e35d8bcf6eed9b4b97e76ea1fb44c2af637dc72e90a0ec773db1224a
+- Code quality review pack: .qfai/review/review-20260923140002000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 2276b26301d3e00a739d0a7f5644a38e0da646a6b9f9e04c264605773255d167
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 18 passed (18). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification seal: 5884f0850b92bbda283c82c693ec79cbb7829d498556dc02ad107639bbdd482e
 
 ### TDD-0570
 
@@ -1181,8 +1282,27 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.tes
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 16 skipped (17)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 17 passed (17). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: da96f2d57cf5ee5ffb422dedb2269c27fa7b7143
+- Refactor verify result: Test Files 1 passed (1); Tests 17 passed (17). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 81060ea6… matches; stubbed defaultServerRunner fallback fails :215:27; TDD-0561 re-verify in #tdd-0515 covers the annotation removal (ae69c92c8, f800ebeb…); GREEN and file 17/17 at HEAD
+
+- Spec review: PASS
+- Spec reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Spec audited evidence hash: 8e57bcf6dbdb269215a999f457a3be7df4f4e9a6c6c06308066a41105c033ca0
+- Spec review pack: .qfai/review/review-20260923140004000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 8049ee527669a1c08b47c9387df815c3db86fed321eec029ba61371971d0a3bf
+- Code quality review: PASS
+- Code quality reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Code quality audited evidence hash: 8e57bcf6dbdb269215a999f457a3be7df4f4e9a6c6c06308066a41105c033ca0
+- Code quality review pack: .qfai/review/review-20260923140004000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 8049ee527669a1c08b47c9387df815c3db86fed321eec029ba61371971d0a3bf
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 17 passed (17). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification seal: 845d63183d803803ee4802c394343e08366727b0b82d52c229d1a210eae32e20
 
 ### TDD-0571
 
@@ -1243,8 +1363,27 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.tes
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 16 skipped (17)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 17 passed (17). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: da96f2d57cf5ee5ffb422dedb2269c27fa7b7143
+- Refactor verify result: Test Files 1 passed (1); Tests 17 passed (17). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 29c723e1… matches; the test's own 2 s race rejection at :277:33 inside the selector states the bound and is admissible; hash f800ebeb… recomputes; GREEN and file 17/17 at HEAD
+
+- Spec review: PASS
+- Spec reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Spec audited evidence hash: a53ec9159d507006d34903ccc6dbb22fd4e12e1687aa73bc31901693963b335e
+- Spec review pack: .qfai/review/review-20260923140005000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: d358f7366ac67071a43e4d182a455f2d7ba066338487fccb5a9e62898996712c
+- Code quality review: PASS
+- Code quality reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Code quality audited evidence hash: a53ec9159d507006d34903ccc6dbb22fd4e12e1687aa73bc31901693963b335e
+- Code quality review pack: .qfai/review/review-20260923140005000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: d358f7366ac67071a43e4d182a455f2d7ba066338487fccb5a9e62898996712c
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 17 passed (17). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification seal: 845d63183d803803ee4802c394343e08366727b0b82d52c229d1a210eae32e20
 
 ### TDD-0572
 
@@ -1324,8 +1463,27 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 - Round 1: GREEN result: One run per entry. Entry 1: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9). Entry 2: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9). Entry 3: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: da96f2d57cf5ee5ffb422dedb2269c27fa7b7143
+- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree d21a70a8… (shared with TDD-0567) matches; all three entries fail separately (:105:20, :131:20, :155:20); hash 9d4193a2… recomputes; GREEN 3/3 and file 9/9 at HEAD
+
+- Spec review: PASS
+- Spec reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Spec audited evidence hash: 9c52a11f46e2014ca80212d1437adc663a6a2bdf93ca10e5d89f4a55197a5dd3
+- Spec review pack: .qfai/review/review-20260923140007000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: c856bbdd16e1d855944584826c35753464b954bb9b849be06ae65ea0a648670f
+- Code quality review: PASS
+- Code quality reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Code quality audited evidence hash: 9c52a11f46e2014ca80212d1437adc663a6a2bdf93ca10e5d89f4a55197a5dd3
+- Code quality review pack: .qfai/review/review-20260923140007000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: c856bbdd16e1d855944584826c35753464b954bb9b849be06ae65ea0a648670f
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 9 passed (9). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification seal: 60f7209cf2387cb5916af472e9d68f116fa462cc0c9e4138daa2ad3ef90d4422
 
 ### TDD-0573
 
@@ -1383,8 +1541,27 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: da96f2d57cf5ee5ffb422dedb2269c27fa7b7143
+- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 69eb25d9… matches; missing-record return 2→0 fails :175:20; hash 9d4193a2… recomputes; GREEN and file 9/9 at HEAD
+
+- Spec review: PASS
+- Spec reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Spec audited evidence hash: 484fd9fb39cc2d43c64190780527b5307ed11e6966a19c7c0cb993a5035d8f3c
+- Spec review pack: .qfai/review/review-20260923140008000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: a17657748515fdf2966ded25246024313ace24fd1c23723961aae3542cb5b43f
+- Code quality review: PASS
+- Code quality reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Code quality audited evidence hash: 484fd9fb39cc2d43c64190780527b5307ed11e6966a19c7c0cb993a5035d8f3c
+- Code quality review pack: .qfai/review/review-20260923140008000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: a17657748515fdf2966ded25246024313ace24fd1c23723961aae3542cb5b43f
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 9 passed (9). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification seal: 60f7209cf2387cb5916af472e9d68f116fa462cc0c9e4138daa2ad3ef90d4422
 
 ### TDD-0574
 
@@ -1443,8 +1620,27 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: da96f2d57cf5ee5ffb422dedb2269c27fa7b7143
+- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 3f247609… matches; deleting args.ts:922 fails :221:56 inside parseArgs; hash 9d4193a2… recomputes; GREEN and file 9/9 at HEAD
+
+- Spec review: PASS
+- Spec reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Spec audited evidence hash: c0ac71f8aff89eec2a9e35c881f42f0e3bb8da820df992701f7810204ababf6d
+- Spec review pack: .qfai/review/review-20260923140009000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: b1137d465f406fbd69ffd060ab48dcbfb1bb2e6210576e520a87e20213497012
+- Code quality review: PASS
+- Code quality reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Code quality audited evidence hash: c0ac71f8aff89eec2a9e35c881f42f0e3bb8da820df992701f7810204ababf6d
+- Code quality review pack: .qfai/review/review-20260923140009000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: b1137d465f406fbd69ffd060ab48dcbfb1bb2e6210576e520a87e20213497012
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 9 passed (9). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification seal: 60f7209cf2387cb5916af472e9d68f116fa462cc0c9e4138daa2ad3ef90d4422
 
 ### TDD-0575
 
@@ -1538,8 +1734,14 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 - Round 1: GREEN result: One run per entry. Entry 1: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9). Entry 2: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: da96f2d57cf5ee5ffb422dedb2269c27fa7b7143
+- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 69b80e85… matches; the two combined edits hit separate paths and each entry fails on its own (:209:19, :247:19); hash 9d4193a2… recomputes; GREEN 2/2 and file 9/9 at HEAD
+
+- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer: TDD-0514's sdd-profile routing of the new check has no test; TDD-0575's Test 6b bypasses the CLI default at main.ts:398 through a cast; the row goes to review-fix
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923140010000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 0f0400fd6c3ab0036db38484f92ac2d44c62da1002491f224fe8256557c1949d
 
 ### TDD-0576
 
@@ -1597,8 +1799,27 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: da96f2d57cf5ee5ffb422dedb2269c27fa7b7143
+- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree a3d7393f… matches; inserted writeFile fails the byte-equality at :277:24 inside runCheckConvergencePeek; hash 9d4193a2… recomputes; GREEN and file 9/9 at HEAD
+
+- Spec review: PASS
+- Spec reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Spec audited evidence hash: 349c4640232c0225b75008daf6eb25ffdf22d966e61a95c3a2a17013de13f381
+- Spec review pack: .qfai/review/review-20260923140011000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 999b3e68d2d9788b64f0c9529d5d753c394f36a0845e41cff809a2da4f73e7aa
+- Code quality review: PASS
+- Code quality reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Code quality audited evidence hash: 349c4640232c0225b75008daf6eb25ffdf22d966e61a95c3a2a17013de13f381
+- Code quality review pack: .qfai/review/review-20260923140011000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 999b3e68d2d9788b64f0c9529d5d753c394f36a0845e41cff809a2da4f73e7aa
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 9 passed (9). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Checkpoint verification seal: 60f7209cf2387cb5916af472e9d68f116fa462cc0c9e4138daa2ad3ef90d4422
 
 ## Coverage Depth Matrix
 
