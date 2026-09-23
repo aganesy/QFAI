@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The completion gate accepts the `qa-gatekeeper` forms the skill documents**
+  (#2197). The skill asks the row-level verdict to name the attempt, round and
+  revision behind it, as in `PASS (qa-gatekeeper#1, Round 1, …)` or
+  `PASS x2 (…)`, and the gate refused any value other than a bare `PASS`. A
+  leading `PASS` is now the verdict; `PASSED` and a leading `REVISE` are still
+  refused.
+
 - **`/qfai-implement` says who mutates a predicate that lives in the test
   file** (#2191). Some acceptance tests plant their own broken copy of a
   shipped workflow, so the code they exercise is a checker inside the test and
