@@ -23,66 +23,66 @@ stays the first markdown table in this file):
 
 ## Test Case Table (required)
 
-| TC-ID        | Level       | AC-Refs                    | EX-Ref       | Type     | Title                                                               |
-| ------------ | ----------- | -------------------------- | ------------ | -------- | ------------------------------------------------------------------- |
-| TC-0003-0001 | integration | AC-0003-0001               | EX-0003-0001 | normal   | 空ディレクトリでの初期化                                            |
-| TC-0003-0002 | integration | AC-0003-0002               | EX-0003-0002 | normal   | 冪等な初期化 - 既存スキップ                                         |
-| TC-0003-0003 | integration | AC-0003-0003               | EX-0003-0003 | normal   | --force スキル上書き + skills.local 保護                            |
-| TC-0003-0004 | integration | AC-0003-0004               | EX-0003-0004 | normal   | --dry-run プレビュー                                                |
-| TC-0003-0005 | integration | AC-0003-0005               | EX-0003-0005 | normal   | skill directory symlink 生成                                        |
-| TC-0003-0006 | integration | AC-0003-0006               | EX-0003-0006 | normal   | agent file symlink 生成                                             |
-| TC-0003-0007 | integration | AC-0003-0007               | EX-0003-0007 | normal   | レガシー 10_workflow.md 削除                                        |
-| TC-0003-0008 | integration | AC-0003-0008               | EX-0003-0007 | normal   | 旧 commands/prompts prune                                           |
-| TC-0003-0009 | integration | AC-0003-0009               |              | normal   | git config core.symlinks 自動設定                                   |
-| TC-0003-0010 | unit        | AC-0003-0010               | EX-0003-0008 | error    | Windows EPERM エラーメッセージ                                      |
-| TC-0003-0011 | integration | AC-0003-0011               | EX-0003-0009 | normal   | instructions 新規配置                                               |
-| TC-0003-0012 | integration | AC-0003-0012               | EX-0003-0010 | edge     | instructions 既存ファイル skip                                      |
-| TC-0003-0013 | integration | AC-0003-0013               | EX-0003-0011 | edge     | --force で instructions 再生成                                      |
-| TC-0003-0014 | integration | AC-0003-0014               | EX-0003-0012 | normal   | instructions アクティベーション案内表示                             |
-| TC-0003-0015 | integration | AC-0003-0002               | EX-0003-0013 | edge     | symlink idempotency (3 consecutive runs)                            |
-| TC-0003-0016 | integration | AC-0003-0001               | EX-0003-0014 | normal   | migrated example EX-0003-0014 coverage                              |
-| TC-0003-0017 | integration | AC-0003-0001               | EX-0003-0015 | normal   | migrated example EX-0003-0015 coverage                              |
-| TC-0003-0018 | integration | AC-0003-0015               | EX-0003-0016 | normal   | gitignore 管理ブロック追記（新規）                                  |
-| TC-0003-0019 | integration | AC-0003-0016               | EX-0003-0017 | edge     | レガシー行除去と管理ブロック置換                                    |
-| TC-0003-0020 | integration | AC-0003-0015               | EX-0003-0016 | boundary | review-\*/ サブディレクトリが gitignore 対象                        |
-| TC-0003-0021 | integration | AC-0003-0017               | EX-0003-0018 | normal   | 4-layer asset-tree seed                                             |
-| TC-0003-0022 | integration | AC-0003-0018               | EX-0003-0019 | normal   | project-root steering seed                                          |
-| TC-0003-0023 | integration | AC-0003-0019, AC-0003-0020 | EX-0003-0020 | normal   | --upgrade-assistant-tree migration                                  |
-| TC-0003-0024 | integration | AC-0003-0021               | EX-0003-0021 | normal   | migration memo authoring                                            |
-| TC-0003-0025 | unit        | AC-0003-0022               | EX-0003-0022 | normal   | assistantPaths.ts SSOT lint                                         |
-| TC-0003-0026 | integration | AC-0003-0023, AC-0003-0024 | EX-0003-0023 | edge     | 旧 layout backward compat + sunset warning                          |
-| TC-0003-0027 | unit        | AC-0003-0025               | EX-0003-0024 | normal   | 配布 job の permission / timeout / concurrency 宣言                 |
-| TC-0003-0028 | integration | AC-0003-0025               | EX-0003-0025 | error    | persist-credentials 削除で hygiene lane が exit 1                   |
-| TC-0003-0029 | unit        | AC-0003-0026               | EX-0003-0026 | boundary | lockfile 4 種 + no-lockfile の install 分岐保持                     |
-| TC-0003-0030 | unit        | AC-0003-0027               | EX-0003-0027 | normal   | 配布 uses が全て 40-hex SHA pin                                     |
-| TC-0003-0031 | unit        | AC-0003-0027, AC-0003-0028 | EX-0003-0028 | normal   | 可読 version は step name（leading v なし）                         |
-| TC-0003-0032 | integration | AC-0003-0027               | EX-0003-0029 | error    | sanctioned set 外 third-party を allow-list が reject               |
-| TC-0003-0033 | integration | AC-0003-0028               | EX-0003-0030 | error    | planted `# v<X.Y.Z>` trailer で leakage guard exit 1                |
-| TC-0003-0034 | integration | AC-0003-0029               | EX-0003-0031 | error    | planted actions/ と非 prefix 名の reject                            |
-| TC-0003-0035 | unit        | AC-0003-0029               | EX-0003-0032 | normal   | 配布ファイル間参照 0 件 + orchestrator job 分離                     |
-| TC-0003-0036 | integration | AC-0003-0030               | EX-0003-0033 | normal   | script 未宣言 adopter で実行 test lane 0 件                         |
-| TC-0003-0037 | integration | AC-0003-0030               | EX-0003-0034 | boundary | two installing declarations, four and three instances, zero secrets |
-| TC-0003-0038 | unit        | AC-0003-0031               | EX-0003-0035 | normal   | docs-only / source diff の lane 選択                                |
-| TC-0003-0039 | integration | AC-0003-0031               | EX-0003-0036 | error    | shallow clone / base ref 不達で fail open                           |
-| TC-0003-0040 | integration | AC-0003-0031               | EX-0003-0037 | boundary | 空 matrix で verdict が exit 0                                      |
-| TC-0003-0041 | unit        | AC-0003-0032               | EX-0003-0038 | error    | organization-private label literal の reject                        |
-| TC-0003-0042 | unit        | AC-0003-0026, AC-0003-0032 | EX-0003-0039 | normal   | 配布 header table の記載完全性                                      |
-| TC-0003-0043 | integration | AC-0003-0033               | EX-0003-0040 | boundary | Node version ファイル不在で fail open                               |
-| TC-0003-0044 | integration | AC-0003-0033               | EX-0003-0041 | error    | packageManager field 不在で fail closed                             |
-| TC-0003-0045 | unit        | AC-0003-0034               | EX-0003-0042 | normal   | write / prune set が配布名リスト由来                                |
-| TC-0003-0046 | integration | AC-0003-0034               | EX-0003-0043 | edge     | adopter 作成の同名ファイルを触らない                                |
-| TC-0003-0047 | integration | AC-0003-0034               | EX-0003-0044 | boundary | declined ファイルの再作成 / prune / stale 抑止                      |
-| TC-0003-0048 | unit        | AC-0003-0034               | EX-0003-0045 | normal   | refresh 経路に自前 copy / removal 呼び出し無し                      |
-| TC-0003-0049 | integration | AC-0003-0035               | EX-0003-0046 | error    | profile / threshold divergence で gate exit 1                       |
-| TC-0003-0050 | unit        | AC-0003-0035               | EX-0003-0047 | normal   | gate placement と subsumed TC 参照の保持                            |
-| TC-0003-0051 | integration | AC-0003-0036               | EX-0003-0048 | boundary | declined name の copy 前除外                                        |
-| TC-0003-0052 | unit        | AC-0003-0034               | EX-0003-0049 | normal   | pruneMatchingEntries の export と predicate                         |
-| TC-0003-0053 | integration | AC-0003-0033               | EX-0003-0040 | normal   | version ファイルと packageManager が揃う happy path                 |
-| TC-0003-0054 | integration | AC-0003-0036               | EX-0003-0048 | normal   | declined でない absent name は書き出して記録する                    |
-| TC-0003-0055 | integration | AC-0003-0037               |              | normal   | Codex agent profile 生成 + --force 再生成                           |
-| TC-0003-0056 | integration | AC-0003-0038               | EX-0003-0050 | normal   | delivered document checks: isolated legs, preserved check name      |
-| TC-0003-0057 | integration | AC-0003-0038               | EX-0003-0050 | normal   | delivered validation profiles: isolated legs, preserved verdict     |
-| TC-0003-0058 | integration | AC-0003-0038               | EX-0003-0051 | error    | aggregate failure protection: bad result and missing binding        |
+| TC-ID        | Level       | AC-Refs                    | EX-Ref       | Type     | Title                                                                 |
+| ------------ | ----------- | -------------------------- | ------------ | -------- | --------------------------------------------------------------------- |
+| TC-0003-0001 | integration | AC-0003-0001               | EX-0003-0001 | normal   | 空ディレクトリでの初期化                                              |
+| TC-0003-0002 | integration | AC-0003-0002               | EX-0003-0002 | normal   | 冪等な初期化 - 既存スキップ                                           |
+| TC-0003-0003 | integration | AC-0003-0003               | EX-0003-0003 | normal   | --force スキル上書き + skills.local 保護                              |
+| TC-0003-0004 | integration | AC-0003-0004               | EX-0003-0004 | normal   | --dry-run プレビュー                                                  |
+| TC-0003-0005 | integration | AC-0003-0005               | EX-0003-0005 | normal   | skill directory symlink 生成                                          |
+| TC-0003-0006 | integration | AC-0003-0006               | EX-0003-0006 | normal   | agent file symlink 生成                                               |
+| TC-0003-0007 | integration | AC-0003-0007               | EX-0003-0007 | normal   | レガシー 10_workflow.md 削除                                          |
+| TC-0003-0008 | integration | AC-0003-0008               | EX-0003-0007 | normal   | 旧 commands/prompts prune                                             |
+| TC-0003-0009 | integration | AC-0003-0009               |              | normal   | git config core.symlinks 自動設定                                     |
+| TC-0003-0010 | unit        | AC-0003-0010               | EX-0003-0008 | error    | Windows EPERM エラーメッセージ                                        |
+| TC-0003-0011 | integration | AC-0003-0011               | EX-0003-0009 | normal   | instructions 新規配置                                                 |
+| TC-0003-0012 | integration | AC-0003-0012               | EX-0003-0010 | edge     | instructions 既存ファイル skip                                        |
+| TC-0003-0013 | integration | AC-0003-0013               | EX-0003-0011 | edge     | --force で instructions 再生成                                        |
+| TC-0003-0014 | integration | AC-0003-0014               | EX-0003-0012 | normal   | instructions アクティベーション案内表示                               |
+| TC-0003-0015 | integration | AC-0003-0002               | EX-0003-0013 | edge     | symlink idempotency (3 consecutive runs)                              |
+| TC-0003-0016 | integration | AC-0003-0001               | EX-0003-0014 | normal   | migrated example EX-0003-0014 coverage                                |
+| TC-0003-0017 | integration | AC-0003-0001               | EX-0003-0015 | normal   | migrated example EX-0003-0015 coverage                                |
+| TC-0003-0018 | integration | AC-0003-0015               | EX-0003-0016 | normal   | gitignore 管理ブロック追記（新規）                                    |
+| TC-0003-0019 | integration | AC-0003-0016               | EX-0003-0017 | edge     | レガシー行除去と管理ブロック置換                                      |
+| TC-0003-0020 | integration | AC-0003-0015               | EX-0003-0016 | boundary | review-\*/ サブディレクトリが gitignore 対象                          |
+| TC-0003-0021 | integration | AC-0003-0017               | EX-0003-0018 | normal   | 4-layer asset-tree seed                                               |
+| TC-0003-0022 | integration | AC-0003-0018               | EX-0003-0019 | normal   | project-root steering seed                                            |
+| TC-0003-0023 | integration | AC-0003-0019, AC-0003-0020 | EX-0003-0020 | normal   | --upgrade-assistant-tree migration                                    |
+| TC-0003-0024 | integration | AC-0003-0021               | EX-0003-0021 | normal   | migration memo authoring                                              |
+| TC-0003-0025 | unit        | AC-0003-0022               | EX-0003-0022 | normal   | assistantPaths.ts SSOT lint                                           |
+| TC-0003-0026 | integration | AC-0003-0023, AC-0003-0024 | EX-0003-0023 | edge     | legacy layout kept, D-DEPRECATED-PATH reported as an error            |
+| TC-0003-0027 | unit        | AC-0003-0025               | EX-0003-0024 | normal   | 配布 job の permission / timeout / concurrency 宣言                   |
+| TC-0003-0028 | integration | AC-0003-0025               | EX-0003-0025 | error    | persist-credentials 削除で hygiene lane が exit 1                     |
+| TC-0003-0029 | unit        | AC-0003-0026               | EX-0003-0026 | boundary | lockfile 4 種 + no-lockfile の install 分岐保持                       |
+| TC-0003-0030 | unit        | AC-0003-0027               | EX-0003-0027 | normal   | 配布 uses が全て 40-hex SHA pin                                       |
+| TC-0003-0031 | unit        | AC-0003-0027, AC-0003-0028 | EX-0003-0028 | normal   | 可読 version は step name（leading v なし）                           |
+| TC-0003-0032 | integration | AC-0003-0027               | EX-0003-0029 | error    | sanctioned set 外 third-party を allow-list が reject                 |
+| TC-0003-0033 | integration | AC-0003-0028               | EX-0003-0030 | error    | planted `# v<X.Y.Z>` trailer で leakage guard exit 1                  |
+| TC-0003-0034 | integration | AC-0003-0029               | EX-0003-0031 | error    | planted actions/ と非 prefix 名の reject                              |
+| TC-0003-0035 | unit        | AC-0003-0029               | EX-0003-0032 | normal   | 配布ファイル間参照 0 件 + orchestrator job 分離                       |
+| TC-0003-0036 | integration | AC-0003-0030               | EX-0003-0033 | normal   | script 未宣言 adopter で実行 test lane 0 件                           |
+| TC-0003-0037 | integration | AC-0003-0030               | EX-0003-0034 | boundary | three installing declarations, nine and eight instances, zero secrets |
+| TC-0003-0038 | unit        | AC-0003-0031               | EX-0003-0035 | normal   | docs-only / source diff の lane 選択                                  |
+| TC-0003-0039 | integration | AC-0003-0031               | EX-0003-0036 | error    | shallow clone / base ref 不達で fail open                             |
+| TC-0003-0040 | integration | AC-0003-0031               | EX-0003-0037 | boundary | 空 matrix で verdict が exit 0                                        |
+| TC-0003-0041 | unit        | AC-0003-0032               | EX-0003-0038 | error    | organization-private label literal の reject                          |
+| TC-0003-0042 | unit        | AC-0003-0026, AC-0003-0032 | EX-0003-0039 | normal   | 配布 header table の記載完全性                                        |
+| TC-0003-0043 | integration | AC-0003-0033               | EX-0003-0040 | boundary | Node version ファイル不在で fail open                                 |
+| TC-0003-0044 | integration | AC-0003-0033               | EX-0003-0041 | error    | packageManager field 不在で fail closed                               |
+| TC-0003-0045 | unit        | AC-0003-0034               | EX-0003-0042 | normal   | write / prune set が配布名リスト由来                                  |
+| TC-0003-0046 | integration | AC-0003-0034               | EX-0003-0043 | edge     | adopter 作成の同名ファイルを触らない                                  |
+| TC-0003-0047 | integration | AC-0003-0034               | EX-0003-0044 | boundary | declined ファイルの再作成 / prune / stale 抑止                        |
+| TC-0003-0048 | unit        | AC-0003-0034               | EX-0003-0045 | normal   | refresh 経路に自前 copy / removal 呼び出し無し                        |
+| TC-0003-0049 | integration | AC-0003-0035               | EX-0003-0046 | error    | profile / threshold divergence で gate exit 1                         |
+| TC-0003-0050 | unit        | AC-0003-0035               | EX-0003-0047 | normal   | gate placement と subsumed TC 参照の保持                              |
+| TC-0003-0051 | integration | AC-0003-0036               | EX-0003-0048 | boundary | declined name の copy 前除外                                          |
+| TC-0003-0052 | unit        | AC-0003-0034               | EX-0003-0049 | normal   | pruneMatchingEntries の export と predicate                           |
+| TC-0003-0053 | integration | AC-0003-0033               | EX-0003-0040 | normal   | version ファイルと packageManager が揃う happy path                   |
+| TC-0003-0054 | integration | AC-0003-0036               | EX-0003-0048 | normal   | declined でない absent name は書き出して記録する                      |
+| TC-0003-0055 | integration | AC-0003-0037               |              | normal   | Codex agent profile 生成 + --force 再生成                             |
+| TC-0003-0056 | integration | AC-0003-0038               | EX-0003-0050 | normal   | delivered document checks: isolated legs, preserved check name        |
+| TC-0003-0057 | integration | AC-0003-0038               | EX-0003-0050 | normal   | delivered validation profiles: isolated legs, preserved verdict       |
+| TC-0003-0058 | integration | AC-0003-0038               | EX-0003-0051 | error    | aggregate failure protection: bad result and missing binding          |
 
 ## TC-0003-0001: 空ディレクトリでの初期化
 
@@ -149,7 +149,8 @@ Verify:
 
 - `.gitignore` が生成されている
 - `QFAI_GITIGNORE_MARKER` が 1 件存在する
-- 必須 7 エントリ（`.qfai/report/*`, `!.qfai/report/README.md`, `.qfai/evidence/*`, `!.qfai/evidence/README.md`, `.qfai/review/*`, `!.qfai/review/README.md`, `.qfai/discussion/discussion-*/`）が含まれる
+- the four ignore entries `.qfai/report/*`, `.qfai/evidence/*`, `.qfai/review/*` and `.qfai/discussion/*` are present
+- none of the four README negations (`!.qfai/report/README.md`, `!.qfai/evidence/README.md`, `!.qfai/review/README.md`, `!.qfai/discussion/README.md`) is present, and neither is `.qfai/discussion/discussion-*/`
 - レガシー 2 エントリ（`!.qfai/review/review-*/`, `!.qfai/review/review-*/**`）は含まれない
 
 ## TC-0003-0019: レガシー行除去と管理ブロック置換
@@ -205,7 +206,7 @@ Setup: empty temp dir.
 Action: `runInit({ root })`、その後ユーザー編集をシミュレートして `.qfai/steering/_templates/entry.md` に追記 → `runInit({ root })` を再実行。
 Verify:
 
-- 初回実行で `.qfai/steering/README.md`, `.qfai/steering/.gitkeep`, `.qfai/steering/_templates/entry.md` が seed される
+- the first run seeds `.qfai/steering/.gitkeep` and `.qfai/steering/_templates/entry.md`, and writes no `.qfai/steering/README.md`
 - 2 回目実行後もユーザー追記内容が `_templates/entry.md` に残っている
 
 ## TC-0003-0023: --upgrade-assistant-tree migration
@@ -250,21 +251,22 @@ Verify:
 - マッチが 0 件 (assistantPaths.ts の import 経由でのみパスが構築されている)
 - `assistantPaths.ts` の export (`CONSTITUTION_DIR_REL`, `MANIFEST_DIR_REL`, `CATALOG_DIR_REL`, `PROCESS_DIR_REL`) が init.ts から import されている
 
-## TC-0003-0026: 旧 layout backward compat + sunset warning
+## TC-0003-0026: legacy layout kept, D-DEPRECATED-PATH reported as an error
 
 **Level:** integration
 **EX Refs:** EX-0003-0023
 **AC Refs:** AC-0003-0023, AC-0003-0024
 
-Setup: v1.8.x の `.qfai/assistant/steering/` レイアウトを持つ temp dir。
-Action: v1.9.0 の `runInit({ root })` (no flag) を実行。
+Setup: a temp dir carrying the legacy `.qfai/assistant/steering/` layout.
+Action: run `runInit({ root })` without a flag, at tool version 1.10.0.
 Verify:
 
-- exit code 0
-- 旧 `.qfai/assistant/steering/` は削除されていない (ファイル内容も unchanged)
-- stdout に `D-DEPRECATED-PATH` warning が出力される
-- warning 本文に `v1.10.0` という具体的な sunset minor version が文字列として含まれる
-- 「次の release」「将来」などの曖昧表現は warning 本文に含まれない
+- `runInit` completes without throwing
+- the legacy `.qfai/assistant/steering/` is not deleted, and its file content is unchanged
+- stderr carries `D-DEPRECATED-PATH` as an error
+- the error says the layout is past the announced sunset and names it as `v1.10.0`
+- the error names the migration command `qfai init --upgrade-assistant-tree`
+- the error no longer calls the legacy layout read-compatible
 
 ## TC-0003-0027: 配布 job の permission / timeout / concurrency 宣言
 
@@ -418,7 +420,7 @@ Verify:
 - 実行判定される test lane は 0 件
 - 各 lane の条件式が参照するのは layer 名スクリプトの存在であり、layer の credential 属性ではない
 
-## TC-0003-0037: two installing declarations, four and three instances, zero secrets
+## TC-0003-0037: three installing declarations, nine and eight instances, zero secrets
 
 **Level:** integration
 **EX Refs:** EX-0003-0034
@@ -429,8 +431,8 @@ Setup: the same init output tree as TC-0003-0036.
 Action: name the job declarations that install dependencies, expand each one's matrix for a pull request and for a push, and count secret declarations, secret-context references and `secrets: inherit`.
 Verify:
 
-- exactly two job declarations install dependencies: the document checks and the validation profiles
-- expanding those two declarations yields four executing instances on a pull request and three on a push
+- exactly three job declarations install dependencies: the document checks, the test lane and the validation profiles
+- expanding those three declarations, with the test lane at its bound of five layer legs, yields nine instances on a pull request and eight on a push
 - secret declarations, secret-context references and `secrets: inherit` are 0 across the set
 - the orchestrator's detection and verdict jobs install nothing and each declares `timeout-minutes`
 
@@ -448,7 +450,7 @@ Verify:
 - Markdown のみでは minimal lane 集合
 - source を含む場合は full lane 集合
 - 経路に third-party action が現れない（name-only diff + JSON filtering のみ）
-- full history 要求は detection job にのみ現れる
+- full history is requested only by the orchestrator's detection job and the document scope job, and by the validation job on a pull request for the drift profile
 
 ## TC-0003-0039: shallow clone / base ref 不達で fail open
 
@@ -573,7 +575,7 @@ Verify:
 - (a)(b)(c) では reader が throw せず record を empty として扱う（fail-safe 方向 = 全て adopter-owned）
 - (d) では当該ファイルが `adopter-owned` として報告される
 - 上書きも prune もされない
-- `.qfai/install-provenance.json` は `QFAI_GITIGNORE_BLOCK` に含まれない（tracked である）
+- `QFAI_GITIGNORE_BLOCK` ignores `.qfai/install-provenance.json` on no line and re-includes it with `!.qfai/install-provenance.json`, so the record stays tracked
 
 ## TC-0003-0047: closed 5-state enum の判定
 
@@ -621,7 +623,7 @@ Verify:
 
 - planted で exit 1、failure code `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` と drift した値・期待値が出力される
 - clean で exit 0
-- 宣言形状が `CLI-WFSET` §5 の 9 dimension をすべて pin している（1 つでも欠落していれば contract 違反）
+- the declared shape pins all ten dimensions of `CLI-WFSET` §5 (a shape missing any one of them is a contract violation)
 - 値の SSOT が test suite 側の 1 箇所であり、spec / contract 側に値の重複記載が無い
 
 ## TC-0003-0050: gate placement と subsumed TC 参照の保持

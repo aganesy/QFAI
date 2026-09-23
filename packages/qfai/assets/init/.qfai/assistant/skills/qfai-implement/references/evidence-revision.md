@@ -472,8 +472,9 @@ latest — a recomputation that stops at one pair is the same hole with a
 value stored beside it.
 
 **A record re-attestation seals its own pack the same way**, under
-`Record re-attestation pack` and `Record re-attestation pack seal` — it is
-not a round, so it takes no `Round N:` prefix
+`<prefix> record re-attestation pack` and `<prefix> record re-attestation pack
+seal` — the prefix is the verdict it supersedes, and it is not a round, so it
+takes no `Round N:` prefix
 (`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`).
 The pack holding the verdict it supersedes is never edited to restamp a hash:
 that would break the seal already recorded over it, which is the one thing

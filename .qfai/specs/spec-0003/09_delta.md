@@ -238,10 +238,11 @@ observable:
 
 ## Change Requests
 
-| CR ID            | Upstream artifact                                                                          | Mode      | Approved by                                                    | Applied at           |
-| ---------------- | ------------------------------------------------------------------------------------------ | --------- | -------------------------------------------------------------- | -------------------- |
-| CR-20260923-0003 | `spec-0003/04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md` | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T03:05:00Z |
-| CR-20260923-0007 | `spec-0003/06_Test-Cases.md`, `tdd/test-list.md`                                           | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T08:26:35Z |
+| CR ID            | Upstream artifact                                                                                                                       | Mode      | Approved by                                                    | Applied at           |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------- | -------------------------------------------------------------- | -------------------- |
+| CR-20260923-0003 | `spec-0003/04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                              | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T03:05:00Z |
+| CR-20260923-0006 | `spec-0003/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md` | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T08:13:56Z |
+| CR-20260923-0007 | `spec-0003/06_Test-Cases.md`, `tdd/test-list.md`                                                                                        | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T08:26:35Z |
 
 ## Triage (2026-09-15)
 
