@@ -6210,6 +6210,7 @@ async function validateSpecTddList(
       root,
       relPath,
       specNumber,
+      knownTcIds,
     })),
   );
 
@@ -7550,18 +7551,32 @@ function validateObligationColumn(
 }
 
 /** Where a finding from {@link validateCompletedRowsRunATest} is filed. */
-type CarrierOnlyContext = { root: string; relPath: string; specNumber: string };
+type CarrierOnlyContext = {
+  root: string;
+  relPath: string;
+  specNumber: string;
+  /** The cases `06_Test-Cases.md` declares, which a decomposed token resolves to. */
+  knownTcIds: ReadonlySet<string>;
+};
 
 /**
- * The `TC-*` tokens of a `done` row whose `Layer` owns `TC-Refs`, upper-cased.
- * Empty for any other row.
+ * The `TC-*` tokens of a `done` row whose `Layer` owns `TC-Refs`, upper-cased
+ * and once each. A decomposed `TC-NNNN-NNNN` brings the declared case it
+ * resolves to as well, since an annotation may name either. Empty for any
+ * other row.
  */
-function completedRowTestCases(ref: LedgerRowRef): string[] {
+function completedRowTestCases(ref: LedgerRowRef, knownTcIds: ReadonlySet<string>): string[] {
   if (!TDD_DONE_STATUSES.has(cell(ref, "Status").toLowerCase())) return [];
   if (!isCoverageBearingRow(ref.scan, ref.row)) return [];
-  return splitTcRefs(cell(ref, "TC-Refs"))
-    .map((token) => token.toUpperCase())
-    .filter(isWellFormedTcRef);
+  const testCases = new Set<string>();
+  for (const token of splitTcRefs(cell(ref, "TC-Refs"))) {
+    const normalized = token.toUpperCase();
+    if (!isWellFormedTcRef(normalized)) continue;
+    testCases.add(normalized);
+    const declared = resolveDeclaredTcId(normalized, knownTcIds);
+    if (declared !== undefined) testCases.add(declared);
+  }
+  return [...testCases];
 }
 
 /**
@@ -7569,7 +7584,11 @@ function completedRowTestCases(ref: LedgerRowRef): string[] {
  *
  * A row with a test for any of its cases is left alone. Its other cases are
  * then the acceptance gate's to report, and the row's claim rests on a test.
- * A case no file names at all is left to that gate as well.
+ * A case no file names at all is not reported here: no carrier then stands in
+ * for a test.
+ *
+ * A scan that could not read every test file is reported once per ledger
+ * rather than read as a pass.
  *
  * `done` alone: an `exception` row parks the obligation under a decision
  * record and claims no test. A retired spec's findings are demoted by the
@@ -7581,11 +7600,18 @@ async function validateCompletedRowsRunATest(
   context: CarrierOnlyContext,
 ): Promise<Issue[]> {
   const candidates = [...rows]
-    .map((ref) => ({ ref, testCases: completedRowTestCases(ref) }))
+    .map((ref) => ({ ref, testCases: completedRowTestCases(ref, context.knownTcIds) }))
     .filter(({ testCases }) => testCases.length > 0);
   if (candidates.length === 0) return [];
   const homes = await readAnnotationHomes();
-  if (homes === null) return [];
+  if (homes === null) {
+    return [
+      annotationScanIncompleteIssue(
+        candidates.map(({ ref }) => ref),
+        context,
+      ),
+    ];
+  }
   const tests = homes.tests.get(context.specNumber);
   const carriers = homes.carriers.get(context.specNumber);
   const issues: Issue[] = [];
@@ -7616,6 +7642,24 @@ function carrierOnlyIssue(
     "tddList.completedRowRunsATest",
     [id, testCase, ...files],
     "change",
-    `Annotate the test that discharges ${testCase} with QFAI:SPEC-${context.specNumber}:${testCase}, or move the row off done through /qfai-implement or a Change Request.`,
+    `Annotate the test that discharges ${testCase} with QFAI:SPEC-${context.specNumber}:${testCase}. If no test discharges it, the row leaves done only through an upstream reset: approve a Change Request, record its CR-* in DR-ID and move the row to todo, then rerun /qfai-implement.`,
+  );
+}
+
+/** The ledger's `done` rows could not be checked, because the test scan has a gap. */
+function annotationScanIncompleteIssue(
+  rows: readonly LedgerRowRef[],
+  context: CarrierOnlyContext,
+): Issue {
+  const ids = rows.map((ref) => cell(ref, "TDD-ID"));
+  return issue(
+    COMPLETED_ROW_CARRIER_ONLY_CODE,
+    `${ids.length} done row(s) in tdd/test-list.md for spec-${context.specNumber} were not checked for a test: the test scan passed its file limit, or could not read a pattern or a file, so a test that annotates their cases may sit in the part it missed`,
+    "error",
+    context.relPath,
+    "tddList.completedRowRunsATest",
+    ids,
+    "change",
+    "Narrow validation.traceability.testFileGlobs or add validation.traceability.testFileExcludeGlobs until the scan reads every test file, and make any unreadable file readable.",
   );
 }

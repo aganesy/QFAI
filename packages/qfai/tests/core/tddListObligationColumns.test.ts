@@ -488,7 +488,9 @@ describe("a done row rests on a test, not on an annotation carrier", () => {
         expect(found[0]?.refs).toEqual(["TDD-0001", "TC-0001-0001", CARRIER]);
         expect(found[0]?.message).toContain(`TC-0001-0001 is named only by ${CARRIER}`);
         expect(found[0]?.suggested_action).toContain("QFAI:SPEC-0001:TC-0001-0001");
-        expect(found[0]?.suggested_action).toContain("/qfai-implement or a Change Request");
+        expect(found[0]?.suggested_action).toContain(
+          "approve a Change Request, record its CR-* in DR-ID and move the row to todo, then rerun /qfai-implement",
+        );
       },
       "# TC\n",
       { files, config },
@@ -540,6 +542,82 @@ describe("a done row rests on a test, not on an annotation carrier", () => {
       },
       "# TC\n",
       { files, config },
+    );
+  });
+
+  it("reads the unit tests under paths.testsDir with no project glob", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0002 | Unit | tests/unit/b.test.ts | case b | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues)).toEqual([]);
+      },
+      "# TC\n",
+      { files },
+    );
+  });
+
+  it("reads a decomposed token as the case it resolves to", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        const found = carrierOnly(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.refs).toEqual(["TDD-0001", "TC-0001", CARRIER]);
+      },
+      UNIT_TEST_CASE,
+      { files: { [CARRIER]: "- QFAI:SPEC-0001:TC-0001\n" }, config },
+    );
+  });
+
+  it("reports a case once when the row names it twice", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001, tc-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues)).toHaveLength(1);
+      },
+      "# TC\n",
+      { files, config },
+    );
+  });
+
+  it("reports a test scan with a gap instead of passing", async () => {
+    const refused: QfaiConfig = {
+      ...config,
+      validation: {
+        ...config.validation,
+        traceability: {
+          ...config.validation.traceability,
+          testFileGlobs: ["tests/**/*\u0000.test.ts"],
+        },
+      },
+    };
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0002 | Unit | tests/unit/b.test.ts | case b | done | - | - |",
+      ],
+      (issues) => {
+        const found = carrierOnly(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.severity).toBe("error");
+        expect(found[0]?.refs).toEqual(["TDD-0001"]);
+        expect(found[0]?.message).toContain("were not checked for a test");
+      },
+      "# TC\n",
+      { files, config: refused },
     );
   });
 

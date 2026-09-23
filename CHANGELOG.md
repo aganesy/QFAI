@@ -38,8 +38,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   row whose `Layer` owns `TC-Refs`. A row with a test for any of its cases is
   not reported, and neither is an `exception` row. The finding names the row,
   the case and the carrier. The fix is to annotate the test that discharges the
-  case, or to move the row off `done` through `/qfai-implement` or a Change
-  Request. The 33 existing findings are carried as a backlog in
+  case. Where no test does, the row leaves `done` only through an upstream
+  reset approved by a Change Request. A test scan that passes its file limit or
+  cannot read a file is reported under the same code rather than read as a
+  pass. The 33 existing findings are carried as a backlog in
   `scripts/dogfood-backlog.json`: spec-0002 3, spec-0003 2, spec-0004 5,
   spec-0010 3, spec-0012 19 and spec-0014 1, in the `tdd` and `full` profiles.
 

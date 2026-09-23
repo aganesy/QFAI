@@ -1181,24 +1181,30 @@ export type TestCaseAnnotationHomes = {
  *
  * The acceptance scan in {@link evaluateAtddCodeTraceability} keeps only the
  * acceptance layers, so it cannot say whether a unit test annotates a case. A
- * ledger row claims a test at every layer, so this reads the same globs with
- * no layer filter, and splits the files the way `QFAI-ATDD-119` does.
+ * ledger row claims a test at every layer, so this reads the same globs plus
+ * the whole of `paths.testsDir`, with no layer filter, and splits the files the
+ * way `QFAI-ATDD-119` does. The whole directory, because with no project glob
+ * the acceptance globs reach none of `unit/` or `component/`.
  *
- * `null` when the scan is incomplete — truncated, or a pattern could not be
- * read. A test past the cut may annotate the case, so "a carrier alone names
- * it" is then unproven, as it is for `coveredByCarrierOnly`.
+ * `null` when the scan is incomplete — truncated, a pattern could not be
+ * walked, or a file could not be read. A test past the gap may annotate the
+ * case, so "a carrier alone names it" is then unproven, as it is for
+ * `coveredByCarrierOnly`.
+ *
+ * SIMPLIFIED: walks and reads the test tree again after the acceptance scan.
+ * Lift when: a completion gate is measured slow on the second walk.
  */
 export async function collectTestCaseAnnotationHomes(
   root: string,
   config: QfaiConfig,
 ): Promise<TestCaseAnnotationHomes | null> {
   const projectGlobs = config.validation.traceability.testFileGlobs;
-  const globs = buildAtddScanGlobs(
-    root,
-    resolvePath(root, config, "testsDir"),
-    deriveAtddFilePattern(projectGlobs),
-    projectGlobs,
-  );
+  const testsRoot = resolvePath(root, config, "testsDir");
+  const filePattern = deriveAtddFilePattern(projectGlobs);
+  const globs = [
+    ...buildAtddScanGlobs(root, testsRoot, filePattern, projectGlobs),
+    `${testsBaseGlob(root, testsRoot)}/${filePattern}`,
+  ];
   const excludes = normalizeGlobs(config.validation.traceability.testFileExcludeGlobs);
   let scan: CollectFilesByGlobsResult;
   try {
@@ -1209,7 +1215,12 @@ export async function collectTestCaseAnnotationHomes(
   if (scan.truncated) return null;
   const homes: TestCaseAnnotationHomes = { tests: new Map(), carriers: new Map() };
   for (const file of scan.files) {
-    const raw = await readSafe(file);
+    let raw: string;
+    try {
+      raw = await readFile(file, "utf-8");
+    } catch {
+      return null;
+    }
     const refs = extractSpecScopedAnnotations(maskTestSource(file, raw), TC_TEST_ANNOTATION_RE);
     if (refs.length === 0) continue;
     const into = hasRunnableTestStructure(file, raw) ? homes.tests : homes.carriers;
@@ -3119,7 +3130,8 @@ function acceptanceSourceFilter(
     namedTestFile(toPosixPath(absolutePath));
 }
 
-function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
+/** `paths.testsDir` as a glob base: root-relative inside the root, absolute outside. */
+function testsBaseGlob(root: string, testsRoot: string): string {
   const relativeTestsRoot = path.relative(root, testsRoot);
   const isInsideRoot =
     relativeTestsRoot.length === 0 ||
@@ -3127,7 +3139,11 @@ function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string
   const base = isInsideRoot
     ? toPosixPath(relativeTestsRoot.length === 0 ? "." : relativeTestsRoot)
     : toPosixPath(testsRoot);
-  const normalizedBase = base.replace(/\/+$/, "");
+  return base.replace(/\/+$/, "");
+}
+
+function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
+  const normalizedBase = testsBaseGlob(root, testsRoot);
   return [
     `${normalizedBase}/e2e/${filePattern}`,
     `${normalizedBase}/api/${filePattern}`,
