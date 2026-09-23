@@ -25,8 +25,10 @@ its `Selector` names four tests:
 | `accepts runner.ok=true (recovery path) and continues to cycle completion` | A runner reporting a recovered owner is adopted, teardown included   |
 | `returns exit 2 with PID + owning command on stderr when runner refuses`   | A refusing runner ends the cycle with exit 2 and its reason          |
 
-Each entry is broken by a different production line, so they are four
-independently observable boundaries.
+Each entry verifies a different clause of the restated case, and each is broken
+by a different production line. The recovery entry and the teardown entry run
+the same ok path, so a mutation that breaks one also fails the other; they
+stay separate rows because the case states them as separate clauses.
 `qfai-implement/references/selector-granularity.md` allows one boundary per
 row, and a row carrying more is split by `/qfai-sdd` Phase 2b, not in place.
 `qfai-implement` Phase Red step 1 stops such a row at selection.
@@ -86,6 +88,10 @@ Approve option 1: split `TDD-0469` into four rows, one per boundary of
    falsifiability path.
 
 ## Resolution
+
+The Context was corrected after approval: it first called the four entries
+independently observable, and the recovery and teardown entries are not, since
+both run the same ok path. The approved option is unchanged.
 
 Applied under option 1.
 

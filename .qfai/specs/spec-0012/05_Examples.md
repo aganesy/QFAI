@@ -508,9 +508,9 @@
 ## EX-0012-0169: `iterate --auto-serve` Refuses to Kill Foreign Process
 
 - BR-Ref: BR-0012-0048
-- Given port 3000 occupied by a process whose owning command is `node /home/user/myapp/server.js` (not a prior iterate),
+- Given a server runner that refuses because port 3000 is owned by `node /home/user/myapp/server.js` (PID 12345),
 - When `iterate --auto-serve` starts,
-- Then iterate detects the foreign owner, refuses to kill it, reports `PID=12345 owning command=node /home/user/myapp/server.js`, and exits with input-error status. A second test on a port owned by a prior iterate force-kills the prior owner cleanly via `tree-kill` / `taskkill /F /T`. NFR-0106 enforced.
+- Then iterate leaves the owner alone, prints the runner's reason naming PID 12345 and that command on stderr, and exits 2. NFR-0106 enforced.
 - Given port 3000 held by another process, and no server runner injected,
 - When `iterate --auto-serve --target-url http://localhost:3000/` starts,
 - Then the default runner does not touch the owner or pick another port, and iterate exits 2 with a reason naming port 3000.

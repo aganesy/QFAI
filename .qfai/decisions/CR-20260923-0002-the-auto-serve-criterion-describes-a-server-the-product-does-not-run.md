@@ -146,3 +146,5 @@ Applied under option 1.
 - `TDD-0561` is seeded for `TC-0012-0489`, at `todo`, with this record in
   `DR-ID`.
 - `spec-0012/09_delta.md` records this request.
+- `CR-20260923-0001` proposes a case for the default runner's refusal of a busy
+  port. `TC-0012-0489` is that case now, so that record reuses it when applied.
