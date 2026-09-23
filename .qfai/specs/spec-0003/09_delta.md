@@ -238,9 +238,9 @@ observable:
 
 ## Change Requests
 
-| CR ID            | Upstream artifact                                                                                 | Mode      | Approved by                                                  | Applied at           |
-| ---------------- | ------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------------ | -------------------- |
-| CR-20260923-0003 | `spec-0003/04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`         | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T03:05:00Z |
+| CR ID            | Upstream artifact                                                                          | Mode      | Approved by                                                    | Applied at           |
+| ---------------- | ------------------------------------------------------------------------------------------ | --------- | -------------------------------------------------------------- | -------------------- |
+| CR-20260923-0003 | `spec-0003/04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md` | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T03:05:00Z |
 
 ## Triage (2026-09-15)
 
