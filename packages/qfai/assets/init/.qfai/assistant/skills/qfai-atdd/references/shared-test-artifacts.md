@@ -33,8 +33,10 @@ observed failure, `Revision` names a tree in one of the two forms
 command is the exact command executed. Gate item 10 accepts a moved current
 manifest only when this complete subsection targets the same spec/item,
 evidence file and selector, and its manifest/hash recompute from the current
-artifacts. Prose mentioning a re-run, or a subsection for another item, clears
-nothing.
+artifacts. An accepted subsection's `Revision` is also where the consumer's
+staleness check starts, so the edit it re-verified does not make the row stale;
+a later change to the test file or the source tree still does. Prose mentioning
+a re-run, or a subsection for another item, clears nothing.
 
 **And it is fixed where it is written, not only in what it says.** The record
 goes **inside the editing row's own entry** — `#### Shared-artifact re-verify`
