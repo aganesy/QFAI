@@ -286,6 +286,7 @@ Phase 4 notes:
 | TDD-0558 | - | E2E | T2 | - | - | todo | - | - | US-0012-0140 | - | - | - | - | - |
 | TDD-0559 | - | E2E | T2 | - | - | todo | - | - | US-0012-0141 | - | - | - | - | - |
 | TDD-0560 | - | E2E | T2 | - | - | todo | - | - | US-0012-0142 | - | - | - | - | - |
+| TDD-0561 | TC-0012-0489 | Integration | T2 | - | - | todo | CR-20260923-0002 | - | - | - | - | - | BR-0012-0048 | default-runner-refuses-held-port |
 
 CHG-006 notes:
 

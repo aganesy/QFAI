@@ -9,7 +9,7 @@
 - Approved by: `claude-code` — under the user's standing instruction to process every issue of this session with its own judgment; NOT a user decision on these options
 - Approved at: `2026-09-23T01:30:00Z`
 - Approved option: `1`
-- Applied at: `-`
+- Applied at: `2026-09-23T06:43:33Z` — see Resolution
 - Superseded by: `-`
 
 ## Context
@@ -131,4 +131,18 @@ in-process default runner, with no product change?
 Approved under option 1, the recommendation. It adds no product code and keeps
 a statement for every clause the tests verify, where option 2 reverses the
 reason the default runner is in-process and option 3 drops the runner contract.
-Not yet applied.
+
+Applied under option 1.
+
+- `REQ-0012-0076`, `AC-0012-0060` and `BR-0012-0048` state the runner contract
+  `iterate` holds a runner to, and the in-process default runner that refuses a
+  port another process holds, naming the port.
+- `BR-0012-0048` keeps the `tree-kill` / `taskkill /F /T` teardown, scoped to a
+  runner that spawns a server subprocess.
+- `EX-0012-0169` carries a second example: port 3000 in use, and
+  `iterate --auto-serve` exits 2 naming the port.
+- `TC-0012-0442` names the runner contract its four blocks verify.
+  `TC-0012-0489` is the case for the default runner's refusal.
+- `TDD-0561` is seeded for `TC-0012-0489`, at `todo`, with this record in
+  `DR-ID`.
+- `spec-0012/09_delta.md` records this request.
