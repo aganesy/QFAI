@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0013 records the change request behind its repointed rules** (#2133).
+  Five rules were repointed at the criterion about their own subject with no
+  change request on record, and the coverage record still said they were
+  broken. `CR-20260923-0010` confirms the repair and is recorded in the pack's
+  delta, and finding 7 of the coverage record says what was done. No spec
+  obligation, test or ledger row changed.
+
 - **The shipped-workflow aggregate check has a case for each job-shape
   clause** (#2194). The check rejects an aggregate with a second step, or with
   `continue-on-error` set on the job, and no case failed when either clause
