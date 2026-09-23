@@ -263,6 +263,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
     return job;
   }
 
+  // QFAI:SPEC-0003:TC-0003-0058
   it("TC-0003-0058 (TDD-0062): rejects a planted green aggregate while accepting its unmodified body", async () => {
     const job = await documentAggregate();
     expect(await aggregateFailureViolations(job, ["checks"])).toEqual([]);
@@ -275,6 +276,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
     expect(await aggregateFailureViolations(job, ["checks"])).toHaveLength(6);
   });
 
+  // QFAI:SPEC-0003:TC-0003-0058
   it("TC-0003-0058 (TDD-0063): rejects a result binding removed from the shipped aggregate", async () => {
     const job = await documentAggregate();
     const step = job.steps[0];
@@ -285,6 +287,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
     ]);
   });
 
+  // QFAI:SPEC-0003:TC-0003-0058
   it.each([
     { if: "false" },
     { shell: "bash {0} || true" },
