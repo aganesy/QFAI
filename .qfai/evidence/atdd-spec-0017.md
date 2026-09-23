@@ -23,9 +23,10 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
 - `.qfai/specs/spec-0017/tdd/test-list.md` — 101 rows: 81 `Integration`,
-  11 `Unit`; **81 `refactor`, 6 `blocked`, 14 `todo`**. The other nine rows are `E2E`, one per story,
-  seeded at `todo`. Five `todo` rows are `Integration` and are therefore this stage's to route — see
-  § "Ledger rows advanced"
+  11 `Unit`; **81 `refactor`, 0 `blocked`, 20 `todo`**. The other nine rows are `E2E`, one per story,
+  seeded at `todo`. Eleven `todo` rows are `Integration` and are therefore this stage's to route.
+  The run started 2026-09-23T10:23:39.000Z hands ten of them over — see § "Ledger rows advanced".
+  `TDD-0012` is the eleventh, and that run's work order did not name it
 - `.qfai/assistant/catalog/test-layers.md` — the layer derivation and the directory each `Level`
   routes to
 - `packages/qfai/assets/init/root/.github/workflows/**` — the shipped surface, measured before any
@@ -291,6 +292,24 @@ That experiment also produced a repo-wide finding this stage did not go looking 
 claims in `tests/e2e/qfai-traceability.md` are backed by no annotation in any E2E test file** (126
 across every test directory in the repository). `spec-0017` is the only spec at zero. `spec-0012`
 alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a cross-spec obligation.
+
+## Grilling Session
+
+### /qfai-atdd — run started 2026-09-23T10:23:39.000Z
+
+Preflight: confidence high
+
+The work order fixes the ten rows, their test cases and the procedure. One
+session opened on detection, after the ten tests had been run and mutated.
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-23T11:08:49.201Z | cbfc3f56258750c07c4a41f05418360f41558825 | 2026-09-23T11:09:26.304Z | three of the ten tests reach less than their test case states, or read their predicate from test code | empty | none in flight | 3 | 0 | 0 |
+
+S1 changes no settled input. Whether the `TDD-0062` test case covers the
+release workflow's two sliced jobs is a question about the spec, so the
+drift protocol routes it to a Change Request. The work order leaves that
+request to the orchestrator, and this run's report carries the question.
 
 ## Work performed (what changed, where)
 
@@ -1263,7 +1282,7 @@ selection. That leaves exactly the two below, and `references/red-provenance.md#
 does **not** cover them: it is scoped to a spec with zero `E2E`/`API` rows, and says nothing about
 `Integration` rows at `todo`.
 
-### TDD-0069
+### TDD-0069, routed before its test existed
 
 - `Layer`: `Integration`
 - `Test file`: `packages/qfai/tests/assets/actionPinBumpOwner.test.ts`
@@ -1348,7 +1367,7 @@ looked for an exact match and found none.)
 **And the writer owes the `Evidence` cell in the same edit** — see the subsection above. Step 3b's own
 malformed-entry rule is what makes that a condition rather than a courtesy.
 
-### TDD-0070
+### TDD-0070, routed before its test existed
 
 - `Layer`: `Integration`
 - `Test file`: `packages/qfai/tests/assets/actionPinBumpOwner.test.ts`
@@ -1378,6 +1397,294 @@ user-approved `TDDLIST-001` waiver, or the row is parked and the spec stays open
 open.** These two rows and the six `blocked` ones are why the completion status below is `FAIL`, and
 none of them is closeable by this stage. `US-0017-0007` was named here too until round 14; it is
 covered, and it was never one of the reasons this spec cannot close.
+
+### Rows handed over by the run started 2026-09-23T10:23:39.000Z
+
+Ten `Integration` rows sit at `todo` whose tests already exist, carry their
+`QFAI:SPEC-0017:TC-*` annotation and pass. For eight of them the ledger's
+`Test file` names a file that does not hold the test. Each entry below names
+the test that carries the row's annotation, and `/qfai-implement` Phase Red
+step 3b writes `Test file` and `Selector` from it.
+
+Every selector is the `it` title of one test, unique across the package's
+tests and free of regular-expression metacharacters. Each was run alone at
+`cbfc3f562` and passed as the only case its file ran.
+
+Nine rows take branch 2. `TDD-0062` is held with no branch, for the gap its
+entry records, so step 3b leaves it at `todo`.
+
+The two entries above headed "routed before its test existed" describe
+`TDD-0069` as `blocked` and `TDD-0070` as branch 3 under `DR-0017-0023`. Neither
+routing reached the ledger. Both rows now have an annotated test that passes, so
+branch 2 applies to them, and the entries below replace that routing.
+
+Each mutation was applied to the tree at `cbfc3f562`, run, and reverted with
+`git checkout`. The row's own case failed on an assertion every time. The five
+test files these rows name were run in full under every mutation, together with
+`tests/scripts/ownWorkflowTopology.test.ts` and
+`tests/scripts/workflowHygiene.test.ts` for a workflow mutation, and
+`tests/scripts/vitestWorkspaceKnobs.test.ts` and
+`tests/assets/actionPinBumpOwner.test.ts` for a runner-configuration or
+decision-record mutation. `Other rows` names what failed there. The proof is
+still `/qfai-implement` step 3c's to take.
+
+| TDD-ID | Obligation | Layer | RED provenance | Entry |
+| ------ | ---------- | ----- | -------------- | ----- |
+| `TDD-0016` | `TC-0017-0016` | Integration | falsifiability | [TDD-0016](#tdd-0016) |
+| `TDD-0030` | `TC-0017-0030` | Integration | falsifiability | [TDD-0030](#tdd-0030) |
+| `TDD-0032` | `TC-0017-0032` | Integration | falsifiability | [TDD-0032](#tdd-0032) |
+| `TDD-0033` | `TC-0017-0033` | Integration | falsifiability | [TDD-0033](#tdd-0033) |
+| `TDD-0034` | `TC-0017-0034` | Integration | falsifiability | [TDD-0034](#tdd-0034) |
+| `TDD-0035` | `TC-0017-0035` | Integration | falsifiability | [TDD-0035](#tdd-0035) |
+| `TDD-0062` | `TC-0017-0062` | Integration | none — held on a coverage gap | [TDD-0062](#tdd-0062) |
+| `TDD-0069` | `TC-0017-0069` | Integration | falsifiability | [TDD-0069](#tdd-0069) |
+| `TDD-0070` | `TC-0017-0070` | Integration | falsifiability | [TDD-0070](#tdd-0070) |
+| `TDD-0083` | `TC-0017-0083` | Integration | falsifiability | [TDD-0083](#tdd-0083) |
+
+### TDD-0016
+
+- TDD-ID: TDD-0016
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts
+- Selector: grants no permission block beyond the three that are deliberate
+- TC-ref: TC-0017-0016
+- Branch: falsifiability — the test and the workflows it reads predate this run, and the case passed on its first run
+- Predicate to break: .github/workflows/release.yml:839, the `publish` job's permission block — `id-token: write # npm provenance`, the grant that makes `publish` the third departure from `{ contents: read }`
+- Mutation: delete line 839
+- Why it fails: `publish` then grants exactly `{ contents: read }`, so it drops out of the departure set and the set has two members.
+  `expect(departures.sort()).toEqual([...three...])` fails as an assertion at `spec0017OwnWorkflowScope.test.ts:136:7`
+- Other rows: none. `TDD-0030` still passes, and so does every case in the other six files
+- Note: the ledger's current `Test file`, `tests/scripts/workflowHygiene.test.ts`, holds no test for this case. Its header comment at line 33 still says the case is absent. That comment is left alone
+
+#### Round 1
+
+- Round 1: RED test hash: 7cfed7b0c1f4809702f8cf5addeaa3178d772572173c9c9b83c0fae2fc1f3035
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts
+```
+
+### TDD-0030
+
+- TDD-ID: TDD-0030
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts
+- Selector: leaves exactly the publishing job's declared literal and routes every other job through the shared setup
+- TC-ref: TC-0017-0030
+- Branch: falsifiability — the test and the workflows it reads predate this run, and the case passed on its first run
+- Predicate to break: .github/workflows/release.yml:81, the workflow-level `env:` block — `NODE_PUBLISH: "24"` is its only Node version literal
+- Mutation: insert `  NODE_LTS: "22"` after line 81
+- Why it fails: the scan finds a second workflow-level Node literal.
+  `expect([...literals].sort()).toEqual(["release.yml#env.NODE_PUBLISH: 24"])` fails as an assertion at `spec0017OwnWorkflowScope.test.ts:260:7`
+- Other rows: none. `TDD-0016` still passes, and so does every case in the other six files
+- Note: the ledger's current `Test file`, `tests/scripts/ownWorkflowTopology.test.ts`, holds no test for this case. Its comment at line 577 still says the case is not written there. That comment is left alone
+
+#### Round 1
+
+- Round 1: RED test hash: 7cfed7b0c1f4809702f8cf5addeaa3178d772572173c9c9b83c0fae2fc1f3035
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts
+```
+
+### TDD-0032
+
+- TDD-ID: TDD-0032
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017ArtifactReuse.test.ts
+- Selector: names the legs that would change, and binds the numbers to the moment one of them downloads
+- TC-ref: TC-0017-0032
+- Branch: falsifiability — the test and the workflow it reads predate this run, and the case passed on its first run
+- Predicate to break: .github/workflows/ci.yml:645-647, the `test` job's `Build qfai (e2e + integration slices)` step — each leg builds the bundle itself, and no step in the job takes it from an artifact
+- Mutation: insert `      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0` after line 647
+- Why it fails: a leg now downloads the build while `e2e` and `integration` still build it, so the rule no longer holds vacuously.
+  `expect(live.holds, live.reason).toBe(true)` fails as an assertion at `spec0017ArtifactReuse.test.ts:156:37`, with the reason "reuse is adopted but e2e, integration still invoke the bundler"
+- Other rows: none of the ten. Every case of the hygiene lane that runs it over the own tree fails, because its required-context rule refuses an external action `.github/required-status-contexts.json` does not enumerate: `TDD-0018`, `TDD-0044`, `TDD-0045`, `TDD-0046`, `TDD-0047`, `TDD-0048`, `TDD-0051`, `TDD-0053`, `TDD-0057`, `TDD-0059` (two cases), `TDD-0093`, and four cases no row names
+- Note: changing line 646 to `if: matrix.slice == 'e2e'` also fails this case, at `:148:7` on the enumerated legs, and fails only one other case, the unannotated floor-lane case "builds before it tests". It breaks the enumeration rather than the live verdict, so it is not this row's proof
+- Note: the adopted half of the rule — the recorded count falls and nothing still rebuilds — is `reuseRuleHolds` in the test file itself, exercised on constructed states. No workflow implements it yet, as `06_Test-Cases.md` says
+
+#### Round 1
+
+- Round 1: RED test hash: e850f67e5b47070701c4f2320102bf332bf51f313b37b78b44c84e2d232c68af
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0017ArtifactReuse.test.ts
+```
+
+### TDD-0033
+
+- TDD-ID: TDD-0033
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
+- Selector: rejects a saving asserted on argument, and accepts the same claim once the numbers are quoted
+- TC-ref: TC-0017-0033
+- Branch: falsifiability — the test and its helper predate this run, and the case passed on its first run
+- Predicate to break: packages/qfai/tests/helpers/measurementClaim.ts:92, `evaluateMeasurementClaim` — `if (pairs.length === 0) {`, which rejects a claim whose record quotes no before-and-after pair
+- Mutation: `if (pairs.length === 0) {` to `if (pairs.length < 0) {`
+- Why it fails: a saving with no numbers is then accepted.
+  `expect(bare.satisfied).toBe(false)` fails as an assertion at `spec0017MeasurementClaims.test.ts:70:7`
+- Other rows: `TDD-0035` also fails, because `resolveArtifactReuse` accepts an unmeasured regression only through this check. `TDD-0034` still passes
+- Predicate ownership: the predicate is a test helper, not product code. No script, workflow or source file implements the rule, and the case reads only fixtures written in the test file. The helper is in the manifest below, so the mutation edits a file the RED test hash covers. Whether that is admissible falsifiability is `qa-gatekeeper`'s judgement
+
+#### Round 1
+
+- Round 1: RED test hash: 8b155a201f01239fc5ddefc5496bbee50b40d2b17431aa99f5986cb0aba79fad
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/measurementClaim.ts
+packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
+```
+
+### TDD-0034
+
+- TDD-ID: TDD-0034
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
+- Selector: resolves the criterion satisfied on a measured regression, and only while the rebuilds are there
+- TC-ref: TC-0017-0034
+- Branch: falsifiability — the test and its helper predate this run, and the case passed on its first run
+- Predicate to break: packages/qfai/tests/helpers/measurementClaim.ts:137, the last return of `resolveArtifactReuse` — `satisfied: true,`, the accepting outcome for a measured regression with the rebuilds kept
+- Mutation: `satisfied: true,` at line 137 to `satisfied: false,`
+- Why it fails: a measured regression with the rebuilds kept no longer resolves the criterion.
+  `expect(kept.satisfied).toBe(true)` fails as an assertion at `spec0017MeasurementClaims.test.ts:100:7`
+- Other rows: none. `TDD-0033` and `TDD-0035` still pass
+- Predicate ownership: as `TDD-0033` — the predicate is the test helper, and the case reads only fixtures
+
+#### Round 1
+
+- Round 1: RED test hash: 8b155a201f01239fc5ddefc5496bbee50b40d2b17431aa99f5986cb0aba79fad
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/measurementClaim.ts
+packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
+```
+
+### TDD-0035
+
+- TDD-ID: TDD-0035
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
+- Selector: refuses to close the criterion on an unmeasured regression, rebuilds present or not
+- TC-ref: TC-0017-0035
+- Branch: falsifiability — the test and its helper predate this run, and the case passed on its first run
+- Predicate to break: packages/qfai/tests/helpers/measurementClaim.ts:128, `resolveArtifactReuse` — `if (!backing.satisfied) return backing;`, which refuses a regression claimed with no numbers
+- Mutation: delete line 128
+- Why it fails: an unmeasured regression with the rebuilds present then resolves the criterion.
+  `expect(verdict.satisfied).toBe(false)` fails as an assertion at `spec0017MeasurementClaims.test.ts:138:9`, on the `rebuildsPresent=true` pass
+- Other rows: none. `TDD-0033` calls `evaluateMeasurementClaim` directly and `TDD-0034`'s records quote numbers, so both still pass
+- Predicate ownership: as `TDD-0033` — the predicate is the test helper, and the case reads only fixtures
+
+#### Round 1
+
+- Round 1: RED test hash: 8b155a201f01239fc5ddefc5496bbee50b40d2b17431aa99f5986cb0aba79fad
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/measurementClaim.ts
+packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
+```
+
+### TDD-0062
+
+- TDD-ID: TDD-0062
+- Layer: Integration
+- Test file: packages/qfai/tests/scripts/sliceSurfaceAlignment.test.ts
+- Selector: agrees across the runner workspace, both CI matrices and the per-slice scripts
+- TC-ref: TC-0017-0062
+- Branch: none — held on a coverage gap until the orchestrator decides whether the test case needs a Change Request. `/qfai-implement` step 3b leaves the row at `todo`
+- Gap: `TC-0017-0062` requires the slice list of every CI job that expands over the slice set to equal the runner project set. Four jobs do: `ci.yml`'s `test` and `node-floor`, and `release.yml`'s `gate-tests` and `gate-floor`. The test reads only the first two (`SLICED_JOBS` at `sliceSurfaceAlignment.test.ts:164`). With `pr-merge` removed from `release.yml:218` (`SUITE_SLICES`), `:507` and `:573`, this case and all 195 cases of the seven files pass. `ownWorkflowTopology.test.ts` compares the two release matrices with `SUITE_SLICES` only, so a release slice set that shrinks as a whole is checked by nothing
+- Predicate to break: .github/workflows/ci.yml:621, the `test` job's `matrix.slice` list
+- Mutation: remove `, pr-merge` from line 621
+- Why it fails: the `test` matrix no longer names every runner project.
+  `expect.soft(sorted(matrixSlices(job))).toEqual(projects)` fails as an assertion at `sliceSurfaceAlignment.test.ts:242:10`
+- Other rows: none of the ten. `TDD-0007`, `TDD-0043`, `TDD-0096` and the unannotated floor-lane case "runs one slice per leg" fail in `ownWorkflowTopology.test.ts`. In `workflowHygiene.test.ts` the same cases as under `TDD-0032`'s mutation fail, and `TDD-0095` as well, because the code-path cost pin and the required-context slice list both move
+- Note: the ledger's current `Selector` is the enclosing `describe` title. Passed to `-t` unescaped, its parentheses are read as a regular-expression group, and it selects no test
+
+#### Round 1
+
+- Round 1: RED test hash: 046dff80e5cba7ecde983ec2757ac0697912faab5a2410bc293c4371f6b65b92
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/runnerProjects.ts
+packages/qfai/tests/scripts/sliceSurfaceAlignment.test.ts
+```
+
+### TDD-0069
+
+- TDD-ID: TDD-0069
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
+- Selector: reads every project, and finds the departing set holds no more than the largest one
+- TC-ref: TC-0017-0069
+- Branch: falsifiability — the test and the runner configuration it reads predate this run, and the case passed on its first run
+- Predicate to break: packages/qfai/vitest.knobs.ts:209-215, `projectKnobs` — the knob set every project spreads, which declares no root-only axis, so no project departs from the declared value
+- Mutation: insert `  maxWorkers: 2,` after line 214
+- Why it fails: all nine projects then declare a root-only axis and depart, so the departing set has more than one member.
+  `expect(described.length > 1 ? described : []).toEqual([])` fails as an assertion at `spec0017TuningChangeScope.test.ts:174:7`
+- Other rows: `TDD-0083` also fails, because nine moved projects carry no run identifiers. `TDD-0060` fails in `vitestWorkspaceKnobs.test.ts`. `TDD-0070` still passes. A move this row catches is always one `TDD-0083` also catches, since no record holds run identifiers for any project
+
+#### Round 1
+
+- Round 1: RED test hash: 6c36e0c3920bdc0939e999e63990792cf9e731edb6a98f635d85cdb6fd42ec5f
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
+```
+
+### TDD-0070
+
+- TDD-ID: TDD-0070
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
+- Selector: holds the post-merge budget open, and finds no merged tuning change owing it anything
+- TC-ref: TC-0017-0070
+- Branch: falsifiability — the test and the decision record it reads predate this run, and the case passed on its first run
+- Predicate to break: .qfai/specs/spec-0017/07_Decisions.md:1-938 — no section records a tuned project in the form `` tuned `<project>` ``, so no merged tuning change owes the post-merge budget anything
+- Mutation: insert `` tuned `unit` `` after line 938
+- Why it fails: the last section then records a tuning change.
+  `expect(tuningRecords.length).toBe(0)` fails as an assertion at `spec0017TuningChangeScope.test.ts:279:7`
+- Other rows: none. `TDD-0069` and `TDD-0083` read the record only for a moved project, and none is moved
+- Predicate ownership: the rate rule itself — above one in twenty reopens the setting — is `budgetHolds` in the test file, exercised on constructed inputs. No product code computes a rerun-to-green rate. The only tree input is the decision record, and the case fails on the first tuning record it finds whatever that record's rate is
+
+#### Round 1
+
+- Round 1: RED test hash: 6c36e0c3920bdc0939e999e63990792cf9e731edb6a98f635d85cdb6fd42ec5f
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
+```
+
+### TDD-0083
+
+- TDD-ID: TDD-0083
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
+- Selector: requires three recorded runs against the change that moved it, and none against no change
+- TC-ref: TC-0017-0083
+- Branch: falsifiability — the test and the runner configuration it reads predate this run, and the case passed on its first run
+- Predicate to break: packages/qfai/vitest.workspace.ts:59, the `e2e` project — `name: "e2e",` with the project knobs spread unchanged, so the project is not moved
+- Mutation: `name: "e2e",` to `name: "e2e", maxConcurrency: 3,`
+- Why it fails: `e2e` is then moved, and no decision-record section naming it quotes a run identifier.
+  `expect(unjustifiedMoves(...)).toEqual([])` fails as an assertion at `spec0017TuningChangeScope.test.ts:213:7`
+- Other rows: `TDD-0069` still passes, because one project is moved and `e2e` is the largest, at 219 test files. `TDD-0061` fails in `vitestWorkspaceKnobs.test.ts`, in three cases
+- Oracle limit: the case ties a run identifier to a change by the project name in the same decision-record section, and counts identifiers rather than checking that the runs were consecutive. Two tuning changes to one project would share their identifiers
+
+#### Round 1
+
+- Round 1: RED test hash: 6c36e0c3920bdc0939e999e63990792cf9e731edb6a98f635d85cdb6fd42ec5f
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
+```
 
 ## Coverage Depth Matrix
 
@@ -1420,6 +1727,21 @@ and this record were all authored by the party that also judged them. **The revi
 been run** — round 1, two independent blocking reviewers, both `REVISE`, findings applied above — but
 the P2-P4 work orders did not happen and cannot be reconstructed retroactively. That half of the
 deviation stands.
+
+### Rows for the run started 2026-09-23T10:23:39.000Z
+
+This run was one `acceptance-test-engineer` working order from the
+orchestrator. It wrote no test, and no reviewer was routed from it.
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1 | acceptance-test-engineer | acceptance-test-engineer | Find the test carrying each of the ten rows' annotations, run it alone, and check it against today's test case | 06_Test-Cases.md, 05_Examples.md, 04_Business-Rules.md, tdd/test-list.md | #rows-handed-over-by-the-run-started-2026-09-23t102339000z | PASS |
+| 2 | acceptance-test-engineer | acceptance-test-engineer | Apply, run and revert one mutation per row | the five test files, the workflows and runner configuration they read | the `Predicate to break`, `Mutation`, `Why it fails` and `Other rows` fields of each entry | PASS |
+| 3 | acceptance-test-engineer | acceptance-test-engineer | Hand over nine rows on the falsifiability branch and hold `TDD-0062` | steps 1 and 2 | #tdd-0016, #tdd-0030, #tdd-0032, #tdd-0033, #tdd-0034, #tdd-0035, #tdd-0062, #tdd-0069, #tdd-0070, #tdd-0083 | PASS |
+| 4 | acceptance-test-engineer | acceptance-test-engineer | Restate the ledger cross-tabulation in `## Inputs reviewed` from the ledger as this run read it | tdd/test-list.md | #inputs-reviewed-filespaths | PASS |
+| 5 | acceptance-test-engineer | acceptance-test-engineer | grilling(S1@2026-09-23T10:23:39.000Z/agents): hold `TDD-0062` with no branch, and neither widen its test nor raise the Change Request here | TC-0017-0062, BR-0017-0057, AC-0017-0027, `release.yml` `gate-tests` / `gate-floor` | #tdd-0062; widening the test would settle by assertion whether the release gate's jobs are in the test case's scope, which is the spec's question, and the work order leaves the Change Request to the orchestrator; no position disagreed | PASS |
+| 6 | acceptance-test-engineer | acceptance-test-engineer | grilling(S1@2026-09-23T10:23:39.000Z/agents): hand `TDD-0033`, `TDD-0034` and `TDD-0035` over with the test helper named as the predicate | `tests/helpers/measurementClaim.ts`, TC-0017-0033..0035 | #tdd-0033, #tdd-0034, #tdd-0035; each test covers its case as the case is written, no product code implements the rule to mutate instead, and holding the rows would leave them stranded on a judgement `qa-gatekeeper` owns; the opposing position, holding them as a gap, is recorded in each entry's `Predicate ownership` field | PASS |
+| 7 | acceptance-test-engineer | acceptance-test-engineer | grilling(S1@2026-09-23T10:23:39.000Z/agents): hand `TDD-0070` and `TDD-0083` over and record their oracle limits rather than hold them | TC-0017-0070, TC-0017-0083, EX-0017-0054, EX-0017-0067 | #tdd-0070, #tdd-0083; each test asserts the case its title names, and what it reaches less precisely — a rate computed only on constructed inputs, identifiers tied to a change by project name — is a precision limit of what the record can carry, not an unread surface like `TDD-0062`'s; no position disagreed | PASS |
 
 ## Execution logs
 
