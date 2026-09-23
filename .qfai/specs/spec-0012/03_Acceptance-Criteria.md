@@ -366,8 +366,8 @@
 - Given `qfai prototyping iterate` invoked WITHOUT `--auto-serve`,
 - When the loop runs,
 - Then no HTTP server MUST be spawned (DR-0012-0029 default posture preserved; amendment pinned by `DR-0012-0031`).
-- And when invoked WITH `--auto-serve`, iterate MUST spawn a local server, tear down via `tree-kill` (Linux/macOS) or `taskkill /F /T` (Windows), recover from a stale prior-iterate port owner by force-kill, and MUST refuse to kill foreign processes (reports PID + owning command instead).
-- And SIGINT MUST trigger graceful teardown with explicit async error handling on the kill path.
+- And when invoked WITH `--auto-serve`, iterate MUST call the server runner once, invoke the teardown it returns at cycle end and on SIGINT, continue when the runner reports a recovered prior owner, and exit 2 reporting the runner's reason when the runner refuses.
+- And the default runner, used when no runner is injected, MUST serve in-process and MUST refuse a port another process holds, naming the port, rather than pick another one.
 
 ## AC-0012-0061: `prototyping.json` validate-conformant emit
 

@@ -1125,7 +1125,7 @@
 - AC-Refs: AC-0012-0060
 - Type: integration
 - Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts`
-- Verify REQ-0012-0062 + NFR-0106: 4 `it` blocks — (a) default invocation spawns no server (DR-0012-0029 preserved), (b) `--auto-serve` spawns + tears down via `tree-kill` (Linux/macOS) / `taskkill /F /T` (Windows), (c) stale prior-iterate port owner force-killed cleanly, (d) foreign-process owner refused (PID + owning command reported; iterate exits with input-error status). SIGINT handler tested with explicit async cleanup error catch.
+- Verify REQ-0012-0062 + NFR-0106: 4 `it` blocks verify the runner contract with an injected runner — (a) without `--auto-serve`, iterate calls no runner (DR-0012-0029 preserved), (b) with `--auto-serve`, iterate calls the runner once and invokes the teardown it returns at cycle end, (c) a runner that reports a recovered prior owner lets the cycle complete, (d) a runner that refuses makes iterate exit 2 with the runner's reason on stderr.
 
 ## TC-0012-0443
 
@@ -1473,6 +1473,15 @@
 - Type: integration
 - Test file: `packages/qfai/tests/integration/cli/commands/prototypingCertify.validateFreshness.test.ts`
 - Verify REQ-0174: the freshness scan skips a cycle-0 reset's backups, so a file inside one that is newer than the run still seals.
+
+## TC-0012-0489
+
+- EX-Ref: EX-0012-0169
+- AC-Refs: AC-0012-0060
+- Type: integration
+- Level: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts`
+- Verify REQ-0012-0076: with no runner injected and the target port held by another process, the default runner refuses the port. The listener holding the port is still listening afterwards, no other port is bound, and iterate exits 2 with a reason on stderr naming the held port.
 
 ## Legacy Coverage Continuity
 
