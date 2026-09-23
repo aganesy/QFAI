@@ -4464,9 +4464,7 @@ ${packPair(1).join("\n")}
 
     /** A re-attestation for each verdict whose subject is the entry's fields. */
     function fieldReattestations(subjects: RepairedSubjects, seal: string): string {
-      return FIELD_VERDICTS.map((prefix) =>
-        reattestation(prefix, subjects.field, seal),
-      ).join("");
+      return FIELD_VERDICTS.map((prefix) => reattestation(prefix, subjects.field, seal)).join("");
     }
 
     function unresolved(issues: Array<{ code: string; message: string }>): string | undefined {

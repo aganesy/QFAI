@@ -282,8 +282,8 @@ const GATE_ITEM_PARITY: readonly {
   {
     item: 10,
     condition:
-      "A verdict carrying a `Record re-attestation` is compared against **that** hash and not the superseded original",
-    box: "the `Record re-attestation pack seal` recomputes here beside the round's `Review pack seal`",
+      "A verdict carrying a `<prefix> record re-attestation` is compared against **that** hash and not the superseded original",
+    box: "that `<prefix> record re-attestation pack seal` recomputes here beside the round's `Review pack seal`",
     source: "record",
   },
   {

@@ -551,10 +551,16 @@ is one queue per spec, and it is defined by a destination, an owner, an entry sh
   response carrying a hash nothing agrees with. Write the re-attestation as its own
   `review-<timestamp>/` pack, sealed by the same procedure. The superseded verdict keeps the hash it
   recorded — it was correct over the bytes it read — and its pack keeps recomputing. The evidence
-  entry records `Record re-attestation` beside the verdict it supersedes, with its own
-  `Record re-attestation pack` and `Record re-attestation pack seal`; the completion gate recomputes
-  the superseding hash and both seals, which is what makes the re-attestation an artifact a
-  validator can see rather than an untraceable edit. No code runs, no row changes status, and it
+  entry records the re-attestation beside the verdict it supersedes, under that verdict's own
+  prefix — `Spec record re-attestation`, `Code quality record re-attestation` or
+  `Prototype parity record re-attestation` — each with its own
+  `<prefix> record re-attestation pack` and `<prefix> record re-attestation pack seal`; the
+  completion gate recomputes the superseding hash and both seals, which is what makes the
+  re-attestation an artifact a validator can see rather than an untraceable edit. **One field per
+  verdict, because one hash cannot answer for two subjects**: a `Prototype parity` verdict hashes
+  the captures its `Surface artifacts` manifest names beside the entry's fields, so on a
+  UI-affecting row it never recomputes to the value the other verdicts read. The re-attesting
+  reviewers may share one pack; each verdict still names it under its own prefix. No code runs, no row changes status, and it
   spends no round — it opens none, so it is not a `Round N:` pack. The revision a verdict names
   excludes `.qfai/evidence/**`, so by construction nothing outside the record moved. **A repair that
   would move the revision is not a record repair**: it is a change to the deliverable and takes the
