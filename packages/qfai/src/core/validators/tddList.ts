@@ -4721,8 +4721,12 @@ async function listRecordFileNames(root: string): Promise<string[]> {
   return names.filter((name): name is string => name !== null).sort();
 }
 
-/** A Change Request record filename: the id, an optional slug, and `.md`. */
-const CHANGE_REQUEST_FILE = /^(CR-\d{8}-\d{4})(?:-[A-Za-z0-9][A-Za-z0-9-]*)?\.md$/i;
+/**
+ * A Change Request record filename: the id, an optional `-<slug>`, and `.md`.
+ * The slug is free text in the project's own language, as the template leaves
+ * it.
+ */
+const CHANGE_REQUEST_FILE = /^(CR-\d{8}-\d{4})(?:-.+)?\.md$/i;
 
 /**
  * The header of the Change Request a `CR-*` id names, or `null` when no record
@@ -4742,8 +4746,9 @@ type DecisionsIndex = {
  * row asks for it.
  *
  * Most runs ask about no Change Request at all, so the files are read on
- * demand and each at most once. Where two files carry the same id, the first
- * in name order answers.
+ * demand and each at most once. An id that two file names carry answers
+ * nothing: which of them is the record cannot be told, and either may be the
+ * one still open.
  *
  * The declared `- ID:` is the record's id; the file name only locates it. A
  * file whose name and declared id disagree — renamed or copied without its
@@ -4754,15 +4759,16 @@ function buildChangeRequestLookup(
   root: string,
   recordNames: readonly string[],
 ): ChangeRequestLookup {
-  const files = new Map<string, string>();
+  const files = new Map<string, string[]>();
   for (const name of recordNames) {
     const id = CHANGE_REQUEST_FILE.exec(name)?.[1]?.toUpperCase();
-    if (id !== undefined && !files.has(id)) files.set(id, name);
+    if (id !== undefined) files.set(id, [...(files.get(id) ?? []), name]);
   }
   const headers = new Map<string, Promise<ChangeRequestHeader>>();
   return async (crId) => {
     const id = crId.toUpperCase();
-    const name = files.get(id);
+    const candidates = files.get(id) ?? [];
+    const name = candidates.length === 1 ? candidates[0] : undefined;
     if (name === undefined) return null;
     let header = headers.get(id);
     if (header === undefined) {

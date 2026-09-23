@@ -751,6 +751,34 @@ describe("QFAI-TDDLIST-021 — a blocked row whose Change Request is settled", (
     expect(namingDeclaredId.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
   });
 
+  it("says nothing when two file names carry the same id", async () => {
+    // Either file may be the record, and the second one is still open.
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      {
+        decisions: {
+          "CR-20260801-0001-a.md": changeRequest({ status: "rejected" }),
+          "CR-20260801-0001-b.md": changeRequest({ status: "open" }),
+        },
+      },
+    );
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  it("finds a record whose slug is in the project's own language", async () => {
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      {
+        decisions: {
+          "CR-20260801-0001-révision_des_bornes.v2.md": changeRequest({ status: "rejected" }),
+        },
+      },
+    );
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDDLIST-021");
+  });
+
   it("does not read a fenced example ahead of the header as the record", async () => {
     // The example's `Status` would otherwise win as the first occurrence.
     const preamble = ["```markdown", "- Status: `rejected`", "```"].join("\n");
