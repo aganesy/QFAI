@@ -704,7 +704,7 @@ describe(
         // Fail OPEN: a tree that never pinned a Node version must still get a lane.
         expect(none.status).toBe(0);
         expect(none.stdout).toContain("::warning::");
-        expect(none.outputs["version"]).toBe("22");
+        expect(none.outputs["version"]).toBe("20");
 
         await writeFile(path.join(cwd, ".node-version"), "22.11.0\n", "utf8");
         const secondary = await runStep(body, cwd);

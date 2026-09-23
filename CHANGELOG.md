@@ -6,22 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **The supported Node floor is now `>=22.12.0`** (#2173). The test runner's
-  current major runs on `^22.12.0 || ^24.0.0 || >=26.0.0`, and the previous
-  floor of `>=20.19.0` admitted releases it does not support. Both manifests,
-  the Renovate constraint, the shipped workflow templates and their fall-open
-  version move together, so the floor is stated in one place and cited
-  consistently everywhere else. A project on Node 20 or 21 has to move to 22.12
-  or later.
-
-- **The test runner moves to its fifth major, and the coverage provider with
+- **The test runner moves to its fourth major, and the coverage provider with
   it** (#2173). The two move as a pair: the provider's peer range names the
-  runner version exactly, and a provider a major ahead of the runner fails at
+  runner version exactly, so a provider a major ahead of the runner fails at
   import rather than at install. Three declarations follow the runner's own
   changes — the project list is imported by the root configuration instead of
   being discovered by file name, isolation is declared directly rather than
   inside a pool block, and `vite` is declared as the peer the runner requires
-  instead of being resolved for it.
+  instead of being resolved for it. The supported Node range is unchanged.
 
 ### Fixed
 

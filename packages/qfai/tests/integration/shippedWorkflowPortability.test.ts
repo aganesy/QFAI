@@ -38,7 +38,7 @@ import {
  * none. Value SSOT is this suite per CLI-WFSET §5; the shipped header block
  * must document the same literal.
  */
-const DOCUMENTED_NODE_VERSION = "22";
+const DOCUMENTED_NODE_VERSION = "20";
 
 /** The adopter Node version files the resolution honours, in precedence order. */
 const NODE_VERSION_FILES: readonly string[] = [".nvmrc", ".node-version"];
