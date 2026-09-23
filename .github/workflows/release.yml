@@ -374,7 +374,7 @@ jobs:
       #
       # Review finding [13] is about the floor going unexercised, and pinning this job to it was the
       # first attempt. That trades one gap for its mirror image: the gate would then run ONLY on
-      # 20.19.0 and the inverse break — works on the floor, fails on the newest Node an adopter
+      # 22.12.0 and the inverse break — works on the floor, fails on the newest Node an adopter
       # actually installs — would be exercised nowhere at tag time. The finding asks for a floor
       # lane "separately from validating the newest Node", not instead of it.
       #

@@ -13,21 +13,19 @@ import process from "node:process";
  *
  * ## Why the set is SPLIT, and not all per project
  *
- * The runner scopes these options, and the split is its decision rather than a
- * preference. `ProjectConfig` is `Omit<UserConfig, NonProjectOptions | …>`, and
- * `NonProjectOptions` names `maxWorkers`, `minWorkers` and `fileParallelism`. Its
- * `poolOptions.forks` is further narrowed to `singleFork | isolate`, so `maxForks` is not
- * a project-level escape hatch either.
+ * The worker and file-parallelism axes bound the run as a whole: how many test files are in
+ * flight at once is one number for the run, not nine. A project inherits every option the
+ * root declares, so declaring them once at the root is what every project then uses.
  *
- * A first attempt declared the worker axis on every project. It type-checked, it ran, it
- * emitted no warning — and it did nothing. Measured on the `validators` project,
- * constraining the worker override to one against the declared default gave a wall-clock
- * ratio of 0.93, which is noise. Two independent lines of evidence, the runner's own type
- * and the stopwatch, agree that a project-level worker declaration is inert.
+ * Repeating them per project would put one measured value in nine places, where eight of
+ * them can drift from the ninth without anything failing. Measured on the `validators`
+ * project against an older runner that ignored a project-level worker declaration outright,
+ * constraining the override to one gave a wall-clock ratio of 0.93 — noise. The value
+ * belongs to the run, and the run's configuration is the root.
  *
- * So the worker and file-parallelism axes are declared at the ROOT, where the runner reads
- * them, and everything genuinely project-scoped stays per project. Both halves are still
- * declared; only the declaration site follows the runner.
+ * So the worker and file-parallelism axes are declared at the ROOT and everything
+ * project-scoped stays per project. Both halves are declared; neither is inherited from the
+ * runner's own defaults.
  *
  * ## Retries
  *
@@ -173,6 +171,10 @@ export const DECLARED_TEST_TIMEOUT = 120_000;
  * `forks` over `threads` on purpose: much of this suite spawns the built binary and writes
  * temporary trees, and process isolation is what keeps those from colliding.
  *
+ * Isolation is declared at the top level rather than inside a pool block. The runner used to
+ * take it as `poolOptions.forks.isolate` and now takes every former pool option directly, so
+ * a pool block here would be read by nothing. The value is unchanged: a process per test file.
+ *
  * ## Why the timeout is 120 s and not 15 s
  *
  * It was 15 s, declared once for all seven projects, and three tests failed on it in a
@@ -210,7 +212,7 @@ export const projectKnobs = {
   testTimeout: DECLARED_TEST_TIMEOUT,
   hookTimeout: DECLARED_TEST_TIMEOUT,
   pool: "forks",
-  poolOptions: { forks: { singleFork: false, isolate: true } },
+  isolate: true,
   maxConcurrency: tunable(CONCURRENCY_ENV, DECLARED_CONCURRENCY),
 } as const;
 

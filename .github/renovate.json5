@@ -118,17 +118,23 @@
   // lint set. So such a release goes green and merges, and the narrowing surfaces later as a
   // local failure for whoever is on the oldest Node this repository supports.
   //
-  // Measured on `markdownlint-cli2`: `0.23.2` declares `>=22` against a floor of `>=20.19.0`, and
-  // its update reached `ci-pass=success`.
+  // Measured on `markdownlint-cli2`: `0.23.2` declares `>=22` against the `>=20.19.0` floor in
+  // force at the time, and its update reached `ci-pass=success`.
   //
   // `strict` is what makes Renovate drop those releases instead of offering them. It also keeps
-  // the line followable rather than frozen — `0.22.1` declares `>=20` and is still offered — so
-  // this is not a pin, and nothing stops receiving fixes.
+  // the line followable rather than frozen — a release declaring `>=20` covers this floor and is
+  // still offered — so this is not a pin, and nothing stops receiving fixes.
+  //
+  // What it cannot narrow is a package that declares no `engines` at all: there is nothing to
+  // compare, so every release of it passes whatever the floor says. A grouped update can
+  // therefore lose the member carrying the constraint and still offer the member that does not,
+  // which is how `@vitest/coverage-v8` once arrived a major ahead of `vitest` itself. The peer
+  // range in the group's own manifests is what catches that, and it catches it at install.
   //
   // The floor itself is STATED rather than left for Renovate to infer from `engines`. Inference
   // is per manifest, this workspace has several, and the value that must bound a devDependency is
   // the one the published package promises — which is the package manifest's, not the root's.
-  constraints: { node: ">=20.19.0" },
+  constraints: { node: ">=22.12.0" },
   constraintsFiltering: "strict",
 
   packageRules: [

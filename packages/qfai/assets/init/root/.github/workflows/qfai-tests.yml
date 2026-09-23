@@ -30,7 +30,7 @@
 # | `packageManager` precondition | a `pnpm-lock.yaml` needs `"packageManager": "pnpm@<version>"` in package.json, or the lane stops CLOSED   |
 # | Inert when                    | your package.json declares no `test:<layer>` script, or the diff did not select the lane                  |
 # | Fail-open behaviour           | degraded detection (unreachable base, shallow clone, failed diff, unknown path): warning, then every lane |
-# | Node version                  | your `.nvmrc` / `.node-version` wins; with neither, a warning annotation, Node 20, and the lane continues |
+# | Node version                  | your `.nvmrc` / `.node-version` wins; with neither, a warning annotation, Node 22, and the lane continues |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
 # | Default-branch push           | runs the lanes the push selects; with `vars.QFAI_CI_PUSH_POLICY` set to `protected`, runs none            |
 #
@@ -519,7 +519,7 @@ jobs:
           # used: it fails the job outright for every adopter who has no
           # such file, which would make this workflow unusable on a tree
           # that simply never pinned a Node version.
-          fallback="20"
+          fallback="22"
           for candidate in .nvmrc .node-version; do
             [ -f "$candidate" ] || continue
             first_line=""
@@ -576,7 +576,7 @@ jobs:
         with:
           # The version resolved by the step above: the adopter's own
           # version file when they have one, else the documented fallback
-          # (Node 20, matching the package `engines: ">=20.19.0"` floor).
+          # (Node 22, matching the package `engines: ">=22.12.0"` floor).
           node-version: ${{ steps.node-version.outputs.version }}
           # setup-node@v4's `cache:` accepts a single package-manager value, and the step above
           # decides it — an expression cannot ask whether the package manager is on PATH, and

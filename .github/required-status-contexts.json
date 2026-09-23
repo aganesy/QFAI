@@ -221,7 +221,7 @@
         "workspace package's lifecycle exactly as it runs the root's."
       ],
       "pinnedBytes": {
-        ".github/actions/setup/action.yml": "c60bf87cda546431c66af0a2b47df1a2a3664540d3fd40b9663ee6f4cf8553d7",
+        ".github/actions/setup/action.yml": "48e1efb0abe7790dec253adec41a7735ea0a37d8430ffe2ef523a27c6fd48aed",
         ".github/actions/setup/dependency-builds.txt": "0788adad7ac485ca2c340c2c75ed5bf581a1ba3bb17ea6fe0d0994f666dabf2f",
         ".github/actions/setup/verify-rebuild-sources.mjs": "0816918db6c8833c8d1c4f0cc6218b9eeae7b16a718a0b3113898ae026e4127f",
         "scripts/check-atdd-annotation-ledger.mjs": "1891bdeb48e1503a810001f6c917f8f2c5e4430124792f721c8c4bda86f4413f",
@@ -424,7 +424,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ff046bcf7d3956e0",
-        "Verify the toolchain action before running it": "3bf39e322198c663",
+        "Verify the toolchain action before running it": "e43a23d152904232",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "211656e97a2f3714",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "f98ff7751afa6bbb",

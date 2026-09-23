@@ -5,7 +5,7 @@
 
 ## Runtime / platform
 
-- Language runtime: Node.js, floor `>=20.19.0` (`packages/qfai/package.json#engines`)
+- Language runtime: Node.js, floor `>=22.12.0` (`packages/qfai/package.json#engines`)
 - OS assumptions: cross-platform. CI runs the suite on Linux and on Windows, and
   the Windows lanes are why path handling is written through `node:path` rather
   than by joining strings.

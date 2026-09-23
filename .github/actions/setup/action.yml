@@ -45,7 +45,7 @@ inputs:
       the newest release satisfying it. Any other value keeps the default.
 
       This exists for review finding [13]. Every toolchain job resolving the same broad
-      `>=20.19.0` range means `setup-node` gives all of them the newest satisfying
+      `>=22.12.0` range means `setup-node` gives all of them the newest satisfying
       release, so nothing in CI or in the release gate ever runs on the floor the package
       promises — and an API or syntax present in Node 24 and absent in the floor passes
       every gate while breaking exactly the supported users the range was written for.
@@ -76,7 +76,7 @@ runs:
     - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
       id: shim
       # Corepack is BUNDLED with the Node line this repository floors at, and it
-      # stopped being bundled from Node 25 on. `engines.node` is `>=20.19.0` with
+      # stopped being bundled from Node 25 on. `engines.node` is `>=22.12.0` with
       # no ceiling, and step 2 resolves "latest satisfying the range", so the day
       # the runner image ships a Node past that boundary this command becomes
       # `corepack: command not found` — and every job that consumes this action

@@ -389,7 +389,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          be126e5761706aca0b54df9edc1d83a6185fdf97ddee8fa3eef0bfe4e1b0c165  .github/pinned-bytes.txt
+          b9826c0a792ccde5a5aee2a9d03c47c8be95888302a56e2b2c0af53339f2d134  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -486,10 +486,10 @@ jobs:
         run: pnpm check-types:future
 
   # ── 3b. The supported floor ──────────────────────────────────────
-  # Every other toolchain job resolves `package.json#engines` — `>=20.19.0` with no
+  # Every other toolchain job resolves `package.json#engines` — `>=22.12.0` with no
   # ceiling — so `setup-node` gives all of them the newest satisfying release and
   # nothing ever runs on the floor the package promises. Review finding [13]: an API
-  # or syntax that exists in Node 24 and not in Node 20.19 passes every gate,
+  # or syntax that exists in Node 24 and not in Node 22.12 passes every gate,
   # including the release gate, and breaks exactly the supported users the range was
   # written for.
   #
@@ -555,7 +555,7 @@ jobs:
           # a green check for a claim nothing tested.
           #
           # The expected value is READ from `engines.node`, the same place the action
-          # derives it from. Writing `v20.19.0` here would be the second literal the
+          # derives it from. Writing `v22.12.0` here would be the second literal the
           # repository's one-Node-literal rule exists to prevent, and it would go stale
           # in the direction that passes.
           range="$(node -p "require('./packages/qfai/package.json').engines.node")"

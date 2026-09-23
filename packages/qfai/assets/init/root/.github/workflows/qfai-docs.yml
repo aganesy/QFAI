@@ -32,8 +32,8 @@
 # | Inert when                    | never inert; delete this file to opt out - `qfai init` will not recreate a file you removed              |
 # | Skipped when                  | every changed path is code a document check never reads; anything else, or any doubt, runs both checks   |
 # | Default-branch push           | runs the checks the push reaches; with `vars.QFAI_CI_PUSH_POLICY` set to `protected`, runs neither       |
-# | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 20, and the lane continues          |
-# | Node support floor            | the package declares `engines: ">=20.19.0"`; the fall-open Node 20 satisfies it                          |
+# | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 22, and the lane continues          |
+# | Node support floor            | the package declares `engines: ">=22.12.0"`; the fall-open Node 22 satisfies it                          |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
 #
 # The checks run only when the change could have moved what they read. A change
@@ -404,7 +404,7 @@ jobs:
           # used: it fails the job outright for every adopter who has no
           # such file, which would make this workflow unusable on a tree
           # that simply never pinned a Node version.
-          fallback="20"
+          fallback="22"
           for candidate in .nvmrc .node-version; do
             [ -f "$candidate" ] || continue
             first_line=""
@@ -461,7 +461,7 @@ jobs:
         with:
           # The version resolved by the step above: the adopter's own
           # version file when they have one, else the documented fallback
-          # (Node 20, matching the package `engines: ">=20.19.0"` floor).
+          # (Node 22, matching the package `engines: ">=22.12.0"` floor).
           node-version: ${{ steps.node-version.outputs.version }}
           # setup-node@v4's `cache:` accepts a single package-manager value, and the step above
           # decides it — an expression cannot ask whether the package manager is on PATH, and
