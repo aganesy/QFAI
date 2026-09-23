@@ -572,7 +572,7 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint
 - Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: 2ccde8e44d32798e3dafbd2218c39761963fcff9
 - qa-gatekeeper: PASS
-- qa-gatekeeper attempts: qa-gatekeeper#1 REVISE, RED phase gate: the entry said TDD-0566's case passes under this mutation, and it fails; qa-gatekeeper#2 PASS, RED phase gate after that line was corrected, reviewed revision working-tree+69f901bf8a421496ece4dd66d57e4218c7ecec33c71110b2650578ee8a48d567; qa-gatekeeper#3 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- qa-gatekeeper attempts: qa-gatekeeper#1 REVISE, RED phase gate: the entry said TDD-0566's case passes under this mutation, and it fails; qa-gatekeeper#2 PASS, RED phase gate after that line was corrected, reviewed revision working-tree+69f901bf8a421496ece4dd66d57e4218c7ecec33c71110b2650578ee8a48d567; qa-gatekeeper#3 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd; qa-gatekeeper#4 PASS, replacement-proof + build-phase GREEN + oracle proof, reviewed revision c648c4a4c1b2c06fde70b1908a604a0f37a1492b (tree-equal to 2ccde8e44 outside the evidence and ledger); the gate ran after the revert, and it confirmed each proof tree by rebuilding it from 2ccde8e44 plus the one-line mutation and matching the recorded content address
 
 - Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the TDD-0471 test misses the handler's order, and the NFR-0106 bound was never stated; CR-20260923-0009 states the bound and the test goes back to /qfai-atdd
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260923090010000
@@ -627,7 +627,7 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint
 - Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: 2ccde8e44d32798e3dafbd2218c39761963fcff9
 - qa-gatekeeper: PASS
-- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+7ea777c3326e31b625df2d4e843ff5befcfe0c0965dfca9caa85cbe320b8e490; qa-gatekeeper#2 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+7ea777c3326e31b625df2d4e843ff5befcfe0c0965dfca9caa85cbe320b8e490; qa-gatekeeper#2 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd; qa-gatekeeper#3 PASS, replacement-proof + build-phase GREEN + oracle proof, reviewed revision c648c4a4c1b2c06fde70b1908a604a0f37a1492b (tree-equal to 2ccde8e44 outside the evidence and ledger); the gate ran after the revert, and it confirmed each proof tree by rebuilding it from 2ccde8e44 plus the one-line mutation and matching the recorded content address
 
 - Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the TDD-0471 test misses the handler's order, and the NFR-0106 bound was never stated; CR-20260923-0009 states the bound and the test goes back to /qfai-atdd
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260923090011000
@@ -694,7 +694,7 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint
 - Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: 2ccde8e44d32798e3dafbd2218c39761963fcff9
 - qa-gatekeeper: PASS
-- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+89fda95e1794e7f57f9c47efc86b0b6657ff52a3c0cee006d3bb98c6a69572b6; qa-gatekeeper#2 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+89fda95e1794e7f57f9c47efc86b0b6657ff52a3c0cee006d3bb98c6a69572b6; qa-gatekeeper#2 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd; qa-gatekeeper#3 PASS, replacement-proof + build-phase GREEN + oracle proof, reviewed revision c648c4a4c1b2c06fde70b1908a604a0f37a1492b (tree-equal to 2ccde8e44 outside the evidence and ledger); the gate ran after the revert, and it confirmed each proof tree by rebuilding it from 2ccde8e44 plus the one-line mutation and matching the recorded content address
 
 - Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the TDD-0471 test misses the handler's order, and the NFR-0106 bound was never stated; CR-20260923-0009 states the bound and the test goes back to /qfai-atdd
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260923090012000
