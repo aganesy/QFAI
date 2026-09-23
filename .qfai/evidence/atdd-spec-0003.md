@@ -61,6 +61,13 @@ No session opened. `CR-20260923-0007` fixes the row, the verify bullet it covers
 the test file and the two job shapes, and nothing surfaced during the run that the
 spec or the change request leaves open.
 
+
+### /qfai-implement — run started 2026-09-23T08:31:57.000Z
+
+Preflight: confidence high
+
+No session was opened: `CR-20260923-0007` settles every decision this row needs.
+
 ## Work performed (what changed, where)
 
 - New `packages/qfai/tests/integration/shippedWorkflowCheckIndependence.test.ts`: the
@@ -692,6 +699,60 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 
 - RED test hash: 7e167bba8c93e3d22ead8847a72628e0785aa6b43c994e142e2d2ecf396c7bc2
 
+#### Round 1
+
+An earlier run of this gate, superseded:
+
+- Command: the same command, with only line 221 (`job.job["continue-on-error"] !== undefined ||`) replaced by an empty line
+- Result: Test Files 1 failed (1); Tests 1 failed | 1 passed | 21 skipped (23). The row's case fails on `AssertionError: expected [] to deeply equal [ Array(1) ]` at `tests/integration/shippedWorkflowPortability.test.ts:328:65`; the second-step case passed
+- Verdict: qa-gatekeeper#1 REVISE — the second-step case had no run showing it fails, so the proof now removes both job-shape clauses in one edit
+
+- Round 1: Satisfied-by: packages/qfai/tests/integration/shippedWorkflowPortability.test.ts, `aggregateFailureViolations`, the job-shape clauses of the result-only aggregate check — `job.steps.length !== 1` and `job.job["continue-on-error"] !== undefined`; the test plants each job shape itself, so no shipped file can make it fail
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0093\): rejects an aggregate job whose shape cannot preserve failure"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 2 failed | 21 skipped (23). Both cases fail on `AssertionError: expected [] to deeply equal [ Array(1) ]` at `tests/integration/shippedWorkflowPortability.test.ts:328:65`: `a second step that does work of its own` and `continue-on-error set on the job`
+
+The edit:
+
+```diff
+-    job.steps.length !== 1 ||
++
+-    job.job["continue-on-error"] !== undefined ||
++
+```
+
+- Round 1: Falsifiability revision: working-tree+7ec5e5259f299517c369d9c15d0142af4d1bc0a620e4b360b50300fefdbd6cd1
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 7e167bba8c93e3d22ead8847a72628e0785aa6b43c994e142e2d2ecf396c7bc2
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/shippedWorkflowFixtures.ts
+packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
+```
+
+- Round 1: Revision: e4da9886fe30f7ae41827a6f5ac26c9a443ac851
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0093\): rejects an aggregate job whose shape cannot preserve failure"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 2 passed | 21 skipped (23)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 23 passed (23). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: e4da9886fe30f7ae41827a6f5ac26c9a443ac851
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 REVISE, RED phase gate: the second-step case had no run showing it fails; qa-gatekeeper#2 PASS, RED phase gate on the two-clause mutation run and the three shared-artifact re-verify subsections, reviewed revision working-tree+7ec5e5259f299517c369d9c15d0142af4d1bc0a620e4b360b50300fefdbd6cd1; qa-gatekeeper#3 PASS, build-phase GREEN + oracle proof, reviewed revision e4da9886fe30f7ae41827a6f5ac26c9a443ac851
+
+- Spec review: PASS
+- Spec reviewed revision: e4da9886fe30f7ae41827a6f5ac26c9a443ac851
+- Spec audited evidence hash: b3b911c58f50d7ba0c2fb6432904658d7048d4a476b523619c81bf7908643db5
+- Spec review pack: .qfai/review/review-20260923080017000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: b20406bd395435082a5599f8ba88d4cd081e865df5f2bdd7d3b6020cb96c240e
+- Code quality review: PASS
+- Code quality reviewed revision: e4da9886fe30f7ae41827a6f5ac26c9a443ac851
+- Code quality audited evidence hash: b3b911c58f50d7ba0c2fb6432904658d7048d4a476b523619c81bf7908643db5
+- Code quality review pack: .qfai/review/review-20260923080017000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: b20406bd395435082a5599f8ba88d4cd081e865df5f2bdd7d3b6020cb96c240e
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: e4da9886fe30f7ae41827a6f5ac26c9a443ac851
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / ⚠️ 130 / ❌ 176, with 365 not applicable, across 909 scored cells.
@@ -733,7 +794,12 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / 
 | 31 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0061, the row's Test file and the full suite | #tdd-0061 | Checkpoint verification fields | PASS |
 | 32 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: write the TDD-0093 case for TC-0003-0058 verify bullet 5 and hand the row over on the falsifiability path | CR-20260923-0007 | packages/qfai/tests/integration/shippedWorkflowPortability.test.ts; #tdd-0093 | PASS |
 | 33 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: shared-artifact re-verify of TDD-0062, TDD-0063 and TDD-0092 under the edited Test file | #tdd-0062, #tdd-0063, #tdd-0092 | #tdd-0093 Shared-artifact re-verify; each selector passes | PASS |
-| 34 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: mutation-only request to /qfai-implement for the proofs of TDD-0062, TDD-0063 and TDD-0092, and the falsifiability run of TDD-0093 | #tdd-0093 | the empty Proof and Restored GREEN fields of #tdd-0093; the TDD-0093 Round 1 block | PENDING |
+| 34 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: mutation-only request to /qfai-implement for the proofs of TDD-0062, TDD-0063 and TDD-0092, and the falsifiability run of TDD-0093 | #tdd-0093 | the Proof and Restored GREEN fields of #tdd-0093 and its Round 1 block, filled by the /qfai-implement run | PASS |
+| 35 | - | n/a | grilling(-@2026-09-23T08:31:57.000Z/none): none | - | - | PASS |
+| 36 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: shared-artifact proofs of TDD-0062, TDD-0063 and TDD-0092 under the edited test file | #tdd-0093 | the three re-verify subsections | PASS |
+| 37 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0093 RED phase gate on the falsifiability mutation run | #tdd-0093 | the second-step case had no run showing it fails | REVISE |
+| 38 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0093 RED phase gate on the two-clause mutation run | #tdd-0093 | Round 1 | PASS |
+| 39 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0093 build-phase GREEN + oracle proof | #tdd-0093 | Round 1 | PASS |
 
 ## Cross-spec obligations
 
@@ -754,10 +820,9 @@ Recorded per row under `## Ledger rows advanced`.
 - The step runner, job reader and delivered tree are copied into several shipped-workflow
   test files, including the two this run touched. Extracting them edits test files other
   specs' completed rows name, so it is a separate change.
-- The two job-shape clauses of the result-only aggregate check in
-  `shippedWorkflowPortability.test.ts`, a second step and a job-level
-  `continue-on-error`, each have a `TDD-0093` case. Their mutation proofs are still
-  owed by `/qfai-implement`.
+- The `TDD-0093` entry's `Mutation:` line names the single-clause edit its handover
+  planned. The run it closed on removes both job-shape clauses, and Round 1 records both
+  runs.
 
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
