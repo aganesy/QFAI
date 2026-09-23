@@ -36,6 +36,8 @@ const ROOT = path.resolve(__dirname, "../../../..");
 
 /** The first review pack this stage opened; earlier directories belong to other stages. */
 const FIRST_PACK = "review-20260820200000000";
+const ROW_REVIEW_PACK_FIELD =
+  /^- (?:Round \d+: Review pack(?: \(attempt \d+\))?|Spec review pack|Code quality review pack):/;
 
 /**
  * The test files whose sizes this record states — ONE list, read by all three guards below.
@@ -192,8 +194,14 @@ async function packsOnDisk(): Promise<string[]> {
 const CERTIFIED_PACKS: readonly string[] = ((): string[] => {
   try {
     const record = readFileSync(path.join(ROOT, ".qfai/evidence/atdd-spec-0017.md"), "utf8");
+    // A row's own verdict fields name the pack that reviewed that row, which is
+    // not a round of this stage, so those lines are left out of the count.
+    const stageLines = record
+      .split("\n")
+      .filter((line) => !ROW_REVIEW_PACK_FIELD.test(line))
+      .join("\n");
     const named = new Set(
-      [...record.matchAll(/\breview-\d{17}\b/g)]
+      [...stageLines.matchAll(/\breview-\d{17}\b/g)]
         .map((match) => match[0])
         .filter((name) => name >= FIRST_PACK),
     );

@@ -23,7 +23,7 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
 - `.qfai/specs/spec-0017/tdd/test-list.md` — 101 rows: 81 `Integration`,
-  11 `Unit`; **81 `refactor`, 0 `blocked`, 20 `todo`**. The other nine rows are `E2E`, one per story,
+  11 `Unit`; **81 `refactor`, 0 `blocked`, 11 `todo`**, with 6 `done` and 3 `review-fix`. Nine rows are `E2E`, one per story,
   seeded at `todo`. Eleven `todo` rows are `Integration` and are therefore this stage's to route.
   The run started 2026-09-23T10:23:39.000Z hands ten of them over — see § "Ledger rows advanced".
   `TDD-0012` is the eleventh, and that run's work order did not name it
@@ -1498,10 +1498,27 @@ packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017OwnWorkflowScope.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
 - qa-gatekeeper: PASS
-- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+9ab5d48feb5c43b336a7f14a20597f5138cff26ed87845981cb45dcb40ec935c matches; assertion at :136:7, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 748e93732be7fa1449ea97f148058b05688f6bccb0512da744c1438ad939d93d, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+9ab5d48feb5c43b336a7f14a20597f5138cff26ed87845981cb45dcb40ec935c matches; assertion at :136:7, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 748e93732be7fa1449ea97f148058b05688f6bccb0512da744c1438ad939d93d, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited 8916ccb035d67265be32503915db26c214c42bf8576861030196105f3358ff27, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Spec review: PASS
+- Spec reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Spec audited evidence hash: 0281f94ff328dd4888179e5fa5e553434d0f6f202bb5701638d0ac59df786757
+- Spec review pack: .qfai/review/review-20260923120000000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 24aa22151594593a65f54c84762f806aa091fba9bc6e3ee6bfe4b53379cd3484
+- Code quality review: PASS
+- Code quality reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Code quality audited evidence hash: 0281f94ff328dd4888179e5fa5e553434d0f6f202bb5701638d0ac59df786757
+- Code quality review pack: .qfai/review/review-20260923120000000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 24aa22151594593a65f54c84762f806aa091fba9bc6e3ee6bfe4b53379cd3484
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017OwnWorkflowScope.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 2 passed (2). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification seal: 2e86643b6bea0acf3d5bb5ac1365fbc1a98ec5bcb6d01e93a3e84da84ce9a203
 
 ### TDD-0030
 
@@ -1544,10 +1561,27 @@ packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017OwnWorkflowScope.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
 - qa-gatekeeper: PASS
-- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+cd0d0b3bbae61cce7bc7c0705e523a099a9093b22d765432a5ae64d516381c07 matches; assertion at :260:7, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited e222cceed2a7c333dc86f2bce82a8240abeb5226be95f9be1231beba47376215, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+cd0d0b3bbae61cce7bc7c0705e523a099a9093b22d765432a5ae64d516381c07 matches; assertion at :260:7, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited e222cceed2a7c333dc86f2bce82a8240abeb5226be95f9be1231beba47376215, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited 5ac583bffa5f15648bc69c92d2ec7cc2826acac63f42e90707eafc2e1a6c7c20, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Spec review: PASS
+- Spec reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Spec audited evidence hash: 13a100a0f956d2ad50031738361699835c86f7dce1cb4a7f43438bbdc2debc91
+- Spec review pack: .qfai/review/review-20260923120001000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: dcb1c9c49939891f70805c58d4c5dd8dd1c164bd590c521272934dcc33f74b26
+- Code quality review: PASS
+- Code quality reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Code quality audited evidence hash: 13a100a0f956d2ad50031738361699835c86f7dce1cb4a7f43438bbdc2debc91
+- Code quality review pack: .qfai/review/review-20260923120001000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: dcb1c9c49939891f70805c58d4c5dd8dd1c164bd590c521272934dcc33f74b26
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017OwnWorkflowScope.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 2 passed (2). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification seal: 2e86643b6bea0acf3d5bb5ac1365fbc1a98ec5bcb6d01e93a3e84da84ce9a203
 
 ### TDD-0032
 
@@ -1592,10 +1626,14 @@ packages/qfai/tests/integration/spec0017ArtifactReuse.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017ArtifactReuse.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
 - qa-gatekeeper: PASS
-- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+678f7ffc13c685c64e500efd4822a2721b874acd34500f54b489108df10e819e matches; assertion at :156:37, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 23d4a78f350b5cdf120266fcf0b8d4e8c8105a0f010fab793e64838bad6368b7, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+678f7ffc13c685c64e500efd4822a2721b874acd34500f54b489108df10e819e matches; assertion at :156:37, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 23d4a78f350b5cdf120266fcf0b8d4e8c8105a0f010fab793e64838bad6368b7, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited f2176866f29e50d3ce5d6000d70e3b1ab653e6efe1fab5ed0d6733fc4638b588, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer (TDD-0032, TDD-0069) and completion-reviewer with implementation-reviewer (TDD-0083): the test does not pin its case as written; the row goes to review-fix
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923120002000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): bef2849366327988facb2154fe54aa01e4e300900261e415c6ac7bde04a907fc
 
 ### TDD-0033
 
@@ -1651,10 +1689,27 @@ packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
 - qa-gatekeeper: PASS
-- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+17e44df9f635084a85878acd7b81d104c2fd5d2db737d1fa781b2bd8d0f2d886 matches; assertion at :70:7, row case only; mutation of the manifest-listed helper admitted as the only implementation of the check) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 11b7b92978a0afe71eae6a5735f109e2775eec03cd78a83eeb6c2ca4c4ed555a, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+17e44df9f635084a85878acd7b81d104c2fd5d2db737d1fa781b2bd8d0f2d886 matches; assertion at :70:7, row case only; mutation of the manifest-listed helper admitted as the only implementation of the check) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 11b7b92978a0afe71eae6a5735f109e2775eec03cd78a83eeb6c2ca4c4ed555a, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited e5aa3452482347735791785778dbe3d6f28a5fe765ac663afd6da742052d2865, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Spec review: PASS
+- Spec reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Spec audited evidence hash: de9f330a7575bf7356c4e0949f9e1d06b63b4c3db966488dd7c59650e1a02273
+- Spec review pack: .qfai/review/review-20260923120003000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 715007a2c642d32ac20ee70f95243ab7dd534a565c743f190c9f0ca0062c03b3
+- Code quality review: PASS
+- Code quality reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Code quality audited evidence hash: de9f330a7575bf7356c4e0949f9e1d06b63b4c3db966488dd7c59650e1a02273
+- Code quality review pack: .qfai/review/review-20260923120003000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 715007a2c642d32ac20ee70f95243ab7dd534a565c743f190c9f0ca0062c03b3
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 4 passed (4). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification seal: 9eb7a5d7dc275e87ae3eeb485376558734d7d8f121f93c437d444a4d36bc63cc
 
 ### TDD-0034
 
@@ -1710,10 +1765,27 @@ packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
 - qa-gatekeeper: PASS
-- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+909c07423d099615e15531cd28119b5ed74d664b5c3187fb4bd2d85675cfeabf matches; assertion at :100:7, row case only; helper mutation admitted) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited c0b7e7f5569c18fe1dfa439f8d9a4b0cf61cf3a3d8214d686a2543a267f5df29, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+909c07423d099615e15531cd28119b5ed74d664b5c3187fb4bd2d85675cfeabf matches; assertion at :100:7, row case only; helper mutation admitted) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited c0b7e7f5569c18fe1dfa439f8d9a4b0cf61cf3a3d8214d686a2543a267f5df29, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited c7de2e48db032dca6f0b758a858bcd3f7071011f88784e9f577f5aac70568c80, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Spec review: PASS
+- Spec reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Spec audited evidence hash: 6908d03ffe4c345ae5f8435a0803166fbf04355e1eedd46b2b0d41adcc489d76
+- Spec review pack: .qfai/review/review-20260923120004000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 7a87a7a04b5e074d572c2c7ea2f5b4c8789e8d32d7afb585a7ad29e89840c3f7
+- Code quality review: PASS
+- Code quality reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Code quality audited evidence hash: 6908d03ffe4c345ae5f8435a0803166fbf04355e1eedd46b2b0d41adcc489d76
+- Code quality review pack: .qfai/review/review-20260923120004000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 7a87a7a04b5e074d572c2c7ea2f5b4c8789e8d32d7afb585a7ad29e89840c3f7
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 4 passed (4). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification seal: 9eb7a5d7dc275e87ae3eeb485376558734d7d8f121f93c437d444a4d36bc63cc
 
 ### TDD-0035
 
@@ -1768,10 +1840,27 @@ packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
 - qa-gatekeeper: PASS
-- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+2a72096081a23d3f3ea894a81465d3eec7af2808f225f3826a38b451440ed5ce matches; assertion at :138:9, row case only; helper mutation admitted) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 22dea35623f2a618f2bcb7d8117b11521d450bd223db971518768c700e6d2d08, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+2a72096081a23d3f3ea894a81465d3eec7af2808f225f3826a38b451440ed5ce matches; assertion at :138:9, row case only; helper mutation admitted) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 22dea35623f2a618f2bcb7d8117b11521d450bd223db971518768c700e6d2d08, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited 850b33fc2db466fa37b4130f4358609c02570968fe66db7bb83fb3c51b061a18, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Spec review: PASS
+- Spec reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Spec audited evidence hash: 36acbf8b7ac480546dc18f662844800bb88fa68f1ae649070cbcdb61e9fb507f
+- Spec review pack: .qfai/review/review-20260923120005000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: a5d9df96bd41109a4b945015403168a21b9e40d7532f9bd913a6fab1b52fcbba
+- Code quality review: PASS
+- Code quality reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Code quality audited evidence hash: 36acbf8b7ac480546dc18f662844800bb88fa68f1ae649070cbcdb61e9fb507f
+- Code quality review pack: .qfai/review/review-20260923120005000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: a5d9df96bd41109a4b945015403168a21b9e40d7532f9bd913a6fab1b52fcbba
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 4 passed (4). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification seal: 9eb7a5d7dc275e87ae3eeb485376558734d7d8f121f93c437d444a4d36bc63cc
 
 ### TDD-0062
 
@@ -1839,10 +1928,14 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
 - qa-gatekeeper: PASS
-- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+7ab6e9082d952b4cc25e283fc2467d5b1d392a6b0e0e248a53ab8cc2cef104aa matches; assertion at :174:7, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 659a2218bdb311191665e0f84ebb8ef9599ba1dcd52c0c3e0378d981ba5a3e38, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+7ab6e9082d952b4cc25e283fc2467d5b1d392a6b0e0e248a53ab8cc2cef104aa matches; assertion at :174:7, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 659a2218bdb311191665e0f84ebb8ef9599ba1dcd52c0c3e0378d981ba5a3e38, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited 9886408fec98205f4356c90e07a70a099613e6a7d383decc9ae60b4fcc043f28, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer (TDD-0032, TDD-0069) and completion-reviewer with implementation-reviewer (TDD-0083): the test does not pin its case as written; the row goes to review-fix
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923120006000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 4a3156fe70007256466980791a619d21cd1ea3602b8c1b93fc3110ea1caf8a84
 
 ### TDD-0070
 
@@ -1884,10 +1977,56 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 - Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts -t "holds the post-merge budget open, and finds no merged tuning change owing it anything"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
 
+
+#### Round 2
+
+Opened by qa-gatekeeper#1's REVISE. The Round 1 mutation added a tuning record, and the
+record check at `:279` fails on any tuning record whatever its rate, so that proof never
+reached `budgetHolds`, the rate rule this row owns. Round 1 stays in the record as evidence
+that the record scan works. It is not this row's proof; Round 2 is.
+
+- Round 2: Satisfied-by: packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts, `budgetHolds`, `input.rerunsToGreen * 20 > input.defaultBranchRuns` — a checker in the Test file itself, exercised on constructed inputs. No shipped file can fail the case, because no product code computes a rerun-to-green rate
+- Round 2: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts -t "holds the post-merge budget open, and finds no merged tuning change owing it anything"
+- Round 2: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). The row's case fails on `AssertionError: exactly one in twenty is inside the budget: expected false to be true // Object.is equality` at `tests/integration/spec0017TuningChangeScope.test.ts:299:7`
+
+The edit:
+
+```diff
+-  const exceeds = input.rerunsToGreen * 20 > input.defaultBranchRuns;
++  const exceeds = input.rerunsToGreen * 20 >= input.defaultBranchRuns;
+```
+
+- Round 2: Falsifiability revision: working-tree+4a6d34bc0907baf3ed67e3e86d18f8521db3315834bfafa48922ba1c1d819360
+- Round 2: RED failure mode: falsifiability
+- Round 2: RED test hash: 6c36e0c3920bdc0939e999e63990792cf9e731edb6a98f635d85cdb6fd42ec5f
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
+```
+
+- Round 2: Revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Round 2: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts -t "holds the post-merge budget open, and finds no merged tuning change owing it anything"
+- Round 2: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
+
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
-- qa-gatekeeper attempts: qa-gatekeeper#1 REVISE, RED phase gate (falsifiability; rebuilt working-tree+4bf5be94ad7b30f94621d55b0d8e96ea06fac0938e5c113f03beee0080ed63d4 matches, but the mutation trips the tuning-record check at :279 and leaves budgetHolds, the rate rule the row owns, untested; re-take on budgetHolds), audited a61c2ca3903ecd46c3e3c55bb1747a5866b5bee61269dd5a03e2253e836509bc, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the Round 2 mutation of the test file was reverted before this run. The row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 REVISE, RED phase gate (falsifiability; rebuilt working-tree+4bf5be94ad7b30f94621d55b0d8e96ea06fac0938e5c113f03beee0080ed63d4 matches, but the mutation trips the tuning-record check at :279 and leaves budgetHolds, the rate rule the row owns, untested; re-take on budgetHolds), audited a61c2ca3903ecd46c3e3c55bb1747a5866b5bee61269dd5a03e2253e836509bc, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#2 PASS, RED phase gate, Round 2 (falsifiability, taken before the revert; content address of the mutated tree working-tree+4a6d34bc0907baf3ed67e3e86d18f8521db3315834bfafa48922ba1c1d819360 matches; the budgetHolds mutation at :259 fails the row's case as an assertion at :299:7, row case only; RED test hash 6c36e0c3920bdc0939e999e63990792cf9e731edb6a98f635d85cdb6fd42ec5f recomputes over the restored test), audited 07e830a262aaa4edf21521d19b1c577b9d9f6a50130c0746318e85a15631d1bf, reviewed revision working-tree+4a6d34bc0907baf3ed67e3e86d18f8521db3315834bfafa48922ba1c1d819360; qa-gatekeeper#3 PASS, build-phase GREEN + oracle proof gate, Round 2 (mutation reverted, tree matches HEAD; GREEN command identical to the Falsifiability command, re-run 1 passed | 2 skipped (3) with the row's case passing; the Round 2 falsifiability trio is the oracle proof; refactor verify re-run 3 passed (3) at 04b2eed30), audited 92797a84b359ebb0617619b9a03cda97664a2a796983f674950ac588ad2371fe, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Spec review: PASS
+- Spec reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Spec audited evidence hash: 459548e75700c455333ae7c46657a8a63799345b8071bd1aa9d230105d65dc41
+- Spec review pack: .qfai/review/review-20260923120007000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 1e76b514f1bf4fe19ce7b0542eca6e288e84859c1a5d49687b3e10df3fe14346
+- Code quality review: PASS
+- Code quality reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Code quality audited evidence hash: 459548e75700c455333ae7c46657a8a63799345b8071bd1aa9d230105d65dc41
+- Code quality review pack: .qfai/review/review-20260923120007000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 1e76b514f1bf4fe19ce7b0542eca6e288e84859c1a5d49687b3e10df3fe14346
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
 
 ### TDD-0083
 
@@ -1931,10 +2070,14 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
 - qa-gatekeeper: PASS
-- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+954431945deba10b08585c489b488cd0bbc83ad1571f8099008b4f321ade380e matches; assertion at :213:7, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green); PASS covers the observation only, coverage of TC-0017-0083 routed to the reviews, audited 829b2c20d06b72441edf2c52fd02afa978448fabf061bc15c79fe09964aaad71, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+954431945deba10b08585c489b488cd0bbc83ad1571f8099008b4f321ade380e matches; assertion at :213:7, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green); PASS covers the observation only, coverage of TC-0017-0083 routed to the reviews, audited 829b2c20d06b72441edf2c52fd02afa978448fabf061bc15c79fe09964aaad71, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited 3a4b0ada33f3df284b550bde2ce19e5680bae64117fc6c558e41c8265d67dc08, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer (TDD-0032, TDD-0069) and completion-reviewer with implementation-reviewer (TDD-0083): the test does not pin its case as written; the row goes to review-fix
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923120008000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): fc0fdbf3019ec0992afde3178b4aa726ca7e620d1d2df4d9556d6364e7a7f9a4
 
 ## Coverage Depth Matrix
 
