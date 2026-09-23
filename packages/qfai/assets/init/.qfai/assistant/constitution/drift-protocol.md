@@ -560,8 +560,8 @@ is one queue per spec, and it is defined by a destination, an owner, an entry sh
   verdict, because one hash cannot answer for two subjects**: a `Prototype parity` verdict hashes
   the captures its `Surface artifacts` manifest names beside the entry's fields, so on a
   UI-affecting row it never recomputes to the value the other verdicts read. The re-attesting
-  reviewers may share one pack; each verdict still names it under its own prefix. No code runs, no row changes status, and it
-  spends no round — it opens none, so it is not a `Round N:` pack. The revision a verdict names
+  reviewers may share one pack; each verdict still names it under its own prefix. No code runs, no
+  row changes status, and it spends no round — it opens none, so it is not a `Round N:` pack. The revision a verdict names
   excludes `.qfai/evidence/**`, so by construction nothing outside the record moved. **A repair that
   would move the revision is not a record repair**: it is a change to the deliverable and takes the
   ordinary path. A repaired entry whose verdict carries no re-attestation is still an open entry.

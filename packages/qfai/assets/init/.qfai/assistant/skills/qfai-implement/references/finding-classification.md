@@ -90,8 +90,7 @@ seal` beside it, under the prefix of the verdict superseded, and the gate
 recomputes the superseding hash and both seals. A row whose `Prototype parity`
 verdict also went stale re-attests that verdict under its own prefix: its
 subject holds the captures, so the value is not the one the other verdicts
-carry. No code runs and
-no round is spent — it opens none, so it is not a `Round N:` pack. A repair
+carry. No code runs and no round is spent — it opens none, so it is not a `Round N:` pack. A repair
 that would move the revision is not a record repair; it is a change to the
 deliverable.
 

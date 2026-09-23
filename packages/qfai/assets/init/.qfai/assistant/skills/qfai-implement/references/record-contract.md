@@ -91,8 +91,8 @@ the original read, by design — and that re-attestation's
 attempt's `Review pack seal`, each from the pack it names. The field is per
 verdict for the reason the paragraph above gives: the parity verdict's subject
 holds the captures, so a repaired UI-affecting row has two subjects to
-re-attest and one field could carry only one of them. The re-attestation is written as a pack of its own for exactly this
-reason: neither seal is ever edited, so a repaired record stays checkable
+re-attest and one field could carry only one of them. The re-attestation is
+written as a pack of its own for exactly this reason: neither seal is ever edited, so a repaired record stays checkable
 rather than becoming an untraceable rewrite of a sealed pack
 (`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`).
 
