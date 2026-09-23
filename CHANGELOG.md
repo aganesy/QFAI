@@ -29,8 +29,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   written beside it, and the forward lane now names any such exemption on a
   passing run instead of reading only the compiler configuration.
 
-## [1.12.3] - 2026-09-24
-
 ### Fixed
 
 - **The rest of spec-0003 states what `qfai init` and the shipped workflows
@@ -42,6 +40,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   runner tier is deferred. Each now says what the tests and the source do. The
   one ledger row whose test case moved, `TDD-0001`, is reopened: its test
   never asserted that init leaves the artifact directories out.
+
+## [1.12.3] - 2026-09-24
+
+### Fixed
 
 - **spec-0012 states the auto-serve SIGINT path as the runner contract**
   (#2201). `TC-0012-0462` still described iterate killing child server
