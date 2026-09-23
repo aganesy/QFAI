@@ -1,5 +1,18 @@
 # 09 Delta
 
+## Triage (2026-09-23)
+
+`R-WORKLOG-DRIFT` leaves the reviewer justification set, so four items stop
+naming it as the pattern they follow.
+
+| Source                                | Subject                                                                                                                                      | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                     | Depends-On |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------- | ---------- |
+| discussion-20260923060900824#REQ-0003 | Reword "R-WORKLOG-DRIFT family pattern" in AC-0015-0014, BR-0015-0009, BR-0015-0013 and TC-0015-0027 to cite the justification rule directly | spec-0015     | UPDATE    | MODIFY | -           | Wording only. The obligation stays, and no ledger row changes | -          |
+
+- Ledger: no row changes. The four items keep their obligation, so TDD-0029,
+  which holds TC-0015-0027 at `done`, is not reset (DL-0003). No row is added or
+  retired, so no `Tier` is seeded.
+
 ## Triage (2026-09-13 concrete-pattern review)
 
 | Source                                                                         | Subject                                         | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                                    |
@@ -14,11 +27,22 @@
 - Tags: @docs, @test
 - Summary: optional pattern review proposes concrete business-flow, US, AC, EX and TC coverage with rationale and no numeric target. Catalog bounds override old targets without overwriting adopter manifests. Existing IDs and independently required obligations remain intact.
 
+- Change ID: DELTA-0002
+- Date: 2026-09-23
+- Primary: Ops
+- Tags: @api, @docs
+- Summary: AC-0015-0014, BR-0015-0009, BR-0015-0013 and TC-0015-0027 cite the
+  Reviewer-Gate justification contract instead of the `R-WORKLOG-DRIFT`
+  pattern. The obligation and every ledger row are unchanged.
+
 ## Update History
 
 | Date       | DL      | Summary                                                              |
 | ---------- | ------- | -------------------------------------------------------------------- |
 | 2026-09-14 | DL-0001 | Bound concrete-pattern review and record the authorized owner rerun. |
+| 2026-09-23 | DL-0002 | Cite the justification rule by its contract section.                 |
+| 2026-09-23 | DL-0003 | Replace only the citation in four items; no ledger row changes.      |
+| 2026-09-23 | DL-0004 | The citation resolves to the contract's rejection sentence.          |
 
 ## Decision Log
 
@@ -76,6 +100,94 @@ notes: Keep optional advisory review of concrete coverage without numeric or abs
   links:
     - .qfai/evidence/sdd-spec-0015.md
 ```
+
+### DL-0002
+
+#### Meta
+
+```yaml
+id: DL-0002
+date: 2026-09-23
+primary: Ops
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0015/03_Acceptance-Criteria.md
+  - spec-0015/04_Business-Rules.md
+  - spec-0015/06_Test-Cases.md
+notes: AC-0015-0014, BR-0015-0009, BR-0015-0013 and TC-0015-0027 cite the Reviewer-Gate justification contract in .qfai/contracts/cli/qfai-validate.md#reviewer-gate-input-bundle (DR-0015-0007).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Cite spec-0004 BR-0004-0017
+  reason: A foreign-namespace BR reference raises QFAI-SPACK-101 and TRACE_DOWNSTREAM_REF in 04_Business-Rules.md.
+  do_not: Cite another spec's BR, AC or US from this spec's item files.
+  temptation: BR-0004-0017 is where spec-0004 states the same rule.
+- option: Name R-REJECTED-READOPT as the pattern
+  reason: It swaps one code name for another instead of pointing at the rule.
+  do_not: Name a single finding code as the family the rule belongs to.
+  temptation: R-REJECTED-READOPT is the one code left in the justification set.
+
+### DL-0003
+
+#### Meta
+
+```yaml
+id: DL-0003
+date: 2026-09-23
+primary: Ops
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0015/03_Acceptance-Criteria.md
+  - spec-0015/04_Business-Rules.md
+  - spec-0015/06_Test-Cases.md
+  - spec-0015/tdd/test-list.md
+notes: Only the citation phrase changes in the four items; the obligation is unchanged, so TDD-0029 stays done and no ledger row changes (DR-0015-0008).
+```
+
+#### Migration / Follow-ups
+
+- No migration required. The test TDD-0029 names asserts the rejection, not the phrase.
+- The header comment of `packages/qfai/tests/integration/validators/justificationRejectEmpty.test.ts` still names the "R-WORKLOG-DRIFT family" pattern. Rewording it is a `/qfai-implement` action under `discussion-20260923060900824#REQ-0017`, which leaves cosmetic test references to that stage.
+
+### DL-0004
+
+#### Meta
+
+```yaml
+id: DL-0004
+date: 2026-09-23
+primary: Ops
+tags: ["@api", "@docs"]
+compat: Improvement
+scope:
+  - spec-0015/03_Acceptance-Criteria.md (AC-0015-0014)
+  - spec-0015/04_Business-Rules.md (BR-0015-0009, BR-0015-0013)
+  - spec-0015/06_Test-Cases.md (TC-0015-0027)
+notes: The citation resolves to the rejection sentence of the Reviewer-Gate input bundle; BR-0015-0009's three-part content resolves to the R-PROMPT-SCANNER-DRIFT row (DR-0015-0009).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+- The rejection sentence was narrowed to the codes that require a justification, under the user's decision of 2026-09-23 recorded in spec-0004 DR-0004-0038 and DR-0004-0039. The eight catalog codes stay in it, so the four items keep their citation.
+
+#### Rejected
+
+- option: Re-point BR-0015-0009 and AC-0015-0014 to the prototyping finding-code section
+  reason: The four items cite the rejection rule, which the input-bundle section states.
+  do_not: Split one rule's citation across two anchors.
+  temptation: The code's own row is in the other section.
+- option: Widen the content clause of the input-bundle section
+  reason: It contradicts a recorded contract decision.
+  do_not: Widen the content clause of qfai-validate.md in this change.
+  temptation: The clause asks for a Decisions row ID these codes lack.
 
 ## Change Requests
 

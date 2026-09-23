@@ -257,3 +257,25 @@ Tracked for separate implementation as OQ-0016
 - Type: error
 - Level: integration
 - Verify a structured item missing any of `id` / `label` / `acceptance`, or carrying extra keys (closed schema violation), is rejected by `auditProfile.ts` (DR-0268).
+
+## TC-0013-0036: Records Go To The Spec Pack
+
+- EX-Ref: EX-0013-0021
+- AC-Refs: AC-0013-0028
+- Type: normal
+- Level: integration
+- Verify, one boundary per check:
+  - the shipped `/qfai-sdd` `SKILL.md` and `references/**` send a decision to `07_Decisions.md` or a Change Request, and a consultation or an out-of-scope discovery to `08_Open-questions.md` or a Change Request (boundary `record-homes-stated`)
+  - `SKILL.md` has no `## Work-log entries` section (boundary `no-worklog-section`)
+  - `SKILL.md` has no `W-PENDING-PROMOTION` example (boundary `no-pending-promotion-example`)
+  - no file under `packages/qfai/assets/init/.qfai/assistant/**` contains `.qfai/steering/` or `worklog-entry.schema.md` (boundary `no-surface-reference-in-tree`)
+
+## TC-0013-0037: Approval Stop Writes No Entry
+
+- EX-Ref: EX-0013-0022
+- AC-Refs: AC-0013-0029
+- Type: normal
+- Level: integration
+- Verify, one boundary per check, each asserted over all three files at once:
+  - `SKILL.md`, `references/sdd-execution-playbook.md` and `references/sdd-triage.md` each state the three stop steps: leave `Approved By` as `-`, do not enter Phase 0, report every unapproved row with its Operation and target (boundary `stop-steps-stated`)
+  - none of the three files contains "work-log" or `consultation-needed` (boundary `no-worklog-entry-named`)

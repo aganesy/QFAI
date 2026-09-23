@@ -46,7 +46,6 @@ stays the first markdown table in this file):
 | TC-0003-0019 | integration | AC-0003-0016               | EX-0003-0017 | edge     | レガシー行除去と管理ブロック置換                                    |
 | TC-0003-0020 | integration | AC-0003-0015               | EX-0003-0016 | boundary | review-\*/ サブディレクトリが gitignore 対象                        |
 | TC-0003-0021 | integration | AC-0003-0017               | EX-0003-0018 | normal   | 4-layer asset-tree seed                                             |
-| TC-0003-0022 | integration | AC-0003-0018               | EX-0003-0019 | normal   | project-root steering seed                                          |
 | TC-0003-0023 | integration | AC-0003-0019, AC-0003-0020 | EX-0003-0020 | normal   | --upgrade-assistant-tree migration                                  |
 | TC-0003-0024 | integration | AC-0003-0021               | EX-0003-0021 | normal   | migration memo authoring                                            |
 | TC-0003-0025 | unit        | AC-0003-0022               | EX-0003-0022 | normal   | assistantPaths.ts SSOT lint                                         |
@@ -83,6 +82,9 @@ stays the first markdown table in this file):
 | TC-0003-0056 | integration | AC-0003-0038               | EX-0003-0050 | normal   | delivered document checks: isolated legs, preserved check name      |
 | TC-0003-0057 | integration | AC-0003-0038               | EX-0003-0050 | normal   | delivered validation profiles: isolated legs, preserved verdict     |
 | TC-0003-0058 | integration | AC-0003-0038               | EX-0003-0051 | error    | aggregate failure protection: bad result and missing binding        |
+| TC-0003-0059 | integration | AC-0003-0039               | EX-0003-0052 | normal   | no work-log path or instructions line after init                    |
+| TC-0003-0060 | integration | AC-0003-0039               | EX-0003-0053 | edge     | populated work-log directory unchanged by init and init --force     |
+| TC-0003-0061 | integration | AC-0003-0039               | EX-0003-0054 | edge     | withdrawn schema: unedited copy retired, edited copy kept           |
 
 ## TC-0003-0001: 空ディレクトリでの初期化
 
@@ -194,19 +196,6 @@ Verify:
 - 上記いずれの layer にも `.gitkeep` は書かれない（layer が空のときだけ空の `.gitkeep` を置く）
 - 通常実行と `--dry-run` の双方で、`report()` の "skipped paths" に `.qfai/assistant/<layer>/.gitkeep` が現れない（未配置の placeholder は copied/skipped のどちらにも計上しない）
 - `.qfai/assistant/steering/` ディレクトリは存在しない
-
-## TC-0003-0022: project-root steering seed
-
-**Level:** integration
-**EX Refs:** EX-0003-0019
-**AC Refs:** AC-0003-0018
-
-Setup: empty temp dir.
-Action: `runInit({ root })`、その後ユーザー編集をシミュレートして `.qfai/steering/_templates/entry.md` に追記 → `runInit({ root })` を再実行。
-Verify:
-
-- 初回実行で `.qfai/steering/README.md`, `.qfai/steering/.gitkeep`, `.qfai/steering/_templates/entry.md` が seed される
-- 2 回目実行後もユーザー追記内容が `_templates/entry.md` に残っている
 
 ## TC-0003-0023: --upgrade-assistant-tree migration
 
@@ -764,3 +753,47 @@ Verify:
 - a body whose failing exit has been replaced passes none of those results
 - an aggregate that no longer binds its dependency's result is rejected and named
 - a step that could not preserve failure — conditional, tolerant shell, `continue-on-error`, an action, or work of its own — is rejected as well
+
+## TC-0003-0059: no work-log path or instructions line after init
+
+**Level:** integration
+**EX Refs:** EX-0003-0052
+**AC Refs:** AC-0003-0039
+**Type:** normal
+
+Setup: an empty temp dir.
+Action: run `runInit` once and capture its report.
+Verify:
+
+- no path exists under `.qfai/steering/`, and the report names none (boundary `no-steering-path`)
+- the generated `.github/copilot-instructions.md` has no work-log line (boundary `no-worklog-instructions-line`)
+
+## TC-0003-0060: populated work-log directory unchanged by init and init --force
+
+**Level:** integration
+**EX Refs:** EX-0003-0053
+**AC Refs:** AC-0003-0039
+**Type:** edge
+
+Setup: an initialised temp dir whose `.qfai/steering/` holds an edited `README.md` and one adopter entry, with no `.gitkeep` and no `_templates/entry.md`. Record the path set under `.qfai/steering/` and each file's SHA-256.
+Action: run `runInit`, then `runInit` with `--force`, reading the directory after each run.
+Verify:
+
+- after the plain run, the path set and every SHA-256 equal the recorded values (boundary `plain-init-byte-identical`)
+- after the `--force` run, the path set and every SHA-256 equal the recorded values (boundary `force-init-byte-identical`)
+
+The fixture omits two of the three files the removed seed wrote. A fully seeded, unedited directory is left alone by create-only copying as well, so it cannot fail against the code that still seeds.
+
+## TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept
+
+**Level:** integration
+**EX Refs:** EX-0003-0054
+**AC Refs:** AC-0003-0039
+**Type:** edge
+
+Setup: two initialised temp dirs, each holding `.qfai/assistant/catalog/worklog-entry.schema.md` with a matching record in `.qfai/assistant/.assets.lock.json`. In the second, edit the file after it was recorded.
+Action: run `runInit` with `--force` in each.
+Verify:
+
+- first dir: the file is gone and the lock has no key for it (boundary `unedited-copy-retired`)
+- second dir: the file is byte-identical to its edited content, and the report carries the note that its content has been edited and it was not removed (boundary `edited-copy-kept-with-note`)

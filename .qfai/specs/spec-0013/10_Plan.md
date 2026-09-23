@@ -11,6 +11,13 @@
 7. Validate gate: run `qfai validate --fail-on error` until error=0
 8. Density review: triage `QFAI-COV-207` warnings
 
+The skill-text part of removing the work-log surface (BR-0013-0021,
+BR-0013-0022) is edited in
+`packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/` and mirrored by
+`pnpm sync:ssot`. It lands in the same change as the removal of
+`QFAI-TDDLIST-015`, in the order spec-0004's `10_Plan.md` states under
+"Removing the work-log surface".
+
 ## Test approach
 
 - Unit tests: reference direction enforcement, required edge detection, contract index alignment

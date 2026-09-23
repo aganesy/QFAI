@@ -1,36 +1,25 @@
 # CLI Contract: `qfai validate`
 
-- Contract scope: public CLI surface for spec / contract / assistant-tree / work-log validation
+- Contract scope: public CLI surface for spec / contract / assistant-tree validation
 - Owning spec: `spec-0004`
 - Used-by: `spec-0003` (post-init self-check), all skill specs (gate evidence)
 - SSOT modules:
   - `packages/qfai/src/cli/commands/validate.ts`
   - `packages/qfai/src/core/paths/assistantPaths.ts` (canonical relative paths SSOT)
-  - `packages/qfai/src/core/validators/worklogSurface.ts` (work-log entry
-    frontmatter parsing and link-integrity check; both are private helpers of
-    this single module — there is no `core/worklog/` directory. A split into
-    dedicated `parseEntry` / `validateLinks` modules is an intended future
-    decomposition, not a location that exists today)
   - `packages/qfai/src/core/validators/reviewerGate.ts` (Reviewer-Gate inputs)
   - `packages/qfai/src/core/validators/reviewerJustification.ts`
     (Reviewer-Gate `R-*` justification outputs)
 
 ## Existing public surface
 
-This contract documents only the **delta** from the assistant-layer recut and the work-log surface introduction. The rest of `qfai validate`'s existing flags, profiles (`sdd`, `prototyping`, `verify`, `discussion`), `--fail-on`, `--format`, `--report`, etc., are unchanged.
+This contract documents only the **delta** from the assistant-layer recut. The rest of `qfai validate`'s existing flags, profiles (`sdd`, `prototyping`, `verify`, `discussion`), `--fail-on`, `--format`, `--report`, etc., are unchanged.
 
 ## New finding codes (this delta)
 
 | Code                         | Severity                                               | Surface                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Source REQ                                                                              |
 | ---------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| `W-WORKLOG-SCHEMA`           | warning                                                | `.qfai/steering/*.md` entry frontmatter is malformed (missing required field, invalid enum, broken YAML, etc.). Non-blocking.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | spec-0004 REQ-0035                                                                      |
-| `R-WORKLOG-DRIFT`            | error (advisory-failing)                               | Reviewer Gate finding: fresh implementation output contradicts the direction of an open entry with `kind` in `{decision, risk, blocker, scope-down}`. Requires non-empty `justification:` field.                                                                                                                                                                                                                                                                                                                                                                                                                   | spec-0004 REQ-0036 (impl); reviewer-input-bundle obligation: spec-0015 09_delta CHG-003 |
 | `R-REJECTED-READOPT`         | error (advisory-failing)                               | Reviewer Gate finding: output adopts an option marked `Status: rejected` in the active spec's `07_Decisions.md`. Requires non-empty `justification:` field.                                                                                                                                                                                                                                                                                                                                                                                                                                                        | spec-0004 REQ-0036 (impl); reviewer-input-bundle obligation: spec-0015 09_delta CHG-003 |
-| `W-PENDING-PROMOTION`        | warning                                                | A `kind: decision` entry has non-null `promote-to` that is not yet satisfied. Surfaced in a dedicated section of the validate report.                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | spec-0004 REQ-0037                                                                      |
 | `D-DEPRECATED-PATH`          | warning (during window) / error (after sunset version) | An old-layout assistant-tree file path is referenced or present. Warning text MUST name the sunset version per spec-0003 REQ-0023.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | spec-0004 REQ-0040, spec-0003 REQ-0023                                                  |
-| `W-WORKLOG-STALE`            | warning                                                | `.qfai/steering/*.md` entry with `status: active` has `updated` older than 90 days. Surfaced with entry ID + age in days.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | spec-0004 REQ-0038                                                                      |
-| `W-WORKLOG-BROKEN-LINK`      | warning                                                | An entry's `links: [...]` element does not resolve to an existing artifact. Each element MUST be a string matching `spec-NNNN`, `discussion-*`, or any registered `<entry-id>` (kebab-case ASCII; no required prefix).                                                                                                                                                                                                                                                                                                                                                                                             | spec-0004 REQ-0039                                                                      |
-| `R-HANDOFF-INCOMPLETE`       | error (advisory-failing)                               | Reviewer Gate finding: a `kind: handoff` entry body is missing one of the five required sections (`## State of the task`, `## Next single action`, `## Constraints to preserve`, `## Open questions`, `## References to consult first`).                                                                                                                                                                                                                                                                                                                                                                           | spec-0004 REQ-0042 (impl); reviewer-input-bundle obligation: spec-0015 09_delta CHG-003 |
 | `W-SKILL-DOC-BROKEN-REF`     | warning (during window) / error (after sunset)         | A `qfai-*` SKILL.md references an assistant path that does not resolve in the current layout.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | spec-0004 REQ-0043                                                                      |
 | `W-USER-EDIT-PRESERVED`      | warning                                                | `qfai init --upgrade-assistant-tree` encountered a collision and preserved the user-edited file at the old path; consumer MUST manually reconcile.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | spec-0004 REQ-0044                                                                      |
 | `W-ASSISTANT-LAYOUT`         | warning                                                | A directory under `.qfai/assistant/` is not in the canonical 4-layer enum (constitution / manifest / catalog / process) and not in the documented pre-recut allowlist (agents / skills / skills.local).                                                                                                                                                                                                                                                                                                                                                                                                            | spec-0004 REQ-0034 (4-layer enforcement)                                                |
@@ -44,35 +33,21 @@ This contract documents only the **delta** from the assistant-layer recut and th
 | `QFAI-SKILLS-015`            | error                                                  | A skill's entry point carries no usable `name:` or `description:`, so a host does not register it and the user cannot invoke it by name. A name is usable when it is lowercase letters, digits and single hyphens, at most 64 characters, and the skill's own directory; a description is usable when it carries text, is at most 1024 characters, and has no `<` or `>`. A dot-prefixed directory directly under the skills root registers no skill, since the host lists none, and a document inside it is read only where a registered skill names it. Reported per entry point, in text and JSON output alike. | The host's own registration contract; no spec row                                       |
 
 A code belongs in this table only once a validator emits it, and
-`packages/qfai/tests/integration/contractDeferralNotes.test.ts` enforces exactly that. It reads the **TypeScript AST** rather than searching the sources for the string, because a comment, a dead constant or a `code:` field on something that is not a finding all satisfy a text search. Each code must reach an emission in one of three shapes, in a module that is actually wired up: (1) it is the first argument of a discovered `Issue` factory — the shared `issue(…)` plus every local function taking the code as its first parameter — or the `code` of an object literal that also carries a `severity`, which is what makes it a finding rather than metadata; (2) it is a member of a gate the module _asks_ (`NAME.has(x)` / `NAME.includes(x)`) and that module hands a variable to a factory, which is how `reviewerJustification.ts` raises the codes it reads off a review report; (3) it is carried by a string a `cli/commands/*` module passes to a printer. The module must additionally be one `core/validate.ts` invokes or `cli/main.ts` imports. The work-log secret-scan hard block (secret content in a work-log entry) previously had a row here with no emitter, no wired scan and no owner, so it is not listed; its definition stays in `.qfai/specs/_policies/06_Glossary.md`, and the row returns together with the module that raises it.
+`packages/qfai/tests/integration/contractDeferralNotes.test.ts` enforces exactly that. It reads the **TypeScript AST** rather than searching the sources for the string, because a comment, a dead constant or a `code:` field on something that is not a finding all satisfy a text search. Each code must reach an emission in one of three shapes, in a module that is actually wired up: (1) it is the first argument of a discovered `Issue` factory — the shared `issue(…)` plus every local function taking the code as its first parameter — or the `code` of an object literal that also carries a `severity`, which is what makes it a finding rather than metadata; (2) it is a member of a gate the module _asks_ (`NAME.has(x)` / `NAME.includes(x)`) and that module hands a variable to a factory, which is how `reviewerJustification.ts` raises the codes it reads off a review report; (3) it is carried by a string a `cli/commands/*` module passes to a printer. The module must additionally be one `core/validate.ts` invokes or `cli/main.ts` imports.
 
 ## Reviewer-Gate input bundle
 
 Reviewer subagents (`completion-reviewer`, `implementation-reviewer`, `qa-gatekeeper`) MUST be invoked with a structured input bundle containing:
 
-1. Open work-log entries (`.qfai/steering/*.md` where `status` ∈ `{active, handoff}` and `scope` matches the current task — `global` or `spec-NNNN`)
-2. The Decisions table from the affected spec's `07_Decisions.md`
-3. The fresh implementation output under review
+1. The Decisions table from the affected spec's `07_Decisions.md`
+2. The fresh implementation output under review
 
-Each Reviewer finding emitted in the `R-*` family MUST carry a `justification:` field with non-empty content naming:
+A Reviewer finding requires a justification when its code is `R-REJECTED-READOPT`, another code this contract declares with a required `justification:`, or a code the justification catalog registers. Such a finding MUST carry a `justification:` field with non-empty content naming:
 
-- (a) the entry ID or Decisions row ID that triggered the finding, and
+- (a) the Decisions row ID that triggered the finding, and
 - (b) the specific contradiction or re-adoption observed.
 
-`qfai validate` rejects Reviewer reports whose `R-*` findings lack `justification:` content. This is the machine-checkable acceptance criterion that makes drift-checks advisory-failing rather than mute.
-
-## Promote-gate surfacing
-
-For each `kind: decision` entry with non-null `promote-to` that is not yet satisfied:
-
-- The validate report includes a dedicated `## Pending Promotion` section listing entry ID, target spec, and one-line summary.
-- The same finding is emitted as `W-PENDING-PROMOTION` for `--fail-on warning` consumers.
-
-Promotion is satisfied when all three conditions hold (canonical SSOT shared with `worklogSurface.ts` and spec-0004 BR-0004-0019):
-
-- A row exists in the **declared target** file (`promote-to: spec-NNNN/07_Decisions.md`) whose body cites the entry ID as a whole token, AND
-- The entry transitions to `status: archived`, AND
-- The entry frontmatter carries a non-empty `promoted-to:` back-ref. The value is the DR-ID (Decision Row identifier, e.g. `DR-3`) of the appended row; format validation of the DR-ID itself is left to spec-side gates so the worklog validator does not need to know per-spec DR numbering schemes.
+`qfai validate` rejects Reviewer reports in which such a finding lacks `justification:` content. A finding in any other code raises no justification error, and neither does a code whose catalog registration `shipped-workflows.md` defers. This is the machine-checkable acceptance criterion that makes drift-checks advisory-failing rather than mute.
 
 ## Backwards-compatible adapter
 
@@ -141,12 +116,11 @@ skill references such as `handoff.md`) is replaced by
 
 ## Reviewer-Gate finding codes for the prototyping defect-remediation pack
 
-In addition to the work-log Reviewer-Gate codes above, the
+In addition to `R-REJECTED-READOPT` above, the
 prototyping defect-remediation pack introduces two CI-lane
 Reviewer-Gate finding codes per REQ-0102 / REQ-0113 / REQ-0125. Both
 are severity **error (advisory-failing)** per OQ-0109 resolution
-(DR-0001-0006) and mirror the `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT`
-pattern (DR-0258).
+(DR-0001-0006) and mirror the `R-REJECTED-READOPT` pattern (DR-0258).
 
 | Code                        | Severity                 | Surface                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Source REQ         |
 | --------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
@@ -155,5 +129,4 @@ pattern (DR-0258).
 
 `qfai validate` rejects Reviewer reports whose `R-PROMPT-SCANNER-DRIFT`
 or `R-CERTIFY-VERIFY-CIRCULAR` findings lack a non-empty
-`justification:`, mirroring the work-log Reviewer-Gate justification
-contract above.
+`justification:`, mirroring the Reviewer-Gate justification contract above.

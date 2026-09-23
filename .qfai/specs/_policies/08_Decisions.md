@@ -1534,6 +1534,7 @@ Source: discussion-20260522081618995 OQ-0001..0012 (10 resolved, 2 deferred)。
 
 #### DR-0250: Promotion target は per-spec `07_Decisions.md` 単独 (OQ-0001 resolved)
 
+- **Status**: SUPERSEDED by `DR-0296`. The work-log surface this governs was removed. Its rejected option, a project-level MADR decision register parallel to the Decisions files, stays rejected.
 - Decision: `kind: decision` work-log entry の promote target は per-spec `07_Decisions.md` のみ。project-level MADR `decisions/` directory は採用しない。
 - Rationale: 単一 SSOT per spec を保つ。並列 decision register を増やさない。
 - Rejected option: project-level MADR `decisions/` 新設 (parallel SSOT を増やすため)。
@@ -1541,6 +1542,7 @@ Source: discussion-20260522081618995 OQ-0001..0012 (10 resolved, 2 deferred)。
 
 #### DR-0251: 4-conceptual-layer + Process partition 採用 (OQ-0002 resolved)
 
+- **Status**: PARTLY SUPERSEDED by `DR-0296` — Decision's second sentence, a project-root `steering/` as the work-log surface, is superseded, and so is the count of four conceptual layers, whose fourth was that surface. The six-entry split of `.qfai/assistant/` stands.
 - Decision: `.qfai/assistant/{constitution,manifest,catalog,process,agents,skills}/` の 6 entry に再分割。`steering/` は project-root に新設し work-log surface とする。
 - Rationale: Spec Kit (Constitution) + Kiro (Manifest/steering) + Cline (scratchpad) + AAIF の industry convergence。bulk-rename Option (current steering → manifest) は 12 files 中 8 を mis-classify するため reject。
 - Rejected options: (B) instructions/ + manifest/ の 2-directory bulk rename; (C) flat assistant/ no layers。
@@ -1548,6 +1550,7 @@ Source: discussion-20260522081618995 OQ-0001..0012 (10 resolved, 2 deferred)。
 
 #### DR-0252: Work-log scope は project-level 単独 (OQ-0003 resolved)
 
+- **Status**: SUPERSEDED by `DR-0296`. The work-log surface this governs was removed.
 - Decision: work-log surface は project-root `.qfai/steering/` 単独。per-spec scope は frontmatter `scope: spec-NNNN` で表現する。
 - Rationale: per-spec path proliferation を回避。cross-spec memos も frontmatter で表現可能。
 - Rejected option: per-spec `.qfai/specs/spec-NNNN/steering/` を併設 (path proliferation のため)。
@@ -1562,6 +1565,7 @@ Source: discussion-20260522081618995 OQ-0001..0012 (10 resolved, 2 deferred)。
 
 #### DR-0254: `.qfai/steering/` は `.gitignore` 既定 exclude (OQ-0005 resolved)
 
+- **Status**: SUPERSEDED by `DR-0296`. The work-log surface this governs was removed. The default it records was never in effect: the managed `.gitignore` block never excluded the directory.
 - Decision: work-log surface は default untracked。project が opt-in する場合は `.gitignore` override で commit 可能。
 - Rationale: accidental secret commit に対する defense-in-depth。共有 resume context が欲しい team は opt-in できる。
 - Rejected option: default tracked (secret leak リスク)。
@@ -1576,6 +1580,7 @@ Source: discussion-20260522081618995 OQ-0001..0012 (10 resolved, 2 deferred)。
 
 #### DR-0256: Work-log entry は YAML frontmatter (OQ-0009 resolved)
 
+- **Status**: SUPERSEDED by `DR-0296`. The work-log surface this governs was removed.
 - Decision: `.qfai/steering/*.md` の metadata は YAML frontmatter。
 - Rationale: 既存 `qfai-*` SKILL.md convention と整合。`closure-rationale` のような prose field と相性良。
 - Rejected option: TOML (tool ecosystem が薄い)、JSON (prose body と分離が必要)。
@@ -1583,6 +1588,7 @@ Source: discussion-20260522081618995 OQ-0001..0012 (10 resolved, 2 deferred)。
 
 #### DR-0257: Entry filename = `<id>.md` で `id` は kebab-case ASCII (OQ-0010 resolved)
 
+- **Status**: SUPERSEDED by `DR-0296`. The work-log surface this governs was removed.
 - Decision: filename stem と frontmatter `id` を match させる。
 - Rationale: `ls` で時系列順、unique-enough、人間可読。
 - Rejected option: UUID filename (人間可読性低)、`YYYY-MM-DD/<slug>.md` (per-day dir 増加)。
@@ -1590,6 +1596,7 @@ Source: discussion-20260522081618995 OQ-0001..0012 (10 resolved, 2 deferred)。
 
 #### DR-0258: Reviewer drift findings は severity error + 必須 justification (advisory-failing) (OQ-0011 resolved)
 
+- **Status**: PARTLY SUPERSEDED by `DR-0296` — superseded for `R-WORKLOG-DRIFT`. The advisory-failing rule (severity error with a mandatory `justification:`, and `qfai validate` rejecting an `R-*` finding without one) stands, for `R-REJECTED-READOPT` and as the pattern other records cite.
 - Decision: `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT` は severity error だが `justification:` field 非空を必須とする。`qfai validate` は justification 欠落の `R-*` finding を reject。
 - Rationale: 自然言語 heuristic な drift 検出を hard-block にすると false-positive で trust が崩れる。warning-only にすると無視される。advisory-failing で中庸を取る。
 - Rejected option: warning-only (無視される); hard-block (false-positive で trust 崩れる)。
@@ -1604,6 +1611,7 @@ Source: discussion-20260522081618995 OQ-0001..0012 (10 resolved, 2 deferred)。
 
 #### DR-0260: AGENTS.md 整合と auto-archival は deferred (OQ-0007 + OQ-0008 deferred)
 
+- **Status**: PARTLY SUPERSEDED by `DR-0296` — the auto-archival half, the `W-WORKLOG-STALE` stand-in, is superseded. The AGENTS.md / CLAUDE.md deferral is not affected.
 - Decision: AGENTS.md / `CLAUDE.md` symlink 議論は別 `/qfai-discussion` invocation に切り出す (target 2026-09-30)。`.qfai/steering/` 自動アーカイブは post-v1 dogfooding review (target 2026-12-31) まで `qfai validate` の `W-WORKLOG-STALE` surface で代用。
 - Rationale: 両者は独立した discovery scope を持つ。本 pack に bundle すると atomicity を超える。
 - Source: requirements-analyst, deferred row in `13_Deferred.md`。
@@ -1947,3 +1955,31 @@ The sixth is `OQ-0028`: no validator reconciles a delta's declared ID ranges aga
   binding it needs per-script segmentation.
 - Related: supersedes `DR-0001-0003`. `spec-0012` REQ-0012-0059, `spec-0004`
   REQ-0028, QFAI-PROT-002.
+
+### DR-0296: The AI work-log surface `.qfai/steering/` is removed
+
+- Status: accepted
+- Date: 2026-09-23
+- Context: `DR-0250..0260` set up a project-root work-log surface,
+  `.qfai/steering/`: typed entries, a promotion gate into per-spec
+  `07_Decisions.md`, handoff briefs, and validator and Reviewer-Gate codes for
+  all of them. The surface is removed. Two records also state a default that
+  never existed. `DR-0254`, and `OC-51`, removed by this change, say the
+  managed `.gitignore` block excludes the directory by default. The block has
+  never listed it.
+- Evidence: `.qfai/evidence/discussion-20260923060900824.md` (SRC-0013, the
+  managed block); `packages/qfai/src/core/gitignore.ts`, whose recommended
+  entries name no steering path. Trace:
+  `discussion-20260923060900824#REQ-0016`.
+- Decision: Remove the `.qfai/steering/` work-log surface. Keep a
+  project-level MADR decision register, parallel to the Decisions files,
+  rejected.
+- Consequences: `qfai init` no longer seeds the directory and `qfai validate`
+  no longer reads it. An adopter's existing `.qfai/steering/` is left in place,
+  and nothing checks or surfaces its entries any more.
+  `R-REJECTED-READOPT` and `TC-71` stay. `DR-0253`, `DR-0255` and `DR-0259`
+  concern the legacy `.qfai/assistant/` layout and are unaffected.
+- Related: supersedes `DR-0250`, `DR-0252`, `DR-0254`, `DR-0256`, `DR-0257`;
+  in part `DR-0251`, `DR-0258`, `DR-0260`. `spec-0003`, `spec-0004`,
+  `spec-0006`, `spec-0011`, `spec-0013`, `spec-0015`.
+  `_policies/10_delta.md` `## Triage (2026-09-23)`.

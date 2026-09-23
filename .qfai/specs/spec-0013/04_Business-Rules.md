@@ -148,3 +148,18 @@
 - During the deprecation window `auditProfile.ts` MUST accept both string-only (legacy) `primary_tasks` items and structured items shaped `{id, label, acceptance}`.
 - The structured shape is **all-required, closed** (DR-0268): all three of `id`, `label`, `acceptance` MUST be present and no additional properties are allowed. A structured item missing any field, or carrying extra keys (e.g. speculative `priority` / `owner`), MUST be rejected.
 - String-only items MUST continue to PASS during the window; the structured form makes a task testable (the `acceptance` field anchors downstream atdd scaffolding).
+
+## BR-0013-0021: Decisions And Discoveries Go To The Spec Pack
+
+- AC-Refs: AC-0013-0028
+
+- A decision goes to the spec's `07_Decisions.md` or a Change Request.
+- A consultation or an out-of-scope discovery goes to `08_Open-questions.md` or a Change Request.
+- No file under `packages/qfai/assets/init/.qfai/assistant/**` names `.qfai/steering/` or `worklog-entry.schema.md`, and no shipped `/qfai-sdd` text cites a work-log finding code as an example.
+
+## BR-0013-0022: The Approval Stop Leaves Only Its Existing Record
+
+- AC-Refs: AC-0013-0029
+
+- The record of this stop is the `Approved By: -` cells, the `QFAI-TRIAGE-005` errors they raise, and the stop report. The stage writes nothing else for it.
+- `SKILL.md`, `references/sdd-execution-playbook.md` and `references/sdd-triage.md` state the same three steps.

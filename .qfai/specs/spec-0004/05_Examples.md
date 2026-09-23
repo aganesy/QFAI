@@ -88,47 +88,13 @@
 - When `qfai validate` runs in v1.9.x
 - Then a warning surface fires naming the offending dir + the canonical 4-layer enum
 
-## EX-0004-0014
-
-- BR-Ref: BR-0004-0015
-- Given `.qfai/steering/entry-001.md` with frontmatter `{id: "entry-001", kind: "unknown-kind"}` (invalid `kind`)
-- When `qfai validate` runs
-- Then `W-WORKLOG-SCHEMA` fires naming `entry-001.md` and the offending `kind` value
-
-## EX-0004-0015
-
-- BR-Ref: BR-0004-0016
-- Given a work-log entry whose `links:` array contains 2 entries that point at a non-existent spec id (4-digit numeric like `9999`) and a non-existent discussion timestamp (illustrative ids — actual numerals omitted to avoid validator id-shape detection in this example)
-- When `qfai validate` runs against a repo without those resources
-- Then `W-WORKLOG-BROKEN-LINK` fires twice (once per unresolved link)
-
 ## EX-0004-0016
 
 - BR-Ref: BR-0004-0017
-- Given a reviewer report JSON containing `{"code": "R-WORKLOG-DRIFT", "justification": ""}`
+- Given a reviewer report JSON containing `{"code": "R-REJECTED-READOPT", "justification": ""}`
 - When `qfai validate` ingests it
 - Then validate exits with error severity (advisory-failing)
-
-## EX-0004-0017
-
-- BR-Ref: BR-0004-0018
-- Given `.qfai/steering/handoff-001.md` with `kind: handoff` and body containing only `## State` and `## Next action` (missing Constraints/OQs/References)
-- When `qfai validate` runs
-- Then `R-HANDOFF-INCOMPLETE` fires naming the 3 missing sections
-
-## EX-0004-0018
-
-- BR-Ref: BR-0004-0019
-- Given an entry with `promote-to: 07_Decisions.md` AND `07_Decisions.md` lacks a row referencing the entry
-- When `qfai validate` runs
-- Then `W-PENDING-PROMOTION` fires AND the validate report carries a "Pending Promotions" section listing the entry
-
-## EX-0004-0019
-
-- BR-Ref: BR-0004-0020
-- Given an entry with `status: active` and `updated: 2025-12-01T00:00:00Z` evaluated on `2026-05-23`
-- When `qfai validate` runs (now − updated = 173 days > 90)
-- Then `W-WORKLOG-STALE` fires naming the entry and age "173d"
+- And given a report containing `{"code": "R-WORKLOG-DRIFT", "justification": ""}`, validate raises no justification finding
 
 ## EX-0004-0020
 
@@ -162,45 +128,10 @@
 
 ## EX-0004-0026
 
-- BR-Ref: BR-0004-0015 (frontmatter schema; meta-validation of the SSOT pipeline)
+- BR-Ref: BR-0004-0001
 - Given the `agent-catalog.yml` row for `acceptance-test-engineer` carries `developer_instructions: "## Mission\n- old body"` while the canonical `.qfai/assistant/agents/acceptance-test-engineer.md` body has changed to `"## Mission\n- new body"`
 - When the SSOT-guard test in `packages/qfai/tests/codex/agents.test.ts` runs
 - Then the test FAILS with `agent-catalog.yml developer_instructions diverges from canonical MD` so the 3-way SSOT cannot drift
-
-## EX-0004-0027
-
-- BR-Ref: BR-0004-0015 (frontmatter schema)
-- Given a `.qfai/steering/foo.md` entry with `created: 2026/05/23` and `updated: May 23 2026` (both non-ISO-8601)
-- When `qfai validate` runs
-- Then `worklogSurface.schema.createdFormat` AND `worklogSurface.schema.updatedFormat` fire as separate `W-WORKLOG-SCHEMA` warnings
-
-## EX-0004-0028
-
-- BR-Ref: BR-0004-0015 (frontmatter schema)
-- Given an entry with `created: 2026-05-23` and `updated: 2026-05-22` (reversed order, both valid ISO-8601)
-- When `qfai validate` runs
-- Then `worklogSurface.schema.updatedOrder` fires naming both dates; the validator does NOT also report a format warning since dates are syntactically valid
-
-## EX-0004-0029
-
-- BR-Ref: BR-0004-0015 (frontmatter schema)
-- Given an entry whose `links` YAML is a mixed-type list: `- 123` (numeric), `- true` (boolean)
-- When `qfai validate` runs
-- Then 2 separate `worklogSurface.schema.linksElementType` warnings fire (one per non-string element); broken-link integrity check is skipped for those elements
-
-## EX-0004-0030
-
-- BR-Ref: BR-0004-0015 (frontmatter schema)
-- Given a `.qfai/steering/foo.md` entry with `id: Foo Bar` (uppercase + space; not kebab-case ASCII)
-- When `qfai validate` runs
-- Then `worklogSurface.schema.idFormat` fires as a `W-WORKLOG-SCHEMA` warning naming the bad id; date-style kebab ids like `2026-05-22-recut-design-call` still pass since they match the contract regex
-
-## EX-0004-0031
-
-- BR-Ref: BR-0004-0015 (frontmatter schema)
-- Given a `.qfai/steering/foo.md` entry with `created: 2026-02-30` (syntactically valid `YYYY-MM-DD` but non-existent — Feb has 28 days in 2026)
-- When `qfai validate` runs
-- Then `worklogSurface.schema.createdFormat` fires; message contains "calendar date" so reviewers can distinguish syntax errors from calendar-validity errors. Internally enforced via `setUTCFullYear()` round-trip in `isValidCalendarDate()`.
 
 ## EX-0004-0032
 
@@ -274,3 +205,29 @@
 - Given a PR that adds `.qfai/discussion/discussion-20260527075558258/` (under an allowed root) and edits an unrelated README
 - When `check-pack-locations.mjs` runs
 - Then the lane passes silently with no `R-PACK-LOCATION-DRIFT`, and a pre-existing legacy `review-old/` directory untouched by the PR is not re-flagged
+
+## EX-0004-0042
+
+- BR-Ref: BR-0004-0034
+- Given a tree whose `.qfai/steering/` holds five entries: one with broken frontmatter, one whose `links` names a spec that does not exist, one `active` entry last updated more than 90 days ago, one whose `promote-to` has no Decisions row, and one `kind: handoff` entry missing sections
+- And the tree has no `.qfai/assistant/steering/` directory
+- When `qfai validate --profile full` runs
+- Then no finding carries `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`, `W-WORKLOG-STALE`, `W-PENDING-PROMOTION` or `R-HANDOFF-INCOMPLETE`
+- And no finding names a path with a `.qfai/steering/` segment
+- The validator that reads the directory raises all five codes on this tree, so the example fails until that validator is gone
+
+## EX-0004-0043
+
+- BR-Ref: BR-0004-0034
+- Given a tree `qfai init` wrote, with `.qfai/assistant/catalog/worklog-entry.schema.md` written back into it
+- When `qfai validate --profile full` runs
+- Then `QFAI-ASSETS-006` (error) names `.qfai/assistant/catalog/worklog-entry.schema.md`
+
+## EX-0004-0044
+
+- BR-Ref: BR-0004-0035
+- Given a ledger with a `blocked` row whose `Blocked-By` is `spec-0004:TDD-0001 — blocked at todo`, and no `.qfai/steering/` directory
+- When `qfai validate --profile tdd` runs
+- Then no error-severity finding names that row
+- And given the same row with an empty `Blocked-By`, `TDDLIST_BLOCKED_MISSING_REF` names it
+- And given a ledger with a `blocked` row whose `Blocked-By` is `spec-0004:TDD-0001 — blocked at todo`, plus a file under `.qfai/steering/` that cannot be read, no finding names `.qfai/steering/`

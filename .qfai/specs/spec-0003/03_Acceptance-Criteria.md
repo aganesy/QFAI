@@ -151,6 +151,19 @@ Scenario: レガシー管理ブロックからの自動移行
   And 新しい管理ブロックに置換される
 ```
 
+```gherkin
+# AC-0003-0039
+# US-Refs: US-0003-0016
+# Source: discussion-20260923060900824#REQ-0001, #REQ-0006, #REQ-0010
+Scenario: No work-log surface is seeded or touched
+  Given an empty project, or one holding an adopter's `.qfai/steering/` and a `catalog/worklog-entry.schema.md` recorded in `.assets.lock.json`
+  When `qfai init` runs, with or without `--force`
+  Then nothing under `.qfai/steering/` is created, modified or deleted
+  And the report names no path under `.qfai/steering/`
+  And the generated `.github/copilot-instructions.md` has no work-log line
+  And under `--force` a recorded copy of the schema is deleted while it matches its record, and an edited copy is kept with a note that its content has been edited
+```
+
 ## AC Catalog (optional)
 
 | AC-ID        | Title                                                       | Notes      | Priority |
@@ -172,7 +185,6 @@ Scenario: レガシー管理ブロックからの自動移行
 | AC-0003-0015 | gitignore 管理ブロック追記                                  | REQ-0016   | P1       |
 | AC-0003-0016 | レガシーブロック自動移行                                    | REQ-0017   | P1       |
 | AC-0003-0017 | 4-layer asset-tree seed                                     | REQ-0018   | P1       |
-| AC-0003-0018 | project-root steering seed                                  | REQ-0019   | P1       |
 | AC-0003-0019 | --upgrade-assistant-tree flag                               | REQ-0020   | P1       |
 | AC-0003-0020 | W-USER-EDIT-PRESERVED 出力                                  | REQ-0020   | P1       |
 | AC-0003-0021 | migration memo authoring                                    | REQ-0021   | P1       |
@@ -193,6 +205,7 @@ Scenario: レガシー管理ブロックからの自動移行
 | AC-0003-0036 | declined name の copy 前除外                                | REQ-0030   | P1       |
 | AC-0003-0037 | Codex agent profile 生成                                    | REQ-0009   | P1       |
 | AC-0003-0038 | Independent shipped checks and a complete aggregate verdict | REQ-0026   | P1       |
+| AC-0003-0039 | No work-log surface is seeded or touched                    | REQ-0032   | P1       |
 
 ## AC-0003-0017: 4-layer asset-tree seed
 
@@ -200,13 +213,6 @@ Scenario: レガシー管理ブロックからの自動移行
 - Given クリーンな新規プロジェクトディレクトリ
 - When `qfai init` を実行する
 - Then `.qfai/assistant/{constitution,manifest,catalog,process}/` の 4 ディレクトリが出荷アセットの内容で生成される。出荷アセットで満たされた layer には `.gitkeep` を書かない（空の layer にのみ空の `.gitkeep` を置く）。`.qfai/assistant/steering/` (旧層) は生成されない
-
-## AC-0003-0018: project-root steering seed
-
-- US-Refs: US-0003-0016
-- Given クリーンな新規プロジェクトディレクトリ
-- When `qfai init` を実行する
-- Then プロジェクトルートに `.qfai/steering/README.md`, `.qfai/steering/.gitkeep`, `.qfai/steering/_templates/entry.md` が生成される。2 回目以降 `qfai init` を実行してもユーザー編集された entry ファイルは preserve される
 
 ## AC-0003-0019: --upgrade-assistant-tree flag
 

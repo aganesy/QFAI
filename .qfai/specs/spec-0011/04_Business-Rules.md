@@ -58,3 +58,11 @@
 
 - `design-system.yaml` is the deterministic mirror of root `DESIGN.md` token tables (color / typography / radius / shadow).
 - `/qfai-implement` MUST treat it as input only — it does not regenerate token tables from per-iter HTML.
+
+## BR-0011-0009: Stops, Decisions And Discoveries Go To Existing Homes
+
+- AC-Refs: AC-0011-0012
+
+- A stop is recorded in the row's `Blocked-By`, and resuming the row closes no other record.
+- A decision, a consultation and an out-of-scope discovery leave as a Change Request to `/qfai-sdd`. This skill writes neither `07_Decisions.md` nor `08_Open-questions.md`.
+- No shipped `/qfai-implement` text directs writing, opening or closing an entry under `.qfai/steering/`.

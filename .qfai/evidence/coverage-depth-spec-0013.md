@@ -1572,3 +1572,116 @@ of the same kind and is counted apart from the seven, because what it needs reco
 acceptance criterion rather than the product: until that is settled neither it nor the criterion can
 be scored honestly at all. Until those are
 settled, the honest verdict for all of them is the one recorded above.
+
+## Update: the work-log removal
+
+Produced by `test-design-analyst` in the `coverage` phase of the `/qfai-atdd` run started
+`2026-09-23T19:33:24.738Z`, over the working tree of branch `claude/qfai-steering-discussion-69d8a9`.
+Everything above this section is the census at revision `e0f367b48e905c3b36fb7b1689706982dbea5162`,
+and it is left as it stood.
+
+This change appends to the pack and removes nothing (`09_delta.md` `## Triage (2026-09-23)`):
+
+- `TC-0013-0036` and `TC-0013-0037`, each declaring `Level` `integration`;
+- `BR-0013-0021` and `BR-0013-0022`, neither carrying a retiring `Status:`;
+- no user story.
+
+The pack now declares 14 user stories, 37 test cases and 22 business rules. The two new test cases
+are carried by six ledger rows, one per boundary: `TDD-0044`, `TDD-0046`, `TDD-0047` and `TDD-0048`
+for `TC-0013-0036`, and `TDD-0045` and `TDD-0049` for `TC-0013-0037`.
+
+### How the new cells are scored
+
+No acceptance test for the new rows exists yet, so the new cells score the design, not a run:
+
+- A cell is ✅ when the test case declares a case for the category and a seeded ledger row carries
+  it. The row notes name the assertion the `red` phase writes.
+- Oracle strength is ⚠️ until a run shows the named mutation failing the test.
+- `n/a` marks a category whose obligation is absent for the row, as the checklist allows.
+
+The census above did not use `n/a`, which is why its rows carry no such cell.
+
+No existing cell moves:
+
+- The two scored files `tests/core/sddPreflight.test.ts` and
+  `tests/cli/commands/sddPreflight.test.ts` receive cosmetic edits in this change: example strings
+  and titles, under `SRC-0008` of `.qfai/evidence/discussion-20260923060900824.md`. No assertion a
+  scored cell rests on is named for change.
+- No other scored file is touched.
+
+### Matrix rows added
+
+| US/TC ID     | Equivalence partitions | Normal path | Error path | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status  |
+| ------------ | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------- |
+| TC-0013-0036 | ✅                     | ✅          | n/a        | n/a        | n/a             | n/a            | n/a               | n/a           | ⚠️              | planned |
+| TC-0013-0037 | ✅                     | ✅          | n/a        | n/a        | n/a             | n/a            | n/a               | ✅            | ⚠️              | planned |
+
+Totals across the nine scored columns, 18 cells: **✅ 5 / ⚠️ 2 / ❌ 0**, `n/a` 11.
+
+**TC-0013-0036.** The subject is the shipped text under
+`packages/qfai/assets/init/.qfai/assistant/`.
+
+- Equivalence partitions: the two record kinds the rule routes, a decision, and a consultation or
+  out-of-scope discovery.
+- Error path `n/a`: `BR-0013-0021` names no failure.
+- Boundaries, one row each:
+  - `TDD-0044` (`record-homes-stated`): within `SKILL.md` and `references/**`, one statement sends a
+    decision to `07_Decisions.md` or a Change Request. Another sends a consultation or an
+    out-of-scope discovery to `08_Open-questions.md` or a Change Request. Both are asserted inside
+    the extracted statement, not as whole-file substrings.
+  - `TDD-0046` (`no-worklog-section`): no `## Work-log entries` heading in `SKILL.md`.
+  - `TDD-0047` (`no-pending-promotion-example`): no `W-PENDING-PROMOTION` in `SKILL.md`.
+  - `TDD-0048` (`no-surface-reference-in-tree`): every file under the assistant tree is read, and
+    the test asserts the file count is above zero. No file may contain `.qfai/steering/` or
+    `worklog-entry.schema.md`. This boundary reads files other specs change as well: the
+    `/qfai-implement` skill (spec-0011) and `catalog/worklog-entry.schema.md` (spec-0004).
+- Oracle mutations, each applied to the shipped text:
+  - `TDD-0044`: delete the out-of-scope discovery clause.
+  - `TDD-0046`: re-insert the heading.
+  - `TDD-0047`: re-insert the example.
+  - `TDD-0048`: re-insert a `.qfai/steering/<id>.md` sentence in any one file.
+
+**TC-0013-0037.** Error path `n/a`: `BR-0013-0022` names no failure.
+
+- Boundaries, one row each:
+  - `TDD-0045` (`stop-steps-stated`): the stop is extracted from each of three places, and each
+    extraction is asserted to be found and non-empty:
+    - `SKILL.md` `### --auto and approval-required rows`;
+    - the missing-approval stop condition of `references/sdd-execution-playbook.md`;
+    - step 7 of `references/sdd-triage.md`.
+
+    Each must state three steps: leave `Approved By` as `-`, do not enter Phase 0, report every
+    unapproved row with its Operation and target.
+  - `TDD-0049` (`no-worklog-entry-named`): none of the three files contains "work-log" or
+    `consultation-needed`.
+- Combinatorial: three files × three steps are asserted together, as the test case requires.
+- Oracle mutations:
+  - `TDD-0045`: remove "do not enter Phase 0" from one of the three files.
+  - `TDD-0049`: re-insert `consultation-needed` in one of them.
+
+### Business rule rows added
+
+| BR ID        | Positive case | Negative case | Conditional branches | Covering TC                                                  | Status  |
+| ------------ | ------------- | ------------- | -------------------- | ------------------------------------------------------------ | ------- |
+| BR-0013-0021 | ✅            | n/a           | n/a                  | TC-0013-0036 (TDD-0044, TDD-0046, TDD-0047, TDD-0048)        | planned |
+| BR-0013-0022 | ✅            | n/a           | n/a                  | TC-0013-0037 (TDD-0045, TDD-0049)                            | planned |
+
+Totals across the three scored columns, 6 cells: **✅ 2 / ⚠️ 0 / ❌ 0**, `n/a` 4.
+
+Neither rule names a failure, and both state their clauses unconditionally. `BR-0013-0022`'s stop
+is the same with and without `--auto`, so the mode is not a branch.
+
+With these two rows the business rule table covers all 22 active `BR-0013-*` headings.
+
+### ❌ and ⚠️ cells added
+
+No `❌` cell is added.
+
+The two `⚠️` cells are the Oracle strength of the two new rows. Each mutation is named above and not
+yet shown to fail its test.
+
+### Totals for the stage evidence
+
+The census totals above, **✅ 66 / ⚠️ 116 / ❌ 312** with `n/a 7` over 501 cells, become
+**✅ 73 / ⚠️ 118 / ❌ 312**, `n/a` 22, across 525 scored cells: 459 matrix depth cells and 66
+business rule cells. `Status` is a row verdict and is excluded.

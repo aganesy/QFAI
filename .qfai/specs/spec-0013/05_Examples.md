@@ -144,3 +144,20 @@
 - Given one item `"Review orders"` (string-only) and one `{id: t1, label: "Mark shipped", acceptance: "order status flips to shipped"}` (structured) and one `{id: t2, label: "x"}` (missing `acceptance`)
 - When `auditProfile.ts` evaluates them during the deprecation window
 - Then the string-only and the complete structured item are accepted; the item missing `acceptance` is rejected (all-required, closed schema)
+
+## EX-0013-0021: Record Homes In The Shipped qfai-sdd Text
+
+- BR-Ref: BR-0013-0021
+- Given the shipped `/qfai-sdd` `SKILL.md` and `references/**`, and the rest of `packages/qfai/assets/init/.qfai/assistant/**`
+- When the text that says where a decision, a consultation or an out-of-scope discovery is recorded is read
+- Then a decision goes to the spec's `07_Decisions.md` or a Change Request, and a consultation or an out-of-scope discovery to `08_Open-questions.md` or a Change Request
+- And `SKILL.md` has no `## Work-log entries` section and no `W-PENDING-PROMOTION` example
+- And no file under `packages/qfai/assets/init/.qfai/assistant/**` names `.qfai/steering/` or `worklog-entry.schema.md`
+
+## EX-0013-0022: The Approval Stop In Three Files
+
+- BR-Ref: BR-0013-0022
+- Given the shipped `SKILL.md`, `references/sdd-execution-playbook.md` and `references/sdd-triage.md`
+- When the missing-approval stop is read in each
+- Then each carries the three steps: leave `Approved By` as `-`, do not enter Phase 0, and report every unapproved row with its Operation and target
+- And none contains "work-log" or `consultation-needed`

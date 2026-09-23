@@ -43,3 +43,9 @@ Given `extractedDesignSystem` resolves to `.qfai/contracts/design/design-system.
 ## AC-0011-0011: Minimal Code In Phase Green
 
 Given a failing test, when Phase Green writes production code for it, then the code written is the least that makes that test pass, and behaviour no test yet demands is not generalized ahead of its own RED.
+
+## AC-0011-0012: Records Go To Existing Homes
+
+- Source: discussion-20260923060900824#REQ-0007
+
+Given the shipped `/qfai-implement` skill (`SKILL.md` and `references/**`), when it tells an agent where a stop, a decision, a consultation or an out-of-scope discovery is recorded, then a stop is recorded in the row's `Blocked-By`, which names what it waits on; a decision, a consultation and an out-of-scope discovery go to `/qfai-sdd` as a Change Request, which records them in the spec's `07_Decisions.md` or `08_Open-questions.md`; and no file of the skill names `.qfai/steering/` or `worklog-entry.schema.md`.

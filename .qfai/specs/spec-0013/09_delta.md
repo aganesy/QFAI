@@ -1,5 +1,419 @@
 # 09 Delta (Migration Record)
 
+## Change Summary
+
+- Change ID: DELTA-0001
+- Date: 2026-09-23
+- Primary: Behavior
+- Tags: @docs, @test
+- Summary: The qfai-sdd skill names the spec-pack home of each record, and its
+  approval stop writes nothing beyond the Triage table and the stop report.
+  AC-0013-0028 and AC-0013-0029, each with one BR, EX and TC, are added, seeded
+  as TDD-0044..TDD-0049, one row per boundary.
+
+## Triage (2026-09-23)
+
+The qfai-sdd skill names the existing home of each record, and its approval stop
+writes nothing beyond the Triage table and the stop report.
+
+| Source                                | Subject                                                                                                                                                                                                                                                                                                            | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                         | Depends-On |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| discussion-20260923060900824#REQ-0007 | Append AC-0013-0028, BR-0013-0021, EX-0013-0021, TC-0013-0036: `SKILL.md` names the same homes, and carries no work-log section and no `W-PENDING-PROMOTION` example                                                                                                                                               | spec-0013     | UPDATE    | APPEND | -           | No item covers this text, and the acceptance signal needs a test. Phase 2b seeds a ledger row for TC-0013-0036                                    | -          |
+| discussion-20260923060900824#REQ-0008 | Append AC-0013-0029, BR-0013-0022, EX-0013-0022, TC-0013-0037: `SKILL.md`, `references/sdd-execution-playbook.md` and `references/sdd-triage.md` state the same stop (leave `Approved By` as `-`, do not enter Phase 0, report each unapproved row with its Operation and target), and none names a work-log entry | spec-0013     | UPDATE    | APPEND | -           | The record of a stop is the `Approved By: -` cell, the `QFAI-TRIAGE-005` errors and the stop report. Phase 2b seeds a ledger row for TC-0013-0037 | -          |
+
+- Ledger: Phase 2b appends one row per boundary at `todo` (DL-0012):
+  TDD-0044, TDD-0046, TDD-0047 and TDD-0048 for TC-0013-0036, `BR-Ref`
+  BR-0013-0021; TDD-0045 and TDD-0049 for TC-0013-0037, `BR-Ref` BR-0013-0022.
+  All are `Integration`, `T2`, owning module
+  `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd`. No row is reset
+  or retired.
+- Ledger: `Tier` is seeded on TDD-0044..TDD-0049 only. No Change Request
+  drives this run, and re-deriving the other rows could raise a tier, which
+  returns a `done` row to `todo` although this change does not touch it
+  (DL-0009).
+- The duplicate headings AC-0013-0008..0010 (`QFAI-ID-002`) predate this
+  change and are left as they are.
+
+## Update History
+
+| Date       | DL      | Summary                                                              |
+| ---------- | ------- | -------------------------------------------------------------------- |
+| 2026-09-23 | DL-0001 | The skill names the spec-pack homes, not `Blocked-By`                |
+| 2026-09-23 | DL-0002 | Texts of AC-0013-0028, BR-0013-0021, EX-0013-0021 and TC-0013-0036   |
+| 2026-09-23 | DL-0003 | Texts of AC-0013-0029, BR-0013-0022, EX-0013-0022 and TC-0013-0037   |
+| 2026-09-23 | DL-0004 | TC-0013-0036 checks the whole assistant tree                         |
+| 2026-09-23 | DL-0005 | Source lines on the new ACs and qualified requirement lines          |
+| 2026-09-23 | DL-0006 | One BR, EX and TC per new AC                                         |
+| 2026-09-23 | DL-0007 | TDD-0044 and TDD-0045 are T2                                         |
+| 2026-09-23 | DL-0008 | Their owning module is the skill directory                           |
+| 2026-09-23 | DL-0009 | Tier seeded on the new rows only                                     |
+| 2026-09-23 | DL-0010 | BR-0013-0021 and BR-0013-0022 are realized by the shipped skill text |
+| 2026-09-23 | DL-0011 | The plan names the edit path and cites spec-0004 for the order       |
+| 2026-09-23 | DL-0012 | One row per boundary: TDD-0044..TDD-0049                             |
+
+## Decision Log
+
+### DL-0001
+
+#### Meta
+
+```yaml
+id: DL-0001
+date: 2026-09-23
+primary: Behavior
+tags: ["@docs", "@test"]
+compat: Change
+scope:
+  - packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md
+  - packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references
+notes: The qfai-sdd skill names 07_Decisions.md, 08_Open-questions.md and a Change Request as homes, and not Blocked-By (DR-0013-0005).
+```
+
+#### Migration / Follow-ups
+
+- `/qfai-implement` rewrites the skill text, then `pnpm sync:ssot` regenerates the `.qfai/assistant/` copy.
+
+#### Rejected
+
+- option: Name Blocked-By as well, as the Triage subject reads
+  reason: /qfai-sdd holds no in-progress ledger row, so it never records a stop there.
+  do_not: Name a home this skill cannot reach.
+  temptation: The Triage subject says the skill names the same homes as /qfai-implement.
+
+#### Verification
+
+### Plan (DL-0001)
+
+```yaml
+- id: VFY-001
+  level: integration
+  target: Record homes in the shipped qfai-sdd text
+  method: TC-0013-0036 reads SKILL.md and references/**
+  owner: dev
+  expected: A decision goes to 07_Decisions.md or a Change Request, and a consultation or discovery to 08_Open-questions.md or a Change Request.
+  links:
+    - .qfai/specs/spec-0013/06_Test-Cases.md
+```
+
+### DL-0002
+
+#### Meta
+
+```yaml
+id: DL-0002
+date: 2026-09-23
+primary: Behavior
+tags: ["@docs", "@test"]
+compat: Change
+scope:
+  - spec-0013/03_Acceptance-Criteria.md
+  - spec-0013/04_Business-Rules.md
+  - spec-0013/05_Examples.md
+  - spec-0013/06_Test-Cases.md
+notes: AC-0013-0028, BR-0013-0021, EX-0013-0021 and TC-0013-0036 name the homes with no Decision Log mention and no settled or unsettled split (DR-0013-0006).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Name the 09_delta.md Decision Log entry beside 07_Decisions.md, and split settled from unsettled decisions
+  reason: references/spec-traceability-rules.md already states both, and the requirement names only the homes.
+  do_not: Restate the grilling-outcome table in an AC.
+  temptation: It reads as the more complete rule.
+
+#### Verification
+
+### Plan (DL-0002)
+
+```yaml
+- id: VFY-001
+  level: integration
+  target: SKILL.md sections and examples
+  method: TC-0013-0036 reads SKILL.md
+  owner: dev
+  expected: No Work-log entries section and no W-PENDING-PROMOTION example.
+  links:
+    - .qfai/specs/spec-0013/06_Test-Cases.md
+```
+
+### DL-0003
+
+#### Meta
+
+```yaml
+id: DL-0003
+date: 2026-09-23
+primary: Behavior
+tags: ["@docs", "@test"]
+compat: Change
+scope:
+  - packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md
+  - packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-execution-playbook.md
+  - packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md
+notes: The missing-approval stop leaves Approved By as -, does not enter Phase 0 and reports every unapproved row, in all three files, and writes no work-log entry (DR-0013-0007).
+```
+
+#### Migration / Follow-ups
+
+- `/qfai-implement` removes the work-log sentence from each stop, the `consultation-needed` kind bullet, the `W-PENDING-PROMOTION` example and the `## Work-log entries` section of `SKILL.md`.
+
+#### Verification
+
+### Plan (DL-0003)
+
+```yaml
+- id: VFY-001
+  level: integration
+  target: The missing-approval stop in three files
+  method: TC-0013-0037 reads SKILL.md, references/sdd-execution-playbook.md and references/sdd-triage.md
+  owner: dev
+  expected: Each states the three steps and none contains work-log or consultation-needed.
+  links:
+    - .qfai/specs/spec-0013/06_Test-Cases.md
+```
+
+### DL-0004
+
+#### Meta
+
+```yaml
+id: DL-0004
+date: 2026-09-23
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - spec-0013/06_Test-Cases.md
+notes: AC-0013-0028, BR-0013-0021 and EX-0013-0021 state the tree-wide absence clause and TC-0013-0036 checks it (DR-0013-0008).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Each skill's test case scans its own directory only
+  reason: The rest of the assistant tree would have no test for the acceptance signal.
+  do_not: Leave an acceptance signal without a test.
+  temptation: Each skill's case stays inside its own skill.
+- option: A separate test case for the tree-wide half
+  reason: It changes the approved Triage id list.
+  do_not: Mint a TC the Triage did not list.
+  temptation: One case per signal reads neatly.
+
+### DL-0005
+
+#### Meta
+
+```yaml
+id: DL-0005
+date: 2026-09-23
+primary: Ops
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0013/01_Spec.md
+  - spec-0013/03_Acceptance-Criteria.md
+notes: AC-0013-0028 and AC-0013-0029 carry Source lines; 01_Spec.md names both requirements with the pack id and no local id (DR-0013-0009).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Record the source only in 09_delta.md
+  reason: Every AC needs its Source, and the local REQ-0007 and REQ-0008 mean something else.
+  do_not: Write a bare REQ-0007 or REQ-0008 for a pack requirement in this spec.
+  temptation: The Triage row already names the source.
+
+### DL-0006
+
+#### Meta
+
+```yaml
+id: DL-0006
+date: 2026-09-23
+primary: Ops
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0013/04_Business-Rules.md
+notes: One BR, one EX and one TC per new AC, as the Triage lists; QFAI-COV-207 warnings are triaged in the density review (DR-0013-0010).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Split the new items further
+  reason: The Triage lists one item per layer, and each AC has one oracle.
+  do_not: Split an item to clear a density warning.
+  temptation: A warning reads as a defect.
+
+### DL-0007
+
+#### Meta
+
+```yaml
+id: DL-0007
+date: 2026-09-23
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - spec-0013/tdd/test-list.md
+notes: TDD-0044 and TDD-0045 are T2 because their tests read shipped files (DR-0013-0011).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: T1 like the neighbouring Integration rows
+  reason: Those rows show - because they predate seeded tiers, and reading shipped files is T2 in the tier table.
+  do_not: Copy an unseeded neighbour's tier onto a new row.
+  temptation: It matches the rows above them.
+
+### DL-0008
+
+#### Meta
+
+```yaml
+id: DL-0008
+date: 2026-09-23
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - spec-0013/tdd/test-list.md
+notes: The owning module of TDD-0044 and TDD-0045 is packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd (DR-0013-0012).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+### DL-0009
+
+#### Meta
+
+```yaml
+id: DL-0009
+date: 2026-09-23
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - spec-0013/tdd/test-list.md
+notes: Tier is seeded on TDD-0044 and TDD-0045 only; the other rows are not re-derived because no Change Request drives this run (DR-0013-0013).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Re-derive Tier on every row
+  reason: A raised tier returns a row to todo, and no Change Request authorizes resetting done rows this change does not touch.
+  do_not: Re-derive tiers across the ledger without a driving Change Request.
+  temptation: Phase 2b re-derives Tier on every run.
+
+### DL-0010
+
+#### Meta
+
+```yaml
+id: DL-0010
+date: 2026-09-23
+primary: Ops
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0013/04_Business-Rules.md (BR-0013-0021, BR-0013-0022)
+notes: BR-0013-0021 and BR-0013-0022 are realized by the shipped qfai-sdd skill text; their named homes resolve to templates, schemas, specPack.ts and .qfai/decisions/, with no contract (DR-0013-0014).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Write a contract for the skill text
+  reason: The request does not need one.
+  do_not: Add a contract under .qfai/contracts/ for skill text.
+  temptation: Obligation reconciliation asks for a realizing contract.
+
+### DL-0011
+
+#### Meta
+
+```yaml
+id: DL-0011
+date: 2026-09-23
+primary: Ops
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0013/10_Plan.md
+notes: The plan names where the skill text is edited and cites spec-0004's plan for the order (DR-0013-0015).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Leave the plan unchanged
+  reason: A reader of this plan alone would miss that the text must land with the removal of QFAI-TDDLIST-015.
+  do_not: Leave the coupling to the other plans.
+  temptation: The edit sits inside one skill.
+
+### DL-0012
+
+#### Meta
+
+```yaml
+id: DL-0012
+date: 2026-09-23
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - spec-0013/06_Test-Cases.md (TC-0013-0036, TC-0013-0037)
+  - spec-0013/tdd/test-list.md (TDD-0044..TDD-0049)
+notes: TC-0013-0036 names four boundaries and TC-0013-0037 two, one ledger row each (DR-0013-0016).
+```
+
+#### Migration / Follow-ups
+
+- `/qfai-atdd` writes one test per boundary and records each RED on its own.
+- TDD-0048 turns green only once the spec-0011 and spec-0003/spec-0004 rows
+  have removed the other references, in the same change.
+
+#### Rejected
+
+- option: Keep one row per case and record why one oracle suffices
+  reason: Each check is fixed by a different edit and can pass while another fails, so one row observes only the first failure.
+  do_not: Put independently failing checks behind one row.
+  temptation: Every check fails today, so one row turns red either way.
+- option: One TC-0013-0037 row per file
+  reason: The three files state one rule; a set-valued assertion over them observes every file that fails.
+  do_not: Split one boundary by the file it is read from.
+  temptation: Each file is edited separately.
+
 ## Origin
 
 - Consolidates: old spec-0011 (Spec Diff Protocol), spec-0038 (Auto-Discovery)

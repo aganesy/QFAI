@@ -52,7 +52,6 @@
 Contract short IDs resolve through `_policies/05_Contracts.md#Contract Index`.
 
 - CLI-INIT — `.qfai/contracts/cli/qfai-init.md`。CHG-007 で `## Shipped GitHub Actions workflows` セクションが追加され、create-only の `force: false` literal が所有権コントラクトの load-bearing 要素であること、`declined` name を copy **実行前**に copy set から除外すること、removal は `pruneMatchingEntries` + retired-name membership predicate のみであること（`startsWith("qfai-")` 禁止）、drift 報告は init の責務ではないことを固定する
-- CLI-WLOG — `.qfai/contracts/cli/worklog-entry.schema.md`。`.qfai/steering/*.md` の frontmatter / body schema（CHG-003）
 - CLI-WFSET — `.qfai/contracts/cli/shipped-workflows.md`。**CHG-007 で新設。REQ-0024..0031 の権威ソース。** 配布 `.github/workflows/**` に対する所有権境界と、gate が diff する宣言形状の dimension 集合を固定する。本 spec の BR / AC は CLI-WFSET を **cite** し、その内容を再記載しない — REQ-0031 の宣言形状の**値**は test suite 側の 1 箇所が SSOT であり、spec も contract も第二のコピーを持たない
   - §1 reserved filename prefix（prefix は reservation notice であり selector ではない）
   - §2 provenance record `.qfai/install-provenance.json`（tracked、`schemaVersion` なし）
@@ -86,7 +85,6 @@ Contract short IDs resolve through `_policies/05_Contracts.md#Contract Index`.
 - REQ-0016: ルート `.gitignore` 管理ブロック追記 (v1.7.18) - `qfai init` は導入プロジェクトのルート `.gitignore` に QFAI 管理ブロック（marker 行 + `.qfai/report/*` + `.qfai/evidence/*` + `.qfai/review/*` + `.qfai/discussion/discussion-*/` + README negation）を冪等に追記する。既存ユーザー記述は保護する
 - REQ-0017: レガシー管理ブロック移行 (v1.7.18) - 旧バージョンで追記されたレガシー行（`!.qfai/review/review-*/`, `!.qfai/review/review-*/**`）を再実行時に自動除去し、新ブロックで置換する
 - REQ-0018: 4-layer asset-tree seeding (v1.9.0) - `qfai init` は `.qfai/assistant/{constitution,manifest,catalog,process}/` の 4 層を seed する（旧 `steering/` 単層から再構成）。layer 名以外は reject される
-- REQ-0019: project-root `.qfai/steering/` seeding (v1.9.0) - `qfai init` はプロジェクトルートに `.qfai/steering/` を seed (`README.md` + `.gitkeep` + `_templates/entry.md`)。reinit 時はユーザー編集を preserve
 - REQ-0020: `qfai init --upgrade-assistant-tree` one-shot migration (v1.9.0) - 旧 `.qfai/assistant/steering/` レイアウトから 4-layer へ一括移行する flag。ユーザー編集は `W-USER-EDIT-PRESERVED` informational note 付きで保全
 - REQ-0021: migration memo authoring (v1.9.0) - `qfai init --upgrade-assistant-tree` 実行時、`.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` を生成。commit 後は immutable (OC-53 準拠)
 - REQ-0022: `assistantPaths.ts` SSOT module (v1.9.0) - 配布される assistant-tree のパス文字列は `packages/qfai/src/core/paths/assistantPaths.ts` が唯一の producer。hard-coded literal は lint で reject (NFR-0001 系)
@@ -107,6 +105,7 @@ Contract short IDs resolve through `_policies/05_Contracts.md#Contract Index`.
   - **overwrite 動詞そのものは本 spec の対象外** — unconditional-overwrite refresh コマンドは上流 pack の `OQ-0021` で deferred（OQ-0003-0003 として mirror）。drift の検出・報告は spec-0006（`qfai doctor` / CLI-DOC）が所有し、その state vocabulary は CLI-WFSET §3 の enum をそのまま使う。
 - REQ-0031 (CHG-007、上流 pack REQ-0021): 配布 set の structural contract gate - テストスイート内に保持された**宣言された期待形状**に対して配布 set を diff し、配布ファイルがそこから drift したら fail する gate。REQ-0026 の generic invariant（permission block が在る / timeout が在る / floating 参照が無い）に対する残余は semantic であり、load-bearing な**値** — 各配布 lane がどの subcommand を呼ぶか、どの profile か、どの failure threshold か、どの repository variable を読むか、どの lane が存在するか、各 lane を inert にしているのは何か — を 1 つの承認済み期待形状に対して assert する。**値の SSOT は test suite 側の 1 箇所**であり、spec も CLI-WFSET も値を再記載しない（第二のコピーは DTC-5 が記録する drift クラスを再生産する）。contract が固定するのは形状が pin すべき **dimension 集合**（CLI-WFSET §5 の 9 項目）であり、1 つでも欠落した形状は判断の問題ではなく contract 違反として扱う。既存 asset test の配布 validate workflow に対する ad-hoc string assertion を **subsume して置き換える**ため、それらが持つ test-case annotation は保持または再登録する。配置は load-bearing: `pnpm ci:lint` から実行し、`pnpm ci:gate`（release workflow のみが invoke する）からは実行しない。failure code は `R-SHIPPED-WORKFLOW-SHAPE-DRIFT`（bare `R-` lint namespace）。catalog 所属は severity class で決まるため本 error-class code は `JUSTIFICATION_CATALOG` に属すべきだが、登録は lockstep 変更として deferred（`spec-0015` `OQ-0015-0001`）。現時点の不在は一時的乖離であり恒久的性質ではない。ordering: spec-0017 の上流 pack REQ-0025（リポジトリ自身の配布 workflow 複製の廃止）と**同一変更またはそれ以前**に着地する必要がある
   - The lane dimension covers aggregate lanes as well: a job that declares an always-run condition together with a `needs` list, asserted against the exact list.
+- REQ-0032 (upstream pack discussion-20260923060900824 REQ-0001, REQ-0006, REQ-0010): no work-log surface - `qfai init`, with or without `--force`, creates, modifies and deletes nothing under `.qfai/steering/`, names no path there in its report, and generates no work-log line in `.github/copilot-instructions.md`. Under `--force`, a copy of the withdrawn `catalog/worklog-entry.schema.md` that `.assets.lock.json` records is deleted while it matches its record; an edited copy stays, and init notes that its content has been edited
 
 ## Entry points
 

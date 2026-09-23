@@ -1,6 +1,6 @@
 # 07 Decisions
 
-6 items.
+9 items.
 
 ## Decisions
 
@@ -39,3 +39,27 @@
 - Rejected — keep the emitter-identity rationale: falsified by two catalog members, and worse than merely wrong. It would license exempting any future script-emitted error-class code by construction, which is how a convenient exemption becomes permanent. DO NOT reintroduce "a deterministic script cannot author a justification" in **any artifact of any spec, policy file or contract** — the round-3 and round-4 reviews both found it surviving in consumers after the owning artifact was corrected, so a spec-scoped DO NOT is demonstrably too narrow. Temptation: it reads as a clean principle and needs no follow-up item.
 - Rejected — register the two codes in the catalog inside this pack: correct in substance but inflates the pack past its atomic slice, editing two reviewer SSOTs and a closed-set acceptance criterion that this cascade does not own. Temptation: it is only two array entries. It is not — it is a closed-set extension with a count assertion, a contract file and four spec-local records behind it.
 - Rejected — leave the divergence unrecorded and simply ingest the codes: keeps the gate green while erasing the reason, so the next reader re-derives an emitter-based rule from the observed behaviour. Temptation: no new open question to carry.
+
+### DR-0015-0007: Cite the justification rule by its contract section (2026-09-23)
+
+- Status: accepted
+- Context: AC-0015-0014, BR-0015-0009, BR-0015-0013 and TC-0015-0027 name "the R-WORKLOG-DRIFT family pattern" as the rule they follow. `R-WORKLOG-DRIFT` leaves the reviewer justification set, so the name no longer points at a live rule.
+- Decision: Cite the rule's home, the Reviewer-Gate justification contract in `.qfai/contracts/cli/qfai-validate.md#reviewer-gate-input-bundle`.
+- Consequences: The four items point at the section that states the rule. Citing `BR-0004-0017` instead would be a foreign-namespace reference, which raises `QFAI-SPACK-101` and `TRACE_DOWNSTREAM_REF`. Naming `R-REJECTED-READOPT` instead would replace one code with another as the pattern's name.
+- Related: AC-0015-0014, BR-0015-0009, BR-0015-0013, TC-0015-0027
+
+### DR-0015-0008: Replace only the citation in the four items (2026-09-23)
+
+- Status: accepted
+- Context: The four items keep their obligation. Only the name of the rule they follow changes.
+- Decision: Replace the "R-WORKLOG-DRIFT family pattern" phrase in each item with the Reviewer-Gate justification contract citation, and leave the rest of each text unchanged.
+- Consequences: The obligation is the same, so TDD-0029, which holds TC-0015-0027 at `done`, is not reset and no ledger row changes.
+- Related: AC-0015-0014, BR-0015-0009, BR-0015-0013, TC-0015-0027, TDD-0029
+
+### DR-0015-0009: The justification citation resolves to the rejection sentence (2026-09-23)
+
+- Status: accepted
+- Context: AC-0015-0014, BR-0015-0009, BR-0015-0013 and TC-0015-0027 cite `.qfai/contracts/cli/qfai-validate.md#reviewer-gate-input-bundle`. The anchor resolves. That section's content clause asks for a Decisions row ID, which neither `R-PROMPT-SCANNER-DRIFT` nor the eight catalog codes have.
+- Decision: Record the citation as pointing at the section's rejection sentence: "`qfai validate` rejects Reviewer reports in which such a finding lacks `justification:` content", where such a finding is one in `R-REJECTED-READOPT`, another code the contract declares with a required `justification:`, or a code the justification catalog registers. The contract was narrowed to that sentence under the user's decision of 2026-09-23, recorded in spec-0004 DR-0004-0038 and DR-0004-0039. BR-0015-0009's three-part content resolves to the `R-PROMPT-SCANNER-DRIFT` row of the contract's prototyping finding-code table. No item is re-pointed, and the section's content clause is not widened.
+- Consequences: The four items keep their text. Widening the contract's content clause would contradict a recorded contract decision, which is the user's decision.
+- Related: AC-0015-0014, BR-0015-0009, BR-0015-0013, TC-0015-0027, CLI-VAL

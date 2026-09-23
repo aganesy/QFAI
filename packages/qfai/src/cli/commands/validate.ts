@@ -595,10 +595,8 @@ export const GATE_GROUP_FAMILIES = {
     // partial-profile notice under-states what skipping `sdd` left unchecked.
     "QFAI-AUTOPILOT-*",
     "E_*",
-    // Worklog surface, assistant tree migration, skill doc references and
-    // stale references — all sdd-only compositions.
-    "W-WORKLOG-*",
-    "W-PENDING-PROMOTION",
+    // Assistant tree migration, skill doc references and stale references —
+    // all sdd-only compositions.
     "W-ASSISTANT-LAYOUT",
     "W-SKILL-DOC-BROKEN-REF",
     "W-SKILL-PROJECT-MEMORY",

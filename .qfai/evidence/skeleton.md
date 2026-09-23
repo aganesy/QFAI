@@ -43,3 +43,34 @@ entrypoints; this repository has one.
   and whether it writes it correctly, belongs to `US-0003-0001`'s own test
   cases; asserting it here would be the predicate the phase forbids.
 - Skeleton cycles: 1 of 3
+
+### Re-run — `/qfai-atdd` stage gate P1a, 2026-09-23T19:33:24.738Z
+
+The latest recorded result above exits 0, so this invocation re-runs the
+recorded command, and this run's exit status decides.
+
+- Skeleton command: `node scripts/smoke-qfai-cli.mjs`, resolved from the
+  `Smoke` entry of `catalog/tech.md#standard-commands-copy-paste`. It matches
+  the recorded command.
+- Skeleton script: `scripts/smoke-qfai-cli.mjs@82f30997dc88e617531e5f59f86fd8b7c1793a134564853019366e590a639c1d`,
+  recomputed before the run. It matches the recorded hash.
+- Skeleton result:
+
+  ```text
+  $ node scripts/smoke-qfai-cli.mjs
+  smoke-qfai-cli: qfai -> US-0003-0001 reached; the dry run planned 325 path(s)
+  exit=0
+  ```
+
+  Environment: Node.js v24.18.0 on Windows 11. `packages/qfai/dist/` was rebuilt
+  with `tsup` (the package's `build` script) immediately before the run. The
+  build read commit `45587f6b2`, with no uncommitted change under
+  `packages/qfai/` or `scripts/`. After the run, no `qfai-skeleton-*` directory
+  remained in the OS temporary directory.
+
+- Skeleton gatekeeper: the PASS above stands. The command and the script hash
+  both match the judged run, so no fresh judgement is required.
+- Skeleton debt: none. The skeleton was not changed.
+- Skeleton cycles: 0 of 3. The skeleton was not changed, and this run is the
+  re-run the evidence rule requires.
+- Outcome: proven for this invocation. `Phase: Red` may start for `qfai`.

@@ -1,5 +1,551 @@
 # 09 Delta
 
+## Triage (2026-09-23)
+
+`qfai init` stops seeding the project-root work-log surface `.qfai/steering/`,
+and leaves an existing one untouched.
+
+| Source                                | Subject                                                                                                                                                                                                     | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                                                                                                                                                                                                                      | Depends-On                            |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| discussion-20260923060900824#REQ-0001 | Remove project-root seeding: the REQ-0019 line and the CLI-WLOG contract line in 01_Spec.md, AC-0003-0018, BR-0003-0016, EX-0003-0019, TC-0003-0022; ledger row TDD-0022 deleted and its ID tombstoned      | spec-0003     | UPDATE    | REMOVE | yusuke_senaga | The behaviour is removed. TDD-0022 is `done` on the TC-0003-0022 block of `tests/cli/init.test.ts`, which is deleted in the same change                                                                                                        | -                                     |
+| discussion-20260923060900824#REQ-0001 | Narrow US-0003-0016 to the four-layer seed: drop the `.qfai/steering/` clause from its title, Goal and Notes                                                                                                | spec-0003     | UPDATE    | MODIFY | yusuke_senaga | The story also carries REQ-0018 and AC-0003-0017, which stay. Before: four-layer seed and work-log seed. After: four-layer seed. Nothing else is added or dropped; E2E row TDD-0064 keeps `US-Refs: US-0003-0016` unchanged                    | -                                     |
+| discussion-20260923060900824#REQ-0016 | Resolve OQ-0003-0002 (auto-archival of work-log entries) as moot                                                                                                                                            | spec-0003     | UPDATE    | MODIFY | yusuke_senaga | The question is about a surface that no longer exists. Resolving keeps the record of why it closed                                                                                                                                             | -                                     |
+| discussion-20260923060900824#REQ-0010 | Append AC-0003-0039, BR-0003-0049, EX-0003-0052, EX-0003-0053, TC-0003-0059, TC-0003-0060: init creates, modifies and deletes nothing under `.qfai/steering/`                                               | spec-0003     | UPDATE    | APPEND | yusuke_senaga | Carries the absence signal of REQ-0001 and the hash test of REQ-0010 and NFR-0003: an empty directory gets no path there and no work-log line in the generated instructions; a populated one is byte-identical after `init` and `init --force` | discussion-20260923060900824#REQ-0001 |
+| discussion-20260923060900824#REQ-0006 | Append BR-0003-0050, EX-0003-0054, TC-0003-0061 under AC-0003-0039: `init --force` deletes a lock-recorded, unedited `catalog/worklog-entry.schema.md` and keeps an edited one with the edited-content note | spec-0003     | UPDATE    | APPEND | yusuke_senaga | No item states the withdrawn-asset retire pass, and REQ-0006's acceptance needs a test. Existing behaviour; no new code                                                                                                                        | discussion-20260923060900824#REQ-0010 |
+
+- Approved By: yusuke_senaga, through AskUserQuestion on 2026-09-23, for this
+  target's rows as one set.
+- Ledger: Phase 2b deletes TDD-0022, records it under a new
+  `## TDD-ID reservations` citing the REMOVE row above, and seeds rows for
+  TC-0003-0059..0061.
+- Size: AC 38 and TC 58 exceed the slice-policy threshold. The spec owns one
+  capability (CAP-0003), so this is recorded and not split.
+- Retired row: `spec-0003/TDD-0022` (TC-0003-0022, `done`), under the REMOVE row
+  above. Its `Evidence` cell, verbatim:
+  `v1.9.0 RED→GREEN 2026-05-23 (README + .gitkeep + \_templates/entry.md, re-init preserved)`.
+- The tests and annotations that row drove are `/qfai-implement`'s to delete,
+  in the change that removes the seed:
+  - `packages/qfai/tests/cli/init.test.ts`: the six `it` blocks named
+    `TC-0003-0022 (TDD-0022)` at lines 3580-3760, with their annotation
+    comments, and the `WORKLOG_ENTRY_STATUSES` import at line 37, which only
+    those blocks use. The file is shared with live rows, so confirm afterwards
+    that the selectors of TDD-0018..0021, TDD-0023..0026 are still present.
+  - `packages/qfai/tests/integration/initSpec0003.test.ts`: the file-level
+    `QFAI:SPEC-0003:TC-0003-0022` annotation at line 29 and the `TC-0003-0022`
+    describe block at lines 221-227. The file is shared with live rows, so
+    confirm afterwards that the selectors of TDD-0001..0015 and TDD-0025 are
+    still present.
+  - `tests/integration/qfai-traceability.md`: the carrier entry
+    `QFAI:SPEC-0003:TC-0003-0022` at line 59.
+- `/qfai-implement` action, with no row change: two tests of TDD-0025 (`done`)
+  assert `joinProjectSteering`, which upstream REQ-0005 removes:
+  - `packages/qfai/tests/integration/initSpec0003.test.ts:256`, in the
+    `TC-0003-0025` describe block;
+  - `packages/qfai/tests/cli/init.test.ts:4120`, in the
+    `TC-0003-0025 (TDD-0025)` test. It is a string check on `init.ts`, so the
+    type check does not catch it.
+
+  Remove both assertions with the symbol. TDD-0025 is not reset, because
+  TC-0003-0025's obligation does not change.
+
+- Tier: seeded as T2 on TDD-0092..0097 only. The rows already in the ledger
+  keep their cell: no Change Request asks for a re-derivation, and raising the
+  tier of an untouched `done` row would reset it to `todo`.
+
+## Update History
+
+| Date       | DL      | Summary                                                                         |
+| ---------- | ------- | ------------------------------------------------------------------------------- |
+| 2026-09-23 | DL-0001 | REQ-0032 and AC-0003-0039: init seeds and touches no work-log surface           |
+| 2026-09-23 | DL-0002 | US-0003-0016 narrows to the four-layer seed                                     |
+| 2026-09-23 | DL-0003 | AC-0003-0039 belongs to US-0003-0016                                            |
+| 2026-09-23 | DL-0004 | The absence criterion covers init's report                                      |
+| 2026-09-23 | DL-0005 | The withdrawn schema's retirement keeps its own BR, EX and TC                   |
+| 2026-09-23 | DL-0006 | TC-0003-0060 covers plain init and `init --force`                               |
+| 2026-09-23 | DL-0007 | EX-0003-0053 uses a partial seed                                                |
+| 2026-09-23 | DL-0008 | Six ledger rows, one per independently failing part                             |
+| 2026-09-23 | DL-0009 | Cells of TDD-0092..0097                                                         |
+| 2026-09-23 | DL-0010 | `## TDD-ID reservations` holds the TDD-0022 tombstone                           |
+| 2026-09-23 | DL-0011 | Tier seeded on the new rows only                                                |
+| 2026-09-23 | DL-0012 | The TDD-0025 assertions on `joinProjectSteering` are a `/qfai-implement` action |
+| 2026-09-23 | DL-0013 | BR-0003-0050 cites CLI-INIT                                                     |
+| 2026-09-23 | DL-0014 | BR-0003-0050's recorded hash resolves through `.assets.lock.json`               |
+| 2026-09-23 | DL-0015 | BR-0003-0049 is realized by what init does not write                            |
+| 2026-09-23 | DL-0016 | The plan names init's removed symbols and cites spec-0004's plan for the order  |
+| 2026-09-23 | DL-0017 | The removal's tests build their own trees                                       |
+
+## Decision Log
+
+### DL-0001
+
+#### Meta
+
+```yaml
+id: DL-0001
+date: 2026-09-23
+primary: Behavior
+tags: ["@docs", "@test"]
+compat: Change
+scope:
+  - spec-0003/01_Spec.md (REQ-0032 replaces REQ-0019)
+  - spec-0003/03_Acceptance-Criteria.md (AC-0003-0039)
+notes: REQ-0032 states that init seeds and touches no work-log surface, and AC-0003-0039 cites it (DR-0003-0013).
+```
+
+#### Migration / Follow-ups
+
+- A project initialised before this change keeps its `.qfai/steering/`, and
+  init leaves it as it is.
+
+#### Rejected
+
+- option: Cite the upstream requirements directly in the AC Catalog
+  reason: The catalog's Notes column holds one spec-local REQ per row.
+  do_not: List upstream requirement ids in the AC Catalog.
+  temptation: It avoids minting a local id for three upstream ones.
+
+#### Verification
+
+### Plan
+
+```yaml
+- id: VFY-001
+  level: integration
+  target: init creates, modifies and deletes nothing under .qfai/steering/
+  method: TC-0003-0059, TC-0003-0060 and TC-0003-0061 through TDD-0092..0097
+  owner: dev
+  expected: All six rows reach done, each having failed first against the code that still seeds.
+  links:
+    - .qfai/specs/spec-0003/tdd/test-list.md
+```
+
+### DL-0002
+
+#### Meta
+
+```yaml
+id: DL-0002
+date: 2026-09-23
+primary: Behavior
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0003/02_User-stories.md (US-0003-0016)
+notes: US-0003-0016 narrows to the four-layer seed and drops the frontmatter-schema non-goal (DR-0003-0014).
+```
+
+#### Migration / Follow-ups
+
+- No migration required. TDD-0064 keeps `US-Refs: US-0003-0016` and stays
+  `todo`.
+
+#### Rejected
+
+- option: Keep the frontmatter-schema non-goal
+  reason: It names a spec-0004 check that no longer exists.
+  do_not: Restore a non-goal that points at a removed check.
+  temptation: A non-goal looks harmless to keep.
+
+### DL-0003
+
+#### Meta
+
+```yaml
+id: DL-0003
+date: 2026-09-23
+primary: Behavior
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0003/03_Acceptance-Criteria.md (AC-0003-0039)
+notes: AC-0003-0039 is parented on US-0003-0016 (DR-0003-0015).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: A new story for the absence of the surface
+  reason: The criterion is the negative of the half US-0003-0016 lost.
+  do_not: Open a story for behaviour that no longer exists.
+  temptation: A removal can look like a feature of its own.
+
+### DL-0004
+
+#### Meta
+
+```yaml
+id: DL-0004
+date: 2026-09-23
+primary: Behavior
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0003/03_Acceptance-Criteria.md (AC-0003-0039)
+  - spec-0003/04_Business-Rules.md (BR-0003-0049)
+notes: The absence criterion covers init's report; the --force NOTE wording and unrecorded copies get no criterion (DR-0003-0016).
+```
+
+#### Migration / Follow-ups
+
+- The NOTE wording changes in the implementation.
+
+#### Rejected
+
+- option: Pin the --force NOTE wording and the unrecorded copy in the criterion
+  reason: No upstream acceptance signal needs them.
+  do_not: Add criteria the request does not need.
+  temptation: Upstream REQ-0001's description names the NOTE.
+
+### DL-0005
+
+#### Meta
+
+```yaml
+id: DL-0005
+date: 2026-09-23
+primary: Behavior
+tags: ["@docs", "@test"]
+compat: Improvement
+scope:
+  - spec-0003/04_Business-Rules.md (BR-0003-0050)
+  - spec-0003/05_Examples.md (EX-0003-0054)
+  - spec-0003/06_Test-Cases.md (TC-0003-0061)
+notes: The withdrawn schema's retirement keeps its own rule, example and test case (DR-0003-0017).
+```
+
+#### Migration / Follow-ups
+
+- No migration required. The retire pass already exists.
+
+#### Rejected
+
+- option: Rely on the generic retire-pass test in assistantAssetProvenance.test.ts
+  reason: It proves neither this file's withdrawal nor the edited-content note, and dropping the rows changes an approved APPEND row.
+  do_not: Drop BR-0003-0050, EX-0003-0054 or TC-0003-0061 without the user's approval.
+  temptation: The retire pass is already tested.
+
+### DL-0006
+
+#### Meta
+
+```yaml
+id: DL-0006
+date: 2026-09-23
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - spec-0003/06_Test-Cases.md (TC-0003-0060)
+notes: TC-0003-0060 covers plain init and init --force (DR-0003-0018).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Cover init --force only
+  reason: Upstream REQ-0010 says "with or without --force".
+  do_not: Leave the plain run untested.
+  temptation: REQ-0010's acceptance names --force alone.
+
+### DL-0007
+
+#### Meta
+
+```yaml
+id: DL-0007
+date: 2026-09-23
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - spec-0003/05_Examples.md (EX-0003-0053)
+notes: EX-0003-0053 uses a partial seed so its test fails first (DR-0003-0019).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: A fully seeded, unedited directory
+  reason: Create-only copying leaves it alone, so the test passes on the code that still seeds.
+  do_not: Use a fixture the current code already satisfies.
+  temptation: It looks like the most common adopter state.
+
+### DL-0008
+
+#### Meta
+
+```yaml
+id: DL-0008
+date: 2026-09-23
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - spec-0003/tdd/test-list.md (TDD-0092..0097)
+notes: Six ledger rows, two per new test case, one per independently failing part (DR-0003-0020).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: One row per test case
+  reason: A RED run stops at the first failing assertion and leaves the second part unobserved.
+  do_not: Seed one row over two independently failing parts.
+  temptation: Fewer rows.
+
+### DL-0009
+
+#### Meta
+
+```yaml
+id: DL-0009
+date: 2026-09-23
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - spec-0003/tdd/test-list.md (TDD-0092..0097)
+notes: Cells of the six new rows, with module paths from the repository root (DR-0003-0021).
+```
+
+#### Migration / Follow-ups
+
+- `/qfai-implement` fills `Test file` and `Selector` when it advances each row.
+
+#### Rejected
+
+- option: Package-relative module paths such as src/cli/commands/init.ts
+  reason: Every path in this ledger is from the repository root.
+  do_not: Mix path bases in one column.
+  temptation: The package is where the module lives.
+
+### DL-0010
+
+#### Meta
+
+```yaml
+id: DL-0010
+date: 2026-09-23
+primary: Ops
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0003/tdd/test-list.md (## TDD-ID reservations)
+notes: The reservations section sits after the ledger table and holds the TDD-0022 tombstone (DR-0003-0022).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Place the section above the ledger
+  reason: validateTddList reads the first table as the ledger.
+  do_not: Put anything table-shaped above the ledger.
+  temptation: Reservations read naturally before the rows they reserve.
+
+### DL-0011
+
+#### Meta
+
+```yaml
+id: DL-0011
+date: 2026-09-23
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - spec-0003/tdd/test-list.md (Tier)
+notes: Tier is seeded on the new rows only (DR-0003-0023).
+```
+
+#### Migration / Follow-ups
+
+- Rows seeded earlier keep their `Tier` until a Change Request re-derives them.
+
+#### Rejected
+
+- option: Re-derive Tier on every row
+  reason: No Change Request drives it, and a raise resets an untouched done row to todo.
+  do_not: Re-derive Tier on rows this run does not add or reset.
+  temptation: Phase 2b asks for Tier on every row it seeds.
+
+### DL-0012
+
+#### Meta
+
+```yaml
+id: DL-0012
+date: 2026-09-23
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - packages/qfai/tests/integration/initSpec0003.test.ts:256 (TDD-0025)
+  - packages/qfai/tests/cli/init.test.ts:4120 (TDD-0025)
+notes: The two TDD-0025 assertions on the removed joinProjectSteering symbol are a /qfai-implement action (DR-0003-0024).
+```
+
+#### Migration / Follow-ups
+
+- `/qfai-implement` removes both assertions in the change that removes the
+  symbol.
+
+#### Rejected
+
+- option: Reset TDD-0025 to todo
+  reason: TC-0003-0025's obligation does not change.
+  do_not: Reset a done row whose obligation is unchanged.
+  temptation: Its test fails once the symbol is gone.
+
+### DL-0013
+
+#### Meta
+
+```yaml
+id: DL-0013
+date: 2026-09-23
+primary: Ops
+tags: ["@api", "@docs"]
+compat: Improvement
+scope:
+  - spec-0003/04_Business-Rules.md (BR-0003-0050 Contract-Refs)
+notes: BR-0003-0050 cites CLI-INIT, the contract of the command that runs the retire pass (DR-0003-0025).
+```
+
+#### Migration / Follow-ups
+
+- The obligation-reconciliation phase records the lock hash as init's internal
+  record of existing behaviour.
+
+#### Rejected
+
+- option: Contract-Refs "-"
+  reason: The rule is realised by the init command, whose contract is CLI-INIT.
+  do_not: Leave a rule of the init command bound to no contract.
+  temptation: No contract line describes the retire pass.
+
+### DL-0014
+
+#### Meta
+
+```yaml
+id: DL-0014
+date: 2026-09-23
+primary: Ops
+tags: ["@api", "@docs"]
+compat: Improvement
+scope:
+  - spec-0003/04_Business-Rules.md (BR-0003-0050)
+notes: The recorded hash of BR-0003-0050 resolves through the .assets.lock.json entry retireWithdrawnGovernedAssets reads, with no contract write (DR-0003-0026).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Add a line to qfai-init.md naming the lock record and the retire pass
+  reason: It widens the approved contract edits, and REQ-0006 asks for no new behaviour.
+  do_not: Add a contract line for the retire pass in this change.
+  temptation: Obligation reconciliation asks for a contract field.
+
+### DL-0015
+
+#### Meta
+
+```yaml
+id: DL-0015
+date: 2026-09-23
+primary: Ops
+tags: ["@api", "@docs"]
+compat: Improvement
+scope:
+  - spec-0003/04_Business-Rules.md (BR-0003-0049)
+notes: BR-0003-0049 is realized by what init does not write; qfai-init.md gains no line (DR-0003-0027).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Restore a "must not touch .qfai/steering/" line in qfai-init.md
+  reason: It reverses an approved contract edit.
+  do_not: Put a protective line for the removed surface back in the contract.
+  temptation: A negative rule has no positive contract line to point at.
+
+### DL-0016
+
+#### Meta
+
+```yaml
+id: DL-0016
+date: 2026-09-23
+primary: Ops
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0003/10_Plan.md
+notes: The plan states the init part of the removal by symbol and cites spec-0004's plan for the order (DR-0003-0028).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Restate the order of the whole change in this plan
+  reason: Six copies of one order drift apart.
+  do_not: Copy the removal order out of spec-0004's plan.
+  temptation: The implementer of this spec reads this plan first.
+- option: Rewrite the earlier sections of this plan
+  reason: The request does not cover them.
+  do_not: Re-audit or rewrite the CHG-007 sections in this change.
+  temptation: One line there still calls US-0003-0021..0028 unimplemented.
+
+### DL-0017
+
+#### Meta
+
+```yaml
+id: DL-0017
+date: 2026-09-23
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - spec-0003/10_Plan.md (Test approach)
+notes: The removal's tests build their own trees; no shared fixture is planned (DR-0003-0029).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: A shared fixture for a populated .qfai/steering/ tree
+  reason: The three trees differ, so there is no third identical caller.
+  do_not: Plan a shared fixture before three callers need the same tree.
+  temptation: Three tests put files under the same directory.
+
 ## 2026-09-22 — US-0003-0014 retired (README file generation)
 
 - Date: 2026-09-22
@@ -32,6 +578,16 @@ carry no README, which is what this change specifies.
 - Date: 2026-04-01
 - Primary: spec-0003 新規作成（旧 spec-0001, spec-0017, spec-0018 の統合）
 - Tags: init, symlink, instructions, codex, consolidation
+
+- Change ID: DELTA-0002
+- Date: 2026-09-23
+- Primary: Behavior
+- Tags: @api, @docs, @test
+- Summary: `qfai init` no longer seeds `.qfai/steering/` and leaves an existing
+  one untouched. REQ-0019 and its AC, BR, EX and TC are removed with ledger row
+  TDD-0022. REQ-0032, AC-0003-0039, BR-0003-0049, BR-0003-0050,
+  EX-0003-0052..0054 and TC-0003-0059..0061 are added, seeded as
+  TDD-0092..0097. OQ-0003-0002 is resolved as moot.
 
 ## Migration Record
 

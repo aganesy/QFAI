@@ -150,3 +150,15 @@ Given a contract stub the Contracts-first phase wrote, when it is validated, the
 ## AC-0013-0027: Batch Mode Capability Mapping Is Stable
 
 Given an invocation with no argument, when capabilities are assigned spec identifiers, then the order in `_policies/03_Capabilities.md` decides the assignment and an identifier already assigned keeps it; reordering is a Change Request.
+
+## AC-0013-0028: Records Go To The Spec Pack
+
+- Source: discussion-20260923060900824#REQ-0007
+
+Given the shipped `/qfai-sdd` skill (`SKILL.md` and `references/**`), when it tells an agent where a decision, a consultation or an out-of-scope discovery is recorded, then a decision goes to the spec's `07_Decisions.md` or a Change Request, and a consultation or an out-of-scope discovery to `08_Open-questions.md` or a Change Request; `SKILL.md` has no `## Work-log entries` section and no `W-PENDING-PROMOTION` example; and no file under `packages/qfai/assets/init/.qfai/assistant/**` names `.qfai/steering/` or `worklog-entry.schema.md`.
+
+## AC-0013-0029: Approval Stop Writes No Entry
+
+- Source: discussion-20260923060900824#REQ-0008
+
+Given a Triage row that needs approval and has none, with or without `--auto`, when the stage stops before Phase 0, then `SKILL.md` (`### --auto and approval-required rows`), `references/sdd-execution-playbook.md` (the missing-approval stop condition) and `references/sdd-triage.md` (step 7) each state the same stop — leave `Approved By` as `-`, do not enter Phase 0, and report every unapproved row with its Operation and target — and none of them names a work-log entry or the `consultation-needed` kind.

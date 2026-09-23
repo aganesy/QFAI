@@ -97,7 +97,7 @@ CHG-007 notes:
   that window is worth more than ledger-index tidiness. Both orders are legal; only G1 gates the
   rest.
 - **Tiers**: T2 (reviewed alone) for `TDD-0029`, `TDD-0032`, `TDD-0033`, `TDD-0036` and — escalated at the
-  point of use, see `.qfai/steering/2026-08-08-chg-007-spec-0006-g5-tier-escalation.md` — `TDD-0039`; T1 for the
+  point of use, see the ruling "`TDD-0039` escalates to T2" in `.qfai/evidence/implement-spec-0006.md` — `TDD-0039`; T1 for the
   other eight. The criticality test turns on contract and public-JSON surface, not on mutation
   risk - the check writes nothing.
 - **Parallel dispatch: DENY.** This ledger carries no `Owning module` column and the seam did not

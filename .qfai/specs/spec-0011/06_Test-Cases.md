@@ -78,3 +78,23 @@
 - EX-Ref: EX-0011-0009
 - AC-Refs: AC-0011-0010
 - Verify `/qfai-implement` reads `design-system.yaml` token tables that are byte-equivalent to root `DESIGN.md` token tables after parse normalization, and surfaces drift through the design contract validators.
+
+## TC-0011-0013: Records Go To Existing Homes
+
+- EX-Ref: EX-0011-0010
+- AC-Refs: AC-0011-0012
+- Type: normal
+- Level: integration
+- Verify, one boundary per check:
+  - the shipped `SKILL.md` and `references/execution-ledger.md` record a stop
+    in `Blocked-By` and send a decision, a consultation or an out-of-scope
+    discovery to `/qfai-sdd` as a Change Request (boundary
+    `record-homes-stated`)
+  - the `blocked -> todo` bullet of `references/execution-ledger.md` contains
+    no `archived` and no instruction to close a record (boundary
+    `resume-closes-no-record`)
+  - no file under
+    `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/`
+    contains `.qfai/steering/` or `worklog-entry.schema.md`, and neither
+    `SKILL.md` nor `references/execution-ledger.md` contains "work-log entry"
+    (boundary `no-surface-reference`)
