@@ -486,6 +486,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Thirteen more completed ledger rows name the test that runs their case**
+  (#1436). Each row's selector named its test case id rather than a test, and
+  the test that verifies the case, in the file the row names, carried no
+  annotation for it. So the selector resolved to nothing, and the only file
+  naming the case was an annotation carrier. The annotation now sits on that
+  test and the selector names it. The carrier-only backlog falls from 56
+  entries to 39, and the dogfooding backlog by one row in spec-0004 and twelve
+  in spec-0012.
+  A row whose case is verified in a different file from the one it names is
+  left alone. Its `Test file` would have to move with the annotation, and that
+  cell is not writable once it holds a real path.
+
 - **A PowerShell host crash names the processor it happened on** (#2181). A
   leg can lose one case to the host crash or nearly all of them, and a rerun
   on another runner recovers both. Whether the second mode follows the
