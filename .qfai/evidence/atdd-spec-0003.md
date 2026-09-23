@@ -905,8 +905,27 @@ packages/qfai/tests/integration/initSpec0003.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24). Run after `rm -rf packages/qfai/assets/init/.qfai/specs`, which leaves the shipped tree as it is at that revision
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 0d2064bd1dd3e976ae8e39ea31b9c04f6e180209
+- Refactor verify result: Test Files 1 passed (1); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the rebuilt falsifiability run (specs/.gitkeep, bullet 1 assertion at :75:72), reviewed revision working-tree+66d3dc33e57a53cc76dcc281e6545ef8d68d826d2555de7de7dd3a97f8ee6fbc; build-phase GREEN + oracle proof, reviewed revision e4e818d9bd641e56c55f4d074280a636687f008b
+
+- Spec review: PASS
+- Spec reviewed revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Spec audited evidence hash: c9e4fa914bfecb2b1c0ec1abebbfc19acb167e656ef5c45077a0af023afa4076
+- Spec review pack: .qfai/review/review-20260923130000000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 888b53a0d9cfa5c89fd4ea9ac62938512b5980f0b823e07af34320a79ada6dc5
+- Code quality review: PASS
+- Code quality reviewed revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Code quality audited evidence hash: c9e4fa914bfecb2b1c0ec1abebbfc19acb167e656ef5c45077a0af023afa4076
+- Code quality review pack: .qfai/review/review-20260923130000000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 888b53a0d9cfa5c89fd4ea9ac62938512b5980f0b823e07af34320a79ada6dc5
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 24 passed (24). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Checkpoint verification seal: fa5e87e093c231ba3b1b8725963c7774c8321994ac37406340a3650286aeacb4
 
 ### TDD-0037
 
@@ -934,21 +953,7 @@ writes the value above to the ledger and to its own entry's copy; until it does,
 - Selector run command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowInertness.test.ts -t "TC-0003-0037 \(TDD-0037\): three installing job declarations, nine and eight executing instances, zero secret references"
 - Selector run result: PASS — Test Files 1 passed (1); Tests 3 passed | 3 skipped (6)
 - Selector run revision: working-tree+b6717d99336497714758bb9eafe114d2ddc4f4c194e332da052432f02b99161f
-- Round 1: RED test replacement: test-only replacement — CR-20260923-0011 asked for the describe and the count case to be renamed; the proof at .qfai/evidence/implement-spec-0003.md#tdd-0037 is stale — test replaced, and /qfai-implement re-takes it under the corrected test
-- Round 1: Replacement proof revision: test-only replacement (CR-20260923-0011) — handed over empty; /qfai-implement writes it when it re-takes the proof
 - Proof to re-take: the two mutations the earlier entry names — a `secrets.QFAI_LEAKED` reference planted in the verdict step's `env:` of `packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml`, and a `run: npm ci` step appended to its `detection` job
-- Round 1: RED test hash: 30ebc3cb08f888b4c46df68667a8b4c82e538837b44ed2d96193fb60a897e236
-- Round 1: RED test manifest:
-
-```text
-packages/qfai/tests/helpers/shippedWorkflowFixtures.ts
-packages/qfai/tests/helpers/stdout.ts
-packages/qfai/tests/integration/shippedWorkflowInertness.test.ts
-```
-
-The earlier entry records no `RED test hash`, so none is overwritten. Over the same
-manifest the file hashed to
-`64780749016ea65cecf5f8e5ccb7233deb631be8257daf9f9680091f63b67450` before the rename.
 
 #### Shared-artifact re-verify
 
@@ -962,6 +967,79 @@ describe is byte-identical after the rename, and its selector was re-run:
 - Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowInertness.test.ts -t "TC-0003-0036 \(TDD-0036\): no declared layer script means zero executing test lanes"
 - Re-verify result: PASS — Test Files 1 passed (1); Tests 3 passed | 3 skipped (6)
 - Re-verify revision: working-tree+b6717d99336497714758bb9eafe114d2ddc4f4c194e332da052432f02b99161f
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/root/.github/workflows/, every workflow file init writes — none carries a `secrets` reference, a secret declaration or `secrets: inherit`, and only `qfai-docs.yml#checks`, `qfai-tests.yml#tests` and `qfai-validate.yml#validate` install dependencies. The lanes were built by TDD-0035, TDD-0038 to TDD-0040, TDD-0027 and TDD-0055; the zero-secret property has held since the set shipped
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowInertness.test.ts -t "TC-0003-0037 \(TDD-0037\): three installing job declarations, nine and eight executing instances, zero secret references"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 2 passed | 3 skipped (6). The secret case fails on `AssertionError: expected [ Array(1) ] to deeply equal []` at `tests/integration/shippedWorkflowInertness.test.ts:549:24`, naming `qfai-tests.yml:677: secret context reference`
+
+The edit, a secret reference planted in the verdict step's `env:` of `packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml`:
+
+```diff
+           QFAI_SELECTED: ${{ needs.detection.outputs.selected }}
++          QFAI_LEAKED: ${{ secrets.QFAI_LEAKED }}
+```
+
+- Round 1: Falsifiability revision: working-tree+27a64a572f3b9dde75c9f714c23c1cfd41db2d7888b293654d82671f282d412b
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 30ebc3cb08f888b4c46df68667a8b4c82e538837b44ed2d96193fb60a897e236
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/shippedWorkflowFixtures.ts
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/integration/shippedWorkflowInertness.test.ts
+```
+
+The earlier entry records no `RED test hash`, so none is overwritten. Over the same
+manifest the file hashed to
+`64780749016ea65cecf5f8e5ccb7233deb631be8257daf9f9680091f63b67450` before the rename.
+
+- Round 1: RED test replacement: test-only replacement — CR-20260923-0011 asked for the describe and the count case to be renamed; the proof at .qfai/evidence/implement-spec-0003.md#tdd-0037 is stale — test replaced, and /qfai-implement re-takes it under the corrected test
+- Round 1: Replacement proof revision: working-tree+27a64a572f3b9dde75c9f714c23c1cfd41db2d7888b293654d82671f282d412b
+- Round 1: Replacement proof command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowInertness.test.ts -t "TC-0003-0037 \(TDD-0037\): three installing job declarations, nine and eight executing instances, zero secret references"
+- Round 1: Replacement proof result: Test Files 1 failed (1); Tests 1 failed | 2 passed | 3 skipped (6). The planted secret the proof at .qfai/evidence/implement-spec-0003.md#tdd-0037 names, re-run under the renamed test, fails the secret case on `AssertionError: expected [ Array(1) ] to deeply equal []` at `tests/integration/shippedWorkflowInertness.test.ts:549:24`. Over the whole test file the same edit fails that case alone: Tests 1 failed | 5 passed (6)
+
+A second mutation, the one the earlier entry ran beyond the proof, exercises the other two cases. It is not the row's proof:
+
+- Command: the same command, with a `run: npm ci` step appended to the `detection` job of the same file
+- Result: Test Files 1 failed (1); Tests 2 failed | 1 passed | 3 skipped (6). The count case fails on `AssertionError: expected [ …(4) ] to deeply equal [ …(3) ]` at `tests/integration/shippedWorkflowInertness.test.ts:499:68`, with `detection` as the extra entry, and the detection case fails on `AssertionError: expected [ Array(1) ] to deeply equal []` at `:574:24`, naming `detection job installs dependencies`
+- Revision: working-tree+ceced760cb9f30ce532c18e001c8b48dbbc5cc5ab4806957a499b90b2fbd4e07
+
+```diff
+           echo "qfai tests: lanes to run ${selected}"
++      - name: Install dependencies
++        run: npm ci
+   tests:
+```
+
+- Round 1: Revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowInertness.test.ts -t "TC-0003-0037 \(TDD-0037\): three installing job declarations, nine and eight executing instances, zero secret references"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 3 passed | 3 skipped (6). Run after `git checkout -- packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml`, which restored the file after each mutation
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowInertness.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 6 passed (6). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the rebuilt falsifiability run (planted secrets.QFAI_LEAKED in the verdict step, secret case at :549:24) and the TDD-0036 shared-artifact re-verify, reviewed revision working-tree+27a64a572f3b9dde75c9f714c23c1cfd41db2d7888b293654d82671f282d412b; build-phase GREEN + oracle proof, reviewed revision e4e818d9bd641e56c55f4d074280a636687f008b
+
+- Spec review: PASS
+- Spec reviewed revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Spec audited evidence hash: b1eedd2b472ea8a6c5b8e3814205694077a4c345f1bf07c83309f858d1ae9af1
+- Spec review pack: .qfai/review/review-20260923130001000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 19c315faa2751606c83ee1e5e877c1053aff72c126ce80e3fa0e3d16ea95ce1e
+- Code quality review: PASS
+- Code quality reviewed revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Code quality audited evidence hash: b1eedd2b472ea8a6c5b8e3814205694077a4c345f1bf07c83309f858d1ae9af1
+- Code quality review pack: .qfai/review/review-20260923130001000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 19c315faa2751606c83ee1e5e877c1053aff72c126ce80e3fa0e3d16ea95ce1e
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run --maxWorkers=7 --testTimeout=600000
+- Checkpoint verification result: PASS — the last row of this run, so the full suite ran: Test Files 771 passed | 3 skipped (774); Tests 14565 passed | 82 skipped (14647)
+- Checkpoint verification revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Checkpoint verification seal: 645095fba21747e6dc9b7be0b1a48e5dd514dd440649e88e89a443576ba712a4
 
 ## Coverage Depth Matrix
 

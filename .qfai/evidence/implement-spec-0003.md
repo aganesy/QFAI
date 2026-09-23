@@ -4656,3 +4656,15 @@ populated, and it resets no rows.
 
 **Closing status: `blocked-pending-spec-0017` for the Phase E tail, and `pending-upstream` for the
 US-level E2E coverage.**
+
+## Record defects
+
+Open entries from the completion review of the `/qfai-implement` run started
+2026-09-23T11:42:45.972Z, attempt 1. Each is repaired in place before spec-0003
+completion is declared.
+
+- `record:unchecked`, `TDD-0037`, Round 1: the entry's `Branch:` line says it records a test-only replacement and changes no branch, and a paragraph says the ledger still holds the old describe title. After `CR-20260923-0013` the entry carries the row's own falsifiability proof, and the ledger holds the renamed title.
+- `record:unchecked`, `TDD-0037`, Round 1: the round carries `RED test replacement` / `Replacement proof` fields, which `round-evidence.md` reserves for a `REVISE` that replaced the test. The proof was re-taken because a change request reset the row.
+- `record:unchecked`, `TDD-0037`: the Gaps bullet and the Final status of `atdd-spec-0003.md` still say the row stays `done` and waits for a change request.
+- `record:unchecked`, `TDD-0001` and `TDD-0037`: the Work Orders Summary for this run has no rows for the qa-gatekeeper verdicts, the `TDD-0037` falsifiability run or raising `CR-20260923-0013`, and row 48 is still `PENDING`.
+- `record:unchecked`, `CR-20260923-0013`: its form does not match class `defect` (an options table, an approved option, no reproduction section).
