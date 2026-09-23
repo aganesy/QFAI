@@ -760,8 +760,8 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
      runner variable; the set reads two. `US-0003-0006` keeps `README.md` a regular file; no README is
      written.
    `CR-20260923-0006` restated every statement named above to what the product does and the tests
-   assert, and changed no test. Other statements in the pack carry the same contradictions; that
-   record lists them for a follow-up Change Request. The matrix has not been rescored against the
+   assert, and changed no test. `CR-20260923-0011` restated the other statements that carried the
+   same contradictions, and reset `TDD-0001`. The matrix has not been rescored against the
    restated statements.
 3. **Eight safety-floor cells are not `✅`, and a written reason cannot open them.**
    `US-0003-0006` × ER, `US-0003-0012` × ER, `US-0003-0021` × ER, `US-0003-0027` × ER,
