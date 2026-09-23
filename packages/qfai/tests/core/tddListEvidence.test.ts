@@ -4753,13 +4753,21 @@ ${packPair(1).join("\n")}
    * the committed provenance is what carries the entry there.
    */
   function editingEntry(
-    options: { proofResult?: string; auditHash?: string; specVerdict?: string } = {},
+    options: {
+      proofResult?: string;
+      auditHash?: string;
+      specVerdict?: string;
+      reverifyRevision?: string;
+    } = {},
   ): string {
     const record = `#### Shared-artifact re-verify
 
 ##### spec-0001/TDD-0001
 
-${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")}
+${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed").replace(
+  DEFAULT_REVISION,
+  options.reverifyRevision ?? DEFAULT_REVISION,
+)}
 
 - Spec review: ${options.specVerdict ?? "PASS"}`;
     return completeEntry("Integration")
@@ -4928,6 +4936,90 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
         ),
       });
       expect(codes).toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  // The record's `Revision` is the tree the re-verify ran on, so a consumer's
+  // staleness interval starts there. The consumer's own observation predates
+  // the edit the record covers, so an interval from it would always report
+  // that edit, and a re-verified row could never clear `QFAI-TDDLIST-009`.
+  describe("staleness after a shared-artifact re-verify", () => {
+    /**
+     * A repository where the consumer observed an empty tree, a later commit
+     * wrote the shared test file as `sharedContent`, and the re-verify record
+     * names that commit. The seed then writes the test file's final content
+     * and is committed, so a `sharedContent` other than the seed's is a further
+     * change after the record's revision.
+     */
+    async function reverifiedProject(
+      root: string,
+      options: { sharedContent: string; withRecord: boolean },
+    ): Promise<Array<{ code: string; message: string }>> {
+      const observed = await repoWithRevision(root);
+      await mkdir(path.dirname(path.join(root, TEST_FILE)), { recursive: true });
+      await writeFile(path.join(root, TEST_FILE), options.sharedContent, "utf-8");
+      commitAll(root, "edit the shared test file");
+      const reverified = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf-8",
+      }).trim();
+      const evidence = options.withRecord
+        ? staleConsumerEntry().concat(editingEntry({ reverifyRevision: reverified }))
+        : completeEntry("Integration");
+      await seedProject(
+        root,
+        options.withRecord
+          ? reverifyLedger()
+          : ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+        [],
+        { ".qfai/evidence/atdd-spec-0001.md": evidence.replaceAll(DEFAULT_REVISION, observed) },
+        { revision: observed },
+      );
+      commitAll(root, "seed the evidence");
+      return (await validateTddList(root, defaultConfig)).map((i) => ({
+        code: i.code,
+        message: i.message,
+      }));
+    }
+
+    const consumerStale = (issues: Array<{ code: string; message: string }>) =>
+      issues.filter(
+        ({ code, message }) =>
+          code === "QFAI-TDDLIST-009" &&
+          message.includes("TDD-0001 (") &&
+          message.includes(TEST_FILE),
+      );
+
+    it("reads the consumer's interval from the re-verify record's Revision", async () => {
+      await withProject(async (root) => {
+        const issues = await reverifiedProject(root, {
+          sharedContent: "// test\n",
+          withRecord: true,
+        });
+        expect(redHashInvalid(issues), "the record is current").toBe(false);
+        expect(consumerStale(issues)).toEqual([]);
+      });
+    });
+
+    it("still reports a change made after the re-verify record's Revision", async () => {
+      await withProject(async (root) => {
+        const issues = await reverifiedProject(root, {
+          sharedContent: "// before the further edit\n",
+          withRecord: true,
+        });
+        expect(redHashInvalid(issues), "the record is current").toBe(false);
+        expect(consumerStale(issues)).toHaveLength(1);
+      });
+    });
+
+    it("still reports a row that no re-verify record covers", async () => {
+      await withProject(async (root) => {
+        const issues = await reverifiedProject(root, {
+          sharedContent: "// test\n",
+          withRecord: false,
+        });
+        expect(consumerStale(issues)).toHaveLength(1);
+      });
     });
   });
 
