@@ -4,6 +4,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **spec-0012's traceability ledger names the row that holds each case**
+  (#2179). 74 rows of its planning tables named a TDD-ID the test ledger
+  gives to a different case, because the test ledger was renumbered after
+  they were written. Each now names the row that holds its case. Four cases
+  have no row in the test ledger at all, and their rows now say so rather
+  than borrow an id. `REQ-0012-0077` also named a test file that does not
+  exist, and now names the one that does.
+
 ## [1.12.2] - 2026-09-23
 
 ### Added
@@ -487,14 +497,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the options, four weaknesses of the adopted unit and the dissent against it.
 
 ### Fixed
-
-- **spec-0012's traceability ledger names the row that holds each case**
-  (#2179). 74 rows of its planning tables named a TDD-ID the test ledger
-  gives to a different case, because the test ledger was renumbered after
-  they were written. Each now names the row that holds its case. Four cases
-  have no row in the test ledger at all, and their rows now say so rather
-  than borrow an id. `REQ-0012-0077` also named a test file that does not
-  exist, and now names the one that does.
 
 - **Four test cases only an annotation carrier named now have a test**
   (#2160). Six completed rows claimed them, and no test file carried their
