@@ -15,12 +15,12 @@
 - US-0003-0011: Copilot review instructions 配布 - .github/instructions/ に create-only で配布
 - US-0003-0012: instructions の force 更新 - --force で instructions を shipped テンプレートへ更新
 - US-0003-0013: instructions アクティベーション案内 - 作成時にガイダンスメッセージ表示
-- US-0003-0015: `.gitignore` 管理ブロック自動追記 (v1.7.18) - `qfai init` 時に QFAI 生成成果物（report/evidence/review-pack/discussion-pack）が自動で gitignore される
+- US-0003-0015: `.gitignore` managed block (v1.7.18) - `qfai init` ignores the artifacts QFAI generates (report, evidence, review, discussion) and keeps the governance records among them tracked
 - US-0003-0016: 4-layer asset-tree seeding (v1.9.0) - `qfai init` seeds the four layers of `.qfai/assistant/{constitution,manifest,catalog,process}/`
 - US-0003-0017: --upgrade-assistant-tree migration helper (v1.9.0) - 旧 `.qfai/assistant/steering/` レイアウトを 4-layer へ一括移行する flag。ユーザー編集を保全
 - US-0003-0018: migration memo authoring (v1.9.0) - migration 実行時に `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` を生成
 - US-0003-0019: assistantPaths.ts SSOT module (v1.9.0) - assistant-tree のパス文字列を単一の TypeScript module から供給し、hard-coded literal を排除
-- US-0003-0020: 旧 layout backwards-compatibility window (v1.9.0) - 旧 `.qfai/assistant/steering/` を 1 minor release window だけ読み取り可能とし、sunset version を `D-DEPRECATED-PATH` warning で明示
+- US-0003-0020: legacy layout past its sunset (v1.9.0) - the one-minor window for the legacy `.qfai/assistant/steering/` layout closed at v1.10.0; `qfai init` keeps the legacy files and reports them as a `D-DEPRECATED-PATH` error
 - US-0003-0021: 配布 workflow の hardening (CHG-007) - 既存の配布 validate workflow が least privilege / cancellation 付き concurrency / checkout credential hygiene / bounding を備え、header の Node floor 主張を止め、既存の lockfile 検出 cache 式を保持する
 - US-0003-0022: 配布 action pin ポリシーと trailer 解決 (CHG-007) - 配布 workflow の action 参照を SHA pin しつつ、可読 version を step name 側に置くことで comment-blind な leakage guard の breadth を落とさずに再現性を得る
 - US-0003-0023: layer 分離された credential-free 配布 workflow set (CHG-007) - `qfai-` prefix の複数ファイル構成で layer 別 lane を提供し、adopter が対応スクリプトを宣言するまで全 lane が inert のままである
@@ -58,17 +58,17 @@
 - Non-goals: 既存の `qfai.config.yaml#paths.*` フィールドの再設計
 - Notes: REQ-0022 を実装する。lint rule が assistantPaths import を強制する
 
-## US-0003-0020: 旧 layout backwards-compatibility window
+## US-0003-0020: legacy layout past its sunset
 
 - Parent: CAP-0003
-- Goal: 旧 `.qfai/assistant/steering/` レイアウトを exactly 1 minor release window (v1.9.x) の間、読み取り可能なまま維持する。sunset version (v1.10.0) は `D-DEPRECATED-PATH` warning の本文に明示し、ユーザーに移行猶予を与える
+- Goal: the legacy `.qfai/assistant/steering/` layout stayed readable for exactly one minor release window (v1.9.x), and that window closed at v1.10.0. A project still carrying the legacy layout keeps its files: `qfai init` without a flag deletes nothing, and reports the layout as a `D-DEPRECATED-PATH` error on stderr that names the sunset release (v1.10.0) and the command that migrates it, `qfai init --upgrade-assistant-tree`
 - Non-goals: write path で旧 layout に書き出すこと
 - Notes: REQ-0023 を実装する。NFR-0002 (predictable migration window)
 
 ## US-0003-0001: ワークスペース初期化
 
 - Parent: CAP-0003
-- Goal: `npx qfai init` で `.qfai/` ディレクトリ構造（assistant/, specs/, contracts/, discussion/, evidence/, review/, report/）、設定ファイル（qfai.config.yaml）を生成する
+- Goal: `npx qfai init` creates `.qfai/assistant/` and the configuration file `qfai.config.yaml` at the project root. It scaffolds none of the artifact directories: `specs/`, `contracts/`, `discussion/`, `evidence/`, `review/` and `report/` do not exist under `.qfai/` after init
 - Non-goals: validate/report/doctor 等の他コマンド機能
 - Notes: 空ディレクトリおよび既存プロジェクトの両方で動作すること
 
@@ -102,7 +102,7 @@
 ## US-0003-0006: Agent symlink 統合
 
 - Parent: CAP-0003
-- Goal: `.claude/agents/<name>.md` と `.github/agents/<name>.agent.md` を `.qfai/assistant/agents/<name>.md` へのファイル symlink として配置する。README.md は通常ファイルのまま維持する
+- Goal: `.claude/agents/<name>.md` と `.github/agents/<name>.agent.md` を `.qfai/assistant/agents/<name>.md` へのファイル symlink として配置する。No `README.md` is written into `.agents/`, `.codex/`, `.claude/agents/` or `.github/agents/`
 - Non-goals: agent 定義の自動変換
 
 ## US-0003-0007: レガシーファイル退避
@@ -150,9 +150,9 @@
 ## US-0003-0015: `.gitignore` 管理ブロック自動追記
 
 - Parent: CAP-0003
-- Goal: `qfai init` 時に導入プロジェクトのルート `.gitignore` に QFAI 管理ブロック（marker 行 + `.qfai/report/*`, `.qfai/evidence/*`, `.qfai/review/*`, `.qfai/discussion/discussion-*/`, README ファイルの negation）を追記する。旧バージョンで追記されたレガシー行（`!.qfai/review/review-*/`, `!.qfai/review/review-*/**`）は再実行時に自動除去する
+- Goal: `qfai init` appends the QFAI managed block to the adopting project's root `.gitignore`: the marker line, ignore lines that include `.qfai/report/*`, `.qfai/evidence/*`, `.qfai/discussion/*` and `.qfai/review/*`, and then the governance negations that keep decision and evidence records tracked. The block carries no README negation and no `.qfai/discussion/discussion-*/`. A re-run strips every line an earlier release wrote and this one retired, the `review-*/` negations among them
 - Non-goals: ユーザー独自の gitignore エントリの変更/削除、review-pack を追跡したい場合のプロジェクト固有 negation 追加（プロジェクト側で明示追加する）
-- Notes: NFR-0012（冪等性）を満たす。`review-*/` ディレクトリはデフォルトで gitignore されるため、必要に応じてプロジェクト側で negation を追加して追跡できる
+- Notes: NFR-0012（冪等性）を満たす。`review-*/` directories are ignored by default; a project that wants to track one adds its own negation
 
 ## US-0003-0021: 配布 workflow の hardening
 

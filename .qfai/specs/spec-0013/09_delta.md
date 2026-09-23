@@ -562,3 +562,9 @@ Rows owned by this spec.
   - REQ-0164 validator-implementation side is shared with spec-0004 (`auditProfile.ts` / `QFAI-AUD-020` enforcement). This slice owns the SDD authoring + doc + template surface (`ui-spec.yaml` comments, `references/ui-contract-guide.md`).
   - REQ-0163: `D-SURFACE-TYPE-MISSING` warns during the deprecation window and sunsets to error; `resolveAllUiBearingSpecs()` keeps the frontmatter as the strict downstream signal (no behavioral change downstream).
 - Source: REQ-0155, REQ-0163, REQ-0164 (discussion-20260527075558258)
+
+## Change Requests
+
+| CR ID            | Upstream artifact                                                                 | Mode         | Approved by                                                    | Applied at           |
+| ---------------- | --------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------- | -------------------- |
+| CR-20260923-0010 | `spec-0013/03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `06_Test-Cases.md` | confirm-only | claude-code (the user's standing instruction for this session) | 2026-09-23T10:52:00Z |

@@ -48,7 +48,7 @@ and leaves an existing one untouched.
   Remove both assertions with the symbol. TDD-0025 is not reset, because
   TC-0003-0025's obligation does not change.
 
-- Tier: seeded as T2 on TDD-0092..0097 only. The rows already in the ledger
+- Tier: seeded as T2 on TDD-0094..0099 only. The rows already in the ledger
   keep their cell: no Change Request asks for a re-derivation, and raising the
   tier of an untouched `done` row would reset it to `todo`.
 
@@ -64,7 +64,7 @@ and leaves an existing one untouched.
 | 2026-09-23 | DL-0006 | TC-0003-0060 covers plain init and `init --force`                               |
 | 2026-09-23 | DL-0007 | EX-0003-0053 uses a partial seed                                                |
 | 2026-09-23 | DL-0008 | Six ledger rows, one per independently failing part                             |
-| 2026-09-23 | DL-0009 | Cells of TDD-0092..0097                                                         |
+| 2026-09-23 | DL-0009 | Cells of TDD-0094..0099                                                         |
 | 2026-09-23 | DL-0010 | `## TDD-ID reservations` holds the TDD-0022 tombstone                           |
 | 2026-09-23 | DL-0011 | Tier seeded on the new rows only                                                |
 | 2026-09-23 | DL-0012 | The TDD-0025 assertions on `joinProjectSteering` are a `/qfai-implement` action |
@@ -112,7 +112,7 @@ notes: REQ-0032 states that init seeds and touches no work-log surface, and AC-0
 - id: VFY-001
   level: integration
   target: init creates, modifies and deletes nothing under .qfai/steering/
-  method: TC-0003-0059, TC-0003-0060 and TC-0003-0061 through TDD-0092..0097
+  method: TC-0003-0059, TC-0003-0060 and TC-0003-0061 through TDD-0094..0099
   owner: dev
   expected: All six rows reach done, each having failed first against the code that still seeds.
   links:
@@ -290,7 +290,7 @@ primary: Ops
 tags: ["@test"]
 compat: Improvement
 scope:
-  - spec-0003/tdd/test-list.md (TDD-0092..0097)
+  - spec-0003/tdd/test-list.md (TDD-0094..0099)
 notes: Six ledger rows, two per new test case, one per independently failing part (DR-0003-0020).
 ```
 
@@ -316,7 +316,7 @@ primary: Ops
 tags: ["@test"]
 compat: Improvement
 scope:
-  - spec-0003/tdd/test-list.md (TDD-0092..0097)
+  - spec-0003/tdd/test-list.md (TDD-0094..0099)
 notes: Cells of the six new rows, with module paths from the repository root (DR-0003-0021).
 ```
 
@@ -587,7 +587,7 @@ carry no README, which is what this change specifies.
   one untouched. REQ-0019 and its AC, BR, EX and TC are removed with ledger row
   TDD-0022. REQ-0032, AC-0003-0039, BR-0003-0049, BR-0003-0050,
   EX-0003-0052..0054 and TC-0003-0059..0061 are added, seeded as
-  TDD-0092..0097. OQ-0003-0002 is resolved as moot.
+  TDD-0094..0099. OQ-0003-0002 is resolved as moot.
 
 ## Migration Record
 
@@ -791,6 +791,14 @@ observable:
 - The addition is purely additive: no ID was renumbered and no existing `Title` or `Rule` text was rewritten. Only the new cells were filled on pre-existing rows.
 - A second table was not an option: `collectTestCaseIds` and the TDD coverage report both read `parseFirstMarkdownTable`, so splitting the new TC rows into a second table would find no `TC-ID` column there and silently disable `TDDLIST_TC_NOT_COVERED` for the whole spec.
 - Pre-existing `Contract-Refs` values: BR-0003-0001..0014 are `-`; BR-0003-0015..0020 are `CLI-INIT`, which the Contract Index row for CLI-INIT names explicitly as the CHG-003 surface (assistant-tree seed, `--upgrade-assistant-tree`, work-log surface seed, deprecation window, path SSOT enforcement).
+
+## Change Requests
+
+| CR ID            | Upstream artifact                                                                                                                       | Mode      | Approved by                                                    | Applied at           |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------- | -------------------------------------------------------------- | -------------------- |
+| CR-20260923-0003 | `spec-0003/04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                              | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T03:05:00Z |
+| CR-20260923-0006 | `spec-0003/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md` | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T08:13:56Z |
+| CR-20260923-0007 | `spec-0003/06_Test-Cases.md`, `tdd/test-list.md`                                                                                        | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T08:26:35Z |
 
 ## Triage (2026-09-15)
 

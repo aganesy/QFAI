@@ -4,7 +4,122 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The test runner moves to its fourth major, and the coverage provider with
+  it** (#2173). The two move as a pair: the provider's peer range names the
+  runner version exactly, so a provider a major ahead of the runner fails at
+  import rather than at install. Three declarations follow the runner's own
+  changes — the project list is imported by the root configuration instead of
+  being discovered by file name, isolation is declared directly rather than
+  inside a pool block, and `vite` is declared as the peer the runner requires
+  instead of being resolved for it. The supported Node range is unchanged.
+
+- **The type checker moves to TypeScript 6.** The seventh major ships the
+  compiler as a native binary and no longer exposes the classic compiler API
+  from its main entry, which the test tree and the declaration build both read;
+  the linter refuses to load against it at all. The sixth is the newest release
+  every part of this toolchain supports, and it reports the deprecations the
+  seventh turns into errors. The forward lane keeps type-checking against the
+  seventh, so nothing stops tracking it.
+
+  One deprecation is silenced, inside the declaration rollup only: the bundler
+  builds that rollup with `baseUrl` whatever the project declares, and this
+  package declares neither `baseUrl` nor `paths`. The lifting condition is
+  written beside it, and the forward lane now names any such exemption on a
+  passing run instead of reading only the compiler configuration.
+
+## [1.12.3] - 2026-09-24
+
 ### Fixed
+
+- **spec-0012 states the auto-serve SIGINT path as the runner contract**
+  (#2201). `TC-0012-0462` still described iterate killing child server
+  processes, while iterate only invokes the teardown its server runner
+  returns. The case now names three clauses:
+  - the handler is installed after the runner returns and removed at the end of
+    the cycle;
+  - teardown and removal still run when the cycle fails;
+  - a SIGINT runs the teardown once, within 2 seconds.
+
+  Each clause has its own row. `NFR-0106` now states the 2-second bound the
+  case cites. The first row's test also checks the handler is not installed
+  before the runner is called, and the bound check runs unconditionally.
+
+- **spec-0013 records the change request behind its repointed rules** (#2133).
+  Five rules were repointed at the criterion about their own subject with no
+  change request on record, and the coverage record still said they were
+  broken. `CR-20260923-0010` confirms the repair and is recorded in the pack's
+  delta, and finding 7 of the coverage record says what was done. No spec
+  obligation, test or ledger row changed.
+
+- **The shipped-workflow aggregate check has a case for each job-shape
+  clause** (#2194). The check rejects an aggregate with a second step, or with
+  `continue-on-error` set on the job, and no case failed when either clause
+  was removed. `TC-0003-0058` now states that obligation, and a new two-case
+  test covers it. The three completed rows that read the same test file are
+  re-verified against the edited file.
+  A re-verified row is no longer reported stale (`QFAI-TDDLIST-009`) for the
+  edit its re-verify covered: the interval now starts at the re-verify
+  record's `Revision`, and a later change still makes the row stale.
+
+- **spec-0003 states what `qfai init` and the shipped workflows do now**
+  (#2190). Five of its obligations described the product before a deliberate
+  change and the tests asserted the opposite. They said init creates six
+  artifact directories, writes a nine-line `.gitignore` block, and seeds a
+  steering README. They also said a legacy path only warns, and two jobs
+  install. Five more partly disagreed. Each statement now says what the tests
+  and the source do. No test or product code changed, so no ledger row is
+  reopened.
+
+- **spec-0012 states `--auto-serve` as a runner contract, and its five rows
+  are complete** (#2179). The spec said iterate spawns a server, kills child
+  processes with `tree-kill` and force-kills an earlier iterate. The product
+  calls a server runner, invokes the teardown it returns, and by default serves
+  in-process and refuses a port another process holds. The requirement, story,
+  criterion, rule, example and test case now say the same, one ledger row that
+  named four boundaries is split into four, and a new case covers the default
+  runner's refusal. Each row's test is shown to fail when the predicate it pins
+  is broken.
+
+- **The completion gate reads a record re-attestation, one per verdict**
+  (#2196, #2205). Repairing a completed row's evidence record after its review
+  moves the bytes the review hashed, so the recorded `Audited evidence hash` no
+  longer recomputes. The procedure the skill prescribes answers that with a
+  re-attestation in a review pack of its own, but the gate never read it, so a
+  repaired row could not pass `QFAI-TDDLIST-008`. A verdict whose hash disagrees
+  now passes when the re-attestation recorded under that verdict's own prefix —
+  `Spec record re-attestation`, `Code quality record re-attestation` or
+  `Prototype parity record re-attestation` — equals the recomputed hash. Each
+  owes a canonical `<prefix> record re-attestation pack` and a sha256
+  `<prefix> record re-attestation pack seal`, and each seal is recomputed when
+  the pack is in the checkout; two verdicts may name the same pack. The fields
+  are per verdict because one hash cannot answer for two subjects: a
+  `Prototype parity` verdict hashes the captures its `Surface artifacts`
+  manifest names beside the entry's fields, so on a UI-affecting row it never
+  recomputes to the value the other verdicts read. An `n/a` (not UI-affecting)
+  row refuses a parity re-attestation, as it already refuses a parity hash and
+  pack. Every one of these fields sits outside the audited subject, so writing
+  them does not move the hash they re-attest.
+
+- **The completion gate accepts the `qa-gatekeeper` forms the skill documents**
+  (#2197). The skill asks the row-level verdict to name the attempt, round and
+  revision behind it, as in `PASS (qa-gatekeeper#1, Round 1, …)` or
+  `PASS x2 (…)`, and the gate refused any value other than a bare `PASS`. A
+  leading `PASS` is now the verdict; `PASSED` and a leading `REVISE` are still
+  refused.
+
+- **spec-0003 states the change-scoped document lane, and the rows that pin
+  its matrix, conditions and check names are complete** (#1876). The spec said
+  the document check job depends on nothing and that a skipped dependency
+  always fails the aggregate. The shipped lane skips its checks when no
+  document changed, and its aggregate treats that skip as green only when the
+  scope said so. The spec now says the same, and a new row covers the fourth
+  verify bullet of the aggregate case. The four integration-level cases moved
+  out of the end-to-end file into
+  `tests/integration/shippedWorkflowCheckIndependence.test.ts`, and the seven
+  rows are done: each test is shown to fail when the predicate it pins is
+  broken.
 
 - **`/qfai-implement` says who mutates a predicate that lives in the test
   file** (#2191). Some acceptance tests plant their own broken copy of a

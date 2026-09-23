@@ -158,7 +158,7 @@
 - Context: Upstream REQ-0010's acceptance names `init --force`; its description says "with or without `--force`".
 - Decision: TC-0003-0060 reads the directory after a plain run and after a `--force` run.
 - Consequences: Each run has its own ledger row, so a regression on one path fails on its own.
-- Related: TC-0003-0060, TDD-0094, TDD-0095
+- Related: TC-0003-0060, TDD-0096, TDD-0097
 
 ### DR-0003-0019: EX-0003-0053 uses a partial seed
 
@@ -172,7 +172,7 @@
 
 - Status: accepted
 - Context: Each new test case has two parts that fail independently.
-- Decision: Seed TDD-0092..TDD-0097, two rows per test case, each naming its part in `Boundary`.
+- Decision: Seed TDD-0094..TDD-0099, two rows per test case, each naming its part in `Boundary`.
 - Consequences: A RED run observes each part, rather than stopping at the first failing assertion.
 - Related: TC-0003-0059, TC-0003-0060, TC-0003-0061
 
@@ -180,9 +180,9 @@
 
 - Status: accepted
 - Context: The rows are ATDD-owned integration rows whose tests do not exist yet. They touch init's write set and the governed-asset lock.
-- Decision: `Layer` Integration, `Tier` T2, `Test file` `-`, `Status` todo. `Owning module` is `packages/qfai/src/cli/commands/init.ts` for TDD-0092..0095 and `packages/qfai/src/core/governedAssistantManifest.ts` for TDD-0096..0097, as paths from the repository root.
+- Decision: `Layer` Integration, `Tier` T2, `Test file` `-`, `Status` todo. `Owning module` is `packages/qfai/src/cli/commands/init.ts` for TDD-0094..0097 and `packages/qfai/src/core/governedAssistantManifest.ts` for TDD-0098..0099, as paths from the repository root.
 - Consequences: `/qfai-atdd` writes the tests, and `/qfai-implement` fills `Test file` and `Selector` when it advances each row.
-- Related: TDD-0092, TDD-0093, TDD-0094, TDD-0095, TDD-0096, TDD-0097
+- Related: TDD-0094, TDD-0095, TDD-0096, TDD-0097, TDD-0098, TDD-0099
 
 ### DR-0003-0022: TDD-ID reservations sit after the ledger table
 
@@ -196,9 +196,9 @@
 
 - Status: accepted
 - Context: Most rows in this ledger carry `-` in `Tier`. No Change Request asks for a re-derivation, and raising the tier of an untouched `done` row would reset it to `todo`.
-- Decision: Seed `Tier` on TDD-0092..0097 only, and state the limit in the ledger notes of `09_delta.md`.
+- Decision: Seed `Tier` on TDD-0094..0099 only, and state the limit in the ledger notes of `09_delta.md`.
 - Consequences: Rows seeded earlier keep `-`, which is read downstream as T1, until a Change Request re-derives them.
-- Related: TDD-0092, TDD-0093, TDD-0094, TDD-0095, TDD-0096, TDD-0097
+- Related: TDD-0094, TDD-0095, TDD-0096, TDD-0097, TDD-0098, TDD-0099
 
 ### DR-0003-0024: The TDD-0025 assertion on a removed symbol goes to /qfai-implement
 

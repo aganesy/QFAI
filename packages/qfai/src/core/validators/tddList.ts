@@ -1491,8 +1491,11 @@ function normalizeAuditArtifact(value: string): string {
   return `${lines.join("\n")}\n`;
 }
 
+// A record re-attestation is written after the verdict it supersedes, over the
+// repaired entry, so its fields end the audited subject as the verdicts do.
+// Were they inside it, writing them would move the very hash they re-attest.
 const GATE_COMPLETED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|seal|revision|note))(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:(?:Spec|Code quality|Prototype parity) record re-attestation(?: pack(?: seal)?)?|Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|seal|revision|note))(?:\*\*)?\s*(?::|\|)/i;
 
 const PHASE_AUTHORED_EVIDENCE_FIELD =
   /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Refactor verify revision|Oracle proof|qa-gatekeeper|Shared-artifact re-verify|Surface artifacts)(?:\*\*)?\s*(?::|\|)/i;
@@ -2469,7 +2472,9 @@ async function isAuditedCompletedEntry(
   const hashesRecompute = (["Spec", "Code quality"] as const).every((prefix) => {
     const recorded = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
     return (
-      recorded !== null && SHA256_VALUE.test(recorded) && bareSha256(recorded) === expectedHash
+      recorded !== null &&
+      SHA256_VALUE.test(recorded) &&
+      (bareSha256(recorded) === expectedHash || reattestsSubject(section, prefix, expectedHash))
     );
   });
   if (!hashesRecompute) return false;
@@ -2619,13 +2624,19 @@ function stagePackRecordsPass(
   );
 }
 
-/** One `Shared-artifact re-verify` subsection, judged on its own fields. */
-async function isCurrentReverifyRecord(
+/**
+ * One `Shared-artifact re-verify` subsection, judged on its own fields.
+ *
+ * Answers the record's `Revision` when the record is current, and `null` when
+ * it is not. The revision is the tree the re-verify ran on, which is where the
+ * consumer's staleness interval starts once the record is accepted.
+ */
+async function currentReverifyRecordRevision(
   root: string,
   evidenceFile: string,
   expected: CompletedEvidenceExpectation,
   section: string,
-): Promise<boolean> {
+): Promise<string | null> {
   const revision = rowEvidenceFieldValue(section, "Revision");
   const reverifyCommand = rowEvidenceFieldValue(section, "Re-verify command");
   const reverifyResult = rowEvidenceFieldValue(section, "Re-verify result");
@@ -2656,21 +2667,24 @@ async function isCurrentReverifyRecord(
     recordedHash === null ||
     !SHA256_VALUE.test(recordedHash)
   ) {
-    return false;
+    return null;
   }
   const manifestPaths = manifest
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) => line.trim().replace(/^[-*]\s+/, ""))
     .filter((line) => line.length > 0);
-  if (!manifestPaths.includes(expected.testFile)) return false;
+  if (!manifestPaths.includes(expected.testFile)) return null;
   const computed = await redTestManifestHash(root, manifest);
-  return computed !== null && bareSha256(recordedHash) === computed;
+  return computed !== null && bareSha256(recordedHash) === computed ? revision : null;
 }
 
 /**
- * True when some **audited** record re-verifies this row against the current
- * shared artifact.
+ * The `Revision` of every **audited** record that re-verifies this row against
+ * the current shared artifact, in the order the records are found.
+ *
+ * A generator, so a caller that needs only the first answer stops the walk
+ * there instead of judging every entry in `.qfai/evidence/`.
  *
  * Where the record may live is half the rule. Any Markdown under
  * `.qfai/evidence/` used to qualify, and nothing tied the block to the change
@@ -2691,18 +2705,18 @@ async function isCurrentReverifyRecord(
  *   response and `summary.json` record the stage reviewer's PASS over that
  *   stage's own spec (`hasSealedStageStatus`).
  */
-async function hasCurrentSharedArtifactReverify(
+async function* currentSharedArtifactReverifyRevisions(
   context: CompletedEvidenceContext,
   evidenceFile: string,
   expected: CompletedEvidenceExpectation,
-): Promise<boolean> {
+): AsyncGenerator<string, void, undefined> {
   const root = context.root;
   const evidenceDir = path.join(root, ".qfai", "evidence");
   let entries: Dirent[];
   try {
     entries = await readdir(evidenceDir, { withFileTypes: true });
   } catch {
-    return false;
+    return;
   }
   const target = `spec-${expected.specNumber}/${expected.tddId}`;
   for (const entry of entries) {
@@ -2723,7 +2737,8 @@ async function hasCurrentSharedArtifactReverify(
       if (stageSpecNumber === undefined) continue;
       if (!(await hasSealedStageStatus(context, stageSpecNumber, content))) continue;
       for (const section of sharedArtifactReverifySections(content, target)) {
-        if (await isCurrentReverifyRecord(root, evidenceFile, expected, section)) return true;
+        const revision = await currentReverifyRecordRevision(root, evidenceFile, expected, section);
+        if (revision !== null) yield revision;
       }
       continue;
     }
@@ -2735,11 +2750,23 @@ async function hasCurrentSharedArtifactReverify(
       if (!(await isAuditedCompletedEntry(context, ownerFile, ownerSection, ownerTddId))) continue;
       const audited = phaseAuthoredEvidence(ownerSection, ownerTddId);
       for (const section of sharedArtifactReverifySections(audited, target)) {
-        if (await isCurrentReverifyRecord(root, evidenceFile, expected, section)) return true;
+        const revision = await currentReverifyRecordRevision(root, evidenceFile, expected, section);
+        if (revision !== null) yield revision;
       }
     }
   }
-  return false;
+}
+
+/** True when some audited record re-verifies this row against the current shared artifact. */
+async function hasCurrentSharedArtifactReverify(
+  context: CompletedEvidenceContext,
+  evidenceFile: string,
+  expected: CompletedEvidenceExpectation,
+): Promise<boolean> {
+  const revisions = currentSharedArtifactReverifyRevisions(context, evidenceFile, expected);
+  const first = await revisions.next();
+  await revisions.return(undefined);
+  return first.done !== true;
 }
 
 /**
@@ -3132,7 +3159,7 @@ function missingCompletedEvidenceFields(
   }
   for (const field of ["qa-gatekeeper", "Spec review", "Code quality review"] as const) {
     const verdict = rowEvidenceFieldValue(section, field);
-    if (verdict !== null && verdict.toUpperCase() !== "PASS") {
+    if (verdict !== null && !isPassVerdict(field, verdict)) {
       missing.push(`${field}: PASS`);
     }
   }
@@ -3156,6 +3183,11 @@ function missingCompletedEvidenceFields(
       "Prototype parity audited evidence hash",
       "Prototype parity review pack",
       "Prototype parity review pack seal",
+      // A re-attestation supersedes a verdict, and this row has none to
+      // supersede.
+      "Prototype parity record re-attestation",
+      "Prototype parity record re-attestation pack",
+      "Prototype parity record re-attestation pack seal",
       "Surface artifacts",
     ]) {
       if (rowEvidenceFieldValue(section, field) !== null) {
@@ -3464,7 +3496,106 @@ function missingCompletedEvidenceFields(
     missing.push(`Checkpoint verification revision naming ${REVISION_FORM_HINT}`);
   }
   missing.push(...reviewPacksApart(section));
+  missing.push(...recordReattestationFieldDefects(section));
   return missing;
+}
+
+/**
+ * The verdicts a repaired record can be re-attested for, in the prefix each
+ * one's fields already carry.
+ */
+const REATTESTABLE_VERDICTS = ["Spec", "Code quality", "Prototype parity"] as const;
+
+/**
+ * The field one verdict's re-attestation is recorded under.
+ *
+ * A re-attestation supersedes one verdict, not the entry. The parity verdict's
+ * subject takes the captures its `Surface artifacts` manifest names, so on a
+ * UI-affecting row it never recomputes to the value the field-subject verdicts
+ * read, and one hash beside the entry reaches only one of those subjects.
+ */
+function recordReattestationField(prefix: string): string {
+  return `${prefix} record re-attestation`;
+}
+
+/**
+ * The fields each `<prefix> record re-attestation` owes beside it, in its form.
+ *
+ * The re-attestation is a review pack of its own, and the gate recomputes that
+ * pack's seal. A hash recorded without its pack and seal is one nobody can
+ * trace to a reviewer, so the three are owed together.
+ */
+function recordReattestationFieldDefects(section: string): string[] {
+  const defects: string[] = [];
+  for (const prefix of REATTESTABLE_VERDICTS) {
+    const field = recordReattestationField(prefix);
+    const hash = rowEvidenceFieldValue(section, field);
+    if (hash === null) continue;
+    if (!SHA256_VALUE.test(hash)) defects.push(`${field}: sha256`);
+    const pack = rowEvidenceFieldValue(section, `${field} pack`);
+    if (pack === null) {
+      defects.push(`${field} pack`);
+    } else if (!CANONICAL_REVIEW_PACK.test(recordedPackPath(pack))) {
+      defects.push(`${field} pack: canonical .qfai/review/review-<17-digit timestamp> path`);
+    }
+    const seal = rowEvidenceFieldValue(section, `${field} pack seal`);
+    if (seal === null) {
+      defects.push(`${field} pack seal`);
+    } else if (!SHA256_VALUE.test(seal)) {
+      defects.push(`${field} pack seal: sha256`);
+    }
+  }
+  return defects;
+}
+
+/**
+ * True when this verdict's own re-attestation is the hash `recomputed` has
+ * now: a reviewer re-read the repaired record and attested these bytes.
+ *
+ * Another verdict's re-attestation does not answer for this one. Each names
+ * the subject its reviewer read, and on a repaired UI-affecting row those
+ * subjects differ.
+ */
+function reattestsSubject(section: string, prefix: string, recomputed: string): boolean {
+  const hash = rowEvidenceFieldValue(section, recordReattestationField(prefix));
+  return hash !== null && SHA256_VALUE.test(hash) && bareSha256(hash) === recomputed;
+}
+
+/**
+ * Each re-attestation pack's seal, recomputed from the pack it names when that
+ * pack is in the checkout.
+ *
+ * Review packs are local-only, so an absent pack is not a failure, as for the
+ * verdicts' own packs. The field forms are reported elsewhere, and a value in
+ * the wrong form is not read here.
+ */
+async function invalidRecordReattestationPacks(root: string, section: string): Promise<string[]> {
+  const invalid: string[] = [];
+  for (const prefix of REATTESTABLE_VERDICTS) {
+    const field = recordReattestationField(prefix);
+    if (rowEvidenceFieldValue(section, field) === null) continue;
+    const pack = rowEvidenceFieldValue(section, `${field} pack`);
+    const seal = rowEvidenceFieldValue(section, `${field} pack seal`);
+    if (pack === null || seal === null || !SHA256_VALUE.test(seal)) continue;
+    const packPath = recordedPackPath(pack);
+    if (!CANONICAL_REVIEW_PACK.test(packPath)) continue;
+    try {
+      await lstat(path.join(root, ...packPath.split("/")));
+    } catch (error) {
+      if (isEnoent(error)) continue;
+      invalid.push(`${field} pack path readable when present`);
+      continue;
+    }
+    const files = await collectReviewPackFiles(root, packPath);
+    if (files === null) {
+      invalid.push(`${field} pack resolving to regular files`);
+      continue;
+    }
+    if (reviewPackSeal(files) !== bareSha256(seal)) {
+      invalid.push(`${field} pack seal matching pack contents`);
+    }
+  }
+  return invalid;
 }
 
 /**
@@ -3544,11 +3675,15 @@ async function invalidCompletedEvidenceArtifacts(
     const auditedHash = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
     const packPath = rowEvidenceFieldValue(section, `${prefix} review pack`);
     const packSeal = rowEvidenceFieldValue(section, `${prefix} review pack seal`);
+    // A record repair moves the bytes the verdict read, by design, so a
+    // re-attestation over the repaired bytes stands in for the superseded hash.
+    // The superseded verdict's own pack is still checked below.
     if (
       recomputed !== null &&
       auditedHash !== null &&
       SHA256_VALUE.test(auditedHash) &&
-      bareSha256(auditedHash) !== recomputed
+      bareSha256(auditedHash) !== recomputed &&
+      !reattestsSubject(section, prefix, recomputed)
     ) {
       invalid.push(`${prefix} audited evidence hash matching ${subject}`);
     }
@@ -3611,6 +3746,7 @@ async function invalidCompletedEvidenceArtifacts(
       );
     }
   }
+  invalid.push(...(await invalidRecordReattestationPacks(root, section)));
 
   // The attempt the last round closed on is the review the row-level verdicts
   // record, so each routed reviewer answered there once, over the tree and
@@ -3807,6 +3943,19 @@ type RoundAttemptPack = RoundPackRow & {
 };
 
 /** The outcome an attempt's `reviewer verdict` states, or `null` when it states neither. */
+/**
+ * Whether a row-level verdict field reads PASS.
+ *
+ * The `qa-gatekeeper` field names the attempts behind its PASS on the same line
+ * (`PASS (qa-gatekeeper#1, Round 1, …)`, `PASS x2 (…)`), so a leading PASS is
+ * the verdict, read the way `attemptOutcome` reads a round's. The two review
+ * verdicts carry their provenance in fields of their own and stay exact.
+ */
+function isPassVerdict(field: string, verdict: string): boolean {
+  if (field === "qa-gatekeeper") return attemptOutcome(verdict) === "PASS";
+  return verdict.toUpperCase() === "PASS";
+}
+
 function attemptOutcome(verdict: string | null): "PASS" | "REVISE" | null {
   const value = (verdict ?? "").trim();
   if (/^PASS\b/i.test(value)) return "PASS";
@@ -5300,18 +5449,44 @@ export function staleEvidenceFiles(
   testFile: string,
   cache: Map<string, ChangedSince> = new Map(),
 ): readonly string[] | null {
-  const revision = observationRevision(section);
+  const changes = coveredChangesSince(
+    root,
+    srcRelDir,
+    observationRevision(section),
+    testFile,
+    cache,
+  );
+  return changes.kind === "stale" ? changes.files : null;
+}
+
+/**
+ * What moved under the test file and `srcDir` since `revision`.
+ *
+ * `unchecked` is kept apart from `current`: a revision that names no commit
+ * this clone holds, or no commit at all, says nothing about the tree. A caller
+ * that clears a finding on `current` must not clear it on `unchecked`.
+ */
+type CoveredChanges =
+  { kind: "stale"; files: readonly string[] } | { kind: "current" } | { kind: "unchecked" };
+
+function coveredChangesSince(
+  root: string,
+  srcRelDir: string,
+  revision: string | null,
+  testFile: string,
+  cache: Map<string, ChangedSince>,
+): CoveredChanges {
   // The shape test is a COST guard, not a correctness one, and no row can
   // distinguish it: without it a `working-tree+<hash>` reaches
-  // `changedFilesSince`, `rev-parse` fails, and the answer is `null` either
-  // way. It is kept because this runs per ledger row, and a project on content
-  // addresses would spawn a git process for every one of them to reach a
-  // guaranteed null.
+  // `changedFilesSince`, `rev-parse` fails, and the answer is `unchecked`
+  // either way. It is kept because this runs per ledger row, and a project on
+  // content addresses would spawn a git process for every one of them to reach
+  // a guaranteed `unchecked`.
   if (revision === null || !/^[0-9a-f]{7,64}$/i.test(revision)) {
-    return null;
+    return { kind: "unchecked" };
   }
   if (testFile.length === 0 && srcRelDir.length === 0) {
-    return null;
+    return { kind: "unchecked" };
   }
 
   // ONE diff per distinct revision, over the whole tree, filtered per row in
@@ -5325,15 +5500,60 @@ export function staleEvidenceFiles(
     changed = changedFilesSince(root, revision, []);
     cache.set(revision, changed);
   }
-  if (changed.kind !== "changed") {
-    return null;
-  }
+  if (changed.kind === "unresolvable") return { kind: "unchecked" };
+  if (changed.kind === "unchanged") return { kind: "current" };
 
   const prefix = srcRelDir.length > 0 ? `${srcRelDir}/` : null;
   const covered = changed.files.filter(
     (file) => file === testFile || (prefix !== null && file.startsWith(prefix)),
   );
-  return covered.length > 0 ? covered : null;
+  return covered.length > 0 ? { kind: "stale", files: covered } : { kind: "current" };
+}
+
+/** The completed entry a `done` row's anchor resolved to. */
+interface ResolvedCompletedEntry {
+  evidenceFile: string;
+  section: string;
+  expectation: CompletedEvidenceExpectation;
+}
+
+/**
+ * `staleEvidenceFiles`, read from the newest observation the row has.
+ *
+ * A later row that edits a shared test file re-verifies this one and records
+ * that as a `Shared-artifact re-verify` record in its own audited entry. The
+ * record's `Revision` is the tree the re-verify ran on, so the interval starts
+ * there rather than at the row's own, older observation. Whatever changed after
+ * that revision still makes the row stale.
+ *
+ * Any current record whose interval is clean clears the row. On a linear
+ * history the newest record is the one that can, so the order the records are
+ * found in does not change the answer. A record whose revision names no commit
+ * here clears nothing.
+ *
+ * The records are looked up only for a `done` row that is stale from its own
+ * revision, so a row that is current costs no walk of `.qfai/evidence/`.
+ */
+async function staleSinceNewestObservation(
+  context: CompletedEvidenceContext,
+  srcRelDir: string,
+  entry: ResolvedCompletedEntry | null,
+  testFile: string,
+  cache: Map<string, ChangedSince>,
+): Promise<readonly string[] | null> {
+  if (entry === null) return null;
+  const stale = staleEvidenceFiles(context.root, srcRelDir, entry.section, testFile, cache);
+  if (stale === null) return null;
+  const revisions = currentSharedArtifactReverifyRevisions(
+    context,
+    entry.evidenceFile,
+    entry.expectation,
+  );
+  for await (const revision of revisions) {
+    const since = coveredChangesSince(context.root, srcRelDir, revision, testFile, cache);
+    if (since.kind === "current") return null;
+  }
+  return stale;
 }
 
 /**
@@ -6771,7 +6991,7 @@ async function validateSpecTddList(
       );
     }
 
-    let lastResolvedSection = "";
+    let lastResolved: ResolvedCompletedEntry | null = null;
     for (const anchor of anchors) {
       relatedFile = anchor.file;
       if (anchor.file !== expectedFile) {
@@ -6814,10 +7034,6 @@ async function validateSpecTddList(
               ? "CON-API-Refs"
               : "TC-Refs";
         const section = evidenceIndex.sections.get(anchor.fragment) ?? "";
-        // Kept for the staleness check below, which needs the section this row
-        // actually resolved to rather than the last one the loop happened to
-        // look at.
-        lastResolvedSection = section;
         const expectation = {
           specNumber,
           tddId,
@@ -6829,6 +7045,10 @@ async function validateSpecTddList(
           preSplit: usesPreSplitEvidence(layer, evidence),
           reviewUnit: reviewUnitOf(ref, [...ledgerRows()]),
         } satisfies CompletedEvidenceExpectation;
+        // Kept for the staleness check below, which needs the entry this row
+        // actually resolved to rather than the last one the loop happened to
+        // look at.
+        lastResolved = { evidenceFile: anchor.file, section, expectation };
         // A backfilled row is exempt from the reviewer-pack fields, and the
         // exemption is reported rather than applied silently. The gate's whole
         // value is that a `done` row means a reviewed one, so a row that is
@@ -6868,15 +7088,15 @@ async function validateSpecTddList(
     }
 
     if (anchorFailure.length === 0) {
-      const staleFiles = staleEvidenceFiles(
-        root,
+      const staleFiles = await staleSinceNewestObservation(
+        evidenceContext,
         srcRelDir,
-        lastResolvedSection,
+        lastResolved,
         cell(ref, "Test file"),
         revisionDiffCache,
       );
       if (staleFiles !== null) {
-        const revision = observationRevision(lastResolvedSection) ?? "";
+        const revision = observationRevision(lastResolved?.section ?? "") ?? "";
         const shown = staleFiles.slice(0, 5);
         const more =
           staleFiles.length > shown.length ? ` (+${staleFiles.length - shown.length})` : "";

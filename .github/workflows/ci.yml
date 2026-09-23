@@ -389,7 +389,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          396cda74330b12b3a4a4bc4058b57534d21b95c4c3229ae4caf7fa7dc7db24b8  .github/pinned-bytes.txt
+          60b742beef8099c46a86a20bb291488a44edef8718c6d57c6edb0759d8842981  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -645,6 +645,15 @@ jobs:
       - name: Build qfai (e2e + integration slices)
         if: matrix.slice == 'e2e' || matrix.slice == 'integration'
         run: pnpm -C packages/qfai build
+      - name: Record the runner CPU (pr-fix slice)
+        # The PowerShell host this slice spawns can crash on nearly every case of
+        # a leg, and whether that follows the runner's CPU model is the open
+        # question. The job log carries no hardware detail without this line.
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped test lanes spawn no PowerShell host, so there is
+        # no crash on that side whose runner a CPU line would identify.
+        if: matrix.slice == 'pr-fix'
+        run: lscpu
       - name: Run tests (${{ matrix.slice }})
         # The per-slice script, not the generic runner with a project name.
         # While this read `test -- --project <slice>` a slice with no script of

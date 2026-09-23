@@ -125,6 +125,12 @@
   // the line followable rather than frozen — `0.22.1` declares `>=20` and is still offered — so
   // this is not a pin, and nothing stops receiving fixes.
   //
+  // What it cannot narrow is a package that declares no `engines` at all: there is nothing to
+  // compare, so every release of it passes whatever the floor says. A grouped update can
+  // therefore lose the member carrying the constraint and still offer the member that does not,
+  // which is how `@vitest/coverage-v8` once arrived a major ahead of `vitest` itself. The peer
+  // range in the group's own manifests is what catches that, and it catches it at install.
+  //
   // The floor itself is STATED rather than left for Renovate to infer from `engines`. Inference
   // is per manifest, this workspace has several, and the value that must bound a devDependency is
   // the one the published package promises — which is the package manifest's, not the root's.

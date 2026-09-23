@@ -16,7 +16,7 @@
 - Date: 2026-09-23
 - Primary: Behavior
 - Tags: @docs, @test
-- Summary: Under CR-20260923-0004, AC-0004-0041, BR-0004-0035, EX-0004-0044
+- Summary: Under CR-20260923-0011, AC-0004-0041, BR-0004-0035, EX-0004-0044
   and TC-0004-0076 state that a `blocked` row passes on a well-formed
   `Blocked-By`, naming what it waits on and the status it was blocked at, as
   `TDDLIST_BLOCKED_MISSING_REF` checks. No ledger row changes.
@@ -134,7 +134,7 @@ only, and a `blocked` ledger row needs nothing beyond its `Blocked-By`.
 | 2026-09-23 | DL-0026 | TC-0004-0018 is Level `unit`; TDD-0018 and TDD-0072 are Layer `unit`           |
 | 2026-09-23 | DL-0027 | TDD-0072 runs after TDD-0018 and cites it as `Satisfied-by`                    |
 | 2026-09-23 | DL-0028 | TDD-0067..TDD-0071 need no change; TC-0004-0074 keeps one row                  |
-| 2026-09-23 | DL-0029 | A blocked row passes on a well-formed `Blocked-By` (CR-20260923-0004)          |
+| 2026-09-23 | DL-0029 | A blocked row passes on a well-formed `Blocked-By` (CR-20260923-0011)          |
 
 ## Decision Log
 
@@ -948,7 +948,7 @@ scope:
   - spec-0004/04_Business-Rules.md (BR-0004-0035)
   - spec-0004/05_Examples.md (EX-0004-0044)
   - spec-0004/06_Test-Cases.md (TC-0004-0076)
-notes: The items state TDDLIST_BLOCKED_MISSING_REF as it is; the passing Blocked-By names its status (CR-20260923-0004, DR-0004-0043).
+notes: The items state TDDLIST_BLOCKED_MISSING_REF as it is; the passing Blocked-By names its status (CR-20260923-0011, DR-0004-0043).
 ```
 
 #### Migration / Follow-ups
@@ -980,7 +980,7 @@ notes: The items state TDDLIST_BLOCKED_MISSING_REF as it is; the passing Blocked
 
 | CR ID            | Upstream artifact                                                                                                                 | Mode      | Approved by   | Applied at           |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------- | -------------------- |
-| CR-20260923-0004 | `spec-0004/03_Acceptance-Criteria.md`, `spec-0004/04_Business-Rules.md`, `spec-0004/05_Examples.md`, `spec-0004/06_Test-Cases.md` | re-derive | yusuke_senaga | 2026-09-23T20:08:13Z |
+| CR-20260923-0011 | `spec-0004/03_Acceptance-Criteria.md`, `spec-0004/04_Business-Rules.md`, `spec-0004/05_Examples.md`, `spec-0004/06_Test-Cases.md` | re-derive | yusuke_senaga | 2026-09-23T20:08:13Z |
 
 ## 2026-09-04
 
