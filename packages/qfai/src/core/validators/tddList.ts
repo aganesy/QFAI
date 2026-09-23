@@ -7561,22 +7561,24 @@ type CarrierOnlyContext = {
 
 /**
  * The `TC-*` tokens of a `done` row whose `Layer` owns `TC-Refs`, upper-cased
- * and once each. A decomposed `TC-NNNN-NNNN` brings the declared case it
- * resolves to as well, since an annotation may name either. Empty for any
- * other row.
+ * and once each, with the ids an annotation for each may carry: the token, and
+ * for a decomposed `TC-NNNN-NNNN` the declared case it resolves to. Empty for
+ * any other row.
  */
-function completedRowTestCases(ref: LedgerRowRef, knownTcIds: ReadonlySet<string>): string[] {
-  if (!TDD_DONE_STATUSES.has(cell(ref, "Status").toLowerCase())) return [];
-  if (!isCoverageBearingRow(ref.scan, ref.row)) return [];
-  const testCases = new Set<string>();
+function completedRowTestCases(
+  ref: LedgerRowRef,
+  knownTcIds: ReadonlySet<string>,
+): Map<string, string[]> {
+  const testCases = new Map<string, string[]>();
+  if (!TDD_DONE_STATUSES.has(cell(ref, "Status").toLowerCase())) return testCases;
+  if (!isCoverageBearingRow(ref.scan, ref.row)) return testCases;
   for (const token of splitTcRefs(cell(ref, "TC-Refs"))) {
     const normalized = token.toUpperCase();
     if (!isWellFormedTcRef(normalized)) continue;
-    testCases.add(normalized);
     const declared = resolveDeclaredTcId(normalized, knownTcIds);
-    if (declared !== undefined) testCases.add(declared);
+    testCases.set(normalized, [...new Set([normalized, declared ?? normalized])]);
   }
-  return [...testCases];
+  return testCases;
 }
 
 /**
@@ -7601,7 +7603,7 @@ async function validateCompletedRowsRunATest(
 ): Promise<Issue[]> {
   const candidates = [...rows]
     .map((ref) => ({ ref, testCases: completedRowTestCases(ref, context.knownTcIds) }))
-    .filter(({ testCases }) => testCases.length > 0);
+    .filter(({ testCases }) => testCases.size > 0);
   if (candidates.length === 0) return [];
   const homes = await readAnnotationHomes();
   if (homes === null) {
@@ -7616,10 +7618,11 @@ async function validateCompletedRowsRunATest(
   const carriers = homes.carriers.get(context.specNumber);
   const issues: Issue[] = [];
   for (const { ref, testCases } of candidates) {
-    if (testCases.some((testCase) => tests?.has(testCase) === true)) continue;
-    for (const testCase of testCases) {
-      const named = carriers?.get(testCase);
-      if (named === undefined) continue;
+    const aliases = [...testCases.values()].flat();
+    if (aliases.some((alias) => tests?.has(alias) === true)) continue;
+    for (const [testCase, ids] of testCases) {
+      const named = new Set(ids.flatMap((id) => [...(carriers?.get(id) ?? [])]));
+      if (named.size === 0) continue;
       issues.push(carrierOnlyIssue(ref, testCase, named, context));
     }
   }

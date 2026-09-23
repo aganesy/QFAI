@@ -560,7 +560,7 @@ describe("a done row rests on a test, not on an annotation carrier", () => {
     );
   });
 
-  it("reads a decomposed token as the case it resolves to", async () => {
+  it("reads a decomposed token through the case it resolves to", async () => {
     await withLedger(
       [
         BASE_HEADERS,
@@ -570,10 +570,34 @@ describe("a done row rests on a test, not on an annotation carrier", () => {
       (issues) => {
         const found = carrierOnly(issues);
         expect(found).toHaveLength(1);
-        expect(found[0]?.refs).toEqual(["TDD-0001", "TC-0001", CARRIER]);
+        expect(found[0]?.refs).toEqual(["TDD-0001", "TC-0001-0001", CARRIER]);
       },
       UNIT_TEST_CASE,
       { files: { [CARRIER]: "- QFAI:SPEC-0001:TC-0001\n" }, config },
+    );
+  });
+
+  it("reports a decomposed token once when carriers name both of its forms", async () => {
+    const other = "tests/integration/more-traceability.md";
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        const found = carrierOnly(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.refs).toEqual(["TDD-0001", "TC-0001-0001", other, CARRIER]);
+      },
+      UNIT_TEST_CASE,
+      {
+        files: {
+          [CARRIER]: "- QFAI:SPEC-0001:TC-0001\n",
+          [other]: "- QFAI:SPEC-0001:TC-0001-0001\n",
+        },
+        config,
+      },
     );
   });
 
