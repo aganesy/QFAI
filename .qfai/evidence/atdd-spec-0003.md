@@ -393,6 +393,10 @@ packages/qfai/tests/integration/shippedWorkflowCheckIndependence.test.ts
 - Code quality review pack seal: 2bd549a351ad86e4057ad38bbaab854667e3f3d2fb01d3e060b47a15e2525cc9
 - Prototype parity: n/a (not UI-affecting)
 - Prototype parity reviewed revision: 8264ee9066edb66e49848e1f385cc15431220c42
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowCheckIndependence.test.ts --reporter=verbose && pnpm -C packages/qfai exec vitest run --maxWorkers=7 --testTimeout=600000
+- Checkpoint verification result: PASS — step 1, the Test file: Test Files 1 passed (1); Tests 22 passed (22), naming TC-0003-0057 (TDD-0061) as passed. Step 2, the full suite: Test Files 771 passed | 3 skipped (774); Tests 14542 passed | 82 skipped (14624), exit 0. The worker count and per-test timeout are raised because two slow suites time out at the default under a full parallel run on this host
+- Checkpoint verification revision: b8b38f2bf640432111527922e83bad3939ab8a56
+- Checkpoint verification seal: 0c57eca84fd2f8cb4124cf8a84eebf7dfc92c67bad9b87e2930f3009e94b194f
 
 ### TDD-0062
 
@@ -613,6 +617,9 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / 
 | 26 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0060 re-taken falsifiability proof under the corrected test | #tdd-0060 | Round 1 Replacement proof fields | PASS |
 | 27 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0061 re-taken falsifiability proof under the corrected test | #tdd-0061 | Round 1 Replacement proof fields | PASS |
 | 28 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: build-phase GREEN on the restored tree for TDD-0058 to TDD-0061 | #tdd-0058 … #tdd-0061 | Round 1 Revision, GREEN and Refactor verify fields | PASS |
+| 29 | completion-reviewer | completion-reviewer | /qfai-implement: completion review of TDD-0058 to TDD-0061, attempt 2 | #tdd-0058 … #tdd-0061 | one response per row in that row's attempt-2 review pack | PASS |
+| 30 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of TDD-0058 to TDD-0061, attempt 2 | #tdd-0058 … #tdd-0061 | one response per row in that row's attempt-2 review pack | PASS |
+| 31 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0061, the row's Test file and the full suite | #tdd-0061 | Checkpoint verification fields | PASS |
 
 ## Cross-spec obligations
 
@@ -639,5 +646,8 @@ Recorded per row under `## Ledger rows advanced`.
 
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
-FAIL — the pack's other ATDD-owned rows are still owed, as the matrix records. The
-seven rows this run took up are handed to `/qfai-implement`.
+FAIL — the pack's other ATDD-owned rows are still owed, as the matrix records.
+
+The seven rows this run took up are `done`. `/qfai-implement` took each through the
+falsifiability path, and `qa-gatekeeper`, `completion-reviewer` and
+`implementation-reviewer` passed each one. `TDD-0061` closed on the full suite.
