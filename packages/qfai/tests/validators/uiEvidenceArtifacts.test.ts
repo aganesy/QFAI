@@ -83,6 +83,7 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues).toEqual([]);
   });
 
+  // QFAI:SPEC-0004:TC-0004-0005
   it("contracts/ui が無い場合はチェックをスキップする", async () => {
     const root = await newTempRoot();
 

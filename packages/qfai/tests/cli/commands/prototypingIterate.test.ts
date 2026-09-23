@@ -351,6 +351,7 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
   });
 
   // QFAI:SPEC-0012:TC-0012-0358
+  // QFAI:SPEC-0012:TC-0012-0352
   it("TC-0012-0358 (TDD-0373): exit 65 when latest iter index === 9; exit 0 when index <= 8 without convergence", async () => {
     // Synthesizes both halves of TC-0012-0358 in one block. The "exit 65
     // at index 9" half overlaps with the TC-0325 test above; the "exit 0
@@ -1400,6 +1401,7 @@ describe("iterate-plan.json design tokens (TC-3.5.x)", () => {
 
 // QFAI:SPEC-0012:TC-0012-0373
 describe("runPrototypingIterate cycle >= 1 lock drift stderr (TC-0012-0373)", () => {
+  // QFAI:SPEC-0012:TC-0012-0327
   it("exits 2 with stderr matching /DESIGN\\.md hash mismatch.*re-run from cycle 0/ and writes no review payload for the failed cycle", async () => {
     // TC-0012-0373 pins the canonical operator-facing stderr phrase
     // "DESIGN.md hash mismatch" plus "re-run from cycle 0" so the
@@ -2539,6 +2541,7 @@ describe("resolveSurfaceUnion (direct unit test for the union composition rule)"
   // `prototyping iterate --cycle 0` hits the zero-UI short-circuit.
   // Fixture seeds `specsDir` outside `root` and asserts the union
   // includes the pinned spec.
+  // QFAI:SPEC-0012:TC-0012-0429
   it("resolves primarySpecId via absolute `paths.specsDir` override", async () => {
     const root = await newTempDir();
     // Stage an absolute specsDir OUTSIDE root so a `root + absolute` join
