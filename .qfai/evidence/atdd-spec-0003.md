@@ -80,6 +80,14 @@ Preflight: confidence high
 | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
 | S1 | adopted | 2026-09-23T11:27:41Z | working-tree+b6717d99336497714758bb9eafe114d2ddc4f4c194e332da052432f02b99161f | 2026-09-23T11:28:00Z | neither test the change request names for TDD-0001 sits in the directory TC-0003-0001's Level routes to | empty | none in flight | 1 | 0 | 0 |
 
+### /qfai-implement — run started 2026-09-23T11:42:45.972Z
+
+Preflight: confidence high
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-23T11:44:45Z | 0d2064bd1dd3e976ae8e39ea31b9c04f6e180209 | 2026-09-23T11:44:51Z | TDD-0037 is done under a replaced test, and the one exit from done, the upstream reset, is refused for a row the approving CR's actions do not name | empty | none in flight | 1 | 0 | 0 |
+
 ## Work performed (what changed, where)
 
 - New `packages/qfai/tests/integration/shippedWorkflowCheckIndependence.test.ts`: the
@@ -867,6 +875,39 @@ describe is unchanged. Its selector was re-run against the edited file:
 - Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 23 skipped (24)
 - Re-verify revision: working-tree+7e98884c7e3c2ab9aa28703507d9661672229d1a78219c693a823672c1bb78b0
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/init.ts, `runInit`, `copyTemplateTree(qfaiAssets, destQfai, …)` at line 509 — it writes under `.qfai/` exactly the tree `packages/qfai/assets/init/.qfai/` ships, which holds `assistant/` and `waivers.yml` and no artifact directory
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0001: Empty directory initialization"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 23 skipped (24). The row's case fails on `AssertionError: init wrote an artifact directory under .qfai/: expected [ 'specs' ] to deeply equal []` at `tests/integration/initSpec0003.test.ts:75:72`
+
+The edit, an empty file added to the shipped tree:
+
+```diff
+diff --git a/packages/qfai/assets/init/.qfai/specs/.gitkeep b/packages/qfai/assets/init/.qfai/specs/.gitkeep
+new file mode 100644
+index 000000000..e69de29bb
+```
+
+- Round 1: Falsifiability revision: working-tree+66d3dc33e57a53cc76dcc281e6545ef8d68d826d2555de7de7dd3a97f8ee6fbc
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 5944d673da0c6056d3cb765a2a2bb103efe8ab8595e2f0b3d11715a7bb56ecb3
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/initSpec0003.test.ts
+```
+
+- Round 1: Revision: 0d2064bd1dd3e976ae8e39ea31b9c04f6e180209
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0001: Empty directory initialization"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24). Run after `rm -rf packages/qfai/assets/init/.qfai/specs`, which leaves the shipped tree as it is at that revision
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 0d2064bd1dd3e976ae8e39ea31b9c04f6e180209
+
 ### TDD-0037
 
 - TDD-ID: TDD-0037
@@ -979,6 +1020,10 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / 
 | 47 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: shared-artifact re-verify of TDD-0025 under the edited Test file | #tdd-0001 | #tdd-0001 Shared-artifact re-verify; the selector passes | PASS |
 | 48 | completion-reviewer | - | /qfai-atdd: completion review of TDD-0001 and TDD-0037 | #tdd-0001, #tdd-0037 | not run in this invocation | PENDING |
 | 49 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: add the TC-0003-0001 verify bullet 3 assertion to the TDD-0001 case, re-take the mutation trial and the RED test hash | #tdd-0001 | packages/qfai/tests/integration/initSpec0003.test.ts; #tdd-0001 | PASS |
+| 50 | backend-engineer | backend-engineer | /qfai-implement: TDD-0001 falsifiability run with an empty `specs/.gitkeep` added to the shipped `.qfai/` tree | #tdd-0001 | #tdd-0001 Round 1 falsifiability fields | PASS |
+| 51 | backend-engineer | backend-engineer | /qfai-implement: TDD-0001 restored GREEN and whole-file Refactor verify | #tdd-0001 | #tdd-0001 Round 1 GREEN and Refactor verify fields | PASS |
+| 52 | backend-engineer | backend-engineer | grilling(S1@2026-09-23T11:42:45.972Z/agents): TDD-0037 stays at done, and re-taking its proof waits for a Change Request that names the row | execution-ledger.md allowed transitions; change-request-reset.md; CR-20260923-0011 approved action 2 | done leaves only by the upstream reset, which change-request-reset.md refuses for a row the CR's approved actions do not name, and CR-20260923-0011 names TDD-0001 and says no other row. Disagreeing position: the work order asked to bring the row to refactor | PASS |
+| 53 | backend-engineer | backend-engineer | /qfai-implement: TDD-0037 Selector copied from the handback into the ledger | #tdd-0037; CR-20260923-0011 | test-list.md row 37 Selector, which CR-20260923-0011 says follows the rename | PASS |
 
 ## Cross-spec obligations
 
@@ -1005,9 +1050,11 @@ Recorded per row under `## Ledger rows advanced`.
 - The `TDD-0001` case asserts all three verify bullets of `TC-0003-0001`. Its one
   mutation breaks bullet 1; no mutation has been run against the bullet 2 and bullet 3
   assertions.
-- Row 37's `Selector` still holds the old describe title until `/qfai-implement` copies
-  the one in the `TDD-0037` entry, so validate reports `TDDLIST_SELECTOR_UNRESOLVED` on
-  it until then.
+- `TDD-0037` stays `done` with its proof marked stale. The one exit from `done` is the
+  upstream reset, and `CR-20260923-0011`'s approved actions name `TDD-0001` alone, so
+  re-taking the proof needs a Change Request that names `TDD-0037`. Its Evidence cell
+  still points at `implement-spec-0003.md`, which the row's `Integration` layer does not
+  own.
 - The comments inside the `TDD-0037` count case still speak of four and three installs.
   Only the titles were in scope.
 
