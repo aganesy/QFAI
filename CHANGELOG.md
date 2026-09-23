@@ -14,6 +14,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   than borrow an id. `REQ-0012-0077` also named a test file that does not
   exist, and now names the one that does.
 
+- **Four test cases only an annotation carrier named now have a test**
+  (#2160). Six completed rows claimed them, and no test file carried their
+  annotation, so nothing ran them:
+  - `findDesignMdViolations` returns the same violations in the same order on
+    every call, reads no clock and changes neither input;
+  - the prototyping reviewer prompt names the inputs the reviewer reads;
+  - the reviewer prompt leaves brand identity to root `DESIGN.md` and carries
+    the `lap-*` catalog;
+  - `SKILL.md` delegates generation and evaluation to two different
+    sub-agents.
+    Each row's selector now names its test. The carrier-only backlog falls from
+    56 entries to 50.
+
 ## [1.12.2] - 2026-09-23
 
 ### Added
@@ -497,19 +510,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the options, four weaknesses of the adopted unit and the dissent against it.
 
 ### Fixed
-
-- **Four test cases only an annotation carrier named now have a test**
-  (#2160). Six completed rows claimed them, and no test file carried their
-  annotation, so nothing ran them:
-  - `findDesignMdViolations` returns the same violations in the same order on
-    every call, reads no clock and changes neither input;
-  - the prototyping reviewer prompt names the inputs the reviewer reads;
-  - the reviewer prompt leaves brand identity to root `DESIGN.md` and carries
-    the `lap-*` catalog;
-  - `SKILL.md` delegates generation and evaluation to two different
-    sub-agents.
-    Each row's selector now names its test. The carrier-only backlog falls from
-    56 entries to 50.
 
 - **The spec-0012 capture and serve rows name every case their test case
   holds** (#1436). Each row's test case is verified by several `it` blocks —
