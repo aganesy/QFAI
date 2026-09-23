@@ -6,6 +6,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0003 states what `qfai init` and the shipped workflows do now**
+  (#2190). Five of its obligations described the product before a deliberate
+  change and the tests asserted the opposite. They said init creates six
+  artifact directories, writes a nine-line `.gitignore` block, and seeds a
+  steering README. They also said a legacy path only warns, and two jobs
+  install. Five more partly disagreed. Each statement now says what the tests
+  and the source do. No test or product code changed, so no ledger row is
+  reopened.
+
 - **The completion gate reads a `Record re-attestation`** (#2196). Repairing a
   completed row's evidence record after its review moves the bytes the review
   hashed, so the recorded `Audited evidence hash` no longer recomputes. The
