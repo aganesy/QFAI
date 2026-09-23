@@ -357,7 +357,7 @@ describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing
 });
 
 // QFAI:SPEC-0003:TC-0003-0037
-describe("TC-0003-0037 (TDD-0037): two installing job declarations, four and three executing instances, zero secret references", () => {
+describe("TC-0003-0037 (TDD-0037): three installing job declarations, nine and eight executing instances, zero secret references", () => {
   // Setup is TC-0003-0036's init output tree (the scriptless adopter);
   // every count below is taken over EVERY workflow file init wrote.
   // Scope notes, disclosed:
@@ -466,7 +466,7 @@ describe("TC-0003-0037 (TDD-0037): two installing job declarations, four and thr
     return count;
   }
 
-  it("the init-written jobs that install dependencies are exactly the docs and validate lanes, four instances on a pull request and three on a push", async () => {
+  it("the init-written jobs that install dependencies are exactly the docs, test and validate lanes, nine instances on a pull request and eight on a push", async () => {
     const files = await initWorkflowSet();
     // Non-vacuity: the whole multi-file set is what is being counted.
     expect(files.length, "the init-written set must have two or more files").toBeGreaterThanOrEqual(

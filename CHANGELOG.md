@@ -45,6 +45,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `scripts/dogfood-backlog.json`: spec-0002 3, spec-0003 2, spec-0004 5,
   spec-0010 3, spec-0012 19 and spec-0014 1, in the `tdd` and `full` profiles.
 
+- **The rest of spec-0003 states what `qfai init` and the shipped workflows
+  do now** (#2203). Sixteen more statements still described the product before
+  a deliberate change. They said init creates the artifact directories and a
+  steering README, and that the `.gitignore` block carries README negations.
+  They also said a legacy layout only warns on stdout, two jobs install, one
+  job requests full history, the shape pins nine dimensions, and a second
+  runner tier is deferred. Each now says what the tests and the source do. The
+  one ledger row whose test case moved, `TDD-0001`, is reopened: its test
+  never asserted that init leaves the artifact directories out.
+
 ## [1.12.3] - 2026-09-24
 
 ### Fixed
