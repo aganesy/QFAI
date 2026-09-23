@@ -139,7 +139,7 @@ describe("defaultCaptureScreen — HTTP response-status guard", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("REJECTS a 399 redirect that did not resolve (boundary just below 400 is OK)", async () => {
+  it("ACCEPTS a 399 response, the last status below the 400 rejection boundary", async () => {
     const dir = await newTempDir();
     const page = makeStubPage({ status: () => 399 });
     vi.doMock("playwright", () => makeStubModule(page));

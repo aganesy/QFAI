@@ -34,6 +34,7 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
   });
 
   // TC-3.4.1
+  // QFAI:SPEC-0012:TC-0012-0319
   it("returns converged when all three arrays are empty", () => {
     const iter = baseIter({ blockingFindings: [] });
     expect(shouldStop([iter])).toBe("converged");
@@ -46,6 +47,7 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
   });
 
   // TC-3.4.3
+  // QFAI:SPEC-0012:TC-0012-0320
   it("returns null when layoutAntiPatternsDetected is non-empty (other conditions met)", () => {
     const iter = baseIter({
       blockingFindings: [],
@@ -55,6 +57,7 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
   });
 
   // TC-3.4.4
+  // QFAI:SPEC-0012:TC-0012-0329
   it("returns null when designMdViolations is non-empty (other conditions met)", () => {
     const iter = baseIter({
       blockingFindings: [],
@@ -313,12 +316,14 @@ describe("iteration paths", () => {
 });
 
 describe("type guards", () => {
+  // QFAI:SPEC-0012:TC-0012-0341
   it("isPivotDirective accepts the 3 levels", () => {
     expect(isPivotDirective("continue")).toBe(true);
     expect(isPivotDirective("refine")).toBe(true);
     expect(isPivotDirective("pivot")).toBe(true);
   });
 
+  // QFAI:SPEC-0012:TC-0012-0341
   it("isPivotDirective rejects other values", () => {
     expect(isPivotDirective("stop")).toBe(false);
     expect(isPivotDirective(undefined)).toBe(false);

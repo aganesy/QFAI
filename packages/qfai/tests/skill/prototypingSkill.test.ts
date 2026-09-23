@@ -223,3 +223,36 @@ describe("prototyping skill asset — multi-spec wiring (spec-0012 CHG-002)", ()
     expect(skillContent.toLowerCase()).toMatch(/every ui-bearing spec[\s\S]{0,80}one invocation/i);
   });
 });
+
+describe("prototyping skill asset — the reviewer and its inputs", () => {
+  /** One level-2 section of a Markdown asset, heading excluded. */
+  function section(markdown: string, heading: string): string {
+    const start = markdown.indexOf(`\n## ${heading}\n`);
+    if (start < 0) throw new Error(`no "## ${heading}" section`);
+    const body = markdown.slice(start + heading.length + 5);
+    const next = body.search(/\n## /);
+    return next < 0 ? body : body.slice(0, next);
+  }
+
+  // QFAI:SPEC-0012:TC-0012-0294
+  it("the reviewer prompt names every input class the reviewer reads", async () => {
+    const inputs = section(await readPrototypingAsset("references/reviewer-prompt.md"), "Inputs");
+    for (const input of ["Screenshot:", "HTML snapshot:", "Prior reviews:", "Root `DESIGN.md`"]) {
+      expect(inputs, `the Inputs section names ${input}`).toContain(input);
+    }
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0336
+  it("the reviewer prompt leaves brand identity to root DESIGN.md and carries the lap-* catalog", async () => {
+    const prompt = await readPrototypingAsset("references/reviewer-prompt.md");
+    expect(prompt).toMatch(/Brand identity \([^)]*\) is\s+locked by root `DESIGN\.md`/);
+    expect(prompt).toMatch(/^## Layout anti-pattern matching \(`lap-\*`\)$/m);
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0351
+  it("SKILL.md delegates generation and evaluation to two different sub-agents", async () => {
+    const skill = await readPrototypingAsset("SKILL.md");
+    expect(skill).toMatch(/^\|\s*Generation\s*\|\s*product-experience-architect\s*\|/m);
+    expect(skill).toMatch(/^\|\s*Evaluation scoring\s*\|\s*product-surface-reviewer\s*\|/m);
+  });
+});

@@ -577,3 +577,62 @@ describe("TC-0003-0040 (TDD-0040): verdict exits 0 on an empty matrix and carrie
     expect(needsList).toContain("detection");
   });
 });
+
+describe("a default-branch push declared covered by its pull request runs nothing it already ran", () => {
+  // `QFAI_CI_PUSH_POLICY=protected` is the adopter's statement that every merge passed these
+  // checks on a pull request first. Only that exact value on a push may skip, because a skip
+  // anywhere else would be a claim nothing established.
+  const CASES: ReadonlyArray<{ event: string; policy: string; skips: boolean }> = [
+    { event: "push", policy: "protected", skips: true },
+    { event: "push", policy: "", skips: false },
+    { event: "push", policy: "Protected", skips: false },
+    { event: "pull_request", policy: "protected", skips: false },
+  ];
+
+  /** The first `run:` body of one job in one shipped file. */
+  async function shippedBody(file: string, jobId: string): Promise<string> {
+    const doc: unknown = parse(await readFile(shippedWorkflowPath(file), "utf-8"));
+    const job = findWorkflowJob(doc, jobId);
+    const body = job === undefined ? undefined : firstRunBody(job);
+    if (typeof body !== "string") {
+      throw new Error(`${file} declares no ${jobId} job with a run: step`);
+    }
+    return body;
+  }
+
+  /** A repository whose one change is both source and a document, so neither lane skips on its own. */
+  async function changedRepo(): Promise<{ dir: string; baseSha: string }> {
+    const repo = await makeRepo();
+    await commitChange(repo.dir, "src/index.ts", "export const marker = 1;\n");
+    await commitChange(repo.dir, "docs/guide.md", "# guide\n");
+    return repo;
+  }
+
+  it.each(CASES)(
+    "the test lanes: $event with policy '$policy' skips=$skips",
+    async ({ event, policy, skips }) => {
+      const { dir, baseSha } = await changedRepo();
+      const run = await runShell(await shippedBody(ORCHESTRATOR, "detection"), dir, {
+        QFAI_BASE_REF: baseSha,
+        QFAI_EVENT_NAME: event,
+        QFAI_PUSH_POLICY: policy,
+      });
+      expect(run.status).toBe(0);
+      expect(lanesOf(run)).toEqual(skips ? [] : [...FULL_LANES]);
+    },
+  );
+
+  it.each(CASES)(
+    "the document checks: $event with policy '$policy' skips=$skips",
+    async ({ event, policy, skips }) => {
+      const { dir, baseSha } = await changedRepo();
+      const run = await runShell(await shippedBody("qfai-docs.yml", "scope"), dir, {
+        QFAI_BASE_REF: baseSha,
+        QFAI_EVENT_NAME: event,
+        QFAI_PUSH_POLICY: policy,
+      });
+      expect(run.status).toBe(0);
+      expect(run.outputs["run"]).toBe(skips ? "false" : "true");
+    },
+  );
+});
