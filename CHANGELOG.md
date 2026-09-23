@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`/qfai-implement` says who mutates a predicate that lives in the test
+  file** (#2191). Some acceptance tests plant their own broken copy of a
+  shipped workflow, so the code they exercise is a checker inside the test and
+  no production edit can make them fail. The falsifiability step now takes a
+  mutation of that checker as a reverted probe rather than an edit of the
+  acceptance test, and takes the `RED test hash` before the mutation, so the
+  hash matches the restored file.
+
 - **A runner whose PowerShell host crashes on nearly every case stops
   rerunning them** (#2181). A case whose host crashed reruns once, which
   absorbs the rare crash. On a host that crashes on nearly every case every
