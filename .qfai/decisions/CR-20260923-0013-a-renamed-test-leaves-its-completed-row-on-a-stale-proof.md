@@ -6,9 +6,9 @@
 - Raised at: `2026-09-23T11:50:30Z`
 - Class: `defect`
 - Status: `approved`
-- Approved by: `claude-code` — under the user's standing instruction to process every issue of this session with its own judgment; NOT a user decision on these options
+- Approved by: `claude-code` — under the user's standing instruction to process every issue of this session with its own judgment; NOT a user decision on this change
 - Approved at: `2026-09-23T11:51:00Z`
-- Approved option: `1`
+- Approved option: `-`
 - Applied at: `2026-09-23T11:52:00Z` — see Resolution
 - Superseded by: `-`
 
@@ -31,17 +31,35 @@ The row's evidence also still lives in `implement-spec-0003.md`, while an
 `Integration` row's evidence belongs in `atdd-spec-0003.md`. That mismatch is why
 `validate` reports `QFAI-TDDLIST-008` and `QFAI-TDDLIST-011` on it.
 
-## Options (at least 3) and recommendation
+## Reproduction
 
-| #   | Option                                                                                                                     | Cost                      | Risk                                                       | Recommended |
-| --- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ---------------------------------------------------------- | ----------- |
-| 1   | Reset `TDD-0037` to `todo` with this record in `DR-ID`, and let `/qfai-implement` re-take its proof in `atdd-spec-0003.md` | One row through the cycle | None found; the obligation and the behaviour are unchanged | ✅          |
-| 2   | Leave `TDD-0037` at `done` and revert the rename                                                                           | None                      | The test names keep contradicting what the case asserts    |             |
-| 3   | Leave `TDD-0037` at `done` with the renamed test and the stale proof                                                       | None                      | A completed row rests on a proof no current test carries   |             |
+From `05fe504d5d1c2e636744532f80976adec2c8893c`, the revision this request was
+raised on. The ledger row and the test carry the renamed title:
+
+```text
+.qfai/specs/spec-0003/tdd/test-list.md
+ 41: | TDD-0037 | ... | ... three installing job declarations, nine and eight executing instances, ... | done | ... implement-spec-0003.md#tdd-0037 |
+packages/qfai/tests/integration/shippedWorkflowInertness.test.ts
+360: describe("TC-0003-0037 (TDD-0037): three installing job declarations, nine and eight executing instances, zero secret references", () => {
+```
+
+The proof the row's `Evidence` cell points at was taken under a title no test
+carries any more:
+
+```text
+.qfai/evidence/implement-spec-0003.md
+1763: - Selector: `TC-0003-0037 (TDD-0037): exactly one installing job and zero secret references`
+```
+
+The row's own handover marks that proof stale:
+
+```text
+.qfai/evidence/atdd-spec-0003.md
+937: - Round 1: RED test replacement: test-only replacement — ... the proof at
+     .qfai/evidence/implement-spec-0003.md#tdd-0037 is stale — test replaced, ...
+```
 
 ## Proposed change
-
-Option 1.
 
 1. `TDD-0037` goes to `todo` with this record in `DR-ID`. Its `TC-Refs`,
    `Test file` and `Selector` stay as they are. The `Selector` already names the
@@ -68,7 +86,7 @@ Option 1.
 
 ## Decision needed from user
 
-Approve option 1: reset `TDD-0037` so its proof is re-taken on the renamed test?
+Approve the reset of `TDD-0037`, so its proof is re-taken on the renamed test?
 
 ## Approved actions (owner skill rerun plan)
 
@@ -78,7 +96,7 @@ Approve option 1: reset `TDD-0037` so its proof is re-taken on the renamed test?
 
 ## Resolution
 
-Applied under option 1.
+Applied.
 
 - `TDD-0037` is at `todo` with this record in `DR-ID`.
 - `spec-0003/09_delta.md` records this request.

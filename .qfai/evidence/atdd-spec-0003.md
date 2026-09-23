@@ -1096,12 +1096,22 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / 
 | 45 | acceptance-test-engineer | acceptance-test-engineer | grilling(S1@2026-09-23T11:24:46.722Z/agents): TDD-0001's test is the row's own case in tests/integration/initSpec0003.test.ts, rewritten to run init and assert the clause, not either test CR-20260923-0011 names | CR-20260923-0011; 06_Test-Cases.md TC-0003-0001; .qfai/assistant/catalog/test-layers.md | #tdd-0001; TC-0003-0001 declares Level integration, so its home is tests/integration/**, where initE2E.test.ts is not and where QFAI-ATDD-122 keeps its annotation out of tests/e2e/**; tests/cli/init.test.ts is in no layer directory and asserts only that no file is written. Disagreeing position: the work order asked for one of the two named tests to be picked | PASS |
 | 46 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: write the TDD-0001 case and hand the row over on the falsifiability path, with a reverted trial of the mutation | CR-20260923-0011 | packages/qfai/tests/integration/initSpec0003.test.ts; #tdd-0001 | PASS |
 | 47 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: shared-artifact re-verify of TDD-0025 under the edited Test file | #tdd-0001 | #tdd-0001 Shared-artifact re-verify; the selector passes | PASS |
-| 48 | completion-reviewer | - | /qfai-atdd: completion review of TDD-0001 and TDD-0037 | #tdd-0001, #tdd-0037 | not run in this invocation | PENDING |
+| 48 | completion-reviewer | - | /qfai-atdd: completion review of TDD-0001 and TDD-0037 | #tdd-0001, #tdd-0037 | not run in this invocation; the /qfai-implement run took it at row 61 | PASS |
 | 49 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: add the TC-0003-0001 verify bullet 3 assertion to the TDD-0001 case, re-take the mutation trial and the RED test hash | #tdd-0001 | packages/qfai/tests/integration/initSpec0003.test.ts; #tdd-0001 | PASS |
 | 50 | backend-engineer | backend-engineer | /qfai-implement: TDD-0001 falsifiability run with an empty `specs/.gitkeep` added to the shipped `.qfai/` tree | #tdd-0001 | #tdd-0001 Round 1 falsifiability fields | PASS |
 | 51 | backend-engineer | backend-engineer | /qfai-implement: TDD-0001 restored GREEN and whole-file Refactor verify | #tdd-0001 | #tdd-0001 Round 1 GREEN and Refactor verify fields | PASS |
 | 52 | backend-engineer | backend-engineer | grilling(S1@2026-09-23T11:42:45.972Z/agents): TDD-0037 stays at done, and re-taking its proof waits for a Change Request that names the row | execution-ledger.md allowed transitions; change-request-reset.md; CR-20260923-0011 approved action 2 | done leaves only by the upstream reset, which change-request-reset.md refuses for a row the CR's approved actions do not name, and CR-20260923-0011 names TDD-0001 and says no other row. Disagreeing position: the work order asked to bring the row to refactor | PASS |
 | 53 | backend-engineer | backend-engineer | /qfai-implement: TDD-0037 Selector copied from the handback into the ledger | #tdd-0037; CR-20260923-0011 | test-list.md row 37 Selector, which CR-20260923-0011 says follows the rename | PASS |
+| 54 | orchestrator | orchestrator | /qfai-implement: raise CR-20260923-0013 so TDD-0037 is reset and its proof re-taken on the renamed test; this replaces the outcome of row 52 | #tdd-0037; change-request-reset.md | CR-20260923-0013; test-list.md row 37 at todo with the record in DR-ID | PASS |
+| 55 | backend-engineer | backend-engineer | /qfai-implement: TDD-0037 falsifiability run with a secret reference planted in the shipped `qfai-tests.yml`, and a second run with an install step on its detection job | #tdd-0037 | #tdd-0037 Round 1 falsifiability fields | PASS |
+| 56 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0001 RED phase gate on the falsifiability mutation run | #tdd-0001 | #tdd-0001 Round 1 | PASS |
+| 57 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0037 RED phase gate on the falsifiability mutation run and the TDD-0036 re-verify | #tdd-0037 | #tdd-0037 Round 1 | PASS |
+| 58 | backend-engineer | backend-engineer | /qfai-implement: TDD-0037 restored GREEN and whole-file Refactor verify, and the TDD-0001 Refactor verify re-run on the reviewed tree | #tdd-0001, #tdd-0037 | the GREEN and Refactor verify fields of both entries | PASS |
+| 59 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0001 build-phase GREEN + oracle proof | #tdd-0001 | #tdd-0001 Round 1 | PASS |
+| 60 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0037 build-phase GREEN + oracle proof | #tdd-0037 | #tdd-0037 Round 1 | PASS |
+| 61 | completion-reviewer | completion-reviewer | /qfai-implement: completion review of TDD-0001 and TDD-0037, attempt 1 | #tdd-0001, #tdd-0037 | one response per row in that row's review pack; its record advisories are queued in implement-spec-0003.md `## Record defects` | PASS |
+| 62 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of TDD-0001 and TDD-0037, attempt 1 | #tdd-0001, #tdd-0037 | one response per row in that row's review pack | PASS |
+| 63 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0001 on its Test file and of TDD-0037 on the full suite | #tdd-0001, #tdd-0037 | Checkpoint verification fields | PASS |
 
 ## Cross-spec obligations
 
@@ -1128,11 +1138,13 @@ Recorded per row under `## Ledger rows advanced`.
 - The `TDD-0001` case asserts all three verify bullets of `TC-0003-0001`. Its one
   mutation breaks bullet 1; no mutation has been run against the bullet 2 and bullet 3
   assertions.
-- `TDD-0037` stays `done` with its proof marked stale. The one exit from `done` is the
-  upstream reset, and `CR-20260923-0011`'s approved actions name `TDD-0001` alone, so
-  re-taking the proof needs a Change Request that names `TDD-0037`. Its Evidence cell
-  still points at `implement-spec-0003.md`, which the row's `Integration` layer does not
-  own.
+- No mutation has shown the `TDD-0037` count case's nine and eight instance counts
+  fail. The planted secret fails the secret case, and the install step on the
+  detection job fails the declaration list and the detection case.
+- The `TDD-0037` entry's `Branch:` line, its paragraph on the ledger's `Selector` and
+  its Round 1 `RED test replacement` and `Replacement proof` fields describe the row
+  as it was before `CR-20260923-0013` reset it. The repair is queued in
+  `.qfai/evidence/implement-spec-0003.md` under `## Record defects`.
 - The comments inside the `TDD-0037` count case still speak of four and three installs.
   Only the titles were in scope.
 
@@ -1140,6 +1152,8 @@ Recorded per row under `## Ledger rows advanced`.
 
 FAIL — the pack's other ATDD-owned rows are still owed, as the matrix records.
 
-The seven rows this run took up are `done`. `/qfai-implement` took each through the
+The ten rows these runs took up are `done`: `TDD-0058` to `TDD-0063`, `TDD-0092`,
+`TDD-0093`, `TDD-0001` and `TDD-0037`. `/qfai-implement` took each through the
 falsifiability path, and `qa-gatekeeper`, `completion-reviewer` and
-`implementation-reviewer` passed each one. `TDD-0061` closed on the full suite.
+`implementation-reviewer` passed each one. `TDD-0061`, `TDD-0093` and `TDD-0037`
+closed on the full suite.
