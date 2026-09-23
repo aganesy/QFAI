@@ -1496,6 +1496,12 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    `03_Acceptance-Criteria.md` declares **three duplicate AC ids**: `AC-0013-0008`, `AC-0013-0009` and
    `AC-0013-0010` each appear twice under different headings. Any consumer resolving an `AC-Ref` by id
    gets whichever one it reaches first.
+
+   **Resolution (`CR-20260923-0010`, 2026-09-23).** The five rules now cite `AC-0013-0006`, `-0005`,
+   `-0026`, `-0009` and `-0027`. `AC-0013-0026` and `AC-0013-0027` were added for the two subjects no
+   criterion stated, and `TC-0013-0012` and `TC-0013-0010` cite them. The `qfai-sdd` skill now states
+   `BR-0013-0005`'s `none` clause, and `sddSkillSpec0013.test.ts` asserts it. The scores above are
+   unchanged until the next coverage refresh. The duplicate ids stay open under `CR-20260913-0012`.
 8. **`US-0013-0003` and `AC-0013-0003` require opposite behaviour, and the runtime implements the
    story.** The story reads "I want SDD to validate the latest discussion pack and **stop if
    incomplete or has blocking OQs**". Its acceptance criterion reads "SDD MUST NOT stop on a pack that

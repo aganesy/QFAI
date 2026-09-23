@@ -1292,7 +1292,7 @@
 - AC-Refs: AC-0012-0060
 - Type: integration
 - Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts`
-- Verify REQ-0012-0062 SIGINT path: spawning iterate + sending SIGINT triggers `tree-kill` / `taskkill /F /T` of all child server processes within 2s; async cleanup errors surfaced on stderr with explicit naming. Cross-platform (Linux/macOS/Windows matrix).
+- Verify REQ-0012-0062 SIGINT path: iterate installs its SIGINT handler after the runner returns and removes it at the end of the cycle; the teardown runs and the handler is removed even when the cycle fails; and a SIGINT during the cycle invokes the runner's teardown once, within the NFR-0106 bound.
 
 ## TC-0012-0463
 

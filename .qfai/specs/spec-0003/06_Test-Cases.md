@@ -766,3 +766,4 @@ Verify:
 - a body whose failing exit has been replaced passes none of those results
 - an aggregate that no longer binds its dependency's result is rejected and named
 - a step that could not preserve failure — conditional, tolerant shell, `continue-on-error`, an action, or work of its own — is rejected as well
+- an aggregate whose job shape cannot preserve failure — a second step, or `continue-on-error` set on the job — is rejected as well

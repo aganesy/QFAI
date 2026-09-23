@@ -1907,6 +1907,13 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(shared).toContain("under `Shared-artifact re-verify`");
     expect(shared).toContain("**A row whose re-run fails is not re-verified**");
   });
+  it("starts a re-verified row's staleness check at the re-verify's revision", async () => {
+    // The validator reads an accepted record's `Revision` as the start of the
+    // consumer's staleness interval, so the reference has to say so.
+    const shared = flat(await read(tree, SHARED_ARTIFACT));
+    expect(shared).toContain("`Revision` is also where the consumer's staleness check starts");
+    expect(shared).toContain("a later change to the test file or the source tree still does");
+  });
   it("gives the seam a body the selector can decode", async () => {
     // A selector that decodes JSON before asserting raises a parse error on an
     // empty body, which the admissibility rule rejects as a non-assertion

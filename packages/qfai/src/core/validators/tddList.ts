@@ -2624,13 +2624,19 @@ function stagePackRecordsPass(
   );
 }
 
-/** One `Shared-artifact re-verify` subsection, judged on its own fields. */
-async function isCurrentReverifyRecord(
+/**
+ * One `Shared-artifact re-verify` subsection, judged on its own fields.
+ *
+ * Answers the record's `Revision` when the record is current, and `null` when
+ * it is not. The revision is the tree the re-verify ran on, which is where the
+ * consumer's staleness interval starts once the record is accepted.
+ */
+async function currentReverifyRecordRevision(
   root: string,
   evidenceFile: string,
   expected: CompletedEvidenceExpectation,
   section: string,
-): Promise<boolean> {
+): Promise<string | null> {
   const revision = rowEvidenceFieldValue(section, "Revision");
   const reverifyCommand = rowEvidenceFieldValue(section, "Re-verify command");
   const reverifyResult = rowEvidenceFieldValue(section, "Re-verify result");
@@ -2661,21 +2667,24 @@ async function isCurrentReverifyRecord(
     recordedHash === null ||
     !SHA256_VALUE.test(recordedHash)
   ) {
-    return false;
+    return null;
   }
   const manifestPaths = manifest
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) => line.trim().replace(/^[-*]\s+/, ""))
     .filter((line) => line.length > 0);
-  if (!manifestPaths.includes(expected.testFile)) return false;
+  if (!manifestPaths.includes(expected.testFile)) return null;
   const computed = await redTestManifestHash(root, manifest);
-  return computed !== null && bareSha256(recordedHash) === computed;
+  return computed !== null && bareSha256(recordedHash) === computed ? revision : null;
 }
 
 /**
- * True when some **audited** record re-verifies this row against the current
- * shared artifact.
+ * The `Revision` of every **audited** record that re-verifies this row against
+ * the current shared artifact, in the order the records are found.
+ *
+ * A generator, so a caller that needs only the first answer stops the walk
+ * there instead of judging every entry in `.qfai/evidence/`.
  *
  * Where the record may live is half the rule. Any Markdown under
  * `.qfai/evidence/` used to qualify, and nothing tied the block to the change
@@ -2696,18 +2705,18 @@ async function isCurrentReverifyRecord(
  *   response and `summary.json` record the stage reviewer's PASS over that
  *   stage's own spec (`hasSealedStageStatus`).
  */
-async function hasCurrentSharedArtifactReverify(
+async function* currentSharedArtifactReverifyRevisions(
   context: CompletedEvidenceContext,
   evidenceFile: string,
   expected: CompletedEvidenceExpectation,
-): Promise<boolean> {
+): AsyncGenerator<string, void, undefined> {
   const root = context.root;
   const evidenceDir = path.join(root, ".qfai", "evidence");
   let entries: Dirent[];
   try {
     entries = await readdir(evidenceDir, { withFileTypes: true });
   } catch {
-    return false;
+    return;
   }
   const target = `spec-${expected.specNumber}/${expected.tddId}`;
   for (const entry of entries) {
@@ -2728,7 +2737,8 @@ async function hasCurrentSharedArtifactReverify(
       if (stageSpecNumber === undefined) continue;
       if (!(await hasSealedStageStatus(context, stageSpecNumber, content))) continue;
       for (const section of sharedArtifactReverifySections(content, target)) {
-        if (await isCurrentReverifyRecord(root, evidenceFile, expected, section)) return true;
+        const revision = await currentReverifyRecordRevision(root, evidenceFile, expected, section);
+        if (revision !== null) yield revision;
       }
       continue;
     }
@@ -2740,11 +2750,23 @@ async function hasCurrentSharedArtifactReverify(
       if (!(await isAuditedCompletedEntry(context, ownerFile, ownerSection, ownerTddId))) continue;
       const audited = phaseAuthoredEvidence(ownerSection, ownerTddId);
       for (const section of sharedArtifactReverifySections(audited, target)) {
-        if (await isCurrentReverifyRecord(root, evidenceFile, expected, section)) return true;
+        const revision = await currentReverifyRecordRevision(root, evidenceFile, expected, section);
+        if (revision !== null) yield revision;
       }
     }
   }
-  return false;
+}
+
+/** True when some audited record re-verifies this row against the current shared artifact. */
+async function hasCurrentSharedArtifactReverify(
+  context: CompletedEvidenceContext,
+  evidenceFile: string,
+  expected: CompletedEvidenceExpectation,
+): Promise<boolean> {
+  const revisions = currentSharedArtifactReverifyRevisions(context, evidenceFile, expected);
+  const first = await revisions.next();
+  await revisions.return(undefined);
+  return first.done !== true;
 }
 
 /**
@@ -5427,18 +5449,44 @@ export function staleEvidenceFiles(
   testFile: string,
   cache: Map<string, ChangedSince> = new Map(),
 ): readonly string[] | null {
-  const revision = observationRevision(section);
+  const changes = coveredChangesSince(
+    root,
+    srcRelDir,
+    observationRevision(section),
+    testFile,
+    cache,
+  );
+  return changes.kind === "stale" ? changes.files : null;
+}
+
+/**
+ * What moved under the test file and `srcDir` since `revision`.
+ *
+ * `unchecked` is kept apart from `current`: a revision that names no commit
+ * this clone holds, or no commit at all, says nothing about the tree. A caller
+ * that clears a finding on `current` must not clear it on `unchecked`.
+ */
+type CoveredChanges =
+  { kind: "stale"; files: readonly string[] } | { kind: "current" } | { kind: "unchecked" };
+
+function coveredChangesSince(
+  root: string,
+  srcRelDir: string,
+  revision: string | null,
+  testFile: string,
+  cache: Map<string, ChangedSince>,
+): CoveredChanges {
   // The shape test is a COST guard, not a correctness one, and no row can
   // distinguish it: without it a `working-tree+<hash>` reaches
-  // `changedFilesSince`, `rev-parse` fails, and the answer is `null` either
-  // way. It is kept because this runs per ledger row, and a project on content
-  // addresses would spawn a git process for every one of them to reach a
-  // guaranteed null.
+  // `changedFilesSince`, `rev-parse` fails, and the answer is `unchecked`
+  // either way. It is kept because this runs per ledger row, and a project on
+  // content addresses would spawn a git process for every one of them to reach
+  // a guaranteed `unchecked`.
   if (revision === null || !/^[0-9a-f]{7,64}$/i.test(revision)) {
-    return null;
+    return { kind: "unchecked" };
   }
   if (testFile.length === 0 && srcRelDir.length === 0) {
-    return null;
+    return { kind: "unchecked" };
   }
 
   // ONE diff per distinct revision, over the whole tree, filtered per row in
@@ -5452,15 +5500,60 @@ export function staleEvidenceFiles(
     changed = changedFilesSince(root, revision, []);
     cache.set(revision, changed);
   }
-  if (changed.kind !== "changed") {
-    return null;
-  }
+  if (changed.kind === "unresolvable") return { kind: "unchecked" };
+  if (changed.kind === "unchanged") return { kind: "current" };
 
   const prefix = srcRelDir.length > 0 ? `${srcRelDir}/` : null;
   const covered = changed.files.filter(
     (file) => file === testFile || (prefix !== null && file.startsWith(prefix)),
   );
-  return covered.length > 0 ? covered : null;
+  return covered.length > 0 ? { kind: "stale", files: covered } : { kind: "current" };
+}
+
+/** The completed entry a `done` row's anchor resolved to. */
+interface ResolvedCompletedEntry {
+  evidenceFile: string;
+  section: string;
+  expectation: CompletedEvidenceExpectation;
+}
+
+/**
+ * `staleEvidenceFiles`, read from the newest observation the row has.
+ *
+ * A later row that edits a shared test file re-verifies this one and records
+ * that as a `Shared-artifact re-verify` record in its own audited entry. The
+ * record's `Revision` is the tree the re-verify ran on, so the interval starts
+ * there rather than at the row's own, older observation. Whatever changed after
+ * that revision still makes the row stale.
+ *
+ * Any current record whose interval is clean clears the row. On a linear
+ * history the newest record is the one that can, so the order the records are
+ * found in does not change the answer. A record whose revision names no commit
+ * here clears nothing.
+ *
+ * The records are looked up only for a `done` row that is stale from its own
+ * revision, so a row that is current costs no walk of `.qfai/evidence/`.
+ */
+async function staleSinceNewestObservation(
+  context: CompletedEvidenceContext,
+  srcRelDir: string,
+  entry: ResolvedCompletedEntry | null,
+  testFile: string,
+  cache: Map<string, ChangedSince>,
+): Promise<readonly string[] | null> {
+  if (entry === null) return null;
+  const stale = staleEvidenceFiles(context.root, srcRelDir, entry.section, testFile, cache);
+  if (stale === null) return null;
+  const revisions = currentSharedArtifactReverifyRevisions(
+    context,
+    entry.evidenceFile,
+    entry.expectation,
+  );
+  for await (const revision of revisions) {
+    const since = coveredChangesSince(context.root, srcRelDir, revision, testFile, cache);
+    if (since.kind === "current") return null;
+  }
+  return stale;
 }
 
 /**
@@ -6898,7 +6991,7 @@ async function validateSpecTddList(
       );
     }
 
-    let lastResolvedSection = "";
+    let lastResolved: ResolvedCompletedEntry | null = null;
     for (const anchor of anchors) {
       relatedFile = anchor.file;
       if (anchor.file !== expectedFile) {
@@ -6941,10 +7034,6 @@ async function validateSpecTddList(
               ? "CON-API-Refs"
               : "TC-Refs";
         const section = evidenceIndex.sections.get(anchor.fragment) ?? "";
-        // Kept for the staleness check below, which needs the section this row
-        // actually resolved to rather than the last one the loop happened to
-        // look at.
-        lastResolvedSection = section;
         const expectation = {
           specNumber,
           tddId,
@@ -6956,6 +7045,10 @@ async function validateSpecTddList(
           preSplit: usesPreSplitEvidence(layer, evidence),
           reviewUnit: reviewUnitOf(ref, [...ledgerRows()]),
         } satisfies CompletedEvidenceExpectation;
+        // Kept for the staleness check below, which needs the entry this row
+        // actually resolved to rather than the last one the loop happened to
+        // look at.
+        lastResolved = { evidenceFile: anchor.file, section, expectation };
         // A backfilled row is exempt from the reviewer-pack fields, and the
         // exemption is reported rather than applied silently. The gate's whole
         // value is that a `done` row means a reviewed one, so a row that is
@@ -6995,15 +7088,15 @@ async function validateSpecTddList(
     }
 
     if (anchorFailure.length === 0) {
-      const staleFiles = staleEvidenceFiles(
-        root,
+      const staleFiles = await staleSinceNewestObservation(
+        evidenceContext,
         srcRelDir,
-        lastResolvedSection,
+        lastResolved,
         cell(ref, "Test file"),
         revisionDiffCache,
       );
       if (staleFiles !== null) {
-        const revision = observationRevision(lastResolvedSection) ?? "";
+        const revision = observationRevision(lastResolved?.section ?? "") ?? "";
         const shown = staleFiles.slice(0, 5);
         const more =
           staleFiles.length > shown.length ? ` (+${staleFiles.length - shown.length})` : "";
