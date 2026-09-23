@@ -544,21 +544,35 @@ describe("QFAI-TDDLIST-015 — a stop must leave a steering record", () => {
  * template's own trailing comments kept so the header parser meets them. The
  * body quotes an approved status on purpose: only the header is the record.
  */
-function changeRequest(fields: { status: string; appliedAt?: string }): string {
+function changeRequest(fields: {
+  status: string;
+  appliedAt?: string;
+  id?: string;
+  changeClass?: string;
+  approvedBy?: string;
+  approvedOption?: string;
+  supersededBy?: string;
+  /** The `## Resolution` body; the default records what was done. */
+  resolution?: string;
+  /** Lines placed between the title and the header list. */
+  preamble?: string;
+}): string {
   return [
     "# Change Request",
     "",
-    "- ID: `CR-20260801-0001`",
-    "- Class: `defect`",
+    ...(fields.preamble === undefined ? [] : [fields.preamble, ""]),
+    `- ID: \`${fields.id ?? "CR-20260801-0001"}\``,
+    `- Class: \`${fields.changeClass ?? "defect"}\``,
     `- Status: \`${fields.status}\` <!-- open | approved | rejected | superseded -->`,
-    "- Approved by: `user`",
+    `- Approved by: \`${fields.approvedBy ?? "user"}\``,
     "- Approved at: `2026-08-02T00:00:00Z`",
+    `- Approved option: \`${fields.approvedOption ?? "-"}\``,
     `- Applied at: \`${fields.appliedAt ?? "-"}\` <!-- YYYY-MM-DDThh:mm:ssZ -->`,
+    `- Superseded by: \`${fields.supersededBy ?? "-"}\``,
     "",
     "## Resolution",
     "",
-    "- Status: `approved`",
-    "- Applied at: `2026-08-03T00:00:00Z`",
+    fields.resolution ?? "- Status: `approved`\n- Applied at: `2026-08-03T00:00:00Z`",
     "",
   ].join("\n");
 }
@@ -650,5 +664,111 @@ describe("QFAI-TDDLIST-021 — a blocked row whose Change Request is settled", (
     expect(found?.severity).toBe("warning");
     expect(found?.message).toContain("Evidence");
     expect(found?.message).toContain("CR-20260801-0001 (rejected)");
+  });
+
+  it("says nothing while the Evidence cell names another blocker beside the Change Request", async () => {
+    // Evidence is prose, so a row reference beside the request can still be
+    // holding the row.
+    const row = `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | BLOCKED by CR-20260801-0001 and spec-0006:TDD-0034 |`;
+    const issues = await run(
+      `${EIGHT_COL}\n${row}\n`,
+      {},
+      { decisions: { [CR_FILE]: changeRequest({ status: "rejected" }) } },
+    );
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  describe("a half-filled record is not settled", () => {
+    const cases: ReadonlyArray<[string, Parameters<typeof changeRequest>[0]]> = [
+      ["a rejected request with no approver", { status: "rejected", approvedBy: "-" }],
+      ["a superseded request that names no successor", { status: "superseded" }],
+      [
+        "a rejected request whose Resolution holds only the template comment",
+        { status: "rejected", resolution: "<!-- Record what was actually done. -->" },
+      ],
+      [
+        "an approved intent request with no approved option",
+        { status: "approved", appliedAt: "2026-08-03T00:00:00Z", changeClass: "intent" },
+      ],
+    ];
+    it.each(cases)("says nothing for %s", async (_label, fields) => {
+      const issues = await run(
+        `${NINE_COL}\n${blockedOnCr}\n`,
+        {},
+        { decisions: { [CR_FILE]: changeRequest(fields) } },
+      );
+      expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+    });
+  });
+
+  it("warns for a superseded request that names its successor", async () => {
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      {
+        decisions: {
+          [CR_FILE]: changeRequest({ status: "superseded", supersededBy: "CR-20260801-0009" }),
+        },
+      },
+    );
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDDLIST-021");
+  });
+
+  it("warns for an approved intent request that records its option", async () => {
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      {
+        decisions: {
+          [CR_FILE]: changeRequest({
+            status: "approved",
+            appliedAt: "2026-08-03T00:00:00Z",
+            changeClass: "intent",
+            approvedOption: "2",
+          }),
+        },
+      },
+    );
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDDLIST-021");
+  });
+
+  it("says nothing when the record's declared id is not the one its file name carries", async () => {
+    // A copy renamed without its header moving: the declared id is the
+    // record's, so the row naming the file-name id has no record.
+    const settledCopy = changeRequest({ status: "rejected", id: "CR-20260801-0003" });
+    const namingFileId = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      { decisions: { [CR_FILE]: settledCopy } },
+    );
+    expect(namingFileId.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+
+    const namingDeclaredId = await run(
+      `${NINE_COL}\n${blockedOnCr.replace("CR-20260801-0001", "CR-20260801-0003")}\n`,
+      {},
+      { decisions: { [CR_FILE]: settledCopy } },
+    );
+    expect(namingDeclaredId.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  it("does not read a fenced example ahead of the header as the record", async () => {
+    // The example's `Status` would otherwise win as the first occurrence.
+    const preamble = ["```markdown", "- Status: `rejected`", "```"].join("\n");
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      { decisions: { [CR_FILE]: changeRequest({ status: "open", preamble }) } },
+    );
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  it("does not end the header at a heading inside a fenced example", async () => {
+    const preamble = ["```markdown", "## Example", "```"].join("\n");
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      { decisions: { [CR_FILE]: changeRequest({ status: "rejected", preamble }) } },
+    );
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDDLIST-021");
   });
 });

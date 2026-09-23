@@ -4726,7 +4726,8 @@ const CHANGE_REQUEST_FILE = /^(CR-\d{8}-\d{4})(?:-[A-Za-z0-9][A-Za-z0-9-]*)?\.md
 
 /**
  * The header of the Change Request a `CR-*` id names, or `null` when no record
- * file under `.qfai/decisions/` carries that id.
+ * file under `.qfai/decisions/` carries that id in both its name and its
+ * `- ID:` field.
  */
 type ChangeRequestLookup = (crId: string) => Promise<ChangeRequestHeader | null>;
 
@@ -4743,6 +4744,11 @@ type DecisionsIndex = {
  * Most runs ask about no Change Request at all, so the files are read on
  * demand and each at most once. Where two files carry the same id, the first
  * in name order answers.
+ *
+ * The declared `- ID:` is the record's id; the file name only locates it. A
+ * file whose name and declared id disagree — renamed or copied without its
+ * header moving — answers for neither, so a row cannot borrow the status of a
+ * record that is not the one it names.
  */
 function buildChangeRequestLookup(
   root: string,
@@ -4763,7 +4769,8 @@ function buildChangeRequestLookup(
       header = readSafe(path.join(root, DR_RECORD_DIR, name)).then(parseChangeRequestHeader);
       headers.set(id, header);
     }
-    return await header;
+    const parsed = await header;
+    return parsed.id === id ? parsed : null;
   };
 }
 
@@ -5245,6 +5252,9 @@ const BLOCKED_BY_CLOSED_CR_CODE = "QFAI-TDDLIST-021";
 /** A `CR-*` id anywhere in a cell, with or without the slug that follows it. */
 const CHANGE_REQUEST_ID_IN_TEXT = /\bCR-\d{8}-\d{4}\b/gi;
 
+/** A blocker other than a Change Request: a ledger row, or a contract path. */
+const OTHER_BLOCKER_IN_TEXT = /\bTDD-\d{4}\b|\.qfai\/contracts\//i;
+
 /** Every distinct `CR-*` id a cell names, upper-cased, in order of appearance. */
 function changeRequestIdsIn(text: string): string[] {
   return [...new Set([...text.matchAll(CHANGE_REQUEST_ID_IN_TEXT)].map((m) => m[0].toUpperCase()))];
@@ -5265,6 +5275,11 @@ function describeSettledStatus(status: string | null): string {
  * read only when `Blocked-By` names no blocker at all — an empty cell, or a
  * ledger without the column — and `TDDLIST_BLOCKED_MISSING_REF` already reports
  * that cell. A malformed `Blocked-By` is left to the same finding.
+ *
+ * `Evidence` is prose, so it cannot be held to the Change-Request-only shape
+ * `Blocked-By` is. It counts only while it names none of the other blockers a
+ * `Blocked-By` cell admits: a ledger row, here or in another spec, or a
+ * contract path.
  */
 function changeRequestBlockers(ref: LedgerRowRef): { column: string; ids: string[] } | null {
   const parsed = parseBlockedBy(cell(ref, BLOCKED_BY_COLUMN));
@@ -5274,7 +5289,9 @@ function changeRequestBlockers(ref: LedgerRowRef): { column: string; ids: string
       : null;
   }
   if (parsed.reason !== "missing-blocker") return null;
-  const ids = changeRequestIdsIn(cell(ref, "Evidence"));
+  const evidence = cell(ref, "Evidence");
+  if (OTHER_BLOCKER_IN_TEXT.test(evidence)) return null;
+  const ids = changeRequestIdsIn(evidence);
   return ids.length > 0 ? { column: "Evidence", ids } : null;
 }
 

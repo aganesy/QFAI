@@ -330,15 +330,23 @@ export function collectReOpenEntries(text: string): DecisionRecordEntry[] {
 }
 
 /**
- * The two header fields of a Change Request that say whether it is settled.
+ * What a Change Request record says about whether it is resolved.
  *
- * `null` means the field was absent. The values are the ones the record holds,
- * with the template's backticks and trailing comment removed and `status`
- * lower-cased.
+ * The header fields are `null` when absent, and otherwise hold the record's
+ * value with the template's backticks and trailing comment removed; `id` is
+ * upper-cased, and `status` and `changeClass` lower-cased.
  */
 export type ChangeRequestHeader = {
+  id: string | null;
   status: string | null;
+  changeClass: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  approvedOption: string | null;
   appliedAt: string | null;
+  supersededBy: string | null;
+  /** True when the `## Resolution` section holds text outside comments. */
+  hasResolution: boolean;
 };
 
 /**
@@ -354,48 +362,96 @@ const CHANGE_REQUEST_SETTLED_STATUSES: ReadonlySet<string> = new Set([
 
 /** A heading of level 2 or deeper, which is where a record's header block ends. */
 const SECTION_HEADING_RE = new RegExp(`^${BLOCK_INDENT}#{2,6}(?:\\s|$)`);
+/** A heading of level 1 or 2, which is where the `Resolution` section ends. */
+const TOP_SECTION_HEADING_RE = new RegExp(`^${BLOCK_INDENT}#{1,2}(?:\\s|$)`);
+const RESOLUTION_HEADING_RE = new RegExp(`^${BLOCK_INDENT}##\\s+Resolution\\s*#*\\s*$`, "i");
 
-/**
- * Parse the header bullet list of a `.qfai/decisions/CR-*.md` record.
- *
- * Only the lines before the first `##` heading are read. The body of a Change
- * Request quotes its own fields freely, so a `- Status:` line in a section is
- * prose about the record, not the record. Comments are masked as in
- * {@link parseDecisionRecordEntries}: the template's own comment lists the
- * status vocabulary, and a line wrapped in `<!-- -->` is not a field. The first
- * occurrence of a field wins.
- */
-export function parseChangeRequestHeader(text: string): ChangeRequestHeader {
-  const header: ChangeRequestHeader = { status: null, appliedAt: null };
-  let inComment = false;
-  for (const raw of text.replace(/\r\n/g, "\n").split("\n")) {
-    const masked = maskLineComments(raw, inComment);
-    inComment = masked.open;
-    const line = masked.text;
-    if (SECTION_HEADING_RE.test(line)) break;
-    const field = FIELD_RE.exec(line);
-    if (!field?.[1]) continue;
-    const key = normalizeKey(field[1]);
-    const value = cleanValue(field[2] ?? "");
-    if (key === "status" && header.status === null) header.status = value.toLowerCase();
-    else if (key === "applied-at" && header.appliedAt === null) header.appliedAt = value;
-  }
-  return header;
+type ChangeRequestSection = "header" | "body" | "resolution";
+
+/** The section a heading line moves the reader into, or `null` when it moves nowhere. */
+function nextChangeRequestSection(
+  line: string,
+  section: ChangeRequestSection,
+): ChangeRequestSection | null {
+  if (RESOLUTION_HEADING_RE.test(line)) return "resolution";
+  const leaves = section === "resolution" ? TOP_SECTION_HEADING_RE : SECTION_HEADING_RE;
+  return leaves.test(line) ? "body" : null;
 }
 
 /**
- * True when a Change Request no longer holds anything open.
+ * Parse a `.qfai/decisions/CR-*.md` record: its header bullet list, and
+ * whether its `## Resolution` section says anything.
  *
- * `rejected` and `superseded` are settled by their status. `approved` is
- * settled only once `Applied at` is filled: the template treats an approved
- * request as unresolved until the approved actions have been carried out, and
- * a row it blocked still owes the obligation in its old form until then.
+ * Fields are read only before the first `##` heading. The body of a Change
+ * Request quotes its own fields freely, so a `- Status:` line in a section is
+ * prose about the record, not the record. Comments and fenced blocks are
+ * masked as in {@link parseDecisionRecordEntries}: the template's own comment
+ * lists the status vocabulary, and a quoted example is not the record — nor
+ * does a heading inside one end the header. The first occurrence of a field
+ * wins. Text inside a fence in `## Resolution` counts as content.
+ */
+export function parseChangeRequestHeader(text: string): ChangeRequestHeader {
+  const fields = new Map<string, string>();
+  let hasResolution = false;
+  let section: ChangeRequestSection = "header";
+  let openFence: RegExp | null = null;
+  let inComment = false;
+  for (const raw of text.replace(/\r\n/g, "\n").split("\n")) {
+    if (openFence) {
+      if (openFence.test(raw)) openFence = null;
+      else if (section === "resolution" && raw.trim().length > 0) hasResolution = true;
+      continue;
+    }
+    const masked = maskLineComments(raw, inComment);
+    inComment = masked.open;
+    const line = masked.text;
+    const fenceOpen = FENCE_OPEN_RE.exec(line);
+    if (fenceOpen?.[1]) {
+      openFence = closeFenceRe(fenceOpen[1]);
+      if (openFence) continue;
+    }
+    const next = nextChangeRequestSection(line, section);
+    if (next !== null) {
+      section = next;
+      continue;
+    }
+    if (section === "resolution" && line.trim().length > 0) hasResolution = true;
+    if (section !== "header") continue;
+    const field = FIELD_RE.exec(line);
+    if (!field?.[1]) continue;
+    const key = normalizeKey(field[1]);
+    if (!fields.has(key)) fields.set(key, cleanValue(field[2] ?? ""));
+  }
+  return {
+    id: fields.get("id")?.toUpperCase() ?? null,
+    status: fields.get("status")?.toLowerCase() ?? null,
+    changeClass: fields.get("class")?.toLowerCase() ?? null,
+    approvedBy: fields.get("approved-by") ?? null,
+    approvedAt: fields.get("approved-at") ?? null,
+    approvedOption: fields.get("approved-option") ?? null,
+    appliedAt: fields.get("applied-at") ?? null,
+    supersededBy: fields.get("superseded-by") ?? null,
+    hasResolution,
+  };
+}
+
+/**
+ * True when a Change Request is resolved: the record the completion gate asks
+ * for is complete, so nothing is left open.
  *
- * SIMPLIFIED: reads the two header fields only; the `Resolution` section the
- * completion gate also asks for is not checked.
- * Lift when: a caller acts on this answer by itself rather than reporting it.
+ * A half-filled record is unresolved. Every settled status needs `Approved by`,
+ * `Approved at` and a `Resolution` that says something. On top of that,
+ * `superseded` needs `Superseded by`, and `approved` needs `Applied at` — the
+ * approved actions have been carried out — and `Approved option` unless the
+ * request is of class `defect`, which has no options to choose between.
  */
 export function isChangeRequestSettled(header: ChangeRequestHeader): boolean {
-  if (header.status === null || !CHANGE_REQUEST_SETTLED_STATUSES.has(header.status)) return false;
-  return header.status !== "approved" || !isPlaceholderValue(header.appliedAt);
+  const { status } = header;
+  if (status === null || !CHANGE_REQUEST_SETTLED_STATUSES.has(status)) return false;
+  if (isPlaceholderValue(header.approvedBy) || isPlaceholderValue(header.approvedAt)) return false;
+  if (!header.hasResolution) return false;
+  if (status === "superseded") return !isPlaceholderValue(header.supersededBy);
+  if (status !== "approved") return true;
+  if (isPlaceholderValue(header.appliedAt)) return false;
+  return header.changeClass === "defect" || !isPlaceholderValue(header.approvedOption);
 }
