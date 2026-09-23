@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The completion gate reads a `Record re-attestation`** (#2196). Repairing a
+  completed row's evidence record after its review moves the bytes the review
+  hashed, so the recorded `Audited evidence hash` no longer recomputes. The
+  procedure the skill prescribes answers that with a re-attestation in a review
+  pack of its own, but the gate never read it, so a repaired row could not pass
+  `QFAI-TDDLIST-008`. A verdict whose hash disagrees now passes when the entry's
+  `Record re-attestation` equals the recomputed hash. The re-attestation owes a
+  canonical `Record re-attestation pack` and a sha256
+  `Record re-attestation pack seal`, and the seal is recomputed when the pack is
+  in the checkout. The three fields sit outside the audited subject, so writing
+  them does not move the hash they re-attest.
+
 - **`/qfai-implement` says who mutates a predicate that lives in the test
   file** (#2191). Some acceptance tests plant their own broken copy of a
   shipped workflow, so the code they exercise is a checker inside the test and

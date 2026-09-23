@@ -4317,6 +4317,116 @@ ${packPair(1).join("\n")}
     });
   });
 
+  // A record repair edits bytes inside the audited subject after both reviews
+  // passed, so the hashes they recorded stop recomputing. The contract answers
+  // that with a re-attestation written as a pack of its own, and the gate has
+  // to compare the verdicts against it.
+  describe("Record re-attestation", () => {
+    const EVIDENCE_FILE = ".qfai/evidence/implement-spec-0001.md";
+    const REATTESTATION_PACK = ".qfai/review/review-20260811000000009";
+    const ORIGINAL_PROOF =
+      "- Oracle proof: equivalent-mutant — TC-0001 permits any non-empty result\n";
+    const REPAIRED_PROOF =
+      "- Oracle proof: equivalent-mutant — TC-0001 permits any non-empty result string\n";
+    const UNSEALED = `sha256:${"c".repeat(64)}`;
+
+    /**
+     * Seeds a completed entry, repairs its Oracle proof after the reviews, and
+     * appends `fields(repairedHash, seal)` after the verdicts. `pack: "present"`
+     * writes the re-attestation pack, and `seal` is then its real seal.
+     */
+    async function repairedIssues(
+      root: string,
+      fields: (repairedHash: string, seal: string) => string,
+      pack: "present" | "absent" = "absent",
+    ): Promise<Array<{ code: string; message: string }>> {
+      await seedProject(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), [], {
+        [EVIDENCE_FILE]: completeEntry("Unit"),
+      });
+      const evidencePath = path.join(root, EVIDENCE_FILE);
+      const original = await readFile(evidencePath, "utf8");
+      expect(original, "the fixture carries the field the repair edits").toContain(ORIGINAL_PROOF);
+      const repaired = original.replace(ORIGINAL_PROOF, REPAIRED_PROOF);
+      const repairedHash = phaseAuditHash(EVIDENCE_FILE, repaired);
+      let seal = UNSEALED;
+      if (pack === "present") {
+        await writeRoundPack(root, REATTESTATION_PACK, "TDD-ID: TDD-0001\n", {
+          "completion-reviewer": `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: ${repairedHash}\n`,
+        });
+        seal = `sha256:${await packSeal(root, REATTESTATION_PACK)}`;
+      }
+      await writeFile(evidencePath, `${repaired}${fields(repairedHash, seal)}`, "utf8");
+      const issues = await validateTddList(root, defaultConfig);
+      return issues.map((issue) => ({ code: issue.code, message: issue.message }));
+    }
+
+    function reattestation(hash: string, seal: string): string {
+      return [
+        `- Record re-attestation: sha256:${hash}`,
+        `- Record re-attestation pack: ${REATTESTATION_PACK}`,
+        `- Record re-attestation pack seal: ${seal}`,
+        "",
+      ].join("\n");
+    }
+
+    function unresolved(issues: Array<{ code: string; message: string }>): string | undefined {
+      return issues.find((issue) => issue.code === "QFAI-TDDLIST-008")?.message;
+    }
+
+    it("accepts a repaired record re-attested over its new bytes", async () => {
+      await withProject(async (root) => {
+        const issues = await repairedIssues(root, reattestation, "present");
+        expect(unresolved(issues)).toBeUndefined();
+      });
+    });
+
+    it("rejects the same repair when nothing re-attests it", async () => {
+      await withProject(async (root) => {
+        const issues = await repairedIssues(root, () => "");
+        expect(unresolved(issues)).toContain("Spec audited evidence hash matching");
+      });
+    });
+
+    it("rejects a re-attestation naming a hash the repaired record does not have", async () => {
+      await withProject(async (root) => {
+        const issues = await repairedIssues(root, (_hash, seal) =>
+          reattestation("d".repeat(64), seal),
+        );
+        expect(unresolved(issues)).toContain("Spec audited evidence hash matching");
+      });
+    });
+
+    for (const [label, field] of [
+      ["pack", "- Record re-attestation pack: "],
+      ["pack seal", "- Record re-attestation pack seal: "],
+    ] as const) {
+      it(`rejects a re-attestation recorded without its ${label}`, async () => {
+        await withProject(async (root) => {
+          const issues = await repairedIssues(root, (hash, seal) =>
+            reattestation(hash, seal)
+              .split("\n")
+              .filter((line) => !line.startsWith(field))
+              .join("\n"),
+          );
+          expect(unresolved(issues)).toMatch(new RegExp(`Record re-attestation ${label}[,.]`));
+        });
+      });
+    }
+
+    it("rejects a re-attestation whose present pack does not match its seal", async () => {
+      await withProject(async (root) => {
+        const issues = await repairedIssues(
+          root,
+          (hash) => reattestation(hash, UNSEALED),
+          "present",
+        );
+        expect(unresolved(issues)).toContain(
+          "Record re-attestation pack seal matching pack contents",
+        );
+      });
+    });
+  });
+
   it("rejects phase-authored fields placed after review fields", async () => {
     await withProject(async (root) => {
       const evidence = completeEntry("Unit")

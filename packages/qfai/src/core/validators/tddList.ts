@@ -1491,8 +1491,11 @@ function normalizeAuditArtifact(value: string): string {
   return `${lines.join("\n")}\n`;
 }
 
+// A record re-attestation is written after the verdict it supersedes, over the
+// repaired entry, so its fields end the audited subject as the verdicts do.
+// Were they inside it, writing them would move the very hash they re-attest.
 const GATE_COMPLETED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|seal|revision|note))(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Record re-attestation(?: pack(?: seal)?)?|Checkpoint verification (?:command|result|seal|revision|note))(?:\*\*)?\s*(?::|\|)/i;
 
 const PHASE_AUTHORED_EVIDENCE_FIELD =
   /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Refactor verify revision|Oracle proof|qa-gatekeeper|Shared-artifact re-verify|Surface artifacts)(?:\*\*)?\s*(?::|\|)/i;
@@ -2469,7 +2472,9 @@ async function isAuditedCompletedEntry(
   const hashesRecompute = (["Spec", "Code quality"] as const).every((prefix) => {
     const recorded = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
     return (
-      recorded !== null && SHA256_VALUE.test(recorded) && bareSha256(recorded) === expectedHash
+      recorded !== null &&
+      SHA256_VALUE.test(recorded) &&
+      (bareSha256(recorded) === expectedHash || reattestsSubject(section, expectedHash))
     );
   });
   if (!hashesRecompute) return false;
@@ -3464,7 +3469,80 @@ function missingCompletedEvidenceFields(
     missing.push(`Checkpoint verification revision naming ${REVISION_FORM_HINT}`);
   }
   missing.push(...reviewPacksApart(section));
+  missing.push(...recordReattestationFieldDefects(section));
   return missing;
+}
+
+const RECORD_REATTESTATION = "Record re-attestation";
+
+/**
+ * The fields a `Record re-attestation` owes beside it, each in its form.
+ *
+ * The re-attestation is a review pack of its own, and the gate recomputes that
+ * pack's seal. A hash recorded without its pack and seal is one nobody can
+ * trace to a reviewer, so the three are owed together.
+ */
+function recordReattestationFieldDefects(section: string): string[] {
+  const hash = rowEvidenceFieldValue(section, RECORD_REATTESTATION);
+  if (hash === null) return [];
+  const defects: string[] = [];
+  if (!SHA256_VALUE.test(hash)) defects.push(`${RECORD_REATTESTATION}: sha256`);
+  const pack = rowEvidenceFieldValue(section, `${RECORD_REATTESTATION} pack`);
+  if (pack === null) {
+    defects.push(`${RECORD_REATTESTATION} pack`);
+  } else if (!CANONICAL_REVIEW_PACK.test(recordedPackPath(pack))) {
+    defects.push(
+      `${RECORD_REATTESTATION} pack: canonical .qfai/review/review-<17-digit timestamp> path`,
+    );
+  }
+  const seal = rowEvidenceFieldValue(section, `${RECORD_REATTESTATION} pack seal`);
+  if (seal === null) {
+    defects.push(`${RECORD_REATTESTATION} pack seal`);
+  } else if (!SHA256_VALUE.test(seal)) {
+    defects.push(`${RECORD_REATTESTATION} pack seal: sha256`);
+  }
+  return defects;
+}
+
+/**
+ * True when the entry's `Record re-attestation` is the hash `recomputed` has
+ * now: a reviewer re-read the repaired record and attested these bytes.
+ */
+function reattestsSubject(section: string, recomputed: string): boolean {
+  // SIMPLIFIED: an entry carries one re-attestation hash, so it re-attests only
+  // the verdicts whose subjects recompute to that one value.
+  // Lift when: a repaired UI-affecting row needs its parity verdict re-attested
+  // beside the two field-subject verdicts.
+  const hash = rowEvidenceFieldValue(section, RECORD_REATTESTATION);
+  return hash !== null && SHA256_VALUE.test(hash) && bareSha256(hash) === recomputed;
+}
+
+/**
+ * The re-attestation pack's seal, recomputed from the pack it names when that
+ * pack is in the checkout.
+ *
+ * Review packs are local-only, so an absent pack is not a failure, as for the
+ * verdicts' own packs. The field forms are reported elsewhere, and a value in
+ * the wrong form is not read here.
+ */
+async function invalidRecordReattestationPack(root: string, section: string): Promise<string[]> {
+  if (rowEvidenceFieldValue(section, RECORD_REATTESTATION) === null) return [];
+  const pack = rowEvidenceFieldValue(section, `${RECORD_REATTESTATION} pack`);
+  const seal = rowEvidenceFieldValue(section, `${RECORD_REATTESTATION} pack seal`);
+  if (pack === null || seal === null || !SHA256_VALUE.test(seal)) return [];
+  const packPath = recordedPackPath(pack);
+  if (!CANONICAL_REVIEW_PACK.test(packPath)) return [];
+  try {
+    await lstat(path.join(root, ...packPath.split("/")));
+  } catch (error) {
+    if (isEnoent(error)) return [];
+    return [`${RECORD_REATTESTATION} pack path readable when present`];
+  }
+  const files = await collectReviewPackFiles(root, packPath);
+  if (files === null) return [`${RECORD_REATTESTATION} pack resolving to regular files`];
+  return reviewPackSeal(files) === bareSha256(seal)
+    ? []
+    : [`${RECORD_REATTESTATION} pack seal matching pack contents`];
 }
 
 /**
@@ -3544,11 +3622,15 @@ async function invalidCompletedEvidenceArtifacts(
     const auditedHash = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
     const packPath = rowEvidenceFieldValue(section, `${prefix} review pack`);
     const packSeal = rowEvidenceFieldValue(section, `${prefix} review pack seal`);
+    // A record repair moves the bytes the verdict read, by design, so a
+    // re-attestation over the repaired bytes stands in for the superseded hash.
+    // The superseded verdict's own pack is still checked below.
     if (
       recomputed !== null &&
       auditedHash !== null &&
       SHA256_VALUE.test(auditedHash) &&
-      bareSha256(auditedHash) !== recomputed
+      bareSha256(auditedHash) !== recomputed &&
+      !reattestsSubject(section, recomputed)
     ) {
       invalid.push(`${prefix} audited evidence hash matching ${subject}`);
     }
@@ -3611,6 +3693,7 @@ async function invalidCompletedEvidenceArtifacts(
       );
     }
   }
+  invalid.push(...(await invalidRecordReattestationPack(root, section)));
 
   // The attempt the last round closed on is the review the row-level verdicts
   // record, so each routed reviewer answered there once, over the tree and
