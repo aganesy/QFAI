@@ -443,6 +443,7 @@ describe("resolveAllUiBearingSpecs", () => {
   // drift gates against a phantom UI surface instead of taking the
   // documented no-op path. This fixture pins that discipline so a
   // future `access()`-style shortcut cannot land green.
+  // QFAI:SPEC-0012:TC-0012-0432
   it("does NOT classify a spec as UI-bearing when the direct-match candidate `<id>.yaml` exists but is a directory", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-uicontract-dir-"));
     try {
