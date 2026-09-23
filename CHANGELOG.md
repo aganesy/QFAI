@@ -486,6 +486,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The spec-0012 capture and serve rows name every case their test case
+  holds** (#1436). Each row's test case is verified by several `it` blocks —
+  three for `--capture`, four for `--auto-serve` — and its selector named a
+  summary of all of them, which matches no test. Each selector is now the list
+  of those blocks, in the array form a selector cell accepts, so the command the
+  row prints runs every case. The dogfooding backlog falls by two in spec-0012.
+
 - **Thirteen more completed ledger rows name the test that runs their case**
   (#1436). Each row's selector named its test case id rather than a test, and
   the test that verifies the case, in the file the row names, carried no
