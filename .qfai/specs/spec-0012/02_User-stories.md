@@ -201,7 +201,7 @@ As an `/qfai-prototyping` operator, I want an opt-in `qfai prototyping iterate -
 
 ## US-0012-0126
 
-As an `/qfai-prototyping` operator, I want an opt-in `qfai prototyping iterate --auto-serve` flag (default OFF) so that iterate can spawn / teardown a local HTTP server with safe foreign-process detection. (REQ-0012-0062)
+As an `/qfai-prototyping` operator, I want an opt-in `qfai prototyping iterate --auto-serve` flag (default OFF) so that iterate can start and tear down a local HTTP server through a runner that refuses a port another process holds. (REQ-0012-0062)
 
 ## US-0012-0127
 

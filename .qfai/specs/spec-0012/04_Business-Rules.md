@@ -287,8 +287,9 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 
 - AC-Refs: AC-0012-0060
 - `qfai prototyping iterate` MUST accept `--auto-serve` as opt-in; default OFF preserves the existing posture.
-- When passed, the spawned HTTP server MUST be torn down via `tree-kill` (Linux/macOS) or `taskkill /F /T` (Windows) on exit and SIGINT.
-- Stale port-bound prior-iterate processes MAY be force-killed; foreign (non-iterate) processes MUST NOT be killed — iterate MUST report PID + owning command and exit with input-error status.
+- When passed, iterate MUST call the server runner once and invoke the teardown it returns at cycle end and on SIGINT. It continues when the runner reports a recovered prior owner, and exits 2 reporting the runner's reason when the runner refuses.
+- The default runner, used when no runner is injected, MUST serve in-process and MUST refuse a port another process holds, naming the port, rather than pick another one.
+- A runner that spawns a server subprocess MUST tear down its tree with `tree-kill` (Linux/macOS) or `taskkill /F /T` (Windows), and MUST NOT kill a process it did not start.
 - NFR-0106 protection: the foreign-process refusal path is integration-tested.
 - The `DR-0012-0029` amendment is pinned by `DR-0012-0031`.
 

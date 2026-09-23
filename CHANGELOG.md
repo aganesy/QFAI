@@ -15,6 +15,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the source do. No test or product code changed, so no ledger row is
   reopened.
 
+- **spec-0012 states `--auto-serve` as a runner contract, and its five rows
+  are complete** (#2179). The spec said iterate spawns a server, kills child
+  processes with `tree-kill` and force-kills an earlier iterate. The product
+  calls a server runner, invokes the teardown it returns, and by default serves
+  in-process and refuses a port another process holds. The requirement, story,
+  criterion, rule, example and test case now say the same, one ledger row that
+  named four boundaries is split into four, and a new case covers the default
+  runner's refusal. Each row's test is shown to fail when the predicate it pins
+  is broken.
+
 - **The completion gate reads a `Record re-attestation`** (#2196). Repairing a
   completed row's evidence record after its review moves the bytes the review
   hashed, so the recorded `Audited evidence hash` no longer recomputes. The
