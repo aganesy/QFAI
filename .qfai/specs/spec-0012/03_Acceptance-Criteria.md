@@ -352,7 +352,7 @@
 ## AC-0012-0059: `iterate --capture` opt-in flag (default OFF; preserves DR-0012-0029)
 
 - US-Refs: US-0012-0125
-- REQ-Refs: REQ-0012-0061
+- REQ-Refs: REQ-0012-0061, REQ-0012-0075
 - Given `qfai prototyping iterate` invoked WITHOUT `--capture`,
 - When the loop runs,
 - Then no PNG / HTML artifacts MUST be written (the existing DR-0012-0029 no-capture posture is preserved; amendment pinned by `DR-0012-0031`).
@@ -362,7 +362,7 @@
 ## AC-0012-0060: `iterate --auto-serve` opt-in flag with foreign-process protection
 
 - US-Refs: US-0012-0126
-- REQ-Refs: REQ-0012-0062
+- REQ-Refs: REQ-0012-0062, REQ-0012-0076
 - Given `qfai prototyping iterate` invoked WITHOUT `--auto-serve`,
 - When the loop runs,
 - Then no HTTP server MUST be spawned (DR-0012-0029 default posture preserved; amendment pinned by `DR-0012-0031`).
@@ -372,7 +372,7 @@
 ## AC-0012-0061: `prototyping.json` validate-conformant emit
 
 - US-Refs: US-0012-0127
-- REQ-Refs: REQ-0012-0063
+- REQ-Refs: REQ-0012-0063, REQ-0012-0077
 - Given a converged `iterate` invocation,
 - When `iterate` writes `prototyping.json`,
 - Then `iterations[i]` MUST carry non-null `commitSha` (sentinel `"uncommitted"` permitted), non-empty `proseCritique`, `scores`, `layoutAntiPatternsDetected`, `designMdViolations`, `pivotDirective`, `reviewerId`, AND `evidenceRefs[]` with one entry per `screens[].id`.
@@ -564,6 +564,16 @@
 - Given a prototyping evidence tree holding `screenshots/` or `html/` from a previous loop,
 - When `qfai prototyping iterate --cycle 0` runs, with or without `--force`,
 - Then both directories MUST be moved into `aggregate.backup-<ISO>/` before any iteration directory is cleared, each moved file MUST appear in `mutation-log.jsonl`, and the backups MUST be left out of the completion certificate's evidence digests and of its freshness scan.
+
+## AC-0012-0083: `iterate --check-convergence` reports the recorded loop state read-only (REQ-0012-0078)
+
+- US-Refs: US-0012-0143
+- REQ-Refs: REQ-0012-0078
+- Given a prototyping evidence tree whose `prototyping.json` records a loop state,
+- When `qfai prototyping iterate --check-convergence` runs, with or without `--cycle`,
+- Then it MUST print `stopReason`, `acceptedIterationIndex` and the number of recorded iterations, and exit 0 only when `stopReason` is `converged` and `acceptedIterationIndex` is a non-negative integer.
+- And every other state, including a missing or unreadable `prototyping.json`, MUST exit 2 and print the reason.
+- And the run MUST write nothing and MUST NOT start a cycle.
 
 ## Completion Gate
 

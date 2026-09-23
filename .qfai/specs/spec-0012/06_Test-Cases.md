@@ -1474,6 +1474,48 @@
 - Test file: `packages/qfai/tests/integration/cli/commands/prototypingCertify.validateFreshness.test.ts`
 - Verify REQ-0174: the freshness scan skips a cycle-0 reset's backups, so a file inside one that is newer than the run still seals.
 
+## TC-0012-0484
+
+- EX-Ref: EX-0012-0168
+- AC-Refs: AC-0012-0059
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts`
+- Verify REQ-0012-0075: `--capture` on the command line turns capture on, and its absence leaves it off. With no screens injected, iterate captures every `screens[]` entry of the project's UI contracts, whether the contract file ends `.yaml` or `.yml`. With no runner injected, iterate uses the default Playwright runner, and a run where Playwright is not installed exits 2 with a reason naming Playwright.
+
+## TC-0012-0485
+
+- EX-Ref: EX-0012-0169
+- AC-Refs: AC-0012-0060
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts`
+- Verify REQ-0012-0076: `--auto-serve` on the command line turns serving on, and its absence starts no server. With no runner injected, iterate uses the default server runner, whose teardown resolves within 2000 ms. The default runner's refusal of a port another process holds is TC-0012-0489.
+
+## TC-0012-0486
+
+- EX-Ref: EX-0012-0187
+- AC-Refs: AC-0012-0059
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts`
+- Verify REQ-0012-0075 capture URL composition: `http://` and `https://` screen URLs pass unchanged; a route-relative URL, with or without a leading slash, is joined to `--target-url` by `new URL(route, base)`; a screen with no URL falls back to `--target-url`, or to none; a route-relative URL with no `--target-url`, and a pair that does not compose, fail with a reason naming `--target-url`.
+
+## TC-0012-0487
+
+- EX-Ref: EX-0012-0188
+- AC-Refs: AC-0012-0059
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts`
+- Verify REQ-0012-0075 default runner response guard: a navigation answering 200, 204 or 399 is captured; one answering 404 or 500 fails with a reason naming the status, and one returning no response fails with `no response`; no failing navigation is screenshotted.
+
+## TC-0012-0488
+
+- EX-Ref: EX-0012-0189
+- AC-Refs: AC-0012-0083
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts`
+- Verify REQ-0012-0078: `--check-convergence` exits 0 and reports `stopReason` and `acceptedIterationIndex` for a record of `converged` with a non-negative accepted index; exits 2 with `Not converged` and the reason for `max-iterations`, `license-verify-fail`, a negative accepted index and a missing `prototyping.json`; parses without `--cycle` and reports cycle 9, or the cycle given; and leaves `prototyping.json` unchanged, writing no `iter-NN/` directory and no `iterate-plan.json`.
+
 ## TC-0012-0489
 
 - EX-Ref: EX-0012-0169

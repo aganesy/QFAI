@@ -13,8 +13,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checks on the column read only the ids it holds, so such a row passed them
   all. `E2E` and `API` rows, and an `Integration` row carrying a `CON-DB-*`
   contract, record their obligation in another column and are not reported.
-  The seven spec-0012 rows it reports today are carried as a backlog in
-  `scripts/dogfood-backlog.json`.
+  The seven spec-0012 rows it reported now name a case or are retired:
+  `TDD-0420` and `TDD-0496` duplicated other rows and are removed, and the
+  other five name new cases `TC-0012-0484` to `TC-0012-0488` and return to
+  `todo` (`CR-20260923-0001`, `CR-20260923-0012`).
 
 - **The shipped-workflow aggregate check has a case for each job-shape
   clause** (#2194). The check rejects an aggregate with a second step, or with

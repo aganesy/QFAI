@@ -54,6 +54,7 @@
 - US-0012-0140: a `prototyping.mode` discriminator (`convergence` | `exploration`) settable via `qfai.config.yaml#prototyping.…
 - US-0012-0141: `QFAI-CRIT-009` error text to name every required keyword (`cta_visibility`, `four_state_check`, and any other…
 - US-0012-0142: `iterate` and `certify` to append a `.qfai/evidence/prototyping/mutation-log.jsonl` JSON-Lines entry shaped `{…
+- US-0012-0143: `qfai prototyping iterate --check-convergence` to report whether the loop has converged without running a cycle
 
 ## Active User Stories
 
@@ -266,6 +267,10 @@ As a reviewer authoring `taskFidelity` evidence, I want `QFAI-CRIT-009` error te
 ## US-0012-0142
 
 As a maintainer auditing evidence churn, I want `iterate` and `certify` to append a `.qfai/evidence/prototyping/mutation-log.jsonl` JSON-Lines entry shaped `{ ts, caller, path, action, priorSize, newSize }` for every destructive mutation (delete / overwrite) under `iter-NN/*` (including each file moved by `--cycle 0 --force`), git-ignored by default, so that iter-NN evidence disappearance becomes forensically reproducible; a code path mutating iter-NN without a mutation-log call surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (error). (REQ-0165)
+
+## US-0012-0143
+
+As an `/qfai-prototyping` operator, I want `qfai prototyping iterate --check-convergence` to report whether the loop has converged without running a cycle, so that I can choose between `certify` and another cycle from the recorded state. (REQ-0012-0078)
 
 ## Legacy Coverage Continuity
 
