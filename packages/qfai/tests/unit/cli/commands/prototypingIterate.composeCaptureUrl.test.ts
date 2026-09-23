@@ -30,25 +30,21 @@ import { describe, expect, it } from "vitest";
 import { composeCaptureUrl } from "../../../../src/cli/commands/prototypingIterate.js";
 
 describe("composeCaptureUrl — direct unit coverage", () => {
-  // QFAI:SPEC-0012:TC-0012-0486
   it("forwards absolute https:// URLs verbatim (operator override wins over base)", () => {
     const result = composeCaptureUrl("https://example.com/page", "http://localhost:5173");
     expect(result).toEqual({ ok: true, url: "https://example.com/page" });
   });
 
-  // QFAI:SPEC-0012:TC-0012-0486
   it("forwards absolute http:// URLs verbatim", () => {
     const result = composeCaptureUrl("http://example.com/page", "http://localhost:5173");
     expect(result).toEqual({ ok: true, url: "http://example.com/page" });
   });
 
-  // QFAI:SPEC-0012:TC-0012-0486
   it("composes a leading-slash route-relative URL against targetUrl", () => {
     const result = composeCaptureUrl("/orders/new", "http://localhost:3000");
     expect(result).toEqual({ ok: true, url: "http://localhost:3000/orders/new" });
   });
 
-  // QFAI:SPEC-0012:TC-0012-0486
   it("composes a no-leading-slash route-relative URL against a trailing-slash base", () => {
     // WHATWG URL: without a trailing slash on the base, the last path
     // segment is replaced. Operator-facing convention for prototype
@@ -58,7 +54,6 @@ describe("composeCaptureUrl — direct unit coverage", () => {
     expect(result).toEqual({ ok: true, url: "http://localhost:3000/orders/new" });
   });
 
-  // QFAI:SPEC-0012:TC-0012-0486
   it("returns ok=false with the operator-facing flag named when a route-relative URL has no targetUrl", () => {
     const result = composeCaptureUrl("/orders/new", undefined);
     expect(result.ok).toBe(false);
@@ -77,19 +72,16 @@ describe("composeCaptureUrl — direct unit coverage", () => {
     expect(result.reason).not.toMatch(/options\.targetUrl/);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0486
   it("falls back to targetUrl when screen URL is undefined", () => {
     const result = composeCaptureUrl(undefined, "http://localhost:5173");
     expect(result).toEqual({ ok: true, url: "http://localhost:5173" });
   });
 
-  // QFAI:SPEC-0012:TC-0012-0486
   it("falls back to null when both screen URL and targetUrl are undefined", () => {
     const result = composeCaptureUrl(undefined, undefined);
     expect(result).toEqual({ ok: true, url: null });
   });
 
-  // QFAI:SPEC-0012:TC-0012-0486
   it("returns ok=false with the operator-facing flag named when URL composition throws", () => {
     // `new URL(":::", "not-a-base")` throws (`:::` is not a valid URL
     // and `"not-a-base"` is not a valid absolute base) — the catch

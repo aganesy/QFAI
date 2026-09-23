@@ -65,7 +65,6 @@ describe("defaultCaptureScreen — HTTP response-status guard", () => {
     vi.resetModules();
   });
 
-  // QFAI:SPEC-0012:TC-0012-0487
   it("ACCEPTS a 200 OK response and writes PNG/HTML", async () => {
     const dir = await newTempDir();
     const page = makeStubPage({ status: () => 200 });
@@ -82,7 +81,6 @@ describe("defaultCaptureScreen — HTTP response-status guard", () => {
     expect(html).toBe("<html></html>");
   });
 
-  // QFAI:SPEC-0012:TC-0012-0487
   it("REJECTS a 404 Not Found response with reason mentioning the status", async () => {
     const dir = await newTempDir();
     const page = makeStubPage({ status: () => 404 });
@@ -98,7 +96,6 @@ describe("defaultCaptureScreen — HTTP response-status guard", () => {
     expect(page.screenshot).not.toHaveBeenCalled();
   });
 
-  // QFAI:SPEC-0012:TC-0012-0487
   it("REJECTS a 500 Internal Server Error response", async () => {
     const dir = await newTempDir();
     const page = makeStubPage({ status: () => 500 });
@@ -114,7 +111,6 @@ describe("defaultCaptureScreen — HTTP response-status guard", () => {
     expect(page.screenshot).not.toHaveBeenCalled();
   });
 
-  // QFAI:SPEC-0012:TC-0012-0487
   it("REJECTS a null response (no navigation occurred)", async () => {
     const dir = await newTempDir();
     const page = makeStubPage(null);
@@ -130,7 +126,6 @@ describe("defaultCaptureScreen — HTTP response-status guard", () => {
     expect(page.screenshot).not.toHaveBeenCalled();
   });
 
-  // QFAI:SPEC-0012:TC-0012-0487
   it("ACCEPTS a 204 No Content response (still 2xx)", async () => {
     const dir = await newTempDir();
     const page = makeStubPage({ status: () => 204 });
@@ -144,7 +139,6 @@ describe("defaultCaptureScreen — HTTP response-status guard", () => {
     expect(result.ok).toBe(true);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0487
   it("ACCEPTS a 399 response, the last status below the 400 rejection boundary", async () => {
     const dir = await newTempDir();
     const page = makeStubPage({ status: () => 399 });

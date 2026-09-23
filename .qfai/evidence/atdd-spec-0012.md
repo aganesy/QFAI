@@ -37,6 +37,16 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 - rejected option の再導入はない。`09_delta.md` の rev11 decision に沿い、public export 再公開や legacy grammar 許容は行っていない。
 - The stub runner in `does not invoke the server runner when --auto-serve is absent` returns a well-formed `ok: true` result.
   A call that should not happen is then caught by the test's own assertion, rather than by iterate failing to read an empty result.
+- The case `uses the default runner when no captureScreen is injected, and exits 2 naming Playwright when it is not installed` mocks `playwright` with a module whose `chromium` export throws an `ERR_MODULE_NOT_FOUND` error.
+  vitest wraps an error thrown by a mock factory in an error of its own, which the default runner reads as a broken install rather than a missing package.
+  Raised from the export, the error reaches the runner's own module-not-found branch.
+- The case `dynamically loads defaultServerRunner; deferred sentinel error is gone` now binds a port that was free a moment before, and spies on `net.Server.prototype.listen`.
+  It asserts exit 0, one listen on the `--target-url` port, and no server left listening after iterate returns.
+  Before, it asserted only that the exit code was a number, which also held when iterate used no default runner at all.
+- `TDD-0516` and `TDD-0517` are `unit` rows whose cases declare `Level: L1`, so this stage writes no handover entry for them.
+  `CR-20260923-0001` step 3 gives them to `/qfai-implement`, whose evidence is `implement-spec-0012.md`.
+  Their annotation lines are left to that run too, which adds them in the change that advances the rows.
+  Added here, they put both rows on `openRowAlreadyTested.test.ts`'s list of open rows a test already annotates, which may only shrink.
 
 ## Work performed (what changed, where)
 
@@ -55,6 +65,17 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 - `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts`
   - Each of the four tests carries `QFAI:SPEC-0012:TC-0012-0442`.
   - The stub runner in `does not invoke the server runner when --auto-serve is absent` returns a well-formed `ok: true` result instead of nothing. The title and both assertions are unchanged.
+- `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts`
+  - Six tests carry `QFAI:SPEC-0012:TC-0012-0484`, the six `CR-20260923-0001` names.
+  - New block (11): with no `captureScreen` injected and Playwright missing, iterate exits 2 and stderr names Playwright. It carries the same annotation.
+- `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts`
+  - Five tests carry `QFAI:SPEC-0012:TC-0012-0485`. Block (7) carries none: its refusal is `TC-0012-0489`.
+  - `dynamically loads defaultServerRunner; deferred sentinel error is gone` asserts that iterate bound the `--target-url` port, exited 0 and left no server listening. Its three existing assertions stay, and `typeof exit` became `exit === 0`.
+  - `listenOnEphemeralPort` moved from block (8) to file scope, unchanged, so block (3) can use it.
+- `packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts`
+  - All eight tests carry `QFAI:SPEC-0012:TC-0012-0488`.
+- `packages/qfai/tests/e2e/spec0012PrototypingRemediationE2E.test.ts`
+  - The file carries `QFAI:SPEC-0012:US-0012-0143`, and a new `US-0012-0143` block runs the peek through the CLI entry point.
 
 ## Commands executed + key outputs
 
@@ -96,6 +117,15 @@ Preflight: confidence high
 | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
 | S1 | adopted | 2026-09-23T07:01:00Z | d310849f2a0d737689212974f479c2007c2a4f27 | 2026-09-23T07:03:00Z | a ledger row whose Selector names four boundaries of one test case | empty | none in flight | 1 | 0 | 0 |
 
+### /qfai-atdd — run started 2026-09-23T11:30:58.834Z
+
+Preflight: confidence high
+
+No session opened. `CR-20260923-0001` fixes the rows, their test cases and the
+test file each case names. Three rows need a split, which is a Change Request
+this stage reports rather than decides, and the two fixture choices this run
+made are recorded under `## Decisions made`.
+
 ## Ledger rows advanced
 
 This run takes up the rows `CR-20260923-0002` owes, as `CR-20260923-0004`
@@ -110,6 +140,16 @@ every row takes branch 2. The mutations are production code, and
 | `TDD-0562` | `TC-0012-0442` | Integration | falsifiability | [TDD-0562](#tdd-0562) |
 | `TDD-0563` | `TC-0012-0442` | Integration | falsifiability | [TDD-0563](#tdd-0563) |
 | `TDD-0564` | `TC-0012-0442` | Integration | falsifiability | [TDD-0564](#tdd-0564) |
+| `TDD-0567` | `US-0012-0143` | E2E | falsifiability | [TDD-0567](#tdd-0567) |
+
+The run started 2026-09-23T11:30:58.834Z takes up the rows `CR-20260923-0001`
+resets. `TDD-0567` is handed over on the falsifiability branch. `TDD-0514`,
+`TDD-0515` and `TDD-0497` are not handed over: each case has several
+independently observable boundaries, so each row needs a split, which is a
+Change Request. Their entries below group the tests by boundary and name a
+mutation for each. `TDD-0515`'s entry also holds the re-verify of `TDD-0561`,
+whose Test file this run edited. `TDD-0516` and `TDD-0517` are `/qfai-implement`'s
+rows and have no entry here.
 
 ### TDD-0469
 
@@ -489,6 +529,169 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.t
 - Checkpoint verification revision: 2d35c540bad7b3ae24611d105b105ce5e63f7f2a
 - Checkpoint verification seal: a8d25651519a0f5a47b1bea669fa3d8e5fda13f859d923e5f9273e2b16539606
 
+### TDD-0567
+
+- TDD-ID: TDD-0567
+- Layer: E2E
+- Test file: packages/qfai/tests/e2e/spec0012PrototypingRemediationE2E.test.ts
+- Selector: US-0012-0143: iterate --check-convergence reports the recorded loop state read-only
+- US-ref: US-0012-0143
+- Branch: falsifiability — the peek predates the story, so the new block passed on its first run
+- Predicate to break: packages/qfai/src/cli/commands/prototypingIterate.ts:3327, `runCheckConvergencePeek` — the closing `return 2;`, the exit code of every recorded state that is not converged
+- Mutation: `return 2;` to `return 0;` at line 3327
+- Why it fails: the budget-exhausted record still prints `Not converged`, but the run exits 0.
+  `expect(notConverged.exitCode).toBe(2)` fails as an assertion, `AssertionError: expected +0 to be 2 // Object.is equality` at `tests/e2e/spec0012PrototypingRemediationE2E.test.ts:565:35`
+- Other rows: the other 19 tests of the E2E file still pass. Three tests of `prototypingIterate.checkConvergence.test.ts` fail: `converged with a negative acceptedIterationIndex is NOT converged`, `Test 2` and `Test 3`. They belong to `TDD-0497`, which is at `todo`, so no completed row is affected
+- Type check: the mutated line is a plain `return 0;` in a function returning `Promise<number>`
+
+The block runs `qfai prototyping iterate --check-convergence --root <project>`
+through the CLI entry point, with no `--cycle`, twice against one project:
+
+| Clause | Observation |
+| ------ | ----------- |
+| AC-0012-0083 and EX-0012-0189: a `max-iterations` record with `acceptedIterationIndex: null`, peeked without `--cycle` | exit 2; stdout carries `(cycle 9):`, `stopReason: max-iterations`, `acceptedIterationIndex: null`, `iterations: 10` and `Not converged: stopReason="max-iterations"` |
+| EX-0012-0189: a `converged` record with `acceptedIterationIndex: 3` | exit 0; stdout carries `stopReason: converged`, `acceptedIterationIndex: 3`, `iterations: 4` and `Converged:` |
+| AC-0012-0083: the run writes nothing and starts no cycle | after each run `prototyping.json` is byte-for-byte what the test wrote, and the project's file list equals the one taken before the first run |
+
+`EX-0012-0187` and `EX-0012-0188` hang from `BR-0012-0066`, whose criterion is
+`AC-0012-0059`, the `--capture` criterion. They are not in this story's chain,
+so the block does not assert them.
+
+First run:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/e2e/spec0012PrototypingRemediationE2E.test.ts -t "US-0012-0143: iterate --check-convergence reports the recorded loop state read-only"
+  Test Files 1 passed (1); Tests 1 passed | 19 skipped (20)
+```
+
+The mutation was applied, run and reverted at revision
+`8d6fc3cbdd81e577a3cf46ec20987251ffa99acc`:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/e2e/spec0012PrototypingRemediationE2E.test.ts -t "US-0012-0143: iterate --check-convergence reports the recorded loop state read-only"
+  AssertionError: expected +0 to be 2 // Object.is equality
+   ❯ tests/e2e/spec0012PrototypingRemediationE2E.test.ts:565:35
+  Test Files 1 failed (1); Tests 1 failed | 19 skipped (20)
+after git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts:
+  Test Files 1 passed (1); Tests 1 passed | 19 skipped (20)
+```
+
+`/qfai-implement` Phase Red step 3c takes the recorded run.
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingIterate.ts, `runCheckConvergencePeek`, the closing `return 2;` for every recorded state that is not converged
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: cbc624eb31702de967d6c55559105628638570df03331d570a2864b509918cf8
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/e2e/spec0012PrototypingRemediationE2E.test.ts
+```
+
+#### Done rows on the same Test file
+
+Sixteen `done` rows name this Test file: `TDD-0460` to `TDD-0463`, `TDD-0473`
+to `TDD-0476`, `TDD-0490` to `TDD-0495` and `TDD-0509` to `TDD-0513`. None
+records a `RED test manifest`, so this edit moves no recorded hash and there is
+no re-verify record to write. The whole file passed after the edit: Test Files 1
+passed (1); Tests 20 passed (20).
+
+### TDD-0514
+
+- TDD-ID: TDD-0514
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts
+- TC-ref: TC-0012-0484
+- Branch: none — not handed over. `TC-0012-0484` states three independently observable boundaries, so the row needs a split through a Change Request
+
+| Boundary | Tests, at line | Predicate | Mutation | Tests that fail |
+| -------- | -------------- | --------- | -------- | --------------- |
+| `--capture` on the command line turns capture on, and its absence leaves it off | 131 `parseArgs sets options.prototypingCapture=true when --capture is present`; 143 `parseArgs leaves prototypingCapture undefined when --capture is absent` | `packages/qfai/src/cli/lib/args.ts:932`, `options.prototypingCapture = true;` | delete the line | 131, `AssertionError: expected undefined to be true` |
+| with no screens injected, iterate captures every `screens[]` entry of the UI contracts, `.yaml` or `.yml` | 410 `derives screens from UI contracts when CLI sets capture=true without DI screens`; 602 ``derives screens from `.yml` UI contracts (extension parity with `.yaml`)`` | `packages/qfai/src/core/contracts/screenContracts.ts:144`, the `**/*.{yaml,yml}` glob | the glob to `**/*.json` | 410 and 602, `AssertionError: expected [] to deeply equal [ 'home', 'settings' ]`. The glob to `**/*.yaml` fails 602 alone |
+| with no runner injected, iterate uses the default Playwright runner, and a run without Playwright exits 2 naming it | 652 `uses the default runner when no captureScreen is injected, and exits 2 naming Playwright when it is not installed` (new); 202 `exports defaultCaptureScreen as a function (smoke test on the default runner module)`; 208 `surfaces 'playwright not installed' and exits 2 when the runner reports the missing-dep failure shape (DI-mimicked)` | `packages/qfai/src/cli/commands/prototypingIterate.ts:1535`, `runner = mod.defaultCaptureScreen;` in `runCapturePath` | `runner = async () => ({ ok: true, durationMs: 0 });` | 652 alone, `AssertionError: expected +0 to be 2` at `prototypingIterate.cliCapture.test.ts:682:20`. 202 and 208 still pass: neither lets iterate choose the runner |
+
+The new test at line 652 is the one `CR-20260923-0001` says the case still owed.
+It passed on its first run, because iterate already falls back to the default
+runner, so it did not go RED; the mutation above is its falsifiability run.
+
+### TDD-0515
+
+- TDD-ID: TDD-0515
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts
+- TC-ref: TC-0012-0485
+- Branch: none — not handed over. `TC-0012-0485` states three independently observable boundaries, so the row needs a split through a Change Request
+
+| Boundary | Tests, at line | Predicate | Mutation | Tests that fail |
+| -------- | -------------- | --------- | -------- | --------------- |
+| `--auto-serve` on the command line turns serving on, and its absence starts no server | 139 `parseArgs sets options.prototypingAutoServe=true when --auto-serve is present`; 151 `parseArgs leaves prototypingAutoServe undefined when --auto-serve is absent`; 228 `does not invoke serverRunner when autoServe flag is absent` | `packages/qfai/src/cli/lib/args.ts:942`, `options.prototypingAutoServe = true;`; and `packages/qfai/src/cli/commands/prototypingIterate.ts:1281`, `if (options.autoServe) {` | delete line 942; line 1281 to `if (options.autoServe ?? options.serverRunner) {` | 139 on the first, `AssertionError: expected undefined to be true`. 228 on the second, but as `TypeError: Cannot read properties of undefined (reading 'ok')`, not an assertion: its stub is a bare `vi.fn()`. The second predicate is also `TDD-0469`'s |
+| with no runner injected, iterate uses the default server runner | 179 `dynamically loads defaultServerRunner; deferred sentinel error is gone` | `packages/qfai/src/cli/commands/prototypingIterate.ts:1294`, `serverRunner = mod.defaultServerRunner;` | `serverRunner = async () => ({ ok: true, teardown: async () => {} });` | 179, `AssertionError: expected [] to deeply equal [ 54406 ]` at `prototypingIterate.cliAutoServe.test.ts:215:27`; and `TDD-0561`'s case, `AssertionError: expected +0 to be 2` |
+| the default runner's teardown resolves within 2000 ms | 267 `default runner teardown resolves within 2000ms` | `packages/qfai/src/core/prototyping/defaultServerRunner.ts:174`, the `resolve();` inside `server.close` | `setTimeout(resolve, 2500);` | 267, on the test's own `Error: teardown exceeded 2s budget` from its `Promise.race`, not an `AssertionError` |
+
+The test at line 179 asserted only `typeof exit === "number"` before this run,
+and that held under the line 1294 mutation. It now asserts exit 0, one listen on
+the `--target-url` port, and no server listening after iterate returns. It
+passed on its first run, because iterate already uses the default runner, so it
+did not go RED.
+
+`CR-20260923-0001` names block (7), `default runner returns {ok:false,
+reason:/already in use/i} when port is busy, iterate exits 2`, for this case.
+Its resolution moves the busy-port refusal to `TC-0012-0489`, so that test
+carries no `TC-0012-0485` annotation.
+
+#### Shared-artifact re-verify
+
+This run added five annotation lines to the Test file, changed the test at line
+179 and moved `listenOnEphemeralPort` from block (8) to file scope without
+changing it. That moves the `RED test hash` of the one `done` row whose manifest
+holds the file. Its selector was re-run against the edited file, and its
+original mutation was re-applied, run and reverted.
+
+##### spec-0012/TDD-0561
+
+- Evidence file: .qfai/evidence/atdd-spec-0012.md
+- Revision: 8d6fc3cbdd81e577a3cf46ec20987251ffa99acc
+- Selector: TC-0012-0489 (TDD-0561): refuses the held port, binds no other and iterate exits 2 naming it
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts -t "TC-0012-0489 \(TDD-0561\): refuses the held port, binds no other and iterate exits 2 naming it"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 16 skipped (17)
+- Proof command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts -t "TC-0012-0489 \(TDD-0561\): refuses the held port, binds no other and iterate exits 2 naming it", with `packages/qfai/src/core/prototyping/defaultServerRunner.ts:207` changed from `` `port ${port} already in use; refusing to attach to a foreign process. ` + `` to `` `port already in use; refusing to attach to a foreign process. ` + ``
+- Proof result: FAIL — Test Files 1 failed (1); Tests 1 failed | 16 skipped (17). The row's case fails on `AssertionError: expected 'qfai prototyping iterate --auto-serve…' to contain 'port 49867'` at `tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts:616:37`
+- Restored GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts -t "TC-0012-0489 \(TDD-0561\): refuses the held port, binds no other and iterate exits 2 naming it", after `git checkout -- packages/qfai/src/core/prototyping/defaultServerRunner.ts`
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed | 16 skipped (17)
+- RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts
+```
+
+- RED test hash: 0f6ada4853ddef22dcfe836351c8dc76d4177eb277bd950144cdd12c04657551
+
+The record is read as evidence once this entry is a completed, reviewed item.
+`TDD-0515` is split before it can be, so the row that inherits this Test file
+carries the record forward.
+
+### TDD-0497
+
+- TDD-ID: TDD-0497
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
+- TC-ref: TC-0012-0488
+- Branch: none — not handed over. `TC-0012-0488` states five independently observable boundaries, so the row needs a split through a Change Request
+
+| Boundary | Tests, at line | Predicate | Mutation | Tests that fail |
+| -------- | -------------- | --------- | -------- | --------------- |
+| a `converged` record with a non-negative accepted index exits 0 and reports `stopReason` and `acceptedIterationIndex` | 66 `Test 1`; the converged cases of 185 `Test 5`, 216 `Test 6` and 252 `Test 7` | `packages/qfai/src/cli/commands/prototypingIterate.ts:3297`, `if (stopReason === "converged" && acceptedIterationIndex !== null) {` | `!== null` to `=== null` | 66, 185, 216 and 252, `AssertionError: expected 2 to be +0`; and 90, which the mutation turns to exit 0 |
+| every other recorded state exits 2 with `Not converged` and its reason | 90 `converged with a negative acceptedIterationIndex is NOT converged`; 117 `Test 2`; 141 `Test 3` | line 3327, the closing `return 2;` of `runCheckConvergencePeek` | `return 0;` | 90, 117 and 141, `AssertionError: expected +0 to be 2`; and `TDD-0567`'s block |
+| a missing `prototyping.json` exits 2 with a diagnostic | 165 `Test 4` | line 3271, the `return 2;` after the missing-file diagnostic | `return 0;` | 165 alone |
+| the peek parses without `--cycle` and reports cycle 9, or the cycle given | 216 `Test 6` (parse and default); 185 `Test 5` (cycle given) | `packages/qfai/src/cli/lib/args.ts:922`, `options.prototypingCheckConvergence = true;`; `prototypingIterate.ts:459`, `runCheckConvergencePeek(options.root, 9)`; `prototypingIterate.ts:473`, `runCheckConvergencePeek(options.root, options.cycle)` | delete line 922; `9` to `0` at 459; `options.cycle` to `9` at 473 | 216 on the first two, 185 on the third |
+| the peek leaves `prototyping.json` unchanged and writes no `iter-NN/` directory or `iterate-plan.json` | 252 `Test 7` | `runCheckConvergencePeek`, which reads and never writes; mutated at line 3286 | `info(header);` to `await writeFile(protoJsonAbs, "{}\n", "utf-8"); info(header);` | 252, `AssertionError: expected '{}\n' to be …`; and `TDD-0567`'s block |
+
+Test 6 holds two boundaries in one test: the parse (line 922) and the cycle
+default (line 459). The rejection reasons in the second boundary are one
+predicate, the closing `return 2;`, which is why they are grouped; a split that
+keeps one row per reason would give each of them its own row.
+
 ## Coverage Depth Matrix
 
 | Obligation | Layer | Implemented in | Depth | Rationale |
@@ -506,6 +709,10 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.t
 | `TC-0012-0282..0284` | Integration | `packages/qfai/tests/integration/prototypingRev11Integration.test.ts` | D3 | core test existence / describe synchronization を検査 |
 | `TC-0012-0442` | Integration | `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts` | D3 | Runs `runPrototypingIterate` with an injected runner and checks the four clauses of the runner contract: no call without `--auto-serve`, one call and one teardown with it, a recovered owner completing the cycle, and a refusal exiting 2 with the runner's reason on stderr. One ledger row per clause: `TDD-0469`, `TDD-0562`, `TDD-0563`, `TDD-0564` |
 | `TC-0012-0489` | Integration | `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts` | D3 | Runs `runPrototypingIterate` with the default runner against a port a real listener holds, and checks the exit code, the port in the stderr reason, that the listener still accepts connections, and that no other port was bound |
+| `TC-0012-0484` | Integration | `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts` | D3 | Parses `--capture` on and off, derives screens from `.yaml` and `.yml` UI contracts, and runs iterate with no runner injected and Playwright missing, checking exit 2 and the Playwright reason on stderr. `TDD-0514` needs a split, one row per boundary |
+| `TC-0012-0485` | Integration | `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts` | D3 | Parses `--auto-serve` on and off, checks no runner is called without it, runs iterate with no runner injected on a free port and checks the one listen and the teardown, and bounds the default runner's teardown at 2000 ms. `TDD-0515` needs a split, one row per boundary |
+| `TC-0012-0488` | Integration | `packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts` | D3 | Peeks converged, negative-index, `max-iterations`, `license-verify-fail` and missing records, the given and the default cycle, and checks the peek writes nothing. `TDD-0497` needs a split, one row per boundary |
+| `US-0012-0143` | E2E | `packages/qfai/tests/e2e/spec0012PrototypingRemediationE2E.test.ts` | D3 | Runs the peek through the CLI entry point without `--cycle` against a `max-iterations` record and a `converged` one, and checks the exit codes, the reported state and that no file changed. `TDD-0567` |
 
 ## Coverage obligations checklist
 
@@ -563,6 +770,19 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.t
 | 30 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of the five rows, attempt 2 | #tdd-0469 … #tdd-0564 | one response per row in that row's attempt-2 pack | PASS |
 | 31 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0564, its Test file and the full suite | #tdd-0564 | Checkpoint verification fields | PASS |
 
+### Rows for the run started 2026-09-23T11:30:58.834Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 32 | acceptance-test-engineer | acceptance-test-engineer | Annotate the tests of `TC-0012-0484`, `TC-0012-0485` and `TC-0012-0488` | CR-20260923-0001 `## Proposed change`, 06_Test-Cases.md | the three test files in #work-performed-what-changed-where | PASS |
+| 33 | acceptance-test-engineer | acceptance-test-engineer | Write the `TC-0012-0484` case where iterate itself falls back to the default Playwright runner | CR-20260923-0001 approved actions step 3, 06_Test-Cases.md `TC-0012-0484` | `prototypingIterate.cliCapture.test.ts` block (11); #tdd-0514 | PASS |
+| 34 | acceptance-test-engineer | acceptance-test-engineer | Make the `TC-0012-0485` default-runner case assert the bind and the teardown | CR-20260923-0001 approved actions step 3, 06_Test-Cases.md `TC-0012-0485` | `prototypingIterate.cliAutoServe.test.ts` block (3); #tdd-0515 | PASS |
+| 35 | acceptance-test-engineer | acceptance-test-engineer | Write the `US-0012-0143` E2E block and hand over `TDD-0567` on the falsifiability branch | US-0012-0143, AC-0012-0083, BR-0012-0067, EX-0012-0189, `prototypingIterate.ts` | `spec0012PrototypingRemediationE2E.test.ts`; #tdd-0567 | PASS |
+| 36 | acceptance-test-engineer | acceptance-test-engineer | Group the tests of `TDD-0514`, `TDD-0515` and `TDD-0497` by boundary, with a mutation for each | the three test files, `selector-granularity.md` | #tdd-0514, #tdd-0515, #tdd-0497; each row needs a split | PASS |
+| 37 | acceptance-test-engineer | acceptance-test-engineer | Re-verify `spec-0012/TDD-0561` under the edited Test file | #tdd-0561, `shared-test-artifacts.md` | #tdd-0515 Shared-artifact re-verify | PASS |
+| 38 | acceptance-test-engineer | acceptance-test-engineer | Add `TC-0012-0484`, `TC-0012-0485`, `TC-0012-0488` and `US-0012-0143` to the Coverage Depth Matrix | 06_Test-Cases.md, 02_User-stories.md | #coverage-depth-matrix | PASS |
+| 39 | - | n/a | grilling(-@2026-09-23T11:30:58.834Z/none): none | - | - | PASS |
+
 ## Execution logs
 
 - focused suites:
@@ -613,7 +833,43 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 
 The `-t` pattern escapes `(`, `)` and `+`, since vitest reads it as a regular expression.
 
+### Checks for the run started 2026-09-23T11:30:58.834Z
+
+```text
+pnpm -C packages/qfai exec vitest run <the four changed test files and the two unit files>
+  Test Files 6 passed (6); Tests 77 passed (77)
+eslint and prettier --check on the changed test files   -> exit 0
+npx tsc --noEmit -p packages/qfai/tsconfig.tests.json    -> exit 0
+node packages/qfai/dist/cli/index.mjs validate --profile tdd --format text   -> 945 errors (946 before)
+node packages/qfai/dist/cli/index.mjs validate --profile full --format text  -> 964 errors (965 before)
+pnpm -C packages/qfai exec vitest run tests/assets
+  Test Files 1 failed | 185 passed (186): openRowAlreadyTested.test.ts
+```
+
+`tsconfig.tests.json` lists none of the changed test files. A scratch config
+that extends it and includes only them reported four errors in
+`spec0012PrototypingRemediationE2E.test.ts`, none on a line this run added: the
+`dm()` fixture at lines 69, 80 and 81, and `.sort()` on a readonly array at line
+643, which was line 569 before. The other files reported none. The scratch
+config is deleted.
+
+`validate` no longer reports `QFAI-ATDD-111` for `US-0012-0143` or
+`QFAI-ATDD-112` for `TC-0012-0484`, `-0485` and `-0488`. It reports one new
+error, `QFAI-TDDLIST-008` on `TDD-0561`: its recorded `RED test hash` no longer
+matches the edited Test file. The re-verify record under `#tdd-0515` is read
+only from a completed, reviewed entry, so the finding stands until the row that
+inherits that record reaches `done`.
+
+`openRowAlreadyTested.test.ts` fails on three rows it does not list:
+`TDD-0497`, `TDD-0514` and `TDD-0515`. Each is `todo` while a test carries its
+case, and the list may only shrink. They leave it when `/qfai-implement`
+advances them, after the split.
+
 ## Gaps / Open risks
+
+- `TDD-0514`, `TDD-0515` and `TDD-0497` each need a split through a Change Request before they can be handed over. Their entries group the tests by boundary.
+- `QFAI-TDDLIST-008` on `TDD-0561` and the `openRowAlreadyTested.test.ts` failure both clear only when the split rows reach `done`.
+- `composeCaptureUrl`'s route-relative tests pass when the join is string concatenation, `targetUrl + screenUrl`: only the unparseable-pair test fails under that mutation. `TDD-0516` is `/qfai-implement`'s row.
 
 - repo-global gate は未解消の既存 failures が残るため、今回は scope-local completion として扱う。
 - `completion-reviewer` は内容面を PASS としたが、4ファイルがまだ未コミットである点を merge 前の手続き上の注意として指摘した。
