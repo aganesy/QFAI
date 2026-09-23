@@ -297,3 +297,34 @@ Branch `feature/v1.8.10` is pinned. Per CLAUDE.md version-discipline ("On a pinn
 - Wave 1 deferred Playwright TCs (TDD-0401/0402): when is live Playwright integration scheduled?
 - TDD-0384 per-spec iter layout migration: is this its own spec-0012 follow-on Change Request, or rolled into a different spec?
 - Should the legacy `resolvePrimaryPrototypingSpec` be physically removed in v1.8.11, or left as deprecated for one more release cycle?
+
+# /qfai-implement — run started 2026-09-23T22:29:18.879Z
+
+`TDD-0516` and `TDD-0517` were selected and stopped at `todo`, before any
+test or production edit: each row's test case states several boundaries, and
+a split is `/qfai-sdd` Phase 2b's. The handed-over rows of this run are in
+`atdd-spec-0012.md`.
+
+## Grilling Session
+
+### /qfai-implement — run started 2026-09-23T22:29:18.879Z
+
+Preflight: session opened
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-23T22:30:20Z | da96f2d57cf5ee5ffb422dedb2269c27fa7b7143 | 2026-09-23T22:30:30Z | preflight | empty | none in flight | 2 | 0 | 0 |
+| S2 | adopted | 2026-09-23T22:31:48Z | da96f2d57cf5ee5ffb422dedb2269c27fa7b7143 | 2026-09-23T22:31:49Z | the two mutations the TDD-0514 handover names mask each other when applied together | empty | none in flight | 1 | 0 | 0 |
+| S3 | adopted | 2026-09-23T22:36:51Z | da96f2d57cf5ee5ffb422dedb2269c27fa7b7143 | 2026-09-23T22:37:41Z | the test cases of the unit rows TDD-0516 and TDD-0517 each state several boundaries | empty | none in flight | 2 | 0 | 0 |
+
+## Work Orders Summary
+
+### Rows for the /qfai-implement run started 2026-09-23T22:29:18.879Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 46 | backend-engineer | backend-engineer | grilling(S1@2026-09-23T22:29:18.879Z/agents): keep the ledger `Selector` of `TDD-0514` and `TDD-0515` and correct the entry's identity copy to it | CR-20260923-0014 `## Proposed change` step 1; #tdd-0514, #tdd-0515; `qfai-implement/SKILL.md` per-item evidence contract | the `Selector` line of both entries; the ledger cell resolves, so the carve-out does not allow rewriting it, and the entry copies its identity from the ledger. The work order asked for the handover's `describe` name in the ledger | PASS |
+| 47 | backend-engineer | backend-engineer | grilling(S1@2026-09-23T22:29:18.879Z/agents): prove a multi-entry row on one mutated tree that fails every entry, and record each handover mutation alone as extra evidence | #tdd-0514, #tdd-0515, #tdd-0575; `qfai-implement/SKILL.md` Red 3c; `selector-granularity.md` | Round 1 of the three rows; step 3c runs each entry against one tree with one `Falsifiability revision`, and the primary mutation alone leaves an entry passing. The work order asked for the primary mutation as the proof | PASS |
+| 48 | backend-engineer | backend-engineer | grilling(S2@2026-09-23T22:29:18.879Z/agents): on `TDD-0514` and `TDD-0515`, set the flag to `false` in the flag's case instead of deleting the line | #tdd-0514; `tmp` run output of the discarded proof | Round 1 of both rows; with the initializer mutation in place a deleted case is masked, so the flag-present test passed. The discarded run is recorded in #tdd-0514 | PASS |
+| 49 | backend-engineer | backend-engineer | grilling(S3@2026-09-23T22:29:18.879Z/agents): stop `TDD-0516` at `todo`: `TC-0012-0486` states five boundaries of `composeCaptureUrl` | 06_Test-Cases.md `TC-0012-0486`; `selector-granularity.md`; the boundary method of CR-20260923-0014 | the row is unchanged; absolute passthrough, route-relative join, fallback with no screen URL, and two rejections naming `--target-url` each sit on their own predicate. A split is `/qfai-sdd` Phase 2b's; no Change Request is raised in this run, per the work order | PASS |
+| 50 | backend-engineer | backend-engineer | grilling(S3@2026-09-23T22:29:18.879Z/agents): stop `TDD-0517` at `todo`: `TC-0012-0487` states two boundaries of `defaultCaptureScreen` | 06_Test-Cases.md `TC-0012-0487`; `selector-granularity.md`; the boundary method of CR-20260923-0014 | the row is unchanged; the rejection of a status of 400 or above and the rejection of a missing response are two predicates with two reasons. A split is `/qfai-sdd` Phase 2b's; no Change Request is raised in this run, per the work order | PASS |
