@@ -213,18 +213,21 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
   });
 
   // QFAI:SPEC-0012:TC-0012-0488
-  it("Test 6: --check-convergence WITHOUT --cycle parses and defaults cycle to 9 via the CLI parser", async () => {
-    // a) argparse must recognise --check-convergence as a known boolean
-    //    flag (not an unknown-flag error).
+  it("Test 6a: --check-convergence WITHOUT --cycle parses as a known flag", () => {
+    // argparse must recognise --check-convergence as a known boolean
+    // flag (not an unknown-flag error).
     const parsed = parseArgs(["prototyping", "iterate", "--check-convergence"], "/tmp/fake");
     expect(parsed.invalid).toBe(false);
     expect(parsed.options.prototypingCheckConvergence).toBe(true);
     expect(parsed.options.prototypingAction).toBe("iterate");
+  });
 
-    // b) When invoked WITHOUT --cycle but WITH --check-convergence, the
-    //    peek path must default to cycle 9 (the hint's recommendation)
-    //    and must NOT trip the cycle-required guard. We exercise the
-    //    runPrototypingIterate entry directly with cycle omitted.
+  // QFAI:SPEC-0012:TC-0012-0488
+  it("Test 6b: --check-convergence WITHOUT --cycle defaults the peek to cycle 9", async () => {
+    // When invoked WITHOUT --cycle but WITH --check-convergence, the
+    // peek path must default to cycle 9 (the hint's recommendation)
+    // and must NOT trip the cycle-required guard. We exercise the
+    // runPrototypingIterate entry directly with cycle omitted.
     const root = await newTempDir();
     await seedPrototypingJson(root, {
       stopReason: "converged",

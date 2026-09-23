@@ -198,13 +198,11 @@ describe("iterate --capture: (3) default Playwright runner fallback when capture
   // This satisfies the "missing-dep path is observable in CI" guarantee
   // the original test was meant to provide.
 
-  // QFAI:SPEC-0012:TC-0012-0484
   it("exports defaultCaptureScreen as a function (smoke test on the default runner module)", async () => {
     const mod = await import("../../../../src/core/prototyping/defaultCaptureScreen.js");
     expect(typeof mod.defaultCaptureScreen).toBe("function");
   });
 
-  // QFAI:SPEC-0012:TC-0012-0484
   it("surfaces 'playwright not installed' and exits 2 when the runner reports the missing-dep failure shape (DI-mimicked)", async () => {
     const root = await newTempDir();
     await seedMinimal(root);

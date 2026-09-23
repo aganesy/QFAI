@@ -224,7 +224,6 @@ describe("iterate --auto-serve: (3) default runner fallback when serverRunner om
 });
 
 describe("iterate --auto-serve: (4) no-server default preserved (DR-0012-0029 / DR-0012-0031)", () => {
-  // QFAI:SPEC-0012:TC-0012-0485
   it("does not invoke serverRunner when autoServe flag is absent", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
