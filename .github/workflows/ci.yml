@@ -645,6 +645,15 @@ jobs:
       - name: Build qfai (e2e + integration slices)
         if: matrix.slice == 'e2e' || matrix.slice == 'integration'
         run: pnpm -C packages/qfai build
+      - name: Record the runner CPU (pr-fix slice)
+        # The PowerShell host this slice spawns can crash on nearly every case of
+        # a leg, and whether that follows the runner's CPU model is the open
+        # question. The job log carries no hardware detail without this line.
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped test lanes spawn no PowerShell host, so there is
+        # no crash on that side whose runner a CPU line would identify.
+        if: matrix.slice == 'pr-fix'
+        run: lscpu
       - name: Run tests (${{ matrix.slice }})
         # The per-slice script, not the generic runner with a project name.
         # While this read `test -- --project <slice>` a slice with no script of
