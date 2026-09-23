@@ -213,6 +213,9 @@ describe("iterate --auto-serve SIGINT teardown", () => {
     // SIGINT handler installed by iterate (during the auto-serve
     // setup) must reach the teardown within 2s.
     const sigintDispatchedAt: number[] = [];
+    // Teardown calls seen while the cycle is still running, read after the
+    // SIGINT. A teardown the cycle end runs cannot be counted here.
+    let teardownCallsBeforeCycleEnd = -1;
     const exit = await runPrototypingIterate({
       root,
       cycle: 0,
@@ -225,6 +228,7 @@ describe("iterate --auto-serve SIGINT teardown", () => {
         process.emit("SIGINT");
         // Yield to let the handler run.
         await new Promise((r) => setTimeout(r, 10));
+        teardownCallsBeforeCycleEnd = teardown.mock.calls.length;
         await writeFile(pngPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
         await writeFile(htmlPath, "<html></html>");
         return { ok: true, durationMs: 5 };
@@ -233,6 +237,8 @@ describe("iterate --auto-serve SIGINT teardown", () => {
     });
 
     expect(exit).toBe(0);
+    // The SIGINT itself ran the teardown, before the cycle ended.
+    expect(teardownCallsBeforeCycleEnd).toBe(1);
     // Teardown should have run AT LEAST once. SIGINT-driven teardown
     // semantics: iterate must not call teardown twice on the same
     // resolved teardown — once via SIGINT, then a second time at

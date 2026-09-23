@@ -37,6 +37,8 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 - rejected option の再導入はない。`09_delta.md` の rev11 decision に沿い、public export 再公開や legacy grammar 許容は行っていない。
 - The stub runner in `does not invoke the server runner when --auto-serve is absent` returns a well-formed `ok: true` result.
   A call that should not happen is then caught by the test's own assertion, rather than by iterate failing to read an empty result.
+- The case `teardown executes within 2s when SIGINT is dispatched mid-run` reads the teardown call count while the cycle is still running, after the SIGINT.
+  Without it, the cycle-end teardown satisfied the case even when the SIGINT ran nothing, so the case could not own the boundary `sigint-invokes-teardown-within-bound`.
 
 ## Work performed (what changed, where)
 
@@ -55,6 +57,9 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 - `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts`
   - Each of the four tests carries `QFAI:SPEC-0012:TC-0012-0442`.
   - The stub runner in `does not invoke the server runner when --auto-serve is absent` returns a well-formed `ok: true` result instead of nothing. The title and both assertions are unchanged.
+- `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts`
+  - Each of the three tests carries `QFAI:SPEC-0012:TC-0012-0462`.
+  - `teardown executes within 2s when SIGINT is dispatched mid-run` records the teardown call count after the SIGINT, inside the capture callback, and asserts it is 1. The existing assertions, including the 2 s bound, are unchanged.
 
 ## Commands executed + key outputs
 
@@ -118,7 +123,6 @@ The run started 2026-09-23T08:46:59.499Z adds the three rows `CR-20260923-0008` 
 | ------ | ---------- | ----- | -------------- | ----- |
 | `TDD-0469` | `TC-0012-0442` | Integration | falsifiability | [TDD-0469](#tdd-0469) |
 | `TDD-0561` | `TC-0012-0489` | Integration | falsifiability | [TDD-0561](#tdd-0561) |
-| `TC-0012-0462` | Integration | `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts` | D3 | Runs `runPrototypingIterate` with an injected runner and checks the three SIGINT clauses: the handler is installed for the cycle and removed at its end, teardown and removal survive a failed cycle, and a SIGINT during the cycle tears down once within the bound. One ledger row per clause: `TDD-0471`, `TDD-0565`, `TDD-0566`. The third case does not observe that the SIGINT, rather than the cycle end, caused the teardown |
 | `TDD-0562` | `TC-0012-0442` | Integration | falsifiability | [TDD-0562](#tdd-0562) |
 | `TDD-0563` | `TC-0012-0442` | Integration | falsifiability | [TDD-0563](#tdd-0563) |
 | `TDD-0564` | `TC-0012-0442` | Integration | falsifiability | [TDD-0564](#tdd-0564) |
@@ -540,18 +544,24 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.t
 - Test file: packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
 - Selector: teardown executes within 2s when SIGINT is dispatched mid-run
 - TC-ref: TC-0012-0462
-- Branch: falsifiability — the change request restated the test case and changed no test and no product code, so the case passed on its first run
-- Predicate to break: packages/qfai/src/cli/commands/prototypingIterate.ts:1274, `teardownOnce` — `teardownInvoked = true;`, which makes the teardown a SIGINT invokes the only one
-- Mutation: delete line 1274
-- Why it fails: the SIGINT invokes the teardown, and the cycle end invokes it a second time.
-  `expect(teardown).toHaveBeenCalledTimes(1)` sees 2 calls
-- Other rows: no SIGINT reaches the other two cases, so each still sees one teardown call
-- Oracle limit: deleting `void teardownOnce();` at line 1327 is not caught by this case.
-  The cycle-end teardown then runs once, about 15 ms after the SIGINT, which still meets both assertions.
-  The case observes that a SIGINT teardown is not doubled, not that the SIGINT caused it
+- Branch: falsifiability — the change request restated the test case and changed no product code, so the case passed on its first run
+- Predicate to break: packages/qfai/src/cli/commands/prototypingIterate.ts:1327, the SIGINT handler in `runPrototypingIterate` — `void teardownOnce();`, the call that makes a SIGINT run the teardown
+- Mutation: delete line 1327
+- Why it fails: the SIGINT no longer runs the teardown, so the count read in the capture callback after the SIGINT is 0.
+  `expect(teardownCallsBeforeCycleEnd).toBe(1)` fails as an assertion. The cycle-end teardown still runs once afterwards
+- Other rows: no SIGINT reaches the other two cases, so the handler's body never runs there and both still pass
+- Note: deleting `teardownInvoked = true;` at line 1274 also fails this case, on `expect(teardown).toHaveBeenCalledTimes(1)` with 2 calls.
+  It breaks the once-guard rather than the SIGINT call, so it is not this row's proof
+
+The case reads the teardown call count inside the capture callback, after the
+SIGINT and the 10 ms yield, and asserts it is 1 after iterate returns. The
+handler starts the teardown synchronously when the SIGINT is emitted, so the
+count does not depend on timing, and a teardown the cycle end runs comes too
+late to be counted.
 
 The three mutations were written into a type-level copy of the auto-serve block
-in a scratch config with the test file, and `tsc` exited 0 on all three.
+in a scratch config with the test file, and `tsc` exited 0 on all three. The
+`TDD-0566` copy was re-checked with the line 1327 deletion, also exit 0.
 
 ## Coverage Depth Matrix
 
@@ -570,6 +580,7 @@ in a scratch config with the test file, and `tsc` exited 0 on all three.
 | `TC-0012-0282..0284` | Integration | `packages/qfai/tests/integration/prototypingRev11Integration.test.ts` | D3 | core test existence / describe synchronization を検査 |
 | `TC-0012-0442` | Integration | `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts` | D3 | Runs `runPrototypingIterate` with an injected runner and checks the four clauses of the runner contract: no call without `--auto-serve`, one call and one teardown with it, a recovered owner completing the cycle, and a refusal exiting 2 with the runner's reason on stderr. One ledger row per clause: `TDD-0469`, `TDD-0562`, `TDD-0563`, `TDD-0564` |
 | `TC-0012-0489` | Integration | `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts` | D3 | Runs `runPrototypingIterate` with the default runner against a port a real listener holds, and checks the exit code, the port in the stderr reason, that the listener still accepts connections, and that no other port was bound |
+| `TC-0012-0462` | Integration | `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts` | D3 | Runs `runPrototypingIterate` with an injected runner and checks the three SIGINT clauses: the handler is installed for the cycle and removed at its end, teardown and removal survive a failed cycle, and a SIGINT during the cycle tears down once within the bound. One ledger row per clause: `TDD-0471`, `TDD-0565`, `TDD-0566`. |
 
 ## Coverage obligations checklist
 
@@ -635,6 +646,7 @@ in a scratch config with the test file, and `tsc` exited 0 on all three.
 | 33 | acceptance-test-engineer | acceptance-test-engineer | Hand over `TDD-0471`, `TDD-0565` and `TDD-0566` on the falsifiability branch | the test file, `prototypingIterate.ts` | #tdd-0471, #tdd-0565, #tdd-0566 | PASS |
 | 34 | acceptance-test-engineer | acceptance-test-engineer | Add `TC-0012-0462` to the Coverage Depth Matrix | 06_Test-Cases.md | #coverage-depth-matrix | PASS |
 | 35 | - | n/a | grilling(-@2026-09-23T08:46:59.499Z/none): none | - | - | PASS |
+| 36 | acceptance-test-engineer | acceptance-test-engineer | Make the `TDD-0566` case observe that the SIGINT ran the teardown, and move its proof to the handler call | #tdd-0566 | `prototypingIterate.autoServe.sigint.test.ts`; #tdd-0566 | PASS |
 
 ## Execution logs
 
@@ -703,13 +715,25 @@ scratch config that extends `packages/qfai/tsconfig.tests.json` and includes the
 test file and the type-level copy of the three mutations, with exit 0. The
 scratch config is deleted.
 
+After the `TDD-0566` case gained its assertion:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts -t "<Selector>"
+  TDD-0471   Tests 1 passed | 2 skipped (3)
+  TDD-0565   Tests 1 passed | 2 skipped (3)
+  TDD-0566   Tests 1 passed | 2 skipped (3)
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
+  Test Files 1 passed (1); Tests 3 passed (3)
+tsc on a scratch config: the test file and the line 1327 mutation copy   -> exit 0
+eslint and prettier --check on the test file                             -> exit 0
+```
+
 ## Gaps / Open risks
 
 - repo-global gate は未解消の既存 failures が残るため、今回は scope-local completion として扱う。
 - `completion-reviewer` は内容面を PASS としたが、4ファイルがまだ未コミットである点を merge 前の手続き上の注意として指摘した。
 - `TC-0012-0276` の ordering assertion は string index ベースで、実装の大幅な整形変更には比較的弱い。
 - source-inspection 型 ATDD はこの repo の既存パターンに整合するが、runtime behavior を直接実行するテストではないため rationale を残す。
-- The `TDD-0566` case does not observe that a SIGINT, rather than the cycle end, invoked the teardown. Removing the handler's call leaves it green. Closing that needs an assertion inside the case, which this run did not add.
 
 ## Final status (PASS/FAIL) + who confirmed
 
