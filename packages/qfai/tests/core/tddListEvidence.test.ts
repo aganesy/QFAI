@@ -4186,10 +4186,14 @@ ${packPair(1).join("\n")}
             `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
             `- Prototype parity audited evidence hash: ${"a".repeat(64)}`,
             "- Prototype parity review pack: .qfai/review/review-20260811000000003",
+            `- Prototype parity record re-attestation: sha256:${"b".repeat(64)}`,
           ]),
         );
         expect(issue?.message).toContain("no Prototype parity audited evidence hash on an n/a");
         expect(issue?.message).toContain("no Prototype parity review pack on an n/a");
+        // A re-attestation supersedes a verdict, and an `n/a` row has none to
+        // supersede: it is provenance for a review that did not happen.
+        expect(issue?.message).toContain("no Prototype parity record re-attestation on an n/a");
       });
     });
     it("refuses a second Surface artifacts field", async () => {
@@ -4353,7 +4357,7 @@ ${packPair(1).join("\n")}
   // A record repair edits bytes inside the audited subject after both reviews
   // passed, so the hashes they recorded stop recomputing. The contract answers
   // that with a re-attestation written as a pack of its own, and the gate has
-  // to compare the verdicts against it.
+  // to compare each verdict against the re-attestation that supersedes it.
   describe("Record re-attestation", () => {
     const EVIDENCE_FILE = ".qfai/evidence/implement-spec-0001.md";
     const REATTESTATION_PACK = ".qfai/review/review-20260811000000009";
@@ -4362,44 +4366,107 @@ ${packPair(1).join("\n")}
     const REPAIRED_PROOF =
       "- Oracle proof: equivalent-mutant — TC-0001 permits any non-empty result string\n";
     const UNSEALED = `sha256:${"c".repeat(64)}`;
+    const CAPTURE = ".qfai/evidence/prototyping/screen.png";
+    const CAPTURE_BYTES = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const FENCE = "`".repeat(3);
+    const FIELD_VERDICTS = ["Spec", "Code quality"] as const;
+
+    /**
+     * The subjects a repaired entry's verdicts recompute.
+     *
+     * `Spec` and `Code quality` read the entry's fields; `Prototype parity`
+     * reads those plus a record per capture the `Surface artifacts` manifest
+     * names. On a UI-affecting row the two values differ by construction, so
+     * one hash cannot re-attest every verdict.
+     */
+    interface RepairedSubjects {
+      field: string;
+      parity: string;
+    }
+
+    /** A UI-affecting entry: a parity verdict, and the manifest it reads. */
+    function parityEntry(): string {
+      return completeEntry("Unit")
+        .replace(
+          "- qa-gatekeeper: PASS",
+          [
+            "- Surface artifacts:",
+            "",
+            `${FENCE}text`,
+            CAPTURE,
+            FENCE,
+            "",
+            "- qa-gatekeeper: PASS",
+          ].join("\n"),
+        )
+        .replace(
+          "- Checkpoint verification command: npm test",
+          [
+            "- Prototype parity: PASS (clause 1)",
+            `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
+            "- Prototype parity audited evidence hash: {{PARITY_AUDIT_HASH}}",
+            "- Prototype parity review pack: .qfai/review/review-20260811000000001",
+            "- Prototype parity review pack seal: {{PARITY_PACK_SEAL}}",
+            "- Checkpoint verification command: npm test",
+          ].join("\n"),
+        );
+    }
 
     /**
      * Seeds a completed entry, repairs its Oracle proof after the reviews, and
-     * appends `fields(repairedHash, seal)` after the verdicts. `pack: "present"`
+     * appends `fields(subjects, seal)` after the verdicts. `pack: "present"`
      * writes the re-attestation pack, and `seal` is then its real seal.
      */
     async function repairedIssues(
       root: string,
-      fields: (repairedHash: string, seal: string) => string,
-      pack: "present" | "absent" = "absent",
+      fields: (subjects: RepairedSubjects, seal: string) => string,
+      options: { pack?: "present" | "absent"; uiAffecting?: boolean } = {},
     ): Promise<Array<{ code: string; message: string }>> {
-      await seedProject(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), [], {
-        [EVIDENCE_FILE]: completeEntry("Unit"),
-      });
+      const uiAffecting = options.uiAffecting === true;
+      await seedProject(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        [],
+        { [EVIDENCE_FILE]: uiAffecting ? parityEntry() : completeEntry("Unit") },
+        uiAffecting ? { surfaceArtifacts: { [CAPTURE]: CAPTURE_BYTES } } : {},
+      );
       const evidencePath = path.join(root, EVIDENCE_FILE);
       const original = await readFile(evidencePath, "utf8");
       expect(original, "the fixture carries the field the repair edits").toContain(ORIGINAL_PROOF);
       const repaired = original.replace(ORIGINAL_PROOF, REPAIRED_PROOF);
-      const repairedHash = phaseAuditHash(EVIDENCE_FILE, repaired);
+      const subjects: RepairedSubjects = {
+        field: phaseAuditHash(EVIDENCE_FILE, repaired),
+        parity: phaseAuditHash(EVIDENCE_FILE, repaired, "TDD-0001", null, [
+          surfaceRecord(CAPTURE, CAPTURE_BYTES),
+        ]),
+      };
       let seal = UNSEALED;
-      if (pack === "present") {
+      if (options.pack === "present") {
         await writeRoundPack(root, REATTESTATION_PACK, "TDD-ID: TDD-0001\n", {
-          "completion-reviewer": `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: ${repairedHash}\n`,
+          "completion-reviewer": `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: ${subjects.field}\n`,
         });
         seal = `sha256:${await packSeal(root, REATTESTATION_PACK)}`;
       }
-      await writeFile(evidencePath, `${repaired}${fields(repairedHash, seal)}`, "utf8");
+      await writeFile(evidencePath, `${repaired}${fields(subjects, seal)}`, "utf8");
       const issues = await validateTddList(root, defaultConfig);
       return issues.map((issue) => ({ code: issue.code, message: issue.message }));
     }
 
-    function reattestation(hash: string, seal: string): string {
+    /** The three fields one verdict's re-attestation owes. */
+    function reattestation(prefix: string, hash: string, seal: string): string {
       return [
-        `- Record re-attestation: sha256:${hash}`,
-        `- Record re-attestation pack: ${REATTESTATION_PACK}`,
-        `- Record re-attestation pack seal: ${seal}`,
+        `- ${prefix} record re-attestation: sha256:${hash}`,
+        `- ${prefix} record re-attestation pack: ${REATTESTATION_PACK}`,
+        `- ${prefix} record re-attestation pack seal: ${seal}`,
         "",
       ].join("\n");
+    }
+
+    /** A re-attestation for each verdict whose subject is the entry's fields. */
+    function fieldReattestations(subjects: RepairedSubjects, seal: string): string {
+      return FIELD_VERDICTS.map((prefix) =>
+        reattestation(prefix, subjects.field, seal),
+      ).join("");
     }
 
     function unresolved(issues: Array<{ code: string; message: string }>): string | undefined {
@@ -4408,8 +4475,35 @@ ${packPair(1).join("\n")}
 
     it("accepts a repaired record re-attested over its new bytes", async () => {
       await withProject(async (root) => {
-        const issues = await repairedIssues(root, reattestation, "present");
+        const issues = await repairedIssues(root, fieldReattestations, { pack: "present" });
         expect(unresolved(issues)).toBeUndefined();
+      });
+    });
+
+    // The parity subject takes the captures as well, so it never recomputes to
+    // the value the other two verdicts read. A repaired UI-affecting row is
+    // completable only where that verdict can carry a re-attestation of its own.
+    it("accepts a repaired UI-affecting row whose parity verdict re-attests its own subject", async () => {
+      await withProject(async (root) => {
+        const issues = await repairedIssues(
+          root,
+          (subjects, seal) =>
+            `${fieldReattestations(subjects, seal)}${reattestation("Prototype parity", subjects.parity, seal)}`,
+          { pack: "present", uiAffecting: true },
+        );
+        expect(unresolved(issues)).toBeUndefined();
+      });
+    });
+
+    it("rejects a repaired UI-affecting row whose parity verdict is left on the field subject", async () => {
+      await withProject(async (root) => {
+        const issues = await repairedIssues(
+          root,
+          (subjects, seal) =>
+            `${fieldReattestations(subjects, seal)}${reattestation("Prototype parity", subjects.field, seal)}`,
+          { pack: "present", uiAffecting: true },
+        );
+        expect(unresolved(issues)).toContain("Prototype parity audited evidence hash matching");
       });
     });
 
@@ -4422,26 +4516,41 @@ ${packPair(1).join("\n")}
 
     it("rejects a re-attestation naming a hash the repaired record does not have", async () => {
       await withProject(async (root) => {
-        const issues = await repairedIssues(root, (_hash, seal) =>
-          reattestation("d".repeat(64), seal),
+        const issues = await repairedIssues(root, (_subjects, seal) =>
+          FIELD_VERDICTS.map((prefix) => reattestation(prefix, "d".repeat(64), seal)).join(""),
         );
         expect(unresolved(issues)).toContain("Spec audited evidence hash matching");
       });
     });
 
+    // A verdict reads the re-attestation that names it. Were the fields read as
+    // a set, re-attesting one verdict would clear every other verdict with it.
+    for (const attested of FIELD_VERDICTS) {
+      const unattested = FIELD_VERDICTS.find((prefix) => prefix !== attested) ?? attested;
+      it(`leaves ${unattested} unattested when only ${attested} carries a re-attestation`, async () => {
+        await withProject(async (root) => {
+          const issues = await repairedIssues(root, (subjects, seal) =>
+            reattestation(attested, subjects.field, seal),
+          );
+          expect(unresolved(issues)).toContain(`${unattested} audited evidence hash matching`);
+          expect(unresolved(issues)).not.toContain(`${attested} audited evidence hash matching`);
+        });
+      });
+    }
+
     for (const [label, field] of [
-      ["pack", "- Record re-attestation pack: "],
-      ["pack seal", "- Record re-attestation pack seal: "],
+      ["pack", "- Spec record re-attestation pack: "],
+      ["pack seal", "- Spec record re-attestation pack seal: "],
     ] as const) {
       it(`rejects a re-attestation recorded without its ${label}`, async () => {
         await withProject(async (root) => {
-          const issues = await repairedIssues(root, (hash, seal) =>
-            reattestation(hash, seal)
+          const issues = await repairedIssues(root, (subjects, seal) =>
+            fieldReattestations(subjects, seal)
               .split("\n")
               .filter((line) => !line.startsWith(field))
               .join("\n"),
           );
-          expect(unresolved(issues)).toMatch(new RegExp(`Record re-attestation ${label}[,.]`));
+          expect(unresolved(issues)).toMatch(new RegExp(`Spec record re-attestation ${label}[,.]`));
         });
       });
     }
@@ -4450,11 +4559,11 @@ ${packPair(1).join("\n")}
       await withProject(async (root) => {
         const issues = await repairedIssues(
           root,
-          (hash) => reattestation(hash, UNSEALED),
-          "present",
+          (subjects) => fieldReattestations(subjects, UNSEALED),
+          { pack: "present" },
         );
         expect(unresolved(issues)).toContain(
-          "Record re-attestation pack seal matching pack contents",
+          "Spec record re-attestation pack seal matching pack contents",
         );
       });
     });
