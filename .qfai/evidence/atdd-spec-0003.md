@@ -33,6 +33,10 @@ run is its approved action 2.
   its own copy of the aggregate, so no change to a shipped file can fail it. The code
   the case exercises is the check in `aggregateFailureViolations`, and that is where
   the discriminating mutation sits.
+- **`TDD-0001`'s test is the row's own integration case, rewritten.** The two tests
+  `CR-20260923-0011` names assert the clause, but neither sits in
+  `tests/integration/**`, where `TC-0003-0001`'s `Level` routes it. The reasoning is
+  in the `TDD-0001` entry.
 
 ## Grilling Session
 
@@ -68,6 +72,14 @@ Preflight: confidence high
 
 No session was opened: `CR-20260923-0007` settles every decision this row needs.
 
+### /qfai-atdd — run started 2026-09-23T11:24:46.722Z
+
+Preflight: confidence high
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-23T11:27:41Z | working-tree+b6717d99336497714758bb9eafe114d2ddc4f4c194e332da052432f02b99161f | 2026-09-23T11:28:00Z | neither test the change request names for TDD-0001 sits in the directory TC-0003-0001's Level routes to | empty | none in flight | 1 | 0 | 0 |
+
 ## Work performed (what changed, where)
 
 - New `packages/qfai/tests/integration/shippedWorkflowCheckIndependence.test.ts`: the
@@ -83,6 +95,12 @@ No session was opened: `CR-20260923-0007` settles every decision this row needs.
   `TDD-0093` `it.each` in the `TC-0003-0058` describe, annotated
   `QFAI:SPEC-0003:TC-0003-0058`, with one case per job shape of verify bullet 5.
   `CR-20260923-0007` asked for it.
+- `packages/qfai/tests/integration/shippedWorkflowInertness.test.ts`: the `TDD-0037`
+  describe and its count case renamed to the counts the case asserts. No assertion
+  changed. `CR-20260923-0011` asked for it.
+- `packages/qfai/tests/integration/initSpec0003.test.ts`: the `TC-0003-0001` case
+  now runs init into an empty directory and asserts verify bullets 1 and 2, for the
+  `TDD-0001` row that `CR-20260923-0011` reset.
 
 ## Commands executed + key outputs
 
@@ -104,6 +122,17 @@ npx tsc --noEmit -p packages/qfai/tsconfig.tests.json   -> exit 0
 
 The re-verify runs of `TDD-0062`, `TDD-0063` and `TDD-0092` are in the `TDD-0093`
 entry.
+
+For `TDD-0001` and `TDD-0037`:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts tests/integration/shippedWorkflowInertness.test.ts
+  Test Files 2 passed (2); Tests 30 passed (30)
+npx tsc --noEmit -p packages/qfai/tsconfig.tests.json   -> exit 0
+npx eslint packages/qfai/tests/integration/initSpec0003.test.ts packages/qfai/tests/integration/shippedWorkflowInertness.test.ts --max-warnings 0   -> exit 0
+```
+
+The selector, mutation and re-verify runs are in each row's entry.
 
 ## Test volume estimate
 
@@ -130,6 +159,8 @@ entry.
 | `TDD-0063` | `TC-0003-0058` | Integration | falsifiability | [TDD-0063](#tdd-0063) |
 | `TDD-0092` | `TC-0003-0058` | Integration | falsifiability | [TDD-0092](#tdd-0092) |
 | `TDD-0093` | `TC-0003-0058` | Integration | falsifiability | [TDD-0093](#tdd-0093) |
+| `TDD-0001` | `TC-0003-0001` | Integration | falsifiability | [TDD-0001](#tdd-0001) |
+| `TDD-0037` | `TC-0003-0037` | Integration | falsifiability, test-only replacement | [TDD-0037](#tdd-0037) |
 
 ### TDD-0058
 
@@ -757,6 +788,123 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - Checkpoint verification revision: b20dbe4bc5c90581a030cdda8656107b85415a2c
 - Checkpoint verification seal: de5d644d1a9f3d0f6fdaf6d29e977a36a542e4d23303e0df85ae3006efd73032
 
+### TDD-0001
+
+- TDD-ID: TDD-0001
+- Layer: integration
+- Test file: packages/qfai/tests/integration/initSpec0003.test.ts
+- Selector: TC-0003-0001: Empty directory initialization
+- TC-ref: TC-0003-0001
+- Branch: falsifiability — init already writes no artifact directory, so the case passes on its first run and no natural RED can be observed
+- Predicate to break: packages/qfai/src/cli/commands/init.ts:509, `copyTemplateTree(qfaiAssets, destQfai, …)` — it writes under `.qfai/` what `packages/qfai/assets/init/.qfai/` ships, and that tree holds `assistant/` and `waivers.yml` and no artifact directory
+- Mutation: add an empty file `packages/qfai/assets/init/.qfai/specs/.gitkeep`
+- Why it fails: init copies the new `specs/` directory into `.qfai/`, and the case's last assertion finds `specs` among the six artifact directories
+- Other rows: the same mutation fails `tests/e2e/initE2E.test.ts` "creates .qfai/ with assistant assets and no artifact scaffold", the test `TDD-0069` (`US-0003-0001`, `todo`) is expected to take, and `tests/cli/init.test.ts` "does not create artifact scaffold outside assistant assets", which no ledger row names. Both were run under the mutation and failed on an assertion. `TDD-0002` to `TDD-0015` share the Test file and are `exception`; `TDD-0025` shares it and is `done` (see the re-verify below)
+
+The case replaces the backfill test that only read `init.ts` for the string
+`runInit`. It runs `runInit` into an empty temporary directory and asserts verify
+bullets 1 and 2 of `TC-0003-0001`: `.qfai/assistant/` is a directory,
+`qfai.config.yaml` is a file, and none of `specs`, `contracts`, `discussion`,
+`evidence`, `review` and `report` exists under `.qfai/`. The describe title is
+unchanged, so the ledger's `Test file` and `Selector` already name it.
+
+The two tests the change request names assert the same clause and cannot be this
+row's test. `TC-0003-0001` declares `Level: integration`, so its home is
+`tests/integration/**`. `initE2E.test.ts` is under `tests/e2e/**`, where
+`QFAI-ATDD-122` refuses a `TC-0003-0001` annotation and the row's `integration`
+Layer would not match the path. `tests/cli/init.test.ts` is in no layer directory,
+and it asserts only that no file is written under the six directories. The Layer
+is right for the Test file. The file's header already carries
+`// QFAI:SPEC-0003:TC-0003-0001` (line 11), so no annotation was added.
+
+- First-run command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0001: Empty directory initialization"
+- First-run result: PASS — Test Files 1 passed (1); Tests 1 passed | 23 skipped (24)
+- Mutation trial command: the same command, with the empty file `packages/qfai/assets/init/.qfai/specs/.gitkeep` added
+- Mutation trial result: FAIL — Test Files 1 failed (1); Tests 1 failed | 23 skipped (24). The row's case fails on `AssertionError: init wrote an artifact directory under .qfai/: expected [ 'specs' ] to deeply equal []` at `tests/integration/initSpec0003.test.ts:71:72`
+- Mutation trial revision: working-tree+a94042123cedd6552a73e23067ca252742f883b58c43bf78213e8d24c753da95
+- Restored GREEN command: the same command, after `rm -rf packages/qfai/assets/init/.qfai/specs`
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed | 23 skipped (24)
+
+The trial shows the mutation discriminates. It is not the row's falsifiability
+trio: `/qfai-implement` Phase Red step 3c applies the mutation, records the
+`Round 1:` fields and routes `qa-gatekeeper` while it is in the tree.
+
+- RED test hash: 4b2a66e3d4750d41608cd697d8e8caa256cc822f85accc1ef322de99ed396206
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/initSpec0003.test.ts
+```
+
+#### Shared-artifact re-verify
+
+No RED test manifest in any evidence file names
+`packages/qfai/tests/integration/initSpec0003.test.ts`, so no recorded hash moves and
+no `spec-NNNN/TDD-NNNN` subsection is owed. The one other `done` row whose Test file
+this is, `spec-0003/TDD-0025`, carries no manifest and no recorded mutation, and its
+describe is unchanged. Its selector was re-run against the edited file:
+
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0025: assistantPaths.ts SSOT module"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 23 skipped (24)
+- Re-verify revision: working-tree+e793cf9742da0890faf9551702abf02099f8f7846da9685fa54d073c3b4d20a7
+
+### TDD-0037
+
+- TDD-ID: TDD-0037
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/shippedWorkflowInertness.test.ts
+- Selector: TC-0003-0037 (TDD-0037): three installing job declarations, nine and eight executing instances, zero secret references
+- TC-ref: TC-0003-0037
+- Branch: falsifiability — recorded where the row closed, `.qfai/evidence/implement-spec-0003.md#tdd-0037`. This entry records a test-only replacement and changes no branch
+
+`CR-20260923-0011` asked for the row's test names to state the counts the case
+asserts. Two title strings changed and no assertion did:
+
+| Title | Before | After |
+| ----- | ------ | ----- |
+| `describe`, line 360 | `TC-0003-0037 (TDD-0037): two installing job declarations, four and three executing instances, zero secret references` | `TC-0003-0037 (TDD-0037): three installing job declarations, nine and eight executing instances, zero secret references` |
+| `it`, line 469 | `the init-written jobs that install dependencies are exactly the docs and validate lanes, four instances on a pull request and three on a push` | `the init-written jobs that install dependencies are exactly the docs, test and validate lanes, nine instances on a pull request and eight on a push` |
+
+The `Selector` above names the renamed describe, which holds the row's three cases
+and nothing else. The ledger still holds the old describe title. `/qfai-implement`
+writes the value above to the ledger and to its own entry's copy; until it does,
+`TDDLIST_SELECTOR_UNRESOLVED` is reported on row 37. No other ledger row's
+`Selector` named either old title.
+
+- Selector run command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowInertness.test.ts -t "TC-0003-0037 \(TDD-0037\): three installing job declarations, nine and eight executing instances, zero secret references"
+- Selector run result: PASS — Test Files 1 passed (1); Tests 3 passed | 3 skipped (6)
+- Selector run revision: working-tree+b6717d99336497714758bb9eafe114d2ddc4f4c194e332da052432f02b99161f
+- Round 1: RED test replacement: test-only replacement — CR-20260923-0011 asked for the describe and the count case to be renamed; the proof at .qfai/evidence/implement-spec-0003.md#tdd-0037 is stale — test replaced, and /qfai-implement re-takes it under the corrected test
+- Round 1: Replacement proof revision: test-only replacement (CR-20260923-0011) — handed over empty; /qfai-implement writes it when it re-takes the proof
+- Proof to re-take: the two mutations the earlier entry names — a `secrets.QFAI_LEAKED` reference planted in the verdict step's `env:` of `packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml`, and a `run: npm ci` step appended to its `detection` job
+- Round 1: RED test hash: 30ebc3cb08f888b4c46df68667a8b4c82e538837b44ed2d96193fb60a897e236
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/shippedWorkflowFixtures.ts
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/integration/shippedWorkflowInertness.test.ts
+```
+
+The earlier entry records no `RED test hash`, so none is overwritten. Over the same
+manifest the file hashed to
+`64780749016ea65cecf5f8e5ccb7233deb631be8257daf9f9680091f63b67450` before the rename.
+
+#### Shared-artifact re-verify
+
+No RED test manifest in `.qfai/evidence/atdd-spec-0003.md`, or in any other evidence
+file, names `packages/qfai/tests/integration/shippedWorkflowInertness.test.ts`, so no
+recorded hash moves and no `spec-NNNN/TDD-NNNN` subsection is owed. The one other
+`done` row whose Test file this is, `spec-0003/TDD-0036`, has its evidence at
+`.qfai/evidence/implement-spec-0003.md#tdd-0036`, which records no manifest. Its
+describe is byte-identical after the rename, and its selector was re-run:
+
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowInertness.test.ts -t "TC-0003-0036 \(TDD-0036\): no declared layer script means zero executing test lanes"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 3 passed | 3 skipped (6)
+- Re-verify revision: working-tree+b6717d99336497714758bb9eafe114d2ddc4f4c194e332da052432f02b99161f
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / ⚠️ 130 / ❌ 176, with 365 not applicable, across 909 scored cells.
@@ -807,6 +955,12 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / 
 | 40 | completion-reviewer | completion-reviewer | /qfai-implement: completion review of TDD-0093, attempt 1 | #tdd-0093 | one response in the row's pack | PASS |
 | 41 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of TDD-0093, attempt 1 | #tdd-0093 | one response in the row's pack | PASS |
 | 42 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0093, its Test file and the full suite | #tdd-0093 | Checkpoint verification fields | PASS |
+| 43 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: rename the TDD-0037 describe and count case to the counts the case asserts, record the new RED test hash and mark the proof stale | CR-20260923-0011 | packages/qfai/tests/integration/shippedWorkflowInertness.test.ts; #tdd-0037 | PASS |
+| 44 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: shared-artifact re-verify under the renamed titles | #tdd-0037 | #tdd-0037 Shared-artifact re-verify: no RED test manifest names the file; the TDD-0036 selector passes | PASS |
+| 45 | acceptance-test-engineer | acceptance-test-engineer | grilling(S1@2026-09-23T11:24:46.722Z/agents): TDD-0001's test is the row's own case in tests/integration/initSpec0003.test.ts, rewritten to run init and assert the clause, not either test CR-20260923-0011 names | CR-20260923-0011; 06_Test-Cases.md TC-0003-0001; .qfai/assistant/catalog/test-layers.md | #tdd-0001; TC-0003-0001 declares Level integration, so its home is tests/integration/**, where initE2E.test.ts is not and where QFAI-ATDD-122 keeps its annotation out of tests/e2e/**; tests/cli/init.test.ts is in no layer directory and asserts only that no file is written. Disagreeing position: the work order asked for one of the two named tests to be picked | PASS |
+| 46 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: write the TDD-0001 case and hand the row over on the falsifiability path, with a reverted trial of the mutation | CR-20260923-0011 | packages/qfai/tests/integration/initSpec0003.test.ts; #tdd-0001 | PASS |
+| 47 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: shared-artifact re-verify of TDD-0025 under the edited Test file | #tdd-0001 | #tdd-0001 Shared-artifact re-verify; the selector passes | PASS |
+| 48 | completion-reviewer | - | /qfai-atdd: completion review of TDD-0001 and TDD-0037 | #tdd-0001, #tdd-0037 | not run in this invocation | PENDING |
 
 ## Cross-spec obligations
 
@@ -830,6 +984,14 @@ Recorded per row under `## Ledger rows advanced`.
 - The `TDD-0093` entry's `Mutation:` line names the single-clause edit its handover
   planned. The run it closed on removes both job-shape clauses, and Round 1 records both
   runs.
+- The `TDD-0001` case asserts verify bullets 1 and 2 of `TC-0003-0001`. Bullet 3, the
+  skill symlinks, is asserted by `tests/e2e/initE2E.test.ts` "creates skill symlinks in
+  integration directories" and not by this case.
+- Row 37's `Selector` still holds the old describe title until `/qfai-implement` copies
+  the one in the `TDD-0037` entry, so validate reports `TDDLIST_SELECTOR_UNRESOLVED` on
+  it until then.
+- The comments inside the `TDD-0037` count case still speak of four and three installs.
+  Only the titles were in scope.
 
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 

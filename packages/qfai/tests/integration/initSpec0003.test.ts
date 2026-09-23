@@ -4,8 +4,9 @@
  * Validates that the init command (spec-0003) requirements are covered
  * by existing implementation: init.ts CLI command module.
  *
- * All 15 TDD items are Exception-pattern backfill (DR-0003-0006).
+ * Every case except TC-0003-0001 is Exception-pattern backfill (DR-0003-0006).
  * Existing coverage: tests/cli/init.test.ts, tests/codex/agents.test.ts.
+ * TC-0003-0001 runs init into an empty directory and reads what it wrote.
  */
 // QFAI:SPEC-0003:TC-0003-0001
 // QFAI:SPEC-0003:TC-0003-0002
@@ -31,18 +32,46 @@
 // QFAI:SPEC-0003:TC-0003-0024
 // QFAI:SPEC-0003:TC-0003-0025
 // QFAI:SPEC-0003:TC-0003-0026
-import { readFile } from "node:fs/promises";
+import { lstat, mkdtemp, readFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+
+import { runInit } from "../../src/cli/commands/init.js";
+import { captureStdout } from "../helpers/stdout.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const INIT_CLI = path.resolve(__dirname, "..", "..", "src", "cli", "commands", "init.ts");
 
 // TC-0003-0001: Empty directory initialization
 describe("TC-0003-0001: Empty directory initialization", () => {
-  it("init module exports runInit", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
-    expect(content).toContain("runInit");
-    expect(content).toContain(".qfai");
+  const ARTIFACT_DIRS = ["specs", "contracts", "discussion", "evidence", "review", "report"];
+
+  async function kindOf(target: string): Promise<"directory" | "file" | "other" | "absent"> {
+    try {
+      const entry = await lstat(target);
+      return entry.isDirectory() ? "directory" : entry.isFile() ? "file" : "other";
+    } catch (err: unknown) {
+      if (err instanceof Error && "code" in err && err.code === "ENOENT") return "absent";
+      throw err;
+    }
+  }
+
+  it("writes .qfai/assistant/ and qfai.config.yaml, and none of the six artifact directories", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tc0001-"));
+    try {
+      await captureStdout(() => runInit({ dir, force: false, dryRun: false, yes: true }));
+
+      expect(await kindOf(path.join(dir, ".qfai", "assistant"))).toBe("directory");
+      expect(await kindOf(path.join(dir, "qfai.config.yaml"))).toBe("file");
+      const present: string[] = [];
+      for (const sub of ARTIFACT_DIRS) {
+        if ((await kindOf(path.join(dir, ".qfai", sub))) !== "absent") present.push(sub);
+      }
+      expect(present, "init wrote an artifact directory under .qfai/").toEqual([]);
+    } finally {
+      await removeTempTree(dir);
+    }
   });
 });
 
