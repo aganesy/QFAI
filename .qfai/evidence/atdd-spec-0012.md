@@ -70,6 +70,100 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 | API | 0 | 0 | `.qfai/contracts/api/README.md` | spec-0012 rev11 に contract obligation なし |
 | Integration | 13 | 13 | `.qfai/specs/spec-0012/06_Test-Cases.md` | `TC-0012-0272..0284` |
 
+## Grilling Session
+
+### /qfai-atdd — run started 2026-09-23T06:51:05.149Z
+
+Preflight: confidence high
+
+No session opened. The change request fixes both rows, their test cases and the
+test file each case names, and nothing surfaced during the run that the spec or
+the change request leaves open.
+
+## Ledger rows advanced
+
+This run takes up the two rows `CR-20260923-0002` owes. Both passed on their
+first run here, so both take branch 2. The mutations are production code and
+`/qfai-implement` Phase Red step 3c applies them.
+
+| TDD-ID | Obligation | Layer | RED provenance | Entry |
+| ------ | ---------- | ----- | -------------- | ----- |
+| `TDD-0469` | `TC-0012-0442` | Integration | falsifiability | [TDD-0469](#tdd-0469) |
+| `TDD-0561` | `TC-0012-0489` | Integration | falsifiability | [TDD-0561](#tdd-0561) |
+
+### TDD-0469
+
+- TDD-ID: TDD-0469
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts
+- Selector: ["does not invoke the server runner when --auto-serve is absent","calls the runner once and invokes the returned teardown at cycle end","accepts runner.ok=true (recovery path) and continues to cycle completion","returns exit 2 with PID + owning command on stderr when runner refuses"]
+- TC-ref: TC-0012-0442
+- Branch: falsifiability — the change request restated the test case and changed no test and no product code, so each Selector entry passed on its first run
+- Predicate to break: one per Selector entry, listed below
+- Mutation: one per Selector entry, listed below
+
+Each Selector entry runs on its own, so each has its own predicate. All four
+are in `runPrototypingIterate`, in
+`packages/qfai/src/cli/commands/prototypingIterate.ts`.
+
+1. Selector entry: `does not invoke the server runner when --auto-serve is absent`
+   - Predicate to break: line 1281, `if (options.autoServe) {` — the gate that keeps the runner uncalled without `--auto-serve`
+   - Mutation: `if (options.autoServe) {` to `if (options.autoServe ?? options.serverRunner) {`
+   - Why it fails: the test injects a runner and no `autoServe`, so the mutated gate calls it.
+     The stub returns nothing, and reading `serverResult.ok` at line 1317 throws a `TypeError`.
+     The case fails before it reaches `expect(runner).not.toHaveBeenCalled()`
+2. Selector entry: `calls the runner once and invokes the returned teardown at cycle end`
+   - Predicate to break: line 1369, `await teardownOnce();` — the cycle-end teardown in the `finally` block
+   - Mutation: delete line 1369
+   - Why it fails: nothing else invokes the teardown during the cycle, so `expect(teardown).toHaveBeenCalledTimes(1)` sees 0 calls
+3. Selector entry: `accepts runner.ok=true (recovery path) and continues to cycle completion`
+   - Predicate to break: line 1317, `if (!serverResult.ok) {` — the check that lets a runner reporting success continue the cycle
+   - Mutation: `if (!serverResult.ok) {` to `if (serverResult.ok) {`
+   - Why it fails: a runner answering `ok: true` now takes the refusal branch and iterate returns 2, so `expect(exit).toBe(0)` fails.
+     vitest strips types, so the `reason` read in that branch does not stop the run
+4. Selector entry: `returns exit 2 with PID + owning command on stderr when runner refuses`
+   - Predicate to break: line 1318, ``error(`qfai prototyping iterate --auto-serve: ${serverResult.reason}`);`` — the line that puts the runner's reason on stderr
+   - Mutation: that line to `error("qfai prototyping iterate --auto-serve: refused");`
+   - Why it fails: the exit code stays 2, and `expect(joined).toMatch(/foreign process/)` fails because stderr no longer carries the reason
+
+First run of each entry, on its own:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts -t "<entry>"
+  each of the four: Tests 1 passed | 3 skipped (4)
+```
+
+### TDD-0561
+
+- TDD-ID: TDD-0561
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts
+- Selector: TC-0012-0489 (TDD-0561): refuses the held port, binds no other and iterate exits 2 naming it
+- TC-ref: TC-0012-0489
+- Branch: falsifiability — the default runner already refuses a port another listener holds and names it (`port ${port} already in use`), so the new test passed on its first run
+- Predicate to break: packages/qfai/src/core/prototyping/defaultServerRunner.ts:207, `bindServer` — the `EADDRINUSE` refusal reason that names the held port
+- Mutation: `` `port ${port} already in use; refusing to attach to a foreign process. ` `` to `` `port already in use; refusing to attach to a foreign process. ` ``
+- Why it fails: iterate still exits 2, and the rest of the reason names the port only as `:<port>` in the `lsof` and `findstr` hints.
+  ``expect(stderrChunks.join("")).toContain(`port ${blocker.port}`)`` therefore fails
+
+The test binds an ephemeral listener, then runs `runPrototypingIterate` with
+`autoServe: true`, no `serverRunner`, and a `targetUrl` naming that port, which
+the default runner binds. It observes the four clauses of the case:
+
+| Clause | Observation |
+| ------ | ----------- |
+| iterate exits 2 | `expect(exit).toBe(2)` |
+| stderr names the held port | stderr contains `port <held port>` |
+| the holder is still listening | a TCP connection to the held port succeeds after iterate returns |
+| no other port is bound | a spy on `net.Server.prototype.listen`, installed after the holder bound, records exactly one call, on the held port, and the one server it started is not listening afterwards |
+
+First run:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts -t "TC-0012-0489 \(TDD-0561\): refuses the held port, binds no other and iterate exits 2 naming it"
+  Test Files 1 passed (1); Tests 1 passed | 16 skipped (17)
+```
+
 ## Coverage Depth Matrix
 
 | Obligation | Layer | Implemented in | Depth | Rationale |
@@ -85,6 +179,8 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 | `TC-0012-0277..0278` | Integration | `packages/qfai/tests/integration/prototypingRev11Integration.test.ts` | D3 | panelScore strict validation source を検査 |
 | `TC-0012-0279..0281` | Integration | `packages/qfai/tests/integration/prototypingRev11Integration.test.ts` | D3 | specCoverage / refSemantics semantic closure を検査 |
 | `TC-0012-0282..0284` | Integration | `packages/qfai/tests/integration/prototypingRev11Integration.test.ts` | D3 | core test existence / describe synchronization を検査 |
+| `TC-0012-0442` | Integration | `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts` | D3 | Runs `runPrototypingIterate` with an injected runner and checks the four clauses of the runner contract: no call without `--auto-serve`, one call and one teardown with it, a recovered owner completing the cycle, and a refusal exiting 2 with the runner's reason on stderr |
+| `TC-0012-0489` | Integration | `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts` | D3 | Runs `runPrototypingIterate` with the default runner against a port a real listener holds, and checks the exit code, the port in the stderr reason, that the listener still accepts connections, and that no other port was bound |
 
 ## Coverage obligations checklist
 
@@ -107,6 +203,16 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 | 5 | `qa-gatekeeper` | coverage depth and scope-local gate review | full ATDD diff and outputs | `#final-status-passfail--who-confirmed` | PASS |
 | 6 | `completion-reviewer` | independent completion review | ATDD diff, traceability, evidence, gate outputs | `#final-status-passfail--who-confirmed` | PASS |
 
+### Rows for the run started 2026-09-23T06:51:05.149Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 7 | acceptance-test-engineer | acceptance-test-engineer | Write the `TC-0012-0489` test for `TDD-0561` | CR-20260923-0002, 06_Test-Cases.md `TC-0012-0489` | `prototypingIterate.cliAutoServe.test.ts` | PASS |
+| 8 | acceptance-test-engineer | acceptance-test-engineer | Annotate the four `TDD-0469` tests with `TC-0012-0442` | CR-20260923-0002, 06_Test-Cases.md `TC-0012-0442` | `prototypingIterate.autoServe.test.ts` | PASS |
+| 9 | acceptance-test-engineer | acceptance-test-engineer | Hand over `TDD-0469` and `TDD-0561` on the falsifiability branch | both test files, `prototypingIterate.ts`, `defaultServerRunner.ts` | #tdd-0469, #tdd-0561 | PASS |
+| 10 | acceptance-test-engineer | acceptance-test-engineer | Add `TC-0012-0442` and `TC-0012-0489` to the Coverage Depth Matrix | 06_Test-Cases.md | #coverage-depth-matrix | PASS |
+| 11 | - | n/a | grilling(-@2026-09-23T06:51:05.149Z/none): none | - | - | PASS |
+
 ## Execution logs
 
 - focused suites:
@@ -124,6 +230,18 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
   - `pnpm format:check` -> FAIL (pre-existing repo-wide formatting issues)
 - format self-check:
   - evidence updated to README-aligned heading structure and table schema
+
+### Checks for the run started 2026-09-23T06:51:05.149Z
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts tests/integration/cli/commands/prototypingIterate.autoServe.test.ts
+  Test Files 2 passed (2); Tests 21 passed (21)
+npx tsc --noEmit -p packages/qfai/tsconfig.tests.json   -> exit 0
+eslint and prettier --check on both test files         -> exit 0
+```
+
+`tsconfig.tests.json` does not list either test file. Both were also checked
+through a scratch config that extends it and includes only them, with exit 0.
 
 ## Gaps / Open risks
 
