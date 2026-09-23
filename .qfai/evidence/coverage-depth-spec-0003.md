@@ -759,8 +759,10 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
      `BR-0003-0043` count nine dimensions; the shape and the contract hold ten. `REQ-0028` fixes one
      runner variable; the set reads two. `US-0003-0006` keeps `README.md` a regular file; no README is
      written.
-   Each needs the pack reconciled with the product through a Change Request; the tests do not need
-   changing.
+   `CR-20260923-0006` restated every statement named above to what the product does and the tests
+   assert, and changed no test. Other statements in the pack carry the same contradictions; that
+   record lists them for a follow-up Change Request. The matrix has not been rescored against the
+   restated statements.
 3. **Eight safety-floor cells are not `✅`, and a written reason cannot open them.**
    `US-0003-0006` × ER, `US-0003-0012` × ER, `US-0003-0021` × ER, `US-0003-0027` × ER,
    `TC-0003-0013` × ER, `TC-0003-0028` × ER, `BR-0003-0009` × Negative, `BR-0003-0022` × Negative.
