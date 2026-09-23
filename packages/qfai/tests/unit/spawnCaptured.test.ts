@@ -22,10 +22,11 @@ import {
   EXIT_ZERO,
   type Spawned,
   cpuModel,
+  HOST_CRASH_LIMIT,
+  hostCrashRetry,
   hostCrashed,
   outcomeOf,
   outputContext,
-  retryOnHostCrash,
   spawnCaptured,
 } from "../helpers/spawnCaptured.js";
 
@@ -203,9 +204,8 @@ describe("a crashed runtime reruns the case once, and a script's own answer neve
     const answers = [ended("SIGABRT"), ended(null, 0)];
     const warnings: string[] = [];
     let attempts = 0;
-    const result = await retryOnHostCrash(
-      () => Promise.resolve(answers[attempts++] ?? ended(null, 9)),
-      (message) => warnings.push(message),
+    const result = await hostCrashRetry((message) => warnings.push(message))(() =>
+      Promise.resolve(answers[attempts++] ?? ended(null, 9)),
     );
     expect(attempts).toBe(2);
     expect(result.outcome).toBe(EXIT_ZERO);
@@ -217,30 +217,46 @@ describe("a crashed runtime reruns the case once, and a script's own answer neve
 
   it("reports a second crash as it happened rather than retrying again", async () => {
     let attempts = 0;
-    const result = await retryOnHostCrash(
-      () => {
-        attempts += 1;
-        return Promise.resolve(ended("SIGSEGV"));
-      },
-      () => {},
-    );
+    const result = await hostCrashRetry(() => {})(() => {
+      attempts += 1;
+      return Promise.resolve(ended("SIGSEGV"));
+    });
     expect(attempts).toBe(2);
     expect(result.outcome).toBe("killed by SIGSEGV");
   });
 
   it("never reruns a case whose script answered, whatever it answered", async () => {
     let attempts = 0;
-    const result = await retryOnHostCrash(
-      () => {
-        attempts += 1;
-        return Promise.resolve(ended(null, 1));
-      },
-      () => {
-        throw new Error("no warning is due for a script's own exit");
-      },
-    );
+    const result = await hostCrashRetry(() => {
+      throw new Error("no warning is due for a script's own exit");
+    })(() => {
+      attempts += 1;
+      return Promise.resolve(ended(null, 1));
+    });
     expect(attempts).toBe(1);
     expect(result.outcome).toBe("exit 1");
+  });
+
+  it("stops rerunning once a runner has seen more crashes than the limit, and says so once", async () => {
+    // A host that crashes on nearly every case fails every rerun too. Past the limit the cases
+    // report their crash straight away, and one line says the job needs another runner.
+    const warnings: string[] = [];
+    const retry = hostCrashRetry((message) => warnings.push(message));
+    let attempts = 0;
+    const crash = (): Promise<Spawned> => {
+      attempts += 1;
+      return Promise.resolve(ended("SIGSEGV"));
+    };
+    for (let crashCase = 0; crashCase < HOST_CRASH_LIMIT + 3; crashCase += 1) {
+      expect((await retry(crash)).outcome).toBe("killed by SIGSEGV");
+    }
+    // Two attempts for each case up to the limit, one for each case past it.
+    expect(attempts).toBe(HOST_CRASH_LIMIT * 2 + 3);
+    const brokenHost = warnings.filter((message) =>
+      message.includes("the runner's host is broken"),
+    );
+    expect(brokenHost).toHaveLength(1);
+    expect(brokenHost[0]).toContain("Rerun the job on another runner");
   });
 });
 
