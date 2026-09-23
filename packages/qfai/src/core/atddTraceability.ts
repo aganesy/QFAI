@@ -1164,6 +1164,61 @@ export async function evaluateAtddCodeTraceability(
 }
 
 /**
+ * Where each `TC-*` annotation sits, split by whether the file declares a test.
+ *
+ * Both maps are keyed like the scan's own `refs.tc`: spec number, then `TC-…`,
+ * then the files.
+ */
+export type TestCaseAnnotationHomes = {
+  /** Files that declare a test a runner collects. */
+  tests: AtddSpecRefs;
+  /** Files that name the case and declare no test: prose, or an annotation alone. */
+  carriers: AtddSpecRefs;
+};
+
+/**
+ * Every `TC-*` annotation in the test files, whatever the case's `Level`.
+ *
+ * The acceptance scan in {@link evaluateAtddCodeTraceability} keeps only the
+ * acceptance layers, so it cannot say whether a unit test annotates a case. A
+ * ledger row claims a test at every layer, so this reads the same globs with
+ * no layer filter, and splits the files the way `QFAI-ATDD-119` does.
+ *
+ * `null` when the scan is incomplete — truncated, or a pattern could not be
+ * read. A test past the cut may annotate the case, so "a carrier alone names
+ * it" is then unproven, as it is for `coveredByCarrierOnly`.
+ */
+export async function collectTestCaseAnnotationHomes(
+  root: string,
+  config: QfaiConfig,
+): Promise<TestCaseAnnotationHomes | null> {
+  const projectGlobs = config.validation.traceability.testFileGlobs;
+  const globs = buildAtddScanGlobs(
+    root,
+    resolvePath(root, config, "testsDir"),
+    deriveAtddFilePattern(projectGlobs),
+    projectGlobs,
+  );
+  const excludes = normalizeGlobs(config.validation.traceability.testFileExcludeGlobs);
+  let scan: CollectFilesByGlobsResult;
+  try {
+    scan = await collectTestFiles(root, globs, excludes, acceptanceSourceFilter(root, globs));
+  } catch {
+    return null;
+  }
+  if (scan.truncated) return null;
+  const homes: TestCaseAnnotationHomes = { tests: new Map(), carriers: new Map() };
+  for (const file of scan.files) {
+    const raw = await readSafe(file);
+    const refs = extractSpecScopedAnnotations(maskTestSource(file, raw), TC_TEST_ANNOTATION_RE);
+    if (refs.length === 0) continue;
+    const into = hasRunnableTestStructure(file, raw) ? homes.tests : homes.carriers;
+    for (const ref of refs) recordSpecRef(into, ref.spec, `TC-${ref.id}`, file);
+  }
+  return homes;
+}
+
+/**
  * Why a pattern could not be read, in a form the report may carry.
  *
  * A file-system error's own message embeds the absolute path the call was made

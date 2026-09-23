@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A `done` row whose test case only an annotation carrier names is
+  reported** (#2160). A carrier such as `tests/integration/qfai-traceability.md`
+  lists obligations and declares no test, so no runner selects a case named
+  only there. `QFAI-TDDLIST-023` (`error`) reports each such case on a `done`
+  row whose `Layer` owns `TC-Refs`. A row with a test for any of its cases is
+  not reported, and neither is an `exception` row. The finding names the row,
+  the case and the carrier. The fix is to annotate the test that discharges the
+  case, or to move the row off `done` through `/qfai-implement` or a Change
+  Request. The 33 existing findings are carried as a backlog in
+  `scripts/dogfood-backlog.json`: spec-0002 3, spec-0003 2, spec-0004 5,
+  spec-0010 3, spec-0012 19 and spec-0014 1, in the `tdd` and `full` profiles.
+
 - **spec-0012 states the auto-serve SIGINT path as the runner contract**
   (#2201). `TC-0012-0462` still described iterate killing child server
   processes, while iterate only invokes the teardown its server runner

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { defaultConfig } from "../../src/core/config.js";
+import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
 const BASE_HEADERS =
@@ -13,21 +13,35 @@ const BASE_HEADERS =
 const BASE_SEP =
   "| -------- | ------- | ----- | --------------- | -------- | ------ | ----- | -------- |";
 
+/** What a case adds to the spec pack the helper writes. */
+interface LedgerFixture {
+  /** `01_Spec.md`'s content. */
+  readonly spec?: string;
+  /** Further files, keyed by their path relative to the project root. */
+  readonly files?: Readonly<Record<string, string>>;
+  readonly config?: QfaiConfig;
+}
+
 async function withLedger(
   lines: string[],
   assertion: (issues: Awaited<ReturnType<typeof validateTddList>>) => void,
   testCases = "# TC\n",
+  fixture: LedgerFixture = {},
 ): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tdd-oblig-"));
   try {
     const specDir = path.join(root, ".qfai", "specs", "spec-0001");
     await mkdir(path.join(specDir, "tdd"), { recursive: true });
-    await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n", "utf-8");
+    await writeFile(path.join(specDir, "01_Spec.md"), fixture.spec ?? "# Spec\n", "utf-8");
     await writeFile(path.join(specDir, "02_User-stories.md"), "# US\n", "utf-8");
     await writeFile(path.join(specDir, "03_Acceptance-Criteria.md"), "# AC\n", "utf-8");
     await writeFile(path.join(specDir, "06_Test-Cases.md"), testCases, "utf-8");
     await writeFile(path.join(specDir, "tdd", "test-list.md"), lines.join("\n"), "utf-8");
-    assertion(await validateTddList(root, defaultConfig));
+    for (const [relative, content] of Object.entries(fixture.files ?? {})) {
+      await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
+      await writeFile(path.join(root, relative), content, "utf-8");
+    }
+    assertion(await validateTddList(root, fixture.config ?? defaultConfig));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -421,6 +435,137 @@ describe("the Layer enum is checked on every row", () => {
       ],
       (issues) => {
         expect(issues.filter((entry) => entry.code === "TDDLIST_UNKNOWN_LAYER")).toEqual([]);
+      },
+    );
+  });
+});
+
+describe("a done row rests on a test, not on an annotation carrier", () => {
+  const carrierOnly = (
+    issues: Awaited<ReturnType<typeof validateTddList>>,
+  ): Awaited<ReturnType<typeof validateTddList>> =>
+    issues.filter((entry) => entry.code === "QFAI-TDDLIST-023");
+
+  const CARRIER = "tests/integration/qfai-traceability.md";
+
+  /** A carrier naming two cases, and a unit test annotating the second. */
+  const files = {
+    [CARRIER]: [
+      "# Traceability",
+      "",
+      "- QFAI:SPEC-0001:TC-0001-0001",
+      "- QFAI:SPEC-0001:TC-0001-0002",
+      "",
+    ].join("\n"),
+    "tests/unit/b.test.ts": ["// QFAI:SPEC-0001:TC-0001-0002", 'it("case b", () => {});', ""].join(
+      "\n",
+    ),
+  };
+
+  /** Reaches `tests/unit/`, which the acceptance scan leaves out. */
+  const config: QfaiConfig = {
+    ...defaultConfig,
+    validation: {
+      ...defaultConfig.validation,
+      traceability: {
+        ...defaultConfig.validation.traceability,
+        testFileGlobs: ["tests/**/*.test.ts"],
+      },
+    },
+  };
+
+  it("reports a done row whose case only the carrier names", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        const found = carrierOnly(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.severity).toBe("error");
+        expect(found[0]?.refs).toEqual(["TDD-0001", "TC-0001-0001", CARRIER]);
+        expect(found[0]?.message).toContain(`TC-0001-0001 is named only by ${CARRIER}`);
+        expect(found[0]?.suggested_action).toContain("QFAI:SPEC-0001:TC-0001-0001");
+        expect(found[0]?.suggested_action).toContain("/qfai-implement or a Change Request");
+      },
+      "# TC\n",
+      { files, config },
+    );
+  });
+
+  it("leaves a row a test annotates, and a case nothing names", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0002 | Unit | tests/unit/b.test.ts | case b | done | - | - |",
+        "| TDD-0002 | TC-0001-0001, TC-0001-0002 | Unit | tests/unit/b.test.ts | case b | done | - | - |",
+        "| TDD-0003 | TC-0001-0003 | Unit | tests/unit/c.test.ts | case c | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues)).toEqual([]);
+      },
+      "# TC\n",
+      { files, config },
+    );
+  });
+
+  it("reads done alone", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | todo | - | - |",
+        "| TDD-0002 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | exception | DR-0001 | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues)).toEqual([]);
+      },
+      "# TC\n",
+      { files, config },
+    );
+  });
+
+  it("leaves a row whose Layer does not own TC-Refs", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | E2E | tests/e2e/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues)).toEqual([]);
+      },
+      "# TC\n",
+      { files, config },
+    );
+  });
+
+  it("demotes the finding on a retired spec", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        const found = carrierOnly(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.severity).toBe("info");
+      },
+      "# TC\n",
+      {
+        files,
+        config,
+        spec: [
+          "# SPEC-0001 Sample",
+          "",
+          "- Status: deprecated",
+          "- Deprecated-at: 2026-01-01",
+          "",
+        ].join("\n"),
       },
     );
   });

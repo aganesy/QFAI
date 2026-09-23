@@ -1947,6 +1947,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No two rows of one test case claim the same boundary: the rows of a split are identified by the (`TC-Refs`, `Boundary`) pair, and a repeated slug leaves one boundary covered by nothing.",
   "QFAI-TDDLIST-019":
     "A `done` row whose evidence entry declares its original run's output unretained is exempt from the reviewer-pack and seal fields, and says so here: `done` is read as reviewed, so a row whose review cannot be verified from artifacts stays visible rather than passing as one that carries them.",
+  "QFAI-TDDLIST-023":
+    "Every `done` row names a test case that a test file annotates, so the row's completion rests on a test a runner selects rather than on a document that only lists the case.",
   // The assistant-tree provenance family. Every governed file under
   // `constitution/` and `catalog/` is either byte-identical to the installed
   // release or an explicitly recorded local overlay; the four classifications

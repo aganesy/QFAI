@@ -43,6 +43,7 @@ import {
   resolveDeclaredTcId,
   resolveParentTcId,
   TC_FORBIDDEN_LAYERS,
+  TDD_DONE_STATUSES,
   TDD_LEDGER_REQUIRED_COLUMNS,
   UNIT_COMPONENT_LAYERS,
   NON_COVERAGE_LAYERS,
@@ -50,6 +51,13 @@ import {
 // The coverage-target TC set `qfai report` also reads, so the gate and the
 // progress figure cannot disagree about which TCs a spec declares.
 import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
+// The acceptance scan's own reading of an annotation, and of a file that
+// declares no test, so this validator and `QFAI-ATDD-119` call the same file a
+// carrier.
+import {
+  collectTestCaseAnnotationHomes,
+  type TestCaseAnnotationHomes,
+} from "../atddTraceability.js";
 import type { Issue } from "../types.js";
 import { UiAffectingClauses } from "../uiAffectingClauses.js";
 // The same `AC` / `BR` / `EX` / `TC` walk `layerCoverage.ts` scores coverage
@@ -4861,6 +4869,17 @@ export const EVIDENCE_BACKFILLED_CODE = "QFAI-TDDLIST-019";
 export const OBLIGATION_COLUMN_ABSENT_CODE = "QFAI-TDDLIST-020";
 
 /**
+ * Finding code for a `done` row whose test case only an annotation carrier
+ * names.
+ *
+ * A carrier lists obligations and declares no test, so no runner selects a
+ * case named only there. The acceptance gate is satisfied by the annotation it
+ * reads, and `QFAI-ATDD-119` reports the obligation at `info`. The row adds a
+ * claim that work was done, which is why it is an error here.
+ */
+export const COMPLETED_ROW_CARRIER_ONLY_CODE = "QFAI-TDDLIST-023";
+
+/**
  * `Revision` names a tree that files the observation covered have moved past.
  *
  * `evidence-revision.md#what-makes-evidence-stale` defines staleness
@@ -5309,6 +5328,11 @@ export async function validateTddList(
   // check.
   const { issues: steeringIssues, ...gateFields } = await readSteeringIndex(root);
   let steeringIssuesDrained = false;
+  // The test tree is read at most once, and only once a ledger holds a `done`
+  // row that names a test case.
+  let annotationHomes: Promise<TestCaseAnnotationHomes | null> | undefined;
+  const readAnnotationHomes = (): Promise<TestCaseAnnotationHomes | null> =>
+    (annotationHomes ??= collectTestCaseAnnotationHomes(root, config));
   const gate: BlockedWorklogGate = {
     ...gateFields,
     drainUnreadable: () => {
@@ -5331,6 +5355,7 @@ export async function validateTddList(
       recordIds,
       srcRelDir,
       config.paths.contractsDir,
+      readAnnotationHomes,
     );
     issues.push(...demoteRetiredSpecIssues(specIssues, entry));
   }
@@ -5720,6 +5745,7 @@ async function validateSpecTddList(
   recordIds: ReadonlySet<string>,
   srcRelDir: string,
   contractsDir: string,
+  readAnnotationHomes: () => Promise<TestCaseAnnotationHomes | null>,
 ): Promise<Issue[]> {
   // The whole entry, not its directory: Check 8c derives the review-group key
   // from the spec's layer files, and `SpecEntry` is what already resolves those
@@ -6177,6 +6203,15 @@ async function validateSpecTddList(
       ),
     );
   }
+
+  // A `done` row whose test case only an annotation carrier names.
+  issues.push(
+    ...(await validateCompletedRowsRunATest(ledgerRows(), readAnnotationHomes, {
+      root,
+      relPath,
+      specNumber,
+    })),
+  );
 
   // Check 5d: the sibling rows of a split obligation each name the boundary
   // they own.
@@ -7512,4 +7547,75 @@ function validateObligationColumn(
     );
   }
   return issues;
+}
+
+/** Where a finding from {@link validateCompletedRowsRunATest} is filed. */
+type CarrierOnlyContext = { root: string; relPath: string; specNumber: string };
+
+/**
+ * The `TC-*` tokens of a `done` row whose `Layer` owns `TC-Refs`, upper-cased.
+ * Empty for any other row.
+ */
+function completedRowTestCases(ref: LedgerRowRef): string[] {
+  if (!TDD_DONE_STATUSES.has(cell(ref, "Status").toLowerCase())) return [];
+  if (!isCoverageBearingRow(ref.scan, ref.row)) return [];
+  return splitTcRefs(cell(ref, "TC-Refs"))
+    .map((token) => token.toUpperCase())
+    .filter(isWellFormedTcRef);
+}
+
+/**
+ * Reports each test case of a `done` row that only an annotation carrier names.
+ *
+ * A row with a test for any of its cases is left alone. Its other cases are
+ * then the acceptance gate's to report, and the row's claim rests on a test.
+ * A case no file names at all is left to that gate as well.
+ *
+ * `done` alone: an `exception` row parks the obligation under a decision
+ * record and claims no test. A retired spec's findings are demoted by the
+ * caller.
+ */
+async function validateCompletedRowsRunATest(
+  rows: Iterable<LedgerRowRef>,
+  readAnnotationHomes: () => Promise<TestCaseAnnotationHomes | null>,
+  context: CarrierOnlyContext,
+): Promise<Issue[]> {
+  const candidates = [...rows]
+    .map((ref) => ({ ref, testCases: completedRowTestCases(ref) }))
+    .filter(({ testCases }) => testCases.length > 0);
+  if (candidates.length === 0) return [];
+  const homes = await readAnnotationHomes();
+  if (homes === null) return [];
+  const tests = homes.tests.get(context.specNumber);
+  const carriers = homes.carriers.get(context.specNumber);
+  const issues: Issue[] = [];
+  for (const { ref, testCases } of candidates) {
+    if (testCases.some((testCase) => tests?.has(testCase) === true)) continue;
+    for (const testCase of testCases) {
+      const named = carriers?.get(testCase);
+      if (named === undefined) continue;
+      issues.push(carrierOnlyIssue(ref, testCase, named, context));
+    }
+  }
+  return issues;
+}
+
+function carrierOnlyIssue(
+  ref: LedgerRowRef,
+  testCase: string,
+  carriers: ReadonlySet<string>,
+  context: CarrierOnlyContext,
+): Issue {
+  const id = cell(ref, "TDD-ID");
+  const files = [...carriers].map((file) => toRelPath(context.root, file)).sort();
+  return issue(
+    COMPLETED_ROW_CARRIER_ONLY_CODE,
+    `${id} in tdd/test-list.md for spec-${context.specNumber} (${ref.label}) is done, but ${testCase} is named only by ${files.join(", ")}, which declares no test. No runner selects the case, so the row's completion rests on a list of obligations`,
+    "error",
+    context.relPath,
+    "tddList.completedRowRunsATest",
+    [id, testCase, ...files],
+    "change",
+    `Annotate the test that discharges ${testCase} with QFAI:SPEC-${context.specNumber}:${testCase}, or move the row off done through /qfai-implement or a Change Request.`,
+  );
 }
