@@ -178,6 +178,13 @@ describe("--profile sdd observes the ledger seed shape it wrote", () => {
     expect(await codesFor("sdd", mismatched)).toContain("TDDLIST_OBLIGATION_LAYER_MISMATCH");
   });
 
+  it("raises QFAI-TDDLIST-022 on a seeded row that names no test case", async () => {
+    // `TC-Refs` is the seed's cell, so a row it wrote with no test case there
+    // is damage the reader may not repair by re-pointing the obligation.
+    const row = "| TDD-0001 | - | Unit | tests/unit/a.test.ts | a | todo | - | - |";
+    expect(await codesFor("sdd", ledger([row]))).toContain("QFAI-TDDLIST-022");
+  });
+
   it("leaves the execution-state codes to --profile tdd", async () => {
     const done = ledger([
       "| TDD-0001 | TC-0001 | Unit | tests/unit/a.test.ts | a | done | - | - |",

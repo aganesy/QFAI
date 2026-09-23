@@ -24,6 +24,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runPrototypingIterate } from "../../../../src/cli/commands/prototypingIterate.js";
 import { parseArgs } from "../../../../src/cli/lib/args.js";
+import { run } from "../../../../src/cli/main.js";
 
 const tempDirs: string[] = [];
 
@@ -224,10 +225,9 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
 
   // QFAI:SPEC-0012:TC-0012-0488
   it("Test 6b: --check-convergence WITHOUT --cycle defaults the peek to cycle 9", async () => {
-    // When invoked WITHOUT --cycle but WITH --check-convergence, the
-    // peek path must default to cycle 9 (the hint's recommendation)
-    // and must NOT trip the cycle-required guard. We exercise the
-    // runPrototypingIterate entry directly with cycle omitted.
+    // Run through the CLI entry point, which supplies the default: without
+    // --cycle the peek reads cycle 9 (the hint's recommendation) and does
+    // not trip the cycle-required guard.
     const root = await newTempDir();
     await seedPrototypingJson(root, {
       stopReason: "converged",
@@ -235,18 +235,19 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
       iterations: [{ index: 7 }],
     });
     const captured = captureStdout();
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
     try {
-      // Cast through unknown so we can omit `cycle` from the options
-      // bag at the type level — the read-only branch must not require it.
-      const exit = await runPrototypingIterate({
-        root,
-        checkConvergence: true,
-      } as unknown as Parameters<typeof runPrototypingIterate>[0]);
-      expect(exit).toBe(0);
+      await run(["prototyping", "iterate", "--check-convergence", "--root", root], root);
+      const exitCode = process.exitCode;
       const out = captured.lines.join("");
-      expect(out).toMatch(/cycle\s*9/);
+      expect(out).toContain("(cycle 9)");
       expect(out).toMatch(/stopReason:\s*converged/);
+      expect(exitCode).toBe(0);
     } finally {
+      process.exitCode = previousExitCode;
+      stderrSpy.mockRestore();
       captured.restore();
     }
   });

@@ -1948,7 +1948,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-TDDLIST-019":
     "A `done` row whose evidence entry declares its original run's output unretained is exempt from the reviewer-pack and seal fields, and says so here: `done` is read as reviewed, so a row whose review cannot be verified from artifacts stays visible rather than passing as one that carries them.",
   "QFAI-TDDLIST-022":
-    "Every ledger row whose `Layer` takes a test case names one in `TC-Refs`, so the row traces to the case it discharges rather than passing every check on that column by holding nothing those checks read.",
+    "Every ledger row names a test case in `TC-Refs`, except an `E2E` or `API` row and an `Integration` row carrying a `CON-DB-*` contract, which record their obligation in another column. The row then traces to the case it discharges rather than passing every check on that column by holding nothing those checks read.",
   // The assistant-tree provenance family. Every governed file under
   // `constitution/` and `catalog/` is either byte-identical to the installed
   // release or an explicitly recorded local overlay; the four classifications

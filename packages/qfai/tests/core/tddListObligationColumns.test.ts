@@ -480,6 +480,36 @@ describe("a row that owes a test case names one in TC-Refs", () => {
     );
   });
 
+  it("reports an empty TC-Refs cell", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 |         | Unit  | tests/a.test.ts | case a   | todo   | -     | -        |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.message).toContain("holds an empty TC-Refs");
+      },
+    );
+  });
+
+  it("reports a CON-DB-* contract on a row whose Layer is not Integration", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | CON-DB-0001 | Unit | tests/a.test.ts | a | todo | - | - |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found.map((entry) => entry.refs?.[0])).toEqual(["TDD-0001"]);
+        expect(found[0]?.message).toContain('TC-Refs "CON-DB-0001"');
+      },
+    );
+  });
+
   it("exempts a row whose Layer records its obligation in another column", async () => {
     await withLedger(
       [
