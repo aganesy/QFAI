@@ -328,3 +328,74 @@ export function parseDecisionRecordEntries(text: string): DecisionRecordEntry[] 
 export function collectReOpenEntries(text: string): DecisionRecordEntry[] {
   return parseDecisionRecordEntries(text).filter((entry) => entry.status === RE_OPEN_STATUS);
 }
+
+/**
+ * The two header fields of a Change Request that say whether it is settled.
+ *
+ * `null` means the field was absent. The values are the ones the record holds,
+ * with the template's backticks and trailing comment removed and `status`
+ * lower-cased.
+ */
+export type ChangeRequestHeader = {
+  status: string | null;
+  appliedAt: string | null;
+};
+
+/**
+ * The `Status` values the shipped Change Request template defines as leaving
+ * `open`: `open | approved | rejected | superseded`. A value outside that
+ * vocabulary is not read as settled.
+ */
+const CHANGE_REQUEST_SETTLED_STATUSES: ReadonlySet<string> = new Set([
+  "approved",
+  "rejected",
+  "superseded",
+]);
+
+/** A heading of level 2 or deeper, which is where a record's header block ends. */
+const SECTION_HEADING_RE = new RegExp(`^${BLOCK_INDENT}#{2,6}(?:\\s|$)`);
+
+/**
+ * Parse the header bullet list of a `.qfai/decisions/CR-*.md` record.
+ *
+ * Only the lines before the first `##` heading are read. The body of a Change
+ * Request quotes its own fields freely, so a `- Status:` line in a section is
+ * prose about the record, not the record. Comments are masked as in
+ * {@link parseDecisionRecordEntries}: the template's own comment lists the
+ * status vocabulary, and a line wrapped in `<!-- -->` is not a field. The first
+ * occurrence of a field wins.
+ */
+export function parseChangeRequestHeader(text: string): ChangeRequestHeader {
+  const header: ChangeRequestHeader = { status: null, appliedAt: null };
+  let inComment = false;
+  for (const raw of text.replace(/\r\n/g, "\n").split("\n")) {
+    const masked = maskLineComments(raw, inComment);
+    inComment = masked.open;
+    const line = masked.text;
+    if (SECTION_HEADING_RE.test(line)) break;
+    const field = FIELD_RE.exec(line);
+    if (!field?.[1]) continue;
+    const key = normalizeKey(field[1]);
+    const value = cleanValue(field[2] ?? "");
+    if (key === "status" && header.status === null) header.status = value.toLowerCase();
+    else if (key === "applied-at" && header.appliedAt === null) header.appliedAt = value;
+  }
+  return header;
+}
+
+/**
+ * True when a Change Request no longer holds anything open.
+ *
+ * `rejected` and `superseded` are settled by their status. `approved` is
+ * settled only once `Applied at` is filled: the template treats an approved
+ * request as unresolved until the approved actions have been carried out, and
+ * a row it blocked still owes the obligation in its old form until then.
+ *
+ * SIMPLIFIED: reads the two header fields only; the `Resolution` section the
+ * completion gate also asks for is not checked.
+ * Lift when: a caller acts on this answer by itself rather than reporting it.
+ */
+export function isChangeRequestSettled(header: ChangeRequestHeader): boolean {
+  if (header.status === null || !CHANGE_REQUEST_SETTLED_STATUSES.has(header.status)) return false;
+  return header.status !== "approved" || !isPlaceholderValue(header.appliedAt);
+}

@@ -64,7 +64,11 @@ type SteeringSeed = Readonly<Record<string, string>>;
 async function run(
   ledger: string,
   steering: SteeringSeed = {},
-  opts: { readonly steeringIsRegularFile?: boolean } = {},
+  opts: {
+    readonly steeringIsRegularFile?: boolean;
+    /** `.qfai/decisions/<name>` files to seed alongside the ledger. */
+    readonly decisions?: SteeringSeed;
+  } = {},
 ): Promise<Array<{ code: string; severity: string; message: string; suggested: string }>> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-blocked-"));
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
@@ -92,6 +96,14 @@ async function run(
       await mkdir(steeringDir, { recursive: true });
       for (const name of steeringNames) {
         await writeFile(path.join(steeringDir, name), steering[name] ?? "", "utf-8");
+      }
+    }
+    const decisions = opts.decisions ?? {};
+    if (Object.keys(decisions).length > 0) {
+      const decisionsDir = path.join(root, ".qfai", "decisions");
+      await mkdir(decisionsDir, { recursive: true });
+      for (const [name, body] of Object.entries(decisions)) {
+        await writeFile(path.join(decisionsDir, name), body, "utf-8");
       }
     }
     const issues = await validateTddList(root, defaultConfig);
@@ -524,5 +536,119 @@ describe("QFAI-TDDLIST-015 — a stop must leave a steering record", () => {
     const codes = issues.map((i) => i.code);
     expect(codes).not.toContain("QFAI-TDDLIST-016");
     expect(codes).not.toContain("QFAI-TDDLIST-015");
+  });
+});
+
+/**
+ * A Change Request record in the shape the shipped template writes, with the
+ * template's own trailing comments kept so the header parser meets them. The
+ * body quotes an approved status on purpose: only the header is the record.
+ */
+function changeRequest(fields: { status: string; appliedAt?: string }): string {
+  return [
+    "# Change Request",
+    "",
+    "- ID: `CR-20260801-0001`",
+    "- Class: `defect`",
+    `- Status: \`${fields.status}\` <!-- open | approved | rejected | superseded -->`,
+    "- Approved by: `user`",
+    "- Approved at: `2026-08-02T00:00:00Z`",
+    `- Applied at: \`${fields.appliedAt ?? "-"}\` <!-- YYYY-MM-DDThh:mm:ssZ -->`,
+    "",
+    "## Resolution",
+    "",
+    "- Status: `approved`",
+    "- Applied at: `2026-08-03T00:00:00Z`",
+    "",
+  ].join("\n");
+}
+
+const CR_FILE = "CR-20260801-0001-a-settled-question.md";
+
+describe("QFAI-TDDLIST-021 — a blocked row whose Change Request is settled", () => {
+  // Ordinary selection skips a `blocked` row and nothing else writes
+  // `blocked -> todo`, so a row parked on a request that has since been decided
+  // stays parked with no finding pointing at it.
+  const blockedOnCr = `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | CR-20260801-0001 — blocked at todo |`;
+
+  it("warns when the Change Request in Blocked-By is approved and applied", async () => {
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      {
+        decisions: {
+          [CR_FILE]: changeRequest({ status: "approved", appliedAt: "2026-08-03T00:00:00Z" }),
+        },
+      },
+    );
+    const found = issues.find((i) => i.code === "QFAI-TDDLIST-021");
+    expect(found?.severity).toBe("warning");
+    expect(found?.message).toContain("TDD-0001");
+    expect(found?.message).toContain("CR-20260801-0001 (approved and applied)");
+    expect(found?.suggested).toContain("/qfai-implement");
+    expect(found?.suggested).toContain("`blocked -> todo`");
+  });
+
+  it("says nothing while the Change Request is still open", async () => {
+    // The body's `- Status: approved` line is prose about the record, so it
+    // must not stand in for the header's own `open`.
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      { decisions: { [CR_FILE]: changeRequest({ status: "open" }) } },
+    );
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  it("says nothing while an approved Change Request has not been applied", async () => {
+    // The template treats an approved request as unresolved until `Applied at`
+    // is filled, and the row still owes the obligation in its old form.
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      { decisions: { [CR_FILE]: changeRequest({ status: "approved" }) } },
+    );
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  it("says nothing when the Change Request resolves to no record", async () => {
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      {
+        decisions: {
+          "CR-20260801-0002-another-question.md": changeRequest({
+            status: "approved",
+            appliedAt: "2026-08-03T00:00:00Z",
+          }),
+        },
+      },
+    );
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  it("says nothing while Blocked-By names another blocker beside the Change Request", async () => {
+    // The other blocker can still be holding the row, so "waiting on nothing"
+    // would be false.
+    const row = `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | CR-20260801-0001, spec-0006:TDD-0034 — blocked at todo |`;
+    const issues = await run(
+      `${NINE_COL}\n${row}\n`,
+      {},
+      { decisions: { [CR_FILE]: changeRequest({ status: "rejected" }) } },
+    );
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  it("reads the Evidence cell when the ledger has no Blocked-By to read", async () => {
+    const row = `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | BLOCKED by CR-20260801-0001, which names this row |`;
+    const issues = await run(
+      `${EIGHT_COL}\n${row}\n`,
+      {},
+      { decisions: { [CR_FILE]: changeRequest({ status: "rejected" }) } },
+    );
+    const found = issues.find((i) => i.code === "QFAI-TDDLIST-021");
+    expect(found?.severity).toBe("warning");
+    expect(found?.message).toContain("Evidence");
+    expect(found?.message).toContain("CR-20260801-0001 (rejected)");
   });
 });

@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A blocked ledger row whose Change Request is settled is reported**
+  (#2015). A `blocked` row that named a Change Request stayed `blocked` after
+  the request was decided, and nothing said so. `validate` now warns with
+  `QFAI-TDDLIST-021` when the row's `Blocked-By` cell names only Change
+  Requests — or, with no blocker there, its `Evidence` cell names some — and
+  each is `rejected`, `superseded`, or `approved` with `Applied at` filled. The
+  finding sends the row back through `/qfai-implement`, where `blocked -> todo`
+  is the resumption edge. An open request, an approved one not yet applied, an
+  id with no record in `.qfai/decisions/`, and a `Blocked-By` that names
+  another blocker as well report nothing.
+
 - **spec-0003 states what `qfai init` and the shipped workflows do now**
   (#2190). Five of its obligations described the product before a deliberate
   change and the tests asserted the opposite. They said init creates six

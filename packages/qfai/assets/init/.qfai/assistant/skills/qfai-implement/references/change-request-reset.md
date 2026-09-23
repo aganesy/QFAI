@@ -85,8 +85,10 @@ CR. Both count as resolved (`#when-an-in-scope-cr-counts-as-resolved`), so both
 leave the unresolved union — and neither authorises a reset, so the release
 above never runs for them. Nothing else writes `blocked -> todo`, and ordinary
 selection skips a `blocked` row unconditionally, so without this the row sits
-parked against a decision nobody will ever apply, `validate` is quiet, and the
-spec's completion gate is clear.
+parked against a decision nobody will ever apply, and the spec's completion gate
+is clear. `npx qfai validate` reports such a row as `QFAI-TDDLIST-021`, a
+warning, once its `Blocked-By` cell names only Change Requests and each is
+`rejected`, `superseded`, or `approved` with `Applied at` filled.
 
 The release is the same recomputation the approved path makes:
 
