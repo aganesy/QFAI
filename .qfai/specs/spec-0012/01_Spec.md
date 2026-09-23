@@ -167,7 +167,7 @@ Absorbed from `.qfai/discussion/discussion-20260523221141355/06_REQ.md` (CHG-005
 - NFR-0102: 3-cycle convergence p95 on the canonical fixture pack (Tailwind ↔ gate alignment + `var()` unwrap + SAFE_LITERALS shipped together).
 - NFR-0103: Blocking-cause categories enumerated by REQ-0012-0068 are stable named identifiers; new categories are additive only.
 - NFR-0104: Zero-script LOC in the shipped `references/handoff.md` aggregate path (operator does not hand-author capture / serve scripts).
-- NFR-0106: `--auto-serve` MUST NOT kill foreign processes (BR-protected; verified by integration test).
+- NFR-0106: `--auto-serve` MUST NOT kill foreign processes (BR-protected; verified by integration test), and the runner's teardown MUST complete within 2 seconds of a SIGINT.
 - NFR-0107: `--capture` per-screen budget cap 30s (soft warning if exceeded; not a hard-fail).
 - NFR-0110: Scanner unit-testability ≥ 30 unit tests across `scanFonts` / `scanRadius` / `scanShadow` / `scanColors` × `unwrapVarReference` / `SAFE_LITERALS` matrix; ≥ 90% statement coverage on the scanner module.
 - NFR-0113: md5 duplicate detection is deterministic across re-runs (same screen set → same `lap-009` finding set).

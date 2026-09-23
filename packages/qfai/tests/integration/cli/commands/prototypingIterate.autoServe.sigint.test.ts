@@ -107,14 +107,19 @@ async function seedMinimal(root: string): Promise<void> {
 }
 
 describe("iterate --auto-serve SIGINT teardown", () => {
+  // QFAI:SPEC-0012:TC-0012-0462
   it("installs a SIGINT handler after the runner returns and removes it after cycle completion", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
     const sigintListenersBefore = process.listenerCount("SIGINT");
 
     let listenersDuringCapture = -1;
+    let listenersWhenRunnerCalled = -1;
     const teardown = vi.fn(async () => {});
-    const runner = vi.fn(async () => ({ ok: true, teardown, pid: 11111 }) as const);
+    const runner = vi.fn(async () => {
+      listenersWhenRunnerCalled = process.listenerCount("SIGINT");
+      return { ok: true, teardown, pid: 11111 } as const;
+    });
 
     const exit = await runPrototypingIterate({
       root,
@@ -134,6 +139,8 @@ describe("iterate --auto-serve SIGINT teardown", () => {
 
     expect(exit).toBe(0);
     expect(teardown).toHaveBeenCalledTimes(1);
+    // No handler is installed before the runner returns.
+    expect(listenersWhenRunnerCalled).toBe(sigintListenersBefore);
     // During the capture phase the SIGINT listener count MUST be one
     // higher than the baseline; iterate installed exactly one handler
     // for the auto-serve teardown path.
@@ -155,6 +162,7 @@ describe("iterate --auto-serve SIGINT teardown", () => {
   // aggregate mirror tries to create as a directory; `mkdir(...,
   // { recursive: true })` then raises `EEXIST` / `ENOTDIR`, which
   // bubbles up past `runCapturePath`.
+  // QFAI:SPEC-0012:TC-0012-0462
   it("auto-serve teardown + SIGINT detach happen even when the mirror helper throws", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -192,6 +200,7 @@ describe("iterate --auto-serve SIGINT teardown", () => {
     expect(process.listenerCount("SIGINT")).toBe(sigintListenersBefore);
   });
 
+  // QFAI:SPEC-0012:TC-0012-0462
   it("teardown executes within 2s when SIGINT is dispatched mid-run", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -210,6 +219,9 @@ describe("iterate --auto-serve SIGINT teardown", () => {
     // SIGINT handler installed by iterate (during the auto-serve
     // setup) must reach the teardown within 2s.
     const sigintDispatchedAt: number[] = [];
+    // Teardown calls seen while the cycle is still running, read after the
+    // SIGINT. A teardown the cycle end runs cannot be counted here.
+    let teardownCallsBeforeCycleEnd = -1;
     const exit = await runPrototypingIterate({
       root,
       cycle: 0,
@@ -222,6 +234,7 @@ describe("iterate --auto-serve SIGINT teardown", () => {
         process.emit("SIGINT");
         // Yield to let the handler run.
         await new Promise((r) => setTimeout(r, 10));
+        teardownCallsBeforeCycleEnd = teardown.mock.calls.length;
         await writeFile(pngPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
         await writeFile(htmlPath, "<html></html>");
         return { ok: true, durationMs: 5 };
@@ -230,15 +243,16 @@ describe("iterate --auto-serve SIGINT teardown", () => {
     });
 
     expect(exit).toBe(0);
+    // The SIGINT itself ran the teardown, before the cycle ended.
+    expect(teardownCallsBeforeCycleEnd).toBe(1);
     // Teardown should have run AT LEAST once. SIGINT-driven teardown
     // semantics: iterate must not call teardown twice on the same
     // resolved teardown — once via SIGINT, then a second time at
     // cycle end would be a double-close defect on real resources.
     expect(teardown).toHaveBeenCalledTimes(1);
-    const teardownEnd = teardownEndedAt[0];
-    const sigintStart = sigintDispatchedAt[0];
-    if (typeof sigintStart === "number" && typeof teardownEnd === "number") {
-      expect(teardownEnd - sigintStart).toBeLessThan(2_000);
-    }
+    expect(sigintDispatchedAt).toHaveLength(1);
+    expect(teardownEndedAt).toHaveLength(1);
+    const elapsedMs = Number(teardownEndedAt[0]) - Number(sigintDispatchedAt[0]);
+    expect(elapsedMs).toBeLessThan(2_000);
   });
 });
