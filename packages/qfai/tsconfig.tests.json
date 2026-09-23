@@ -225,7 +225,6 @@
     "tests/e2e/spec0017RunnerParallelismE2E.test.ts",
     "tests/helpers/buildCommand.ts",
     "tests/helpers/childFailure.ts",
-    "tests/helpers/deliveredWorkflowTree.ts",
     "tests/helpers/fixedOutputLanguage.ts",
     "tests/helpers/gitConfigEnv.ts",
     "tests/helpers/measurementClaim.ts",
