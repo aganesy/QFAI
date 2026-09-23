@@ -37,7 +37,7 @@ const ROOT = path.resolve(__dirname, "../../../..");
 /** The first review pack this stage opened; earlier directories belong to other stages. */
 const FIRST_PACK = "review-20260820200000000";
 const ROW_REVIEW_PACK_FIELD =
-  /^- (?:Round \d+: Review pack(?: \(attempt \d+\))?|Spec review pack|Code quality review pack):/;
+  /^- (?:Round \d+: Review pack(?: \(attempt \d+\))?|(?:Spec|Code quality) (?:review pack|record re-attestation pack)):/;
 
 /**
  * The test files whose sizes this record states — ONE list, read by all three guards below.
