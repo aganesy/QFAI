@@ -3137,7 +3137,7 @@ function missingCompletedEvidenceFields(
   }
   for (const field of ["qa-gatekeeper", "Spec review", "Code quality review"] as const) {
     const verdict = rowEvidenceFieldValue(section, field);
-    if (verdict !== null && verdict.toUpperCase() !== "PASS") {
+    if (verdict !== null && !isPassVerdict(field, verdict)) {
       missing.push(`${field}: PASS`);
     }
   }
@@ -3890,6 +3890,19 @@ type RoundAttemptPack = RoundPackRow & {
 };
 
 /** The outcome an attempt's `reviewer verdict` states, or `null` when it states neither. */
+/**
+ * Whether a row-level verdict field reads PASS.
+ *
+ * The `qa-gatekeeper` field names the attempts behind its PASS on the same line
+ * (`PASS (qa-gatekeeper#1, Round 1, …)`, `PASS x2 (…)`), so a leading PASS is
+ * the verdict, read the way `attemptOutcome` reads a round's. The two review
+ * verdicts carry their provenance in fields of their own and stay exact.
+ */
+function isPassVerdict(field: string, verdict: string): boolean {
+  if (field === "qa-gatekeeper") return attemptOutcome(verdict) === "PASS";
+  return verdict.toUpperCase() === "PASS";
+}
+
 function attemptOutcome(verdict: string | null): "PASS" | "REVISE" | null {
   const value = (verdict ?? "").trim();
   if (/^PASS\b/i.test(value)) return "PASS";
