@@ -6,6 +6,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0012 states the auto-serve SIGINT path as the runner contract**
+  (#2201). `TC-0012-0462` still described iterate killing child server
+  processes, while iterate only invokes the teardown its server runner
+  returns. The case now names three clauses:
+  - the handler is installed after the runner returns and removed at the end of
+    the cycle;
+  - teardown and removal still run when the cycle fails;
+  - a SIGINT runs the teardown once, within 2 seconds.
+
+  Each clause has its own row. `NFR-0106` now states the 2-second bound the
+  case cites. The first row's test also checks the handler is not installed
+  before the runner is called, and the bound check runs unconditionally.
+
 - **spec-0013 records the change request behind its repointed rules** (#2133).
   Five rules were repointed at the criterion about their own subject with no
   change request on record, and the coverage record still said they were
