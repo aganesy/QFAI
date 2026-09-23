@@ -114,8 +114,12 @@ describe("iterate --auto-serve SIGINT teardown", () => {
     const sigintListenersBefore = process.listenerCount("SIGINT");
 
     let listenersDuringCapture = -1;
+    let listenersWhenRunnerCalled = -1;
     const teardown = vi.fn(async () => {});
-    const runner = vi.fn(async () => ({ ok: true, teardown, pid: 11111 }) as const);
+    const runner = vi.fn(async () => {
+      listenersWhenRunnerCalled = process.listenerCount("SIGINT");
+      return { ok: true, teardown, pid: 11111 } as const;
+    });
 
     const exit = await runPrototypingIterate({
       root,
@@ -135,6 +139,8 @@ describe("iterate --auto-serve SIGINT teardown", () => {
 
     expect(exit).toBe(0);
     expect(teardown).toHaveBeenCalledTimes(1);
+    // No handler is installed before the runner returns.
+    expect(listenersWhenRunnerCalled).toBe(sigintListenersBefore);
     // During the capture phase the SIGINT listener count MUST be one
     // higher than the baseline; iterate installed exactly one handler
     // for the auto-serve teardown path.
@@ -244,10 +250,9 @@ describe("iterate --auto-serve SIGINT teardown", () => {
     // resolved teardown — once via SIGINT, then a second time at
     // cycle end would be a double-close defect on real resources.
     expect(teardown).toHaveBeenCalledTimes(1);
-    const teardownEnd = teardownEndedAt[0];
-    const sigintStart = sigintDispatchedAt[0];
-    if (typeof sigintStart === "number" && typeof teardownEnd === "number") {
-      expect(teardownEnd - sigintStart).toBeLessThan(2_000);
-    }
+    expect(sigintDispatchedAt).toHaveLength(1);
+    expect(teardownEndedAt).toHaveLength(1);
+    const elapsedMs = Number(teardownEndedAt[0]) - Number(sigintDispatchedAt[0]);
+    expect(elapsedMs).toBeLessThan(2_000);
   });
 });

@@ -39,6 +39,9 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
   A call that should not happen is then caught by the test's own assertion, rather than by iterate failing to read an empty result.
 - The case `teardown executes within 2s when SIGINT is dispatched mid-run` reads the teardown call count while the cycle is still running, after the SIGINT.
   Without it, the cycle-end teardown satisfied the case even when the SIGINT ran nothing, so the case could not own the boundary `sigint-invokes-teardown-within-bound`.
+- The `TDD-0471` test records the SIGINT listener count inside its runner stub and asserts it equals the baseline.
+  The clause says the handler is installed after the runner returns, and without this a handler installed before the runner call left every test green.
+- The `TDD-0566` test asserts one SIGINT dispatch and one teardown end before it checks the 2-second bound, so the bound check can no longer be skipped.
 
 ## Work performed (what changed, where)
 
@@ -60,6 +63,8 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 - `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts`
   - Each of the three tests carries `QFAI:SPEC-0012:TC-0012-0462`.
   - `teardown executes within 2s when SIGINT is dispatched mid-run` records the teardown call count after the SIGINT, inside the capture callback, and asserts it is 1. The existing assertions, including the 2 s bound, are unchanged.
+  - `installs a SIGINT handler after the runner returns and removes it after cycle completion`: the runner stub records `process.listenerCount("SIGINT")` when it is called, and the test asserts it equals `sigintListenersBefore`. Every existing assertion is unchanged.
+  - `teardown executes within 2s when SIGINT is dispatched mid-run`: the bound check is unconditional. The test asserts `sigintDispatchedAt` and `teardownEndedAt` each hold one value, then that the elapsed time is under 2 000 ms.
 
 ## Commands executed + key outputs
 
@@ -108,6 +113,15 @@ Preflight: confidence high
 No session opened. `CR-20260923-0008` fixes the three rows, their boundaries
 and the test each one names, and nothing surfaced during the run that the spec
 or the change request leaves open.
+
+
+### /qfai-implement — run started 2026-09-23T08:45:00.000Z
+
+Preflight: confidence high
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-23T08:46:00Z | 97262ad85841c5f5a22bb206a9a9e8b2af9b4542 | 2026-09-23T08:46:05Z | a restated SIGINT case whose row's Selector names three clauses | empty | none in flight | 1 | 0 | 0 |
 
 ## Ledger rows advanced
 
@@ -521,7 +535,46 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.t
 - Why it fails: no handler is added, so the listener count read during capture equals the baseline.
   `expect(listenersDuringCapture).toBe(sigintListenersBefore + 1)` fails as an assertion
 - Other rows: `TDD-0565` still passes, because the cycle-end teardown and the `process.off` of a handler never added both still run.
-  `TDD-0566` still passes, because the cycle-end teardown runs once, well inside the 2 s bound
+  `TDD-0566` also fails, at `:241:41`: with no handler installed, the SIGINT cannot run the teardown before the cycle ends. A SIGINT reaches the teardown only through the installed handler, so the two rows cannot be broken apart
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingIterate.ts, `runPrototypingIterate`, `process.on("SIGINT", sigintHandler)` — the handler installed for the cycle
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts -t "installs a SIGINT handler after the runner returns and removes it after cycle completion"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). The row's case fails on `AssertionError: expected +0 to be 1 // Object.is equality` at `tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts:141:36`
+
+The edit:
+
+```diff
+-    process.on("SIGINT", sigintHandler);
++
+```
+
+- Round 1: Falsifiability revision: working-tree+69f901bf8a421496ece4dd66d57e4218c7ecec33c71110b2650578ee8a48d567
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 4284535510d521c425a887a5435544b348f0b44f2bf6af65552f287a44fb4b82
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
+```
+
+- Round 1: RED test replacement: test-only replacement — completion-reviewer REVISE, Round 1 attempt 1 (the test's runner stub records the SIGINT listener count when it is called, and the test asserts it equals the baseline, so the handler has to be installed after the runner returns); the proof above is stale — test replaced, and /qfai-implement re-takes it under the corrected test
+- Round 1: Replacement proof revision:
+
+- Round 1: Revision: d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts -t "installs a SIGINT handler after the runner returns and removes it after cycle completion"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 REVISE, RED phase gate: the entry said TDD-0566's case passes under this mutation, and it fails; qa-gatekeeper#2 PASS, RED phase gate after that line was corrected, reviewed revision working-tree+69f901bf8a421496ece4dd66d57e4218c7ecec33c71110b2650578ee8a48d567; qa-gatekeeper#3 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the TDD-0471 test misses the handler's order, and the NFR-0106 bound was never stated; CR-20260923-0009 states the bound and the test goes back to /qfai-atdd
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923090010000
+- Round 1: Review pack seal (attempt 1): 13532b4dfb9ad9276612e9c2d7a75d49a1e84239aaa835ed9309e2b2f4c0bf53
 
 ### TDD-0565
 
@@ -536,6 +589,45 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.t
 - Why it fails: a throw from the capture path is rethrown before the removal and the teardown run, so iterate still rejects.
   `expect(teardown).toHaveBeenCalledTimes(1)` then sees 0 calls
 - Other rows: on a cycle that completes, the block after the `catch` runs as the `finally` did, so `TDD-0471` and `TDD-0566` still pass
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingIterate.ts, `runPrototypingIterate`, the `finally` that runs the teardown and removes the handler when the cycle fails
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts -t "auto-serve teardown \+ SIGINT detach happen even when the mirror helper throws"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). The row's case fails on `AssertionError: expected "spy" to be called 1 times, but got 0 times` at `tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts:193:22`
+
+The edit:
+
+```diff
+-  } finally {
++  } catch (cause) { throw cause; } {
+```
+
+- Round 1: Falsifiability revision: working-tree+7ea777c3326e31b625df2d4e843ff5befcfe0c0965dfca9caa85cbe320b8e490
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 4284535510d521c425a887a5435544b348f0b44f2bf6af65552f287a44fb4b82
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
+```
+
+- Round 1: RED test replacement: test-only replacement — completion-reviewer REVISE, Round 1 attempt 1 (the other two tests of this file changed: the TDD-0471 test gained its order assertion and the TDD-0566 test its unconditional bound check; this row's own test is unchanged); the proof above is stale — test replaced, and /qfai-implement re-takes it under the corrected test
+- Round 1: Replacement proof revision:
+
+- Round 1: Revision: d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts -t "auto-serve teardown \+ SIGINT detach happen even when the mirror helper throws"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+7ea777c3326e31b625df2d4e843ff5befcfe0c0965dfca9caa85cbe320b8e490; qa-gatekeeper#2 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the TDD-0471 test misses the handler's order, and the NFR-0106 bound was never stated; CR-20260923-0009 states the bound and the test goes back to /qfai-atdd
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923090011000
+- Round 1: Review pack seal (attempt 1): 781798b7b61d4a72551d31e0eb300a2f4e21480c32a737e1560b226aadab6f41
 
 ### TDD-0566
 
@@ -562,6 +654,45 @@ late to be counted.
 The three mutations were written into a type-level copy of the auto-serve block
 in a scratch config with the test file, and `tsc` exited 0 on all three. The
 `TDD-0566` copy was re-checked with the line 1327 deletion, also exit 0.
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingIterate.ts, `runPrototypingIterate`, the SIGINT handler's `void teardownOnce();`
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts -t "teardown executes within 2s when SIGINT is dispatched mid-run"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). The row's case fails on `AssertionError: expected +0 to be 1 // Object.is equality` at `tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts:241:41`
+
+The edit:
+
+```diff
+-      void teardownOnce();
++
+```
+
+- Round 1: Falsifiability revision: working-tree+89fda95e1794e7f57f9c47efc86b0b6657ff52a3c0cee006d3bb98c6a69572b6
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 4284535510d521c425a887a5435544b348f0b44f2bf6af65552f287a44fb4b82
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
+```
+
+- Round 1: RED test replacement: test-only replacement — completion-reviewer REVISE, Round 1 attempt 1 (the 2-second bound check no longer sits inside a condition: the test asserts one SIGINT dispatch and one teardown end, then the elapsed time); the proof above is stale — test replaced, and /qfai-implement re-takes it under the corrected test
+- Round 1: Replacement proof revision:
+
+- Round 1: Revision: d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts -t "teardown executes within 2s when SIGINT is dispatched mid-run"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+89fda95e1794e7f57f9c47efc86b0b6657ff52a3c0cee006d3bb98c6a69572b6; qa-gatekeeper#2 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the TDD-0471 test misses the handler's order, and the NFR-0106 bound was never stated; CR-20260923-0009 states the bound and the test goes back to /qfai-atdd
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923090012000
+- Round 1: Review pack seal (attempt 1): 6fbd28486d4cda0e8554553d75906ce84ac75161150a427b9afa67cdaa7d4a88
 
 ## Coverage Depth Matrix
 
@@ -647,6 +778,20 @@ in a scratch config with the test file, and `tsc` exited 0 on all three. The
 | 34 | acceptance-test-engineer | acceptance-test-engineer | Add `TC-0012-0462` to the Coverage Depth Matrix | 06_Test-Cases.md | #coverage-depth-matrix | PASS |
 | 35 | - | n/a | grilling(-@2026-09-23T08:46:59.499Z/none): none | - | - | PASS |
 | 36 | acceptance-test-engineer | acceptance-test-engineer | Make the `TDD-0566` case observe that the SIGINT ran the teardown, and move its proof to the handler call | #tdd-0566 | `prototypingIterate.autoServe.sigint.test.ts`; #tdd-0566 | PASS |
+| 37 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd review-fix handback: add the handler-order assertion to the `TDD-0471` test, make the `TDD-0566` bound check unconditional, replace the RED test hash of `TDD-0471`, `TDD-0565` and `TDD-0566`, and mark each proof stale | completion-reviewer REVISE, Round 1 attempt 1; #tdd-0471, #tdd-0565, #tdd-0566 | the test file; Round 1 RED test replacement lines | PASS |
+
+### Rows for the /qfai-implement run started 2026-09-23T08:45:00.000Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1 | orchestrator | orchestrator | grilling(S1@2026-09-23T08:45:00.000Z/agents): restate TC-0012-0462 and split TDD-0471 into three rows through CR-20260923-0008 | #tdd-0471, `selector-granularity.md` | CR-20260923-0008; narrowing the Selector alone would leave two clauses with no row | PASS |
+| 2 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0471 RED phase gate | #tdd-0471 | the Other rows line said TDD-0566 passes under the mutation, and it fails | REVISE |
+| 3 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0471 RED phase gate, resubmitted with that line corrected | #tdd-0471 | Round 1 | PASS |
+| 4 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0471 build-phase GREEN + oracle proof | #tdd-0471 | Round 1 | PASS |
+| 5 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0565 RED phase gate | #tdd-0565 | Round 1 | PASS |
+| 6 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0565 build-phase GREEN + oracle proof | #tdd-0565 | Round 1 | PASS |
+| 7 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0566 RED phase gate | #tdd-0566 | Round 1 | PASS |
+| 8 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0566 build-phase GREEN + oracle proof | #tdd-0566 | Round 1 | PASS |
 
 ## Execution logs
 
@@ -727,6 +872,23 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 tsc on a scratch config: the test file and the line 1327 mutation copy   -> exit 0
 eslint and prettier --check on the test file                             -> exit 0
 ```
+
+After the review-fix correction of the test file:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts -t "<Selector>"
+  TDD-0471   Tests 1 passed | 2 skipped (3)
+  TDD-0565   Tests 1 passed | 2 skipped (3)
+  TDD-0566   Tests 1 passed | 2 skipped (3)
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
+  Test Files 1 passed (1); Tests 3 passed (3)
+tsc on a scratch config holding the test file   -> exit 0
+eslint and prettier --check on the test file    -> exit 0
+RED test hash over the corrected manifest       -> 4284535510d521c425a887a5435544b348f0b44f2bf6af65552f287a44fb4b82
+```
+
+The corrected test passes on its first run, so the rows take the no-new-behaviour
+path and no round is opened.
 
 ## Gaps / Open risks
 
