@@ -569,14 +569,38 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 2ccde8e44d32798e3dafbd2218c39761963fcff9
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 REVISE, RED phase gate: the entry said TDD-0566's case passes under this mutation, and it fails; qa-gatekeeper#2 PASS, RED phase gate after that line was corrected, reviewed revision working-tree+69f901bf8a421496ece4dd66d57e4218c7ecec33c71110b2650578ee8a48d567; qa-gatekeeper#3 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd; qa-gatekeeper#4 PASS, replacement-proof + build-phase GREEN + oracle proof, reviewed revision c648c4a4c1b2c06fde70b1908a604a0f37a1492b (tree-equal to 2ccde8e44 outside the evidence and ledger); the gate ran after the revert, and it confirmed each proof tree by rebuilding it from 2ccde8e44 plus the one-line mutation and matching the recorded content address
 
 - Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the TDD-0471 test misses the handler's order, and the NFR-0106 bound was never stated; CR-20260923-0009 states the bound and the test goes back to /qfai-atdd
-- Round 1: Review pack (attempt 1): .qfai/review/review-20260923090010000
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923090010000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): 13532b4dfb9ad9276612e9c2d7a75d49a1e84239aaa835ed9309e2b2f4c0bf53
+
+- Round 1: reviewer verdict (attempt 2): REVISE — completion-reviewer: Refactor verify revision names 2ccde8e44, not the reviewed revision; the verify is re-run and its revision refreshed on the current tree; implementation-reviewer PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260923090020000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): 5e76b9ad08f8757a159d46b876c75de6e27b757f7f6ee21b4b4454dbd9e1a297
+
+- Round 1: reviewer verdict (attempt 3): PASS
+- Round 1: Review pack (attempt 3): .qfai/review/review-20260923090030000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 3): 7e10e3b5ef3d95677b659b4ad5a8cb434a0b6f6b8189b154339c0fc6571479dc
+- Spec review: PASS
+- Spec reviewed revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
+- Spec audited evidence hash: 4719f1ed93206b70691bf078581d53f5b135743f0ea8b1ae05fbfe6f092f10db
+- Spec review pack: .qfai/review/review-20260923090030000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 7e10e3b5ef3d95677b659b4ad5a8cb434a0b6f6b8189b154339c0fc6571479dc
+- Code quality review: PASS
+- Code quality reviewed revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
+- Code quality audited evidence hash: 4719f1ed93206b70691bf078581d53f5b135743f0ea8b1ae05fbfe6f092f10db
+- Code quality review pack: .qfai/review/review-20260923090030000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 7e10e3b5ef3d95677b659b4ad5a8cb434a0b6f6b8189b154339c0fc6571479dc
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 3 passed (3). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
+- Checkpoint verification seal: 9dfd172bc6323bad1523bc963470fe8fca15d5ab0cf6bb09e9a8e7e70ca875e0
 
 ### TDD-0565
 
@@ -624,14 +648,38 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 2ccde8e44d32798e3dafbd2218c39761963fcff9
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+7ea777c3326e31b625df2d4e843ff5befcfe0c0965dfca9caa85cbe320b8e490; qa-gatekeeper#2 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd; qa-gatekeeper#3 PASS, replacement-proof + build-phase GREEN + oracle proof, reviewed revision c648c4a4c1b2c06fde70b1908a604a0f37a1492b (tree-equal to 2ccde8e44 outside the evidence and ledger); the gate ran after the revert, and it confirmed each proof tree by rebuilding it from 2ccde8e44 plus the one-line mutation and matching the recorded content address
 
 - Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the TDD-0471 test misses the handler's order, and the NFR-0106 bound was never stated; CR-20260923-0009 states the bound and the test goes back to /qfai-atdd
-- Round 1: Review pack (attempt 1): .qfai/review/review-20260923090011000
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923090011000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): 781798b7b61d4a72551d31e0eb300a2f4e21480c32a737e1560b226aadab6f41
+
+- Round 1: reviewer verdict (attempt 2): REVISE — completion-reviewer: Refactor verify revision names 2ccde8e44, not the reviewed revision; the verify is re-run and its revision refreshed on the current tree; implementation-reviewer PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260923090021000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): e2ced9ce169926ef59a050ca4f0b7d95e5f5d20e3589826f4b175daf074e8aae
+
+- Round 1: reviewer verdict (attempt 3): PASS
+- Round 1: Review pack (attempt 3): .qfai/review/review-20260923090031000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 3): 73ff474046d927262a77a95dab434049aa474cd970409b07deb2943e368cacd2
+- Spec review: PASS
+- Spec reviewed revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
+- Spec audited evidence hash: 90abff7b8d5fb1fd14f9c6a9bab713ad7adcd0b5ae2e305cd32cfd1127e488ee
+- Spec review pack: .qfai/review/review-20260923090031000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 73ff474046d927262a77a95dab434049aa474cd970409b07deb2943e368cacd2
+- Code quality review: PASS
+- Code quality reviewed revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
+- Code quality audited evidence hash: 90abff7b8d5fb1fd14f9c6a9bab713ad7adcd0b5ae2e305cd32cfd1127e488ee
+- Code quality review pack: .qfai/review/review-20260923090031000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 73ff474046d927262a77a95dab434049aa474cd970409b07deb2943e368cacd2
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 3 passed (3). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
+- Checkpoint verification seal: 9dfd172bc6323bad1523bc963470fe8fca15d5ab0cf6bb09e9a8e7e70ca875e0
 
 ### TDD-0566
 
@@ -691,14 +739,40 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 2ccde8e44d32798e3dafbd2218c39761963fcff9
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+89fda95e1794e7f57f9c47efc86b0b6657ff52a3c0cee006d3bb98c6a69572b6; qa-gatekeeper#2 PASS, build-phase GREEN + oracle proof, reviewed revision d4062ae2f6dd8a2c6d2a5ee2fdd3e5c5b6d54afd; qa-gatekeeper#3 PASS, replacement-proof + build-phase GREEN + oracle proof, reviewed revision c648c4a4c1b2c06fde70b1908a604a0f37a1492b (tree-equal to 2ccde8e44 outside the evidence and ledger); the gate ran after the revert, and it confirmed each proof tree by rebuilding it from 2ccde8e44 plus the one-line mutation and matching the recorded content address
 
 - Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the TDD-0471 test misses the handler's order, and the NFR-0106 bound was never stated; CR-20260923-0009 states the bound and the test goes back to /qfai-atdd
-- Round 1: Review pack (attempt 1): .qfai/review/review-20260923090012000
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923090012000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): 6fbd28486d4cda0e8554553d75906ce84ac75161150a427b9afa67cdaa7d4a88
+
+- Round 1: reviewer verdict (attempt 2): REVISE — completion-reviewer: Refactor verify revision names 2ccde8e44, not the reviewed revision; the verify is re-run and its revision refreshed on the current tree; implementation-reviewer PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260923090022000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): d9c71671b874973b03842b0cb944eda503beec21b1e9f6767fe4fcafbba67423
+
+- Round 1: reviewer verdict (attempt 3): PASS
+- Round 1: Review pack (attempt 3): .qfai/review/review-20260923090032000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 3): 04680b4ecddd5a1e45fb2656a75d9023d371009512a7b5865081de73ac89a412
+- Spec review: PASS
+- Spec reviewed revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
+- Spec audited evidence hash: 314f5e506ebcc099cf3ab88def76931d28ee1680234cfbbc6daf063660061956
+- Spec review pack: .qfai/review/review-20260923090032000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 04680b4ecddd5a1e45fb2656a75d9023d371009512a7b5865081de73ac89a412
+- Code quality review: PASS
+- Code quality reviewed revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
+- Code quality audited evidence hash: 314f5e506ebcc099cf3ab88def76931d28ee1680234cfbbc6daf063660061956
+- Code quality review pack: .qfai/review/review-20260923090032000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 04680b4ecddd5a1e45fb2656a75d9023d371009512a7b5865081de73ac89a412
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run --maxWorkers=7 --testTimeout=600000
+- Checkpoint verification result: PASS — the last row of this run, so the full suite ran: Test Files 771 passed | 3 skipped (774); Tests 14553 passed | 82 skipped (14635)
+- Checkpoint verification revision: 6c36c7913713371c7493fca59269ce4fadd6fb06
+- Checkpoint verification seal: 4a9d4972b938def2b096407c04276b55b18459f85d700187de42cd9a6081eb23
+
+A first full-suite run on this tree was discarded: it failed one test, `tests/assets/evidenceCitedArtifacts.test.ts`, because the review-pack lines this run added to this file lacked the not-a-citation marker. The marker was added, which moves no audited evidence hash, and the run above is the re-run.
 
 ## Coverage Depth Matrix
 
