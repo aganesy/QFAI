@@ -127,6 +127,7 @@ async function fileExists(p: string): Promise<boolean> {
 }
 
 describe("iterate --capture: (1) CLI flag parses", () => {
+  // QFAI:SPEC-0012:TC-0012-0484
   it("parseArgs sets options.prototypingCapture=true when --capture is present", () => {
     const parsed = parseArgs(
       ["prototyping", "iterate", "--cycle", "0", "--capture"],
@@ -138,6 +139,7 @@ describe("iterate --capture: (1) CLI flag parses", () => {
     expect(parsed.options.prototypingCapture).toBe(true);
   });
 
+  // QFAI:SPEC-0012:TC-0012-0484
   it("parseArgs leaves prototypingCapture undefined when --capture is absent", () => {
     const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0"], process.cwd());
     expect(parsed.invalid).toBe(false);
@@ -196,11 +198,13 @@ describe("iterate --capture: (3) default Playwright runner fallback when capture
   // This satisfies the "missing-dep path is observable in CI" guarantee
   // the original test was meant to provide.
 
+  // QFAI:SPEC-0012:TC-0012-0484
   it("exports defaultCaptureScreen as a function (smoke test on the default runner module)", async () => {
     const mod = await import("../../../../src/core/prototyping/defaultCaptureScreen.js");
     expect(typeof mod.defaultCaptureScreen).toBe("function");
   });
 
+  // QFAI:SPEC-0012:TC-0012-0484
   it("surfaces 'playwright not installed' and exits 2 when the runner reports the missing-dep failure shape (DI-mimicked)", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -402,6 +406,7 @@ async function seedUiContract(
 }
 
 describe("iterate --capture: (8) auto-derive screens from UI contracts", () => {
+  // QFAI:SPEC-0012:TC-0012-0484
   it("derives screens from UI contracts when CLI sets capture=true without DI screens", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -593,6 +598,7 @@ describe("iterate --capture: (9) capture URL composition with targetUrl", () => 
 });
 
 describe("iterate --capture: (10) auto-derive screens accepts `.yml` UI contracts", () => {
+  // QFAI:SPEC-0012:TC-0012-0484
   it("derives screens from `.yml` UI contracts (extension parity with `.yaml`)", async () => {
     // Repos that author UI contracts as `.yml` (rather than `.yaml`)
     // were silently producing an empty screens list under `--capture`,
@@ -633,5 +639,53 @@ describe("iterate --capture: (10) auto-derive screens accepts `.yml` UI contract
     expect(await fileExists(path.join(iterDir, "home.html"))).toBe(true);
     expect(await fileExists(path.join(iterDir, "settings.png"))).toBe(true);
     expect(await fileExists(path.join(iterDir, "settings.html"))).toBe(true);
+  });
+});
+
+describe("iterate --capture: (11) iterate falls back to the default Playwright runner", () => {
+  afterEach(() => {
+    vi.doUnmock("playwright");
+    vi.resetModules();
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0484
+  it("uses the default runner when no captureScreen is injected, and exits 2 naming Playwright when it is not installed", async () => {
+    const root = await newTempDir();
+    await seedMinimal(root);
+    // vitest wraps an error thrown by a mock factory in one of its own, which
+    // the default runner reads as a broken install. Raising the error from the
+    // module's `chromium` export hands the runner the module-not-found error a
+    // missing package raises.
+    const notInstalled = Object.assign(new Error("Cannot find package 'playwright'"), {
+      code: "ERR_MODULE_NOT_FOUND",
+    });
+    vi.resetModules();
+    vi.doMock("playwright", () => ({
+      get chromium(): never {
+        throw notInstalled;
+      },
+    }));
+    const stderrChunks: string[] = [];
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation((c) => {
+      stderrChunks.push(String(c));
+      return true;
+    });
+    try {
+      const exit = await runPrototypingIterate({
+        root,
+        cycle: 0,
+        targetUrl: "http://localhost:5173",
+        capture: true,
+        screens: [{ id: "home", url: "/" }],
+      });
+      expect(exit).toBe(2);
+      expect(stderrChunks.join("")).toContain(
+        "screen home failed (playwright not installed. Install with `npm i -D playwright`",
+      );
+    } finally {
+      stdoutSpy.mockRestore();
+      stderrSpy.mockRestore();
+    }
   });
 });

@@ -62,6 +62,7 @@ async function seedPrototypingJson(root: string, body: Record<string, unknown>):
 }
 
 describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
+  // QFAI:SPEC-0012:TC-0012-0488
   it("Test 1: cycle 9 + converged loop (converged + accepted) -> exit 0 + report", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -85,6 +86,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
+  // QFAI:SPEC-0012:TC-0012-0488
   it("converged with a negative acceptedIterationIndex is NOT converged", async () => {
     // The peek and the sealed-loop guard must agree on what counts as an
     // accepted iteration. `refuseWhenLoopConverged` treats a negative index as
@@ -111,6 +113,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
+  // QFAI:SPEC-0012:TC-0012-0488
   it("Test 2: max-iterations + acceptedIterationIndex null -> exit 2 + Not converged", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -134,6 +137,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
+  // QFAI:SPEC-0012:TC-0012-0488
   it("Test 3: license-verify-fail -> exit 2 + Not converged + reason", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -157,6 +161,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
+  // QFAI:SPEC-0012:TC-0012-0488
   it("Test 4: prototyping.json missing -> exit 2 + diagnostic", async () => {
     const root = await newTempDir();
     // Do NOT seed prototyping.json.
@@ -176,6 +181,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
+  // QFAI:SPEC-0012:TC-0012-0488
   it("Test 5: --cycle 5 --check-convergence reports the requested cycle (not 9)", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -206,6 +212,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
+  // QFAI:SPEC-0012:TC-0012-0488
   it("Test 6: --check-convergence WITHOUT --cycle parses and defaults cycle to 9 via the CLI parser", async () => {
     // a) argparse must recognise --check-convergence as a known boolean
     //    flag (not an unknown-flag error).
@@ -241,6 +248,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
+  // QFAI:SPEC-0012:TC-0012-0488
   it("Test 7: --check-convergence does NOT invoke iterate (no iter-NN/iterate-plan.json written)", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {

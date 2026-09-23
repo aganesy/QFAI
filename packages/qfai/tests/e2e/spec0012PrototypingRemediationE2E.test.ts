@@ -11,7 +11,8 @@
  * --cycle out-of-range). Phase 4 adds US-0012-0132/0133/0134/0135/0136
  * (Operator UX surface: [BLOCKED] summary + primarySpecId
  * normalisation + lap-009/010 advisory + --license-patch + iter-NN/
- * iterate-context.json).
+ * iterate-context.json). US-0012-0143 covers the read-only
+ * `--check-convergence` peek.
  */
 // QFAI:SPEC-0012:US-0012-0119
 // QFAI:SPEC-0012:US-0012-0120
@@ -32,6 +33,7 @@
 // QFAI:SPEC-0012:US-0012-0135
 // QFAI:SPEC-0012:US-0012-0136
 // QFAI:SPEC-0012:US-0012-0137
+// QFAI:SPEC-0012:US-0012-0143
 
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -40,6 +42,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runPrototypingIterate } from "../../src/cli/commands/prototypingIterate.js";
+import { run } from "../../src/cli/main.js";
 import { loadConfig } from "../../src/core/config.js";
 import type { DesignMd } from "../../src/core/design/designMd.js";
 import { findDesignMdViolations } from "../../src/core/prototyping/designMdViolations.js";
@@ -514,6 +517,77 @@ describe("US-0012-0137: --cycle out-of-range error + peek hint", () => {
     } finally {
       stderrSpy.mockRestore();
     }
+  });
+});
+
+describe("US-0012-0143: iterate --check-convergence reports the recorded loop state read-only", () => {
+  async function listTree(dir: string): Promise<string[]> {
+    const entries = await readdir(dir, { recursive: true });
+    return entries.map((entry) => entry.split(path.sep).join("/")).sort();
+  }
+
+  async function peek(root: string): Promise<{ exitCode: unknown; stdout: string }> {
+    const chunks: string[] = [];
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation((c) => {
+      chunks.push(String(c));
+      return true;
+    });
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await run(["prototyping", "iterate", "--check-convergence", "--root", root], root);
+      return { exitCode: process.exitCode, stdout: chunks.join("") };
+    } finally {
+      process.exitCode = previousExitCode;
+      stdoutSpy.mockRestore();
+      stderrSpy.mockRestore();
+    }
+  }
+
+  it("reports a budget-exhausted loop as not converged and a converged one as converged, without --cycle and without writing", async () => {
+    const root = await p2TempDir();
+    await seedPhase2Project(root);
+    const protoDir = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(protoDir, { recursive: true });
+    const protoPath = path.join(protoDir, "prototyping.json");
+    const iterations = Array.from({ length: 10 }, (_, index) => ({ index }));
+
+    const exhausted = `${JSON.stringify(
+      { stopReason: "max-iterations", acceptedIterationIndex: null, iterations },
+      null,
+      2,
+    )}\n`;
+    await writeFile(protoPath, exhausted, "utf-8");
+    const treeBefore = await listTree(root);
+
+    const notConverged = await peek(root);
+    expect(notConverged.exitCode).toBe(2);
+    expect(notConverged.stdout).toContain(
+      "qfai prototyping iterate --check-convergence (cycle 9):",
+    );
+    expect(notConverged.stdout).toContain("stopReason: max-iterations");
+    expect(notConverged.stdout).toContain("acceptedIterationIndex: null");
+    expect(notConverged.stdout).toContain("iterations: 10");
+    expect(notConverged.stdout).toContain('Not converged: stopReason="max-iterations"');
+    expect(await readFile(protoPath, "utf-8")).toBe(exhausted);
+    expect(await listTree(root)).toEqual(treeBefore);
+
+    const sealed = `${JSON.stringify(
+      { stopReason: "converged", acceptedIterationIndex: 3, iterations: iterations.slice(0, 4) },
+      null,
+      2,
+    )}\n`;
+    await writeFile(protoPath, sealed, "utf-8");
+
+    const converged = await peek(root);
+    expect(converged.exitCode).toBe(0);
+    expect(converged.stdout).toContain("stopReason: converged");
+    expect(converged.stdout).toContain("acceptedIterationIndex: 3");
+    expect(converged.stdout).toContain("iterations: 4");
+    expect(converged.stdout).toContain("Converged:");
+    expect(await readFile(protoPath, "utf-8")).toBe(sealed);
+    expect(await listTree(root)).toEqual(treeBefore);
   });
 });
 
