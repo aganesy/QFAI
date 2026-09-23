@@ -730,7 +730,7 @@ Verify:
 
 - the check job declares one leg per independent document check and sets `fail-fast: false`
 - each checker command appears in exactly one leg, selected by that leg's own `if`, and neither command changed
-- no leg carries `continue-on-error`, and the job depends on nothing
+- no leg carries `continue-on-error`, and the job depends only on the change-scope job of the same file, running when that job reports a change a document check reads
 - the aggregate job keeps the external check name unchanged, needs the check job and runs under `always()`
 
 ## TC-0003-0057: delivered validation profiles: isolated legs, preserved verdict

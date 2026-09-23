@@ -16,6 +16,37 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   runner's refusal. Each row's test is shown to fail when the predicate it pins
   is broken.
 
+- **The completion gate reads a `Record re-attestation`** (#2196). Repairing a
+  completed row's evidence record after its review moves the bytes the review
+  hashed, so the recorded `Audited evidence hash` no longer recomputes. The
+  procedure the skill prescribes answers that with a re-attestation in a review
+  pack of its own, but the gate never read it, so a repaired row could not pass
+  `QFAI-TDDLIST-008`. A verdict whose hash disagrees now passes when the entry's
+  `Record re-attestation` equals the recomputed hash. The re-attestation owes a
+  canonical `Record re-attestation pack` and a sha256
+  `Record re-attestation pack seal`, and the seal is recomputed when the pack is
+  in the checkout. The three fields sit outside the audited subject, so writing
+  them does not move the hash they re-attest.
+
+- **The completion gate accepts the `qa-gatekeeper` forms the skill documents**
+  (#2197). The skill asks the row-level verdict to name the attempt, round and
+  revision behind it, as in `PASS (qa-gatekeeper#1, Round 1, …)` or
+  `PASS x2 (…)`, and the gate refused any value other than a bare `PASS`. A
+  leading `PASS` is now the verdict; `PASSED` and a leading `REVISE` are still
+  refused.
+
+- **spec-0003 states the change-scoped document lane, and the rows that pin
+  its matrix, conditions and check names are complete** (#1876). The spec said
+  the document check job depends on nothing and that a skipped dependency
+  always fails the aggregate. The shipped lane skips its checks when no
+  document changed, and its aggregate treats that skip as green only when the
+  scope said so. The spec now says the same, and a new row covers the fourth
+  verify bullet of the aggregate case. The four integration-level cases moved
+  out of the end-to-end file into
+  `tests/integration/shippedWorkflowCheckIndependence.test.ts`, and the seven
+  rows are done: each test is shown to fail when the predicate it pins is
+  broken.
+
 - **`/qfai-implement` says who mutates a predicate that lives in the test
   file** (#2191). Some acceptance tests plant their own broken copy of a
   shipped workflow, so the code they exercise is a checker inside the test and
