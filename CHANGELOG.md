@@ -4,6 +4,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The type checker moves to TypeScript 6.** The seventh major ships the
+  compiler as a native binary and no longer exposes the classic compiler API
+  from its main entry, which the test tree and the declaration build both read;
+  the linter refuses to load against it at all. The sixth is the newest release
+  every part of this toolchain supports, and it reports the deprecations the
+  seventh turns into errors. The forward lane keeps type-checking against the
+  seventh, so nothing stops tracking it.
+
+  One deprecation is silenced, inside the declaration rollup only: the bundler
+  builds that rollup with `baseUrl` whatever the project declares, and this
+  package declares neither `baseUrl` nor `paths`. The lifting condition is
+  written beside it, and the forward lane now names any such exemption on a
+  passing run instead of reading only the compiler configuration.
+
 ### Fixed
 
 - **spec-0003 states what `qfai init` and the shipped workflows do now**
