@@ -1978,6 +1978,10 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
 
 
+- Round 1: reviewer verdict: REVISE — qa-gatekeeper#1, RED phase gate: the Round 1 mutation trips the tuning-record check at `:279` and leaves `budgetHolds`, the rate rule this row owns, untested
+- Round 1: Review pack: .qfai/review/review-20260923120009000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: da0e46808d4231a3ba740a90eae6a02ba65435b096343c53ca17323931c42ffb
+
 #### Round 2
 
 Opened by qa-gatekeeper#1's REVISE. The Round 1 mutation added a tuning record, and the
@@ -2020,13 +2024,25 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 - Spec audited evidence hash: 459548e75700c455333ae7c46657a8a63799345b8071bd1aa9d230105d65dc41
 - Spec review pack: .qfai/review/review-20260923120007000 <!-- qfai:not-a-citation -->
 - Spec review pack seal: 1e76b514f1bf4fe19ce7b0542eca6e288e84859c1a5d49687b3e10df3fe14346
+- Spec record re-attestation: c1f9d8cff797fceca442d9e3726c56775a7528ac05a8a678165d5b05de6c03c6
+- Spec record re-attestation pack: .qfai/review/review-20260923120010000 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 2c198510b919f0c93c5ca8a63b8c1b090b541e830967424594096a8588398eab
 - Code quality review: PASS
 - Code quality reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
 - Code quality audited evidence hash: 459548e75700c455333ae7c46657a8a63799345b8071bd1aa9d230105d65dc41
 - Code quality review pack: .qfai/review/review-20260923120007000 <!-- qfai:not-a-citation -->
 - Code quality review pack seal: 1e76b514f1bf4fe19ce7b0542eca6e288e84859c1a5d49687b3e10df3fe14346
+- Code quality record re-attestation: c1f9d8cff797fceca442d9e3726c56775a7528ac05a8a678165d5b05de6c03c6
+- Code quality record re-attestation pack: .qfai/review/review-20260923120010000 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 2c198510b919f0c93c5ca8a63b8c1b090b541e830967424594096a8588398eab
 - Prototype parity: n/a (not UI-affecting)
 - Prototype parity reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run --maxWorkers=7 --testTimeout=600000
+- Checkpoint verification result: PASS — the last row of this run, so the full suite ran: Test Files 771 passed | 3 skipped (774); Tests 14564 passed | 82 skipped (14646)
+- Checkpoint verification revision: daf9d8afa24b024ab4249c385eccdc1e656e340c
+- Checkpoint verification seal: 99a248bfb5da75ecd3df1321213d651c973ba248125610fcafc851829c75024f
+
+Two earlier full-suite runs were discarded. The first, at 04b2eed30, failed 39 tests: five repository-only asset tests still listed the released rows, and the guard-byte pins lagged the dogfood pin. Those were repaired in daf9d8afa. The second, at daf9d8afa, failed seven cases of `tests/scripts/ownWorkflowTopology.test.ts` on a 100 ms script timeout while another full suite ran on the same machine. The run above is the same tree with nothing else running.
 
 ### TDD-0083
 
