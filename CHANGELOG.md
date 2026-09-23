@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.12.3] - 2026-09-24
+
 ### Fixed
 
 - **spec-0012 states the auto-serve SIGINT path as the runner contract**
