@@ -3,13 +3,13 @@
 - ID: `CR-20260923-0003`
 - Title: `spec-0003 states the document lane as it was before change scoping`
 - Raised by: `qfai-implement`
-- Raised at: `2026-09-23T03:55:00Z`
+- Raised at: `2026-09-23T02:45:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `claude-code` — under the user's standing instruction to process every issue of this session with its own judgment; NOT a user decision on these options
+- Approved at: `2026-09-23T03:05:00Z`
+- Approved option: `1`
+- Applied at: `2026-09-23T03:05:00Z` — see Resolution
 - Superseded by: `-`
 
 ## Context
@@ -135,4 +135,14 @@ seed the missing row, and move the four cases into an integration module?
 
 ## Resolution
 
-Not yet resolved.
+Applied under option 1.
+
+- `TC-0003-0056` verify bullet 3, `BR-0003-0048` and `EX-0003-0051` state the
+  change-scoped document lane contract §5 dimension 6 admits.
+- `TDD-0092` is seeded for `TC-0003-0058` verify bullet 4, at `todo`, with
+  this record in `DR-ID`.
+- `TDD-0058` to `TDD-0061` name
+  `packages/qfai/tests/integration/shippedWorkflowCheckIndependence.test.ts`,
+  which now holds their cases.
+- The six parked rows are back at `todo` with this record in `DR-ID`.
+- `spec-0003/09_delta.md` records this request.
