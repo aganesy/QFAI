@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The completion gate accepts the `qa-gatekeeper` forms the skill documents**
+  (#2197). The skill asks the row-level verdict to name the attempt, round and
+  revision behind it, as in `PASS (qa-gatekeeper#1, Round 1, …)` or
+  `PASS x2 (…)`, and the gate refused any value other than a bare `PASS`. A
+  leading `PASS` is now the verdict; `PASSED` and a leading `REVISE` are still
+  refused.
+
 - **spec-0003 states the change-scoped document lane, and the rows that pin
   its matrix, conditions and check names are complete** (#1876). The spec said
   the document check job depends on nothing and that a skipped dependency

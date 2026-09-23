@@ -1801,6 +1801,39 @@ describe("QFAI-TDDLIST-008", () => {
     });
   }
 
+  for (const verdict of [
+    "PASS (qa-gatekeeper#1, Round 1, reviewed revision working-tree+abc at HEAD 1234567)",
+    "PASS x2 (qa-gatekeeper#1 — RED phase gate pre-production-code; build-phase GREEN + oracle proof)",
+  ] as const) {
+    it(`accepts the documented qa-gatekeeper form ${verdict.slice(0, 9)}…`, async () => {
+      await withProject(async (root) => {
+        const evidence = completeEntry("Unit").replace(
+          `- qa-gatekeeper: PASS\n`,
+          `- qa-gatekeeper: ${verdict}\n`,
+        );
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        });
+        expect(codes).not.toContain("QFAI-TDDLIST-008");
+      });
+    });
+  }
+
+  for (const verdict of ["PASSED", "REVISE (qa-gatekeeper#1, Round 1)"] as const) {
+    it(`rejects a qa-gatekeeper verdict that does not lead with PASS: ${verdict}`, async () => {
+      await withProject(async (root) => {
+        const evidence = completeEntry("Unit").replace(
+          `- qa-gatekeeper: PASS\n`,
+          `- qa-gatekeeper: ${verdict}\n`,
+        );
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        });
+        expect(codes).toContain("QFAI-TDDLIST-008");
+      });
+    });
+  }
+
   it("accepts command and result payloads in canonical fenced blocks", async () => {
     await withProject(async (root) => {
       const evidence = completeEntry("Unit")
