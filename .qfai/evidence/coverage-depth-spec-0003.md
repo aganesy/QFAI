@@ -649,7 +649,7 @@ failure, boundary, special value, sequence or combination of its own.
 | `TC-0003-0013` × OS | `toContain("[BLOCKER]")` rather than equality with the template. |
 | `TC-0003-0014` × BV | Zero and two created; exactly one is not. |
 | `TC-0003-0020` × EP | Reads the block constant; the `.gitignore` a run writes is not read. |
-| `TC-0003-0020` × BV | Both negations absent is asserted; the presence of `.qfai/review/*` the first bullet requires is not. |
+| `TC-0003-0020` × BV | Both negations absent is asserted; the ignore pattern for the review directory, which the first bullet requires, is not. |
 | `TC-0003-0020` × OS | A writer that ignored the constant passes. |
 | `TC-0003-0021` × EP | Populated layers only. |
 | `TC-0003-0021` × NP | The fourth bullet, `.qfai/assistant/steering/` absent, is not asserted. |
