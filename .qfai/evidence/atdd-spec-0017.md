@@ -2264,7 +2264,7 @@ a merge can invalidate has no author to hold responsible for it.
 The count and its split across the two include roots are on one line, and both are derived by the same
 walk:
 
-e2e callsites at this tree: 2441 (packages/qfai/tests/assets 2248, packages/qfai/tests/e2e 193)
+e2e callsites at this tree: 2442 (packages/qfai/tests/assets 2249, packages/qfai/tests/e2e 193)
 
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is

@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The shipped-workflow aggregate check has a case for each job-shape
+  clause** (#2194). The check rejects an aggregate with a second step, or with
+  `continue-on-error` set on the job, and no case failed when either clause
+  was removed. `TC-0003-0058` now states that obligation, and a new two-case
+  test covers it. The three completed rows that read the same test file are
+  re-verified against the edited file.
+  A re-verified row is no longer reported stale (`QFAI-TDDLIST-009`) for the
+  edit its re-verify covered: the interval now starts at the re-verify
+  record's `Revision`, and a later change still makes the row stale.
+
 - **spec-0003 states what `qfai init` and the shipped workflows do now**
   (#2190). Five of its obligations described the product before a deliberate
   change and the tests asserted the opposite. They said init creates six
