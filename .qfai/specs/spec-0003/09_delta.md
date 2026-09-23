@@ -244,6 +244,7 @@ observable:
 | CR-20260923-0006 | `spec-0003/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md` | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T08:13:56Z |
 | CR-20260923-0007 | `spec-0003/06_Test-Cases.md`, `tdd/test-list.md`                                                                                        | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T08:26:35Z |
 | CR-20260923-0011 | `spec-0003/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`     | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T11:15:07Z |
+| CR-20260923-0013 | `spec-0003/tdd/test-list.md`                                                                                                            | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T11:52:00Z |
 
 ## Triage (2026-09-15)
 
