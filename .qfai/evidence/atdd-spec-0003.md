@@ -752,6 +752,10 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - Code quality review pack seal: b20406bd395435082a5599f8ba88d4cd081e865df5f2bdd7d3b6020cb96c240e
 - Prototype parity: n/a (not UI-affecting)
 - Prototype parity reviewed revision: e4da9886fe30f7ae41827a6f5ac26c9a443ac851
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts --reporter=verbose && pnpm -C packages/qfai exec vitest run --maxWorkers=7 --testTimeout=600000
+- Checkpoint verification result: PASS — step 1, the Test file: Test Files 1 passed (1); Tests 23 passed (23), naming both TDD-0093 cases as passed. Step 2, the full suite: Test Files 771 passed | 3 skipped (774); Tests 14555 passed | 82 skipped (14637), exit 0. The worker count and per-test timeout are raised because two slow suites time out at the default under a full parallel run on this host
+- Checkpoint verification revision: b20dbe4bc5c90581a030cdda8656107b85415a2c
+- Checkpoint verification seal: de5d644d1a9f3d0f6fdaf6d29e977a36a542e4d23303e0df85ae3006efd73032
 
 ## Coverage Depth Matrix
 
@@ -800,6 +804,9 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / 
 | 37 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0093 RED phase gate on the falsifiability mutation run | #tdd-0093 | the second-step case had no run showing it fails | REVISE |
 | 38 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0093 RED phase gate on the two-clause mutation run | #tdd-0093 | Round 1 | PASS |
 | 39 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0093 build-phase GREEN + oracle proof | #tdd-0093 | Round 1 | PASS |
+| 40 | completion-reviewer | completion-reviewer | /qfai-implement: completion review of TDD-0093, attempt 1 | #tdd-0093 | one response in the row's pack | PASS |
+| 41 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of TDD-0093, attempt 1 | #tdd-0093 | one response in the row's pack | PASS |
+| 42 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0093, its Test file and the full suite | #tdd-0093 | Checkpoint verification fields | PASS |
 
 ## Cross-spec obligations
 

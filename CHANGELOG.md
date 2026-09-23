@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The shipped-workflow aggregate check has a case for each job-shape
+  clause** (#2194). The check rejects an aggregate with a second step, or with
+  `continue-on-error` set on the job, and no case failed when either clause
+  was removed. `TC-0003-0058` now states that obligation, and a new two-case
+  test covers it. The three completed rows that read the same test file are
+  re-verified against the edited file.
+
 - **spec-0012 states `--auto-serve` as a runner contract, and its five rows
   are complete** (#2179). The spec said iterate spawns a server, kills child
   processes with `tree-kill` and force-kills an earlier iterate. The product
