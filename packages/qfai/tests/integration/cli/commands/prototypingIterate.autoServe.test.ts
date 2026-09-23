@@ -112,7 +112,10 @@ describe("iterate --auto-serve default OFF", () => {
   it("does not invoke the server runner when --auto-serve is absent", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
-    const runner = vi.fn();
+    // A well-formed answer, so a call that should not happen is caught by the
+    // assertion below rather than by iterate failing to read the result.
+    const teardown = vi.fn(async () => {});
+    const runner = vi.fn(async () => ({ ok: true, teardown, pid: 1 }) as const);
     const exit = await runPrototypingIterate({
       root,
       cycle: 0,

@@ -35,6 +35,8 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 - 既存の prototyping 系パターンに合わせ、source-inspection 型の acceptance test を採用した。rev11 は semantic closure の確認が主で、実装 source と core test 同期の検査が acceptance objective に一致するため。
 - validate が参照する annotation source は root `tests/e2e|integration/qfai-traceability.md` なので、packages 側 test 追加と同時に root traceability を更新した。
 - rejected option の再導入はない。`09_delta.md` の rev11 decision に沿い、public export 再公開や legacy grammar 許容は行っていない。
+- The stub runner in `does not invoke the server runner when --auto-serve is absent` returns a well-formed `ok: true` result.
+  A call that should not happen is then caught by the test's own assertion, rather than by iterate failing to read an empty result.
 
 ## Work performed (what changed, where)
 
@@ -48,6 +50,11 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 - `packages/qfai/tests/integration/prototypingRev11Integration.test.ts`
   - rev11 Integration test を新規追加。
   - `TC-0012-0272..0284` の ID 対応を spec に合わせて調整し、実装 source / core tests との一致を検査。
+- `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts`
+  - New case `TC-0012-0489 (TDD-0561)`: the default runner refuses a held port.
+- `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts`
+  - Each of the four tests carries `QFAI:SPEC-0012:TC-0012-0442`.
+  - The stub runner in `does not invoke the server runner when --auto-serve is absent` returns a well-formed `ok: true` result instead of nothing. The title and both assertions are unchanged.
 
 ## Commands executed + key outputs
 
@@ -98,7 +105,7 @@ first run here, so both take branch 2. The mutations are production code and
 - Test file: packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts
 - Selector: ["does not invoke the server runner when --auto-serve is absent","calls the runner once and invokes the returned teardown at cycle end","accepts runner.ok=true (recovery path) and continues to cycle completion","returns exit 2 with PID + owning command on stderr when runner refuses"]
 - TC-ref: TC-0012-0442
-- Branch: falsifiability — the change request restated the test case and changed no test and no product code, so each Selector entry passed on its first run
+- Branch: falsifiability — the change request restated the test case and changed no product code, so each Selector entry passed on its first run
 - Predicate to break: one per Selector entry, listed below
 - Mutation: one per Selector entry, listed below
 
@@ -110,17 +117,21 @@ are in `runPrototypingIterate`, in
    - Predicate to break: line 1281, `if (options.autoServe) {` — the gate that keeps the runner uncalled without `--auto-serve`
    - Mutation: `if (options.autoServe) {` to `if (options.autoServe ?? options.serverRunner) {`
    - Why it fails: the test injects a runner and no `autoServe`, so the mutated gate calls it.
-     The stub returns nothing, and reading `serverResult.ok` at line 1317 throws a `TypeError`.
-     The case fails before it reaches `expect(runner).not.toHaveBeenCalled()`
+     The stub answers with a well-formed `ok: true` result, so iterate completes with exit 0.
+     `expect(runner).not.toHaveBeenCalled()` then fails as an assertion
+   - Type check: `options.autoServe ?? options.serverRunner` is a boolean or a function, and the mutated line passes `tsc`
 2. Selector entry: `calls the runner once and invokes the returned teardown at cycle end`
    - Predicate to break: line 1369, `await teardownOnce();` — the cycle-end teardown in the `finally` block
    - Mutation: delete line 1369
    - Why it fails: nothing else invokes the teardown during the cycle, so `expect(teardown).toHaveBeenCalledTimes(1)` sees 0 calls
 3. Selector entry: `accepts runner.ok=true (recovery path) and continues to cycle completion`
-   - Predicate to break: line 1317, `if (!serverResult.ok) {` — the check that lets a runner reporting success continue the cycle
-   - Mutation: `if (!serverResult.ok) {` to `if (serverResult.ok) {`
-   - Why it fails: a runner answering `ok: true` now takes the refusal branch and iterate returns 2, so `expect(exit).toBe(0)` fails.
-     vitest strips types, so the `reason` read in that branch does not stop the run
+   - Predicate to break: line 1321, `serverTeardown = serverResult.teardown;` — iterate adopting the teardown of a runner that reports success
+   - Mutation: `serverTeardown = serverResult.teardown;` to `serverTeardown = null;`
+   - Why it fails: the recovery run still exits 0, but the returned teardown is never adopted.
+     `expect(teardown).toHaveBeenCalledTimes(1)` sees 0 calls
+   - Type check: the mutated line passes `tsc`. Deleting the line instead does not:
+     `serverTeardown` is initialised to `null` and never assigned again, so `tsc` narrows it to `never` inside `teardownOnce` and rejects the call at line 1276
+   - Distinct from entry 2, whose predicate is the cycle-end call at line 1369
 4. Selector entry: `returns exit 2 with PID + owning command on stderr when runner refuses`
    - Predicate to break: line 1318, ``error(`qfai prototyping iterate --auto-serve: ${serverResult.reason}`);`` — the line that puts the runner's reason on stderr
    - Mutation: that line to `error("qfai prototyping iterate --auto-serve: refused");`
@@ -131,6 +142,13 @@ First run of each entry, on its own:
 ```text
 pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts -t "<entry>"
   each of the four: Tests 1 passed | 3 skipped (4)
+```
+
+Entry 1 again, after its stub was changed to return a well-formed result:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServe.test.ts -t "does not invoke the server runner when --auto-serve is absent"
+  Tests 1 passed | 3 skipped (4)
 ```
 
 ### TDD-0561
@@ -212,6 +230,7 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 | 9 | acceptance-test-engineer | acceptance-test-engineer | Hand over `TDD-0469` and `TDD-0561` on the falsifiability branch | both test files, `prototypingIterate.ts`, `defaultServerRunner.ts` | #tdd-0469, #tdd-0561 | PASS |
 | 10 | acceptance-test-engineer | acceptance-test-engineer | Add `TC-0012-0442` and `TC-0012-0489` to the Coverage Depth Matrix | 06_Test-Cases.md | #coverage-depth-matrix | PASS |
 | 11 | - | n/a | grilling(-@2026-09-23T06:51:05.149Z/none): none | - | - | PASS |
+| 12 | acceptance-test-engineer | acceptance-test-engineer | Give the entry 1 stub a well-formed result, and name a compiling mutation for entry 3 | #tdd-0469, `red-admissibility.md` | `prototypingIterate.autoServe.test.ts`; #tdd-0469 entries 1 and 3 | PASS |
 
 ## Execution logs
 
@@ -242,6 +261,12 @@ eslint and prettier --check on both test files         -> exit 0
 
 `tsconfig.tests.json` does not list either test file. Both were also checked
 through a scratch config that extends it and includes only them, with exit 0.
+
+After the entry 1 stub change, both files passed again (Tests 21 passed (21)),
+and eslint and prettier exited 0. A scratch config holding both test files and
+a type-level copy of the entry 1 and entry 3 mutations reported one error only:
+the copy that deletes the `serverTeardown` assignment, which is why entry 3
+names `serverTeardown = null;` instead. The scratch config is deleted.
 
 ## Gaps / Open risks
 
