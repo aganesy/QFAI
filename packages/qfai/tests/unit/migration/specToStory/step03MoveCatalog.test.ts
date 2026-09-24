@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 import { getInitAssetsDir } from "../../../../src/shared/assets.js";
+import { defaultConfig } from "../../../../src/core/config.js";
 import {
   executePlannedStep,
   type MigrationContext,
@@ -25,7 +26,7 @@ async function fixture(): Promise<MigrationContext> {
   const contractsDir = path.join(specsDir, "03_contract");
   await mkdir(contractsDir, { recursive: true });
   await writeFile(path.join(root, "qfai.config.yaml"), "paths:\n  specsDir: .qfai/spec\n", "utf8");
-  return { root, specsDir, contractsDir, config: {} as MigrationContext["config"] };
+  return { root, specsDir, contractsDir, config: structuredClone(defaultConfig) };
 }
 
 async function put(root: string, relative: string, content: string): Promise<void> {

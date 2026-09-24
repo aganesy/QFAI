@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { parseRecordTable } from "../../../../src/core/storyTree/tables.js";
+import { defaultConfig } from "../../../../src/core/config.js";
 import {
   executePlannedStep,
   type MigrationContext,
@@ -26,7 +27,7 @@ async function fixture(): Promise<MigrationContext> {
     root,
     specsDir,
     contractsDir: path.join(specsDir, "03_contract"),
-    config: {} as MigrationContext["config"],
+    config: structuredClone(defaultConfig),
   };
 }
 

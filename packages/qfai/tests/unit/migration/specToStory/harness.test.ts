@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { defaultConfig } from "../../../../src/core/config.js";
 import {
   executePlannedStep,
   moveAcrossDevices,
@@ -27,13 +28,15 @@ async function context(): Promise<MigrationContext> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-harness-"));
   roots.push(root);
   await mkdir(path.join(root, ".qfai"));
+  const config = structuredClone(defaultConfig);
+  config.paths.specsDir = ".qfai/spec";
+  config.paths.contractsDir = ".qfai/spec/03_contract";
+  config.paths.testsDir = "tests";
   return {
     root,
     specsDir: path.join(root, ".qfai", "spec"),
     contractsDir: path.join(root, ".qfai", "spec", "03_contract"),
-    config: {
-      paths: { specsDir: ".qfai/spec", contractsDir: ".qfai/spec/03_contract", testsDir: "tests" },
-    } as MigrationContext["config"],
+    config,
   };
 }
 
@@ -555,7 +558,11 @@ describe("migration harness", () => {
       "qfai.config.yaml",
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
-    await put(ctx.root, ".qfai/spec/spec-0001/01_Spec.md", "# Spec\n\n- Status: active\n");
+    await put(
+      ctx.root,
+      ".qfai/spec/spec-0001/01_Spec.md",
+      "# Spec\n\n- Status: active\n\n## Scope\n\nSubmitting an order from a cart.\n",
+    );
     await put(
       ctx.root,
       ".qfai/spec/spec-0001/02_User-stories.md",

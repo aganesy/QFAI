@@ -31,7 +31,7 @@ describe("legacy migration records", () => {
       "TC-ID": "TC-0011-0001",
       "EX-Ref": "EX-0011-0001",
       "AC-Refs": "AC-0011-0001",
-      Steps: "Verify completion.",
+      Steps: "Normal cycle\n\n- Verify completion.",
     });
 
     const rule = parseLegacyRecords(

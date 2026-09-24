@@ -167,7 +167,7 @@ describe("migration steps 5 to 8", () => {
     await put(
       context.root,
       ".qfai/evidence/migration-spec-to-story/plan.yaml",
-      "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
+      "flows:\n  - title: Checkout\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
     );
     await put(
       context.root,
@@ -196,7 +196,7 @@ describe("migration steps 5 to 8", () => {
     await put(
       context.root,
       ".qfai/evidence/migration-spec-to-story/plan.yaml",
-      "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
+      "flows:\n  - title: Checkout\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
     );
     const source =
       "# Rules\n\n## BR-0001-0001: Valid total\n\n- AC-Refs: AC-0001-0001\n- The total MUST be nonnegative.\n";
@@ -309,7 +309,7 @@ describe("migration steps 5 to 8", () => {
       await put(
         context.root,
         ".qfai/evidence/migration-spec-to-story/plan.yaml",
-        `flows: []\nrules:\n${preservedRule}  - id: ${rule.id}\n    contract: ${rule.contract}\n`,
+        `flows:\n  - title: Checkout\n    stories:\n      - id: US-0001-0001\nrules:\n${preservedRule}  - id: ${rule.id}\n    contract: ${rule.contract}\n`,
       );
       const c = capture();
       expect(await executePlannedStep(step07, context, false, c.io)).toBe(2);

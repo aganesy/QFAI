@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { MigrationContext } from "../../../../src/migration/specToStory/harness.js";
+import { defaultConfig } from "../../../../src/core/config.js";
 import { executePlannedStep } from "../../../../src/migration/specToStory/harness.js";
 import { step09 } from "../../../../src/migration/specToStory/step09RepointLinks.js";
 
@@ -14,10 +14,10 @@ const context = {
   root: "/project",
   specsDir: "/project/.qfai/spec",
   contractsDir: "/project/.qfai/spec/03_contract",
-  config: {} as MigrationContext["config"],
+  config: structuredClone(defaultConfig),
 };
 
-beforeEach(() => repair.mockReset());
+beforeEach(() => repair.mockClear());
 
 describe("migration integration-link repointing", () => {
   it("journals each host link and delegates one real writer run", async () => {
