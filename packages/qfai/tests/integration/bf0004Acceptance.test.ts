@@ -646,7 +646,7 @@ describe("BF-0004 acceptance criteria", () => {
         /^docs\/specs\/(?:_policies|01_policy)\//,
         /^docs\/contracts\/(?:tech|structure|contracts)\.md$/,
       ],
-      [/^docs\/specs\/(?:02_business-flow|spec-\d{4}|_policies)\//, /^docs\/contracts\//],
+      [/^docs\/specs\/(?:02_business-flow|spec-\d{4}|_policies)\//],
       [
         /^docs\/specs\/02_business-flow\/business-flow-\d{4}\/user-story-\d{4}-\d{4}\/03_Example\.md$/,
       ],
@@ -849,6 +849,85 @@ describe("BF-0004 acceptance criteria", () => {
     );
     expect(archived).toContain("Slice");
     expect(principle).not.toContain(archived);
+  });
+
+  it("routes every policy and catalog section to its designated document", async () => {
+    // QFAI:EX-0004-0006-01
+    const root = await project();
+    prepareThrough(root, 2);
+    const markers = [
+      [
+        ".qfai/spec/_policies/01_Objective.md",
+        ".qfai/spec/01_policy/objective.md",
+        "Objective source marker",
+      ],
+      [
+        ".qfai/spec/_policies/02_Initiative.md",
+        ".qfai/spec/01_policy/initiative.md",
+        "Initiative source marker",
+      ],
+      [
+        ".qfai/spec/_policies/05_Contracts.md",
+        ".qfai/spec/03_contract/contracts.md",
+        "Contract source marker",
+      ],
+      [
+        ".qfai/spec/_policies/06_Glossary.md",
+        ".qfai/spec/01_policy/glossary.md",
+        "Glossary source marker",
+      ],
+      [
+        ".qfai/spec/_policies/07_Constraints.md",
+        ".qfai/spec/01_policy/constraint.md",
+        "Constraint source marker",
+      ],
+      [
+        ".qfai/assistant/catalog/product.md",
+        ".qfai/spec/01_policy/objective.md",
+        "Product purpose marker",
+      ],
+      [
+        ".qfai/assistant/catalog/tech.md",
+        ".qfai/spec/03_contract/tech.md",
+        "Technology runtime marker",
+      ],
+      [
+        ".qfai/assistant/catalog/structure.md",
+        ".qfai/spec/03_contract/structure.md",
+        "Structure source marker",
+      ],
+    ] as const;
+    for (const [source, , marker] of markers) {
+      const file = path.join(root, source);
+      await writeFile(file, `${(await readFile(file, "utf8")).trimEnd()}\n\n${marker}.\n`);
+    }
+    await writeFile(
+      path.join(root, ".qfai/assistant/catalog/manifest.md"),
+      "# Manifest\n\n## Principles\n\nManifest principle marker.\n",
+    );
+    const product = path.join(root, ".qfai/assistant/catalog/product.md");
+    await writeFile(
+      product,
+      `${await readFile(product, "utf8")}\n## Milestones\n\nProduct milestone marker.\n`,
+    );
+    const tech = path.join(root, ".qfai/assistant/catalog/tech.md");
+    await writeFile(
+      tech,
+      `${await readFile(tech, "utf8")}\n## Standard commands\n\nStandard commands marker.\n`,
+    );
+    expect(step(root, 3).status).toBe(0);
+    for (const [, target, marker] of markers) {
+      expect(await readFile(path.join(root, target), "utf8")).toContain(`${marker}.`);
+    }
+    expect(await readFile(path.join(root, ".qfai/spec/01_policy/principle.md"), "utf8")).toContain(
+      "Manifest principle marker.",
+    );
+    expect(await readFile(path.join(root, ".qfai/spec/01_policy/initiative.md"), "utf8")).toContain(
+      "Product milestone marker.",
+    );
+    expect(await readFile(path.join(root, ".qfai/spec/03_contract/tech.md"), "utf8")).toContain(
+      "Standard commands marker.",
+    );
   });
 
   // QFAI:AC-0004-0006-02
