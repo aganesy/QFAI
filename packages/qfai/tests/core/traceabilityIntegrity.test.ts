@@ -338,31 +338,18 @@ describe("TDD-0014: evidence without Diff Context", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// TDD-0015 → TC-0013-0020 (Type=normal): the SUT here is the structural
-// wiring between `validate.ts` and `validators/index` for
-// `validateTraceabilityIntegrity` — NOT the SpecDiffResult shape (which
-// is TC-0013-0014, exercised by specAutoDiscovery.test.ts:596). This
-// guards the validator-registration wiring under AC-0013-0014 (Validate
-// Pipeline Validator Registration Integrity) / BR-0013-0011 (Validator
-// Registry Wiring); AC-0013-0007 (Validate Gate error=0) remains the
-// behavioral post-condition whose forward-compat boundary is covered by
-// TC-0013-0021.
-// QFAI:EX-0001-0155-01
-// ---------------------------------------------------------------------------
-describe("TDD-0015: validate pipeline integration", () => {
-  it("validateTraceabilityIntegrity is exported from validators/index", async () => {
+describe("story-tree obligation pipeline integration", () => {
+  it("exports the story-tree obligation validator", async () => {
     const validatorIndex = await import("../../src/core/validators/index.js");
-    expect(typeof validatorIndex.validateTraceabilityIntegrity).toBe("function");
+    expect(typeof validatorIndex.validateStoryTreeObligations).toBe("function");
   });
 
-  it("validate.ts imports and calls traceabilityIntegrity in findings", async () => {
-    // Read validate.ts source and verify the integration is present
+  it("validate.ts runs story-tree obligations in both test profiles", async () => {
     const { readFile } = await import("node:fs/promises");
     const { resolve } = await import("node:path");
     const validateSrc = await readFile(resolve(__dirname, "../../src/core/validate.ts"), "utf-8");
-    expect(validateSrc).toContain("validateTraceabilityIntegrity");
-    expect(validateSrc).toContain("await validateTraceabilityIntegrity(root, config)");
+    expect(validateSrc).toContain('validateStoryTreeObligations(root, config, "atdd", model)');
+    expect(validateSrc).toContain('validateStoryTreeObligations(root, config, "tdd", model)');
   });
 });
 
