@@ -909,7 +909,7 @@ describe("BF-0004 acceptance criteria", () => {
       "US-0001-0002": "US-0002-0001",
       "AC-0001-0001": "AC-0001-0001-01",
       "AC-0001-0002": "AC-0002-0001-01",
-      "BR-0001-0001": "BR-0001-0001",
+      "BR-0001-0001": "BR-0001",
     });
     expect(map.placements["spec-0001"]).toMatchObject({
       "US-0001-0001": "Place an order",
@@ -940,6 +940,96 @@ describe("BF-0004 acceptance criteria", () => {
     );
     expect(secondFlow).toContain("Track a receipt");
     expect(secondFlow).toContain("flowchart");
+  });
+
+  it("places an example cited twice when both cases name the same criterion", async () => {
+    // QFAI:EX-0004-0007-03
+    const root = await project();
+    const cases = path.join(root, ".qfai/specs/spec-0001/06_Test-Cases.md");
+    await writeFile(
+      cases,
+      `${await readFile(cases, "utf8")}| TC-0001-0004 | AC-0001-0001 | EX-0001-0001 | Resubmit a valid order | Receipt has the order ID |\n`,
+    );
+    prepareThrough(root, 3);
+    const result = step(root, 4);
+    expect(result.status).toBe(0);
+    const map = JSON.parse(
+      await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
+    ) as Journey["map"];
+    const exampleId = map.ids["spec-0001"]?.["EX-0001-0001"];
+    expect(exampleId).toBe("EX-0001-0001-01");
+    const target = await readFile(
+      path.join(
+        root,
+        ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md",
+      ),
+      "utf8",
+    );
+    expect(target).toContain(`${exampleId} | AC-0001-0001-01`);
+    expect(target).toContain("A valid order");
+  });
+
+  it("numbers flows and stories by plan order but criteria and examples by source order", async () => {
+    // QFAI:EX-0004-0007-02
+    const root = await project();
+    const stories = path.join(root, ".qfai/specs/spec-0001/02_User-stories.md");
+    await writeFile(
+      stories,
+      `${await readFile(stories, "utf8")}\n## US-0001-0002: Track a receipt\n\nAs a buyer, I track it.\n\n## US-0001-0003: View history\n\nAs a buyer, I view it.\n`,
+    );
+    const criteria = path.join(root, ".qfai/specs/spec-0001/03_Acceptance-Criteria.md");
+    await writeFile(
+      criteria,
+      (await readFile(criteria, "utf8")).replaceAll(
+        "- Parent: US-0001-0001",
+        "- Parent: US-0001-0002",
+      ),
+    );
+    const planPath = path.join(root, ".qfai/evidence/migration-spec-to-story/plan.yaml");
+    const plan = parseYaml(await readFile(planPath, "utf8")) as {
+      flows: Array<{
+        title: string;
+        from?: string;
+        stories: Array<{ id: string; criteria?: string[] }>;
+      }>;
+      rules: Array<{ id: string; contract: string }>;
+    };
+    plan.flows = [
+      {
+        title: "F1",
+        from: "CHG-0001: Order flow",
+        stories: [
+          { id: "US-0001-0002", criteria: ["AC-0001-0002", "AC-0001-0001"] },
+          { id: "US-0001-0001" },
+        ],
+      },
+      { title: "F2", stories: [{ id: "US-0001-0003" }] },
+    ];
+    plan.rules = plan.rules.slice(0, 2);
+    await writeFile(planPath, stringifyYaml(plan));
+    prepareThrough(root, 3);
+    expect(step(root, 4).status).toBe(3);
+    const map = JSON.parse(
+      await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
+    ) as Journey["map"];
+    const index = await readFile(
+      path.join(root, ".qfai/spec/02_business-flow/business-flows.md"),
+      "utf8",
+    );
+    expect(index).toContain("| BF-0001 | F1 |");
+    expect(index).toContain("| BF-0002 | F2 |");
+    expect(index.indexOf("| BF-0001 | F1 |")).toBeLessThan(index.indexOf("| BF-0002 | F2 |"));
+    expect(map.ids["spec-0001"]).toMatchObject({
+      "US-0001-0002": "US-0001-0001",
+      "US-0001-0001": "US-0001-0002",
+      "US-0001-0003": "US-0002-0001",
+      "AC-0001-0001": "AC-0001-0001-01",
+      "AC-0001-0002": "AC-0001-0001-02",
+      "EX-0001-0001": "EX-0001-0001-01",
+      "EX-0001-0002": "EX-0001-0001-02",
+      "BR-0001-0001": "BR-0001",
+      "BR-0001-0002": "BR-0002",
+    });
   });
 
   // QFAI:AC-0004-0008-01
