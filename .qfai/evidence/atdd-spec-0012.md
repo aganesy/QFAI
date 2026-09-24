@@ -805,13 +805,13 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 
 - Round 1: GREEN result: One run per entry. Entry 1: Test Files 1 passed (1); Tests 1 passed | 17 skipped (18). Entry 2: Test Files 1 passed (1); Tests 1 passed | 17 skipped (18)
 
-- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 18 passed (18). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
-- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts tests/integration/cli/commands/validate.sddProfileLedgerSeed.test.ts tests/core/tddListObligationColumns.test.ts tests/assets/completedRowNamesItsTestCase.test.ts
+- Refactor verify result: Test Files 4 passed (4); Tests 70 passed (70) — the row's test file 18 of 18, and the three files the rework changed: `validate.sddProfileLedgerSeed.test.ts` 20, `tddListObligationColumns.test.ts` 31, `completedRowNamesItsTestCase.test.ts` 1. No production file changed
+- Refactor verify revision: c505a4bc1de4a002847ef7d2672babf9050798bc
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree ab99c390… matches; both entries fail on their own AssertionError (:139:47, :146:47); both edits inside parseArgs; hash 112bea3e… recomputes; GREEN 2/2 and file 18/18 at HEAD
 
-- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer: TDD-0514's sdd-profile routing of the new check has no test; TDD-0575's Test 6b bypasses the CLI default at main.ts:398 through a cast; the row goes to review-fix
+- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer: TDD-0514's sdd-profile routing of the new check has no test; TDD-0575's Test 6b bypasses the CLI default at main.ts:398 through a cast; the row goes to review-fix. This row takes the path for a `REVISE` that needs no new production behaviour, and opens no round. The rework adds the `--profile sdd` case for `QFAI-TDDLIST-022` to `validate.sddProfileLedgerSeed.test.ts`. It adds an empty `TC-Refs` cell and a `CON-DB-*` id on a `Unit` row to `tddListObligationColumns.test.ts`. It states in the `CHANGELOG.md` entry and in the check's expected-state text which rows are exempt, and corrects the header of `completedRowNamesItsTestCase.test.ts`. Commit `c505a4bc1de4a002847ef7d2672babf9050798bc`. Removing `TC_REFS_NAME_NO_TEST_CASE_CODE` from the seed-shape set in `tddList.ts` fails the new `--profile sdd` case (`expected [ 'TDDLIST_TC_NOT_COVERED', …(20) ] to include 'QFAI-TDDLIST-022'`); reverted
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260923140000000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): 83fb1d8e77aa7df6c063cff233f7cbb9456146ebc8e82ba4881009cbff8b9a3e
 
@@ -1659,7 +1659,7 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence
 - Type check: `tsc --noEmit -p packages/qfai/tsconfig.json` exits 0 under each mutation
 - Run with, one command per entry: `-t 'Test 5: --cycle 5 --check-convergence reports the requested cycle \(not 9\)'` and `-t 'Test 6b: --check-convergence WITHOUT --cycle defaults the peek to cycle 9'`, each Tests 1 passed | 8 skipped (9).
   No `describe` or common title fragment selects exactly these two
-- Done rows on this Test file: none
+- Done rows on this Test file: `TDD-0497`, `TDD-0572`, `TDD-0573`, `TDD-0574` and `TDD-0576`, re-verified below
 
 ```text
 line 459 9 to 0:
@@ -1734,14 +1734,214 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 - Round 1: GREEN result: One run per entry. Entry 1: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9). Entry 2: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
-- Refactor verify revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
+- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production file changed in this phase, and the whole test file is the relevant suite. Re-run on the tree Round 2 closed on
+- Refactor verify revision: c505a4bc1de4a002847ef7d2672babf9050798bc
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 69b80e85… matches; the two combined edits hit separate paths and each entry fails on its own (:209:19, :247:19); hash 9d4193a2… recomputes; GREEN 2/2 and file 9/9 at HEAD
 
-- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer: TDD-0514's sdd-profile routing of the new check has no test; TDD-0575's Test 6b bypasses the CLI default at main.ts:398 through a cast; the row goes to review-fix
+- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer: TDD-0514's sdd-profile routing of the new check has no test; TDD-0575's Test 6b bypasses the CLI default at main.ts:398 through a cast; the row goes to review-fix. This row opens Round 2: Test 6b now runs through the CLI entry point, so the default it asserts is read at `main.ts:398`, and that needs a falsifiability run of its own
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260923140010000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): 0f0400fd6c3ab0036db38484f92ac2d44c62da1002491f224fe8256557c1949d
+
+#### Round 2
+
+Test 6b now runs `prototyping iterate --check-convergence --root <root>`
+through `run`, the CLI entry point, instead of calling `runPrototypingIterate`
+with `cycle` cast away. The default it asserts is therefore the one
+`main.ts:398` supplies, `options.prototypingCycle ?? 9`, and the peek then
+reads it through `prototypingIterate.ts:473`. Line 459 is not on that path.
+Test 5 is unchanged and still reads line 473.
+
+- Round 2: Satisfied-by: packages/qfai/src/cli/main.ts, `dispatch`, the `cycle` default of the `prototyping iterate` call; and packages/qfai/src/cli/commands/prototypingIterate.ts, `runPrototypingIterate`, the `runCheckConvergencePeek` call that takes the given cycle
+- Round 2: Falsifiability command:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 5: --cycle 5 --check-convergence reports the requested cycle \(not 9\)"
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 6b: --check-convergence WITHOUT --cycle defaults the peek to cycle 9"
+```
+
+- Round 2: Falsifiability result: One run per entry, all against the tree below. Entry 1: Test Files 1 failed (1); Tests 1 failed | 8 skipped (9), failing on `AssertionError: expected 'qfai prototyping iterate --check-conv…' to match /cycle\s*5/` at `tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts:210:19`. Entry 2: Test Files 1 failed (1); Tests 1 failed | 8 skipped (9), failing on `AssertionError: expected '' to contain '(cycle 9)'` at `tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts:245:19`
+
+Test 5's half is Round 1's, line 473 `options.cycle` to `9`. On the same tree it
+answers `(cycle 9)` for every default in range, so any in-range value at
+`main.ts:398` leaves Test 6b passing: `?? 0` together with it passed (below).
+The default is therefore taken out of range, `?? 10`. The range check in
+`runPrototypingIterate` then refuses the cycle before line 473, the peek
+prints nothing, and Test 6b fails on its first assertion.
+
+The edit, both mutations applied together:
+
+```diff
+diff --git a/packages/qfai/src/cli/commands/prototypingIterate.ts b/packages/qfai/src/cli/commands/prototypingIterate.ts
+index 13f40dd1e..d9acf2c3c 100644
+--- a/packages/qfai/src/cli/commands/prototypingIterate.ts
++++ b/packages/qfai/src/cli/commands/prototypingIterate.ts
+@@ -473 +473 @@ export async function runPrototypingIterate(
+-    return runCheckConvergencePeek(options.root, options.cycle);
++    return runCheckConvergencePeek(options.root, 9);
+diff --git a/packages/qfai/src/cli/main.ts b/packages/qfai/src/cli/main.ts
+index f58c56e0d..c108fd259 100644
+--- a/packages/qfai/src/cli/main.ts
++++ b/packages/qfai/src/cli/main.ts
+@@ -398 +398 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
+-          cycle: options.prototypingCycle ?? 9,
++          cycle: options.prototypingCycle ?? 10,
+```
+
+`tsc --noEmit -p packages/qfai/tsconfig.json` exits 0 on that tree.
+
+Each mutation alone, run against every entry and reverted. These runs are not the proof; they show which predicate each test reads:
+
+```text
+main.ts:398 ?? 9 to ?? 10:
+  Test 5: --cycle 5 --check-convergence reports the requested cycle (not 9): Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+  Test 6b: --check-convergence WITHOUT --cycle defaults the peek to cycle 9: Test Files 1 failed (1); Tests 1 failed | 8 skipped (9) — AssertionError: expected '' to contain '(cycle 9)' at tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts:245:19
+main.ts:398 ?? 9 to ?? 0:
+  Test 5: --cycle 5 --check-convergence reports the requested cycle (not 9): Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+  Test 6b: --check-convergence WITHOUT --cycle defaults the peek to cycle 9: Test Files 1 failed (1); Tests 1 failed | 8 skipped (9) — AssertionError: expected 'qfai prototyping iterate --check-conv…' to contain '(cycle 9)' at tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts:245:19
+prototypingIterate.ts:473 runCheckConvergencePeek(options.root, options.cycle) to runCheckConvergencePeek(options.root, 9):
+  Test 5: --cycle 5 --check-convergence reports the requested cycle (not 9): Test Files 1 failed (1); Tests 1 failed | 8 skipped (9) — AssertionError: expected 'qfai prototyping iterate --check-conv…' to match /cycle\s*5/ at tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts:210:19
+  Test 6b: --check-convergence WITHOUT --cycle defaults the peek to cycle 9: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+main.ts:398 ?? 9 to ?? 0, with line 473 changed as above:
+  Test 6b: --check-convergence WITHOUT --cycle defaults the peek to cycle 9: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+```
+
+- Round 2: Falsifiability revision: working-tree+69fa8c000deadebe69b18398fe33185a6f064e390bc418eb539b7734c1cb45a2
+- Round 2: RED failure mode: falsifiability
+- Round 2: RED test hash: bf9a7565888fadb44163966f392b86fe675244e5343d56d945a62dcf24c34a7c
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
+```
+
+- Round 2: Revision: c505a4bc1de4a002847ef7d2672babf9050798bc
+- Round 2: GREEN command:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 5: --cycle 5 --check-convergence reports the requested cycle \(not 9\)"
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 6b: --check-convergence WITHOUT --cycle defaults the peek to cycle 9"
+```
+
+- Round 2: GREEN result: One run per entry, after `git checkout -- packages/qfai/src`. Entry 1: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9). Entry 2: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+
+#### Shared-artifact re-verify
+
+Round 2 changed the Test file, and five `done` rows hold it in their
+manifest. Each row's selector was re-run on the file as it now stands, its
+recorded mutation was re-applied, run and reverted, and its selector was run
+again. Each mutation is identical to the one the row's own entry records, and
+each row fails on the assertion its entry records. The failing line is one
+lower than recorded in every case, because of the import Round 2 added.
+
+A first `TDD-0576` proof run is discarded: the tool that applied the mutation
+wrote the `\n` in `"{}\n"` as a line break, and the mutated file did not
+compile (`Error: Transform failed with 1 error`, no tests run). The mutation
+was re-applied as the entry records it, and that run is the one below.
+
+##### spec-0012/TDD-0497
+
+- Evidence file: .qfai/evidence/atdd-spec-0012.md
+- Revision: c505a4bc1de4a002847ef7d2672babf9050798bc
+- Selector: Test 1: cycle 9 + converged loop (converged + accepted) -> exit 0 + report
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 1: cycle 9 \+ converged loop \(converged \+ accepted\) -> exit 0 \+ report"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+- Proof command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 1: cycle 9 \+ converged loop \(converged \+ accepted\) -> exit 0 \+ report", with `packages/qfai/src/cli/commands/prototypingIterate.ts:3297` changed from `acceptedIterationIndex !== null` to `acceptedIterationIndex === null`
+- Proof result: FAIL — Test Files 1 failed (1); Tests 1 failed | 8 skipped (9). The row's case fails on `AssertionError: expected 2 to be +0 // Object.is equality` at `tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts:81:20`
+- Restored GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 1: cycle 9 \+ converged loop \(converged \+ accepted\) -> exit 0 \+ report", after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+- RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
+```
+
+- RED test hash: bf9a7565888fadb44163966f392b86fe675244e5343d56d945a62dcf24c34a7c
+
+##### spec-0012/TDD-0572
+
+- Evidence file: .qfai/evidence/atdd-spec-0012.md
+- Revision: c505a4bc1de4a002847ef7d2672babf9050798bc
+- Selector: ["converged with a negative acceptedIterationIndex is NOT converged","Test 2: max-iterations + acceptedIterationIndex null -> exit 2 + Not converged","Test 3: license-verify-fail -> exit 2 + Not converged + reason"]
+- Re-verify command:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "converged with a negative acceptedIterationIndex is NOT converged"
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 2: max-iterations \+ acceptedIterationIndex null -> exit 2 \+ Not converged"
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 3: license-verify-fail -> exit 2 \+ Not converged \+ reason"
+```
+
+- Re-verify result: PASS — one run per entry. Entry 1: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9). Entry 2: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9). Entry 3: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+- Proof command: the three commands above, each run with `packages/qfai/src/cli/commands/prototypingIterate.ts:3327` changed from `return 2;` to `return 0;`
+- Proof result: FAIL — one run per entry, all against that tree. Entry 1: Test Files 1 failed (1); Tests 1 failed | 8 skipped (9), on `AssertionError: expected +0 to be 2 // Object.is equality` at `tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts:106:20`. Entry 2: the same, at `:132:20`. Entry 3: the same, at `:156:20`
+- Restored GREEN command: the three commands above, after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
+- Restored GREEN result: PASS — one run per entry. Entry 1: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9). Entry 2: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9). Entry 3: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+- RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
+```
+
+- RED test hash: bf9a7565888fadb44163966f392b86fe675244e5343d56d945a62dcf24c34a7c
+
+##### spec-0012/TDD-0573
+
+- Evidence file: .qfai/evidence/atdd-spec-0012.md
+- Revision: c505a4bc1de4a002847ef7d2672babf9050798bc
+- Selector: Test 4: prototyping.json missing -> exit 2 + diagnostic
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 4: prototyping\.json missing -> exit 2 \+ diagnostic"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+- Proof command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 4: prototyping\.json missing -> exit 2 \+ diagnostic", with `packages/qfai/src/cli/commands/prototypingIterate.ts:3271` changed from `return 2;` to `return 0;`
+- Proof result: FAIL — Test Files 1 failed (1); Tests 1 failed | 8 skipped (9). The row's case fails on `AssertionError: expected +0 to be 2 // Object.is equality` at `tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts:176:20`
+- Restored GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 4: prototyping\.json missing -> exit 2 \+ diagnostic", after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+- RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
+```
+
+- RED test hash: bf9a7565888fadb44163966f392b86fe675244e5343d56d945a62dcf24c34a7c
+
+##### spec-0012/TDD-0574
+
+- Evidence file: .qfai/evidence/atdd-spec-0012.md
+- Revision: c505a4bc1de4a002847ef7d2672babf9050798bc
+- Selector: Test 6a: --check-convergence WITHOUT --cycle parses as a known flag
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 6a: --check-convergence WITHOUT --cycle parses as a known flag"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+- Proof command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 6a: --check-convergence WITHOUT --cycle parses as a known flag", with `packages/qfai/src/cli/lib/args.ts:922`, `options.prototypingCheckConvergence = true;`, emptied
+- Proof result: FAIL — Test Files 1 failed (1); Tests 1 failed | 8 skipped (9). The row's case fails on `AssertionError: expected undefined to be true // Object.is equality` at `tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts:222:56`
+- Restored GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 6a: --check-convergence WITHOUT --cycle parses as a known flag", after `git checkout -- packages/qfai/src/cli/lib/args.ts`
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+- RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
+```
+
+- RED test hash: bf9a7565888fadb44163966f392b86fe675244e5343d56d945a62dcf24c34a7c
+
+##### spec-0012/TDD-0576
+
+- Evidence file: .qfai/evidence/atdd-spec-0012.md
+- Revision: c505a4bc1de4a002847ef7d2672babf9050798bc
+- Selector: Test 7: --check-convergence does NOT invoke iterate (no iter-NN/iterate-plan.json written)
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 7: --check-convergence does NOT invoke iterate \(no iter-NN/iterate-plan\.json written\)"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+- Proof command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 7: --check-convergence does NOT invoke iterate \(no iter-NN/iterate-plan\.json written\)", with `packages/qfai/src/cli/commands/prototypingIterate.ts:3286` changed from `info(header);` to `await writeFile(protoJsonAbs, "{}\n", "utf-8"); info(header);`
+- Proof result: FAIL — Test Files 1 failed (1); Tests 1 failed | 8 skipped (9). The row's case fails on `AssertionError: expected '{}\n' to be '{\n  "stopReason": "converged",\n  "a…' // Object.is equality` at `tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts:278:24`
+- Restored GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 7: --check-convergence does NOT invoke iterate \(no iter-NN/iterate-plan\.json written\)", after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
+- RED test manifest:
+
+```text
+packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
+```
+
+- RED test hash: bf9a7565888fadb44163966f392b86fe675244e5343d56d945a62dcf24c34a7c
+
+The records are read as evidence once this entry is a completed, reviewed item.
 
 ### TDD-0576
 
@@ -1945,6 +2145,9 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence
 | 61 | backend-engineer | backend-engineer | /qfai-implement: TDD-0575 Phase Red 3c falsifiability run, restored GREEN and refactor verify | #tdd-0575 | Round 1; the row is at `refactor` | PASS |
 | 62 | backend-engineer | backend-engineer | /qfai-implement: TDD-0576 Phase Red 3c falsifiability run, restored GREEN and refactor verify | #tdd-0576 | Round 1; the row is at `refactor` | PASS |
 | 63 | backend-engineer | backend-engineer | /qfai-implement: TDD-0567 Phase Red 3c falsifiability run, restored GREEN and refactor verify | #tdd-0567 | Round 1; the row is at `refactor` | PASS |
+| 64 | acceptance-test-engineer | acceptance-test-engineer | /qfai-implement: TDD-0514 review-fix, no new production behaviour: the `--profile sdd` case for `QFAI-TDDLIST-022`, two unit cases, and refactor verify | #tdd-0514; the attempt-1 `REVISE` of `implementation-reviewer` | the path taken on `Round 1: reviewer verdict (attempt 1)`, a refreshed `Refactor verify`; commit `c505a4bc1`; the row is at `refactor` | PASS |
+| 65 | acceptance-test-engineer | acceptance-test-engineer | /qfai-implement: TDD-0575 review-fix Round 2: Test 6b through the CLI entry point, falsifiability run on `main.ts:398`, restored GREEN and refactor verify | #tdd-0575; the attempt-1 `REVISE` of `implementation-reviewer` | Round 2; commit `c505a4bc1`; the row is at `refactor` | PASS |
+| 66 | acceptance-test-engineer | acceptance-test-engineer | /qfai-implement: shared-artifact re-verify of the five `done` rows on `prototypingIterate.checkConvergence.test.ts` | #tdd-0575; the entries of `TDD-0497`, `TDD-0572`, `TDD-0573`, `TDD-0574`, `TDD-0576` | `#### Shared-artifact re-verify` under #tdd-0575, one record per row; each fails under its recorded mutation and passes restored | PASS |
 
 ## Execution logs
 
@@ -2090,6 +2293,7 @@ move it. The rows leave it as `/qfai-implement` advances them.
 - `TDD-0571` fails under its mutation on the test's own timeout error, not on an assertion. `CR-20260923-0014` accepts that error as the statement of the 2000 ms bound.
 - `TDD-0514` and `TDD-0515` carry a JSON array of their two test titles as `Selector` in the ledger, where their entries name the `describe` that holds exactly those tests. `/qfai-implement` Phase Red step 3b writes the entry's value.
 - `composeCaptureUrl`'s route-relative tests pass when the join is string concatenation, `targetUrl + screenUrl`: only the unparseable-pair test fails under that mutation. `TDD-0516` is `/qfai-implement`'s row.
+- `QFAI-TDDLIST-008` on `TDD-0497`, `TDD-0572`, `TDD-0573`, `TDD-0574` and `TDD-0576` clears when `TDD-0575`'s entry, which holds their re-verify records, is a completed, reviewed item. Until then `scripts/dogfood-backlog.json` pins spec-0012's ledger at 398 in the `tdd` and `full` profiles, up from 394. Once the five clear, it is re-pinned at 393.
 
 - repo-global gate は未解消の既存 failures が残るため、今回は scope-local completion として扱う。
 - `completion-reviewer` は内容面を PASS としたが、4ファイルがまだ未コミットである点を merge 前の手続き上の注意として指摘した。
