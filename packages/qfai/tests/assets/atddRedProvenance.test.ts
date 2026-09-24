@@ -2004,17 +2004,19 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // The gate recomputes the hash with a six-digit mode, because the other
     // permission bits follow the checkout's umask. Sending the author to the
     // revision manifest's four octal digits gave a hash no gate reproduces.
-    // Any bit of `0111` selects `100755`, where git reads only the owner's, so
-    // the text says where to read it from.
     const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
-      "**`mode` is six digits spelled like git's tree mode, not the revision manifest's four octal digits**: `120000` for a symlink, `100755` for a file with any bit of `0111` set, and `100644` for any other file.",
+      "**`mode` is six digits spelled like git's tree mode, not the revision manifest's four octal digits**: `120000` for a symlink, `100755` for a file `git add` would record as executable, and `100644` for any other file.",
     );
-    expect(provenance).toContain("Read it from the file on disk, not from `git ls-files -s`");
-    // Windows has no execute bit, so the one bit the record keeps does not
-    // travel between Windows and POSIX checkouts.
-    expect(provenance).toContain("**The execute bit does not cross between Windows and POSIX.**");
     expect(provenance).not.toContain("the same shape the revision manifest uses");
+    // The gate reads the execute bit where git does, which is what carries it
+    // between Windows, whose disk has none, and POSIX. Read off the disk on
+    // both, a file git marks executable hashed differently on each.
+    expect(provenance).toContain(
+      "Where `core.fileMode` is `false`, as in a repository git created on Windows, take it from the index — `100755` when `git ls-files -s` says so, and `100644` for a file git does not track. Everywhere else, take the owner's execute bit off the disk: a `0654` file is `100644`.",
+    );
+    expect(provenance).not.toContain("does not cross between Windows and POSIX");
+    expect(provenance).not.toContain("any bit of `0111`");
   });
 
   it("invalidates the proof whenever the test changed, on either branch", async () => {

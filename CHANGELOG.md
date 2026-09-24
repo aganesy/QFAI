@@ -59,12 +59,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the skill said never matched, and `validate` refused evidence that was
   complete. The six-digit form is the intended one: the gate recomputes the
   hash on whichever checkout runs it, and every permission bit but the execute
-  bits follows that checkout's umask. The skill now names the three values,
-  says any execute bit selects `100755`, and says to read the mode from the
-  file on disk rather than from git's index. It also says the execute bit does
-  not cross between Windows and POSIX, so a manifest naming an executable file
-  is hashed on the kind of system that recomputes it. The revision manifest
-  keeps its own four digits.
+  bits follows that checkout's umask. The skill now names the three values and
+  says where the execute bit is read from. The revision manifest keeps its own
+  four digits.
+
+- **The RED test hash reads the execute bit where git reads it.** `validate`
+  took a manifest file's execute bit off the disk. Windows has none, so a file
+  git marks executable hashed as `100644` on a Windows checkout and `100755` on
+  a POSIX one, and evidence recorded on one was refused on the other. The gate
+  now reads the bit the way `git add` does: from the index where
+  `core.fileMode` is `false`, as in a repository git created on Windows, and
+  from the owner's execute bit on disk everywhere else. An execute bit held
+  only by the group or others no longer selects `100755`; git never recorded
+  it either.
+
+  Two kinds of recorded evidence now hash differently, and `validate` refuses
+  them until their `RED test hash` is recorded again: evidence recorded on
+  Windows whose manifest names a file git marks executable, and evidence whose
+  manifest names a file executable by the group or others but not its owner.
+  POSIX checkouts already refused the first kind.
 
 ## [1.12.3] - 2026-09-24
 

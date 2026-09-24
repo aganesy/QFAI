@@ -8,7 +8,7 @@ import { resolvePath } from "../config.js";
 import { REVISION_FORM_SOURCE } from "../evidenceRevision.js";
 import { isEnoent } from "../fs/errno.js";
 import type { ChangedSince } from "../gitChanges.js";
-import { changedFilesSince } from "../gitChanges.js";
+import { changedFilesSince, gitStdout } from "../gitChanges.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import { isSpecInScope, type SpecScope } from "../specScope.js";
 import {
@@ -1934,7 +1934,45 @@ async function hasPlainParentComponents(root: string, safePath: string): Promise
   return true;
 }
 
-async function artifactRecord(root: string, relativePath: string): Promise<string | null> {
+/**
+ * The paths among `paths` that git's index marks `100755`, or `null` when git
+ * reads the execute bit off the disk instead.
+ *
+ * The execute bit is read the way `git add` reads it, because git is what
+ * carries it between checkouts. Where `core.fileMode` is `false` — as git sets
+ * it in a repository it creates on Windows, whose file system has no execute
+ * bit — git keeps the mode the index already holds, and a file it does not
+ * track is `100644`. Everywhere else git reads the owner's bit off the disk,
+ * and a checkout writes that bit from the index. Either way, two checkouts of
+ * one commit read the same mode. Read off the disk on Windows, a file git
+ * marks executable would be `100644` there and `100755` on a POSIX checkout,
+ * and evidence recorded on one would be refused on the other.
+ *
+ * A directory git cannot answer for — no `git`, no repository — reads the
+ * disk.
+ */
+function indexExecutablesWhereGitIgnoresDisk(
+  root: string,
+  paths: readonly string[],
+): ReadonlySet<string> | null {
+  if (gitStdout(root, ["config", "--bool", "core.fileMode"])?.trim() !== "false") return null;
+  // `--literal-pathspecs`: a manifest entry is a path, and a `*` or `[` in it
+  // must not widen the listing to files the manifest does not name.
+  const listing = gitStdout(root, ["--literal-pathspecs", "ls-files", "-s", "-z", "--", ...paths]);
+  if (listing === null) return null;
+  return new Set(
+    listing
+      .split("\0")
+      .filter((entry) => entry.startsWith("100755 "))
+      .map((entry) => entry.slice(entry.indexOf("\t") + 1)),
+  );
+}
+
+async function artifactRecord(
+  root: string,
+  relativePath: string,
+  indexExecutables: ReadonlySet<string> | null,
+): Promise<string | null> {
   const safePath = safeRepoRelativePath(relativePath);
   if (safePath === null) return null;
   if (!(await hasPlainParentComponents(root, safePath))) return null;
@@ -1965,8 +2003,12 @@ async function artifactRecord(root: string, relativePath: string): Promise<strin
   // tracked content reads `664` under one umask, `644` under another and `666`
   // on Windows, so evidence recorded on one checkout could not recompute on any
   // other and every handed-over row went unresolved for a difference Git does
-  // not even store. The executable bit is the one permission that travels.
-  const mode = kind === "symlink" ? "120000" : (metadata.mode & 0o111) === 0 ? "100644" : "100755";
+  // not even store. The owner's execute bit is the one permission that
+  // travels, and `indexExecutablesWhereGitIgnoresDisk` says where it is read
+  // from.
+  const executable =
+    indexExecutables === null ? (metadata.mode & 0o100) !== 0 : indexExecutables.has(safePath);
+  const mode = kind === "symlink" ? "120000" : executable ? "100755" : "100644";
   return `${safePath}\0${kind}\0${mode}\0${sha256(bytes)}`;
 }
 
@@ -1986,9 +2028,12 @@ async function redTestManifestHash(root: string, manifest: string): Promise<stri
   ) {
     return null;
   }
+  const safePaths = paths.map(safeRepoRelativePath);
+  if (!safePaths.every((entry): entry is string => entry !== null)) return null;
+  const indexExecutables = indexExecutablesWhereGitIgnoresDisk(root, safePaths);
   const records: string[] = [];
   for (const entry of paths) {
-    const record = await artifactRecord(root, entry);
+    const record = await artifactRecord(root, entry, indexExecutables);
     if (record === null) return null;
     records.push(record);
   }
