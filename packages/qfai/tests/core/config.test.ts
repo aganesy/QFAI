@@ -379,8 +379,6 @@ describe("testStrategy key surface", () => {
       expect(issues).toEqual([]);
       expect(Object.keys(config.validation.testStrategy).sort()).toEqual([
         "forbidTestTodoStubs",
-        "maxE2eScenarioCount",
-        "maxE2eScenarioRatio",
         "requireLayerTags",
         "requireSizeTags",
       ]);
@@ -398,8 +396,6 @@ describe("testStrategy key surface", () => {
   // than to `undefined`.
   it("keeps the deprecated keys a required boolean on the public type", async () => {
     const legacy: QfaiValidationConfig["testStrategy"] = {
-      maxE2eScenarioRatio: null,
-      maxE2eScenarioCount: null,
       forbidTestTodoStubs: true,
       requireLayerTags: true,
       requireSizeTags: true,
