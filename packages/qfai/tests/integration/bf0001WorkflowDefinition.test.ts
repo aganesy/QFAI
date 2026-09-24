@@ -76,6 +76,24 @@ describe("BF-0001 workflow definition", () => {
     expect(sdd).toContain("Read the pack, its completed reviews");
   });
 
+  // QFAI:EX-0001-0017-01
+  it("instructs SDD to reconcile discussion and completed reviews in its own evidence", async () => {
+    const sdd = await readFile(skill("qfai-sdd"), "utf8");
+    const playbook = await readFile(
+      path.join(assistant, "skill", "qfai-sdd", "references", "sdd-execution-playbook.md"),
+      "utf8",
+    );
+    const checklist = await readFile(
+      path.join(assistant, "skill", "qfai-sdd", "references", "sdd-phase-checklists.md"),
+      "utf8",
+    );
+    expect(sdd).toContain("Read the pack, its completed reviews");
+    expect(sdd).toContain("Record a discrepancy in an SDD-owned row or evidence");
+    expect(sdd).toContain("do not edit the");
+    expect(playbook).toContain("Disposition its applicable review advice in SDD evidence");
+    expect(checklist).toContain("A disagreement was resolved in an SDD-owned artifact");
+  });
+
   // QFAI:EX-0001-0001-03
   // QFAI:EX-0001-0001-04
   it("routes the specification output to the three story-tree layers", async () => {

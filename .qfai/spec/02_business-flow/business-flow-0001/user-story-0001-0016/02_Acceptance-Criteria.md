@@ -10,5 +10,6 @@ Feature: planner-first design authoring
 Scenario: discussion は visual winner を選ばない
   Given UI-bearing discussion pack
   When discussion artifacts を検査する
-  Then selected direction や finalized design system を discussion の完了条件として要求しない
+  Then discussion records the user's brand theme in `01_Context.md#Design Direction`
+  And screen explorations remain unranked without a selected winner or finalized design system
 ```
