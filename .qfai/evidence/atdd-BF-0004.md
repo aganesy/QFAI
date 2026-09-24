@@ -8,7 +8,7 @@ The story tree contains 12 stories, 30 criteria and 85 examples. The BF journeys
 
 See [coverage-depth-BF-0004.md](coverage-depth-BF-0004.md).
 
-✅ 0 / ⚠️ 104 / ❌ 235 across 339 scored cells; 423 cells are not applicable.
+✅ 0 / ⚠️ 111 / ❌ 228 across 339 scored cells; 423 cells are not applicable.
 
 ## Execution and disposition
 
