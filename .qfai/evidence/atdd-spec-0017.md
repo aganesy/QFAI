@@ -22,9 +22,11 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
 - `.qfai/specs/spec-0017/07_Decisions.md` — `DR-0017-*`, read for the rejected alternatives this
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
-- `.qfai/specs/spec-0017/tdd/test-list.md` — 101 rows: 81 `Integration`,
-  11 `Unit`; **76 `refactor`, 0 `blocked`, 16 `todo`**, with 6 `done` and 3 `review-fix`. Nine rows are `E2E`, one per story,
-  seeded at `todo`. At the 2026-09-23 run, eleven `todo` rows were `Integration` and were this stage's to route.
+- `.qfai/specs/spec-0017/tdd/test-list.md` — 110 rows: 90 `Integration`,
+  11 `Unit`; **76 `refactor`, 0 `blocked`, 25 `todo`**, with 6 `done` and 3 `review-fix`.
+  The nine additional `Integration` rows split six acceptance cases into independent outcomes and remain `todo`.
+  At the 2026-09-23 run, nine rows were `E2E`, one per story, seeded at `todo`.
+  Eleven `todo` rows were `Integration` and were this stage's to route.
   The run started 2026-09-23T10:23:39.000Z hands ten of them over — see § "Ledger rows advanced".
   `TDD-0012` is the eleventh, and that run's work order did not name it
 - `.qfai/assistant/catalog/test-layers.md` — the layer derivation and the directory each `Level`
@@ -364,7 +366,7 @@ Two things are left to `qa-gatekeeper` rather than decided here:
   that the case list and the grammar name the same members, a sweep that deletes each member in turn and
   requires a case to notice, and the eleven real builds it planted in a shipped lane — ten of which the
   story did not see
-- **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 6 tests deriving the Coverage
+- **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 8 tests deriving the Coverage
   Depth Matrix's totals, partition, class assignment, per-class justification and row width from the
   table itself
 - **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 14 tests deriving this record's own
@@ -422,8 +424,8 @@ node scripts/check-atdd-annotation-ledger.mjs        (repo-wide)
 
 pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotationLedger.test.ts
   -> Tests 63 passed (63), exit 0
-pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
-  -> Tests 6 passed (6), exit 0
+cd packages/qfai && npm exec -- vitest run tests/assets/coverageDepthMatrix.test.ts
+  -> Tests 8 passed (8), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
   -> Tests 12 passed | 2 skipped (14), exit 0
   the two skipped read the review archive and are skipped by name where this
@@ -3049,7 +3051,7 @@ a merge can invalidate has no author to hold responsible for it.
 The count and its split across the two include roots are on one line, and both are derived by the same
 walk:
 
-e2e callsites at this tree: 2443 (packages/qfai/tests/assets 2250, packages/qfai/tests/e2e 193)
+e2e callsites at this tree: 2444 (packages/qfai/tests/assets 2252, packages/qfai/tests/e2e 192)
 
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is
