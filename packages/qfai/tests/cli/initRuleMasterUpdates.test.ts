@@ -343,9 +343,17 @@ describe("the constitution and its safety floor upgrade together", () => {
       "A retained constitution does not gain newer authority from refreshed cards.",
     );
     for (const role of roles) {
-      expect(await readFile(path.join(assistantPath(), "agent", `${role}.md`), "utf-8")).toContain(
-        "Use this route only where the installed Article VII governs the artifact.",
-      );
+      const card = await readFile(path.join(assistantPath(), "agent", `${role}.md`), "utf-8");
+      expect(card).toContain("shared-skill-delegation-baseline.md");
+      if (
+        ["architecture-reviewer", "product-surface-reviewer", "requirements-reviewer"].includes(
+          role,
+        )
+      ) {
+        expect(card).toContain(
+          "Use this route only where the installed Article VII governs the artifact.",
+        );
+      }
     }
   });
 

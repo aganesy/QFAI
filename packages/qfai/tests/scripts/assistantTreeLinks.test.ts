@@ -127,7 +127,7 @@ describe("link-assistant-tree --check", () => {
 
     await rm(rule);
     await mkdir(rule);
-    await writeFile(path.join(rule, "test-layers.md"), "# Local copy\n", "utf-8");
+    await writeFile(path.join(rule, "quality.md"), "# Local copy\n", "utf-8");
     const checked = runIsolated(script, root, true);
     expect(checked.status).toBe(1);
     expect(checked.output).toContain(".qfai/assistant/rule");
