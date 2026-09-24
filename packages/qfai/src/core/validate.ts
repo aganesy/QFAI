@@ -62,6 +62,8 @@ import {
   validatePrototypingDelegationMap,
   validateConfigReferenceIntegrity,
   validatePrototypingArtifactRefIntegrity,
+  validateSpecIdLinkage,
+  validateFrozenSurfaceReachability,
   validateResearchSummary,
   validateRepositoryHygiene,
   validateUiDefinitionConsistency,
@@ -714,6 +716,8 @@ async function runPrototypingValidators(
     ...(await validateCompletionCertificateIssues(root, config)),
     ...(await validateConfigReferenceIntegrity(root, config)),
     ...(await validatePrototypingArtifactRefIntegrity(root, config)),
+    ...(await validateSpecIdLinkage(root, config)),
+    ...(await validateFrozenSurfaceReachability(root, config)),
     // `QFAI-PROT-311` — delegationMap entries must name a role from the
     // SKILL.md Delegation Scope Table. No-ops when prototyping.json has no
     // executionPlan, so bootstrap projects are unaffected.

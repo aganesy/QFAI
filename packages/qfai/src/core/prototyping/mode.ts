@@ -108,7 +108,9 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-PROT-006", // iterations.length exceeds MAX_ITERATIONS
   "QFAI-PROT-007", // acceptedIterationIndex === iterations.length - 1
   // validators/prototyping/** — linkage, paths, completion certificate
+  "QFAI-PROT-008", // uiContractsCovered must resolve to current UI contracts
   "QFAI-PROT-009", // artifact path integrity (empty / outside-root / missing ref)
+  "QFAI-PROT-011", // frozenSurfaceUnion names a UI contract that no longer resolves
   "QFAI-PROT-311", // delegation map: entries must name a role the skill declares
   "QFAI-PROT-335", // completion certificate: required evidence
   "QFAI-PROT-336", // completion certificate: completion claimed without seal
