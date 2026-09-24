@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -8,6 +8,8 @@ import { parse as parseYaml } from "yaml";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { parseRecordTable } from "../../src/core/storyTree/tables.js";
+import { validateProject } from "../../src/core/validate.js";
+import { runInit } from "../../src/cli/commands/init.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import {
   executePlannedStep,
@@ -104,6 +106,76 @@ async function run(step: MigrationStep, context: MigrationContext, dryRun = fals
 }
 
 describe("BF-0004 migration examples", () => {
+  it("installs a resolvable migration skill on both fresh and old-layout projects", async () => {
+    // QFAI:EX-0004-0001-01
+    const fresh = await mkdtemp(path.join(tmpdir(), "qfai-bf4-fresh-"));
+    const legacy = await mkdtemp(path.join(tmpdir(), "qfai-bf4-legacy-"));
+    roots.push(fresh, legacy);
+    await put(legacy, ".qfai/specs/spec-0001/01_Spec.md", "# Old\n");
+    for (const root of [fresh, legacy]) {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const skill = path.join(root, ".qfai/assistant/skill/qfai-migration-spec-to-story");
+      expect(await readFile(path.join(skill, "SKILL.md"), "utf8")).toContain(
+        "qfai-migration-spec-to-story",
+      );
+      expect(await readdir(path.join(skill, "scripts"))).toContain("01-rename-directories.mjs");
+      for (const host of [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"]) {
+        expect(await realpath(path.join(root, host, "qfai-migration-spec-to-story"))).toBe(
+          await realpath(skill),
+        );
+      }
+    }
+  });
+
+  it("delegates link and managed-ignore mutations to the init writers", async () => {
+    // QFAI:EX-0004-0001-02
+    const source = path.resolve(getInitAssetsDir(), "../../src/migration/specToStory");
+    const links = await readFile(path.join(source, "step09RepointLinks.ts"), "utf8");
+    const ignore = await readFile(path.join(source, "step10UpdateGitignore.ts"), "utf8");
+    expect(links).toContain(
+      'import { repairIntegrationWrappers } from "../../cli/commands/init.js"',
+    );
+    expect(links).toContain("await repairIntegrationWrappers(");
+    expect(ignore).toContain(
+      'import { ensureRootGitignoreEntries } from "../../cli/commands/init.js"',
+    );
+    expect(ignore).toContain("await ensureRootGitignoreEntries(context.root, false");
+    expect(links).not.toMatch(/\b(?:symlink|unlink|rm|writeFile)\s*\(/);
+    expect(ignore).not.toMatch(/\b(?:writeFile|appendFile|rename)\s*\(/);
+  });
+
+  it("reports only the old layout across five profiles, ahead of a missing story file", async () => {
+    // QFAI:EX-0004-0002-01
+    const context = await fixture(
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    await put(context.root, ".qfai/spec/spec-0001/01_Spec.md", "# Old\n");
+    await put(
+      context.root,
+      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/01_User-story.md",
+      "# New\n",
+    );
+    for (const profile of ["sdd", "atdd", "tdd", "full", "drift"] as const) {
+      const result = await validateProject(
+        context.root,
+        {
+          config: context.config,
+          issues: [],
+          configPath: path.join(context.root, "qfai.config.yaml"),
+        },
+        { profile },
+      );
+      expect(result.issues).toHaveLength(1);
+      expect(result.issues[0]?.code).toBe("QFAI-LAYOUT-001");
+      expect(result.issues[0]?.severity).toBe("error");
+      expect(result.issues[0]?.message).toContain(path.join(context.root, ".qfai/spec"));
+      expect(result.issues[0]?.message).toContain("/qfai-migration-spec-to-story");
+      expect(result.issues[0]?.message).toMatch(
+        /; run \/qfai-migration-spec-to-story before validation\.$/,
+      );
+      expect(result.issues[0]?.message).not.toContain("03_Example.md");
+    }
+  });
   it("moves every present default directory and skips an absent prototype directory", async () => {
     // QFAI:EX-0004-0004-01
     const context = await fixture();
