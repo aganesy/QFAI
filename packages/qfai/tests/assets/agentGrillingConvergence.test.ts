@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const CONVERGENCE = "assistant/constitution/review-convergence.md";
+const CONVERGENCE = "assistant/rule/review-convergence.md";
 const GRILLING = ".agents/rules/grilling.md";
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
