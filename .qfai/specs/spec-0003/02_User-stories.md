@@ -186,7 +186,7 @@
 
 - Parent: CAP-0003
 - Goal: 配布 set の全 runner selector が repository variable を読み、その default が public GitHub-hosted label であり、各配布ファイルの header table が variable 名 / default / 誤値時に GitHub が fail fast せず無期限 queue する失敗モードを明示する
-- Non-goals: organization-private label の配布、`qfai.config.yaml` への CI キー追加、runner tier の二段階化（2 つ目の job class が実在してから）
+- Non-goals: shipping an organization-private label, and adding a CI key to `qfai.config.yaml`
 - Notes: REQ-0028 を実装する。上流 pack REQ-0018 / OQ-0008。誤値が fail fast しないため、knob より default の方がリスクを負う
 
 ## US-0003-0026: 配布 Node / package manager portability

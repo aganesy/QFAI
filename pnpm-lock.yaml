@@ -51,8 +51,8 @@ importers:
   packages/qfai:
     dependencies:
       '@cucumber/gherkin':
-        specifier: ^37.0.1
-        version: 37.0.1
+        specifier: ^42.0.0
+        version: 42.0.1
       '@cucumber/messages':
         specifier: ^34.0.0
         version: 34.2.1
@@ -200,11 +200,8 @@ packages:
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
 
-  '@cucumber/gherkin@37.0.1':
-    resolution: {integrity: sha512-VmX+PKa9vqKZiycZoQKYlCsA0N7gAfiOfrcHSjK+suEVUwvKEH2sjO47NznrFFLmVWYTRmw3DLHQnpBAznkYEA==}
-
-  '@cucumber/messages@31.2.0':
-    resolution: {integrity: sha512-3urzBNCwmU/YKrKR0b3XdioFcOFNuxlLwEImsxeP8rXnweLs+Ky04QURcbKpFom3T6a6v9zVioLCfHUuSQ72pg==}
+  '@cucumber/gherkin@42.0.1':
+    resolution: {integrity: sha512-Kqg0ULhWqbXp/a1c04ND4sS4KTlIL831tQ0NhZLXWdEhT6LiNsZ5LFRzy/lBy7QQpcKhroKp/i3C2WdEnRBKNg==}
 
   '@cucumber/messages@34.2.1':
     resolution: {integrity: sha512-aj2iCAG9ZOpMVcMxcgShifv5fbR96b7SMgdWcPXXh2QbFp7OEcAnQ5MC5YfWUDSDasmw7FU5NJEsOrXdTQOU1A==}
@@ -1171,9 +1168,6 @@ packages:
     resolution: {integrity: sha512-Qgzu8kfBvo+cA4962jnP1KkS6Dop5NS6g7R5LFYJr4b8Ub94PPQXUksCw9PvXoeXPRRddRNC5C1JQUR2SMGtnA==}
     engines: {node: '>= 14.16.0'}
 
-  class-transformer@0.5.1:
-    resolution: {integrity: sha512-SQa1Ws6hUbfC98vKGxZH3KFY0Y1lm5Zm0SY8XX9zbK7FJCyVEac3ATW0RIpwzW+oOfmHE5PMPufDG9hCfoEOMw==}
-
   commander@4.1.1:
     resolution: {integrity: sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA==}
     engines: {node: '>= 6'}
@@ -2079,9 +2073,6 @@ packages:
     resolution: {integrity: sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg==}
     engines: {node: '>= 14.18.0'}
 
-  reflect-metadata@0.2.2:
-    resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
-
   require-from-string@2.0.2:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
@@ -2546,14 +2537,9 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.0': {}
 
-  '@cucumber/gherkin@37.0.1':
+  '@cucumber/gherkin@42.0.1':
     dependencies:
-      '@cucumber/messages': 31.2.0
-
-  '@cucumber/messages@31.2.0':
-    dependencies:
-      class-transformer: 0.5.1
-      reflect-metadata: 0.2.2
+      '@cucumber/messages': 34.2.1
 
   '@cucumber/messages@34.2.1': {}
 
@@ -3323,8 +3309,6 @@ snapshots:
   chokidar@4.0.3:
     dependencies:
       readdirp: 4.1.2
-
-  class-transformer@0.5.1: {}
 
   commander@4.1.1: {}
 
@@ -4371,8 +4355,6 @@ snapshots:
   queue-microtask@1.2.3: {}
 
   readdirp@4.1.2: {}
-
-  reflect-metadata@0.2.2: {}
 
   require-from-string@2.0.2: {}
 
