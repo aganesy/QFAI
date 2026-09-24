@@ -1956,6 +1956,8 @@ function indexExecutablesWhereGitIgnoresDisk(
   paths: readonly string[],
 ): ReadonlySet<string> | null | undefined {
   if (gitStdout(root, ["config", "--bool", "core.fileMode"])?.trim() !== "false") return null;
+  // A global setting can be false even when `root` is outside a repository.
+  if (gitStdout(root, ["rev-parse", "--is-inside-work-tree"])?.trim() !== "true") return null;
   const executables = new Set<string>();
   // Keep both the Windows command line and gitStdout's output buffer bounded.
   // `--literal-pathspecs` prevents `*` and `[` in a manifest path from widening a batch.

@@ -4748,6 +4748,35 @@ ${packPair(1).join("\n")}
     });
   }
 
+  it("reads the disk outside a repository even when global core.fileMode is false", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+      const previousGlobalConfig = process.env.GIT_CONFIG_GLOBAL;
+      const globalConfig = path.join(root, "global.gitconfig");
+      await writeFile(globalConfig, "[core]\n\tfileMode = false\n");
+      process.env.GIT_CONFIG_GLOBAL = globalConfig;
+      try {
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+          { ".qfai/evidence/atdd-spec-0001.md": completeEntry("Integration") },
+        );
+        expect(
+          issues.some(
+            ({ code, message }) =>
+              code === "QFAI-TDDLIST-008" &&
+              (message.includes("valid RED test manifest") ||
+                message.includes("RED test hash matching its manifest")),
+          ),
+        ).toBe(false);
+      } finally {
+        if (previousGlobalConfig === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+        else process.env.GIT_CONFIG_GLOBAL = previousGlobalConfig;
+      }
+    });
+  });
+
   it("rejects an unmerged manifest path instead of choosing a conflict stage's mode", async () => {
     await withProject(async (root) => {
       const pointer =
