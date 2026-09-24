@@ -1337,6 +1337,50 @@ describe("BF-0004 acceptance criteria", () => {
     }
   });
 
+  it("repoints old host links, preserves occupied paths and refuses uninspectable wrappers", async () => {
+    // QFAI:EX-0004-0011-01
+    const oldLinkRoot = await project();
+    const oldSkill = path.join(oldLinkRoot, ".qfai/assistant/skills/qfai-sdd");
+    await mkdir(oldSkill, { recursive: true });
+    await writeFile(path.join(oldSkill, "SKILL.md"), "# Old wrapper target\n");
+    const wrapper = path.join(oldLinkRoot, ".claude/skills/qfai-sdd");
+    await mkdir(path.dirname(wrapper), { recursive: true });
+    await symlink(oldSkill, wrapper, process.platform === "win32" ? "junction" : "dir");
+    expect(step(oldLinkRoot, 1).status).toBe(0);
+    const beforeLinks = await fileSnapshot(oldLinkRoot);
+    const linked = step(oldLinkRoot, 9);
+    expect(linked.status).toBe(0);
+    expect((await readlink(wrapper)).replace(/\\/g, "/")).toContain("assistant/skill/qfai-sdd");
+    const afterLinks = await fileSnapshot(oldLinkRoot);
+    expect(
+      [...new Set([...beforeLinks.keys(), ...afterLinks.keys()])]
+        .filter((name) => beforeLinks.get(name) !== afterLinks.get(name))
+        .every((name) => changedPathPatterns[8]?.some((pattern) => pattern.test(name))),
+    ).toBe(true);
+
+    const occupiedRoot = await project();
+    expect(step(occupiedRoot, 1).status).toBe(0);
+    const occupied = path.join(occupiedRoot, ".claude/skills/qfai-sdd");
+    await mkdir(path.dirname(occupied), { recursive: true });
+    await writeFile(occupied, "Project-owned wrapper\n");
+    const protectedRun = step(occupiedRoot, 9);
+    expect(protectedRun.status).toBe(3);
+    expect(section(protectedRun.stdout, "For a person").join("\n")).toContain(
+      ".claude/skills/qfai-sdd",
+    );
+    expect(await readFile(occupied, "utf8")).toBe("Project-owned wrapper\n");
+
+    const unreadableRoot = await project();
+    expect(step(unreadableRoot, 1).status).toBe(0);
+    await mkdir(path.join(unreadableRoot, ".claude"), { recursive: true });
+    await writeFile(path.join(unreadableRoot, ".claude/skills"), "Not a directory\n");
+    const before = await fingerprint(unreadableRoot);
+    const refused = step(unreadableRoot, 9);
+    expect(refused.status).toBe(2);
+    expect(refused.stderr).toMatch(/inspect|not a directory/i);
+    expect(await fingerprint(unreadableRoot)).toBe(before);
+  });
+
   // QFAI:AC-0004-0011-02
   // QFAI:EX-0004-0011-02
   it("keeps decision evidence visible to Git after the ignore update", async () => {
