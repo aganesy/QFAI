@@ -33,7 +33,9 @@ describe("SDD routing crosswalk covers the ordered story-tree stages", () => {
         tree,
         "assistant/skill/qfai-sdd/references/sdd-routing-phase-crosswalk.md",
       );
-      expect(crosswalk).toContain("Record the review and gate in each affected BF's evidence");
+      expect(crosswalk.replace(/\s+/g, " ")).toContain(
+        "Record the review and gate in each affected BF's evidence",
+      );
       expect(crosswalk).toContain("A REVISE returns to the author");
     });
   }

@@ -14,7 +14,7 @@ describe("uiux sidecar templates", () => {
     "init",
     ".qfai",
     "assistant",
-    "skills",
+    "skill",
     "qfai-discussion",
     "templates",
   );
@@ -61,7 +61,7 @@ describe("uiux sidecar templates", () => {
       "init",
       ".qfai",
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "templates",
       "uiux",

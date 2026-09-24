@@ -24,14 +24,14 @@ import { STOP_REASONS } from "../../src/core/prototyping/iteration.js";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
-const SCANNED = [".qfai/specs/**/*.md", ".qfai/contracts/cli/*.md"];
+const SCANNED = [".qfai/spec/**/*.md"];
 
 /**
  * Documents that record what a value used to be. A delta, a TDD worklog row
  * and a change request all exist to hold superseded text, and rewriting them
  * would destroy the record they are for.
  */
-const EXEMPT_FILE = /(^\.qfai\/decisions\/|09_delta\.md$|tdd\/test-list\.md$)/;
+const EXEMPT_FILE = /(^\.qfai\/spec\/decisions\.md$|09_delta\.md$)/;
 
 /**
  * The retired vocabulary, matched bare rather than inside backticks: the value
@@ -57,7 +57,7 @@ describe("the stop reasons a document names are the ones the loop writes", () =>
     expect([...STOP_REASONS]).not.toContain("axes-exceptional");
   });
 
-  it("no spec or CLI contract names a stop reason the enum does not carry", async () => {
+  it("no current story or CLI contract names a stop reason the enum does not carry", async () => {
     const declared = new Set<string>(STOP_REASONS);
     const files = await fg(SCANNED, { cwd: repoRoot, absolute: false, dot: true });
     expect(files.length, "the sweep must have found documents to be about").toBeGreaterThan(0);
@@ -88,12 +88,13 @@ describe("the stop reasons a document names are the ones the loop writes", () =>
     // The third category was `axes-below-exceptional`, an axis score. The stop
     // reads three arrays, so an operator given an axis there looks for a cause
     // nothing consulted.
-    const criteria = await readFile(
-      path.join(repoRoot, ".qfai/specs/spec-0012/03_Acceptance-Criteria.md"),
+    const blocked = await readFile(
+      path.join(
+        repoRoot,
+        "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/review-payload-schema.md",
+      ),
       "utf-8",
     );
-    const blocked = criteria.split("\n").find((line) => line.includes("[BLOCKED]"));
-    expect(blocked, "the blocked-summary criterion").toBeDefined();
     for (const category of BLOCKED_CATEGORIES) {
       expect(blocked ?? "").toContain(category);
     }

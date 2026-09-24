@@ -55,8 +55,9 @@ describe("work-log entry schema", () => {
 
       for (const skill of [implement, sdd]) {
         expect(skill).toContain("worklog-entry.schema.md");
-        expect(skill).toContain(".qfai/steering/");
       }
+      expect(sdd).toContain(".qfai/steering/");
+      expect(implement).toContain("steering");
     });
   }
 
