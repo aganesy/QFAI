@@ -564,6 +564,7 @@ export async function runPrototypingCertify(
     options.root,
     config.paths.contractsDir,
   );
+  const uiContractsPath = path.join(config.paths.contractsDir, "ui").replace(/\\/g, "/");
   if (screenContracts.length > 0) {
     const presentScreenIds = new Set<string>();
     for (const htmlPath of finalHtmlPaths) {
@@ -618,7 +619,7 @@ export async function runPrototypingCertify(
           "Then re-run the loop from cycle 0. Re-invoking the accepted cycle with --capture " +
           "will not work: that iteration is already recorded in prototyping.json#iterations, " +
           "so iterate exits first on the expected-next-cycle gate. If a listed screen is no " +
-          "longer part of the product, delete it from .qfai/contracts/ui/ AND still re-run the " +
+          `longer part of the product, delete it from ${uiContractsPath}/ AND still re-run the ` +
           "loop from cycle 0 — deleting alone is not a shortcut past this gate. certify " +
           "recomputes the declared-screen set from the contracts on every run, so a bare " +
           "deletion silently drops that screen's HTML and UI contract review.json checks while " +

@@ -7,6 +7,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { runPrototypingIterate } from "../../../src/cli/commands/prototypingIterate.js";
 import { hashDesignMd } from "../../../src/core/design/designMd.js";
 
+const EXCEPTIONAL_SCORES = {
+  informationArchitecture: "exceptional",
+  navigationFlow: "exceptional",
+  usability: "exceptional",
+  functionality: "exceptional",
+} as const;
+
 // Canonical Phase 1 DESIGN.md sample. Used by every test that wants the
 // hash gate to pass; mutate selectively per-test for the negative cases.
 const CANONICAL_DESIGN_MD = [
@@ -125,6 +132,7 @@ async function seedPrototypingJson(
   iterations: Array<{
     index: number;
     blockingFindings: string[];
+    scores?: typeof EXCEPTIONAL_SCORES;
     layoutAntiPatternsDetected?: string[];
     designMdViolations?: Array<{ kind: string; found: string }>;
   }>,
@@ -154,6 +162,7 @@ async function seedPrototypingJson(
       index: it.index,
       commitSha: "a".repeat(40),
       blockingFindings: it.blockingFindings,
+      scores: it.scores,
       proseCritique: "x".repeat(1500),
       layoutAntiPatternsDetected: it.layoutAntiPatternsDetected ?? [],
       designMdViolations: it.designMdViolations ?? [],
@@ -225,13 +234,14 @@ describe("runPrototypingIterate cycle 0", () => {
 
 describe("runPrototypingIterate convergence (exit 64)", () => {
   // QFAI:EX-0001-0112-03
-  it("returns 64 when the latest iter has nothing open and no anti-patterns", async () => {
+  it("returns 64 when all UX axes are exceptional and nothing blocks the latest iter", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedPrototypingJson(root, [
       {
         index: 0,
         blockingFindings: [],
+        scores: EXCEPTIONAL_SCORES,
         layoutAntiPatternsDetected: [],
         designMdViolations: [],
       },
@@ -668,7 +678,7 @@ describe("runPrototypingIterate cycle 0 DESIGN.md ingestion (TC-3.5.x)", () => {
     // CI alike.
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await mkdir(path.join(root, ".qfai/contracts/design/DESIGN.md.lock.yaml"), {
+    await mkdir(path.join(root, ".qfai/spec/03_contract/design/DESIGN.md.lock.yaml"), {
       recursive: true,
     });
 
@@ -963,8 +973,8 @@ describe("runPrototypingIterate cycle N hash gate (TC-3.5.x)", () => {
   it("rejects mid-loop primary-spec change (cycle 1 with frozen uiContractsCovered != resolved spec) with exit 2", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    // Frozen seed claims spec-0099, but the resolved primary spec
-    // (from disk markers) is spec-0001.
+    // Frozen seed claims CON-UI-0099, but the declared UI contract
+    // resolves to CON-UI-0001.
     await seedRawPrototypingJson(root, {
       uiContractsCovered: ["CON-UI-0099"],
       designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
@@ -1125,8 +1135,7 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
     ).toBe(0);
 
     const body = await readProtoJson(root);
-    // seedMinimalProject creates spec-0001 with `surface_type: ui-bearing`,
-    // so the resolved primary spec id is "CON-UI-0001".
+    // seedMinimalProject declares a UI contract with a screen.
     expect(body.uiContractsCovered).toEqual(["CON-UI-0001"]);
   });
 
@@ -1829,7 +1838,8 @@ describe("runPrototypingIterate UI contract scope", () => {
     await seedMinimalProject(root);
     await seedPrototypingJson(root, [{ index: 0, blockingFindings: [] }]);
     await addUiContract(root, "CON-UI-0002", "settings");
-    const stderr = vi.spyOn(console, "error").mockImplementation(() => {});
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const stderr = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
       expect(stderr.mock.calls.flat().join(" ")).toContain("CON-UI-0002");
@@ -2193,9 +2203,8 @@ describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discr
 describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop (TC-0012-0424)", () => {
   it("returns exit 2 on a converged loop where one UI contract was removed mid-loop", async () => {
     const root = await newTempDir();
-    // Seed a multi-UI project: spec-0001 stays UI-bearing (so the
-    // zero-UI precheck does NOT short-circuit), spec-0002 had its
-    // marker removed mid-loop. `frozenSurfaceUnion` records both
+    // CON-UI-0001 remains declared, so the zero-UI precheck does not
+    // short-circuit. CON-UI-0002 was removed mid-loop; `frozenSurfaceUnion` records both
     // ["CON-UI-0001", "CON-UI-0002"]; live `resolveSurfaceUnion` returns ["CON-UI-0001"]
     // only. The recorded iter is fully converged (axes exceptional +
     // no lap + no dmv) so `shouldStop` would return
@@ -2226,6 +2235,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
             index: 0,
             commitSha: "a".repeat(40),
             blockingFindings: [],
+            scores: EXCEPTIONAL_SCORES,
             proseCritique: "x".repeat(1500),
             layoutAntiPatternsDetected: [],
             designMdViolations: [],
@@ -2292,6 +2302,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
             index: 0,
             commitSha: "a".repeat(40),
             blockingFindings: [],
+            scores: EXCEPTIONAL_SCORES,
             proseCritique: "x".repeat(1500),
             layoutAntiPatternsDetected: [],
             designMdViolations: [],
@@ -2454,7 +2465,7 @@ describe("the shipped sealed-loop guidance matches the gates", () => {
   const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
   const repoRootDir = path.resolve(process.cwd(), "..", "..");
   const readShipped = (tree: string, relative: string): Promise<string> =>
-    readFile(path.join(repoRootDir, tree, "assistant/skills/qfai-prototyping", relative), "utf-8");
+    readFile(path.join(repoRootDir, tree, "assistant/skill/qfai-prototyping", relative), "utf-8");
 
   it.each(trees)("%s: does not promise a same-cycle retry after max-iterations", async (tree) => {
     const skill = await readShipped(tree, "SKILL.md");

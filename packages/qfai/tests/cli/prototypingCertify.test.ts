@@ -92,7 +92,7 @@ afterEach(async () => {
   }
 });
 
-async function seedMinimalProject(root: string, opts?: { specMarker?: boolean }): Promise<void> {
+async function seedMinimalProject(root: string): Promise<void> {
   await writeFile(
     path.join(root, "qfai.config.yaml"),
     [
@@ -115,7 +115,6 @@ async function seedMinimalProject(root: string, opts?: { specMarker?: boolean })
     "# QFAI-CONTRACT-ID: CON-UI-0012\nscreens: [{id: index, route: /}]\n",
     "utf-8",
   );
-  void opts;
 }
 
 async function seedAllGatesPass(root: string): Promise<void> {
@@ -123,15 +122,15 @@ async function seedAllGatesPass(root: string): Promise<void> {
   // fixture seeds a parseable DESIGN.md plus a final-iter HTML free of
   // violations.
   await seedDesignMdAndFinalHtml(root);
-  // v1.8.4 Phase 11.7+: certify now reads validate.json from
-  // config.output.validateJsonPath (default: .qfai/report/validate.json),
-  // not hardcoded .qfai/output/. Seed both locations so tests work
-  // regardless of the default.
+  // Certify reads the prototyping-profile result derived from
+  // config.output.validateJsonPath.
   await mkdir(path.join(root, ".qfai/report"), { recursive: true });
   await mkdir(path.join(root, ".qfai/output"), { recursive: true });
-  const validateJson = JSON.stringify({ counts: { error: 0, warning: 0, info: 0 } });
-  await writeFile(path.join(root, ".qfai/report/validate.json"), validateJson, "utf-8");
-  await writeFile(path.join(root, ".qfai/output/validate.json"), validateJson, "utf-8");
+  const validateJson = JSON.stringify({
+    profile: "prototyping",
+    counts: { error: 0, warning: 0, info: 0 },
+  });
+  await writeFile(path.join(root, ".qfai/report/validate-prototyping.json"), validateJson, "utf-8");
   await writeFile(
     path.join(root, ".qfai/output/verify.json"),
     JSON.stringify({ status: "PASS" }),
@@ -172,7 +171,7 @@ async function seedAllGatesPass(root: string): Promise<void> {
 describe("qfai prototyping certify (generate)", () => {
   it("writes completion-certificate.json when all gates pass", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
 
     const exit = await runPrototypingCertify({ root, check: false });
@@ -217,10 +216,10 @@ describe("qfai prototyping certify (generate)", () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedAllGatesPass(root);
-    // Override the validate.json that certify actually reads (default
-    // config.output.validateJsonPath = .qfai/report/validate.json).
+    // Override the prototyping-profile report derived from the default
+    // config.output.validateJsonPath.
     await writeFile(
-      path.join(root, ".qfai/report/validate.json"),
+      path.join(root, ".qfai/report/validate-prototyping.json"),
       JSON.stringify({ counts: { error: 3, warning: 0, info: 0 } }),
       "utf-8",
     );
@@ -297,7 +296,7 @@ describe("qfai prototyping certify (generate)", () => {
 
   it("exits 2 when prototyping.json#iterations[] is empty (and identifies the empty-iterations branch in the error log)", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     // Override prototyping.json to have an empty iterations[] while
     // every other gate stays passing. This locks the SPECIFIC
@@ -312,6 +311,7 @@ describe("qfai prototyping certify (generate)", () => {
         runId: "run-test-2026",
         designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
         uiContractsCovered: ["CON-UI-0012"],
+        frozenSurfaceUnion: ["CON-UI-0012"],
         reviewerGate: {
           result: "PASS",
           signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -354,9 +354,9 @@ describe("qfai prototyping certify (generate)", () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedAllGatesPass(root);
-    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
-      path.join(root, ".qfai/contracts/ui/extra.yaml"),
+      path.join(root, ".qfai/spec/03_contract/ui/extra.yaml"),
       "# QFAI-CONTRACT-ID: CON-UI-0007\nscreens:\n  - id: extra\n",
       "utf-8",
     );
@@ -370,7 +370,7 @@ describe("qfai prototyping certify (generate)", () => {
 
   it("exits 2 when prototyping.json#uiContractsCovered is missing", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     // Re-write prototyping.json without the uiContractsCovered slot.
     await writeFile(
@@ -393,7 +393,7 @@ describe("qfai prototyping certify (generate)", () => {
 
   it("exits 2 when prototyping.json#uiContractsCovered is malformed (empty array)", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     await writeFile(
       path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
@@ -416,7 +416,7 @@ describe("qfai prototyping certify (generate)", () => {
 
   it("accepts legacy reviewer signoff fields when issuing the certificate", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     await writeFile(
       path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
@@ -426,6 +426,7 @@ describe("qfai prototyping certify (generate)", () => {
         runId: "run-x",
         designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
         uiContractsCovered: ["CON-UI-0012"],
+        frozenSurfaceUnion: ["CON-UI-0012"],
         reviewerGate: {
           result: "PASS",
           signoff: { reviewer: "legacy-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -449,7 +450,7 @@ describe("qfai prototyping certify (generate)", () => {
 describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () => {
   it("exits 2 when accepted iter is missing HTML for a declared screen contract", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     // Plant a UI contract declaring two screens; the seeded
     // accepted-iter (iter-01) has only `index.html`, not
@@ -477,7 +478,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
   // expected-next-cycle gate before capture runs.
   it("points the missing-HTML failure at a reachable recovery path", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
@@ -525,7 +526,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
 
   it("exits 2 when accepted iter has only an older screen file's name (anchored to accepted iter)", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     // UI contracts declare home + settings.
     await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
@@ -546,7 +547,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
 
   it("succeeds when accepted iter has HTML for every declared screen", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
@@ -584,7 +585,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
 describe("qfai prototyping certify --check", () => {
   it("exits 0 when certificate matches current evidence", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
     expect(await runPrototypingCertify({ root, check: true })).toBe(0);
@@ -598,7 +599,7 @@ describe("qfai prototyping certify --check", () => {
 
   it("exits 2 when evidence has been modified after certify", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     await runPrototypingCertify({ root, check: false });
     await writeFile(
@@ -678,7 +679,7 @@ describe("qfai prototyping show-ui-contract", () => {
 describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
   it("TC-3.6.2: final HTML with one DESIGN.md violation → exit 2", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     // Overwrite the final HTML with a violating color literal.
     await writeFile(
@@ -691,7 +692,7 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
 
   it("TC-3.6.3: no final iteration HTML → exit 2", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     // Remove the seeded final HTML directory entirely.
     await rm(path.join(root, ".qfai/evidence/prototyping/iter-01"), {
@@ -703,7 +704,7 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
 
   it("TC-3.6.4: empty violations array (clean HTML) → exit 0", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
   });
@@ -720,7 +721,7 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
     // (which deletes stale iter-NN dirs as part of the hard reset) or
     // remove them manually before sealing.
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     // The fresh loop has 2 recorded iterations → accepted index = 1.
     // Plant a stale iter-14 with violating HTML.
@@ -751,9 +752,9 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
     // EISDIR on `readFile`, which routes through the new `unreadable`
     // kind exactly as EACCES / EPERM / EIO would. Works cross-platform.
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
-    await mkdir(path.join(root, ".qfai/contracts/design/DESIGN.md.lock.yaml"), {
+    await mkdir(path.join(root, ".qfai/spec/03_contract/design/DESIGN.md.lock.yaml"), {
       recursive: true,
     });
 
@@ -798,7 +799,7 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
     // iter dirs are present: certify uses iter-01 (the recorded final)
     // and ignores iter-00.
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     // No stale dirs planted; iter-00 and iter-01 are both seeded clean
     // by seedAllGatesPass.
@@ -807,7 +808,7 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
 
   it("exits 2 when the recorded final iter dir has no HTML (despite older iters with HTML)", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     // Wipe the recorded final iter (iter-01) but leave iter-00 with HTML.
     await rm(path.join(root, ".qfai/evidence/prototyping/iter-01"), {
@@ -824,7 +825,7 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
 
   it("TC-3.6.5: only the LAST iter is evaluated (older dirty iters ignored)", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     // Add an older iter-00 with violating HTML; iter-01 (final) is clean.
     const iter00 = path.join(root, ".qfai/evidence/prototyping/iter-00");
@@ -839,7 +840,7 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
 
   it("TC-3.6.7: certificate.json includes designMd { path, sha256 }", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
     const certBody = JSON.parse(
@@ -853,7 +854,7 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
 
   it("TC-3.6.8: designMd.sha256 is 64-char lowercase hex", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
     const certBody = JSON.parse(
@@ -866,7 +867,7 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
 
   it("TC-3.6.9: --check fails when DESIGN.md mutated after certify", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
     // Mutate DESIGN.md by 1 byte → sha mismatch.
