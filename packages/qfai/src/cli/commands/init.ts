@@ -2435,61 +2435,80 @@ async function replaceRootGitignore(
 ): Promise<void> {
   const qfaiDir = path.join(destRoot, ".qfai");
   const stageDir = path.join(qfaiDir, "report");
-  for (const dir of [qfaiDir, stageDir]) {
-    try {
-      await mkdir(dir);
-    } catch (err: unknown) {
-      if (!hasErrnoCode(err) || err.code !== "EEXIST") throw err;
-    }
-    if (!(await lstat(dir)).isDirectory()) {
-      throw new Error(`Cannot stage .gitignore: ${formatReportPath(dir)} is not a directory.`);
-    }
-  }
-
-  const original = await safeLstat(target);
-  if (original !== undefined && !original.isFile()) {
-    throw new Error("Cannot update .gitignore: its path is not a regular file.");
-  }
-  const staging = path.join(stageDir, `.gitignore-${process.pid}-${randomUUID()}.tmp`);
-  const ownerPath = `${staging}.owner`;
+  let createdStageDir = false;
+  let cleanupError: Error | undefined;
   try {
-    await writeFile(ownerPath, rootGitignoreStageOwner(content), {
-      encoding: "utf-8",
-      flag: "wx",
-      mode: 0o600,
-    });
-    const handle = await open(
-      staging,
-      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL,
-      0o600,
-    );
-    try {
-      await handle.writeFile(content, "utf-8");
-      if (original !== undefined) await handle.chmod(original.mode & 0o7777);
-    } finally {
-      await handle.close();
-    }
-    if (original !== undefined) {
-      const refusal = await keepOwner(staging, original);
-      if (refusal !== null) throw new Error(`Cannot update .gitignore: ${refusal}`);
+    for (const dir of [qfaiDir, stageDir]) {
+      try {
+        await mkdir(dir);
+        if (dir === stageDir) createdStageDir = true;
+      } catch (err: unknown) {
+        if (!hasErrnoCode(err) || err.code !== "EEXIST") throw err;
+      }
+      if (!(await lstat(dir)).isDirectory()) {
+        throw new Error(`Cannot stage .gitignore: ${formatReportPath(dir)} is not a directory.`);
+      }
     }
 
-    const currentStat = await safeLstat(target);
-    if (currentStat !== undefined && !currentStat.isFile()) {
-      throw new Error("Cannot update .gitignore: its path changed to a non-regular file.");
+    const original = await safeLstat(target);
+    if (original !== undefined && !original.isFile()) {
+      throw new Error("Cannot update .gitignore: its path is not a regular file.");
     }
-    const current = currentStat === undefined ? "" : await readFile(target, "utf-8");
-    if ((currentStat !== undefined) !== previousExisted || current !== previous) {
-      throw new Error("Cannot update .gitignore: it changed while this run was working.");
+    const staging = path.join(stageDir, `.gitignore-${process.pid}-${randomUUID()}.tmp`);
+    const ownerPath = `${staging}.owner`;
+    try {
+      await writeFile(ownerPath, rootGitignoreStageOwner(content), {
+        encoding: "utf-8",
+        flag: "wx",
+        mode: 0o600,
+      });
+      const handle = await open(
+        staging,
+        constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL,
+        0o600,
+      );
+      try {
+        await handle.writeFile(content, "utf-8");
+        if (original !== undefined) await handle.chmod(original.mode & 0o7777);
+      } finally {
+        await handle.close();
+      }
+      if (original !== undefined) {
+        const refusal = await keepOwner(staging, original);
+        if (refusal !== null) throw new Error(`Cannot update .gitignore: ${refusal}`);
+      }
+
+      const currentStat = await safeLstat(target);
+      if (currentStat !== undefined && !currentStat.isFile()) {
+        throw new Error("Cannot update .gitignore: its path changed to a non-regular file.");
+      }
+      const current = currentStat === undefined ? "" : await readFile(target, "utf-8");
+      if ((currentStat !== undefined) !== previousExisted || current !== previous) {
+        throw new Error("Cannot update .gitignore: it changed while this run was working.");
+      }
+      if (!(await lstat(stageDir)).isDirectory()) {
+        throw new Error("Cannot update .gitignore: the staging directory changed.");
+      }
+      await rename(staging, target);
+    } finally {
+      await rm(staging, { force: true }).catch(() => undefined);
+      await rm(ownerPath, { force: true }).catch(() => undefined);
     }
-    if (!(await lstat(stageDir)).isDirectory()) {
-      throw new Error("Cannot update .gitignore: the staging directory changed.");
-    }
-    await rename(staging, target);
   } finally {
-    await rm(staging, { force: true }).catch(() => undefined);
-    await rm(ownerPath, { force: true }).catch(() => undefined);
+    if (createdStageDir) {
+      try {
+        await rmdir(stageDir);
+      } catch (err: unknown) {
+        if (
+          !hasErrnoCode(err) ||
+          (err.code !== "ENOENT" && err.code !== "ENOTEMPTY" && err.code !== "EEXIST")
+        ) {
+          cleanupError = err instanceof Error ? err : new Error(String(err));
+        }
+      }
+    }
   }
+  if (cleanupError !== undefined) throw cleanupError;
 }
 
 /**

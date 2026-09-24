@@ -49,7 +49,9 @@ describe("root .gitignore replacement", () => {
 
       expect(fault.staged).toContain("custom-output/\n");
       expect(await readFile(target, "utf-8")).toBe(original);
-      expect(await readdir(path.join(root, ".qfai", "report"))).toEqual([]);
+      await expect(readdir(path.join(root, ".qfai", "report"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
 
       fault.failPublish = false;
       await ensureRootGitignoreEntries(root, false, () => {});
@@ -75,10 +77,27 @@ describe("root .gitignore replacement", () => {
       await expect(readFile(path.join(root, ".gitignore"), "utf-8")).rejects.toMatchObject({
         code: "ENOENT",
       });
-      expect(await readdir(path.join(root, ".qfai", "report"))).toEqual([]);
+      await expect(readdir(path.join(root, ".qfai", "report"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
     } finally {
       fault.failPublish = false;
       fault.staged = "";
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("removes its temporary report directory after publishing a new .gitignore", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-gitignore-atomic-"));
+    try {
+      await ensureRootGitignoreEntries(root, false, () => {});
+      expect(await readFile(path.join(root, ".gitignore"), "utf-8")).toContain(
+        QFAI_GITIGNORE_MARKER,
+      );
+      await expect(readdir(path.join(root, ".qfai", "report"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
