@@ -19,9 +19,9 @@ it("describes the story obligation omitted by each partial profile", async () =>
       return result.issues.find((issue) => issue.code === "QFAI-PROFILE-001")?.message;
     };
 
-    expect(await notice("atdd")).toContain("QFAI-STORY-006 (EX)");
-    expect(await notice("tdd")).toContain("QFAI-STORY-006 (BF/AC)");
-    expect((await notice("full")) ?? "").not.toContain("QFAI-STORY-006");
+    expect(await notice("atdd")).toContain("QFAI-STORY-001");
+    expect(await notice("tdd")).toContain("QFAI-STORY-001");
+    expect((await notice("full")) ?? "").not.toContain("QFAI-STORY-001");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

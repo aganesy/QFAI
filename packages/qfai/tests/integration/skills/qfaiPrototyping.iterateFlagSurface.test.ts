@@ -22,7 +22,7 @@ import { describe, expect, it } from "vitest";
 
 const SKILL_MD = path.resolve(
   process.cwd(),
-  "assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md",
+  "assets/init/.qfai/assistant/skill/qfai-prototyping/SKILL.md",
 );
 const ARGS_TS = path.resolve(process.cwd(), "src/cli/lib/args.ts");
 const MAIN_TS = path.resolve(process.cwd(), "src/cli/main.ts");

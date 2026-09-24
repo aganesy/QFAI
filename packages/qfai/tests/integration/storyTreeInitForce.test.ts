@@ -31,7 +31,7 @@ it("removes only retired workflow files from both assistant skill layouts on --f
       await mkdir(directory, { recursive: true });
       await writeFile(path.join(directory, retiredName), "# retired workflow\n");
       await writeFile(path.join(directory, `${retiredName}.notes`), "project note\n");
-      await mkdir(path.join(directory, "project-notes"));
+      await mkdir(path.join(directory, "project-notes"), { recursive: true });
       await writeFile(path.join(directory, "project-notes", "keep.md"), "project directory\n");
     }
     const currentSkill = path.join(assistant, "skill", "qfai-sdd", "SKILL.md");

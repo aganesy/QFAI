@@ -17,7 +17,7 @@ import { describe, expect, it } from "vitest";
 
 const SKILL_ROOT = path.resolve(
   process.cwd(),
-  "assets/init/.qfai/assistant/skills/qfai-prototyping",
+  "assets/init/.qfai/assistant/skill/qfai-prototyping",
 );
 
 async function listReferenceFiles(): Promise<string[]> {

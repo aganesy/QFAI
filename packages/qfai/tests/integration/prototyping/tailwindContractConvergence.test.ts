@@ -92,6 +92,12 @@ const convergedIteration = (index: number): Iteration => ({
   index,
   commitSha: `${index.toString().padStart(40, "0")}`,
   blockingFindings: [],
+  scores: {
+    informationArchitecture: "exceptional",
+    navigationFlow: "exceptional",
+    usability: "exceptional",
+    functionality: "exceptional",
+  },
   proseCritique: "ok",
   layoutAntiPatternsDetected: [],
   designMdViolations: [],

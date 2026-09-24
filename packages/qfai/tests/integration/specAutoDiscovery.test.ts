@@ -47,10 +47,8 @@ const stubConfig: QfaiConfig = {
       maxE2eScenarioCount: null,
     },
     traceability: {
-      scMustHaveTest: true,
       testFileGlobs: ["**/*.test.ts"],
       testFileExcludeGlobs: [],
-      unknownContractIdSeverity: "error",
     },
   },
   output: { validateJsonPath: ".qfai/report/validate.json" },
@@ -863,68 +861,66 @@ describe("TC-0014-0029: integration test existence", () => {
 // TC-0008-0011
 // QFAI:EX-0001-0074-01
 describe("TC-0008-0011: Coverage Depth Matrix Produced and Verified", () => {
-  it("spec-0008 06_Test-Cases.md contains depth matrix columns", async () => {
-    const tcPath = path.resolve(
+  it("the flow matrix records each required depth dimension and story-tree IDs", async () => {
+    const matrixPath = path.resolve(
       process.cwd(),
       "..",
       "..",
       ".qfai",
-      "specs",
-      "spec-0008",
-      "06_Test-Cases.md",
+      "evidence",
+      "coverage-depth-BF-0001.md",
     );
-    const content = await readFile(tcPath, "utf-8");
-    expect(content).toContain("Coverage Depth Matrix");
-    expect(content).toContain("normal");
-    expect(content).toContain("error");
+    const content = await readFile(matrixPath, "utf-8");
+    expect(content).toContain("Coverage Depth Matrix — BF-0001");
+    expect(content).toMatch(
+      /\| Normal \| Error \| Boundary \| Special \| State transition \| Combinatorial \|/,
+    );
+    expect(content).toContain("| US-0001-0074 |");
+    expect(content).toContain("| AC-0001-0074-01 |");
+    expect(content).toContain("| EX-0001-0074-01 |");
   });
 
-  it("AC-0008-0009 specifies depth categories", async () => {
+  it("the story criterion assigns depth review to the business flow", async () => {
     const acPath = path.resolve(
       process.cwd(),
       "..",
       "..",
       ".qfai",
-      "specs",
-      "spec-0008",
-      "03_Acceptance-Criteria.md",
+      "spec",
+      "02_business-flow",
+      "business-flow-0001",
+      "user-story-0001-0074",
+      "02_Acceptance-Criteria.md",
     );
     const content = await readFile(acPath, "utf-8");
-    expect(content).toContain("AC-0008-0009");
-    expect(content).toMatch(/normal.*error.*boundary/i);
+    expect(content).toContain("AC-0001-0074-01");
+    expect(content).toMatch(/normal\/error\/boundary\/special\/state-transition\/combinatorial/);
+    expect(content).toContain("one ATDD evidence file");
   });
 });
 
 // TC-0008-0012
 // QFAI:EX-0001-0074-01
 describe("TC-0008-0012: Normal-Path-Only Flagged as Incomplete", () => {
-  it("spec defines normal-path-only detection rule", async () => {
-    const tcPath = path.resolve(
-      process.cwd(),
-      "..",
-      "..",
-      ".qfai",
-      "specs",
-      "spec-0008",
-      "06_Test-Cases.md",
-    );
-    const content = await readFile(tcPath, "utf-8");
-    expect(content).toContain("Normal-Path-Only Flagged as Incomplete");
-    expect(content).toMatch(/flagged as incomplete/i);
+  const storyDir = path.resolve(
+    process.cwd(),
+    "..",
+    "..",
+    ".qfai",
+    "spec",
+    "02_business-flow",
+    "business-flow-0001",
+    "user-story-0001-0074",
+  );
+
+  it("the story criterion requires incomplete status for a normal-only case", async () => {
+    const content = await readFile(path.join(storyDir, "02_Acceptance-Criteria.md"), "utf-8");
+    expect(content).toMatch(/only normal-path test cases is flagged as incomplete/);
   });
 
-  it("EX-0008-0008 shows incomplete status for normal-only US", async () => {
-    const exPath = path.resolve(
-      process.cwd(),
-      "..",
-      "..",
-      ".qfai",
-      "specs",
-      "spec-0008",
-      "05_Examples.md",
-    );
-    const content = await readFile(exPath, "utf-8");
-    expect(content).toContain("EX-0008-0008");
-    expect(content).toContain("incomplete");
+  it("the example assigns missing error depth to the criterion row", async () => {
+    const content = await readFile(path.join(storyDir, "03_Example.md"), "utf-8");
+    expect(content).toContain("EX-0001-0074-01");
+    expect(content).toContain("❌ for Error path and is incomplete");
   });
 });

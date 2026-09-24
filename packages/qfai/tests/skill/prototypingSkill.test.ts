@@ -227,7 +227,7 @@ describe("prototyping skill asset — the reviewer and its inputs", () => {
     );
     expect(skill).toContain("does not require a third sub-agent identity");
     expect(skill).toContain("optional `iterate --capture` CLI operation");
-    expect(skill).toContain("The reviewer operates Playwright during the assessment");
+    expect(skill).toContain("The reviewer operates Playwright live");
   });
 
   it("requires the reviewer to score four ordinal axes while retaining six per-screen Feel fields", async () => {
