@@ -118,6 +118,8 @@ proof; the completion reviewer checks flow coverage and evidence independently.
 An author cannot certify their own tests. Resolve blocking findings using
 `rule/review-convergence.md`; seal review evidence as
 `references/pack-seal.md` and `references/review-fix-rounds.md` require.
+For a failed gate, follow
+`rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
 Write a handoff entry naming BF and AC IDs, test paths and selectors, commands
 and outcomes, evidence paths, unresolved findings and implementation work.
