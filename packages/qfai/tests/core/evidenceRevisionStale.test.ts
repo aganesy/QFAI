@@ -423,7 +423,10 @@ describe("staleness at rest, over what the test reached", () => {
    * The test imports `src/login.ts` (written the ESM way, as `.js`), which
    * imports `src/session.ts`. `src/billing.ts` is imported by nothing.
    */
-  async function repoWithImports(testBody?: string): Promise<{ root: string; head: string }> {
+  async function repoWithImports(
+    testBody?: string,
+    extraFiles: Readonly<Record<string, string>> = {},
+  ): Promise<{ root: string; head: string }> {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reach-"));
     dirs.push(root);
     git(root, "init", "--initial-branch=main");
@@ -442,6 +445,7 @@ describe("staleness at rest, over what the test reached", () => {
       TEST,
       testBody ?? 'import { login } from "../../src/login.js";\nit("logs in", () => login);\n',
     );
+    for (const [rel, content] of Object.entries(extraFiles)) await write(root, rel, content);
     git(root, "add", "-A");
     git(root, "commit", "-m", "seed");
     const head = execFileSync("git", ["rev-parse", "HEAD"], {
@@ -528,6 +532,97 @@ describe("staleness at rest, over what the test reached", () => {
     const reach = await observationReach(root, "src", TEST, []);
     expect(reach.kind).toBe("unfollowed");
     expect(reach.kind === "unfollowed" ? reach.reason : "").toContain("@/login");
+  });
+
+  describe("an import through a path alias", () => {
+    const ALIASED_TEST = 'import { format } from "@/lib/format";\nit("formats", () => format);\n';
+    // JSONC, as the compiler reads it: a comment and a trailing comma. The first
+    // target names nothing, so the second has to be tried.
+    const TSCONFIG = [
+      "{",
+      "  // Next.js writes its alias like this.",
+      '  "compilerOptions": {',
+      '    "paths": { "@/*": ["./generated/*", "./src/*"], },',
+      "  },",
+      "}",
+      "",
+    ].join("\n");
+    const FORMAT = "src/lib/format.ts";
+
+    it("follows the alias to the file it names", async () => {
+      const { root } = await repoWithImports(ALIASED_TEST, {
+        "tsconfig.json": TSCONFIG,
+        [FORMAT]: "export const format = 1;\n",
+      });
+
+      expect([...(await reachOf(root))].sort()).toEqual([FORMAT, TEST]);
+    });
+
+    it("stays clean when a file the alias does not reach changed", async () => {
+      const { root, head } = await repoWithImports(ALIASED_TEST, {
+        "tsconfig.json": TSCONFIG,
+        [FORMAT]: "export const format = 1;\n",
+      });
+      await commit(root, "src/billing.ts", "export const charge = 2;\n");
+
+      expect(
+        staleEvidenceFiles(root, "src", section(head), TEST, new Map(), await reachOf(root)),
+      ).toBeNull();
+    });
+
+    it("goes stale when the aliased file changed", async () => {
+      const { root, head } = await repoWithImports(ALIASED_TEST, {
+        "tsconfig.json": TSCONFIG,
+        [FORMAT]: "export const format = 1;\n",
+      });
+      await commit(root, FORMAT, "export const format = 2;\n");
+
+      expect(
+        staleEvidenceFiles(root, "src", section(head), TEST, new Map(), await reachOf(root)),
+      ).toEqual([FORMAT]);
+    });
+
+    it("reads the aliases from the config the root one extends", async () => {
+      const { root } = await repoWithImports(ALIASED_TEST, {
+        "tsconfig.json": '{ "extends": "./tsconfig.base.json" }\n',
+        "tsconfig.base.json": '{ "compilerOptions": { "paths": { "@/*": ["./src/*"] } } }\n',
+        [FORMAT]: "export const format = 1;\n",
+      });
+
+      expect([...(await reachOf(root))].sort()).toEqual([FORMAT, TEST]);
+    });
+
+    it("reads jsconfig.json where there is no tsconfig.json", async () => {
+      const { root } = await repoWithImports(ALIASED_TEST, {
+        "jsconfig.json":
+          '{ "compilerOptions": { "baseUrl": ".", "paths": { "@/*": ["src/*"] } } }\n',
+        [FORMAT]: "export const format = 1;\n",
+      });
+
+      expect([...(await reachOf(root))].sort()).toEqual([FORMAT, TEST]);
+    });
+
+    it("still falls back for an alias no pattern matches", async () => {
+      const { root } = await repoWithImports(
+        'import { format } from "~/lib/format";\nit("formats", () => format);\n',
+        { "tsconfig.json": TSCONFIG, [FORMAT]: "export const format = 1;\n" },
+      );
+
+      const reach = await observationReach(root, "src", TEST, []);
+      expect(reach.kind).toBe("unfollowed");
+      expect(reach.kind === "unfollowed" ? reach.reason : "").toContain("~/lib/format");
+    });
+
+    it("falls back, naming the pattern, when a matched alias names no file", async () => {
+      const { root } = await repoWithImports(
+        'import { gone } from "@/lib/gone";\nit("formats", () => gone);\n',
+        { "tsconfig.json": TSCONFIG },
+      );
+
+      const reach = await observationReach(root, "src", TEST, []);
+      expect(reach.kind).toBe("unfollowed");
+      expect(reach.kind === "unfollowed" ? reach.reason : "").toContain("`@/*` in tsconfig.json");
+    });
   });
 
   it("falls back when an import's path is computed", async () => {

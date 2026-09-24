@@ -7138,7 +7138,7 @@ async function validateSpecTddList(
   // run would answer a later one from an earlier tree.
   const revisionDiffCache = new Map<string, ChangedSince>();
   // Each file's imports are read once, however many rows' tests reach it.
-  const reachCache: ObservationReachCache = new Map();
+  const reachCache: ObservationReachCache = { imports: new Map() };
   // A single per-spec evidence file can serve hundreds of ledger rows. Cache
   // its parsed sections (and a missing-file sentinel) so each path is read once.
   const evidenceIndexCache = new Map<string, MarkdownEvidenceIndex | null>();

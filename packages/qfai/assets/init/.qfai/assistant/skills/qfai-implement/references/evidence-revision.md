@@ -734,12 +734,19 @@ Consequences:
     through other imports.
 
   Whether a change was unrelated is then computed from the imports rather than
-  judged. The validator follows relative imports and treats built-ins and
-  installed packages as outside the project. It measures over the whole source
-  directory instead, and says why in the finding, when it cannot follow an
-  import: a path alias, a computed `import()` or `require()`, a relative path
-  that names no file, or a test file that is not JavaScript or TypeScript. A
-  setup file the test runner loads by configuration is not in the reached set.
+  judged. The validator follows relative imports, and path aliases through the
+  `compilerOptions.paths` and `baseUrl` of the root `tsconfig.json` (or
+  `jsconfig.json`), including a config it extends by relative path. Built-ins
+  and installed packages are outside the project. It measures over the whole
+  source directory instead, and says why in the finding, when it cannot follow
+  an import:
+  - an alias no pattern resolves;
+  - a computed `import()` or `require()`;
+  - a relative path that names no file;
+  - a test file that is not JavaScript or TypeScript.
+
+  A setup file the test runner loads by configuration is not in the reached
+  set.
 
 - **A clone that does not hold the revision cannot answer this at all.** The diff
   above fails on an unreachable commit, which is not the same as returning

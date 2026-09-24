@@ -38,8 +38,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   rows whose test and module had not moved. A `done` row is now measured over
   its test file, the files its newest `RED test manifest` lists, and the files
   under `srcDir` those import, directly or transitively. Relative imports are
-  followed; built-ins and installed packages are outside the project. Where an
-  import cannot be followed — a path alias, a computed `import()` or
+  followed, and so are path aliases such as `@/lib/x`, through the `paths` and
+  `baseUrl` of the root `tsconfig.json` or `jsconfig.json`. Built-ins and
+  installed packages are outside the project. Where an import cannot be
+  followed — an alias no pattern resolves, a computed `import()` or
   `require()`, a relative path that names no file, or a test file that is not
   JavaScript or TypeScript — the row is measured over all of `srcDir` as before,
   and the finding says why. The finding now names the covered set it measured.

@@ -2,6 +2,7 @@ import { readFile, realpath, stat } from "node:fs/promises";
 import { isBuiltin } from "node:module";
 import path from "node:path";
 
+import { withoutJsoncSyntax } from "./jsonc.js";
 import { isInside } from "./validators/utils.js";
 
 /**
@@ -23,14 +24,18 @@ import { isInside } from "./validators/utils.js";
  * the whole source directory instead. An import that cannot be followed may
  * lead anywhere, so under-reporting it would clear a row the change did reach.
  *
- * SIMPLIFIED: reads string-literal specifiers only. A relative path is resolved
- * the way a bundler resolves one; a bare specifier counts as external only when
- * it is a runtime built-in or a package installed outside the repository's own
- * code. A path alias (`@/lib/x`), a computed `import()` or `require()`, or a
- * test file in a language other than JavaScript or TypeScript is unfollowed.
- * Setup files a test runner loads by configuration are not reached either.
- * Lift when: a project's aliased rows are measured still going stale for
- * changes their tests do not import.
+ * A relative path is resolved the way a bundler resolves one. A bare specifier
+ * is resolved through the `compilerOptions.paths` and `baseUrl` of the root
+ * `tsconfig.json` (or `jsconfig.json` where there is none), and otherwise
+ * counts as external only when it is a runtime built-in or a package installed
+ * outside the repository's own code.
+ *
+ * SIMPLIFIED: reads string-literal specifiers only, and only the root config.
+ * A computed `import()` or `require()`, an alias no pattern resolves, or a test
+ * file in a language other than JavaScript or TypeScript is unfollowed. Setup
+ * files a test runner loads by configuration are not reached.
+ * Lift when: a project's rows are measured falling back to the whole source
+ * directory for one of these, rather than for an import that names no file.
  */
 export type ObservationReach =
   | { readonly kind: "reach"; readonly files: ReadonlySet<string> }
@@ -41,8 +46,40 @@ type FileImports =
   | { readonly kind: "imports"; readonly files: readonly string[] }
   | { readonly kind: "unfollowed"; readonly reason: string };
 
-/** Parsed imports per absolute path, shared by every row of one run. */
-export type ObservationReachCache = Map<string, FileImports>;
+/** The path aliases a project's root compiler config declares. */
+interface PathAliases {
+  /** The config file they were read from, for a finding to name. */
+  readonly configName: string;
+  /** `[pattern, targets]`, each pattern holding at most one `*`. */
+  readonly paths: ReadonlyArray<readonly [string, readonly string[]]>;
+  /** Where a `paths` target is resolved from. */
+  readonly pathsBase: string;
+  /** Where a bare specifier no pattern matches is tried, if anywhere. */
+  readonly baseUrl: string | null;
+}
+
+/**
+ * Shared by every row of one run: each file's imports, and the project's path
+ * aliases, which stay `undefined` until the first row reads them.
+ */
+export interface ObservationReachCache {
+  readonly imports: Map<string, FileImports>;
+  aliases?: PathAliases | null;
+}
+
+/** The part of a compiler config that decides how a bare specifier resolves. */
+interface ConfigPaths {
+  readonly dir: string;
+  readonly baseUrl: string | null;
+  readonly paths: ReadonlyArray<readonly [string, readonly string[]]> | null;
+}
+
+/** Everything a file's imports are resolved against. */
+interface WalkContext {
+  readonly root: string;
+  readonly realRoot: string;
+  readonly aliases: PathAliases | null;
+}
 
 const SCRIPT_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"]);
 const PROBE_EXTENSIONS = [
@@ -93,8 +130,8 @@ function underNodeModules(absolute: string): boolean {
   return absolute.split(path.sep).includes("node_modules");
 }
 
-async function resolveRelative(from: string, specifier: string): Promise<string | null> {
-  const base = path.resolve(path.dirname(from), specifier.replace(/[?#].*$/, ""));
+/** The file an import of `base` loads: as written, by extension, or as a directory index. */
+async function resolveFile(base: string): Promise<string | null> {
   const extension = path.extname(base);
   const stem = base.slice(0, base.length - extension.length);
   const candidates = [
@@ -122,7 +159,6 @@ async function isExternalPackage(
   from: string,
   specifier: string,
 ): Promise<boolean> {
-  if (isBuiltin(specifier)) return true;
   const segments = specifier.split("/");
   const scoped = specifier.startsWith("@");
   const nameSegments = segments.slice(0, scoped ? 2 : 1);
@@ -143,8 +179,186 @@ async function isExternalPackage(
   }
 }
 
-async function readImports(root: string, realRoot: string, absolute: string): Promise<FileImports> {
-  const shown = path.relative(root, absolute).split(path.sep).join("/");
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** A JSONC file's value, `undefined` when there is no such file, `null` when it does not parse. */
+async function readJsonc(file: string): Promise<unknown> {
+  let text: string;
+  try {
+    text = await readFile(file, "utf-8");
+  } catch {
+    return undefined;
+  }
+  try {
+    const parsed: unknown = JSON.parse(withoutJsoncSyntax(text));
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function configPaths(config: unknown, dir: string): ConfigPaths {
+  const options: Record<string, unknown> =
+    isRecord(config) && isRecord(config.compilerOptions) ? config.compilerOptions : {};
+  const baseUrl = typeof options.baseUrl === "string" ? path.resolve(dir, options.baseUrl) : null;
+  const paths = isRecord(options.paths)
+    ? Object.entries(options.paths).map(
+        ([pattern, targets]): readonly [string, readonly string[]] => [
+          pattern,
+          Array.isArray(targets)
+            ? targets.filter((target): target is string => typeof target === "string")
+            : [],
+        ],
+      )
+    : null;
+  return { dir, baseUrl, paths };
+}
+
+/**
+ * The config a relative `extends` names, one level up.
+ *
+ * SIMPLIFIED: one level, and a relative path only. A package name or an array
+ * in `extends` is not read, so the aliases it declares do not resolve and the
+ * row falls back to the whole source directory.
+ * Lift when: a project whose aliases live in an extended package config is
+ * measured falling back for that reason.
+ */
+async function extendedConfigPaths(config: unknown, dir: string): Promise<ConfigPaths | null> {
+  const parent = isRecord(config) ? config.extends : undefined;
+  if (typeof parent !== "string" || !(parent.startsWith("./") || parent.startsWith("../"))) {
+    return null;
+  }
+  const file = path.resolve(dir, parent);
+  for (const candidate of file.endsWith(".json") ? [file] : [file, `${file}.json`]) {
+    const parsed = await readJsonc(candidate);
+    if (parsed !== undefined) return configPaths(parsed, path.dirname(candidate));
+  }
+  return null;
+}
+
+/**
+ * The path aliases of the project's root `tsconfig.json`, or of its
+ * `jsconfig.json` where it has no `tsconfig.json`.
+ *
+ * `paths` and `baseUrl` follow the compiler: a config's own value wins over the
+ * one it extends, and `paths` targets resolve from `baseUrl` where one is set,
+ * otherwise from the directory of the config that declared them.
+ */
+async function loadPathAliases(root: string): Promise<PathAliases | null> {
+  for (const configName of ["tsconfig.json", "jsconfig.json"]) {
+    const config = await readJsonc(path.join(root, configName));
+    if (config === undefined) continue;
+    const own = configPaths(config, root);
+    const parent = await extendedConfigPaths(config, root);
+    const baseUrl = own.baseUrl ?? parent?.baseUrl ?? null;
+    const declaring = own.paths !== null ? own : parent?.paths ? parent : null;
+    return {
+      configName,
+      baseUrl,
+      paths: declaring?.paths ?? [],
+      pathsBase: baseUrl ?? declaring?.dir ?? root,
+    };
+  }
+  return null;
+}
+
+/**
+ * The `paths` pattern that governs `specifier`, and what its `*` captured.
+ *
+ * An exact pattern wins; among wildcards, the longest prefix does, as the
+ * compiler chooses.
+ */
+function matchingPattern(
+  paths: PathAliases["paths"],
+  specifier: string,
+): { pattern: string; targets: readonly string[]; captured: string } | null {
+  let best: { pattern: string; targets: readonly string[]; captured: string } | null = null;
+  let bestPrefix = -1;
+  for (const [pattern, targets] of paths) {
+    const star = pattern.indexOf("*");
+    if (star === -1) {
+      if (pattern === specifier) return { pattern, targets, captured: "" };
+      continue;
+    }
+    const prefix = pattern.slice(0, star);
+    const suffix = pattern.slice(star + 1);
+    if (
+      prefix.length > bestPrefix &&
+      specifier.length >= prefix.length + suffix.length &&
+      specifier.startsWith(prefix) &&
+      specifier.endsWith(suffix)
+    ) {
+      const captured = specifier.slice(prefix.length, specifier.length - suffix.length);
+      best = { pattern, targets, captured };
+      bestPrefix = prefix.length;
+    }
+  }
+  return best;
+}
+
+/** Where a specifier leads: a file, code outside the project, or nowhere this walk can follow. */
+type SpecifierTarget =
+  | { readonly kind: "file"; readonly file: string }
+  | { readonly kind: "external" }
+  | { readonly kind: "unfollowed"; readonly why: string };
+
+/**
+ * A bare specifier resolved through the project's path aliases, or `null` when
+ * no alias applies to it.
+ */
+async function resolveAlias(
+  aliases: PathAliases | null,
+  specifier: string,
+): Promise<SpecifierTarget | null> {
+  if (aliases === null) return null;
+  const match = matchingPattern(aliases.paths, specifier);
+  if (match !== null) {
+    for (const target of match.targets) {
+      const file = await resolveFile(
+        path.resolve(aliases.pathsBase, target.replace("*", match.captured)),
+      );
+      if (file !== null) return { kind: "file", file };
+    }
+    return {
+      kind: "unfollowed",
+      why: `which matches \`${match.pattern}\` in ${aliases.configName} but names no file`,
+    };
+  }
+  if (aliases.baseUrl !== null) {
+    const file = await resolveFile(path.resolve(aliases.baseUrl, specifier));
+    if (file !== null) return { kind: "file", file };
+  }
+  return null;
+}
+
+async function resolveSpecifier(
+  context: WalkContext,
+  from: string,
+  specifier: string,
+): Promise<SpecifierTarget> {
+  const withoutQuery = specifier.replace(/\?.*$/, "");
+  if (withoutQuery.startsWith("./") || withoutQuery.startsWith("../")) {
+    const file = await resolveFile(
+      path.resolve(path.dirname(from), withoutQuery.replace(/#.*$/, "")),
+    );
+    return file !== null
+      ? { kind: "file", file }
+      : { kind: "unfollowed", why: "which names no file" };
+  }
+  if (isBuiltin(withoutQuery)) return { kind: "external" };
+  const aliased = await resolveAlias(context.aliases, withoutQuery);
+  if (aliased !== null) return aliased;
+  if (await isExternalPackage(context.realRoot, from, withoutQuery)) return { kind: "external" };
+  return {
+    kind: "unfollowed",
+    why: "which is neither relative, a path alias, nor an installed package",
+  };
+}
+
+async function readImports(context: WalkContext, absolute: string): Promise<FileImports> {
+  const shown = path.relative(context.root, absolute).split(path.sep).join("/");
   let content: string;
   try {
     content = await readFile(absolute, "utf-8");
@@ -156,21 +370,18 @@ async function readImports(root: string, realRoot: string, absolute: string): Pr
   }
   const files: string[] = [];
   for (const specifier of specifiersIn(content)) {
-    if (specifier.startsWith("./") || specifier.startsWith("../")) {
-      const resolved = await resolveRelative(absolute, specifier);
-      if (resolved === null || !isInside(root, resolved)) {
-        return {
-          kind: "unfollowed",
-          reason: `\`${shown}\` imports \`${specifier}\`, which names no file in the repository`,
-        };
-      }
-      files.push(resolved);
-    } else if (!(await isExternalPackage(realRoot, absolute, specifier))) {
-      return {
-        kind: "unfollowed",
-        reason: `\`${shown}\` imports \`${specifier}\`, which is neither relative nor an installed package`,
-      };
+    const target = await resolveSpecifier(context, absolute, specifier);
+    if (target.kind === "external") continue;
+    const why =
+      target.kind === "unfollowed"
+        ? target.why
+        : isInside(context.root, target.file)
+          ? null
+          : "which resolves outside the repository";
+    if (why !== null) {
+      return { kind: "unfollowed", reason: `\`${shown}\` imports \`${specifier}\`, ${why}` };
     }
+    if (target.kind === "file") files.push(target.file);
   }
   return { kind: "imports", files };
 }
@@ -187,7 +398,7 @@ export async function observationReach(
   srcRelDir: string,
   testFile: string,
   otherRoots: readonly string[],
-  cache: ObservationReachCache = new Map(),
+  cache: ObservationReachCache = { imports: new Map() },
 ): Promise<ObservationReach> {
   const absoluteRoot = path.resolve(root);
   // An installed package's real path is compared against the root's, so a
@@ -214,6 +425,8 @@ export async function observationReach(
     return { kind: "unfollowed", reason: "no source directory is configured" };
   }
 
+  if (cache.aliases === undefined) cache.aliases = await loadPathAliases(absoluteRoot);
+  const context: WalkContext = { root: absoluteRoot, realRoot, aliases: cache.aliases };
   const covered = new Set<string>(
     [testFile, ...otherRoots].map((file) => file.replace(/\\/g, "/")),
   );
@@ -230,10 +443,10 @@ export async function observationReach(
     visited.add(next);
     if (isInside(sourceRoot, next)) covered.add(toRelative(next));
     if (!SCRIPT_EXTENSIONS.has(path.extname(next)) || underNodeModules(next)) continue;
-    let imports = cache.get(next);
+    let imports = cache.imports.get(next);
     if (imports === undefined) {
-      imports = await readImports(absoluteRoot, realRoot, next);
-      cache.set(next, imports);
+      imports = await readImports(context, next);
+      cache.imports.set(next, imports);
     }
     if (imports.kind === "unfollowed") return imports;
     pending.push(...imports.files);
