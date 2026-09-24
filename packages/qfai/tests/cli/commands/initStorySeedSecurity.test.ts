@@ -6,7 +6,6 @@ import { describe, expect, it } from "vitest";
 
 import { runInit } from "../../../src/cli/commands/init.js";
 
-// QFAI:BF-0001
 describe("init story-tree seed destination", () => {
   it.each(["spec", "spec/03_contract/api"])(
     "refuses an existing symlink at .qfai/%s without writing outside the project",
