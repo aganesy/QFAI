@@ -726,11 +726,18 @@ export async function runPrototypingIterate(
   if (options.cycle === 0) {
     const evidenceRootAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL);
     const iter00Abs = path.join(evidenceRootAbs, "iter-00");
-    if (await entryExists(iter00Abs)) {
-      const contents = await readdir(iter00Abs, { withFileTypes: true });
-      const hasCurrentEvidence = contents.some(
-        (entry) => !(entry.isDirectory() && LEGACY_SPEC_EVIDENCE_DIR.test(entry.name)),
-      );
+    const iter00Entry = await lstat(iter00Abs).catch((cause: unknown) => {
+      if (isEnoent(cause)) return null;
+      throw cause;
+    });
+    if (iter00Entry !== null) {
+      // A file or link is itself the entry the reset must preserve. Only a
+      // directory can contain legacy spec evidence that may stay in place.
+      const hasCurrentEvidence =
+        !iter00Entry.isDirectory() ||
+        (await readdir(iter00Abs, { withFileTypes: true })).some(
+          (entry) => !(entry.isDirectory() && LEGACY_SPEC_EVIDENCE_DIR.test(entry.name)),
+        );
       if (!hasCurrentEvidence) {
         // Old spec-scoped evidence is historical input. A new UI-contract
         // cycle can be seeded beside it without rewriting those files.
@@ -1030,7 +1037,7 @@ export async function runPrototypingIterate(
           "completion-certificate.json the new runId will replace it on the next certify pass.",
       );
     }
-    if (iter00Backup !== null) {
+    if (iter00Backup !== null && (await lstat(iter00Backup.to)).isDirectory()) {
       const legacyDirs = (await readdir(iter00Backup.to, { withFileTypes: true })).filter(
         (entry) => entry.isDirectory() && LEGACY_SPEC_EVIDENCE_DIR.test(entry.name),
       );
@@ -2521,24 +2528,6 @@ type ClearEvidenceIterDirsResult =
  * summary for the multi-spec migration helpers. The two contracts are
  * not unified yet.
  */
-/**
- * Whether an entry is present at `absPath`, read as the entry itself rather
- * than as what it points at.
- *
- * A link counts, dangling or not, as aggregate discovery already counts one:
- * the cycle-0 reset moves the entry aside and then creates the directory, so an
- * entry left in place is one the create fails on, after the reset has already
- * moved the aggregates. Distinguishes absence (false) from other I/O failures
- * (re-thrown, so the caller fails closed).
- */
-async function entryExists(absPath: string): Promise<boolean> {
-  const entry = await lstat(absPath).catch((cause: unknown) => {
-    if (isEnoent(cause)) return null;
-    throw cause;
-  });
-  return entry !== null;
-}
-
 /**
  * Recursively list every entry under `absDir` that is not a directory it
  * descends into (post-order): files, and links, which move and are removed as
