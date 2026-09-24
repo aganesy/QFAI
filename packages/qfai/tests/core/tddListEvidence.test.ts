@@ -4748,6 +4748,84 @@ ${packPair(1).join("\n")}
     });
   }
 
+  it("rejects an unmerged manifest path instead of choosing a conflict stage's mode", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+      await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+        { ".qfai/evidence/atdd-spec-0001.md": completeEntry("Integration") },
+      );
+      const git = (...args: string[]): Buffer =>
+        execFileSync("git", args, { cwd: root, stdio: ["ignore", "pipe", "ignore"] });
+      git("init");
+      git("config", "core.fileMode", "false");
+      const oid = git("hash-object", "-w", TEST_FILE).toString().trim();
+      execFileSync("git", ["update-index", "--index-info"], {
+        cwd: root,
+        input: `100644 ${oid} 2\t${TEST_FILE}\n100755 ${oid} 3\t${TEST_FILE}\n`,
+        stdio: ["pipe", "ignore", "ignore"],
+      });
+      const issues = await validateTddList(root, defaultConfig);
+      expect(
+        issues.some(
+          ({ code, message }) =>
+            code === "QFAI-TDDLIST-008" && message.includes("valid RED test manifest"),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("reads executable index modes when a manifest exceeds the Windows argument limit", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+      const evidencePath = ".qfai/evidence/atdd-spec-0001.md";
+      const extraPaths = Array.from(
+        { length: 240 },
+        (_, index) => `tests/unit/${String(index).padStart(3, "0")}-${"a".repeat(140)}.test.ts`,
+      );
+      const paths = [...extraPaths, TEST_FILE].sort((left, right) =>
+        Buffer.from(left).compare(Buffer.from(right)),
+      );
+      await seedProject(
+        root,
+        ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+        extraPaths,
+        { [evidencePath]: completeEntry("Integration") },
+      );
+      const git = (...args: string[]): void => {
+        execFileSync("git", args, { cwd: root, stdio: ["ignore", "ignore", "ignore"] });
+      };
+      git("init");
+      git("config", "core.fileMode", "false");
+      git("add", "-A");
+      git("update-index", "--chmod=+x", TEST_FILE);
+      const blob = digest("// test\n");
+      const hash = digest(
+        paths
+          .map((entry) => `${entry}\0file\0${entry === TEST_FILE ? "100755" : "100644"}\0${blob}`)
+          .join("\n"),
+      );
+      const file = path.join(root, evidencePath);
+      const evidence = (await readFile(file, "utf-8"))
+        .replace(/^- Round 1: RED test hash:.*$/m, `- Round 1: RED test hash: ${hash}`)
+        .replace(
+          "- Round 1: RED test manifest: tests/unit/sample.test.ts",
+          ["- Round 1: RED test manifest:", "", "~~~text", ...paths, "~~~"].join("\n"),
+        );
+      await writeFile(file, evidence);
+      const issues = await validateTddList(root, defaultConfig);
+      expect(
+        issues.some(
+          ({ code, message }) =>
+            code === "QFAI-TDDLIST-008" && message.includes("RED test hash matching its manifest"),
+        ),
+      ).toBe(false);
+    });
+  });
+
   it("validates the current manifest without rehashing an earlier round against later bytes", async () => {
     await withProject(async (root) => {
       const pointer =

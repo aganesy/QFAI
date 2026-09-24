@@ -2015,6 +2015,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(provenance).toContain(
       "Where `core.fileMode` is `false`, as in a repository git created on Windows, take it from the index — `100755` when `git ls-files -s` says so, and `100644` for a file git does not track. Everywhere else, take the owner's execute bit off the disk: a `0654` file is `100644`.",
     );
+    expect(provenance).toContain("the gate rejects an unmerged index entry");
     expect(provenance).not.toContain("does not cross between Windows and POSIX");
     expect(provenance).not.toContain("any bit of `0111`");
   });

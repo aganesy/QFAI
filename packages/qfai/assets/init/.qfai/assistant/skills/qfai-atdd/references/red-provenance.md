@@ -171,6 +171,8 @@ gate condition where it is defined below.
       the disk: a `0654` file is `100644`. Windows has no execute bit on disk,
       so the index is what carries it there, and two checkouts of one commit
       read the same mode on Windows and on POSIX.
+      Resolve and stage a merge conflict in a manifest file before recording
+      the hash; the gate rejects an unmerged index entry.
 
       `kind` and `mode` are in it for the reason they are in that one, and more
       so here: after Phase Green the original `RED revision` cannot be

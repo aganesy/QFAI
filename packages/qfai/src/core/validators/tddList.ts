@@ -1935,8 +1935,8 @@ async function hasPlainParentComponents(root: string, safePath: string): Promise
 }
 
 /**
- * The paths among `paths` that git's index marks `100755`, or `null` when git
- * reads the execute bit off the disk instead.
+ * The paths among `paths` that git's index marks `100755`. `null` means git
+ * reads the disk; `undefined` means the index could not be read safely.
  *
  * The execute bit is read the way `git add` reads it, because git is what
  * carries it between checkouts. Where `core.fileMode` is `false` — as git sets
@@ -1949,23 +1949,47 @@ async function hasPlainParentComponents(root: string, safePath: string): Promise
  * and evidence recorded on one would be refused on the other.
  *
  * A directory git cannot answer for — no `git`, no repository — reads the
- * disk.
+ * disk. An index read failure or an unmerged entry invalidates the manifest.
  */
 function indexExecutablesWhereGitIgnoresDisk(
   root: string,
   paths: readonly string[],
-): ReadonlySet<string> | null {
+): ReadonlySet<string> | null | undefined {
   if (gitStdout(root, ["config", "--bool", "core.fileMode"])?.trim() !== "false") return null;
-  // `--literal-pathspecs`: a manifest entry is a path, and a `*` or `[` in it
-  // must not widen the listing to files the manifest does not name.
-  const listing = gitStdout(root, ["--literal-pathspecs", "ls-files", "-s", "-z", "--", ...paths]);
-  if (listing === null) return null;
-  return new Set(
-    listing
-      .split("\0")
-      .filter((entry) => entry.startsWith("100755 "))
-      .map((entry) => entry.slice(entry.indexOf("\t") + 1)),
-  );
+  const executables = new Set<string>();
+  // Keep both the Windows command line and gitStdout's output buffer bounded.
+  // `--literal-pathspecs` prevents `*` and `[` in a manifest path from widening a batch.
+  for (let offset = 0; offset < paths.length;) {
+    const batch: string[] = [];
+    let characters = 0;
+    while (
+      offset < paths.length &&
+      batch.length < 100 &&
+      (batch.length === 0 || characters + (paths[offset]?.length ?? 0) < 8000)
+    ) {
+      const next = paths[offset];
+      if (next === undefined) return undefined;
+      batch.push(next);
+      characters += next.length;
+      offset += 1;
+    }
+    const listing = gitStdout(root, [
+      "--literal-pathspecs",
+      "ls-files",
+      "-s",
+      "-z",
+      "--",
+      ...batch,
+    ]);
+    if (listing === null) return undefined;
+    for (const entry of listing.split("\0")) {
+      if (entry.length === 0) continue;
+      const tab = entry.indexOf("\t");
+      if (tab < 0 || entry[tab - 1] !== "0") return undefined;
+      if (entry.startsWith("100755 ")) executables.add(entry.slice(tab + 1));
+    }
+  }
+  return executables;
 }
 
 async function artifactRecord(
@@ -2031,6 +2055,7 @@ async function redTestManifestHash(root: string, manifest: string): Promise<stri
   const safePaths = paths.map(safeRepoRelativePath);
   if (!safePaths.every((entry): entry is string => entry !== null)) return null;
   const indexExecutables = indexExecutablesWhereGitIgnoresDisk(root, safePaths);
+  if (indexExecutables === undefined) return null;
   const records: string[] = [];
   for (const entry of paths) {
     const record = await artifactRecord(root, entry, indexExecutables);
