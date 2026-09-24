@@ -41,6 +41,22 @@ spec-claimed paths in other specs were never checked, so the column is not decor
 | `packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml` | present     | Scanned by the hygiene lane, authored by `spec-0003`. This spec never edits it.                                               |
 | `packages/qfai/tests/assets/assets.test.ts`                          | present     | Asserts floating major-version references in the shipped workflow. Its co-change is `spec-0003`'s obligation, not ours.       |
 
+### Test helper consumers
+
+- `packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts` supplies workflow and
+  slice readers to `packages/qfai/tests/scripts/sliceSurfaceAlignment.test.ts`,
+  `packages/qfai/tests/integration/spec0017CiMatrix.test.ts`
+  (`TC-0017-0007`, `TC-0017-0043`) and
+  `packages/qfai/tests/integration/spec0017SliceAlignment.test.ts`
+  (`TC-0017-0062`, `TC-0017-0064`). These are three separate consuming test
+  modules.
+- `packages/qfai/tests/helpers/spec0017Release.ts` supplies release classifier
+  and gate readers to `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts`,
+  `packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts`
+  (`TC-0017-0090`) and
+  `packages/qfai/tests/integration/spec0017ReleaseFallback.test.ts`
+  (`TC-0017-0091`). These are three separate consuming test modules.
+
 ### The shape of the change, in order
 
 The order is not a preference; it is DR-0017-0005, and inverting an edge is a review rejection.
@@ -178,6 +194,13 @@ because the setup dedup is what changes its arithmetic.
   sliced operations path. An older nine-slice tag containing all seven names
   must take the complete whole-suite aggregate. Re-execute TDD-0099 and
   TDD-0100 after the classifier changes.
+- **Separate CI acceptance results.** Each of the six matrix-shaped cases
+  names its independently observable outcomes in the test-case table. Phase 2b
+  keeps the first outcome on its existing TDD row and seeds a sibling row for
+  each remaining outcome. ATDD assigns one unique selector per row; implement
+  records separate RED or falsifiability, GREEN, review and checkpoint proof.
+  The failed required-operation result remains under TDD-0098, which already
+  tests the release prerequisite result matrix.
 - **What is not proven by execution here.** The bump-owner record and the build-reuse baseline are
   DR-0017-0002's subject. The layer partition's _quality_ is a judgement, not an oracle; only the
   file count and the check name are asserted.

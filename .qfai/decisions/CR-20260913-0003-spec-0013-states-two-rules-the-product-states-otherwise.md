@@ -135,18 +135,18 @@ window it names has closed regardless, so both readings arrive at `error`.
 
 ## Blocked downstream items
 
-| Item                                                                         | Kind         | Why it depends on the artifact                                                                           |
-| ---------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------- |
-| `spec-0013/TDD-0025`                                                         | `ledger-row` | Carries `TC-0013-0030`'s population boundary, which item 1 settles                                       |
-| The row the ledger repair appends for `TC-0013-0030`'s resolver boundary     | `ledger-row` | Every option restates that boundary                                                                      |
-| `spec-0013/TDD-0026`                                                         | `ledger-row` | Carries `TC-0013-0031`'s boundary for a companion without the frontmatter, whose severity item 2 settles |
-| The row the ledger repair appends for `TC-0013-0031`'s no-companion boundary | `ledger-row` | Carries the test case item 2 re-derives                                                                  |
-| `spec-0013` `E2E` rows whose `US-Refs` names `US-0013-0013`                  | `ledger-row` | Seeded by the ledger repair over a story every item-1 option restates                                    |
+| Item                                           | Kind         | Why it depends on the artifact                                                                                           |
+| ---------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `spec-0013/TDD-0025`, `TDD-0066`               | `ledger-row` | The former `TC-0013-0030` row now separates stage population and strict resolver behavior; item 1 settles both.          |
+| `spec-0013/TDD-0026`, `TDD-0067`               | `ledger-row` | The former `TC-0013-0031` row now separates companion warning and no-companion silence; item 2 settles both.             |
+| `spec-0013/TDD-0042`, `TDD-0095` to `TDD-0097` | `ledger-row` | The `US-0013-0013` E2E row now separates stage population, strict resolver, companion warning, and no-companion silence. |
 
 While this record is open, none of these rows is selected or given evidence.
-The ledger repair returns `TDD-0025` and `TDD-0026` to `todo` and puts the
-rest there, and evidence recorded against either side of a disagreement this
-record has not settled would fix that side into the record.
+The ledger repair returned `TDD-0025` and `TDD-0026` to `todo` and seeded
+`TDD-0066/0067` and `TDD-0042/0095/0096/0097` at `todo`. The old→new mapping is
+`TDD-0025 → 0025/0066`, `TDD-0026 → 0026/0067`, and the previously unallocated
+E2E story → `0042/0095/0096/0097`. Evidence against either side of a
+disagreement this record has not settled would fix that side into the record.
 
 - Not blocked by this CR: every other `spec-0013` row. The rows carrying
   `TC-0013-0025`, `TC-0013-0027` or `US-0013-0011` are blocked by the two

@@ -610,7 +610,7 @@ describe("TC-0013-0014: SpecDiffResult includes all required fields", () => {
     await removeTempTree(tmpRoot);
   });
 
-  it("result contains entries, allSpecs, and fullScan with correct types", async () => {
+  it("TDD-0044 returns entries, allSpecs, and fullScan for a fallback scan", async () => {
     const specsRoot = path.join(tmpRoot, ".qfai", "specs");
     await mkdir(path.join(specsRoot, "spec-0001"), { recursive: true });
     await writeFile(path.join(specsRoot, "spec-0001", "01_Spec.md"), "s", "utf-8");
@@ -630,6 +630,10 @@ describe("TC-0013-0014: SpecDiffResult includes all required fields", () => {
       }),
     );
     expect(result.allSpecs).toContain("spec-0001");
+    expect(result.fullScan).toBe(true);
+    expect(result.entries).toEqual(
+      expect.arrayContaining([expect.objectContaining({ specId: "spec-0001" })]),
+    );
   });
 });
 
@@ -647,23 +651,18 @@ describe("TC-0013-0015: policy change detection", () => {
     await removeTempTree(tmpRoot);
   });
 
-  it("detectPolicyChanges returns true when _policies/ files are modified", () => {
+  it("TDD-0045 returns true when _policies/ files are modified", async () => {
     vi.mocked(execFileSync).mockReturnValue(
       ".qfai/specs/_policies/naming.md\nsrc/core/config.ts\n",
     );
 
-    // detectPolicyChanges is sync-wrapped in a Promise
-    return detectPolicyChanges(tmpRoot, "origin/main").then((changed) => {
-      expect(changed).toBe(true);
-    });
+    expect(await detectPolicyChanges(tmpRoot, "origin/main")).toBe(true);
   });
 
-  it("detectPolicyChanges returns false when no _policies/ files are modified", () => {
+  it("TDD-0046 returns false when no _policies/ files are modified", async () => {
     vi.mocked(execFileSync).mockReturnValue("src/core/config.ts\n");
 
-    return detectPolicyChanges(tmpRoot, "origin/main").then((changed) => {
-      expect(changed).toBe(false);
-    });
+    expect(await detectPolicyChanges(tmpRoot, "origin/main")).toBe(false);
   });
 });
 
@@ -680,7 +679,7 @@ describe("TC-0013-0016: config baseBranch — loadConfig reads baseBranch from y
     await removeTempTree(tmpRoot);
   });
 
-  it("loadConfig reads baseBranch from qfai.config.yaml", async () => {
+  it("TDD-0047 reads configured baseBranch from qfai.config.yaml", async () => {
     const yamlContent = ["baseBranch: origin/develop", "paths:", "  specsDir: .qfai/specs"].join(
       "\n",
     );
@@ -690,7 +689,7 @@ describe("TC-0013-0016: config baseBranch — loadConfig reads baseBranch from y
     expect(config.baseBranch).toBe("origin/develop");
   });
 
-  it("loadConfig returns default (no baseBranch) when yaml omits it", async () => {
+  it("TDD-0048 returns the default baseBranch sentinel when yaml omits it", async () => {
     const yamlContent = ["paths:", "  specsDir: .qfai/specs"].join("\n");
     await writeFile(path.join(tmpRoot, "qfai.config.yaml"), yamlContent, "utf-8");
 
@@ -713,7 +712,7 @@ describe("TC-0013-0017: old evidence without Diff Context remains parseable", ()
     await removeTempTree(tmpRoot);
   });
 
-  it("detectSpecChanges works when evidence files lack Diff Context section", async () => {
+  it("TDD-0049 accepts old evidence without a Diff Context section", async () => {
     const specsRoot = path.join(tmpRoot, ".qfai", "specs");
     const evidenceDir = path.join(tmpRoot, ".qfai", "evidence");
     await mkdir(path.join(specsRoot, "spec-0001"), { recursive: true });
@@ -736,10 +735,13 @@ describe("TC-0013-0017: old evidence without Diff Context remains parseable", ()
       throw new Error("git not found");
     });
 
-    // Should not throw for current parser behavior
     const result = await detectSpecChanges(tmpRoot, stubConfig);
-    expect(result).toBeDefined();
-    expect(result.entries.length).toBeGreaterThanOrEqual(0);
+    expect(result.allSpecs).toContain("spec-0001");
+    expect(result.entries).toContainEqual({
+      specId: "spec-0001",
+      sources: ["timestamp"],
+      status: "stale",
+    });
   });
 });
 

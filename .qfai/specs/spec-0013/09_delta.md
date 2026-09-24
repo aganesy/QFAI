@@ -151,6 +151,16 @@ Rows owned by this spec.
 
 ## Change Requests
 
-| CR ID            | Upstream artifact                                                                 | Mode         | Approved by                                                    | Applied at           |
-| ---------------- | --------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------- | -------------------- |
-| CR-20260923-0010 | `spec-0013/03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `06_Test-Cases.md` | confirm-only | claude-code (the user's standing instruction for this session) | 2026-09-23T10:52:00Z |
+| CR ID            | Upstream artifact                                                                                                                                                         | Mode         | Approved by                                                    | Applied at           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------- | -------------------- |
+| CR-20260923-0010 | `spec-0013/03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `06_Test-Cases.md`                                                                                         | confirm-only | claude-code (the user's standing instruction for this session) | 2026-09-23T10:52:00Z |
+| CR-20260913-0009 | `spec-0013/02_User-stories.md`, `tdd/test-list.md`                                                                                                                        | re-derive    | user (2026-09-24 reply)                                        | 2026-09-24T09:46:00Z |
+| CR-20260913-0012 | `spec-0013/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `10_Plan.md`, `tdd/test-list.md` | re-derive    | user (2026-09-24 reply)                                        | 2026-09-24T09:46:00Z |
+
+### CR-20260913-0009: Ledger boundary repair
+
+The existing 15-column ledger already had E2E placeholders for thirteen stories. Re-derivation adds the missing Integration cases and separates independently observable outcomes. Prior completed or exception evidence remains as history; the affected rows return to `todo` because their test identity changed. `US-0013-0003` now agrees with its usable-source acceptance criterion.
+
+### CR-20260913-0012: Acceptance criterion ID repair
+
+The original `AC-0013-0008` to `AC-0013-0010` headings retain their IDs. The contradicted markdown readiness and design normalization duplicates are removed. Optional side-artifact neutrality moves to `AC-0013-0028` with `BR-0013-0021`, `EX-0013-0021`, and `TC-0013-0036` to `TC-0013-0037`. The historical references above remain a record of past source text and do not reintroduce those obligations.

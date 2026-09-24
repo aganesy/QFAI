@@ -88,15 +88,17 @@ stays one boundary, a contract from before the slot blocking the lane.
 
 ## Blocked downstream items
 
-| Item                                                                   | Kind         | Why it depends on the artifact                                              |
-| ---------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------- |
-| `spec-0013/TDD-0021`                                                   | `ledger-row` | Carries `TC-0013-0027`, whose legacy sub-case this fix restates             |
-| The two `spec-0013` rows `CR-20260913-0009` appends for `TC-0013-0027` | `ledger-row` | The same obligation. One of them owns the legacy sub-case this fix restates |
+| Item                 | Kind         | Why it depends on the artifact                                                                                                |
+| -------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `spec-0013/TDD-0064` | `ledger-row` | The former `TDD-0021` aggregate row now places the legacy slot-less contract window in this separate `TC-0013-0027` boundary. |
 
-- Not blocked by this CR: every other `spec-0013` row. `TDD-0020` and the row
-  `CR-20260913-0009` appends beside it carry `TC-0013-0026`. They share the
-  test file, and their obligation, the lane and the preflight refusing an empty
-  list, does not read the legacy window.
+The old→new mapping for `TC-0013-0027` is `TDD-0021` (non-empty lane pass),
+`TDD-0063` (non-empty preflight pass), and `TDD-0064` (legacy slot-less
+contract). Only `TDD-0064` waits for this CR.
+
+- Not blocked by this CR: every other `spec-0013` row, including `TDD-0021`
+  and `TDD-0063` for a non-empty contract, and `TDD-0020` and `TDD-0062` for
+  an empty contract. Those outcomes do not read the legacy window.
 - Overlapping open CRs: `CR-20260913-0009` re-derives `spec-0013`'s ledger to
   its template, splitting every progressed row that runs several boundaries
   behind one `Selector`, `TDD-0021` among them. **It is applied first, and this

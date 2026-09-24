@@ -22,6 +22,8 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { QfaiConfig } from "../../src/core/config.js";
+import { defaultConfig } from "../../src/core/config.js";
+import { runSddPreflight } from "../../src/core/preflight/sddPreflight.js";
 import { validateContracts } from "../../src/core/validators/contracts.js";
 
 const roots: string[] = [];
@@ -93,27 +95,31 @@ describe("TC-0013-0002: Contract Index Alignment", () => {
 });
 
 // TC-0013-0003: Usable-Source Preflight Stop
-//
-// The obligation is the narrower one: an incomplete or contradictory pack
-// continues, and only the absence of every source stops the stage. Asserting
-// only that SKILL.md contains the token `discussion-pack` and mentions
-// preflight would also pass a stage that stopped on any thin pack. Both
-// directions are asserted, because the token check would pass on a stage
-// that had lost either half.
 describe("TC-0013-0003: Usable-Source Preflight Stop", () => {
-  it("SKILL.md stops Stage 0 only when no usable source exists", async () => {
-    const content = await readFile(SKILL_PATH, "utf-8");
-    expect(content).toMatch(/preflight/i);
-    expect(content).toContain("Stop only when there is no usable source at all");
+  it("continues with a selected discussion pack even when it is incomplete", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-spec0013-preflight-"));
+    roots.push(root);
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260924000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "06_REQ.md"),
+      "# Requirements\n\n- REQ-0001: Save a draft.\n",
+    );
+
+    const result = await runSddPreflight(root, defaultConfig, { packDir });
+    expect(result.status).toBe("ready");
+    expect(result.selectedInputPath).toBe(packDir);
+    expect(result.packGaps.length).toBeGreaterThan(0);
   });
 
-  it("SKILL.md does not stop on an incomplete, contradictory or OQ-carrying pack", async () => {
-    const content = (await readFile(SKILL_PATH, "utf-8")).replace(/\s+/g, " ");
-    expect(content).toContain(
-      "an incomplete pack, a contradictory one, or a blocking discussion OQ does not by itself stop this stage",
-    );
-    // And the pack is not the thing to repair when it is the source of the gap.
-    expect(content).toContain("Do NOT edit, repair or re-run a pack");
+  it("stops when no usable discussion or import-lite source exists", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-spec0013-preflight-"));
+    roots.push(root);
+
+    const result = await runSddPreflight(root, defaultConfig);
+    expect(result.status).toBe("blocked");
+    expect(result.selectedInputPath).toBeNull();
+    expect(result.blockers.length).toBeGreaterThan(0);
   });
 });
 

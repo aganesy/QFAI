@@ -6,10 +6,10 @@
 - Raised at: `2026-09-18T03:05:00Z`
 - Class: `defect`
 - Status: `approved`
-- Approved by: `claude-code` — under the user's standing instruction to process every issue of this session with its own judgment; NOT a user decision on these options
-- Approved at: `2026-09-22T22:00:00Z`
+- Approved by: `user` (2026-09-24 reply; Claude Code selected option 1 on 2026-09-22)
+- Approved at: `2026-09-24T08:55:00Z`
 - Approved option: `1`
-- Applied at: `-`
+- Applied at: `2026-09-24T09:46:00Z`
 - Superseded by: `-`
 
 ## Context
@@ -101,7 +101,7 @@ Option 1.
 1. The first heading of each pair keeps its id. None of the six references
    above moves.
 2. **Optional Side Artifact Does Not Block Preflight** takes the next free
-   criterion id, `AC-0013-0026` when this record is applied first. It gains the
+   criterion id, `AC-0013-0028` in the current tree. It gains the
    chain `REQ-0011` requires of every criterion:
    - one business rule, `BR-0013-0021`, stating that the preflight's result
      does not depend on whether an optional side artifact is present, absent,
@@ -126,7 +126,7 @@ Option 1.
    `BR-0013-0003`, `EX-0013-0003` and `TC-0013-0003` already state the rule for
    an incomplete pack. `US-0013-0008` is restated without its first clause, "to
    block only on discussion-pack markdown readiness", leaving the side-artifact
-   clause, which is what `AC-0013-0026` answers.
+   clause, which is what `AC-0013-0028` answers.
 4. **Design Contract Normalization** is removed, with `REQ-0016`, `REQ-0017`
    and `REQ-0018`. `AC-0013-0016` and `AC-0013-0017` already state the active
    design-contract set.
@@ -153,7 +153,7 @@ the same file, which is how this duplicate went unreported.
 - Overlapping open CRs:
   - `CR-20260912-0003` names "the side-artifact `AC-0013-0009`", and says its
     option `2B` cannot be approved until this repair lands. Once this record is
-    applied, that criterion is `AC-0013-0026`, and `CR-20260912-0003` is read
+    applied, that criterion is `AC-0013-0028`, and `CR-20260912-0003` is read
     with that id.
   - The other open records that edit `spec-0013`'s upstream files name none of
     the ids this record removes, renumbers or allocates. **This record is
@@ -224,7 +224,11 @@ requirements beneath them?
 Approved under option 1, the recommendation. It removes the two criteria the
 rest of the pack already contradicts or supersedes, and keeps the one that is
 live, so it adds the least of the three and restores nothing an approved record
-retired. Not yet applied.
+retired. The user explicitly ratified this option on 2026-09-24. The owner
+rerun applied it on 2026-09-24, after the ledger repair.
+
+At application, `AC-0013-0026` and `AC-0013-0027` already exist. The
+approved next-free-ID rule therefore selects `AC-0013-0028`.
 
 One precondition for action 3.2, found when approving. `packages/qfai/tests/core/sddPreflight.test.ts`
 is the file the two new rows bind to, and `.qfai/evidence/atdd-spec-0002.md`

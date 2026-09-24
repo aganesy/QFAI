@@ -4,14 +4,9 @@
  * `packages/qfai/assets/init/root/.github/workflows/**`, which belongs to a
  * different spec and a different contract.
  *
- * This file is the home the ledger names for spec-0017's rows, so it grows one
- * describe per row as the nine sequenced changes land. It now carries changes 1, 4,
- * 7, 8 and 9 — the derived verdict, the shared setup definition, the retirement of
- * the duplicate validate workflow, change detection and lane selection, and the
- * check-name invariants layer separation must preserve. The sentence that stood
- * here said "the first change only", which stopped being true four changes ago; a
- * count maintained in prose is a count that goes stale, so this one names the
- * changes instead.
+ * This file covers workflow topology and script-level behavior. The CI matrix,
+ * check-name, slice-alignment and release-operation acceptance rows run in the
+ * integration project. Both projects read the same workflow sources.
  *
  * ## How a YAML `run:` body is evaluated rather than read
  *
@@ -55,7 +50,6 @@
 // QFAI:SPEC-0017:TC-0017-0072
 // QFAI:SPEC-0017:TC-0017-0073
 // QFAI:SPEC-0017:TC-0017-0006
-// QFAI:SPEC-0017:TC-0017-0007
 // QFAI:SPEC-0017:TC-0017-0008
 // QFAI:SPEC-0017:TC-0017-0009
 // QFAI:SPEC-0017:TC-0017-0010
@@ -63,7 +57,6 @@
 // QFAI:SPEC-0017:TC-0017-0012
 // QFAI:SPEC-0017:TC-0017-0041
 // QFAI:SPEC-0017:TC-0017-0042
-// QFAI:SPEC-0017:TC-0017-0043
 // QFAI:SPEC-0017:TC-0017-0036
 // QFAI:SPEC-0017:TC-0017-0038
 // QFAI:SPEC-0017:TC-0017-0039
@@ -82,12 +75,34 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { runInNewContext } from "node:vm";
 
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
-import { invokedScriptBodies } from "../../../../scripts/check-workflow-hygiene.mjs";
+import {
+  acceptsRelease,
+  classify,
+  classifyTag,
+  currentPackage,
+  currentRoot,
+  declaredSlices,
+  gateJobs,
+  gatePaths,
+  invocations,
+  manifestWith,
+  matrixSlices,
+  operationJobs,
+  operationScripts,
+  releaseDocument,
+  releaseJobs,
+  runsUnder,
+  scriptKeys,
+  steps,
+  suiteRuns,
+  TAGGED_MANIFESTS,
+  TAGS,
+  type ReleaseNeeds,
+} from "../helpers/spec0017Release.js";
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -1156,35 +1171,6 @@ describe("TC-0017-0006 (TDD-0006): the executing set and its declared timeout su
   });
 });
 
-describe("TC-0017-0007 (TDD-0007): retained legs are skipped without changing the matrix", () => {
-  it("keeps every matrix leg declared and puts the condition on the job, not the list", () => {
-    const test = ciJobs()["test"];
-    expect(test, "ci.yml must declare a `test` job").not.toBeUndefined();
-    if (test === undefined) return;
-
-    // CLAIM 1 — retained legs stay declared across selection states. Removing a
-    // suite is a separate change to the full-run matrix, not a selection result.
-    const strategy = test["strategy"];
-    const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
-    const slices = isRecord(matrix) ? matrix["slice"] : undefined;
-    expect
-      .soft(
-        Array.isArray(slices) ? [...slices].sort() : slices,
-        "every declared slice must stay in the matrix so its check name persists",
-      )
-      .toEqual(["cli", "core", "e2e", "integration", "scripts", "unit", "validators"]);
-
-    // CLAIM 2 — and the condition sits on the JOB. A condition inside the matrix would
-    // change the leg set, which is CLAIM 1's removal by another route.
-    expect
-      .soft(conditionOf(test), "the selection condition belongs on the job")
-      .toContain(`needs.${DETECT_JOB}.outputs.full`);
-    expect
-      .soft(JSON.stringify(strategy ?? null), "no selection condition may live inside the matrix")
-      .not.toContain("needs.");
-  });
-});
-
 /**
  * The lanes `BR-0017-0011` exempts from selection, by the command that runs each.
  *
@@ -1694,97 +1680,6 @@ const OWN_WORKFLOW_FILES = [
   "tag-release.yml",
 ] as const;
 
-/**
- * The full-run check names, pinned independently of the workflow parser.
- *
- * Both sliced jobs report expanded names on a full run. When their job-level
- * condition is false, GitHub reports one skipped check under each bare job name.
- * `packages/qfai/docs/ci-check-names.md` records both observations and API totals.
- *
- * Only `ci-pass` is required. Its needs map receives one rolled-up result per
- * matrix, so neither selection state requires a branch-protection change.
- */
-const FULL_CI_CHECK_NAMES = [
-  "build",
-  "check-types",
-  "check-types-future",
-  "ci-pass",
-  "detect",
-  "lint",
-  "mirror-surface",
-  "node-floor (cli)",
-  "node-floor (core)",
-  "node-floor (e2e)",
-  "node-floor (integration)",
-  "node-floor (scripts)",
-  "node-floor (unit)",
-  "node-floor (validators)",
-  "scanner-coverage",
-  "test (cli)",
-  "test (core)",
-  "test (e2e)",
-  "test (integration)",
-  "test (scripts)",
-  "test (unit)",
-  "test (validators)",
-] as const;
-
-const CI_CHECK_NAMES = {
-  full: FULL_CI_CHECK_NAMES,
-  "documentation-only": [
-    "build",
-    "check-types",
-    "check-types-future",
-    "ci-pass",
-    "detect",
-    "lint",
-    "mirror-surface",
-    "node-floor",
-    "scanner-coverage",
-    "test",
-  ],
-} as const;
-
-type CiSelection = keyof typeof CI_CHECK_NAMES;
-
-/**
- * The check names one workflow file reports.
- *
- * A job's check name is its `name:` when it declares one and its key otherwise; a matrix
- * job reports one per leg when selected, or one bare name when skipped before expansion.
- * Both states are modelled, so a future `name:` override is visible to
- * `TC-0017-0043` rather than silently renaming a check.
- */
-function checkNames(file: string, selection: CiSelection): string[] {
-  const doc: unknown = parseYaml(readFileSync(path.join(WORKFLOWS_DIR, file), "utf-8"));
-  if (!isRecord(doc) || !isRecord(doc["jobs"])) {
-    throw new Error(`${file} declares no jobs`);
-  }
-  const names: string[] = [];
-  for (const [id, job] of Object.entries(doc["jobs"])) {
-    if (!isRecord(job)) continue;
-    const label = typeof job["name"] === "string" ? job["name"] : id;
-    const strategy = job["strategy"];
-    const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
-    const legs = isRecord(matrix) ? Object.values(matrix).filter(isStringArray).flat() : [];
-    const condition = job["if"];
-    if (
-      legs.length > 0 &&
-      condition !== undefined &&
-      condition !== "${{ needs.detect.outputs.full == 'true' }}"
-    ) {
-      throw new Error(`${id} has an unmodelled matrix selection condition: ${String(condition)}`);
-    }
-    const selected = selection === "full" || condition === undefined;
-    if (legs.length > 0 && selected) {
-      for (const leg of legs) names.push(`${label} (${leg})`);
-    } else {
-      names.push(label);
-    }
-  }
-  return names.sort();
-}
-
 describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no check name", () => {
   it("keeps the layer split inside the existing file as matrix legs of one job", () => {
     // CLAIM 1 — this exact set, and no member of it is a per-layer workflow. A per-layer
@@ -1811,7 +1706,7 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
     // seven check names the same way, and the axis claim below is what refuses it.
     //
     // A LITERAL list, so a third sliced lane arrives as a failing test naming the new member
-    // rather than as a diff to interpret — the reason `CI_CHECK_NAMES` is a literal too.
+    // rather than as a diff to interpret — the integration check-name test also pins a literal list.
     const jobs = ciJobs();
     const matrixJobs = Object.entries(jobs)
       .filter(([, job]) => {
@@ -2135,16 +2030,6 @@ describe("TC-0017-0042 (TDD-0042): the aggregate verdict check name is immutable
       .filter(([id, job]) => id !== VERDICT_JOB && job["name"] === VERDICT_JOB)
       .map(([id]) => id);
     expect.soft(impostors, `no other job may report as \`${VERDICT_JOB}\``).toEqual([]);
-  });
-});
-
-describe("TC-0017-0043 (TDD-0043): each selection state preserves its reported check names", () => {
-  it("reports the complete pinned set for full and documentation-only runs", () => {
-    for (const selection of ["full", "documentation-only"] as const) {
-      expect
-        .soft(checkNames("ci.yml", selection), `${selection} must retain its observed check names`)
-        .toEqual([...CI_CHECK_NAMES[selection]].sort());
-    }
   });
 });
 
@@ -3682,607 +3567,14 @@ describe("release automation performs decisions rather than making them", () => 
  * ## Where the manifests come from
  *
  * The program reads two manifests and looks up script keys, so the script key set is the whole of
- * what a manifest is to it. Each tag's sets are recorded below, read off the tags themselves, and
- * a tag is immutable — so these are a record rather than an approximation. They are recorded
+ * what a manifest is to it. Each tag's sets are recorded in the shared release helper,
+ * read off the tags themselves. Tags are immutable, so these are a record rather
+ * than an approximation. They are recorded
  * because the job that runs this file checks out at depth 2 and fetches no tags, and a row that
  * needs `git show v1.10.0:package.json` would be skipped in exactly the place it has to run. The
  * last row re-derives them from the tags wherever the tags are reachable.
  */
 describe("the release gate runs what the tag's tree declares, and runs the suite once", () => {
-  const RELEASE_WORKFLOW = path.join(WORKFLOWS_DIR, "release.yml");
-
-  /**
-   * The script key sets four real tags declare, and the body of the aggregate each one carries.
-   *
-   * The recent tag has the retired pair of slices, so the current release workflow
-   * must route it through the whole-suite gate. The older tags exercise missing
-   * slice scripts and the aggregate-only gate.
-   */
-  const TAGGED_MANIFESTS = {
-    "v1.12.3": {
-      root: [
-        "preinstall",
-        "build",
-        "sync:ssot",
-        "ci:gate",
-        "ci:gate:checks",
-        "ci:gate:ssot",
-        "ci:gate:lint",
-        "ci:gate:types",
-        "ci:gate:build",
-        "ci:gate:structure",
-        "ci:gate:scans",
-        "ci:lint",
-        "ci:lint:structure",
-        "ci:lint:scans",
-        "ci:build-verify",
-        "ci:coverage",
-        "lint",
-        "lint:md",
-        "lint:mermaid",
-        "lint:mdschema",
-        "lint:doc-clarity",
-        "format",
-        "format:check",
-        "check-types",
-        "check-types:future",
-        "test:assets",
-        "verify:pack",
-        "prepack",
-      ],
-      package: [
-        "build",
-        "prepack",
-        "lint",
-        "lint:branch-version",
-        "lint:md:shipped",
-        "lint:shipping",
-        "lint:workflow-shape",
-        "lint:mirror-surface",
-        "generate:rule-codes",
-        "generate:governed-manifest",
-        "check-types",
-        "test",
-        "test:coverage",
-        "test:core",
-        "test:validators",
-        "test:integration",
-        "test:e2e",
-        "test:cli",
-        "test:unit",
-        "test:scripts",
-        "test:pr-fix",
-        "test:pr-merge",
-        "test:assets",
-        "self-validate",
-      ],
-    },
-    "v1.12.0": {
-      root: [
-        "preinstall",
-        "build",
-        "sync:ssot",
-        "ci:gate",
-        "ci:lint",
-        "ci:build-verify",
-        "ci:coverage",
-        "lint",
-        "lint:md",
-        "lint:mermaid",
-        "lint:mdschema",
-        "lint:doc-clarity",
-        "format",
-        "format:check",
-        "check-types",
-        "check-types:future",
-        "test:assets",
-        "verify:pack",
-        "prepack",
-      ],
-      package: [
-        "build",
-        "prepack",
-        "lint",
-        "lint:branch-version",
-        "lint:shipping",
-        "lint:workflow-shape",
-        "lint:mirror-surface",
-        "generate:rule-codes",
-        "generate:governed-manifest",
-        "check-types",
-        "test",
-        "test:coverage",
-        "test:core",
-        "test:validators",
-        "test:integration",
-        "test:e2e",
-        "test:cli",
-        "test:unit",
-        "test:scripts",
-        "test:assets",
-        "self-validate",
-      ],
-    },
-    "v1.10.0": {
-      root: [
-        "preinstall",
-        "build",
-        "sync:ssot",
-        "ci:gate",
-        "ci:lint",
-        "ci:build-verify",
-        "ci:coverage",
-        "lint",
-        "lint:md",
-        "format",
-        "format:check",
-        "check-types",
-        "check-types:future",
-        "test:assets",
-        "verify:pack",
-        "prepack",
-      ],
-      package: [
-        "build",
-        "prepack",
-        "lint",
-        "lint:branch-version",
-        "lint:shipping",
-        "check-types",
-        "test",
-        "test:coverage",
-        "test:core",
-        "test:validators",
-        "test:integration",
-        "test:e2e",
-        "test:cli",
-        "test:assets",
-        "self-validate",
-      ],
-    },
-    "v1.8.0": {
-      root: [
-        "build",
-        "sync:ssot",
-        "ci:gate",
-        "ci:lint",
-        "ci:build-verify",
-        "lint",
-        "lint:md",
-        "format",
-        "format:check",
-        "check-types",
-        "check-types:future",
-        "test:assets",
-        "verify:pack",
-        "prepack",
-      ],
-      package: [
-        "build",
-        "prepack",
-        "lint",
-        "check-types",
-        "test",
-        "test:core",
-        "test:validators",
-        "test:integration",
-        "test:e2e",
-        "test:cli",
-        "test:assets",
-      ],
-    },
-  } as const;
-
-  /** The tag keys, narrowed once so every row below indexes the record rather than a string. */
-  const TAGS = Object.keys(TAGGED_MANIFESTS) as Array<keyof typeof TAGGED_MANIFESTS>;
-
-  /**
-   * A manifest carrying exactly these script keys.
-   *
-   * The bodies are a placeholder because the classifier never reads one: it asks whether the
-   * lookup yields a string. Writing the real bodies here would record something no row checks and
-   * invite a reader to trust it.
-   */
-  const manifestWith = (keys: readonly string[]): string =>
-    JSON.stringify({ scripts: Object.fromEntries(keys.map((key) => [key, "…"])) });
-
-  const releaseDocument = (): Record<string, unknown> => {
-    const parsed: unknown = parseYaml(readFileSync(RELEASE_WORKFLOW, "utf-8"));
-    if (!isRecord(parsed)) throw new Error("release.yml did not parse to a mapping");
-    return parsed;
-  };
-
-  const releaseJobs = (): Record<string, Record<string, unknown>> => {
-    const jobs = releaseDocument()["jobs"];
-    if (!isRecord(jobs)) throw new Error("release.yml declares no jobs");
-    const out: Record<string, Record<string, unknown>> = {};
-    for (const [id, job] of Object.entries(jobs)) {
-      if (!isRecord(job)) throw new Error(`release.yml's ${id} job did not parse to a mapping`);
-      out[id] = job;
-    }
-    return out;
-  };
-
-  const steps = (job: Record<string, unknown>): Array<Record<string, unknown>> => {
-    const value = job["steps"];
-    if (!Array.isArray(value)) return [];
-    return value.filter((step): step is Record<string, unknown> => isRecord(step));
-  };
-
-  /** The `verify` step that decides, identified by the id its output expression names. */
-  const shapeStep = (): Record<string, unknown> => {
-    const verify = releaseJobs()["verify"];
-    if (verify === undefined) throw new Error("release.yml declares no verify job");
-    const step = steps(verify).find((candidate) => candidate["id"] === "shape");
-    if (step === undefined) throw new Error("release.yml's verify job declares no `shape` step");
-    return step;
-  };
-
-  /** The slice list the decision is made against, read off the step rather than restated here. */
-  const declaredSlices = (): string[] => {
-    const env = shapeStep()["env"];
-    const value = isRecord(env) ? env["SUITE_SLICES"] : undefined;
-    if (typeof value !== "string") throw new Error("the shape step declares no SUITE_SLICES");
-    return value.trim().split(/\s+/).filter(Boolean);
-  };
-
-  /**
-   * The classifier, out of its quoted heredoc.
-   *
-   * Quoted is what makes the extraction sound: bash expands nothing inside `<<'SHAPE'`, so the
-   * bytes the runner executes and the bytes below are the same bytes. Exactly one well-ordered
-   * delimiter pair is accepted — a silent zero-match would hand every row an empty program, and
-   * `node ""` exits 0, so every row that expects a refusal would fail and every row that expects
-   * a classification would fail for the wrong reason.
-   */
-  const classifierProgram = (): string => {
-    const body = shapeStep()["run"];
-    if (typeof body !== "string") throw new Error("the shape step has no run body");
-    const lines = body.split(/\r?\n/);
-    const opens = lines.flatMap((line, index) => (line === "node - <<'SHAPE'" ? [index] : []));
-    const closes = lines.flatMap((line, index) => (line === "SHAPE" ? [index] : []));
-    if (opens.length !== 1 || closes.length !== 1) {
-      throw new Error(
-        `the shape step must hold exactly one quoted SHAPE heredoc; found ${opens.length} ` +
-          `openings and ${closes.length} terminators`,
-      );
-    }
-    const [open] = opens;
-    const [close] = closes;
-    if (open === undefined || close === undefined || close <= open + 1) {
-      throw new Error("the shape step's SHAPE heredoc is empty or its delimiters are out of order");
-    }
-    return `${lines.slice(open + 1, close).join("\n")}\n`;
-  };
-
-  type Classification = { status: number; shape: string; checks: string; output: string };
-  const operationScripts = ["ci:gate:ssot", "ci:gate:lint", "ci:gate:types", "ci:gate:build"];
-  const operationJobs = ["gate-ssot", "gate-lint", "gate-types"];
-  const gatePaths = [
-    { shape: "whole", checks: "aggregate" },
-    { shape: "sliced", checks: "aggregate" },
-    { shape: "sliced", checks: "operations" },
-  ];
-
-  /**
-   * The classifier, run against two manifests.
-   *
-   * `.cjs`, because the workflow feeds it to `node -` on stdin, which Node reads as CommonJS.
-   * A `.js` file in a directory with no manifest is read the same way today; naming the module
-   * system is what keeps the two from drifting apart on a future Node.
-   */
-  const classify = (
-    root: string,
-    pkg: string,
-    slices: string[] = declaredSlices(),
-  ): Classification => {
-    const dir = mkdtempSync(path.join(tmpdir(), "qfai-gate-shape-"));
-    try {
-      const program = path.join(dir, "classify.cjs");
-      const outputFile = path.join(dir, "github-output");
-      writeFileSync(program, classifierProgram(), "utf-8");
-      writeFileSync(outputFile, "", "utf-8");
-      const run = spawnSync("node", [program], {
-        encoding: "utf-8",
-        env: {
-          ...process.env,
-          ROOT_MANIFEST: root,
-          PACKAGE_MANIFEST: pkg,
-          SUITE_SLICES: slices.join(" "),
-          GITHUB_OUTPUT: outputFile,
-        },
-      });
-      if (run.error !== undefined) throw run.error;
-      const written = readFileSync(outputFile, "utf-8");
-      const match = /^suite-shape=(.*)$/m.exec(written);
-      return {
-        status: run.status ?? -1,
-        shape: match?.[1] ?? "",
-        checks: /^checks-shape=(.*)$/m.exec(written)?.[1] ?? "",
-        output: `${run.stdout ?? ""}${run.stderr ?? ""}`,
-      };
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  };
-
-  const classifyTag = (tag: keyof typeof TAGGED_MANIFESTS): Classification =>
-    classify(manifestWith(TAGGED_MANIFESTS[tag].root), manifestWith(TAGGED_MANIFESTS[tag].package));
-
-  /** This tree's own manifests, which are the sliced shape by construction. */
-  const currentRoot = (): string => readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8");
-  const currentPackage = (): string =>
-    readFileSync(path.join(REPO_ROOT, "packages", "qfai", "package.json"), "utf-8");
-
-  const scriptKeys = (manifest: string): string[] => {
-    const parsed: unknown = JSON.parse(manifest);
-    if (!isRecord(parsed) || !isRecord(parsed["scripts"])) {
-      throw new Error("a manifest under test declares no scripts");
-    }
-    return Object.keys(parsed["scripts"]);
-  };
-
-  /**
-   * Which shape a job or a step runs under.
-   *
-   * A condition that never mentions the decision is orthogonal to it — the two build steps select
-   * on `matrix.slice` — and counts as running under both. A condition that DOES mention it must
-   * use the restricted release-condition grammar. Unknown syntax throws rather than silently
-   * treating an unrecognized condition as an unconditional step.
-   */
-  const runsUnder = (
-    owner: Record<string, unknown>,
-    where: string,
-    shape: string,
-    checks: string,
-  ): boolean => {
-    const condition = owner["if"];
-    if (condition === undefined) return true;
-    if (typeof condition !== "string") throw new Error(`${where} carries a non-string condition`);
-    const text = condition.trim();
-    if (!text.includes("suite-shape") && !text.includes("checks-shape")) return true;
-    try {
-      return acceptsRelease(
-        text,
-        { verify: { outputs: { "suite-shape": shape, "checks-shape": checks } } },
-        "push",
-      );
-    } catch (error) {
-      throw new Error(`${where} has an unsupported shape condition`, { cause: error });
-    }
-  };
-
-  /** The gate jobs, discovered by prefix and checked against the declared set below. */
-  const gateJobs = (): Record<string, Record<string, unknown>> =>
-    Object.fromEntries(Object.entries(releaseJobs()).filter(([id]) => id.startsWith("gate")));
-
-  const matrixSlices = (job: Record<string, unknown>): string[] => {
-    const strategy = job["strategy"];
-    const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
-    const slices = isRecord(matrix) ? matrix["slice"] : undefined;
-    if (slices === undefined) return [""];
-    if (!Array.isArray(slices) || !slices.every((s) => typeof s === "string")) {
-      throw new Error("a gate job declares a matrix.slice that is not a list of strings");
-    }
-    return slices;
-  };
-
-  /** Whether a job resolves the engines floor, read off the setup step's inputs. */
-  const pinsFloor = (job: Record<string, unknown>): boolean =>
-    steps(job).some((step) => {
-      const inputs = step["with"];
-      return isRecord(inputs) && inputs["pin-engines-floor"] === "true";
-    });
-
-  type Invocation = { jobId: string; where: string; manifest: "root" | "package"; script: string };
-
-  /**
-   * Every script a gate job would invoke for a tag of this shape.
-   *
-   * `pnpm <name>` reads from the root manifest and `pnpm -C packages/qfai <name>` from the
-   * package's. No gate step calls a pnpm built-in, so every match is a script that has to exist;
-   * a `-C` naming any other directory throws rather than being dropped.
-   */
-  const invocations = (shape: string, checks: string): Invocation[] => {
-    const out: Invocation[] = [];
-    for (const [jobId, job] of Object.entries(gateJobs())) {
-      if (!runsUnder(job, `release.yml#${jobId}`, shape, checks)) continue;
-      for (const step of steps(job)) {
-        const name = String(step["name"] ?? "(unnamed)");
-        const where = `release.yml#${jobId}: ${name}`;
-        if (!runsUnder(step, where, shape, checks)) continue;
-        const body = step["run"];
-        if (typeof body !== "string") continue;
-        for (const slice of matrixSlices(job)) {
-          const text = body.split("${{ matrix.slice }}").join(slice);
-          for (const match of text.matchAll(/\bpnpm (?:-C (\S+) )?([A-Za-z][\w:.-]*)/g)) {
-            const directory = match[1];
-            const script = match[2];
-            if (script === undefined) continue;
-            if (directory !== undefined && directory !== "packages/qfai") {
-              throw new Error(`${where} runs pnpm -C ${directory}, which this row cannot resolve`);
-            }
-            out.push({
-              jobId,
-              where,
-              manifest: directory === undefined ? "root" : "package",
-              script,
-            });
-          }
-        }
-      }
-    }
-    return out;
-  };
-
-  /**
-   * The suite call every tag's `ci:gate` ends in.
-   *
-   * Recorded rather than read, because the rows that need it run where the tags are not fetched.
-   * The last row in this block re-derives it from the tags themselves wherever they are
-   * reachable, and all three carry this call verbatim.
-   */
-  const TAGGED_AGGREGATE_BODY = "pnpm -C packages/qfai test";
-
-  /**
-   * What the root aggregate a gate step names would itself run.
-   *
-   * On the old path it is the tag's own `ci:gate`, recorded above. On the sliced path the gate
-   * names either the checks aggregate or an operation entry point. Each invoked script is
-   * resolved transitively so a check reaching the suite through another script is counted too.
-   */
-  const aggregateBody = (shape: string, script: string): string => {
-    if (shape === "whole") return TAGGED_AGGREGATE_BODY;
-    const resolved: unknown = invokedScriptBodies(`pnpm ${script}`, REPO_ROOT);
-    if (!Array.isArray(resolved)) {
-      throw new Error(`the script reader returned no list for pnpm ${script}`);
-    }
-    return resolved.map((entry) => (Array.isArray(entry) ? String(entry[1] ?? "") : "")).join("\n");
-  };
-
-  /**
-   * The package test scripts one tag's gate would run, counted, on one Node resolution.
-   *
-   * A root script contributes what IT runs: on the old path the gate runs `ci:gate`, whose body
-   * ends in `pnpm -C packages/qfai test`, so the aggregate's suite run is counted here as one.
-   * That is the whole reason a count is taken rather than the job list read — the aggregate's
-   * suite and a sliced leg are the same suite arriving by two routes, and a set would swallow the
-   * second.
-   */
-  const suiteRuns = (shape: string, checks: string, floor: boolean): string[] => {
-    const onFloor = new Set(
-      Object.entries(gateJobs())
-        .filter(([, job]) => pinsFloor(job) === floor)
-        .map(([id]) => id),
-    );
-    const runs: string[] = [];
-    for (const invocation of invocations(shape, checks)) {
-      if (!onFloor.has(invocation.jobId)) continue;
-      if (invocation.manifest === "package") {
-        if (invocation.script === "test" || invocation.script.startsWith("test:")) {
-          runs.push(invocation.script);
-        }
-        continue;
-      }
-      if (!invocation.script.startsWith("ci:gate")) continue;
-      for (const match of aggregateBody(shape, invocation.script).matchAll(
-        /\bpnpm -C packages\/qfai (test(?::[\w-]+)?)\b/g,
-      )) {
-        const script = match[1];
-        if (script !== undefined) runs.push(script);
-      }
-    }
-    return runs.sort();
-  };
-
-  // QFAI:SPEC-0017:TC-0017-0090
-  it("TC-0017-0090 (TDD-0099): classifies complete operation capabilities and legacy trees", () => {
-    const current = classify(currentRoot(), currentPackage());
-    expect(current.status, current.output).toBe(0);
-    expect([current.shape, current.checks]).toEqual(["sliced", "operations"]);
-    for (const tag of TAGS) expect(classifyTag(tag).checks, tag).toBe("aggregate");
-    const legacy = classify(
-      manifestWith(scriptKeys(currentRoot()).filter((key) => !operationScripts.includes(key))),
-      currentPackage(),
-    );
-    expect([legacy.shape, legacy.checks]).toEqual(["sliced", "aggregate"]);
-  });
-
-  // QFAI:SPEC-0017:TC-0017-0090
-  it("TC-0017-0090 (TDD-0099): preserves the complete ordered release checks", () => {
-    const parsed: unknown = JSON.parse(currentRoot());
-    if (!isRecord(parsed) || !isRecord(parsed["scripts"])) throw new Error("root scripts missing");
-    const scripts = parsed["scripts"];
-    expect(scripts["ci:gate:checks"]).toBe(
-      operationScripts.map((script) => `pnpm ${script}`).join(" && "),
-    );
-    const bodies = operationScripts.map((script) => {
-      const body = scripts[script];
-      if (typeof body !== "string") throw new Error(`${script} missing`);
-      return body;
-    });
-    expect(bodies.join(" && ")).toBe(
-      "pnpm sync:ssot && git diff --exit-code .qfai/ qfai.config.yaml packages/qfai/assets/init/.qfai/ && bash ./scripts/run-lint-checks.sh gate && pnpm check-types && node ./scripts/check-build-warnings.mjs && pnpm verify:pack",
-    );
-    const selected = invocations("sliced", "operations")
-      .filter((entry) => entry.manifest === "root")
-      .map((entry) => entry.script);
-    expect(selected.sort()).toEqual([...operationScripts].sort());
-  });
-
-  // QFAI:SPEC-0017:TC-0017-0091
-  it("TC-0017-0091 (TDD-0100): incomplete operation capabilities retain aggregate checks", () => {
-    const root = scriptKeys(currentRoot());
-    for (const dropped of operationScripts) {
-      expect(root).toContain(dropped);
-      for (const value of [undefined, 1, null, {}]) {
-        const scripts = Object.fromEntries(
-          root.map((key) => [key, key === dropped ? value : "declared"]),
-        );
-        const result = classify(JSON.stringify({ scripts }), currentPackage());
-        expect(result.status, `${dropped}: ${result.output}`).toBe(0);
-        expect([result.shape, result.checks]).toEqual(["sliced", "aggregate"]);
-      }
-    }
-    expect(classifyTag("v1.12.3").shape).toBe("whole");
-    const whole = classify(currentRoot(), manifestWith(["test"]));
-    expect([whole.shape, whole.checks]).toEqual(["whole", "aggregate"]);
-  });
-
-  // QFAI:SPEC-0017:TC-0017-0091
-  it("TC-0017-0091 (TDD-0100): refuses missing unknown and incompatible checks outputs", () => {
-    for (const id of ["github-release", "publish"]) {
-      const condition = releaseJobs()[id]?.["if"];
-      if (typeof condition !== "string") throw new Error(`${id} has no release condition`);
-      for (const { shape, checks } of gatePaths) {
-        const needs: ReleaseNeeds = {
-          verify: { result: "success", outputs: { "suite-shape": shape, "checks-shape": checks } },
-          gate: { result: "success" },
-          "gate-tests": { result: shape === "sliced" ? "success" : "skipped" },
-          "gate-floor": { result: shape === "sliced" ? "success" : "skipped" },
-          "gate-floor-whole": { result: shape === "whole" ? "success" : "skipped" },
-          ...Object.fromEntries(
-            operationJobs.map((name) => [
-              name,
-              { result: checks === "operations" ? "success" : "skipped" },
-            ]),
-          ),
-        };
-        for (const invalid of [
-          undefined,
-          "",
-          "unknown",
-          checks === "operations" ? "aggregate" : "operations",
-        ]) {
-          const changed = {
-            ...needs,
-            verify: {
-              result: "success",
-              outputs: { "suite-shape": shape, "checks-shape": invalid },
-            },
-          };
-          expect
-            .soft(
-              acceptsRelease(condition, changed, "push"),
-              `${id} ${shape} ${checks} -> ${invalid}`,
-            )
-            .toBe(false);
-        }
-      }
-      const impossible: ReleaseNeeds = Object.fromEntries(
-        Object.keys(gateJobs()).map((name) => [
-          name,
-          { result: ["gate-tests", "gate-floor"].includes(name) ? "skipped" : "success" },
-        ]),
-      );
-      impossible["verify"] = {
-        result: "success",
-        outputs: { "suite-shape": "whole", "checks-shape": "operations" },
-      };
-      expect(acceptsRelease(condition, impossible, "push"), `${id} whole operations`).toBe(false);
-    }
-  });
-
   // QFAI:SPEC-0017:TC-0017-0092
   it("TC-0017-0092 (TDD-0101): runs independent checks in isolated verified workspaces", () => {
     for (const id of ["gate", ...operationJobs]) {
@@ -4574,74 +3866,6 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
         );
     }
   });
-
-  type ReleaseNeed = {
-    result?: string | undefined;
-    outputs?: { "suite-shape"?: string | undefined; "checks-shape"?: string | undefined };
-  };
-  type ReleaseNeeds = Record<string, ReleaseNeed>;
-
-  /** Evaluates the release conditions' lowercase string fixtures and Boolean operators only. */
-  const acceptsRelease = (
-    condition: string,
-    needs: ReleaseNeeds,
-    event: string,
-    cancelled = false,
-  ): boolean => {
-    const expression = condition.trim().replace(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/, "$1");
-    const token =
-      /\s+|contains\(needs\.\*\.result,\s*'([^']*)'\)|cancelled\(\)|github\.event_name|needs\.([a-z][a-z-]*)\.(result|outputs\.(?:suite|checks)-shape)|'[^']*'|&&|\|\||==|!=|[!()]/gy;
-    const translated: string[] = [];
-    let offset = 0;
-    while (offset < expression.length) {
-      token.lastIndex = offset;
-      const match = token.exec(expression);
-      if (match === null) {
-        throw new Error(`Unsupported release condition syntax at ${expression.slice(offset)}`);
-      }
-      offset = token.lastIndex;
-      const text = match[0];
-      if (/^\s+$/.test(text)) continue;
-      if (match[1] !== undefined) {
-        translated.push(String(Object.values(needs).some((need) => need.result === match[1])));
-      } else if (text === "cancelled()") {
-        translated.push(String(cancelled));
-      } else if (text === "github.event_name") {
-        translated.push(JSON.stringify(event));
-      } else if (match[2] !== undefined) {
-        if (
-          ![
-            "verify",
-            "gate",
-            "gate-tests",
-            "gate-floor",
-            "gate-floor-whole",
-            ...operationJobs,
-          ].includes(match[2])
-        ) {
-          throw new Error(`Unsupported release need ${match[2]}`);
-        }
-        const need = needs[match[2]];
-        translated.push(
-          JSON.stringify(
-            (match[3] === "result"
-              ? need?.result
-              : need?.outputs?.[
-                  match[3] === "outputs.checks-shape" ? "checks-shape" : "suite-shape"
-                ]) ?? "",
-          ),
-        );
-      } else if (text.startsWith("'")) {
-        translated.push(JSON.stringify(text.slice(1, -1)));
-      } else {
-        translated.push(text);
-      }
-    }
-    // Only literals and the operators above reach the VM; unsupported syntax never evaluates.
-    const result: unknown = runInNewContext(translated.join(" "), {}, { timeout: 100 });
-    if (typeof result !== "boolean") throw new Error("Release condition must return a Boolean");
-    return result;
-  };
 
   // QFAI:SPEC-0017:TC-0017-0088
   it("TC-0017-0088 (TDD-0097): release prerequisites accept complete gate paths", () => {
