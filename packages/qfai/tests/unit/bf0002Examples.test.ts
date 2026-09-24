@@ -49,7 +49,7 @@ function verdictProgram(): string {
   return lines.slice(start + 1, end).join("\n");
 }
 
-function evaluateVerdict(needs: Record<string, { result?: string }>): {
+function evaluateVerdict(needs: Record<string, { result?: string | undefined }>): {
   exitCode: number;
   output: string;
 } {
