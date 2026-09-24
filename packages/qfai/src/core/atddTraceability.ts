@@ -1223,7 +1223,10 @@ export async function collectTestCaseAnnotationHomes(
     }
     const refs = extractSpecScopedAnnotations(maskTestSource(file, raw), TC_TEST_ANNOTATION_RE);
     if (refs.length === 0) continue;
-    const into = hasRunnableTestStructure(file, raw) ? homes.tests : homes.carriers;
+    // A computed binding (`const run = LIVE ? test : test.skip`) declares a test
+    // no literal call shows, and this check reports at `error`, so it counts.
+    const declaresTest = hasRunnableTestStructure(file, raw) || hasComputedSuiteBinding(raw);
+    const into = declaresTest ? homes.tests : homes.carriers;
     for (const ref of refs) recordSpecRef(into, ref.spec, `TC-${ref.id}`, file);
   }
   return homes;

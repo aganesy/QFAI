@@ -545,6 +545,32 @@ describe("a done row rests on a test, not on an annotation carrier", () => {
     );
   });
 
+  it("counts a test declared through a computed binding", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0002 | Unit | tests/unit/b.test.ts | case b | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues)).toEqual([]);
+      },
+      "# TC\n",
+      {
+        files: {
+          ...files,
+          "tests/unit/b.test.ts": [
+            "// QFAI:SPEC-0001:TC-0001-0002",
+            "const deployed = process.env.LIVE ? test : test.skip;",
+            'deployed("case b", () => {});',
+            "",
+          ].join("\n"),
+        },
+        config,
+      },
+    );
+  });
+
   it("reads the unit tests under paths.testsDir with no project glob", async () => {
     await withLedger(
       [
