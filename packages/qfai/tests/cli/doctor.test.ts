@@ -470,7 +470,7 @@ describe("doctor", () => {
 
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
       expect(parsed.profile).toBe("prototyping");
-      expect(findCheck(parsed.checks, "prototyping.primarySpec")?.severity).toBe("ok");
+      expect(findCheck(parsed.checks, "prototyping.primaryUiContract")?.severity).toBe("ok");
       expect(findCheck(parsed.checks, "prototyping.uiContracts")?.severity).toBe("ok");
       expect(findCheck(parsed.checks, "prototyping.designContracts")?.severity).toBe("ok");
       expect(findCheck(parsed.checks, "prototyping.requiredRoles")?.severity).toBe("ok");
@@ -746,7 +746,7 @@ describe("doctor", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
-      await rm(path.join(root, ".qfai", "contracts", "design", "DESIGN.md.lock.yaml"), {
+      await rm(path.join(root, ".qfai", "spec", "03_contract", "design", "DESIGN.md.lock.yaml"), {
         force: true,
       });
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
@@ -765,7 +765,7 @@ describe("doctor", () => {
       await seedPrototypingFixture(root, server.url);
       // Replace lock with a non-matching sha.
       await writeFile(
-        path.join(root, ".qfai", "contracts", "design", "DESIGN.md.lock.yaml"),
+        path.join(root, ".qfai", "spec", "03_contract", "design", "DESIGN.md.lock.yaml"),
         [
           'designMdPath: "DESIGN.md"',
           `designMdSha256: "${"0".repeat(64)}"`,
@@ -789,7 +789,7 @@ describe("doctor", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
       await writeFile(
-        path.join(root, ".qfai", "contracts", "design", "DESIGN.md.lock.yaml"),
+        path.join(root, ".qfai", "spec", "03_contract", "design", "DESIGN.md.lock.yaml"),
         ": : :\n",
         "utf-8",
       );
@@ -809,7 +809,7 @@ describe("doctor", () => {
       await seedPrototypingFixture(root, server.url);
       // 64-hex but doesn't match — same shape as TC-3.7.5.
       await writeFile(
-        path.join(root, ".qfai", "contracts", "design", "DESIGN.md.lock.yaml"),
+        path.join(root, ".qfai", "spec", "03_contract", "design", "DESIGN.md.lock.yaml"),
         ['designMdPath: "DESIGN.md"', `designMdSha256: "${"a".repeat(64)}"`, ""].join("\n"),
         "utf-8",
       );
@@ -828,7 +828,7 @@ describe("doctor", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
       await rm(path.join(root, "DESIGN.md"), { force: true });
-      await rm(path.join(root, ".qfai", "contracts", "design", "DESIGN.md.lock.yaml"), {
+      await rm(path.join(root, ".qfai", "spec", "03_contract", "design", "DESIGN.md.lock.yaml"), {
         force: true,
       });
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
@@ -847,7 +847,7 @@ describe("doctor", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
-      expect(findCheck(parsed.checks, "prototyping.primarySpec")).toBeDefined();
+      expect(findCheck(parsed.checks, "prototyping.primaryUiContract")).toBeDefined();
       expect(findCheck(parsed.checks, "prototyping.uiContracts")).toBeDefined();
       expect(findCheck(parsed.checks, "prototyping.designContracts")).toBeDefined();
       expect(findCheck(parsed.checks, "prototyping.requiredRoles")).toBeDefined();
@@ -1031,7 +1031,7 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
     "utf-8",
   );
   // Phase 3b: brand SSOT lives in root DESIGN.md plus a sha freeze in
-  // contracts/design/DESIGN.md.lock.yaml.
+  // spec/03_contract/design/DESIGN.md.lock.yaml.
   const designMdText = [
     "---",
     "brand:",
