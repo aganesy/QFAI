@@ -51,10 +51,10 @@ describe("the layer to CI lane map is part of the layer rule", () => {
   });
 
   // QFAI:EX-0002-0021-06
-  it("mirrors the authored rule through a symbolic link", () => {
+  it("mirrors the authored rule through a linked directory", () => {
     const source = path.join(assetRoot, ruleName);
     const mirrored = path.join(rootMirror, ruleName);
-    expect(lstatSync(mirrored).isSymbolicLink()).toBe(true);
+    expect(lstatSync(path.dirname(mirrored)).isSymbolicLink()).toBe(true);
     expect(realpathSync(mirrored)).toBe(realpathSync(source));
     expect(read(mirrored)).toBe(read(source));
   });

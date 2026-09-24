@@ -13,7 +13,7 @@ describe.each(trees)("%s oracle strength", (tree) => {
   it("requires an example assertion that fails for the owned behavior", async () => {
     const skill = await read(tree, "assistant/skill/qfai-implement/SKILL.md");
     const proof = await read(tree, "assistant/skill/qfai-implement/references/oracle-strength.md");
-    expect(skill).toContain("a falsifiable assertion");
+    expect(skill.replace(/\s+/g, " ")).toContain("a falsifiable assertion");
     expect(proof).toContain("smallest valid change to the owned predicate");
     expect(proof).toContain("Run the same selector and record its failing assertion output");
     expect(proof).toContain("Restore the predicate immediately");

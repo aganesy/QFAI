@@ -7,6 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const read = (tree: string, file: string): Promise<string> =>
   readFile(path.join(root, tree, file), "utf-8");
+const flat = (text: string): string => text.replace(/\s+/g, " ");
 
 describe("contract obligations are reconciled after concrete examples", () => {
   for (const tree of trees) {
@@ -38,12 +39,12 @@ describe("contract obligations are reconciled after concrete examples", () => {
           tree,
           "assistant/skill/qfai-sdd/references/contract-artifact-rules.md",
         );
-        expect(skill).toContain("Recompute affected flows after each contract change");
-        expect(rules).toContain(
+        expect(flat(skill)).toContain("Recompute affected flows after each contract change");
+        expect(flat(rules)).toContain(
           "recheck every obligation in it until a pass writes nothing and adds no flow",
         );
-        expect(rules).toContain("write scope stays within the approved change-request row");
-        expect(rules).toContain("A confirm-only review is read-only");
+        expect(flat(rules)).toContain("write scope stays within the approved change-request row");
+        expect(flat(rules)).toContain("A confirm-only review is read-only");
       },
     );
   }

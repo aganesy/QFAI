@@ -7,6 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const read = (tree: string, file: string): Promise<string> =>
   readFile(path.join(root, tree, file), "utf-8");
+const flat = (text: string): string => text.replace(/\s+/g, " ");
 
 describe("observed failures become concrete examples under acceptance criteria", () => {
   for (const tree of trees) {
@@ -20,7 +21,7 @@ describe("observed failures become concrete examples under acceptance criteria",
         tree,
         "assistant/skill/qfai-sdd/references/spec-traceability-rules.md",
       );
-      expect(skill).toContain("Preserve normal outcomes and meaningful failure boundaries");
+      expect(flat(skill)).toContain("Preserve normal outcomes and meaningful failure boundaries");
       expect(checklist).toContain(
         "Examples cover meaningful success, boundary, and kept-failure outcomes",
       );

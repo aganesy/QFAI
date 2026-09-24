@@ -78,7 +78,7 @@ async function collectMarkdown(dir: string, base: string = dir): Promise<string[
   }
   for (const entry of entries) {
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
+    if (entry.isDirectory() || entry.isSymbolicLink()) {
       collected.push(...(await collectMarkdown(full, base)));
     } else if (entry.name.endsWith(".md")) {
       collected.push(path.relative(base, full).replace(/\\/g, "/"));
