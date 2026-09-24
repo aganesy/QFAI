@@ -66,9 +66,9 @@
  * `integration` has other globs with files behind them, a per-PROJECT check would
  * have passed over it — so the invariant is per-GLOB.
  */
-// QFAI:SPEC-0017:TC-0017-0062
-// QFAI:SPEC-0017:TC-0017-0063
-// QFAI:SPEC-0017:TC-0017-0064
+// QFAI:EX-0002-0019-11
+// QFAI:EX-0002-0019-09
+// QFAI:EX-0002-0019-10
 
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";

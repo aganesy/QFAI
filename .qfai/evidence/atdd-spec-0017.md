@@ -22,9 +22,12 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
 - `.qfai/specs/spec-0017/07_Decisions.md` — `DR-0017-*`, read for the rejected alternatives this
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
-- `.qfai/specs/spec-0017/tdd/test-list.md` — 101 rows: 81 `Integration`,
-  11 `Unit`; **81 `refactor`, 6 `blocked`, 14 `todo`**. The other nine rows are `E2E`, one per story,
-  seeded at `todo`. Five `todo` rows are `Integration` and are therefore this stage's to route — see
+- `.qfai/specs/spec-0017/tdd/test-list.md` — 106 rows: 84 `Integration`,
+  11 `Unit`; **81 `refactor`, 6 `blocked`, 19 `todo`**. The other eleven rows are `E2E`, one per story,
+  seeded at `todo`. This stage reviewed the first 101 rows; TDD-0102 to TDD-0104, TDD-0106 and
+  TDD-0107 were appended at `todo` by the later spec-to-story `/qfai-sdd` run and are a later ATDD
+  run's to route. Five `todo` rows among the first 101 are `Integration` and are therefore this
+  stage's to route — see
   § "Ledger rows advanced"
 - `.qfai/assistant/catalog/test-layers.md` — the layer derivation and the directory each `Level`
   routes to

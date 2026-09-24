@@ -10,8 +10,8 @@
  *     under a one-minor-release deprecation window (sunset: qfai 1.10.0);
  *     non-blocking so legacy contracts can migrate without a hard break.
  */
-// QFAI:SPEC-0013:TC-0013-0026
-// QFAI:SPEC-0013:TC-0013-0027
+// QFAI:EX-0001-0159-02
+// QFAI:EX-0001-0159-02
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

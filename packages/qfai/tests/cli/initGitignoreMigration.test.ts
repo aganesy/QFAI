@@ -190,7 +190,7 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
         ".qfai/evidence/coverage-depth-spec-0001.md",
         ".qfai/evidence/change-request-0001.md",
         ".qfai/evidence/decision-0001.md",
-        ".qfai/evidence/decisions/20260101T000000000.json",
+        ".qfai/evidence/decision/20260101T000000000.json",
         ".qfai/evidence/import-lite-20260101000000000.md",
         ".qfai/evidence/import-lite.md",
         // The two session records. A stage that ran its grilling session and
@@ -232,38 +232,29 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
 
 describe("--force regenerates the standard asset trees", () => {
   it("restores an edited agent definition, not the manifest and not project content", async () => {
-    // Without this, a correction to an agent body reached new projects only:
-    // `.qfai/**` is copied create-only and `--force` covered
-    // `assistant/skills` alone.
-    //
-    // `agent-catalog.yml` is **not** in the set. `qfai-configure` is the
-    // shipped entrypoint for editing the declarative manifests, so forcing the
-    // catalog would replace a taxonomy adjustment made through the supported
-    // path — and nothing migrates it back, because `--upgrade-assistant-tree`
-    // deliberately does not walk `manifest/`.
+    // The retired manifest is adopter content. Init does not create or update it.
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const agent = path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md");
+      const agent = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
       const manifest = path.join(root, ".qfai", "assistant", "manifest", "agent-catalog.yml");
-      const steering = path.join(root, ".qfai", "steering", "README.md");
+      const steering = path.join(root, ".qfai", "steering", "_template", "entry.md");
       await writeFile(agent, "# stale" + NL, "utf-8");
+      await mkdir(path.dirname(manifest), { recursive: true });
       await writeFile(manifest, "tuned: true" + NL, "utf-8");
-      const projectContent = await readFile(steering, "utf-8").catch(() => null);
+      const projectContent = await readFile(steering, "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
       expect(await readFile(agent, "utf-8")).not.toBe("# stale" + NL);
       expect(await readFile(manifest, "utf-8")).toBe("tuned: true" + NL);
-      if (projectContent !== null) {
-        expect(await readFile(steering, "utf-8")).toBe(projectContent);
-      }
+      expect(await readFile(steering, "utf-8")).toBe(projectContent);
     });
   });
 
   it("leaves them alone without --force", async () => {
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const agent = path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md");
+      const agent = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
       await writeFile(agent, "# ours\n", "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -774,7 +765,7 @@ describe("nothing under a review directory reaches a commit", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const hidden = [
-        ".qfai/evidence/decisions/20260101T000000000.json",
+        ".qfai/evidence/decision/20260101T000000000.json",
         ".qfai/evidence/implement-spec-0001.md",
         ".qfai/evidence/atdd-spec-0001.md",
         ".qfai/evidence/coverage-depth-spec-0001.md",

@@ -213,7 +213,7 @@ async function initScriptlessTree(): Promise<{ dir: string; doc: unknown }> {
   return { dir, doc };
 }
 
-// QFAI:SPEC-0003:TC-0003-0036
+// QFAI:EX-0002-0003-03
 describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing test lanes", () => {
   // One it() per TC-0003-0036 verify bullet. Scope notes, disclosed:
   // - The evaluator above honestly interprets a literal `false` conjunct
@@ -356,7 +356,7 @@ describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0037
+// QFAI:EX-0002-0003-04
 describe("TC-0003-0037 (TDD-0037): two installing job declarations, four and three executing instances, zero secret references", () => {
   // Setup is TC-0003-0036's init output tree (the scriptless adopter);
   // every count below is taken over EVERY workflow file init wrote.

@@ -1,0 +1,36 @@
+# 07 NFR (Non-Functional Requirements)
+
+## Requirements Table
+
+| NFR-ID   | Category        | Title                                    | Target                                                                                                                                                                                                                                                       | Measurement                                                                                                                                            | Source                             | Priority |
+| -------- | --------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- | -------- |
+| NFR-0001 | reliability     | Migration scripts are idempotent         | A second run on a migrated tree changes 0 files; an interrupted run, run again, completes                                                                                                                                                                    | Run each script twice on the old-layout fixture and compare the trees byte for byte; kill a run midway and rerun                                       | SRC-0113 (Q19); SRC-0101           | must     |
+| NFR-0002 | operability     | Every migration script has a dry run     | A dry run writes 0 files and prints every operation the real run would perform                                                                                                                                                                               | Compare the tree before and after a dry run; compare its printed operations with the files the real run changes                                        | SRC-0113 (Q19)                     | must     |
+| NFR-0003 | reliability     | Migration loses no case                  | 100% of `06_Test-Cases` rows with EX-Ref `—` appear in the migration report, either as a new EX-ID or as unresolved                                                                                                                                          | Count such rows in the fixture input; count report entries; the two counts are equal                                                                   | SRC-0105; SRC-0113 (Q12)           | must     |
+| NFR-0004 | security        | No internal identifiers in shipped files | 0 findings from the pre-build lint, the post-build guard and the smoke test on the release candidate, with the pattern set extended by REQ-0024                                                                                                              | `pnpm ci:lint`, `packages/qfai/scripts/check-no-internal-version-leakage.sh`, `distributedSurfaceLeakage.test.ts`, each run with the REQ-0024 patterns | SRC-0114                           | must     |
+| NFR-0005 | performance     | Validate is not slower                   | `qfai validate --fail-on error` on the sample tree `qfai init` writes takes at most 120% of the pre-change time                                                                                                                                              | Median of five runs on the same machine, before and after; baseline measured in phase P1 (assumption: no baseline exists yet)                          | SRC-0101                           | should   |
+| NFR-0006 | maintainability | Layout has one description               | 0 failures in `mdschemaSchemas.test.ts`; `pnpm lint:mdschema` and `pnpm lint:mermaid` pass on the sample tree                                                                                                                                                | CI lint and test jobs                                                                                                                                  | SRC-0115; SRC-0120                 | must     |
+| NFR-0007 | usability       | The old-layout error says what to do     | The finding names the detected path and `/qfai-migration-spec-to-story`, in one sentence                                                                                                                                                                     | Validate on the old-layout fixture; read the finding                                                                                                   | SRC-0113 (Q12)                     | must     |
+| NFR-0008 | security        | Migration writes only where it must      | Scripts write only to: `.qfai/`; `qfai.config.yaml`; the managed block of `.gitignore`; the host integration links (REQ-0019 step 9); and `QFAI:` annotation lines in test files. Each of these writes is covered by the dry run (NFR-0002). 0 network calls | Run on a fixture inside a temporary directory, diff every file outside that list (expected: none), and review the scripts for network APIs             | SRC-0113 (Q19); SRC-0103; SRC-0108 | must     |
+| NFR-0009 | maintainability | Mirror stays in step                     | `pnpm ci:gate:ssot` reports no diff on every commit of the change                                                                                                                                                                                            | CI gate job                                                                                                                                            | SRC-0107                           | must     |
+| NFR-0010 | reliability     | Decision records stay tracked            | After migration, `git check-ignore` reports no path under `.qfai/evidence/decision/`, and a record written there shows in `git status`                                                                                                                       | Run both on the migrated fixture                                                                                                                       | SRC-0103                           | must     |
+
+## Categories
+
+- `performance`: Response time, throughput, latency.
+- `reliability`: Availability, fault tolerance, recovery.
+- `security`: Authentication, authorization, data protection.
+- `scalability`: Load handling, horizontal/vertical scaling.
+- `usability`: Accessibility, UX standards, i18n.
+- `maintainability`: Code quality, documentation, testability.
+- `operability`: Monitoring, deployment, logging.
+
+## Rules
+
+- Each NFR must have a measurable target.
+- Each NFR must reference at least one Source (SRC-ID).
+
+## Notes on targets
+
+- NFR-0005: 120% is an assumption. The new validators replace old ones rather than adding to them, so the check count should not grow; the margin allows for the new cross-file links (BR to EX, EX to AC). The delivery team may tighten it once the P1 baseline exists.
+- Scalability has no NFR. The change does not alter how validate scales with project size beyond NFR-0005.

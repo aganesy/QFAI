@@ -15,7 +15,7 @@ import {
   loadCompletionCertificate,
   writeCompletionCertificate,
 } from "../../../src/core/prototyping/certificate.js";
-import { readFrozenSpecsCovered } from "../../../src/core/prototyping/specsCovered.js";
+import { readUiContractsCovered } from "../../../src/core/prototyping/specsCovered.js";
 
 const tempDirs: string[] = [];
 
@@ -56,10 +56,30 @@ const baseInputs = (evidenceRoot: string) => ({
     timestamp: "2026-04-27T00:02:00Z",
   },
   iterationCount: 4,
-  specsCovered: ["0017"],
+  uiContractsCovered: ["CON-UI-0017"],
+  convergedUiContracts: ["CON-UI-0017"],
+  laggingUiContracts: [],
 });
 
 describe("buildCompletionCertificate", () => {
+  it("requires a canonical, distinct partition of covered UI contracts", async () => {
+    const root = await newTempDir();
+    const evidenceRoot = await seedEvidence(root, {});
+    await expect(
+      buildCompletionCertificate({
+        ...baseInputs(evidenceRoot),
+        uiContractsCovered: ["0017"],
+        convergedUiContracts: ["0017"],
+      }),
+    ).rejects.toThrow(/CON-UI-NNNN/);
+    await expect(
+      buildCompletionCertificate({
+        ...baseInputs(evidenceRoot),
+        laggingUiContracts: ["CON-UI-0017"],
+      }),
+    ).rejects.toThrow(/partition/);
+  });
+
   it("collects sha256 digests of every evidence file (sorted by path)", async () => {
     const root = await newTempDir();
     const evidenceRoot = await seedEvidence(root, {
@@ -85,12 +105,21 @@ describe("buildCompletionCertificate", () => {
     const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
     expect(cert.runId).toBe("run-2026-04-27-abc");
     expect(cert.reviewerSignoff.reviewerId).toBe("test-reviewer");
-    expect(cert.specsCovered).toEqual(["0017"]);
+    expect(cert.uiContractsCovered).toEqual(["CON-UI-0017"]);
   });
 });
 
 describe("write / load round-trip", () => {
-  // QFAI:SPEC-0012:TC-0012-0334
+  it("rejects certificates with legacy spec fields", async () => {
+    const root = await newTempDir();
+    const evidenceRoot = await seedEvidence(root, {});
+    const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
+    const certPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);
+    await mkdir(path.dirname(certPath), { recursive: true });
+    await writeFile(certPath, JSON.stringify({ ...cert, specsCovered: ["0017"] }), "utf-8");
+    expect(await loadCompletionCertificate(root)).toBeNull();
+  });
+
   it("writes to canonical path and load returns the same object", async () => {
     const root = await newTempDir();
     const evidenceRoot = await seedEvidence(root, {
@@ -111,13 +140,15 @@ describe("write / load round-trip", () => {
     const body = await readFile(path.join(root, COMPLETION_CERTIFICATE_REL_PATH), "utf-8");
     // Top-level keys appear in alphabetical order
     const topKeysOrdered = [
+      "convergedUiContracts",
       "evidenceDigests",
       "generatedAt",
       "generator",
       "iterationCount",
+      "laggingUiContracts",
       "reviewerSignoff",
       "runId",
-      "specsCovered",
+      "uiContractsCovered",
       "validateRun",
       "verifyRun",
     ];
@@ -193,7 +224,7 @@ describe("checkCompletionCertificate", () => {
     }
   });
 
-  // QFAI:SPEC-0012:TC-0012-0482
+  // QFAI:EX-0001-0140-02
   it("leaves a cycle-0 reset's backups out of the digest tree", async () => {
     // They hold the previous loop's evidence, and removing one after certify
     // must not read as this loop's evidence changing.
@@ -321,7 +352,9 @@ describe("checkCompletionCertificate", () => {
           timestamp: "2026-04-27T00:00:00Z",
         },
         iterationCount: 0,
-        specsCovered: [],
+        uiContractsCovered: ["CON-UI-0001"],
+        convergedUiContracts: ["CON-UI-0001"],
+        laggingUiContracts: [],
       })}\n`,
       "utf-8",
     );
@@ -409,109 +442,99 @@ describe("checkCompletionCertificate", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// TC-0012-0382 / TC-0012-0390 — frozen-set SSOT drives certify aggregation
-// (TDD-0386 / TDD-0388)
+// Frozen UI contract evidence drives certify aggregation.
 // ─────────────────────────────────────────────────────────────────────────
 
-describe("readFrozenSpecsCovered drives certify aggregation (TC-0012-0382)", () => {
-  // QFAI:SPEC-0012:TC-0012-0382
-  it("TC-0012-0382 (TDD-0386): preserves the frozen set iteration order verbatim", async () => {
-    // Per spec-0012 AC-0012-0050: `readFrozenSpecsCovered` reads the
-    // cycle-0 frozen spec set and the certify aggregation loop honours
-    // that order verbatim (it does NOT re-sort, re-dedupe, or
-    // re-resolve from disk). This unit test pins the predicate: a
+describe("readUiContractsCovered drives certify aggregation", () => {
+  it("preserves the frozen UI contract iteration order verbatim", async () => {
+    // The reader consumes the cycle-0 frozen UI contract set and the
+    // certify aggregation loop honours that order verbatim (it does not re-sort,
+    // re-dedupe, or re-resolve from disk). This unit test pins the predicate: a
     // mock prototyping.json record with a non-lexicographic order
-    // (e.g. ["0099", "0001"]) returns the same order — proving the
+    // (e.g. ["CON-UI-0099", "CON-UI-0001"]) returns the same order — proving the
     // reader does not silently re-sort.
     //
     // The certify call site (prototypingCertify.ts:314) passes the
     // returned array verbatim into `buildCompletionCertificate({
-    // specsCovered })`, which uses `[...inputs.specsCovered]` to
+    // uiContractsCovered })`, which uses `[...inputs.uiContractsCovered]` to
     // preserve order. Together these two facts mean a certify
-    // iteration over `cert.specsCovered` walks the spec set in
+    // iteration over `cert.uiContractsCovered` walks the UI contract set in
     // frozen-set order.
-    const frozen = ["0099", "0001", "0042"];
-    const result = readFrozenSpecsCovered({ specsCovered: frozen });
-    expect(result).not.toBeNull();
+    const frozen = ["CON-UI-0099", "CON-UI-0001", "CON-UI-0042"];
+    const result = readUiContractsCovered({ uiContractsCovered: frozen });
     // Preservation of input order (NOT sorted) — defends against a
     // future refactor that silently sorts the array.
-    expect(result).toEqual(["0099", "0001", "0042"]);
+    expect(result).toEqual({ kind: "ok", value: ["CON-UI-0099", "CON-UI-0001", "CON-UI-0042"] });
     // Confirm non-mutation of the input.
-    expect(frozen).toEqual(["0099", "0001", "0042"]);
+    expect(frozen).toEqual(["CON-UI-0099", "CON-UI-0001", "CON-UI-0042"]);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0382
-  it("TC-0012-0382 (TDD-0386): downstream consumer (e.g. certify build) sees identical iteration order", async () => {
+  it("the certificate receives the same frozen UI contract iteration order", async () => {
     // End-to-end on the unit boundary: read frozen → pass into
-    // buildCompletionCertificate → confirm cert.specsCovered preserves
+    // buildCompletionCertificate → confirm cert.uiContractsCovered preserves
     // the iteration order. This pins the contract between
-    // `specsCovered.ts` and `certificate.ts` so a future change to
+    // `uiContractsCovered.ts` and `certificate.ts` so a future change to
     // either side that silently re-orders is caught.
     const root = await newTempDir();
     const evidenceRoot = await seedEvidence(root, {
       "rounds/r5/harvest.json": "{}\n",
     });
-    const frozenInRecord = { specsCovered: ["0099", "0001", "0042"] };
-    const frozen = readFrozenSpecsCovered(frozenInRecord);
-    expect(frozen).not.toBeNull();
-    if (frozen === null) throw new Error("frozen unexpectedly null");
+    const frozenInRecord = { uiContractsCovered: ["CON-UI-0099", "CON-UI-0001", "CON-UI-0042"] };
+    const frozenResult = readUiContractsCovered(frozenInRecord);
+    if (frozenResult.kind !== "ok") throw new Error("frozen UI contract list unexpectedly invalid");
+    const frozen = frozenResult.value;
 
     const cert = await buildCompletionCertificate({
       ...baseInputs(evidenceRoot),
-      specsCovered: frozen,
+      uiContractsCovered: frozen,
+      convergedUiContracts: frozen,
     });
-    expect(cert.specsCovered).toEqual(["0099", "0001", "0042"]);
+    expect(cert.uiContractsCovered).toEqual(["CON-UI-0099", "CON-UI-0001", "CON-UI-0042"]);
   });
 });
 
-describe("frozen SSOT immutability across cycles (TC-0012-0390)", () => {
-  // QFAI:SPEC-0012:TC-0012-0390
-  it("TC-0012-0390 (TDD-0388): cycle-0 frozen specsCovered is read from evidence, not from live in-memory mutations", async () => {
-    // Per AC-0012-0051 / spec-0012 §SSOT immutability: the cycle-0
-    // frozen spec set is recorded once and consumed by subsequent
-    // cycles via `readFrozenSpecsCovered`. Mutating an in-memory
-    // "live" copy of the spec set must not affect what subsequent
-    // reads return — readFrozenSpecsCovered ALWAYS produces a defensive
+describe("frozen UI contract evidence remains immutable across reads", () => {
+  it("reads frozen uiContractsCovered from evidence, not live in-memory mutations", async () => {
+    // The cycle-0 frozen UI contract set is recorded once and consumed by subsequent
+    // reads. Mutating an in-memory
+    // "live" copy of the UI contract set must not affect what subsequent
+    // reads return — readUiContractsCovered always produces a defensive
     // copy from the persisted record.
     //
     // Setup: persist a "cycle 0 evidence" record with frozen set
-    // ["0001"]. Then mutate an in-memory "live" array. Re-read the
-    // frozen set — must still be ["0001"], not the mutated value.
-    const recorded = { specsCovered: ["0001"] };
-    const liveInMemory: string[] = [...recorded.specsCovered];
+    // ["CON-UI-0001"]. Then mutate an in-memory "live" array. Re-read the
+    // frozen set — must still be ["CON-UI-0001"], not the mutated value.
+    const recorded = { uiContractsCovered: ["CON-UI-0001"] };
+    const liveInMemory: string[] = [...recorded.uiContractsCovered];
 
     // Cycle 0: read the frozen set.
-    const cycle0 = readFrozenSpecsCovered(recorded);
-    expect(cycle0).toEqual(["0001"]);
+    const cycle0 = readUiContractsCovered(recorded);
+    expect(cycle0).toEqual({ kind: "ok", value: ["CON-UI-0001"] });
 
     // Mutate the in-memory live copy AND attempt to mutate cycle0
     // (which must not back-write to the record).
-    liveInMemory.push("0099");
-    if (cycle0 !== null) {
-      cycle0.push("0042");
+    liveInMemory.push("CON-UI-0099");
+    if (cycle0.kind === "ok") {
+      cycle0.value.push("CON-UI-0042");
     }
 
-    // Cycle 1 re-reads the frozen set — still ["0001"].
-    const cycle1 = readFrozenSpecsCovered(recorded);
-    expect(cycle1).toEqual(["0001"]);
+    // Cycle 1 re-reads the frozen set — still ["CON-UI-0001"].
+    const cycle1 = readUiContractsCovered(recorded);
+    expect(cycle1).toEqual({ kind: "ok", value: ["CON-UI-0001"] });
     // Confirm the persisted record was NOT mutated by the cycle-0
     // consumer (defensive-copy contract).
-    expect(recorded.specsCovered).toEqual(["0001"]);
+    expect(recorded.uiContractsCovered).toEqual(["CON-UI-0001"]);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0390
-  it("TC-0012-0390 (TDD-0388): cycle-0 frozenLicenseCatalog shape preserved across reads", async () => {
-    // The license catalog companion to the frozen spec set is
+  it("preserves the frozenLicenseCatalog shape across reads", async () => {
+    // The license catalog companion to the frozen UI contract set is
     // recorded once at cycle 0 and read on every subsequent cycle.
-    // This unit test pins that the catalog shape persisted on
-    // prototyping.json round-trips losslessly (allowedSources +
-    // licenseTiers), so a future cycle that re-reads it cannot
-    // observe a partial / re-baselined catalog.
+    // This unit test pins JSON round-trip of the catalog shape
+    // (allowedSources + licenseTiers), without claiming that the
+    // iterate command persisted or consumed it.
     //
-    // No public reader API for frozenLicenseCatalog yet (the iterate
-    // command reads it inline); pin the round-trip on a JSON
-    // serialize/parse boundary instead so the on-disk persistence
-    // contract is exercised.
+    // No public reader API for frozenLicenseCatalog exists; this
+    // exercises only the serialization boundary.
     const catalog = {
       allowedSources: ["unsplash", "pexels"] as const,
       licenseTiers: {

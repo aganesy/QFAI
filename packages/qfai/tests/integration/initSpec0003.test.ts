@@ -1,36 +1,4 @@
-/**
- * Integration: Init Command Spec-0003 TDD Backfill
- *
- * Validates that the init command (spec-0003) requirements are covered
- * by existing implementation: init.ts CLI command module.
- *
- * All 15 TDD items are Exception-pattern backfill (DR-0003-0006).
- * Existing coverage: tests/cli/init.test.ts, tests/codex/agents.test.ts.
- */
-// QFAI:SPEC-0003:TC-0003-0001
-// QFAI:SPEC-0003:TC-0003-0002
-// QFAI:SPEC-0003:TC-0003-0003
-// QFAI:SPEC-0003:TC-0003-0004
-// QFAI:SPEC-0003:TC-0003-0005
-// QFAI:SPEC-0003:TC-0003-0006
-// QFAI:SPEC-0003:TC-0003-0007
-// QFAI:SPEC-0003:TC-0003-0008
-// QFAI:SPEC-0003:TC-0003-0009
-// QFAI:SPEC-0003:TC-0003-0010
-// QFAI:SPEC-0003:TC-0003-0011
-// QFAI:SPEC-0003:TC-0003-0012
-// QFAI:SPEC-0003:TC-0003-0013
-// QFAI:SPEC-0003:TC-0003-0014
-// QFAI:SPEC-0003:TC-0003-0015
-// QFAI:SPEC-0003:TC-0003-0018
-// QFAI:SPEC-0003:TC-0003-0019
-// QFAI:SPEC-0003:TC-0003-0020
-// QFAI:SPEC-0003:TC-0003-0021
-// QFAI:SPEC-0003:TC-0003-0022
-// QFAI:SPEC-0003:TC-0003-0023
-// QFAI:SPEC-0003:TC-0003-0024
-// QFAI:SPEC-0003:TC-0003-0025
-// QFAI:SPEC-0003:TC-0003-0026
+/** Init integration traceability and assistant-tree wiring. */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -205,59 +173,53 @@ describe("TC-0003-0020: review-*/ サブディレクトリが gitignore 対象",
   });
 });
 
-// TC-0003-0021..0026 (v1.9.0 assistant-tree recut). Runtime assertions live
-// in tests/cli/init.test.ts; here we keep the static-content checks that
-// pin the SSOT imports and the assistantPaths.ts helpers.
+// Runtime assertions live in tests/cli/init.test.ts. These checks pin the
+// assistant-tree path helpers used by init.
 
-describe("TC-0003-0021: 4-layer asset-tree seed", () => {
-  it("init imports assistantPaths.ts and uses ASSISTANT_LAYERS / joinAssistantLayer", async () => {
+describe("TC-0003-0021: singular assistant-tree seed", () => {
+  it("init uses the assistant path SSOT and ships the four singular layers", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("assistantPaths");
-    expect(content).toContain("ASSISTANT_LAYERS");
+    expect(content).toContain("ASSISTANT_DIR");
     expect(content).toContain("joinAssistantLayer");
+    expect(content).toContain('"assistant/skill"');
+    expect(content).toContain('"assistant/agent"');
+    const { ASSISTANT_LAYERS } = await import("../../src/core/paths/assistantPaths.js");
+    expect(ASSISTANT_LAYERS).toEqual(["rule", "skill", "agent", "prompt"]);
   });
 });
 
 describe("TC-0003-0022: project-root steering surface seed", () => {
-  it("init declares seedProjectSteering and references _templates/entry.md", async () => {
+  it("init seeds the create-only steering entry under _template", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("seedProjectSteering");
     expect(content).toContain("joinProjectSteering");
-    expect(content).toMatch(/entry\.md/);
+    expect(content).toContain('{ rel: ["_template", "entry.md"]');
   });
 });
 
 describe("TC-0003-0023: --upgrade-assistant-tree migration", () => {
-  it("init wires --upgrade-assistant-tree to runUpgradeAssistantTree", async () => {
+  it("init moves only named legacy assets while keeping existing destinations", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("upgradeAssistantTree");
     expect(content).toContain("runUpgradeAssistantTree");
     expect(content).toContain("W-USER-EDIT-PRESERVED");
-  });
-});
-
-describe("TC-0003-0024: migration memo authoring", () => {
-  it("init authors the migration memo via buildMigrationMemo / joinMigrationMemo", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
-    expect(content).toContain("buildMigrationMemo");
-    expect(content).toContain("joinMigrationMemo");
-    // The retirement label comes from the SSOT in `assistantPaths.ts`, shared
-    // with the validator, NOT from a release-relative computation.
-    expect(content).toContain("legacyAssistantSteeringSunsetLabel");
+    expect(content).toContain("UPGRADE_RULE_FILES");
+    expect(content).toContain('"qfai-sdd/references/requirements-decomposition.md"');
+    expect(content).toContain("if (target === null) continue");
   });
 });
 
 describe("TC-0003-0025: assistantPaths.ts SSOT module", () => {
-  it("exports the canonical 4 layer names and helper functions", async () => {
+  it("exports the singular layer names and path helpers", async () => {
     const mod = await import("../../src/core/paths/assistantPaths.js");
-    expect(mod.ASSISTANT_LAYERS).toEqual(["constitution", "manifest", "catalog", "process"]);
+    expect(mod.ASSISTANT_LAYERS).toEqual(["rule", "skill", "agent", "prompt"]);
     expect(typeof mod.joinAssistantLayer).toBe("function");
-    expect(typeof mod.joinLegacyAssistantSteering).toBe("function");
     expect(typeof mod.joinProjectSteering).toBe("function");
-    expect(typeof mod.joinMigrationMemo).toBe("function");
-    expect(mod.migrationMemoRelativePath("1.9.0")).toBe(
-      ".qfai/assistant/process/migrations/v1.9.0-assistant-layer-recut.md",
+    expect(mod.joinAssistantLayer("project", "rule", "quality.md")).toBe(
+      path.join("project", ".qfai", "assistant", "rule", "quality.md"),
     );
+    expect(mod.PROJECT_STEERING_TEMPLATES_SUBDIR).toBe("_template");
   });
 });
 

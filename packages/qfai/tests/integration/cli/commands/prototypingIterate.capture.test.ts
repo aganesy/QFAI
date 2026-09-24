@@ -13,7 +13,7 @@
  * the flag plumbing + per-screen iteration + htmlSourceCopy byte-copy.
  */
 
-// QFAI:SPEC-0012:TC-0012-0440
+// QFAI:EX-0001-0134-01
 
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";

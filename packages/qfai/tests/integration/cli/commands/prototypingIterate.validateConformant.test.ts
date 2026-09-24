@@ -17,7 +17,7 @@
  * Plus top-level `acceptedIterationIndex` + `stopReason`.
  */
 
-// QFAI:SPEC-0012:TC-0012-0443
+// QFAI:EX-0001-0136-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -179,7 +179,7 @@ describe("iterate cycle 0 emits validate-conformant prototyping.json", () => {
       iterations: Array<{
         index: number;
         commitSha: string;
-        evidenceRefs: { screenshot: string; html: string };
+        evidenceRefs: Array<{ kind: "screenshot" | "html"; path: string }>;
         reviewerId: string;
       }>;
       acceptedIterationIndex: number;
@@ -200,11 +200,8 @@ describe("iterate cycle 0 emits validate-conformant prototyping.json", () => {
   });
 
   // Round-trip `iterate --cycle 0` → `validatePrototypingArtifactRefIntegrity`.
-  // The ref-integrity validator reads `iter.evidenceRefs.screenshot` / `.html`
-  // as object fields, so `buildSeedIterations` emits the canonical
-  // `{screenshot, html}` object shape (SSOT: {@link Iteration} type +
-  // `buildEvaluatorReview`) rather than an array of `{kind, path}` entries,
-  // which would trip `QFAI-PROT-009` on every fresh cycle-0 seed.
+  // The untouched seed has no evidenceRefs array because capture and review
+  // happen after it is written. Reviewed iterations use {kind, path} entries.
   it("ref-integrity validator returns zero error-severity issues post-cycle-0 (no declared screens)", async () => {
     const root = await newTempDir();
     await seedProject(root);

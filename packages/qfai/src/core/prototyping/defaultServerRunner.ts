@@ -4,7 +4,7 @@
  *
  * Spins up an in-process Node `http.createServer` listening on
  * `127.0.0.1`. Serves static files from
- * `<root>/.qfai/prototypes/iter-NN/` (where NN is the zero-padded
+ * `<root>/.qfai/prototype/iter-NN/` (where NN is the zero-padded
  * cycle), with `GET /` mapped to `index.html`. Path-traversal attempts
  * outside the iteration directory are rejected with HTTP 403.
  *
@@ -49,6 +49,8 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import path from "node:path";
+
+import { PROTOTYPE_REL } from "./paths.js";
 
 /**
  * Arguments accepted by the default server runner. Mirrors the
@@ -141,7 +143,7 @@ export const defaultServerRunner = async (args: ServerRunnerArgs): Promise<Serve
   // process the operator never asked for) → DEFAULT_AUTO_SERVE_PORT.
   const port = args.port ?? derivePortFromTargetUrl(args.targetUrl) ?? DEFAULT_AUTO_SERVE_PORT;
   const iterDirName = `iter-${String(args.cycle).padStart(2, "0")}`;
-  const serveRoot = path.resolve(args.root, ".qfai", "prototypes", iterDirName);
+  const serveRoot = path.resolve(args.root, PROTOTYPE_REL, iterDirName);
 
   const server = createServer((req, res) => {
     handleRequest(req, res, serveRoot);

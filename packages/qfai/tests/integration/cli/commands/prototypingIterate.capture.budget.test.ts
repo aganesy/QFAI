@@ -11,7 +11,7 @@
  * the comparison semantics.
  */
 
-// QFAI:SPEC-0012:TC-0012-0441
+// QFAI:EX-0001-0134-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

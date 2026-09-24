@@ -14,8 +14,8 @@
  *       same reset fails (REQ-0174).
  */
 
-// QFAI:SPEC-0012:TC-0012-0449
-// QFAI:SPEC-0012:TC-0012-0481
+// QFAI:EX-0001-0140-01
+// QFAI:EX-0001-0140-02
 
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";

@@ -126,7 +126,6 @@ describe("doctor", () => {
 
       const configSearch = indexOf("config.search");
       const configLoad = indexOf("config.load");
-      const specLayout = indexOf("spec.layout");
       const guardrails = indexOf("guardrails.present");
       const outputValidate = indexOf("output.validateJson");
       const outputAlignment = indexOf("output.pathAlignment");
@@ -136,64 +135,11 @@ describe("doctor", () => {
       expect(configLoad).toBeGreaterThan(configSearch);
       expect(Math.min(...pathIndices)).toBeGreaterThan(configLoad);
       expect(promptsDeprecated).toBeGreaterThan(Math.max(...pathIndices));
-      expect(specLayout).toBeGreaterThan(promptsDeprecated);
-      expect(guardrails).toBeGreaterThan(specLayout);
+      expect(guardrails).toBeGreaterThan(promptsDeprecated);
       expect(outputValidate).toBeGreaterThan(guardrails);
       expect(outputAlignment).toBeGreaterThan(outputValidate);
       expect(outDirCollision).toBeGreaterThan(outputAlignment);
       expect(traceability).toBeGreaterThan(outDirCollision);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("warns when spec pack files are missing", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const specPackDir = path.join(root, ".qfai", "specs", "spec-0001");
-      await rm(specPackDir, { recursive: true, force: true });
-      await mkdir(specPackDir, { recursive: true });
-      await writeFile(path.join(specPackDir, "spec.md"), "# SPEC-0001: Sample Spec\n", "utf-8");
-
-      const parsed = await readDoctorData(root);
-      const check = findCheck(parsed.checks, "spec.layout");
-      expect(check?.severity).toBe("warning");
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("warns when legacy file layout is used", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const specPackDir = path.join(root, ".qfai", "specs", "spec-0001");
-      await rm(specPackDir, { recursive: true, force: true });
-      await mkdir(specPackDir, { recursive: true });
-      await writeFile(path.join(specPackDir, "spec.md"), "# SPEC-0001\n", "utf-8");
-      await writeFile(path.join(specPackDir, "delta.md"), "# Delta\n", "utf-8");
-      await writeFile(path.join(specPackDir, "scenario.feature"), "Feature: Sample\n", "utf-8");
-      await writeFile(path.join(specPackDir, "case-catalogue.md"), "# Case Catalogue\n", "utf-8");
-      await writeFile(
-        path.join(specPackDir, "traceability-matrix.md"),
-        "# Traceability Matrix\n",
-        "utf-8",
-      );
-      await writeFile(
-        path.join(specPackDir, "implementation-brief.md"),
-        "# Implementation Brief\n",
-        "utf-8",
-      );
-
-      const parsed = await readDoctorData(root);
-      const check = findCheck(parsed.checks, "spec.layout");
-      // Legacy layout guidance is informational in v1.4.36; hard errors focus
-      // on missing required files for layered/spec-pack contracts.
-      expect(check?.severity).toBe("info");
-      expect(check?.message).toContain("legacy implementation-brief.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -211,6 +157,31 @@ describe("doctor", () => {
     }
   });
 
+  it("reads guardrails from configured policy and contract roots", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-guardrails-"));
+    try {
+      const policy = path.join(root, "custom/spec/01_policy/policy.md");
+      const contract = path.join(root, "custom/contracts/api/orders.md");
+      await mkdir(path.dirname(policy), { recursive: true });
+      await mkdir(path.dirname(contract), { recursive: true });
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  specsDir: custom/spec\n  contractsDir: custom/contracts\n",
+        "utf8",
+      );
+      const guardrail = (id: string): string =>
+        `## Decision Guardrails\n### ${id}: Boundary\n- Type: non-goal\n- Guardrail: Keep this boundary.\n- Rationale: Scope is fixed.\n- Reconsider: When the scope changes.\n`;
+      await writeFile(policy, guardrail("DG-0001"), "utf8");
+      await writeFile(contract, guardrail("DG-0002"), "utf8");
+      const parsed = await readDoctorData(root);
+      const check = findCheck(parsed.checks, "guardrails.present");
+      expect(check?.severity).toBe("ok");
+      expect(check?.details?.count).toBe(2);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("warns on empty testFileGlobs and output path mismatch", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
@@ -221,11 +192,11 @@ describe("doctor", () => {
         configPath,
         [
           "paths:",
-          "  specsDir: .qfai/specs",
-          "  contractsDir: .qfai/contracts",
+          "  specsDir: .qfai/spec",
+          "  contractsDir: .qfai/spec/03_contract",
           "  discussionDir: .qfai/discussion",
           "  outDir: .qfai/report",
-          "  skillsDir: .qfai/assistant/skills",
+          "  skillsDir: .qfai/assistant/skill",
           "  srcDir: src",
           "  testsDir: tests",
           "validation:",
@@ -258,13 +229,13 @@ describe("doctor", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      await seedScenarioSpecPack(root);
+      await seedBusinessFlow(root);
       await writeTestGlobsConfig(root, ["tests/**/*.matches-nothing.ts"]);
 
       const parsed = await readDoctorData(root);
       const globsCheck = findCheck(parsed.checks, "traceability.testGlobs");
       expect(globsCheck?.severity).toBe("error");
-      expect(globsCheck?.details?.["scenarioFiles"]).toBe(1);
+      expect(globsCheck?.details?.["flows"]).toBe(1);
 
       expect(await runDoctorExit(root, "error")).toBe(1);
     } finally {
@@ -278,7 +249,7 @@ describe("doctor", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      await seedScenarioSpecPack(root);
+      await seedBusinessFlow(root);
       await mkdir(path.join(root, "tests"), { recursive: true });
       await writeFile(path.join(root, "tests", "sample.test.ts"), "export {};\n", "utf-8");
       await writeTestGlobsConfig(root, ["tests/**/*.test.ts"]);
@@ -522,13 +493,96 @@ describe("doctor", () => {
     }
   });
 
-  it("reports prototyping role wrapper failures before runtime execution", async () => {
+  it("does not require an optional implementation role wrapper", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await seedPrototypingFixture(root, server.url);
       await rm(path.join(root, ".claude", "agents", "frontend-engineer.md"), { force: true });
+
+      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      expect(findCheck(parsed.checks, "prototyping.requiredRoles")?.severity).toBe("ok");
+      expect(findCheck(parsed.checks, "prototyping.requiredRoles")?.details?.requiredRoles).toEqual(
+        ["product-experience-architect", "product-surface-reviewer"],
+      );
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts the canonical singular agent tree created by init", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, server.url);
+      const canonical = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "agent",
+        "product-surface-reviewer.md",
+      );
+      expect(await readFile(canonical, "utf8")).toContain("product-surface-reviewer");
+      await expect(stat(path.join(root, ".qfai", "assistant", "agents"))).rejects.toThrow();
+
+      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      expect(findCheck(parsed.checks, "agents.frontmatter")?.severity).toBe("ok");
+      expect(findCheck(parsed.checks, "prototyping.requiredRoles")?.severity).toBe("ok");
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not accept a legacy plural agent file in place of the canonical role", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, server.url);
+      const canonical = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "agent",
+        "product-surface-reviewer.md",
+      );
+      const legacy = path.join(root, ".qfai", "assistant", "agents", "product-surface-reviewer.md");
+      await mkdir(path.dirname(legacy), { recursive: true });
+      await writeFile(legacy, await readFile(canonical, "utf8"), "utf8");
+      await rm(canonical);
+
+      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
+      expect(findCheck(parsed.checks, "prototyping.requiredRoles")).toMatchObject({
+        severity: "error",
+        details: {
+          invalidRoles: [
+            {
+              roleId: "product-surface-reviewer",
+              canonicalPath: ".qfai/assistant/agent/product-surface-reviewer.md",
+              canonicalExists: false,
+            },
+          ],
+        },
+      });
+    } finally {
+      await stopTestServer(server.server);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a missing reviewer wrapper before runtime execution", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const server = await startTestServer();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedPrototypingFixture(root, server.url);
+      await rm(path.join(root, ".claude", "agents", "product-surface-reviewer.md"), {
+        force: true,
+      });
 
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
       expect(findCheck(parsed.checks, "prototyping.requiredRoles")?.severity).toBe("error");
@@ -850,18 +904,13 @@ async function runDoctorExit(root: string, failOn: "warning" | "error"): Promise
 }
 
 /**
- * A spec pack whose scenario file exists, so the SC->Test gate is armed
- * (`collectScenarioFiles` is non-empty). `qfai init` ships no spec packs, which
- * is why a bare init tree never reaches the glob verdict at all.
+ * A declared business flow arms the test-glob check. A bare init tree does
+ * not declare a flow, so it cannot report a missing test for one.
  */
-async function seedScenarioSpecPack(root: string): Promise<void> {
-  const dir = path.join(root, ".qfai", "specs", "spec-0001");
+async function seedBusinessFlow(root: string): Promise<void> {
+  const dir = path.join(root, ".qfai", "spec", "02_business-flow", "business-flow-0001");
   await mkdir(dir, { recursive: true });
-  // `01_Spec.md` + `02_User-stories.md` + `05_Examples.md` select the layered
-  // layout whose `examplesPath` is `05_Examples.md`.
-  await writeFile(path.join(dir, "01_Spec.md"), "# Spec\n", "utf-8");
-  await writeFile(path.join(dir, "02_User-stories.md"), "# User stories\n", "utf-8");
-  await writeFile(path.join(dir, "05_Examples.md"), "# Examples\n", "utf-8");
+  await writeFile(path.join(dir, "business-flow.md"), "# BF-0001: Sample flow\n", "utf-8");
 }
 
 async function writeTestGlobsConfig(root: string, globs: string[]): Promise<void> {
@@ -869,16 +918,15 @@ async function writeTestGlobsConfig(root: string, globs: string[]): Promise<void
     path.join(root, "qfai.config.yaml"),
     [
       "paths:",
-      "  specsDir: .qfai/specs",
-      "  contractsDir: .qfai/contracts",
+      "  specsDir: .qfai/spec",
+      "  contractsDir: .qfai/spec/03_contract",
       "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/report",
-      "  skillsDir: .qfai/assistant/skills",
+      "  skillsDir: .qfai/assistant/skill",
       "  srcDir: src",
       "  testsDir: tests",
       "validation:",
       "  traceability:",
-      "    scMustHaveTest: true",
       `    testFileGlobs: [${globs.map((glob) => JSON.stringify(glob)).join(", ")}]`,
       "output:",
       "  validateJsonPath: .qfai/report/validate.json",
@@ -919,15 +967,15 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
     path.join(root, "qfai.config.yaml"),
     [
       "paths:",
-      "  specsDir: .qfai/specs",
-      "  contractsDir: .qfai/contracts",
+      "  specsDir: .qfai/spec",
+      "  contractsDir: .qfai/spec/03_contract",
       "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/report",
-      "  skillsDir: .qfai/assistant/skills",
+      "  skillsDir: .qfai/assistant/skill",
       "  srcDir: src",
       "  testsDir: tests",
       "prototyping:",
-      '  primarySpecId: "0001"',
+      "  primaryUiContract: CON-UI-0001",
       "  execution:",
       `    targetUrl: ${targetUrl}`,
       "    browserTool: playwright-cli",
@@ -936,24 +984,20 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
     "utf-8",
   );
 
-  const specDir = path.join(root, ".qfai", "specs", "spec-0001");
-  const uiDir = path.join(root, ".qfai", "contracts", "ui");
-  const designDir = path.join(root, ".qfai", "contracts", "design");
+  const specDir = path.join(root, ".qfai", "spec", "02_business-flow", "business-flow-0001");
+  const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
+  const designDir = path.join(root, ".qfai", "spec", "03_contract", "design");
   const binDir = path.join(root, "node_modules", ".bin");
   await mkdir(specDir, { recursive: true });
   await mkdir(uiDir, { recursive: true });
   await mkdir(designDir, { recursive: true });
   await mkdir(binDir, { recursive: true });
 
+  await writeFile(path.join(specDir, "business-flow.md"), "# BF-0001: Doctor fixture\n", "utf-8");
   await writeFile(
-    path.join(specDir, "01_Spec.md"),
-    "---\nsurface_type: ui-bearing\n---\n\n# spec-0001 (doctor fixture)\n",
-    "utf-8",
-  );
-  await writeFile(path.join(specDir, "02_User-stories.md"), "# stories\n", "utf-8");
-  await writeFile(
-    path.join(uiDir, "ui-0001.yaml"),
+    path.join(uiDir, "home.yaml"),
     [
+      "# QFAI-CONTRACT-ID: CON-UI-0001",
       "screens:",
       "  - id: home",
       "    title: Home",

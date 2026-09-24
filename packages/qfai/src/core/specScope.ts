@@ -144,12 +144,8 @@ function owningSpecInTestLayout(absolute: string, roots: SpecScopeRoots): string
  * inside a `spec-NNNN` directory under `specsRoot` (including `_policies/**`,
  * which is shared and therefore owned by no spec).
  *
- * `finding.file` is absolute for some validators and repo-relative for others
- * (`surfaceTypeDrift` emits `.qfai/specs/spec-0004/01_Spec.md`), so the path is
- * resolved against `root` first. Comparing a repo-relative path with an
- * absolute `specsRoot` produces a `..`-prefixed result and would classify every
- * such finding as repo-level — leaking a sibling spec's warnings into a scoped
- * `--strict` run.
+ * `finding.file` may be absolute or repo-relative. Resolve it against `root`
+ * before comparing it with `specsRoot`.
  */
 /** Whether a path is under `specsRoot` at all — see {@link isFindingInSpecScope}. */
 function isInsideSpecsRoot(filePath: string, roots: SpecScopeRoots): boolean {

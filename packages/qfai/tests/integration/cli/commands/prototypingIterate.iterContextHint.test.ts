@@ -7,7 +7,7 @@
  * The file is advisory-only (certify ignores presence/absence).
  */
 
-// QFAI:SPEC-0012:TC-0012-0456
+// QFAI:EX-0001-0145-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

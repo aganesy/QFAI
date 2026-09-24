@@ -7,17 +7,18 @@ import { isEnoent } from "../../core/fs/errno.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import { createReportData, formatReportJson, formatReportMarkdown } from "../../core/report.js";
-import { writeSpecPackReports } from "../../core/specPackReport.js";
-import { buildSpecScope } from "../../core/specScope.js";
+import { writeBusinessFlowReports } from "../../core/specPackReport.js";
+import { resolveFlowScope } from "../../core/flowScope.js";
+import { readStoryTreeModel } from "../../core/storyTree/tree.js";
 import type { ValidationProfile, ValidationResult } from "../../core/types.js";
 import { countIssues, validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
 import { error, info, warn } from "../lib/logger.js";
-import { warnIfTruncated, withTruncatedScanIssue } from "../lib/warnings.js";
 import type { LegacyValidateJsonGate } from "./validate.js";
 import {
   appendIssue,
   evaluateLegacyValidateJsonGate,
+  isStoryTreeProject,
   profileSuffixedReportPath,
   scopedReportPath,
 } from "./validate.js";
@@ -32,8 +33,8 @@ export type ReportOptions = {
   profile?: ValidationProfile;
   failOn?: FailOn;
   strict?: boolean;
-  /** `--spec <id>` values; empty / absent = the whole repo. */
-  specIds?: readonly string[];
+  /** `--flow <BF-NNNN>` values; empty / absent = the whole repo. */
+  flowIds?: readonly string[];
 };
 
 type ReportPaths = {
@@ -44,16 +45,8 @@ type ReportPaths = {
 };
 
 /**
- * Resolves the validate-result path and the rendered-report path, applying
- * `--spec` scoping when present.
- *
- * A scoped run reads `validate.spec-<ids>.json` — what `validate --spec` wrote
- * — and writes `report.spec-<ids>.md` / `.json`, so parallel slice workers stop
- * racing on the shared `report.md`. An explicit `--out` still wins.
- *
- * `null` when any `--spec` value carries no resolvable spec number: the same
- * refusal `scopedReportPath` makes for `validate`, so raw input never reaches a
- * filename and a failing scope never writes the file a healthy one would.
+ * Resolve validate and report paths. A flow-scoped run uses the same suffix
+ * as validate. An explicit `--out` still selects the report destination.
  */
 function resolveReportPaths(
   root: string,
@@ -64,10 +57,10 @@ function resolveReportPaths(
   const defaultOut =
     options.format === "json" ? path.join(outRoot, "report.json") : path.join(outRoot, "report.md");
   const configuredValidateJson = config.output.validateJsonPath;
-  const specIds = options.specIds ?? [];
+  const flowIds = options.flowIds ?? [];
   const scopedValidateJson =
-    specIds.length > 0 ? scopedReportPath(configuredValidateJson, specIds) : configuredValidateJson;
-  const scopedOut = specIds.length > 0 ? scopedReportPath(defaultOut, specIds) : defaultOut;
+    flowIds.length > 0 ? scopedReportPath(configuredValidateJson, flowIds) : configuredValidateJson;
+  const scopedOut = flowIds.length > 0 ? scopedReportPath(defaultOut, flowIds) : defaultOut;
   if (scopedValidateJson === null || scopedOut === null) {
     return null;
   }
@@ -81,25 +74,9 @@ function resolveReportPaths(
 /**
  * True when an explicit `--in` file carries the scope the run was asked for.
  *
- * `--in` hands `runReport` a `ValidationResult` verbatim — `issues`, `counts`,
- * SC coverage and the waiver aggregates are whatever the producing run
- * computed. Scoping the output *name* does nothing to that body, so
- * `report --spec 0004 --in <repo-wide validate.json>` wrote sibling specs'
- * findings into `report.spec-0004.md`. Re-filtering the input is not a way out
- * either: `waivers.suppressed.byWaiver` attributes each suppression to a waiver
- * id the surviving `Issue` no longer names, so that aggregate cannot be
- * recomputed from the file alone and the report would still be part repo-wide.
- *
- * The provenance that does exist is the filename `validate --spec` writes, so
- * that is what is checked — same basename, any directory, which keeps `--in`
- * useful for a slice whose validate result lives outside `outDir`.
- *
- * `--profile` adds a second suffix on top of the scope one, so the run's own
- * `validate.spec-<ids>-<profile>.json` carries the requested scope just as
- * `validate.spec-<ids>.json` does and is accepted alongside it. A sibling
- * profile's file is not: within a scoped run the filename is the only scope
- * provenance there is, and admitting an arbitrary suffix would readmit the
- * mixed-scope body this check exists to refuse.
+ * The stored validation result carries findings and waiver totals that cannot
+ * be reconstructed by filtering a repository-wide result. The scoped file
+ * name is the available provenance. `--profile` adds its suffix to that name.
  */
 function inputCarriesRequestedScope(
   inputPath: string,
@@ -116,26 +93,18 @@ function inputCarriesRequestedScope(
 /**
  * The ENOENT guidance for a missing validate result.
  *
- * A scoped run reads `validate.spec-<ids>.json`, so the unscoped text — "run
- * `qfai validate`, output `.qfai/report/validate.json`" — named a file this
- * command will never read: following it verbatim left the scoped input missing
- * and the very same `report --spec` exited 2 again. The scoped branch therefore
- * repeats the caller's own `--spec` values on both suggested commands.
- *
- * `--profile` has the same failure mode for the same reason — the reader falls
- * through to `validate-<profile>.json` — so the suggested commands repeat it
- * too, and the quoted destination is the path this run would actually read
- * rather than a fixed literal.
+ * Repeat `--flow` and `--profile` so the suggested validate command writes
+ * the exact file the report command attempted to read.
  */
 function buildMissingInputGuidance(
   inputPath: string,
-  specIds: readonly string[],
+  flowIds: readonly string[],
   profile: ValidationProfile | undefined,
   expectedValidateJsonPath: string,
 ): string {
   const header = [`qfai report: input file not found: ${inputPath}`, ""];
   const profileArg = profile ? ` --profile ${profile}` : "";
-  if (specIds.length === 0) {
+  if (flowIds.length === 0) {
     return [
       ...header,
       "Run qfai validate first. For example:",
@@ -146,15 +115,16 @@ function buildMissingInputGuidance(
       "If you use the GitHub Actions template, run the workflow's validate job first.",
     ].join("\n");
   }
-  const specArgs = specIds.map((id) => `--spec ${id}`).join(" ");
+  const unit = "flow";
+  const scopeArgs = flowIds.map((id) => `--flow ${id}`).join(" ");
   return [
     ...header,
-    `report with --spec reads the scoped validate result. Run validate with the same --spec first. For example:`,
-    `  qfai validate ${specArgs}${profileArg}`,
+    `report with --${unit} reads the scoped validate result. Run validate with the same --${unit} first. For example:`,
+    `  qfai validate ${scopeArgs}${profileArg}`,
     `(output path: ${expectedValidateJsonPath})`,
     "",
     `Alternatively, pass --run-validate to report itself. For example:`,
-    `  qfai report ${specArgs}${profileArg} --run-validate`,
+    `  qfai report ${scopeArgs}${profileArg} --run-validate`,
   ].join("\n");
 }
 
@@ -165,13 +135,30 @@ function buildMissingInputGuidance(
 export async function runReport(options: ReportOptions): Promise<number> {
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
-  const specIds = options.specIds ?? [];
+  const flowIds = options.flowIds ?? [];
+  const storyTree = await isStoryTreeProject(root, configResult.config);
+  if (!storyTree) {
+    error(
+      "qfai report: this project does not contain a story tree. Migrate the specs before reporting.",
+    );
+    return 2;
+  }
+  if (flowIds.length > 0) {
+    const flowScope = resolveFlowScope(
+      flowIds,
+      await readStoryTreeModel(root, configResult.config),
+    );
+    if (flowScope.invalidValues.length > 0) {
+      error(`qfai report: unknown or invalid --flow value: ${flowScope.invalidValues.join(", ")}`);
+      return 2;
+    }
+  }
   const paths = resolveReportPaths(root, configResult.config, options);
   if (paths === null) {
     error(
       [
-        `qfai report: --spec values are not readable as spec numbers: ${specIds.join(", ")}`,
-        "For example: --spec 0003 / --spec spec-0004",
+        `qfai report: --flow values are not readable as business flow IDs: ${flowIds.join(", ")}`,
+        "For example: --flow BF-0001",
       ].join("\n"),
     );
     return 2;
@@ -185,7 +172,7 @@ export async function runReport(options: ReportOptions): Promise<number> {
     // Same migration gate `runValidate` enforces, evaluated once and handed to
     // the run below. Post-sunset, a config still pointing at
     // `.qfai/output/validate.json` gets no write — least of all a brand-new
-    // `validate.spec-<ids>.json` inside the directory the sunset exists to
+    // `validate.flow-<ids>.json` inside the directory the sunset exists to
     // retire, which would read as "still fine to write here".
     const legacyGate = await evaluateLegacyValidateJsonGate({
       root,
@@ -221,24 +208,25 @@ export async function runReport(options: ReportOptions): Promise<number> {
     );
     if (
       options.inputPath !== undefined &&
-      specIds.length > 0 &&
+      flowIds.length > 0 &&
       !inputCarriesRequestedScope(inputPath, paths.validateJsonPath, options.profile)
     ) {
-      const specArgs = specIds.map((id) => `--spec ${id}`).join(" ");
+      const unit = "flow";
+      const scopeArgs = flowIds.map((id) => `--flow ${id}`).join(" ");
       error(
         [
-          `qfai report: the --in validate result does not match the --spec scope: ${inputPath}`,
-          `report with --spec takes counts / issues / SC coverage / waiver totals from the input file as they are, so a whole-repo or different-spec result mixes out-of-scope results into the output.`,
+          `qfai report: the --in validate result does not match the --${unit} scope: ${inputPath}`,
+          `report with --${unit} takes counts, issues, and waiver totals from the input file as they are.`,
           `Pass the scoped validate result named ${path.basename(paths.validateJsonPath)}. For example:`,
-          `  qfai validate ${specArgs}`,
-          `  qfai report ${specArgs}`,
+          `  qfai validate ${scopeArgs}`,
+          `  qfai report ${scopeArgs}`,
         ].join("\n"),
       );
       return 2;
     }
     const loaded = await loadValidationResult(
       inputPath,
-      specIds,
+      flowIds,
       options.profile,
       resolveInputPath(root, paths.validateJsonPath, undefined, options.profile),
     );
@@ -255,38 +243,22 @@ export async function runReport(options: ReportOptions): Promise<number> {
     // validate-prototyping.json` のような組み合わせでは成果物側の profile が
     // 実態を表す。profile 未記録の旧形式のときだけ指定値へフォールバックする。
     ranNarrowProfileInCi = buildCiProfileIssue(loaded.profile ?? options.profile) !== null;
-    // The truncation finding is different from the CI-profile one above: it is
-    // a property of the scan the loaded artifact records, so a `validate.json`
-    // written before the finding existed carries the truncated scan without the
-    // issue. `withTruncatedScanIssue` re-derives it and no-ops when the writing
-    // run already put it there.
-    validation = withTruncatedScanIssue(loaded, "report");
+    validation = loaded;
   }
 
-  // The rendered body has to honour the same scope as the filename: a scoped
-  // run that re-walked every spec put sibling specs — including ones another
-  // worker was mid-edit on — inside `report.spec-<ids>.md`.
-  const data = await createReportData(
-    root,
-    validation,
-    configResult,
-    specIds.length > 0 ? { specIds } : {},
-  );
-  warnIfTruncated(data.traceability.testFiles, "report");
+  // Render only the flows named by the input scope.
+  const data = await createReportData(root, configResult.config, validation, flowIds);
   const output =
     options.format === "json"
       ? formatReportJson(data)
-      : options.baseUrl
-        ? formatReportMarkdown(data, { baseUrl: options.baseUrl })
-        : formatReportMarkdown(data);
+      : formatReportMarkdown(data, options.baseUrl ? { baseUrl: options.baseUrl } : {});
 
   const outPath = paths.outPath;
 
   await mkdir(path.dirname(outPath), { recursive: true });
   await writeFile(outPath, `${output}\n`, "utf-8");
-  // Scoped: touch only the packs this run owns. An unscoped call rewrites every
-  // spec pack, which is how a slice worker clobbered its siblings' artifacts.
-  await writeSpecPackReports(root, configResult.config, buildSpecScope(specIds));
+  // A scoped run writes only its selected flow directories.
+  await writeBusinessFlowReports(root, configResult.config, flowIds);
 
   if (ranNarrowProfileInCi) {
     // Reported, not fatal: the run happened and its findings are real. Exiting
@@ -300,9 +272,6 @@ export async function runReport(options: ReportOptions): Promise<number> {
   // 持たないと validate が拒否する状態でも永続的に緑になるため、validate と
   // 同じ failOn 解決と severity 比較で終了コードを決める。
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
-  // `data.summary.counts`, not `validation.counts`: the report adds findings of
-  // its own (uncounted delta files), and a line that omitted them would print
-  // `warning=0` above a report body that lists warnings.
   info(
     `report: info=${data.summary.counts.info} warning=${data.summary.counts.warning} error=${data.summary.counts.error} failOn=${failOn}`,
   );
@@ -322,12 +291,8 @@ export async function runReport(options: ReportOptions): Promise<number> {
  * SSOT sees `qfai validate` exit 1 and refuse the write while `qfai report
  * --run-validate` re-creates the deprecated file and exits 0.
  *
- * `writeTo` is the scope-resolved target, so a post-sunset refusal covers the
- * scoped `validate.spec-<ids>.json` as well: a brand-new file inside the
- * directory the sunset exists to retire would read as "still fine to write
- * here". The scope also reaches the gate itself — `scopedSpecIds` is what
- * keeps the PRE-sunset writer-side notice off a slice that writes no shared
- * report at all.
+ * `writeTo` is the scope-resolved target, so a refusal also covers the
+ * corresponding `validate.flow-<ids>.json` path.
  */
 async function runValidateForReport(
   root: string,
@@ -336,22 +301,16 @@ async function runValidateForReport(
   writeTo: string,
   legacyGate: LegacyValidateJsonGate,
 ): Promise<{ validation: ValidationResult; ranNarrowProfileInCi: boolean }> {
-  const specIds = options.specIds ?? [];
+  const flowIds = options.flowIds ?? [];
   const ciProfileIssue = buildCiProfileIssue(options.profile);
   const validated = await validateProject(root, configResult, {
     ...(options.profile ? { profile: options.profile } : {}),
-    ...(specIds.length > 0 ? { specIds } : {}),
+    ...(flowIds.length > 0 ? { flowIds } : {}),
   });
   const withCiIssue = ciProfileIssue ? appendIssue(validated, ciProfileIssue) : validated;
   const gated = legacyGate.issue ? appendIssue(withCiIssue, legacyGate.issue) : withCiIssue;
-  // A truncated scan has to reach `validate.json#issues` before the file is
-  // written, otherwise the artifact a reviewer opens records the run as clean
-  // while its coverage numbers came from a partial file set.
-  const normalized = withTruncatedScanIssue(normalizeValidationResult(root, gated), "report");
-  // Both scopings compose: `paths.validateJsonPath` already carries the
-  // `--spec` suffix, and `writeValidationResults` adds the `--profile` one on
-  // top, so a scoped profile run writes `validate.spec-<ids>-<profile>.json`
-  // beside the always-latest pointer the reader falls back to.
+  const normalized = normalizeValidationResult(root, gated);
+  // Profile suffixes compose with the flow-scoped path.
   if (!legacyGate.refuseConfiguredLegacyWrite) {
     await writeValidationResults(root, writeTo, normalized, options.profile);
   }
@@ -392,13 +351,13 @@ function resolveInputPath(
  * 入力の validate 出力を読む。見つからないときは案内を出して `null` を返す
  * (呼び出し側が exit code を立てる)。それ以外の失敗はそのまま投げる。
  *
- * 案内文は `buildMissingInputGuidance` に委ねる: `--spec` と `--profile` は
+ * 案内文は `buildMissingInputGuidance` に委ねる: `--flow` と `--profile` は
  * どちらも読み取り先のファイル名を変えるので、片方だけを知っている文面は
  * 「その通りに実行してもまた同じ exit 2 になる」案内になる。
  */
 async function loadValidationResult(
   inputPath: string,
-  specIds: readonly string[],
+  flowIds: readonly string[],
   profile: ValidationProfile | undefined,
   expectedValidateJsonPath: string,
 ): Promise<ValidationResult | null> {
@@ -406,7 +365,7 @@ async function loadValidationResult(
     return await readValidationResult(inputPath);
   } catch (err) {
     if (isEnoent(err)) {
-      error(buildMissingInputGuidance(inputPath, specIds, profile, expectedValidateJsonPath));
+      error(buildMissingInputGuidance(inputPath, flowIds, profile, expectedValidateJsonPath));
       return null;
     }
     throw err;
@@ -483,6 +442,10 @@ function isGateReadableIssue(issue: unknown): boolean {
   if (!issue || typeof issue !== "object") {
     return false;
   }
+  if (typeof Reflect.get(issue, "code") !== "string") return false;
+  if (typeof Reflect.get(issue, "message") !== "string") return false;
+  const category: unknown = Reflect.get(issue, "category");
+  if (category !== "canonical" && category !== "change") return false;
   const severity: unknown = Reflect.get(issue, "severity");
   if (severity !== "info" && severity !== "warning" && severity !== "error") {
     return false;
@@ -496,6 +459,7 @@ function isValidationResult(value: unknown): value is ValidationResult {
     return false;
   }
   const record = value as Record<string, unknown>;
+  if ("traceability" in record) return false;
   if (typeof record.toolVersion !== "string") {
     return false;
   }
@@ -509,7 +473,8 @@ function isValidationResult(value: unknown): value is ValidationResult {
     profile !== "tdd" &&
     profile !== "verify" &&
     profile !== "full" &&
-    profile !== "saas-package"
+    profile !== "saas-package" &&
+    profile !== "drift"
   ) {
     return false;
   }
@@ -531,35 +496,15 @@ function isValidationResult(value: unknown): value is ValidationResult {
     return false;
   }
 
-  const traceability = record.traceability as Record<string, unknown> | undefined;
-  if (!traceability || typeof traceability !== "object") {
-    return false;
-  }
-
-  const sc = traceability.sc as Record<string, unknown> | undefined;
-  const testFiles = traceability.testFiles as Record<string, unknown> | undefined;
-  if (!sc || !testFiles) {
-    return false;
-  }
-  if (
-    typeof sc.total !== "number" ||
-    typeof sc.covered !== "number" ||
-    typeof sc.missing !== "number"
-  ) {
-    return false;
-  }
-  if (!Array.isArray(sc.missingIds)) {
-    return false;
-  }
-  if (!sc.refs || typeof sc.refs !== "object") {
-    return false;
-  }
-  if (
-    !Array.isArray(testFiles.globs) ||
-    !Array.isArray(testFiles.excludeGlobs) ||
-    typeof testFiles.matchedFileCount !== "number"
-  ) {
-    return false;
+  if (record.waivers !== undefined) {
+    const waivers = record.waivers;
+    if (!waivers || typeof waivers !== "object") return false;
+    const active: unknown = Reflect.get(waivers, "active");
+    const suppressed: unknown = Reflect.get(waivers, "suppressed");
+    if (!Array.isArray(active) || !suppressed || typeof suppressed !== "object") return false;
+    if (typeof Reflect.get(suppressed, "total") !== "number") return false;
+    if (typeof Reflect.get(suppressed, "byWaiver") !== "object") return false;
+    if (typeof Reflect.get(suppressed, "byRule") !== "object") return false;
   }
 
   return true;

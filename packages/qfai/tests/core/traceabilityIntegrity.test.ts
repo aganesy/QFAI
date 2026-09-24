@@ -348,7 +348,7 @@ describe("TDD-0014: evidence without Diff Context", () => {
 // Registry Wiring); AC-0013-0007 (Validate Gate error=0) remains the
 // behavioral post-condition whose forward-compat boundary is covered by
 // TC-0013-0021.
-// QFAI:SPEC-0013:TC-0013-0020
+// QFAI:EX-0001-0155-01
 // ---------------------------------------------------------------------------
 describe("TDD-0015: validate pipeline integration", () => {
   it("validateTraceabilityIntegrity is exported from validators/index", async () => {

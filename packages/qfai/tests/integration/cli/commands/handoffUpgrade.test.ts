@@ -6,7 +6,7 @@
  * - recognized fields are mapped to schema-defined slots
  * - ALL original fields preserved under a `legacy:` key (no data loss)
  */
-// QFAI:SPEC-0015:TC-0015-0030
+// QFAI:EX-0001-0180-01
 
 import { execFileSync } from "node:child_process";
 import {

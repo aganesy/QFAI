@@ -3,8 +3,8 @@
  *   doctor playwright primary probe + deprecation window,
  *   2-group summary + skills.integrity severity downgrade.
  */
-// QFAI:SPEC-0006:US-0006-0006
-// QFAI:SPEC-0006:US-0006-0007
+// QFAI:BF-0003
+// QFAI:BF-0003
 
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

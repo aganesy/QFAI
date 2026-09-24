@@ -4,7 +4,7 @@
 // nothing else — and reports, rather than passes over, every path a link
 // rewrite is not the repair for.
 
-import { mkdir, mkdtemp, readlink, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readlink, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -15,6 +15,7 @@ import {
   SKILL_INTEGRATION_DIRS,
   repairIntegrationWrappers,
 } from "../../../src/cli/commands/init.js";
+import type * as InitAssets from "../../../src/cli/lib/assets.js";
 import type * as FsPromises from "node:fs/promises";
 
 import type { Issue } from "../../../src/core/types.js";
@@ -41,6 +42,15 @@ let inspectionThrows = false;
  * replaced with one that delegates except while this is set.
  */
 let symlinkDenied = false;
+let initAssetsOverride: string | null = null;
+
+vi.mock("../../../src/cli/lib/assets.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof InitAssets>();
+  return {
+    ...actual,
+    getInitAssetsDir: (): string => initAssetsOverride ?? actual.getInitAssetsDir(),
+  };
+});
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof FsPromises>();
@@ -85,6 +95,7 @@ afterEach(() => {
   injectedFindings = null;
   inspectionThrows = false;
   symlinkDenied = false;
+  initAssetsOverride = null;
 });
 
 /** A skill the shipped roster carries, so its wrapper is one init would write. */
@@ -114,10 +125,10 @@ async function canCreateSymlink(root: string): Promise<boolean> {
 
 /** The canonical tree the wrappers point at, plus every wrapper init writes. */
 async function wireProject(root: string): Promise<void> {
-  const canonical = path.join(root, ".qfai", "assistant", "skills", SHIPPED_SKILL);
+  const canonical = path.join(root, ".qfai", "assistant", "skill", SHIPPED_SKILL);
   await mkdir(canonical, { recursive: true });
   await writeFile(path.join(canonical, "SKILL.md"), "# skill\n", "utf-8");
-  await mkdir(path.join(root, ".qfai", "assistant", "agents"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "assistant", "agent"), { recursive: true });
 
   for (const dir of SKILL_INTEGRATION_DIRS) {
     const absolute = path.join(root, ...dir.split("/"));
@@ -126,7 +137,7 @@ async function wireProject(root: string): Promise<void> {
       ...dir.split("/").map(() => ".."),
       ".qfai",
       "assistant",
-      "skills",
+      "skill",
       SHIPPED_SKILL,
     );
     await symlink(target, path.join(absolute, SHIPPED_SKILL), "dir");
@@ -137,15 +148,167 @@ async function wireProject(root: string): Promise<void> {
 }
 
 /** Runs the repair and hands back the lines it reported. */
-async function repair(root: string, dryRun = false): Promise<string[]> {
+async function repair(
+  root: string,
+  dryRun = false,
+  options: { includeMissing?: boolean; onlyRelative?: ReadonlySet<string> } = {},
+): Promise<string[]> {
   const lines: string[] = [];
-  await repairIntegrationWrappers(root, dryRun, (line) => lines.push(line));
+  await repairIntegrationWrappers(root, dryRun, (line) => lines.push(line), options);
   return lines;
 }
 
 const wrapperPath = (root: string): string => path.join(root, ".claude", "skills", SHIPPED_SKILL);
 
 describe("repairIntegrationWrappers", () => {
+  it("repoints an agent wrapper through this repository's shipped assistant link", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      const assets = path.join(root, "packages", "qfai", "assets", "init");
+      const shippedAgentDir = path.join(assets, ".qfai", "assistant", "agent");
+      await mkdir(shippedAgentDir, { recursive: true });
+      await writeFile(path.join(shippedAgentDir, "orchestrator.md"), "# shipped agent\n");
+      initAssetsOverride = assets;
+
+      const canonicalAgentDir = path.join(root, ".qfai", "assistant", "agent");
+      await mkdir(path.dirname(canonicalAgentDir), { recursive: true });
+      await symlink(
+        path.relative(path.dirname(canonicalAgentDir), shippedAgentDir),
+        canonicalAgentDir,
+        "dir",
+      );
+      const relative = ".github/agents/orchestrator.agent.md";
+      const wrapper = path.join(root, ...relative.split("/"));
+      await mkdir(path.dirname(wrapper), { recursive: true });
+      const oldTarget = path.relative(
+        path.dirname(wrapper),
+        path.join(root, ".qfai", "assistant", "agents", "orchestrator.md"),
+      );
+      await symlink(oldTarget, wrapper, "file");
+      injectedFindings = [linkFinding(relative)];
+      const options = { includeMissing: true, onlyRelative: new Set([relative]) };
+
+      const preview = await repair(root, true, options);
+      expect(preview.join("\n")).toContain(`would relink ${relative}`);
+      expect(await readlink(wrapper)).toBe(oldTarget);
+
+      const lines = await repair(root, false, options);
+      expect(lines.join("\n")).toContain(`relinked ${relative}`);
+      expect(await readFile(wrapper, "utf-8")).toBe("# shipped agent\n");
+    });
+  });
+
+  it("declines an agent wrapper whose canonical parent links outside shipped assets", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      const assets = path.join(root, "packages", "qfai", "assets", "init");
+      const shippedAgentDir = path.join(assets, ".qfai", "assistant", "agent");
+      await mkdir(shippedAgentDir, { recursive: true });
+      await writeFile(path.join(shippedAgentDir, "orchestrator.md"), "# shipped agent\n");
+      initAssetsOverride = assets;
+
+      const foreignAgentDir = path.join(root, "foreign-agents");
+      await mkdir(foreignAgentDir);
+      await writeFile(path.join(foreignAgentDir, "orchestrator.md"), "# foreign agent\n");
+      const canonicalAgentDir = path.join(root, ".qfai", "assistant", "agent");
+      await mkdir(path.dirname(canonicalAgentDir), { recursive: true });
+      await symlink(foreignAgentDir, canonicalAgentDir, "dir");
+      const relative = ".github/agents/orchestrator.agent.md";
+      const wrapper = path.join(root, ...relative.split("/"));
+      await mkdir(path.dirname(wrapper), { recursive: true });
+      const oldTarget = "../../missing-agent.md";
+      await symlink(oldTarget, wrapper, "file");
+      injectedFindings = [linkFinding(relative)];
+
+      const lines = await repair(root, false, { onlyRelative: new Set([relative]) });
+      expect(lines.join("\n")).toContain("canonical source has a linked parent");
+      expect(await readlink(wrapper)).toBe(oldTarget);
+    });
+  });
+
+  it("limits a live repair to journaled relative paths", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      const other = `${SKILL_INTEGRATION_DIRS[1]}/${SHIPPED_SKILL}`;
+      const wrongTarget = path.join("..", "..", "nowhere");
+      for (const relative of [WRAPPER, other]) {
+        const absolute = path.join(root, ...relative.split("/"));
+        await rm(absolute);
+        await symlink(wrongTarget, absolute, "dir");
+      }
+      injectedFindings = [linkFinding(WRAPPER), linkFinding(other)];
+
+      const lines = await repair(root, false, { onlyRelative: new Set([WRAPPER]) });
+
+      expect(lines.join("\n")).toContain(`relinked ${WRAPPER}`);
+      expect(lines.join("\n")).not.toContain(other);
+      expect(await readlink(path.join(root, ...other.split("/")))).toBe(wrongTarget);
+    });
+  });
+
+  it("previews and restores a missing migration wrapper without touching the rest of the roster", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      await rm(wrapperPath(root));
+      injectedFindings = [];
+      const options = { includeMissing: true, onlyRelative: new Set([WRAPPER]) };
+
+      expect((await repair(root)).join("\n")).toContain("nothing to repair");
+      expect((await repair(root, true, options)).join("\n")).toContain(`would relink ${WRAPPER}`);
+      await expect(stat(wrapperPath(root))).rejects.toThrow();
+
+      const lines = await repair(root, false, options);
+      expect(lines.join("\n")).toContain(`relinked ${WRAPPER}`);
+      expect(lines.join("\n")).toContain("left alone=0");
+      expect((await stat(wrapperPath(root))).isDirectory()).toBe(true);
+    });
+  });
+
+  it("does not create a missing wrapper through a linked integration directory", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      const outside = path.join(root, "external-skills");
+      await mkdir(outside, { recursive: true });
+      const skillsDir = path.join(root, ".claude", "skills");
+      await rm(skillsDir, { recursive: true, force: true });
+      await symlink(outside, skillsDir, "dir");
+      injectedFindings = [];
+
+      const lines = await repair(root, false, {
+        includeMissing: true,
+        onlyRelative: new Set([WRAPPER]),
+      });
+
+      expect(lines.join("\n")).toContain("a linked parent occupies");
+      await expect(stat(path.join(outside, SHIPPED_SKILL))).rejects.toThrow();
+    });
+  });
+
+  it("reports a missing canonical source without creating a dangling migration wrapper", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      await rm(path.join(root, ".qfai", "assistant", "skill", SHIPPED_SKILL), {
+        recursive: true,
+        force: true,
+      });
+      await rm(wrapperPath(root));
+      injectedFindings = [];
+      const options = { includeMissing: true, onlyRelative: new Set([WRAPPER]) };
+
+      const preview = await repair(root, true, options);
+      expect(preview.join("\n")).toContain(`left alone ${WRAPPER}: canonical source`);
+      expect(preview.join("\n")).not.toContain(`would relink ${WRAPPER}`);
+
+      const result = await repair(root, false, options);
+      expect(result.join("\n")).toContain(`left alone ${WRAPPER}: canonical source`);
+      await expect(stat(wrapperPath(root))).rejects.toThrow();
+    });
+  });
+
   it("relinks a wrapper whose target string is wrong", async () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
@@ -158,7 +321,7 @@ describe("repairIntegrationWrappers", () => {
 
       expect(lines.join("\n")).toContain(`relinked ${WRAPPER}`);
       expect(await readlink(wrapperPath(root))).toContain(
-        path.join(".qfai", "assistant", "skills", SHIPPED_SKILL),
+        path.join(".qfai", "assistant", "skill", SHIPPED_SKILL),
       );
     });
   });
@@ -188,7 +351,7 @@ describe("repairIntegrationWrappers", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
-      const skillDoc = path.join(root, ".qfai", "assistant", "skills", SHIPPED_SKILL, "SKILL.md");
+      const skillDoc = path.join(root, ".qfai", "assistant", "skill", SHIPPED_SKILL, "SKILL.md");
       await writeFile(skillDoc, "# edited by the project\n", "utf-8");
       const readme = path.join(root, ".claude", "skills", "README.md");
       await writeFile(readme, "# the project's own note\n", "utf-8");

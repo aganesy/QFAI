@@ -22,7 +22,6 @@ import {
   makeGovernedContainmentGuard,
   replaceGovernedAsset,
   retireVerifiedGovernedAsset,
-  retireWithdrawnGovernedAssets,
   runInit,
   SHIPPED_WORKFLOW_NAMES,
 } from "../../src/cli/commands/init.js";
@@ -76,7 +75,7 @@ async function makeProject(): Promise<string> {
   tempRoots.push(root);
   const assistantDir = path.join(root, ".qfai", "assistant");
   await mkdir(assistantDir, { recursive: true });
-  for (const layer of ["constitution", "catalog"]) {
+  for (const layer of ["rule"]) {
     await cp(path.join(shippedAssistantDir, layer), path.join(assistantDir, layer), {
       recursive: true,
     });
@@ -109,9 +108,9 @@ describe("assistant asset provenance", () => {
     expect(codesOf(issues)).not.toContain("QFAI-ASSETS-006");
   });
 
-  it("flags a locally edited catalog file as a fork", async () => {
+  it("flags a locally edited rule file as a fork", async () => {
     const root = await makeProject();
-    const target = path.join(root, ".qfai", "assistant", "catalog", "test-layers.md");
+    const target = path.join(root, ".qfai", "assistant", "rule", "test-layers.md");
     await writeFile(target, `${await readFile(target, "utf-8")}\n- project-only rule\n`, "utf-8");
 
     const issues = await validateAssistantAssets(root, defaultConfig);
@@ -121,125 +120,10 @@ describe("assistant asset provenance", () => {
     expect(forked[0]?.file).toContain("test-layers.md");
   });
 
-  it.each(["manifest.md", "product.md", "structure.md", "tech.md"])(
-    "does not call a filled-in %s a fork",
-    async (fileName) => {
-      // These four ship telling the reader to replace their contents, and the
-      // skills read them for their commands. Reported as a fork, the rule that
-      // asks for the placeholders to be replaced and the rule that reads the
-      // shipped bytes disagree: leaving the template in place is then the only
-      // state that satisfies both.
-      const root = await makeProject();
-      const target = path.join(root, ".qfai", "assistant", "catalog", fileName);
-      await writeFile(target, "# Filled in\n\nWhat this project actually does.\n", "utf-8");
-
-      const issues = await validateAssistantAssets(root, defaultConfig);
-      expect(issues.filter((found) => found.code === "QFAI-ASSETS-005")).toEqual([]);
-    },
-  );
-
-  it.each(["manifest.md", "product.md", "structure.md", "tech.md"])(
-    "does not call a filled-in %s stale once its content is what the lock records",
-    async (fileName) => {
-      // The other half of the same question. `stale` means the file matches the
-      // lock and not the release, and its remedy is `qfai init --force`, which
-      // rewrites the file. On a document the project owns, the lock recording
-      // the adopted content is the ordinary result of re-locking, and the
-      // remedy then destroys the content the project was told to write.
-      //
-      // So the pair has to be exempt together: reported as a fork, filling the
-      // document in is a finding, and reported as stale, the fix for that
-      // finding deletes the work.
-      const root = await makeProject();
-      const assistantDir = path.join(root, ".qfai", "assistant");
-      const adopted = `# ${fileName}\n\nWhat this project actually does.\n`;
-      await writeFile(path.join(assistantDir, "catalog", fileName), adopted, "utf-8");
-      const lock = await readAssistantAssetsLock(assistantDir);
-      await writeAssistantAssetsLock(assistantDir, {
-        files: { ...(lock?.files ?? {}), [`catalog/${fileName}`]: hashAssistantAssetText(adopted) },
-      });
-
-      const issues = await validateAssistantAssets(root, defaultConfig);
-      expect(issues.filter((found) => found.code === "QFAI-ASSETS-004")).toEqual([]);
-    },
-  );
-
-  it("leaves a filled-in catalog alone under --force, even once the lock records it", async () => {
-    // The other side of the same contract. Not reporting the file is only half
-    // of owning it: `--force` decides what to refresh with the same comparison
-    // the stale verdict uses, so a lock holding the project's own content made
-    // the file look refreshable and the run replaced it with the template.
-    //
-    // Nothing warned, because the note that says a file was left alone is
-    // written on the branch that declines to touch it.
-    const root = await makeProject();
-    const assistantDir = path.join(root, ".qfai", "assistant");
-    const target = path.join(assistantDir, "catalog", "tech.md");
-    const adopted = "# Tech\n\n## Standard commands (copy-paste)\n\n`pnpm test`\n";
-    await writeFile(target, adopted, "utf-8");
-    const lock = await readAssistantAssetsLock(assistantDir);
-    await writeAssistantAssetsLock(assistantDir, {
-      files: { ...(lock?.files ?? {}), "catalog/tech.md": hashAssistantAssetText(adopted) },
-    });
-
-    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
-
-    expect(await readFile(target, "utf-8")).toBe(adopted);
-  }, 120000);
-
-  it("does not retire a filled-in catalog the release has stopped shipping", async () => {
-    // Retirement decides by hash too, and it deletes rather than overwrites. A
-    // release that drops one of these four does not thereby own what the
-    // project wrote in it, but a lock holding the adopted content makes the
-    // document read as an untouched copy of ours.
-    //
-    // Driven directly: the state needs a path the release no longer ships, and
-    // no `runInit` can produce one while all four are still shipped.
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-retire-"));
-    tempRoots.push(root);
-    const assistantDir = path.join(root, ".qfai", "assistant");
-    await mkdir(path.join(assistantDir, "catalog"), { recursive: true });
-    const target = path.join(assistantDir, "catalog", "tech.md");
-    const adopted = "# Tech\n\n## Standard commands (copy-paste)\n\n`pnpm test`\n";
-    await writeFile(target, adopted, "utf-8");
-
-    const recorded: Record<string, string> = {};
-    const out = {
-      removed: [] as string[],
-      skipped: [] as string[],
-      manualMergeNotes: [] as string[],
-    };
-    await retireWithdrawnGovernedAssets(
-      assistantDir,
-      {}, // the release ships nothing by this name any more
-      { "catalog/tech.md": hashAssistantAssetText(adopted) },
-      recorded,
-      { force: true, dryRun: false },
-      makeGovernedContainmentGuard(root),
-      out,
-    );
-
-    expect(await readFile(target, "utf-8")).toBe(adopted);
-    expect(out.removed).toEqual([]);
-    expect(out.manualMergeNotes.join("\n")).toContain("its content is yours");
-  });
-
-  it("still reports a catalog file the project deleted", async () => {
-    // The exemption is for a difference, not for an absence: a catalog the
-    // skills read is gone, and nothing else reports that.
-    const root = await makeProject();
-    await rm(path.join(root, ".qfai", "assistant", "catalog", "tech.md"));
-
-    const issues = await validateAssistantAssets(root, defaultConfig);
-    const missing = issues.filter((found) => found.code === "QFAI-ASSETS-007");
-    expect(missing).toHaveLength(1);
-    expect(missing[0]?.file).toContain("tech.md");
-  });
-
   it("separates a stale copy from a fork by what qfai recorded writing", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
-    const target = path.join(assistantDir, "catalog", "test-layers.md");
+    const target = path.join(assistantDir, "rule", "test-layers.md");
     const olderRelease = "# Test Layers\n\nWhat an older release shipped.\n";
     await writeFile(target, olderRelease, "utf-8");
     const lock = await readAssistantAssetsLock(assistantDir);
@@ -247,7 +131,7 @@ describe("assistant asset provenance", () => {
     await writeAssistantAssetsLock(assistantDir, {
       files: {
         ...(lock?.files ?? {}),
-        "catalog/test-layers.md": hashAssistantAssetText(olderRelease),
+        "rule/test-layers.md": hashAssistantAssetText(olderRelease),
       },
     });
 
@@ -258,13 +142,13 @@ describe("assistant asset provenance", () => {
 
   it("never reports a *.local.md overlay, and does report an unshipped sibling", async () => {
     const root = await makeProject();
-    const catalogDir = path.join(root, ".qfai", "assistant", "catalog");
-    await writeFile(path.join(catalogDir, "test-layers.local.md"), "# L1/L2 overlay\n", "utf-8");
+    const ruleDir = path.join(root, ".qfai", "assistant", "rule");
+    await writeFile(path.join(ruleDir, "test-layers.local.md"), "# L1/L2 overlay\n", "utf-8");
 
     let issues = await validateAssistantAssets(root, defaultConfig);
     expect(codesOf(issues)).not.toContain("QFAI-ASSETS-006");
 
-    await writeFile(path.join(catalogDir, "project-layers.md"), "# not an overlay\n", "utf-8");
+    await writeFile(path.join(ruleDir, "project-layers.md"), "# not an overlay\n", "utf-8");
     issues = await validateAssistantAssets(root, defaultConfig);
     const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-006");
     expect(unshipped).toHaveLength(1);
@@ -274,26 +158,26 @@ describe("assistant asset provenance", () => {
   it("reports every provenance code at error", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
-    const catalogDir = path.join(assistantDir, "catalog");
+    const ruleDir = path.join(assistantDir, "rule");
     // One project carrying all four classifications at once: a fork, a stale
     // copy, an unshipped addition and a deletion.
-    const forked = path.join(catalogDir, "test-layers.md");
+    const forked = path.join(ruleDir, "test-layers.md");
     await writeFile(forked, `${await readFile(forked, "utf-8")}\n- project-only rule\n`, "utf-8");
-    await writeFile(path.join(catalogDir, "project-layers.md"), "# not an overlay\n", "utf-8");
-    const stale = path.join(assistantDir, "constitution", "quality.md");
+    await writeFile(path.join(ruleDir, "project-layers.md"), "# not an overlay\n", "utf-8");
+    const stale = path.join(assistantDir, "rule", "quality.md");
     const olderRelease = "# Quality\n\nWhat an older release shipped.\n";
     await writeFile(stale, olderRelease, "utf-8");
     const lock = await readAssistantAssetsLock(assistantDir);
     await writeAssistantAssetsLock(assistantDir, {
       files: {
         ...(lock?.files ?? {}),
-        "constitution/quality.md": hashAssistantAssetText(olderRelease),
+        "rule/quality.md": hashAssistantAssetText(olderRelease),
       },
     });
     // Not `drift-protocol.md` / `test-layers.md`: their absence belongs to the
     // existence probes (QFAI-ASSETS-001/002), which are not part of this
     // family's window.
-    await rm(path.join(assistantDir, "constitution", "communication.md"));
+    await rm(path.join(assistantDir, "rule", "communication.md"));
 
     const issues = (await validateAssistantAssets(root, defaultConfig)).filter((found) =>
       PROVENANCE_CODES.has(found.code),
@@ -327,7 +211,7 @@ describe("assistant asset provenance", () => {
 
   it("reports a deleted governed file instead of passing it in silence", async () => {
     const root = await makeProject();
-    const target = path.join(root, ".qfai", "assistant", "constitution", "quality.md");
+    const target = path.join(root, ".qfai", "assistant", "rule", "quality.md");
     await rm(target);
 
     const issues = await validateAssistantAssets(root, defaultConfig);
@@ -340,7 +224,7 @@ describe("assistant asset provenance", () => {
   it("does not report absences at a project that has no governed layer at all", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-bare-"));
     tempRoots.push(root);
-    await mkdir(path.join(root, ".qfai", "assistant", "skills"), { recursive: true });
+    await mkdir(path.join(root, ".qfai", "assistant", "skill"), { recursive: true });
 
     const issues = await validateAssistantAssets(root, defaultConfig);
     expect(codesOf(issues)).not.toContain("QFAI-ASSETS-007");
@@ -349,8 +233,8 @@ describe("assistant asset provenance", () => {
   it("does not double-report the two files the existence probes already own", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
-    await rm(path.join(assistantDir, "constitution", "drift-protocol.md"));
-    await rm(path.join(assistantDir, "catalog", "test-layers.md"));
+    await rm(path.join(assistantDir, "rule", "drift-protocol.md"));
+    await rm(path.join(assistantDir, "rule", "test-layers.md"));
 
     const issues = await validateAssistantAssets(root, defaultConfig);
     expect(codesOf(issues)).toContain("QFAI-ASSETS-001");
@@ -360,20 +244,20 @@ describe("assistant asset provenance", () => {
 
   it("treats only *.local.md as an overlay, not every *.local.* sibling", async () => {
     const root = await makeProject();
-    const catalogDir = path.join(root, ".qfai", "assistant", "catalog");
-    await writeFile(path.join(catalogDir, "review-gate.local.yml"), "rules: []\n", "utf-8");
+    const ruleDir = path.join(root, ".qfai", "assistant", "rule");
+    await writeFile(path.join(ruleDir, "custom.local.yml"), "rules: []\n", "utf-8");
 
     const issues = await validateAssistantAssets(root, defaultConfig);
     const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-006");
     expect(unshipped).toHaveLength(1);
-    expect(unshipped[0]?.file).toContain("review-gate.local.yml");
+    expect(unshipped[0]?.file).toContain("custom.local.yml");
   });
 
   it("checks a dotted filename too, and still ignores known housekeeping dotfiles", async () => {
     const root = await makeProject();
-    const constitutionDir = path.join(root, ".qfai", "assistant", "constitution");
-    await writeFile(path.join(constitutionDir, ".gitkeep"), "", "utf-8");
-    await writeFile(path.join(constitutionDir, ".policy.md"), "# hidden rule\n", "utf-8");
+    const ruleDir = path.join(root, ".qfai", "assistant", "rule");
+    await writeFile(path.join(ruleDir, ".gitkeep"), "", "utf-8");
+    await writeFile(path.join(ruleDir, ".policy.md"), "# hidden rule\n", "utf-8");
 
     const issues = await validateAssistantAssets(root, defaultConfig);
     const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-006");
@@ -384,11 +268,10 @@ describe("assistant asset provenance", () => {
   it("refuses to build a shipped set from an incompletely extracted install", async () => {
     const broken = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-broken-"));
     tempRoots.push(broken);
-    // `catalog/` never extracted. Reporting an empty layer here would make
-    // every catalog entry in a project's lock look like a withdrawn rule.
-    await cp(path.join(shippedAssistantDir, "constitution"), path.join(broken, "constitution"), {
+    await cp(path.join(shippedAssistantDir, "rule"), path.join(broken, "rule"), {
       recursive: true,
     });
+    await rm(path.join(broken, "rule", "test-layers.md"));
 
     await expect(buildShippedAssistantHashes(broken)).rejects.toThrow();
   });
@@ -410,7 +293,8 @@ describe("assistant asset provenance", () => {
             "../../outside-victim.json": hashAssistantAssetText(outsideBody),
             "catalog/../../../escape.md": "deadbeef",
             "catalog/nested/deep.md": "deadbeef",
-            "catalog/test-layers.md.": "deadbeef",
+            "rule/nested/deep.md": "deadbeef",
+            "rule/test-layers.md.": "deadbeef",
           },
         },
         null,
@@ -424,10 +308,10 @@ describe("assistant asset provenance", () => {
     expect(parsed?.files["catalog/../../../escape.md"]).toBeUndefined();
     // Windows drops a trailing dot, so this key opens the shipped
     // `test-layers.md` while recording under a key that is not the shipped one.
-    expect(parsed?.files["catalog/test-layers.md."]).toBeUndefined();
-    // A governed layer is `catalog/**`, so a nested key is one qfai could have
-    // written and is kept.
-    expect(parsed?.files["catalog/nested/deep.md"]).toBe("deadbeef");
+    expect(parsed?.files["rule/test-layers.md."]).toBeUndefined();
+    expect(parsed?.files["catalog/nested/deep.md"]).toBeUndefined();
+    // A nested rule is still inside the governed layer.
+    expect(parsed?.files["rule/nested/deep.md"]).toBe("deadbeef");
 
     // The retire pass deletes any recorded path whose content still matches
     // its recorded hash: an honoured traversal key would take this file with it.
@@ -439,7 +323,7 @@ describe("assistant asset provenance", () => {
   it("repairs a governed path occupied by a directory, and never calls it shipped", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
-    const governed = path.join(assistantDir, "constitution", "quality.md");
+    const governed = path.join(assistantDir, "rule", "quality.md");
     await rm(path.join(assistantDir, ASSISTANT_ASSETS_LOCK_BASENAME), { force: true });
     await rm(governed);
     await mkdir(governed);
@@ -449,7 +333,7 @@ describe("assistant asset provenance", () => {
 
     // Nothing was written there, so nothing may be recorded as if it had been.
     const plainLock = await readAssistantAssetsLock(assistantDir);
-    expect(plainLock?.files["constitution/quality.md"]).toBeUndefined();
+    expect(plainLock?.files["rule/quality.md"]).toBeUndefined();
     expect(codesOf(await validateAssistantAssets(root, defaultConfig))).toContain(
       "QFAI-ASSETS-007",
     );
@@ -458,18 +342,18 @@ describe("assistant asset provenance", () => {
 
     const shipped = await buildShippedAssistantHashes(shippedAssistantDir);
     expect(hashAssistantAssetText(await readFile(governed, "utf-8"))).toBe(
-      shipped["constitution/quality.md"],
+      shipped["rule/quality.md"],
     );
     const forcedLock = await readAssistantAssetsLock(assistantDir);
-    expect(forcedLock?.files["constitution/quality.md"]).toBe(shipped["constitution/quality.md"]);
+    expect(forcedLock?.files["rule/quality.md"]).toBe(shipped["rule/quality.md"]);
   }, 120000);
 
   it("reports each governed path once, with the governed outcome", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
     const shipped = await buildShippedAssistantHashes(shippedAssistantDir);
-    const stalePath = path.join(assistantDir, "catalog", "test-layers.md");
-    const forkedPath = path.join(assistantDir, "constitution", "quality.md");
+    const stalePath = path.join(assistantDir, "rule", "test-layers.md");
+    const forkedPath = path.join(assistantDir, "rule", "quality.md");
     const staleBody = "# Test Layers\n\nOlder release.\n";
     await writeFile(stalePath, staleBody, "utf-8");
     await writeFile(
@@ -478,7 +362,7 @@ describe("assistant asset provenance", () => {
       "utf-8",
     );
     await writeAssistantAssetsLock(assistantDir, {
-      files: { ...shipped, "catalog/test-layers.md": hashAssistantAssetText(staleBody) },
+      files: { ...shipped, "rule/test-layers.md": hashAssistantAssetText(staleBody) },
     });
 
     const output = await captureStdout(() =>
@@ -513,13 +397,13 @@ describe("assistant asset provenance", () => {
 
     // Still the content qfai recorded writing, so the governed sync refreshes
     // it — once, and never also as a path it skipped.
-    expect(reportOf("catalog/test-layers.md")).toEqual({ written: 1, notes: 0 });
+    expect(reportOf("rule/test-layers.md")).toEqual({ written: 1, notes: 0 });
     // Diverged, so it is left byte-identical and named once as a manual merge,
     // and never claimed as written.
-    expect(reportOf("constitution/quality.md")).toEqual({ written: 0, notes: 1 });
+    expect(reportOf("rule/quality.md")).toEqual({ written: 0, notes: 1 });
     // No staging file is left behind by the atomic refresh.
-    const catalogEntries = await readdir(path.join(assistantDir, "catalog"));
-    expect(catalogEntries.filter((entry) => entry.includes("qfai-staging"))).toEqual([]);
+    const ruleEntries = await readdir(path.join(assistantDir, "rule"));
+    expect(ruleEntries.filter((entry) => entry.includes("qfai-staging"))).toEqual([]);
   }, 120000);
 
   it.skipIf(process.platform === "win32")(
@@ -542,16 +426,16 @@ describe("assistant asset provenance", () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
     const withdrawnBody = "# Withdrawn\n\nShipped by an older release.\n";
-    const untouched = path.join(assistantDir, "catalog", "withdrawn.md");
-    const edited = path.join(assistantDir, "catalog", "withdrawn-edited.md");
+    const untouched = path.join(assistantDir, "rule", "withdrawn.md");
+    const edited = path.join(assistantDir, "rule", "withdrawn-edited.md");
     await writeFile(untouched, withdrawnBody, "utf-8");
     await writeFile(edited, `${withdrawnBody}- project rule\n`, "utf-8");
     const lock = await readAssistantAssetsLock(assistantDir);
     await writeAssistantAssetsLock(assistantDir, {
       files: {
         ...(lock?.files ?? {}),
-        "catalog/withdrawn.md": hashAssistantAssetText(withdrawnBody),
-        "catalog/withdrawn-edited.md": hashAssistantAssetText(withdrawnBody),
+        "rule/withdrawn.md": hashAssistantAssetText(withdrawnBody),
+        "rule/withdrawn-edited.md": hashAssistantAssetText(withdrawnBody),
       },
     });
 
@@ -560,9 +444,9 @@ describe("assistant asset provenance", () => {
     await expect(readFile(untouched, "utf-8")).rejects.toThrow();
     expect(await readFile(edited, "utf-8")).toContain("- project rule");
     const refreshed = await readAssistantAssetsLock(assistantDir);
-    expect(refreshed?.files["catalog/withdrawn.md"]).toBeUndefined();
+    expect(refreshed?.files["rule/withdrawn.md"]).toBeUndefined();
     // The edited one stays classifiable so a later --force can still retire it.
-    expect(refreshed?.files["catalog/withdrawn-edited.md"]).toBe(
+    expect(refreshed?.files["rule/withdrawn-edited.md"]).toBe(
       hashAssistantAssetText(withdrawnBody),
     );
   }, 120000);
@@ -571,7 +455,7 @@ describe("assistant asset provenance", () => {
     "answers for a FIFO at a governed path instead of waiting for a writer",
     async () => {
       const root = await makeProject();
-      const governed = path.join(root, ".qfai", "assistant", "constitution", "quality.md");
+      const governed = path.join(root, ".qfai", "assistant", "rule", "quality.md");
       await rm(governed);
       await promisify(execFile)("mkfifo", [governed]);
 
@@ -594,11 +478,11 @@ describe("assistant asset provenance", () => {
       await rm(path.join(assistantDir, ASSISTANT_ASSETS_LOCK_BASENAME), { force: true });
       await symlink(outside, path.join(assistantDir, ASSISTANT_ASSETS_LOCK_BASENAME));
 
-      await writeAssistantAssetsLock(assistantDir, { files: { "catalog/a.md": "deadbeef" } });
+      await writeAssistantAssetsLock(assistantDir, { files: { "rule/a.md": "deadbeef" } });
 
       expect(await readFile(outside, "utf-8")).toBe("{}\n");
       expect(await readAssistantAssetsLock(assistantDir)).toEqual({
-        files: { "catalog/a.md": "deadbeef" },
+        files: { "rule/a.md": "deadbeef" },
       });
     },
   );
@@ -612,14 +496,14 @@ describe("assistant asset provenance", () => {
       const victimBody = '{ "name": "victim" }\n';
       await writeFile(victim, victimBody, "utf-8");
 
-      const governed = path.join(assistantDir, "constitution", "quality.md");
+      const governed = path.join(assistantDir, "rule", "quality.md");
       await rm(governed);
       await symlink(victim, governed);
       const lock = await readAssistantAssetsLock(assistantDir);
       await writeAssistantAssetsLock(assistantDir, {
         files: {
           ...(lock?.files ?? {}),
-          "constitution/quality.md": hashAssistantAssetText(victimBody),
+          "rule/quality.md": hashAssistantAssetText(victimBody),
         },
       });
 
@@ -628,7 +512,7 @@ describe("assistant asset provenance", () => {
       expect(await readFile(victim, "utf-8")).toBe(victimBody);
       const shipped = await buildShippedAssistantHashes(shippedAssistantDir);
       expect(hashAssistantAssetText(await readFile(governed, "utf-8"))).toBe(
-        shipped["constitution/quality.md"],
+        shipped["rule/quality.md"],
       );
     },
     120000,
@@ -643,40 +527,36 @@ describe("assistant asset provenance", () => {
     const assistantDir = path.join(root, ".qfai", "assistant");
     const lock = await readAssistantAssetsLock(assistantDir);
     const shipped = await buildShippedAssistantHashes(shippedAssistantDir);
-    expect(lock?.files["constitution/drift-protocol.md"]).toBe(
-      shipped["constitution/drift-protocol.md"],
-    );
-    expect(lock?.files["catalog/test-layers.md"]).toBe(shipped["catalog/test-layers.md"]);
+    expect(lock?.files["rule/drift-protocol.md"]).toBe(shipped["rule/drift-protocol.md"]);
+    expect(lock?.files["rule/test-layers.md"]).toBe(shipped["rule/test-layers.md"]);
 
     // One file goes stale (still exactly what an older qfai wrote), one is forked.
-    const stalePath = path.join(assistantDir, "catalog", "test-layers.md");
-    const forkedPath = path.join(assistantDir, "constitution", "drift-protocol.md");
+    const stalePath = path.join(assistantDir, "rule", "test-layers.md");
+    const forkedPath = path.join(assistantDir, "rule", "drift-protocol.md");
     const staleBody = "# Test Layers\n\nOlder release.\n";
     const forkedBody = `${await readFile(forkedPath, "utf-8")}\n- project rule\n`;
     await writeFile(stalePath, staleBody, "utf-8");
     await writeFile(forkedPath, forkedBody, "utf-8");
     await writeAssistantAssetsLock(assistantDir, {
-      files: { ...shipped, "catalog/test-layers.md": hashAssistantAssetText(staleBody) },
+      files: { ...shipped, "rule/test-layers.md": hashAssistantAssetText(staleBody) },
     });
 
     await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
 
     expect(hashAssistantAssetText(await readFile(stalePath, "utf-8"))).toBe(
-      shipped["catalog/test-layers.md"],
+      shipped["rule/test-layers.md"],
     );
     expect(await readFile(forkedPath, "utf-8")).toBe(forkedBody);
     const refreshedLock = await readAssistantAssetsLock(assistantDir);
-    expect(refreshedLock?.files["catalog/test-layers.md"]).toBe(shipped["catalog/test-layers.md"]);
+    expect(refreshedLock?.files["rule/test-layers.md"]).toBe(shipped["rule/test-layers.md"]);
     // The fork keeps the hash qfai last wrote, so it stays classifiable.
-    expect(refreshedLock?.files["constitution/drift-protocol.md"]).toBe(
-      shipped["constitution/drift-protocol.md"],
-    );
+    expect(refreshedLock?.files["rule/drift-protocol.md"]).toBe(shipped["rule/drift-protocol.md"]);
     expect(ASSISTANT_ASSETS_LOCK_BASENAME).toBe(".assets.lock.json");
   }, 120000);
 
   it("reports a normative file added inside a governed subdirectory", async () => {
     const root = await makeProject();
-    const nested = path.join(root, ".qfai", "assistant", "constitution", "custom");
+    const nested = path.join(root, ".qfai", "assistant", "rule", "custom");
     await mkdir(nested, { recursive: true });
     await writeFile(path.join(nested, "rule.md"), "# project rule\n", "utf-8");
     // The overlay stays exempt at any depth.
@@ -691,21 +571,21 @@ describe("assistant asset provenance", () => {
   it("never retires a shipped rule through a case-variant lock key", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
-    const governed = path.join(assistantDir, "catalog", "test-layers.md");
+    const governed = path.join(assistantDir, "rule", "test-layers.md");
     const body = await readFile(governed, "utf-8");
     const lock = await readAssistantAssetsLock(assistantDir);
     // On a case-insensitive filesystem this key opens the shipped file itself,
     // so retiring it as "withdrawn" would delete a rule the release still ships.
     await writeAssistantAssetsLock(assistantDir, {
-      files: { ...(lock?.files ?? {}), "catalog/TEST-LAYERS.MD": hashAssistantAssetText(body) },
+      files: { ...(lock?.files ?? {}), "rule/TEST-LAYERS.MD": hashAssistantAssetText(body) },
     });
 
     await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
 
     expect(await readFile(governed, "utf-8")).toBe(body);
     const refreshed = await readAssistantAssetsLock(assistantDir);
-    expect(refreshed?.files["catalog/TEST-LAYERS.MD"]).toBeUndefined();
-    expect(refreshed?.files["catalog/test-layers.md"]).toBe(hashAssistantAssetText(body));
+    expect(refreshed?.files["rule/TEST-LAYERS.MD"]).toBeUndefined();
+    expect(refreshed?.files["rule/test-layers.md"]).toBe(hashAssistantAssetText(body));
   }, 120000);
 
   it("hashes a governed file in chunks, agreeing with the whole-string form", async () => {
@@ -731,7 +611,7 @@ describe("assistant asset provenance", () => {
   it("never writes or retires through a governed layer that leaves the project", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
-    const outside = path.join(await outsideProject(), "outside-catalog");
+    const outside = path.join(await outsideProject(), "outside-rule");
     await mkdir(outside, { recursive: true });
     const refreshVictim = path.join(outside, "test-layers.md");
     const refreshVictimBody = "# not qfai's\n";
@@ -741,13 +621,13 @@ describe("assistant asset provenance", () => {
     await writeFile(retireVictim, retireVictimBody, "utf-8");
 
     const lock = await readAssistantAssetsLock(assistantDir);
-    await rm(path.join(assistantDir, "catalog"), { recursive: true, force: true });
+    await rm(path.join(assistantDir, "rule"), { recursive: true, force: true });
     // `junction` is ignored off Windows, where a plain directory symlink is made.
-    await symlink(outside, path.join(assistantDir, "catalog"), "junction");
+    await symlink(outside, path.join(assistantDir, "rule"), "junction");
     await writeAssistantAssetsLock(assistantDir, {
       files: {
         ...(lock?.files ?? {}),
-        "catalog/withdrawn.md": hashAssistantAssetText(retireVictimBody),
+        "rule/withdrawn.md": hashAssistantAssetText(retireVictimBody),
       },
     });
 
@@ -758,8 +638,8 @@ describe("assistant asset provenance", () => {
     expect(await readFile(refreshVictim, "utf-8")).toBe(refreshVictimBody);
     expect(await readFile(retireVictim, "utf-8")).toBe(retireVictimBody);
     const refreshed = await readAssistantAssetsLock(assistantDir);
-    expect(refreshed?.files["catalog/test-layers.md"]).toBeUndefined();
-    expect(refreshed?.files["catalog/withdrawn.md"]).toBeUndefined();
+    expect(refreshed?.files["rule/test-layers.md"]).toBeUndefined();
+    expect(refreshed?.files["rule/withdrawn.md"]).toBeUndefined();
   }, 120000);
 
   // The containment walk started at the assistant root, and `lstat` declines to
@@ -790,10 +670,10 @@ describe("assistant asset provenance", () => {
     }
 
     const outsideAssistant = path.join(outsideQfai, "assistant");
-    const refreshVictim = path.join(outsideAssistant, "catalog", "test-layers.md");
+    const refreshVictim = path.join(outsideAssistant, "rule", "test-layers.md");
     const refreshVictimBody = "# an older release wrote this, outside the project\n";
     await writeFile(refreshVictim, refreshVictimBody, "utf-8");
-    const retireVictim = path.join(outsideAssistant, "catalog", "withdrawn.md");
+    const retireVictim = path.join(outsideAssistant, "rule", "withdrawn.md");
     const retireVictimBody = "# also not qfai's to delete\n";
     await writeFile(retireVictim, retireVictimBody, "utf-8");
     // Recorded as qfai's own writes, which is what makes `--force` willing to
@@ -801,8 +681,8 @@ describe("assistant asset provenance", () => {
     await writeAssistantAssetsLock(outsideAssistant, {
       files: {
         ...(lock?.files ?? {}),
-        "catalog/test-layers.md": hashAssistantAssetText(refreshVictimBody),
-        "catalog/withdrawn.md": hashAssistantAssetText(retireVictimBody),
+        "rule/test-layers.md": hashAssistantAssetText(refreshVictimBody),
+        "rule/withdrawn.md": hashAssistantAssetText(retireVictimBody),
       },
     });
 
@@ -812,32 +692,26 @@ describe("assistant asset provenance", () => {
     expect(await readFile(retireVictim, "utf-8")).toBe(retireVictimBody);
     // The record is a governed write too, so it is left exactly as planted.
     const after = await readAssistantAssetsLock(outsideAssistant);
-    expect(after?.files["catalog/test-layers.md"]).toBe(hashAssistantAssetText(refreshVictimBody));
-    expect(after?.files["catalog/withdrawn.md"]).toBe(hashAssistantAssetText(retireVictimBody));
+    expect(after?.files["rule/test-layers.md"]).toBe(hashAssistantAssetText(refreshVictimBody));
+    expect(after?.files["rule/withdrawn.md"]).toBe(hashAssistantAssetText(retireVictimBody));
   }, 120000);
 
-  // `runUpgradeAssistantTree` deliberately leaves the legacy file in place, so
-  // a part-way-through-the-recut project has both layouts at once. The
-  // existence probe was then satisfied by the legacy copy while the exclusion
-  // below silenced the provenance check — deleting a normative rule was
-  // reportable in every layout except the one the upgrade path creates.
-  it("reports a deleted canonical rule when the legacy fallback still stands", async () => {
+  // A legacy copy cannot stand in for the canonical rule. The existence probe
+  // owns the missing-file finding and provenance must not report it again.
+  it("ignores a legacy copy when the canonical drift rule is missing", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
     await mkdir(path.join(assistantDir, "instructions"), { recursive: true });
     await cp(
-      path.join(assistantDir, "constitution", "drift-protocol.md"),
+      path.join(assistantDir, "rule", "drift-protocol.md"),
       path.join(assistantDir, "instructions", "drift-protocol.md"),
     );
-    await rm(path.join(assistantDir, "constitution", "drift-protocol.md"));
+    await rm(path.join(assistantDir, "rule", "drift-protocol.md"));
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    // The probe found the legacy copy, so it says nothing — and that is exactly
-    // why the absence has to be reported here.
-    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-001");
+    expect(codesOf(issues)).toContain("QFAI-ASSETS-001");
     const missing = issues.filter((found) => found.code === "QFAI-ASSETS-007");
-    expect(missing).toHaveLength(1);
-    expect(missing[0]?.file).toContain(path.join("constitution", "drift-protocol.md"));
+    expect(missing).toHaveLength(0);
   });
 
   // `readdir` resolves a symlinked scan root like any other path, so `validate`
@@ -846,12 +720,12 @@ describe("assistant asset provenance", () => {
   it("refuses to walk a governed layer that is a symlink, and says so", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
-    const outside = path.join(await outsideProject(), "outside-catalog");
+    const outside = path.join(await outsideProject(), "outside-rule");
     // Identical content, so a validator that followed the link found nothing to
     // report and the escape stayed invisible.
-    await cp(path.join(shippedAssistantDir, "catalog"), outside, { recursive: true });
-    await rm(path.join(assistantDir, "catalog"), { recursive: true, force: true });
-    await symlink(outside, path.join(assistantDir, "catalog"), "junction");
+    await cp(path.join(shippedAssistantDir, "rule"), outside, { recursive: true });
+    await rm(path.join(assistantDir, "rule"), { recursive: true, force: true });
+    await symlink(outside, path.join(assistantDir, "rule"), "junction");
 
     const issues = await validateAssistantAssets(root, defaultConfig);
     const unverifiable = issues.filter((found) => found.code === "QFAI-ASSETS-008");
@@ -865,14 +739,14 @@ describe("assistant asset provenance", () => {
   // pass as qfai's own scaffolding — a normative addition the record never saw.
   it("excludes only a real staging file, not every name that opens with the prefix", async () => {
     const root = await makeProject();
-    const constitutionDir = path.join(root, ".qfai", "assistant", "constitution");
+    const ruleDir = path.join(root, ".qfai", "assistant", "rule");
     await writeFile(
-      path.join(constitutionDir, `${ASSISTANT_STAGING_PREFIX}project-rule.md`),
+      path.join(ruleDir, `${ASSISTANT_STAGING_PREFIX}project-rule.md`),
       "# a rule wearing qfai's scaffolding\n",
       "utf-8",
     );
     await writeFile(
-      path.join(constitutionDir, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`),
+      path.join(ruleDir, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`),
       "# a genuine in-flight staging file\n",
       "utf-8",
     );
@@ -888,9 +762,9 @@ describe("assistant asset provenance", () => {
   // normative file the record never saw.
   it("rejects a staging name whose version and variant nibbles qfai never emits", async () => {
     const root = await makeProject();
-    const constitutionDir = path.join(root, ".qfai", "assistant", "constitution");
+    const ruleDir = path.join(root, ".qfai", "assistant", "rule");
     const nilUuidName = `${ASSISTANT_STAGING_PREFIX}00000000-0000-0000-0000-000000000000.tmp`;
-    await writeFile(path.join(constitutionDir, nilUuidName), "# not scaffolding\n", "utf-8");
+    await writeFile(path.join(ruleDir, nilUuidName), "# not scaffolding\n", "utf-8");
 
     const issues = await validateAssistantAssets(root, defaultConfig);
     const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-006");
@@ -905,10 +779,10 @@ describe("assistant asset provenance", () => {
     "does not accept a governed filename that is a symlink to shipped bytes",
     async () => {
       const root = await makeProject();
-      const relative = path.join("catalog", "test-layers.md");
+      const relative = path.join("rule", "test-layers.md");
       const target = path.join(root, ".qfai", "assistant", relative);
       const outside = path.join(await outsideProject(), "outside-test-layers.md");
-      await cp(path.join(shippedAssistantDir, "catalog", "test-layers.md"), outside);
+      await cp(path.join(shippedAssistantDir, "rule", "test-layers.md"), outside);
       await rm(target);
       await symlink(outside, target);
 
@@ -922,22 +796,21 @@ describe("assistant asset provenance", () => {
     },
   );
 
-  // `runUpgradeAssistantTree` leaves the legacy file behind on purpose, so a
-  // migrated project has both layouts — and deleting the canonical layer there
-  // satisfied QFAI-ASSETS-001 from the legacy copy while the per-file loop
-  // skipped every shipped rule for want of a layer to report it in.
+  // A recorded governed layer that disappears receives one layer finding.
+  // The two required-file probes also report their canonical paths as missing.
   it("reports a governed layer the record says qfai wrote and the project deleted", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
     await mkdir(path.join(assistantDir, "instructions"), { recursive: true });
     await cp(
-      path.join(assistantDir, "constitution", "drift-protocol.md"),
+      path.join(assistantDir, "rule", "drift-protocol.md"),
       path.join(assistantDir, "instructions", "drift-protocol.md"),
     );
-    await rm(path.join(assistantDir, "constitution"), { recursive: true, force: true });
+    await rm(path.join(assistantDir, "rule"), { recursive: true, force: true });
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-001");
+    expect(codesOf(issues)).toContain("QFAI-ASSETS-001");
+    expect(codesOf(issues)).toContain("QFAI-ASSETS-002");
     const missing = issues.filter((found) => found.code === "QFAI-ASSETS-007");
     // Once, against the layer — not once per shipped rule it used to hold.
     expect(missing).toHaveLength(1);
@@ -951,7 +824,7 @@ describe("assistant asset provenance", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-"));
     tempRoots.push(root);
     const assistantDir = path.join(root, ".qfai", "assistant");
-    await mkdir(path.join(assistantDir, "skills"), { recursive: true });
+    await mkdir(path.join(assistantDir, "skill"), { recursive: true });
 
     const issues = await validateAssistantAssets(root, defaultConfig);
     expect(codesOf(issues)).not.toContain("QFAI-ASSETS-007");
@@ -968,7 +841,7 @@ describe("assistant asset provenance", () => {
     await cp(shippedAssistantDir, install, { recursive: true });
     // One file gone from an otherwise intact layer: the exact shape a truncated
     // extraction leaves, and the one the layer-root check cannot see.
-    await rm(path.join(install, "catalog", "product.md"));
+    await rm(path.join(install, "rule", "quality.md"));
 
     await expect(buildShippedAssistantHashes(install)).rejects.toThrow(/product\.md/);
   });
@@ -1041,7 +914,7 @@ describe("assistant asset provenance", () => {
   // The preview must not report a repair that has not happened.
   it("previews the occupied-path repair as pending under --dry-run", async () => {
     const root = await makeProject();
-    const target = path.join(root, ".qfai", "assistant", "catalog", "test-layers.md");
+    const target = path.join(root, ".qfai", "assistant", "rule", "test-layers.md");
     await rm(target);
     await mkdir(target, { recursive: true });
 
@@ -1082,8 +955,8 @@ describe("assistant asset provenance", () => {
     const run = promisify(execFile);
     await run("git", ["init", "-q", root], { cwd: root });
     await writeFile(path.join(root, ".gitignore"), `.qfai/**\n${QFAI_GITIGNORE_BLOCK}`, "utf-8");
-    const governedRel = path.posix.join(".qfai", "assistant", "catalog", "test-layers.md");
-    await mkdir(path.join(root, ".qfai", "assistant", "catalog"), { recursive: true });
+    const governedRel = path.posix.join(".qfai", "assistant", "rule", "test-layers.md");
+    await mkdir(path.join(root, ".qfai", "assistant", "rule"), { recursive: true });
     await writeFile(path.join(root, governedRel), "# Test Layers\n", "utf-8");
 
     await expect(run("git", ["check-ignore", governedRel], { cwd: root })).rejects.toMatchObject({
@@ -1119,17 +992,18 @@ describe("assistant asset provenance", () => {
       "{ this is not json",
       "utf-8",
     );
-    // The state the silence needed: a migrated tree whose legacy fallback
-    // satisfies QFAI-ASSETS-001, with the canonical layer deleted.
+    // A legacy copy does not satisfy the canonical probes. The broken lock is
+    // reported independently from the missing required rules.
     await mkdir(path.join(assistantDir, "instructions"), { recursive: true });
     await cp(
-      path.join(shippedAssistantDir, "constitution", "drift-protocol.md"),
+      path.join(shippedAssistantDir, "rule", "drift-protocol.md"),
       path.join(assistantDir, "instructions", "drift-protocol.md"),
     );
-    await rm(path.join(assistantDir, "constitution"), { recursive: true, force: true });
+    await rm(path.join(assistantDir, "rule"), { recursive: true, force: true });
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-001");
+    expect(codesOf(issues)).toContain("QFAI-ASSETS-001");
+    expect(codesOf(issues)).toContain("QFAI-ASSETS-002");
     expect(codesOf(issues)).toContain("QFAI-ASSETS-008");
   });
 
@@ -1139,10 +1013,8 @@ describe("assistant asset provenance", () => {
     await rm(path.join(root, ".qfai", "assistant", ASSISTANT_ASSETS_LOCK_BASENAME));
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    // The provenance family only. `QFAI-ASSETS-003` is the Stage 0 steering
-    // placeholder detector, which shares the prefix and fires on the shipped
-    // catalog this fixture copies verbatim — a prefix match would assert on a
-    // rule that has nothing to do with the record.
+    // Restrict the assertion to provenance so unrelated existence findings
+    // cannot change what this case proves.
     expect(codesOf(issues).filter((code) => PROVENANCE_CODES.has(code))).toEqual([]);
   });
 
@@ -1150,22 +1022,22 @@ describe("assistant asset provenance", () => {
   // recorded in the lock is absent from every shipped set, so `--force` retired
   // the one extension point the protocol sanctions.
   it("never lets a lock claim ownership of a project overlay", async () => {
-    expect(isGovernedAssistantLockKey("catalog/test-layers.local.md")).toBe(false);
-    expect(isGovernedAssistantLockKey("constitution/.gitignore")).toBe(false);
+    expect(isGovernedAssistantLockKey("rule/test-layers.local.md")).toBe(false);
+    expect(isGovernedAssistantLockKey("rule/.gitignore")).toBe(false);
     // Over-correction pin: the paths qfai does own are still keys.
-    expect(isGovernedAssistantLockKey("catalog/test-layers.md")).toBe(true);
-    expect(isGovernedAssistantLockKey("constitution/custom/rule.md")).toBe(true);
+    expect(isGovernedAssistantLockKey("rule/test-layers.md")).toBe(true);
+    expect(isGovernedAssistantLockKey("rule/custom/rule.md")).toBe(true);
 
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");
-    const overlay = path.join(assistantDir, "catalog", "test-layers.local.md");
+    const overlay = path.join(assistantDir, "rule", "test-layers.local.md");
     const body = "# L1/L2, this project's own\n";
     await writeFile(overlay, body, "utf-8");
     const lock = await readAssistantAssetsLock(assistantDir);
     await writeAssistantAssetsLock(assistantDir, {
       files: {
         ...(lock?.files ?? {}),
-        "catalog/test-layers.local.md": hashAssistantAssetText(body),
+        "rule/test-layers.local.md": hashAssistantAssetText(body),
       },
     });
 
@@ -1209,19 +1081,19 @@ describe("assistant asset provenance", () => {
       const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-"));
       tempRoots.push(root);
       const assistantDir = path.join(root, ".qfai", "assistant");
-      await mkdir(path.join(assistantDir, "catalog"), { recursive: true });
+      await mkdir(path.join(assistantDir, "rule"), { recursive: true });
       // Outside the project: that is what the guard refuses. A link to another
       // directory inside it is a vendored layer, which the guard admits.
-      const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-catalog-"));
+      const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-rule-"));
       tempRoots.push(outside);
 
       const isContained = makeGovernedContainmentGuard(root);
-      expect(await isContained("catalog/first.md")).toBe(true);
+      expect(await isContained("rule/first.md")).toBe(true);
 
-      await rm(path.join(assistantDir, "catalog"), { recursive: true, force: true });
-      await symlink(outside, path.join(assistantDir, "catalog"));
+      await rm(path.join(assistantDir, "rule"), { recursive: true, force: true });
+      await symlink(outside, path.join(assistantDir, "rule"));
 
-      expect(await isContained("catalog/second.md")).toBe(false);
+      expect(await isContained("rule/second.md")).toBe(false);
     },
   );
 });

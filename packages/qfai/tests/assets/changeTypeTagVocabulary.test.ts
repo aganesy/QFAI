@@ -21,8 +21,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const ASSISTANT = "assistant";
-const WORKFLOW = "assistant/constitution/workflow.md";
-const CLASSIFICATION = "assistant/constitution/change-classification.md";
+const WORKFLOW = "assistant/rule/workflow.md";
+const CLASSIFICATION = "assistant/rule/change-classification.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -106,7 +106,7 @@ describe("the Change Type tag list agrees with its SSOT", () => {
       const workflow = await read(tree, WORKFLOW);
 
       // Restating a list without naming its owner is how the lists drifted.
-      expect(workflow).toContain("constitution/change-classification.md");
+      expect(workflow).toContain("rule/change-classification.md");
     });
   }
 });

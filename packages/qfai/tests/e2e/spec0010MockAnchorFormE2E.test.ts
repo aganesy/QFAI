@@ -64,7 +64,7 @@ async function localRefFindings(root: string): Promise<string[]> {
   return issues.filter((entry) => entry.code === "QFAI-MOCK-010").map((entry) => entry.message);
 }
 
-// QFAI:SPEC-0010:US-0010-0011
+// QFAI:BF-0001
 describe("E2E: the mock template emits anchor-form hrefs by default (US-0010-0011)", () => {
   it("ships a mock whose links are anchor-form", async () => {
     const template = await readFile(workshopTemplate, "utf-8");

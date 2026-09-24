@@ -673,19 +673,19 @@ describe("validateAssistantAssets — regenerated assistant layers", () => {
   }
 
   /** The project's copy of a layer, exactly as `qfai init` would leave it. */
-  async function seedLayer(root: string, layer: "skills" | "agents"): Promise<void> {
+  async function seedLayer(root: string, layer: "skill" | "agent"): Promise<void> {
     await cp(path.join(shippedAssistantDir, layer), path.join(root, ".qfai", "assistant", layer), {
       recursive: true,
     });
   }
 
   /** A file inside the project's copy of a layer, by its path under that layer. */
-  function layerFile(root: string, layer: "skills" | "agents", relative: string): string {
+  function layerFile(root: string, layer: "skill" | "agent", relative: string): string {
     return path.join(root, ".qfai", "assistant", layer, ...relative.split("/"));
   }
 
   /** The paths the release ships under one layer, in the walk's own order. */
-  async function shippedUnder(layer: "skills" | "agents"): Promise<string[]> {
+  async function shippedUnder(layer: "skill" | "agent"): Promise<string[]> {
     return (await collectRegeneratedAssistantFiles(shippedAssistantDir, layer)).map((relative) =>
       relative.slice(layer.length + 1),
     );
@@ -693,26 +693,26 @@ describe("validateAssistantAssets — regenerated assistant layers", () => {
 
   it("says nothing about a project holding exactly what the release ships", async () => {
     const root = await newRoot();
-    await seedLayer(root, "skills");
-    await seedLayer(root, "agents");
+    await seedLayer(root, "skill");
+    await seedLayer(root, "agent");
 
     expect(await staleFindings(root)).toHaveLength(0);
   });
 
   it("reports one finding for the layer, naming the count and the remedy's cost", async () => {
     const root = await newRoot();
-    await seedLayer(root, "skills");
-    await seedLayer(root, "agents");
-    const [first] = await shippedUnder("skills");
+    await seedLayer(root, "skill");
+    await seedLayer(root, "agent");
+    const [first] = await shippedUnder("skill");
     expect(first, "the release must ship skills for this case to be about anything").toBeDefined();
-    await writeFile(layerFile(root, "skills", first ?? ""), "behind the release\n", "utf-8");
+    await writeFile(layerFile(root, "skill", first ?? ""), "behind the release\n", "utf-8");
 
     const findings = await staleFindings(root);
 
     expect(findings).toHaveLength(1);
     const [finding] = findings;
     expect(finding?.rule).toBe("assistantAssets.staleRegeneratedLayer");
-    expect(finding?.file).toContain(path.join("assistant", "skills"));
+    expect(finding?.file).toContain(path.join("assistant", "skill"));
     expect(finding?.message).toContain("differs from the installed release in 1 of the");
     expect(finding?.message).toContain(first ?? "");
     // The hint has to say the layer is overwritten. `QFAI-ASSETS-004` can offer
@@ -727,15 +727,15 @@ describe("validateAssistantAssets — regenerated assistant layers", () => {
 
   it("stays at one finding per layer when the whole tree is behind", async () => {
     const root = await newRoot();
-    await seedLayer(root, "skills");
-    await seedLayer(root, "agents");
-    const shipped = await shippedUnder("skills");
+    await seedLayer(root, "skill");
+    await seedLayer(root, "agent");
+    const shipped = await shippedUnder("skill");
     expect(
       shipped.length,
       "the burying this case is about needs many files to bury with",
     ).toBeGreaterThan(NAMED_STALE_FILES);
     for (const relative of shipped) {
-      await writeFile(layerFile(root, "skills", relative), "behind the release\n", "utf-8");
+      await writeFile(layerFile(root, "skill", relative), "behind the release\n", "utf-8");
     }
 
     const findings = await staleFindings(root);
@@ -753,14 +753,14 @@ describe("validateAssistantAssets — regenerated assistant layers", () => {
 
   it("reports only the layer that is behind", async () => {
     const root = await newRoot();
-    await seedLayer(root, "skills");
-    await seedLayer(root, "agents");
-    const [first] = await shippedUnder("agents");
-    await writeFile(layerFile(root, "agents", first ?? ""), "behind the release\n", "utf-8");
+    await seedLayer(root, "skill");
+    await seedLayer(root, "agent");
+    const [first] = await shippedUnder("agent");
+    await writeFile(layerFile(root, "agent", first ?? ""), "behind the release\n", "utf-8");
 
     const findings = await staleFindings(root);
 
-    expect(findings.map((found) => path.basename(found.file ?? ""))).toEqual(["agents"]);
+    expect(findings.map((found) => path.basename(found.file ?? ""))).toEqual(["agent"]);
   });
 
   it("says nothing about a project that has no such layer", async () => {
@@ -776,19 +776,19 @@ describe("validateAssistantAssets — regenerated assistant layers", () => {
     // `--force` copies, it does not prune, so reporting this would name
     // something the remedy cannot clear.
     const root = await newRoot();
-    await seedLayer(root, "skills");
-    await seedLayer(root, "agents");
-    await writeFile(layerFile(root, "agents", "project-only.md"), "ours\n", "utf-8");
+    await seedLayer(root, "skill");
+    await seedLayer(root, "agent");
+    await writeFile(layerFile(root, "agent", "project-only.md"), "ours\n", "utf-8");
 
     expect(await staleFindings(root)).toHaveLength(0);
   });
 
   it("reports at error", async () => {
     const root = await newRoot();
-    await seedLayer(root, "skills");
-    await seedLayer(root, "agents");
-    const [first] = await shippedUnder("skills");
-    await writeFile(layerFile(root, "skills", first ?? ""), "behind the release\n", "utf-8");
+    await seedLayer(root, "skill");
+    await seedLayer(root, "agent");
+    const [first] = await shippedUnder("skill");
+    await writeFile(layerFile(root, "skill", first ?? ""), "behind the release\n", "utf-8");
 
     const [finding] = await staleFindings(root);
 

@@ -8,8 +8,8 @@
  * links by default and that the discussion SKILL.md instructs
  * anchor-form authoring. These guard the template ↔ validator contract.
  */
-// QFAI:SPEC-0010:TC-0010-0009
-// QFAI:SPEC-0010:TC-0010-0010
+// QFAI:EX-0001-0092-01
+// QFAI:EX-0001-0092-02
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";

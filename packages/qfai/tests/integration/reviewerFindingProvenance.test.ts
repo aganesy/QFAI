@@ -45,7 +45,7 @@ const FINDING_CLASSIFICATION = path.join(
   "references",
   "finding-classification.md",
 );
-const CONFIGURE_SKILL = path.join(assistantDir, "skills", "qfai-configure", "SKILL.md");
+const CONFIGURE_SKILL = path.join(assistantDir, "skill", "qfai-configure", "SKILL.md");
 const REVIEW_ARTIFACT_LAYOUT = path.join(
   assistantDir,
   "skills",

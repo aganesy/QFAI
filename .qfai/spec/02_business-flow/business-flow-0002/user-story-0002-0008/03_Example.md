@@ -1,0 +1,8 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                          | Expected                                                                                                                                                                                                                                                         |
+| --------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0002-0008-01 | AC-0002-0008-01 | 配布 lane の profile 値と failure threshold を planted divergence させて gate を実行し、宣言形状が pin する dimension を数える | gate が exit 1 し `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` と drift した値・期待値を出力する。clean 状態では exit 0。宣言形状は CLI-WFSET §5 の 9 dimension をすべて pin している。subsume 対象だった asset test の test-case 参照は期待形状側に登録されたまま残っている |
+| EX-0002-0008-02 | AC-0002-0008-01 | gate の invocation path を `pnpm ci:lint` と `pnpm ci:gate` の両方で検索                                                       | `pnpm ci:lint` に現れ、`pnpm ci:gate` には現れない。planted violation が pull request を red にする                                                                                                                                                              |

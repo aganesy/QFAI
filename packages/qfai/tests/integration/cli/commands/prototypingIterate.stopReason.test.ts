@@ -6,7 +6,7 @@
  * that the CLI emits each one at its appropriate gate.
  */
 
-// QFAI:SPEC-0012:TC-0012-0463
+// QFAI:EX-0001-0136-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

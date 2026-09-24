@@ -37,7 +37,7 @@ async function cleanupTempDir(dir: string): Promise<void> {
   await rm(dir, { recursive: true, force: true });
 }
 
-// QFAI:SPEC-0003:US-0003-0001
+// QFAI:BF-0001
 describe("E2E: workspace initialization (US-0003-0001)", () => {
   it("creates .qfai/ with assistant assets and no artifact scaffold", async () => {
     const tmpDir = await createTempDir();
@@ -67,7 +67,7 @@ describe("E2E: workspace initialization (US-0003-0001)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0002
+// QFAI:BF-0001
 describe("E2E: idempotent initialization (US-0003-0002)", () => {
   it("second init skips existing files and preserves their content", async () => {
     const tmpDir = await createTempDir();
@@ -90,7 +90,7 @@ describe("E2E: idempotent initialization (US-0003-0002)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0003
+// QFAI:BF-0001
 describe("E2E: force update (US-0003-0003)", () => {
   it("--force overwrites skills and does not create skills.local", async () => {
     const tmpDir = await createTempDir();
@@ -118,7 +118,7 @@ describe("E2E: force update (US-0003-0003)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0004
+// QFAI:BF-0001
 describe("E2E: dry-run (US-0003-0004)", () => {
   it("--dry-run does not create any files", async () => {
     const tmpDir = await createTempDir();
@@ -135,7 +135,7 @@ describe("E2E: dry-run (US-0003-0004)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0005
+// QFAI:BF-0001
 describe("E2E: multi-tool wrapper generation (US-0003-0005)", () => {
   it("generates wrapper directories for Claude, Copilot, Codex, and Agents", async () => {
     const tmpDir = await createTempDir();
@@ -152,7 +152,7 @@ describe("E2E: multi-tool wrapper generation (US-0003-0005)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0007
+// QFAI:BF-0001
 describe("E2E: legacy file evacuation (US-0003-0007)", () => {
   it("--force removes legacy 10_workflow.md from skills", async () => {
     const tmpDir = await createTempDir();
@@ -178,7 +178,7 @@ describe("E2E: legacy file evacuation (US-0003-0007)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0008
+// QFAI:BF-0001
 describe("E2E: commands/prompts deprecation + skill symlink integration (US-0003-0008)", () => {
   it("--force removes the commands/prompts wrappers qfai shipped, and only those", async () => {
     const tmpDir = await createTempDir();
@@ -279,7 +279,7 @@ describe("E2E: commands/prompts deprecation + skill symlink integration (US-0003
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0006
+// QFAI:BF-0001
 describe("E2E: agent wrapper symlink (US-0003-0006)", () => {
   it("creates agent symlinks in .claude/agents/ and .github/agents/", async () => {
     const tmpDir = await createTempDir();
@@ -354,7 +354,7 @@ describe("E2E: agent wrapper symlink (US-0003-0006)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0009
+// QFAI:BF-0001
 describe("E2E: git symlink settings + Windows support (US-0003-0009)", () => {
   it("init runs without error on a non-git directory (git config is skipped)", async () => {
     const tmpDir = await createTempDir();
@@ -369,7 +369,7 @@ describe("E2E: git symlink settings + Windows support (US-0003-0009)", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0010
+// QFAI:BF-0001
 describe("E2E: copilot-instructions.md reference update (US-0003-0010)", () => {
   it("generated copilot-instructions.md references .github/skills/ not .github/prompts/", async () => {
     const tmpDir = await createTempDir();
@@ -449,7 +449,7 @@ describe("E2E: canonical template generation", () => {
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0015
+// QFAI:BF-0001
 describe("E2E: gitignore managed block auto-append (US-0003-0015)", () => {
   it("init appends QFAI managed block to root .gitignore and ignores review-*/ by default", async () => {
     const tmpDir = await createTempDir();

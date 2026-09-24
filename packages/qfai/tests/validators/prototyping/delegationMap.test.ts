@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  PROTOTYPING_ALLOWED_ROLE_IDS,
   PROTOTYPING_REQUIRED_ROLE_IDS,
   SHIPPED_DELEGATION_SCOPE_TABLE,
   resolveDelegationScope,
@@ -41,7 +42,6 @@ describe("validateDelegationMapIssues (v1.8.4 standard adapter)", () => {
     expect(validateDelegationMapIssues(map, path)).toEqual([]);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0286
   it("emits QFAI-PROT-311 (error, canonical) for an invalid role", () => {
     const map = { UI実装: "qa-gatekeeper" }; // qa-gatekeeper is not allowed for UI実装
     const issues = validateDelegationMapIssues(map, path);
@@ -159,7 +159,6 @@ describe("validatePrototypingDelegationMap (prototyping.json reader)", () => {
     expect(await validatePrototypingDelegationMap(root)).toEqual([]);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0293
   it("emits QFAI-PROT-311 for a role outside the Delegation Scope Table", async () => {
     const root = await seedRoot(
       JSON.stringify({
@@ -220,7 +219,7 @@ describe("shipped Delegation Scope Table categories are validated", () => {
   const SKILL_MD = nodePath.resolve(
     fileURLToPath(import.meta.url),
     "../../../..",
-    "assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md",
+    "assets/init/.qfai/assistant/skill/qfai-prototyping/SKILL.md",
   );
 
   async function readShippedScopeRows(): Promise<{ category: string; roles: string[] }[]> {
@@ -306,16 +305,16 @@ describe("shipped Delegation Scope Table categories are validated", () => {
   it("documents only role ids the policy knows", async () => {
     for (const { category, roles } of await readShippedScopeRows()) {
       for (const role of roles) {
-        expect(PROTOTYPING_REQUIRED_ROLE_IDS, `shipped row "${category}"`).toContain(role);
+        expect(PROTOTYPING_ALLOWED_ROLE_IDS, `shipped row "${category}"`).toContain(role);
       }
     }
   });
 
   it("rejects a shipped label assigned to a role only its canonical category allows", () => {
-    // The table documents `Generation` -> product-experience-architect only;
+    // The table documents generation -> product-experience-architect only;
     // frontend-engineer is allowed for the canonical UI実装 category.
     const issues = validateDelegationMapIssues(
-      { Generation: "frontend-engineer" },
+      { "Generation and implementation": "frontend-engineer" },
       PROTO_JSON_REL_SSOT,
     );
 
@@ -323,9 +322,9 @@ describe("shipped Delegation Scope Table categories are validated", () => {
     expect(issues[0]?.message).toContain("Allowed roles: product-experience-architect.");
   });
 
-  it("rejects Evaluation scoring assigned to the canonical category's extra role", () => {
+  it("rejects live review assigned to the canonical category's extra role", () => {
     const issues = validateDelegationMapIssues(
-      { "Evaluation scoring": "product-experience-architect" },
+      { "Live Playwright review and evaluation scoring": "product-experience-architect" },
       PROTO_JSON_REL_SSOT,
     );
 
@@ -335,10 +334,20 @@ describe("shipped Delegation Scope Table categories are validated", () => {
 
   // ─── Over-correction pins ─────────────────────────────────────────────
 
+  it("requires only distinct generator and reviewer identities by default", () => {
+    expect(PROTOTYPING_REQUIRED_ROLE_IDS).toEqual([
+      "product-experience-architect",
+      "product-surface-reviewer",
+    ]);
+    expect(Object.keys(SHIPPED_DELEGATION_SCOPE_TABLE)).toContain(
+      "Optional Playwright CLI execution & capture",
+    );
+  });
+
   it("still accepts a shipped label paired with its own documented role", () => {
     expect(
       validateDelegationMapIssues(
-        { Generation: "product-experience-architect" },
+        { "Generation and implementation": "product-experience-architect" },
         PROTO_JSON_REL_SSOT,
       ),
     ).toEqual([]);
@@ -354,21 +363,35 @@ describe("shipped Delegation Scope Table categories are validated", () => {
     ).toEqual([]);
   });
 
-  it.each(["evaluation scoring", "  Evaluation   Scoring  "])(
-    "still resolves the label variant %j",
-    (label) => {
-      expect(
-        validateDelegationMapIssues({ [label]: "product-surface-reviewer" }, PROTO_JSON_REL_SSOT),
-      ).toEqual([]);
-    },
-  );
+  it.each([
+    "live playwright review and evaluation scoring",
+    "  Live Playwright  review and evaluation scoring  ",
+  ])("still resolves the label variant %j", (label) => {
+    expect(
+      validateDelegationMapIssues({ [label]: "product-surface-reviewer" }, PROTO_JSON_REL_SSOT),
+    ).toEqual([]);
+  });
 
-  it.each(["Playwright CLI execution & capture", "Playwright CLI execution and capture"])(
-    "still accepts %j for devops-ci-engineer",
-    (label) => {
-      expect(
-        validateDelegationMapIssues({ [label]: "devops-ci-engineer" }, PROTO_JSON_REL_SSOT),
-      ).toEqual([]);
-    },
-  );
+  it.each([
+    "Optional Playwright CLI execution & capture",
+    "Optional Playwright CLI execution and capture",
+  ])("still accepts %j for devops-ci-engineer", (label) => {
+    expect(
+      validateDelegationMapIssues({ [label]: "devops-ci-engineer" }, PROTO_JSON_REL_SSOT),
+    ).toEqual([]);
+  });
+
+  it("validates stored delegation maps that use earlier shipped labels", () => {
+    expect(resolveDelegationScope("Generation")).toEqual(["product-experience-architect"]);
+    expect(resolveDelegationScope("Evaluation scoring")).toEqual(["product-surface-reviewer"]);
+    expect(resolveDelegationScope("Playwright CLI execution & capture")).toEqual([
+      "devops-ci-engineer",
+    ]);
+    expect(
+      validateDelegationMapIssues(
+        { "Evaluation scoring": "product-experience-architect" },
+        PROTO_JSON_REL_SSOT,
+      ).map((issue) => issue.code),
+    ).toEqual(["QFAI-PROT-311"]);
+  });
 });

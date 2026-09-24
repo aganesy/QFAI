@@ -16,17 +16,59 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, realpathSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 // tests/scripts/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const SCRIPT = path.join(repoRoot, "scripts", "link-assistant-tree.mjs");
 const ASSISTANT = path.join(repoRoot, ".qfai", "assistant");
 const ASSETS = path.join(repoRoot, "packages", "qfai", "assets", "init", ".qfai", "assistant");
+const fixtureRoots: string[] = [];
+
+afterEach(async () => {
+  for (const root of fixtureRoots.splice(0)) await rm(root, { recursive: true, force: true });
+});
+
+async function makeIsolatedTree(): Promise<{ root: string; script: string; assistant: string }> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-assistant-links-"));
+  fixtureRoots.push(root);
+  const script = path.join(root, "scripts", "link-assistant-tree.mjs");
+  const assistant = path.join(root, ".qfai", "assistant");
+  const source = path.join(root, "packages", "qfai", "assets", "init", ".qfai", "assistant");
+  const provenance = path.join(
+    root,
+    "packages",
+    "qfai",
+    "src",
+    "core",
+    "assistantAssetProvenance.ts",
+  );
+  await mkdir(path.dirname(script), { recursive: true });
+  await mkdir(path.join(source, "rule"), { recursive: true });
+  await mkdir(path.dirname(provenance), { recursive: true });
+  await mkdir(assistant, { recursive: true });
+  await cp(SCRIPT, script);
+  await writeFile(path.join(source, "rule", "quality.md"), "# Quality\n", "utf-8");
+  await writeFile(provenance, "export const ADOPTER_OWNED_CATALOG_FILES = [] as const;\n", "utf-8");
+  return { root, script, assistant };
+}
+
+function runIsolated(
+  script: string,
+  root: string,
+  checkOnly: boolean,
+): { status: number; output: string } {
+  const result = spawnSync("node", checkOnly ? [script, "--check"] : [script], {
+    cwd: root,
+    encoding: "utf-8",
+  });
+  return { status: result.status ?? 1, output: (result.stdout ?? "") + (result.stderr ?? "") };
+}
 
 function runCheck(): { status: number; output: string } {
   // Both streams: a problem goes to stderr, and the success path prints the
@@ -47,7 +89,7 @@ describe("link-assistant-tree --check", () => {
   });
 
   it("links the layers the package owns end to end", () => {
-    for (const layer of ["skills", "agents", "constitution", "manifest"]) {
+    for (const layer of ["skill", "agent", "rule", "prompt"]) {
       const entry = path.join(ASSISTANT, layer);
       expect(lstatSync(entry).isSymbolicLink(), `${layer} must be a symlink`).toBe(true);
       expect(realpathSync(entry), `${layer} must resolve to the shipped assets`).toBe(
@@ -56,16 +98,8 @@ describe("link-assistant-tree --check", () => {
     }
   });
 
-  it("keeps the four catalog documents the project owns as real files", () => {
-    // `ADOPTER_OWNED_CATALOG_FILES` is the script's source for these, and
-    // `qfai init --force` reads the same constant to decide what it must not
-    // overwrite. Linking one would make a project's own Stage 0 answers a copy
-    // of the shipped placeholder.
-    for (const fileName of ["manifest.md", "product.md", "structure.md", "tech.md"]) {
-      const entry = path.join(ASSISTANT, "catalog", fileName);
-      expect(existsSync(entry), `${fileName} must exist`).toBe(true);
-      expect(lstatSync(entry).isSymbolicLink(), `${fileName} must NOT be a symlink`).toBe(false);
-    }
+  it("has no assistant catalog after project context moves to the spec tree", () => {
+    expect(existsSync(path.join(ASSISTANT, "catalog"))).toBe(false);
   });
 
   it("reports a path that exists here and nowhere in the assets", async () => {
@@ -89,10 +123,9 @@ describe("link-assistant-tree --check", () => {
     expect(source).not.toContain("await import(");
   });
 
-  it("considers only the paths git tracks", async () => {
-    // A suite that writes into the working tree leaves an untracked file
-    // behind. Reporting that would fail the lane for something no commit
-    // holds, which is what it did the first time this ran in CI.
+  it("ignores untracked regular scratch files", async () => {
+    // A suite may leave an untracked file in the working tree. Such a file
+    // does not change what this repository ships.
     const source = await readFile(SCRIPT, "utf-8");
 
     expect(source).toContain("git");
@@ -100,13 +133,55 @@ describe("link-assistant-tree --check", () => {
     expect(source).toContain("TRACKED !== null");
   });
 
-  it("names the one prefix this tree may hold alone", async () => {
-    // `qfai init --upgrade-assistant-tree` writes a migration memo per upgrade
-    // into the tree that ran it. Everything else is unaccounted for, so the
-    // allow-list stays one entry long and visible.
-    const source = await readFile(SCRIPT, "utf-8");
+  it("accepts an explicitly empty adopter-owned list after the catalog moves", async () => {
+    const { root, script, assistant } = await makeIsolatedTree();
+    expect(runIsolated(script, root, false).status).toBe(0);
+    const checked = runIsolated(script, root, true);
+    expect(checked.status).toBe(0);
+    expect(lstatSync(path.join(assistant, "rule")).isSymbolicLink()).toBe(true);
+  });
 
-    expect(source).toContain('const LOCAL_ONLY_ALLOWED = ["process/migrations/"];');
+  it("rejects an owned-file list whose contents cannot be parsed", async () => {
+    const { root, script } = await makeIsolatedTree();
+    const provenance = path.join(
+      root,
+      "packages",
+      "qfai",
+      "src",
+      "core",
+      "assistantAssetProvenance.ts",
+    );
+    await writeFile(
+      provenance,
+      "export const ADOPTER_OWNED_CATALOG_FILES = [unknownName] as const;\n",
+      "utf-8",
+    );
+    const checked = runIsolated(script, root, true);
+    expect(checked.status).toBe(1);
+    expect(checked.output).toContain("not a literal string list");
+  });
+
+  it("reports a retired layer even when it is a symlink", async () => {
+    const { root, script, assistant } = await makeIsolatedTree();
+    await symlink(
+      path.join(root, "packages", "qfai", "assets", "init", ".qfai", "assistant", "rule"),
+      path.join(assistant, "skills"),
+      "dir",
+    );
+    const checked = runIsolated(script, root, true);
+    expect(checked.status).toBe(1);
+    expect(checked.output).toContain(".qfai/assistant/skills");
+  });
+
+  it("reports a retired real directory without deleting its contents", async () => {
+    const { root, script, assistant } = await makeIsolatedTree();
+    const retired = path.join(assistant, "process");
+    await mkdir(retired);
+    await writeFile(path.join(retired, "local.md"), "# Local\n", "utf-8");
+    const checked = runIsolated(script, root, true);
+    expect(checked.status).toBe(1);
+    expect(checked.output).toContain(".qfai/assistant/process");
+    expect(await readFile(path.join(retired, "local.md"), "utf-8")).toBe("# Local\n");
   });
 
   it("no longer carries the legacy steering residue", () => {

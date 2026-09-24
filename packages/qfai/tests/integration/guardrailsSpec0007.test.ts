@@ -8,15 +8,15 @@
  * All 9 TDD items are Exception-pattern backfill (DR-0007-0002).
  * Existing coverage: tests/cli/guardrails.test.ts, tests/core/decisionGuardrails.test.ts.
  */
-// QFAI:SPEC-0007:TC-0007-0001
-// QFAI:SPEC-0007:TC-0007-0002
-// QFAI:SPEC-0007:TC-0007-0003
-// QFAI:SPEC-0007:TC-0007-0004
-// QFAI:SPEC-0007:TC-0007-0005
-// QFAI:SPEC-0007:TC-0007-0006
-// QFAI:SPEC-0007:TC-0007-0007
-// QFAI:SPEC-0007:TC-0007-0008
-// QFAI:SPEC-0007:TC-0007-0009
+// QFAI:EX-0003-0013-01
+// QFAI:EX-0003-0013-02
+// QFAI:EX-0003-0013-03
+// QFAI:EX-0003-0014-01
+// QFAI:EX-0003-0014-02
+// QFAI:EX-0003-0015-01
+// QFAI:EX-0003-0015-02
+// QFAI:EX-0003-0016-01
+// QFAI:EX-0003-0016-02
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";

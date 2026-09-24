@@ -59,7 +59,7 @@ const REGRESSION_WITHOUT_NUMBERS = [
   "- Consequences: none; the legs are unchanged.",
 ].join("\n");
 
-// QFAI:SPEC-0017:TC-0017-0033
+// QFAI:EX-0002-0016-02
 describe("a cost claim with no captured numbers does not satisfy the rule", () => {
   it("rejects a saving asserted on argument, and accepts the same claim once the numbers are quoted", () => {
     const bare = evaluateMeasurementClaim({ claim: "saving", record: WITHOUT_NUMBERS });
@@ -85,7 +85,7 @@ describe("a cost claim with no captured numbers does not satisfy the rule", () =
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0034
+// QFAI:EX-0002-0016-03
 describe("a recorded regression with the rebuilds kept is accepting", () => {
   it("resolves the criterion satisfied on a measured regression, and only while the rebuilds are there", () => {
     const kept = resolveArtifactReuse({
@@ -122,7 +122,7 @@ describe("a recorded regression with the rebuilds kept is accepting", () => {
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0035
+// QFAI:EX-0002-0016-02
 describe("an asserted regression with no numbers is not accepting", () => {
   it("refuses to close the criterion on an unmeasured regression, rebuilds present or not", () => {
     for (const rebuildsPresent of [true, false]) {

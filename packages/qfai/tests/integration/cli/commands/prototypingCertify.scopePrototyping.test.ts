@@ -16,7 +16,7 @@
  * downstream validate pass runs.
  */
 
-// QFAI:SPEC-0012:TC-0012-0445
+// QFAI:EX-0001-0137-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

@@ -1,0 +1,62 @@
+# Document schema: 03_contract/tech.md
+structure:
+  - heading:
+      pattern: "^# Technology$"
+      regex: true
+    description: Required document heading.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Runtime / platform$"
+          regex: true
+        description: Supported runtime and platform.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Stack$"
+          regex: true
+        description: Stack section.
+        allow_additional: true
+        optional: true
+        tables:
+          - min: 1
+            required_headers:
+              - Component
+              - Choice
+      - heading:
+          pattern: "^## Package manager$"
+          regex: true
+        description: Package manager and version.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Language / framework$"
+          regex: true
+        description: Language and framework choices.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Frontend$"
+          regex: true
+        description: Frontend choices where applicable.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Dependencies( \\(runtime\\))?$"
+          regex: true
+        description: Runtime dependencies.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Constraints$"
+          regex: true
+        description: Technical constraints.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Standard commands \\(copy-paste\\)$"
+          regex: true
+        description: Standard commands (copy-paste) section.
+        allow_additional: true
+        lists:
+          - min: 1

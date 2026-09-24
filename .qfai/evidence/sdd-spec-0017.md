@@ -3,128 +3,98 @@
 ## Objective
 
 - Spec target: spec-0017
-- Objective: replace the documentation-only executed-instance ceiling with a statement of what
-  the repository can actually enforce, so that a job which shortens the run's critical path
-  without adding work is judged by the requirement rather than refused by the measure.
+- Objective: make the repository toolchain follow the story-tree change — the
+  assistant-tree mirror covering the renamed `rule/ skill/ agent/ prompt/`
+  directories, the lane map merged into `rule/test-layers.md`, and the shape
+  table moving in the same pull request as the leak guards — in the batch run
+  `sdd-batch-20260923100952585`.
 
 ## Inputs reviewed
 
-- `.qfai/specs/spec-0017/01_Spec.md` (NFR-0001, NFR-0002, REQ-0007)
-- `.qfai/specs/spec-0017/03_Acceptance-Criteria.md` (AC-0017-0003, AC-0017-0006)
-- `.qfai/specs/spec-0017/04_Business-Rules.md` (BR-0017-0007, BR-0017-0010, BR-0017-0030)
-- `.qfai/specs/spec-0017/05_Examples.md` (EX-0017-0007, and the header's one-example-per-rule rule)
-- `.qfai/specs/spec-0017/06_Test-Cases.md` (TC-0017-0006, TC-0017-0007)
-- `.qfai/specs/spec-0017/08_Open-questions.md` (OQ-0017-0002)
-- `.qfai/specs/spec-0017/tdd/test-list.md` (TDD-0006)
-- `.qfai/specs/_policies/07_Constraints.md` (OC-73)
-- `.github/workflows/ci.yml` — the job set, the conditions and the declared `timeout-minutes`
-- `.github/required-status-contexts.json` — `dependencies`, `dependencyConditions`, the note
-- `scripts/check-workflow-hygiene.mjs` — property 2c, and which fields it does not read
-- `scripts/run-lint-checks.sh` — the five lanes and their grouping
-- `packages/qfai/tests/scripts/ownWorkflowTopology.test.ts` — the set equality this replaces
+- Discussion pack `discussion-20260923063306456`: REQ-0017, REQ-0018,
+  REQ-0024, NFR-0004, NFR-0009.
+- `.qfai/contracts/cli/qfai-init.md`, section The assistant tree.
+- `.agents/rules/distributed-surface.local.md` and the clause list
+  `packages/qfai/tests/integration/agentsRulesSurface.test.ts` holds for it.
+- `scripts/link-assistant-tree.mjs` and
+  `packages/qfai/src/core/assistantAssetProvenance.ts`.
+- `.qfai/specs/spec-0017/01_Spec.md` to `06_Test-Cases.md`, `09_delta.md`,
+  `10_Plan.md`, `16_Traceability-ledger.md` and `tdd/test-list.md`.
+- The `qfai-sdd` delta and evidence templates, and
+  `references/sdd-phase-checklists.md`.
+- `.qfai/evidence/sdd-batch-20260923100952585.md`, the batch record.
 
 ## Preflight summary path
 
-- Preflight run id 20260919090302234: ready, source `discussion-pack`, seven imported
-  requirements, no blockers. Re-run after Triage, so it reflects the approved intake.
-- Written as the run id and its outcome rather than as a path, because the report tree is not
-  committed and a path into it names provenance a reader cannot open.
+- Preflight run id `run-20260923191813154`, the run after the Triage table
+  was persisted: ready, 24 REQ imported, no blockers and no pack gaps.
 
 ## Triage decisions
 
-| Source   | Subject                                                                                     | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                           |
-| -------- | ------------------------------------------------------------------------------------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| REQ-0007 | The documentation-only path is pinned and re-pinned rather than held to a count of four job names | UPDATE    | MODIFY | -           | NFR-0002 names the baseline the measure serves, and the four names were a value derived from the tree as it then stood. A lane measured at 250.1 s under contention and 111.7 s on a runner of its own needs that runner and must stay unconditional. |
-| REQ-0007 | The refusing side of the restated measure                                                   | UPDATE    | APPEND | -           | One test case, citing the example the rule already has. The pack states one example per rule and gives the reason, so the negative reaches the chain through the rule rather than through a criterion or an example of its own.                       |
-| REQ-0007 | The selection exemption is scoped to the lane rather than to the job that hosts it | UPDATE | MODIFY | - | BR-0017-0011 named one lane and enumerated four guards, while that lane also carries the agent-integration mirror guards. The pin rule does not close the gap: it requires the executing set to match the declaration, which a lane given a job of its own, a condition and a `dependencyConditions` entry satisfies with the guard skipped. |
-| REQ-0007 | The documentation-only floor OC-73 restates is corrected to the new measure                 | UPDATE    | MODIFY | -           | Cross-spec, so the row is persisted in `_policies/10_delta.md`. OC-73's Impact stated the floor as a count of executed instances, which is no longer the measure.                                                                                    |
+| Source                                                      | Subject                                                                                            | Operation | Sub-op | Approved By | Rationale                                                                                          |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | --------- | ------ | ----------- | -------------------------------------------------------------------------------------------------- |
+| discussion-20260923063306456#REQ-0017, #REQ-0018, #NFR-0009 | `pnpm sync:ssot` covers the renamed tree; the layer-to-CI-lane mapping document leaves `catalog/`  | UPDATE    | MODIFY | -           | Slice B, lands P6. The spec owns exactly CAP-0017, so no SPLIT. P6 co-change list in `09_delta.md` |
+| discussion-20260923063306456#REQ-0024, #NFR-0004            | The shape table in `.agents/rules/distributed-surface.local.md` moves in the same PR as the guards | UPDATE    | MODIFY | -           | Slice A; this spec's NFR-0005 governs moving the pattern set in one PR                             |
 
 ## Open questions
 
-- OQ-0017-0002 stays `deferred`, owner user, due 2026-11-30. Its Notes are corrected to the new
-  floor and the new measure; the question itself is untouched.
+- None opened in this spec's `08_Open-questions.md`.
+- OQ-0177: the lane map merges into `rule/test-layers.md` — Disposition:
+  resolved
+- OQ-0182: `scripts/link-assistant-tree.mjs` throws once P7 empties
+  `catalog/`, and no item covers it — Disposition: open
 
 ## Decisions made
 
-- The measure is restated rather than deleted or raised from four to five — adjudicated by the
-  user, who was given all three. Deleting it leaves nothing to stop every job becoming
-  unconditional; raising it leaves a proxy that argues again at the next split.
-- The unit is runner-minutes, read as the sum of declared `timeout-minutes` over the jobs a
-  documentation-only run executes. Adopted from the griller's recommendation. Job instances was
-  refused because it charges +1 for a change that cuts the critical path and adds no work, and
-  frozen-lockfile installs is numerically identical to instances.
-- **The rule states a re-pin obligation, not a bound — adjudicated by the user.** A
-  `MUST NOT cost more than the pinned ceiling` clause cannot fail: enforcement is equality
-  against a value recomputed from the same tree, so once the pinner has run, no state of the tree
-  violates it. The rule now requires the executing set and its declared timeout sum to be pinned,
-  and a change to either to re-pin in the same change with BR-0017-0030's numbers.
-- The number is a pin recomputed from the workflow tree, never a literal in the rule. Adopted
-  from the griller's recommendation over a recorded dissent, which DR-0017-0015 carries.
-- The membership claim is scoped to the jobs the aggregate verdict depends on, not to every job
-  that executes. The verdict carries `if: always()` and is not one of its own `dependencies`, so
-  the two sets differ — four jobs against three on today's tree — and a flat equality would be
-  false on the tree it describes.
-- NFR-0002 keeps instance count and its documentation-only figure moves to five. Its other two
-  clauses are quantified in instances, installs and builds, so a minutes figure in one clause
-  would be the only one in a unit no other clause uses.
-- Every statement the fifth unconditional job makes false is corrected here — adjudicated by the
-  user. NFR-0002's clause, REQ-0007's prose, OQ-0017-0002's Notes, AC-0017-0006 and OC-73 each
-  stated a count, and a spec that says two exempt lanes in one place and three in another is
-  broken whichever number is right.
-- The hygiene-lane refusal stays in BR-0017-0007 and gets no acceptance criterion of its own.
-  `04_Business-Rules.md` § Granularity folds a rule's planted-violation form into the same rule,
-  so a `Then` clause carrying its own premise was a second scenario inside the first.
-- The selection exemption is scoped to the lane rather than to the job hosting it, and
-  BR-0017-0011 carries it, with DR-0017-0016 recording the decision. An earlier draft deleted the acceptance clause on the ground that
-  BR-0017-0007's membership claim already covered it; that was wrong. BR-0017-0007 requires the
-  executing set to match the declaration, which a lane given a job of its own, a condition and a
-  `dependencyConditions` entry satisfies with the guard skipped. BR-0017-0011 now covers every
-  lane of the lint aggregate whichever job hosts it, names the mirror guards among what those
-  lanes carry, and forbids that pair. Deferring the obligation instead was refused because it
-  would have removed statements the user approved in this cycle, which is theirs to decide.
-- The negative goes in the example the rule already has, not a second one. The pack states one
-  example per rule and gives the reason — a second would split an oracle the rule keeps together.
+- DELTA-0002 in `09_delta.md`: the change summary of this run.
+- Phase 2 node ruling G6 C1: the lane map merges into `rule/test-layers.md` as
+  a MODIFY; BR-0017-0063 is restated rather than removed; OC-76's placement
+  clause is amended in `_policies`.
+- Phase 2 node rulings G6-13 and G6-14: the overlay suite pins one token per
+  new shape; two new stories.
+- Phase 2 question Q1, answered by the user: the `QFAI-TRACE-001` findings the
+  03 and 04 edits raise are pinned in `scripts/dogfood-backlog.json` as a
+  one-off exception.
+- Phase 3 escalations P3-C2 and P3-C3, answered by the user: the shape table
+  lands with the guards in a P1 pull request of its own; the memo exception is
+  removed in a third pull request.
+- Phase 4 / this run's `09_delta.md` record: the landing list, the co-changes
+  and the recorded drift; no decision beyond the rulings above.
+- Review cycle 1: ruling D9 withdraws TC-0017-0096 and TDD-0105, and moves the
+  smoke scan into a test helper; P3-C2 is recorded as the authority for the
+  P1 pull request's reading of NFR-0005.
 
 ## Work performed
 
-- `.qfai/specs/spec-0017/03_Acceptance-Criteria.md` — AC-0017-0003 restated, its two-subject
-  clause removed; AC-0017-0006 restated as the exemption rule rather than a count, with its Given
-  matching the widened rule and a clause for the third exempt lane
-- `.qfai/specs/spec-0017/04_Business-Rules.md` — BR-0017-0007's Rule, title and Notes, including
-  the sentence that keeps the two job sets apart; BR-0017-0010's Notes; BR-0017-0011's title,
-  Rule, Notes and NFR-Refs, scoping the exemption to the lane and forbidding the pair that would
-  satisfy BR-0017-0007 with the guard skipped
-- `.qfai/specs/spec-0017/01_Spec.md` — NFR-0002's documentation-only clause; REQ-0007's prose
-- `.qfai/specs/spec-0017/05_Examples.md` — EX-0017-0007 and EX-0017-0011, each now carrying both
-  outcomes of its rule
-- `.qfai/specs/spec-0017/06_Test-Cases.md` — TC-0017-0006 and TC-0017-0012 restated,
-  TC-0017-0084 and TC-0017-0085 added for the two refusing sides, and five drifted Coverage
-  summary figures, each derived from the tree
-- `.qfai/specs/spec-0017/07_Decisions.md` — DR-0017-0015 and DR-0017-0016
-- `.qfai/specs/spec-0017/08_Open-questions.md` — OQ-0017-0002's Notes
-- `.qfai/specs/spec-0017/09_delta.md` — four Triage rows
-- `.qfai/specs/spec-0017/10_Plan.md` — the risk-table signal, three stale figures, one
-  test-approach bullet, and steps 10 and 11
-- `.qfai/specs/spec-0017/tdd/test-list.md` — TDD-0006 reset to `todo` with DR-0017-0015 and its
-  prior evidence kept; TDD-0093 and TDD-0094 seeded at `todo` for the two new cases
-- `.qfai/specs/_policies/07_Constraints.md` — OC-73's Impact
-- `.qfai/specs/_policies/10_delta.md` — the cross-spec Triage section
-- `CHANGELOG.md` — the entry for this change
-
-Every test case this cycle changed, with the ledger row that carries it. The ledger's
-upstream-reset rule returns a row to `todo` when its test case's obligation changes,
-and it fired four times here. Listed because the omission is invisible from the
-artifact that changed: a row disagrees with its test case only when the two are read
-together.
-
-| Test case | What changed | Ledger row | Status | DR-ID |
-| ------------ | ---------------- | ---------- | ------ | ---------------------- |
-| TC-0017-0006 | Title and oracle | TDD-0006   | todo   | DR-0017-0015           |
-| TC-0017-0012 | Title and oracle | TDD-0012   | todo   | DR-0017-0016           |
-| TC-0017-0084 | new              | TDD-0093   | todo   | -                      |
-| TC-0017-0085 | new              | TDD-0094   | todo   | -                      |
-
-No changed test case lacks a row, and no row for a changed test case is above `todo`.
+- Phase 2: `01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`,
+  `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md` and
+  `tdd/test-list.md` — US-0017-0010 and US-0017-0011, AC-0017-0037 and
+  AC-0017-0038, BR-0017-0070 to BR-0017-0072, EX-0017-0071 to EX-0017-0073,
+  TC-0017-0093 to TC-0017-0096, TDD-0102 to TDD-0107; TC-0017-0096 and
+  TDD-0105 were later withdrawn under D9.
+- Phase 3: `10_Plan.md` story-tree subsections and the `Owning module` cells.
+- Phase 4: `.qfai/specs/spec-0017/09_delta.md` — DELTA-0002 and section
+  `2026-09-24 — Spec-to-story run` — and this file, which replaces the record
+  of the earlier cycle.
+- `.qfai/evidence/atdd-spec-0017.md`, lines 25 to 31: the ledger counts it
+  states were brought to the current ledger after this run appended TDD-0102
+  to TDD-0107, because `packages/qfai/tests/assets/stageEvidenceCounts.test.ts`
+  compares those counts with the ledger. The same lines now say which rows
+  that stage reviewed and which this run appended. They were edited again
+  when TDD-0105 was withdrawn: 106 rows, 84 `Integration`, 11 `Unit`;
+  81 `refactor`, 6 `blocked`, 19 `todo`.
+- Review cycle 1 fixes:
+  - TC-0017-0096 and its ledger row TDD-0105 withdrawn (ruling D9). The
+    `agentsRulesSurface.test.ts` token block is still written in P1, under
+    `.agents/rules/root-additions-policy.local.md` step 4, and the plan cites
+    that step. `06_Test-Cases.md` Coverage summary restated for 95 cases.
+  - The P1 step names `packages/qfai/tests/helpers/distributedSurfaceScan.ts`
+    as where the smoke test's pattern set lives, in the table of guards.
+  - The NFR approach records P3-C2 as the authority for reading NFR-0005's
+    "zero template edits" as nothing beyond re-spelling IDs in the P1 pull
+    request.
+  - The `QFAI-TRACE-001` pin risk row names its six keys and counts, the Q1
+    exception, and the re-pin when a keyed file changes.
 
 ## Contract executability
 
@@ -133,114 +103,71 @@ No changed test case lacks a row, and no row for a changed test case is above `t
 ## Commands executed
 
 ```sh
-npx qfai validate --profile sdd --fail-on error --format github
+npx qfai validate --profile sdd --fail-on error --spec spec-0017 --format github
+npx qfai validate --profile sdd --fail-on error --spec spec-0017 --format text
 ```
+
+The `github` run is the template's command. The `text` run gives the
+per-severity counts recorded below; both report the same findings.
+
+The CLI was the one built from this branch's source, not a published copy.
 
 ## Validate evidence paths
 
-- Validate run id 20260919104520672, scope `--profile sdd --spec spec-0017`: error=0,
-  warning=24, info=4. Every warning predates this change: thirteen `W-WORKLOG-BROKEN-LINK` and
-  one `W-WORKLOG-SCHEMA` on the work-log surface, nine `QFAI-TRIAGE-010` on `_policies` rows no
-  ledger carries, and one `QFAI-DCON-034` for the unreplaced sample brand, which a spec declaring
-  no surface does not engage.
-- Run ids and outcomes rather than paths, for the reason the preflight section gives.
+- Validate run ids `run-20260924143038229` (`--format github`) and
+  `run-20260924143016419` (`--format text`), scope `sdd` profile,
+  `--spec spec-0017`, after the review-cycle 1 fixes: passed, 0 errors,
+  29 warnings, 4 info. No finding is new against the Phase 4 run
+  `run-20260924101452119`; the warnings are repository-wide (work-log links,
+  triage-to-policies notices, the host-link warning, the sample brand) and none
+  names this spec's files.
 
 ## Pre-draft Grilling
 
-| Phase | Session | Ended at             | Wrote at             | Frontier                                                                      | Evidence             |
-| ----- | ------- | -------------------- | -------------------- | ----------------------------------------------------------------------------- | -------------------- |
-| 0     | skipped | -                    | -                    | empty: the Triage rows name no contract, and this phase wrote nothing         | -                    |
-| 1     | skipped | -                    | 2026-09-19T00:29:54Z | empty: answered by the Phase 2 unit decision, which fixes what OC-73 restates | -                    |
-| 2     | run     | 2026-09-19T00:13:00Z | 2026-09-19T00:24:18Z | 5 settled, 1 escalated and answered                                           | #work-orders-summary |
-| 2c    | skipped | -                    | -                    | empty: no contract was touched, so no obligation changed realizability        | -                    |
-| 3     | skipped | -                    | 2026-09-19T00:27:19Z | empty: answered by the Phase 2 scope decision, which named `10_Plan.md`       | -                    |
+| Phase | Session | Ended at             | Wrote at             | Frontier                 | Evidence             |
+| ----- | ------- | -------------------- | -------------------- | ------------------------ | -------------------- |
+| 2     | run     | 2026-09-23T20:48:12Z | 2026-09-23T20:58:00Z | 112 settled, 0 escalated | sdd-batch-20260923100952585.md#phase-2-grilling-decisions  |
+| 2c.1  | run     | 2026-09-23T22:25:00Z | 2026-09-23T22:27:00Z | 34 settled, 0 escalated  | sdd-batch-20260923100952585.md#phase-2c-grilling-decisions |
+| 3     | run     | 2026-09-24T00:29:24Z | 2026-09-24T00:35:00Z | 31 settled, 0 escalated  | sdd-batch-20260923100952585.md#phase-3-grilling-decisions  |
 
-- Batch record: none
+- Batch record: `.qfai/evidence/sdd-batch-20260923100952585.md`
 
-The Phase 2 row reads `run` rather than `escalated` because the one critical decision it raised
-was put to the user and answered before any author wrote. `Ended at` is the session's own close,
-derived from its measured duration; every write above is later than it. A second critical
-decision arrived later, from the reviewer gate rather than from the session, and is recorded in
-the work orders below.
+Each row reads `run` for its pre-draft session. Phase 3's P3-C2 and P3-C3
+were settled after the first draft and applied in consolidation. Phases 0 and
+1 ran once for the batch and are in the batch record.
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent)     | Agent instance             | Task title                                                                                      | Input (refs)                             | Output (refs)                                                                           | Status (PASS/REVISE/PENDING) |
-| ---- | -------------------- | -------------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------- |
-| 1    | orchestrator         | sdd-20260919-orchestrator  | Stage 0 preflight, then Stage 1 Triage classified and persisted                                 | REQ-0007                                 | `09_delta.md` § Triage, `_policies/10_delta.md` § Triage                                 | PASS                         |
-| 2    | orchestrator         | sdd-20260919-griller-1     | grilling(2/agents): the unit is runner-minutes read as declared `timeout-minutes`               | NFR-0002, BR-0017-0030, the measurements | BR-0017-0007, EX-0017-0007, TC-0017-0006                                                | PASS                         |
-| 3    | orchestrator         | sdd-20260919-griller-1     | grilling(2/agents): the number is a recomputed pin, not a literal in the rule                   | BR-0017-0030                             | BR-0017-0007, DR-0017-0015                                                              | PASS                         |
-| 4    | orchestrator         | sdd-20260919-griller-1     | grilling(2/agents): two claims replace the set equality                                         | the existing set-equality assertion      | BR-0017-0007, TC-0017-0006                                                              | PASS                         |
-| 5    | orchestrator         | sdd-20260919-griller-1     | grilling(2/agents): the static oracle is sufficient, the measured half is BR-0017-0030          | NFR-0001, BR-0017-0030                   | TC-0017-0006                                                                            | PASS                         |
-| 6    | orchestrator         | sdd-20260919-griller-1     | grilling(2/user): the rewording covers every statement the fifth job makes false                | NFR-0002, REQ-0007, OQ-0017-0002         | `01_Spec.md`, `08_Open-questions.md`, AC-0017-0006, OC-73                                | PASS                         |
-| 7    | requirements-analyst | sdd-20260919-req-analyst-1 | Draft AC-0017-0003, AC-0017-0006, BR-0017-0007, BR-0017-0010, NFR-0002, REQ-0007, OC-73         | Triage rows, the adopted decisions       | `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `01_Spec.md`, `08_Open-questions.md`, `_policies/**` | PASS        |
-| 8    | test-design-analyst  | sdd-20260919-test-design-1 | Draft EX-0017-0007, TC-0017-0006, the TDD-0006 reset and the Coverage summary figures           | Triage row, the adopted decisions        | `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                 | PASS                         |
-| 9    | solution-architect   | sdd-20260919-sol-arch-1    | Author DR-0017-0015 and finalize the Plan                                                        | the adopted decisions, the measurements  | `07_Decisions.md`, `10_Plan.md`                                                          | PASS                         |
-| 10   | completion-reviewer  | sdd-20260919-completion-1  | Reviewer gate over the completion contract                                                       | every artifact above, this file           | REVISE: five blocking findings, one of them an oracle a conforming tree falsifies        | REVISE                       |
-| 11   | orchestrator         | sdd-20260919-orchestrator  | grilling(rework/user): the rule states a re-pin obligation, not a bound                          | the reviewer's F4                        | BR-0017-0007, AC-0017-0003, DR-0017-0015                                                | PASS                         |
-| 12   | requirements-analyst | sdd-20260919-req-analyst-1 | Rework F1, F3, F4 and F5 across the criteria, the rules and the spec                            | the reviewer's findings                  | `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `08_Open-questions.md`              | PASS                         |
-| 13   | test-design-analyst  | sdd-20260919-test-design-1 | Rework F1 and F2: the example, TC-0017-0006, TC-0017-0084, TDD-0093 and the figures             | the reviewer's findings                  | `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                 | PASS                         |
-| 14   | solution-architect   | sdd-20260919-sol-arch-1    | Rework F1, F6 and F7, and re-read both Plan steps against the restated rule                     | the reviewer's findings                  | `07_Decisions.md`, `10_Plan.md`                                                          | PASS                         |
-| 15   | completion-reviewer  | sdd-20260919-completion-2  | Reviewer gate over the rework                                                                    | every artifact above, this file           | REVISE: the changelog stated the refused design, and the mirror-lane obligation had no carrier | REVISE |
-| 16   | orchestrator         | sdd-20260919-orchestrator  | Rewrite the changelog entry, the Triage subject and the mirror-lane decision record              | the reviewer's R1 and R3                  | `CHANGELOG.md`, `09_delta.md`, this file                                                    | PASS                         |
-| 17   | requirements-analyst | sdd-20260919-req-analyst-1 | Scope the exemption to the lane in BR-0017-0011, and restore the criterion's third clause        | the reviewer's R2                         | `04_Business-Rules.md`, `03_Acceptance-Criteria.md`                                          | PASS                         |
-| 18   | test-design-analyst  | sdd-20260919-test-design-1 | Widen EX-0017-0011 and TC-0017-0012, add TC-0017-0085 and TDD-0094, re-derive the figures        | the reviewer's R2                         | `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                    | PASS                         |
-| 19   | solution-architect   | sdd-20260919-sol-arch-1    | Cite the rule from Plan step 11, and sweep both records for the removed wording                  | the reviewer's R4                         | `10_Plan.md`, `07_Decisions.md`                                                             | PASS                         |
-| 20   | completion-reviewer  | sdd-20260919-completion-3  | Reviewer gate over the second rework                                                             | every artifact above, this file            | REVISE: a reworded test case left its ledger row above `todo`, so nothing scheduled the widened obligation | REVISE |
-| 21   | test-design-analyst  | sdd-20260919-test-design-1 | Reset TDD-0012 under the upstream rule, and scope the seeding notes to the change they record    | the reviewer's B1 and R5                   | `tdd/test-list.md`                                                                       | PASS                         |
-| 22   | solution-architect   | sdd-20260919-sol-arch-1    | Author DR-0017-0016 for the lane scope, which no existing record decided                         | TDD-0012's reset, BR-0017-0011             | `07_Decisions.md`                                                                        | PASS                         |
-| 23   | orchestrator         | sdd-20260919-orchestrator  | Record every changed test case beside its ledger row's status                                     | the reviewer's residual risk               | this file                                                                               | PASS                         |
-| 24   | completion-reviewer  | sdd-20260919-completion-4  | Reviewer gate over the third rework                                                              | every artifact above, this file             | REVISE: a reset clause in the ledger still stated the refused design, in the cell the implementer reads | REVISE |
-| 25   | orchestrator         | sdd-20260919-orchestrator  | Sweep every changed file for the refused wording, rather than delegating it per owner             | the reviewer's B2                           | one real hit found, in `tdd/test-list.md`                                                | PASS                         |
-| 26   | test-design-analyst  | sdd-20260919-test-design-1 | State the re-pin obligation in TDD-0006's reset clause                                            | BR-0017-0007, DR-0017-0015 weakness 4       | `tdd/test-list.md`                                                                       | PASS                         |
-| 27   | completion-reviewer  | sdd-20260919-completion-5  | Reviewer gate over the fourth rework                                                              | every artifact above, this file              | PASS: no further instance of the refused design; the membership scope and the ledger re-derived | PASS |
+| Step | Role (sub-agent)                                               | Agent instance                                 | Task title                                          | Input (refs)                                    | Output (refs)                                                  | Status (PASS/REVISE/PENDING) |
+| ---- | -------------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------- | ---------------------------- |
+| 1    | requirements-analyst                                           | triage-author                                  | Draft, revise and persist the Stage 1 Triage table  | Pack REQ/NFR, active spec summaries             | `09_delta.md` § Triage (2026-09-23 spec-to-story)              | PASS                         |
+| 2    | delivery-planner                                               | triage-gate                                    | Blocking gate on the Triage table, two rounds       | Triage drafts rev 1 and rev 2                   | REVISE (F1–F5), then PASS with named fixes N1–N4               | PASS                         |
+| 3    | requirements-analyst                                           | phase2-plan-G6                                 | Phase 2 item plan and open decisions for this spec  | Phase 2 plan brief, Triage, Phase 0 decisions   | Item plan (orchestrator scratchpad)                            | PASS                         |
+| 4    | architecture-reviewer                                          | phase2-griller                                 | Phase 2 griller ruling across eight groups          | Eight item plans                                | Rulings X1–X14, node rulings G6 C1, G6-13, G6-14, Q1           | PASS                         |
+| 6    | requirements-analyst                                           | phase2-writeA-G6                               | Phase 2 wave A: 01_Spec and 02–04                   | Write brief, plans, rulings                     | `01_Spec.md`, `02`–`04`                                        | PASS                         |
+| 7    | test-design-analyst                                            | phase2-writeB-G6                               | Phase 2 wave B: 05, 06 and the Phase 2b ledger      | Wave A output                                   | `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`       | PASS                         |
+| 8    | solution-architect, architecture-reviewer, test-design-analyst | phase2c-author, phase2c-griller, phase2c-write | Phase 2c obligation reconciliation                  | Carry list, Phase 2 output                      | `catalog/` holding the four seeds unreported between P6 and P7 | PASS                         |
+| 9    | solution-architect, architecture-reviewer                      | phase3-author, phase3-griller                  | Phase 3 pre-draft grilling                          | Phase 2 items, contracts, plan template, source | Elements, node rulings, P3-C1                                  | PASS                         |
+| 10   | solution-architect                                             | phase3-write-W5                                | Phase 3: `10_Plan.md` and the `Owning module` cells | Phase 3 rulings, write brief                    | `10_Plan.md`, ledger `Owning module` cells                     | PASS                         |
+| 11   | solution-architect                                             | phase3-consolidate                             | Align every plan with P3-C2; Plan gate              | Seven plans, P3-C2                              | 195 files conform; no new validate error                       | PASS                         |
+| 12   | requirements-analyst                                           | phase4-writer-D4                               | Phase 4: `09_delta.md` and this file                | Batch record, Phase 2c and Phase 3 notes        | `09_delta.md`, this file                                       | PASS                         |
+
+Step numbers are the batch record's; step 5 amended no row of this spec.
 
 ## Gaps / Open risks
 
-- The declared sum for today's unconditional set is 35 minutes, against NFR-0001's three-minute
-  bound for this path. The pin is roughly twelve times looser than the reality it prices; it
-  catches a runaway job and a forgotten raise, which is the class a declared value can catch.
-- `timeout-minutes` is integer-only and each half of a split needs its own margin, so extracting
-  the lane will raise the pinned sum even though the measured critical path falls. BR-0017-0030
-  judges the measured figures.
-- A timeout raised for an unrelated safety reason trips the lane, which forces the raiser to
-  re-price this path deliberately.
-- The measure enforces equality against a value recomputed from the same tree, so it refuses a
-  change that was not re-pinned rather than a cost. That is why the rule states a re-pin
-  obligation and no bound beside it. The dissent that named this is recorded in DR-0017-0015.
-- BR-0017-0011 forbids a moved lane acquiring a condition or a `dependencyConditions` entry, and
-  TC-0017-0085 is the case for that pair. Without it the sentence would assert something no tree
-  could fail, which is the defect the review caught twice before.
-- Every lane later moved into a job of its own owes a `dependencyConditionsNote` entry, and no
-  lane parses that note, so the entry is held by review. DR-0017-0016 records that as an accepted
-  cost of the lane scope.
-- BR-0017-0007 requires the declaration's note to name each unconditional job with the reason it
-  cannot be skipped, and nothing parses that note: no file under `scripts/`, `packages/qfai/src`
-  or `packages/qfai/tests` reads `dependencyConditionsNote`. The set equality beside it is
-  checked by the hygiene lane's property 2c; the reason text is held by review, as this
-  repository holds several obligations.
-- `.github/required-status-contexts.json`'s note names three unconditional jobs. A fifth job owes
-  a fourth entry and its reason there, which is Plan step 11's obligation.
-- NFR-0002's code-path figure names at most 12 instances and the tree runs 25. Left alone:
-  correcting it is a cost claim, so BR-0017-0030 wants measured numbers behind it.
-- `06_Test-Cases.md`'s Coverage summary carried five figures that had drifted by one row. All are
-  derived from the tree now. Nothing reads that section, and spec-0017 is the only pack with one.
-- `05_Examples.md` states one example per rule and gives the reason: a second would split a
-  planted-violation form from its positive. EX-0017-0067 is not that shape — it is a second
-  positive obligation of BR-0017-0053, which the header's clause does not reach and does not
-  admit either. Either the header gains a clause for a rule carrying two independent positive
-  obligations, or such a rule is a granularity defect and BR-0017-0053 is split. Pre-existing,
-  and outside this change.
-- A sweep for wording a decision removed is one pass over every file the cycle touched, run by
-  whoever holds the finding. Delegated per owner it missed the ledger, which no author's sweep
-  covered, and the surviving clause sat in the cell `/qfai-implement` reads when it selects a row.
-- No wall-clock improvement is claimed here. The projected figures belong to Plan step 11, which
-  owes captured before-and-after numbers under BR-0017-0030.
+- The `QFAI-TRACE-001` pin is not in `scripts/dogfood-backlog.json` yet. It
+  is a co-change of the P2 to P8 pull request, shared with spec-0014; until
+  it lands, the `tdd` and `full` dogfood lanes each report 13 findings, nine
+  of them on files this spec's ledger links.
+- The drift recorded in `09_delta.md`: the P7 throw in
+  `scripts/link-assistant-tree.mjs` (OQ-0182); the size signal of 38 criteria and 95
+  cases.
+- A stale plural link passes `--check` today, because the check skips
+  symbolic links; TC-0017-0094 plants one.
 
 ## Final status
 
-- Final status: PASS
-- Rationale: the routed blocking reviewer returned PASS on the fifth pass, with the membership
-  scope, the four ledger rows and every Coverage figure re-derived from the tree rather than read
-  from a report. Four gates returned REVISE before it, and each finding has its own rework row.
-  Validate is at error=0 with 24 warnings, all of which predate this change.
+- Final status: REVISE
+- Rationale: the Reviewer Gate returned REVISE in cycle 1. Its fixes for this
+  spec are applied; the gate has not re-run.

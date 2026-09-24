@@ -48,7 +48,7 @@ const CHECK_SCRIPT = path.resolve(
 
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md";
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md";
 
 /** Two lines each, so a rewrite has something to re-terminate. */
 const SCANNER_SEED = 'export const KIND = "color";\nexport const OTHER = "font";\n';

@@ -42,7 +42,7 @@ async function skillDir(): Promise<string> {
   return path.join(await project(), ".qfai", "assistant", "skills", "qfai-atdd");
 }
 
-// QFAI:SPEC-0008:US-0008-0008
+// QFAI:BF-0001
 describe(
   "E2E: an adopter receives the worker-scoped credential-reuse rules, reachable from the skill (US-0008-0008)",
   { timeout: 120000 },

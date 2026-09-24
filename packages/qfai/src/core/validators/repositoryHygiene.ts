@@ -17,8 +17,8 @@ const LEGACY_DIR_RULES: LegacyDirRule[] = [
   { legacy: "discuss", canonical: "discussion" },
   { legacy: "requirements", canonical: "discussion" },
   { legacy: "require", canonical: "discussion" },
-  { legacy: "spec", canonical: "specs" },
-  { legacy: "specification", canonical: "specs" },
+  { legacy: "specs", canonical: "spec" },
+  { legacy: "specification", canonical: "spec" },
 ];
 
 const SUSPICIOUS_TEMPLATE_NAME_RE = /^(?:_?templates?|_?sample(?:s)?|sample-template)$/i;
@@ -33,6 +33,7 @@ export async function validateRepositoryHygiene(
 
   for (const rule of LEGACY_DIR_RULES) {
     const legacyPath = path.join(qfaiRoot, rule.legacy);
+    if (legacyPath === specsRoot) continue;
     if (!(await isDirectory(legacyPath))) {
       continue;
     }

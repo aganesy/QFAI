@@ -8,16 +8,18 @@ scope: global
 blocking: false
 promote-to: null
 links:
-  - spec-0017
-  - spec-0003
-  - spec-0006
-  - spec-0008
-  - spec-0015
+  - BF-0002
+  - BF-0001
+  - BF-0002
+  - BF-0004
+  - BF-0003
+  - BF-0001
+  - BF-0001
   - discussion-20260804173914356
 closure-rationale: >-
   Both decisions were captured at the policy layer in the same change —
-  `_policies/08_Decisions.md` (DR-0275, DR-0276) and `_policies/10_delta.md`
-  § CHG-007 — so there is no pending promotion. This entry exists to make two
+  `_policies/08_Decisions.md` (DR-0275, DR-0276) and `_policies/10_delta.md` §
+  CHG-007 — so there is no pending promotion. This entry exists to make two
   things durable that the decision rows alone do not carry: the mechanism that
   forced DR-0275, and a correction to a claim this run escalated and later
   falsified. The narrative record of both lives in `.qfai/evidence/` and

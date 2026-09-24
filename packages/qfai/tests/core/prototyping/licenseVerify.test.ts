@@ -18,7 +18,7 @@ const catalog: LicenseCatalog = {
 };
 
 describe("licenseVerify — allow-listed sources + tier match", () => {
-  // QFAI:SPEC-0012:TC-0012-0370
+  // QFAI:EX-0001-0121-01
   it("returns ok when every entry has an allow-listed source and a known license tier", () => {
     const sources: ImageSource[] = [
       {
@@ -44,14 +44,14 @@ describe("licenseVerify — allow-listed sources + tier match", () => {
     expect(licenseVerify(sources, catalog)).toEqual({ ok: true });
   });
 
-  // QFAI:SPEC-0012:TC-0012-0370
+  // QFAI:EX-0001-0121-01
   it("returns ok on empty input (no entries to validate)", () => {
     expect(licenseVerify([], catalog)).toEqual({ ok: true });
   });
 });
 
 describe("licenseVerify — rejects non-allow-listed sources and unknown tiers", () => {
-  // QFAI:SPEC-0012:TC-0012-0395
+  // QFAI:EX-0001-0121-02
   it("emits license-not-allowlisted for sources outside the frozen allowlist", () => {
     const sources: ImageSource[] = [
       {
@@ -75,7 +75,7 @@ describe("licenseVerify — rejects non-allow-listed sources and unknown tiers",
     ]);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0395
+  // QFAI:EX-0001-0121-02
   it("emits license-tier-unknown when source is allowed but license is not registered for it", () => {
     const sources: ImageSource[] = [
       {
@@ -100,7 +100,7 @@ describe("licenseVerify — rejects non-allow-listed sources and unknown tiers",
     ]);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0395
+  // QFAI:EX-0001-0121-02
   it("aggregates every offending entry without short-circuiting", () => {
     const sources: ImageSource[] = [
       {
@@ -231,8 +231,7 @@ describe("licenseVerify — non-https URL guard", () => {
 
 // When the catalog declares `sourceHosts`, the URL host must match the
 // per-source allowlist.
-// QFAI:SPEC-0012:TC-0012-0411
-describe("licenseVerify — per-source URL host binding (TC-0012-0411)", () => {
+describe("licenseVerify — per-source URL host binding", () => {
   const hostBoundCatalog: LicenseCatalog = {
     allowedSources: ["unsplash", "pexels"],
     licenseTiers: {
@@ -322,8 +321,7 @@ describe("licenseVerify — per-source URL host binding (TC-0012-0411)", () => {
 
 // Backward-compat: catalogs that pre-date the `sourceHosts` field
 // continue to work — the host check is skipped.
-// QFAI:SPEC-0012:TC-0012-0412
-describe("licenseVerify — backward compat: catalog without sourceHosts (TC-0012-0412)", () => {
+describe("licenseVerify — catalog without sourceHosts", () => {
   it("does not run the host check when sourceHosts is undefined", () => {
     // No `sourceHosts` key — every URL on an allowlisted source +
     // known tier should pass, regardless of host.
@@ -343,8 +341,7 @@ describe("licenseVerify — backward compat: catalog without sourceHosts (TC-001
 // Attribution is required at the runtime license gate. Undefined and
 // empty-string both surface as the new `license-missing-attribution`
 // error → exit 66 per the CLI contract's exit-code class table.
-// QFAI:SPEC-0012:TC-0012-0414
-describe("licenseVerify — attribution is required (TC-0012-0414)", () => {
+describe("licenseVerify — attribution is required", () => {
   it("emits license-missing-attribution when attribution is undefined", () => {
     const sources: ImageSource[] = [
       {

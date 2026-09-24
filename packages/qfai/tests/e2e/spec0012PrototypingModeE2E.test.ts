@@ -10,7 +10,7 @@
  * are asserted alongside the per-iteration mode record and certify
  * refusal.
  */
-// QFAI:SPEC-0012:US-0012-0140
+// QFAI:BF-0001
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

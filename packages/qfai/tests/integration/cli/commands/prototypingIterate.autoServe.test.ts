@@ -15,7 +15,7 @@
  *       exit 2 with the PID/command surfaced on stderr.
  */
 
-// QFAI:SPEC-0012:TC-0012-0442
+// QFAI:EX-0001-0135-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -108,7 +108,7 @@ async function seedMinimal(root: string): Promise<void> {
 }
 
 describe("iterate --auto-serve default OFF", () => {
-  // QFAI:SPEC-0012:TC-0012-0442
+  // QFAI:EX-0001-0135-01
   it("does not invoke the server runner when --auto-serve is absent", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -128,7 +128,7 @@ describe("iterate --auto-serve default OFF", () => {
 });
 
 describe("iterate --auto-serve ON invokes runner + teardown", () => {
-  // QFAI:SPEC-0012:TC-0012-0442
+  // QFAI:EX-0001-0135-01
   it("calls the runner once and invokes the returned teardown at cycle end", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -148,7 +148,7 @@ describe("iterate --auto-serve ON invokes runner + teardown", () => {
 });
 
 describe("iterate --auto-serve stale prior-iterate owner recovers", () => {
-  // QFAI:SPEC-0012:TC-0012-0442
+  // QFAI:EX-0001-0135-01
   it("accepts runner.ok=true (recovery path) and continues to cycle completion", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -169,7 +169,7 @@ describe("iterate --auto-serve stale prior-iterate owner recovers", () => {
 });
 
 describe("iterate --auto-serve foreign-process refusal", () => {
-  // QFAI:SPEC-0012:TC-0012-0442
+  // QFAI:EX-0001-0135-01
   it("returns exit 2 with PID + owning command on stderr when runner refuses", async () => {
     const root = await newTempDir();
     await seedMinimal(root);

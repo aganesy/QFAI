@@ -174,7 +174,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(issues).toEqual([]);
   });
 
-  // QFAI:SPEC-0004:TC-0004-0008
+  // QFAI:EX-0001-0042-03
   it("TC-3.8.2: missing root DESIGN.md → DCON-030", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
@@ -1066,7 +1066,7 @@ procurement:
     expect(dcon005).toEqual([]);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0346
+  // QFAI:EX-0001-0117-01
   it("design-system.yaml mirror with diverging color value → DCON-005 with diff diagnostic", async () => {
     // The mirror is contractually a verbatim DESIGN.md
     // copy. A hand-authored mirror that disagrees with DESIGN.md must
@@ -1751,6 +1751,9 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
     // sample costs it nothing yet. An error would stop a project that never
     // opted into the design surface at all.
     expect(dcon034[0]?.severity).toBe("warning");
+    expect(dcon034[0]?.suggested_action).toContain(
+      ".qfai/assistant/skill/qfai-prototyping/templates/DESIGN.md.sample",
+    );
   });
 
   it("escalates DCON-034 to error once the project is UI-bearing", async () => {

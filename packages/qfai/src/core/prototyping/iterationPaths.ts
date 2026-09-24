@@ -21,7 +21,7 @@ import { PROTOTYPING_EVIDENCE_REL } from "./paths.js";
 
 const STALE_ITER_DIR_RE = /^iter-\d{2,}$/;
 const PARSE_PATH_RE =
-  /^\.qfai\/evidence\/prototyping\/iter-(\d{2,})\/(spec-\d{4})\/([^/]+)\.review\.json$/;
+  /^\.qfai\/evidence\/prototyping\/iter-(\d{2,})\/(CON-UI-\d{4})\/([^/]+)\.review\.json$/;
 
 function padIndex(index: number): string {
   return String(index).padStart(2, "0");
@@ -43,8 +43,8 @@ function padIndex(index: number): string {
  * (per-spec iter-dir migration) lands and removes the flat layout
  * altogether.
  */
-export function iterationDirPerSpec(index: number, specId: string): string {
-  return `${PROTOTYPING_EVIDENCE_REL}/iter-${padIndex(index)}/${specId}`;
+export function iterationDirPerUiContract(index: number, uiContractId: string): string {
+  return `${PROTOTYPING_EVIDENCE_REL}/iter-${padIndex(index)}/${uiContractId}`;
 }
 
 /**
@@ -55,12 +55,12 @@ export function iterationDirPerSpec(index: number, specId: string): string {
  * helper of the same name in `./iteration.ts`. See
  * {@link iterationDirPerSpec} for the full rationale.
  */
-export function iterationReviewPathPerSpec(
+export function iterationReviewPathPerUiContract(
   index: number,
-  specId: string,
+  uiContractId: string,
   screenId: string,
 ): string {
-  return `${iterationDirPerSpec(index, specId)}/${screenId}.review.json`;
+  return `${iterationDirPerUiContract(index, uiContractId)}/${screenId}.review.json`;
 }
 
 /**
@@ -73,7 +73,7 @@ export function iterationReviewPathPerSpec(
 export async function findIterationReviewFiles(root: string, index: number): Promise<string[]> {
   const padded = padIndex(index);
   const baseDir = path.join(root, PROTOTYPING_EVIDENCE_REL, `iter-${padded}`).replace(/\\/g, "/");
-  const pattern = `${baseDir}/spec-*/*.review.json`;
+  const pattern = `${baseDir}/CON-UI-*/*.review.json`;
 
   let matches: string[];
   try {
@@ -171,28 +171,28 @@ export async function deleteStaleIterDirs(root: string): Promise<{ deleted: stri
 }
 
 /**
- * Inverse of {@link iterationReviewPathPerSpec}: parses a project-root
+ * Inverse of {@link iterationReviewPathPerUiContract}: parses a project-root
  * relative review path back into its `(idx, spec, screen)` components.
  * Returns `null` when the input does not match the expected shape so
  * callers can fail-closed on malformed paths.
  */
 export function parseIterationReviewPath(
   relPath: string,
-): { idx: number; spec: string; screen: string } | null {
+): { idx: number; uiContractId: string; screen: string } | null {
   const normalized = relPath.replace(/\\/g, "/");
   const match = PARSE_PATH_RE.exec(normalized);
   if (!match) {
     return null;
   }
   const idxRaw = match[1];
-  const spec = match[2];
+  const uiContractId = match[2];
   const screen = match[3];
-  if (idxRaw === undefined || spec === undefined || screen === undefined) {
+  if (idxRaw === undefined || uiContractId === undefined || screen === undefined) {
     return null;
   }
   const idx = Number.parseInt(idxRaw, 10);
   if (!Number.isInteger(idx) || idx < 0) {
     return null;
   }
-  return { idx, spec, screen };
+  return { idx, uiContractId, screen };
 }

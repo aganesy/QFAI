@@ -7,6 +7,72 @@ import { describe, expect, it } from "vitest";
 
 import { loadConfig, type QfaiValidationConfig } from "../../src/core/config.js";
 
+// QFAI:EX-0001-0038-05
+describe("story-tree default paths", () => {
+  it("resolves both omitted path keys to the story tree", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-story-paths-"));
+    try {
+      await writeFile(path.join(root, "qfai.config.yaml"), "paths:\n  testsDir: checks\n", "utf-8");
+      const { config, issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
+      expect(config.paths.specsDir).toBe(".qfai/spec");
+      expect(config.paths.contractsDir).toBe(".qfai/spec/03_contract");
+      expect(config.paths.skillsDir).toBe(".qfai/assistant/skill");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("assistant routing overrides", () => {
+  it("loads complete routing entries and review profiles without merging defaults", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-routing-overrides-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        [
+          "routing:",
+          "  - skill: qfai-sdd",
+          "    phases: []",
+          "reviewProfiles:",
+          "  default:",
+          "    always_required: [completion-reviewer]",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      const { config, issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
+      expect(config.routing).toEqual([{ skill: "qfai-sdd", phases: [] }]);
+      expect(config.reviewProfiles).toEqual({
+        default: { always_required: ["completion-reviewer"] },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects duplicate routing keys and malformed profiles", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-routing-overrides-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "routing:\n  - skill: qfai-sdd\n  - skill: qfai-sdd\nreviewProfiles:\n  default: invalid\n",
+        "utf-8",
+      );
+      const { config, issues } = await loadConfig(root);
+      expect(issues.map((issue) => issue.code)).toEqual([
+        "QFAI_CONFIG_INVALID",
+        "QFAI_CONFIG_INVALID",
+      ]);
+      expect(config.routing).toEqual([{ skill: "qfai-sdd" }]);
+      expect(config.reviewProfiles).toEqual({});
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("baseBranch config", () => {
   it("loads baseBranch from config YAML", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-basebranch-"));

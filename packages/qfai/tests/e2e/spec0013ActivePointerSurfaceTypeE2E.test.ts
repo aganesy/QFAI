@@ -4,8 +4,7 @@
  *   - US-0013-0012: resolve the active discussion pack via a single
  *     helper reading `.qfai/state.json#discussion.currentId` (no
  *     modification-time guessing; clear recovery error on ambiguity).
- *   - US-0013-0013: surface_type auto-populate on a UI-companion spec;
- *     D-SURFACE-TYPE-MISSING warns when frontmatter is absent.
+ *   - US-0013-0013: surface_type auto-populate on a UI-companion spec.
  *   - US-0013-0014: structured primary_tasks `{id,label,acceptance}`
  *     shape accepted; recommended ceiling of 7 named in
  *     QFAI-AUD-020 warning text.
@@ -14,9 +13,9 @@
  * temp-fixture invocations of the production helpers. Per the layer
  * policy each block carries only the US annotation comment.
  */
-// QFAI:SPEC-0013:US-0013-0012
+// QFAI:BF-0001
 // QFAI:SPEC-0013:US-0013-0013
-// QFAI:SPEC-0013:US-0013-0014
+// QFAI:BF-0001
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -32,7 +31,6 @@ import {
 } from "../../src/core/discussionPack.js";
 import { writeDiscussionCurrentId } from "../../src/core/state.js";
 import { validateDesignAudit } from "../../src/core/validators/designAudit.js";
-import { validateSurfaceTypeDrift } from "../../src/core/validators/surfaceTypeDrift.js";
 
 let root = "";
 
@@ -73,14 +71,14 @@ async function seedUiCompanion(filename: string, body: string): Promise<void> {
 }
 
 describe("spec-0013 US-0013-0012 active-pack resolver", () => {
-  it("QFAI:SPEC-0013:US-0013-0012 — normal: resolver returns the pack named in state.json#discussion.currentId", async () => {
+  it("QFAI:BF-0001 — normal: resolver returns the pack named in state.json#discussion.currentId", async () => {
     const expected = await seedDiscussionPack("discussion-20260527075558258");
     await writeDiscussionCurrentId(root, "discussion-20260527075558258");
     const resolved = await resolveActiveDiscussionPack(root);
     expect(resolved).toBe(expected);
   });
 
-  it("QFAI:SPEC-0013:US-0013-0012 — error: absent/missing currentId raises a recovery error", async () => {
+  it("QFAI:BF-0001 — error: absent/missing currentId raises a recovery error", async () => {
     await seedDiscussionPack("discussion-20260101000000000");
     await expect(resolveActiveDiscussionPack(root)).rejects.toBeInstanceOf(
       ResolveActiveDiscussionPackError,
@@ -112,25 +110,6 @@ describe("spec-0013 US-0013-0013 surface_type auto-populate", () => {
     const body = await readFile(specPath, "utf-8");
     expect(body).toMatch(/surface_type:\s*ui-bearing/);
   });
-
-  it("QFAI:SPEC-0013:US-0013-0013 — boundary/error: D-SURFACE-TYPE-MISSING warns on companion-without-frontmatter", async () => {
-    await seedSpec("0091", ["---", "id: spec-0091", "---", "", "# Sample", ""].join("\n"));
-    await seedUiCompanion(
-      "ui-0091-dashboard.yaml",
-      ["screens:", "  - id: dashboard", "    route: /dashboard", "    primary_tasks: []", ""].join(
-        "\n",
-      ),
-    );
-    const issues = await validateSurfaceTypeDrift(root, defaultConfig);
-    const drift = issues.find((issue) => issue.code === "D-SURFACE-TYPE-MISSING");
-    expect(drift, "expected D-SURFACE-TYPE-MISSING warning").toBeDefined();
-    // Version-computed, not a literal. This asserted `"warning"` while the
-    // finding's own remediation text promised escalation "in a future minor
-    // release", so it kept passing through the release that was supposed to
-    // change it. Comparing against `deprecationSeverity` breaks if the
-    // validator hard-codes again, and holds on both sides of the sunset.
-    expect(drift?.severity).toBe("error");
-  });
 });
 
 describe("spec-0013 US-0013-0014 primary_tasks ceiling + shape", () => {
@@ -139,7 +118,7 @@ describe("spec-0013 US-0013-0014 primary_tasks ceiling + shape", () => {
     return validateDesignAudit(root, defaultConfig);
   }
 
-  it("QFAI:SPEC-0013:US-0013-0014 — normal: structured items accepted and the ceiling named in the warning when count is over it", async () => {
+  it("QFAI:BF-0001 — normal: structured items accepted and the ceiling named in the warning when count is over it", async () => {
     const tasks = Array.from({ length: 9 }, (_, i) => `      - task_${i + 1}`).join("\n");
     const issues = await seedUi(
       [
@@ -157,7 +136,7 @@ describe("spec-0013 US-0013-0014 primary_tasks ceiling + shape", () => {
     expect(warning?.message ?? "").toMatch(/at most 7/);
   });
 
-  it("QFAI:SPEC-0013:US-0013-0014 — error/boundary: a two-task screen does not warn; incomplete structured item rejected", async () => {
+  it("QFAI:BF-0001 — error/boundary: a two-task screen does not warn; incomplete structured item rejected", async () => {
     const issues = await seedUi(
       [
         "screens:",

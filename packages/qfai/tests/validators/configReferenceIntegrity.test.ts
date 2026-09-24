@@ -6,7 +6,7 @@
  *   002: paths.* points to a missing directory (warning)
  *   003: calibration.packPath points to a missing dir
  */
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -32,7 +32,7 @@ afterEach(async () => {
   }
 });
 
-function makeConfig(overrides: { primarySpecId?: string; packPath?: string } = {}): QfaiConfig {
+function makeConfig(overrides: { primaryUiContract?: string; packPath?: string } = {}): QfaiConfig {
   return {
     paths: {
       contractsDir: ".qfai/contracts",
@@ -63,7 +63,9 @@ function makeConfig(overrides: { primarySpecId?: string; packPath?: string } = {
     },
     output: { validateJsonPath: ".qfai/output/validate.json" },
     prototyping: {
-      ...(overrides.primarySpecId !== undefined ? { primarySpecId: overrides.primarySpecId } : {}),
+      ...(overrides.primaryUiContract !== undefined
+        ? { primaryUiContract: overrides.primaryUiContract }
+        : {}),
       ...(overrides.packPath !== undefined
         ? { calibration: { packPath: overrides.packPath } }
         : {}),
@@ -78,24 +80,29 @@ async function seedDirs(root: string, paths: string[]): Promise<void> {
 }
 
 describe("validateConfigReferenceIntegrity", () => {
-  it("returns empty when all paths exist and primarySpecId resolves", async () => {
+  it("returns empty when a configured UI contract declares screens", async () => {
     const root = await newTempDir();
     await seedDirs(root, [
-      ".qfai/specs/spec-0012",
-      ".qfai/contracts",
+      ".qfai/specs",
+      ".qfai/contracts/ui",
       ".qfai/discussion",
       ".qfai/assistant/skills",
       "src",
       "tests",
     ]);
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/home.yaml"),
+      "# QFAI-CONTRACT-ID: CON-UI-0012\nscreens: [{id: home}]\n",
+      "utf-8",
+    );
     const issues = await validateConfigReferenceIntegrity(
       root,
-      makeConfig({ primarySpecId: "0012" }),
+      makeConfig({ primaryUiContract: "CON-UI-0012" }),
     );
     expect(issues).toEqual([]);
   });
 
-  it("emits QFAI-CFG-LINK-001 (error) when primarySpecId points to missing spec", async () => {
+  it("emits QFAI-CFG-LINK-001 when the configured UI contract is absent", async () => {
     const root = await newTempDir();
     await seedDirs(root, [
       ".qfai/specs",
@@ -107,7 +114,7 @@ describe("validateConfigReferenceIntegrity", () => {
     ]);
     const issues = await validateConfigReferenceIntegrity(
       root,
-      makeConfig({ primarySpecId: "9999" }),
+      makeConfig({ primaryUiContract: "CON-UI-9999" }),
     );
     const linkIssue = issues.find((i) => i.code === "QFAI-CFG-LINK-001");
     expect(linkIssue).toBeDefined();

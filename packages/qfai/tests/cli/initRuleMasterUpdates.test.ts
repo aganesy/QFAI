@@ -199,8 +199,7 @@ async function hashOf(filePath: string): Promise<string> {
 describe("the constitution and its safety floor upgrade together", () => {
   const minimumPath = (): string => path.join(root, RULES_REL, "minimal-implementation.md");
   const assistantPath = (): string => path.join(root, ".qfai", "assistant");
-  const constitutionPath = (): string =>
-    path.join(assistantPath(), "constitution", "constitution.md");
+  const constitutionPath = (): string => path.join(assistantPath(), "rule", "constitution.md");
 
   async function olderConstitution(): Promise<string> {
     const text = "# Constitution\n\nThe previous release protects its required gates.\n";
@@ -208,7 +207,7 @@ describe("the constitution and its safety floor upgrade together", () => {
     const lock = await readAssistantAssetsLock(assistantPath());
     if (lock === null) throw new Error("The first init must record its governed assets.");
     await writeAssistantAssetsLock(assistantPath(), {
-      files: { ...lock.files, "constitution/constitution.md": hashAssistantAssetText(text) },
+      files: { ...lock.files, "rule/constitution.md": hashAssistantAssetText(text) },
     });
     return text;
   }
@@ -235,7 +234,7 @@ describe("the constitution and its safety floor upgrade together", () => {
     expect(output).toContain("safety floor");
     expect(output).toContain("manual merge");
     const lock = await readAssistantAssetsLock(assistantPath());
-    expect(lock?.files["constitution/constitution.md"]).toBe(hashAssistantAssetText(previous));
+    expect(lock?.files["rule/constitution.md"]).toBe(hashAssistantAssetText(previous));
   });
 
   it("keeps the constitution when its rule master is a directory", async () => {
@@ -270,7 +269,7 @@ describe("the constitution and its safety floor upgrade together", () => {
     expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
     expect(output).toContain("manual merge");
     const lock = await readAssistantAssetsLock(assistantPath());
-    expect(lock?.files["constitution/constitution.md"]).toBe(hashAssistantAssetText(previous));
+    expect(lock?.files["rule/constitution.md"]).toBe(hashAssistantAssetText(previous));
   });
 
   it("refreshes both when the old master still matches its write receipt", async () => {
@@ -308,11 +307,7 @@ describe("the constitution and its safety floor upgrade together", () => {
       "# Constitution\n\n## Article VII — Minimal scope with explicit deltas\n\n" +
       "Make the smallest change that satisfies the spec and passes gates.\n" +
       "How much code implements a behaviour is governed by `.agents/rules/minimal-implementation.md`.\n";
-    const baselinePath = path.join(
-      assistantPath(),
-      "constitution",
-      "shared-skill-delegation-baseline.md",
-    );
+    const baselinePath = path.join(assistantPath(), "rule", "shared-skill-delegation-baseline.md");
     const previousBaseline = "# Shared skill-delegation baseline\n\nFollow Article VII.\n";
     const roles = [
       "architecture-reviewer",
@@ -330,13 +325,12 @@ describe("the constitution and its safety floor upgrade together", () => {
     await writeAssistantAssetsLock(assistantPath(), {
       files: {
         ...lock.files,
-        "constitution/constitution.md": hashAssistantAssetText(previous),
-        "constitution/shared-skill-delegation-baseline.md":
-          hashAssistantAssetText(previousBaseline),
+        "rule/constitution.md": hashAssistantAssetText(previous),
+        "rule/shared-skill-delegation-baseline.md": hashAssistantAssetText(previousBaseline),
       },
     });
     for (const role of roles) {
-      await writeFile(path.join(assistantPath(), "agents", `${role}.md`), "# Previous reviewer\n");
+      await writeFile(path.join(assistantPath(), "agent", `${role}.md`), "# Previous reviewer\n");
     }
 
     await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
@@ -344,12 +338,12 @@ describe("the constitution and its safety floor upgrade together", () => {
     expect(await readFile(minimumPath(), "utf-8")).toBe(edited);
     expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
     const retained = await readAssistantAssetsLock(assistantPath());
-    expect(retained?.files["constitution/constitution.md"]).toBe(hashAssistantAssetText(previous));
+    expect(retained?.files["rule/constitution.md"]).toBe(hashAssistantAssetText(previous));
     expect(await readFile(baselinePath, "utf-8")).toContain(
       "A retained constitution does not gain newer authority from refreshed cards.",
     );
     for (const role of roles) {
-      expect(await readFile(path.join(assistantPath(), "agents", `${role}.md`), "utf-8")).toContain(
+      expect(await readFile(path.join(assistantPath(), "agent", `${role}.md`), "utf-8")).toContain(
         "Use this route only where the installed Article VII governs the artifact.",
       );
     }
@@ -425,7 +419,7 @@ describe("the constitution and its safety floor upgrade together", () => {
       runInit({ dir: root, force: true, dryRun: true, yes: true }),
     );
 
-    expect(output).not.toMatch(/^ {4}- \.qfai\/assistant\/constitution\/constitution\.md$/m);
+    expect(output).not.toMatch(/^ {4}- \.qfai\/assistant\/rule\/constitution\.md$/m);
     expect(output).toContain("manual merge");
     expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
   });
@@ -445,7 +439,7 @@ describe("the constitution and its safety floor upgrade together", () => {
       runInit({ dir: root, force: true, dryRun: true, yes: true }),
     );
 
-    expect(output).toMatch(/^ {4}- \.qfai\/assistant\/constitution\/constitution\.md$/m);
+    expect(output).toMatch(/^ {4}- \.qfai\/assistant\/rule\/constitution\.md$/m);
     expect(await readFile(minimumPath(), "utf-8")).toBe(older);
     expect(await readFile(constitutionPath(), "utf-8")).toBe(previous);
   });
@@ -457,7 +451,7 @@ describe("the constitution and its safety floor upgrade together", () => {
         runInit({ dir: fresh, force: false, dryRun: true, yes: true }),
       );
       expect(output).toMatch(/^ {4}- \.agents\/rules\/minimal-implementation\.md$/m);
-      expect(output).toMatch(/^ {4}- \.qfai\/assistant\/constitution\/constitution\.md$/m);
+      expect(output).toMatch(/^ {4}- \.qfai\/assistant\/rule\/constitution\.md$/m);
       await expect(access(path.join(fresh, ".agents"))).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
       await removeTempTree(fresh);
@@ -480,14 +474,12 @@ describe("the constitution and its safety floor upgrade together", () => {
       expect(output).not.toContain("running `qfai init --force` again");
 
       const assistant = path.join(fresh, ".qfai", "assistant");
-      await expect(
-        access(path.join(assistant, "constitution", "constitution.md")),
-      ).rejects.toMatchObject({
+      await expect(access(path.join(assistant, "rule", "constitution.md"))).rejects.toMatchObject({
         code: "ENOENT",
       });
       const lock = await readAssistantAssetsLock(assistant);
       expect(lock).not.toBeNull();
-      expect(lock?.files).not.toHaveProperty("constitution/constitution.md");
+      expect(lock?.files).not.toHaveProperty("rule/constitution.md");
     } finally {
       await removeTempTree(fresh);
     }

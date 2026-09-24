@@ -12,6 +12,9 @@ node_modules
 !.qfai/report/preflight_summary.md
 .qfai/review/**
 .qfai/evidence/**
+# The migrated decision ledger preserves archived table cells and provenance.
+# Prettier expands its long cells into a multi-megabyte padded table.
+.qfai/spec/decisions.md
 # An archived pack is a frozen record, so reformatting one is churn on a
 # document nobody is editing — and `check-pack-locations` reads the changed
 # paths, so that churn reports the archive directory as a misplaced pack. The

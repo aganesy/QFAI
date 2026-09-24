@@ -6,7 +6,7 @@
  * pre-implementation tokens, `validateStaleReferences` reports zero
  * issues.
  */
-// QFAI:SPEC-0015:TC-0015-0032
+// QFAI:EX-0001-0181-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

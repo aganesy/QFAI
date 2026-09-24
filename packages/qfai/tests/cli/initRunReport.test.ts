@@ -173,7 +173,7 @@ describe("qfai init run report", () => {
       const listed = pathsUnder(output, "  would write paths:");
       // POSIX-joined, because that is what the report writes. `path.join` here would
       // build `\`-separated on Windows and never match a `/`-separated entry.
-      const migrated = ".qfai/assistant/constitution/quality.md";
+      const migrated = ".qfai/assistant/rule/quality.md";
       expect(listed.filter((entry) => entry === migrated)).toHaveLength(1);
       expect(new Set(listed).size).toBe(listed.length);
       expect(output).toContain(`  would write: ${listed.length}`);
@@ -332,7 +332,7 @@ describe("qfai init run report", () => {
       const written = pathsUnder(output, "  written paths:");
       const skipped = pathsUnder(output, "  skipped paths:");
       // POSIX-joined for the same reason as the row above: the report writes `/`.
-      const migrated = ".qfai/assistant/constitution/quality.md";
+      const migrated = ".qfai/assistant/rule/quality.md";
 
       // The migration really wrote the file — this is not a dry run.
       await expect(readFile(path.join(root, migrated), "utf-8")).resolves.toContain(

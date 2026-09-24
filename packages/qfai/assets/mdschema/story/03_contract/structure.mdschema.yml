@@ -1,0 +1,56 @@
+# Document schema: 03_contract/structure.md
+structure:
+  - heading:
+      pattern: "^# Structure$"
+      regex: true
+    description: Required document heading.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Structure$"
+          regex: true
+        description: Structure section.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Entry points$"
+          regex: true
+        description: Runtime entry points.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Repo layout \\(high level\\)$"
+          regex: true
+        description: Repository layout.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Key packages / entrypoints$"
+          regex: true
+        description: Packages and entry points.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Architecture constraints$"
+          regex: true
+        description: Dependency and naming rules.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## UI surface paths \\(SSOT\\)$"
+          regex: true
+        description: Paths of user-visible surfaces.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Quality gates$"
+          regex: true
+        description: Quality gate ownership.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## How to run locally$"
+          regex: true
+        description: Local setup instructions.
+        allow_additional: true
+        optional: true

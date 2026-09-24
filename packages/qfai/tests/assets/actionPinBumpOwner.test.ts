@@ -44,13 +44,13 @@
  * because the two files had already diverged on the profile they ran, so no mirror existed to
  * lose. Recording the absent mirror would overstate what the deletion takes away.
  */
-// QFAI:SPEC-0017:TC-0017-0074
-// QFAI:SPEC-0017:TC-0017-0075
-// QFAI:SPEC-0017:TC-0017-0025
-// QFAI:SPEC-0017:TC-0017-0026
-// QFAI:SPEC-0017:TC-0017-0052
-// QFAI:SPEC-0017:TC-0017-0066
-// QFAI:SPEC-0017:TC-0017-0067
+// QFAI:EX-0002-0020-04
+// QFAI:EX-0002-0020-04
+// QFAI:EX-0002-0014-09
+// QFAI:EX-0002-0014-10
+// QFAI:EX-0002-0018-09
+// QFAI:EX-0002-0019-04
+// QFAI:EX-0002-0019-05
 
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -365,7 +365,7 @@ describe("TC-0017-0067 (TDD-0067): revising the declared starting value needs th
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0065
+// QFAI:EX-0002-0019-03
 describe("TC-0017-0065 (TDD-0065): the adopted worker value matches the recorded measurement", () => {
   it("compares at least two settings on the largest project and places the adopted value", () => {
     // `EX-0017-0049` fixes both halves: a timing artifact comparing at least two worker

@@ -21,10 +21,10 @@
  * generated, and asserting there would pass on a tree whose source was never
  * edited.
  */
-// QFAI:SPEC-0008:TC-0008-0015
-// QFAI:SPEC-0008:TC-0008-0016
-// QFAI:SPEC-0008:TC-0008-0017
-// QFAI:SPEC-0008:TC-0008-0018
+// QFAI:EX-0001-0076-01
+// QFAI:EX-0001-0076-02
+// QFAI:EX-0001-0076-02
+// QFAI:EX-0001-0076-03
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -202,7 +202,7 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     // for one nobody declared.
     //
     // `QFAI-ATDD-131`/`-132`/`-133` are present for the mirror-image reason:
-    // the Coverage Depth Matrix gate (`src/core/validators/atddCoverageDepth.ts`)
+    // the Coverage Depth Matrix gate (`src/core/validators/storyTreeCoverageDepth.ts`)
     // is a validator, so its codes are declarations the tree now holds and the
     // baseline has to say so. What this row still guards is unchanged — the
     // set is enumerated, so the prose deliverable growing a code of its own

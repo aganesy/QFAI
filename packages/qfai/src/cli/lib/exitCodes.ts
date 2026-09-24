@@ -167,11 +167,19 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     ],
   },
   {
+    label: "atdd scaffold",
+    lines: [
+      `${EXIT_CODES.ok} = success,`,
+      `${EXIT_CODES.findings} = a runtime read or write failure,`,
+      `${EXIT_CODES.inputError} = a usage error or an ID absent from the story tree`,
+    ],
+  },
+  {
     label: "other commands",
     lines: [
       `${EXIT_CODES.ok} = success, ${EXIT_CODES.inputError} = a usage error,`,
       `${EXIT_CODES.findings} = a runtime error`,
-      "(init / discussion / audit log / handoff upgrade / atdd scaffold)",
+      "(init / discussion / audit log / handoff upgrade)",
     ],
   },
 ];

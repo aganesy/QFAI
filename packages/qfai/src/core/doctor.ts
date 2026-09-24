@@ -20,7 +20,6 @@ import {
   parseDesignMd,
 } from "./design/designMd.js";
 import { readDesignMdLockSha } from "./design/designMdLock.js";
-import { collectScenarioFiles } from "./discovery.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "./fs.js";
 import { toRelativePath } from "./paths.js";
 import {
@@ -33,8 +32,8 @@ import {
   type PlaywrightLauncherResolution,
 } from "./prototyping/playwrightLauncher.js";
 import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
-import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
+import { readStoryTreeModel } from "./storyTree/tree.js";
 import { diffProjectSkillsAgainstInitAssets, type SkillsIntegrityDiff } from "./skillsIntegrity.js";
 import type { Issue } from "./types.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
@@ -47,7 +46,6 @@ import {
   SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD,
   type SkillManifestProbeResult,
 } from "./doctor/skillManifestProbe.js";
-import { planCapCatalogSpecColumn } from "./doctor/capCatalogSpecColumn.js";
 import { detectOutDirCollisions } from "./doctor/outDirCollisions.js";
 import {
   checkAssistantAssetLineBudget,
@@ -282,7 +280,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
         addCheck(checks, {
           id: "skills.integrity",
           severity: "warning",
-          title: "Skills integrity (.qfai/assistant/skills)",
+          title: "Skills integrity (.qfai/assistant/skill)",
           message:
             "Could not inspect skills (reading a directory or a file failed). Check the permissions and the path.",
           details: { skillsDir: toRelativePath(root, resolved) },
@@ -291,7 +289,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
         addCheck(checks, {
           id: "skills.integrity",
           severity: "info",
-          title: "Skills integrity (.qfai/assistant/skills)",
+          title: "Skills integrity (.qfai/assistant/skill)",
           message:
             "the skills directory has not been created yet, so the check was skipped " +
             "(run 'qfai init')",
@@ -301,7 +299,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
         addCheck(checks, {
           id: "skills.integrity",
           severity: "info",
-          title: "Skills integrity (.qfai/assistant/skills)",
+          title: "Skills integrity (.qfai/assistant/skill)",
           message: "init assets not found, so the check was skipped (check the installation)",
           details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
@@ -309,21 +307,21 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
         addCheck(checks, {
           id: "skills.integrity",
           severity: "ok",
-          title: "Skills integrity (.qfai/assistant/skills)",
+          title: "Skills integrity (.qfai/assistant/skill)",
           message: "Matches the standard assets",
           details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else {
         // skills.integrity defaults to `warning`: direct edits to
-        //.qfai/assistant/skills/** are advisory, not active-profile-blocking.
+        // .qfai/assistant/skill/** edits are advisory, not active-profile-blocking.
         // The doctor 2-group renderer always routes this finding into the
         // advisory group regardless of message wording.
         addCheck(checks, {
           id: "skills.integrity",
           severity: "warning",
-          title: "Skills integrity (.qfai/assistant/skills)",
+          title: "Skills integrity (.qfai/assistant/skill)",
           message:
-            "The standard assets under '.qfai/assistant/skills/**' have been modified. Editing skills directly is discouraged (an update or a re-init can overwrite them).",
+            "The standard assets under '.qfai/assistant/skill/**' have been modified. Editing skills directly is discouraged (an update or a re-init can overwrite them).",
           details: {
             skillsDir: toRelativePath(root, diff.skillsDir),
             missing: diff.missing,
@@ -688,118 +686,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     checks.push(...(await buildSkillManifestProbeChecks(root, options.skillProfile)));
   }
 
-  const specsRoot = resolvePath(root, config, "specsDir");
-  const entries = await collectSpecEntries(specsRoot);
-  let missingCoreFiles = 0;
-  let missingHowSsotFiles = 0;
-  let duplicatedHowSsotFiles = 0;
-  let legacyImplementationBriefOnly = 0;
-
-  for (const entry of entries) {
-    if (entry.layout === "layered") {
-      const layeredRequired = [
-        entry.userStoriesPath,
-        entry.acceptanceCriteriaPath,
-        entry.businessRulesPath,
-        entry.examplesPath,
-        entry.testCasesPath,
-      ];
-      for (const filePath of layeredRequired) {
-        if (!(await exists(filePath))) {
-          missingCoreFiles += 1;
-        }
-      }
-      const hasDelta = (
-        await Promise.all(entry.deltaCandidates.map((target) => exists(target)))
-      ).some(Boolean);
-      if (!hasDelta) {
-        missingCoreFiles += 1;
-      }
-      const hasPlan = await exists(entry.planPath);
-      if (!hasPlan) {
-        missingHowSsotFiles += 1;
-      }
-      continue;
-    }
-
-    const legacyCoreRequired = [
-      entry.specPath,
-      entry.deltaPath,
-      entry.scenarioPath,
-      entry.caseCataloguePath,
-      entry.traceabilityMatrixPath,
-    ];
-    for (const filePath of legacyCoreRequired) {
-      if (!(await exists(filePath))) {
-        missingCoreFiles += 1;
-      }
-    }
-    const hasPlan = await exists(entry.planPath);
-    const hasLegacy = await exists(entry.legacyImplementationBriefPath);
-    if (!hasPlan && !hasLegacy) {
-      missingHowSsotFiles += 1;
-    } else if (hasPlan && hasLegacy) {
-      duplicatedHowSsotFiles += 1;
-    } else if (!hasPlan && hasLegacy) {
-      legacyImplementationBriefOnly += 1;
-    }
-  }
-
-  const hasCoreMissing = missingCoreFiles > 0;
-  const hasHowSsotError = missingHowSsotFiles > 0 || duplicatedHowSsotFiles > 0;
-  const hasLegacyOnly = legacyImplementationBriefOnly > 0;
-  const specLayoutSeverity: DoctorSeverity =
-    hasCoreMissing || hasHowSsotError ? "warning" : hasLegacyOnly ? "info" : "ok";
-  const specLayoutMessage =
-    hasCoreMissing || hasHowSsotError
-      ? `Missing required files in spec packs (missingCoreFiles=${missingCoreFiles}, missingHowSsotFiles=${missingHowSsotFiles}, duplicatedHowSsotFiles=${duplicatedHowSsotFiles}, legacyImplementationBriefOnly=${legacyImplementationBriefOnly})`
-      : hasLegacyOnly
-        ? `legacy implementation-brief.md is used in ${legacyImplementationBriefOnly} spec pack(s). Migrate to plan.md.`
-        : `All spec packs have required files (count=${entries.length})`;
-
-  addCheck(checks, {
-    id: "spec.layout",
-    severity: specLayoutSeverity,
-    title: "Spec pack shape",
-    message: specLayoutMessage,
-    details: {
-      specPacks: entries.length,
-      missingCoreFiles,
-      missingHowSsotFiles,
-      duplicatedHowSsotFiles,
-      legacyImplementationBriefOnly,
-    },
-  });
-
-  // A catalog written before the `Spec` column existed maps CAP to spec by row
-  // position, and that derivation cannot hold the ID gap an approved DELETE
-  // leaves — so the DELETE cannot be completed until the column is declared.
-  // Reported here and written by `--autoremediate`: the file is the project's
-  // own data, so nothing adds the column as a side effect of an upgrade.
-  const capCatalogPlan = await planCapCatalogSpecColumn(specsRoot);
-  if (capCatalogPlan.state !== "no-catalog") {
-    addCheck(checks, {
-      id: "spec.capCatalogSpecColumn",
-      severity: capCatalogPlan.state === "declared" ? "ok" : "warning",
-      title: "CAP catalog mapping",
-      message:
-        capCatalogPlan.state === "declared"
-          ? "The CAP catalog declares its Spec column"
-          : capCatalogPlan.state === "migratable"
-            ? `The CAP catalog maps CAP to spec by row position (rows=${String(capCatalogPlan.pairs.length)}). Run qfai doctor --autoremediate to declare the Spec column.`
-            : "The CAP catalog maps CAP to spec by row position, and the order does not describe the tree, so the pairing cannot be derived. Declare the Spec column by hand.",
-      details: {
-        state: capCatalogPlan.state,
-        ...(capCatalogPlan.state === "migratable"
-          ? { rows: capCatalogPlan.pairs.map((pair) => `${pair.capId} -> ${pair.specId}`) }
-          : {}),
-        ...(capCatalogPlan.state === "ambiguous" ? { reasons: capCatalogPlan.reasons } : {}),
-      },
-    });
-  }
-
   const guardrailsLoad = await loadDecisionGuardrails(root, {
-    specsRoot,
+    specsRoot: path.join(resolvePath(root, config, "specsDir"), "01_policy"),
+    contractsRoot: resolvePath(root, config, "contractsDir"),
   });
   const guardrailsItems = normalizeDecisionGuardrails(guardrailsLoad.entries);
   let guardrailsSeverity: DoctorSeverity;
@@ -863,7 +752,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     addCheck(checks, await buildOutDirCollisionCheck(root));
   }
 
-  const scenarioFiles = await collectScenarioFiles(specsRoot);
+  const storyTree = await readStoryTreeModel(root, config);
   const globs = normalizeGlobs(config.validation.traceability.testFileGlobs);
   const exclude = normalizeGlobs([
     ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
@@ -883,24 +772,15 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     const matchedCount = scanResult.matchedFileCount;
     const truncated = scanResult.truncated;
 
-    // Globs that are set but collect nothing are `error`, not `warning`: the
-    // SC->Test gate is armed (`scMustHaveTest` with scenario files present) and
-    // matched no file, so it reports success while covering nothing — the
-    // "a gate that cannot run is a gate that silently passes" case. `validate`
-    // already calls this class an error (`QFAI-TRACE-124` /
-    // `traceability.layered.testFileGlobsNoMatch`) under the same precondition,
-    // and the two tools disagreeing meant `--fail-on error` on this one passed
-    // the exact misconfiguration the other fails. Unset globs stay `warning`
-    // here for the same reason `validate` keeps them a warning: a project that
-    // has not configured the gate yet has not broken it.
+    // A configured glob that matches no test cannot verify a declared flow.
+    // An empty story tree has no obligation to scan, and an unset glob is
+    // advisory until the project configures its test layout.
     const severity: DoctorSeverity =
       globs.length === 0
         ? "warning"
         : truncated
           ? "warning"
-          : scenarioFiles.length > 0 &&
-              config.validation.traceability.scMustHaveTest &&
-              matchedCount === 0
+          : storyTree.flows.length > 0 && matchedCount === 0
             ? "error"
             : "ok";
 
@@ -910,15 +790,14 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       title: "Test file globs",
       message:
         globs.length === 0
-          ? "testFileGlobs is empty (SC→Test cannot be verified)"
+          ? "testFileGlobs is empty (flow test coverage cannot be verified)"
           : truncated
             ? `fileCount=${matchedCount} (truncated, limit=${scanResult.limit})`
             : `fileCount=${matchedCount}`,
       details: {
         globs,
         excludeGlobs: exclude,
-        scenarioFiles: scenarioFiles.length,
-        scMustHaveTest: config.validation.traceability.scMustHaveTest,
+        flows: storyTree.flows.length,
         truncated,
         limit: scanResult.limit,
       },
@@ -1175,14 +1054,14 @@ function assetLineBudgetNextActions(
 ): string[] {
   const actions: string[] = [];
   const paths = [...new Set(oversized.map((entry) => entry.path))];
-  const hasSkillAsset = paths.some((entry) => entry.startsWith("assistant/skills/"));
-  const hasOtherAsset = paths.some((entry) => !entry.startsWith("assistant/skills/"));
+  const hasSkillAsset = paths.some((entry) => entry.startsWith("assistant/skill/"));
+  const hasOtherAsset = paths.some((entry) => !entry.startsWith("assistant/skill/"));
   if (hasSkillAsset) {
     actions.push("move one topic out of the oversized skill into that skill's own references/");
   }
   if (hasOtherAsset) {
     actions.push(
-      "split a non-skill asset (constitution/, catalog/, manifest/, ...) by topic within its own layer, and update the paths that reference it",
+      "split a non-skill asset (constitution/, rule/, manifest/, ...) by topic within its own layer, and update the paths that reference it",
     );
   }
   // A separate action, because the two ceilings ask for different edits. A file
@@ -1361,7 +1240,7 @@ async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
 }
 
 async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
-  const agentsDir = path.join(root, ".qfai", "assistant", "agents");
+  const agentsDir = path.join(root, ".qfai", "assistant", "agent");
   if (!(await exists(agentsDir))) {
     return {
       id: "agents.frontmatter",
@@ -1411,13 +1290,13 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
     } catch {
       // Deleted between the listing and the read, or unreadable. It is not
       // "valid frontmatter" and it must not reject the run either.
-      unreadableFiles.push(`.qfai/assistant/agents/${fileName}`);
+      unreadableFiles.push(`.qfai/assistant/agent/${fileName}`);
       continue;
     }
     const parsed = parseAgentFrontmatter(content);
     if (!parsed.ok) {
       invalidFiles.push({
-        file: `.qfai/assistant/agents/${fileName}`,
+        file: `.qfai/assistant/agent/${fileName}`,
         error: parsed.error,
       });
     }
@@ -1742,25 +1621,24 @@ async function buildPrototypingPrimarySpecCheck(
   root: string,
   config: Awaited<ReturnType<typeof loadConfig>>["config"],
 ): Promise<DoctorCheck> {
-  const resolvedSpec = await resolvePrimaryPrototypingSpec(root, config);
-  if (!resolvedSpec) {
+  const resolvedContract = await resolvePrimaryPrototypingSpec(root, config);
+  if (!resolvedContract) {
     return {
-      id: "prototyping.primarySpec",
+      id: "prototyping.primaryUiContract",
       severity: "error",
-      title: "Primary prototyping spec",
-      message:
-        "no primary prototyping spec resolved (set prototyping.primarySpecId or add `surface_type: ui-bearing` to 01_Spec.md)",
+      title: "Primary UI contract",
+      message: "no UI contract with CON-UI-NNNN and screens[] resolved under contractsDir/ui",
     };
   }
 
   return {
-    id: "prototyping.primarySpec",
+    id: "prototyping.primaryUiContract",
     severity: "ok",
-    title: "Primary prototyping spec",
-    message: `resolved primary prototyping spec ${resolvedSpec.specId}`,
+    title: "Primary UI contract",
+    message: `resolved primary UI contract ${resolvedContract.uiContractId}`,
     details: {
-      specId: resolvedSpec.specId,
-      path: toRelativePath(root, resolvedSpec.specMdPath),
+      uiContractId: resolvedContract.uiContractId,
+      path: resolvedContract.contractPath,
     },
   };
 }
@@ -1880,7 +1758,7 @@ async function buildPrototypingRolesCheck(root: string): Promise<DoctorCheck> {
 
   const roleFindings: Array<Record<string, unknown>> = [];
   for (const roleId of PROTOTYPING_REQUIRED_ROLE_IDS) {
-    const canonicalPath = path.join(root, ".qfai", "assistant", "agents", `${roleId}.md`);
+    const canonicalPath = path.join(root, ".qfai", "assistant", "agent", `${roleId}.md`);
     const canonicalExists = await exists(canonicalPath);
     const finding: Record<string, unknown> = {
       roleId,
@@ -2175,7 +2053,7 @@ async function probeHttpUrl(
  * The path a required-input bullet names, taken off the front of it.
  *
  * A bullet is free to say what the input is for, and the explanation is not
- * part of the path. Read whole, `.qfai/assistant/catalog/test-layers.md (SSOT
+ * part of the path. Read whole, `.qfai/assistant/rule/test-layers.md (SSOT
  * for hard coverage obligations)` is a required input no tree can satisfy —
  * while the file it names is on disk.
  *

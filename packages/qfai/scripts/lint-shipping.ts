@@ -73,7 +73,7 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     name: "spec-id-literal",
     re: /\bspec-\d{4}\b/,
     suggestion:
-      "Resolve the spec at runtime via `qfai prototyping show-spec` or `resolvePrimaryPrototypingSpec`; do not hardcode spec IDs in runtime data.",
+      "Resolve the affected story from the configured story tree; do not hardcode legacy spec IDs in runtime data.",
     // Bare spec-NNNN references in markdown docs are typically narrative
     // citations — they are NOT install-site path lookups. Only flag in
     // runtime data + src (still skipped by classifyTarget for src below).
@@ -83,7 +83,7 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     name: "spec-path-literal",
     re: /\.qfai\/specs\/spec-\d{4}\//,
     suggestion:
-      "Use a placeholder like `.qfai/specs/<resolved-id>/` and reference via `qfai prototyping show-spec`.",
+      "Resolve the configured story tree at runtime instead of hardcoding a legacy spec path.",
     // Path-form is ALWAYS a real install-site assumption (the path is
     // expected to resolve on the user's filesystem). Flag everywhere
     // except markdown docs (which use them as illustration only).
@@ -154,7 +154,7 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     // content passing one layer of an SSOT-synced set and failing another.
     re: /spec-0*[1-9][0-9]+/i,
     suggestion:
-      "Internal spec IDs (spec-0010+) MUST NOT appear in src/ comments — tsup keeps JSDoc in dist/*.d.ts. Use a generic descriptor (e.g. 'the SDD skill business rules') and keep ID-level traceability in `.qfai/specs/` or test files.",
+      "Internal spec IDs (spec-0010+) MUST NOT appear in src/ comments — tsup keeps JSDoc in dist/*.d.ts. Use a generic descriptor and keep ID-level traceability in the project story tree or test files.",
     appliesTo: ["src-comment"],
   },
   {
@@ -205,26 +205,23 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     appliesTo: ["src-comment"],
   },
   {
-    // Catch internal open-question IDs (OQ-NNNN-NNNN) at the same pre-build
-    // layer that already catches DEC / DR / CAP / spec internal IDs.
-    // OQ entries live in `.qfai/specs/spec-NNNN/08_Open-questions.md`
-    // and are part of the authoring traceability surface — they must
-    // not appear in shipped JSDoc / dist/*.d.ts.
+    // Catch legacy open-question IDs (OQ-NNNN-NNNN) at the same pre-build
+    // layer that catches DEC / DR / CAP / spec internal IDs. Current
+    // OQ-NNNN entries live in `<paths.specsDir>/open-questions.md`.
     name: "internal-oq-id-jsdoc-leak",
     re: /\bOQ-\d{4}-\d{4}\b/,
     suggestion:
-      "Internal open-question IDs (OQ-NNNN-NNNN) MUST NOT appear in src/ JSDoc — tsup keeps JSDoc in dist/*.d.ts.",
+      "Legacy open-question IDs (OQ-NNNN-NNNN) MUST NOT appear in src/ JSDoc — tsup keeps JSDoc in dist/*.d.ts.",
     appliesTo: ["src-comment"],
   },
   {
-    // Cross-spec change IDs (`CHG-NNN`) come from `_policies/10_delta.md`
-    // and only resolve inside this repository. They belong to the same
-    // authoring-traceability surface as DEC / DR / OQ, so they get the
-    // same pre-build treatment.
+    // Legacy cross-spec change IDs (`CHG-NNN`) resolve only inside this
+    // repository. They belong to the same authoring traceability surface
+    // as DEC / DR / OQ, so they get the same pre-build treatment.
     name: "internal-chg-id-jsdoc-leak",
     re: /\bCHG-\d+\b/,
     suggestion:
-      "Internal cross-spec change IDs (CHG-NNN) MUST NOT appear in src/ comments — tsup keeps them in dist/. Describe the change instead (e.g. 'the 4-layer assistant-tree recut') and keep ID-level traceability in `.qfai/specs/`.",
+      "Internal cross-spec change IDs (CHG-NNN) MUST NOT appear in src/ comments — tsup keeps them in dist/. Describe the current behavior and keep historical IDs in authoring records.",
     appliesTo: ["src-comment"],
   },
   {
@@ -241,6 +238,7 @@ const PRAGMA_RE = /qfai-shipping:allow\s+reason="([^"]+)"/;
 const TARGET_GLOBS: ReadonlyArray<{ rootRel: string; matchExtensions: ReadonlyArray<string> }> = [
   // Files that ship verbatim into the user repo via `qfai init`.
   { rootRel: "assets/init", matchExtensions: [".md", ".yaml", ".yml", ".json", ".ts"] },
+  { rootRel: "assets/defaults", matchExtensions: [".yaml", ".yml", ".json"] },
   // Production source. Compiled to dist/ without comments, so JSDoc
   // traceability lines are excluded by content rule below.
   { rootRel: "src", matchExtensions: [".ts"] },
@@ -314,11 +312,15 @@ function isTargetFile(absolutePath: string, pkgRoot: string): boolean {
 
 function classifyTarget(absolutePath: string, pkgRoot: string): Target | null {
   const initRoot = path.join(pkgRoot, "assets", "init");
+  const defaultsRoot = path.join(pkgRoot, "assets", "defaults");
   const srcRoot = path.join(pkgRoot, "src");
   const ext = path.extname(absolutePath).toLowerCase();
   if (absolutePath === initRoot || absolutePath.startsWith(initRoot + path.sep)) {
     // Markdown under init/ is documentation; everything else is runtime data.
     return ext === ".md" ? "init-doc" : "init-runtime";
+  }
+  if (absolutePath === defaultsRoot || absolutePath.startsWith(defaultsRoot + path.sep)) {
+    return "init-runtime";
   }
   if (absolutePath === srcRoot || absolutePath.startsWith(srcRoot + path.sep)) {
     return "src";
@@ -349,13 +351,13 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
       ? PATTERNS.filter((rule) => rule.appliesTo.includes("src-comment"))
       : [];
 
-  if (/^assets\/init\/\.qfai\/specs\/spec-XXXX\//.test(relPath)) {
+  if (relPath.startsWith("assets/init/.qfai/spec/")) {
     violations.push({
       file: relPath,
       line: 1,
       pattern: "spec-path-literal",
-      matched: "assets/init/.qfai/specs/spec-XXXX/",
-      suggestion: "Do not ship seed spec placeholder directories via `qfai init`.",
+      matched: "assets/init/.qfai/spec/",
+      suggestion: "Do not ship an instantiated story tree via `qfai init`.",
     });
   }
 

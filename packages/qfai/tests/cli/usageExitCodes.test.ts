@@ -67,6 +67,9 @@ describe("qfai --help exit-code section", () => {
     expect(section).toContain("guardrails");
     expect(section).toContain("prototyping iterate");
     expect(section).toContain("prototyping certify");
+    expect(section).toMatch(
+      /atdd scaffold\s+0 = success,[\s\S]*?1 = a runtime read or write failure,[\s\S]*?2 = a usage error/,
+    );
   });
 
   it("states why guardrails alone returns 2 for a usage error", async () => {

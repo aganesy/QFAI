@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/solution-architect.md
+../../.qfai/assistant/agent/solution-architect.md

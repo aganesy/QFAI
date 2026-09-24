@@ -75,15 +75,7 @@ export const ASSISTANT_ASSET_EXTENSIONS: readonly string[] = [".md", ".yml", ".y
  * list short: an exemption claims no split is possible, and "this file is long"
  * is not that claim. Every entry needs a reason a reader can check.
  */
-export const LINE_BUDGET_EXEMPT: ReadonlyMap<string, string> = new Map([
-  [
-    "assistant/manifest/agent-catalog.yml",
-    "A roster, not prose: one entry per agent, mirroring `assistant/agents/<id>.md`. " +
-      "Its length tracks the number of agents — shipped, or adjusted through " +
-      "`qfai-configure` — so there is no topic to move out; splitting it would " +
-      "mean splitting the agent roster itself.",
-  ],
-]);
+export const LINE_BUDGET_EXEMPT: ReadonlyMap<string, string> = new Map();
 
 /**
  * Per-file width ceilings for the tree as it stands, which may only shrink.
@@ -120,20 +112,20 @@ export const LINE_BUDGET_EXEMPT: ReadonlyMap<string, string> = new Map([
  * a backlog nobody can add to is a backlog that goes away.
  */
 export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
-  ["assistant/catalog/test-layers.md", 921],
-  ["assistant/constitution/references/audited-evidence-hash.md", 1406],
-  ["assistant/skills/qfai-atdd/references/red-provenance.md", 460],
-  ["assistant/skills/qfai-configure/SKILL.md", 2267],
-  ["assistant/skills/qfai-discussion/templates/01_Context.md", 405],
-  ["assistant/skills/qfai-implement/SKILL.md", 9104],
-  ["assistant/skills/qfai-implement/references/cross-spec-ownership.md", 616],
-  ["assistant/skills/qfai-prototyping/SKILL.md", 541],
-  ["assistant/skills/qfai-sdd/references/design-md-brand-catalog.md", 533],
-  ["assistant/skills/qfai-sdd/references/sdd-phase-checklists.md", 3763],
-  ["assistant/skills/qfai-sdd/references/spec-traceability-rules.md", 790],
-  ["assistant/skills/qfai-verify/SKILL.md", 899],
-  ["assistant/skills/qfai-verify/references/articles.md", 413],
-  ["assistant/skills/qfai-verify/references/verify-output-contract.md", 840],
+  ["assistant/rule/test-layers.md", 921],
+  ["assistant/rule/audited-evidence-hash.md", 1406],
+  ["assistant/skill/qfai-atdd/references/red-provenance.md", 460],
+  ["assistant/skill/qfai-configure/SKILL.md", 2267],
+  ["assistant/skill/qfai-discussion/templates/01_Context.md", 405],
+  ["assistant/skill/qfai-implement/SKILL.md", 9104],
+  ["assistant/skill/qfai-implement/references/cross-spec-ownership.md", 616],
+  ["assistant/skill/qfai-prototyping/SKILL.md", 541],
+  ["assistant/skill/qfai-sdd/references/design-md-brand-catalog.md", 533],
+  ["assistant/skill/qfai-sdd/references/sdd-phase-checklists.md", 3763],
+  ["assistant/skill/qfai-sdd/references/spec-traceability-rules.md", 790],
+  ["assistant/skill/qfai-verify/SKILL.md", 899],
+  ["assistant/skill/qfai-verify/references/articles.md", 413],
+  ["assistant/skill/qfai-verify/references/verify-output-contract.md", 840],
 ]);
 
 /**
@@ -147,20 +139,20 @@ export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
  * about.
  */
 export const WIDTH_BACKLOG_PATHS: readonly string[] = [
-  "assistant/catalog/test-layers.md",
-  "assistant/constitution/references/audited-evidence-hash.md",
-  "assistant/skills/qfai-atdd/references/red-provenance.md",
-  "assistant/skills/qfai-configure/SKILL.md",
-  "assistant/skills/qfai-discussion/templates/01_Context.md",
-  "assistant/skills/qfai-implement/SKILL.md",
-  "assistant/skills/qfai-implement/references/cross-spec-ownership.md",
-  "assistant/skills/qfai-prototyping/SKILL.md",
-  "assistant/skills/qfai-sdd/references/design-md-brand-catalog.md",
-  "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
-  "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
-  "assistant/skills/qfai-verify/SKILL.md",
-  "assistant/skills/qfai-verify/references/articles.md",
-  "assistant/skills/qfai-verify/references/verify-output-contract.md",
+  "assistant/rule/test-layers.md",
+  "assistant/rule/audited-evidence-hash.md",
+  "assistant/skill/qfai-atdd/references/red-provenance.md",
+  "assistant/skill/qfai-configure/SKILL.md",
+  "assistant/skill/qfai-discussion/templates/01_Context.md",
+  "assistant/skill/qfai-implement/SKILL.md",
+  "assistant/skill/qfai-implement/references/cross-spec-ownership.md",
+  "assistant/skill/qfai-prototyping/SKILL.md",
+  "assistant/skill/qfai-sdd/references/design-md-brand-catalog.md",
+  "assistant/skill/qfai-sdd/references/sdd-phase-checklists.md",
+  "assistant/skill/qfai-sdd/references/spec-traceability-rules.md",
+  "assistant/skill/qfai-verify/SKILL.md",
+  "assistant/skill/qfai-verify/references/articles.md",
+  "assistant/skill/qfai-verify/references/verify-output-contract.md",
 ];
 
 /**
@@ -565,9 +557,9 @@ export type AssistantAssetBudgetReport = {
  *
  * A blanket `replace(/[\\/]+/g, "/")` is wrong off Windows: POSIX treats a
  * backslash as an ordinary filename character, so an authored asset literally
- * named `manifest\agent-catalog.yml` directly under `assistant/` would be
- * reported as `assistant/manifest/agent-catalog.yml`, collide with the
- * {@link LINE_BUDGET_EXEMPT} key and go unmeasured at any length. On Windows
+ * named `rule\test-layers.md` directly under `assistant/` would be
+ * reported as `assistant/rule/test-layers.md` and receive its
+ * {@link WIDTH_BUDGET_BACKLOG} allowance. On Windows
  * both separators are real separators, so both still collapse there.
  */
 function toPosixSegments(relative: string): string {

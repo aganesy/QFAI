@@ -51,14 +51,14 @@ describe("the managed block keeps governance records tracked", () => {
   });
 
   it("re-includes the directory writeDecisionRecord actually writes to", () => {
-    // `.qfai/evidence/decisions/<ISO8601-stamp>.json` — git will not descend
+    // `.qfai/evidence/decision/<ISO8601-stamp>.json` — git will not descend
     // into a directory ignored by `.qfai/evidence/*`, so the directory itself
     // must be negated before its contents.
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decisions/");
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decisions/**");
+    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decision/");
+    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decision/**");
     const lines = QFAI_GITIGNORE_BLOCK.split("\n");
-    expect(lines.indexOf("!.qfai/evidence/decisions/")).toBeLessThan(
-      lines.indexOf("!.qfai/evidence/decisions/**"),
+    expect(lines.indexOf("!.qfai/evidence/decision/")).toBeLessThan(
+      lines.indexOf("!.qfai/evidence/decision/**"),
     );
   });
 
@@ -94,7 +94,7 @@ describe("the managed block keeps governance records tracked", () => {
     const lines = QFAI_GITIGNORE_BLOCK.split("\n");
     expect(lines.indexOf("!.qfai/")).toBeLessThan(lines.indexOf("!.qfai/evidence/"));
     expect(lines.indexOf("!.qfai/evidence/")).toBeLessThan(
-      lines.indexOf("!.qfai/evidence/decisions/"),
+      lines.indexOf("!.qfai/evidence/decision/"),
     );
   });
 
@@ -148,7 +148,7 @@ describe("git honours the managed block against a broad pre-existing rule", () =
   ];
   /** Governance records that must stay reachable. */
   const stillTracked = [
-    ".qfai/evidence/decisions/2026-01-01T00-00-00.000Z.json",
+    ".qfai/evidence/decision/2026-01-01T00-00-00.000Z.json",
     // The two files gate item 10 names, and the only ones it resolves an
     // Evidence anchor against.
     ".qfai/evidence/implement-spec-0001.md",

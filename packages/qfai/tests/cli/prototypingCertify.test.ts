@@ -1,5 +1,5 @@
 /**
- * Tests for `qfai prototyping certify` and `qfai prototyping show-spec`
+ * Tests for `qfai prototyping certify` and `qfai prototyping show-ui-contract`
  * (v1.8.4 Phase 5).
  */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -11,20 +11,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   findStaleIterDirs,
   runPrototypingCertify,
-  runPrototypingShowSpec,
+  runPrototypingShowUiContract,
 } from "../../src/cli/commands/prototypingCertify.js";
 import { hashDesignMd } from "../../src/core/design/designMd.js";
 import { COMPLETION_CERTIFICATE_REL_PATH } from "../../src/core/prototyping/certificate.js";
 import { reviewPayload } from "../helpers/reviewPayload.js";
-
-function isCertificateWithSpecsCovered(raw: unknown): raw is { specsCovered: string[] } {
-  if (raw === null || typeof raw !== "object" || !("specsCovered" in raw)) return false;
-  // TS narrows `raw` to `object & Record<"specsCovered", unknown>` after
-  // the `"specsCovered" in raw` guard, so direct property access is
-  // type-safe — no `as` cast needed.
-  const value = raw.specsCovered;
-  return Array.isArray(value) && value.every((v): v is string => typeof v === "string");
-}
 
 const CERT_DESIGN_MD = [
   "---",
@@ -106,29 +97,25 @@ async function seedMinimalProject(root: string, opts?: { specMarker?: boolean })
     path.join(root, "qfai.config.yaml"),
     [
       "paths:",
-      "  contractsDir: .qfai/contracts",
-      "  specsDir: .qfai/specs",
+      "  contractsDir: .qfai/spec/03_contract",
+      "  specsDir: .qfai/spec",
       "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/output",
-      "  skillsDir: .qfai/assistant/skills",
-      "  promptsDir: .qfai/assistant/skills",
+      "  skillsDir: .qfai/assistant/skill",
+      "  promptsDir: .qfai/assistant/prompt",
       "  srcDir: src",
       "  testsDir: tests",
       "",
     ].join("\n"),
     "utf-8",
   );
-  await mkdir(path.join(root, ".qfai/specs/spec-0012"), { recursive: true });
+  await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
   await writeFile(
-    path.join(root, ".qfai/specs/spec-0012/01_Spec.md"),
-    opts?.specMarker ? "---\nsurface_type: ui-bearing\n---\n\n# spec-0012\n" : "# spec-0012\n",
+    path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
+    "# QFAI-CONTRACT-ID: CON-UI-0012\nscreens: [{id: index, route: /}]\n",
     "utf-8",
   );
-  await writeFile(
-    path.join(root, ".qfai/specs/spec-0012/02_User-stories.md"),
-    "# stories\n",
-    "utf-8",
-  );
+  void opts;
 }
 
 async function seedAllGatesPass(root: string): Promise<void> {
@@ -158,7 +145,8 @@ async function seedAllGatesPass(root: string): Promise<void> {
       surface: "web",
       runId: "run-test-2026",
       designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-      specsCovered: ["0012"],
+      uiContractsCovered: ["CON-UI-0012"],
+      frozenSurfaceUnion: ["CON-UI-0012"],
       reviewerGate: {
         result: "PASS",
         signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -170,6 +158,13 @@ async function seedAllGatesPass(root: string): Promise<void> {
   await writeFile(
     path.join(root, ".qfai/evidence/prototyping/some-evidence.json"),
     "{}\n",
+    "utf-8",
+  );
+  const reviewDir = path.join(root, ".qfai/evidence/prototyping/iter-01/CON-UI-0012");
+  await mkdir(reviewDir, { recursive: true });
+  await writeFile(
+    path.join(reviewDir, "index.review.json"),
+    reviewPayload("CON-UI-0012", "index"),
     "utf-8",
   );
 }
@@ -188,12 +183,12 @@ describe("qfai prototyping certify (generate)", () => {
       await (await import("node:fs/promises")).readFile(certPath, "utf-8"),
     ) as {
       runId: string;
-      specsCovered: string[];
+      uiContractsCovered: string[];
       reviewerSignoff: { reviewerId: string };
       iterationCount: number;
     };
     expect(body.runId).toBe("run-test-2026");
-    expect(body.specsCovered).toEqual(["0012"]);
+    expect(body.uiContractsCovered).toEqual(["CON-UI-0012"]);
     expect(body.reviewerSignoff.reviewerId).toBe("test-reviewer");
     expect(body.iterationCount).toBe(2);
   });
@@ -316,7 +311,7 @@ describe("qfai prototyping certify (generate)", () => {
         surface: "web",
         runId: "run-test-2026",
         designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-        specsCovered: ["0012"],
+        uiContractsCovered: ["CON-UI-0012"],
         reviewerGate: {
           result: "PASS",
           signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -355,43 +350,29 @@ describe("qfai prototyping certify (generate)", () => {
     expect(exit).toBe(2);
   });
 
-  it("uses prototyping.json#specsCovered (frozen at cycle 0) — does NOT re-resolve at certify", async () => {
-    // Plant a marker on a different spec id (`spec-0007`) AFTER cycle 0
-    // would have run, while the frozen seed records `["0012"]`. The
-    // certificate must reflect the frozen seed, not a re-resolution.
+  it("rejects a UI contract added after the cycle-0 scope was frozen", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
+    await seedMinimalProject(root);
     await seedAllGatesPass(root);
-    // Add a marker-bearing spec that did NOT exist at cycle 0.
-    await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
     await writeFile(
-      path.join(root, ".qfai/specs/spec-0007/01_Spec.md"),
-      "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
-      "utf-8",
-    );
-    await writeFile(
-      path.join(root, ".qfai/specs/spec-0007/02_User-stories.md"),
-      "# stories\n",
+      path.join(root, ".qfai/contracts/ui/extra.yaml"),
+      "# QFAI-CONTRACT-ID: CON-UI-0007\nscreens:\n  - id: extra\n",
       "utf-8",
     );
 
     const exit = await runPrototypingCertify({ root, check: false });
-    expect(exit).toBe(0);
-
-    const certPath = path.join(root, COMPLETION_CERTIFICATE_REL_PATH);
-    const raw: unknown = JSON.parse(await readFile(certPath, "utf-8"));
-    if (!isCertificateWithSpecsCovered(raw)) {
-      throw new Error("certificate JSON is missing the specsCovered string array");
-    }
-    // Frozen seed wins — even though spec-0007 might now be resolvable.
-    expect(raw.specsCovered).toEqual(["0012"]);
+    expect(exit).toBe(2);
+    await expect(readFile(path.join(root, COMPLETION_CERTIFICATE_REL_PATH))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
   });
 
-  it("exits 2 when prototyping.json#specsCovered is missing", async () => {
+  it("exits 2 when prototyping.json#uiContractsCovered is missing", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });
     await seedAllGatesPass(root);
-    // Re-write prototyping.json without the specsCovered slot.
+    // Re-write prototyping.json without the uiContractsCovered slot.
     await writeFile(
       path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
       JSON.stringify({
@@ -410,7 +391,7 @@ describe("qfai prototyping certify (generate)", () => {
     expect(await runPrototypingCertify({ root, check: false })).toBe(2);
   });
 
-  it("exits 2 when prototyping.json#specsCovered is malformed (empty array)", async () => {
+  it("exits 2 when prototyping.json#uiContractsCovered is malformed (empty array)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });
     await seedAllGatesPass(root);
@@ -421,7 +402,7 @@ describe("qfai prototyping certify (generate)", () => {
         surface: "web",
         runId: "run-test-2026",
         designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-        specsCovered: [],
+        uiContractsCovered: [],
         reviewerGate: {
           result: "PASS",
           signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -444,7 +425,7 @@ describe("qfai prototyping certify (generate)", () => {
         surface: "web",
         runId: "run-x",
         designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-        specsCovered: ["0012"],
+        uiContractsCovered: ["CON-UI-0012"],
         reviewerGate: {
           result: "PASS",
           signoff: { reviewer: "legacy-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -473,10 +454,11 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     // Plant a UI contract declaring two screens; the seeded
     // accepted-iter (iter-01) has only `index.html`, not
     // `home.html` / `settings.html`.
-    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
-      path.join(root, ".qfai/contracts/ui/main.yaml"),
+      path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
       [
+        "# QFAI-CONTRACT-ID: CON-UI-0012",
         "screens:",
         "  - id: home",
         '    route: "/home"',
@@ -497,10 +479,10 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });
     await seedAllGatesPass(root);
-    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
-      path.join(root, ".qfai/contracts/ui/main.yaml"),
-      'screens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
+      '# QFAI-CONTRACT-ID: CON-UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
       "utf-8",
     );
 
@@ -513,7 +495,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
       expect(recovery).toBeDefined();
       expect(recovery).toContain("re-run the loop from cycle 0");
       expect(recovery).toContain("expected-next-cycle gate");
-      expect(recovery).toContain(".qfai/contracts/ui/");
+      expect(recovery).toContain(".qfai/spec/03_contract/ui/");
 
       // --force is not a backup of the loop: it renames iter-00 only, and the
       // reset then deletes iter-01+ and clears iterations / reviewerGate.
@@ -546,10 +528,10 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     await seedMinimalProject(root, { specMarker: true });
     await seedAllGatesPass(root);
     // UI contracts declare home + settings.
-    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
-      path.join(root, ".qfai/contracts/ui/main.yaml"),
-      'screens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
+      '# QFAI-CONTRACT-ID: CON-UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
       "utf-8",
     );
     // Plant settings.html in an OLDER iter dir; certify must not
@@ -566,10 +548,10 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });
     await seedAllGatesPass(root);
-    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
-      path.join(root, ".qfai/contracts/ui/main.yaml"),
-      'screens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
+      '# QFAI-CONTRACT-ID: CON-UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
       "utf-8",
     );
     // Add the two screen HTML files into the accepted iter dir.
@@ -579,20 +561,20 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     // AC-0012-0047: certify also requires
     // `iter-NN/spec-NNNN/<screen>.review.json` for every frozen spec ×
     // declared screen pair. The fixture's frozen spec set is
-    // `["0012"]` (seeded by seedAllGatesPass), and the UI contracts
+    // `["CON-UI-0012"]` (seeded by seedAllGatesPass), and the UI contracts
     // above declare home + settings, so seed both review.jsons.
-    const specDir = path.join(acceptedDir, "spec-0012");
+    const specDir = path.join(acceptedDir, "CON-UI-0012");
     await mkdir(specDir, { recursive: true });
     // certify parses each payload against the shipped closed reviewer
     // schema, so the fixtures must be schema-valid, not merely present.
     await writeFile(
       path.join(specDir, "home.review.json"),
-      `${reviewPayload("spec-0012", "home")}\n`,
+      `${reviewPayload("CON-UI-0012", "home")}\n`,
       "utf-8",
     );
     await writeFile(
       path.join(specDir, "settings.review.json"),
-      `${reviewPayload("spec-0012", "settings")}\n`,
+      `${reviewPayload("CON-UI-0012", "settings")}\n`,
       "utf-8",
     );
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
@@ -628,199 +610,67 @@ describe("qfai prototyping certify --check", () => {
   });
 });
 
-describe("qfai prototyping show-spec", () => {
-  // show-spec reads the cycle-0
-  // frozen `specsCovered[]` from prototyping.json. Tests must seed the
-  // file or expect exit 2.
-  it("returns 0 with the frozen specsCovered when prototyping.json is seeded", async () => {
-    const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
-    // Seed a minimal prototyping.json with frozenSpecsCovered so
-    // show-spec has a frozen scope to print.
-    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
-    await writeFile(
-      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-      JSON.stringify(
-        {
-          runId: "test-run-id",
-          specsCovered: ["0012"],
-          frozenSpecsCovered: ["0012"],
-          frozenSurfaceUnion: ["0012"],
-        },
-        null,
-        2,
-      ),
-      "utf-8",
-    );
-    expect(await runPrototypingShowSpec({ root })).toBe(0);
-  });
+describe("qfai prototyping show-ui-contract", () => {
+  async function seedShowRecord(root: string, record: Record<string, unknown>): Promise<void> {
+    const dir = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "prototyping.json"), JSON.stringify(record), "utf-8");
+  }
 
-  it("returns 2 when prototyping.json is missing (not yet seeded by cycle 0)", async () => {
+  it("shows the frozen and live UI contract IDs with a full primary descriptor", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: false });
-    expect(await runPrototypingShowSpec({ root })).toBe(2);
-  });
-
-  it("returns 2 when prototyping.json lacks a valid frozenSpecsCovered", async () => {
-    const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
-    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
-    await writeFile(
-      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-      JSON.stringify({ runId: "test-run-id" }, null, 2),
-      "utf-8",
-    );
-    expect(await runPrototypingShowSpec({ root })).toBe(2);
-  });
-
-  // Regression coverage for the show-spec JSON payload's field semantics: the payload carries a
-  // `frozenSpecsCoveredSource` discriminant, and `liveUiBearing` uses `resolveSurfaceUnion` and is
-  // emitted as `string[]`. Earlier tests only checked the exit code.
-  // QFAI:SPEC-0012:TC-0012-0422 — pairs with AC-0012-0044 (show-spec
-  // operator-facing surface).
-  it("TC-0012-0422 (a): legacy record without frozenSpecsCovered emits frozenSpecsCoveredSource=specsCovered", async () => {
-    const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
-    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
-    await writeFile(
-      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-      JSON.stringify(
-        {
-          runId: "test-run-id",
-          // Legacy: only `specsCovered`, no `frozenSpecsCovered`.
-          specsCovered: ["0012"],
-        },
-        null,
-        2,
-      ),
-      "utf-8",
-    );
-
+    await seedMinimalProject(root);
+    await seedShowRecord(root, {
+      runId: "test-run-id",
+      uiContractsCovered: ["CON-UI-0012"],
+      frozenSurfaceUnion: ["CON-UI-0012"],
+    });
     const logger = await import("../../src/cli/lib/logger.js");
     const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
     try {
-      expect(await runPrototypingShowSpec({ root })).toBe(0);
-      const payloadText = infoSpy.mock.calls.map((c) => String(c[0])).join("\n");
-      const payload = JSON.parse(payloadText) as Record<string, unknown>;
-      expect(payload.frozenSpecsCovered).toEqual(["0012"]);
-      expect(payload.frozenSpecsCoveredSource).toBe("specsCovered");
+      expect(await runPrototypingShowUiContract({ root })).toBe(0);
+      const payload = JSON.parse(infoSpy.mock.calls.map((c) => String(c[0])).join("\n")) as Record<
+        string,
+        unknown
+      >;
+      expect(payload.uiContractsCovered).toEqual(["CON-UI-0012"]);
+      expect(payload.frozenSurfaceUnion).toEqual(["CON-UI-0012"]);
+      expect(payload.liveUiBearing).toEqual(["CON-UI-0012"]);
+      expect(payload.primary).toEqual({
+        uiContractId: "CON-UI-0012",
+        contractPath: ".qfai/spec/03_contract/ui/home.yaml",
+        source: "contract-scan",
+      });
     } finally {
       infoSpy.mockRestore();
     }
   });
 
-  it("TC-0012-0422 (b): record with frozenSpecsCovered emits frozenSpecsCoveredSource=frozenSpecsCovered", async () => {
+  it.each([
+    { label: "missing", record: { frozenSurfaceUnion: ["CON-UI-0012"] } },
+    { label: "legacy", record: { specsCovered: ["0012"], frozenSpecsCovered: ["0012"] } },
+    {
+      label: "malformed",
+      record: { uiContractsCovered: null, frozenSurfaceUnion: ["CON-UI-0012"] },
+    },
+    {
+      label: "invalid ID",
+      record: { uiContractsCovered: ["0012"], frozenSurfaceUnion: ["CON-UI-0012"] },
+    },
+  ])("rejects $label scope with exit 2", async ({ record }) => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
-    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
-    await writeFile(
-      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-      JSON.stringify(
-        {
-          runId: "test-run-id",
-          specsCovered: ["0012"],
-          frozenSpecsCovered: ["0012"],
-          frozenSurfaceUnion: ["0012"],
-        },
-        null,
-        2,
-      ),
-      "utf-8",
-    );
-
-    const logger = await import("../../src/cli/lib/logger.js");
-    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
-    try {
-      expect(await runPrototypingShowSpec({ root })).toBe(0);
-      const payloadText = infoSpy.mock.calls.map((c) => String(c[0])).join("\n");
-      const payload = JSON.parse(payloadText) as Record<string, unknown>;
-      expect(payload.frozenSpecsCoveredSource).toBe("frozenSpecsCovered");
-    } finally {
-      infoSpy.mockRestore();
-    }
+    await seedMinimalProject(root);
+    await seedShowRecord(root, record);
+    expect(await runPrototypingShowUiContract({ root })).toBe(2);
   });
 
-  it("TC-0012-0422 (c): liveUiBearing is a string[] (contract-aligned)", async () => {
+  it("rejects a missing frozen surface union", async () => {
     const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
-    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
-    await writeFile(
-      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-      JSON.stringify(
-        {
-          runId: "test-run-id",
-          specsCovered: ["0012"],
-          frozenSpecsCovered: ["0012"],
-          frozenSurfaceUnion: ["0012"],
-        },
-        null,
-        2,
-      ),
-      "utf-8",
-    );
-
-    const logger = await import("../../src/cli/lib/logger.js");
-    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
-    try {
-      expect(await runPrototypingShowSpec({ root })).toBe(0);
-      const payloadText = infoSpy.mock.calls.map((c) => String(c[0])).join("\n");
-      const payload = JSON.parse(payloadText) as { liveUiBearing: unknown };
-      expect(Array.isArray(payload.liveUiBearing)).toBe(true);
-      for (const item of payload.liveUiBearing as unknown[]) {
-        expect(typeof item).toBe("string");
-      }
-    } finally {
-      infoSpy.mockRestore();
-    }
-  });
-
-  // show-spec must not read `frozenSpecsCovered` via a plain
-  // `readStringArrayField(...) ?? readStringArrayField(specsCovered)`
-  // fallback: a hand-edited / partially-corrupt multi-spec record would
-  // then silently downgrade the reported scope to the legacy
-  // `specsCovered` field, even though iterate / certify both treat the
-  // same malformed `frozenSpecsCovered` as a hard error — misleading
-  // operators and automation making recovery decisions from show-spec
-  // output. show-spec instead consumes the SSOT classifier and fails
-  // closed on `malformed`.
-  // QFAI:SPEC-0012:TC-0012-0428
-  it("TC-0012-0428: exits 2 with a 'present but malformed' diagnostic when frozenSpecsCovered is present but invalid (does NOT fall back to legacy specsCovered)", async () => {
-    const root = await newTempDir();
-    await seedMinimalProject(root, { specMarker: true });
-    await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
-    await writeFile(
-      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-      JSON.stringify(
-        {
-          runId: "test-run-id",
-          // Legacy single-spec scope is present and VALID — pre-fix
-          // this would have been used as the silent fallback. Post-fix
-          // the malformed frozenSpecsCovered must hard-error.
-          specsCovered: ["0012"],
-          frozenSpecsCovered: null,
-        },
-        null,
-        2,
-      ),
-      "utf-8",
-    );
-
-    const logger = await import("../../src/cli/lib/logger.js");
-    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
-    try {
-      const exit = await runPrototypingShowSpec({ root });
-      expect(exit).toBe(2);
-      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
-      const namesPresentButMalformed = messages.some(
-        (m) => m.includes("present") && m.includes("malformed"),
-      );
-      expect(namesPresentButMalformed).toBe(true);
-    } finally {
-      errorSpy.mockRestore();
-    }
+    await seedMinimalProject(root);
+    await seedShowRecord(root, { uiContractsCovered: ["CON-UI-0012"] });
+    expect(await runPrototypingShowUiContract({ root })).toBe(2);
   });
 });
-
 // ─────────────────────────────────────────────────────────────────────────
 // TC-3.6.x — DESIGN.md compliance gate + cert designMd binding
 // ─────────────────────────────────────────────────────────────────────────

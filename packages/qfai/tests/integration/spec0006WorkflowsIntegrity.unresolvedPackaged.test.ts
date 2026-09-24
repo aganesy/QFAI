@@ -70,7 +70,7 @@
  * round-by-round derivation — mutations as needle text, blobs, outputs — is in
  * `.qfai/evidence/implement-spec-0006.md`.
  */
-// QFAI:SPEC-0006:TC-0006-0030
+// QFAI:EX-0003-0011-03
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 

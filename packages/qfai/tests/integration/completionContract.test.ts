@@ -30,7 +30,7 @@ async function loadContent(): Promise<string> {
   return content;
 }
 
-// QFAI:SPEC-0011:TC-0011-0006
+// QFAI:EX-0001-0097-01
 describe("item completion checklist end-to-end enforcement", () => {
   it("defines a numbered item completion checklist", async () => {
     const c = await loadContent();
@@ -96,7 +96,7 @@ describe("item completion checklist end-to-end enforcement", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0006
+// QFAI:EX-0001-0097-01
 describe("item completion blocked: no RED evidence", () => {
   it("prohibits completion without RED evidence", async () => {
     const c = await loadContent();
@@ -104,7 +104,7 @@ describe("item completion blocked: no RED evidence", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0007
+// QFAI:EX-0001-0097-03
 describe("item completion blocked: no GREEN evidence", () => {
   it("prohibits completion without GREEN evidence", async () => {
     const c = await loadContent();
@@ -127,7 +127,7 @@ describe("item completion blocked: reviewer not run", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0010
+// QFAI:EX-0001-0097-04
 describe("implementation review remains independent from the implementation agent", () => {
   it("requires implementation-reviewer evidence instead of self-approval", async () => {
     const c = await loadContent();
@@ -208,7 +208,6 @@ describe("old template deprecation marking", () => {
 // spec-0002: Canonical entrypoint wiring / old aggregator deprecation
 // ---------------------------------------------------------------------------
 
-// QFAI:SPEC-0004:TC-0004-0002
 describe("canonical entrypoint wiring", () => {
   it("validateProject source calls runCanonicalUixValidators", async () => {
     const validateSrc = await readFile(

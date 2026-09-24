@@ -597,24 +597,21 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
     expect(referencesName("const s = `a${`dropped validateFoo `}d`;", "validateFoo")).toBe(false);
   });
 
-  it("agrees with the tree about the two files main was wrong about", async () => {
+  it("agrees with the tree about parser prose and a validator declaration", async () => {
     // Regression pins on the measured cases rather than on the mechanism, so
     // they keep their meaning if the reduction is rewritten again.
     //
-    // `validateTddList` appears in `core/specPackParsers.ts` exactly once, in a
-    // JSDoc. `main` reported it as a call site there: the phantom literal had
-    // consumed that JSDoc's opener, so its backtick-quoted terms read as code.
     const parsers = await readFile(path.resolve(SRC_ROOT, "core/specPackParsers.ts"), "utf-8");
-    expect(referencesName(parsers, "validateTddList")).toBe(false);
+    expect(referencesName(parsers, "validateStoryTreeCoverageDepth")).toBe(false);
 
     // The mirror direction: a validator's own declaration must survive the
     // reduction of its own module. `main` erased this one, having re-framed the
     // file from a regex some lines above it.
     const depth = await readFile(
-      path.resolve(SRC_ROOT, "core/validators/atddCoverageDepth.ts"),
+      path.resolve(SRC_ROOT, "core/validators/storyTreeCoverageDepth.ts"),
       "utf-8",
     );
-    expect(referencesName(depth, "validateAtddCoverageDepth")).toBe(true);
+    expect(referencesName(depth, "validateStoryTreeCoverageDepth")).toBe(true);
   });
 
   it("keeps import edges the module-edge walk reads", () => {

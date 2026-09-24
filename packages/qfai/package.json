@@ -26,6 +26,7 @@
   "files": [
     "dist",
     "assets",
+    "docs/MIGRATION-2.0.0.md",
     "README.md",
     "LICENSE"
   ],

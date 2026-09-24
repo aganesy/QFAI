@@ -263,7 +263,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
     return job;
   }
 
-  // QFAI:SPEC-0003:TC-0003-0058
+  // QFAI:EX-0002-0003-06
   it("TC-0003-0058 (TDD-0062): rejects a planted green aggregate while accepting its unmodified body", async () => {
     const job = await documentAggregate();
     expect(await aggregateFailureViolations(job, ["checks"])).toEqual([]);
@@ -276,7 +276,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
     expect(await aggregateFailureViolations(job, ["checks"])).toHaveLength(6);
   });
 
-  // QFAI:SPEC-0003:TC-0003-0058
+  // QFAI:EX-0002-0003-06
   it("TC-0003-0058 (TDD-0063): rejects a result binding removed from the shipped aggregate", async () => {
     const job = await documentAggregate();
     const step = job.steps[0];
@@ -287,7 +287,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
     ]);
   });
 
-  // QFAI:SPEC-0003:TC-0003-0058
+  // QFAI:EX-0002-0003-06
   it.each([
     { if: "false" },
     { shell: "bash {0} || true" },
@@ -306,7 +306,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
     ]);
   });
 
-  // QFAI:SPEC-0003:TC-0003-0058
+  // QFAI:EX-0002-0003-06
   it.each<[string, (job: ShippedJob) => void]>([
     [
       "a second step that does work of its own",
@@ -332,7 +332,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
   );
 });
 
-// QFAI:SPEC-0003:TC-0003-0043
+// QFAI:EX-0002-0006-02
 describe("TC-0003-0043 (TDD-0043): absent Node version file falls open to the documented literal", () => {
   // One it() per TC-0003-0043 verify bullet. Scope notes, disclosed:
   // - `actions/setup-node` cannot run off-runner, so the resolution the
@@ -470,7 +470,7 @@ describe("TC-0003-0043 (TDD-0043): absent Node version file falls open to the do
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0044
+// QFAI:EX-0002-0006-03
 describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with an actionable annotation", () => {
   // One it() per TC-0003-0044 verify bullet. This is the OPPOSITE degrade
   // direction from TDD-0043 on the same setup-install column. Scope notes,
@@ -832,7 +832,7 @@ describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0053
+// QFAI:EX-0002-0006-02
 describe("TC-0003-0053 (TDD-0053): version file plus packageManager field is the non-degrading happy path", () => {
   // One it() per TC-0003-0053 verify bullet. This row is the BOUNDARY that
   // keeps TDD-0043's and TDD-0044's degrade oracles from being vacuously

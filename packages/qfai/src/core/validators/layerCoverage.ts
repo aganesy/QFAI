@@ -110,7 +110,7 @@ type ParseDefinitionOptions = {
 export type LayerCoverageOptions = {
   /**
    * When set, only the named specs are validated and only their
-   * `specs-coverage/spec-NNNN.md` reports are (re)written. A `--spec`-limited
+   * `spec-coverage/spec-NNNN.md` reports are (re)written. A `--spec`-limited
    * run must not dirty a sibling spec's report.
    */
   /**
@@ -142,7 +142,7 @@ export async function validateLayerCoverage(
     return issues;
   }
 
-  const coverageRoot = path.join(resolvePath(root, config, "outDir"), "specs-coverage");
+  const coverageRoot = path.join(resolvePath(root, config, "outDir"), "spec-coverage");
 
   for (const entry of layeredEntries) {
     if (isV1421LayeredEntry(entry)) {
@@ -739,12 +739,12 @@ function findUncoveredIds(counts: Map<string, number>): string[] {
 export const THIN_COVERAGE_SIGNAL_CODE = "QFAI-COV-207";
 
 /**
- * Single definition of what `QFAI-COV-207` means, so the specs-coverage report
+ * Single definition of what `QFAI-COV-207` means, so the spec-coverage report
  * and the validate issue catalog cannot drift apart. The code carries the
  * thin-coverage signal the report prints.
  */
 export const THIN_COVERAGE_SIGNAL_EXPECTATION =
-  "Artifacts covered by exactly 1 downstream case are review signals, not gate failures; triage each one in the specs-coverage report.";
+  "Artifacts covered by exactly 1 downstream case are review signals, not gate failures; triage each one in the spec-coverage report.";
 
 /**
  * Collapses an ID list into contiguous runs on its trailing numeric segment,

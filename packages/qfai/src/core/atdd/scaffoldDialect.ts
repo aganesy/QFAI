@@ -1,40 +1,10 @@
 /**
- * Per-stack skeleton dialects for `qfai atdd scaffold`.
+ * Test skeleton dialects for `qfai atdd scaffold`.
  *
- * The scaffold is the only command qfai ships that PRODUCES ATDD test files,
- * and `QFAI-ATDD-112` — the `error`-severity gate that CONSUMES them — derives
- * its scan pattern from `validation.traceability.testFileGlobs`
- * (`deriveAtddFilePattern`). The writer used to emit `<TC>.test.ts`
- * unconditionally, so on a project whose globs derive `{feature,markdown,md,py}`
- * the file the command had just written was outside the scan: the documented
- * happy path (scaffold -> fill in -> validate) could not discharge the
- * obligation it exists to discharge, at any point in the cycle.
- *
- * The dialect is therefore selected from the SAME config key the scan reads, so
- * the writer and the gate cannot disagree about which extension counts.
- *
- * Selection happens twice over that key, because the gate and the project's own
- * runner read it at different resolutions:
- *
- *   1. the derived EXTENSION set picks the dialect AND the emitted extension —
- *      a `tests/**\/*.test.js` project gets `.test.js`, not `.test.ts`, which
- *      the scan (`**\/*.{feature,js,markdown,md}`) would never open;
- *   2. the configured PATHS pick between the dialects' naming conventions — a
- *      project whose globs only allow `*_test.py` gets `<tc>_test.py`, not
- *      `test_<tc>.py`, and a project whose globs cover `src/**` only gets
- *      nothing at all, because the writer's own
- *      `<testsDir>/integration/<spec-id>/` is not a directory those globs
- *      reach. The scan widens to the bare extension and would have counted the
- *      annotation either way, so an un-collectable file would have cleared
- *      `QFAI-ATDD-112` while never running once. The project's EXCLUDE globs
- *      decide the same question from the other side and are applied here too:
- *      `collectScTestReferences` hands them to fast-glob as `ignore`, so a
- *      destination they cover is a destination the normal test scan skips.
- *
- * When no path this writer would produce is admitted by the configured globs,
- * the caller refuses rather than emitting a test nothing executes.
+ * The selected extension and basename must match the project's
+ * `validation.traceability.testFileGlobs` and exclude globs. The command
+ * refuses a destination the project's normal test scan would not collect.
  */
-
 import { readTestFileExtensions } from "../atddTraceability.js";
 import { BraceRangeRefused, braceRangeMembers } from "../globBraceRange.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
@@ -47,10 +17,10 @@ import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
 type ScaffoldNaming = {
   /** Extension that selects this naming out of the derived scan set. */
   readonly extension: string;
-  /** Rendered in refusal messages, e.g. `test_<tc_id>.py`. */
+  /** Rendered in refusal messages, e.g. `test_<ac_or_bf_id>.py`. */
   readonly shape: string;
-  /** Basename of the emitted skeleton for a given TC. */
-  fileName(tcId: string): string;
+  /** Basename of the emitted skeleton for a given AC or BF ID. */
+  fileName(targetId: string): string;
 };
 
 /** A stack's skeleton shape, before a naming convention is chosen for it. */
@@ -71,7 +41,7 @@ type ScaffoldDialectTemplate = {
   /** Naming conventions in preference order; the first match wins. */
   readonly namings: readonly ScaffoldNaming[];
   /** Body lines emitted below the annotation header. */
-  buildBody(tcId: string): string[];
+  buildBody(targetId: string): string[];
 };
 
 /** A dialect with one naming convention bound to it — what the writer uses. */
@@ -82,28 +52,28 @@ export type ScaffoldDialect = {
   readonly placeholderGlob: string;
   /** The extension actually emitted, chosen out of the derived scan set. */
   readonly extension: string;
-  /** Basename of the emitted skeleton for a given TC. */
-  fileName(tcId: string): string;
+  /** Basename of the emitted skeleton for a given AC or BF ID. */
+  fileName(targetId: string): string;
   /** Body lines emitted below the annotation header. */
-  buildBody(tcId: string): string[];
+  buildBody(targetId: string): string[];
 };
 
 const PLACEHOLDER_REASON = "pending — scaffold placeholder";
 
-/** `TC-0001-0002` -> `tc_0001_0002` — the pytest naming convention. */
-function toSnakeCase(tcId: string): string {
-  return tcId.toLowerCase().replace(/-/g, "_");
+/** `AC-0001-0002-01` -> `ac_0001_0002_01` for pytest filenames. */
+function toSnakeCase(targetId: string): string {
+  return targetId.toLowerCase().replace(/-/g, "_");
 }
 
 /**
- * `TC-0001-0002` -> `Test_TC_0001_0002` — the class holding the skeleton.
+ * `AC-0001-0002-01` -> `Test_AC_0001_0002_01` for the skeleton class.
  *
- * Not PEP8's CapWords, deliberately: the TC id has to stay readable in the
+ * Not PEP8's CapWords, deliberately: the target ID has to stay readable in the
  * failure output, and the `Test` prefix is what pytest's default
  * `python_classes` looks for.
  */
-function toTestClassName(tcId: string): string {
-  return `Test_${tcId.replace(/-/g, "_")}`;
+function toTestClassName(targetId: string): string {
+  return `Test_${targetId.replace(/-/g, "_")}`;
 }
 
 /**
@@ -118,8 +88,8 @@ const JS_TS_INFIXES = ["test", "spec"] as const;
 const JS_TS_NAMINGS: readonly ScaffoldNaming[] = JS_TS_EXTENSIONS.flatMap((extension) =>
   JS_TS_INFIXES.map((infix) => ({
     extension,
-    shape: `<TC-ID>.${infix}.${extension}`,
-    fileName: (tcId: string) => `${tcId}.${infix}.${extension}`,
+    shape: `<AC-or-BF-ID>.${infix}.${extension}`,
+    fileName: (targetId: string) => `${targetId}.${infix}.${extension}`,
   })),
 );
 
@@ -129,13 +99,13 @@ const JS_TS_DIALECT: ScaffoldDialectTemplate = {
   commentPrefix: "//",
   placeholderGlob: `**/*.{${JS_TS_INFIXES.join(",")}}.{${JS_TS_EXTENSIONS.join(",")}}`,
   namings: JS_TS_NAMINGS,
-  buildBody: (tcId) => [
+  buildBody: (targetId) => [
     `import { describe, it } from "vitest";`,
     "",
-    `describe(${JSON.stringify(tcId)}, () => {`,
-    `  // TODO: implement assertion for ${tcId}`,
+    `describe(${JSON.stringify(targetId)}, () => {`,
+    `  // TODO: implement assertion for ${targetId}`,
     `  it.skip(${JSON.stringify(PLACEHOLDER_REASON)}, () => {`,
-    `    // TODO: implement assertion for ${tcId}`,
+    `    // TODO: implement assertion for ${targetId}`,
     `  });`,
     `});`,
   ],
@@ -152,13 +122,13 @@ const PYTHON_DIALECT: ScaffoldDialectTemplate = {
   namings: [
     {
       extension: "py",
-      shape: "test_<tc_id>.py",
-      fileName: (tcId: string) => `test_${toSnakeCase(tcId)}.py`,
+      shape: "test_<ac_or_bf_id>.py",
+      fileName: (targetId: string) => `test_${toSnakeCase(targetId)}.py`,
     },
     {
       extension: "py",
-      shape: "<tc_id>_test.py",
-      fileName: (tcId: string) => `${toSnakeCase(tcId)}_test.py`,
+      shape: "<ac_or_bf_id>_test.py",
+      fileName: (targetId: string) => `${toSnakeCase(targetId)}_test.py`,
     },
   ],
   // Deliberately NOT `@pytest.mark.skip` / `pytest.skip(...)`, the literal
@@ -178,13 +148,13 @@ const PYTHON_DIALECT: ScaffoldDialectTemplate = {
   // subclass is collected by BOTH runners, so no runner detection (or extra
   // config the operator would have to supply) is needed to keep the gate
   // honest.
-  buildBody: (tcId) => [
+  buildBody: (targetId) => [
     `import unittest`,
     "",
     "",
-    `class ${toTestClassName(tcId)}(unittest.TestCase):`,
-    `    def test_${toSnakeCase(tcId)}(self) -> None:`,
-    `        # TODO: implement assertion for ${tcId}`,
+    `class ${toTestClassName(targetId)}(unittest.TestCase):`,
+    `    def test_${toSnakeCase(targetId)}(self) -> None:`,
+    `        # TODO: implement assertion for ${targetId}`,
     `        raise NotImplementedError(${JSON.stringify(PLACEHOLDER_REASON)})`,
   ],
 };
@@ -208,8 +178,8 @@ function bindNaming(template: ScaffoldDialectTemplate, naming: ScaffoldNaming): 
     commentPrefix: template.commentPrefix,
     placeholderGlob: template.placeholderGlob,
     extension: naming.extension,
-    fileName: (tcId: string) => naming.fileName(tcId),
-    buildBody: (tcId: string) => template.buildBody(tcId),
+    fileName: (targetId: string) => naming.fileName(targetId),
+    buildBody: (targetId: string) => template.buildBody(targetId),
   };
 }
 
@@ -233,41 +203,6 @@ export const SCAFFOLD_PLACEHOLDER_GLOBS: readonly string[] = Array.from(
   new Set(SCAFFOLD_DIALECTS.map((dialect) => dialect.placeholderGlob)),
 );
 
-/** One skeleton this writer could have emitted for a TC, with its dialect. */
-export type ScaffoldSkeletonCandidate = {
-  /** Basename the naming convention produces for the TC. */
-  readonly fileName: string;
-  /** The dialect that would have written it — its body shape and comment prefix. */
-  readonly dialect: ScaffoldDialect;
-};
-
-/**
- * Every skeleton this writer can emit for one TC, across every dialect and
- * naming convention.
- *
- * Used by the command to find skeletons an EARLIER run left under a different
- * convention: once the dialect follows the config, a project scaffolded before
- * that (or before its globs changed) has a `<TC>.test.ts` next to the new
- * `test_<tc>.py` for the same TC, and `D-SCAFFOLD-PLACEHOLDER` globs both.
- *
- * The dialect travels with the basename because retiring one of those files
- * requires knowing the body it was born with: only a skeleton still identical
- * to what its own dialect emits may be deleted.
- */
-export function scaffoldSkeletonCandidates(tcId: string): ScaffoldSkeletonCandidate[] {
-  const seen = new Set<string>();
-  const candidates: ScaffoldSkeletonCandidate[] = [];
-  for (const template of SCAFFOLD_DIALECTS) {
-    for (const naming of template.namings) {
-      const fileName = naming.fileName(tcId);
-      if (seen.has(fileName)) continue;
-      seen.add(fileName);
-      candidates.push({ fileName, dialect: bindNaming(template, naming) });
-    }
-  }
-  return candidates;
-}
-
 /** Outcome of matching a project's configured globs against this table. */
 export type ScaffoldDialectResolution =
   | { readonly outcome: "resolved"; readonly dialect: ScaffoldDialect }
@@ -288,12 +223,12 @@ export type ScaffoldDialectResolution =
   | { readonly outcome: "naming-mismatch"; readonly shapes: readonly string[] };
 
 /**
- * Representative TC id used to probe a candidate basename against the
+ * Representative AC ID used to probe a candidate basename against the
  * configured globs when the caller names no ids. Every naming above is a pure
  * function of the id's shape, so the probe decides for every id a glob without
  * a brace range admits.
  */
-const PROBE_TC_ID = "TC-0000-0000";
+const PROBE_ID = "AC-0000-0000-01";
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -530,7 +465,7 @@ function opensSegment(pattern: string, index: number, atStart: boolean): boolean
  * directories included — can be matched against a whole candidate path.
  *
  * Extglob support is not cosmetic: `tests/**\/*.@(test|spec).ts` is a valid and
- * common fast-glob pattern that the emitted `<TC-ID>.test.ts` satisfies. An
+ * common fast-glob pattern that the emitted `<AC-ID>.test.ts` satisfies. An
  * escape-everything matcher declared it a `naming-mismatch` and made the
  * command exit 1 on an ordinary TypeScript project.
  *
@@ -773,8 +708,8 @@ function namedClassAt(text: string, index: number): { members: string; end: numb
  * Ranges pass through — `a-z` means the same on both sides — and only the two
  * characters that would end the class early are escaped. A named class is
  * written out from the table. Any other `[` is a member, as it is to the
- * matcher: `[[:TC:]]` is a class of `[`, `:`, `T` and `C` followed by a literal
- * `]`, and so is never the `TC-` a skeleton name starts with.
+ * matcher: `[[:AC:]]` is a class of `[`, `:`, `A` and `C` followed by a literal
+ * `]`, and so is never the `AC-` a skeleton name starts with.
  */
 function compileClassBody(body: string): string {
   let source = "";
@@ -851,8 +786,8 @@ function normalizeGlobPath(value: string): string {
  * When the caller knows where the skeleton will be written, the WHOLE glob is
  * matched against the WHOLE repo-relative path. Matching the basename alone
  * was not enough: a project whose globs are `src/**\/test_*.py` accepts the
- * `test_<tc>.py` name, so the writer emitted
- * `tests/integration/<spec-id>/test_<tc>.py` — a path those globs do not
+ * `test_<id>.py` name, so the writer emitted
+ * `tests/integration/<US-ID>/test_<id>.py` — a path those globs do not
  * cover, and therefore a file the project's own test scan never collects.
  * `QFAI-ATDD-112` widens to the bare extension and counted the annotation
  * anyway, so filling the placeholder in cleared the coverage gate with a test
@@ -864,7 +799,7 @@ function normalizeGlobPath(value: string): string {
  *
  * Matching is CASE-SENSITIVE, because fast-glob is: `collectFilesByGlobs`
  * never sets `caseSensitiveMatch`, whose default is `true`. An `i` flag here
- * made `tests/**\/TEST_*.py` accept the lowercase `test_<tc>.py` this writer
+ * made `tests/**\/TEST_*.py` accept the lowercase `test_<id>.py` this writer
  * emits, which on a case-sensitive filesystem the project's own scan then does
  * not collect — the same "coverage cleared by a test that never runs" outcome,
  * arrived at through the matcher instead of the path.
@@ -921,7 +856,7 @@ export function scaffoldPlaceholderBasenameMatchers(): RegExp[] {
 export type ScaffoldDialectOptions = {
   /**
    * Repo-relative POSIX directory the skeleton lands in
-   * (`tests/integration/<spec-id>`). Given, the configured globs are matched
+   * (`tests/integration/<US-ID>` or `tests/e2e`). Given, the configured globs are matched
    * against the full destination path rather than its basename alone.
    *
    * Omitted when the destination is not expressible relative to the repo root
@@ -940,12 +875,12 @@ export type ScaffoldDialectOptions = {
    */
   readonly excludeGlobs?: readonly string[];
   /**
-   * The test case ids the run writes a skeleton for. Given, a naming is chosen
+   * The AC or BF IDs the run writes a skeleton for. Given, a naming is chosen
    * only when the globs admit the file it would write for every one of them,
    * since a brace range can make a glob depend on an id's digits. Omitted, a
    * representative id stands in for all of them.
    */
-  readonly tcIds?: readonly string[];
+  readonly ids?: readonly string[];
 };
 
 /** One (dialect, naming) pair the project's configured extensions admit. */
@@ -963,7 +898,7 @@ type ScaffoldCandidate = {
  * locking onto the JS/TS template — because it leads the table — left the
  * Python candidates unevaluated. Only the JS/TS paths were then matched
  * against the globs, none of them reached
- * `<testsDir>/integration/<spec-id>/`, and the command exited 1 with
+ * `<testsDir>/integration/<US-ID>/`, and the command refused with
  * `naming-mismatch` on a project for which a perfectly good Python skeleton
  * existed one table row down.
  */
@@ -1017,7 +952,7 @@ export function resolveScaffoldDialect(
   if (!scannable) {
     return {
       outcome: "naming-mismatch",
-      shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_TC_ID))],
+      shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_ID))],
     };
   }
   // The defaults are unioned in because BOTH scans apply them
@@ -1039,7 +974,7 @@ export function resolveScaffoldDialect(
   if (excludes.refused) {
     return {
       outcome: "naming-mismatch",
-      shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_TC_ID))],
+      shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_ID))],
     };
   }
   if (overBound) {
@@ -1048,7 +983,7 @@ export function resolveScaffoldDialect(
     // the refusal names the shape it would have written.
     return {
       outcome: "naming-mismatch",
-      shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_TC_ID))],
+      shapes: [candidatePath(DEFAULT_SCAFFOLD_DIALECT.fileName(PROBE_ID))],
     };
   }
   if (extensions.size === 0) {
@@ -1068,10 +1003,9 @@ export function resolveScaffoldDialect(
   const admits = (candidate: string): boolean =>
     includes.matchers.some((matcher) => matcher.test(candidate)) &&
     !excludes.matchers.some((matcher) => matcher.test(candidate));
-  const tcIds =
-    options.tcIds !== undefined && options.tcIds.length > 0 ? options.tcIds : [PROBE_TC_ID];
+  const ids = options.ids !== undefined && options.ids.length > 0 ? options.ids : [PROBE_ID];
   const chosen = candidates.find(({ naming }) =>
-    tcIds.every((tcId) => admits(candidatePath(naming.fileName(tcId)))),
+    ids.every((id) => admits(candidatePath(naming.fileName(id)))),
   );
   if (chosen === undefined) {
     // The shapes name the whole destination when one is known, so the refusal

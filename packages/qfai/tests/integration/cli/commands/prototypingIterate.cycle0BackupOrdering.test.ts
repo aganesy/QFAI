@@ -17,7 +17,7 @@
  *       command returns exit 2 with the abort diagnostic).
  */
 
-// QFAI:SPEC-0012:TC-0012-0465
+// QFAI:EX-0001-0140-01
 
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

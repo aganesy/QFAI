@@ -549,9 +549,9 @@ describe("collapseIdRuns", () => {
   });
 });
 
-describe("specs-coverage Signals section", () => {
+describe("spec-coverage Signals section", () => {
   const reportPathFor = (root: string, specNumber: string): string =>
-    path.join(root, ".qfai", "report", "specs-coverage", `spec-${specNumber}.md`);
+    path.join(root, ".qfai", "report", "spec-coverage", `spec-${specNumber}.md`);
 
   it("collapses thin coverage into one coded, ranged row per layer", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-signals-"));
@@ -691,7 +691,7 @@ describe("validateLayerCoverage spec scope", () => {
       });
       expect(scoped.some((entry) => entry.code === "QFAI-COV-201")).toBe(false);
 
-      const coverageRoot = path.join(root, ".qfai", "report", "specs-coverage");
+      const coverageRoot = path.join(root, ".qfai", "report", "spec-coverage");
       expect(await exists(path.join(coverageRoot, "spec-0003.md"))).toBe(true);
       // A --spec-limited run must not dirty a sibling spec's report.
       expect(await exists(path.join(coverageRoot, "spec-0004.md"))).toBe(false);

@@ -60,7 +60,7 @@ describe("valid evidence accepted (free-text+labels format)", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0007
+// QFAI:EX-0001-0097-03
 describe("status-only and empty evidence rejected", () => {
   it("explicitly rejects status-only evidence", async () => {
     const c = await loadContent();
@@ -73,7 +73,7 @@ describe("status-only and empty evidence rejected", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0007
+// QFAI:EX-0001-0097-03
 describe("thin evidence replaced with full evidence", () => {
   it("requires both command and result", async () => {
     const c = await loadContent();

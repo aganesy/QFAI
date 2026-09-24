@@ -7,13 +7,13 @@
  * the pack-location lane do not yet exist, so every `it` is `.skip` and
  * shells out to the CLI binary via a local execFile helper.
  */
-// QFAI:SPEC-0004:TC-0004-0067
-// QFAI:SPEC-0004:TC-0004-0068
-// QFAI:SPEC-0004:TC-0004-0069
-// QFAI:SPEC-0004:TC-0004-0070
-// QFAI:SPEC-0004:TC-0004-0071
-// QFAI:SPEC-0004:TC-0004-0072
-// QFAI:SPEC-0004:TC-0004-0073
+// QFAI:EX-0001-0051-01
+// QFAI:EX-0001-0051-01
+// QFAI:EX-0001-0052-01
+// QFAI:EX-0001-0052-01
+// QFAI:EX-0002-0011-01
+// QFAI:EX-0002-0011-02
+// QFAI:EX-0002-0011-02
 
 import { execFile } from "node:child_process";
 import path from "node:path";
@@ -43,7 +43,7 @@ async function runCli(
 }
 
 describe.skip("spec-0004 saas-package profile CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0004:TC-0004-0067 — saas-package validate PASSes and emits one D-SAAS-PACKAGE-VERIFY-SKIPPED per skipped gate (normal)", async () => {
+  it("QFAI:EX-0001-0051-01 — saas-package validate PASSes and emits one D-SAAS-PACKAGE-VERIFY-SKIPPED per skipped gate (normal)", async () => {
     const res = await runCli(["validate", "--profile", "saas-package", "--format", "json"]);
     expect(res.code).toBe(0);
     const body = JSON.parse(res.stdout) as { issues: Array<{ code: string; severity: string }> };
@@ -52,7 +52,7 @@ describe.skip("spec-0004 saas-package profile CHG-006 (test-first, pending /qfai
     expect(skips.every((i) => i.severity === "info")).toBe(true);
   });
 
-  it("QFAI:SPEC-0004:TC-0004-0068 — saas-package validate does NOT PASS when DCON-005 attestation is removed (error/boundary)", async () => {
+  it("QFAI:EX-0001-0051-01 — saas-package validate does NOT PASS when DCON-005 attestation is removed (error/boundary)", async () => {
     const res = await runCli(["validate", "--profile", "saas-package", "--format", "json"]);
     expect(res.code).not.toBe(0);
     expect(res.stdout + res.stderr).toMatch(/design-system\.yaml|DCON-005|attestation/);
@@ -60,12 +60,12 @@ describe.skip("spec-0004 saas-package profile CHG-006 (test-first, pending /qfai
 });
 
 describe.skip("spec-0004 primary_tasks dual-shape CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0004:TC-0004-0069 — auditProfile accepts string-only and structured {id,label,acceptance} primary_tasks (normal)", async () => {
+  it("QFAI:EX-0001-0052-01 — auditProfile accepts string-only and structured {id,label,acceptance} primary_tasks (normal)", async () => {
     const res = await runCli(["validate", "--profile", "prototyping", "--format", "json"]);
     expect(res.code).toBe(0);
   });
 
-  it("QFAI:SPEC-0004:TC-0004-0070 — QFAI-AUD-020 fires for 9 tasks naming the 3..7 band; structured item missing acceptance is rejected (error/boundary)", async () => {
+  it("QFAI:EX-0001-0052-01 — QFAI-AUD-020 fires for 9 tasks naming the 3..7 band; structured item missing acceptance is rejected (error/boundary)", async () => {
     const res = await runCli(["validate", "--profile", "prototyping", "--format", "json"]);
     const out = res.stdout + res.stderr;
     expect(out).toMatch(/QFAI-AUD-020/);
@@ -75,7 +75,7 @@ describe.skip("spec-0004 primary_tasks dual-shape CHG-006 (test-first, pending /
 });
 
 describe.skip("spec-0004 pack-location CI lane CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0004:TC-0004-0071 — root review-2026-05-27/ FAILS the lane with R-PACK-LOCATION-DRIFT proposing the correct path (error/boundary)", async () => {
+  it("QFAI:EX-0002-0011-01 — root review-2026-05-27/ FAILS the lane with R-PACK-LOCATION-DRIFT proposing the correct path (error/boundary)", async () => {
     const res = await runCli(["validate", "--profile", "saas-package", "--format", "json"]);
     const out = res.stdout + res.stderr;
     expect(res.code).not.toBe(0);
@@ -84,12 +84,12 @@ describe.skip("spec-0004 pack-location CI lane CHG-006 (test-first, pending /qfa
     expect(out).toMatch(/\.qfai\/review\//);
   });
 
-  it("QFAI:SPEC-0004:TC-0004-0072 — pack under .qfai/discussion/<ts>/ plus unrelated edit passes silently (normal)", async () => {
+  it("QFAI:EX-0002-0011-02 — pack under .qfai/discussion/<ts>/ plus unrelated edit passes silently (normal)", async () => {
     const res = await runCli(["validate", "--profile", "saas-package", "--format", "json"]);
     expect(res.stdout).not.toMatch(/R-PACK-LOCATION-DRIFT/);
   });
 
-  it("QFAI:SPEC-0004:TC-0004-0073 — untouched pre-existing legacy review-old/ is not re-flagged (changed-dir scope edge)", async () => {
+  it("QFAI:EX-0002-0011-02 — untouched pre-existing legacy review-old/ is not re-flagged (changed-dir scope edge)", async () => {
     // Boundary/scope: PR touches no pack dir while a legacy review-old/
     // exists untouched → lane passes; untouched legacy is out of changed-dir
     // scope (DR-0274), so no R-PACK-LOCATION-DRIFT.

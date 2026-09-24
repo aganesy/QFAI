@@ -9,13 +9,13 @@
  * referenced from tests/integration/**); type-column values are planning
  * signals per .qfai/assistant/catalog/test-layers.md "Volume policy".
  */
-// QFAI:SPEC-0006:TC-0006-0012
-// QFAI:SPEC-0006:TC-0006-0013
-// QFAI:SPEC-0006:TC-0006-0014
-// QFAI:SPEC-0006:TC-0006-0015
-// QFAI:SPEC-0006:TC-0006-0016
-// QFAI:SPEC-0006:TC-0006-0017
-// QFAI:SPEC-0006:TC-0006-0018
+// QFAI:EX-0003-0006-01
+// QFAI:EX-0003-0006-01
+// QFAI:EX-0003-0006-02
+// QFAI:EX-0003-0006-03
+// QFAI:EX-0003-0006-04
+// QFAI:EX-0003-0007-01
+// QFAI:EX-0003-0007-02
 
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

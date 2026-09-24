@@ -12,7 +12,7 @@
  *       preserved end-to-end).
  */
 
-// QFAI:SPEC-0012:TC-0012-0448
+// QFAI:EX-0001-0139-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

@@ -14,7 +14,7 @@
  * taskkill behaviour is the runner's responsibility (mocked here).
  */
 
-// QFAI:SPEC-0012:TC-0012-0462
+// QFAI:EX-0001-0135-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -107,7 +107,7 @@ async function seedMinimal(root: string): Promise<void> {
 }
 
 describe("iterate --auto-serve SIGINT teardown", () => {
-  // QFAI:SPEC-0012:TC-0012-0462
+  // QFAI:EX-0001-0135-01
   it("installs a SIGINT handler after the runner returns and removes it after cycle completion", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -162,7 +162,7 @@ describe("iterate --auto-serve SIGINT teardown", () => {
   // aggregate mirror tries to create as a directory; `mkdir(...,
   // { recursive: true })` then raises `EEXIST` / `ENOTDIR`, which
   // bubbles up past `runCapturePath`.
-  // QFAI:SPEC-0012:TC-0012-0462
+  // QFAI:EX-0001-0135-01
   it("auto-serve teardown + SIGINT detach happen even when the mirror helper throws", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -200,7 +200,7 @@ describe("iterate --auto-serve SIGINT teardown", () => {
     expect(process.listenerCount("SIGINT")).toBe(sigintListenersBefore);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0462
+  // QFAI:EX-0001-0135-01
   it("teardown executes within 2s when SIGINT is dispatched mid-run", async () => {
     const root = await newTempDir();
     await seedMinimal(root);

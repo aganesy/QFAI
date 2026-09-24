@@ -14,7 +14,7 @@
  * alone is faked: the scan is real file I/O, and faking the timers with it
  * would put this suite's own scheduling into the fixture.
  */
-// QFAI:SPEC-0015:TC-0015-0033
+// QFAI:EX-0001-0181-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

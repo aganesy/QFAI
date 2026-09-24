@@ -17,7 +17,7 @@
  * validate-side surfaces stay in lockstep.
  */
 
-// QFAI:SPEC-0014:TC-0014-0035
+// QFAI:EX-0001-0166-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

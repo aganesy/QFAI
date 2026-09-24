@@ -1,4 +1,4 @@
-// QFAI:SPEC-0006:TC-0006-0024
+// QFAI:EX-0003-0010-01
 //
 // Integration: `qfai doctor --profile <skill>` reads the skill's
 // manifest.json `runtimeDependencies` and probes the consumer

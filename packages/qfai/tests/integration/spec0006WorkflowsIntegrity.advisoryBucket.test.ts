@@ -106,7 +106,7 @@
  * what its three-`return` scoping buys are in its own docblock, not restated
  * here; a prose copy is a second SSOT.
  */
-// QFAI:SPEC-0006:TC-0006-0029
+// QFAI:EX-0003-0011-02
 
 import { describe, expect, it } from "vitest";
 

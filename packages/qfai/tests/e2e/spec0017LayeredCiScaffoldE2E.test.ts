@@ -165,8 +165,7 @@ async function runStep(
     if (child.error !== undefined) {
       // `bash` is absent on some Windows images. Rethrowing turns a missing interpreter into a
       // failure of the property under test, which it is not.
-      // Narrowed rather than asserted: the project rule bars a bare `as`, and the repository already
-      // has this exact idiom in `scripts/check-atdd-annotation-ledger.mjs`.
+      // Narrowed rather than asserted: the project rule bars a bare `as`.
       const error: unknown = child.error;
       const code =
         typeof error === "object" && error !== null && "code" in error
@@ -262,7 +261,7 @@ async function shippedJobs(): Promise<Record<string, unknown>> {
   return out;
 }
 
-// QFAI:SPEC-0017:US-0017-0001
+// QFAI:BF-0002
 describe(
   "E2E: an adopter receives change-derived selection behind a derived verdict (US-0017-0001)",
   { timeout: 120000 },
@@ -298,7 +297,7 @@ describe(
   },
 );
 
-// QFAI:SPEC-0017:US-0017-0002
+// QFAI:BF-0002
 describe(
   "E2E: an adopter receives a supply-chain-hardened workflow set (US-0017-0002)",
   { timeout: 120000 },
@@ -362,7 +361,7 @@ describe(
   },
 );
 
-// QFAI:SPEC-0017:US-0017-0003
+// QFAI:BF-0002
 describe(
   "E2E: an adopter receives no hard-coded Node version to drift from (US-0017-0003)",
   { timeout: 120000 },
@@ -560,7 +559,7 @@ describe(
   },
 );
 
-// QFAI:SPEC-0017:US-0017-0004
+// QFAI:BF-0002
 describe(
   "E2E: an adopter's lanes do not each rebuild what one could produce (US-0017-0004)",
   { timeout: 120000 },
@@ -1218,7 +1217,7 @@ describe(
   },
 );
 
-// QFAI:SPEC-0017:US-0017-0005
+// QFAI:BF-0002
 describe(
   "E2E: an adopter's layer separation lives in one workflow file (US-0017-0005)",
   { timeout: 120000 },
@@ -1251,7 +1250,7 @@ describe(
   },
 );
 
-// QFAI:SPEC-0017:US-0017-0006
+// QFAI:BF-0002
 describe(
   "E2E: an adopter's workflow set runs on the event that matters (US-0017-0006)",
   { timeout: 120000 },
@@ -1297,7 +1296,7 @@ describe(
  * because the guard that hunts refuted claims read `.qfai/**` and nothing else. It reads this file now.
  */
 
-// QFAI:SPEC-0017:US-0017-0008
+// QFAI:BF-0002
 describe(
   "E2E: an adopter's required check keeps its work when a workflow retires (US-0017-0008)",
   { timeout: 120000 },
@@ -1319,7 +1318,7 @@ describe(
   },
 );
 
-// QFAI:SPEC-0017:US-0017-0009
+// QFAI:BF-0002
 describe(
   "E2E: an adopter receives the layer-to-CI-lane map, invisibly to the parser (US-0017-0009)",
   { timeout: 120000 },

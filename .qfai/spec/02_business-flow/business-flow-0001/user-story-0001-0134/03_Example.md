@@ -1,0 +1,7 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                             | Expected                                                                                                                                                                                                                                                                                                                                                                              |
+| --------------- | --------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0001-0134-01 | AC-0001-0134-01 | Given `qfai prototyping iterate` invoked WITHOUT `--capture`, When the loop runs, | Then `iter-NN/<screen-id>.png` / `.html` are NOT written (DR-0012-0029 default preserved; amendment pinned by `DR-0012-0031`). A second invocation WITH `--capture` writes both per `iterate-plan.json#screens[]`. When `htmlSourceCopy: true`, the .html mirrors `.qfai/prototypes/iter-NN/<screen-id>.html` byte-for-byte (no runtime style-block injection from `page.content()`). |

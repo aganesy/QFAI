@@ -9,7 +9,7 @@
  * temp-fixture exercise of the iterate `--force` path + the SSOT
  * pair-scan reviewer-gate detector.
  */
-// QFAI:SPEC-0012:US-0012-0142
+// QFAI:BF-0001
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

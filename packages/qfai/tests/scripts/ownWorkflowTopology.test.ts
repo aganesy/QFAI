@@ -42,32 +42,32 @@
  * a developer machine without jq, and an unverifiable gate is what the derived
  * verdict exists to replace.
  */
-// QFAI:SPEC-0017:TC-0017-0001
-// QFAI:SPEC-0017:TC-0017-0002
-// QFAI:SPEC-0017:TC-0017-0003
-// QFAI:SPEC-0017:TC-0017-0004
-// QFAI:SPEC-0017:TC-0017-0005
-// QFAI:SPEC-0017:TC-0017-0027
-// QFAI:SPEC-0017:TC-0017-0028
-// QFAI:SPEC-0017:TC-0017-0029
-// QFAI:SPEC-0017:TC-0017-0031
-// QFAI:SPEC-0017:TC-0017-0071
-// QFAI:SPEC-0017:TC-0017-0072
-// QFAI:SPEC-0017:TC-0017-0073
-// QFAI:SPEC-0017:TC-0017-0006
-// QFAI:SPEC-0017:TC-0017-0007
-// QFAI:SPEC-0017:TC-0017-0008
-// QFAI:SPEC-0017:TC-0017-0009
-// QFAI:SPEC-0017:TC-0017-0010
-// QFAI:SPEC-0017:TC-0017-0011
-// QFAI:SPEC-0017:TC-0017-0012
-// QFAI:SPEC-0017:TC-0017-0041
-// QFAI:SPEC-0017:TC-0017-0042
-// QFAI:SPEC-0017:TC-0017-0043
-// QFAI:SPEC-0017:TC-0017-0036
-// QFAI:SPEC-0017:TC-0017-0038
-// QFAI:SPEC-0017:TC-0017-0039
-// QFAI:SPEC-0017:TC-0017-0040
+// QFAI:EX-0002-0013-01
+// QFAI:EX-0002-0013-03
+// QFAI:EX-0002-0013-05
+// QFAI:EX-0002-0013-02
+// QFAI:EX-0002-0013-04
+// QFAI:EX-0002-0015-01
+// QFAI:EX-0002-0015-02
+// QFAI:EX-0002-0015-03
+// QFAI:EX-0002-0015-05
+// QFAI:EX-0002-0020-01
+// QFAI:EX-0002-0020-02
+// QFAI:EX-0002-0020-03
+// QFAI:EX-0002-0013-07
+// QFAI:EX-0002-0013-06
+// QFAI:EX-0002-0013-08
+// QFAI:EX-0002-0013-08
+// QFAI:EX-0002-0013-10
+// QFAI:EX-0002-0013-09
+// QFAI:EX-0002-0013-11
+// QFAI:EX-0002-0017-03
+// QFAI:EX-0002-0017-01
+// QFAI:EX-0002-0017-02
+// QFAI:EX-0002-0016-04
+// QFAI:EX-0002-0016-05
+// QFAI:EX-0002-0016-06
+// QFAI:EX-0002-0016-06
 
 import { execFileSync, spawnSync } from "node:child_process";
 import {
@@ -1588,7 +1588,7 @@ function codePathCost(jobs: Record<string, Record<string, unknown>>): {
   return { instances, timeoutMinutesSum, installInstances, buildJobs };
 }
 
-// QFAI:SPEC-0017:TC-0017-0087
+// QFAI:EX-0002-0017-04
 describe("TC-0017-0087 (TDD-0096): the code path's cost agrees with the committed pin", () => {
   it("matches every pinned figure against this file's own reading of the workflow", () => {
     const cost = codePathCost(ciJobs());
@@ -4146,7 +4146,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     return runs.sort();
   };
 
-  // QFAI:SPEC-0017:TC-0017-0090
+  // QFAI:EX-0002-0017-06
   it("TC-0017-0090 (TDD-0099): classifies complete operation capabilities and legacy trees", () => {
     const current = classify(currentRoot(), currentPackage());
     expect(current.status, current.output).toBe(0);
@@ -4159,7 +4159,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     expect([legacy.shape, legacy.checks]).toEqual(["sliced", "aggregate"]);
   });
 
-  // QFAI:SPEC-0017:TC-0017-0090
+  // QFAI:EX-0002-0017-06
   it("TC-0017-0090 (TDD-0099): preserves the complete ordered release checks", () => {
     const parsed: unknown = JSON.parse(currentRoot());
     if (!isRecord(parsed) || !isRecord(parsed["scripts"])) throw new Error("root scripts missing");
@@ -4181,7 +4181,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     expect(selected.sort()).toEqual([...operationScripts].sort());
   });
 
-  // QFAI:SPEC-0017:TC-0017-0091
+  // QFAI:EX-0002-0017-06
   it("TC-0017-0091 (TDD-0100): incomplete operation capabilities retain aggregate checks", () => {
     const root = scriptKeys(currentRoot());
     for (const dropped of operationScripts) {
@@ -4199,7 +4199,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     expect([whole.shape, whole.checks]).toEqual(["whole", "aggregate"]);
   });
 
-  // QFAI:SPEC-0017:TC-0017-0091
+  // QFAI:EX-0002-0017-06
   it("TC-0017-0091 (TDD-0100): refuses missing unknown and incompatible checks outputs", () => {
     for (const id of ["github-release", "publish"]) {
       const condition = releaseJobs()[id]?.["if"];
@@ -4253,7 +4253,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0092
+  // QFAI:EX-0002-0017-06
   it("TC-0017-0092 (TDD-0101): runs independent checks in isolated verified workspaces", () => {
     for (const id of ["gate", ...operationJobs]) {
       const job = gateJobs()[id];
@@ -4594,7 +4594,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     return result;
   };
 
-  // QFAI:SPEC-0017:TC-0017-0088
+  // QFAI:EX-0002-0017-05
   it("TC-0017-0088 (TDD-0097): release prerequisites accept complete gate paths", () => {
     for (const id of ["github-release", "publish"]) {
       const condition = releaseJobs()[id]?.["if"];
@@ -4622,7 +4622,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0089
+  // QFAI:EX-0002-0017-05
   it("TC-0017-0089 (TDD-0098): release prerequisites reject invalid gate paths", () => {
     for (const id of ["github-release", "publish"]) {
       const condition = releaseJobs()[id]?.["if"];
@@ -4682,7 +4682,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0089
+  // QFAI:EX-0002-0017-05
   it("TC-0017-0089 release prerequisites evaluator refuses unsupported expressions", () => {
     for (const expression of [
       "always()",

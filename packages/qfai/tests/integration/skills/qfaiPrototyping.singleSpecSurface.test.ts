@@ -8,7 +8,7 @@
  * single-spec language without naming the multi-spec internal helper.
  */
 
-// QFAI:SPEC-0012:TC-0012-0447
+// QFAI:EX-0001-0138-01
 
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";

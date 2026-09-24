@@ -25,7 +25,7 @@ describe("Render Critique Loop validation", () => {
   });
 
   async function seedSkillPrompt(name: string, content: string): Promise<void> {
-    const dir = path.join(root, ".qfai", "assistant", "skills", name);
+    const dir = path.join(root, ".qfai", "assistant", "skill", name);
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "SKILL.md"), content, "utf-8");
   }
@@ -37,8 +37,8 @@ describe("Render Critique Loop validation", () => {
   }
 
   async function seedContracts(): Promise<void> {
-    const designDir = path.join(root, ".qfai", "contracts", "design");
-    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+    const designDir = path.join(root, ".qfai", "spec", "03_contract", "design");
+    const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
     await mkdir(designDir, { recursive: true });
     await mkdir(uiDir, { recursive: true });
     await writeFile(
@@ -62,7 +62,7 @@ describe("Render Critique Loop validation", () => {
     expect(issues.some((i) => i.code === "QFAI-CRIT-001")).toBe(true);
   });
 
-  it("read order with spec / DESIGN.md / ui contracts keeps QFAI-CRIT-002 and 005 silent", async () => {
+  it("read order with a story, DESIGN.md, and UI contracts keeps QFAI-CRIT-002 and 005 silent", async () => {
     await seedContracts();
     await seedSkillPrompt(
       "qfai-prototyping",
@@ -71,7 +71,7 @@ describe("Render Critique Loop validation", () => {
         "",
         "Take a screenshot of the rendered page and review it in the browser.",
         "",
-        "Read order: `.qfai/specs/spec-0001/01_Spec.md` -> `DESIGN.md` -> `.qfai/contracts/ui/*.yaml`.",
+        "Read order: business flow and user story -> `DESIGN.md` -> UI contracts.",
       ].join("\n"),
     );
     const issues = await validateRenderCritique(root, makeConfig());
@@ -88,7 +88,7 @@ describe("Render Critique Loop validation", () => {
         "",
         "Review the rendered HTML and screenshot output in the browser.",
         "",
-        "Read order: `.qfai/specs/spec-0001/01_Spec.md` -> `.qfai/contracts/ui/*.yaml`.",
+        "Read order: business flow and user story -> UI contracts.",
       ].join("\n"),
     );
 
@@ -96,6 +96,16 @@ describe("Render Critique Loop validation", () => {
 
     expect(issues.some((i) => i.code === "QFAI-CRIT-002")).toBe(true);
     expect(issues.some((i) => i.code === "QFAI-CRIT-005")).toBe(true);
+  });
+
+  it("does not treat an archived spec pack as the current story source", async () => {
+    await seedSkillPrompt(
+      "qfai-implement",
+      "Review rendered HTML after reading `.qfai/specs/spec-0001/01_Spec.md`, DESIGN.md, and UI contracts.",
+    );
+    const issues = await validateRenderCritique(root, makeConfig());
+    expect(issues.some((issue) => issue.code === "QFAI-CRIT-002")).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-CRIT-005")).toBe(true);
   });
 
   it("critique evidence に viewport/date/verdict/findings/rubric が揃っていれば必須項目エラーを返さない", async () => {
@@ -188,7 +198,7 @@ describe("Render Critique Loop validation", () => {
       [
         "# Prototyping Skill",
         "",
-        "Render screenshots and review HTML; honor spec / DESIGN.md / .qfai/contracts/ui.",
+        "Render screenshots and review HTML; honor the business flow, DESIGN.md, and UI contracts.",
       ].join("\n"),
     );
     // Seed an evidence file at the SCAN ROOT (matches the pattern
@@ -237,7 +247,7 @@ describe("Render Critique Loop validation", () => {
       [
         "# Prototyping Skill",
         "",
-        "Render screenshots and review HTML; honor spec / DESIGN.md / .qfai/contracts/ui.",
+        "Render screenshots and review HTML; honor the business flow, DESIGN.md, and UI contracts.",
       ].join("\n"),
     );
     await seedEvidence(
@@ -287,7 +297,7 @@ describe("Render Critique Loop validation", () => {
       [
         "# Prototyping Skill",
         "",
-        "Render screenshots and review HTML; honor spec / DESIGN.md / .qfai/contracts/ui.",
+        "Render screenshots and review HTML; honor the business flow, DESIGN.md, and UI contracts.",
       ].join("\n"),
     );
     // Seed the iter directory and let the emitter write the

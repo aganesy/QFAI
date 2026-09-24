@@ -1,23 +1,21 @@
 /**
- * Integration: writeDecisionRecord persists `.qfai/evidence/decisions/<ts>.json`
+ * Integration: writeDecisionRecord persists `.qfai/evidence/decision/<ts>.json`
  * (TC-0015-0022, AC-0015-0016).
  *
  * The writer triggers only when `envelopeContractClause` names one of
  * the four envelope-deviation contexts (DR-0270). The record shape is
  * `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}`.
- * `.qfai/evidence/decisions/` — not `.qfai/decisions/`, which holds Change
- * Request records — is tracked in version control: the managed .gitignore block
- * negates it after `.qfai/evidence/*`.
+ * The managed .gitignore block tracks `.qfai/evidence/decision/`.
  */
-// QFAI:SPEC-0015:TC-0015-0022
+// QFAI:EX-0001-0176-01
 
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { writeDecisionRecord } from "../../src/core/decisionRecord.js";
+import { readDecisionRecords, writeDecisionRecord } from "../../src/core/decisionRecord.js";
 
 let root: string;
 
@@ -29,7 +27,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-describe("TC-0015-0022: writeDecisionRecord writes .qfai/evidence/decisions/<ts>.json for envelope contexts", () => {
+describe("TC-0015-0022: writeDecisionRecord writes .qfai/evidence/decision/<ts>.json for envelope contexts", () => {
   it("writes a record when the envelope context is 'architectural-decision'", async () => {
     const result = await writeDecisionRecord({
       root,
@@ -53,7 +51,8 @@ describe("TC-0015-0022: writeDecisionRecord writes .qfai/evidence/decisions/<ts>
       // ISO-8601 (file-safe timestamp uses `-` for `:`)
       expect(parsed.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}/);
     }
-    const decisionsDir = path.join(root, ".qfai", "evidence", "decisions");
+    const decisionsDir = path.join(root, ".qfai", "evidence", "decision");
+    expect(path.dirname(result.path ?? "")).toBe(decisionsDir);
     const entries = await readdir(decisionsDir);
     expect(entries.length).toBe(1);
     const entry = entries[0] ?? "";
@@ -72,7 +71,7 @@ describe("TC-0015-0022: writeDecisionRecord writes .qfai/evidence/decisions/<ts>
     });
     expect(result.written).toBe(false);
     expect(result.path).toBeUndefined();
-    const decisionsDir = path.join(root, ".qfai", "evidence", "decisions");
+    const decisionsDir = path.join(root, ".qfai", "evidence", "decision");
     let exists = true;
     try {
       await readdir(decisionsDir);
@@ -105,5 +104,36 @@ describe("TC-0015-0022: writeDecisionRecord writes .qfai/evidence/decisions/<ts>
         await rm(sub, { recursive: true, force: true });
       }
     }
+  });
+
+  it("reads the new store without silently including unmigrated records from the old store", async () => {
+    const oldDir = path.join(root, ".qfai", "evidence", "decisions");
+    await mkdir(oldDir, { recursive: true });
+    await writeFile(
+      path.join(oldDir, "legacy.json"),
+      JSON.stringify({
+        question: "old",
+        answer: "yes",
+        scope: "skill-envelope",
+        operatorIdentity: "tester",
+        timestamp: "2026-05-27T00:00:00.000Z",
+        envelopeContractClause: "skill-envelope: old",
+      }),
+      "utf-8",
+    );
+
+    expect(await readDecisionRecords(root)).toEqual([]);
+    await writeDecisionRecord({
+      root,
+      question: "new",
+      answer: "yes",
+      scope: "skill-envelope",
+      operatorIdentity: "tester",
+      envelopeContractClause: "skill-envelope: new",
+    });
+    const records = await readDecisionRecords(root);
+    expect(records).toHaveLength(1);
+    expect(records[0]?.question).toBe("new");
+    expect(records[0]?.__file).toContain(path.join("evidence", "decision"));
   });
 });

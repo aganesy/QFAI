@@ -1,7 +1,7 @@
 import path from "node:path";
 
 /**
- * SSOT for the 4-layer assistant-tree path segments.
+ * SSOT for the assistant-tree path segments.
  * Hard-coded `.qfai/assistant/<layer>/` literals elsewhere in
  * the codebase are lint-rejected; build path strings through
  * the helpers in this module.
@@ -9,7 +9,7 @@ import path from "node:path";
 
 export const ASSISTANT_DIR = ".qfai/assistant" as const;
 
-export const ASSISTANT_LAYERS = ["constitution", "manifest", "catalog", "process"] as const;
+export const ASSISTANT_LAYERS = ["rule", "skill", "agent", "prompt"] as const;
 
 export type AssistantLayer = (typeof ASSISTANT_LAYERS)[number];
 
@@ -17,9 +17,7 @@ export const LEGACY_ASSISTANT_STEERING_DIR = ".qfai/assistant/steering" as const
 
 export const PROJECT_STEERING_DIR = ".qfai/steering" as const;
 
-export const PROJECT_STEERING_TEMPLATES_SUBDIR = "_templates" as const;
-
-export const MIGRATIONS_SUBDIR = "migrations" as const;
+export const PROJECT_STEERING_TEMPLATES_SUBDIR = "_template" as const;
 
 /**
  * The release that retired the legacy `.qfai/assistant/steering/` layout.
@@ -86,14 +84,6 @@ export function joinLegacyAssistantInstructions(destRoot: string, ...rest: strin
 
 export function joinProjectSteering(destRoot: string, ...rest: string[]): string {
   return path.join(destRoot, PROJECT_STEERING_DIR, ...rest);
-}
-
-export function migrationMemoRelativePath(version: string): string {
-  return `${ASSISTANT_DIR}/process/${MIGRATIONS_SUBDIR}/v${version}-assistant-layer-recut.md`;
-}
-
-export function joinMigrationMemo(destRoot: string, version: string): string {
-  return path.join(destRoot, migrationMemoRelativePath(version));
 }
 
 /**

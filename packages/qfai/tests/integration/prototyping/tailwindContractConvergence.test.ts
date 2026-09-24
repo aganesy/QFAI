@@ -13,7 +13,7 @@
  * `shouldStop`) without requiring the CLI harness, so the assertion
  * surface stays integration-level but execution stays in-process.
  */
-// QFAI:SPEC-0012:TC-0012-0434
+// QFAI:EX-0001-0128-01
 
 import { describe, expect, it } from "vitest";
 

@@ -1,6 +1,6 @@
 /**
  * Integration acceptance for spec-0012 CHG-006 test cases
- * TC-0012-0471..0480 (emit-skeletons coverage, DESIGN.md patch-zone,
+ * Emit-skeletons coverage, DESIGN.md patch-zone,
  * prototyping.mode discriminator, taskFidelity keywords, mutation-log).
  *
  * Converted from `.skip` test-first skeletons to deterministic
@@ -8,16 +8,6 @@
  * The integration layer carries the TC annotation comments; the e2e
  * sibling files carry only US annotations per the layer policy.
  */
-// QFAI:SPEC-0012:TC-0012-0471
-// QFAI:SPEC-0012:TC-0012-0472
-// QFAI:SPEC-0012:TC-0012-0473
-// QFAI:SPEC-0012:TC-0012-0474
-// QFAI:SPEC-0012:TC-0012-0475
-// QFAI:SPEC-0012:TC-0012-0476
-// QFAI:SPEC-0012:TC-0012-0477
-// QFAI:SPEC-0012:TC-0012-0478
-// QFAI:SPEC-0012:TC-0012-0479
-// QFAI:SPEC-0012:TC-0012-0480
 
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -125,9 +115,9 @@ async function seedProject(
   );
 }
 
-// ─── E1 (TC-0012-0471/0472): --emit-skeletons coverage ────────────────────
+// ─── --emit-skeletons coverage ────────────────────
 
-describe("TC-0012-0471: iterate --cycle 0 --emit-skeletons writes one placeholder HTML per screen", () => {
+describe("iterate --cycle 0 --emit-skeletons writes one placeholder HTML per screen", () => {
   it("emits one DESIGN.md-token placeholder HTML per UI-contract `screens[].id` (no per-screen LLM call)", async () => {
     const root = await newTempDir();
     await seedProject(root);
@@ -161,10 +151,20 @@ describe("TC-0012-0471: iterate --cycle 0 --emit-skeletons writes one placeholde
   });
 });
 
-describe("TC-0012-0472: --emit-skeletons opt-in default + --skeleton-mode discriminator", () => {
+describe("--emit-skeletons opt-in default + --skeleton-mode discriminator", () => {
+  // QFAI:EX-0001-0147-02
   it("absence of --emit-skeletons writes zero placeholder HTML files (v1.9.1 no-regression)", async () => {
     const root = await newTempDir();
     await seedProject(root);
+    const uiDir = path.join(root, ".qfai/contracts/ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "screens.yaml"),
+      ["screens:", "  - id: home", "    route: /", "  - id: settings", "    route: /settings"].join(
+        "\n",
+      ),
+      "utf-8",
+    );
     const exit = await runPrototypingIterate({
       root,
       cycle: 0,
@@ -180,6 +180,8 @@ describe("TC-0012-0472: --emit-skeletons opt-in default + --skeleton-mode discri
       ),
     ) as Record<string, unknown>;
     expect(plan.cycle).toBe(0);
+    const entries = await readdir(path.join(root, ".qfai/evidence/prototyping/iter-00"));
+    expect(entries.filter((entry) => entry.endsWith(".html"))).toEqual([]);
   });
 
   it("--skeleton-mode full keeps the placeholder body but marks the caller-replace contract", () => {
@@ -199,7 +201,7 @@ describe("TC-0012-0472: --emit-skeletons opt-in default + --skeleton-mode discri
   });
 });
 
-// ─── E2 (TC-0012-0473/0474): DESIGN.md patch_zone ────────────────────
+// ─── DESIGN.md patch_zone ────────────────────
 
 const PATCH_ZONE_FIXTURE = `---
 brand:
@@ -219,7 +221,7 @@ patch_zone:
 # DESIGN.md body content
 `;
 
-describe("TC-0012-0473: in-zone edit updates only patchHash", () => {
+describe("in-zone edit updates only patchHash", () => {
   it("an in-zone color-token value edit keeps majorHash byte-stable and bumps patchHash", () => {
     const DESIGN_BEFORE = PATCH_ZONE_FIXTURE;
     const DESIGN_AFTER = DESIGN_BEFORE.replace('"#f59e0b"', '"#fa6500"');
@@ -230,7 +232,7 @@ describe("TC-0012-0473: in-zone edit updates only patchHash", () => {
   });
 });
 
-describe("TC-0012-0474: out-of-zone edit invalidates evidence and surfaces R-DESIGN-MD-PATCH-OUT-OF-ZONE", () => {
+describe("out-of-zone edit invalidates evidence and surfaces R-DESIGN-MD-PATCH-OUT-OF-ZONE", () => {
   it("an out-of-zone token value (visual.colors.primary) bumps majorHash", () => {
     const DESIGN_BEFORE = PATCH_ZONE_FIXTURE;
     const DESIGN_AFTER = DESIGN_BEFORE.replace('"#2563eb"', '"#7777FF"');
@@ -246,9 +248,9 @@ describe("TC-0012-0474: out-of-zone edit invalidates evidence and surfaces R-DES
   });
 });
 
-// ─── E3 (TC-0012-0475/0476): prototyping.mode + certify reject ──────────
+// ─── prototyping.mode + certify reject ──────────
 
-describe("TC-0012-0475: --mode exploration overrides config + per-iteration mode persisted", () => {
+describe("--mode exploration overrides config + per-iteration mode persisted", () => {
   it("--mode exploration over config=convergence records exploration on the seed iteration", async () => {
     const root = await newTempDir();
     await seedProject(root, { mode: "convergence" });
@@ -283,7 +285,7 @@ describe("TC-0012-0475: --mode exploration overrides config + per-iteration mode
   });
 });
 
-describe("TC-0012-0476: certify refuses to seal a loop with any exploration-mode iteration", () => {
+describe("certify refuses to seal a loop with any exploration-mode iteration", () => {
   it("certify surfaces R-EXPLORATION-CERTIFY-ATTEMPT + exit 2 when an exploration iter is present", async () => {
     const root = await newTempDir();
     await seedProject(root);
@@ -341,9 +343,9 @@ describe("TC-0012-0476: certify refuses to seal a loop with any exploration-mode
   });
 });
 
-// ─── E4 (TC-0012-0477/0478): taskFidelity keyword SSOT + template ────────
+// ─── taskFidelity keyword SSOT + template ────────
 
-describe("TC-0012-0477: QFAI-CRIT-009 keyword surface SSOT", () => {
+describe("QFAI-CRIT-009 keyword surface SSOT", () => {
   it("the required keyword list contains every documented keyword and the section name is canonical", () => {
     expect(TASK_FIDELITY_REQUIRED_KEYWORDS).toContain("cta_visibility");
     expect(TASK_FIDELITY_REQUIRED_KEYWORDS).toContain("four_state_check");
@@ -351,8 +353,9 @@ describe("TC-0012-0477: QFAI-CRIT-009 keyword surface SSOT", () => {
   });
 });
 
-describe("TC-0012-0478: iterate --capture emits a taskFidelity template skeleton with every keyword", () => {
-  it("the template body lists every required keyword as a TODO line under the section header", async () => {
+describe("iterate --capture emits a taskFidelity template with named sections", () => {
+  // QFAI:EX-0001-0150-02
+  it("includes cta_visibility and four_state_check sections with TODO placeholders for all keywords", async () => {
     const root = await newTempDir();
     await seedProject(root);
     const iterDir = path.join(root, ".qfai/evidence/prototyping/iter-00");
@@ -360,23 +363,26 @@ describe("TC-0012-0478: iterate --capture emits a taskFidelity template skeleton
     const written = await writeTaskFidelityTemplate(iterDir);
     const body = await readFile(written.path, "utf-8");
     expect(body).toContain(TASK_FIDELITY_SECTION_NAME);
+    expect(body).toMatch(/^## cta_visibility$/m);
+    expect(body).toMatch(/^## four_state_check$/m);
     for (const kw of TASK_FIDELITY_REQUIRED_KEYWORDS) {
       expect(body).toMatch(new RegExp(`- ${kw}: TODO`));
     }
   });
 });
 
-// ─── E5 (TC-0012-0479/0480): mutation-log + R-EVIDENCE-MUTATION-UNLOGGED ─
+// ─── mutation-log + R-EVIDENCE-MUTATION-UNLOGGED ─
 
-describe("TC-0012-0479: --cycle 0 --force appends a mutation-log line per moved file", () => {
-  it("each prior iter-00 file is recorded with a JSONL line on the backup path", async () => {
+describe("--cycle 0 --force appends a mutation-log line per moved file", () => {
+  // QFAI:EX-0001-0151-01
+  it("records a 2048-byte UI review file with its source path and prior size", async () => {
     const root = await newTempDir();
     await seedProject(root);
-    // Plant prior iter-00 content (two files).
-    const iter00 = path.join(root, ".qfai/evidence/prototyping/iter-00");
-    await mkdir(iter00, { recursive: true });
-    await writeFile(path.join(iter00, "home.html"), "<old/>", "utf-8");
-    await writeFile(path.join(iter00, "dash.html"), "<old/>", "utf-8");
+    // Plant prior iter-00 content.
+    const reviewRel = ".qfai/evidence/prototyping/iter-00/CON-UI-0001/home.review.json";
+    const reviewAbs = path.join(root, reviewRel);
+    await mkdir(path.dirname(reviewAbs), { recursive: true });
+    await writeFile(reviewAbs, `{}` + " ".repeat(2046), "utf-8");
     const exit = await runPrototypingIterate({
       root,
       cycle: 0,
@@ -389,20 +395,25 @@ describe("TC-0012-0479: --cycle 0 --force appends a mutation-log line per moved 
       "utf-8",
     );
     const lines = logRaw.trim().split("\n");
-    expect(lines.length).toBeGreaterThanOrEqual(2);
-    for (const line of lines) {
-      const entry = JSON.parse(line) as Record<string, unknown>;
-      expect(typeof entry.ts).toBe("string");
-      expect(entry.caller).toBe("iterate");
-      expect(typeof entry.path).toBe("string");
-      expect(entry.action).toBe("move");
-      expect(typeof entry.priorSize).toBe("number");
-      expect(entry.newSize).toBe(0);
-    }
+    const entries = lines.map((line) => JSON.parse(line) as Record<string, unknown>);
+    expect(entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          caller: "iterate",
+          path: reviewRel,
+          action: "move",
+          priorSize: 2048,
+          newSize: 0,
+        }),
+      ]),
+    );
+    const moved = entries.find((entry) => entry.path === reviewRel);
+    expect(typeof moved?.ts).toBe("string");
+    expect(Number.isNaN(Date.parse(String(moved?.ts)))).toBe(false);
   });
 });
 
-describe("TC-0012-0480: R-EVIDENCE-MUTATION-UNLOGGED fires when a known mutation site lacks the log call", () => {
+describe("R-EVIDENCE-MUTATION-UNLOGGED source-pair scan", () => {
   it("the SSOT-sync pair scan emits exactly zero findings for the in-tree symmetric pair (current state)", async () => {
     // Run the detector against the real repo root. Today both
     // mutation tokens (`await rename(iter00Abs` + `clearEvidenceIterDirs`

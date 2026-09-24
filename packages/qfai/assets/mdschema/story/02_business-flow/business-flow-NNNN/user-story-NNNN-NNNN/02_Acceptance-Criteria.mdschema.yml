@@ -1,0 +1,16 @@
+# Document schema: 02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/02_Acceptance-Criteria.md
+structure:
+  - heading:
+      pattern: "^# Acceptance Criteria$"
+      regex: true
+    description: Required document heading.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Criteria$"
+          regex: true
+        description: Criteria section.
+        allow_additional: true
+        code_blocks:
+          - lang: gherkin
+            min: 1

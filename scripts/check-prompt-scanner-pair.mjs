@@ -4,7 +4,7 @@
  *
  * The SSOT-sync pair tracked here is:
  *   - scanner: packages/qfai/src/core/prototyping/designMdViolations.ts
- *   - prompt:  packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md
+ *   - prompt:  packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md
  *
  * A PR that touches exactly ONE half of the pair without the other is
  * rejected with R-PROMPT-SCANNER-DRIFT. A PR that touches BOTH halves
@@ -65,7 +65,7 @@ import { argv, env, exit, stdout, stderr } from "node:process";
 
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md";
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md";
 
 /** The one section of the prompt that states the compliance contract. */
 const PROMPT_SCOPE_HEADING = "## Hard constraints (enforced by the compliance gate)";

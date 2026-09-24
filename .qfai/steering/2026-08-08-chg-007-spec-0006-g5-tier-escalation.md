@@ -4,11 +4,11 @@ status: active
 kind: decision
 created: 2026-08-08
 updated: 2026-08-08
-scope: spec-0006
+scope: BF-0003
 blocking: false
 promote-to: null
 links:
-  - spec-0006
+  - BF-0003
   - TDD-0032
   - TDD-0038
   - TDD-0039

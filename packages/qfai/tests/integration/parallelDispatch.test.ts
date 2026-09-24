@@ -38,7 +38,7 @@ async function loadContent(): Promise<string> {
   return content;
 }
 
-// QFAI:SPEC-0011:TC-0011-0005
+// QFAI:EX-0001-0096-01
 describe("independent slices dispatched in parallel with integration verify", () => {
   it("defines allow conditions for parallel dispatch", async () => {
     const c = await loadContent();
@@ -54,7 +54,7 @@ describe("independent slices dispatched in parallel with integration verify", ()
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0005
+// QFAI:EX-0001-0096-01
 describe("dependent slices blocked from parallel dispatch", () => {
   it("defines deny conditions that block parallel dispatch", async () => {
     const c = await loadContent();

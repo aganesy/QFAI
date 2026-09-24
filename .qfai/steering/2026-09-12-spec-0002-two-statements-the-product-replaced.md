@@ -4,10 +4,11 @@ status: active
 kind: consultation-needed
 created: 2026-09-12
 updated: 2026-09-13
-scope: spec-0002
+scope: BF-0001
 blocking: true
 promote-to: null
-links: ["spec-0002"]
+links:
+  - BF-0001
 ---
 
 # spec-0002 states two rules the product replaced

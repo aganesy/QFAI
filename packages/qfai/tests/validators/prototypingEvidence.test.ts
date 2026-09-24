@@ -12,10 +12,13 @@ import {
   findMissingRoutes,
 } from "../../src/core/prototyping/layoutAntiPatternsAdvisory.js";
 import {
+  buildEvidenceRefs,
   SEED_COMMIT_SHA,
   SEED_PROSE_CRITIQUE_PLACEHOLDER,
   SEED_REVIEWER_ID,
 } from "../../src/core/prototyping/iteration.js";
+import type { EvidenceRef } from "../../src/core/prototyping/iteration.js";
+import { PROTOTYPING_EVIDENCE_REL } from "../../src/core/prototyping/paths.js";
 import type { QfaiConfig } from "../../src/core/config.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -78,14 +81,17 @@ const validIter = (index: number, converged = false, lap: string[] = []) => ({
   index,
   commitSha: "a".repeat(40),
   blockingFindings: converged ? [] : ["home: the empty state is not represented"],
+  scores: {
+    informationArchitecture: converged ? "exceptional" : "strong",
+    navigationFlow: converged ? "exceptional" : "strong",
+    usability: converged ? "exceptional" : "strong",
+    functionality: converged ? "exceptional" : "strong",
+  },
   proseCritique: VALID_PROSE_CRITIQUE,
   layoutAntiPatternsDetected: lap,
   designMdViolations: [],
   pivotDirective: "continue" as const,
-  evidenceRefs: {
-    screenshot: `.qfai/evidence/prototyping/iter-${String(index).padStart(2, "0")}/home.png`,
-    html: `.qfai/evidence/prototyping/iter-${String(index).padStart(2, "0")}/home.html`,
-  },
+  evidenceRefs: buildEvidenceRefs(index, ["home"]),
 });
 
 async function seedReviewJsonRaw(root: string, index: number, raw: string): Promise<void> {
@@ -114,11 +120,17 @@ function reviewFrom(
   iter: {
     index: number;
     blockingFindings: readonly string[];
+    scores: {
+      informationArchitecture: string;
+      navigationFlow: string;
+      usability: string;
+      functionality: string;
+    };
     proseCritique: string;
     layoutAntiPatternsDetected: readonly string[];
     designMdViolations: readonly { kind: string; found: string }[];
     pivotDirective: string;
-    evidenceRefs: { screenshot: string; html: string };
+    evidenceRefs: readonly EvidenceRef[];
   },
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
@@ -126,12 +138,23 @@ function reviewFrom(
     iterIndex: iter.index,
     reviewerId: "product-surface-reviewer",
     blockingFindings: iter.blockingFindings,
+    scores: iter.scores,
     proseCritique: iter.proseCritique,
     layoutAntiPatternsDetected: iter.layoutAntiPatternsDetected,
     designMdViolations: iter.designMdViolations,
     pivotDirective: iter.pivotDirective,
-    evidenceRefs: iter.evidenceRefs,
+    evidenceRefs: reviewEvidenceRefs(iter),
     ...overrides,
+  };
+}
+
+function reviewEvidenceRefs(iter: { evidenceRefs: readonly EvidenceRef[] }): {
+  screenshot: string;
+  html: string;
+} {
+  return {
+    screenshot: `${PROTOTYPING_EVIDENCE_REL}/${iter.evidenceRefs.find((ref) => ref.kind === "screenshot")?.path ?? ""}`,
+    html: `${PROTOTYPING_EVIDENCE_REL}/${iter.evidenceRefs.find((ref) => ref.kind === "html")?.path ?? ""}`,
   };
 }
 
@@ -213,6 +236,44 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
+  it("rejects convergence when all blockers clear but one ordinal score remains strong", async () => {
+    const root = await newTempDir();
+    const iter = {
+      ...validIter(0, true),
+      scores: { ...validIter(0, true).scores, navigationFlow: "strong" },
+    };
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["CON-UI-0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: "converged",
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((item) => item.rule === "prototypingEvidence.stopReasonConsistency")).toBe(
+      true,
+    );
+    expect(issues.some((item) => item.rule === "prototypingEvidence.scores")).toBe(false);
+  });
+
+  it("accepts four exceptional scores with empty blockers on a reviewed convergence", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0, true);
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["CON-UI-0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: "converged",
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.filter((item) => item.code === "QFAI-PROT-002" || item.code === "QFAI-PROT-005"),
+    ).toEqual([]);
+  });
+
   it("emits structured issues instead of throwing when stopReason=converged and the last iter is malformed", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -226,7 +287,7 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
-  // QFAI:SPEC-0004:TC-0004-0013
+  // QFAI:EX-0001-0042-09
   it("emits QFAI-PROT-002 when designMdViolations contains a malformed entry", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -553,7 +614,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   // The mirror accepts any string here, so this code is invisible on that
   // surface no matter how it is written. Both sides carry the same value, so
   // the only finding available is the registry check on the reviewer's file.
-  // QFAI:SPEC-0004:TC-0004-0012
+  // QFAI:EX-0001-0042-07
   it("emits QFAI-PROT-002 for a lap-* code no registry entry declares", async () => {
     const root = await newTempDir();
     const iter = validIter(0, false, ["lap-999-not-a-real-code"]);
@@ -666,6 +727,48 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     expect(rules).toContain("prototypingEvidence.review.designMdViolations");
     expect(rules).toContain("prototypingEvidence.review.pivotDirective");
     expect(rules).toContain("prototypingEvidence.review.blockingFindings");
+  });
+
+  it("requires exactly four valid ordinal scores in both summary and persisted iteration", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["CON-UI-0001"],
+      iterations: [{ ...iter, scores: { ...iter.scores, delight: "exceptional" } }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(
+      root,
+      0,
+      reviewFrom(iter, { scores: { informationArchitecture: "excellent" } }),
+    );
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((item) => item.rule === "prototypingEvidence.scores")).toBe(true);
+    expect(issues.some((item) => item.rule === "prototypingEvidence.review.scores")).toBe(true);
+  });
+
+  it("reports a score changed while transcribing the reviewer summary", async () => {
+    const root = await newTempDir();
+    const reviewed = validIter(0);
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["CON-UI-0001"],
+      iterations: [{ ...reviewed, scores: { ...reviewed.scores, usability: "acceptable" } }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(reviewed));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (item) =>
+          item.rule === "prototypingEvidence.review.mirrorMismatch" &&
+          item.message.includes("scores"),
+      ),
+    ).toBe(true);
+    expect(issues.some((item) => item.rule === "prototypingEvidence.scores")).toBe(false);
   });
 
   it("emits QFAI-PROT-002 when review.json iterIndex does not match its directory", async () => {
@@ -856,7 +959,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   // and `.agents/rules/distributed-surface.md` forbids introducing one. It
   // means a payload carrying the pre-v3 keys and missing the v3 required ones,
   // which is what the example spells out.
-  // QFAI:SPEC-0004:TC-0004-0011
+  // QFAI:EX-0001-0042-06
   it("emits QFAI-PROT-002 listing the required keys a v1.x-shaped review.json omits", async () => {
     const root = await newTempDir();
     const iter = validIter(0);
@@ -1123,6 +1226,170 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
 
     const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(issues.some((i) => i.rule === "prototypingEvidence.review.evidenceRefs")).toBe(true);
+  });
+
+  it("accepts full review paths mirrored by relative array entries across multiple screens", async () => {
+    const root = await newTempDir();
+    const iter = {
+      ...validIter(0),
+      evidenceRefs: buildEvidenceRefs(0, ["home", "settings"]),
+    };
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["CON-UI-0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.filter((item) => item.code === "QFAI-PROT-002")).toEqual([]);
+  });
+
+  it("reports a reviewer screenshot or html missing from the persisted array", async () => {
+    const root = await newTempDir();
+    const reviewed = validIter(0);
+    const persisted = {
+      ...reviewed,
+      evidenceRefs: reviewed.evidenceRefs.filter((ref) => ref.kind !== "html"),
+    };
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["CON-UI-0001"],
+      iterations: [persisted],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(reviewed));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (item) =>
+          item.rule === "prototypingEvidence.review.mirrorMismatch" &&
+          item.message.includes("evidenceRefs.html"),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects an object where the persisted evidence array belongs", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["CON-UI-0001"],
+      iterations: [{ ...iter, evidenceRefs: reviewEvidenceRefs(iter) }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((item) => item.rule === "prototypingEvidence.evidenceRefs")).toBe(true);
+  });
+
+  it("rejects duplicate kind and path entries in the persisted array", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    const screenshot = iter.evidenceRefs.find((ref) => ref.kind === "screenshot");
+    if (!screenshot) throw new Error("test fixture must include a screenshot ref");
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["CON-UI-0001"],
+      iterations: [{ ...iter, evidenceRefs: [...iter.evidenceRefs, screenshot] }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((item) => item.rule === "prototypingEvidence.evidenceRefs.duplicate")).toBe(
+      true,
+    );
+  });
+
+  it("rejects an unknown or mislabeled kind in the persisted array", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["CON-UI-0001"],
+      iterations: [
+        {
+          ...iter,
+          evidenceRefs: [
+            { kind: "video", path: "iter-00/home.png" },
+            { kind: "html", path: "iter-00/home.png" },
+          ],
+        },
+      ],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((item) => item.rule === "prototypingEvidence.evidenceRefs.kind")).toBe(true);
+    expect(issues.some((item) => item.rule === "prototypingEvidence.evidenceRefs.path")).toBe(true);
+  });
+
+  it("rejects escaped or wrong-iteration paths on either mirror surface", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["CON-UI-0001"],
+      iterations: [
+        {
+          ...iter,
+          evidenceRefs: [
+            { kind: "screenshot", path: "../outside.png" },
+            { kind: "html", path: "iter-01/home.html" },
+          ],
+        },
+      ],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(
+      root,
+      0,
+      reviewFrom(iter, {
+        evidenceRefs: {
+          screenshot: "../outside.png",
+          html: `${PROTOTYPING_EVIDENCE_REL}/iter-01/home.html`,
+        },
+      }),
+    );
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.filter((item) => item.rule === "prototypingEvidence.evidenceRefs.path"),
+    ).toHaveLength(2);
+    expect(
+      issues.filter((item) => item.rule === "prototypingEvidence.review.evidenceRefs.path"),
+    ).toHaveLength(2);
+  });
+
+  it("rejects undeclared kinds in the review object", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["CON-UI-0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(
+      root,
+      0,
+      reviewFrom(iter, {
+        evidenceRefs: {
+          ...reviewEvidenceRefs(iter),
+          video: `${PROTOTYPING_EVIDENCE_REL}/iter-00/home.mp4`,
+        },
+      }),
+    );
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some((item) => item.rule === "prototypingEvidence.review.evidenceRefs.kind"),
+    ).toBe(true);
   });
 
   // A non-directory component on the way to `iter-NN/` means the file is not

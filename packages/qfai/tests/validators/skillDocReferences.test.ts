@@ -4,8 +4,8 @@
  * Covers TC-0004-0023 (project_memory enforcement) and TC-0004-0024
  * (W-SKILL-DOC-BROKEN-REF).
  */
-// QFAI:SPEC-0004:TC-0004-0023
-// QFAI:SPEC-0004:TC-0004-0024
+// QFAI:EX-0001-0047-02
+// QFAI:EX-0001-0048-01
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";

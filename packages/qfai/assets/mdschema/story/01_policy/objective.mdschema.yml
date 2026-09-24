@@ -1,0 +1,13 @@
+# Document schema: 01_policy/objective.md
+structure:
+  - heading:
+      pattern: "^# Objective$"
+      regex: true
+    description: Required document heading.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Objective$"
+          regex: true
+        description: Objective section.
+        allow_additional: true

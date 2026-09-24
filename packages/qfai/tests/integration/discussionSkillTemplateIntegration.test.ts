@@ -125,7 +125,7 @@ describe("discussion skill template integration", () => {
     expect(files).not.toContain("34_evaluator_calibration.md");
   });
 
-  // QFAI:SPEC-0002:TC-0002-0008
+  // QFAI:EX-0001-0016-01
   it("SKILL.md の UI-bearing completion が brand SSOT を要求している", async () => {
     const content = await readFile(skillPath, "utf-8");
     expect(content).toMatch(/DESIGN\.md/);

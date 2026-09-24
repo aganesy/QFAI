@@ -1,0 +1,8 @@
+flows:
+  - title: First order flow
+    stories:
+      - id: US-0001-0001
+  - title: Second order flow
+    stories:
+      - id: US-0001-0001
+rules: []

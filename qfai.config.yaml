@@ -1,9 +1,9 @@
 paths:
-  specsDir: .qfai/specs
-  contractsDir: .qfai/contracts
+  specsDir: .qfai/spec
+  contractsDir: .qfai/spec/03_contract
   discussionDir: .qfai/discussion
   outDir: .qfai/report
-  skillsDir: .qfai/assistant/skills
+  skillsDir: .qfai/assistant/skill
   srcDir: src
   testsDir: tests
 validation:

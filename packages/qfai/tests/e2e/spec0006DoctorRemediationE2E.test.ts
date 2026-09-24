@@ -7,9 +7,9 @@
  * local execFile helper. /qfai-implement removes `.skip` to turn these
  * green.
  */
-// QFAI:SPEC-0006:US-0006-0008
-// QFAI:SPEC-0006:US-0006-0009
-// QFAI:SPEC-0006:US-0006-0010
+// QFAI:BF-0003
+// QFAI:BF-0003
+// QFAI:BF-0003
 
 import { execFile } from "node:child_process";
 import path from "node:path";
@@ -39,7 +39,7 @@ async function runCli(
 }
 
 describe.skip("spec-0006 doctor --clean TTL archival CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0006:US-0006-0008 — doctor --clean moves a TTL-expired review pack into .qfai/review/_archive/ and never deletes (normal/state)", async () => {
+  it("QFAI:BF-0003 — doctor --clean moves a TTL-expired review pack into .qfai/review/_archive/ and never deletes (normal/state)", async () => {
     // Normal + state transition: an expired top-level pack is moved (not
     // deleted) into _archive/; restore is manual mv.
     const res = await runCli(["doctor", "--clean", "--format", "text"]);
@@ -47,7 +47,7 @@ describe.skip("spec-0006 doctor --clean TTL archival CHG-006 (test-first, pendin
     expect(res.stdout + res.stderr).toMatch(/_archive/);
   });
 
-  it("QFAI:SPEC-0006:US-0006-0008 — failure path: archiving a locked / already-archived pack surfaces a clear error and never deletes (error)", async () => {
+  it("QFAI:BF-0003 — failure path: archiving a locked / already-archived pack surfaces a clear error and never deletes (error)", async () => {
     // Error path (matrix gap flagged for US-0006-0008): a pack that cannot be
     // moved (unwritable target / already in _archive) must report a clear
     // failure and must NOT delete the source pack.
@@ -58,13 +58,13 @@ describe.skip("spec-0006 doctor --clean TTL archival CHG-006 (test-first, pendin
 });
 
 describe.skip("spec-0006 doctor --autoremediate CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0006:US-0006-0009 — doctor --autoremediate --yes installs deps, TTL-archives, and writes missing default-keyed config (normal/state)", async () => {
+  it("QFAI:BF-0003 — doctor --autoremediate --yes installs deps, TTL-archives, and writes missing default-keyed config (normal/state)", async () => {
     // Normal: dirty → remediated → clean across install + clean + config.
     const res = await runCli(["doctor", "--autoremediate", "--yes", "--format", "text"]);
     expect(res.code).toBe(0);
   });
 
-  it("QFAI:SPEC-0006:US-0006-0009 — in CI autoremediate defaults off and prints the disabled line; --dry-run has no side effects (error/boundary)", async () => {
+  it("QFAI:BF-0003 — in CI autoremediate defaults off and prints the disabled line; --dry-run has no side effects (error/boundary)", async () => {
     // Boundary/error: CI default = --autoremediate=off with an explicit
     // "autoremediate disabled in CI" line; --dry-run previews with no writes.
     const res = await runCli(
@@ -76,12 +76,12 @@ describe.skip("spec-0006 doctor --autoremediate CHG-006 (test-first, pending /qf
 });
 
 describe.skip("spec-0006 per-skill runtimeDependencies probe CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0006:US-0006-0010 — doctor --profile <skill> probes manifest runtimeDependencies and reports missing with an install command (normal)", async () => {
+  it("QFAI:BF-0003 — doctor --profile <skill> probes manifest runtimeDependencies and reports missing with an install command (normal)", async () => {
     const res = await runCli(["doctor", "--profile", "qfai-atdd", "--format", "text"]);
     expect(res.stdout + res.stderr).toMatch(/runtimeDependencies|npm install/i);
   });
 
-  it("QFAI:SPEC-0006:US-0006-0010 — manifest↔probe drift emits R-SKILL-MANIFEST-DRIFT (error)", async () => {
+  it("QFAI:BF-0003 — manifest↔probe drift emits R-SKILL-MANIFEST-DRIFT (error)", async () => {
     const res = await runCli(["doctor", "--profile", "qfai-atdd", "--format", "text"]);
     expect(res.stdout + res.stderr).toMatch(/R-SKILL-MANIFEST-DRIFT/);
   });

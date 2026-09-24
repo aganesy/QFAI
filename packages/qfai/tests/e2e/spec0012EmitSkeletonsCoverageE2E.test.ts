@@ -8,7 +8,7 @@
  * default-OFF posture is asserted in addition to the opt-in normal
  * path so the v1.9.1 no-regression contract has a sticky test.
  */
-// QFAI:SPEC-0012:US-0012-0138
+// QFAI:BF-0001
 
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

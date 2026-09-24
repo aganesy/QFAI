@@ -516,7 +516,7 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
   // in THIS file rather than in the shape module because the traceability scan
   // reads only `*.test.ts` / `*.spec.ts`, so an annotation in the shape module
   // would be invisible to it.
-  //   QFAI:SPEC-0003:TC-0003-0049
+  //   QFAI:EX-0002-0008-01
 
   it("planted profile and threshold divergence is reported as shape drift with the drifted and expected values, and the gate's verdict assertion fails (exit 1)", async () => {
     // Differential baseline: a rejection is only evidence when the unplanted
@@ -913,7 +913,7 @@ const RELEASE_TRANSITIVE_ENTRY = "pnpm -C packages/qfai test";
 const GATE_TEST_REL = "tests/integration/shippedWorkflowShapeGate.test.ts";
 
 /** The subsumed asset assertions' test-case reference, registered on the shape-gate side. */
-const SUBSUMED_ANNOTATION = "QFAI:SPEC-0003:TC-0003-0049";
+const SUBSUMED_ANNOTATION = "QFAI:EX-0002-0008-01";
 
 /** The `scripts` block of a package manifest, string entries only. */
 async function readScripts(packageJsonPath: string): Promise<Record<string, string>> {
@@ -959,7 +959,7 @@ describe("TC-0003-0050 (TDD-0050): gate is wired into the lint aggregate and not
   // followed the existing form" is a checked fact. It also settles the shape
   // module's home: vitest is the invoker, so the module stays in the tests
   // tree beside this file and needs no build step.
-  //   QFAI:SPEC-0003:TC-0003-0050
+  //   QFAI:EX-0002-0008-02
 
   it("the gate's invocation path appears in pnpm ci:lint, in the form the existing vitest lane already uses", async () => {
     const rootScripts = await readScripts(path.join(repoRoot, "package.json"));

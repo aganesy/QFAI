@@ -8,7 +8,7 @@
  * finding. Reviewer override requires a non-empty `justification:`.
  */
 
-// QFAI:SPEC-0012:TC-0012-0453
+// QFAI:EX-0001-0143-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

@@ -193,13 +193,13 @@ export async function validateReviewerJustification(
         // `file` with the artifact's own path and `rule` with a constant
         // naming this branch would destroy the lane's file and rule, leaving its job
         // no field to survive in — a JSON consumer of `qfai validate` would get the artifact
-        // it came from and nothing about the offending workflow. `BR-0015-0017` says the
-        // gate passes the lane's payload through rather than reconstructing it, and a site
-        // that exists only inside a sentence has been reconstructed.
+        // it came from and nothing about the offending workflow. The gate passes the
+        // lane's payload through rather than reconstructing it, and a site that exists
+        // only inside a sentence has been reconstructed.
         //
         // The artifact path moves to `relatedFiles`, which is where a file that is evidence
         // FOR a finding belongs rather than the file the finding is ABOUT — and it keeps
-        // `--spec` scoping seeing the same path it saw when `file` carried it.
+        // flow-scoped reports seeing the same path it saw when `file` carried it.
         //
         // `detail` is the producer's account of the violation and is reproduced verbatim.
         // Without it the message named a site and never said what was wrong there, so a

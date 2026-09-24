@@ -124,7 +124,7 @@ export type QfaiUiuxConfig = {
    * translating it.
    *
    * Which registry is primary is prose, and lives in
-   * `.qfai/assistant/catalog/tech.md`. Nothing here ranks them.
+   * `.qfai/spec/03_contract/tech.md`. Nothing here ranks them.
    */
   registries?: Record<string, string>;
   designTokensDir?: string;
@@ -162,12 +162,10 @@ export type QfaiPrototypingConfig = {
   calibration?: QfaiPrototypingCalibrationConfig;
   execution?: QfaiPrototypingExecutionConfig;
   /**
-   * Explicit primary spec ID for `/qfai-prototyping`. If omitted,
-   * `resolvePrimaryPrototypingSpec` auto-detects via the prototyping marker
-   * (`surface_type: ui-bearing`) in `01_Spec.md`. Format: 4-digit string,
-   * e.g. `"0001"`.
+   * Explicit primary UI contract for `/qfai-prototyping`.
+   * Uses the full `CON-UI-NNNN` identifier.
    */
-  primarySpecId?: string;
+  primaryUiContract?: string;
   /**
    * Second-wave loop posture discriminator.
    *
@@ -222,6 +220,12 @@ export type QfaiAtddConfig = {
   scaffoldEscalateCycles?: number;
 };
 
+/** Project routing overrides replace a complete entry, keyed by skill. */
+export type QfaiRoutingEntry = Record<string, unknown> & { skill: string };
+
+/** Project review-profile overrides replace a complete profile, keyed by name. */
+export type QfaiReviewProfile = Record<string, unknown>;
+
 export type QfaiConfig = {
   paths: QfaiPaths;
   validation: QfaiValidationConfig;
@@ -231,6 +235,8 @@ export type QfaiConfig = {
   review?: QfaiReviewConfig;
   report?: QfaiReportConfig;
   atdd?: QfaiAtddConfig;
+  routing?: QfaiRoutingEntry[];
+  reviewProfiles?: Record<string, QfaiReviewProfile>;
   baseBranch?: string;
 };
 
@@ -286,12 +292,12 @@ export type ConfigSearchResult = {
 
 export const defaultConfig: QfaiConfig = {
   paths: {
-    contractsDir: ".qfai/contracts",
-    specsDir: ".qfai/specs",
+    contractsDir: ".qfai/spec/03_contract",
+    specsDir: ".qfai/spec",
     discussionDir: ".qfai/discussion",
     outDir: ".qfai/report",
-    skillsDir: ".qfai/assistant/skills",
-    promptsDir: ".qfai/assistant/prompts",
+    skillsDir: ".qfai/assistant/skill",
+    promptsDir: ".qfai/assistant/prompt",
     srcDir: "src",
     testsDir: "tests",
   },
@@ -390,6 +396,8 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   const review = normalizeReview(raw.review, configPath, issues);
   const report = normalizeReport(raw.report, configPath, issues);
   const atdd = normalizeAtdd(raw.atdd, configPath, issues);
+  const routing = normalizeRouting(raw.routing, configPath, issues);
+  const reviewProfiles = normalizeReviewProfiles(raw.reviewProfiles, configPath, issues);
   const base: QfaiConfig = {
     paths: normalizePaths(raw.paths, configPath, issues),
     validation: normalizeValidation(raw.validation, configPath, issues),
@@ -410,11 +418,67 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   if (atdd) {
     base.atdd = atdd;
   }
+  if (routing) {
+    base.routing = routing;
+  }
+  if (reviewProfiles) {
+    base.reviewProfiles = reviewProfiles;
+  }
   const baseBranch = readOptionalString(raw.baseBranch, "baseBranch", configPath, issues);
   if (baseBranch !== undefined) {
     base.baseBranch = baseBranch;
   }
   return base;
+}
+
+function normalizeRouting(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): QfaiRoutingEntry[] | undefined {
+  if (raw === undefined) return undefined;
+  if (!Array.isArray(raw)) {
+    issues.push(configIssue(configPath, "routing must be a list of entries keyed by skill."));
+    return undefined;
+  }
+  const entries: QfaiRoutingEntry[] = [];
+  const seen = new Set<string>();
+  for (const [index, value] of raw.entries()) {
+    if (!isRecord(value) || !isNonEmptyString(value.skill)) {
+      issues.push(configIssue(configPath, `routing[${index}] must have a non-empty skill.`));
+      continue;
+    }
+    if (seen.has(value.skill)) {
+      issues.push(configIssue(configPath, `routing has duplicate skill ${value.skill}.`));
+      continue;
+    }
+    seen.add(value.skill);
+    entries.push({ ...value, skill: value.skill });
+  }
+  return entries;
+}
+
+function normalizeReviewProfiles(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): Record<string, QfaiReviewProfile> | undefined {
+  if (raw === undefined) return undefined;
+  if (!isRecord(raw)) {
+    issues.push(
+      configIssue(configPath, "reviewProfiles must be a map of profile names to entries."),
+    );
+    return undefined;
+  }
+  const profiles: Record<string, QfaiReviewProfile> = {};
+  for (const [name, value] of Object.entries(raw)) {
+    if (!isNonEmptyString(name) || !isRecord(value)) {
+      issues.push(configIssue(configPath, `reviewProfiles.${name} must be an entry.`));
+      continue;
+    }
+    profiles[name] = { ...value };
+  }
+  return profiles;
 }
 
 function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): QfaiPaths {
@@ -644,15 +708,23 @@ function normalizePrototyping(
 
   const calibration = normalizePrototypingCalibration(raw.calibration, configPath, issues);
   const execution = normalizePrototypingExecution(raw.execution, configPath, issues);
-  const primarySpecId = normalizePrimarySpecId(raw.primarySpecId, configPath, issues);
+  if (Object.prototype.hasOwnProperty.call(raw, "primarySpecId")) {
+    issues.push(
+      configIssue(
+        configPath,
+        "prototyping.primarySpecId is retired; use prototyping.primaryUiContract: CON-UI-NNNN.",
+      ),
+    );
+  }
+  const primaryUiContract = normalizePrimaryUiContract(raw.primaryUiContract, configPath, issues);
   const mode = normalizePrototypingMode(raw.mode, configPath, issues);
-  if (!calibration && !execution && primarySpecId === undefined && mode === undefined) {
+  if (!calibration && !execution && primaryUiContract === undefined && mode === undefined) {
     return undefined;
   }
   return {
     ...(calibration ? { calibration } : {}),
     ...(execution ? { execution } : {}),
-    ...(primarySpecId !== undefined ? { primarySpecId } : {}),
+    ...(primaryUiContract !== undefined ? { primaryUiContract } : {}),
     ...(mode !== undefined ? { mode } : {}),
   };
 }
@@ -677,7 +749,7 @@ function normalizePrototypingMode(
   return undefined;
 }
 
-function normalizePrimarySpecId(
+function normalizePrimaryUiContract(
   raw: unknown,
   configPath: string,
   issues: Issue[],
@@ -689,16 +761,16 @@ function normalizePrimarySpecId(
     issues.push(
       configIssue(
         configPath,
-        'prototyping.primarySpecId は4桁の文字列で指定してください (例: "0012")。',
+        `prototyping.primaryUiContract must be a full CON-UI-NNNN ID; received ${JSON.stringify(raw)}.`,
       ),
     );
     return undefined;
   }
-  if (!/^\d{4}$/.test(raw)) {
+  if (!/^CON-UI-\d{4}$/.test(raw)) {
     issues.push(
       configIssue(
         configPath,
-        `prototyping.primarySpecId は4桁の数字文字列である必要があります (got "${raw}")。`,
+        `prototyping.primaryUiContract must be a full CON-UI-NNNN ID; received ${JSON.stringify(raw)}.`,
       ),
     );
     return undefined;
@@ -961,8 +1033,8 @@ function readString(
  * A configured directory, with any trailing separators removed.
  *
  * Readers use these values two ways: joined with a child path, where a trailing
- * separator is harmless, and tested as a prefix, where it is not. `".qfai/specs/"`
- * builds the prefix `".qfai/specs//"`, which no repository path starts with, so a
+ * separator is harmless, and tested as a prefix, where it is not. `".qfai/spec/"`
+ * builds the prefix `".qfai/spec//"`, which no repository path starts with, so a
  * gate keyed on it selects nothing and reports a pass over an empty set. Settling
  * the spelling here is what stops one reader from working on a value another
  * silently drops.

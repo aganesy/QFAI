@@ -86,7 +86,7 @@ vi.mock("node:fs/promises", async (importOriginal) => {
       const targetPath = String(target);
       if (
         targetPath.includes(UNLISTABLE_SKILL_DIR) ||
-        (targetPath.includes(UNLISTABLE_AGENTS_ROOT) && targetPath.endsWith("agents"))
+        (targetPath.includes(UNLISTABLE_AGENTS_ROOT) && targetPath.endsWith("agent"))
       ) {
         throw Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" });
       }
@@ -123,7 +123,6 @@ import { createDoctorData } from "../../../../src/core/doctor.js";
 import {
   ASSISTANT_ASSET_MAX_LINES,
   ASSISTANT_ASSET_MAX_LINE_CHARS,
-  LINE_BUDGET_EXEMPT,
   checkAssistantAssetLineBudget,
   countLines,
   widestMeasurableLine,
@@ -193,7 +192,7 @@ describe("checkAssistantAssetLineBudget", () => {
 
   it("reports a file over the ceiling with its measured line count", async () => {
     await withTempRoot(async (root) => {
-      await writeAsset(root, "skills/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 3);
+      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 3);
       await writeAsset(root, "catalog/test-layers.md", 10);
 
       const report = await checkAssistantAssetLineBudget(root);
@@ -202,7 +201,7 @@ describe("checkAssistantAssetLineBudget", () => {
       expect(report.maxLines).toBe(ASSISTANT_ASSET_MAX_LINES);
       expect(report.scanned).toBe(2);
       expect(report.oversized).toEqual([
-        { path: "assistant/skills/qfai-demo/SKILL.md", lines: ASSISTANT_ASSET_MAX_LINES + 3 },
+        { path: "assistant/skill/qfai-demo/SKILL.md", lines: ASSISTANT_ASSET_MAX_LINES + 3 },
       ]);
     });
   });
@@ -233,25 +232,6 @@ describe("checkAssistantAssetLineBudget", () => {
     });
   });
 
-  it("honours the exemption list instead of reporting a generated file", async () => {
-    await withTempRoot(async (root) => {
-      const exemptRel = [...LINE_BUDGET_EXEMPT.keys()][0];
-      expect(exemptRel).toBeDefined();
-      const withinAssistant = exemptRel?.replace(/^assistant\//, "") ?? "";
-      await writeAsset(root, withinAssistant, ASSISTANT_ASSET_MAX_LINES + 40);
-
-      const report = await checkAssistantAssetLineBudget(root);
-
-      expect(report.status).toBe("ok");
-      expect(report.oversized).toEqual([]);
-      // The baseline promises the reader sees *why* a file was skipped, so the
-      // reason travels with the path rather than living only in the source.
-      expect(report.exempt).toEqual([
-        { path: exemptRel, reason: LINE_BUDGET_EXEMPT.get(exemptRel ?? "") },
-      ]);
-    });
-  });
-
   it("does not treat an unreadable assistant directory as 'not created yet'", async () => {
     await withUnprobeableRoot(async (root) => {
       const report = await checkAssistantAssetLineBudget(root);
@@ -264,41 +244,13 @@ describe("checkAssistantAssetLineBudget", () => {
     });
   });
 
-  // POSIX-only: Windows rejects `\` in a filename, so the collision this guards
-  // against cannot be staged there (and `path.sep === "\\"` keeps the old
-  // collapse, which is correct on that platform).
-  it.skipIf(path.sep === "\\")(
-    "keeps a POSIX backslash in a filename out of the exemption match",
-    async () => {
-      await withTempRoot(async (root) => {
-        const exemptRel = [...LINE_BUDGET_EXEMPT.keys()][0] ?? "";
-        const withinAssistant = exemptRel.replace(/^assistant\//, "");
-        const assistantDir = path.join(root, ".qfai", "assistant");
-        await mkdir(assistantDir, { recursive: true });
-        // One file, directly under assistant/, whose *name* contains the
-        // separators of the exempt path. It is an authored asset, not the
-        // generated catalog, so the ceiling still applies to it.
-        await writeFile(
-          path.join(assistantDir, withinAssistant.replace(/\//g, "\\")),
-          "x\n".repeat(ASSISTANT_ASSET_MAX_LINES + 3),
-          "utf-8",
-        );
-
-        const report = await checkAssistantAssetLineBudget(root);
-
-        expect(report.exempt).toEqual([]);
-        expect(report.oversized).toHaveLength(1);
-      });
-    },
-  );
-
   it("measures assets under directories the default walker ignores", async () => {
     await withTempRoot(async (root) => {
       // `collectFiles` drops any directory named tmp/dist/node_modules; the
       // baseline promises every `.qfai/assistant/**` asset is measured.
       await writeAsset(
         root,
-        "skills/qfai-demo/references/tmp/oversized.md",
+        "skill/qfai-demo/references/tmp/oversized.md",
         ASSISTANT_ASSET_MAX_LINES + 2,
       );
 
@@ -307,7 +259,7 @@ describe("checkAssistantAssetLineBudget", () => {
       expect(report.status).toBe("over_budget");
       expect(report.oversized).toEqual([
         {
-          path: "assistant/skills/qfai-demo/references/tmp/oversized.md",
+          path: "assistant/skill/qfai-demo/references/tmp/oversized.md",
           lines: ASSISTANT_ASSET_MAX_LINES + 2,
         },
       ]);
@@ -319,7 +271,7 @@ describe("checkAssistantAssetLineBudget", () => {
       // On a filesystem that answers DT_UNKNOWN, isFile()/isDirectory() are both
       // false for a plain directory and a plain file. Skipping those left whole
       // subtrees unmeasured while the report still said `ok`.
-      await writeAsset(root, "skills/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 4);
+      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 4);
       await writeAsset(root, "catalog/test-layers.md", 10);
 
       const report = await checkAssistantAssetLineBudget(root);
@@ -327,7 +279,7 @@ describe("checkAssistantAssetLineBudget", () => {
       expect(report.status).toBe("over_budget");
       expect(report.oversized).toEqual([
         {
-          path: "assistant/skills/qfai-demo/SKILL.md",
+          path: "assistant/skill/qfai-demo/SKILL.md",
           lines: ASSISTANT_ASSET_MAX_LINES + 4,
         },
       ]);
@@ -396,7 +348,7 @@ describe("checkAssistantAssetLineBudget", () => {
 describe("doctor assets.lineBudget check", () => {
   it("still reports assets.lineBudget when the skills tree cannot be listed", async () => {
     await withTempRoot(async (root) => {
-      await writeAsset(root, `skills/${UNLISTABLE_SKILL_DIR}/SKILL.md`, 3);
+      await writeAsset(root, `skill/${UNLISTABLE_SKILL_DIR}/SKILL.md`, 3);
       await writeAsset(root, "constitution/long-rule.md", ASSISTANT_ASSET_MAX_LINES + 2);
 
       // The skills diff runs first and used to reject, so the run produced no
@@ -405,6 +357,7 @@ describe("doctor assets.lineBudget check", () => {
 
       const integrity = data.checks.find((entry) => entry.id === "skills.integrity");
       expect(integrity?.severity).toBe("warning");
+      expect(integrity?.title).toContain(".qfai/assistant/skill");
       expect(integrity?.message).toContain("Could not inspect skills");
 
       const budget = data.checks.find((entry) => entry.id === "assets.lineBudget");
@@ -418,7 +371,7 @@ describe("doctor assets.lineBudget check", () => {
   it("still reports assets.lineBudget when the agents tree cannot be listed", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), UNLISTABLE_AGENTS_ROOT));
     try {
-      await mkdir(path.join(root, ".qfai", "assistant", "agents"), { recursive: true });
+      await mkdir(path.join(root, ".qfai", "assistant", "agent"), { recursive: true });
       await writeAsset(root, "constitution/long-rule.md", ASSISTANT_ASSET_MAX_LINES + 5);
 
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
@@ -439,7 +392,7 @@ describe("doctor assets.lineBudget check", () => {
 
   it("warns with the ceiling and the offending files in details", async () => {
     await withTempRoot(async (root) => {
-      await writeAsset(root, "skills/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 1);
+      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 1);
 
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
       const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
@@ -448,14 +401,14 @@ describe("doctor assets.lineBudget check", () => {
       expect(check?.severity).toBe("warning");
       expect(check?.message).toContain(String(ASSISTANT_ASSET_MAX_LINES));
       expect(check?.details?.["oversized"]).toEqual([
-        { path: "assistant/skills/qfai-demo/SKILL.md", lines: ASSISTANT_ASSET_MAX_LINES + 1 },
+        { path: "assistant/skill/qfai-demo/SKILL.md", lines: ASSISTANT_ASSET_MAX_LINES + 1 },
       ]);
     });
   });
 
   it("names each oversized file and its line count in the message itself", async () => {
     await withTempRoot(async (root) => {
-      await writeAsset(root, "skills/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 1);
+      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 1);
       await writeAsset(root, "constitution/long-rule.md", ASSISTANT_ASSET_MAX_LINES + 7);
 
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
@@ -466,7 +419,7 @@ describe("doctor assets.lineBudget check", () => {
       // `message`; `details` is JSON-only. Both files, their measured counts and
       // the repair guidance must therefore survive into the message.
       expect(message).toContain(
-        `assistant/skills/qfai-demo/SKILL.md (${ASSISTANT_ASSET_MAX_LINES + 1} lines)`,
+        `assistant/skill/qfai-demo/SKILL.md (${ASSISTANT_ASSET_MAX_LINES + 1} lines)`,
       );
       expect(message).toContain(
         `assistant/constitution/long-rule.md (${ASSISTANT_ASSET_MAX_LINES + 7} lines)`,
@@ -509,24 +462,6 @@ describe("doctor assets.lineBudget check", () => {
     });
   });
 
-  it("states the exempt path and its reason in the default output, not only in JSON", async () => {
-    await withTempRoot(async (root) => {
-      const exemptRel = [...LINE_BUDGET_EXEMPT.keys()][0] ?? "";
-      const reason = LINE_BUDGET_EXEMPT.get(exemptRel) ?? "";
-      await writeAsset(root, exemptRel.replace(/^assistant\//, ""), ASSISTANT_ASSET_MAX_LINES + 40);
-
-      const data = await createDoctorData({ startDir: root, rootExplicit: true });
-      const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
-
-      expect(check?.severity).toBe("ok");
-      // Without this the counts speak only for what was measured, and a reader
-      // cannot tell a compliant tree from one whose longest file is exempt.
-      expect(check?.message).toContain(exemptRel);
-      expect(check?.message).toContain(reason);
-      expect(check?.details?.["exempt"]).toEqual([{ path: exemptRel, reason }]);
-    });
-  });
-
   // POSIX-only: Windows rejects a newline in a filename.
   it.skipIf(path.sep === "\\")(
     "escapes control characters in a path before rendering it into the message",
@@ -552,7 +487,7 @@ describe("doctor assets.lineBudget check", () => {
         // `details` keeps the real path so tooling can still act on it.
         expect(check?.details?.["oversized"]).toEqual([
           {
-            path: `assistant/skills/qfai-demo/${hostileName}`,
+            path: `assistant/skill/qfai-demo/${hostileName}`,
             lines: ASSISTANT_ASSET_MAX_LINES + 2,
           },
         ]);
@@ -562,7 +497,7 @@ describe("doctor assets.lineBudget check", () => {
 
   it("is ok when the assistant tree is inside the ceiling", async () => {
     await withTempRoot(async (root) => {
-      await writeAsset(root, "skills/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES);
+      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES);
 
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
       const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
@@ -741,7 +676,7 @@ describe("widestMeasurableLine", () => {
 describe("assets.lineBudget width ceiling", () => {
   it("reports a file whose prose line is wider than the ceiling", async () => {
     await withTempRoot(async (root) => {
-      await writeRawAsset(root, "skills/qfai-demo/SKILL.md", [
+      await writeRawAsset(root, "skill/qfai-demo/SKILL.md", [
         "# Demo",
         `- ${wide(ASSISTANT_ASSET_MAX_LINE_CHARS)}`,
       ]);
@@ -751,7 +686,7 @@ describe("assets.lineBudget width ceiling", () => {
       expect(report.status).toBe("over_budget");
       expect(report.wideLines).toEqual([
         {
-          path: "assistant/skills/qfai-demo/SKILL.md",
+          path: "assistant/skill/qfai-demo/SKILL.md",
           widest: ASSISTANT_ASSET_MAX_LINE_CHARS + 2,
           allowed: ASSISTANT_ASSET_MAX_LINE_CHARS,
         },
@@ -764,9 +699,7 @@ describe("assets.lineBudget width ceiling", () => {
 
   it("passes a file exactly at the ceiling", async () => {
     await withTempRoot(async (root) => {
-      await writeRawAsset(root, "skills/qfai-demo/SKILL.md", [
-        wide(ASSISTANT_ASSET_MAX_LINE_CHARS),
-      ]);
+      await writeRawAsset(root, "skill/qfai-demo/SKILL.md", [wide(ASSISTANT_ASSET_MAX_LINE_CHARS)]);
 
       const report = await checkAssistantAssetLineBudget(root);
       expect(report.wideLines).toEqual([]);
@@ -776,7 +709,7 @@ describe("assets.lineBudget width ceiling", () => {
 
   it("does not fail a wide table row or a wide fenced block", async () => {
     await withTempRoot(async (root) => {
-      await writeRawAsset(root, "skills/qfai-demo/SKILL.md", [
+      await writeRawAsset(root, "skill/qfai-demo/SKILL.md", [
         // A real table: the delimiter row is what makes the rows above and
         // below it rows, so the fixture has to carry one.
         "| head | other |",
@@ -795,7 +728,7 @@ describe("assets.lineBudget width ceiling", () => {
 
   it("names the width a file was held to, in the doctor message", async () => {
     await withTempRoot(async (root) => {
-      await writeRawAsset(root, "skills/qfai-demo/SKILL.md", [wide(900)]);
+      await writeRawAsset(root, "skill/qfai-demo/SKILL.md", [wide(900)]);
 
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
       const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
@@ -805,43 +738,12 @@ describe("assets.lineBudget width ceiling", () => {
     });
   });
 
-  it("measures width on a file exempt from the line ceiling", async () => {
-    // The exemption's stated reason is about a roster's LENGTH — one entry per
-    // agent, nothing to move out. None of that is about how wide a line may be,
-    // and a file excused from both would be the one place this rule cannot see.
-    await withTempRoot(async (root) => {
-      const [exemptPath] = [...LINE_BUDGET_EXEMPT.keys()];
-      const relative = (exemptPath ?? "").replace(/^assistant\//, "");
-      await writeRawAsset(root, relative, [wide(900)]);
-
-      const report = await checkAssistantAssetLineBudget(root);
-
-      expect(report.exempt.map((entry) => entry.path)).toEqual([exemptPath]);
-      expect(report.wideLines).toEqual([
-        { path: exemptPath, widest: 900, allowed: ASSISTANT_ASSET_MAX_LINE_CHARS },
-      ]);
-    });
-  });
-
-  it("leaves an exempt file's line count unreported however long it is", async () => {
-    await withTempRoot(async (root) => {
-      const [exemptPath] = [...LINE_BUDGET_EXEMPT.keys()];
-      const relative = (exemptPath ?? "").replace(/^assistant\//, "");
-      await writeAsset(root, relative, ASSISTANT_ASSET_MAX_LINES + 50);
-
-      const report = await checkAssistantAssetLineBudget(root);
-
-      expect(report.oversized).toEqual([]);
-      expect(report.wideLines).toEqual([]);
-    });
-  });
-
   it("asks for a wrap on a width overrun, not for a split", async () => {
     // A two-line file can fail the width ceiling. Telling its author to move a
     // topic into `references/` asks for a structural change that would not fix
     // it: what the width ceiling wants is the line wrapped.
     await withTempRoot(async (root) => {
-      await writeRawAsset(root, "skills/qfai-demo/SKILL.md", ["# Demo", wide(500)]);
+      await writeRawAsset(root, "skill/qfai-demo/SKILL.md", ["# Demo", wide(500)]);
 
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
       const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
@@ -852,28 +754,9 @@ describe("assets.lineBudget width ceiling", () => {
     });
   });
 
-  it("counts the line ceiling over the files it actually held", async () => {
-    // The exempt file is measured for width and not for length, so counting it
-    // into "all N are within 800 lines" would claim a check that did not run on
-    // it — and contradict the exemption note in the same sentence.
-    await withTempRoot(async (root) => {
-      const [exemptPath] = [...LINE_BUDGET_EXEMPT.keys()];
-      const relative = (exemptPath ?? "").replace(/^assistant\//, "");
-      await writeAsset(root, relative, ASSISTANT_ASSET_MAX_LINES + 50);
-      await writeAsset(root, "skills/qfai-demo/SKILL.md", 10);
-
-      const data = await createDoctorData({ startDir: root, rootExplicit: true });
-      const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
-
-      expect(check?.severity).toBe("ok");
-      expect(check?.message).toContain("all 1 assistant assets held to the line ceiling");
-      expect(check?.message).toContain("all 2 are within the line width");
-    });
-  });
-
   it("says both ceilings when the tree is clean", async () => {
     await withTempRoot(async (root) => {
-      await writeAsset(root, "skills/qfai-demo/SKILL.md", 10);
+      await writeAsset(root, "skill/qfai-demo/SKILL.md", 10);
 
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
       const check = data.checks.find((entry) => entry.id === "assets.lineBudget");

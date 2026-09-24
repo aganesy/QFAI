@@ -1,4 +1,4 @@
-// QFAI:SPEC-0006:TC-0006-0022
+// QFAI:EX-0003-0009-02
 //
 // Error/boundary: `qfai doctor --autoremediate` is disabled in CI by
 // default (the `isCiEnvironment()` path) and surfaces the

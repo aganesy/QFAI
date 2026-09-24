@@ -10,8 +10,8 @@
  *   `id` / `label` / `acceptance`, or carrying extra keys, is
  *   rejected by the audit lane.
  */
-// QFAI:SPEC-0013:TC-0013-0034
-// QFAI:SPEC-0013:TC-0013-0035
+// QFAI:EX-0001-0161-02
+// QFAI:EX-0001-0161-02
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

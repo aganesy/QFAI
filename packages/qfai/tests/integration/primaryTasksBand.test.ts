@@ -11,8 +11,8 @@
  * There is no lower bound. A screen that does one thing is the shape the
  * ceiling protects, so it passes like any other count under it.
  */
-// QFAI:SPEC-0013:TC-0013-0032
-// QFAI:SPEC-0013:TC-0013-0033
+// QFAI:EX-0001-0161-01
+// QFAI:EX-0001-0161-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

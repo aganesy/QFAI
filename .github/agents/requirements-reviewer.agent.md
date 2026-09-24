@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/requirements-reviewer.md
+../../.qfai/assistant/agent/requirements-reviewer.md

@@ -11,7 +11,7 @@
  * Integration scope: config loader + probe-order pin.
  */
 
-// QFAI:SPEC-0012:TC-0012-0439
+// QFAI:EX-0001-0133-01
 
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

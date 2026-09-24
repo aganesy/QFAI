@@ -13,7 +13,7 @@
  * Exercises `runSaasPackageProfile` directly (unit-level) without
  * shelling out to the CLI.
  */
-// QFAI:SPEC-0004:TC-0004-0068
+// QFAI:EX-0001-0051-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -23,7 +23,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../../src/core/config.js";
 import { runSaasPackageProfile } from "../../../../src/core/saasPackage/profile.js";
-import { SAAS_PACKAGE_SKIPPED_GATES } from "../../../../src/core/saasPackage/skippedGates.js";
+import {
+  SAAS_PACKAGE_SKIPPED_GATES,
+  saasPackageSkippedGateFamilies,
+} from "../../../../src/core/saasPackage/skippedGates.js";
 
 let root: string;
 
@@ -46,6 +49,27 @@ async function seedAttestation(): Promise<void> {
 }
 
 describe("TC-0004-0068: saas-package profile rejects missing DCON-005 attestation", () => {
+  it("names current story-tree stage gates in its skip notice", () => {
+    expect(SAAS_PACKAGE_SKIPPED_GATES).toEqual([
+      "validateStoryTreeObligations",
+      "validateStoryTreeCoverageDepth",
+      "validateTestTodoStubs",
+      "validateStoryTreeDrift",
+    ]);
+    expect(saasPackageSkippedGateFamilies()).toEqual([
+      "QFAI-STORY-006",
+      "QFAI-STORY-007",
+      "QFAI-STORY-008",
+      "QFAI-STORY-009",
+      "QFAI-SCAN-002",
+      "QFAI-ATDD-131",
+      "QFAI-ATDD-132",
+      "QFAI-ATDD-133",
+      "QFAI-TEST-*",
+      "QFAI-DRIFT-001",
+      "QFAI-STORY-010",
+    ]);
+  });
   it("fails (error severity) when .qfai/contracts/design/design-system.yaml is absent — failure names the attestation", async () => {
     // No attestation seeded. Prototyping issues are passed as an empty
     // list (clean prototyping pipeline) so the only failure source is

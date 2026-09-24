@@ -197,7 +197,6 @@ describe("issue code uniqueness", () => {
 const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "D-DEPRECATED-PATH",
   "D-SCAFFOLD-PLACEHOLDER",
-  "D-SURFACE-TYPE-MISSING",
   "QFAI-AC-001",
   "QFAI-AGENT-004",
   "QFAI-AGENT-005",
@@ -348,19 +347,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "R-MOCK-HREF-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",
   "R-SKILL-MANIFEST-DRIFT",
-  "TDDLIST_BLOCKED_MISSING_REF",
-  "TDDLIST_DUPLICATE_ID",
-  "TDDLIST_EVIDENCE_EMPTY",
-  "TDDLIST_EXCEPTION_MISSING_DR",
-  "TDDLIST_INVALID_ID",
-  "TDDLIST_INVALID_OBLIGATION_REF",
-  "TDDLIST_INVALID_STATUS",
-  "TDDLIST_OBLIGATION_LAYER_MISMATCH",
-  "TDDLIST_OWNING_MODULE_NOT_SINGULAR",
-  "TDDLIST_REQUIRED_COLUMN_MISSING",
-  "TDDLIST_TABLE_MISSING",
-  "TDDLIST_TC_NOT_COVERED",
-  "TDDLIST_TEST_FILE_MISSING",
   "TRACE_DOWNSTREAM_REF",
   "TRACE_SHARED_SCOPE_VIOLATION",
   // The `core/uiux/**` validators route every finding through a file-local
@@ -532,14 +518,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "R-MOCK-HREF-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",
   "R-SKILL-MANIFEST-DRIFT",
-  "TDDLIST_DUPLICATE_ID",
-  "TDDLIST_INVALID_ID",
-  "TDDLIST_INVALID_OBLIGATION_REF",
-  "TDDLIST_INVALID_STATUS",
-  "TDDLIST_REQUIRED_COLUMN_MISSING",
-  "TDDLIST_TABLE_MISSING",
-  "TDDLIST_TC_NOT_COVERED",
-  "TDDLIST_TEST_FILE_MISSING",
   "TRACE_SHARED_SCOPE_VIOLATION",
   "W-SKILL-DOC-BROKEN-REF",
 ]);
@@ -659,15 +637,6 @@ describe("issue report metadata", () => {
     // decide: the census errs towards demanding metadata.
     expect(usage.get("C-ONE-ERROR")?.errorCapable).toBe(true);
     expect(usage.get("C-UNRESOLVABLE")?.errorCapable).toBe(true);
-  });
-
-  it("keeps TDDLIST_MISSING out of the error census", async () => {
-    // The rule reports `warning` for a spec that owes ledger rows and `info`
-    // for one that owes none. Neither branch is an `error`, and the escalation
-    // it carries is `TDDLIST_TC_NOT_COVERED`, which is in the census.
-    const usage = await collectErrorCapableUsage();
-    expect(usage.has("TDDLIST_MISSING")).toBe(false);
-    expect(usage.has("TDDLIST_TC_NOT_COVERED")).toBe(true);
   });
 
   it("every error-capable issue code has an expected-state catalog entry or is pending", async () => {

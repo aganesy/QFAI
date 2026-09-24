@@ -989,7 +989,7 @@ describe("TC-0014-0029: integration test existence", () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 // TC-0008-0011
-// QFAI:SPEC-0008:TC-0008-0011
+// QFAI:EX-0001-0074-01
 describe("TC-0008-0011: Coverage Depth Matrix Produced and Verified", () => {
   it("spec-0008 06_Test-Cases.md contains depth matrix columns", async () => {
     const tcPath = path.resolve(
@@ -1024,7 +1024,7 @@ describe("TC-0008-0011: Coverage Depth Matrix Produced and Verified", () => {
 });
 
 // TC-0008-0012
-// QFAI:SPEC-0008:TC-0008-0012
+// QFAI:EX-0001-0074-01
 describe("TC-0008-0012: Normal-Path-Only Flagged as Incomplete", () => {
   it("spec defines normal-path-only detection rule", async () => {
     const tcPath = path.resolve(

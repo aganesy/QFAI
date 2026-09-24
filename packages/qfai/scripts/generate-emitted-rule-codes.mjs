@@ -1073,7 +1073,11 @@ async function listTypeScriptFiles(dir) {
  */
 function renderEmittedRuleCodesModule(codes, errorOnly, aliases, postWaiverCodes) {
   const list = (values) =>
-    values.length === 0 ? "" : `\n${values.map((value) => `  "${value}",`).join("\n")}\n`;
+    values.length === 0
+      ? ""
+      : values.length === 1
+        ? `"${values[0]}"`
+        : `\n${values.map((value) => `  "${value}",`).join("\n")}\n`;
   return `/**
  * Every code a validate \`Issue\` from this package can carry.
  *

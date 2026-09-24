@@ -1,7 +1,5 @@
 import {
   access,
-  chmod,
-  chown,
   link,
   lstat,
   mkdtemp,
@@ -9,9 +7,7 @@ import {
   readdir,
   readFile,
   readlink,
-  rename,
   rm,
-  stat,
   writeFile,
   symlink,
 } from "node:fs/promises";
@@ -23,18 +19,15 @@ import { promisify } from "node:util";
 
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
-import { isMap, isSeq, parseDocument } from "yaml";
 
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../src/cli/lib/fs.js";
-import { captureStderr } from "../helpers/stderr.js";
 import { captureStdout } from "../helpers/stdout.js";
 import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
-import { WORKLOG_ENTRY_STATUSES } from "../../src/core/paths/assistantPaths.js";
 import {
   INTEGRATION_SURFACE_DIRS,
   validateIntegrationSurface,
@@ -71,27 +64,6 @@ const REQUIRED_SKILLS = [
 ];
 
 const execFile = promisify(execFileCb);
-
-/**
- * The pre-fix `qfai init` placeholder body for an assistant layer, verbatim.
- * Only an exact copy of this is removable, so the tests that exercise the
- * migration have to write the real thing rather than an approximation.
- */
-function legacyGitkeepBody(layer: "catalog" | "manifest"): string {
-  const purposes = {
-    catalog:
-      "Reference catalogs (test-layers.md, review-gate.rules.yml, spec_required_files.json).",
-    manifest: "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml).",
-  } as const;
-  return [
-    `# .qfai/assistant/${layer}/`,
-    "",
-    purposes[layer],
-    "",
-    "Seeded by qfai init (4-layer assistant-tree recut).",
-    "",
-  ].join("\n");
-}
 
 /**
  * A wrapper body shaped like the ones qfai used to ship: the delegation line
@@ -163,34 +135,6 @@ async function expectSymlinkTarget(linkPath: string, expectedFragment: string): 
   const target = await readlink(linkPath);
   const normalized = target.replace(/\\/g, "/");
   expect(normalized).toContain(expectedFragment);
-}
-
-/** The `qfai-atdd` phases sequence of an `agent-routing.yml` document. */
-function atddPhases(doc: ReturnType<typeof parseDocument>) {
-  const routing = doc.get("routing");
-  if (!isSeq(routing)) throw new Error("agent-routing.yml has no routing sequence");
-  const atdd = routing.items.find((item) => isMap(item) && item.get("skill") === "qfai-atdd");
-  if (!isMap(atdd)) throw new Error("agent-routing.yml has no qfai-atdd entry");
-  const phases = atdd.get("phases");
-  if (!isSeq(phases)) throw new Error("qfai-atdd has no phases");
-  return phases;
-}
-
-/** Roll a routing table back to a package that had no ATDD `red` gate. */
-function withoutAtddRedPhase(source: string): string {
-  const doc = parseDocument(source);
-  const phases = atddPhases(doc);
-  phases.items = phases.items.filter((item) => !(isMap(item) && item.get("id") === "red"));
-  return doc.toString({ lineWidth: 0 });
-}
-
-function atddPhaseIds(source: string): string[] {
-  const ids: string[] = [];
-  for (const item of atddPhases(parseDocument(source)).items) {
-    const id = isMap(item) ? item.get("id") : null;
-    if (typeof id === "string") ids.push(id);
-  }
-  return ids;
 }
 
 describe("qfai init", () => {
@@ -404,24 +348,20 @@ describe("qfai init", () => {
 
       // Regular files (canonical sources)
       const expectedRegularFiles = [
-        path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
-        path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md"),
-        path.join(root, ".qfai", "assistant", "constitution", "constitution.md"),
-        path.join(root, ".qfai", "assistant", "agents", "delivery-planner.md"),
-        path.join(root, ".qfai", "assistant", "catalog", "review-gate.rules.yml"),
-        path.join(root, ".qfai", "assistant", "manifest", "agent-catalog.yml"),
-        path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml"),
-        path.join(root, ".qfai", "assistant", "manifest", "review-profiles.yml"),
+        path.join(root, ".qfai", "assistant", "skill", "qfai-configure", "SKILL.md"),
+        path.join(root, ".qfai", "assistant", "skill", "qfai-discussion", "SKILL.md"),
+        path.join(root, ".qfai", "assistant", "rule", "constitution.md"),
+        path.join(root, ".qfai", "assistant", "agent", "delivery-planner.md"),
         path.join(
           root,
           ".qfai",
           "assistant",
-          "skills",
+          "skill",
           "qfai-discussion",
           "references",
           "rcp_footer.md",
         ),
-        path.join(root, ".qfai", "assistant", "skills", "qfai-sdd", "references", "rcp_footer.md"),
+        path.join(root, ".qfai", "assistant", "skill", "qfai-sdd", "references", "rcp_footer.md"),
         path.join(root, ".github", "copilot-instructions.md"),
       ];
 
@@ -439,7 +379,7 @@ describe("qfai init", () => {
 
       for (const symlinkPath of skillSymlinks) {
         await expectSymlink(symlinkPath);
-        await expectSymlinkTarget(symlinkPath, ".qfai/assistant/skills/qfai-configure");
+        await expectSymlinkTarget(symlinkPath, ".qfai/assistant/skill/qfai-configure");
       }
 
       // Skill symlink resolves to actual skill directory (SKILL.md is accessible)
@@ -449,13 +389,14 @@ describe("qfai init", () => {
       // Agent file symlinks
       const claudeAgent = path.join(root, ".claude", "agents", "delivery-planner.md");
       await expectSymlink(claudeAgent);
-      await expectSymlinkTarget(claudeAgent, ".qfai/assistant/agents/delivery-planner.md");
+      await expectSymlinkTarget(claudeAgent, ".qfai/assistant/agent/delivery-planner.md");
 
       const githubAgent = path.join(root, ".github", "agents", "delivery-planner.agent.md");
       await expectSymlink(githubAgent);
-      await expectSymlinkTarget(githubAgent, ".qfai/assistant/agents/delivery-planner.md");
+      await expectSymlinkTarget(githubAgent, ".qfai/assistant/agent/delivery-planner.md");
 
-      // commands/ and prompts/ are NOT generated
+      // Host command files are not generated; canonical prompts are.
+      await access(path.join(root, ".qfai", "assistant", "prompt"));
       await expect(access(path.join(root, ".qfai", "assistant", "prompts"))).rejects.toMatchObject({
         code: "ENOENT",
       });
@@ -533,13 +474,7 @@ describe("qfai init", () => {
       const after = await readFile(existingConfig, "utf-8");
       expect(after).toBe("custom config\n");
 
-      const existingConstitution = path.join(
-        root,
-        ".qfai",
-        "assistant",
-        "constitution",
-        "constitution.md",
-      );
+      const existingConstitution = path.join(root, ".qfai", "assistant", "rule", "constitution.md");
       await writeFile(existingConstitution, "custom constitution\n", "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
@@ -594,7 +529,7 @@ describe("qfai init", () => {
         root,
         ".qfai",
         "assistant",
-        "skills",
+        "skill",
         "qfai-discussion",
         "SKILL.md",
       );
@@ -608,14 +543,7 @@ describe("qfai init", () => {
       const afterForce = await readFile(skillSample, "utf-8");
 
       const template = await readFile(
-        path.join(
-          getInitAssetsDir(),
-          ".qfai",
-          "assistant",
-          "skills",
-          "qfai-discussion",
-          "SKILL.md",
-        ),
+        path.join(getInitAssetsDir(), ".qfai", "assistant", "skill", "qfai-discussion", "SKILL.md"),
         "utf-8",
       );
 
@@ -640,7 +568,7 @@ describe("qfai init", () => {
 
       // Symlinks should still be valid
       await expectSymlink(skillLink);
-      await expectSymlinkTarget(skillLink, ".qfai/assistant/skills/qfai-configure");
+      await expectSymlinkTarget(skillLink, ".qfai/assistant/skill/qfai-configure");
 
       // Content accessible through symlink
       const skillMd = path.join(skillLink, "SKILL.md");
@@ -979,18 +907,18 @@ describe("qfai init", () => {
   });
 
   it("keeps a project's own skill symlink into its own canonical skill", async () => {
-    // A project may author `.qfai/assistant/skills/my-skill/` and publish it by
+    // A project may author `.qfai/assistant/skill/my-skill/` and publish it by
     // hand — `integrationSurface.ts` allows exactly that. The link target is in
     // the canonical tree, so target alone cannot be the ownership test.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "my-skill");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "my-skill");
       await mkdir(canonical, { recursive: true });
       await writeFile(path.join(canonical, "SKILL.md"), "project skill\n", "utf-8");
       const link = path.join(root, ".claude", "skills", "my-skill");
-      await symlink(path.join("..", "..", ".qfai", "assistant", "skills", "my-skill"), link, "dir");
+      await symlink(path.join("..", "..", ".qfai", "assistant", "skill", "my-skill"), link, "dir");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
@@ -1050,22 +978,18 @@ describe("qfai init", () => {
   });
 
   it("keeps a project alias symlink that borrows a retired skill name", async () => {
-    // init always links `<id> -> .qfai/assistant/skills/<id>`. A link at a
+    // init always links `<id> -> .qfai/assistant/skill/<id>`. A link at a
     // retired name pointing at some other canonical entry is an alias the
     // project made, and "the target is somewhere in the tree" deleted it.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "my-skill");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "my-skill");
       await mkdir(canonical, { recursive: true });
       await writeFile(path.join(canonical, "SKILL.md"), "project skill\n", "utf-8");
       const alias = path.join(root, ".claude", "skills", "qfai-spec");
-      await symlink(
-        path.join("..", "..", ".qfai", "assistant", "skills", "my-skill"),
-        alias,
-        "dir",
-      );
+      await symlink(path.join("..", "..", ".qfai", "assistant", "skill", "my-skill"), alias, "dir");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
@@ -1905,335 +1829,6 @@ describe("qfai init", () => {
     }
   });
 
-  // A project that installed an older package keeps its own agent-routing.yml
-  // (manifest/ is user configuration and --force never overwrites it), so a
-  // phase added to the shipped routing used to reach new projects only: the
-  // regenerated skills routed to a phase the project's table did not have.
-  it("--force merges a missing routing phase in without rewriting the project's taxonomy", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
-
-      // Roll this project back to a table without the ATDD `red` phase, and
-      // give it a taxonomy of its own: an extra agent in `coverage`, and one
-      // shipped-required agent deliberately dropped from it.
-      const doc = parseDocument(withoutAtddRedPhase(await readFile(routingPath, "utf-8")));
-      const coverage = atddPhases(doc).items.find(
-        (item) => isMap(item) && item.get("id") === "coverage",
-      );
-      if (!isMap(coverage)) throw new Error("qfai-atdd has no coverage phase");
-      coverage.set("mandatory_agents", ["house-engineer"]);
-      await writeFile(routingPath, doc.toString({ lineWidth: 0 }), "utf-8");
-      // The merge replaces the file through a temp file and a rename, which
-      // makes a new inode: the mode has to be carried over, or a manifest kept
-      // at 0600 comes back readable by everyone.
-      if (process.platform !== "win32") await chmod(routingPath, 0o600);
-
-      const captured = await captureStdout(async () => {
-        await runInit({ dir: root, force: true, dryRun: false, yes: true });
-      });
-
-      const merged = await readFile(routingPath, "utf-8");
-      const atddSection = merged.slice(merged.indexOf("- skill: qfai-atdd"));
-      // The phase is back, ahead of `implementation` as shipped.
-      expect(atddSection.indexOf("- id: red")).toBeGreaterThan(-1);
-      expect(atddSection.indexOf("- id: red")).toBeLessThan(
-        atddSection.indexOf("- id: implementation"),
-      );
-      expect(captured).toContain("I-ROUTING-PHASE-MERGED");
-      // The project's own edit is untouched, and its dropped required agent is
-      // reported rather than restored.
-      expect(merged).toContain("house-engineer");
-      expect(captured).toContain("W-ROUTING-AGENT-DIVERGED");
-      expect(captured).toContain("test-design-analyst");
-      if (process.platform !== "win32") {
-        expect((await stat(routingPath)).mode & 0o777).toBe(0o600);
-      }
-      // No half-written temp file is left behind in the manifest layer.
-      const manifestEntries = await fg("*", {
-        cwd: path.dirname(routingPath),
-        dot: true,
-        onlyFiles: true,
-      });
-      expect(manifestEntries.filter((entry) => entry.endsWith(".tmp"))).toEqual([]);
-
-      // Idempotent: a second --force has nothing left to add.
-      const second = await captureStdout(async () => {
-        await runInit({ dir: root, force: true, dryRun: false, yes: true });
-      });
-      expect(second).not.toContain("I-ROUTING-PHASE-MERGED");
-      expect(await readFile(routingPath, "utf-8")).toBe(merged);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // `writeFile` resolves a symlink and writes through it, so a project whose
-  // `agent-routing.yml` is a link into another tree would have had that other
-  // file rewritten by `qfai init`. `copyTemplateTree` already `lstat`s its
-  // destinations for this; the merge's direct write has to as well.
-  it("--force refuses to merge through a symlinked agent-routing.yml", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-link-"));
-    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
-
-      // A valid, writable routing table that lives outside the project and is
-      // missing the ATDD `red` phase — exactly what the merge wants to add.
-      const stale = withoutAtddRedPhase(await readFile(routingPath, "utf-8"));
-      const escapee = path.join(outside, "agent-routing.yml");
-      await writeFile(escapee, stale, "utf-8");
-      await rm(routingPath, { force: true });
-      try {
-        await symlink(escapee, routingPath, "file");
-      } catch {
-        return; // No symlinks here (Windows without Developer Mode).
-      }
-
-      const captured = await captureStdout(async () => {
-        await runInit({ dir: root, force: true, dryRun: false, yes: true });
-      });
-
-      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
-      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
-      // Nothing was written through the link.
-      expect(await readFile(escapee, "utf-8")).toBe(stale);
-    } finally {
-      await removeTempTree(root);
-      await removeTempTree(outside);
-    }
-  });
-
-  // `Buffer.toString("utf-8")` does not fail on bytes that are not UTF-8: it
-  // substitutes U+FFFD for each of them. The YAML still parses, so without a
-  // strict decode the merge would rename the substituted text over the user's
-  // manifest and those bytes would be gone for good.
-  it("--force skips a routing manifest that is not valid UTF-8", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-utf8-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
-
-      // Missing the ATDD `red` phase — so there is something to add — with a
-      // comment carrying a byte sequence no UTF-8 decoder can accept.
-      const stale = withoutAtddRedPhase(await readFile(routingPath, "utf-8"));
-      const bytes = Buffer.concat([
-        Buffer.from("# owner: ", "utf-8"),
-        Buffer.from([0xff, 0xfe]),
-        Buffer.from(`\n${stale}`, "utf-8"),
-      ]);
-      await writeFile(routingPath, bytes);
-
-      const captured = await captureStdout(async () => {
-        await runInit({ dir: root, force: true, dryRun: false, yes: true });
-      });
-
-      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
-      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
-      // Byte for byte what the project had: nothing was substituted and
-      // written back.
-      expect(await readFile(routingPath)).toEqual(bytes);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // A manifest `init` cannot open is the same class of problem as one it cannot
-  // parse: the contract is a note and a skipped merge. Letting the read error
-  // out of the merge aborted the whole `--force` run over an optional step.
-  it("--force reports an unreadable routing manifest instead of failing init", async () => {
-    // Needs an unreadable file, which POSIX modes give and root ignores.
-    if (process.platform === "win32" || process.getuid?.() === 0) return;
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-eacces-"));
-    const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const stale = withoutAtddRedPhase(await readFile(routingPath, "utf-8"));
-      await writeFile(routingPath, stale, "utf-8");
-      await chmod(routingPath, 0o000);
-
-      const captured = await captureStdout(async () => {
-        await runInit({ dir: root, force: true, dryRun: false, yes: true });
-      });
-
-      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
-      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
-      // The rest of the run still happened rather than being thrown away.
-      await access(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md"));
-      await chmod(routingPath, 0o600);
-      expect(await readFile(routingPath, "utf-8")).toBe(stale);
-    } finally {
-      await chmod(routingPath, 0o600).catch(() => undefined);
-      await removeTempTree(root);
-    }
-  });
-
-  // The replacement is a new inode created by whoever runs `init`, so under
-  // `sudo qfai init --force` — or in any shared tree where the manifest belongs
-  // to somebody else — a silent rename hands the user's own file to root and
-  // leaves them unable to edit it through `qfai-configure`.
-  it("--force keeps the routing manifest's owner across the merge", async () => {
-    // Needs a process that may hand a file to another owner.
-    if (process.platform === "win32" || process.getuid?.() !== 0) return;
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-owner-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
-      await writeFile(
-        routingPath,
-        withoutAtddRedPhase(await readFile(routingPath, "utf-8")),
-        "utf-8",
-      );
-      await chown(routingPath, 1000, 1000);
-
-      const captured = await captureStdout(async () => {
-        await runInit({ dir: root, force: true, dryRun: false, yes: true });
-      });
-
-      expect(captured).toContain("I-ROUTING-PHASE-MERGED");
-      const after = await lstat(routingPath);
-      expect(after.uid).toBe(1000);
-      expect(after.gid).toBe(1000);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // `--force` regenerates `assistant/agents/**` but never the project's
-  // `agent-catalog.yml`, so a phase spliced in ahead of an agent the project
-  // removed would leave `qfai validate` failing (QFAI-AGENT-008) on a table
-  // that validated a moment earlier.
-  it("--force skips a routing phase the project's agent catalog cannot satisfy", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-catalog-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
-      const routingPath = path.join(manifestDir, "agent-routing.yml");
-      const catalogPath = path.join(manifestDir, "agent-catalog.yml");
-
-      await writeFile(
-        routingPath,
-        withoutAtddRedPhase(await readFile(routingPath, "utf-8")),
-        "utf-8",
-      );
-      // The supported removal path: the agent is gone from the catalog.
-      const catalog = parseDocument(await readFile(catalogPath, "utf-8"));
-      const agents = catalog.get("agents");
-      if (!isSeq(agents)) throw new Error("agent-catalog.yml has no agents sequence");
-      agents.items = agents.items.filter(
-        (item) => !(isMap(item) && item.get("id") === "qa-gatekeeper"),
-      );
-      await writeFile(catalogPath, catalog.toString({ lineWidth: 0 }), "utf-8");
-
-      const captured = await captureStdout(async () => {
-        await runInit({ dir: root, force: true, dryRun: false, yes: true });
-      });
-
-      expect(captured).toContain("W-ROUTING-AGENT-UNKNOWN");
-      expect(captured).toContain("qa-gatekeeper");
-      expect(atddPhaseIds(await readFile(routingPath, "utf-8"))).not.toContain("red");
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // The merge runs after the create-only copy, but `--dry-run` copies nothing,
-  // so the manifest layer is legitimately absent there. An absent path is not
-  // an unsafe one: it is simply nothing to merge into, and warning about it
-  // would put a write-safety diagnostic on every `--force --dry-run`.
-  it("--force --dry-run reports no routing warning when there is no manifest yet", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-dry-"));
-    try {
-      const captured = await captureStdout(async () => {
-        await runInit({ dir: root, force: true, dryRun: true, yes: true });
-      });
-
-      expect(captured).not.toContain("W-ROUTING");
-      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // An `lstat` on the manifest — like `O_NOFOLLOW` — answers for the last path
-  // component only. A project whose whole `manifest/` directory is a link out
-  // of the tree has a perfectly ordinary file at the end of it, so both checks
-  // passed while every byte written still landed outside the project.
-  it("--force refuses to merge through a symlinked manifest directory", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-dirlink-"));
-    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
-      const escapee = path.join(outside, "manifest");
-
-      // Move the real manifest layer out of the project and link to it.
-      await rename(manifestDir, escapee);
-      try {
-        await symlink(escapee, manifestDir, "dir");
-      } catch {
-        await rename(escapee, manifestDir);
-        return; // No symlinks here (Windows without Developer Mode).
-      }
-      const escapedRouting = path.join(escapee, "agent-routing.yml");
-      const stale = withoutAtddRedPhase(await readFile(escapedRouting, "utf-8"));
-      await writeFile(escapedRouting, stale, "utf-8");
-
-      const captured = await captureStdout(async () => {
-        await runInit({ dir: root, force: true, dryRun: false, yes: true });
-      });
-
-      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
-      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
-      // Nothing was written to the file outside the project.
-      expect(await readFile(escapedRouting, "utf-8")).toBe(stale);
-    } finally {
-      await removeTempTree(root);
-      await removeTempTree(outside);
-    }
-  });
-
-  // `review-profiles.yml` is excluded from `--force` exactly as the catalog is,
-  // so a skill entry shipped alongside a new profile would be appended whole
-  // into a project that has neither — leaving `review_profile:` naming a
-  // profile nothing declares when the reviewers for that skill are selected.
-  it("--force skips a routing entry whose review profile the project lacks", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-profile-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
-      const routingPath = path.join(manifestDir, "agent-routing.yml");
-      const profilesPath = path.join(manifestDir, "review-profiles.yml");
-
-      // A project on an older package: no `qfai-prototyping` routing entry, and
-      // no `ui-bearing` profile for it to name either.
-      const routing = parseDocument(await readFile(routingPath, "utf-8"));
-      const entries = routing.get("routing");
-      if (!isSeq(entries)) throw new Error("agent-routing.yml has no routing sequence");
-      entries.items = entries.items.filter(
-        (item) => !(isMap(item) && item.get("skill") === "qfai-prototyping"),
-      );
-      await writeFile(routingPath, routing.toString({ lineWidth: 0 }), "utf-8");
-      const profiles = parseDocument(await readFile(profilesPath, "utf-8"));
-      const declared = profiles.get("profiles");
-      if (!isMap(declared)) throw new Error("review-profiles.yml has no profiles map");
-      declared.delete("ui-bearing");
-      await writeFile(profilesPath, profiles.toString({ lineWidth: 0 }), "utf-8");
-
-      const captured = await captureStdout(async () => {
-        await runInit({ dir: root, force: true, dryRun: false, yes: true });
-      });
-
-      expect(captured).toContain("W-ROUTING-PROFILE-UNKNOWN");
-      expect(captured).toContain("ui-bearing");
-      expect(await readFile(routingPath, "utf-8")).not.toContain("- skill: qfai-prototyping");
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
   it("uses relative symlink targets", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2246,7 +1841,7 @@ describe("qfai init", () => {
       expect(path.isAbsolute(target)).toBe(false);
       // Target should contain the canonical source path
       const normalized = target.replace(/\\/g, "/");
-      expect(normalized).toContain(".qfai/assistant/skills/qfai-configure");
+      expect(normalized).toContain(".qfai/assistant/skill/qfai-configure");
     } finally {
       await removeTempTree(root);
     }
@@ -2290,9 +1885,25 @@ describe("qfai init", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       await expectSymlink(skillLink);
-      await expectSymlinkTarget(skillLink, ".qfai/assistant/skills/qfai-configure");
+      await expectSymlinkTarget(skillLink, ".qfai/assistant/skill/qfai-configure");
       // Should be resolvable now
       await access(path.join(skillLink, "SKILL.md"));
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("retargets a flattened link from the old assistant layout", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-retarget-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const wrapper = path.join(root, ".claude", "skills", "qfai-configure");
+      await rm(wrapper, { force: true });
+      await writeFile(wrapper, "../../.qfai/assistant/skills/qfai-configure", "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await expectSymlinkTarget(wrapper, ".qfai/assistant/skill/qfai-configure");
+      await access(path.join(wrapper, "SKILL.md"));
     } finally {
       await removeTempTree(root);
     }
@@ -2370,7 +1981,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0011
+  // QFAI:EX-0001-0030-01
   it("New repo init creates both instructions files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2416,7 +2027,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0012
+  // QFAI:EX-0001-0030-02
   it("Skip when instructions files exist", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2446,7 +2057,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0013
+  // QFAI:EX-0001-0031-01
   it("--force refreshes instructions from the shipped template", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2657,7 +2268,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0013
+  // QFAI:EX-0001-0031-01
   it("--force refreshes instructions linked to an in-project dir whose name starts with dots", async () => {
     // The escape check compared `path.relative(...)` with a `startsWith("..")`
     // prefix, which also matches a directory merely *named* `..rules`. Link
@@ -2703,7 +2314,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0012
+  // QFAI:EX-0001-0030-02
   it("Partial existing instructions files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2840,7 +2451,7 @@ describe("qfai init", () => {
     expect(principlesLines.length - principlesMarkerIdx).toBeLessThanOrEqual(5);
   });
 
-  // QFAI:SPEC-0003:TC-0003-0014
+  // QFAI:EX-0001-0032-01
   it("Activation guidance printed on create", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2860,7 +2471,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0012
+  // QFAI:EX-0001-0030-02
   it("Empty file treated as existing (instructions)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2885,10 +2496,10 @@ describe("qfai init", () => {
 
       // All previously expected files still exist (instructions files are additive only)
       const expectedRegularFiles = [
-        path.join(root, ".qfai", "assistant", "skills", "qfai-configure", "SKILL.md"),
-        path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md"),
-        path.join(root, ".qfai", "assistant", "constitution", "constitution.md"),
-        path.join(root, ".qfai", "assistant", "agents", "delivery-planner.md"),
+        path.join(root, ".qfai", "assistant", "skill", "qfai-configure", "SKILL.md"),
+        path.join(root, ".qfai", "assistant", "skill", "qfai-discussion", "SKILL.md"),
+        path.join(root, ".qfai", "assistant", "rule", "constitution.md"),
+        path.join(root, ".qfai", "assistant", "agent", "delivery-planner.md"),
         path.join(root, ".github", "copilot-instructions.md"),
         path.join(root, "AGENTS.md"),
         path.join(root, "CLAUDE.md"),
@@ -3306,7 +2917,7 @@ describe("qfai init", () => {
         root,
         ".qfai",
         "assistant",
-        "skills",
+        "skill",
         "qfai-discussion",
         "10_workflow.md",
       );
@@ -3326,8 +2937,8 @@ describe("qfai init", () => {
 
       expect(skippedBullets.filter((bullet) => bullet.includes("\\"))).toEqual([]);
       expect(removedBullets.filter((bullet) => bullet.includes("\\"))).toEqual([]);
-      expect(skippedBullets).toContain(".qfai/assistant/skills/qfai-atdd/SKILL.md");
-      expect(removedBullets).toContain(".qfai/assistant/skills/qfai-discussion/10_workflow.md");
+      expect(skippedBullets).toContain(".qfai/assistant/skill/qfai-atdd/SKILL.md");
+      expect(removedBullets).toContain(".qfai/assistant/skill/qfai-discussion/10_workflow.md");
     } finally {
       await removeTempTree(root);
     }
@@ -3348,864 +2959,86 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0021 (TDD-0021): 4-layer asset-tree seed
-  it("TC-0003-0021 (TDD-0021): seeds the 4 assistant layers and leaves no .gitkeep in a populated layer", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0021-"));
-    const dryRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0021-dry-"));
-    const layers = ["constitution", "manifest", "catalog", "process"];
+  it("seeds the singular assistant tree and project steering template", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-singular-"));
     try {
-      const dryRun = await captureStdout(async () => {
-        await runInit({ dir: dryRoot, force: false, dryRun: true, yes: true });
-      });
-      const run = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-      for (const layer of layers) {
-        const layerDir = path.join(root, ".qfai", "assistant", layer);
-        const entries = await readdir(layerDir);
-        // The shipped assets populate every layer, so a .gitkeep would keep
-        // nothing alive: init must not write one (and must never write a
-        // prose directory index under that filename).
-        expect(entries.length).toBeGreaterThan(0);
-        expect(entries).not.toContain(".gitkeep");
-
-        // A placeholder that was never needed is not a preserved file:
-        // neither run may report its path under "skipped paths".
-        const reported = path.join(".qfai", "assistant", layer, ".gitkeep");
-        expect(run).not.toContain(reported);
-        expect(dryRun).not.toContain(reported);
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      for (const layer of ["rule", "skill", "agent", "prompt"]) {
+        expect(
+          (await readdir(path.join(root, ".qfai", "assistant", layer))).length,
+        ).toBeGreaterThan(0);
       }
-    } finally {
-      await removeTempTree(root);
-      await removeTempTree(dryRoot);
-    }
-  });
-
-  it("removes a pre-fix prose .gitkeep from a populated layer, and reports it", async () => {
-    // Stopping the write does nothing for a project that already ran an older
-    // init: the prose body — a stale directory index naming an internal change
-    // id — sat there forever, reported only as "skipped".
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-legacy-gitkeep-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const layer = path.join(root, ".qfai", "assistant", "constitution");
-      const gitkeep = path.join(layer, ".gitkeep");
-      const legacyBody = [
-        "# .qfai/assistant/constitution/",
-        "",
-        "Foundational normative rules (constitution, drift-protocol, distributed-surface, quality).",
-        "",
-        "Seeded by qfai init (4-layer assistant-tree recut, CHG-003).",
-        "",
-      ].join("\n");
-      await writeFile(gitkeep, legacyBody, "utf-8");
-
-      const output = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-
-      await expect(access(gitkeep)).rejects.toThrow();
-      // POSIX needle, because that is what the report carries: every path
-      // `qfai init` prints goes through `toPosixRelative`, and two assertions
-      // in this file already pin the reports as backslash-free. A `path.join`
-      // needle agrees with that only on a platform whose separator is `/`.
-      expect(output.replaceAll("\\", "/")).toContain(".qfai/assistant/constitution/.gitkeep");
-      expect(output).toMatch(/removed legacy files/);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  it("removes the later prose .gitkeep that no longer names the change id", async () => {
-    // Two generator versions wrote this file: the first named the recut's
-    // internal cross-spec change id, the second dropped it. Dropping it only
-    // stopped new writes — a project that ran the in-between version still
-    // carries the body, so both forms have to be recognised as unedited
-    // generator output and removed.
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-legacy-gitkeep-noid-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const gitkeep = path.join(root, ".qfai", "assistant", "manifest", ".gitkeep");
-      await writeFile(
-        gitkeep,
-        [
-          "# .qfai/assistant/manifest/",
-          "",
-          "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml).",
-          "",
-          "Seeded by qfai init (4-layer assistant-tree recut).",
-          "",
-        ].join("\n"),
-        "utf-8",
+      expect(
+        await readFile(path.join(root, ".qfai", "steering", "_template", "entry.md"), "utf-8"),
+      ).toContain("kind: decision");
+      for (const retired of ["constitution", "manifest", "process"]) {
+        await expect(readdir(path.join(root, ".qfai", "assistant", retired))).rejects.toMatchObject(
+          { code: "ENOENT" },
+        );
+      }
+      for (const relative of [
+        "01_policy/objective.md",
+        "01_policy/initiative.md",
+        "01_policy/principle.md",
+        "03_contract/tech.md",
+        "03_contract/structure.md",
+      ]) {
+        await access(path.join(root, ".qfai", "spec", ...relative.split("/")));
+      }
+      const objective = path.join(root, ".qfai", "spec", "01_policy", "objective.md");
+      await writeFile(objective, "project objective\n", "utf-8");
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      expect(await readFile(objective, "utf-8")).toBe("project objective\n");
+      await expect(readdir(path.join(root, ".qfai", "assistant", "catalog"))).rejects.toMatchObject(
+        { code: "ENOENT" },
       );
+    } finally {
+      await removeTempTree(root);
+    }
+  });
 
+  it("copies named legacy rules only and preserves user-owned files", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-upgrade-"));
+    try {
+      const legacy = path.join(root, ".qfai", "assistant", "instructions");
+      await mkdir(legacy, { recursive: true });
+      await writeFile(path.join(legacy, "quality.md"), "local quality\n", "utf-8");
+      await writeFile(path.join(legacy, "product.md"), "local product\n", "utf-8");
+      await writeFile(path.join(legacy, "unknown.md"), "local unknown\n", "utf-8");
       const output = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        await runInit({
+          dir: root,
+          force: false,
+          dryRun: false,
+          yes: true,
+          upgradeAssistantTree: true,
+        });
       });
-
-      await expect(access(gitkeep)).rejects.toThrow();
-      expect(output).toMatch(/removed legacy files/);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  it("previews the legacy .gitkeep removal without performing it", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-legacy-gitkeep-dry-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const gitkeep = path.join(root, ".qfai", "assistant", "manifest", ".gitkeep");
-      await writeFile(
-        gitkeep,
-        [
-          "# .qfai/assistant/manifest/",
-          "",
-          "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml).",
-          "",
-          "Seeded by qfai init (4-layer assistant-tree recut, CHG-003).",
-          "",
-        ].join("\n"),
-        "utf-8",
-      );
-
-      const output = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: true, yes: true });
-      });
-
-      expect(output).toMatch(/would remove legacy files/);
-      // The dry run reports it and leaves it on disk.
-      await access(gitkeep);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  it("leaves a user-edited .gitkeep alone", async () => {
-    // Only the generator's exact output is removable. Anything else in that
-    // file is a deliberate edit, and deleting it would be data loss.
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-edited-gitkeep-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const gitkeep = path.join(root, ".qfai", "assistant", "catalog", ".gitkeep");
-      await writeFile(gitkeep, "# our own note, do not delete\n", "utf-8");
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      expect(await readFile(gitkeep, "utf-8")).toBe("# our own note, do not delete\n");
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  it("does not delete a .gitkeep that is a symlink to a legacy body", async () => {
-    // The decision is about a five-line placeholder, but the read was
-    // unbounded and against a path the adopter controls, so it followed
-    // whatever the name resolved to. A symlink pointing at a legacy body read
-    // as "unedited generator output" and the link itself was then deleted. A
-    // regular-file reader refuses the symlink instead, which is the same
-    // refusal that keeps a FIFO from hanging `qfai init` in `open` and a
-    // multi-gigabyte file from being read into memory to answer a question
-    // about five lines.
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-symlink-gitkeep-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const layerDir = path.join(root, ".qfai", "assistant", "catalog");
-      const gitkeep = path.join(layerDir, ".gitkeep");
-      const target = path.join(root, "our-placeholder");
-      await writeFile(target, legacyGitkeepBody("catalog"), "utf-8");
-      await rm(gitkeep, { force: true });
-      await symlink(target, gitkeep, "file");
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      expect((await lstat(gitkeep)).isSymbolicLink()).toBe(true);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  it("leaves no quarantine residue behind when it removes a legacy .gitkeep", async () => {
-    // Verifying a name and unlinking that name are two resolutions of one
-    // string, so the removal moves the object aside and re-reads it: what is
-    // measured and what is deleted are then the same inode. The move is an
-    // implementation detail, but a botched one would strand
-    // `.gitkeep.qfai-legacy-*` files in the adopter's tree, so the layer has to
-    // come out holding neither the placeholder nor any residue of moving it.
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-gitkeep-residue-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const layerDir = path.join(root, ".qfai", "assistant", "catalog");
-      const gitkeep = path.join(layerDir, ".gitkeep");
-      await writeFile(gitkeep, legacyGitkeepBody("catalog"), "utf-8");
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      await expect(access(gitkeep)).rejects.toThrow();
-      const left = await readdir(layerDir);
-      expect(left.filter((name) => name.startsWith(".gitkeep"))).toEqual([]);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  it("refuses the legacy .gitkeep removal when an ancestor is a symlink", async () => {
-    // `.qfai/assistant/` pointing into a shared tree makes every check resolve
-    // through the link, and the removal would then delete a file outside the
-    // project. A populated link target also makes the copy skip everything, so
-    // the deletion would be the only effect the run had.
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-gitkeep-symlink-"));
-    const shared = await mkdtemp(path.join(os.tmpdir(), "qfai-init-gitkeep-shared-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const assistant = path.join(root, ".qfai", "assistant");
-      // Move the real tree out to `shared` and leave a symlink behind.
-      await rename(assistant, path.join(shared, "assistant"));
-      await symlink(path.join(shared, "assistant"), assistant, "junction");
-
-      const outside = path.join(shared, "assistant", "catalog", ".gitkeep");
-      await writeFile(outside, legacyGitkeepBody("catalog"), "utf-8");
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      // Untouched: the file lives outside the repository.
-      expect(await readFile(outside, "utf-8")).toBe(legacyGitkeepBody("catalog"));
-    } finally {
-      await removeTempTree(root);
-      await removeTempTree(shared);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): project-root .qfai/steering/ seed
-  it("TC-0003-0022 (TDD-0022): seeds project-root .qfai/steering/ surface (.gitkeep + _templates/entry.md)", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      // No README: the surface's own contract is
-      // `.qfai/assistant/catalog/worklog-entry.schema.md`.
+      expect(
+        await readFile(path.join(root, ".qfai", "assistant", "rule", "quality.md"), "utf-8"),
+      ).toBe("local quality\n");
+      expect(await readFile(path.join(legacy, "quality.md"), "utf-8")).toBe("local quality\n");
+      expect(await readFile(path.join(legacy, "product.md"), "utf-8")).toBe("local product\n");
+      expect(await readFile(path.join(legacy, "unknown.md"), "utf-8")).toBe("local unknown\n");
+      expect(output).not.toContain("unknown.md");
       await expect(
-        readFile(path.join(root, ".qfai", "steering", "README.md"), "utf-8"),
-      ).rejects.toThrow();
-      const gitkeepStat = await lstat(path.join(root, ".qfai", "steering", ".gitkeep"));
-      expect(gitkeepStat.isFile()).toBe(true);
-      const tplBody = await readFile(
-        path.join(root, ".qfai", "steering", "_templates", "entry.md"),
-        "utf-8",
-      );
-      expect(tplBody).toMatch(/id:\s*2026-MM-DD-kebab-case-id/);
-      expect(tplBody).toContain("kind: decision");
-      expect(tplBody).toMatch(/promote-to:/);
-      // The status enum is derived from the same SSOT the validator reads
-      // (WORKLOG_ENTRY_STATUSES), so seed and validator cannot drift.
-      expect(tplBody).toContain(`enum: ${WORKLOG_ENTRY_STATUSES.join(" | ")}`);
+        readFile(path.join(root, ".qfai", "assistant", "rule", "unknown.md"), "utf-8"),
+      ).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
       await removeTempTree(root);
     }
   });
 
-  // The seeded template's frontmatter survives a formatter, so the drift notice keeps meaning
-  // what it says.
-  //
-  // The seed is create-only and re-init compares it byte for byte against what this release
-  // generates. Column-aligned trailing comments are what breaks that pairing: Prettier collapses
-  // a run of spaces before a YAML `#`, so the first `prettier --write` over an adopter's tree
-  // rewrites a file the adopter never touched — and from then on **every** re-init reports
-  // `_templates/entry.md differs from the seed this qfai release generates`. A notice that fires
-  // forever on a file nobody edited is one a reader learns to skip, which costs the notice its
-  // one job: saying that a real seed change is waiting.
-  //
-  // Asserted as the PROPERTY rather than by running Prettier. Prettier is the repository's
-  // formatter and not this package's dependency; a test reaching up the workspace for it would
-  // couple the package suite to the monorepo layout for a claim the property states directly.
-  // The second half is what keeps the first honest — deleting every comment also satisfies
-  // "no run of spaces", and would pass a row that only forbade one.
-  it("TC-0003-0022 (TDD-0022): seeds a steering template whose frontmatter a formatter leaves alone", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022-fmt-"));
+  it("keeps a project rule overlay on a force refresh", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-overlay-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const body = await readFile(
-        path.join(root, ".qfai", "steering", "_templates", "entry.md"),
-        "utf-8",
-      );
-      const lines = body.split(/\r?\n/);
-      const closing = lines.indexOf("---", 1);
-      expect(closing, "the seeded template must open with a frontmatter block").toBeGreaterThan(0);
-      const frontmatter = lines.slice(1, closing);
-
-      expect(
-        frontmatter.filter((line) => / {2,}/.test(line)),
-        "a run of spaces in the frontmatter is column alignment, and Prettier collapses it — " +
-          "which makes every later re-init report seed drift on a file nobody edited",
-      ).toEqual([]);
-
-      // Non-vacuity, both halves: the block was read, and it still carries the guidance the
-      // alignment existed to lay out.
-      expect(
-        frontmatter.length,
-        "the frontmatter must have lines for this to be about",
-      ).toBeGreaterThan(0);
-      expect(
-        frontmatter.filter((line) => line.includes(" # required;")).length,
-        "every field keeps its trailing `# required;` note: dropping the comments would satisfy " +
-          "the spacing claim above while removing what it protects",
-      ).toBe(frontmatter.length);
+      const overlay = path.join(root, ".qfai", "assistant", "rule", "quality.local.md");
+      await writeFile(overlay, "project policy\n", "utf-8");
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      expect(await readFile(overlay, "utf-8")).toBe("project policy\n");
     } finally {
       await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): re-init preserves user edits in .qfai/steering/
-  it("TC-0003-0022 (TDD-0022): re-init does not overwrite user edits in .qfai/steering/_templates/entry.md", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022b-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
-      const userEdit = "---\nid: my-own-shape\n---\n";
-      await writeFile(templatePath, userEdit, "utf-8");
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const after = await readFile(templatePath, "utf-8");
-      expect(after).toBe(userEdit);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): re-init reports a stale steering seed
-  it("TC-0003-0022 (TDD-0022): re-init reports .qfai/steering/ seed drift instead of skipping silently", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022c-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      // An untouched tree is already current: the seed files appear in the
-      // skipped list and must not draw a drift notice.
-      const cleanRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-      expect(cleanRun).not.toContain("differs from the seed this qfai release generates");
-
-      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
-      await writeFile(templatePath, "---\nid: stale\n---\n", "utf-8");
-
-      const staleRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-
-      expect(staleRun).toContain(
-        ".qfai/steering/_templates/entry.md differs from the seed this qfai release generates",
-      );
-      expect(staleRun).toMatch(
-        /first differing line \d+; on disk \d+ lines, latest seed \d+ lines/,
-      );
-      expect(staleRun).toContain("create-only");
-      // The notice never implies a rewrite happened.
-      expect(await readFile(templatePath, "utf-8")).toBe("---\nid: stale\n---\n");
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): CRLF is not drift
-  it("TC-0003-0022 (TDD-0022): re-init does not report drift for a CRLF copy of an unedited seed", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022d-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
-      // What core.autocrlf=true (or a Windows editor) leaves behind: the same
-      // body, every LF rewritten as CRLF.
-      const body = await readFile(templatePath, "utf-8");
-      await writeFile(templatePath, body.replace(/\n/g, "\r\n"), "utf-8");
-
-      const crlfRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-
-      expect(crlfRun).not.toContain("differs from the seed this qfai release generates");
-      expect(crlfRun).not.toContain("could not be compared");
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): an uncomparable seed path is reported
-  it("TC-0003-0022 (TDD-0022): re-init reports a steering seed path it cannot compare", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022e-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      // A directory where the seed file belongs: occupied, so create-only skips
-      // it, but there is no body to compare — that must not read as "current".
-      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
-      // `removeTempTree` rather than a bare `rm`: this file routes every removal
-      // through the helper, and its `force` / retry contract is what is wanted
-      // here too — the seed is a regular file, so the recursive flag is inert.
-      await removeTempTree(templatePath);
-      await mkdir(templatePath, { recursive: true });
-
-      const blockedRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-
-      expect(blockedRun).toContain(
-        ".qfai/steering/_templates/entry.md could not be compared against the seed this qfai release generates",
-      );
-      expect(blockedRun).toContain("whether it is current is unknown");
-      // Only the occupied path is reported, and the run still succeeds.
-      expect(blockedRun).not.toContain(".qfai/steering/.gitkeep could not be compared");
-      const dirStat = await lstat(templatePath);
-      expect(dirStat.isDirectory()).toBe(true);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): --upgrade-assistant-tree migration
-  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree copies legacy steering/ files into the 4-layer tree", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-"));
-    try {
-      // Simulate a legacy v1.8 layout: seed .qfai/assistant/steering/ with content
-      const legacy = path.join(root, ".qfai", "assistant", "steering");
-      await mkdir(legacy, { recursive: true });
-      await writeFile(path.join(legacy, "test-layers.md"), "# legacy test layers\n", "utf-8");
-      await writeFile(path.join(legacy, "agent-catalog.yml"), "agents: []\n", "utf-8");
-
-      await runInit({
-        dir: root,
-        force: false,
-        dryRun: false,
-        yes: true,
-        upgradeAssistantTree: true,
-      });
-
-      const newCatalog = await readFile(
-        path.join(root, ".qfai", "assistant", "catalog", "test-layers.md"),
-        "utf-8",
-      );
-      expect(newCatalog).toContain("legacy test layers");
-      const newManifest = await readFile(
-        path.join(root, ".qfai", "assistant", "manifest", "agent-catalog.yml"),
-        "utf-8",
-      );
-      expect(newManifest).toContain("agents: []");
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): --upgrade walks instructions/ in
-  // addition to steering/, and leaves the canonical manifest/ layer untouched
-  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree relocates files from both probed pre-recut surfaces (instructions/, steering/) and keeps manifest/ in place", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-2s-"));
-    try {
-      // legacy instructions/drift-protocol.md → constitution/drift-protocol.md
-      const legacyInstructions = path.join(root, ".qfai", "assistant", "instructions");
-      await mkdir(legacyInstructions, { recursive: true });
-      await writeFile(
-        path.join(legacyInstructions, "drift-protocol.md"),
-        "# legacy drift\n",
-        "utf-8",
-      );
-      // legacy steering/test-layers.md → catalog/test-layers.md
-      const legacyStg = path.join(root, ".qfai", "assistant", "steering");
-      await mkdir(legacyStg, { recursive: true });
-      await writeFile(path.join(legacyStg, "test-layers.md"), "# legacy layers\n", "utf-8");
-      // pre-existing manifest/spec_required_files.json — manifest/ is never
-      // probed by the helper because the recut leaves its path unchanged, so
-      // the file must simply stay where it is.
-      const legacyManifest = path.join(root, ".qfai", "assistant", "manifest");
-      await mkdir(legacyManifest, { recursive: true });
-      await writeFile(
-        path.join(legacyManifest, "spec_required_files.json"),
-        '{"value": 1}\n',
-        "utf-8",
-      );
-
-      await runInit({
-        dir: root,
-        force: false,
-        dryRun: false,
-        yes: true,
-        upgradeAssistantTree: true,
-      });
-
-      const drift = await readFile(
-        path.join(root, ".qfai", "assistant", "constitution", "drift-protocol.md"),
-        "utf-8",
-      );
-      expect(drift).toContain("legacy drift");
-      const layers = await readFile(
-        path.join(root, ".qfai", "assistant", "catalog", "test-layers.md"),
-        "utf-8",
-      );
-      expect(layers).toContain("legacy layers");
-      // manifest/spec_required_files.json is left exactly as seeded: the
-      // helper does not walk manifest/, so nothing relocates or rewrites it.
-      const manifestFile = await readFile(
-        path.join(root, ".qfai", "assistant", "manifest", "spec_required_files.json"),
-        "utf-8",
-      );
-      expect(manifestFile).toContain('"value": 1');
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): legacy process/migrations/ doesn't double-nest
-  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree strips leading process/ so legacy process/migrations/foo.md lands at process/migrations/foo.md (no double nesting)", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-pp-"));
-    try {
-      const legacyProcess = path.join(
-        root,
-        ".qfai",
-        "assistant",
-        "steering",
-        "process",
-        "migrations",
-      );
-      await mkdir(legacyProcess, { recursive: true });
-      await writeFile(path.join(legacyProcess, "v1.5.0-foo.md"), "# old memo\n", "utf-8");
-
-      await runInit({
-        dir: root,
-        force: false,
-        dryRun: false,
-        yes: true,
-        upgradeAssistantTree: true,
-      });
-
-      // CORRECT destination
-      const correctDest = path.join(
-        root,
-        ".qfai",
-        "assistant",
-        "process",
-        "migrations",
-        "v1.5.0-foo.md",
-      );
-      const movedBody = await readFile(correctDest, "utf-8");
-      expect(movedBody).toContain("old memo");
-
-      // INCORRECT (double-nested) destination MUST NOT exist
-      let doubleNested = false;
-      try {
-        await access(
-          path.join(
-            root,
-            ".qfai",
-            "assistant",
-            "process",
-            "process",
-            "migrations",
-            "v1.5.0-foo.md",
-          ),
-        );
-        doubleNested = true;
-      } catch {
-        doubleNested = false;
-      }
-      expect(doubleNested).toBe(false);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): review-gate.rules.yml maps to catalog layer (not manifest)
-  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree routes review-gate.rules.yml to catalog/ (not manifest/)", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-rg-"));
-    try {
-      const legacy = path.join(root, ".qfai", "assistant", "steering");
-      await mkdir(legacy, { recursive: true });
-      await writeFile(path.join(legacy, "review-gate.rules.yml"), "rules: []\n", "utf-8");
-
-      await runInit({
-        dir: root,
-        force: false,
-        dryRun: false,
-        yes: true,
-        upgradeAssistantTree: true,
-      });
-
-      // catalog/ MUST contain it (review-gate is a reference rules catalog,
-      // not a routing manifest).
-      const catalogCopy = await readFile(
-        path.join(root, ".qfai", "assistant", "catalog", "review-gate.rules.yml"),
-        "utf-8",
-      );
-      expect(catalogCopy).toContain("rules: []");
-
-      // manifest/ MUST NOT contain it.
-      let manifestExists = false;
-      try {
-        await access(path.join(root, ".qfai", "assistant", "manifest", "review-gate.rules.yml"));
-        manifestExists = true;
-      } catch {
-        manifestExists = false;
-      }
-      expect(manifestExists).toBe(false);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): non-top-level `migrations` segment falls through to catalog/
-  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree leaves non-top-level migrations segments in catalog/, not process/", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-mig-"));
-    try {
-      const legacy = path.join(root, ".qfai", "assistant", "steering");
-      // `foo/migrations/bar.md` — `migrations` is NOT at segments[0].
-      const subDir = path.join(legacy, "foo", "migrations");
-      await mkdir(subDir, { recursive: true });
-      await writeFile(path.join(subDir, "bar.md"), "user note\n", "utf-8");
-
-      await runInit({
-        dir: root,
-        force: false,
-        dryRun: false,
-        yes: true,
-        upgradeAssistantTree: true,
-      });
-
-      // process/ MUST NOT contain it (the top-segment guard rejects this).
-      let processExists = false;
-      try {
-        await access(
-          path.join(root, ".qfai", "assistant", "process", "foo", "migrations", "bar.md"),
-        );
-        processExists = true;
-      } catch {
-        processExists = false;
-      }
-      expect(processExists).toBe(false);
-
-      // catalog/ (default fallback) MUST contain it under the same subpath.
-      const catalogCopy = await readFile(
-        path.join(root, ".qfai", "assistant", "catalog", "foo", "migrations", "bar.md"),
-        "utf-8",
-      );
-      expect(catalogCopy).toContain("user note");
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): upgrade on already-upgraded project is a no-op note
-  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree on an already-upgraded project emits W-USER-EDIT-PRESERVED only", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023b-"));
-    try {
-      // First, perform a migration so the new tree exists with content
-      // already in the 4 layers.
-      const legacy = path.join(root, ".qfai", "assistant", "steering");
-      await mkdir(legacy, { recursive: true });
-      await writeFile(path.join(legacy, "test-layers.md"), "legacy A\n", "utf-8");
-      await runInit({
-        dir: root,
-        force: false,
-        dryRun: false,
-        yes: true,
-        upgradeAssistantTree: true,
-      });
-      // Second --upgrade run: catalog/test-layers.md already exists; the
-      // helper must emit the W-USER-EDIT-PRESERVED note and NOT overwrite.
-      const stdout = await captureStdout(async () => {
-        await runInit({
-          dir: root,
-          force: false,
-          dryRun: false,
-          yes: true,
-          upgradeAssistantTree: true,
-        });
-      });
-      expect(stdout).toContain("W-USER-EDIT-PRESERVED");
-      // Existing file is preserved (not overwritten).
-      const preserved = await readFile(
-        path.join(root, ".qfai", "assistant", "catalog", "test-layers.md"),
-        "utf-8",
-      );
-      expect(preserved).toContain("legacy A");
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0024 (TDD-0024): migration memo authoring
-  it("TC-0003-0024 (TDD-0024): --upgrade-assistant-tree writes a migration memo and is idempotent on re-run", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0024-"));
-    try {
-      await runInit({
-        dir: root,
-        force: false,
-        dryRun: false,
-        yes: true,
-        upgradeAssistantTree: true,
-      });
-      const memoMatches = await fg(
-        ".qfai/assistant/process/migrations/v*-assistant-layer-recut.md",
-        {
-          cwd: root,
-          dot: true,
-        },
-      );
-      expect(memoMatches.length).toBe(1);
-      const memoPath = path.join(root, memoMatches[0] ?? "");
-      const firstBody = await readFile(memoPath, "utf-8");
-      expect(firstBody).toContain("assistant-layer recut");
-      expect(firstBody).toContain("reached their sunset in v1.10.0");
-
-      // Re-run: memo MUST NOT be modified (commit-immutable per OC-53).
-      await runInit({
-        dir: root,
-        force: false,
-        dryRun: false,
-        yes: true,
-        upgradeAssistantTree: true,
-      });
-      const secondBody = await readFile(memoPath, "utf-8");
-      expect(secondBody).toBe(firstBody);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  it("names only the pre-recut surfaces it probed when reporting that none were found", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-upgrade-manifest-"));
-    try {
-      // Populate the canonical manifest/ layer and leave the two pre-recut
-      // surfaces (steering/, instructions/) absent. The helper deliberately
-      // never stats manifest/ — its path is unchanged by the recut — so
-      // neither the note nor the memo may claim it was examined.
-      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
-      await mkdir(manifestDir, { recursive: true });
-      await writeFile(path.join(manifestDir, "my-routing.yml"), "phases: []\n", "utf-8");
-
-      const stdout = await captureStdout(async () => {
-        await runInit({
-          dir: root,
-          force: false,
-          dryRun: false,
-          yes: true,
-          upgradeAssistantTree: true,
-        });
-      });
-
-      expect(stdout).toContain(
-        "W-USER-EDIT-PRESERVED: no pre-recut surfaces (.qfai/assistant/{steering,instructions}/) found",
-      );
-      expect(stdout).not.toContain("{steering,instructions,manifest}");
-
-      const memoMatches = await fg(
-        ".qfai/assistant/process/migrations/v*-assistant-layer-recut.md",
-        { cwd: root, dot: true },
-      );
-      expect(memoMatches.length).toBe(1);
-      const memoBody = await readFile(path.join(root, memoMatches[0] ?? ""), "utf-8");
-      expect(memoBody).toContain(
-        "No pre-recut surfaces (`.qfai/assistant/{steering,instructions}/`) found",
-      );
-      expect(memoBody).not.toContain("{steering,instructions,manifest}");
-      expect(memoBody).not.toContain(
-        "Source layout: .qfai/assistant/{steering, instructions, manifest}/",
-      );
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0025 (TDD-0025): assistantPaths.ts SSOT — init.ts routes new layers through the helper
-  it("TC-0003-0025 (TDD-0025): init.ts builds new 4-layer paths through assistantPaths.ts helpers", async () => {
-    const initSrc = await readFile(
-      path.join(__dirname, "..", "..", "src", "cli", "commands", "init.ts"),
-      "utf-8",
-    );
-    expect(initSrc).toMatch(/from "\.\.\/\.\.\/core\/paths\/assistantPaths\.js"/);
-    expect(initSrc).toContain("joinAssistantLayer");
-    expect(initSrc).toContain("joinProjectSteering");
-    expect(initSrc).toContain("joinMigrationMemo");
-    // Layer path strings in path-construction position (e.g. path.join with
-    // literal "constitution"/"manifest"/"catalog"/"process") should not
-    // appear inside init.ts — those go through the SSOT instead.
-    expect(initSrc).not.toMatch(
-      /path\.join\([^)]*"\.qfai",\s*"assistant",\s*"(constitution|manifest|catalog|process)"/,
-    );
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0026 (TDD-0026): legacy backward-compat + sunset warning
-  //
-  // Split across the sunset. The original case pinned its `When` to v1.9.0, so
-  // the pre-sunset half preserves its intent verbatim; the post-sunset half is
-  // what the same run does now that the window named in the message has closed.
-  // Both halves keep the retention assertion — `init` must never delete user
-  // content in the default flow, on either side of a deprecation.
-  async function withLegacySteering(
-    run: (root: string) => Promise<void>,
-  ): Promise<{ root: string; legacyFile: string }> {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0026-"));
-    const legacy = path.join(root, ".qfai", "assistant", "steering");
-    await mkdir(legacy, { recursive: true });
-    await writeFile(path.join(legacy, "test-layers.md"), "legacy content\n", "utf-8");
-    await run(root);
-    return { root, legacyFile: path.join(legacy, "test-layers.md") };
-  }
-
-  it("TC-0003-0026 (TDD-0026): qfai init retains legacy steering/ and reports it as an error", async () => {
-    let root = "";
-    let legacyFile = "";
-    try {
-      const text = await captureStderr(async () => {
-        const r = await withLegacySteering(async (dir) => {
-          await runInit({
-            dir,
-            force: false,
-            dryRun: false,
-            yes: true,
-            toolVersionOverride: "1.10.0",
-          });
-        });
-        root = r.root;
-        legacyFile = r.legacyFile;
-      });
-
-      // Retention is unchanged: escalating the report must not start deleting.
-      expect(await readFile(legacyFile, "utf-8")).toBe("legacy content\n");
-
-      expect(text).toMatch(/D-DEPRECATED-PATH/);
-      expect(text).toMatch(/past the announced sunset \(v1\.10\.0\)/);
-      // The remediation command survives the escalation — an error the operator
-      // cannot act on is worse than the warning it replaced.
-      expect(text).toContain("qfai init --upgrade-assistant-tree");
-      expect(text).not.toMatch(/read-compatible/);
-    } finally {
-      if (root) await removeTempTree(root);
-    }
-  });
-
-  it("TC-0003-0023: --upgrade-assistant-tree still migrates past the sunset", async () => {
-    // The regression guard for the hard constraint: the migration path must
-    // keep READING the legacy tree, because it is the command the error tells
-    // operators to run. Closing the window by refusing legacy presence in
-    // `runInit` would break exactly this.
-    let root = "";
-    try {
-      const r = await withLegacySteering(async (dir) => {
-        await captureStdout(async () => {
-          await runInit({
-            dir,
-            force: false,
-            dryRun: false,
-            yes: true,
-            upgradeAssistantTree: true,
-            toolVersionOverride: "1.10.0",
-          });
-        });
-      });
-      root = r.root;
-
-      const migrated = await readFile(
-        path.join(root, ".qfai", "assistant", "catalog", "test-layers.md"),
-        "utf-8",
-      );
-      expect(migrated).toBe("legacy content\n");
-      expect(await readFile(r.legacyFile, "utf-8")).toBe("legacy content\n");
-    } finally {
-      if (root) await removeTempTree(root);
     }
   });
 

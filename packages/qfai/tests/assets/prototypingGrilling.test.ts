@@ -20,10 +20,10 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const SKILL = "assistant/skills/qfai-prototyping/SKILL.md";
+const SKILL = "assistant/skill/qfai-prototyping/SKILL.md";
 const RULE = ".agents/rules/grilling.md";
-const GENERATOR_PROMPT = "assistant/skills/qfai-prototyping/references/generator-prompt.md";
-const REVIEWER_PROMPT = "assistant/skills/qfai-prototyping/references/reviewer-prompt.md";
+const GENERATOR_PROMPT = "assistant/skill/qfai-prototyping/references/generator-prompt.md";
+const REVIEWER_PROMPT = "assistant/skill/qfai-prototyping/references/reviewer-prompt.md";
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
@@ -336,14 +336,14 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // and not its procedure, and an agent with the name alone improvises an
     // interview that reads exactly like the method.
     const skill = await read(SKILL);
-    expectPhrase(skill, "Read\n`.qfai/assistant/skills/qfai-grilling/SKILL.md` before starting");
+    expectPhrase(skill, "Read\n`.qfai/assistant/skill/qfai-grilling/SKILL.md` before starting");
     expectPhrase(skill, "It is the single implementation");
     // In the read order too, since that is where an agent looks for what to
     // open before it starts.
     const inputs = /## Inputs Priority[\s\S]*?\n## /.exec(skill);
     expect(inputs, "the read order is gone").not.toBeNull();
     expect(unwrap(inputs?.[0] ?? "")).toContain(
-      "`.qfai/assistant/skills/qfai-grilling/SKILL.md` before either session",
+      "`.qfai/assistant/skill/qfai-grilling/SKILL.md` before either session",
     );
   });
 

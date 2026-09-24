@@ -24,10 +24,10 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const ATDD = "assistant/skills/qfai-atdd/SKILL.md";
-const CONSTITUTION = "assistant/constitution/constitution.md";
-const WORKFLOW = "assistant/constitution/workflow.md";
-const QUALITY = "assistant/constitution/quality.md";
+const ATDD = "assistant/skill/qfai-atdd/SKILL.md";
+const CONSTITUTION = "assistant/rule/constitution.md";
+const WORKFLOW = "assistant/rule/workflow.md";
+const QUALITY = "assistant/rule/quality.md";
 
 const read = async (tree: string, rel: string): Promise<string> =>
   await readFile(path.join(repoRoot, tree, rel), "utf-8");

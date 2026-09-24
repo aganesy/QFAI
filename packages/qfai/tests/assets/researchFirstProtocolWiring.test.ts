@@ -1,5 +1,5 @@
 /**
- * `constitution/research-first-protocol.md` declares two integration points into
+ * `rule/research-first-protocol.md` declares two integration points into
  * `/qfai-discussion`: it auto-triggers on the command, and it stores its
  * `research_summary` output under a `## Research Summary` heading inside the
  * current discussion pack. Both sides used to be missing — the skill tree never
@@ -29,10 +29,10 @@ const discussionRoots = [
     "init",
     ".qfai",
     "assistant",
-    "skills",
+    "skill",
     "qfai-discussion",
   ),
-  path.join(repoRoot, ".qfai", "assistant", "skills", "qfai-discussion"),
+  path.join(repoRoot, ".qfai", "assistant", "skill", "qfai-discussion"),
 ];
 const protocolPaths = [
   path.join(
@@ -43,10 +43,10 @@ const protocolPaths = [
     "init",
     ".qfai",
     "assistant",
-    "constitution",
+    "rule",
     "research-first-protocol.md",
   ),
-  path.join(repoRoot, ".qfai", "assistant", "constitution", "research-first-protocol.md"),
+  path.join(repoRoot, ".qfai", "assistant", "rule", "research-first-protocol.md"),
 ];
 
 /** The heading spelling `validateResearchSummary` keys off. */
@@ -162,7 +162,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       expect(required).toContain("research-first-protocol.md");
       expect(required).toContain("## Research Summary");
       expect(required).toContain("04_Sources.md");
-      // The constitution defines this as the protocol run at the start of the
+      // The shared rule defines this as the protocol run at the start of the
       // work, so it must precede the artifacts meant to consume its findings.
       // Placed after them it degrades into a summary filled in at the end.
       expect(required.indexOf("research-first-protocol.md")).toBeLessThan(

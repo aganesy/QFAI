@@ -93,7 +93,7 @@ describe("sub-agent roster completeness and handoff contracts", () => {
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0003
+// QFAI:EX-0001-0095-01
 describe("qa-gatekeeper is sole observation authority", () => {
   let content: string | undefined;
 

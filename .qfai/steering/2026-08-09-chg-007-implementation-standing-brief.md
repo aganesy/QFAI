@@ -8,10 +8,10 @@ scope: CHG-007
 blocking: false
 promote-to: null
 links:
-  - spec-0006
-  - spec-0017
-  - spec-0015
-  - spec-0008
+  - BF-0003
+  - BF-0002
+  - BF-0001
+  - BF-0001
   - TDD-0032
 ---
 

@@ -18,7 +18,7 @@
  * by absence of the scope-limited markers.
  */
 
-// QFAI:SPEC-0014:TC-0014-0036
+// QFAI:EX-0001-0166-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

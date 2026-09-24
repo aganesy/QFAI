@@ -58,6 +58,23 @@ describe("lint-shipping invariant — actual package", () => {
 });
 
 describe("lint-shipping fixture — detection rules", () => {
+  it("scans built-in routing defaults outside the init tree", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "assets/defaults"), { recursive: true });
+    await writeFile(
+      path.join(root, "assets/defaults/agent-routing.yml"),
+      "routing:\n  - skill: spec-1234\n",
+    );
+    const { violations, scannedFileCount } = await runLintShipping(root);
+    expect(scannedFileCount).toBe(1);
+    expect(violations).toEqual([
+      expect.objectContaining({
+        file: "assets/defaults/agent-routing.yml",
+        pattern: "spec-id-literal",
+      }),
+    ]);
+  });
+
   it("detects spec-id-literal and spec-path-literal in shipped runtime YAML", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "assets/init/.qfai"), { recursive: true });
@@ -278,17 +295,22 @@ describe("lint-shipping fixture — detection rules", () => {
     expect(violations).toEqual([]);
   });
 
-  it("flags seed spec placeholder directories in init runtime assets", async () => {
+  it("flags an instantiated story tree in init assets", async () => {
     const root = await newTempDir();
-    await mkdir(path.join(root, "assets/init/.qfai/specs/spec-XXXX/tdd"), { recursive: true });
+    await mkdir(path.join(root, "assets/init/.qfai/spec/01_policy"), { recursive: true });
     await writeFile(
-      path.join(root, "assets/init/.qfai/specs/spec-XXXX/01_Spec.md"),
-      "# spec-XXXX\n\nReferences spec-0001 internally.\n",
+      path.join(root, "assets/init/.qfai/spec/01_policy/objective.md"),
+      "# Objective\n\nProject-owned policy.\n",
       "utf-8",
     );
 
     const { violations } = await runLintShipping(root);
-    expect(violations.map((violation) => violation.pattern)).toContain("spec-path-literal");
+    expect(violations).toContainEqual(
+      expect.objectContaining({
+        file: "assets/init/.qfai/spec/01_policy/objective.md",
+        pattern: "spec-path-literal",
+      }),
+    );
   });
 
   it("does NOT flag composite trace IDs (BR/AC/TC) in JSDoc — only internal spec-NNNN paths/IDs", async () => {

@@ -284,7 +284,7 @@ describe("iterate --capture: (4) no-capture default preserved (DR-0012-0029)", (
   });
 });
 
-describe("iterate --capture: (5) writes evidenceRefs[] bijection on success", () => {
+describe("iterate --capture: (5) writes per-screen capture files on success", () => {
   it("writes a PNG and HTML for each screen captured", async () => {
     const root = await newTempDir();
     await seedMinimal(root);

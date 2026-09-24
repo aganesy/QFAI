@@ -1,0 +1,47 @@
+# CLI Contract: `qfai atdd scaffold`
+
+- Contract scope: the public CLI surface that writes placeholder ATDD test
+  skeletons
+- Owning spec: `spec-0008`
+- Used-by: the `/qfai-atdd` skill; `qfai validate` (`D-SCAFFOLD-PLACEHOLDER`)
+- SSOT modules:
+  - `packages/qfai/src/cli/commands/atddScaffold.ts`
+  - `packages/qfai/src/core/atdd/scaffold.ts`,
+    `packages/qfai/src/core/atdd/scaffoldDialect.ts`,
+    `packages/qfai/src/core/atdd/scaffoldEscalation.ts`
+
+## Command
+
+```text
+qfai atdd scaffold (--story US-NNNN-NNNN | --flow BF-NNNN)
+```
+
+Exactly one option is required. Neither, both, `--spec`, a malformed or unknown
+ID, an unsupported test dialect, or test globs that disagree with the selected
+dialect exit 2 without writing a skeleton. The `--spec` error names `--story`
+and `--flow`.
+
+| Option                 | Writes                                                                                   | Annotation             |
+| ---------------------- | ---------------------------------------------------------------------------------------- | ---------------------- |
+| `--story US-NNNN-NNNN` | One skeleton per AC of the story, at `<testsDir>/integration/<US-ID>/<AC-ID>.test.<ext>` | `QFAI:AC-NNNN-NNNN-NN` |
+| `--flow BF-NNNN`       | One skeleton for the flow, at `<testsDir>/e2e/<BF-ID>.test.<ext>`                        | `QFAI:BF-NNNN`         |
+
+- The file name follows the project's configured test dialect. `<ID>.test.<ext>`
+  is the default form.
+- Each skeleton sits in the layer that discharges its obligation, so an AC
+  skeleton counts toward the AC's integration test and a flow skeleton toward
+  the BF's E2E test once filled in
+  (`qfai-validate.md#what-counts-as-a-test`).
+- An existing file is never overwritten, and a second run writes nothing new.
+- The escalation counts runs per AC ID or BF ID, and `D-SCAFFOLD-PLACEHOLDER` is
+  keyed the same way (`qfai-validate.md#atdd-scaffold-findings`).
+- Exit codes: 0 success; 1 only for a runtime read or write I/O failure; 2 for
+  invalid inputs and incompatible project configuration.
+
+## Rules
+
+| BR-ID   | Statement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Examples                         |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| BR-0217 | ATDD Scaffold Skeleton Shape and Placeholder Lifecycle - `qfai atdd scaffold --spec spec-NNNN` MUST read the spec test_cases and emit one `tests/atdd/spec-NNNN/<TC-ID>.test.*` file per TC (framework path appropriate to the project). - Each emitted skeleton MUST import the test-framework primitives, contain `// TODO: implement assertion for <TC-ID>`, and reference the related `US-*` / `CON-API-*` via comments. - `qfai validate` MUST emit `D-SCAFFOLD-PLACEHOLDER` (severity warning) for any skeleton whose `// TODO: implement assertion for <TC-ID>` is still present. - On the story tree, `qfai atdd scaffold` MUST take exactly one of `--story US-NNNN-NNNN` and `--flow BF-NNNN`. Neither, both, a malformed ID, or an ID the tree does not define MUST exit 2 and write nothing. `--spec` is not accepted: it MUST exit 2 with a message naming `--story` and `--flow`. Exit 1 is kept for a runtime failure reading or writing a file (`.qfai/contracts/cli/qfai-atdd-scaffold.md#story-tree-layout`). - On the story tree, `--story US-NNNN-NNNN` MUST write one skeleton per AC of the story at `<testsDir>/integration/<US-ID>/<AC-ID>.test.<ext>`, named in the project's test dialect and carrying `QFAI:AC-NNNN-NNNN-NN`. - On the story tree, `D-SCAFFOLD-PLACEHOLDER` MUST be keyed by the AC ID for a story skeleton, and `D-SCAFFOLD-FOREIGN-HOME` is not raised (`.qfai/contracts/cli/qfai-validate.md#atdd-scaffold-findings`). | EX-0001-0075-01, EX-0001-0075-03 |
+| BR-0218 | ATDD Scaffold Idempotency and Warning→Error Escalation - Re-running `--story` or `--flow` MUST NOT overwrite any existing skeleton, whether filled or still carrying a placeholder, and writes nothing new for an existing target. - `D-SCAFFOLD-PLACEHOLDER` escalates from warning to error after 3 `qfai validate` cycles with the placeholder unremoved (DR-0272), configurable via `qfai.config.yaml#atdd.scaffoldEscalateCycles`. The default of 3 gives an operator a normal red→green TDD turnaround before the placeholder hard-blocks completion-claim. - The escalation counts consecutive validate cycles per AC ID or BF ID while the placeholder remains; scaffold-run attempts use a separate counter.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | EX-0001-0075-02                  |
+| BR-0222 | ATDD Scaffold Business-Flow Skeleton - On the story tree, `qfai atdd scaffold --flow BF-NNNN` MUST write one skeleton for the flow at `<testsDir>/e2e/<BF-ID>.test.<ext>`, named in the project's test dialect and carrying `QFAI:BF-NNNN` (`.qfai/contracts/cli/qfai-atdd-scaffold.md#story-tree-layout`). - `D-SCAFFOLD-PLACEHOLDER` MUST be keyed by the BF ID for a flow skeleton (`.qfai/contracts/cli/qfai-validate.md#atdd-scaffold-findings`). - An existing file MUST NOT be overwritten, and a second run writes nothing.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | EX-0001-0075-04                  |

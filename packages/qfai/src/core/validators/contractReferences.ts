@@ -14,6 +14,8 @@ import {
 } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
+import type { StoryTreeModel } from "../storyTree/tree.js";
+import { resolveStoryTreeRoots } from "../storyTree/layout.js";
 
 const FULL_CONTRACT_ID_RE = /\bCON-(API|DB|UI)-(\d+)\b/gi;
 const SHORT_CONTRACT_ID_RE = /(?<!CON-)\b(API|DB|UI)-(\d{1,4})\b/gi;
@@ -118,6 +120,73 @@ export async function validateContractReferences(
     );
   }
 
+  return issues;
+}
+
+/** Checks the story-tree contract index, including CLI and design files. */
+export async function validateStoryTreeContractReferences(
+  root: string,
+  config: QfaiConfig,
+  model: StoryTreeModel,
+): Promise<Issue[]> {
+  const { contractsDir } = resolveStoryTreeRoots(root, config);
+  const indexFile = path.join(contractsDir, "contracts.md");
+  const tables = parseIndexTables(await readSafe(indexFile));
+  const indexedIds = new Set<string>();
+  const indexedPaths = new Set<string>();
+  for (const table of tables) {
+    const headers = table.headers.map(normalizeHeaderKey);
+    const idColumn = headers.indexOf("declaredid");
+    const fileColumn = headers.indexOf("file");
+    if (idColumn < 0 || fileColumn < 0) continue;
+    for (const row of table.rows) {
+      const id = canonicalCellContractId(row.cells[idColumn] ?? "");
+      if (id) indexedIds.add(id);
+      const listed = (row.cells[fileColumn] ?? "").replace(/[`*_]/g, "").trim();
+      if (listed) indexedPaths.add(toPosixPath(listed).replace(/^\.\//, ""));
+    }
+  }
+  const index = await buildContractIndex(root, config);
+  const issues: Issue[] = [];
+  const listedPath = (file: string): boolean => {
+    const relative = toPosixPath(path.relative(contractsDir, file));
+    return indexedPaths.has(relative) || indexedPaths.has(toPosixPath(file));
+  };
+  for (const file of model.contractFiles) {
+    const declared = [...index.idToFiles.entries()]
+      .filter(([, paths]) =>
+        [...paths].some((candidate) => path.resolve(candidate) === path.resolve(file)),
+      )
+      .map(([id]) => id);
+    if (declared.length > 0) {
+      for (const id of declared) {
+        if (indexedIds.has(id) && listedPath(file)) continue;
+        issues.push(
+          issue(
+            "QFAI-CONTRACT-034",
+            `Contract ${id} is not listed with its file in ${indexFile}: ${file}`,
+            "error",
+            file,
+            "contracts.storyTreeIndex",
+            [id],
+          ),
+        );
+      }
+      continue;
+    }
+    if (model.additionalContractFiles.includes(file) && !listedPath(file)) {
+      issues.push(
+        issue(
+          "QFAI-CONTRACT-034",
+          `Contract file is not listed in ${indexFile}: ${file}`,
+          "error",
+          file,
+          "contracts.storyTreeIndex",
+          [file],
+        ),
+      );
+    }
+  }
   return issues;
 }
 
