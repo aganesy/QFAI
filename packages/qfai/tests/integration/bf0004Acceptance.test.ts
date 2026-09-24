@@ -992,6 +992,7 @@ describe("BF-0004 acceptance criteria", () => {
   });
 
   // QFAI:AC-0004-0008-03
+  // QFAI:EX-0004-0008-07
   // QFAI:EX-0004-0008-08
   // QFAI:EX-0004-0008-09
   it("derives one criterion and retains examples with none or two", async () => {
@@ -1002,19 +1003,24 @@ describe("BF-0004 acceptance criteria", () => {
       examples,
       (await readFile(examples, "utf8")) +
         "| EX-0001-0004 | BR-0001-0001 | No citing case | Review |\n" +
-        "| EX-0001-0005 | BR-0001-0001 | Two citing criteria | Review |\n",
+        "| EX-0001-0005 | BR-0001-0001 | Two citing criteria | Review |\n" +
+        "| EX-0001-0006 | BR-0001-0001 | Citing case without AC | Review |\n",
     );
     await writeFile(
       cases,
       (await readFile(cases, "utf8")) +
         "| TC-0001-0004 | AC-0001-0001 | EX-0001-0005 | First criterion | Review |\n" +
-        "| TC-0001-0005 | AC-0001-0002 | EX-0001-0005 | Second criterion | Review |\n",
+        "| TC-0001-0005 | AC-0001-0002 | EX-0001-0005 | Second criterion | Review |\n" +
+        "| TC-0001-0006 | — | EX-0001-0006 | No criterion | Review |\n",
     );
     const first = prepareAllowingPerson(root, 4);
     const unresolved = section(first[3]?.stdout ?? "", "For a person").join("\n");
     expect(first[3]?.status).toBe(3);
     expect(unresolved).toContain("EX-0001-0004");
     expect(unresolved).toContain("EX-0001-0005");
+    expect(unresolved).toContain(
+      "spec-0001/05_Examples.md: EX-0001-0006 has no single derived criterion",
+    );
     const derived = step(root, 6);
     expect(derived.status).toBe(0);
     const mapped = await readFile(
@@ -1028,13 +1034,17 @@ describe("BF-0004 acceptance criteria", () => {
     const retained = await readFile(path.join(root, ".qfai/spec/spec-0001/05_Examples.md"), "utf8");
     expect(retained).toContain("EX-0001-0004");
     expect(retained).toContain("EX-0001-0005");
+    expect(retained).toContain("EX-0001-0006");
+    expect(retained).not.toMatch(/EX-0001-0006\s*\|\s*AC-/);
     const map = JSON.parse(
       await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
     ) as Journey["map"];
     expect(map.ids["spec-0001"]).not.toHaveProperty("EX-0001-0004");
     expect(map.ids["spec-0001"]).not.toHaveProperty("EX-0001-0005");
+    expect(map.ids["spec-0001"]).not.toHaveProperty("EX-0001-0006");
     expect(mapped).not.toContain("No citing case");
     expect(mapped).not.toContain("Two citing criteria");
+    expect(mapped).not.toContain("Citing case without AC");
   });
 
   // QFAI:AC-0004-0010-01
