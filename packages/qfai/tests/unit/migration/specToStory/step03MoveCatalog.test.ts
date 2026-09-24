@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
 
@@ -97,6 +97,7 @@ describe("migration catalog move", () => {
 
   it("archives the full legacy slice policy without restoring obsolete rules", async () => {
     // QFAI:EX-0004-0006-03
+    // QFAI:EX-0004-0003-21
     const context = await fixture();
     const original =
       "# Slice\n\n## Principle (read first)\n\nOld CAP/spec rule.\n\n## Triage オペレーション (8 種)\n\nOld TC rule.\n\n## Project choice\n\nSpecific.\n";
@@ -188,6 +189,33 @@ describe("migration catalog move", () => {
     const second = await run(context);
     expect(second.code).toBe(0);
     expect(second.output).toContain("## Operations\nnone");
+  });
+
+  it("archives unconsumed files from all four retired assistant directories", async () => {
+    // QFAI:EX-0004-0003-24
+    const context = await fixture();
+    for (const directory of ["constitution", "catalog", "manifest", "process"]) {
+      await put(context.root, `.qfai/assistant/${directory}/unconsumed.md`, `${directory}\r\n`);
+    }
+    const result = await run(context);
+    expect(result.code).toBe(0);
+    for (const directory of ["constitution", "catalog", "manifest", "process"]) {
+      expect(
+        await readFile(
+          path.join(
+            context.root,
+            `.qfai/evidence/migration-spec-to-story/retired/assistant/${directory}/unconsumed.md`,
+          ),
+          "utf8",
+        ),
+      ).toBe(`${directory}\r\n`);
+      await expect(
+        readFile(path.join(context.root, `.qfai/assistant/${directory}/unconsumed.md`)),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(
+        readdir(path.join(context.root, `.qfai/assistant/${directory}`)),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+    }
   });
 
   it("keeps both files when an archive destination already exists", async () => {

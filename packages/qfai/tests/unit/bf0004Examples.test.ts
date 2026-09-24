@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { cp, mkdtemp, mkdir, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -175,6 +176,110 @@ describe("BF-0004 migration examples", () => {
       );
       expect(result.issues[0]?.message).not.toContain("03_Example.md");
     }
+  });
+
+  it("refuses a truncated migration ID map before step 5 changes any bytes", async () => {
+    // QFAI:EX-0004-0003-06
+    const context = await fixture(
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    await put(context.root, ".qfai/spec/spec-0001/06_Test-Cases.md", "# Cases\n");
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      '{"version":1,"ids":',
+    );
+    const before = await treeHash(context.root);
+    const result = capture();
+    expect(await runStep(5, [], { cwd: context.root, ...result.io })).toBe(2);
+    expect(result.error).toContain(".qfai/evidence/migration-spec-to-story/id-map.json");
+    expect(await treeHash(context.root)).toBe(before);
+  });
+
+  it("requires a local package install when a copied script has no qfai dependency", async () => {
+    // QFAI:EX-0004-0003-04
+    const context = await fixture();
+    await put(context.root, ".qfai/specs/spec-0001/01_Spec.md", "# Old\n");
+    const installedSkill = path.join(
+      context.root,
+      ".qfai/assistant/skill/qfai-migration-spec-to-story",
+    );
+    await cp(
+      path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-spec-to-story"),
+      installedSkill,
+      { recursive: true },
+    );
+    const before = await treeHash(context.root);
+    const result = spawnSync(
+      process.execPath,
+      [path.join(installedSkill, "scripts/01-rename-directories.mjs")],
+      {
+        cwd: context.root,
+        encoding: "utf8",
+      },
+    );
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("npm install --save-dev qfai");
+    expect(await treeHash(context.root)).toBe(before);
+  });
+
+  it("runs step 5 after a valid ID map without demanding an earlier step", async () => {
+    // QFAI:EX-0004-0003-09
+    const context = await fixture(
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      serializeIdMap({
+        version: 1,
+        ids: { "spec-0001": {} },
+        placements: { "spec-0001": {} },
+        retiredPacks: {},
+      }),
+    );
+    const result = capture();
+    expect(await runStep(5, [], { cwd: context.root, ...result.io })).toBe(0);
+    expect(result.output).not.toMatch(/Run step [1-4]/);
+    expect(result.output).toContain("## Operations\nnone");
+  });
+
+  it("archives pack decisions and questions after writing their new rows", async () => {
+    // QFAI:EX-0004-0003-19
+    const context = await fixture(
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    const decisions = "# Decisions\n\n### DR-0001: Choose A\n\n- Status: accepted\n";
+    const questions =
+      "# Questions\n\n## Open Questions\n\n| OQ-ID | Question | Status | Notes |\n| --- | --- | --- | --- |\n| OQ-0001-0001 | Choose B? | open | Ask owner |\n";
+    await put(context.root, ".qfai/spec/spec-0001/07_Decisions.md", decisions);
+    await put(context.root, ".qfai/spec/spec-0001/08_Open-questions.md", questions);
+    expect((await run(step02, context)).code).toBe(0);
+    expect(
+      parseRecordTable(await read(context.root, ".qfai/spec/decisions.md"), "decisions").rows,
+    ).toHaveLength(1);
+    expect(
+      parseRecordTable(await read(context.root, ".qfai/spec/open-questions.md"), "open-questions")
+        .rows,
+    ).toHaveLength(1);
+    expect(
+      await read(
+        context.root,
+        ".qfai/evidence/migration-spec-to-story/retired/spec-0001/07_Decisions.md",
+      ),
+    ).toBe(decisions);
+    expect(
+      await read(
+        context.root,
+        ".qfai/evidence/migration-spec-to-story/retired/spec-0001/08_Open-questions.md",
+      ),
+    ).toBe(questions);
+    await expect(read(context.root, ".qfai/spec/spec-0001/07_Decisions.md")).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+    await expect(
+      read(context.root, ".qfai/spec/spec-0001/08_Open-questions.md"),
+    ).rejects.toMatchObject({ code: "ENOENT" });
   });
   it("moves every present default directory and skips an absent prototype directory", async () => {
     // QFAI:EX-0004-0004-01
