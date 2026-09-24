@@ -27,7 +27,8 @@ describe("decision row identity", () => {
       const template = await readFile(path.join(repoRoot, tree, TEMPLATE), "utf-8");
       const triage = await readFile(path.join(repoRoot, tree, TRIAGE), "utf-8");
       expect(template).toMatch(/\| ID\s+\| Content \| Approach \| Status \|/);
-      expect(triage).toContain("DEC-NNNN");
+      expect(triage).toContain("<paths.specsDir>/decisions.md");
+      expect(triage).toContain("Use the next highest ID in the table plus one");
       expect(template).not.toContain("DR-NNNN");
     }
   });

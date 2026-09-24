@@ -24,8 +24,11 @@ describe("the story-tree contract owns quality-gate commands", () => {
     });
 
     it(`${tree}: structure does not duplicate Standard commands`, async () => {
-      const structure = await read(tree, "spec/03_contract/structure.md");
-      const tech = await read(tree, "spec/03_contract/tech.md");
+      const structure = await read(
+        tree,
+        "assistant/skill/qfai-sdd/templates/spec/03_contract/structure.md",
+      );
+      const tech = await read(tree, "assistant/skill/qfai-sdd/templates/spec/03_contract/tech.md");
       expect(tech).toContain("## Standard commands (copy-paste)");
       expect(structure).not.toContain("## Standard commands (copy-paste)");
     });

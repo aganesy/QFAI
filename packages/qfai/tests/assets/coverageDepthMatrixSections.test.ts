@@ -10,7 +10,7 @@ const assetRoot = path.resolve(
 );
 
 async function asset(relative: string): Promise<string> {
-  return readFile(path.join(assetRoot, relative), "utf-8");
+  return (await readFile(path.join(assetRoot, relative), "utf-8")).replace(/\s*\n\s*/g, " ");
 }
 
 describe("Coverage Depth Matrix", () => {

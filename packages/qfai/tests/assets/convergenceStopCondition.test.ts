@@ -26,7 +26,7 @@ import { EXIT_CODES, formatExitCodesSection } from "../../src/cli/lib/exitCodes.
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const SKILL_DIR = "assistant/skills/qfai-prototyping";
+const SKILL_DIR = "assistant/skill/qfai-prototyping";
 
 /** The three arrays, in the order every statement of the condition lists them. */
 const FINDING_ARRAYS = [

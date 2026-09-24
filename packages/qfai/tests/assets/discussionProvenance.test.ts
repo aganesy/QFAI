@@ -17,7 +17,10 @@ describe("discussion IDs remain provenance, not story-tree IDs", () => {
         "assistant/skill/qfai-sdd/references/requirements-decomposition.md",
       );
       expect(skill).toContain("discussion-<id>#REQ-NNNN");
-      expect(skill).toContain("A discussion pack is provenance and design input");
+      expect(skill.replace(/\s+/g, " ")).toContain(
+        "provenance and design input, not a normative SSOT",
+      );
+      expect(skill).toContain("do not edit the");
       expect(decomposition).toContain("Record a create, update, or retirement operation in");
       expect(decomposition).toContain("decisions.md");
     });
