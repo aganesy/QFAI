@@ -2001,13 +2001,16 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   });
 
   it("spells the RED test manifest's mode the way the gate hashes it", async () => {
-    // The gate recomputes the hash with git's tree mode, because the other
+    // The gate recomputes the hash with a six-digit mode, because the other
     // permission bits follow the checkout's umask. Sending the author to the
     // revision manifest's four octal digits gave a hash no gate reproduces.
+    // Any bit of `0111` selects `100755`, where git reads only the owner's, so
+    // the text says where to read it from.
     const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
-      "**`mode` is git's six-digit tree mode, not the revision manifest's four octal digits**: `120000` for a symlink, `100755` for a file with an execute bit set, and `100644` for any other file.",
+      "**`mode` is six digits spelled like git's tree mode, not the revision manifest's four octal digits**: `120000` for a symlink, `100755` for a file with any bit of `0111` set, and `100644` for any other file.",
     );
+    expect(provenance).toContain("Read it from the file on disk, not from `git ls-files -s`");
     expect(provenance).not.toContain("the same shape the revision manifest uses");
   });
 

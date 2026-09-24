@@ -154,9 +154,12 @@ gate condition where it is defined below.
       in that order. `kind` is `file` or `symlink`, and every part but `mode` is
       written the way the revision manifest writes it.
 
-      **`mode` is git's six-digit tree mode, not the revision manifest's four
-      octal digits**: `120000` for a symlink, `100755` for a file with an
-      execute bit set, and `100644` for any other file. The consumer and
+      **`mode` is six digits spelled like git's tree mode, not the revision
+      manifest's four octal digits**: `120000` for a symlink, `100755` for a
+      file with any bit of `0111` set, and `100644` for any other file. Read it
+      from the file on disk, not from `git ls-files -s`: git looks at the
+      owner's execute bit alone, so a `0654` file is `100644` there and
+      `100755` here. The consumer and
       `npx qfai validate` recompute this hash on their own checkouts, where the
       other permission bits follow that machine's umask — a `0644` here is
       `0664` there and `0666` on Windows — so a record carrying them never

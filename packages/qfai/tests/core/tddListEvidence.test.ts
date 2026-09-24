@@ -4672,12 +4672,13 @@ ${packPair(1).join("\n")}
     });
   });
 
-  // `red-provenance.md` spells `mode` as git's tree mode. The revision
-  // manifest's four octal digits are the other spelling an author following the
-  // skill could reach for, and the gate must refuse it rather than accept both:
+  // `red-provenance.md` spells `mode` in six digits, like git's tree mode. The
+  // revision manifest's four octal digits are the other spelling an author
+  // following the skill could reach for, and the gate must refuse it rather
+  // than accept both:
   // the permission bits beyond the execute bit follow the checkout's umask.
   for (const [label, form, accepted] of [
-    ["git's tree mode", "tree", true],
+    ["the six-digit form", "tree", true],
     ["the revision manifest's four octal digits", "octal", false],
   ] as const) {
     it(`${accepted ? "accepts" : "refuses"} a RED test hash whose mode is ${label}`, async () => {
