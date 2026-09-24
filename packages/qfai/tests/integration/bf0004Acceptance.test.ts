@@ -1072,6 +1072,49 @@ describe("BF-0004 acceptance criteria", () => {
     expect(map.ids["spec-0001"]).not.toHaveProperty("AC-0001-0002");
   });
 
+  it("maps one case to its cited example and a case-only row to its new example", async () => {
+    // QFAI:EX-0004-0007-05
+    const root = await project();
+    const pack = path.join(root, ".qfai/specs/spec-0001");
+    const criteria = path.join(pack, "03_Acceptance-Criteria.md");
+    await writeFile(criteria, (await readFile(criteria, "utf8")).split("## AC-0001-0002")[0] ?? "");
+    for (const [name, omitted] of [
+      ["05_Examples.md", ["EX-0001-0002"]],
+      ["04_Business-Rules.md", ["BR-0001-0002", "BR-0001-0003"]],
+      ["06_Test-Cases.md", ["TC-0001-0002"]],
+    ] as const) {
+      const file = path.join(pack, name);
+      const content = (await readFile(file, "utf8"))
+        .split(/\r?\n/)
+        .filter((line) => !omitted.some((id) => line.includes(`| ${id} |`)))
+        .join("\n");
+      await writeFile(file, content);
+    }
+    const planPath = path.join(root, ".qfai/evidence/migration-spec-to-story/plan.yaml");
+    const plan = parseYaml(await readFile(planPath, "utf8")) as {
+      flows: Array<{ title: string; stories: Array<{ id: string; criteria: string[] }> }>;
+      rules: Array<{ id: string; contract: string }>;
+    };
+    const plannedStory = plan.flows[0]?.stories[0];
+    if (!plannedStory) throw new Error("Migration fixture has no planned story");
+    plannedStory.criteria = ["AC-0001-0001"];
+    plan.rules = plan.rules.slice(0, 1);
+    await writeFile(planPath, stringifyYaml(plan));
+    prepareThrough(root, 3);
+    expect(step(root, 4).status).toBe(0);
+    const map = JSON.parse(
+      await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
+    ) as Journey["map"];
+    expect(map.ids["spec-0001"]).toMatchObject({
+      "US-0001-0001": "US-0001-0001",
+      "AC-0001-0001": "AC-0001-0001-01",
+      "EX-0001-0001": "EX-0001-0001-01",
+      "BR-0001-0001": "BR-0001",
+      "TC-0001-0001": "EX-0001-0001-01",
+      "TC-0001-0003": "EX-0001-0001-02",
+    });
+  });
+
   // QFAI:AC-0004-0008-01
   it("turns a case with no example into a mapped example", async () => {
     const root = await project();
