@@ -341,6 +341,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0020-02
   it("creates template additions with symlinks", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -627,13 +628,13 @@ describe("qfai init", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const canonical = path.join(root, ".qfai", "assistant", "agents", "retired-agent.md");
+      const canonical = path.join(root, ".qfai", "assistant", "agent", "retired-agent.md");
       await writeFile(canonical, "# retired agent\n", "utf-8");
 
       const claudeWrapper = path.join(root, ".claude", "agents", "retired-agent.md");
       const githubWrapper = path.join(root, ".github", "agents", "retired-agent.agent.md");
-      await symlink("../../.qfai/assistant/agents/retired-agent.md", claudeWrapper, "file");
-      await symlink("../../.qfai/assistant/agents/retired-agent.md", githubWrapper, "file");
+      await symlink("../../.qfai/assistant/agent/retired-agent.md", claudeWrapper, "file");
+      await symlink("../../.qfai/assistant/agent/retired-agent.md", githubWrapper, "file");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
@@ -770,9 +771,9 @@ describe("qfai init", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const canonical = path.join(root, ".qfai", "assistant", "agents", "retired-agent.md");
+      const canonical = path.join(root, ".qfai", "assistant", "agent", "retired-agent.md");
       await writeFile(canonical, "# retired agent\n", "utf-8");
-      const target = "../../.qfai/assistant/agents/retired-agent.md";
+      const target = "../../.qfai/assistant/agent/retired-agent.md";
 
       // Both shapes a sidecar can take, because both are shapes the prune
       // otherwise accepts: the renamed symlink, and the renamed flattened file
@@ -1389,7 +1390,7 @@ describe("qfai init", () => {
         root,
         ".qfai",
         "assistant",
-        "skills",
+        "skill",
         "qfai-discussion",
         "10_workflow.md",
       );
@@ -1434,7 +1435,7 @@ describe("qfai init", () => {
         root,
         ".qfai",
         "assistant",
-        "skills",
+        "skill",
         "qfai-discussion",
         "10_workflow.md",
       );
@@ -1661,6 +1662,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0020-03
   it("stays silent about core.symlinks outside a git repository", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
