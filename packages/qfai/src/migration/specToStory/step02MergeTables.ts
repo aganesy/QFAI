@@ -356,8 +356,12 @@ export const step02: MigrationStep = {
         existingQuestions.rows.map((row) => row.id),
         index,
       );
-      const content = `${record.prefix ?? ""}${origin(record)}: ${record.summary}`;
-      return `| ${id} | ${escapeTableCell(content)} | ${escapeTableCell(record.approach)} | ${mapQuestionStatus(record.status)} |`;
+      const unadjudicated = record.prefix === "Unadjudicated: ";
+      const content = unadjudicated
+        ? `${record.prefix}${record.summary}`
+        : `${origin(record)}: ${record.summary}`;
+      const approach = unadjudicated ? `${origin(record)}: ${record.approach}` : record.approach;
+      return `| ${id} | ${escapeTableCell(content)} | ${escapeTableCell(approach)} | ${mapQuestionStatus(record.status)} |`;
     });
     if (decisionRows.length > 0) {
       operations.push({

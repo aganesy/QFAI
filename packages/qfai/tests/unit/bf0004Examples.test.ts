@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { parseRecordTable } from "../../src/core/storyTree/tables.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import {
   executePlannedStep,
@@ -16,6 +17,7 @@ import {
 } from "../../src/migration/specToStory/harness.js";
 import { serializeIdMap } from "../../src/migration/specToStory/idMap.js";
 import { step01, STEP01_RENAMES } from "../../src/migration/specToStory/step01RenameDirectories.js";
+import { step02 } from "../../src/migration/specToStory/step02MergeTables.js";
 import { step08 } from "../../src/migration/specToStory/step08RewriteAnnotations.js";
 
 const roots: string[] = [];
@@ -189,6 +191,146 @@ describe("BF-0004 migration examples", () => {
     await expect(
       readdir(path.join(context.root, ".qfai/assistant/skills.local")),
     ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("merges all six decision origins into consecutive four-cell records", async () => {
+    // QFAI:EX-0004-0005-01
+    // QFAI:EX-0004-0005-02
+    const context = await fixture(
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/spec-0001/07_Decisions.md",
+      "# Decisions\n\n### DR-0001: First\n\n- Status: accepted\n\n### DR-0002: Second\n\n- Status: proposed\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/spec-0001/09_delta.md",
+      "# Delta\n\n### DL-0001: Delta\n\nnotes: Keep the delta.\n\n## Triage\n\n| Subject | Operation | Rationale |\n| --- | --- | --- |\n| Compatibility | UPDATE | Keep compatibility. |\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/08_Decisions.md",
+      "# Decisions\n\n### DR-0003: Shared\n\n- Status: accepted\n",
+    );
+    await put(
+      context.root,
+      ".qfai/decisions/CR-20260101-0001.md",
+      "# Request\n\n- ID: CR-20260101-0001\n- Title: Change paths\n- Status: accepted\n\n## Impact scope\n\n`src/a.ts` and `docs/b.md`\n",
+    );
+    const result = await run(step02, context);
+    expect(result.code).toBe(0);
+    const decisions = parseRecordTable(
+      await read(context.root, ".qfai/spec/decisions.md"),
+      "decisions",
+    );
+    expect(decisions.errors).toEqual([]);
+    expect(decisions.rows).toHaveLength(6);
+    expect(decisions.rows.map((row) => row.id)).toEqual([
+      "DEC-0001",
+      "DEC-0002",
+      "DEC-0003",
+      "DEC-0004",
+      "DEC-0005",
+      "DEC-0006",
+    ]);
+    for (const row of decisions.rows.slice(0, 5))
+      expect(row.content).toMatch(/^\.qfai\/spec\/.*#(?:DR-|DL-|Triage-)/);
+    const request = decisions.rows[5];
+    expect(request?.content).toContain("Change request: src/a.ts, docs/b.md");
+    expect(request?.approach).toMatch(/^\.qfai\/decisions\/CR-20260101-0001\.md:/);
+  });
+
+  it("records a retired pack without placing it in a new flow", async () => {
+    const context = await fixture(
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/spec-0001/01_Spec.md",
+      "# Old\n\n- Status: superseded\n- Superseded by: spec-0002\n",
+    );
+    const result = await run(step02, context);
+    expect(result.code).toBe(0);
+    const rows = parseRecordTable(
+      await read(context.root, ".qfai/spec/decisions.md"),
+      "decisions",
+    ).rows;
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ status: "DONE" });
+    expect(rows[0]?.content).toContain("spec-0001 is superseded by spec-0002");
+    await expect(
+      readdir(path.join(context.root, ".qfai/spec/02_business-flow")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("maps question statuses while omitting the no-question row", async () => {
+    // QFAI:EX-0004-0005-06
+    const context = await fixture(
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/spec-0001/08_Open-questions.md",
+      "# Questions\n\n## Open Questions\n\n| OQ-ID | Question | Status | Notes |\n| --- | --- | --- | --- |\n| OQ-0001-0001 | First? | open | A |\n| OQ-0001-0002 | Second? | deferred | B |\n| OQ-0001-0003 | Third? | resolved | C |\n| OQ-0001-0004 | Fourth? | parked | D |\n| none | No questions | — | — |\n",
+    );
+    expect((await run(step02, context)).code).toBe(0);
+    const rows = parseRecordTable(
+      await read(context.root, ".qfai/spec/open-questions.md"),
+      "open-questions",
+    ).rows;
+    expect(rows.map((row) => [row.id, row.status])).toEqual([
+      ["OQ-0001", "TODO"],
+      ["OQ-0002", "DEFERRED"],
+      ["OQ-0003", "DONE"],
+      ["OQ-0004", "TODO"],
+    ]);
+    expect(
+      rows.every((row) => row.content.startsWith(".qfai/spec/spec-0001/08_Open-questions.md#")),
+    ).toBe(true);
+  });
+
+  it("preserves an unadjudicated question as TODO with an origin", async () => {
+    // QFAI:EX-0004-0005-07
+    const context = await fixture(
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/spec-0001/08_Open-questions.md",
+      "# Questions\n\n## Open Questions\n\n| OQ-ID | Question | Status | Notes |\n| --- | --- | --- | --- |\n| OQ-0001-0001 | Choose a path? | unadjudicated | Needs review |\n",
+    );
+    expect((await run(step02, context)).code).toBe(0);
+    const row = parseRecordTable(
+      await read(context.root, ".qfai/spec/open-questions.md"),
+      "open-questions",
+    ).rows[0];
+    expect(row).toMatchObject({ status: "TODO" });
+    expect(row?.content).toBe("Unadjudicated: Choose a path?");
+    expect(row?.approach).toMatch(/^\.qfai\/spec\/spec-0001\/08_Open-questions\.md/);
+    expect(row?.approach).toContain("Needs review");
+  });
+
+  it("reports both superseded decisions with unresolved successors", async () => {
+    // QFAI:EX-0004-0005-08
+    const context = await fixture(
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/spec-0001/07_Decisions.md",
+      "# Decisions\n\n### DR-0001: No successor\n\n- Status: superseded\n\n### DR-0002: Missing successor\n\n- Status: superseded\n- Successor: DR-9999\n",
+    );
+    const result = await run(step02, context);
+    expect(result.code).toBe(3);
+    expect(result.output).toContain("DR-0001 has no migrated successor");
+    expect(result.output).toContain("DR-0002 has no migrated successor");
+    const rows = parseRecordTable(
+      await read(context.root, ".qfai/spec/decisions.md"),
+      "decisions",
+    ).rows;
+    expect(rows.map((row) => row.status)).toEqual(["TODO", "TODO"]);
   });
 
   it("rewrites mapped case and E2E story annotations but retains unsupported lines", async () => {

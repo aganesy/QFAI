@@ -322,6 +322,148 @@ describe("migration steps 5 to 8", () => {
     ).toContain("SQL rule.");
   });
 
+  it("writes a mapped rule and both citing examples to a SQL contract", async () => {
+    // QFAI:EX-0004-0009-02
+    // QFAI:EX-0004-0009-04
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      serializeIdMap({
+        version: 1,
+        ids: {
+          [spec]: {
+            "EX-0001-0001": "EX-0001-0001-01",
+            "EX-0001-0002": "EX-0001-0001-02",
+            "BR-0001-0001": "BR-0001",
+          },
+        },
+        placements: { [spec]: { "BR-0001-0001": "db/orders.sql" } },
+        retiredPacks: {},
+      }),
+    );
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: db/orders.sql\n",
+    );
+    await put(
+      context.root,
+      `.qfai/spec/${spec}/04_Business-Rules.md`,
+      "| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | An order total is never negative. |\n",
+    );
+    await put(
+      context.root,
+      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | First | Pass |\n| EX-0001-0002 | BR-0001-0001 | Second | Pass |\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/03_contract/db/orders.sql",
+      "CREATE TABLE orders (id INT);\n",
+    );
+    expect(await executePlannedStep(step07, context, false, capture().io)).toBe(0);
+    expect(await readFile(path.join(context.contractsDir, "db/orders.sql"), "utf8")).toContain(
+      "-- Rule BR-0001: An order total is never negative.\n-- Examples: EX-0001-0001-01, EX-0001-0001-02",
+    );
+  });
+
+  it("keeps a placed rule when its contract file is absent", async () => {
+    // QFAI:EX-0004-0009-06
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      serializeIdMap({
+        version: 1,
+        ids: { [spec]: { "BR-0001-0001": "BR-0001", "EX-0001-0001": "EX-0001-0001-01" } },
+        placements: { [spec]: { "BR-0001-0001": "api/missing.yaml" } },
+        retiredPacks: {},
+      }),
+    );
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: api/missing.yaml\n",
+    );
+    const rule =
+      "| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | An order total is never negative. |\n";
+    await put(context.root, `.qfai/spec/${spec}/04_Business-Rules.md`, rule);
+    await put(
+      context.root,
+      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | First | Pass |\n",
+    );
+    const result = capture();
+    expect(await executePlannedStep(step07, context, false, result.io)).toBe(3);
+    expect(result.output.join("")).toContain("contract api/missing.yaml does not exist");
+    expect(await readFile(path.join(context.specsDir, spec, "04_Business-Rules.md"), "utf8")).toBe(
+      rule,
+    );
+    await expect(
+      readFile(path.join(context.contractsDir, "api/missing.yaml")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("keeps a rule whose only citing example stayed unmapped", async () => {
+    // QFAI:EX-0004-0009-09
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      serializeIdMap({
+        version: 1,
+        ids: { [spec]: { "BR-0001-0001": "BR-0001" } },
+        placements: { [spec]: { "BR-0001-0001": "api/orders.yaml" } },
+        retiredPacks: {},
+      }),
+    );
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
+    );
+    const rule =
+      "| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | An order total is never negative. |\n";
+    const example =
+      "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0002 | BR-0001-0001 | Unplaced | Review |\n";
+    await put(context.root, `.qfai/spec/${spec}/04_Business-Rules.md`, rule);
+    await put(context.root, `.qfai/spec/${spec}/05_Examples.md`, example);
+    await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
+    const result = capture();
+    expect(await executePlannedStep(step07, context, false, result.io)).toBe(3);
+    expect(result.output.join("")).toContain("no mapped example cites the rule");
+    expect(await readFile(path.join(context.specsDir, spec, "04_Business-Rules.md"), "utf8")).toBe(
+      rule,
+    );
+    expect(await readFile(path.join(context.specsDir, spec, "05_Examples.md"), "utf8")).toBe(
+      example,
+    );
+    expect(await readFile(path.join(context.contractsDir, "api/orders.yaml"), "utf8")).toBe(
+      "openapi: 3.0.0\n",
+    );
+  });
+
+  it("keeps a rule no old example cites", async () => {
+    // QFAI:EX-0004-0009-07
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
+    );
+    const source =
+      "| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | An order total is never negative. |\n";
+    await put(context.root, `.qfai/spec/${spec}/04_Business-Rules.md`, source);
+    await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
+    const report = capture();
+    expect(await executePlannedStep(step07, context, false, report.io)).toBe(3);
+    expect(report.output.join("")).toContain("no mapped example cites the rule");
+    expect(await readFile(path.join(context.specsDir, spec, "04_Business-Rules.md"), "utf8")).toBe(
+      source,
+    );
+  });
+
   it("refuses changed or unknown rule placements before writing a contract", async () => {
     const context = await fixture();
     await put(
