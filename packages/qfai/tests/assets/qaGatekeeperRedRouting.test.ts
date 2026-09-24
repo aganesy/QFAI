@@ -26,14 +26,11 @@ import { describe, expect, it } from "vitest";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
-const ROUTING_FILES = [
-  "packages/qfai/assets/init/.qfai/assistant/manifest/agent-routing.yml",
-  ".qfai/assistant/manifest/agent-routing.yml",
-];
+const ROUTING_FILES = ["packages/qfai/assets/defaults/agent-routing.yml"];
 
 const SKILL_FILES = [
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md",
-  ".qfai/assistant/skills/qfai-implement/SKILL.md",
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-implement/SKILL.md",
+  ".qfai/assistant/skill/qfai-implement/SKILL.md",
 ];
 
 type Phase = {

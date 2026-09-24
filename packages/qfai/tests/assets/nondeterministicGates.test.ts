@@ -24,8 +24,8 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const BASELINE = "assistant/constitution/shared-skill-operating-baseline.md";
-const SKILL = "assistant/skills/qfai-implement/SKILL.md";
+const BASELINE = "assistant/rule/shared-skill-operating-baseline.md";
+const SKILL = "assistant/skill/qfai-implement/SKILL.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
