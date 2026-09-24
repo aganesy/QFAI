@@ -81,8 +81,8 @@ npx qfai init
 ```
 
 Run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree. Follow
-the project's Standard commands in `<paths.contractsDir>/tech.md` (the default
-is [tech.md](.qfai/spec/03_contract/tech.md)) for its quality gates.
+the project's Standard commands in `<paths.contractsDir>/tech.md` (by default
+`.qfai/spec/03_contract/tech.md`) for its quality gates.
 
 ## What you can do (CLI commands)
 
@@ -213,8 +213,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
 - **qfai-migration-spec-to-story**: Move an existing spec-pack project to the
   story tree with ten bundled scripts. Preview and apply each step, then resolve
   items retained in the migration reports. The bundled
-  [migration guide](packages/qfai/assets/init/.qfai/assistant/skill/qfai-migration-spec-to-story/references/migration-guide.md)
-  defines the plan and report. This skill is not
+  `references/migration-guide.md` defines the plan and report. This skill is not
   a CLI command. See the [2.0.0 migration guide](https://github.com/aganesy/QFAI/blob/main/packages/qfai/docs/MIGRATION-2.0.0.md).
 - **qfai-verify**: Run documented quality gates and produce reviewer-approved evidence under `.qfai/evidence/`.
 
@@ -357,8 +356,7 @@ flowchart LR
 
 - Story and policy SSOT: `paths.specsDir` (`.qfai/spec/` by default).
 - Contract SSOT: `paths.contractsDir` (`.qfai/spec/03_contract/` by default).
-- Project quality-gate commands: [Standard commands](.qfai/spec/03_contract/tech.md#standard-commands-copy-paste)
-  in the default contract tree.
+- Project quality-gate commands: `<paths.contractsDir>/tech.md#standard-commands`.
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
 ## Minimal tutorial
@@ -380,8 +378,7 @@ flowchart LR
 - Q: Validation reports a broken AC, EX or BR link.
   - A: Give each EX one `AC-Ref` in the same story, give each AC an EX, and
     cite every EX from a BR in its enforcing contract. List every contract
-    file in the [contract index](.qfai/spec/03_contract/contracts.md) under
-    `<paths.contractsDir>`.
+    file in the contract index at `<paths.contractsDir>/contracts.md`.
 - Q: An old spec-pack project reports `QFAI-LAYOUT-001`.
   - A: Run `/qfai-migration-spec-to-story`. The detector reads the configured
     `paths.specsDir`. Set that path to the old tree when the project has no

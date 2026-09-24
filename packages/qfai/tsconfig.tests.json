@@ -40,7 +40,6 @@
     "tests/assets/askUserQuestionAutoMode.test.ts",
     "tests/assets/architecturalUsageHome.test.ts",
     "tests/assets/assets.test.ts",
-    "tests/assets/completedRowRunsARealTest.test.ts",
     "tests/assets/rowNamesItsTestFile.test.ts",
     "tests/assets/atddConDbOwnership.test.ts",
     "tests/assets/atddRequiredScope.test.ts",

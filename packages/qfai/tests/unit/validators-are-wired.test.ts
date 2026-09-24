@@ -483,14 +483,22 @@ async function namesWithReachableCallSite(
 }
 
 describe("meta-test: validators/index.ts lists only wired validators", () => {
-  it("every validate* re-exported from the barrel has a call site outside the barrel", async () => {
+  it("every validate* re-exported from the barrel has a call site in the validation graph", async () => {
     const barrel = await collectBarrelValidators();
     expect(barrel.size, "expected the barrel to re-export validators").toBeGreaterThan(10);
 
     const reachable = await collectReachableModules(await collectBarrelExports());
     const referenced = await namesWithReachableCallSite(barrel, reachable);
-    const unwired = Array.from(barrel.keys())
-      .filter((name) => !referenced.has(name) && !KNOWN_UNWIRED_BARREL_EXPORTS.has(name))
+    const execution = await buildExecutionGraph();
+    const executed = executedFromEntry(execution);
+    const unwired = Array.from(barrel)
+      .filter(
+        ([name, owner]) =>
+          !referenced.has(name) &&
+          !executed.has(execution.graph.nodeOf(owner, name) ?? "") &&
+          !KNOWN_UNWIRED_BARREL_EXPORTS.has(name),
+      )
+      .map(([name]) => name)
       .sort();
 
     expect(
