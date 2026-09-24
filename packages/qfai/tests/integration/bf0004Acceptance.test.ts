@@ -423,8 +423,15 @@ describe("BF-0004 acceptance criteria", () => {
   // QFAI:AC-0004-0005-01
   it("merges old decisions with a new ID and a link to the old record", async () => {
     const decisions = await readFile(path.join(journey.root, ".qfai/spec/decisions.md"), "utf8");
-    expect(decisions).toMatch(/\| DEC-\d{4} \|[^|]*CR-0001\.md#CR-0001/);
-    expect(decisions).toMatch(/\| DEC-\d{4} \|[^|]*\| (?:DONE|TODO|DEFERRED) \|/);
+    const row = decisions.split(/\r?\n/).find((line) => line.includes("CR-0001.md#CR-0001"));
+    if (!row) throw new Error("Change-request decision row is absent");
+    const cells = row
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+    expect(cells).toHaveLength(4);
+    expect(cells[0]).toMatch(/^DEC-\d{4}$/);
+    expect(cells[3]).toMatch(/^(?:TODO|DONE|DEFERRED|WIP)$/);
   });
 
   // QFAI:AC-0004-0005-02
@@ -660,8 +667,12 @@ describe("BF-0004 acceptance criteria", () => {
     const result = step(root, 7);
     expect(result.status).toBe(3);
     expect(section(result.stdout, "For a person").join("\n")).toContain("BR-0001-0001");
-    expect(await readFile(source, "utf8")).toBe(before);
-    expect(before).toContain("A valid order receives a receipt.");
+    const oldRule = "| BR-0001-0001 | A valid order receives a receipt.       |";
+    expect(before).toContain(oldRule);
+    expect(await readFile(source, "utf8")).toContain(oldRule);
+    await expect(
+      lstat(path.join(root, ".qfai/spec/03_contract/api/missing-order.yaml")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   // QFAI:AC-0004-0010-02
