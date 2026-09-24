@@ -8,4 +8,9 @@ When the behavior already exists, record the example ID, the code that satisfies
 
 The mutation is a probe and is removed before any review or commit. Its target is the predicate identified as satisfying the example, even when that predicate lives in a shared module. The cross-flow ownership check determines which other flows must be revalidated.
 
+The test's own checker or fixture is not the behavior that satisfies the
+example. Do not mutate it to manufacture a failure. Record the test file hash
+before the probe and confirm the test is unchanged after restoration. If only
+the checker can be made to fail, improve the oracle or raise a contract gap.
+
 A test that cannot be made to fail through its named behavior has no valid proof. Improve its oracle, or raise the upstream contract gap through the drift protocol. The report must say which route was taken.
