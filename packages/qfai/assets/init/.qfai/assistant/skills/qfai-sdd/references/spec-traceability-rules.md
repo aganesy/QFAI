@@ -89,7 +89,7 @@ one.
   from the Contracts table of the spec that reads the entity.
 - A foreign-namespace layer ID is an `error` from two rules at once —
   `QFAI-SPACK-101` (namespace) and `TRACE_DOWNSTREAM_REF` (reference direction).
-  Writing _"per BR-0017-0004"_ in `04_Business-Rules.md` trips both.
+  Writing _"per BR-0007-0004"_ in `04_Business-Rules.md` trips both.
 
 **Which files the namespace check covers**, measured against
 `validateLayeredNamespace`:

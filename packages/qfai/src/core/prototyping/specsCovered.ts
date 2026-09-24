@@ -174,7 +174,7 @@ export type SpecsCoveredDriftResult = {
  * snapshot of the currently UI-bearing spec set.
  *
  * Pure function: the comparison is performed against the FROZEN value as
- * the baseline (per AC-0012-0049 — mid-run spec-set changes are deferred
+ * the baseline (mid-run spec-set changes are deferred
  * to the next invocation, never re-derived from the live filesystem at
  * comparison time). The caller is responsible for capturing
  * `currentLive` once (typically via `resolveAllUiBearingSpecs`); this
