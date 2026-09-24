@@ -1032,6 +1032,46 @@ describe("BF-0004 acceptance criteria", () => {
     });
   });
 
+  it("keeps malformed criteria in the old pack while preserving the complete flow output", async () => {
+    // QFAI:EX-0004-0007-04
+    const complete = path.join(journey.root, ".qfai/spec/02_business-flow");
+    const flow = path.join(complete, "business-flow-0001");
+    expect(await readFile(path.join(complete, "business-flows.md"), "utf8")).toContain(
+      "| BF-0001 | Place an order |",
+    );
+    expect(await readFile(path.join(flow, "business-flow.md"), "utf8")).toContain(
+      "Start --> PlaceOrder --> Receipt",
+    );
+    expect(await readFile(path.join(flow, "user-stories.md"), "utf8")).toContain("US-0001-0001");
+    const story = path.join(flow, "user-story-0001-0001");
+    for (const file of ["01_User-story.md", "02_Acceptance-Criteria.md", "03_Example.md"]) {
+      expect(await readFile(path.join(story, file), "utf8")).toContain("# ");
+    }
+
+    const root = await project();
+    const source = path.join(root, ".qfai/specs/spec-0001/03_Acceptance-Criteria.md");
+    const original = await readFile(source, "utf8");
+    const malformed = original.replace(
+      "Given an empty order, when it is submitted, then no receipt is returned.",
+      "The empty order still needs a reviewed scenario.",
+    );
+    expect(malformed).not.toBe(original);
+    await writeFile(source, malformed);
+    prepareThrough(root, 3);
+    const result = step(root, 4);
+    expect(result.status).toBe(3);
+    expect(section(result.stdout, "For a person").join("\n")).toContain(
+      "spec-0001/03_Acceptance-Criteria.md: AC-0001-0002 has no convertible Gherkin scenario",
+    );
+    expect(
+      await readFile(path.join(root, ".qfai/spec/spec-0001/03_Acceptance-Criteria.md"), "utf8"),
+    ).toContain("AC-0001-0002");
+    const map = JSON.parse(
+      await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
+    ) as Journey["map"];
+    expect(map.ids["spec-0001"]).not.toHaveProperty("AC-0001-0002");
+  });
+
   // QFAI:AC-0004-0008-01
   it("turns a case with no example into a mapped example", async () => {
     const root = await project();
