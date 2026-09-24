@@ -55,6 +55,11 @@ describe("BF-0003 diagnostic and guardrail examples", () => {
   it("counts every doctor severity in the machine-readable summary", async () => {
     // QFAI:EX-0003-0001-04
     await withWorkspace(async (root) => {
+      await put(
+        root,
+        "qfai.config.yaml",
+        "paths:\n  specsDir: .qfai/missing-spec\n  contractsDir: .qfai/spec/03_contract\n",
+      );
       let code = -1;
       const output = await captureStdout(async () => {
         code = await runDoctor({ root, rootExplicit: true, format: "json", failOn: "never" });
