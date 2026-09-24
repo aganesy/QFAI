@@ -34,6 +34,13 @@ import { parse as parseYaml } from "yaml";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import {
+  deliveredWorkflowsDir,
+  readDeliveredJobs,
+  readDeliveredWorkflow,
+  runWorkflowStep as runStep,
+  useDeliveredProject,
+} from "../helpers/deliveredWorkflowTree.js";
+import {
   collectJobSteps,
   headerComment,
   isRecord,
@@ -51,25 +58,10 @@ const VALIDATE = "qfai-validate.yml";
 const DOCS = "qfai-docs.yml";
 
 /** The initialised project, built once for the whole file. */
-let projectPromise: Promise<string> | undefined;
-
-function project(): Promise<string> {
-  projectPromise ??= (async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-spec0003-"));
-    await captureStdout(() => runInit({ dir, force: false, dryRun: false, yes: true }));
-    return dir;
-  })();
-  return projectPromise;
-}
-
-afterAll(async () => {
-  if (projectPromise === undefined) return;
-  const dir = await projectPromise;
-  await removeTempTree(dir);
-});
+const project = useDeliveredProject("qfai-e2e-spec0003-");
 
 async function workflowsDir(): Promise<string> {
-  return path.join(await project(), ".github", "workflows");
+  return deliveredWorkflowsDir(await project());
 }
 
 /** Every workflow file `qfai init` actually delivered, sorted. */
@@ -84,20 +76,12 @@ async function deliveredWorkflowFiles(): Promise<string[]> {
 }
 
 async function workflowText(file: string): Promise<string> {
-  return readFile(path.join(await workflowsDir(), file), "utf-8");
+  return readDeliveredWorkflow(await project(), file);
 }
 
 /** The delivered file's job map, narrowed from the parsed document. */
 async function jobsOf(file: string): Promise<Record<string, Record<string, unknown>>> {
-  const parsed: unknown = parseYaml(await workflowText(file));
-  if (!isRecord(parsed) || !isRecord(parsed["jobs"])) {
-    throw new Error(`${file} was delivered without a jobs map`);
-  }
-  const out: Record<string, Record<string, unknown>> = {};
-  for (const [id, job] of Object.entries(parsed["jobs"])) {
-    if (isRecord(job)) out[`${file}#${id}`] = job;
-  }
-  return out;
+  return readDeliveredJobs(await project(), file);
 }
 
 /** Every job of every delivered workflow, keyed `<file>#<job>`. */
@@ -114,64 +98,6 @@ async function documentOf(file: string): Promise<Record<string, unknown>> {
   const parsed: unknown = parseYaml(await workflowText(file));
   if (!isRecord(parsed)) throw new Error(`${file} was delivered as a non-mapping document`);
   return parsed;
-}
-
-type StepRun = {
-  status: number | null;
-  stdout: string;
-  stderr: string;
-  outputs: Record<string, string>;
-  skipped: boolean;
-};
-
-/**
- * Executes one delivered `run:` body under bash with a stubbed `GITHUB_OUTPUT`, returning the exit
- * status, both streams and the `key=value` pairs the shell published.
- *
- * `-e -o pipefail` are the flags GitHub applies to a `shell: bash` step, so a claim about a lane's
- * exit semantics is only a claim about the delivered file when they are on. The same shape as
- * `tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` and the `shippedWorkflow*` integration suites.
- */
-async function runStep(body: string, cwd: string, env: NodeJS.ProcessEnv = {}): Promise<StepRun> {
-  const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-0003-step-"));
-  try {
-    const scriptPath = path.join(stage, "step.sh");
-    const outputPath = path.join(stage, "github-output.txt");
-    await writeFile(scriptPath, body, "utf8");
-    await writeFile(outputPath, "", "utf8");
-    const child = spawnSync("bash", ["-e", "-o", "pipefail", scriptPath], {
-      cwd,
-      encoding: "utf-8",
-      env: { ...process.env, ...env, GITHUB_OUTPUT: outputPath },
-    });
-    if (child.error !== undefined) {
-      // `bash` is absent on some Windows images. Rethrowing would turn a missing interpreter into a
-      // failure of the property under test, which it is not.
-      const error: unknown = child.error;
-      const code =
-        typeof error === "object" && error !== null && "code" in error
-          ? String(error.code ?? "")
-          : "";
-      if (code === "ENOENT") {
-        return { status: null, stdout: "", stderr: "", outputs: {}, skipped: true };
-      }
-      throw child.error;
-    }
-    const outputs: Record<string, string> = {};
-    for (const line of (await readFile(outputPath, "utf8")).split(/\r?\n/)) {
-      const eq = line.indexOf("=");
-      if (eq > 0) outputs[line.slice(0, eq)] = line.slice(eq + 1);
-    }
-    return {
-      status: child.status,
-      stdout: child.stdout ?? "",
-      stderr: child.stderr ?? "",
-      outputs,
-      skipped: false,
-    };
-  } finally {
-    await removeTempTree(stage);
-  }
 }
 
 /** The `run:` body of the named step of the named job, or a throw naming what was missing. */

@@ -56,11 +56,16 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
-import { runInit } from "../../src/cli/commands/init.js";
 import { classifyBuildCommand } from "../helpers/buildCommand.js";
+import {
+  readDeliveredJobMap,
+  readDeliveredWorkflow,
+  runWorkflowStep as runStep,
+  useDeliveredProject,
+} from "../helpers/deliveredWorkflowTree.js";
 import {
   ALLOWED_ACTION_COMMITS,
   ALLOWED_ACTION_INPUTS,
@@ -90,33 +95,14 @@ import {
   invocationsOf,
   refusals,
 } from "../helpers/shippedLaneCommands.js";
-import { captureStdout } from "../helpers/stdout.js";
 
 /** The initialised project, built once for the whole file. */
-let projectPromise: Promise<string> | undefined;
-
-function project(): Promise<string> {
-  projectPromise ??= (async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-spec0017-"));
-    await captureStdout(() => runInit({ dir, force: false, dryRun: false, yes: true }));
-    return dir;
-  })();
-  return projectPromise;
-}
-
-// The shared project is one temp tree for the whole file, so it needs one teardown. Without
-// this each run of the suite left a full asset tree behind — the cost of memoizing the
-// fixture is that its lifetime is now the file's, not an individual test's.
-afterAll(async () => {
-  if (projectPromise === undefined) return;
-  const dir = await projectPromise;
-  await rm(dir, { recursive: true, force: true });
-});
+const project = useDeliveredProject("qfai-e2e-spec0017-");
 
 const ORCHESTRATOR = "qfai-tests.yml";
 
 async function workflowText(file: string): Promise<string> {
-  return readFile(path.join(await project(), ".github", "workflows", file), "utf-8");
+  return readDeliveredWorkflow(await project(), file);
 }
 
 async function exists(rel: string): Promise<boolean> {
@@ -128,82 +114,13 @@ async function exists(rel: string): Promise<boolean> {
   }
 }
 
-/**
- * Executes one extracted `run:` body under bash with a stubbed `GITHUB_OUTPUT`, returning the exit
- * status, the streams and the `key=value` pairs the shell published.
- *
- * The same pattern as `tests/integration/shippedWorkflow*.test.ts`: the only way to tell a step that
- * resolves a value from a step that merely mentions one is to run it and read what came out.
- */
-async function runStep(
-  body: string,
-  cwd: string,
-): Promise<{
-  status: number | null;
-  stdout: string;
-  stderr: string;
-  outputs: Record<string, string>;
-  skipped: boolean;
-}> {
-  const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-step-"));
-  try {
-    const scriptPath = path.join(stage, "step.sh");
-    const outputPath = path.join(stage, "github-output.txt");
-    await writeFile(scriptPath, body, "utf8");
-    await writeFile(outputPath, "", "utf8");
-    // `-e -o pipefail` are the flags GitHub applies to a `shell: bash` step, and this row's headline
-    // assertion — "no version file must not fail the lane" — is precisely a claim about the exit
-    // semantics they define. Two of the three sibling helpers pass them and this one did not, while
-    // its docstring claimed to follow their pattern; round 2 caught the divergence. Measured: the
-    // current resolver behaves identically either way, so this is correctness ahead of a consequence
-    // rather than a fix to one.
-    const child = spawnSync("bash", ["-e", "-o", "pipefail", scriptPath], {
-      cwd,
-      encoding: "utf-8",
-      env: { ...process.env, GITHUB_OUTPUT: outputPath },
-    });
-    if (child.error !== undefined) {
-      // `bash` is absent on some Windows images. Rethrowing turns a missing interpreter into a
-      // failure of the property under test, which it is not.
-      // Narrowed rather than asserted: the project rule bars a bare `as`, and the repository already
-      // has this exact idiom in `scripts/check-atdd-annotation-ledger.mjs`.
-      const error: unknown = child.error;
-      const code =
-        typeof error === "object" && error !== null && "code" in error
-          ? String(error.code ?? "")
-          : "";
-      if (code === "ENOENT")
-        return { status: null, stdout: "", stderr: "", outputs: {}, skipped: true };
-      throw child.error;
-    }
-    const outputs: Record<string, string> = {};
-    for (const line of (await readFile(outputPath, "utf8")).split(/\r?\n/)) {
-      const eq = line.indexOf("=");
-      if (eq > 0) outputs[line.slice(0, eq)] = line.slice(eq + 1);
-    }
-    return {
-      status: child.status,
-      stdout: child.stdout ?? "",
-      stderr: child.stderr ?? "",
-      outputs,
-      skipped: false,
-    };
-  } finally {
-    await rm(stage, { recursive: true, force: true });
-  }
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** The orchestrator's job map, narrowed from the parsed document. */
 async function jobs(): Promise<Record<string, unknown>> {
-  const parsed: unknown = parseYaml(await workflowText(ORCHESTRATOR));
-  if (!isRecord(parsed) || !isRecord(parsed["jobs"])) {
-    throw new Error(`${ORCHESTRATOR} did not parse to a document with a jobs map`);
-  }
-  return parsed["jobs"];
+  return readDeliveredJobMap(await project(), ORCHESTRATOR);
 }
 
 /**
@@ -253,11 +170,9 @@ async function shippedJobs(): Promise<Record<string, unknown>> {
   const files = await shippedWorkflowFiles();
   const out: Record<string, unknown> = {};
   for (const file of files) {
-    const parsed: unknown = parseYaml(await workflowText(file));
-    if (!isRecord(parsed) || !isRecord(parsed["jobs"])) {
-      throw new Error(`${file} did not parse to a document with a jobs map`);
+    for (const [id, job] of Object.entries(await readDeliveredJobMap(await project(), file))) {
+      out[`${file}#${id}`] = job;
     }
-    for (const [id, job] of Object.entries(parsed["jobs"])) out[`${file}#${id}`] = job;
   }
   return out;
 }
