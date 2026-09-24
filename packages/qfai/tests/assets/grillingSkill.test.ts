@@ -21,8 +21,8 @@ import { describe, expect, it } from "vitest";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const SKILL = "assistant/skills/qfai-grilling/SKILL.md";
-const ENTRY = "assistant/skills/qfai-grill/SKILL.md";
+const SKILL = "assistant/skill/qfai-grilling/SKILL.md";
+const ENTRY = "assistant/skill/qfai-grill/SKILL.md";
 
 const readSkill = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -183,7 +183,7 @@ describe("the grill entry point", () => {
       expect(text).toMatch(/\*\*Without the primitive, stop\.\*\*/);
       // Naming the missing file is the whole of the remedy: a stop that does not
       // say what is missing sends the user looking.
-      expect(text).toMatch(/assistant\/skills\/qfai-grilling\/SKILL\.md` is not present/);
+      expect(text).toMatch(/assistant\/skill\/qfai-grilling\/SKILL\.md` is not present/);
       expect(text).toMatch(/Do not interview from memory/);
       expect(text).toMatch(/an improvised interview is the failure this split exists to prevent/);
     });
@@ -194,7 +194,7 @@ describe("the grill entry point", () => {
       const text = flat(await readSkill(tree, ENTRY));
       expect(text).toMatch(/Not a place to state the method/);
       expect(text).toMatch(/A step this skill performs that the primitive does not describe/);
-      expect(text).toMatch(/Read `\.qfai\/assistant\/skills\/qfai-grilling\/SKILL\.md`/);
+      expect(text).toMatch(/Read `\.qfai\/assistant\/skill\/qfai-grilling\/SKILL\.md`/);
     });
 
     it(`${tree}: writes no file, and ties that to where the gate is`, async () => {
@@ -355,7 +355,7 @@ describe("the delegation baseline sanctions the read-only lookup", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: names the exception, and bounds it to reading`, async () => {
       const text = flat(
-        await readSkill(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+        await readSkill(tree, "assistant/rule/shared-skill-delegation-baseline.md"),
       );
       expect(text).toMatch(/### Sanctioned exception: a read-only fact lookup/);
       expect(text).toMatch(/\*\*Reading, never authoring\.\*\*/);

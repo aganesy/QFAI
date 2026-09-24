@@ -173,6 +173,38 @@ them complete. Give the user the changed EX IDs, test paths, command results,
 review verdicts, evidence path, and consulted work-log IDs.
 `/qfai-verify` owns the repository-wide gate.
 
+## Grilling (MANDATORY)
+
+Article IX of `.qfai/assistant/rule/constitution.md` owns the two sessions
+this stage may run; `.agents/rules/grilling.md` owns the method.
+Neither is restated here. Both sessions are delegated. Critical decisions go
+to the user; other decisions follow the recorded griller recommendation.
+
+- **At the preflight.** Open a session for unresolved implementation choices.
+  Record `confidence high` when there was no session to open.
+- **On detection.** Stop and open a session when a contradiction, missing
+  behavior case, or technical obstacle appears during implementation.
+- **Neither session changes settled input.** Route a needed story or contract
+  change through `rule/drift-protocol.md`; the run solves local obstacles.
+
+Record the sessions in `.qfai/evidence/implement-BF-NNNN.md` under
+`## Grilling Session`. Start the block with the invocation's UTC start time to
+the millisecond and `Preflight: session opened` or `Preflight: confidence high`.
+For every session that the user did not stop, record its session ID, subject,
+ending, end time, source revision, time work resumed (or why it did not),
+frontier, lookups, decisions, open nodes, and escalations. The ending is one
+of `confirmed`, `user-closed`, `adopted`, or `no-question`; a `stopped`
+session is reported to the user without writing the artifact they stopped.
+List each open node beneath the record with its session ID. Record every
+adopted decision and user answer in the Work Orders Summary, keyed to this
+invocation and session; record `none` when no decision was settled.
+
+The completion reviewer checks the record against this invocation's start
+time, each counted decision and open node, and the source revision. A missing
+record, an unanswered critical decision, or work resumed after a `stopped`
+session is `REVISE`. A `no-question` ending cannot hide an open node:
+record the open question in the stage evidence and leave completion pending.
+
 ## Default Autopilot Policy
 
 - auto-decide: implementation seam, test selector, and local refactor that
