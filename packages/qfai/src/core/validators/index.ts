@@ -16,6 +16,18 @@ export { validateContractSsotModules } from "./contractSsotModules.js";
 export { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
 export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";
 export { validateStoryTreeCoverageDepth } from "./storyTreeCoverageDepth.js";
+export { validateStorySteeringPlaceholders } from "./assistantAssets.js";
+export { validateStoryTreeContractReferences } from "./contractReferences.js";
+export {
+  validateStoryTreeObligationsModel,
+  validateStoryTreeObligations,
+} from "./storyTreeObligations.js";
+export {
+  validateStoryTreeStructureModel,
+  validateStoryDirectories,
+  validateStoryTreeStructure,
+} from "./storyTreeStructure.js";
+export { validateStoryTreeDrift } from "./upstreamSsotGuard.js";
 export { validateScaffoldPlaceholder } from "./scaffoldPlaceholder.js";
 export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validatePrototypingEvidence, validateScreenIdCasing } from "./prototypingEvidence.js";

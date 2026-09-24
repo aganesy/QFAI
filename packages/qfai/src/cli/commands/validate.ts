@@ -1271,15 +1271,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No test file holds a silent placeholder — `it.todo` / `pytest.skip` / `t.Skip` / `@Disabled` / `#[ignore]` and the other dialects' stub forms.",
   "QFAI-TEST-003":
     "No vitest/jest test is parked with a `.skip` modifier; a parked suite is waived per path in `.qfai/waivers.yml` instead.",
-  // "or `-`" alone read as "an empty cell is malformed", which is the opposite
-  // of the rule: the validator, the ledger template and `volume-policy.md` all
-  // treat empty and `-` as the one "not resolved" state.
-  "QFAI-BRREF-001":
-    "A declared `BR-Ref` cell holds one `BR-NNNN` or `BR-NNNN-NNNN`, or `-` — equivalently an empty cell — when no BR reaches the row.",
-  "QFAI-BRREF-002":
-    "Every declared `BR-Ref` names a rule the spec's `04_Business-Rules.md` declares, so the T1 review group is keyed on a rule that exists.",
-  "QFAI-BRREF-003":
-    "A declared `BR-Ref` is the key the row's own `TC-Refs` derive: `TC` -> `EX-Ref` -> `05_Examples.md`'s `BR-Ref` (`AC-Refs` only for a TC with no `EX-Ref`), lowest of the union.",
   "QFAI-DENSITY-005":
     "A `Rule` cell at least 400 chars AND at least 3x the mean of the other `BR` rows in the same file is a size signal (warning): the cell may carry more than its rule. Files with fewer than 3 `BR-ID`/`Rule` rows are not checked.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
@@ -1341,10 +1332,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A `- Flow:` citation names a business flow that `_policies/04_Business-Flow.md` declares, so the edge from a story to the flow that realizes it resolves.",
   "QFAI-BFLOW-006":
     "Each business flow is declared once, so a story citing one names a single flow.",
-  "QFAI-TCLEVEL-001":
-    "Every tdd/test-list.md coverage row cites a TC that declares a Level the ledger owns (L1/L2). A TC declaring no Level is owned by /qfai-atdd under tests/integration/** (QFAI-ATDD-112), so a ledger row still claiming it makes two stages own the same TC.",
-  "QFAI-TCLEVEL-002":
-    "No tdd/test-list.md unit or component row cites a TC whose declared Level (L3/L4/L5) sends its test to /qfai-atdd. Such a row claims the TC for the ledger while QFAI-ATDD-112 claims it for the directory the Level names, so both gates pass on the other's account.",
   "QFAI-LINK-001":
     "Every qfai-owned entry in .claude/.agents/.codex/.github skill and agent directories is a symlink that resolves.",
   "QFAI-LINK-002":
@@ -1436,8 +1423,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Root DESIGN.md exists but failed to parse per design-md-spec (front-matter is malformed).",
   "QFAI-DCON-034":
     "Root DESIGN.md must be the project's own brand SSOT, not the unreplaced qfai sample seeded by `qfai init`.",
-  "QFAI-AGENT-014":
-    "The agent catalog embeds each agent's canonical body verbatim under `developer_instructions`, so a loader that reads only the catalog gets the same instructions the markdown file states.",
   "QFAI-AGENT-015":
     "Every role a skill declares is dispatchable: some routing phase or its review profile selects it.",
   "QFAI-AGENT-016":
@@ -1528,8 +1513,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // `paths.skillsDir` is configurable and the diff is taken against whatever it
   // resolves to, so the expected state names the tree by role. The directory
   // actually compared is on the finding's `target:` line.
-  "QFAI-TABLE-001":
-    "Every Markdown table row carries the same cell count as its header, so a positionally-read ledger cannot silently shift a column.",
   "QFAI-SKILLS-001":
     "The project's assistant skills directory matches the skill assets shipped by the installed QFAI version.",
   "QFAI-ASSETS-003":
@@ -1548,20 +1531,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
-  "QFAI-TDDLIST-011":
-    "Every ledger `Evidence` cell is written in the one shape the grammar admits, so the row's provenance, oracle, revision and anchor can each be read from the cell rather than inferred from prose.",
-  "QFAI-TDDLIST-012":
-    "Every ledger `Evidence` cell stays inside the 240-character cap: the cell is a pointer to the proof, and the commands and their output live in the evidence file its anchor names.",
-  "QFAI-TDDLIST-013":
-    "No ATDD-owned row records `RED:n-a`: its test is authored by `/qfai-atdd`, so it owes either an observed RED or the falsifiability argument that stands in for one.",
-  "QFAI-TDDLIST-014":
-    "Every ledger row carries exactly the cells its table's header declares, so no content sits past the last column where the per-column rules cannot read it.",
-  "QFAI-TDDLIST-017":
-    "Every row of a split test case names the one boundary it owns in `Boundary`, so a reseed pairs rows with boundaries by a cell nothing downstream rewrites rather than by the test name.",
-  "QFAI-TDDLIST-018":
-    "No two rows of one test case claim the same boundary: the rows of a split are identified by the (`TC-Refs`, `Boundary`) pair, and a repeated slug leaves one boundary covered by nothing.",
-  "QFAI-TDDLIST-019":
-    "A `done` row whose evidence entry declares its original run's output unretained is exempt from the reviewer-pack and seal fields, and says so here: `done` is read as reviewed, so a row whose review cannot be verified from artifacts stays visible rather than passing as one that carries them.",
   // The assistant-tree provenance family. Every governed file under
   // `constitution/` and `catalog/` is either byte-identical to the installed
   // release or an explicitly recorded local overlay; the four classifications
@@ -1579,39 +1548,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The governed assistant layers can be read on both sides, so provenance is actually compared rather than assumed clean.",
   "QFAI-ASSETS-009":
     "The assistant layers `qfai init --force` regenerates (`skills/`, `agents/`) hold what the installed release ships, so the project is not running the skill bodies it initialised with.",
-  TDDLIST_SELECTOR_UNRESOLVED:
-    "Every row past `todo` names a `Selector` its `Test file` holds, so the proof the row claims can be re-run by reading the cell. Resolution is containment over each `::`-separated segment, so a title assembled from a template literal is named by any literal fragment of it.",
-  "QFAI-TDDLIST-007":
-    "A ledger row at `done` states its evidence as a pointer into the evidence file its `Layer` owns, anchored at its own TDD item.",
-  "QFAI-TDDLIST-009":
-    "Every row's recorded `Revision` still names the tree its observation ran against: nothing the observation covered — the test file it names, or the source under test — has changed since. A stale Revision looks exactly like a fresh one, so this is computed rather than read.",
-  "QFAI-TDDLIST-008":
-    "Every evidence pointer resolves: the owner file the row's `Layer` names, the row's own TDD item, a heading that is present, and a complete entry behind it.",
-  "QFAI-CTYPE-004":
-    "Every `### DL-` entry in a delta file carries the seven `#### Meta` keys `parseDeltaV1` reads, so the Change Type counters see it. An entry the parser skips is counted for nothing and leaves the summary describing less change than the file records.",
   "QFAI-RESEARCH-013":
     "A UI-bearing discussion pack registers at least `uiux.competitive_refs_min` complete competitive references (default 3) in `04_Sources.md`.",
   "QFAI-RESEARCH-014":
     "Every registered competitive reference populates `adopted_points`, `rejected_points` and `local_translation` with real content rather than a placeholder.",
-  // States the healthy tree rather than the rejected values: a blank cell reads
-  // as `T1`, so what the operator has to see is that a cell which is *filled*
-  // names a tier the ceremony rules recognise.
-  "QFAI-TDDLIST-010":
-    "Every filled `Tier` cell in a TDD Execution Ledger names one of `T1`, `T2`, `T3` or `-`, so the ceremony a row owes is the one its author declared.",
-  // The other `TDDLIST_*` codes read the ledger alone and stay generic; this
-  // one pairs the ledger with the steering surface, so the expected state has
-  // to name both halves or the reader cannot tell which artifact is missing.
-  "QFAI-TDDLIST-015":
-    "A spec whose `tdd/test-list.md` holds `Status=blocked` rows also has a `.qfai/steering/` work-log entry accounting for the stop, associated with the spec by `scope: spec-NNNN` or by a `scope: global` entry's `links`.",
-  // The companion to the row above, and it earns a catalog entry for the same
-  // reason: the code is error-capable, and the reader of an `expected:` line
-  // needs to be told the expectation is about the surface, not about any spec.
-  "QFAI-TDDLIST-016":
-    "`.qfai/steering/` is walkable and every entry in it is readable, so the check for a work-log entry accounting for a stop has an answer to give.",
-  // Pairs the ledger with `.qfai/decisions/`, so the expected state names the
-  // record a blocked row waits on as well as the row.
-  "QFAI-TDDLIST-021":
-    "No `Status=blocked` row waits only on Change Requests that are already settled: a row whose `Blocked-By` cell (or, with no blocker there, its `Evidence` cell) names only `CR-*` records that are `rejected`, `superseded`, or `approved` with `Applied at` filled has been released through `/qfai-implement`.",
   "QFAI-RESEARCH-015":
     "Every `source_id` in the Research Summary resolves to an `id` in the same `sources[]` list.",
   "QFAI-RESEARCH-016":
@@ -1673,11 +1613,6 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // make each row name exactly one directory that no other row names.
   "QFAI-SPLIT-106":
     "Edit the `Spec` cell of each `CAP-NNNN` row the message names in `_policies/03_Capabilities.md` so it holds exactly one `spec-NNNN` directory: fill a blank cell with the directory that capability owns, cut a cell that lists several down to the one that owns it, merge a CAP that appears on two rows into one row, and give a directory claimed by two CAPs to only one of them.",
-  // The agent-catalog drift emitter passes no `suggested_action` on either of
-  // its paths (absent block, stale block), so both depend on this catalog for
-  // their `fix:` line. One repair covers both: the markdown file is the source.
-  "QFAI-AGENT-014":
-    "Copy the agent markdown file from its `## Mission` heading onward, verbatim, into that agent's `developer_instructions` block in the catalog. When the instructions themselves need to change, edit the markdown file first and regenerate the block from it — never the other way round.",
   "QFAI-AGENT-015":
     "Remove the role from the skill's `roles:`, or bind it in the package defaults (`packages/qfai/assets/defaults/agent-routing.yml` or `review-profiles.yml`). For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
   "QFAI-AGENT-016":

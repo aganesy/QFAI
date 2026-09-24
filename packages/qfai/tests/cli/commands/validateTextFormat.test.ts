@@ -488,7 +488,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-multiline-"));
     try {
-      const designDir = path.join(root, ".qfai", "contracts", "design");
+      const designDir = path.join(root, ".qfai", "spec", "03_contract", "design");
       await mkdir(designDir, { recursive: true });
       await writeFile(
         path.join(designDir, "anti-patterns.yaml"),
@@ -536,7 +536,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-classify-"));
     try {
-      const designDir = path.join(root, ".qfai", "contracts", "design");
+      const designDir = path.join(root, ".qfai", "spec", "03_contract", "design");
       await mkdir(designDir, { recursive: true });
       await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
       await writeFile(

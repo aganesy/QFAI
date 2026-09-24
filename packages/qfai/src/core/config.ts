@@ -56,8 +56,6 @@ export type QfaiValidationConfig = {
     specSections: string[];
   };
   testStrategy: {
-    maxE2eScenarioRatio: number | null;
-    maxE2eScenarioCount: number | null;
     /**
      * When true (default), `qfai validate` reports the silent-placeholder
      * construct of each supported stack in test files (QFAI-TEST-001). On
@@ -307,8 +305,6 @@ export const defaultConfig: QfaiConfig = {
       specSections: [],
     },
     testStrategy: {
-      maxE2eScenarioRatio: null,
-      maxE2eScenarioCount: null,
       forbidTestTodoStubs: true,
       requireLayerTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
       requireSizeTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
@@ -597,20 +593,6 @@ function normalizeValidation(
       ),
     },
     testStrategy: {
-      maxE2eScenarioRatio: readOptionalRatio(
-        testStrategyRaw?.maxE2eScenarioRatio,
-        base.testStrategy.maxE2eScenarioRatio,
-        "validation.testStrategy.maxE2eScenarioRatio",
-        configPath,
-        issues,
-      ),
-      maxE2eScenarioCount: readOptionalNonNegativeInt(
-        testStrategyRaw?.maxE2eScenarioCount,
-        base.testStrategy.maxE2eScenarioCount,
-        "validation.testStrategy.maxE2eScenarioCount",
-        configPath,
-        issues,
-      ),
       forbidTestTodoStubs: readBoolean(
         testStrategyRaw?.forbidTestTodoStubs,
         base.testStrategy.forbidTestTodoStubs,
@@ -1068,51 +1050,6 @@ function readOptionalString(
   }
   issues.push(configIssue(configPath, `${label} は空でない文字列である必要があります。`));
   return undefined;
-}
-
-function readOptionalRatio(
-  value: unknown,
-  fallback: number | null,
-  label: string,
-  configPath: string,
-  issues: Issue[],
-): number | null {
-  if (value === undefined) {
-    return fallback;
-  }
-  if (value === null) {
-    return null;
-  }
-  if (typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1) {
-    return value;
-  }
-  issues.push(configIssue(configPath, `${label} は 0〜1 の数値である必要があります。`));
-  return fallback;
-}
-
-function readOptionalNonNegativeInt(
-  value: unknown,
-  fallback: number | null,
-  label: string,
-  configPath: string,
-  issues: Issue[],
-): number | null {
-  if (value === undefined) {
-    return fallback;
-  }
-  if (value === null) {
-    return null;
-  }
-  if (
-    typeof value === "number" &&
-    Number.isFinite(value) &&
-    Number.isInteger(value) &&
-    value >= 0
-  ) {
-    return value;
-  }
-  issues.push(configIssue(configPath, `${label} は 0 以上の整数である必要があります。`));
-  return fallback;
 }
 
 function readStringArray(

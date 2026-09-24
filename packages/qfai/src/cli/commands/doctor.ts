@@ -81,7 +81,7 @@ function formatDoctorText(data: Awaited<ReturnType<typeof createDoctorData>>): s
     }
   }
   lines.push("");
-  lines.push("== advisory findings (drift, non-blocking by default) ==");
+  lines.push("== warnings advisory of drift ==");
   const combinedAdvisory = [...advisoryGroup, ...skillsAdvisory];
   if (combinedAdvisory.length === 0) {
     lines.push("[ok] (no findings in this bucket)");
