@@ -170,4 +170,4 @@ packages/qfai/tests/integration/spec0015LegacyProfilePreservation.test.ts
 
 ## Record defects
 
-- `record:QFAI-TDDLIST-008`, `TDD-0039`, Round 1: the TC reference and falsifiability failure mode carried explanatory text where validation requires an exact value. The corrected record was re-attested by both reviewers, then formally re-reviewed in `.qfai/review/review-20260924174336967`. The original sealed review remains at `.qfai/review/review-20260924140518254` as history.
+- `record:QFAI-TDDLIST-008`, `TDD-0039`, Round 1: the TC reference and falsifiability failure mode carried explanatory text where validation requires an exact value. The completion and implementation reviewers re-attested PASS at `working-tree+21020bfa0c992308fee2d5926044ed6191935f9a006889bd8dd677beb242a000` over audited hash `da28eee8bb6d5f6c0cda426f7ec13a2f3315c59a86eb072be15712b1cfaab6b3`, then formally re-reviewed the corrected record with PASS. The original sealed review remains historical.
