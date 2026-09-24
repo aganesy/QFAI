@@ -176,7 +176,7 @@ The ordinal rises on a handoff that opens a general series on the same artifact,
 - Do not declare DONE until all routed blocking reviewers return `PASS`.
 - Any in-scope blocking finding from an invoked reviewer prevents DONE until resolved;
   `blocking_agents` requires a reviewer's PASS only when that reviewer is routed.
-- Every reviewer returning `FAIL` or `REVISE` must include a concrete fix proposal.
+- Every reviewer returning `REVISE` must include a concrete fix proposal.
 
 ### Round budget and convergence (MUST)
 
