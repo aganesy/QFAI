@@ -45,6 +45,42 @@ const scriptNames = [
   "09-repoint-links.mjs",
   "10-update-gitignore.mjs",
 ] as const;
+const changedPathPatterns: readonly (readonly RegExp[])[] = [
+  [
+    /^\.qfai\/(?:specs|contracts)\//,
+    /^\.qfai\/spec\/(?:_policies|spec-\d{4}|03_contract)\//,
+    /^\.qfai\/evidence\/migration-spec-to-story\/legacy\/(?:specs|contracts)\//,
+    /^qfai\.config\.yaml$/,
+  ],
+  [
+    /^\.qfai\/spec\/(?:decisions|open-questions)\.md$/,
+    /^\.qfai\/spec\/(?:spec-\d{4}\/(?:07_Decisions|08_Open-questions|09_delta)|_policies\/(?:08_Decisions|09_Open-questions|10_delta))\.md$/,
+    /^\.qfai\/decisions\//,
+    /^\.qfai\/evidence\/migration-spec-to-story\/retired\/(?:spec-\d{4}|_policies|decisions)\//,
+  ],
+  [
+    /^\.qfai\/spec\/(?:_policies|01_policy|03_contract)\//,
+    /^\.qfai\/assistant\/(?:constitution|catalog|manifest|process|rule)\//,
+    /^\.qfai\/evidence\/migration-spec-to-story\/retired\/(?:_policies|assistant)\//,
+    /^qfai\.config\.yaml$/,
+  ],
+  [
+    /^\.qfai\/spec\/(?:02_business-flow|spec-\d{4}|_policies|03_contract)\//,
+    /^\.qfai\/evidence\/migration-spec-to-story\/(?:id-map\.json|retired\/)/,
+    /^\.qfai\/worklog\//,
+  ],
+  [/^\.qfai\/spec\/02_business-flow\/business-flow-\d{4}\/user-story-\d{4}-\d{4}\/03_Example\.md$/],
+  [
+    /^\.qfai\/spec\/02_business-flow\/business-flow-\d{4}\/user-story-\d{4}-\d{4}\/02_Acceptance-Criteria\.md$/,
+  ],
+  [
+    /^\.qfai\/spec\/(?:spec-\d{4}\/(?:01_Spec|04_Business-Rules)\.md|03_contract\/)/,
+    /^\.qfai\/evidence\/migration-spec-to-story\/retired\/spec-\d{4}\/(?:01_Spec|04_Business-Rules)\.md$/,
+  ],
+  [/^tests\//],
+  [/^\.(?:claude|agents|codex|github)\/(?:skills|agents)(?:\/|$)/],
+  [/^\.gitignore$/, /^\.qfai\/report\/\.gitignore-[1-9]\d*-[0-9a-f-]+\.tmp(?:\.owner)?$/],
+];
 const temporary: string[] = [];
 
 type Result = { status: number | null; stdout: string; stderr: string };
@@ -378,32 +414,69 @@ describe("BF-0004 acceptance criteria", () => {
     const valid = await readFile(plan, "utf8");
     const oldFlow = path.join(root, ".qfai/spec/_policies/04_Business-Flow.md");
     const oldFlowContent = await readFile(oldFlow, "utf8");
-    const invalid = [
-      { name: "unclosed YAML", content: "flows: [\nrules: []\n" },
-      { name: "unknown field", content: `${valid}unexpected: true\n` },
-      { name: "duplicate YAML key", content: `${valid}rules: []\n` },
+    const invalid: Array<{
+      name: string;
+      content: string;
+      expected?: string;
+      duplicateHeading?: boolean;
+    }> = [
+      { name: "unclosed YAML", content: "flows: [\nrules: []\n", expected: "flows: [" },
+      { name: "unknown field", content: `${valid}unexpected: true\n`, expected: "unexpected" },
+      { name: "duplicate YAML key", content: `${valid}rules: []\n`, expected: "rules" },
       {
         name: "duplicate story",
         content:
           "flows:\n  - title: F1\n    stories:\n      - id: US-0001-0001\n      - id: US-0001-0001\nrules: []\n",
+        expected: "US-0001-0001",
+      },
+      {
+        name: "duplicate criterion",
+        content:
+          "flows:\n  - title: F1\n    stories:\n      - id: US-0001-0001\n        criteria: [AC-0001-0001, AC-0001-0001]\nrules: []\n",
+        expected: "AC-0001-0001",
+      },
+      {
+        name: "duplicate rule",
+        content: `${valid}  - id: BR-0001-0001\n    contract: api/order.yaml\n`,
+        expected: "BR-0001-0001",
       },
       {
         name: "unknown story",
         content: "flows:\n  - title: F1\n    stories:\n      - id: US-9999-0001\nrules: []\n",
+        expected: "US-9999-0001",
+      },
+      {
+        name: "wrong-pack criterion",
+        content:
+          "flows:\n  - title: F1\n    stories:\n      - id: US-0001-0001\n        criteria: [AC-0002-0001]\nrules: []\n",
+        expected: "AC-0002-0001",
+      },
+      {
+        name: "unknown rule",
+        content: `${valid}  - id: BR-9999-0001\n    contract: api/order.yaml\n`,
+        expected: "BR-9999-0001",
       },
       {
         name: "missing flow selector",
         content:
           "flows:\n  - title: F1\n    from: 'CHG-9999: Missing'\n    stories:\n      - id: US-0001-0001\nrules: []\n",
+        expected: "CHG-9999: Missing",
       },
-      { name: "repeated flow selector", content: valid, duplicateHeading: true },
+      {
+        name: "repeated flow selector",
+        content: valid,
+        duplicateHeading: true,
+        expected: "CHG-0001: Order flow",
+      },
       {
         name: "absolute contract",
         content: valid.replace("contract: api/order.yaml", "contract: /tmp/orders.yaml"),
+        expected: "/tmp/orders.yaml",
       },
       {
         name: "traversing contract",
         content: valid.replace("contract: api/order.yaml", "contract: ../orders.yaml"),
+        expected: "../orders.yaml",
       },
     ];
     for (const scenario of invalid) {
@@ -418,6 +491,7 @@ describe("BF-0004 acceptance criteria", () => {
       const result = step(root, 4);
       expect(result.status, scenario.name).toBe(2);
       expect(result.stderr, scenario.name).toContain("plan.yaml");
+      if (scenario.expected) expect(result.stderr, scenario.name).toContain(scenario.expected);
       expect(await fingerprint(root), scenario.name).toBe(before);
       await expect(
         lstat(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json")),
@@ -456,20 +530,12 @@ describe("BF-0004 acceptance criteria", () => {
   // QFAI:EX-0004-0003-14
   // QFAI:EX-0004-0003-15
   it("keeps every step inside its write boundary without opening the network", async () => {
-    const hostPrefixes = [".claude/", ".agents/", ".codex/", ".github/"];
     expect(journey.changedPaths).toHaveLength(10);
     for (const [index, paths] of journey.changedPaths.entries()) {
       const number = index + 1;
       expect(journey.applied[index]?.status).toBe(0);
       for (const changed of paths) {
-        const allowed =
-          number <= 7
-            ? changed.startsWith(".qfai/") || changed === "qfai.config.yaml"
-            : number === 8
-              ? changed.startsWith("tests/")
-              : number === 9
-                ? hostPrefixes.some((prefix) => changed.startsWith(prefix))
-                : changed === ".gitignore";
+        const allowed = changedPathPatterns[index]?.some((pattern) => pattern.test(changed));
         expect(allowed, "Step " + number + " changed " + changed).toBe(true);
       }
     }
@@ -662,6 +728,52 @@ describe("BF-0004 acceptance criteria", () => {
       await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
     ) as Journey["map"];
     expect(map.ids["spec-0001"]).not.toHaveProperty("US-0001-0002");
+  });
+
+  it("places an ambiguous criterion explicitly and creates a template for a new flow", async () => {
+    // QFAI:EX-0004-0007-01
+    // QFAI:EX-0004-0007-08
+    const root = await project();
+    const stories = path.join(root, ".qfai/specs/spec-0001/02_User-stories.md");
+    await writeFile(
+      stories,
+      `${await readFile(stories, "utf8")}\n## US-0001-0002: Track the receipt\n\nAs a buyer, I can track it.\n`,
+    );
+    const criteria = path.join(root, ".qfai/specs/spec-0001/03_Acceptance-Criteria.md");
+    await writeFile(
+      criteria,
+      (await readFile(criteria, "utf8")).replace("- Parent: US-0001-0001\n", ""),
+    );
+    const planPath = path.join(root, ".qfai/evidence/migration-spec-to-story/plan.yaml");
+    const plan = parseYaml(await readFile(planPath, "utf8")) as {
+      flows: Array<{
+        title: string;
+        from?: string;
+        stories: Array<{ id: string; criteria?: string[] }>;
+      }>;
+    };
+    plan.flows.push({ title: "Track a receipt", stories: [{ id: "US-0001-0002" }] });
+    await writeFile(planPath, stringifyYaml(plan));
+    prepareThrough(root, 3);
+    const result = step(root, 4);
+    expect(result.status).toBe(3);
+    expect(section(result.stdout, "For a person").join("\n")).toContain(
+      "Track a receipt has no old flow diagram",
+    );
+    const map = JSON.parse(
+      await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
+    ) as Journey["map"];
+    expect(map.ids["spec-0001"]).toMatchObject({
+      "US-0001-0001": "US-0001-0001",
+      "US-0001-0002": "US-0002-0001",
+      "AC-0001-0001": "AC-0001-0001-01",
+    });
+    const secondFlow = await readFile(
+      path.join(root, ".qfai/spec/02_business-flow/business-flow-0002/business-flow.md"),
+      "utf8",
+    );
+    expect(secondFlow).toContain("Track a receipt");
+    expect(secondFlow).toContain("flowchart");
   });
 
   // QFAI:AC-0004-0008-01

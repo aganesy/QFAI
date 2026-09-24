@@ -88,12 +88,11 @@ export async function readMigrationPlan(context: MigrationContext): Promise<Migr
     throw new MigrationInputError(`${PLAN_PATH}: ${document.errors[0]?.message ?? "invalid YAML"}`);
   }
   const value: unknown = document.toJS();
-  if (
-    !isObject(value) ||
-    !hasOnlyKeys(value, ["flows", "rules"]) ||
-    !Array.isArray(value.flows) ||
-    !Array.isArray(value.rules)
-  ) {
+  if (isObject(value) && !hasOnlyKeys(value, ["flows", "rules"])) {
+    const unknown = Object.keys(value).find((key) => key !== "flows" && key !== "rules");
+    throw new MigrationInputError(`${PLAN_PATH}: unknown field ${unknown}`);
+  }
+  if (!isObject(value) || !Array.isArray(value.flows) || !Array.isArray(value.rules)) {
     throw new MigrationInputError(`${PLAN_PATH}: flows and rules must be lists`);
   }
   const flows: PlannedFlow[] = [];
@@ -119,6 +118,14 @@ export async function readMigrationPlan(context: MigrationContext): Promise<Migr
     for (const item of entry.stories) {
       const id = isObject(item) ? item.id : undefined;
       const criteria = isObject(item) ? item.criteria : undefined;
+      if (Array.isArray(criteria)) {
+        const values: unknown[] = criteria;
+        const ids = values.filter((part): part is string => typeof part === "string");
+        const repeated = ids.find((part, index) => ids.indexOf(part) !== index);
+        if (repeated !== undefined) {
+          throw new MigrationInputError(`${PLAN_PATH}: duplicate criterion ${repeated}`);
+        }
+      }
       if (
         !isObject(item) ||
         !hasOnlyKeys(item, ["id", "criteria"]) ||
@@ -126,8 +133,7 @@ export async function readMigrationPlan(context: MigrationContext): Promise<Migr
         !/^US-\d{4}-\d{4}$/.test(id) ||
         (criteria !== undefined &&
           (!Array.isArray(criteria) ||
-            !criteria.every((part) => typeof part === "string" && /^AC-\d{4}-\d{4}$/.test(part)) ||
-            new Set(criteria).size !== criteria.length))
+            !criteria.every((part) => typeof part === "string" && /^AC-\d{4}-\d{4}$/.test(part))))
       ) {
         throw new MigrationInputError(`${PLAN_PATH}: invalid story under ${entry.title}`);
       }
@@ -147,6 +153,7 @@ export async function readMigrationPlan(context: MigrationContext): Promise<Migr
   const rules: PlannedRule[] = [];
   const seenRules = new Set<string>();
   for (const entry of value.rules) {
+    const placement = isObject(entry) && typeof entry.contract === "string" ? entry.contract : "";
     if (
       !isObject(entry) ||
       !hasOnlyKeys(entry, ["id", "contract"]) ||
@@ -161,7 +168,7 @@ export async function readMigrationPlan(context: MigrationContext): Promise<Migr
         .resolve(context.contractsDir, entry.contract)
         .startsWith(`${context.contractsDir}${path.sep}`)
     ) {
-      throw new MigrationInputError(`${PLAN_PATH}: invalid rule placement`);
+      throw new MigrationInputError(`${PLAN_PATH}: invalid rule placement ${placement}`.trimEnd());
     }
     if (seenRules.has(entry.id))
       throw new MigrationInputError(`${PLAN_PATH}: duplicate rule ${entry.id}`);
