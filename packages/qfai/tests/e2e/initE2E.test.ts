@@ -39,7 +39,6 @@ async function cleanupTempDir(dir: string): Promise<void> {
 
 // QFAI:BF-0001
 describe("E2E: workspace initialization (US-0003-0001)", () => {
-  // QFAI:EX-0001-0020-01
   it("creates the empty story tree with assistant assets", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -82,7 +81,6 @@ describe("E2E: workspace initialization (US-0003-0001)", () => {
 
 // QFAI:BF-0001
 describe("E2E: idempotent initialization (US-0003-0002)", () => {
-  // QFAI:EX-0001-0021-01
   it("second init skips existing files and preserves their content", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -134,7 +132,6 @@ describe("E2E: force update (US-0003-0003)", () => {
 
 // QFAI:BF-0001
 describe("E2E: dry-run (US-0003-0004)", () => {
-  // QFAI:EX-0001-0023-01
   it("--dry-run does not create any files", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -169,7 +166,6 @@ describe("E2E: multi-tool wrapper generation (US-0003-0005)", () => {
 
 // QFAI:BF-0001
 describe("E2E: legacy file evacuation (US-0003-0007)", () => {
-  // QFAI:EX-0001-0026-01
   it("--force removes legacy 10_workflow.md from skills", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -196,7 +192,6 @@ describe("E2E: legacy file evacuation (US-0003-0007)", () => {
 
 // QFAI:BF-0001
 describe("E2E: commands/prompts deprecation + skill symlink integration (US-0003-0008)", () => {
-  // QFAI:EX-0001-0027-01
   it("--force removes the commands/prompts wrappers qfai shipped, and only those", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -298,7 +293,6 @@ describe("E2E: commands/prompts deprecation + skill symlink integration (US-0003
 
 // QFAI:BF-0001
 describe("E2E: agent wrapper symlink (US-0003-0006)", () => {
-  // QFAI:EX-0001-0025-01
   it("creates agent symlinks in .claude/agents/ and .github/agents/", async () => {
     const tmpDir = await createTempDir();
     try {

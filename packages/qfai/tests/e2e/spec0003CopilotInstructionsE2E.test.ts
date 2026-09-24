@@ -37,7 +37,6 @@ function instructionPath(root: string, name: string): string {
 
 // QFAI:BF-0001
 describe("E2E: Copilot review instructions are distributed create-only (US-0003-0011)", () => {
-  // QFAI:EX-0001-0030-01
   it("writes both instruction files on a first init", async () => {
     const tmpDir = await createTempDir();
     try {

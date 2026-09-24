@@ -24,7 +24,7 @@ it("removes only retired workflow files from both assistant skill layouts on --f
 
     const assistant = path.join(root, ".qfai", "assistant");
     const legacyDirectories = [
-      path.join(assistant, "skill", "qfai-sdd"),
+      path.join(assistant, "skills", "qfai-sdd"),
       path.join(assistant, "skill", "qfai-sdd"),
     ];
     for (const directory of legacyDirectories) {

@@ -342,6 +342,7 @@ describe("qfai init", () => {
   });
 
   // QFAI:EX-0001-0020-02
+  // QFAI:EX-0001-0025-01
   it("creates template additions with symlinks", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -395,6 +396,14 @@ describe("qfai init", () => {
       const githubAgent = path.join(root, ".github", "agents", "delivery-planner.agent.md");
       await expectSymlink(githubAgent);
       await expectSymlinkTarget(githubAgent, ".qfai/assistant/agent/delivery-planner.md");
+      for (const readme of [
+        ".agents/README.md",
+        ".codex/README.md",
+        ".claude/agents/README.md",
+        ".github/agents/README.md",
+      ]) {
+        await expect(access(path.join(root, readme))).rejects.toMatchObject({ code: "ENOENT" });
+      }
 
       // Host command files are not generated; canonical prompts are.
       await access(path.join(root, ".qfai", "assistant", "prompt"));
@@ -464,16 +473,21 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0021-01
   it("is create-only for root/ and .qfai/ (skips existing files)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       const existingConfig = path.join(root, "qfai.config.yaml");
       await writeFile(existingConfig, "custom config\n", "utf-8");
 
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const output = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true }),
+      );
 
       const after = await readFile(existingConfig, "utf-8");
       expect(after).toBe("custom config\n");
+      expect(sectionPaths(output, "  skipped paths:")).toContain("qfai.config.yaml");
+      await access(path.join(root, ".qfai", "assistant", "rule", "constitution.md"));
 
       const existingConstitution = path.join(root, ".qfai", "assistant", "rule", "constitution.md");
       await writeFile(existingConstitution, "custom constitution\n", "utf-8");
@@ -482,6 +496,23 @@ describe("qfai init", () => {
 
       const constitutionAfter = await readFile(existingConstitution, "utf-8");
       expect(constitutionAfter).toBe("custom constitution\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:EX-0001-0023-01
+  it("lists planned files in dry-run without writing the story tree", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-dry-run-"));
+    try {
+      const output = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: true, yes: true }),
+      );
+      expect(sectionPaths(output, "  would write paths:")).toContain("qfai.config.yaml");
+      await expect(access(path.join(root, "qfai.config.yaml"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(access(path.join(root, ".qfai"))).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
       await removeTempTree(root);
     }
@@ -579,6 +610,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0027-01
   it("removes deprecated commands/prompts wrappers on --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -851,6 +883,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0027-01
   it("keeps project-authored qfai-* commands, prompts and skills on --force", async () => {
     // Ownership is what init wrote, not the `qfai-` prefix: nothing reserves
     // that prefix (the shipped roster itself carries `web-research`), and init
@@ -1353,6 +1386,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0027-01
   it("replaces old non-symlink skill wrappers with symlinks on --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
