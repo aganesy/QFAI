@@ -3,7 +3,7 @@
   "profiles": {
     "tdd": {
       ".qfai/specs/spec-0002/tdd/test-list.md": 9,
-      ".qfai/specs/spec-0003/tdd/test-list.md": 71,
+      ".qfai/specs/spec-0003/tdd/test-list.md": 70,
       ".qfai/specs/spec-0004/tdd/test-list.md": 82,
       ".qfai/specs/spec-0006/tdd/test-list.md": 59,
       ".qfai/specs/spec-0010/tdd/test-list.md": 24,
@@ -30,7 +30,7 @@
       ".qfai/evidence/atdd-spec-0012.md": 1,
       ".qfai/specs/spec-0001": 1,
       ".qfai/specs/spec-0002/tdd/test-list.md": 9,
-      ".qfai/specs/spec-0003/tdd/test-list.md": 71,
+      ".qfai/specs/spec-0003/tdd/test-list.md": 70,
       ".qfai/specs/spec-0004/tdd/test-list.md": 82,
       ".qfai/specs/spec-0005": 1,
       ".qfai/specs/spec-0006": 1,
