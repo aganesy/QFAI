@@ -10,6 +10,49 @@ const skill = (name: string) => path.join(assistant, "skill", name, "SKILL.md");
 const rule = (name: string) => path.join(assistant, "rule", name);
 
 describe("BF-0001 workflow definition", () => {
+  // QFAI:EX-0001-0006-05
+  it("keeps the sample's executable quality commands in tech.md only", async () => {
+    const seed = path.join(assistant, "skill", "qfai-sdd", "templates", "spec");
+    const techPath = path.join(seed, "03_contract", "tech.md");
+    const tech = await readFile(techPath, "utf8");
+    const labels = [
+      "Install",
+      "Format",
+      "Test",
+      "Lint",
+      "Typecheck",
+      "Build",
+      "Skeleton",
+      "Validate",
+    ];
+    const commandRows = (content: string) =>
+      content.match(/^- (?:Install|Format|Test|Lint|Typecheck|Build|Skeleton|Validate): .+$/gm) ??
+      [];
+    const section = tech
+      .split(/^## /m)
+      .find((part) => part.startsWith("Standard commands (copy-paste)"));
+    expect(section).toBeDefined();
+    expect(commandRows(section ?? "").map((row) => row.split(":")[0]?.slice(2))).toEqual(labels);
+    expect(commandRows(tech)).toEqual(commandRows(section ?? ""));
+
+    const visit = async (directory: string): Promise<void> => {
+      for (const entry of await readdir(directory, { withFileTypes: true })) {
+        const file = path.join(directory, entry.name);
+        if (entry.isDirectory()) {
+          await visit(file);
+        } else if (entry.isFile() && file !== techPath) {
+          expect(commandRows(await readFile(file, "utf8")), file).toEqual([]);
+        }
+      }
+    };
+    await visit(seed);
+    const config = await readFile(
+      path.join(getInitAssetsDir(), "root", "qfai.config.yaml"),
+      "utf8",
+    );
+    expect(commandRows(config)).toEqual([]);
+  });
+
   // QFAI:EX-0001-0001-01
   it("keeps the five handoff phases in their declared order", async () => {
     const workflow = await readFile(rule("workflow.md"), "utf8");
