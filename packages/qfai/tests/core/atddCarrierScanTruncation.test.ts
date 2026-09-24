@@ -43,7 +43,7 @@ vi.mock("../../src/core/fs.js", async () => {
 });
 
 const { evaluateAtddCodeTraceability } = await import("../../src/core/atddTraceability.js");
-const { defaultConfig } = await import("../../src/core/config.js");
+const { legacyLayoutConfig: defaultConfig } = await import("./legacyLayoutConfig.js");
 const { validateAtddCodeTraceability } =
   await import("../../src/core/validators/atddCodeTraceability.js");
 

@@ -99,7 +99,7 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md");
+      const target = path.join(root, ".qfai", "assistant", "skill", "qfai-discussion", "SKILL.md");
       const before = await readFile(target, "utf-8");
       await writeFile(target, `${before}\nmodified\n`, "utf-8");
 
@@ -119,7 +119,7 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md");
+      const target = path.join(root, ".qfai", "assistant", "skill", "qfai-discussion", "SKILL.md");
       await unlink(target);
 
       const { diffProjectSkillsAgainstInitAssets } =
@@ -138,7 +138,7 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const extraDir = path.join(root, ".qfai", "assistant", "skills", "extra");
+      const extraDir = path.join(root, ".qfai", "assistant", "skill", "extra");
       await mkdir(extraDir, { recursive: true });
       await writeFile(path.join(extraDir, "SKILL.md"), "extra", "utf-8");
 
@@ -191,7 +191,7 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md");
+      const target = path.join(root, ".qfai", "assistant", "skill", "qfai-discussion", "SKILL.md");
       const content = await readFile(target, "utf-8");
       const crlf = content.replace(/\n/g, "\r\n");
       await writeFile(target, crlf, "utf-8");
@@ -219,7 +219,7 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
         await import("../../src/core/skillsIntegrity.js");
 
       // Ensure skills directory exists so we don't short-circuit with missing skills.
-      await mkdir(path.join(root, ".qfai", "assistant", "skills"), {
+      await mkdir(path.join(root, ".qfai", "assistant", "skill"), {
         recursive: true,
       });
 
@@ -288,7 +288,7 @@ describe("validateSkillsIntegrity", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const target = path.join(root, ".qfai", "assistant", "skills", "qfai-discussion", "SKILL.md");
+      const target = path.join(root, ".qfai", "assistant", "skill", "qfai-discussion", "SKILL.md");
       const before = await readFile(target, "utf-8");
       await writeFile(target, `${before}\nmodified\n`, "utf-8");
 
@@ -305,8 +305,8 @@ describe("validateSkillsIntegrity", () => {
       expect(issues[0]?.suggested_action).not.toContain("skills.local");
       // The over-correction pin: on a default install the finding still names
       // the default directory, and now says so on `target:` as well.
-      expect(issues[0]?.file).toBe(".qfai/assistant/skills");
-      expect(issues[0]?.message).toContain(".qfai/assistant/skills/**");
+      expect(issues[0]?.file).toBe(".qfai/assistant/skill");
+      expect(issues[0]?.message).toContain(".qfai/assistant/skill/**");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -324,7 +324,7 @@ describe("validateSkillsIntegrity", () => {
       // appear.
       const moved = path.join(root, "tools", "skills");
       await mkdir(path.dirname(moved), { recursive: true });
-      await rename(path.join(root, ".qfai", "assistant", "skills"), moved);
+      await rename(path.join(root, ".qfai", "assistant", "skill"), moved);
 
       const { validateSkillsIntegrity } =
         await import("../../src/core/validators/skillsIntegrity.js");
@@ -338,7 +338,7 @@ describe("validateSkillsIntegrity", () => {
       expect(issues[0]?.code).toBe("QFAI-SKILLS-001");
       expect(issues[0]?.file).toBe("tools/skills");
       expect(issues[0]?.message).toContain("tools/skills/**");
-      expect(issues[0]?.message).not.toContain(".qfai/assistant/skills");
+      expect(issues[0]?.message).not.toContain(".qfai/assistant/skill");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

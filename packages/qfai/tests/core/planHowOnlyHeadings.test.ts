@@ -17,7 +17,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { defaultConfig } from "../../src/core/config.js";
+import { legacyLayoutConfig as defaultConfig } from "./legacyLayoutConfig.js";
 import { validateLayerCoverage } from "../../src/core/validators/layerCoverage.js";
 
 /** Runs the validator over a v1421 spec whose `10_Plan.md` has these headings. */

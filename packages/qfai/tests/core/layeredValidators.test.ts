@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { defaultConfig } from "../../src/core/config.js";
+import { legacyLayoutConfig as defaultConfig } from "./legacyLayoutConfig.js";
 import { validateLayeredTraceability } from "../../src/core/validators/layeredTraceability.js";
 import { validateOrphanProhibition } from "../../src/core/validators/orphanProhibition.js";
 import { validateSpecSplitByCapability } from "../../src/core/validators/specSplitByCapability.js";

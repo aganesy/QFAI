@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { defaultConfig } from "../../src/core/config.js";
+import { legacyLayoutConfig as defaultConfig } from "./legacyLayoutConfig.js";
 import { parseDesignToken } from "../../src/core/parse/designToken.js";
 import { computeContrastRatio } from "../../src/core/uiux/contrastRatio.js";
 import { parseHtmlMock } from "../../src/core/uiux/htmlMockDom.js";

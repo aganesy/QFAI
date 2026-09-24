@@ -3,7 +3,7 @@
  *
  * Asserts the new required-files set:
  *   - root DESIGN.md
- *   - .qfai/contracts/design/DESIGN.md.lock.yaml
+ *   - .qfai/spec/03_contract/design/DESIGN.md.lock.yaml
  *
  * Plus preserved checks:
  *   - REQUIRED_PROTOTYPING_DESIGN_FILES (design-system.yaml, prototype-handoff.yaml)
@@ -42,7 +42,7 @@ async function newTempDir(): Promise<string> {
 }
 
 // Verbatim mirror of VALID_DESIGN_MD's visual.* tokens, in YAML form
-// suitable for `.qfai/contracts/design/design-system.yaml`. Tests that
+// suitable for `.qfai/spec/03_contract/design/design-system.yaml`. Tests that
 // want the full mirror (post-1.8.9 contract) seed this; tests that
 // want a partial mirror to exercise DCON-005 hand-construct their own.
 const VALID_MIRROR_YAML = [
@@ -115,10 +115,10 @@ const VALID_DESIGN_MD = [
 ].join("\n");
 
 async function seedUiBearingProject(root: string): Promise<void> {
-  await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
-  await mkdir(path.join(root, ".qfai/contracts/design"), { recursive: true });
+  await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
+  await mkdir(path.join(root, ".qfai/spec/03_contract/design"), { recursive: true });
   await writeFile(
-    path.join(root, ".qfai/contracts/ui/ui-0001.yaml"),
+    path.join(root, ".qfai/spec/03_contract/ui/ui-0001.yaml"),
     "screens:\n  - id: home\n    title: Home\n    route: /\n",
     "utf-8",
   );
@@ -127,7 +127,7 @@ async function seedUiBearingProject(root: string): Promise<void> {
 async function seedDesignMdAndLock(root: string): Promise<void> {
   await writeFile(path.join(root, "DESIGN.md"), VALID_DESIGN_MD, "utf-8");
   await writeFile(
-    path.join(root, ".qfai/contracts/design/DESIGN.md.lock.yaml"),
+    path.join(root, ".qfai/spec/03_contract/design/DESIGN.md.lock.yaml"),
     [
       'designMdPath: "DESIGN.md"',
       `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
@@ -139,7 +139,7 @@ async function seedDesignMdAndLock(root: string): Promise<void> {
 }
 
 async function seedPrototypingDesignYamls(root: string): Promise<void> {
-  const dir = path.join(root, ".qfai/contracts/design");
+  const dir = path.join(root, ".qfai/spec/03_contract/design");
   await writeFile(
     path.join(dir, "design-system.yaml"),
     "checklist:\n  color: [primary]\n  typography: [Inter]\n  spacing: [4px]\n  border_radius: [0.25rem]\n  shadow: [sm]\n  dos_and_donts: [be calm]\n  motion_rules: [reduce]\n  component_tone: [restrained]\n",
@@ -155,7 +155,7 @@ async function seedPrototypingDesignYamls(root: string): Promise<void> {
       'finalArtifact: ".qfai/prototypes/final/index.html"',
       'designMdPath: "DESIGN.md"',
       `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-      'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+      'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
       "implementationNotes: |",
       "  Reviewed final iter has clear navigation, four-state coverage, and",
       "  compliant DESIGN.md token use; no further hand-tweaks required.",
@@ -192,7 +192,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedDesignMdAndLock(root);
-    await rm(path.join(root, ".qfai/contracts/design/DESIGN.md.lock.yaml"), { force: true });
+    await rm(path.join(root, ".qfai/spec/03_contract/design/DESIGN.md.lock.yaml"), { force: true });
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);
     expect(issues.map((i) => i.code)).toContain("QFAI-DCON-031");
   });
@@ -259,9 +259,9 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     // A target whose UI contracts declare screens owes a `procurement`, so the
     // seeded handoff carries the one that says the screen needed nothing.
     await writeFile(
-      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
       `${(
-        await readFile(path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"), "utf-8")
+        await readFile(path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"), "utf-8")
       ).trimEnd()}
 procurement:
   drawn-from-project:
@@ -281,13 +281,13 @@ procurement:
     await seedPrototypingDesignYamls(root);
     // Override with a non-integer value.
     await writeFile(
-      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
       [
         'finalIterIndex: "not-a-number"',
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -313,7 +313,7 @@ procurement:
     await seedDesignMdAndLock(root);
     await seedPrototypingDesignYamls(root);
     await writeFile(
-      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
       [
         "finalIterIndex:",
         "  - 1",
@@ -321,7 +321,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -347,14 +347,14 @@ procurement:
     await seedDesignMdAndLock(root);
     await seedPrototypingDesignYamls(root);
     await writeFile(
-      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
       [
         "finalIterIndex:",
         "  foo: 1",
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -379,12 +379,12 @@ procurement:
     await seedPrototypingDesignYamls(root);
     // Override with the field absent.
     await writeFile(
-      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
       [
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -405,13 +405,13 @@ procurement:
     /** The seeded handoff with `procurement` set to `body`. */
     const withProcurement = async (root: string, body: readonly string[]): Promise<void> => {
       await writeFile(
-        path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+        path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
         [
           "finalIterIndex: 1",
           'finalArtifact: ".qfai/prototypes/final/index.html"',
           'designMdPath: "DESIGN.md"',
           `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-          'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+          'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
           'implementationNotes: "test"',
           ...body,
           "",
@@ -423,7 +423,7 @@ procurement:
     /** A second contract, declaring the screen the rows below name. */
     const withDashboard = async (root: string): Promise<void> => {
       await writeFile(
-        path.join(root, ".qfai/contracts/ui/ui-0002.yaml"),
+        path.join(root, ".qfai/spec/03_contract/ui/ui-0002.yaml"),
         ["screens:", "  - id: dashboard", "    title: Dashboard", "    route: /dashboard", ""].join(
           "\n",
         ),
@@ -469,7 +469,7 @@ procurement:
       // The readiness gate reports that project already; every row failing
       // beside it would repeat the one finding once per row.
       const root = await newTempDir();
-      await mkdir(path.join(root, ".qfai/contracts/design"), { recursive: true });
+      await mkdir(path.join(root, ".qfai/spec/03_contract/design"), { recursive: true });
       await seedDesignMdAndLock(root);
       await seedPrototypingDesignYamls(root);
       await withProcurement(root, rowFor("procured", "anything"));
@@ -502,7 +502,7 @@ procurement:
       const handoff = await readFile(
         path.join(
           getInitAssetsDir(),
-          ".qfai/assistant/skills/qfai-prototyping/references/handoff.md",
+          ".qfai/assistant/skill/qfai-prototyping/references/handoff.md",
         ),
         "utf-8",
       );
@@ -719,7 +719,7 @@ procurement:
       const handoff = await readFile(
         path.join(
           getInitAssetsDir(),
-          ".qfai/assistant/skills/qfai-prototyping/references/handoff.md",
+          ".qfai/assistant/skill/qfai-prototyping/references/handoff.md",
         ),
         "utf-8",
       );
@@ -824,14 +824,14 @@ procurement:
     await seedDesignMdAndLock(root);
     await seedPrototypingDesignYamls(root);
     await writeFile(
-      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
       [
         "finalIterIndex: 1",
         "finalArtifact:", // mapping-shaped value
         '  uri: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -853,15 +853,15 @@ procurement:
     await seedDesignMdAndLock(root);
     await seedPrototypingDesignYamls(root);
     await writeFile(
-      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
       [
         "finalIterIndex: 1",
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
         "designSystemMirror:",
-        '  - ".qfai/contracts/design/design-system.yaml"',
-        '  - ".qfai/contracts/design/another.yaml"',
+        '  - ".qfai/spec/03_contract/design/design-system.yaml"',
+        '  - ".qfai/spec/03_contract/design/another.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -891,7 +891,7 @@ procurement:
       '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n  spacing:\n    base: "8px"',
     );
     await writeFile(path.join(root, "DESIGN.md"), designMdWithSpacing, "utf-8");
-    const designDir = path.join(root, ".qfai/contracts/design");
+    const designDir = path.join(root, ".qfai/spec/03_contract/design");
     await mkdir(designDir, { recursive: true });
     await writeFile(
       path.join(designDir, "DESIGN.md.lock.yaml"),
@@ -915,7 +915,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(designMdWithSpacing)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -935,7 +935,7 @@ procurement:
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedDesignMdAndLock(root);
-    const designDir = path.join(root, ".qfai/contracts/design");
+    const designDir = path.join(root, ".qfai/spec/03_contract/design");
     await writeFile(
       path.join(designDir, "design-system.yaml"),
       VALID_MIRROR_YAML.replace("  radius:", '  spacing:\n    base: "8px"\n  radius:'),
@@ -948,7 +948,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -967,7 +967,7 @@ procurement:
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedDesignMdAndLock(root);
-    const designDir = path.join(root, ".qfai/contracts/design");
+    const designDir = path.join(root, ".qfai/spec/03_contract/design");
     await writeFile(
       path.join(designDir, "design-system.yaml"),
       VALID_MIRROR_YAML.replace(
@@ -983,7 +983,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1003,7 +1003,7 @@ procurement:
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedDesignMdAndLock(root);
-    const designDir = path.join(root, ".qfai/contracts/design");
+    const designDir = path.join(root, ".qfai/spec/03_contract/design");
     await writeFile(
       path.join(designDir, "design-system.yaml"),
       VALID_MIRROR_YAML.replace(
@@ -1019,7 +1019,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1043,7 +1043,7 @@ procurement:
     // Replace the legacy checklist-shaped design-system.yaml with the
     // post-1.8.9 mirror shape — full verbatim copy of DESIGN.md tokens
     // so both the shape gate and the value cross-check pass.
-    const designDir = path.join(root, ".qfai/contracts/design");
+    const designDir = path.join(root, ".qfai/spec/03_contract/design");
     await writeFile(path.join(designDir, "design-system.yaml"), VALID_MIRROR_YAML, "utf-8");
     // Also seed the prototype-handoff so the suite passes end-to-end.
     await writeFile(
@@ -1053,7 +1053,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1075,7 +1075,7 @@ procurement:
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedDesignMdAndLock(root);
-    const designDir = path.join(root, ".qfai/contracts/design");
+    const designDir = path.join(root, ".qfai/spec/03_contract/design");
     await writeFile(
       path.join(designDir, "design-system.yaml"),
       VALID_MIRROR_YAML.replace('primary: "#1F2937"', 'primary: "#FF0000"'),
@@ -1088,7 +1088,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1118,7 +1118,7 @@ procurement:
       '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "1rem"\n      lg: "1.25rem"\n    weight:\n      regular: 400\n      bold: 700',
     );
     await writeFile(path.join(root, "DESIGN.md"), designMdWithFull, "utf-8");
-    const designDir = path.join(root, ".qfai/contracts/design");
+    const designDir = path.join(root, ".qfai/spec/03_contract/design");
     await mkdir(designDir, { recursive: true });
     await writeFile(
       path.join(designDir, "DESIGN.md.lock.yaml"),
@@ -1146,7 +1146,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(designMdWithFull)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1168,13 +1168,13 @@ procurement:
     await seedDesignMdAndLock(root);
     await seedPrototypingDesignYamls(root);
     await writeFile(
-      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
       [
         "finalIterIndex: 1",
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "TBD"',
         'designMdSha256: "TODO"',
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1211,7 +1211,7 @@ procurement:
       '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n  spacing:\n    base: "0.25rem"\n    scale: [0, 4, 8, 16]',
     );
     await writeFile(path.join(root, "DESIGN.md"), designMdWithSpacing, "utf-8");
-    const designDir = path.join(root, ".qfai/contracts/design");
+    const designDir = path.join(root, ".qfai/spec/03_contract/design");
     await mkdir(designDir, { recursive: true });
     await writeFile(
       path.join(designDir, "DESIGN.md.lock.yaml"),
@@ -1239,7 +1239,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(designMdWithSpacing)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1272,7 +1272,7 @@ procurement:
       '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n  spacing:\n    base: "0.25rem"',
     );
     await writeFile(path.join(root, "DESIGN.md"), designMdSpacingBaseOnly, "utf-8");
-    const designDir = path.join(root, ".qfai/contracts/design");
+    const designDir = path.join(root, ".qfai/spec/03_contract/design");
     await mkdir(designDir, { recursive: true });
     await writeFile(
       path.join(designDir, "DESIGN.md.lock.yaml"),
@@ -1301,7 +1301,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(designMdSpacingBaseOnly)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1333,7 +1333,7 @@ procurement:
       '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n  spacing:\n    scale: [0, 4, 8, 16]',
     );
     await writeFile(path.join(root, "DESIGN.md"), designMdSpacingScaleOnly, "utf-8");
-    const designDir = path.join(root, ".qfai/contracts/design");
+    const designDir = path.join(root, ".qfai/spec/03_contract/design");
     await mkdir(designDir, { recursive: true });
     await writeFile(
       path.join(designDir, "DESIGN.md.lock.yaml"),
@@ -1362,7 +1362,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(designMdSpacingScaleOnly)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1386,7 +1386,7 @@ procurement:
       '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "1rem"\n      lg: "1.25rem"',
     );
     await writeFile(path.join(root, "DESIGN.md"), designMdWithScale, "utf-8");
-    const designDir = path.join(root, ".qfai/contracts/design");
+    const designDir = path.join(root, ".qfai/spec/03_contract/design");
     await mkdir(designDir, { recursive: true });
     await writeFile(
       path.join(designDir, "DESIGN.md.lock.yaml"),
@@ -1407,7 +1407,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(designMdWithScale)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1426,7 +1426,7 @@ procurement:
       '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    weight:\n      regular: 400\n      bold: 700',
     );
     await writeFile(path.join(root, "DESIGN.md"), designMdWithWeight, "utf-8");
-    const designDir = path.join(root, ".qfai/contracts/design");
+    const designDir = path.join(root, ".qfai/spec/03_contract/design");
     await mkdir(designDir, { recursive: true });
     await writeFile(
       path.join(designDir, "DESIGN.md.lock.yaml"),
@@ -1454,7 +1454,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(designMdWithWeight)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1481,7 +1481,7 @@ procurement:
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedDesignMdAndLock(root);
-    const designDir = path.join(root, ".qfai/contracts/design");
+    const designDir = path.join(root, ".qfai/spec/03_contract/design");
     await writeFile(
       path.join(designDir, "design-system.yaml"),
       VALID_MIRROR_YAML.replace(
@@ -1497,7 +1497,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1536,7 +1536,7 @@ procurement:
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedDesignMdAndLock(root);
-    const designDir = path.join(root, ".qfai/contracts/design");
+    const designDir = path.join(root, ".qfai/spec/03_contract/design");
     // Drop visual.radius.full from the mirror — DESIGN.md still has
     // it, so the cross-check must surface it as missing.
     await writeFile(
@@ -1551,7 +1551,7 @@ procurement:
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1575,13 +1575,13 @@ procurement:
     await seedDesignMdAndLock(root);
     await seedPrototypingDesignYamls(root);
     await writeFile(
-      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
       [
         "finalIterIndex: 1",
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "docs/alternate-DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1605,13 +1605,13 @@ procurement:
     await seedDesignMdAndLock(root);
     await seedPrototypingDesignYamls(root);
     await writeFile(
-      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
       [
         "finalIterIndex: 1",
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "./DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1630,13 +1630,13 @@ procurement:
     await seedDesignMdAndLock(root);
     await seedPrototypingDesignYamls(root);
     await writeFile(
-      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
       [
         "finalIterIndex: 1",
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         'designMdSha256: "not-a-real-sha"',
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1661,13 +1661,13 @@ procurement:
     await seedPrototypingDesignYamls(root);
     const stale = "0".repeat(64);
     await writeFile(
-      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
       [
         "finalIterIndex: 1",
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${stale}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),
@@ -1691,13 +1691,13 @@ procurement:
     await seedDesignMdAndLock(root);
     await seedPrototypingDesignYamls(root);
     await writeFile(
-      path.join(root, ".qfai/contracts/design/prototype-handoff.yaml"),
+      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
       [
         "finalIterIndex: -1",
         'finalArtifact: ".qfai/prototypes/final/index.html"',
         'designMdPath: "DESIGN.md"',
         `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/contracts/design/design-system.yaml"',
+        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
         'implementationNotes: "test"',
         "",
       ].join("\n"),

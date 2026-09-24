@@ -45,8 +45,6 @@ function config(primaryUiContract?: string): QfaiConfig {
       testStrategy: {
         requireLayerTags: false,
         requireSizeTags: false,
-        maxE2eScenarioRatio: null,
-        maxE2eScenarioCount: null,
         forbidTestTodoStubs: true,
       },
       traceability: {

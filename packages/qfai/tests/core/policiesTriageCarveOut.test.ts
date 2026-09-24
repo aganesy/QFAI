@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { defaultConfig } from "../../src/core/config.js";
+import { legacyLayoutConfig as defaultConfig } from "./legacyLayoutConfig.js";
 import { validateLayeredTraceability } from "../../src/core/validators/layeredTraceability.js";
 
 const TRIAGE_SECTION = [

@@ -47,7 +47,7 @@ afterEach(async () => {
 async function projectWithSkill(frontMatter: readonly string[]): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-registration-"));
   tempDirs.push(root);
-  const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+  const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
   await mkdir(skillDir, { recursive: true });
   await writeFile(
     path.join(skillDir, "SKILL.md"),
@@ -76,7 +76,7 @@ async function projectWithSkill(frontMatter: readonly string[]): Promise<string>
 async function projectWithSkillDocument(body: string): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-registration-"));
   tempDirs.push(root);
-  const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+  const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
   await mkdir(skillDir, { recursive: true });
   await writeFile(path.join(skillDir, "SKILL.md"), body, "utf-8");
   return root;
@@ -189,7 +189,7 @@ describe("a skill carries what a host needs to register it", () => {
     // The loader opens one SKILL.md per direct subdirectory whatever it is
     // called, so a descriptionless skill there fails to register in silence.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const ignored = path.join(root, ".qfai", "assistant", "skills", "dist");
+    const ignored = path.join(root, ".qfai", "assistant", "skill", "dist");
     await mkdir(ignored, { recursive: true });
     await writeFile(
       path.join(ignored, "SKILL.md"),
@@ -206,7 +206,7 @@ describe("a skill carries what a host needs to register it", () => {
     // The loader opens one SKILL.md per direct subdirectory. A generator
     // template under `templates/` is never registered by anything.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const templates = path.join(root, ".qfai", "assistant", "skills", "qfai-example", "templates");
+    const templates = path.join(root, ".qfai", "assistant", "skill", "qfai-example", "templates");
     await mkdir(templates, { recursive: true });
     await writeFile(
       path.join(templates, "SKILL.md"),
@@ -223,7 +223,7 @@ describe("a skill carries what a host needs to register it", () => {
     // unreadable regular file, and neither Windows nor root honours it.
     if (process.platform === "win32" || process.getuid?.() === 0) return;
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const ignored = path.join(root, ".qfai", "assistant", "skills", "tmp");
+    const ignored = path.join(root, ".qfai", "assistant", "skill", "tmp");
     await mkdir(ignored, { recursive: true });
     const file = path.join(ignored, "SKILL.md");
     await writeFile(file, ["---", "name: tmp", "---", ""].join("\n"), "utf-8");
@@ -243,7 +243,7 @@ describe("a skill carries what a host needs to register it", () => {
     // second time, in text and JSON output both.
     if (process.platform === "win32" || process.getuid?.() === 0) return;
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const file = path.join(root, ".qfai", "assistant", "skills", "qfai-example", "SKILL.md");
+    const file = path.join(root, ".qfai", "assistant", "skill", "qfai-example", "SKILL.md");
     await chmod(file, 0o000);
 
     const findings = (await validateAssistantAssets(root, defaultConfig)).filter(
@@ -274,7 +274,7 @@ describe("a skill carries what a host needs to register it", () => {
     // The host follows the link and opens the document the step names, so a
     // broken one is reported although the crawl does not walk into the link.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skills = path.join(root, ".qfai", "assistant", "skill");
     const real = path.join(root, "elsewhere", "qfai-linked");
     await mkdir(path.join(real, "references"), { recursive: true });
     await writeFile(
@@ -310,7 +310,7 @@ describe("a skill carries what a host needs to register it", () => {
     // The crawl does not walk into a link, and a step names a document by one
     // path, so a cycle cannot keep the run going.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     await writeFile(
       path.join(skillDir, "SKILL.md"),
       `${await readFile(path.join(skillDir, "SKILL.md"), "utf-8")}\nSee loop/loop/references/guide.md.\n`,
@@ -333,7 +333,7 @@ describe("a skill carries what a host needs to register it", () => {
     // A shape this CLI writes itself. `isDirectory()` is false for the link, so
     // excluding on it left the skill unchecked by anything.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skills = path.join(root, ".qfai", "assistant", "skill");
     const real = path.join(root, "elsewhere", "qfai-linked");
     await mkdir(real, { recursive: true });
     await writeFile(
@@ -366,7 +366,7 @@ describe("a skill carries what a host needs to register it", () => {
     // A directory where `SKILL.md` should be cites nothing, so the reference
     // graph stays decided.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skills = path.join(root, ".qfai", "assistant", "skill");
     await mkdir(path.join(skills, "qfai-folder", "SKILL.md"), { recursive: true });
     await mkdir(path.join(skills, "qfai-example", "references"), { recursive: true });
     const orphan = path.join(skills, "qfai-example", "references", "orphan.md");
@@ -382,7 +382,7 @@ describe("a skill carries what a host needs to register it", () => {
     // The host lists no hidden directory, and a registered skill can still open
     // a document there by naming it.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skills = path.join(root, ".qfai", "assistant", "skill");
     const entryPoint = path.join(skills, "qfai-example", "SKILL.md");
     await writeFile(
       entryPoint,
@@ -401,7 +401,7 @@ describe("a skill carries what a host needs to register it", () => {
     // A `SKILL.md` that is a directory: `stat` succeeds and the host still
     // cannot load it, and the crawl walks through rather than naming it.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skills = path.join(root, ".qfai", "assistant", "skill");
     await mkdir(path.join(skills, "qfai-folder", "SKILL.md"), { recursive: true });
 
     const findings = (await validateAssistantAssets(root, defaultConfig)).filter((finding) =>
@@ -451,7 +451,7 @@ describe("a skill carries what a host needs to register it", () => {
     // The host opens through the link. Refusing one here reported a skill it
     // loads without trouble.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     const real = path.join(root, "elsewhere", "SKILL.md");
     await mkdir(path.dirname(real), { recursive: true });
     await writeFile(
@@ -504,7 +504,7 @@ describe("the gate reads a skill as the host does", () => {
     // differs from it, so the action names the rename.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-registration-"));
     tempDirs.push(root);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "My Skill");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "My Skill");
     await mkdir(skillDir, { recursive: true });
     await writeFile(
       path.join(skillDir, "SKILL.md"),
@@ -520,7 +520,7 @@ describe("the gate reads a skill as the host does", () => {
   it("asks for the rename after a front matter repair where the directory can be no name", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-registration-"));
     tempDirs.push(root);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "My Skill");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "My Skill");
     await mkdir(skillDir, { recursive: true });
     await writeFile(
       path.join(skillDir, "SKILL.md"),
@@ -539,7 +539,7 @@ describe("the gate reads a skill as the host does", () => {
     // marker checks are about the documents the skill's author wrote, and a file
     // there that a step names is read when the step is reached.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     const vendored = path.join(skillDir, "node_modules", "pkg", "SKILL.md");
     await mkdir(path.dirname(vendored), { recursive: true });
     await writeFile(vendored, "# vendored\n", "utf-8");
@@ -554,7 +554,7 @@ describe("the gate reads a skill as the host does", () => {
   it("passes over a directory the host does not list", async () => {
     // A dot-prefixed skill directory is one the host never loads.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skills = path.join(root, ".qfai", "assistant", "skill");
     await mkdir(path.join(skills, ".draft"), { recursive: true });
     await writeFile(path.join(skills, ".draft", "SKILL.md"), "# draft\n", "utf-8");
 
@@ -565,7 +565,7 @@ describe("the gate reads a skill as the host does", () => {
     // An entry point holding a byte that is not UTF-8 is one the host refuses,
     // so it is reported, however well its metadata would parse.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     await writeFile(
       path.join(skillDir, "SKILL.md"),
       Buffer.concat([
@@ -585,7 +585,7 @@ describe("the gate reads a skill as the host does", () => {
     // orphan. A document there that a registered skill names is still read, and
     // reported when it cannot be.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skills = path.join(root, ".qfai", "assistant", "skill");
     await mkdir(path.join(skills, ".draft", "references"), { recursive: true });
     await writeFile(path.join(skills, ".draft", "SKILL.md"), "# draft\n", "utf-8");
     await writeFile(path.join(skills, ".draft", "references", "orphan.md"), "# orphan\n", "utf-8");
@@ -598,7 +598,7 @@ describe("the gate reads a skill as the host does", () => {
   it("reports an entry point that is not valid UTF-8", async () => {
     // A byte that is not UTF-8 makes the document unreadable, as the host reads it.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skills = path.join(root, ".qfai", "assistant", "skill");
     const dist = path.join(skills, "dist");
     await mkdir(dist, { recursive: true });
     await writeFile(
@@ -656,7 +656,7 @@ describe("the gate reads a skill as the host does", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-registration-"));
     tempDirs.push(root);
     const overlong = "a".repeat(65);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", overlong);
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", overlong);
     await mkdir(skillDir, { recursive: true });
     await writeFile(
       path.join(skillDir, "SKILL.md"),
@@ -675,7 +675,7 @@ describe("the gate reads a skill as the host does", () => {
     // The host lists no dot-prefixed directory, `..draft` included: it is a
     // name under the skills root, not a path leaving it.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skills = path.join(root, ".qfai", "assistant", "skill");
     await mkdir(path.join(skills, "..draft", "references"), { recursive: true });
     await writeFile(path.join(skills, "..draft", "SKILL.md"), "# draft\n", "utf-8");
     await writeFile(path.join(skills, "..draft", "references", "orphan.md"), "# orphan\n", "utf-8");
@@ -692,7 +692,7 @@ describe("the gate reads a skill as the host does", () => {
     // the portable way to produce one, and neither Windows nor root honours it.
     if (process.platform === "win32" || process.getuid?.() === 0) return;
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const hidden = path.join(root, ".qfai", "assistant", "skills", ".draft");
+    const hidden = path.join(root, ".qfai", "assistant", "skill", ".draft");
     await mkdir(hidden, { recursive: true });
     await writeFile(path.join(hidden, "SKILL.md"), "# draft\n", "utf-8");
     await chmod(hidden, 0o000);
@@ -754,7 +754,7 @@ describe("the gate reads a skill as the host does", () => {
     // The crawl passes over `tmp`, and a skill can still name a document under
     // it, which the host then opens.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     const entryPoint = path.join(skillDir, "SKILL.md");
     await writeFile(
       entryPoint,
@@ -777,7 +777,7 @@ describe("the gate reads a skill as the host does", () => {
     // file of several mebibytes is still judged rather than passed over. The
     // case above it holds what happens past the ceiling.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     const entryPoint = path.join(skillDir, "SKILL.md");
     await writeFile(
       entryPoint,
@@ -800,7 +800,7 @@ describe("the gate reads a skill as the host does", () => {
     // Held in memory, a multi-gigabyte file would end the run. It is not read, so
     // what it cites is unknown, and an uncited reference is not reported as one.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     const entryPoint = path.join(skillDir, "SKILL.md");
     await writeFile(
       entryPoint,
@@ -823,7 +823,7 @@ describe("the gate reads a skill as the host does", () => {
     // Its text cannot be held, and its encoding is still what the host fails
     // on, so the stream is decoded a chunk at a time and kept nowhere.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     const entryPoint = path.join(skillDir, "SKILL.md");
     await writeFile(
       entryPoint,
@@ -848,7 +848,7 @@ describe("the gate reads a skill as the host does", () => {
     // over as one whose bytes were read and found to be UTF-8.
     if (process.platform === "win32" || process.getuid?.() === 0) return;
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     const entryPoint = path.join(skillDir, "SKILL.md");
     await writeFile(
       entryPoint,
@@ -878,7 +878,7 @@ describe("the gate reads a skill as the host does", () => {
     // so there the two cases cannot be told apart and this one does not arise.
     if (process.platform === "win32") return;
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     const entryPoint = path.join(skillDir, "SKILL.md");
     await writeFile(
       entryPoint,
@@ -897,7 +897,7 @@ describe("the gate reads a skill as the host does", () => {
     // The host loads the link as the entry point, so the document is a root and
     // its citations resolve from the skill's directory.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     await mkdir(path.join(skillDir, "references"), { recursive: true });
     const entry = path.join(skillDir, "references", "entry.md");
     await writeFile(
@@ -921,7 +921,7 @@ describe("the gate reads a skill as the host does", () => {
   it("reports a path a step names that is not an ordinary file", async () => {
     // A directory at the named path exists, and the host still cannot open it.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     const entryPoint = path.join(skillDir, "SKILL.md");
     await writeFile(
       entryPoint,
@@ -939,7 +939,7 @@ describe("the gate reads a skill as the host does", () => {
 
   it("reports a link a step names whose target is gone", async () => {
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     const entryPoint = path.join(skillDir, "SKILL.md");
     await writeFile(
       entryPoint,
@@ -963,7 +963,7 @@ describe("the gate reads a skill as the host does", () => {
     // From `references/tmp/notes.md`, `guide.md` names the file beside it first;
     // the crawled `qfai-example/guide.md` is only the fallback.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     const entryPoint = path.join(skillDir, "SKILL.md");
     await writeFile(
       entryPoint,
@@ -987,7 +987,7 @@ describe("the gate reads a skill as the host does", () => {
     // On a volume that folds case the citation and the crawled name are one file;
     // elsewhere the citation names nothing. Either way the file is reported once.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     const entryPoint = path.join(skillDir, "SKILL.md");
     await writeFile(
       entryPoint,
@@ -1007,7 +1007,7 @@ describe("the gate reads a skill as the host does", () => {
   it("keeps uncited references reported beside an entry point that is a link cycle", async () => {
     // A cycle holds no text and cites nothing, so the graph stays decided.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skills = path.join(root, ".qfai", "assistant", "skill");
     await mkdir(path.join(skills, "qfai-example", "references"), { recursive: true });
     const orphan = path.join(skills, "qfai-example", "references", "orphan.md");
     await writeFile(orphan, "# orphan\n", "utf-8");
@@ -1056,7 +1056,7 @@ describe("the gate reads a skill as the host does", () => {
     // `dist` is an ordinary skill name. Its entry point is read by the probe, and
     // a reference only it cites is not uncited.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skills = path.join(root, ".qfai", "assistant", "skill");
     await mkdir(path.join(skills, "qfai-example", "references"), { recursive: true });
     const shared = path.join(skills, "qfai-example", "references", "shared.md");
     await writeFile(shared, "# shared\n", "utf-8");
@@ -1094,7 +1094,7 @@ describe("the gate reads a skill as the host does", () => {
     // On a case-insensitive file system the crawl and the entry-point probe name
     // one file two ways.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     await rm(path.join(skillDir, "SKILL.md"));
     const file = path.join(skillDir, "skill.md");
     await writeFile(file, Buffer.concat([Buffer.from("# skill\n"), Buffer.from([0xff])]));
@@ -1114,7 +1114,7 @@ describe("the gate reads a skill as the host does", () => {
     // With no readable entry point there is no root to reach a reference from,
     // so the decoding failure is the finding, not every reference beside it.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     await writeFile(
       path.join(skillDir, "SKILL.md"),
       Buffer.concat([Buffer.from("# skill\nSee references/guide.md.\n"), Buffer.from([0xff])]),
@@ -1132,7 +1132,7 @@ describe("the gate reads a skill as the host does", () => {
     // the bytes at the other end stop the skill, whatever the target's own
     // finding says about the target.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skills = path.join(root, ".qfai", "assistant", "skill");
     const skillDir = path.join(skills, "qfai-example");
     const target = path.join(skills, "shared", "entry.md");
     await mkdir(path.dirname(target), { recursive: true });
@@ -1164,7 +1164,7 @@ describe("the gate reads a skill as the host does", () => {
     // What the unreadable document cites is unknown, so the reference it may
     // cite is not called uncited; the decoding failure is the finding.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     const entryPoint = path.join(skillDir, "SKILL.md");
     await writeFile(
       entryPoint,
@@ -1190,7 +1190,7 @@ describe("the gate reads a skill as the host does", () => {
     // A citation can name a document in another skill, so what the unreadable
     // document cites may be anywhere in the tree.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skills = path.join(root, ".qfai", "assistant", "skill");
     const entryPoint = path.join(skills, "qfai-example", "SKILL.md");
     await writeFile(
       entryPoint,
@@ -1221,7 +1221,7 @@ describe("the gate reads a skill as the host does", () => {
     // Unreached, the unreadable document can make nothing reachable, so the
     // uncited reference is still decided.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     await mkdir(path.join(skillDir, "templates"), { recursive: true });
     await writeFile(
       path.join(skillDir, "templates", "bad.md"),
@@ -1239,7 +1239,7 @@ describe("the gate reads a skill as the host does", () => {
 
   it("reports an unreadable entry point once when a hard link gives it a second crawled path", async () => {
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-example");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
     const entryPoint = path.join(skillDir, "SKILL.md");
     await writeFile(entryPoint, Buffer.concat([Buffer.from("# skill\n"), Buffer.from([0xff])]));
     await mkdir(path.join(skillDir, "templates"), { recursive: true });
@@ -1260,7 +1260,7 @@ describe("the gate reads a skill as the host does", () => {
     // A template named SKILL.md inside a skill registers nothing, so an invalid
     // byte in it stops the step that names it rather than the skill.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const templates = path.join(root, ".qfai", "assistant", "skills", "qfai-example", "templates");
+    const templates = path.join(root, ".qfai", "assistant", "skill", "qfai-example", "templates");
     await mkdir(templates, { recursive: true });
     const file = path.join(templates, "SKILL.md");
     await writeFile(file, Buffer.concat([Buffer.from("# template\n"), Buffer.from([0xff])]));
@@ -1318,7 +1318,7 @@ describe("the gate reads a skill as the host does", () => {
       "",
     ].join("\n");
     const root = await projectWithSkillDocument(body);
-    const file = path.join(root, ".qfai", "assistant", "skills", "qfai-example", "SKILL.md");
+    const file = path.join(root, ".qfai", "assistant", "skill", "qfai-example", "SKILL.md");
     await writeFile(file, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(body)]));
 
     expect((await registrationFindings(root)).length).toBeGreaterThan(0);

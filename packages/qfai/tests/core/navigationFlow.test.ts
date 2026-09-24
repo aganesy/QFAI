@@ -6,7 +6,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { validateNavigationFlow } from "../../src/core/validators/navigationFlow.js";
-import { defaultConfig } from "../../src/core/config.js";
+import { legacyLayoutConfig as defaultConfig } from "./legacyLayoutConfig.js";
 
 // ── Test helpers ───────────────────────────────────────────────────────
 

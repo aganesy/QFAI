@@ -22,7 +22,7 @@ import {
   parseStoryFlowRefs,
   parseTestFlowRefs,
 } from "../../src/core/businessFlow.js";
-import { defaultConfig } from "../../src/core/config.js";
+import { legacyLayoutConfig as defaultConfig } from "./legacyLayoutConfig.js";
 import { evaluateAtddCodeTraceability } from "../../src/core/atddTraceability.js";
 import { validateBusinessFlowTraceability } from "../../src/core/validators/businessFlowTraceability.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";

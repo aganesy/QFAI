@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { defaultConfig } from "../../src/core/config.js";
+import { legacyLayoutConfig as defaultConfig } from "./legacyLayoutConfig.js";
 import { validateStatusInSpecs } from "../../src/core/validators/statusInSpecs.js";
 
 describe("validateStatusInSpecs", () => {
