@@ -658,6 +658,37 @@ describe("BF-0004 acceptance criteria", () => {
       [],
       [],
     ];
+    const commonPatterns: readonly (readonly RegExp[])[] = [
+      [
+        /^\.qfai\/assistant\/(?:skills(?:\.local)?|skill(?:\.local)?|agents|agent|prompts|prompt)\//,
+        /^\.qfai\/(?:prototypes|prototype)\//,
+        /^\.qfai\/evidence\/(?:decisions|decision|migration-spec-to-story\/legacy)\//,
+        /^\.qfai\/steering\/_templates?\//,
+        /^\.qfai\/report\/specs?-coverage\//,
+        /^qfai\.config\.yaml$/,
+      ],
+      [
+        /^\.qfai\/decisions\//,
+        /^\.qfai\/evidence\/migration-spec-to-story\/retired\/(?:spec-\d{4}|_policies|decisions)\//,
+      ],
+      [
+        /^\.qfai\/assistant\/(?:constitution|catalog|manifest|process|rule)\//,
+        /^\.qfai\/evidence\/migration-spec-to-story\/retired\/(?:_policies|assistant)\//,
+        /^qfai\.config\.yaml$/,
+      ],
+      [
+        /^\.qfai\/evidence\/migration-spec-to-story\/(?:id-map\.json|retired\/)/,
+        /^\.qfai\/steering\//,
+      ],
+      [],
+      [],
+      [
+        /^\.qfai\/evidence\/migration-spec-to-story\/retired\/spec-\d{4}\/(?:01_Spec|04_Business-Rules)\.md$/,
+      ],
+      [/^tests\//],
+      [/^\.(?:claude|agents|codex|github)\/(?:skills|agents)(?:\/|$)/],
+      [/^\.gitignore$/, /^\.qfai\/report\/\.gitignore-[1-9]\d*-[0-9a-f-]+\.tmp(?:\.owner)?$/],
+    ];
     for (let number = 1; number <= 10; number += 1) {
       const before = await fileSnapshot(root);
       const result = step(root, number);
@@ -666,10 +697,9 @@ describe("BF-0004 acceptance criteria", () => {
       for (const changed of new Set([...before.keys(), ...after.keys()])) {
         if (before.get(changed) === after.get(changed)) continue;
         expect(
-          [
-            ...(changedPathPatterns[number - 1] ?? []),
-            ...(configuredPatterns[number - 1] ?? []),
-          ].some((pattern) => pattern.test(changed)),
+          [...(commonPatterns[number - 1] ?? []), ...(configuredPatterns[number - 1] ?? [])].some(
+            (pattern) => pattern.test(changed),
+          ),
           `Step ${number} changed ${changed}`,
         ).toBe(true);
       }
