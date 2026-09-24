@@ -261,7 +261,10 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     await writeFile(
       path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
       `${(
-        await readFile(path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"), "utf-8")
+        await readFile(
+          path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
+          "utf-8",
+        )
       ).trimEnd()}
 procurement:
   drawn-from-project:

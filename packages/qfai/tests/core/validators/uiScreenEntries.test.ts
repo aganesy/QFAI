@@ -139,7 +139,9 @@ describe("a UI contract entry no screen is read from is reported", () => {
     });
     expect(await validateUiScreenEntries(root, defaultConfig)).toEqual([]);
 
-    await mkdir(path.join(root, ".qfai", "spec", "03_contract", "ui", "spec-0003"), { recursive: true });
+    await mkdir(path.join(root, ".qfai", "spec", "03_contract", "ui", "spec-0003"), {
+      recursive: true,
+    });
     for (const name of ["a.yaml", "b.yaml"]) {
       await writeFile(
         path.join(root, ".qfai", "spec", "03_contract", "ui", "spec-0003", name),

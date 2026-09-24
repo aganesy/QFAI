@@ -708,14 +708,7 @@ describe("the gate reads a skill as the host does", () => {
     // only where a step names one, so the finding says the step fails, not the
     // load.
     const root = await projectWithSkill(['description: "Does the thing."']);
-    const references = path.join(
-      root,
-      ".qfai",
-      "assistant",
-      "skill",
-      "qfai-example",
-      "references",
-    );
+    const references = path.join(root, ".qfai", "assistant", "skill", "qfai-example", "references");
     await mkdir(references, { recursive: true });
     const file = path.join(references, "note.md");
     await writeFile(file, Buffer.concat([Buffer.from("# note\n"), Buffer.from([0xff])]));

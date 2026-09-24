@@ -491,9 +491,10 @@ describe("the boundary this gate claims", () => {
         expect(reported).toHaveLength(1);
         expect(reported[0]?.rule).toBe("contracts.ssotModuleUnreadable");
       } finally {
-        await chmod(path.join(root, ".qfai", "spec", "03_contract", "cli", "qfai-init.md"), 0o600).catch(
-          () => undefined,
-        );
+        await chmod(
+          path.join(root, ".qfai", "spec", "03_contract", "cli", "qfai-init.md"),
+          0o600,
+        ).catch(() => undefined);
         await rm(root, { recursive: true, force: true });
       }
     },

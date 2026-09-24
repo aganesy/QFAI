@@ -74,10 +74,7 @@ describe("checkUiContractsCoveredDrift", () => {
 
   it("accepts the same contract set regardless of order", () => {
     expect(
-      checkUiContractsCoveredDrift(
-        ["CON-UI-0002", "CON-UI-0001"],
-        ["CON-UI-0001", "CON-UI-0002"],
-      ),
+      checkUiContractsCoveredDrift(["CON-UI-0002", "CON-UI-0001"], ["CON-UI-0001", "CON-UI-0002"]),
     ).toEqual({ drifted: false, added: [], removed: [] });
   });
 });

@@ -180,7 +180,8 @@ describe("the first clause that holds", () => {
 
   it("clause 3, direction a: a UI contract names the obligation", async () => {
     const root = await project({
-      ".qfai/spec/03_contract/ui/home.yaml": "screens:\n  - id: home\n    route: /\n    notes: TC-0001\n",
+      ".qfai/spec/03_contract/ui/home.yaml":
+        "screens:\n  - id: home\n    route: /\n    notes: TC-0001\n",
     });
     expect(await clauses(root).firstHolding({ ...ROW, obligations: ["TC-0001"] })).toEqual({
       clause: 3,

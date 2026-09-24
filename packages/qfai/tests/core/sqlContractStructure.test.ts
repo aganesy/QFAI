@@ -33,7 +33,11 @@ async function runOn(sql: string): Promise<Array<{ code: string; severity: strin
   );
   await mkdir(path.join(root, ".qfai", "spec", "03_contract", "db"), { recursive: true });
   try {
-    await writeFile(path.join(root, ".qfai", "spec", "03_contract", "db", "schema.sql"), sql, "utf-8");
+    await writeFile(
+      path.join(root, ".qfai", "spec", "03_contract", "db", "schema.sql"),
+      sql,
+      "utf-8",
+    );
     const issues = await validateContracts(root, defaultConfig);
     return issues.map((i) => ({ code: i.code, severity: i.severity }));
   } finally {
