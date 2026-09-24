@@ -309,6 +309,65 @@ describe("repairIntegrationWrappers", () => {
     });
   });
 
+  it("repoints a migration wrapper still linked to the plural directory the gate does not name", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      await rm(wrapperPath(root));
+      const pluralTarget = path.join("..", "..", ".qfai", "assistant", "skills", SHIPPED_SKILL);
+      await symlink(pluralTarget, wrapperPath(root), "dir");
+      injectedFindings = [];
+      const options = { includeMissing: true, onlyRelative: new Set([WRAPPER]) };
+
+      expect((await repair(root)).join("\n")).toContain("nothing to repair");
+      expect((await repair(root, true, options)).join("\n")).toContain(`would relink ${WRAPPER}`);
+      expect(await readlink(wrapperPath(root))).toBe(pluralTarget);
+
+      const lines = await repair(root, false, options);
+      expect(lines.join("\n")).toContain(`relinked ${WRAPPER}`);
+      expect(await readlink(wrapperPath(root))).toBe(
+        path.join("..", "..", ".qfai", "assistant", "skill", SHIPPED_SKILL),
+      );
+    });
+  });
+
+  it("leaves a migration wrapper linked elsewhere to the gate", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      await rm(wrapperPath(root));
+      const ownTarget = path.join("..", "..", "project-skills", SHIPPED_SKILL);
+      await symlink(ownTarget, wrapperPath(root), "dir");
+      injectedFindings = [];
+
+      const lines = await repair(root, false, {
+        includeMissing: true,
+        onlyRelative: new Set([WRAPPER]),
+      });
+
+      expect(lines.join("\n")).toContain("nothing to repair");
+      expect(await readlink(wrapperPath(root))).toBe(ownTarget);
+    });
+  });
+
+  it("reports an occupied migration wrapper the gate does not name", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      await rm(wrapperPath(root));
+      await writeFile(wrapperPath(root), "project-owned wrapper\n", "utf-8");
+      injectedFindings = [];
+
+      const lines = await repair(root, false, {
+        includeMissing: true,
+        onlyRelative: new Set([WRAPPER]),
+      });
+
+      expect(lines.join("\n")).toContain(`left alone ${WRAPPER}: a regular file occupies the path`);
+      expect(await readFile(wrapperPath(root), "utf-8")).toBe("project-owned wrapper\n");
+    });
+  });
+
   it("relinks a wrapper whose target string is wrong", async () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;

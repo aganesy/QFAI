@@ -85,6 +85,62 @@ async function reportAfterPassingTests(
   return { testExitCode: 0, validationExitCode: 0, reportExitCode, testOutput };
 }
 
+const DISCUSSION_FILES = [
+  "01_Context.md",
+  "02_Inception-Deck.md",
+  "03_Story-Workshop.md",
+  "04_Sources.md",
+  "05_Scope.md",
+  "06_REQ.md",
+  "07_NFR.md",
+  "08_Glossary.md",
+  "09_Constraints.md",
+  "10_Policy.md",
+  "11_OQ-Register.md",
+  "12_OQ-Resolution-Log.md",
+  "13_Deferred.md",
+  "14_Review-Request.md",
+  "99_delta.md",
+] as const;
+
+const DISCUSSION_BODY =
+  "Buyers select cart items and check out; the checkout total is the sum of the selected item prices. Payment settlement is outside this discussion.\n";
+
+function discussionFile(name: (typeof DISCUSSION_FILES)[number]): string {
+  const heading = `# ${name.slice(3, -3).replace(/-/g, " ")}\n\n`;
+  switch (name) {
+    case "01_Context.md":
+      return `${heading}## UI-bearing Classification\n\n- ui_bearing: false\n- primary_surface: non-ui\n- secondary_surfaces: []\n- classification_rationale: The checkout total is computed by a module with no screen.\n\n## Goal and Completion Criteria\n\n- Goal: ${DISCUSSION_BODY}`;
+    case "03_Story-Workshop.md":
+      return `${heading}${DISCUSSION_BODY}\n\`\`\`mermaid\nflowchart TD\n  Select[Select items] --> Total[See the total]\n\`\`\`\n`;
+    case "04_Sources.md":
+      return `${heading}## Source Registry\n\n| SRC-ID | Title | Type | URL / Path | Retrieved | Notes |\n| --- | --- | --- | --- | --- | --- |\n| SRC-0001 | Checkout requirements | primary | docs/checkout.md | 2026-01-01 | Owner request |\n\n## Research Summary\n\n\`\`\`yaml\nresearch_summary:\n  sources:\n    - id: SRC-0001\n      title: Checkout requirements\n      url: https://example.com/checkout\n      published: 2026-01-01\n  best_practices:\n    - id: BP-0001\n      category: arithmetic\n      title: Sum the selected prices once\n      description: Add item prices without rounding each step.\n      source_id: SRC-0001\n  anti_patterns:\n    - id: AP-0001\n      category: arithmetic\n      title: Seeding a sum with a nonzero value\n      description: A nonzero seed shifts every total.\n      source_id: SRC-0001\n  reflection:\n    - source_id: SRC-0001\n      finding: The total is a plain sum of the selected prices.\n      action: apply\n      reason: It is the whole of the requirement.\n\`\`\`\n`;
+    default:
+      return `${heading}${DISCUSSION_BODY}`;
+  }
+}
+
+/**
+ * The inputs BF-0001 has before SDD authors the story tree: the discussion that
+ * led to it, and the technology and structure contracts the full profile reads
+ * for unfilled placeholders.
+ */
+async function seedProjectInputs(root: string): Promise<void> {
+  for (const name of DISCUSSION_FILES) {
+    await put(root, `.qfai/discussion/discussion-20260101000000000/${name}`, discussionFile(name));
+  }
+  await put(
+    root,
+    ".qfai/spec/03_contract/tech.md",
+    "# Technology\n\n## Runtime / platform\n\n- Runtime: `Node.js 20`\n- Platform: `Linux, macOS and Windows`\n\n## Stack\n\n| Component | Choice |\n| --------- | ------ |\n| Test runner | node:test |\n\n## Dependencies\n\n- Runtime dependency: `none; the checkout module uses the standard library`\n\n## Standard commands (copy-paste)\n\n- Install: `npm install`\n- Format: `npm run format:check`\n- Test: `node --test tests`\n- Lint: `npm run lint`\n- Typecheck: `npm run typecheck`\n- Build: `npm run build`\n- Skeleton: `node src/checkout.mjs`\n- Validate: `npx qfai validate`\n",
+  );
+  await put(
+    root,
+    ".qfai/spec/03_contract/structure.md",
+    "# Structure\n\n## Structure\n\n- Repository layout: `src/ holds the checkout module; tests/ holds its tests by layer`\n- Production roots: `src/`\n\n## Entry points\n\n- Entry point: `src/checkout.mjs totals the selected cart items`\n\n## Key packages / entrypoints\n\n- Package or entrypoint: `src/checkout.mjs computes the cart total`\n\n## Architecture constraints\n\n- Boundary: `tests import src; src imports nothing from tests`\n\n## UI surface paths (SSOT)\n\n- UI surface: `none`\n",
+  );
+}
+
 async function project(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf0001-"));
   roots.push(root);
@@ -112,6 +168,7 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     const story = `${flow}/user-story-0001-0001`;
     const question = `${spec}/open-questions.md`;
 
+    await seedProjectInputs(root);
     await put(
       root,
       `${spec}/01_policy/objective.md`,

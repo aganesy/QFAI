@@ -5,7 +5,6 @@
  * `.qfai/contracts/ui/<spec>-*.yaml` companion is present.
  *
  */
-// QFAI:SPEC-0013:TC-0013-0030
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

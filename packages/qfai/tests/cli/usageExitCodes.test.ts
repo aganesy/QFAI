@@ -130,7 +130,9 @@ describe("qfai --help exit-code section", () => {
     // Ordinary iterate requires every UX score to be exceptional and all
     // three blocking arrays to be empty.
     expect(iterateRow).toMatch(
-      new RegExp(`${EXIT_CODES.prototypingStop} = STOP: converged[^]*?no blocking finding`),
+      new RegExp(
+        `${EXIT_CODES.prototypingStop} = STOP: converged[^]*?no DESIGN\\.md violation[^]*?blocking finding`,
+      ),
     );
     expect(iterateRow).toContain("DESIGN.md violation");
     expect(iterateRow).toContain("anti-pattern");

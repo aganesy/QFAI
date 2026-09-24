@@ -81,6 +81,7 @@ describe("story-tree prototyping report", () => {
   });
 
   // QFAI:AC-0001-0067-01
+  // QFAI:EX-0001-0067-02
   it("reports accepted screenshot and missing HTML evidence with the validator finding", async () => {
     const root = await sandbox();
     const evidence = ".qfai/evidence/prototyping";

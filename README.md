@@ -212,8 +212,9 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
   Refactor cycle for each example.
 - **qfai-migration-spec-to-story**: Move an existing spec-pack project to the
   story tree with ten bundled scripts. Preview and apply each step, then resolve
-  items retained in the migration reports. The bundled
-  `references/migration-guide.md` defines the plan and report. This skill is not
+  items retained in the migration reports. The installed
+  `.qfai/assistant/skill/qfai-migration-spec-to-story/references/migration-guide.md`
+  defines the plan and report. This skill is not
   a CLI command. See the [2.0.0 migration guide](https://github.com/aganesy/QFAI/blob/main/packages/qfai/docs/MIGRATION-2.0.0.md).
 - **qfai-verify**: Run documented quality gates and produce reviewer-approved evidence under `.qfai/evidence/`.
 

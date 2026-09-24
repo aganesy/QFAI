@@ -14,7 +14,6 @@
  * policy each block carries only the US annotation comment.
  */
 // QFAI:BF-0001
-// QFAI:SPEC-0013:US-0013-0013
 // QFAI:BF-0001
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -94,7 +93,7 @@ describe("spec-0013 US-0013-0012 active-pack resolver", () => {
 });
 
 describe("spec-0013 US-0013-0013 surface_type auto-populate", () => {
-  it("QFAI:SPEC-0013:US-0013-0013 — normal: populator writes surface_type: ui-bearing when a UI companion exists", async () => {
+  it("normal: populator writes surface_type: ui-bearing when a UI companion exists", async () => {
     const specPath = await seedSpec(
       "0099",
       ["---", "id: spec-0099", "---", "", "# Sample", ""].join("\n"),

@@ -4696,6 +4696,36 @@ async function describeUnrewritable(linkPath: string): Promise<string> {
   return "a special file occupies the path";
 }
 
+/**
+ * Whether a migration repairs or reports this roster path even when the gate
+ * does not name it.
+ *
+ * The gate reports wrappers only in a project it can tell was initialised. A
+ * project still on the old layout may carry nothing that proves it, and its
+ * links to the plural directories are still init's links. So the migration
+ * reads each roster path itself:
+ *
+ * | the path holds                          | outcome                                       |
+ * | --------------------------------------- | --------------------------------------------- |
+ * | nothing                                 | restored, so an interrupted run can resume    |
+ * | a link to the plural directory          | repointed                                     |
+ * | a link to anywhere else                 | left to the gate; it may be the project's own |
+ * | a file, directory or other entry        | preserved and reported as occupied            |
+ */
+async function isMigrationRosterEntry(wrapper: PlannedWrapper): Promise<boolean> {
+  let stats: Stats;
+  try {
+    stats = await lstat(wrapper.linkPath);
+  } catch (err: unknown) {
+    if (isEnoent(err)) return true;
+    throw err;
+  }
+  if (!stats.isSymbolicLink()) return true;
+  const base = path.dirname(wrapper.linkPath);
+  const current = path.resolve(base, await readlink(wrapper.linkPath));
+  return current === path.resolve(base, wrapper.legacyTarget);
+}
+
 /** The wrapper paths the gate is currently reporting, waivers applied. */
 async function wrappersTheGateNames(root: string): Promise<ReadonlySet<string> | null> {
   let findings: Issue[];
@@ -4745,8 +4775,9 @@ async function isOwnShippedAgentLink(root: string, linkedParent: string): Promis
  * files, so an unattended pass cannot be allowed to reach for it: local edits
  * to any of those would be gone without the operator asking. This writes
  * symlinks and nothing else, through the same {@link ensureSymlink} `init`
- * uses. A migration also inspects missing roster entries so a run interrupted
- * while replacing a link can restore it on retry. Its journaled path set limits
+ * uses. A migration also reads each roster path itself
+ * ({@link isMigrationRosterEntry}), so a project the gate cannot yet tell was
+ * initialised still has its links repointed. Its journaled path set limits
  * the live run to paths the dry run named.
  *
  * Two kinds of path are reported rather than rewritten, because a pass that
@@ -4779,16 +4810,7 @@ export async function repairIntegrationWrappers(
   const planned = await plannedWrappers(root);
   if (options.includeMissing) {
     for (const [relative, wrapper] of planned) {
-      if (!selected(relative)) continue;
-      try {
-        await lstat(wrapper.linkPath);
-      } catch (err: unknown) {
-        if (isEnoent(err)) {
-          named.add(relative);
-        } else {
-          throw err;
-        }
-      }
+      if (selected(relative) && (await isMigrationRosterEntry(wrapper))) named.add(relative);
     }
   }
   if (named.size === 0) {

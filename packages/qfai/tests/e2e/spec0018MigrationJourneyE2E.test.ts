@@ -20,6 +20,7 @@ import {
   readdir,
   readlink,
   rename,
+  rm,
   symlink,
   unlink,
   writeFile,
@@ -197,6 +198,14 @@ function operations(report: string): string[] {
     .filter((line) => line !== "" && line !== "none");
 }
 
+function forAPerson(report: string): string[] {
+  const section = /^## For a person\r?\n([\s\S]*?)(?=\r?\n## |$)/m.exec(report)?.[1] ?? "";
+  return section
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && line !== "none");
+}
+
 async function applyPreparedResolution(root: string): Promise<void> {
   const resolution = JSON.parse(await readFile(RESOLUTION, "utf8")) as {
     contract: string;
@@ -221,6 +230,28 @@ async function applyPreparedResolution(root: string): Promise<void> {
   if (!Array.isArray(selected.examples)) throw new Error("Migrated rule has no examples");
   selected.examples.push(resolution.example);
   await writeFile(target, stringify(contract), "utf8");
+}
+
+/**
+ * Step 7 leaves a retired pack's unplaced rules and examples in place and lists
+ * them for a person. The guide has that person keep them until their content is
+ * accounted for, and validation reports the old layout until the pack is gone.
+ * Removing it only after each remaining file matches its archived copy models
+ * that resolution without discarding anything.
+ */
+async function removeAccountedRetiredPack(root: string, id: string): Promise<void> {
+  const pack = path.join(root, ".qfai/spec", id);
+  const archive = path.join(root, ".qfai/evidence/migration-spec-to-story/retired", id);
+  const remaining = await readdir(pack);
+  if (remaining.length === 0) throw new Error(`${id} has no remaining file to account for`);
+  for (const name of remaining) {
+    const [left, archived] = await Promise.all([
+      readFile(path.join(pack, name)),
+      readFile(path.join(archive, name)),
+    ]);
+    if (!left.equals(archived)) throw new Error(`${id}/${name} differs from its archived copy`);
+  }
+  await rm(pack, { recursive: true });
 }
 
 async function noSpawnPreload(root: string, inspectFailure = false): Promise<string> {
@@ -289,6 +320,7 @@ beforeAll(async () => {
   }
   const secondHash = await fingerprint(root);
   await applyPreparedResolution(root);
+  await removeAccountedRetiredPack(root, "spec-0002");
   const validation = run(root, process.execPath, [
     CLI,
     "validate",
@@ -361,9 +393,15 @@ describe("spec-0018: one shipped-script migration journey", () => {
     expect(await textAt(journey.root, ".qfai/spec/01_policy/initiative.md")).toContain(
       "first order flow",
     );
-    expect(await textAt(journey.root, ".qfai/spec/01_policy/principle.md")).toContain(
-      "one source for each order decision",
-    );
+    await expect(
+      lstat(path.join(journey.root, ".qfai/spec/01_policy/principle.md")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    expect(
+      await textAt(
+        journey.root,
+        ".qfai/evidence/migration-spec-to-story/retired/_policies/11_Slice-Policy.md",
+      ),
+    ).toContain("one source for each order decision");
     expect(
       await textAt(
         journey.root,
@@ -450,7 +488,16 @@ describe("spec-0018: one shipped-script migration journey", () => {
     const noSpawn = await noSpawnPreload(normal);
     const before = await fingerprint(normal, HOST_WRAPPERS);
     const repaired = step(normal, 9, [], ["--require", noSpawn]);
-    expect(repaired.status, repaired.stderr).toBe(0);
+    // The fixture carries only the canonical skill and agent it links, so every
+    // other shipped roster entry has no source. Step 9 reports each of those
+    // under `## For a person` with exit 3 instead of creating a dangling link.
+    expect(repaired.status, repaired.stderr).toBe(3);
+    const unsettled = forAPerson(repaired.stdout);
+    expect(unsettled.length).toBeGreaterThan(0);
+    for (const item of unsettled) {
+      expect(item).toMatch(/^- left alone \S+: canonical source is missing at /);
+      expect([...HOST_WRAPPERS].some((wrapper) => item.includes(` ${wrapper}:`))).toBe(false);
+    }
     expect(await fingerprint(normal, HOST_WRAPPERS)).toBe(before);
     for (const dir of HOST_SKILL_DIRS) {
       expect((await readlink(path.join(normal, dir, "qfai-sdd"))).replace(/\\/g, "/")).toContain(
@@ -491,6 +538,13 @@ describe("spec-0018: one shipped-script migration journey", () => {
       .filter((issue) => issue.code === "QFAI-STORY-006")
       .flatMap((issue) => issue.refs ?? [])
       .sort();
-    expect(uncovered).toEqual(["AC-0001-0001-01", "AC-0001-0001-02", "EX-0001-0001-02"]);
+    // EX-0001-0001-01 is annotated only in an E2E test, which does not satisfy an
+    // EX obligation.
+    expect(uncovered).toEqual([
+      "AC-0001-0001-01",
+      "AC-0001-0001-02",
+      "EX-0001-0001-01",
+      "EX-0001-0001-02",
+    ]);
   });
 });

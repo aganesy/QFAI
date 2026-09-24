@@ -74,7 +74,7 @@ describe("web-research security", () => {
     expect(content).toMatch(/allow[_\s-]?list/i);
   });
 
-  // QFAI:SPEC-0016:TC-0016-0013  TDD-0018
+  // TDD-0018
   it("default-deny blocks non-allowlisted domain", async () => {
     const content = await readSkill();
     expect(content).toMatch(/default[_\s-]?deny/i);
@@ -89,7 +89,7 @@ describe("web-research security", () => {
 
   // ── Sandbox Enforcement ────────────────────────────────────────────
 
-  // QFAI:SPEC-0016:TC-0016-0022  TDD-0020
+  // TDD-0020
   it("sandbox default-deny enforcement — template files exist", async () => {
     const files = await fg(["**/*"], { cwd: sandboxTemplateDir, absolute: false });
     expect(files.length).toBeGreaterThan(0);

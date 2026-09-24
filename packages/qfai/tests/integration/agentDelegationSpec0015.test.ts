@@ -2,10 +2,7 @@
  * Integration coverage for agent card definitions, package routing defaults,
  * and delegation behavior.
  */
-// QFAI:SPEC-0015:TC-0015-0001
-// QFAI:SPEC-0015:TC-0015-0002
-// QFAI:SPEC-0015:TC-0015-0009
-// QFAI:SPEC-0015:TC-0015-0010
+// QFAI:AC-0001-0167-01
 // QFAI:EX-0001-0169-01
 // QFAI:EX-0001-0169-02
 import { mkdtemp, readdir, readFile } from "node:fs/promises";

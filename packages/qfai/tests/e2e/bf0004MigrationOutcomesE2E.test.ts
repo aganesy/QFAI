@@ -209,7 +209,7 @@ describe("BF-0004 migration outcomes", () => {
       ".qfai/assistant/skill/qfai-migration-spec-to-story/references/migration-guide.md",
     );
     expect(skill).toContain("references/migration-guide.md");
-    expect(guide).toContain("QFAI 2.0.0 uses");
+    expect(guide).toContain("QFAI 2.0.0 introduces");
     expect(guide).toContain("QFAI 2.x does not read the old spec-pack layout");
     expect(guide).toContain("stay on a pinned 1.x release");
     expect(guide).toContain("To upgrade, migrate the project before using");

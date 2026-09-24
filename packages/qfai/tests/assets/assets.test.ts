@@ -170,6 +170,27 @@ const VERSION_SHAPES: readonly RegExp[] = [
   new RegExp(String.raw`\b(?:${VERSION_BEARING})[\s@:]+v?\d+\.\d+(?:\.\d+)?\b`, "gi"),
 ];
 
+// A number a contract requires a document to state. It names a fixed thing
+// rather than something the adopter runs on, so it does not go stale. Each
+// entry is one file and one exact match: any other version in that file fails.
+const REQUIRED_VERSION_MENTIONS: readonly { readonly file: string; readonly version: string }[] = [
+  // The value the review artifact contract fixes for `summary.json`.
+  { file: "review-artifact-layout.md", version: "version 2.0" },
+  // The release the migration guide is about. The migration contract requires
+  // the guide to name it, without a `v`.
+  {
+    file: "qfai-migration-spec-to-story/references/migration-guide.md",
+    version: "QFAI 2.0.0",
+  },
+];
+
+function isRequiredVersionMention(filePath: string, version: string): boolean {
+  const normalized = filePath.split(path.sep).join("/");
+  return REQUIRED_VERSION_MENTIONS.some(
+    (entry) => normalized.endsWith(`/${entry.file}`) && version === entry.version,
+  );
+}
+
 /** Every version a document pins, as written. Empty means it pins none. */
 function hardCodedVersions(markdown: string): string[] {
   return VERSION_SHAPES.flatMap((shape) => [...markdown.matchAll(shape)].map((match) => match[0]));
@@ -1316,7 +1337,7 @@ describe("assets guardrails", () => {
     const matches: string[] = [];
     for (const filePath of markdownFiles) {
       const found = hardCodedVersions(await readFile(filePath, "utf-8")).filter(
-        (version) => !(filePath.endsWith("review-artifact-layout.md") && version === "version 2.0"),
+        (version) => !isRequiredVersionMention(filePath, version),
       );
       if (found.length > 0) {
         matches.push(`${path.relative(repoRoot, filePath)}: ${found.join(", ")}`);

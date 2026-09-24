@@ -334,7 +334,6 @@ describe("git unavailable — Source A and B empty, C/D still work", () => {
 });
 
 // TC-0013-0014
-// QFAI:SPEC-0013:TC-0013-0014
 describe("TC-0013-0014: full pipeline — all options, verify result structure", () => {
   let tmpRoot: string;
 
@@ -467,7 +466,6 @@ describe("full scan bypasses diff detection", () => {
 });
 
 // TC-0013-0014
-// QFAI:SPEC-0013:TC-0013-0014
 describe("TC-0013-0014: SpecDiffResult includes all required fields", () => {
   let tmpRoot: string;
 
@@ -504,7 +502,6 @@ describe("TC-0013-0014: SpecDiffResult includes all required fields", () => {
 });
 
 // TC-0013-0015
-// QFAI:SPEC-0013:TC-0013-0015
 describe("TC-0013-0015: policy change detection", () => {
   let tmpRoot: string;
 
@@ -538,7 +535,6 @@ describe("TC-0013-0015: policy change detection", () => {
 });
 
 // TC-0013-0016
-// QFAI:SPEC-0013:TC-0013-0016
 describe("TC-0013-0016: config baseBranch — loadConfig reads baseBranch from yaml", () => {
   let tmpRoot: string;
 
@@ -570,7 +566,6 @@ describe("TC-0013-0016: config baseBranch — loadConfig reads baseBranch from y
 });
 
 // TC-0013-0017
-// QFAI:SPEC-0013:TC-0013-0017
 describe("TC-0013-0017: old evidence without Diff Context remains parseable", () => {
   let tmpRoot: string;
 

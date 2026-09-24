@@ -396,7 +396,10 @@ describe("BF-0004 migration cutover", () => {
     }
     expect(e2e).toContain(["QFAI", "BF-0001"].join(":"));
     expect(journey.real[4]?.stdout).toMatch(/## Cases to examples\r?\nnone/);
-    expect(journey.real[7]?.stdout).toContain("QFAI:SPEC-0001:US-0001-0001");
+    // The only story annotation is in the E2E layer, so step 8 rewrites it to
+    // its flow rather than keeping it.
+    expect(e2e).not.toContain("QFAI:SPEC-0001:US-0001-0001");
+    expect(journey.real[7]?.stdout).not.toContain("QFAI:SPEC-0001:US-0001-0001");
     expect(journey.real[7]?.stdout).toContain("QFAI:CON-API-0001");
   });
 
