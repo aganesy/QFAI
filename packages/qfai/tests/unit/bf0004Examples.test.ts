@@ -624,9 +624,10 @@ describe("BF-0004 migration examples", () => {
     );
     const markers = [
       "plan.yaml",
-      "--dry-run first",
+      "run `--dry-run` first",
       "complete Markdown report and exit code",
       "Remove facts duplicated in different words",
+      "Run steps 4 to 10 in order, each with `--dry-run` followed by the real run",
       "After step 10, run the project's local `qfai validate` launcher",
     ];
     const positions = markers.map((marker) => skill.indexOf(marker));

@@ -96,6 +96,7 @@ type Journey = {
   dryUnchanged: boolean[];
   rerunUnchanged: boolean;
   changedPaths: string[][];
+  operationPaths: string[][];
   map: { ids: Record<string, Record<string, string>> };
   afterStep7DirectoriesRemoved: boolean;
   idMapUnchangedOnRerun: boolean;
@@ -142,6 +143,26 @@ function section(report: string, name: string): string[] {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line !== "" && line !== "none");
+}
+
+function pathsNamedByOperations(
+  report: string,
+  before: Map<string, string>,
+  after: Map<string, string>,
+): string[] {
+  const snapshotPaths = [...new Set([...before.keys(), ...after.keys()])];
+  const names = section(report, "Operations").flatMap((line) => {
+    const description = line.replace(/^- /, "");
+    if (description.endsWith(": remove empty directory")) return [];
+    const pathText = description.split(": ")[0] ?? "";
+    return pathText.split(" → ").flatMap((mentioned) => {
+      const descendants = snapshotPaths.filter((name) => name.startsWith(`${mentioned}/`));
+      return snapshotPaths.includes(mentioned) || descendants.length === 0
+        ? [mentioned]
+        : descendants;
+    });
+  });
+  return [...new Set(names)].sort();
 }
 
 async function fingerprint(root: string): Promise<string> {
@@ -296,6 +317,7 @@ beforeAll(async () => {
   const applied: Result[] = [];
   const dryUnchanged: boolean[] = [];
   const changedPaths: string[][] = [];
+  const operationPaths: string[][] = [];
   let afterStep7DirectoriesRemoved = false;
   for (let number = 1; number <= 10; number += 1) {
     const before = await fingerprint(root);
@@ -312,6 +334,7 @@ beforeAll(async () => {
     }
     applied.push(real);
     const afterFiles = await fileSnapshot(root);
+    operationPaths.push(pathsNamedByOperations(real.stdout, beforeFiles, afterFiles));
     changedPaths.push(
       [...new Set([...beforeFiles.keys(), ...afterFiles.keys()])]
         .filter((name) => beforeFiles.get(name) !== afterFiles.get(name))
@@ -348,6 +371,7 @@ beforeAll(async () => {
     dryUnchanged,
     rerunUnchanged: (await fingerprint(root)) === beforeRerun,
     changedPaths,
+    operationPaths,
     afterStep7DirectoriesRemoved,
     idMapUnchangedOnRerun: (
       await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"))
@@ -516,11 +540,13 @@ describe("BF-0004 acceptance criteria", () => {
 
   // QFAI:AC-0004-0003-03
   // QFAI:EX-0004-0003-10
+  // QFAI:EX-0004-0003-11
   it("previews the ordered operations without changing files", () => {
     expect(journey.dryUnchanged).toEqual(Array(10).fill(true));
     expect(journey.dry.map((result) => section(result.stdout, "Operations"))).toEqual(
       journey.applied.map((result) => section(result.stdout, "Operations")),
     );
+    expect(journey.operationPaths).toEqual(journey.changedPaths);
   });
 
   // QFAI:AC-0004-0003-04
