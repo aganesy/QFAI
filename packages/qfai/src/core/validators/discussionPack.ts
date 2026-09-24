@@ -5,6 +5,7 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
 import { resolveImportLiteEntrypoint } from "../preflight/importLiteEvidence.js";
+import { isPristineStorySeed } from "../storyTree/pristineSeed.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -53,6 +54,13 @@ export async function validateDiscussionPackReadiness(
   }
 
   if (!readiness.latestPackDir || !readiness.latestPackName) {
+    if (
+      readiness.dangerousPackNames.length === 0 &&
+      readiness.legacyPackNames.length === 0 &&
+      (await isPristineStorySeed(root, config))
+    ) {
+      return issues;
+    }
     // The import-lite entrypoint is the sanctioned substitute for a project
     // that already carries specs and never ran `/qfai-discussion`
     // (`QFAI-IMPLITE-001`). Without this the final gate

@@ -505,9 +505,7 @@ async function runStoryProfileValidators(
   const sdd = async (includeSteering = true): Promise<Issue[]> => [
     ...(await validateStoryTreeStructure(root, config, model)),
     ...(await validateStoryTreeContractReferences(root, config, model)),
-    ...(includeSteering
-      ? await validateStorySteeringPlaceholders(root, resolvePath(root, config, "contractsDir"))
-      : []),
+    ...(includeSteering ? await validateStorySteeringPlaceholders(root, config) : []),
     ...(await validateContracts(root, config)),
     ...(await validateSddDesignContractReadiness(root, config)),
     ...(await validateGrillingTrace(root, {

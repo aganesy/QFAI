@@ -32,6 +32,7 @@ import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
 import { escapeRegExp } from "../regex.js";
 import { splitMarkdownRow } from "../specPackParsers.js";
 import { hasLegacySpecPackEntries } from "../storyTree/layout.js";
+import { isPristineStorySeed } from "../storyTree/pristineSeed.js";
 import type { Issue } from "../types.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { TODO_PLACEHOLDER_RE } from "./renderCritique.js";
@@ -274,7 +275,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   issues.push(
     ...(hasLegacySpecPackEntries(specsEntries)
       ? await collectSteeringPlaceholderIssues(root, assistantDir)
-      : await validateStorySteeringPlaceholders(root, resolvePath(root, config, "contractsDir"))),
+      : await validateStorySteeringPlaceholders(root, config)),
   );
 
   // The crawl reads the skill tree once, here, and every later check works from
@@ -834,8 +835,10 @@ async function collectSteeringPlaceholderIssues(
 /** The story layout stores adopter-owned steering in the contract layer. */
 export async function validateStorySteeringPlaceholders(
   root: string,
-  contractsDir: string,
+  config: QfaiConfig,
 ): Promise<Issue[]> {
+  if (await isPristineStorySeed(root, config)) return [];
+  const contractsDir = resolvePath(root, config, "contractsDir");
   const issues: Issue[] = [];
   for (const fileName of ["tech.md", "structure.md"]) {
     const filePath = path.join(contractsDir, fileName);
