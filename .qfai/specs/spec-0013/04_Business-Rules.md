@@ -148,3 +148,9 @@
 - During the deprecation window `auditProfile.ts` MUST accept both string-only (legacy) `primary_tasks` items and structured items shaped `{id, label, acceptance}`.
 - The structured shape is **all-required, closed** (DR-0268): all three of `id`, `label`, `acceptance` MUST be present and no additional properties are allowed. A structured item missing any field, or carrying extra keys (e.g. speculative `priority` / `owner`), MUST be rejected.
 - String-only items MUST continue to PASS during the window; the structured form makes a task testable (the `acceptance` field anchors downstream atdd scaffolding).
+
+## BR-0013-0021: Optional Side Artifact Neutrality
+
+- AC-Refs: AC-0013-0028
+
+- SDD preflight readiness MUST NOT depend on whether an optional discussion side artifact is present, absent, malformed, or in a legacy format.

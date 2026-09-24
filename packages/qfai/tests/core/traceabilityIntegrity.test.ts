@@ -2,7 +2,8 @@
  * traceabilityIntegrity tests — TDD-0011 through TDD-0015 (spec-0038).
  */
 import { execFileSync } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -14,7 +15,7 @@ vi.mock("node:child_process", () => ({
 
 import { validateTraceabilityIntegrity } from "../../src/core/validators/traceabilityIntegrity.js";
 import type { QfaiConfig } from "../../src/core/config.js";
-import { gitDiffListings } from "../helpers/gitDiffMock.js";
+import { gitDiffListings as rawGitDiffListings } from "../helpers/gitDiffMock.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const stubConfig: QfaiConfig = {
@@ -59,6 +60,70 @@ async function seedLayeredSpec(specDir: string): Promise<void> {
   await mkdir(specDir, { recursive: true });
   await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
   await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 User stories\n", "utf-8");
+  const number = path.basename(specDir).slice(-4);
+  await writeFile(
+    path.join(specDir, "04_Business-Rules.md"),
+    [
+      "# Business Rules",
+      "",
+      "| BR-ID | Rule |",
+      "| --- | --- |",
+      `| BR-${number}-0001 | The current rule is satisfied. |`,
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(specDir, "03_Acceptance-Criteria.md"),
+    [
+      "# Acceptance Criteria",
+      "",
+      "| AC-ID | Title | Notes | Priority |",
+      "| --- | --- | --- | --- |",
+      `| AC-${number}-0001 | The current outcome is observed. | - | Must |`,
+    ].join("\n"),
+    "utf-8",
+  );
+  const root = path.resolve(specDir, "..", "..", "..");
+  await mkdir(path.join(root, "src", "core"), { recursive: true });
+  await writeFile(
+    path.join(root, "src", "core", "someModule.ts"),
+    "export const value = 1;\n",
+    "utf-8",
+  );
+}
+
+/** The old fixtures still exercise real changed IDs under the new merge-base contract. */
+function gitDiffListings(listings: Parameters<typeof rawGitDiffListings>[0] = {}) {
+  const diff = rawGitDiffListings(listings);
+  return (...call: unknown[]): string => {
+    const args = Array.isArray(call[1]) ? call[1].map(String) : [];
+    if (args[0] === "merge-base") return "fixture-merge-base\n";
+    if (args[0] === "ls-tree") return "present\0";
+    if (args[0] === "show") {
+      const object = args[1] ?? "";
+      const specNumber = /spec-(\d{4})/.exec(object)?.[1] ?? "0001";
+      if (object.endsWith("/04_Business-Rules.md")) {
+        return [
+          "# Business Rules",
+          "",
+          "| BR-ID | Rule |",
+          "| --- | --- |",
+          `| BR-${specNumber}-0001 | The prior rule was satisfied. |`,
+        ].join("\n");
+      }
+      if (object.endsWith("/03_Acceptance-Criteria.md")) {
+        return [
+          "# Acceptance Criteria",
+          "",
+          "| AC-ID | Title | Notes | Priority |",
+          "| --- | --- | --- | --- |",
+          `| AC-${specNumber}-0001 | The prior outcome was observed. | - | Must |`,
+        ].join("\n");
+      }
+      throw new Error(`unexpected git show ${object}`);
+    }
+    return diff(...call);
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -434,6 +499,7 @@ describe("ledger presence is checked without a branch diff", () => {
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe("QFAI-TRACE-002");
+    expect(issues[0]?.severity).toBe("warning");
     expect(issues[0]?.rule).toBe("traceability.integrity.ledgerFormatMismatch");
   });
 
@@ -504,7 +570,7 @@ describe("an unavailable diff is reported, not swallowed", () => {
     await removeTempTree(tmpRoot);
   });
 
-  it("emits QFAI-TRACE-003 (info) when git cannot resolve the base ref", async () => {
+  it("emits QFAI-TRACE-003 (error) when git cannot resolve the base ref", async () => {
     await seedLayeredSpec(path.join(tmpRoot, ".qfai", "specs", "spec-0001"));
     vi.mocked(execFileSync).mockImplementation(() => {
       throw new Error("fatal: ambiguous argument 'origin/main..HEAD'");
@@ -512,7 +578,7 @@ describe("an unavailable diff is reported, not swallowed", () => {
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     const skipped = issues.find((entry) => entry.code === "QFAI-TRACE-003");
-    expect(skipped?.severity).toBe("info");
+    expect(skipped?.severity).toBe("error");
     expect(skipped?.rule).toBe("traceability.integrity.diffUnavailable");
     expect(skipped?.message).toContain("origin/main");
     // `baseBranch` is normalized from the document root (config.ts#306), never
@@ -733,5 +799,683 @@ describe("the unconditional scan stays inside its own layout and profile", () =>
     // QFAI-TRACE-003 only ever explains why QFAI-TRACE-001 was skipped; the
     // sdd profile never asks for that check, so the notice would be noise.
     expect(issues.some((entry) => entry.code === "QFAI-TRACE-003")).toBe(false);
+  });
+});
+
+// A branch diff names files, not obligations. These fixtures return the base
+// document from git so the validator must identify which ID's content moved.
+describe("changed obligations and their bindings", () => {
+  let root: string;
+  const specId = "spec-0099";
+  const specPath = `.qfai/specs/${specId}`;
+  const brPath = `${specPath}/04_Business-Rules.md`;
+  const acPath = `${specPath}/03_Acceptance-Criteria.md`;
+  const oldRules = [
+    "# Business Rules",
+    "",
+    "| BR-ID | Rule |",
+    "| --- | --- |",
+    "| BR-0099-0001 | First behavior stays true. |",
+    "| BR-0099-0002 | Second behavior stays true. |",
+  ].join("\n");
+  const oldCriteria = [
+    "# Acceptance Criteria",
+    "",
+    "| AC-ID | Title | Notes | Priority |",
+    "| --- | --- | --- | --- |",
+    "| AC-0099-0001 | First outcome | Existing | Must |",
+  ].join("\n");
+  const pythonConfig: QfaiConfig = {
+    ...stubConfig,
+    validation: {
+      ...stubConfig.validation,
+      traceability: {
+        ...stubConfig.validation.traceability,
+        testFileGlobs: ["**/*.test.ts", "**/*_test.py"],
+      },
+    },
+  };
+
+  beforeEach(async () => {
+    vi.mocked(execFileSync).mockReset();
+    root = await import("node:fs/promises").then((fs) =>
+      fs.mkdtemp(path.join(os.tmpdir(), "qfai-trace-obligation-")),
+    );
+    await seedLayeredSpec(path.join(root, specPath));
+    await writeFile(path.join(root, brPath), oldRules, "utf-8");
+    await writeFile(path.join(root, acPath), oldCriteria, "utf-8");
+    for (const file of ["src/first.ts", "src/second.ts"]) {
+      await mkdir(path.dirname(path.join(root, file)), { recursive: true });
+      await writeFile(path.join(root, file), "export const value = true;\n", "utf-8");
+    }
+  });
+
+  afterEach(async () => {
+    await removeTempTree(root);
+  });
+
+  async function ledger(rows: readonly string[], planned: readonly string[] = []): Promise<void> {
+    const contents = [
+      "# Traceability Ledger",
+      "",
+      "| BR/AC | Implementation File | Test File | Notes | Proof |",
+      "| --- | --- | --- | --- | --- |",
+      ...rows,
+      "",
+      "### Planned bindings",
+      "",
+      "| Implementation File | State today | BR / AC it will realize | Test File (planned) | Promotion trigger |",
+      "| --- | --- | --- | --- | --- |",
+      ...planned,
+    ].join("\n");
+    await writeFile(path.join(root, specPath, "16_Traceability-ledger.md"), contents, "utf-8");
+  }
+
+  function mockHistory(
+    changed: readonly string[],
+    options: { baseRules?: string; baseCriteria?: string; baseUnavailable?: boolean } = {},
+  ): void {
+    const listings = gitDiffListings({ changed });
+    vi.mocked(execFileSync).mockImplementation((...call) => {
+      const args = Array.isArray(call[1]) ? call[1].map(String) : [];
+      if (args[0] === "merge-base") {
+        if (options.baseUnavailable) throw new Error("base is unavailable");
+        return "fixture-merge-base\n";
+      }
+      if (args[0] === "show") {
+        const object = args[1] ?? "";
+        if (object.endsWith(`:${brPath}`)) return options.baseRules ?? oldRules;
+        if (object.endsWith(`:${acPath}`)) return options.baseCriteria ?? oldCriteria;
+        throw new Error(`unexpected git show ${object}`);
+      }
+      if (args[0] === "ls-tree") return "present\0";
+      return listings(...call);
+    });
+  }
+
+  const active = (
+    id: string,
+    file: string,
+    proof = "-",
+    testFile = "tests/core/behavior.test.ts",
+  ): string => `| ${id} | ${file} | ${testFile} | - | ${proof} |`;
+
+  it("checks only the edited rule, leaving its unchanged sibling's unchanged file alone", async () => {
+    await writeFile(
+      path.join(root, brPath),
+      oldRules.replace("First behavior stays true.", "First behavior now rejects false."),
+      "utf-8",
+    );
+    await ledger([active("BR-0099-0001", "src/first.ts"), active("BR-0099-0002", "src/second.ts")]);
+    mockHistory([`1\t1\t${brPath}`, "1\t1\tsrc/first.ts"]);
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(issues.filter((entry) => entry.code === "QFAI-TRACE-001")).toEqual([]);
+  });
+
+  it("does not treat a rule table reordering as a changed obligation", async () => {
+    await writeFile(
+      path.join(root, brPath),
+      oldRules.replace(
+        "| BR-0099-0001 | First behavior stays true. |\n| BR-0099-0002 | Second behavior stays true. |",
+        "| BR-0099-0002 | Second behavior stays true. |\n| BR-0099-0001 | First behavior stays true. |",
+      ),
+      "utf-8",
+    );
+    await ledger([active("BR-0099-0001", "src/first.ts")]);
+    mockHistory([`2\t2\t${brPath}`]);
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(issues.filter((entry) => entry.code === "QFAI-TRACE-001")).toEqual([]);
+  });
+
+  it("rejects a changed rule with no active or planned binding", async () => {
+    await writeFile(
+      path.join(root, brPath),
+      `${oldRules}\n| BR-0099-0003 | New behavior. |`,
+      "utf-8",
+    );
+    await ledger([active("BR-0099-0001", "src/first.ts")]);
+    mockHistory([`1\t0\t${brPath}`]);
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(
+      issues.some(
+        (entry) => entry.code === "QFAI-TRACE-001" && entry.message.includes("BR-0099-0003"),
+      ),
+    ).toBe(true);
+  });
+
+  it("accepts an explicit planned binding for a new rule whose file is absent", async () => {
+    await writeFile(
+      path.join(root, brPath),
+      `${oldRules}\n| BR-0099-0003 | New behavior. |`,
+      "utf-8",
+    );
+    await ledger(
+      [active("BR-0099-0001", "src/first.ts")],
+      ["| `src/future.ts` | absent | BR-0099-0003 | `tests/core/future.test.ts` | File creation |"],
+    );
+    mockHistory([`1\t0\t${brPath}`]);
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(issues.filter((entry) => entry.code === "QFAI-TRACE-001")).toEqual([]);
+  });
+
+  it("rejects an ambiguous active binding that repeats one rule and path", async () => {
+    await writeFile(
+      path.join(root, brPath),
+      oldRules.replace("First behavior stays true.", "First behavior now rejects false."),
+      "utf-8",
+    );
+    await ledger([active("BR-0099-0001", "src/first.ts"), active("BR-0099-0001", "src/first.ts")]);
+    mockHistory([`1\t1\t${brPath}`, "1\t1\tsrc/first.ts"]);
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(
+      issues.some(
+        (entry) => entry.code === "QFAI-TRACE-001" && entry.message.includes("BR-0099-0001"),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects an active binding whose implementation path has been removed", async () => {
+    await writeFile(
+      path.join(root, brPath),
+      oldRules.replace("First behavior stays true.", "First behavior now rejects false."),
+      "utf-8",
+    );
+    await ledger([active("BR-0099-0001", "src/missing.ts")]);
+    mockHistory([`1\t1\t${brPath}`]);
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(
+      issues.some((entry) => entry.code === "QFAI-TRACE-001" && entry.file === "src/missing.ts"),
+    ).toBe(true);
+  });
+
+  it("treats a present ledger with an invalid first table as an error", async () => {
+    await writeFile(
+      path.join(root, specPath, "16_Traceability-ledger.md"),
+      [
+        "# Traceability Ledger",
+        "",
+        "| BR/AC | Notes |",
+        "| --- | --- |",
+        "| BR-0099-0001 | no implementation column |",
+      ].join("\n"),
+      "utf-8",
+    );
+    mockHistory([`1\t1\t${brPath}`]);
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(
+      issues.some((entry) => entry.code === "QFAI-TRACE-002" && entry.severity === "error"),
+    ).toBe(true);
+  });
+
+  it("rejects a ledger that swaps the implementation and test columns", async () => {
+    await writeFile(
+      path.join(root, specPath, "16_Traceability-ledger.md"),
+      [
+        "# Traceability Ledger",
+        "",
+        "| BR/AC | Test File | Implementation File | Notes | Proof |",
+        "| --- | --- | --- | --- | --- |",
+        "| BR-0099-0001 | tests/core/behavior.test.ts | src/first.ts | - | - |",
+      ].join("\n"),
+      "utf-8",
+    );
+    mockHistory([`1\t1\t${brPath}`]);
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(
+      issues.some(
+        (entry) =>
+          entry.code === "QFAI-TRACE-002" &&
+          entry.severity === "error" &&
+          entry.rule === "traceability.integrity.ledgerFormatMismatch",
+      ),
+    ).toBe(true);
+  });
+
+  it("fails closed in the implementation profile when the merge base is unavailable", async () => {
+    await ledger([active("BR-0099-0001", "src/first.ts")]);
+    mockHistory([`1\t1\t${brPath}`], { baseUnavailable: true });
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(
+      issues.some((entry) => entry.code === "QFAI-TRACE-003" && entry.severity === "error"),
+    ).toBe(true);
+  });
+
+  it("fails closed when the base document exists but git cannot read it", async () => {
+    await ledger([active("BR-0099-0001", "src/first.ts")]);
+    const listings = gitDiffListings({ changed: [`1\t1\t${brPath}`] });
+    vi.mocked(execFileSync).mockImplementation((...call) => {
+      const args = Array.isArray(call[1]) ? call[1].map(String) : [];
+      if (args[0] === "show") throw new Error("object read failed");
+      return listings(...call);
+    });
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(
+      issues.some((entry) => entry.code === "QFAI-TRACE-003" && entry.severity === "error"),
+    ).toBe(true);
+  });
+
+  it("does not require a merge base in the spec authoring profile", async () => {
+    await ledger([active("BR-0099-0001", "src/first.ts")]);
+    mockHistory([`1\t1\t${brPath}`], { baseUnavailable: true });
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig, {
+      includeImplementationDiff: false,
+    });
+    expect(issues).toEqual([]);
+    expect(vi.mocked(execFileSync)).not.toHaveBeenCalled();
+  });
+
+  it("compares acceptance-criterion text as well as business-rule text", async () => {
+    await writeFile(
+      path.join(root, acPath),
+      oldCriteria.replace("First outcome", "First outcome now has a stronger boundary"),
+      "utf-8",
+    );
+    await ledger([active("AC-0099-0001", "src/first.ts")]);
+    mockHistory([`1\t1\t${acPath}`]);
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(
+      issues.some(
+        (entry) => entry.code === "QFAI-TRACE-001" && entry.message.includes("AC-0099-0001"),
+      ),
+    ).toBe(true);
+  });
+
+  it.each(["#", "##"])(
+    "compares acceptance-criterion %s headings without a catalog table",
+    async (level) => {
+      const before = [
+        "# Acceptance Criteria",
+        "",
+        `${level} AC-0099-0001: First outcome`,
+        "",
+        "The initial boundary applies.",
+        "",
+        `${level} AC-0099-0002: Second outcome`,
+        "",
+        "The stable boundary applies.",
+      ].join("\n");
+      const after = before.replace(
+        "The initial boundary applies.",
+        "The stronger boundary applies.",
+      );
+      await writeFile(path.join(root, acPath), after, "utf-8");
+      await ledger([
+        active("AC-0099-0001", "src/first.ts"),
+        active("AC-0099-0002", "src/second.ts"),
+      ]);
+      mockHistory([`1\t1\t${acPath}`], { baseCriteria: before });
+
+      const issues = await validateTraceabilityIntegrity(root, stubConfig);
+      const drift = issues.filter((entry) => entry.code === "QFAI-TRACE-001");
+      expect(drift.map((entry) => entry.refs)).toEqual([["AC-0099-0001"]]);
+    },
+  );
+
+  it.each(["#", "##"])("compares business-rule %s headings without a rule table", async (level) => {
+    const before = [
+      "# Business Rules",
+      "",
+      `${level} BR-0099-0001: First behavior`,
+      "",
+      "The initial rule applies.",
+      "",
+      `${level} BR-0099-0002: Second behavior`,
+      "",
+      "The stable rule applies.",
+    ].join("\n");
+    const after = before.replace("The initial rule applies.", "The stronger rule applies.");
+    await writeFile(path.join(root, brPath), after, "utf-8");
+    await ledger([active("BR-0099-0001", "src/first.ts"), active("BR-0099-0002", "src/second.ts")]);
+    mockHistory([`1\t1\t${brPath}`], { baseRules: before });
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    const drift = issues.filter((entry) => entry.code === "QFAI-TRACE-001");
+    expect(drift.map((entry) => entry.refs)).toEqual([["BR-0099-0001"]]);
+  });
+
+  async function proofFixture(
+    overrides: {
+      proof?: string;
+      satisfiedBy?: string;
+      restoredHash?: string;
+      redHash?: string;
+      green?: string;
+      qa?: string;
+      tc?: string;
+      selector?: string;
+      alsoCriterion?: boolean;
+      tcAcRefs?: string;
+      tcTitle?: string;
+      testAnnotationTc?: string;
+      testBody?: string;
+      testFile?: string;
+      rowSelector?: string;
+      tddId?: string;
+      runCommand?: string;
+      falsifiabilityCommand?: string;
+      greenCommand?: string;
+    } = {},
+  ): Promise<void> {
+    const id = "BR-0099-0003";
+    const tddId = overrides.tddId ?? "TDD-0001";
+    const testFile = overrides.testFile ?? "tests/core/behavior.test.ts";
+    const rowSelector = overrides.rowSelector ?? "existing behavior is verified";
+    const runCommand =
+      overrides.runCommand ??
+      (testFile.endsWith(".py")
+        ? `pytest -q ${rowSelector}`
+        : `vitest run ${testFile} --testNamePattern=${tddId}`);
+    const testAnnotationTc = overrides.testAnnotationTc ?? "TC-0099-0001";
+    const testText =
+      overrides.testBody ??
+      [
+        `// QFAI:SPEC-0099:${testAnnotationTc}`,
+        `it("${testAnnotationTc} (${tddId}): existing behavior is verified", () => expect(true).toBe(true));`,
+        "",
+      ].join("\n");
+    await mkdir(path.dirname(path.join(root, testFile)), { recursive: true });
+    await writeFile(path.join(root, testFile), testText, "utf-8");
+    const fileHash = createHash("sha256").update(testText).digest("hex");
+    const testHash = createHash("sha256")
+      .update([testFile, "file", "100644", fileHash].join("\0"))
+      .digest("hex");
+    const sourceHash = createHash("sha256")
+      .update(await readFile(path.join(root, "src", "first.ts")))
+      .digest("hex");
+    await writeFile(
+      path.join(root, brPath),
+      `${oldRules}\n| ${id} | Existing behavior is required. |`,
+      "utf-8",
+    );
+    if (overrides.alsoCriterion) {
+      await writeFile(
+        path.join(root, acPath),
+        oldCriteria.replace("First outcome", "First outcome requires the existing behavior"),
+        "utf-8",
+      );
+    }
+    await ledger([
+      active(id, "src/first.ts", overrides.proof ?? tddId, testFile),
+      ...(overrides.alsoCriterion
+        ? [active("AC-0099-0001", "src/first.ts", overrides.proof ?? tddId, testFile)]
+        : []),
+    ]);
+    await mkdir(path.join(root, specPath, "tdd"), { recursive: true });
+    await writeFile(
+      path.join(root, specPath, "tdd", "test-list.md"),
+      [
+        "# Test list",
+        "",
+        "| TDD-ID | TC-Refs | Test file | Selector | Evidence | BR-Ref |",
+        "| --- | --- | --- | --- | --- | --- |",
+        `| ${tddId} | ${overrides.tc ?? "TC-0099-0001"} | ${testFile} | ${rowSelector} | [ATDD](../../../evidence/atdd-spec-0099.md#${tddId.toLowerCase()}) | ${id} |`,
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, specPath, "06_Test-Cases.md"),
+      [
+        "# Test cases",
+        "",
+        "| TC-ID | Title | AC-Refs | BR-Refs |",
+        "| --- | --- | --- | --- |",
+        `| TC-0099-0001 | ${overrides.tcTitle ?? "Existing behavior"} | ${overrides.tcAcRefs ?? "AC-0099-0001"} | ${id} |`,
+      ].join("\n"),
+      "utf-8",
+    );
+    await mkdir(path.join(root, ".qfai", "evidence"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "evidence", "atdd-spec-0099.md"),
+      [
+        "# ATDD Evidence",
+        "",
+        `### ${tddId}`,
+        "",
+        `- TDD-ID: ${tddId}`,
+        `- Test file: \`${testFile}\``,
+        `- Selector: \`${overrides.selector ?? rowSelector}\``,
+        `- TC-ref: ${overrides.tc ?? "TC-0099-0001"}`,
+        `- Round 1: RED test hash: ${overrides.redHash ?? testHash}`,
+        "- Round 1: RED test manifest:",
+        "",
+        "```text",
+        testFile,
+        "```",
+        "",
+        `- Satisfied-by: \`${overrides.satisfiedBy ?? "src/first.ts::value"}\``,
+        `- Mutant SHA-256: ${"a".repeat(64)}. Restored SHA-256: ${overrides.restoredHash ?? sourceHash}.`,
+        `- Falsifiability command: \`${overrides.falsifiabilityCommand ?? runCommand}\``,
+        "- Falsifiability result: exit 1; Tests 1 failed.",
+        `- GREEN command: \`${overrides.greenCommand ?? runCommand}\``,
+        `- GREEN result: ${overrides.green ?? "exit 0; Tests 1 passed"}.`,
+        `- qa-gatekeeper: ${overrides.qa ?? "PASS"}`,
+        `- qa-gatekeeper live mutation review: \`${overrides.qa ?? "PASS"}\`; independent same-command assertion=True; exit=1.`,
+      ].join("\n"),
+      "utf-8",
+    );
+    mockHistory([`1\t0\t${brPath}`, ...(overrides.alsoCriterion ? [`1\t1\t${acPath}`] : [])]);
+  }
+
+  it("accepts current independent proof for an unchanged implementation", async () => {
+    await proofFixture();
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(issues.filter((entry) => entry.code === "QFAI-TRACE-001")).toEqual([]);
+  });
+
+  it("allows one reviewed test to prove the same unchanged file for its BR and AC bindings", async () => {
+    await proofFixture({ alsoCriterion: true });
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(issues.filter((entry) => entry.code === "QFAI-TRACE-001")).toEqual([]);
+  });
+
+  it("does not count a TC title as an AC reference for proof", async () => {
+    await proofFixture({
+      alsoCriterion: true,
+      tcAcRefs: "-",
+      tcTitle: "AC-0099-0001 appears only in this title",
+    });
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    const drift = issues.filter((entry) => entry.code === "QFAI-TRACE-001");
+    expect(drift.map((entry) => entry.refs)).toEqual([["AC-0099-0001"]]);
+  });
+
+  it("rejects proof when the test still names and annotates an earlier TC", async () => {
+    await proofFixture({ testAnnotationTc: "TC-0099-0002" });
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(
+      issues.some((entry) => entry.code === "QFAI-TRACE-001" && entry.severity === "error"),
+    ).toBe(true);
+  });
+
+  it("rejects a runnable test with no TC annotation", async () => {
+    await proofFixture({
+      testBody: [
+        'it("TC-0099-0001 (TDD-0001): existing behavior is verified", () => expect(true).toBe(true));',
+        "",
+      ].join("\n"),
+    });
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(
+      issues.some((entry) => entry.code === "QFAI-TRACE-001" && entry.severity === "error"),
+    ).toBe(true);
+  });
+
+  it("does not accept a commented-out test as runnable proof", async () => {
+    await proofFixture({
+      testBody: [
+        "// QFAI:SPEC-0099:TC-0099-0001",
+        '// it("TC-0099-0001 (TDD-0001): existing behavior is verified", () => expect(true).toBe(true));',
+        "",
+      ].join("\n"),
+    });
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(
+      issues.some((entry) => entry.code === "QFAI-TRACE-001" && entry.severity === "error"),
+    ).toBe(true);
+  });
+
+  it("accepts a current pytest class and method selector as proof", async () => {
+    await proofFixture({
+      testFile: "tests/x_test.py",
+      rowSelector: "tests/x_test.py::TestA::test_b",
+      testBody: [
+        "class TestA:",
+        "    # QFAI:SPEC-0099:TC-0099-0001",
+        "    def test_b(self):",
+        "        assert True",
+        "",
+      ].join("\n"),
+    });
+
+    const issues = await validateTraceabilityIntegrity(root, pythonConfig);
+    expect(issues.filter((entry) => entry.code === "QFAI-TRACE-001")).toEqual([]);
+  });
+
+  it("rejects full-file pytest commands when the selected method appears only in a comment", async () => {
+    await proofFixture({
+      testFile: "tests/x_test.py",
+      rowSelector: "tests/x_test.py::TestA::test_b",
+      runCommand: "pytest -q tests/x_test.py",
+      testBody: [
+        "class TestA:",
+        "    # QFAI:SPEC-0099:TC-0099-0001",
+        "    # test_b was removed",
+        "    def test_other(self):",
+        "        assert True",
+        "",
+      ].join("\n"),
+    });
+
+    const issues = await validateTraceabilityIntegrity(root, pythonConfig);
+    expect(
+      issues.some((entry) => entry.code === "QFAI-TRACE-001" && entry.severity === "error"),
+    ).toBe(true);
+  });
+
+  it.each(["falsifiabilityCommand", "greenCommand"] as const)(
+    "requires the %s to target the pytest selector",
+    async (commandField) => {
+      await proofFixture({
+        testFile: "tests/x_test.py",
+        rowSelector: "tests/x_test.py::TestA::test_b",
+        [commandField]: "pytest -q tests/x_test.py",
+        testBody: [
+          "class TestA:",
+          "    # QFAI:SPEC-0099:TC-0099-0001",
+          "    def test_b(self):",
+          "        assert True",
+          "",
+        ].join("\n"),
+      });
+
+      const issues = await validateTraceabilityIntegrity(root, pythonConfig);
+      expect(
+        issues.some((entry) => entry.code === "QFAI-TRACE-001" && entry.severity === "error"),
+      ).toBe(true);
+    },
+  );
+
+  it("rejects pytest proof when the selected method was renamed", async () => {
+    await proofFixture({
+      testFile: "tests/x_test.py",
+      rowSelector: "tests/x_test.py::TestA::test_b",
+      testBody: [
+        "class TestA:",
+        "    # QFAI:SPEC-0099:TC-0099-0001",
+        "    def test_old(self):",
+        "        assert True",
+        "",
+      ].join("\n"),
+    });
+
+    const issues = await validateTraceabilityIntegrity(root, pythonConfig);
+    expect(
+      issues.some((entry) => entry.code === "QFAI-TRACE-001" && entry.severity === "error"),
+    ).toBe(true);
+  });
+
+  it("rejects a runnable pytest method without its TC annotation", async () => {
+    await proofFixture({
+      testFile: "tests/x_test.py",
+      rowSelector: "tests/x_test.py::TestA::test_b",
+      testBody: ["class TestA:", "    def test_b(self):", "        assert True", ""].join("\n"),
+    });
+
+    const issues = await validateTraceabilityIntegrity(root, pythonConfig);
+    expect(
+      issues.some((entry) => entry.code === "QFAI-TRACE-001" && entry.severity === "error"),
+    ).toBe(true);
+  });
+
+  it("accepts a parameterized Vitest test as proof", async () => {
+    await proofFixture({
+      testBody: [
+        "// QFAI:SPEC-0099:TC-0099-0001",
+        'it.each([[1]])("TC-0099-0001 (TDD-0001): existing behavior is verified", (value) => expect(value).toBe(1));',
+        "",
+      ].join("\n"),
+    });
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(issues.filter((entry) => entry.code === "QFAI-TRACE-001")).toEqual([]);
+  });
+
+  it("accepts a Vitest command filtered to the row's TDD ID", async () => {
+    await proofFixture({ tddId: "TDD-0107" });
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(issues.filter((entry) => entry.code === "QFAI-TRACE-001")).toEqual([]);
+  });
+
+  it("does not borrow an earlier round's manifest and GREEN review for the final RED hash", async () => {
+    await proofFixture();
+    const evidencePath = path.join(root, ".qfai", "evidence", "atdd-spec-0099.md");
+    const prior = await readFile(evidencePath, "utf-8");
+    const currentHash = /Round 1: RED test hash: ([a-f0-9]{64})/.exec(prior)?.[1];
+    expect(currentHash).toBeDefined();
+    const stalePrior = prior.replace(
+      `Round 1: RED test hash: ${currentHash}`,
+      `Round 1: RED test hash: ${"b".repeat(64)}`,
+    );
+    await writeFile(
+      evidencePath,
+      `${stalePrior}\n- Round 2: RED test hash: ${currentHash}\n`,
+      "utf-8",
+    );
+
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(
+      issues.some((entry) => entry.code === "QFAI-TRACE-001" && entry.severity === "error"),
+    ).toBe(true);
+  });
+
+  it.each([
+    { name: "missing proof", proof: "-" },
+    { name: "stale source hash", restoredHash: "b".repeat(64) },
+    { name: "stale test hash", redHash: "b".repeat(64) },
+    { name: "different implementation", satisfiedBy: "src/second.ts::value" },
+    { name: "failed GREEN", green: "exit 1; Tests 1 failed" },
+    { name: "failed QA", qa: "FAIL" },
+    { name: "wrong test case", tc: "TC-0099-0002" },
+    { name: "wrong selector", selector: "different test" },
+  ])("rejects $name for an unchanged implementation", async (overrides) => {
+    await proofFixture(overrides);
+    const issues = await validateTraceabilityIntegrity(root, stubConfig);
+    expect(
+      issues.some((entry) => entry.code === "QFAI-TRACE-001" && entry.severity === "error"),
+    ).toBe(true);
   });
 });

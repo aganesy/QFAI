@@ -74,14 +74,16 @@ async function makeSpec(specId: string, body: string): Promise<string> {
 describe("spec-0013 active-pack resolver CHG-006", () => {
   it("QFAI:SPEC-0013:TC-0013-0028 — normal: the single helper returns the pack named in state.json#discussion.currentId", async () => {
     const expected = await makeDiscussionPack("discussion-20260527075558258");
+    await makeDiscussionPack("discussion-20260528075558258");
     await writeDiscussionCurrentId(root, "discussion-20260527075558258");
     const resolved = await resolveActiveDiscussionPack(root);
     expect(resolved).toBe(expected);
   });
 
-  it("QFAI:SPEC-0013:TC-0013-0029 — error: absent/missing currentId raises a recovery error naming candidate dirs and 'qfai discussion use <id>'", async () => {
+  it("QFAI:SPEC-0013:TC-0013-0029 — a dangling currentId names candidate packs and the recovery command", async () => {
     await makeDiscussionPack("discussion-20260101000000000");
     await makeDiscussionPack("discussion-20260202000000000");
+    await writeDiscussionCurrentId(root, "discussion-20260303000000000");
     await expect(resolveActiveDiscussionPack(root)).rejects.toBeInstanceOf(
       ResolveActiveDiscussionPackError,
     );
@@ -92,6 +94,23 @@ describe("spec-0013 active-pack resolver CHG-006", () => {
       expect(message).toMatch(/discussion-20260101000000000/);
       expect(message).toMatch(/discussion-20260202000000000/);
       expect(message).toMatch(/qfai discussion use <id>/);
+    }
+  });
+
+  it("QFAI:SPEC-0013:TC-0013-0029 — an absent currentId names candidate packs and the recovery command", async () => {
+    await makeDiscussionPack("discussion-20260101000000000");
+    await makeDiscussionPack("discussion-20260202000000000");
+
+    await expect(resolveActiveDiscussionPack(root)).rejects.toMatchObject({
+      reason: "unset",
+      message: expect.stringContaining("qfai discussion use <id>"),
+    });
+    try {
+      await resolveActiveDiscussionPack(root);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      expect(message).toContain("discussion-20260101000000000");
+      expect(message).toContain("discussion-20260202000000000");
     }
   });
 });

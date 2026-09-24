@@ -1599,6 +1599,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "qfai.config.yaml sets no key that has been retired. A retired key is still parsed so an existing config keeps loading, but nothing reads it, so leaving it in place misreports the gate the tool actually runs.",
   "QFAI-SCOPE-001": "Every `--spec` value resolves to a 1-4 digit spec number.",
   "QFAI-SCOPE-002": "Every `--spec` value names a spec directory that exists.",
+  "QFAI-TRACE-002":
+    "A layered spec may omit its optional traceability ledger. If present, the ledger is a readable regular Markdown file whose first table has at least three columns, including `Implementation File`.",
+  "QFAI-TRACE-003":
+    "The configured base and merge-base resolve, and changed layered specs and their BR/AC can be inspected against that history. An intentionally removed spec is identified for review.",
   E_SPEC_MISSING_FILESET: "Spec Pack required files (01..18) are complete.",
   E_LEDGER_MISSING_COLUMN:
     "Traceability Ledger has all required columns: trace_id,obj_id,init_id,cap_id,flow_id,us_id,ac_id,ex_ids,tc_ids.",
@@ -2031,6 +2035,10 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // codes whose `issue(...)` sites carry no `suggested_action` of their own.
   "QFAI-CFG-001":
     "Delete the named key from qfai.config.yaml. It changes no behaviour, so removing it is not a settings change — every validator already runs as if it were absent.",
+  "QFAI-TRACE-002":
+    "An omitted optional ledger needs no action. If the spec has opted in, replace a non-file or unreadable ledger with a readable Markdown file shaped like the shipped 16_Traceability-ledger.md template.",
+  "QFAI-TRACE-003":
+    "Fetch the configured base ref or set the top-level `baseBranch` key, correct `paths.specsDir` if it points away from the specs, and restore unreadable BR/AC files. For an intentionally removed spec, review its former implementation links; otherwise restore its layered files.",
   "QFAI-BPAP-001":
     "Restore read access to the file, or delete it if it is no longer part of the rule set.",
   "QFAI-BPAP-002": "Correct the YAML syntax the parse error points at, then rerun validate.",
