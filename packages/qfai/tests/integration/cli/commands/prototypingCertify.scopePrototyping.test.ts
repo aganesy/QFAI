@@ -26,6 +26,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runPrototypingCertify } from "../../../../src/cli/commands/prototypingCertify.js";
 import { hashDesignMd } from "../../../../src/core/design/designMd.js";
+import { CERTIFY_UI_CONTRACT, seedCertifyUiEvidence } from "./certifyUiFixture.js";
 
 const CERT_DESIGN_MD = [
   "---",
@@ -114,6 +115,7 @@ async function seedHappyPath(root: string, verifyJson: object): Promise<void> {
   const iter00 = path.join(root, ".qfai/evidence/prototyping/iter-00");
   await mkdir(iter00, { recursive: true });
   await writeFile(path.join(iter00, "index.html"), CLEAN_FINAL_HTML, "utf-8");
+  await seedCertifyUiEvidence(root, iter00);
   await mkdir(path.join(root, ".qfai/output"), { recursive: true });
   await mkdir(path.join(root, ".qfai/report"), { recursive: true });
   const validateBody = JSON.stringify({
@@ -128,7 +130,8 @@ async function seedHappyPath(root: string, verifyJson: object): Promise<void> {
     surface: "web",
     runId: "run-scope-prototyping",
     designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-    specsCovered: ["0012"],
+    uiContractsCovered: [CERTIFY_UI_CONTRACT],
+    frozenSurfaceUnion: [CERTIFY_UI_CONTRACT],
     reviewerGate: {
       result: "PASS",
       signoff: { reviewerId: "test-reviewer", timestamp: "2026-05-26T00:00:00Z" },
