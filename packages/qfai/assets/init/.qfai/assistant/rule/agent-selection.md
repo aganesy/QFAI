@@ -21,9 +21,7 @@ does not own copies of these default files.
 
 A local installation of QFAI is required in an adopting project. If it is
 unavailable, stop and ask for a local install with `npm install -D qfai`.
-In the QFAI source repository, read the files directly from
-`packages/qfai/assets/defaults/`; that repository must not depend on its own
-package. Do not infer routing from a skill body or continue without the defaults.
+Do not infer routing from a skill body or continue without the defaults.
 
 ## Selection
 

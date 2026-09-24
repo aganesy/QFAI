@@ -4,7 +4,7 @@ x-qfai-depends-on: []
 x-qfai-rules:
   - id: BR-0001
     statement: A valid order draft request creates one draft.
-    examples: [EX-0001-0001-01]
+    examples: [EX-NNNN-NNNN-NN]
 openapi: "3.1.0"
 info:
   title: Sample Orders API

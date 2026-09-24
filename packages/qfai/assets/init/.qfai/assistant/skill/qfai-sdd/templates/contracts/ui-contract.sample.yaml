@@ -4,7 +4,7 @@ x-qfai-depends-on: []
 x-qfai-rules:
   - id: BR-0003
     statement: Submitting an invalid order displays a field-level error.
-    examples: [EX-0001-0001-03]
+    examples: [EX-NNNN-NNNN-NN]
 prototype:
   mode: interactive
   mockPaths:
