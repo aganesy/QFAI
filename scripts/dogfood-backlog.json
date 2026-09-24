@@ -19,8 +19,7 @@
     },
     "sdd": {
       ".qfai/specs/spec-0002/tdd/test-list.md": 1,
-      ".qfai/specs/spec-0010/tdd/test-list.md": 1,
-      ".qfai/specs/spec-0012/tdd/test-list.md": 8
+      ".qfai/specs/spec-0010/tdd/test-list.md": 1
     },
     "full": {
       ".qfai/assistant/catalog/manifest.md": 1,

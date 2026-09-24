@@ -9,7 +9,7 @@
 - Approved by: `user` — explicit Option 1 selection relayed by the orchestrator
 - Approved at: `2026-09-24T21:19:12Z` (recorded at; reply timestamp unavailable)
 - Approved option: `1 — reconcile active boundaries and retire orphaned rows`
-- Applied at: `-`
+- Applied at: `2026-09-24T23:35:15Z`
 - Superseded by: `-`
 
 ## Context
@@ -312,3 +312,38 @@ that removing former `TC-0012-0321` from active `06_Test-Cases.md` and
 retaining its old wording, superseded status and `TC-0012-0357` successor in
 `09_delta.md` mechanically realizes Option 1's `TDD-0365` retirement. The owner
 rerun is in progress.
+
+The owner rerun then completed actions 1, 3 and 5. `TC-0012-0334` and the
+superseded `TC-0012-0321` left active `06_Test-Cases.md`; their wording is kept
+in `09_delta.md`. `TC-0012-0325` stays declared as superseded. `TDD-0336`,
+`TDD-0337` and `TDD-0338` were re-scoped to `TC-0012-0329`, `TC-0012-0323`
+and `TC-0012-0326`. `TDD-0567` (`TC-0012-0324`) and `TDD-0568`
+(`TC-0012-0335`, now `L3`) were seeded as `todo` Integration rows. The six
+rows in action 3 were retired with tombstones in `tdd/test-list.md`. The
+`certificate.test.ts` test `writes to canonical path and load returns the same
+object` was deleted; every other test in that file is kept. The two removed
+cases were struck from the integration annotation carrier. The retired rows
+were struck from the carrier-only test backlog.
+
+Action 2, the `/qfai-implement` preflight, reset exactly `TDD-0336`,
+`TDD-0337` and `TDD-0338` from `done` to `todo` and appended this request to
+each row's `DR-ID`. Each Evidence cell now cites this request. The former
+`TC-Refs`, selector, status and verbatim Evidence of each row are kept as
+withdrawn history in `.qfai/evidence/implement-spec-0012.md`. No other row was
+reset. The reset rows and the seeded `TDD-0567` point at tests that already
+exist, so they were added to the open-but-tested backlog until their
+re-execution reaches `done`.
+
+Action 4 corrected the `TDD-0364` fixture in `iteration.test.ts` to
+`lap-007-state-not-represented`. `TDD-0364` stays `done`. Its selector passed
+once regex-escaped; unescaped, the parentheses match no test. The test fix,
+both file hashes and the shared-artifact re-verification of every other
+`done` row in that file are recorded in the same evidence file. Independent
+review of the test fix is still owed, as are the `Oracle proof` re-takes and
+reviewer verdicts for the re-verified rows.
+
+`Applied at` records the completed owner rerun and ledger sweep. Two later
+stage runs remain: `/qfai-atdd spec-0012` writes the `TDD-0567` and
+`TDD-0568` Integration tests, and `TDD-0568` needs the real handoff writer or
+a faithful workflow harness. `/qfai-implement spec-0012` re-executes the three
+reset rows.

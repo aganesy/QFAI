@@ -297,3 +297,85 @@ Branch `feature/v1.8.10` is pinned. Per CLAUDE.md version-discipline ("On a pinn
 - Wave 1 deferred Playwright TCs (TDD-0401/0402): when is live Playwright integration scheduled?
 - TDD-0384 per-spec iter layout migration: is this its own spec-0012 follow-on Change Request, or rolled into a different spec?
 - Should the legacy `resolvePrimaryPrototypingSpec` be physically removed in v1.8.11, or left as deprecated for one more release cycle?
+
+---
+
+# CR-20260925-0005 preflight and TDD-0364 test fix (2026-09-24 UTC)
+
+## CR-20260925-0005 preflight
+
+The approved Option 1 of `CR-20260925-0005` names exactly three rows for reset:
+`TDD-0336`, `TDD-0337` and `TDD-0338`. The owner rerun re-scoped each row to one
+case. Each row moved `done -> todo`, with `CR-20260925-0005` appended to its
+`DR-ID`. No other row was reset.
+
+### Withdrawn history
+
+The completed cycles below were recorded against the multi-case rows before the
+re-scope. They no longer describe the rows' obligations. No per-row RED/GREEN
+entry for these rows exists in this file; the ledger cells were the whole
+record.
+
+| Row        | Former TC-Refs                                                 | Former selector                                                                                                                                                                                 | Former Status and DR-ID | Former Evidence (verbatim)                                                            | Re-scoped to   |
+| ---------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------- | -------------- |
+| `TDD-0336` | `TC-0012-0319`, `TC-0012-0320`, `TC-0012-0321`, `TC-0012-0329` | `["returns converged when all three arrays are empty","returns null when layoutAntiPatternsDetected is non-empty (other conditions met)","returns null when designMdViolations is non-empty (other conditions met)"]` | `done`, `DR-0012-0014`  | `shouldStop axes-exceptional / lap-cap / max-iterations / designMdViolations-blocked` | `TC-0012-0329` |
+| `TDD-0337` | `TC-0012-0322`, `TC-0012-0323`, `TC-0012-0324`, `TC-0012-0325` | `TC-0012-0322`                                                                                                                                                                                  | `done`, `DR-0012-0016`  | `iterate --cycle exit codes (0 / 2 / 64 / 65)`                                        | `TC-0012-0323` |
+| `TDD-0338` | `TC-0012-0326`, `TC-0012-0327`                                 | `exits 2 with stderr matching`                                                                                                                                                                  | `done`, `DR-0012-0024`  | `designMdSha256 record / hash mismatch exit 2`                                        | `TC-0012-0326` |
+
+The former cells are descriptive and carry no evidence anchor, so they neither
+prove nor disprove the old runs. The "Cascade ledger entries" note under the
+cycle-budget session above records that `TDD-0336` to `TDD-0338` kept their
+old evidence strings after an in-place literal update. None of this history
+counts toward the re-scoped obligations; each row owes a fresh cycle.
+
+## TDD-0364
+
+### test_fix — 2026-09-24
+
+- Kind: D14 `test_fix` under approved action 4 of `CR-20260925-0005`. The row
+  keeps `Status = done`, its `TC-Refs` and its obligation.
+- Change: in `packages/qfai/tests/core/prototyping/iteration.test.ts`, the
+  `TC-0012-0320` test's `layoutAntiPatternsDetected` fixture changed from
+  `["lap-008-no-back-affordance"]` to `["lap-007-state-not-represented"]`, the
+  value `TC-0012-0320` declares. No other test in the file changed.
+- File SHA-256 before:
+  `b2bb44a2d271037f3e4ba9ddfb836e179e8c753c814ea1d65cb9f69ec07b1c5d`
+  (as committed at `7a4e9aa5666b54c1be037f03f3b38e023a0cf640`).
+- File SHA-256 after:
+  `c8b878e8976c0029e67afb737f57e652571c64b9f4aa605b3a641c28bf97cc23`.
+- Tree: base commit `981189c90fe49606bd10743548eebb0927baa9f4` plus uncommitted
+  edits. A formal revision is taken when the change is committed.
+- Command, as the ledger writes the selector:
+  `cd packages/qfai && npx vitest run tests/core/prototyping/iteration.test.ts -t "returns null when layoutAntiPatternsDetected is non-empty (other conditions met)"`
+  — `Tests 33 skipped (33)`. The `-t` value is a regular expression, so the
+  unescaped parentheses form a group and match no test name.
+- Command, parentheses escaped:
+  `cd packages/qfai && npx vitest run tests/core/prototyping/iteration.test.ts -t "returns null when layoutAntiPatternsDetected is non-empty \(other conditions met\)"`
+  — `Tests 1 passed | 32 skipped (33)`.
+- Owed: independent review of this change. Whether the changed fixture value
+  owes fresh falsifiability evidence is for that review to decide.
+
+## Shared-artifact re-verify
+
+The test fix above changed `iteration.test.ts`. Each line below is a `done`
+row naming that file, with its selector re-run once against the changed file
+(SHA-256 `c8b878e8…cc23`). Only the selector was re-run. Each row still owes the
+`Oracle proof` re-take and fresh verdicts from its required reviewers. The whole
+per-spec set was not re-run.
+
+- `spec-0012/TDD-0364` — the selector re-run above: `Tests 1 passed | 32 skipped (33)`.
+- `spec-0012/TDD-0348` — `-t "TC-0012-0339"`: `Tests 33 skipped (33)`. The selector names no test; the case is annotated only in the integration annotation carrier.
+- `spec-0012/TDD-0349` — `-t "TC-0012-0340"`: `Tests 33 skipped (33)`. Same as `TDD-0348`.
+- `spec-0012/TDD-0350` — `-t "isPivotDirective accepts the 3 levels"`: `Tests 1 passed | 32 skipped (33)`; `-t "isPivotDirective rejects other values"`: `Tests 1 passed | 32 skipped (33)`.
+- `spec-0012/TDD-0351` — `-t "TC-0012-0342"`: `Tests 33 skipped (33)`. Same as `TDD-0348`.
+- `spec-0012/TDD-0359` — `-t "TC-0012-0350"`: `Tests 33 skipped (33)`. Same as `TDD-0348`.
+- `spec-0012/TDD-0363` — `-t "returns converged when all three arrays are empty"`: `Tests 1 passed | 32 skipped (33)`.
+- `spec-0012/TDD-0371` — `-t "TC-0012-0359"`: `Tests 1 passed | 32 skipped (33)`.
+- `spec-0012/TDD-0372` — `-t "TC-0012-0357"`: `Tests 1 passed | 32 skipped (33)`.
+- `spec-0012/TDD-0375` — `-t "TC-0012-0369"`: `Tests 1 passed | 32 skipped (33)`.
+- `spec-0012/TDD-0376` — `-t "TC-0012-0367"`: `Tests 2 passed | 31 skipped (33)`.
+- `spec-0012/TDD-0377` — `-t "TC-0012-0368"`: `Tests 1 passed | 32 skipped (33)`.
+
+Rows outside this block: `TDD-0336` is `todo` after the reset and `TDD-0347` is
+`exception`, so neither owes a re-verify. `TDD-0339`, `TDD-0366`, `TDD-0367` and
+`TDD-0373` name other test files, which this change did not edit.

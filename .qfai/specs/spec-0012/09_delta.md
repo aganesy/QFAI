@@ -465,11 +465,11 @@ D4 named seven specs for Change Requests, and this spec is not one of them. The 
 
 ## Change Requests
 
-| CR ID            | Upstream artifact                                                                         | Mode      | Approved by | Applied at                       |
-| ---------------- | ----------------------------------------------------------------------------------------- | --------- | ----------- | -------------------------------- |
-| CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                    | re-derive | user        | 2026-09-24T18:26:35Z             |
-| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`    | re-derive | user        | 2026-09-24T19:00:08Z             |
-| CR-20260925-0005 | `.qfai/specs/spec-0012/06_Test-Cases.md`; `tdd/test-list.md`; `16_Traceability-ledger.md` | re-derive | user        | pending implementation preflight |
+| CR ID            | Upstream artifact                                                                         | Mode      | Approved by | Applied at           |
+| ---------------- | ----------------------------------------------------------------------------------------- | --------- | ----------- | -------------------- |
+| CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                    | re-derive | user        | 2026-09-24T18:26:35Z |
+| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`    | re-derive | user        | 2026-09-24T19:00:08Z |
+| CR-20260925-0005 | `.qfai/specs/spec-0012/06_Test-Cases.md`; `tdd/test-list.md`; `16_Traceability-ledger.md` | re-derive | user        | 2026-09-24T23:35:15Z |
 
 ## 2026-09-25 — Ledger boundary reconciliation
 
@@ -479,7 +479,7 @@ requests. The former `TC-0012-0334` declared `EX-0012-0110` and
 `AC-0012-0033`: “Verify completion certificate v2.0 round-trip: parse →
 serialize yields byte-equivalent output for the v2.0 schema.” Its criterion and
 example are superseded, so the case is removed from active coverage. The
-certificate save/load selector remains a downstream test-deletion action.
+certificate save/load test was deleted; every other certificate test is kept.
 
 The former `TC-0012-0321` was already marked `Status: superseded — replaced
 by TC-0012-0357` for the index-9 terminator. It cited `EX-0012-0110`,
