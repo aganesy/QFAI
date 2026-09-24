@@ -54,14 +54,12 @@ export type TraceabilityGraph = {
  * intent: it was empty precisely when the spec pack was healthy, and populated only with IDs that
  * failed.
  *
- * Every layered style `collectSpecEntries` recognises is walked, because restricting this to the
- * v1416 style `validateTraceability` gates would leave the artifact empty for every spec written
- * in the current v1421 layout. The layer vocabulary differs per style — v1416 links
+ * Every layered style `collectSpecEntries` recognises is walked. The layer vocabulary differs
+ * per style — v1416 links
  * `US -> AC -> BR -> SC -> CASE`, v1417/v1421 link `US -> AC -> BR -> EX -> TC` — so the edge
  * types differ too; the node/edge shape does not.
  *
- * Emits no issues; parse problems are reported by `validateTraceability` and
- * `validateLayerCoverage` on the same inputs.
+ * Emits no issues. It only builds the graph for the run artifact.
  */
 export async function buildLayeredTraceabilityGraph(
   root: string,
@@ -179,7 +177,7 @@ function createGraphBuilder(root: string): GraphBuilder {
 
 /** v1416: markdown tables, `SC`/`CASE` layer names, composite `XX-nnnn-nnnn` IDs. */
 async function addV1416Entry(builder: SpecScopedBuilder, entry: SpecEntry): Promise<void> {
-  // Parse findings are the business of validateTraceability, which walks the same files.
+  // The graph contains only the edges parsed from each file.
   const discarded: Issue[] = [];
   const data = await collectLayeredEdgeData(entry, discarded);
   builder.addNodes(data.usIds, "US", entry.userStoriesPath);
