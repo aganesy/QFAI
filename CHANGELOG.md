@@ -61,8 +61,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   hash on whichever checkout runs it, and every permission bit but the execute
   bits follows that checkout's umask. The skill now names the three values,
   says any execute bit selects `100755`, and says to read the mode from the
-  file on disk rather than from git's index. The revision manifest keeps its
-  own four digits.
+  file on disk rather than from git's index. It also says the execute bit does
+  not cross between Windows and POSIX, so a manifest naming an executable file
+  is hashed on the kind of system that recomputes it. The revision manifest
+  keeps its own four digits.
 
 ## [1.12.3] - 2026-09-24
 

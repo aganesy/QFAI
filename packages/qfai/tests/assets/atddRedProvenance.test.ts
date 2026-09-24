@@ -2011,6 +2011,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       "**`mode` is six digits spelled like git's tree mode, not the revision manifest's four octal digits**: `120000` for a symlink, `100755` for a file with any bit of `0111` set, and `100644` for any other file.",
     );
     expect(provenance).toContain("Read it from the file on disk, not from `git ls-files -s`");
+    // Windows has no execute bit, so the one bit the record keeps does not
+    // travel between Windows and POSIX checkouts.
+    expect(provenance).toContain("**The execute bit does not cross between Windows and POSIX.**");
     expect(provenance).not.toContain("the same shape the revision manifest uses");
   });
 
