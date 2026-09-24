@@ -143,6 +143,29 @@ describe("BF-0001 story-directory examples", () => {
 });
 
 describe("BF-0001 ID examples", () => {
+  it("accepts one declaration of every story-tree ID shape", () => {
+    // QFAI:EX-0001-0008-01
+    const contents = files();
+    contents.set(`${spec}/decisions.md`, table(["| DEC-0001 | Accepted choice | Reason | DONE |"]));
+    contents.set(
+      `${spec}/open-questions.md`,
+      table(["| OQ-0001 | Resolved question | Answer | DONE |"]),
+    );
+    const model = buildStoryTreeModel(contents);
+    expect(model.declarations.map((entry) => entry.id)).toEqual([
+      "AC-0001-0001-01",
+      "BF-0001",
+      "BR-0001",
+      "DEC-0001",
+      "EX-0001-0001-01",
+      "OQ-0001",
+      "US-0001-0001",
+    ]);
+    expect(
+      validateStoryTreeStructureModel(model).filter((entry) => entry.code === "QFAI-STORY-002"),
+    ).toEqual([]);
+  });
+
   it("allocates the next story ID after a gap without reusing the gap", () => {
     // QFAI:EX-0001-0008-07
     expect(nextId("US", ["US-0001-0001", "US-0001-0003"], "BF-0001")).toBe("US-0001-0004");

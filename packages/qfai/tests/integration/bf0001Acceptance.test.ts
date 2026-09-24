@@ -51,6 +51,7 @@ afterEach(async () => {
 describe("BF-0001 story-tree acceptance", () => {
   // QFAI:AC-0001-0005-01
   it("seeds both project tables and the policy, flow and contract roots at configured defaults", async () => {
+    // QFAI:EX-0001-0005-01
     const root = await sandbox();
     await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
 
