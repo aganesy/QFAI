@@ -228,7 +228,7 @@ export type ScaffoldDialectResolution =
  * function of the id's shape, so the probe decides for every id a glob without
  * a brace range admits.
  */
-const PROBE_ID = "AC-0000-0000-01";
+const PROBE_ID = "AC-0001-0001-01";
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
