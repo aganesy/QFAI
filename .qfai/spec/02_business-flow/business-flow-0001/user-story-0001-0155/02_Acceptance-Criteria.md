@@ -15,9 +15,9 @@ Scenario: Validate Gate error=0
 # AC-0001-0155-02
 # Parent: US-0001-0155
 Scenario: Validate Pipeline Validator Registration Integrity
-  Given a traceability validator declared in `packages/qfai/src/core/validators/`
+  Given the current story-tree structure, contract-reference, test-obligation, coverage-depth and drift validators
   When the validate pipeline (`packages/qfai/src/core/validate.ts`) is loaded
-  Then the validator's registration MUST hold end-to-end as a single registration-integrity outcome. Partial wiring (one half present, the other missing) is treated as a single failure mode at AC granularity, not as 2 independent facets — internal decomposition of the registration contract (export presence under canonical name, import + invocation in `validate.ts`) is intentionally kept at the lower (rule) layer rather than at AC layer, so the AC stays outside the compound-AC facet-level gap class.
+  Then each validator's public export and direct pipeline registration hold as one complete outcome, including invocation in its owning profile.
 
 # AC-0001-0155-03
 # Parent: US-0001-0155

@@ -25,6 +25,11 @@ async function storyRoot(): Promise<string> {
     await writeFile(path.join(dir, "business-flow.md"), `# BF-${id}: Flow ${id}\n`, "utf8");
   }
   await writeFile(
+    path.join(specs, "02_business-flow", "business-flows.md"),
+    "| BF-ID | Title |\n| --- | --- |\n| BF-0001 | Flow 0001 |\n| BF-0002 | Flow 0002 |\n",
+    "utf8",
+  );
+  await writeFile(
     path.join(root, "qfai.config.yaml"),
     "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     "utf8",
@@ -59,6 +64,7 @@ describe("story-tree CLI flow scope", () => {
   });
 
   it("TC-0004-0112: refuses --spec on a story tree", async () => {
+    // QFAI:EX-0001-0097-05
     const root = await storyRoot();
     const parsed = parseArgs(["validate", "--spec", "0001"], root);
     expect(parsed.invalid).toBe(true);

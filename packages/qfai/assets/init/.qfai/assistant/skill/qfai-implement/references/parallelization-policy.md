@@ -8,6 +8,8 @@ Process one open EX at a time in ascending ID order within the selected BF flow.
 
 For each candidate item, name its production files, test files, contracts, fixtures, schema or database objects, and shared resources such as ports. Disjoint filenames alone are insufficient: compare read and write sets, imports, shared fixtures, persistence, generated assets, and external process state. If any dependency is uncertain, use serial execution.
 
+Deny parallel dispatch when two items write the same shared fixture or mock file, or mutate the same fixture instance. A shared fixture module that both items only read as-is does not by itself deny parallel dispatch.
+
 Give each worker a separate worktree and an exact file ownership list. Workers do not change another worker's files or the story tree. The orchestrator integrates their results and resolves every overlap before judging either item complete.
 
 ## Integration gate

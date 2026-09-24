@@ -4,7 +4,10 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { validateProject } from "../../src/core/validate.js";
+
 const here = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(here, "..", "..", "..", "..");
 const skillRoot = path.resolve(
   here,
   "..",
@@ -81,6 +84,30 @@ describe("shipped qfai-sdd story-tree contract", () => {
     expect(content).toContain(".qfai/evidence/sdd-BF-NNNN.md");
     expect(content).toContain("templates/evidence/sdd-flow.md");
     expect(content).toContain("routed blocking reviewer cycle");
+  });
+
+  it("gates each changed flow separately without inheriting a sibling worker's findings", async () => {
+    // QFAI:EX-0001-0155-02
+    const content = await skill();
+    expect(content).toContain("for each BF written or changed");
+    expect(content).toContain(
+      "A worker's flow gate does not include a sibling flow still being edited",
+    );
+    expect(content).toContain("npx qfai validate --profile sdd --fail-on error --flow BF-NNNN");
+    expect(content).not.toMatch(/--spec\b/);
+  });
+
+  it("runs the current BF-0001 SDD validators without error findings", async () => {
+    // QFAI:EX-0001-0155-03
+    const content = await skill();
+    expect(content).toContain("npx qfai validate --profile sdd --fail-on error --flow BF-NNNN");
+    const result = await validateProject(repoRoot, undefined, {
+      profile: "sdd",
+      flowIds: ["BF-0001"],
+    });
+    expect(result.profile).toBe("sdd");
+    expect(result.profileValidatorsRan).toBe(true);
+    expect(result.counts.error).toBe(0);
   });
 
   it("does not carry the retired layout or gate", async () => {

@@ -100,6 +100,7 @@ describe("story-tree layout dispatch", () => {
   });
 
   it("keeps only the named flow's finding under --flow", async () => {
+    // QFAI:EX-0001-0155-02
     for (const number of ["0001", "0002"]) {
       await put(
         `${specs}/02_business-flow/business-flow-${number}/business-flow.md`,

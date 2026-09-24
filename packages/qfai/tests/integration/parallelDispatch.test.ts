@@ -29,6 +29,18 @@ describe("parallel EX dispatch and integration", () => {
     expect(policy).toMatch(/If any dependency is uncertain, use serial execution/);
   });
 
+  it("denies concurrent fixture writes while allowing a shared read-only fixture", async () => {
+    // QFAI:EX-0001-0096-01
+    const policy = await readFile(policyPath, "utf-8");
+    expect(policy).toContain(
+      "Deny parallel dispatch when two items write the same shared fixture or mock file",
+    );
+    expect(policy).toContain("or mutate the same fixture instance");
+    expect(policy).toContain(
+      "A shared fixture module that both items only read as-is does not by itself deny parallel dispatch",
+    );
+  });
+
   it("separates worktrees, gives exact ownership, and integrates before completion", async () => {
     const policy = await readFile(policyPath, "utf-8");
     expect(policy).toMatch(/Give each worker a separate worktree and an exact file ownership list/);
