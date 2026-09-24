@@ -25,14 +25,9 @@ describe("excess vocabulary covers code and product surface without adding tags"
 
   it.each(
     ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>
-      [
-        "architecture-reviewer",
-        "completion-reviewer",
-        "implementation-reviewer",
-        "product-surface-reviewer",
-        "qa-gatekeeper",
-        "requirements-reviewer",
-      ].map((role) => ({ tree, role })),
+      ["architecture-reviewer", "product-surface-reviewer", "requirements-reviewer"].map(
+        (role) => ({ tree, role }),
+      ),
     ),
   )("$tree/$role ships the same vocabulary and product scope", async ({ tree, role }) => {
     const text = await readFile(path.join(ROOT, tree, "assistant/agent", `${role}.md`), "utf-8");
@@ -56,6 +51,30 @@ describe("excess vocabulary covers code and product surface without adding tags"
     expect(excess).toContain("Otherwise report unsupported Article VII excess as advisory");
     expect(text).not.toMatch(/^- Apply .*tag excess/m);
   });
+
+  it.each(
+    ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>
+      ["completion-reviewer", "implementation-reviewer", "qa-gatekeeper"].map((role) => ({
+        tree,
+        role,
+      })),
+    ),
+  )(
+    "$tree/$role keeps excess findings concrete without weakening obligations",
+    async ({ tree, role }) => {
+      const text = await readFile(path.join(ROOT, tree, "assistant/agent", `${role}.md`), "utf-8");
+      if (role === "qa-gatekeeper") {
+        expect(text).toContain("`defect:code-quality`");
+        expect(text).toContain("what replaces it");
+        expect(text).toContain("Do not weaken an active obligation");
+      } else {
+        expect(text).toContain(".agents/rules/minimal-implementation.md");
+        expect(text).toContain(
+          "The finding would add a product obligation upstream never asked for.",
+        );
+      }
+    },
+  );
 });
 
 describe("the implementation reviewer flags dropped promises, not uncaught propagation", () => {
@@ -66,18 +85,13 @@ describe("the implementation reviewer flags dropped promises, not uncaught propa
         path.join(ROOT, tree, "assistant/agent/implementation-reviewer.md"),
         "utf-8",
       );
-      expect(card.replace(/\s+/g, " ")).toContain("a promise that is neither awaited nor returned");
+      expect(card.replace(/\s+/g, " ")).toContain("promises that callers neither await nor return");
       expect(card).not.toContain("unhandled async paths");
-      const classification = await readFile(
-        path.join(
-          ROOT,
-          tree,
-          "assistant/skill/qfai-implement/references/finding-classification.md",
-        ),
+      const rule = await readFile(
+        path.join(ROOT, ".agents/rules/minimal-implementation.md"),
         "utf-8",
       );
-      expect(classification).toContain("defect:correctness");
-      expect(classification).toContain("unhandled rejection");
+      expect(rule).toContain("A dropped rejection remains a correctness defect");
     },
   );
 });
@@ -93,7 +107,7 @@ describe("reviewer stop conditions distinguish named-rule defects from new produ
     expect(stop).toBeDefined();
     expect(stop).toContain("The finding would add a product obligation upstream never asked for.");
     expect(stop).toContain("raise it as an advisory finding plus a Change Request proposal");
-    expect(stop).toContain("a regression against a named constitution or catalog rule");
+    expect(stop).toContain("a regression against a governing rule or contract");
     expect(stop).toContain("it stays blocking and traces to its `defect:*` class");
   });
 });
@@ -148,11 +162,11 @@ describe("the retained-failure test stays under the safety floor", () => {
     expect(flat).toContain(
       "Do not make the callback async and assume its ignored outer promise is consumed",
     );
-    expect(flat).toContain("<paths.specsDir>/spec-*/06_Test-Cases.md");
+    expect(flat).toContain("the owning story's `03_Example.md`");
     expect(flat).toContain("Resolve `paths.specsDir` from `qfai.config.yaml`");
     expect(flat).toContain("process entry point is a trust boundary");
     expect(flat).toContain("A dropped rejection remains a correctness defect");
-    expect(flat).toContain("06_Test-Cases.md");
+    expect(flat).toContain("a test that annotates its EX ID");
   });
 
   it("keeps the operating rule byte-identical to its shipped master", async () => {
@@ -658,7 +672,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     // places an agent is already reading when it is about to write the
     // sentence, which is where a rule it has not opened still reaches it.
     it.each([
-      "packages/qfai/assets/init/.qfai/assistant/catalog/cli-ux-guidelines.md",
+      "packages/qfai/assets/init/.qfai/assistant/rule/cli-ux-guidelines.md",
       "packages/qfai/assets/init/.qfai/assistant/agent/product-experience-architect.md",
       "packages/qfai/assets/init/.qfai/assistant/agent/frontend-engineer.md",
       "packages/qfai/assets/init/.qfai/assistant/agent/product-surface-reviewer.md",
