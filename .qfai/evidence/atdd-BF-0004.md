@@ -2,13 +2,13 @@
 
 ## Scope
 
-The story tree contains 12 stories, 30 criteria and 85 examples. The BF journey is [bf0004MigrationCutoverE2E.test.ts](../../packages/qfai/tests/e2e/bf0004MigrationCutoverE2E.test.ts). [bf0004Acceptance.test.ts](../../packages/qfai/tests/integration/bf0004Acceptance.test.ts) adds assertions for all 30 criteria. The matrix lists every ID and records static test candidates and gaps.
+The story tree contains 12 stories, 30 criteria and 85 examples. The BF journeys are [bf0004MigrationCutoverE2E.test.ts](../../packages/qfai/tests/e2e/bf0004MigrationCutoverE2E.test.ts) and [bf0004MigrationOutcomesE2E.test.ts](../../packages/qfai/tests/e2e/bf0004MigrationOutcomesE2E.test.ts). [bf0004Acceptance.test.ts](../../packages/qfai/tests/integration/bf0004Acceptance.test.ts) adds assertions for all 30 criteria. The matrix lists every ID and records static test candidates and gaps.
 
 ## Coverage Depth Matrix
 
 See [coverage-depth-BF-0004.md](coverage-depth-BF-0004.md).
 
-✅ 0 / ⚠️ 97 / ❌ 242 across 339 scored cells; 423 cells are not applicable.
+✅ 0 / ⚠️ 101 / ❌ 238 across 339 scored cells; 423 cells are not applicable.
 
 ## Execution and disposition
 
