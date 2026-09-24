@@ -375,6 +375,21 @@
     "tests/e2e/bf0001DevelopVerifyFlowE2E.test.ts",
     "tests/e2e/bf0002CiReleaseFlowE2E.test.ts",
     "tests/e2e/bf0003DoctorRepairFlowE2E.test.ts",
-    "tests/e2e/bf0004MigrationCutoverE2E.test.ts"
+    "tests/e2e/bf0004MigrationCutoverE2E.test.ts",
+    "tests/cli/commands/initStorySeedSecurity.test.ts",
+    "tests/fixtures/bf0004MigrationCutover/order.e2e.test.ts",
+    "tests/fixtures/bf0004MigrationCutover/order.integration.test.ts",
+    "tests/fixtures/migration-spec-to-story/old-layout/tests/e2e/order.test.ts",
+    "tests/fixtures/migration-spec-to-story/old-layout/tests/integration/order.test.ts",
+    "tests/integration/bf0001Acceptance.test.ts",
+    "tests/integration/bf0002Acceptance.test.ts",
+    "tests/integration/bf0003Acceptance.test.ts",
+    "tests/integration/bf0004Acceptance.test.ts",
+    "tests/unit/bf0001Examples.test.ts",
+    "tests/unit/bf0002Examples.test.ts",
+    "tests/unit/bf0003Examples.test.ts",
+    "tests/unit/bf0004Examples.test.ts",
+    "tests/unit/migration/specToStory/step02MergeTables.test.ts",
+    "tests/validators/freshStorySeed.test.ts"
   ]
 }
