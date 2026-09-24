@@ -678,7 +678,7 @@ describe("skill reference reachability", () => {
         root,
         ".qfai",
         "assistant",
-        "skills",
+        "skill",
         "demo-skill",
         "references",
       );
