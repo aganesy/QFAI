@@ -509,7 +509,7 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
 - Round 1: RED test hash: 373f531deb31d86e4304b1903e93dc096b4832f8102a0c2eb33521b43b7b8028
 - Round 1: RED test manifest: packages/qfai/tests/validators/reviewerRejectedReadopt.test.ts
 - Round 1: RED failure mode: falsifiability
-- Round 1: Falsifiability revision: working-tree+c489ffb5544a2d3615915a1f0ffcdc7a7f5b1ce55ae2082a295191e03511ea7c
+- Round 1: Falsifiability revision: working-tree+e7ae0726ffdb1e0424411df03027ddc85ab388f5b30dc64183e8d72ebbd60deb
 - Mutation: remove only `R-REJECTED-READOPT` from `ADVISORY_FAILING_CODES` in `reviewerJustification.ts`. This changes the owned predicate, not the test or fixture.
 - Round 1: Falsifiability command: `corepack pnpm -C packages/qfai exec vitest run tests/validators/reviewerRejectedReadopt.test.ts --reporter=dot`
 - Round 1: Falsifiability result: FAIL, exit 1, with this named selector and assertion output:
@@ -523,8 +523,8 @@ tests/validators/reviewerRejectedReadopt.test.ts:22:70
 Test Files 1 failed (1); Tests 1 failed (1)
 ```
 
-- Mutation restoration: the original source bytes were written back in `finally`. The address before mutation and after restoration was `working-tree+fe2b53535c307e46e43ee2488ed194ef5246993af65bf3b39ec0e09d8a8e8cb8` (`ADDRESS_EQUAL=True`).
-- Round 1: Revision: working-tree+fe2b53535c307e46e43ee2488ed194ef5246993af65bf3b39ec0e09d8a8e8cb8
+- Mutation restoration: the original source bytes were written back in `finally`. The address before mutation and after restoration was `working-tree+139a02682c2218f2acdbd06cb4cb1799ae85f0b7995226830784cec5c229afaa` (`ADDRESS_EQUAL=True`).
+- Round 1: Revision: working-tree+139a02682c2218f2acdbd06cb4cb1799ae85f0b7995226830784cec5c229afaa
 - Round 1: GREEN command: `corepack pnpm -C packages/qfai exec vitest run tests/validators/reviewerRejectedReadopt.test.ts --reporter=dot`
 - Round 1: GREEN result: PASS, exit 0 after restoration:
 
@@ -533,12 +533,26 @@ Test Files 1 failed (1); Tests 1 failed (1)
 Test Files 1 passed (1); Tests 1 passed (1)
 ```
 
-- qa-gatekeeper: PASS for Round 1 RED/falsifiability observation, restored GREEN and Oracle strength; independent instance `spec0003_qa_build` reviewed the named selector, test hash, mutation, assertion failure and restoration.
+- qa-gatekeeper: PASS x2 (independent instance `spec0003_qa_build`, Round 1 qa-gatekeeper#1 RED/falsifiability observation at `working-tree+e7ae0726ffdb1e0424411df03027ddc85ab388f5b30dc64183e8d72ebbd60deb`; Round 1 qa-gatekeeper#2 restored GREEN and Oracle strength at `working-tree+139a02682c2218f2acdbd06cb4cb1799ae85f0b7995226830784cec5c229afaa`). Both attempts reviewed the named selector, test hash, mutation, assertion failure and byte restoration; reviewed revision `working-tree+139a02682c2218f2acdbd06cb4cb1799ae85f0b7995226830784cec5c229afaa`.
 - Round 1: Oracle proof: `corepack pnpm -C packages/qfai exec vitest run tests/validators/reviewerRejectedReadopt.test.ts --reporter=dot` equals the GREEN command. With `R-REJECTED-READOPT` removed from `ADVISORY_FAILING_CODES`, the runner named `TC-0004-0018: rejects an empty R-REJECTED-READOPT justification`, reported `AssertionError: expected [] to deeply equal [ Array(1) ]` at line 22, and exited 1. After byte restoration, the same selector passed (1/1, exit 0).
 - Refactor: no production or test refactor was needed after the focused test.
 - Refactor verify command: `corepack pnpm check-types`; `corepack pnpm lint`; `corepack pnpm format:check`; `corepack pnpm -C packages/qfai exec vitest run tests/validators/reviewerRejectedReadopt.test.ts --reporter=dot`.
 - Refactor verify result: types and lint passed; the focused test passed. The full format check initially found the ledger row and passed after formatting it. The final full-suite checkpoint is the second CI run.
-- Refactor verify revision: working-tree+fe2b53535c307e46e43ee2488ed194ef5246993af65bf3b39ec0e09d8a8e8cb8
+- Refactor verify revision: working-tree+139a02682c2218f2acdbd06cb4cb1799ae85f0b7995226830784cec5c229afaa
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260924191914961 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 6745bb45b6893d5a16f20f97cd1c7a9bdc4638a8b55c26bebf029c8a0a3c82dc
+- Spec review: PASS
+- Spec reviewed revision: working-tree+139a02682c2218f2acdbd06cb4cb1799ae85f0b7995226830784cec5c229afaa
+- Spec audited evidence hash: fba48102d910e87c8da299c66f15b683ec47c56738a32c8877b281bc8429545b
+- Spec review pack: .qfai/review/review-20260924191914961 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 6745bb45b6893d5a16f20f97cd1c7a9bdc4638a8b55c26bebf029c8a0a3c82dc
+- Code quality review: PASS
+- Code quality reviewed revision: working-tree+139a02682c2218f2acdbd06cb4cb1799ae85f0b7995226830784cec5c229afaa
+- Code quality audited evidence hash: fba48102d910e87c8da299c66f15b683ec47c56738a32c8877b281bc8429545b
+- Code quality review pack: .qfai/review/review-20260924191914961 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 6745bb45b6893d5a16f20f97cd1c7a9bdc4638a8b55c26bebf029c8a0a3c82dc
+- Prototype parity reviewed revision: working-tree+139a02682c2218f2acdbd06cb4cb1799ae85f0b7995226830784cec5c229afaa
 - Prototype parity: n/a (the test is not UI-affecting).
 - Ledger write: `todo -> red -> green -> refactor` during this unit cycle; `done` awaits independent review and the second CI run.
 ## Test results summary
