@@ -9,6 +9,8 @@ import {
 
 describe("migration record status", () => {
   it("maps current, superseded and absent statuses", () => {
+    // QFAI:EX-0004-0005-03
+    // QFAI:EX-0004-0005-04
     expect([
       mapDecisionStatus("proposed"),
       mapDecisionStatus("accepted"),

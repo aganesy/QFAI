@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 import { defaultConfig } from "../../../../src/core/config.js";
 import { serializeIdMap } from "../../../../src/migration/specToStory/idMap.js";
@@ -86,6 +87,7 @@ function capture() {
 
 describe("migration steps 5 to 8", () => {
   it("uses heading-only legacy cases and keeps their detail in the new example", async () => {
+    // QFAI:EX-0004-0008-02
     const context = await fixture();
     await put(
       context.root,
@@ -97,7 +99,11 @@ describe("migration steps 5 to 8", () => {
       `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
       "# Examples\n",
     );
-    expect(await executePlannedStep(step05, context, false, capture().io)).toBe(0);
+    const report = capture();
+    expect(await executePlannedStep(step05, context, false, report.io)).toBe(0);
+    expect(report.output.join("")).toContain(
+      "## Cases to examples\n- TC-0001-0001 → EX-0001-0001-02\n",
+    );
     expect(await readFile(path.join(context.specsDir, story), "utf8")).toContain(
       "EX-0001-0001-02 | AC-0001-0001-01 | Submit order",
     );
@@ -124,6 +130,9 @@ describe("migration steps 5 to 8", () => {
   });
 
   it("converts every single-criterion case and accounts for each unconvertible case", async () => {
+    // QFAI:EX-0004-0008-01
+    // QFAI:EX-0004-0008-03
+    // QFAI:EX-0004-0008-04
     const context = await fixture();
     await put(
       context.root,
@@ -144,12 +153,24 @@ describe("migration steps 5 to 8", () => {
     const examples = await readFile(path.join(context.specsDir, story), "utf8");
     expect(examples).toContain("EX-0001-0001-02 | AC-0001-0001-01 | Submit order | Order accepted");
     expect(examples).toContain("EX-0001-0001-03 | AC-0001-0001-01 | Dangling EX | Review");
+    expect(examples).not.toContain("Missing AC");
+    expect(examples).not.toContain("Two ACs");
+    expect(
+      await readFile(
+        path.join(
+          context.root,
+          `.qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md`,
+        ),
+        "utf8",
+      ),
+    ).toContain("TC-0001-0003 | — | — | Missing AC | Review");
     const repeated = await step05.plan(context);
     expect(repeated.operations).toEqual([]);
     expect((repeated.casesToExamples?.length ?? 0) + (repeated.forAPerson?.length ?? 0)).toBe(4);
   });
 
   it("derives a mapped example's criterion from all citing cases", async () => {
+    // QFAI:EX-0004-0008-06
     const context = await fixture();
     await put(
       context.root,
@@ -163,6 +184,8 @@ describe("migration steps 5 to 8", () => {
   });
 
   it("writes a mapped rule into its existing YAML contract and leaves unresolved rules in their pack", async () => {
+    // QFAI:EX-0004-0009-01
+    // QFAI:EX-0004-0009-05
     const context = await fixture();
     await put(
       context.root,
@@ -182,13 +205,22 @@ describe("migration steps 5 to 8", () => {
     await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
     const c = capture();
     expect(await executePlannedStep(step07, context, false, c.io)).toBe(3);
-    expect(await readFile(path.join(context.contractsDir, "api/orders.yaml"), "utf8")).toContain(
-      "BR-0001",
-    );
+    expect(
+      parseYaml(await readFile(path.join(context.contractsDir, "api/orders.yaml"), "utf8")),
+    ).toMatchObject({
+      "x-qfai-rules": [
+        {
+          id: "BR-0001",
+          statement: "An order total is never negative.",
+          examples: ["EX-0001-0001-01"],
+        },
+      ],
+    });
     expect(
       await readFile(path.join(context.specsDir, spec, "04_Business-Rules.md"), "utf8"),
     ).toContain("BR-0001-0002");
     expect(c.output.join("")).toContain("BR-0001-0002");
+    expect(c.output.join("")).toContain("no contract placement in plan");
   });
 
   it("moves a heading rule to its contract and archives the original section", async () => {
@@ -225,6 +257,7 @@ describe("migration steps 5 to 8", () => {
   });
 
   it("writes SQL and Markdown rule forms with mapped example IDs", async () => {
+    // QFAI:EX-0004-0009-03
     const context = await fixture();
     await put(
       context.root,
@@ -269,6 +302,9 @@ describe("migration steps 5 to 8", () => {
     );
     expect(await readFile(path.join(context.contractsDir, "cli/orders.md"), "utf8")).toContain(
       "| BR-0002 | Markdown rule. | EX-0001-0001-01 |",
+    );
+    expect(await readFile(path.join(context.contractsDir, "cli/orders.md"), "utf8")).toContain(
+      "## Rules\n\n| BR-ID | Statement | Examples |",
     );
     await expect(
       readFile(path.join(context.specsDir, spec, "04_Business-Rules.md")),

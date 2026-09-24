@@ -54,6 +54,8 @@ async function run(context: MigrationContext): Promise<{ code: number; output: s
 
 describe("migration catalog move", () => {
   it("routes whole sections and keeps the standard commands section", async () => {
+    // QFAI:EX-0004-0006-02
+    // QFAI:EX-0004-0006-04
     const context = await fixture();
     await put(
       context.root,
@@ -94,6 +96,7 @@ describe("migration catalog move", () => {
   });
 
   it("archives the full legacy slice policy without restoring obsolete rules", async () => {
+    // QFAI:EX-0004-0006-03
     const context = await fixture();
     const original =
       "# Slice\n\n## Principle (read first)\n\nOld CAP/spec rule.\n\n## Triage オペレーション (8 種)\n\nOld TC rule.\n\n## Project choice\n\nSpecific.\n";
@@ -148,6 +151,7 @@ describe("migration catalog move", () => {
   });
 
   it("archives abolished directories and moves only overlays with a rule master", async () => {
+    // QFAI:EX-0004-0006-06
     const context = await fixture();
     await put(context.root, ".qfai/assistant/rule/drift-protocol.md", "# Rule\n");
     await put(context.root, ".qfai/assistant/constitution/drift-protocol.local.md", "local rule\n");
@@ -156,6 +160,7 @@ describe("migration catalog move", () => {
     const first = await run(context);
     expect(first.code).toBe(3);
     expect(first.output).toContain("house-notes.local.md");
+    expect(first.output).toContain("no rule master or the overlay destination exists");
     expect(
       await readFile(
         path.join(context.root, ".qfai/assistant/rule/drift-protocol.local.md"),
@@ -203,6 +208,7 @@ describe("migration catalog move", () => {
   });
 
   it("writes only manifest entries that differ from built-in defaults", async () => {
+    // QFAI:EX-0004-0006-05
     const context = await fixture();
     const defaultsDir = path.resolve(getInitAssetsDir(), "..", "defaults");
     const defaults = parseYaml(
