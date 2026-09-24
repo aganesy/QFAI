@@ -88,6 +88,7 @@ function capture() {
 describe("migration steps 5 to 8", () => {
   it("uses heading-only legacy cases and keeps their detail in the new example", async () => {
     // QFAI:EX-0004-0008-02
+    // QFAI:EX-0004-0003-17
     const context = await fixture();
     await put(
       context.root,
@@ -104,6 +105,7 @@ describe("migration steps 5 to 8", () => {
     expect(report.output.join("")).toContain(
       "## Cases to examples\n- TC-0001-0001 → EX-0001-0001-02\n",
     );
+    expect(report.output.join("")).toContain("## For a person\nnone");
     expect(await readFile(path.join(context.specsDir, story), "utf8")).toContain(
       "EX-0001-0001-02 | AC-0001-0001-01 | Submit order",
     );
@@ -133,6 +135,7 @@ describe("migration steps 5 to 8", () => {
     // QFAI:EX-0004-0008-01
     // QFAI:EX-0004-0008-03
     // QFAI:EX-0004-0008-04
+    // QFAI:EX-0004-0003-16
     const context = await fixture();
     await put(
       context.root,
@@ -167,6 +170,46 @@ describe("migration steps 5 to 8", () => {
     const repeated = await step05.plan(context);
     expect(repeated.operations).toEqual([]);
     expect((repeated.casesToExamples?.length ?? 0) + (repeated.forAPerson?.length ?? 0)).toBe(4);
+  });
+
+  it("accounts for five case-only rows as three conversions and two human decisions", async () => {
+    // QFAI:EX-0004-0008-05
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      serializeIdMap({
+        version: 1,
+        ids: {
+          [spec]: {
+            "TC-0001-0001": "EX-0001-0001-02",
+            "TC-0001-0002": "EX-0001-0001-03",
+            "TC-0001-0003": "EX-0001-0001-04",
+            "AC-0001-0001": "AC-0001-0001-01",
+          },
+        },
+        placements: { [spec]: {} },
+        retiredPacks: {},
+      }),
+    );
+    await put(
+      context.root,
+      `.qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md`,
+      "| TC-ID | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0001-0001 | AC-0001-0001 | — | First | Accepted |\n| TC-0001-0002 | AC-0001-0001 | — | Second | Accepted |\n| TC-0001-0003 | AC-0001-0001 | — | Third | Accepted |\n| TC-0001-0004 | — | — | Missing | Review |\n| TC-0001-0005 | AC-0001-0001, AC-0001-0002 | — | Ambiguous | Review |\n",
+    );
+    const report = capture();
+    expect(await executePlannedStep(step05, context, false, report.io)).toBe(3);
+    const plan = await step05.plan(context);
+    expect(plan.casesToExamples).toHaveLength(3);
+    expect(plan.forAPerson).toHaveLength(2);
+    expect(report.output.join("")).toContain("TC-0001-0004");
+    expect(report.output.join("")).toContain("TC-0001-0005");
+    const examples = await readFile(path.join(context.specsDir, story), "utf8");
+    expect(examples).toContain("EX-0001-0001-02 | AC-0001-0001-01 | First | Accepted");
+    expect(examples).toContain("EX-0001-0001-03 | AC-0001-0001-01 | Second | Accepted");
+    expect(examples).toContain("EX-0001-0001-04 | AC-0001-0001-01 | Third | Accepted");
+    expect(examples).not.toContain("Missing");
+    expect(examples).not.toContain("Ambiguous");
   });
 
   it("derives a mapped example's criterion from all citing cases", async () => {
