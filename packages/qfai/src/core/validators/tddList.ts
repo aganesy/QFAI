@@ -20,10 +20,13 @@ import {
 // The `DR-*` id class and its two declaration files, shared with the re-open
 // gate in `specPack.ts` so both resolve a `DR-*` against the same files.
 import {
+  type ChangeRequestHeader,
   collectDeclaredDrIds,
   DR_DECLARATION_FILES,
   DR_ID_FORMAT,
   DR_POLICY_DECLARATION_FILE,
+  isChangeRequestSettled,
+  parseChangeRequestHeader,
 } from "../decisionRecords.js";
 import { PROJECT_STEERING_DIR } from "../paths/assistantPaths.js";
 import {
@@ -4679,22 +4682,35 @@ async function isRecordFile(dir: string, entry: Dirent, projectRoot: string): Pr
  * and re-scanned the same names once for each spec. Indexing the ids also turns
  * an exception row's lookup into a hash probe rather than a scan over every
  * record file.
+ */
+function collectDeclaredRecordIds(recordNames: readonly string[]): ReadonlySet<string> {
+  const ids = new Set<string>();
+  for (const name of recordNames) {
+    for (const id of recordFileDeclaredIds(name)) ids.add(id);
+  }
+  return ids;
+}
+
+/**
+ * The names of the record files under `.qfai/decisions/`, sorted.
+ *
+ * One listing serves both readers of the directory: the `DR-*` index above and
+ * the Change Request lookup.
  *
  * An absent directory is the common case (no anomaly has been recorded yet) and
- * an unreadable one must not fail the whole ledger check, so both yield an
- * empty set. Directories are dropped rather than indexed: a directory called
- * `DR-<id>-<slug>.md/` would otherwise satisfy the existence check that the
- * Decision Record itself is supposed to satisfy. A symlink is resolved and
- * counts only while it lands inside the project — see `isRecordFile`.
+ * an unreadable one must not fail the whole ledger check, so both yield no
+ * names. Directories are dropped: a directory called `DR-<id>-<slug>.md/` would
+ * otherwise satisfy the existence check that the Decision Record itself is
+ * supposed to satisfy. A symlink is resolved and counts only while it lands
+ * inside the project — see `isRecordFile`.
  */
-async function collectDeclaredRecordIds(root: string): Promise<ReadonlySet<string>> {
-  const ids = new Set<string>();
+async function listRecordFileNames(root: string): Promise<string[]> {
   const dir = path.join(root, DR_RECORD_DIR);
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
   } catch {
-    return ids;
+    return [];
   }
   const projectRoot = await resolvedRoot(root);
   const names = await Promise.all(
@@ -4702,11 +4718,86 @@ async function collectDeclaredRecordIds(root: string): Promise<ReadonlySet<strin
       (await isRecordFile(dir, entry, projectRoot)) ? entry.name : null,
     ),
   );
-  for (const name of names) {
-    if (name === null) continue;
-    for (const id of recordFileDeclaredIds(name)) ids.add(id);
+  return names.filter((name): name is string => name !== null).sort();
+}
+
+/**
+ * A Change Request record filename: the id, an optional `-<slug>`, and `.md`.
+ * The slug is free text in the project's own language, as the template leaves
+ * it.
+ */
+const CHANGE_REQUEST_FILE = /^(CR-\d{8}-\d{4})(?:-.+)?\.md$/i;
+
+/** The Change Request records under `.qfai/decisions/`, read on demand. */
+type ChangeRequestLookup = {
+  /**
+   * The header of the Change Request a `CR-*` id names, or `null` when no
+   * record file carries that id in both its name and its `- ID:` field.
+   */
+  header: (crId: string) => Promise<ChangeRequestHeader | null>;
+  /** The `## Blocked downstream items` text of every record not yet settled. */
+  unresolvedBlockedItems: () => Promise<readonly string[]>;
+};
+
+/** What `.qfai/decisions/` holds, read once per run and shared by every spec. */
+type DecisionsIndex = {
+  recordIds: ReadonlySet<string>;
+  changeRequests: ChangeRequestLookup;
+};
+
+/**
+ * Index the Change Request records by id, reading each one only when a ledger
+ * row asks for it.
+ *
+ * Most runs ask about no Change Request at all, so the files are read on
+ * demand and each at most once. An id that two file names carry answers
+ * nothing: which of them is the record cannot be told, and either may be the
+ * one still open.
+ *
+ * The declared `- ID:` is the record's id; the file name only locates it. A
+ * file whose name and declared id disagree — renamed or copied without its
+ * header moving — answers for neither, so a row cannot borrow the status of a
+ * record that is not the one it names.
+ *
+ * The blocked sets of the unresolved records are read across every file,
+ * ambiguous and mismatched ones included: a record that cannot be told apart
+ * may still be the one holding a row.
+ */
+function buildChangeRequestLookup(
+  root: string,
+  recordNames: readonly string[],
+): ChangeRequestLookup {
+  const files = new Map<string, string[]>();
+  for (const name of recordNames) {
+    const id = CHANGE_REQUEST_FILE.exec(name)?.[1]?.toUpperCase();
+    if (id !== undefined) files.set(id, [...(files.get(id) ?? []), name]);
   }
-  return ids;
+  const headers = new Map<string, Promise<ChangeRequestHeader>>();
+  const read = (name: string): Promise<ChangeRequestHeader> => {
+    let header = headers.get(name);
+    if (header === undefined) {
+      header = readSafe(path.join(root, DR_RECORD_DIR, name)).then(parseChangeRequestHeader);
+      headers.set(name, header);
+    }
+    return header;
+  };
+  let unresolved: Promise<string[]> | undefined;
+  return {
+    header: async (crId) => {
+      const id = crId.toUpperCase();
+      const candidates = files.get(id) ?? [];
+      const name = candidates.length === 1 ? candidates[0] : undefined;
+      if (name === undefined) return null;
+      const parsed = await read(name);
+      return parsed.id === id ? parsed : null;
+    },
+    unresolvedBlockedItems: async () => {
+      unresolved ??= Promise.all([...files.values()].flat().map(read)).then((all) =>
+        all.filter((h) => !isChangeRequestSettled(h)).map((h) => h.blockedItems),
+      );
+      return await unresolved;
+    },
+  };
 }
 
 /**
@@ -5196,6 +5287,150 @@ function blockedWithoutWorklog(
   ];
 }
 
+/** The finding for a `blocked` row whose Change Request blockers are all settled. */
+const BLOCKED_BY_CLOSED_CR_CODE = "QFAI-TDDLIST-021";
+
+/** A `CR-*` id anywhere in a cell, with or without the slug that follows it. */
+const CHANGE_REQUEST_ID_IN_TEXT = /\bCR-\d{8}-\d{4}\b/gi;
+
+/** A blocker other than a Change Request: a ledger row, or a contract path. */
+const OTHER_BLOCKER_IN_TEXT = /\bTDD-\d{4}\b|\.qfai\/contracts\//i;
+
+/** A row named with its spec: `spec-NNNN/TDD-NNNN`, or with `:` in place of `/`. */
+const QUALIFIED_ROW_IN_TEXT = /\bspec-(\d{4})\s*[/:]\s*(TDD-\d{4})\b/gi;
+const BARE_ROW_IN_TEXT = /\bTDD-\d{4}\b/gi;
+/** The template's line for what a request does not block. */
+const NOT_BLOCKED_LINE = /^\s*[-*]\s*Not blocked by this CR\s*:.*$/gim;
+
+/**
+ * True when a Change Request's blocked items name this spec's row.
+ *
+ * SIMPLIFIED: a bare `TDD-NNNN` is taken to name the row in every spec, and an
+ * item written as prose ("every row whose TC-Refs names ...") names nothing.
+ * Both err towards silence, which is the safe side for a warning that tells
+ * the operator to release a row.
+ * Lift when: the template fixes a grammar for a blocked item.
+ */
+function blockedItemsNameRow(items: string, specNumber: string, tddId: string): boolean {
+  const row = tddId.toUpperCase();
+  if (row.length === 0) return false;
+  const text = items.replace(NOT_BLOCKED_LINE, "");
+  for (const match of text.matchAll(QUALIFIED_ROW_IN_TEXT)) {
+    if (match[1] === specNumber && match[2]?.toUpperCase() === row) return true;
+  }
+  const bare = text.replace(QUALIFIED_ROW_IN_TEXT, " ");
+  return [...bare.matchAll(BARE_ROW_IN_TEXT)].some((match) => match[0].toUpperCase() === row);
+}
+
+/** Every distinct `CR-*` id a cell names, upper-cased, in order of appearance. */
+function changeRequestIdsIn(text: string): string[] {
+  return [...new Set([...text.matchAll(CHANGE_REQUEST_ID_IN_TEXT)].map((m) => m[0].toUpperCase()))];
+}
+
+/** How a settled Change Request's status reads in a finding. */
+function describeSettledStatus(status: string | null): string {
+  return status === "approved" ? "approved and applied" : (status ?? "");
+}
+
+/**
+ * The Change Requests a `blocked` row waits on, and the cell they were read
+ * from; `null` when the row may be waiting on something else.
+ *
+ * `Blocked-By` is where the blocker belongs, and it counts only when its
+ * blocker half names Change Requests and nothing more: a contract path or
+ * another spec's row beside them can still be holding the row. `Evidence` is
+ * read only when `Blocked-By` names no blocker at all — an empty cell, or a
+ * ledger without the column — and `TDDLIST_BLOCKED_MISSING_REF` already reports
+ * that cell. A malformed `Blocked-By` is left to the same finding.
+ *
+ * `Evidence` is prose, so it cannot be held to the Change-Request-only shape
+ * `Blocked-By` is. It counts only while it names none of the other blockers a
+ * `Blocked-By` cell admits: a ledger row, here or in another spec, or a
+ * contract path.
+ */
+function changeRequestBlockers(ref: LedgerRowRef): { column: string; ids: string[] } | null {
+  const parsed = parseBlockedBy(cell(ref, BLOCKED_BY_COLUMN));
+  if (parsed.ok) {
+    return isChangeRequestRefsOnly(parsed.blocker)
+      ? { column: BLOCKED_BY_COLUMN, ids: changeRequestIdsIn(parsed.blocker) }
+      : null;
+  }
+  if (parsed.reason !== "missing-blocker") return null;
+  const evidence = cell(ref, "Evidence");
+  if (OTHER_BLOCKER_IN_TEXT.test(evidence)) return null;
+  const ids = changeRequestIdsIn(evidence);
+  return ids.length > 0 ? { column: "Evidence", ids } : null;
+}
+
+/**
+ * The Change Requests a `blocked` row waits on, each with its status, when
+ * every one of them is settled; `null` when it waits on none, or when any one
+ * does not resolve to a record or is still open.
+ */
+async function settledBlockers(
+  ref: LedgerRowRef,
+  lookup: ChangeRequestLookup,
+): Promise<{ column: string; blockers: string[] } | null> {
+  const named = changeRequestBlockers(ref);
+  if (named === null) return null;
+  const { column, ids } = named;
+  const headers = await Promise.all(ids.map(lookup.header));
+  const blockers: string[] = [];
+  for (const [index, header] of headers.entries()) {
+    if (header === null || !isChangeRequestSettled(header)) return null;
+    blockers.push(`${ids[index] ?? ""} (${describeSettledStatus(header.status)})`);
+  }
+  return { column, blockers };
+}
+
+/**
+ * A `blocked` row whose Change Request blockers are all settled.
+ *
+ * Nothing else reports it. The row is parked on a decision that has already
+ * been made, ordinary selection skips it, and `QFAI-TDDLIST-015` is satisfied
+ * by the work-log entry written when it stopped — so the ledger keeps saying
+ * the row cannot start long after it can.
+ *
+ * A `warning`: the row's obligation is still visible as unfinished, and the
+ * finding is there so a reader sees that the stop has outlived its cause.
+ *
+ * A row can sit in more than one Change Request's blocked set, and the ledger
+ * cell need not name them all. So a row that an unresolved request still lists
+ * under `## Blocked downstream items` is not reported: it is still held.
+ */
+async function blockedByClosedChangeRequest(
+  blockedRows: readonly LedgerRowRef[],
+  specNumber: string,
+  relPath: string,
+  lookup: ChangeRequestLookup,
+): Promise<Issue[]> {
+  const settled = await Promise.all(blockedRows.map((ref) => settledBlockers(ref, lookup)));
+  if (settled.every((found) => found === null)) return [];
+  const stillHeld = await lookup.unresolvedBlockedItems();
+  const issues: Issue[] = [];
+  for (const [index, ref] of blockedRows.entries()) {
+    const found = settled[index];
+    if (found === null || found === undefined) continue;
+    const tddId = cell(ref, "TDD-ID");
+    if (stillHeld.some((items) => blockedItemsNameRow(items, specNumber, tddId))) continue;
+    const rowKey = tddId.length > 0 ? tddId : ref.label;
+    issues.push(
+      issue(
+        BLOCKED_BY_CLOSED_CR_CODE,
+        `TDD item "${rowKey}" in spec-${specNumber} is still Status=blocked, but every Change Request its ${found.column} cell names is settled: ${found.blockers.join(", ")}. The blocker is closed and the row is waiting on nothing`,
+        "warning",
+        relPath,
+        "tddList.blockedByClosedChangeRequest",
+        undefined,
+        "change",
+        `Release the row through \`/qfai-implement\`. Its Change Request preflight takes \`blocked -> todo\`, the resumption edge: \`Blocked-By\` is cleared and the resumed round records \`Resumed-from-blocked\`. Where an approved request changed what the row asserts, the preflight takes the upstream reset to \`todo\` instead and records the request in \`DR-ID\`.`,
+        { dl_id: rowKey },
+      ),
+    );
+  }
+  return issues;
+}
+
 /**
  * The steering surface reduced to the answer the stop check needs, plus the
  * findings raised by reading it.
@@ -5311,7 +5546,9 @@ export async function validateTddList(
   const entries = await collectSpecEntries(specsRoot);
   // `.qfai/decisions/` is one shared directory, so it is read once here and
   // handed to each spec rather than re-scanned per spec.
-  const recordIds = await collectDeclaredRecordIds(root);
+  const recordNames = await listRecordFileNames(root);
+  const recordIds = collectDeclaredRecordIds(recordNames);
+  const changeRequests = buildChangeRequestLookup(root, recordNames);
   const issues: Issue[] = [];
 
   // Read once for the whole run: the steering surface is project-wide, and one
@@ -5343,7 +5580,7 @@ export async function validateTddList(
       entry,
       specsRoot,
       gate,
-      recordIds,
+      { recordIds, changeRequests },
       srcRelDir,
       config.paths.contractsDir,
     );
@@ -5735,10 +5972,11 @@ async function validateSpecTddList(
   specEntry: SpecEntry,
   specsRoot: string,
   gate: BlockedWorklogGate,
-  recordIds: ReadonlySet<string>,
+  decisions: DecisionsIndex,
   srcRelDir: string,
   contractsDir: string,
 ): Promise<Issue[]> {
+  const { recordIds, changeRequests } = decisions;
   // The whole entry, not its directory: Check 8c derives the review-group key
   // from the spec's layer files, and `SpecEntry` is what already resolves those
   // paths per layout.
@@ -6397,9 +6635,11 @@ async function validateSpecTddList(
   // row be saved in a state no later session can resume from.
   const hasBlockedByColumn = anyTableHasColumn(coverageTables, BLOCKED_BY_COLUMN);
   const blockedRowLabels: string[] = [];
+  const blockedRows: LedgerRowRef[] = [];
   for (const ref of ledgerRows()) {
     if (cell(ref, "Status").toLowerCase() !== "blocked") continue;
     blockedRowLabels.push(ref.label);
+    blockedRows.push(ref);
     const blockedBy = cell(ref, BLOCKED_BY_COLUMN);
     const parsed = parseBlockedBy(blockedBy);
     if (parsed.ok) continue;
@@ -6466,6 +6706,11 @@ async function validateSpecTddList(
   // steering path, so the surface is tracked and the omission is visible to
   // ordinary CI.
   issues.push(...blockedWithoutWorklog(blockedRowLabels, specNumber, relPath, gate));
+
+  // Phase 2 – Check 8b': a blocked row whose Change Request has been settled.
+  issues.push(
+    ...(await blockedByClosedChangeRequest(blockedRows, specNumber, relPath, changeRequests)),
+  );
 
   // Phase 2 – Check 8: Exception rows must have a DR-ID that resolves
   const isDrDeclared = await buildDrDeclarationResolver(specDir, specsRoot, recordIds);
