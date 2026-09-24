@@ -75,7 +75,7 @@ Reconciled CLI pairings:
 - (UX-loop redesign / spec-0012 09_delta CHG-001) discussion sidecars `uiux/30_exploration_brief.md`, `uiux/31_reference_pool.md`, `uiux/32_design_anti_goals.md` は廃止。`/qfai-discussion` はこれらを生成しない。
 - `uiux/40_screen_contracts.md` is normalized by `/qfai-sdd` into `.qfai/contracts/ui/*.yaml` (`UICON-001`) when the target spec is UI-bearing. `spec-0018` is not UI-bearing (decided 2026-09-24); its pack's screens are the `## Operator-facing screens` section of CLI-WF (`.qfai/contracts/cli/qfai-workflow.md`).
 - v2.0: `uiux/33_exploration_rubric.md` と `uiux/34_evaluator_calibration.md` は廃止（`/qfai-discussion` で生成しない）。`DCON-002`, `DCON-003` は P4 で物理削除。
-- (UX-loop redesign / spec-0012 09_delta CHG-001) `DCON-030` (root `DESIGN.md`) は `/qfai-discussion` の brand 出力。`/qfai-sdd` Phase 0 で sha256 凍結 (`DCON-031`) を行う。
+- (UX-loop redesign / spec-0012 09_delta CHG-001) `DCON-030` (root `DESIGN.md`) is authored by `/qfai-sdd` Phase 0 from the brand direction the discussion pack records in `01_Context.md#Design Direction`. The same phase freezes its sha256 (`DCON-031`). Discussion writes no `DESIGN.md`.
 - (UX-loop redesign / spec-0012 09_delta CHG-001) `DCON-005` (design-system) は `/qfai-prototyping` の post-loop で `DESIGN.md` token の deterministic mirror として生成される。`DCON-032` validator が byte-equivalent を検証。
 - v2.0+UX-loop: `DCON-008` (prototype-handoff) は最終 iter HTML を `finalArtifact` として参照し、`extractedDesignSystem` は `DCON-005` (= DESIGN.md mirror) を指す。
 - v2.0: `DCON-004` (selected-direction) は P4 で物理削除（winner 選定の概念がないため）。
