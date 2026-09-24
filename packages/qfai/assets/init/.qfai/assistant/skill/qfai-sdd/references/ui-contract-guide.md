@@ -191,7 +191,7 @@ The prototyping cycle resolves UI-bearing contracts by their declared full `CON-
 Cycle 0 freezes the full set of UI-bearing IDs in `uiContractsCovered[]` and its union of screen surfaces in
 `frozenSurfaceUnion[]`. Evidence for a screen is scoped beneath `iter-NN/CON-UI-NNNN/<screen>.review.json`. A later
 iterate, certify, or show reads that frozen set. If an older record has `specsCovered` or `frozenSpecsCovered`, or lacks
-the new fields, seed a fresh cycle 0 with `qfai prototyping iterate --cycle 0`; retain the older evidence as history.
+the new fields, seed a fresh cycle 0 with `npx qfai prototyping iterate --cycle 0`; retain the older evidence as history.
 
 A malformed UI contract or an empty screen list is an authoring failure. Fix the declared contract and its index row, then refresh the affected flow's SDD validation and downstream evidence. Discussion UI/UX sidecars are source material; the contract is the execution authority.
 

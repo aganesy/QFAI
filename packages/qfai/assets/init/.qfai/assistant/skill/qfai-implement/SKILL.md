@@ -24,6 +24,12 @@ mode: approval-gated
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## User Questions (AskUserQuestion Protocol)
+
+Agents MUST follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`
+for every user question. With `--auto`, they MUST ask nothing and record
+explicit assumptions in the stage evidence.
+
 Work within one `BF-NNNN` flow. Read its stories, acceptance criteria,
 examples, and owning contracts from the configured `paths.specsDir` and
 `paths.contractsDir`. The default spec tree is `.qfai/spec/`. Resolve
@@ -70,7 +76,7 @@ Do not reopen settled requirements as implementation preferences.
 ### Select the next example
 
 Start each selection by running
-`qfai validate --profile tdd --flow BF-NNNN`. Record the run start time.
+`npx qfai validate --profile tdd --flow BF-NNNN`. Record the run start time.
 Read its `validate.flow-<ids>.json` result even when the command exits
 nonzero. The result is usable only when the file exists, `profile` is
 `tdd`, and `generatedAt` is no earlier than this run start. If any check
@@ -162,7 +168,7 @@ Report the flow complete only when:
 3. The affected tests and the Test, Lint, Typecheck and Build commands from
    `tech.md` have been run on the integrated tree, or a command's documented
    applicability makes it unnecessary.
-4. `qfai validate --profile tdd --fail-on error --flow BF-NNNN` succeeds
+4. `npx qfai validate --profile tdd --fail-on error --flow BF-NNNN` succeeds
    on the final tree. Read its fresh JSON result using the same freshness
    checks as selection.
 

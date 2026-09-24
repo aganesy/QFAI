@@ -12,14 +12,16 @@ the 2.x validation and authoring workflow.
    honor configured paths and may write there even when outside `.qfai/`.
 2. Install `qfai@2.0.0` as a local project dependency with the project's
    package manager. A copy available only through `npx` is insufficient.
-3. Run the locally installed `qfai init` without `--force`. On an old-layout
+   Complete the launcher preflight in `.qfai/assistant/rule/shared-skill-operating-baseline.md`:
+   confirm the local binary or the Plug'n'Play package and loader before invoking the CLI.
+3. Run `npx qfai init` from the local dependency (or `yarn exec qfai init` for Plug'n'Play), without `--force`. On an old-layout
    project it installs and links the migration skill without seeding a second
    spec tree.
 4. Open `/qfai-migration-spec-to-story`. Work from the project root. The
    installed skill is under
    `.qfai/assistant/skill/qfai-migration-spec-to-story/`.
 
-Do not run `qfai init --force` to migrate. It can write beyond the migration
+Do not run `npx qfai init --force` to migrate. It can write beyond the migration
 scripts' allowed paths and replace local edits.
 
 ## Place stories and rules
@@ -138,7 +140,7 @@ annotation only in an E2E test. Contract annotations, unresolved annotations
 and old deferral markers stay in place and are reported. Step 9 changes only the
 host integration links. Step 10 changes only the managed `.gitignore` block.
 
-After step 10, run the locally installed `qfai validate` command. Resolve every
+After step 10, run `npx qfai validate` from the local dependency (or `yarn exec qfai validate` for Plug'n'Play). Resolve every
 layout and chain error. Its test-obligation findings identify any business
 flow, acceptance criterion or example still missing a test in its layer. E2E
 tests cover flows, integration and API tests cover criteria, and other tests

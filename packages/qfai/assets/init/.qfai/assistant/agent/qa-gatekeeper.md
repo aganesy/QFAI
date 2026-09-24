@@ -113,9 +113,9 @@ scope or the whole flow.
   handoff. Use `rule/audited-evidence-hash.md` and the owning skill's
   evidence reference to check freshness.
 - An ATDD gate uses
-  `qfai validate --profile atdd --flow BF-NNNN --fail-on error`.
+  `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error`.
   An implementation gate uses
-  `qfai validate --profile tdd --fail-on error --flow BF-NNNN`.
+  `npx qfai validate --profile tdd --fail-on error --flow BF-NNNN`.
   Implement's selection result is usable only when its JSON exists,
   `profile` is `tdd`, and `generatedAt` is no earlier than the run
   start. Read the result even when the command exits nonzero.

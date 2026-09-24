@@ -149,7 +149,7 @@ Rules:
 - Do not reintroduce an option whose row in `<paths.specsDir>/decisions.md` has Status `REJECTED`.
 - To reconsider it, ask for explicit approval and append a new `DEC-NNNN` row. Its Content begins `Change request:` and names the authorized paths or IDs, the rejected row's full `DEC-NNNN` ID, and the option being reopened. Its Approach states the changed evidence, intended story or contract change, and approval source. Leave the rejected row intact.
 - The new row stays `TODO` while approval is pending, becomes `WIP` after approval, and becomes `DONE` only after the owning SDD rerun and dependent checks. A PR description or completion report alone does not reopen the option.
-- The reviewer checks the new row and approval provenance before accepting a formerly rejected option. `qfai validate` checks the four-column decision-table shape, status vocabulary, and append-only cells; it does not infer that two differently worded options are the same.
+- The reviewer checks the new row and approval provenance before accepting a formerly rejected option. `npx qfai validate` checks the four-column decision-table shape, status vocabulary, and append-only cells; it does not infer that two differently worded options are the same.
 
 ## Gate Failure Autorepair Protocol
 

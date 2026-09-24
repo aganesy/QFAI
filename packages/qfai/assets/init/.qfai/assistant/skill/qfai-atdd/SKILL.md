@@ -22,6 +22,12 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## User Questions (AskUserQuestion Protocol)
+
+Agents MUST follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`
+for every user question. With `--auto`, they MUST ask nothing and record
+explicit assumptions in the stage evidence.
+
 The active scope is one `BF-NNNN` business flow. Read its stories, acceptance
 criteria, examples and owning contracts under `paths.specsDir` before authoring.
 Use the configured paths; the default tree is `.qfai/spec/`. Read open work-log
@@ -44,7 +50,7 @@ but contract IDs are not coverage annotations. Unit and component tests belong
 to `/qfai-implement`. Each test needs an observable assertion; an annotation
 or a generated placeholder alone never proves behavior.
 
-Run `qfai validate --profile atdd --flow BF-NNNN --fail-on error` to obtain
+Run `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error` to obtain
 current obligations and findings. An exception is a DONE row in the applicable
 `decisions.md` table naming the BF or AC. Never invent a waiver in the test
 or suppress a finding. Report repo-wide findings attributed to another flow
@@ -68,8 +74,8 @@ If credentials are needed in E2E, API or integration work, follow
 
 ### Scaffold and authoring
 
-`qfai atdd scaffold --flow BF-NNNN` creates one E2E placeholder under
-`<testsDir>/e2e/`. `qfai atdd scaffold --story US-NNNN-NNNN` creates one
+`npx qfai atdd scaffold --flow BF-NNNN` creates one E2E placeholder under
+`<testsDir>/e2e/`. `npx qfai atdd scaffold --story US-NNNN-NNNN` creates one
 integration placeholder per AC under the story's integration home. The options
 are exclusive. A generated path must match configured globs and exclusions;
 an unsupported pattern is a refusal. Existing edited files are preserved.
@@ -137,7 +143,7 @@ The stage may report PASS only when:
    test command, selected tests and observed result.
 3. Routed reviewers and qa-gatekeeper passed the current work, with no
    blocking finding remaining.
-4. `qfai validate --profile atdd --flow BF-NNNN --fail-on error` reports no
+4. `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error` reports no
    error owned by this flow. Residual findings elsewhere have named owners.
 
 Report changed tests, BF and AC coverage, commands and outcomes, review

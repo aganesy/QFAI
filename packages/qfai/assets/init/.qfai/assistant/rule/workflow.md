@@ -74,7 +74,7 @@ Prototyping stage policy:
 
 Implementation stage:
 
-- `/qfai-implement` selects a current EX obligation from `qfai validate --profile tdd --flow BF-NNNN`. It records an observable assertion failure, the passing result, and the refactor check for that EX.
+- `/qfai-implement` selects a current EX obligation from `npx qfai validate --profile tdd --flow BF-NNNN`. It records an observable assertion failure, the passing result, and the refactor check for that EX.
 - A collection, import, syntax, or fixture failure is not an admissible RED. When existing behavior already satisfies the EX, record falsifiability evidence under the rule in `references/red-not-observable.md`. Never weaken a correct test to manufacture RED.
 - The BF completion checkpoint runs the Test, Lint, Typecheck, and Build commands in `<paths.contractsDir>/tech.md`, flow validation, and independent review. Parallel execution requires disjoint writes, a passing technical gate, and user consent.
 

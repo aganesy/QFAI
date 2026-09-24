@@ -19,10 +19,18 @@ routing-profile: architecture-heavy
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## User Questions (AskUserQuestion Protocol)
+
+Agents MUST follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`
+for every user question. With `--auto`, they MUST ask nothing and record
+explicit assumptions in the migration report.
+
 Read `references/migration-guide.md` before changing the project. Run this
 skill from the project root, where `qfai.config.yaml` and a locally installed
 `qfai` package are available. The ten scripts use the installed package. They
 do not add a `qfai` subcommand or make network calls.
+Complete the launcher preflight in `.qfai/assistant/rule/shared-skill-operating-baseline.md`
+before running a CLI command.
 
 ### Procedure
 
@@ -50,7 +58,7 @@ do not add a `qfai` subcommand or make network calls.
    Preserve any item the scripts could not place. After step 4 writes
    `id-map.json`, do not change `plan.yaml` to move a mapped item. Resolve
    remaining content in the new tree through `/qfai-sdd`.
-6. After step 10, run the project's local `qfai validate` launcher. Resolve
+6. After step 10, run `npx qfai validate` through the project's local dependency (or `yarn exec qfai validate` for Plug'n'Play). Resolve
    layout and chain errors. Use its BF, AC and EX test-obligation findings to
    finish test coverage or record a permitted decision exception.
 
@@ -71,7 +79,7 @@ Each script is invoked as
 `node <skill-dir>/scripts/<script>.mjs [--dry-run]`, with `<skill-dir>` set to
 this installed skill directory. `scripts/_step.mjs` is the shared package
 loader used by all ten entry points and must be shipped with them. Step 9 only
-repairs links. Do not run `qfai init --force` during migration.
+repairs links. Do not run `npx qfai init --force` during migration.
 
 The scripts print `## Operations` even when empty. Steps 2 through 8 also print
 `## For a person`; step 5 prints `## Cases to examples`; step 8 prints

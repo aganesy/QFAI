@@ -1,6 +1,6 @@
 # Acceptance-test scaffolding
 
-`qfai atdd scaffold` accepts exactly one selector:
+`npx qfai atdd scaffold` accepts exactly one selector:
 
 - `--flow BF-NNNN` creates one E2E skeleton for the flow at
   `<testsDir>/e2e/<BF-ID>.test.<ext>` with `QFAI:BF-NNNN`.

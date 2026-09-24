@@ -53,7 +53,7 @@ specialization_tags:
 - `rule/**`, including routing, test layers and drift.
 - `qfai.config.yaml`, the affected BF, US, AC and EX files under `<paths.specsDir>/02_business-flow/**`, and their active contracts.
 - `<paths.specsDir>/03_contract/tech.md` and `structure.md` for commands and affected modules.
-- The fresh `qfai validate --profile tdd --flow BF-NNNN` JSON findings and current ATDD handoff.
+- The fresh `npx qfai validate --profile tdd --flow BF-NNNN` JSON findings and current ATDD handoff.
 - Open global and current-flow work-log entries, applicable discussion source, requirements and open-question records.
 
 ## Deliverables
