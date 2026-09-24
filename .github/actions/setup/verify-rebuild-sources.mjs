@@ -35,6 +35,10 @@
  * Usage:
  * `node verify-rebuild-sources.mjs <pnpm-lock.yaml> <dependency-builds.txt> <pnpm-workspace.yaml>`.
  * Exits 1 on any finding.
+ *
+ * SHIPPED-CI: not-applicable
+ * Because: the shipped templates install with an adopter's own package manager and lockfile and
+ * deliberately run install scripts, so there is no allow-list there for this to check.
  */
 import { readFileSync } from "node:fs";
 import { argv, exit, stdout } from "node:process";

@@ -3616,3 +3616,13 @@ git cat-file -t <hash>
 `pnpm exec vitest` **from the repository root does not work** and is recorded because it cost a false
 oracle result: it exits 1 with `Command "vitest" not found`, which reads exactly like a failing test.
 Every invocation above uses `-C packages/qfai`.
+
+## Record defects
+
+Open entries from the completion review of the `/qfai-implement` run started
+2026-09-23T11:16:15.344Z, attempt 1. Each is repaired in place before spec-0017
+completion is declared.
+
+- `record:unchecked`, `TDD-0016`, `TDD-0030`, `TDD-0032`, `TDD-0033`, `TDD-0034`, `TDD-0035`, `TDD-0069`, `TDD-0070`, `TDD-0083`, Round 1: the ledger reached `refactor` before the RED-gate verdict was written, and each mutation was reverted before the gate saw it. The gatekeeper rebuilt each mutated tree from its recorded address and edit. For `TDD-0070` the ledger shows no `refactor -> red` edge for the Round 1 REVISE window; only the `qa-gatekeeper attempts` line records that verdict.
+- `record:unchecked`, `TDD-0032`, `TDD-0033`, `TDD-0034`, `TDD-0035`, Round 1: `Resumed-from-blocked ... blocked at todo` was reconstructed, not copied from `Blocked-By`, which held `-` before the resumption.
+- `record:unchecked`, `TDD-0070`, Round 1: the review pack `review-20260923120009000` holding the qa-gatekeeper#1 `REVISE` was written after that gate's Round 2 `PASS`, so the round that Round 2 follows carries the verdict that opened it. Its response file is the gatekeeper's own, re-issued by the same reviewer, stating when the verdict was given and when it was written into the pack.

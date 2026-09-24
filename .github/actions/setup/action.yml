@@ -330,6 +330,11 @@ runs:
         # refuses to build a package that list does not name. The two are read against each
         # other here: a name the manager permits and the list does not is a permission nobody
         # reviewed, and a name the list carries and the manager does not stops this step anyway.
+        #
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped templates install with an adopter's own package manager and
+        # lockfile and deliberately run install scripts, so they carry neither the allow-list
+        # nor the rebuild this check stands in front of.
         node "${{ github.action_path }}/verify-rebuild-sources.mjs" \
           pnpm-lock.yaml "${list}" pnpm-workspace.yaml
 
