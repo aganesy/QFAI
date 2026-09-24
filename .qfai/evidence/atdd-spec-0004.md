@@ -3256,10 +3256,10 @@ re-run locally, it also waits for the CI full-suite run.
 | TDD-0067 | spec-0014 | 7 rows: TDD-0009, TDD-0018..0019, TDD-0033..0036 | `packages/qfai/src/core/validate.ts` and the files listed in `### TDD-0067` | Remove the work-log validator from validate's sdd composition | spec-0014's `done` rows certify behaviour whose tests reach `validateProject` or the CLI validate command, whose sdd composition lost the work-log validator. Re-run read-only, file-scoped with `--reporter=verbose`, in the checkpoint run above: TDD-0009, TDD-0018, TDD-0019 named as passed. The other 4 rows are re-run by the CI full-suite checkpoint | open |
 | TDD-0067 | spec-0015 | 21 rows: TDD-0011..0012, TDD-0017..0035 | `packages/qfai/src/core/validate.ts` and the files listed in `### TDD-0067` | Remove the work-log validator from validate's sdd composition | spec-0015's `done` rows are matched through the package fallback only; no static import reaches a changed module. Their selectors are re-run by the CI full-suite checkpoint | open |
 | TDD-0067 | spec-0016 | 28 rows: TDD-0001..0028 | `packages/qfai/src/core/validate.ts` and the files listed in `### TDD-0067` | Remove the work-log validator from validate's sdd composition | spec-0016's `done` rows are matched through the package fallback only; no static import reaches a changed module. Their selectors are re-run by the CI full-suite checkpoint | open |
-| TDD-0068 | spec-0003 | TDD-0098 (`todo`) | `packages/qfai/src/core/governedAssistantManifest.ts`, `packages/qfai/assets/init/.qfai/assistant/catalog/worklog-entry.schema.md` | Withdraw `catalog/worklog-entry.schema.md` from the shipped governed set | spec-0003 `TDD-0098` asserts that `init --force` retires an unedited, lock-recorded copy of the schema. Its RED was taken before this round, on the tree that still shipped the file. It takes its GREEN on this round's tree in the spec-0003 `/qfai-implement` invocation (implement S3 decision R-D12) | open |
-| TDD-0068 | spec-0003 | TDD-0099 (`todo`) | `packages/qfai/src/core/governedAssistantManifest.ts`, `packages/qfai/assets/init/.qfai/assistant/catalog/worklog-entry.schema.md` | Withdraw `catalog/worklog-entry.schema.md` from the shipped governed set | spec-0003 `TDD-0099` asserts that `init --force` keeps an edited copy with the edited-content note. Its RED was taken before this round, on the tree that still shipped the file. It takes its GREEN on this round's tree in the spec-0003 `/qfai-implement` invocation (implement S3 decision R-D12) | open |
+| TDD-0068 | spec-0003 | TDD-0098 (`todo`) | `packages/qfai/src/core/governedAssistantManifest.ts`, `packages/qfai/assets/init/.qfai/assistant/catalog/worklog-entry.schema.md` | Withdraw `catalog/worklog-entry.schema.md` from the shipped governed set | spec-0003 `TDD-0098` asserts that `init --force` retires an unedited, lock-recorded copy of the schema. Its RED was taken before this round, on the tree that still shipped the file. It takes its GREEN on this round's tree in the spec-0003 `/qfai-implement` invocation (implement S3 decision R-D12) | re-reviewed |
+| TDD-0068 | spec-0003 | TDD-0099 (`todo`) | `packages/qfai/src/core/governedAssistantManifest.ts`, `packages/qfai/assets/init/.qfai/assistant/catalog/worklog-entry.schema.md` | Withdraw `catalog/worklog-entry.schema.md` from the shipped governed set | spec-0003 `TDD-0099` asserts that `init --force` keeps an edited copy with the edited-content note. Its RED was taken before this round, on the tree that still shipped the file. It takes its GREEN on this round's tree in the spec-0003 `/qfai-implement` invocation (implement S3 decision R-D12) | re-reviewed |
 
-Pending: the `done` rows other specs gained through the merge of main are added to the spec-0003 and spec-0012 entries when the head CI checkpoint closes, together with any rows main adds before then: spec-0003 TDD-0058..0063, TDD-0092 and TDD-0093; spec-0012 TDD-0561..0566.
+The TDD-0068 dependencies on spec-0003 TDD-0098 and TDD-0099 are re-reviewed: both dependent rows reached `done` with their own GREEN, Oracle proof and completion review; the first and later full CI checkpoints passed. The other cross-spec entries remain open pending dependent-row verification.
 
 ## Execution logs
 
@@ -3267,35 +3267,9 @@ Pending: the `done` rows other specs gained through the merge of main are added 
 
 ## Gaps / Open risks
 
-- `TDD-0067`: at `refactor`. The RED gate (qa-gatekeeper#2), the build gate
-  (qa-gatekeeper#3), and both item reviews pinned to
-  `working-tree+c40624af…d549` passed. `done` waits for the CI full-suite run on
-  the reviewed tree, and for the reviews to be re-pinned to the merged commit
-  `536fc4ddd`.
-- Checkpoint departure (user decision, see Decisions made): every row stops at
-  `refactor` with a local per-row checkpoint only. No full-suite checkpoint runs
-  per row. All rows’ full-suite checkpoints close together on the final head’s
-  CI, and no row goes `done` before that run passes.
-- `TDD-0069`: RED passed by `qa-gatekeeper` (RED phase) on the approved test
-  hash `ddf4adda…dba10`. Ready for `/qfai-implement` step 3b. Its GREEN waits
-  for `TDD-0071`'s RED; the three-mutation Oracle proof and the reviews follow it.
-- `TDD-0071`: RED passed by `qa-gatekeeper` (RED phase) on the approved test
-  hash `9f0091e3…06e7dc`, taken ahead of `TDD-0069`'s GREEN (implement griller
-  S2, adopted). Ready for handover; its GREEN is taken on the tree after
-  `TDD-0069`'s GREEN.
-- `TDD-0071` on POSIX (`qa-gatekeeper` advisory): the test makes its file
-  unreadable with `chmod 000`, which does not stop a process running as root.
-  Run as root, the test fails at its `readFile` precondition (line 133) before
-  validate runs. The final head's CI must not run this test as root; that
-  failure would be a host limitation, not a regression.
-- `TDD-0068`: RED and its stripped run recorded on the approved test hash
-  `d27c64b0…48805c`, passed by `qa-gatekeeper` (RED phase); ready. The GREEN that
-  withdraws the schema asset waits for the REDs of spec-0003 `TDD-0098` and
-  `TDD-0099`.
-- `TDD-0070`: branch 2, confirmed by a passing classification run and P4b re-run on the
-  approved hash `a4c8d3a8…063971`. Ready for `/qfai-implement` step 3c, which takes the
-  falsifiability run and routes `qa-gatekeeper` on it.
-
+- The scoped rows TDD-0067 through TDD-0071 reached `done` after the first full CI checkpoint. TDD-0018 is recorded in the implementation evidence, and TDD-0072 is in its separate second checkpoint cycle.
+- The POSIX unreadable-file test uses `chmod 000` and requires a non-root runner. The first full CI checkpoint passed on the supported runner.
+- A spec-wide P8 stage review and scoped P5 validation are not recorded here, so no ATDD stage PASS is claimed.
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
 Pending. P8 has not been reached, and no review pack is open.
@@ -3306,3 +3280,4 @@ Pending. P8 has not been reached, and no review pack is open.
 - Run: https://github.com/aganesy/QFAI/actions/runs/36026684599
 - Result: PASS — build, lint, types, all nine package test slices, Node floor tests, and ci-pass succeeded.
 - Rows closed: TDD-0067, TDD-0068, TDD-0069, TDD-0070, TDD-0071.
+- Later full CI: `d1aef569c06201a083942a3376ab8fbfd15854b7`, run `36041167862`, passed after the cited-artifact record repair.

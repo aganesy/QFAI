@@ -13,7 +13,7 @@ part of the removal of the work-log surface `.qfai/steering/`. The
 | TDD-ID | TC-Refs | Layer | Final status |
 | ------ | ------- | ----- | ------------ |
 | TDD-0018 | TC-0004-0018 | unit | refactor (item reviews) |
-| TDD-0072 | TC-0004-0018 | unit | todo; runs after the final CI moves TDD-0018 to `done`, and closes on a second CI run (the user's answer to S5 Q6) |
+| TDD-0072 | TC-0004-0018 | unit | refactor; independent review and second CI pending |
 
 ## Grilling Session
 
@@ -98,6 +98,7 @@ Escalated S5: Q6 — the order TDD-0072 runs in. No order closes on the single f
 | TDD-ID | Obligation | Layer | RED provenance | Entry |
 | ------ | ---------- | ----- | -------------- | ----- |
 | `TDD-0018` | `TC-0004-0018` | unit | implement-authored RED, gated | [TDD-0018](#tdd-0018) |
+| `TDD-0072` | `TC-0004-0018` | unit | satisfied by done sibling TDD-0018; mutation proof | [TDD-0072](#tdd-0072) |
 
 ### TDD-0018
 
@@ -492,6 +493,54 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
 - Checkpoint verification revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
 - Checkpoint verification seal: 9fbbe571d84987a7d05c2950598a008a65f180885332a02a34a0a347117ca4dc
 
+### TDD-0072
+
+- TDD-ID: TDD-0072
+- Layer: unit
+- TC-ref: TC-0004-0018
+- Boundary: `rejected-readopt-empty`
+- Test file: packages/qfai/tests/validators/reviewerRejectedReadopt.test.ts
+- Selector: TC-0004-0018: rejects an empty R-REJECTED-READOPT justification
+
+#### Round 1
+
+- Round 1: Satisfied-by: TDD-0018 (`done` before this test was written). The shared validator still rejects an empty `R-REJECTED-READOPT` justification while the retired work-log codes are ignored.
+- Phase Red: The independent test and `tsconfig.tests.json` entry were added after the first full CI checkpoint passed at `d1aef569c06201a083942a3376ab8fbfd15854b7`. The first run passed. No natural RED is claimed.
+- Round 1: RED test hash: 373f531deb31d86e4304b1903e93dc096b4832f8102a0c2eb33521b43b7b8028
+- Round 1: RED test manifest: packages/qfai/tests/validators/reviewerRejectedReadopt.test.ts
+- Round 1: RED failure mode: falsifiability
+- Round 1: Falsifiability revision: working-tree+c489ffb5544a2d3615915a1f0ffcdc7a7f5b1ce55ae2082a295191e03511ea7c
+- Mutation: remove only `R-REJECTED-READOPT` from `ADVISORY_FAILING_CODES` in `reviewerJustification.ts`. This changes the owned predicate, not the test or fixture.
+- Round 1: Falsifiability command: `corepack pnpm -C packages/qfai exec vitest run tests/validators/reviewerRejectedReadopt.test.ts --reporter=dot`
+- Round 1: Falsifiability result: FAIL, exit 1, with this named selector and assertion output:
+
+```text
+FAIL |validators| tests/validators/reviewerRejectedReadopt.test.ts > TC-0004-0018: rejects an empty R-REJECTED-READOPT justification
+AssertionError: expected [] to deeply equal [ Array(1) ]
+- Expected [{ "code": "R-REJECTED-READOPT", "severity": "error" }]
++ Received []
+tests/validators/reviewerRejectedReadopt.test.ts:22:70
+Test Files 1 failed (1); Tests 1 failed (1)
+```
+
+- Mutation restoration: the original source bytes were written back in `finally`. The address before mutation and after restoration was `working-tree+fe2b53535c307e46e43ee2488ed194ef5246993af65bf3b39ec0e09d8a8e8cb8` (`ADDRESS_EQUAL=True`).
+- Round 1: Revision: working-tree+fe2b53535c307e46e43ee2488ed194ef5246993af65bf3b39ec0e09d8a8e8cb8
+- Round 1: GREEN command: `corepack pnpm -C packages/qfai exec vitest run tests/validators/reviewerRejectedReadopt.test.ts --reporter=dot`
+- Round 1: GREEN result: PASS, exit 0 after restoration:
+
+```text
+|validators| tests/validators/reviewerRejectedReadopt.test.ts > TC-0004-0018: rejects an empty R-REJECTED-READOPT justification
+Test Files 1 passed (1); Tests 1 passed (1)
+```
+
+- qa-gatekeeper: PASS for Round 1 RED/falsifiability observation, restored GREEN and Oracle strength; independent instance `spec0003_qa_build` reviewed the named selector, test hash, mutation, assertion failure and restoration.
+- Round 1: Oracle proof: `corepack pnpm -C packages/qfai exec vitest run tests/validators/reviewerRejectedReadopt.test.ts --reporter=dot` equals the GREEN command. With `R-REJECTED-READOPT` removed from `ADVISORY_FAILING_CODES`, the runner named `TC-0004-0018: rejects an empty R-REJECTED-READOPT justification`, reported `AssertionError: expected [] to deeply equal [ Array(1) ]` at line 22, and exited 1. After byte restoration, the same selector passed (1/1, exit 0).
+- Refactor: no production or test refactor was needed after the focused test.
+- Refactor verify command: `corepack pnpm check-types`; `corepack pnpm lint`; `corepack pnpm format:check`; `corepack pnpm -C packages/qfai exec vitest run tests/validators/reviewerRejectedReadopt.test.ts --reporter=dot`.
+- Refactor verify result: types and lint passed; the focused test passed. The full format check initially found the ledger row and passed after formatting it. The final full-suite checkpoint is the second CI run.
+- Refactor verify revision: working-tree+fe2b53535c307e46e43ee2488ed194ef5246993af65bf3b39ec0e09d8a8e8cb8
+- Prototype parity: n/a (the test is not UI-affecting).
+- Ledger write: `todo -> red -> green -> refactor` during this unit cycle; `done` awaits independent review and the second CI run.
 ## Test results summary
 
 Recorded per row under `## Ledger rows advanced`.

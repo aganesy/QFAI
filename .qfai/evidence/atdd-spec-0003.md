@@ -3132,7 +3132,7 @@ steps 43–63 belong to the earlier continuation.
 
 | Source rows | Dependent spec | Dependent row | Shared artifact | Change | Verification | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| TDD-0094, TDD-0096, TDD-0097 | spec-0015 | TDD-0039 (`todo`) | `packages/qfai/src/cli/commands/init.ts` | Remove the project work-log seed and its report folding | No selector is recorded for TDD-0039; the final full-suite checkpoint must cover it when the row gains one | open |
+| TDD-0094, TDD-0096, TDD-0097 | spec-0015 | TDD-0039 (`done`) | `packages/qfai/src/cli/commands/init.ts` | Remove the project work-log seed and its report folding | The TDD-0039 selector and the first full-suite checkpoint passed. | closed |
 
 ## Execution logs
 
@@ -3179,7 +3179,7 @@ Recorded per row under `## Ledger rows advanced`.
 
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
-FAIL — the pack's other ATDD-owned rows are still owed, as the matrix records.
+FAIL for the spec-wide ATDD pack; the scoped rows named below and in the first full CI checkpoint are done. The other ATDD-owned rows and the open safety-floor change request remain.
 
 The ten rows these runs took up are `done`: `TDD-0058` to `TDD-0063`, `TDD-0092`,
 `TDD-0093`, `TDD-0001` and `TDD-0037`. `/qfai-implement` took each through the

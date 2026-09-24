@@ -912,7 +912,7 @@ See `.qfai/evidence/coverage-depth-spec-0011.md` (committed). Totals: ✅ 4 / �
 
 | Source rows | Dependent spec | Dependent row | Shared artifact | Change | Verification | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| TDD-0021..TDD-0023 | spec-0013 | TDD-0048 (`todo`) | Shipped `.qfai/assistant` skill tree | Remove the qfai-implement work-log text | `spec0013RecordHomes.test.ts` still has its deliberate RED in qfai-sdd files; re-run it after spec-0013 edits | open |
+| TDD-0021..TDD-0023 | spec-0013 | TDD-0048 (`done`) | Shipped `.qfai/assistant` skill tree | Remove the qfai-implement work-log text | The TDD-0048 selector and the first full-suite checkpoint passed. | closed |
 
 The direct importer scan found no test importing the changed Markdown files. The
 source-reading asset suite passed 179 files and failed four repository-wide
@@ -927,16 +927,12 @@ None yet; the REDs are recorded per row when they run.
 
 ## Gaps / Open risks
 
-- `TDD-0021` … `TDD-0023`: REDs passed by `qa-gatekeeper` (RED phase) on file hash
-  `97bd4a7b…ee53f26`; handoffs ready. Their GREEN is the `/qfai-implement` skill-text round.
-- The implementation's source-reading asset suite has four accounting failures,
-  named under Cross-spec obligations. Its other 179 files passed.
-- Checkpoint departure (user decision, see Decisions made): no full-suite checkpoint runs per
-  row. All rows' full-suite checkpoints close together on the final head's CI.
-
+- TDD-0021 through TDD-0023 reached `done` after their RED, GREEN, Oracle, Refactor verification, row reviews and the first full CI checkpoint.
+- The four repository-wide accounting failures recorded above were from an earlier source-reading check. All package test slices passed at the first full CI checkpoint.
+- A spec-wide P8 stage review and scoped P5 validation are not recorded here, so no ATDD stage PASS is claimed.
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
-Pending. P8 has not been reached, and no review pack is open.
+TDD-0021 through TDD-0023 are done after the first full CI checkpoint. This is a scoped row outcome; no spec-wide P8 PASS is claimed here.
 
 ## First full CI checkpoint
 

@@ -173,13 +173,13 @@ the Coverage Depth Matrix below.
 
 ### /qfai-atdd run 2026-09-23T19:33:24.738Z
 
-- `TC-0013-0036` and `TC-0013-0037`: written (`TDD-0044` … `TDD-0049`), not yet run, under
+- `TC-0013-0036` and `TC-0013-0037`: exercised by `TDD-0044` … `TDD-0049`, all done after the first full CI checkpoint, under
   `packages/qfai/tests/integration/**`.
 - `US-*` (14), `CON-API-*` (none), `CON-DB-*` (none): unchanged by this change.
 
 ## Ledger rows advanced
 
-No row changed status. Every row below was already `done`.
+The four earlier rows were already done. TDD-0044 through TDD-0049 became done after the first full CI checkpoint.
 
 | TDD-ID     | Obligation      | Layer       | RED provenance | Status |
 | ---------- | --------------- | ----------- | -------------- | ------ |
@@ -187,12 +187,12 @@ No row changed status. Every row below was already `done`.
 | `TDD-0024` | `TC-0013-0029`  | integration | falsifiability | done   |
 | `TDD-0029` | `TC-0013-0034`  | integration | falsifiability | done   |
 | `TDD-0030` | `TC-0013-0035`  | integration | falsifiability | done   |
-| `TDD-0044` | `TC-0013-0036` | Integration | observed-red | todo |
-| `TDD-0046` | `TC-0013-0036` | Integration | observed-red | todo |
-| `TDD-0047` | `TC-0013-0036` | Integration | observed-red | todo |
-| `TDD-0048` | `TC-0013-0036` | Integration | observed-red | todo |
-| `TDD-0045` | `TC-0013-0037` | Integration | observed-red | todo |
-| `TDD-0049` | `TC-0013-0037` | Integration | observed-red | todo |
+| `TDD-0044` | `TC-0013-0036` | Integration | observed-red | done |
+| `TDD-0046` | `TC-0013-0036` | Integration | observed-red | done |
+| `TDD-0047` | `TC-0013-0036` | Integration | observed-red | done |
+| `TDD-0048` | `TC-0013-0036` | Integration | observed-red | done |
+| `TDD-0045` | `TC-0013-0037` | Integration | observed-red | done |
+| `TDD-0049` | `TC-0013-0037` | Integration | observed-red | done |
 
 One of the four reaches part of a multi-clause obligation. The part each reaches
 is recorded with the row, so the evidence says what it proves rather than
@@ -2458,11 +2458,7 @@ pair, so a change to one can silently diverge from the other.
 
 ## Final status
 
-PASS for the four rows recorded here, each for the part of its obligation named
-under "Ledger rows advanced". This is a per-row verdict, not a stage verdict:
-the pack is not clean, and eight of its twelve `done` rows are listed under Gaps
-rather than claimed.
-
+PASS for TDD-0020, TDD-0024, TDD-0029, TDD-0030 and TDD-0044 through TDD-0049, each for the part of its obligation named under "Ledger rows advanced". This is a per-row verdict, not a stage verdict. The pack retains the eight unrelated coverage gaps named above.
 ## First full CI checkpoint
 
 - Revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
