@@ -347,6 +347,8 @@ export type ChangeRequestHeader = {
   supersededBy: string | null;
   /** True when the `## Resolution` section holds text outside comments. */
   hasResolution: boolean;
+  /** The text of the `## Blocked downstream items` section, comments removed. */
+  blockedItems: string;
 };
 
 /**
@@ -362,11 +364,17 @@ const CHANGE_REQUEST_SETTLED_STATUSES: ReadonlySet<string> = new Set([
 
 /** A heading of level 2 or deeper, which is where a record's header block ends. */
 const SECTION_HEADING_RE = new RegExp(`^${BLOCK_INDENT}#{2,6}(?:\\s|$)`);
-/** A heading of level 1 or 2, which is where the `Resolution` section ends. */
+/** A heading of level 1 or 2, which is where a read section ends. */
 const TOP_SECTION_HEADING_RE = new RegExp(`^${BLOCK_INDENT}#{1,2}(?:\\s|$)`);
 const RESOLUTION_HEADING_RE = new RegExp(`^${BLOCK_INDENT}##\\s+Resolution\\s*#*\\s*$`, "i");
+const BLOCKED_HEADING_RE = new RegExp(
+  `^${BLOCK_INDENT}##\\s+Blocked downstream items\\s*#*\\s*$`,
+  "i",
+);
 
-type ChangeRequestSection = "header" | "body" | "resolution";
+/** The two body sections whose text is kept. */
+type ChangeRequestBodySection = "resolution" | "blocked";
+type ChangeRequestSection = "header" | "body" | ChangeRequestBodySection;
 
 /** The section a heading line moves the reader into, or `null` when it moves nowhere. */
 function nextChangeRequestSection(
@@ -374,13 +382,16 @@ function nextChangeRequestSection(
   section: ChangeRequestSection,
 ): ChangeRequestSection | null {
   if (RESOLUTION_HEADING_RE.test(line)) return "resolution";
-  const leaves = section === "resolution" ? TOP_SECTION_HEADING_RE : SECTION_HEADING_RE;
+  if (BLOCKED_HEADING_RE.test(line)) return "blocked";
+  const leaves =
+    section === "header" || section === "body" ? SECTION_HEADING_RE : TOP_SECTION_HEADING_RE;
   return leaves.test(line) ? "body" : null;
 }
 
 /**
- * Parse a `.qfai/decisions/CR-*.md` record: its header bullet list, and
- * whether its `## Resolution` section says anything.
+ * Parse a `.qfai/decisions/CR-*.md` record: its header bullet list, whether
+ * its `## Resolution` section says anything, and what its
+ * `## Blocked downstream items` section lists.
  *
  * Fields are read only before the first `##` heading. The body of a Change
  * Request quotes its own fields freely, so a `- Status:` line in a section is
@@ -392,14 +403,14 @@ function nextChangeRequestSection(
  */
 export function parseChangeRequestHeader(text: string): ChangeRequestHeader {
   const fields = new Map<string, string>();
-  let hasResolution = false;
+  const bodies: Record<ChangeRequestBodySection, string[]> = { resolution: [], blocked: [] };
   let section: ChangeRequestSection = "header";
   let openFence: RegExp | null = null;
   let inComment = false;
   for (const raw of text.replace(/\r\n/g, "\n").split("\n")) {
     if (openFence) {
       if (openFence.test(raw)) openFence = null;
-      else if (section === "resolution" && raw.trim().length > 0) hasResolution = true;
+      else if (section === "resolution" || section === "blocked") bodies[section].push(raw);
       continue;
     }
     const masked = maskLineComments(raw, inComment);
@@ -415,7 +426,7 @@ export function parseChangeRequestHeader(text: string): ChangeRequestHeader {
       section = next;
       continue;
     }
-    if (section === "resolution" && line.trim().length > 0) hasResolution = true;
+    if (section === "resolution" || section === "blocked") bodies[section].push(line);
     if (section !== "header") continue;
     const field = FIELD_RE.exec(line);
     if (!field?.[1]) continue;
@@ -431,7 +442,8 @@ export function parseChangeRequestHeader(text: string): ChangeRequestHeader {
     approvedOption: fields.get("approved-option") ?? null,
     appliedAt: fields.get("applied-at") ?? null,
     supersededBy: fields.get("superseded-by") ?? null,
-    hasResolution,
+    hasResolution: bodies.resolution.some((line) => line.trim().length > 0),
+    blockedItems: bodies.blocked.join("\n"),
   };
 }
 

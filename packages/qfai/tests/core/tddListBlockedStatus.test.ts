@@ -556,6 +556,8 @@ function changeRequest(fields: {
   resolution?: string;
   /** Lines placed between the title and the header list. */
   preamble?: string;
+  /** The `## Blocked downstream items` body; the section is left out when absent. */
+  blockedItems?: string;
 }): string {
   return [
     "# Change Request",
@@ -570,6 +572,9 @@ function changeRequest(fields: {
     `- Applied at: \`${fields.appliedAt ?? "-"}\` <!-- YYYY-MM-DDThh:mm:ssZ -->`,
     `- Superseded by: \`${fields.supersededBy ?? "-"}\``,
     "",
+    ...(fields.blockedItems === undefined
+      ? []
+      : ["## Blocked downstream items", "", fields.blockedItems, ""]),
     "## Resolution",
     "",
     fields.resolution ?? "- Status: `approved`\n- Applied at: `2026-08-03T00:00:00Z`",
@@ -798,5 +803,50 @@ describe("QFAI-TDDLIST-021 — a blocked row whose Change Request is settled", (
       { decisions: { [CR_FILE]: changeRequest({ status: "rejected", preamble }) } },
     );
     expect(issues.map((i) => i.code)).toContain("QFAI-TDDLIST-021");
+  });
+
+  describe("a row another unresolved request still blocks", () => {
+    // The ledger cell names only the settled request; the open one lists the
+    // row in its own blocked set, which is the union the release recomputes.
+    const openRequest = (item: string): string =>
+      changeRequest({
+        id: "CR-20260801-0002",
+        status: "open",
+        blockedItems: [
+          "| Item | Kind | Why it depends on the artifact |",
+          "| ---- | ---- | ------------------------------ |",
+          `| \`${item}\` | \`ledger-row\` | Its TC is what this request changes |`,
+          "",
+          "- Not blocked by this CR: `spec-0001/TDD-0009`",
+        ].join("\n"),
+      });
+
+    it("says nothing while the open request lists the row", async () => {
+      const issues = await run(
+        `${NINE_COL}\n${blockedOnCr}\n`,
+        {},
+        {
+          decisions: {
+            [CR_FILE]: changeRequest({ status: "rejected" }),
+            "CR-20260801-0002-overlapping.md": openRequest("spec-0001/TDD-0001"),
+          },
+        },
+      );
+      expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+    });
+
+    it("still warns when the open request lists the same row id in another spec", async () => {
+      const issues = await run(
+        `${NINE_COL}\n${blockedOnCr}\n`,
+        {},
+        {
+          decisions: {
+            [CR_FILE]: changeRequest({ status: "rejected" }),
+            "CR-20260801-0002-overlapping.md": openRequest("spec-0002/TDD-0001"),
+          },
+        },
+      );
+      expect(issues.map((i) => i.code)).toContain("QFAI-TDDLIST-021");
+    });
   });
 });

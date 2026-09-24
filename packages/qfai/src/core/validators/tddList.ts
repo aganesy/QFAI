@@ -4728,12 +4728,16 @@ async function listRecordFileNames(root: string): Promise<string[]> {
  */
 const CHANGE_REQUEST_FILE = /^(CR-\d{8}-\d{4})(?:-.+)?\.md$/i;
 
-/**
- * The header of the Change Request a `CR-*` id names, or `null` when no record
- * file under `.qfai/decisions/` carries that id in both its name and its
- * `- ID:` field.
- */
-type ChangeRequestLookup = (crId: string) => Promise<ChangeRequestHeader | null>;
+/** The Change Request records under `.qfai/decisions/`, read on demand. */
+type ChangeRequestLookup = {
+  /**
+   * The header of the Change Request a `CR-*` id names, or `null` when no
+   * record file carries that id in both its name and its `- ID:` field.
+   */
+  header: (crId: string) => Promise<ChangeRequestHeader | null>;
+  /** The `## Blocked downstream items` text of every record not yet settled. */
+  unresolvedBlockedItems: () => Promise<readonly string[]>;
+};
 
 /** What `.qfai/decisions/` holds, read once per run and shared by every spec. */
 type DecisionsIndex = {
@@ -4754,6 +4758,10 @@ type DecisionsIndex = {
  * file whose name and declared id disagree — renamed or copied without its
  * header moving — answers for neither, so a row cannot borrow the status of a
  * record that is not the one it names.
+ *
+ * The blocked sets of the unresolved records are read across every file,
+ * ambiguous and mismatched ones included: a record that cannot be told apart
+ * may still be the one holding a row.
  */
 function buildChangeRequestLookup(
   root: string,
@@ -4765,18 +4773,30 @@ function buildChangeRequestLookup(
     if (id !== undefined) files.set(id, [...(files.get(id) ?? []), name]);
   }
   const headers = new Map<string, Promise<ChangeRequestHeader>>();
-  return async (crId) => {
-    const id = crId.toUpperCase();
-    const candidates = files.get(id) ?? [];
-    const name = candidates.length === 1 ? candidates[0] : undefined;
-    if (name === undefined) return null;
-    let header = headers.get(id);
+  const read = (name: string): Promise<ChangeRequestHeader> => {
+    let header = headers.get(name);
     if (header === undefined) {
       header = readSafe(path.join(root, DR_RECORD_DIR, name)).then(parseChangeRequestHeader);
-      headers.set(id, header);
+      headers.set(name, header);
     }
-    const parsed = await header;
-    return parsed.id === id ? parsed : null;
+    return header;
+  };
+  let unresolved: Promise<string[]> | undefined;
+  return {
+    header: async (crId) => {
+      const id = crId.toUpperCase();
+      const candidates = files.get(id) ?? [];
+      const name = candidates.length === 1 ? candidates[0] : undefined;
+      if (name === undefined) return null;
+      const parsed = await read(name);
+      return parsed.id === id ? parsed : null;
+    },
+    unresolvedBlockedItems: async () => {
+      unresolved ??= Promise.all([...files.values()].flat().map(read)).then((all) =>
+        all.filter((h) => !isChangeRequestSettled(h)).map((h) => h.blockedItems),
+      );
+      return await unresolved;
+    },
   };
 }
 
@@ -5261,6 +5281,32 @@ const CHANGE_REQUEST_ID_IN_TEXT = /\bCR-\d{8}-\d{4}\b/gi;
 /** A blocker other than a Change Request: a ledger row, or a contract path. */
 const OTHER_BLOCKER_IN_TEXT = /\bTDD-\d{4}\b|\.qfai\/contracts\//i;
 
+/** A row named with its spec: `spec-NNNN/TDD-NNNN`, or with `:` in place of `/`. */
+const QUALIFIED_ROW_IN_TEXT = /\bspec-(\d{4})\s*[/:]\s*(TDD-\d{4})\b/gi;
+const BARE_ROW_IN_TEXT = /\bTDD-\d{4}\b/gi;
+/** The template's line for what a request does not block. */
+const NOT_BLOCKED_LINE = /^\s*[-*]\s*Not blocked by this CR\s*:.*$/gim;
+
+/**
+ * True when a Change Request's blocked items name this spec's row.
+ *
+ * SIMPLIFIED: a bare `TDD-NNNN` is taken to name the row in every spec, and an
+ * item written as prose ("every row whose TC-Refs names ...") names nothing.
+ * Both err towards silence, which is the safe side for a warning that tells
+ * the operator to release a row.
+ * Lift when: the template fixes a grammar for a blocked item.
+ */
+function blockedItemsNameRow(items: string, specNumber: string, tddId: string): boolean {
+  const row = tddId.toUpperCase();
+  if (row.length === 0) return false;
+  const text = items.replace(NOT_BLOCKED_LINE, "");
+  for (const match of text.matchAll(QUALIFIED_ROW_IN_TEXT)) {
+    if (match[1] === specNumber && match[2]?.toUpperCase() === row) return true;
+  }
+  const bare = text.replace(QUALIFIED_ROW_IN_TEXT, " ");
+  return [...bare.matchAll(BARE_ROW_IN_TEXT)].some((match) => match[0].toUpperCase() === row);
+}
+
 /** Every distinct `CR-*` id a cell names, upper-cased, in order of appearance. */
 function changeRequestIdsIn(text: string): string[] {
   return [...new Set([...text.matchAll(CHANGE_REQUEST_ID_IN_TEXT)].map((m) => m[0].toUpperCase()))];
@@ -5313,7 +5359,7 @@ async function settledBlockers(
   const named = changeRequestBlockers(ref);
   if (named === null) return null;
   const { column, ids } = named;
-  const headers = await Promise.all(ids.map(lookup));
+  const headers = await Promise.all(ids.map(lookup.header));
   const blockers: string[] = [];
   for (const [index, header] of headers.entries()) {
     if (header === null || !isChangeRequestSettled(header)) return null;
@@ -5332,6 +5378,10 @@ async function settledBlockers(
  *
  * A `warning`: the row's obligation is still visible as unfinished, and the
  * finding is there so a reader sees that the stop has outlived its cause.
+ *
+ * A row can sit in more than one Change Request's blocked set, and the ledger
+ * cell need not name them all. So a row that an unresolved request still lists
+ * under `## Blocked downstream items` is not reported: it is still held.
  */
 async function blockedByClosedChangeRequest(
   blockedRows: readonly LedgerRowRef[],
@@ -5340,11 +5390,14 @@ async function blockedByClosedChangeRequest(
   lookup: ChangeRequestLookup,
 ): Promise<Issue[]> {
   const settled = await Promise.all(blockedRows.map((ref) => settledBlockers(ref, lookup)));
+  if (settled.every((found) => found === null)) return [];
+  const stillHeld = await lookup.unresolvedBlockedItems();
   const issues: Issue[] = [];
   for (const [index, ref] of blockedRows.entries()) {
     const found = settled[index];
     if (found === null || found === undefined) continue;
     const tddId = cell(ref, "TDD-ID");
+    if (stillHeld.some((items) => blockedItemsNameRow(items, specNumber, tddId))) continue;
     const rowKey = tddId.length > 0 ? tddId : ref.label;
     issues.push(
       issue(
