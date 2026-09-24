@@ -79,9 +79,9 @@ rule or example into a current contract or criterion to clear an exit 3.
   `spec0003ShippedWorkflowSet` (BF-0002), `spec0006DoctorRemediation`
   (BF-0003) and `spec0018MigrationJourney` (BF-0004). Treat each as a
   candidate until the assertions and failure path match its BF.
-- For each BF, author and track
-  `.qfai/evidence/coverage-depth-BF-NNNN.md` and
-  `.qfai/evidence/atdd-BF-NNNN.md`. Each matrix has the BF/E2E link, a row for
+- For each BF, author and track its coverage-depth and ATDD Markdown evidence
+  under `.qfai/evidence/`, using that flow's ID in both filenames. Each matrix
+  has the BF/E2E link, a row for
   every scoped US/AC/EX, six coverage cells per row and explicit gaps. The
   ATDD evidence links its matrix and gives matching numeric ✅/⚠️/❌ totals,
   test commands and observed results. These eight files must be tracked even
