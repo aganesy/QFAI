@@ -701,6 +701,30 @@ describe("BF-0004 acceptance criteria", () => {
     expect(cells[3]).toMatch(/^(?:TODO|DONE|DEFERRED|WIP)$/);
   });
 
+  it("records a superseded pack as a completed decision without creating a flow", async () => {
+    // QFAI:EX-0004-0005-05
+    const root = await project();
+    await cp(
+      path.join(fixtureRoot, ".qfai/specs/spec-0002"),
+      path.join(root, ".qfai/specs/spec-0002"),
+      { recursive: true },
+    );
+    prepareThrough(root, 3);
+    const decisions = await readFile(path.join(root, ".qfai/spec/decisions.md"), "utf8");
+    const retiredRow = decisions
+      .split(/\r?\n/)
+      .find((line) => line.includes("spec-0002 is superseded by spec-0001"));
+    expect(retiredRow).toContain("| DONE |");
+    expect(step(root, 4).status).toBe(0);
+    const map = JSON.parse(
+      await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
+    ) as Journey["map"];
+    expect(map.ids["spec-0002"]).toEqual({});
+    await expect(
+      lstat(path.join(root, ".qfai/spec/02_business-flow/business-flow-0002")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
   // QFAI:AC-0004-0005-02
   it("moves old open questions into the shared question ledger", async () => {
     const questions = await readFile(
