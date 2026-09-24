@@ -112,20 +112,12 @@ export const LINE_BUDGET_EXEMPT: ReadonlyMap<string, string> = new Map();
  * a backlog nobody can add to is a backlog that goes away.
  */
 export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
-  ["assistant/rule/test-layers.md", 921],
-  ["assistant/rule/audited-evidence-hash.md", 1406],
-  ["assistant/skill/qfai-atdd/references/red-provenance.md", 460],
-  ["assistant/skill/qfai-configure/SKILL.md", 2267],
+  ["assistant/skill/qfai-configure/SKILL.md", 671],
   ["assistant/skill/qfai-discussion/templates/01_Context.md", 405],
-  ["assistant/skill/qfai-implement/SKILL.md", 9104],
-  ["assistant/skill/qfai-implement/references/cross-spec-ownership.md", 616],
   ["assistant/skill/qfai-prototyping/SKILL.md", 541],
   ["assistant/skill/qfai-sdd/references/design-md-brand-catalog.md", 533],
-  ["assistant/skill/qfai-sdd/references/sdd-phase-checklists.md", 3763],
-  ["assistant/skill/qfai-sdd/references/spec-traceability-rules.md", 790],
   ["assistant/skill/qfai-verify/SKILL.md", 899],
-  ["assistant/skill/qfai-verify/references/articles.md", 413],
-  ["assistant/skill/qfai-verify/references/verify-output-contract.md", 840],
+  ["assistant/skill/qfai-verify/references/verify-output-contract.md", 837],
 ]);
 
 /**
@@ -139,19 +131,11 @@ export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
  * about.
  */
 export const WIDTH_BACKLOG_PATHS: readonly string[] = [
-  "assistant/rule/test-layers.md",
-  "assistant/rule/audited-evidence-hash.md",
-  "assistant/skill/qfai-atdd/references/red-provenance.md",
   "assistant/skill/qfai-configure/SKILL.md",
   "assistant/skill/qfai-discussion/templates/01_Context.md",
-  "assistant/skill/qfai-implement/SKILL.md",
-  "assistant/skill/qfai-implement/references/cross-spec-ownership.md",
   "assistant/skill/qfai-prototyping/SKILL.md",
   "assistant/skill/qfai-sdd/references/design-md-brand-catalog.md",
-  "assistant/skill/qfai-sdd/references/sdd-phase-checklists.md",
-  "assistant/skill/qfai-sdd/references/spec-traceability-rules.md",
   "assistant/skill/qfai-verify/SKILL.md",
-  "assistant/skill/qfai-verify/references/articles.md",
   "assistant/skill/qfai-verify/references/verify-output-contract.md",
 ];
 
