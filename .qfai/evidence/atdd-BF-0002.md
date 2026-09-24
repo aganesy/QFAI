@@ -8,11 +8,13 @@ The matrix maps every ID from the current story tree to a layer, an assertion ca
 
 ## Coverage Depth Matrix
 
-[coverage-depth-BF-0002.md](coverage-depth-BF-0002.md) — ✅ 0 / ⚠️ 37 / ❌ 550. The counts cover scored cells; `—` means the row has no declared case in that dimension.
+[coverage-depth-BF-0002.md](coverage-depth-BF-0002.md) — ✅ 0 / ⚠️ 48 / ❌ 539. The counts cover scored cells; `—` means the row has no declared case in that dimension.
 
 ## Evidence and remaining work
 
 - Source: `.qfai/spec/02_business-flow/business-flow-0002/` (all story, AC and EX files).
+- Acceptance tests: `packages/qfai/tests/integration/bf0002Acceptance.test.ts` adds six observable tests for eight ACs. They execute the workflow hygiene lane over clean and planted own/shipped trees, inspect the required verdict and build chain, and verify the CI full-validation wiring. Eleven scored cells gained static assertion candidates. The BF journey remains in `packages/qfai/tests/e2e/bf0002CiReleaseFlowE2E.test.ts`.
+- Decision alignment: `AC-0002-0016-03` and examples 04/05 follow the later `ci-pass` required-context decision. The test checks that `build` remains reachable and that its verification steps cannot silently continue on error.
 - Static inspection: annotations and nearby `expect(...)` or `assert(...)` calls in `packages/qfai/tests/**`. A candidate is partial until its asserted behavior and CI outcome are checked.
 - Test execution: not run locally, per the session's CI-only instruction. No RED/GREEN or falsifiability result is claimed.
 - Required next action: ATDD resolves BF/AC and story-level gaps, Implement resolves EX gaps, then CI executes the selected tests and the matrix is rescored from actual outcomes.

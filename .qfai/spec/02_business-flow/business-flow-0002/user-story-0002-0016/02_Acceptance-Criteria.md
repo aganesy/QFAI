@@ -27,13 +27,14 @@ Scenario: A measured "no" is a legitimate outcome rather than a failed attempt
 # AC-0002-0016-03
 # Parent: US-0002-0016
 Scenario: The producer and verifier split must not hollow out the only required status check
-  Given the job named build is the repository's only required status check
+  Given the required status context is `ci-pass`, whose needs include the job named `build`
   When that job is split, folded into, or otherwise restructured
   Then a job of that exact name still exists
-  And it carries no condition of its own, and no job it depends on carries one, because a skipped dependency makes it skipped and a skipped job reports success
-  And it still performs, or depends on jobs that perform, every item of its enumerated verification set
+  And `build` carries no condition of its own, and no job it depends on carries one, so its verification work remains reachable
+  And `ci-pass` carries `if: always()` and derives its verdict from the serialized results of every declared need, including `build`
+  And `build` still performs, or depends on jobs that perform, every item of its enumerated verification set
   And no item of that set is weakened by continue-on-error
-  And a removal, a rename, an added condition or a shrunk verification set is a release blocker
+  And a removal, a rename, a skippable required context, an added condition on `build` or a shrunk verification set is a release blocker
 
 # AC-0002-0016-04
 # Parent: US-0002-0016
