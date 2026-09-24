@@ -112,12 +112,16 @@ describe("BF-0003 doctor acceptance", () => {
       const stdoutData: unknown = JSON.parse(output);
       const fileData: unknown = JSON.parse(await readFile(outputPath, "utf8"));
       expect(stdoutData).toMatchObject({
-        root,
+        root: path.relative(process.cwd(), root).replace(/\\/g, "/"),
         config: { found: true },
         checks: expect.any(Array),
         summary: { warning: expect.any(Number), error: 0 },
       });
-      expect(fileData).toMatchObject({ root, config: { found: true }, checks: expect.any(Array) });
+      expect(fileData).toMatchObject({
+        root: path.relative(process.cwd(), root).replace(/\\/g, "/"),
+        config: { found: true },
+        checks: expect.any(Array),
+      });
       expect(writeMessage).toContain(`doctor: wrote ${outputPath}`);
     });
   });

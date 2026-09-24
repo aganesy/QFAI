@@ -139,10 +139,10 @@ describe("scaffold dialect matches the runner's glob", () => {
   });
 
   it.each([
-    ["brace range", "tests/**/AC-{0000..0002}-0000-01.test.ts", "resolved"],
-    ["range excludes probe", "tests/**/AC-{0001..0002}-0000-01.test.ts", "naming-mismatch"],
+    ["brace range", "tests/**/AC-{0000..0002}-0001-01.test.ts", "resolved"],
+    ["range excludes probe", "tests/**/AC-{0002..0003}-0001-01.test.ts", "naming-mismatch"],
     ["extension range", "tests/**/*.{s..u}est.ts", "resolved"],
-    ["unexpanded large range", "tests/**/AC-{0000..9999}-0000-01.test.ts", "naming-mismatch"],
+    ["unexpanded large range", "tests/**/AC-{0000..9999}-0001-01.test.ts", "naming-mismatch"],
     ["unsupported language", "tests/**/*.rb", "unsupported-stack"],
     ["uncollectable Python name", "tests/**/check_*.py", "naming-mismatch"],
     ["case-sensitive Python name", "tests/**/TEST_*.py", "naming-mismatch"],

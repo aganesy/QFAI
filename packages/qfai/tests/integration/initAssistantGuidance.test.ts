@@ -24,18 +24,6 @@ const instructionsDir = path.join(
   "assistant",
   "rule",
 );
-// Post-recut: agent-catalog.yml moved from steering/ to manifest/.
-const manifestDir = path.join(
-  repoRoot,
-  "packages",
-  "qfai",
-  "assets",
-  "init",
-  ".qfai",
-  "assistant",
-  "manifest",
-);
-
 describe("init assistant guidance: exploration-first alignment", () => {
   it("frontend-engineer.md が selected direction / screen contracts を参照する", async () => {
     const content = await readFile(path.join(agentsDir, "frontend-engineer.md"), "utf-8");
@@ -52,14 +40,21 @@ describe("init assistant guidance: exploration-first alignment", () => {
     );
   });
 
-  it("agent-selection.md が sidecar artifacts を維持する", async () => {
-    const content = await readFile(path.join(instructionsDir, "agent-selection.md"), "utf-8");
-    expect(content).toMatch(/sidecar artifacts/i);
+  it("routes discussion sidecars through SDD before downstream UI work", async () => {
+    const content = await readFile(
+      path.join(instructionsDir, "ui-definition-protocol.md"),
+      "utf-8",
+    );
+    expect(content).toContain("`/qfai-sdd` alone reads the discussion sidecar artifacts");
+    expect(content).toContain(
+      "They read the UI and UX definition from the story tree, contracts and evidence",
+    );
   });
 
-  it("agent-catalog.yml の frontend mission が selected direction ベースに更新されている", async () => {
-    const content = await readFile(path.join(manifestDir, "agent-catalog.yml"), "utf-8");
-    expect(content).toMatch(/selected direction|design system|screen contracts/i);
+  it("uses the canonical frontend card mission", async () => {
+    const content = await readFile(path.join(agentsDir, "frontend-engineer.md"), "utf-8");
+    expect(content).toMatch(/mission: Implement frontend behavior aligned with selected direction/);
+    expect(content).toMatch(/design system, screen contracts, and product-surface decisions/);
   });
 
   it("distributed agent cards do not require repo-private .instruction paths", async () => {

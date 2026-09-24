@@ -115,11 +115,19 @@ describe("TC-0003-0030 (TDD-0030): every shipped uses value is a 40-hex SHA pin"
     // pinned tree until this scan was widened).
     const testFiles = (await fg(["**/*.ts"], { cwd: TESTS_DIR, absolute: true })).sort();
     const offending: string[] = [];
+    const plantedFixtureFiles = new Set([
+      "integration/bf0002Acceptance.test.ts",
+      "unit/bf0002Examples.test.ts",
+    ]);
     for (const filePath of testFiles) {
       const source = await readFile(filePath, "utf-8");
       const relative = path.relative(TESTS_DIR, filePath).split(path.sep).join("/");
       source.split(/\r?\n/).forEach((line, index) => {
-        if (/@v[0-9]/.test(line)) {
+        // These two inputs deliberately plant an unpinned checkout reference
+        // in a temporary workflow to prove that the shipped pin guard rejects it.
+        const plantedFixture =
+          plantedFixtureFiles.has(relative) && line.trim().startsWith('"uses: actions/checkout@');
+        if (/@v[0-9]/.test(line) && !plantedFixture) {
           offending.push(`${relative}:${index + 1}: ${line.trim()}`);
         }
       });

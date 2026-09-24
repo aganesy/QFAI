@@ -117,7 +117,8 @@ describe("BF-0001 workflow definition", () => {
   // QFAI:EX-0001-0004-01
   it("defines an ordered, acyclic eight-stage workflow with the optional stages", async () => {
     const workflow = await readFile(rule("workflow.md"), "utf8");
-    const stages = [...workflow.matchAll(/^([0-7])\. (.+)$/gm)].map((match) => ({
+    const canonicalStages = workflow.split("## Stages (canonical)")[1]?.split("\nStage 3")[0] ?? "";
+    const stages = [...canonicalStages.matchAll(/^([0-7])\. (.+)$/gm)].map((match) => ({
       number: Number(match[1]),
       label: match[2] ?? "",
     }));

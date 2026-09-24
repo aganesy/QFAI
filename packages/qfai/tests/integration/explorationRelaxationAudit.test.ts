@@ -23,7 +23,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { validateProject } from "../../src/core/validate.js";
 
-const UI_CONTRACT = `screens:
+const UI_CONTRACT = `# QFAI-CONTRACT-ID: CON-UI-0001
+screens:
   - id: orders
     title: Orders
 `;

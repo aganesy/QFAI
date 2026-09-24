@@ -31,6 +31,11 @@ async function put(root: string, relative: string, body: string): Promise<void> 
 
 function storyFiles(acRef = "AC-0001-0001-01"): Map<string, string> {
   return new Map([
+    [
+      `${spec}/02_business-flow/business-flows.md`,
+      "| BF-ID | Title |\n| --- | --- |\n| BF-0001 | Checkout |\n",
+    ],
+    [`${flow}/user-stories.md`, "| US-ID | Title |\n| --- | --- |\n| US-0001-0001 | Checkout |\n"],
     [`${flow}/business-flow.md`, "# BF-0001: Checkout\n"],
     [`${story}/01_User-story.md`, "# US-0001-0001: Checkout\n"],
     [

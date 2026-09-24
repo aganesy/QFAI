@@ -234,14 +234,12 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
       "QFAI-ATDD-101",
       "QFAI-ATDD-102",
       "QFAI-ATDD-103",
-      "QFAI-ATDD-104",
       "QFAI-ATDD-105",
       "QFAI-ATDD-111",
       "QFAI-ATDD-112",
       "QFAI-ATDD-113",
       "QFAI-ATDD-114",
       "QFAI-ATDD-115",
-      "QFAI-ATDD-116",
       "QFAI-ATDD-117",
       "QFAI-ATDD-118",
       // Obligations referenced only from carriers that declare no test. 118 is
@@ -273,7 +271,7 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
 
   it("leaves the layer token set at its five members", async () => {
     const crosswalk = await readFile(
-      path.join(getInitAssetsDir(), ".qfai", "assistant", "catalog", "test-layers.md"),
+      path.join(getInitAssetsDir(), ".qfai", "assistant", "rule", "test-layers.md"),
       "utf-8",
     );
     const tokens = [...crosswalk.matchAll(/`layer-([a-z0-9]+)`/g)].map((match) => match[1] ?? "");

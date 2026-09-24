@@ -133,7 +133,7 @@ describe("qfai-init.md matches the additive assistant-tree upgrade", () => {
   it("does not write the retired assistant directories or a migration memo", async () => {
     const contract = await readFile(contractPath, "utf-8");
     expect(contract).toMatch(
-      /writes nothing under .constitution. .manifest. .catalog. or\s+.process./,
+      /writes nothing under `constitution\/`, `manifest\/`, `catalog\/` or\s+`process\/`/,
     );
     expect(contract).toMatch(/writes no migration memo/);
   });
