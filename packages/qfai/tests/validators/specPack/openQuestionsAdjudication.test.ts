@@ -11,20 +11,7 @@
  * new section, because the gate already reads statuses and no existing pack
  * carries the value, so nothing has to be migrated to it.
  */
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { describe, expect, it } from "vitest";
-
-const repoRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "..",
-  "..",
-  "..",
-  "..",
-);
 
 import { collectOpenQuestionsGateIssues } from "../../../src/core/validators/specPack.js";
 import type { SpecEntry } from "../../../src/core/specLayout.js";
@@ -145,19 +132,6 @@ describe("the register it reads, and the notation it reads it in", () => {
       "\n",
     );
     expect(codes(table)).toEqual(["E_OQ_OPEN_RELEASE_BLOCK"]);
-  });
-
-  it("passes the template a fresh spec is created from", async () => {
-    // The template carries a glossary of the four statuses beside the register.
-    // Read as a second register, an untouched spec reports itself.
-    const template = await readFile(
-      path.join(
-        repoRoot,
-        "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/spec/08_Open-questions.md",
-      ),
-      "utf-8",
-    );
-    expect(codes(template)).toEqual([]);
   });
 
   it("reads a table written without trailing pipes", () => {

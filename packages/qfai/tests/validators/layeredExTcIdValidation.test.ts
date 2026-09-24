@@ -23,6 +23,13 @@ import { defaultConfig } from "../../src/core/config.js";
 import { extractIds } from "../../src/core/ids.js";
 import { validateSpecPacks } from "../../src/core/validators/specPack.js";
 
+// These cases exercise the retained low-level spec-pack reader, not the
+// story-tree validation entrypoint, which rejects this layout.
+const legacyConfig = {
+  ...defaultConfig,
+  paths: { ...defaultConfig.paths, specsDir: ".qfai/specs" },
+};
+
 async function withSpec<T>(
   files: Partial<Record<"examples" | "testCases", string>>,
   fn: (root: string) => Promise<T>,
@@ -54,7 +61,7 @@ async function withSpec<T>(
 }
 
 const codes = async (root: string): Promise<string[]> =>
-  (await validateSpecPacks(root, defaultConfig)).map((i) => i.code);
+  (await validateSpecPacks(root, legacyConfig)).map((i) => i.code);
 
 describe("the registry knows the two kinds the templates write", () => {
   it("extracts EX and TC in the composite form AC and BR use", () => {
@@ -125,7 +132,7 @@ describe("QFAI-SPACK-101 reaches a cross-spec EX/TC id", () => {
     // form that passes is the owner's CONTRACT id. That was discoverable only
     // by tripping the validator repeatedly.
     await withSpec({ testCases: "# TC\n\n## TC-0007-0001\n" }, async (root) => {
-      const found = (await validateSpecPacks(root, defaultConfig)).find(
+      const found = (await validateSpecPacks(root, legacyConfig)).find(
         (i) => i.code === "QFAI-SPACK-101",
       );
       expect(found).toBeDefined();

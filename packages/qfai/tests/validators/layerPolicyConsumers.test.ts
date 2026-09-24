@@ -20,6 +20,11 @@ import { defaultConfig } from "../../src/core/config.js";
 import { loadLayerPolicy } from "../../src/core/layerPolicy.js";
 import { validateSpecPacks } from "../../src/core/validators/specPack.js";
 
+const legacyConfig = {
+  ...defaultConfig,
+  paths: { ...defaultConfig.paths, specsDir: ".qfai/specs" },
+};
+
 const FULL_POLICY = `# Test Layers
 
 ## Layer definitions
@@ -54,13 +59,13 @@ async function withProject<T>(
   );
   const assistant = path.join(root, ".qfai", "assistant");
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
-  await mkdir(path.join(assistant, "catalog"), { recursive: true });
+  await mkdir(path.join(assistant, "rule"), { recursive: true });
   await mkdir(path.join(assistant, "skills"), { recursive: true });
   await mkdir(specDir, { recursive: true });
   try {
     if (opts.policy !== null) {
       await writeFile(
-        path.join(assistant, "catalog", "test-layers.md"),
+        path.join(assistant, "rule", "test-layers.md"),
         opts.policy ?? FULL_POLICY,
         "utf-8",
       );
@@ -149,7 +154,7 @@ describe("QFAI-EX-105 — the layered branch finally consumes the policy", () =>
     // The whole defect: this layout is what `qfai init` produces, and it had no
     // tag argument at all.
     await withProject({ level: "Chaos" }, async (root) => {
-      const issues = await validateSpecPacks(root, defaultConfig);
+      const issues = await validateSpecPacks(root, legacyConfig);
       const found = issues.find((i) => i.code === "QFAI-EX-105");
       expect(found?.severity).toBe("warning");
       expect(found?.refs).toEqual(["Chaos"]);
@@ -158,7 +163,7 @@ describe("QFAI-EX-105 — the layered branch finally consumes the policy", () =>
 
   it("accepts a layer name the policy declares", async () => {
     await withProject({ level: "Integration" }, async (root) => {
-      const issues = await validateSpecPacks(root, defaultConfig);
+      const issues = await validateSpecPacks(root, legacyConfig);
       expect(issues.map((i) => i.code)).not.toContain("QFAI-EX-105");
     });
   });
@@ -167,7 +172,7 @@ describe("QFAI-EX-105 — the layered branch finally consumes the policy", () =>
   // owns them, and reporting them here would double-report one value.
   it("leaves the positional codes to the rule that owns them", async () => {
     await withProject({ level: "L3" }, async (root) => {
-      const issues = await validateSpecPacks(root, defaultConfig);
+      const issues = await validateSpecPacks(root, legacyConfig);
       expect(issues.map((i) => i.code)).not.toContain("QFAI-EX-105");
     });
   });

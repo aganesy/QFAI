@@ -16,6 +16,11 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
+
+const legacyConfig = {
+  ...defaultConfig,
+  paths: { ...defaultConfig.paths, specsDir: ".qfai/specs" },
+};
 import { validateSpecPacks } from "../../../src/core/validators/specPack.js";
 
 const REGISTER = "09_Open-questions.md";
@@ -50,7 +55,7 @@ async function withTree<T>(
 }
 
 const codes = async (root: string): Promise<string[]> =>
-  (await validateSpecPacks(root, defaultConfig)).map((found) => found.code);
+  (await validateSpecPacks(root, legacyConfig)).map((found) => found.code);
 
 describe("the shared register is read before the tree is called empty", () => {
   it("reports a policy decision nobody took, with no spec pack beside it", async () => {

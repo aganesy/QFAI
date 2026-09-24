@@ -20,6 +20,13 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+
+// The direct parser tests keep the old document grammar covered during the
+// migration. The product validate entrypoint rejects this layout.
+const legacyConfig = {
+  ...defaultConfig,
+  paths: { ...defaultConfig.paths, specsDir: ".qfai/specs" },
+};
 import {
   collectDeclaredDrHeadingIds,
   collectReOpenEntries,
@@ -132,7 +139,7 @@ async function withSpec<T>(
 }
 
 const codes = async (root: string): Promise<string[]> =>
-  (await validateSpecPacks(root, defaultConfig)).map((found) => found.code);
+  (await validateSpecPacks(root, legacyConfig)).map((found) => found.code);
 
 describe("the re-open record has a parsed shape", () => {
   it("recognises `Status: re-open` and its three extra fields", () => {
