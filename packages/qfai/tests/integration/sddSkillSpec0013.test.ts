@@ -52,7 +52,9 @@ describe("shipped qfai-sdd story-tree contract", () => {
     const content = await skill();
     expect(content).toContain("BF → US → AC → EX ← BR");
     expect(content).toMatch(/Mermaid `flowchart` or `sequenceDiagram`/);
-    expect(content).toContain("Every EX is cited by at least one BR");
+    expect(content).toContain(
+      "Every EX cites one AC; every AC and BR has an EX; every EX has a BR",
+    );
     expect(content).toContain("Give each EX exactly one existing AC");
   });
 

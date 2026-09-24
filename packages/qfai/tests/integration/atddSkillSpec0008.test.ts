@@ -16,7 +16,7 @@ describe("ATDD skill acceptance obligations", () => {
     );
     expect(content).toMatch(/Example\s*\|\s*Every other test layer\s*\|\s*`QFAI:EX-NNNN-NNNN-NN`/);
     expect(content).toContain("An E2E test carries its flow annotation");
-    expect(content).toContain("An integration or API test carries its AC annotation");
+    expect(content).toContain("AC maps to integration or API");
   });
 
   it("uses flow-scoped validation and flow evidence", async () => {

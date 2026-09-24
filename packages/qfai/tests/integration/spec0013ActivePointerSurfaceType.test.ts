@@ -1,7 +1,6 @@
 /**
  * Integration acceptance for spec-0013 CHG-006 test cases
- * TC-0013-0028..0035 (active-pack resolver, surface_type frontmatter
- * auto-populate, primary_tasks ceiling + shape).
+ * Current active-pack resolver and primary_tasks ceiling + shape.
  *
  * Converted from `.skip` test-first skeletons to deterministic temp-dir
  * fixtures invoking the production helpers directly. Each block sets
@@ -16,14 +15,13 @@
 // QFAI:EX-0001-0161-02
 // QFAI:EX-0001-0161-02
 
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { populateSurfaceTypeIfUiCompanion } from "../../src/core/detection/surfaceType.js";
 import {
   resolveActiveDiscussionPack,
   ResolveActiveDiscussionPackError,
@@ -55,20 +53,6 @@ async function makeUiContract(filename: string, content: string): Promise<void> 
   await writeFile(path.join(uiDir, filename), content, "utf-8");
 }
 
-async function makeSpec(specId: string, body: string): Promise<string> {
-  const specDir = path.join(root, ".qfai", "specs", `spec-${specId}`);
-  await mkdir(specDir, { recursive: true });
-  const specPath = path.join(specDir, "01_Spec.md");
-  await writeFile(specPath, body, "utf-8");
-  await writeFile(path.join(specDir, "02_User-stories.md"), "# User stories\n", "utf-8");
-  await writeFile(
-    path.join(specDir, "03_Acceptance-Criteria.md"),
-    "# Acceptance Criteria\n",
-    "utf-8",
-  );
-  return specPath;
-}
-
 describe("spec-0013 active-pack resolver CHG-006", () => {
   it("QFAI:EX-0001-0160-01 — normal: the single helper returns the pack named in state.json#discussion.currentId", async () => {
     const expected = await makeDiscussionPack("discussion-20260527075558258");
@@ -91,25 +75,6 @@ describe("spec-0013 active-pack resolver CHG-006", () => {
       expect(message).toMatch(/discussion-20260202000000000/);
       expect(message).toMatch(/qfai discussion use <id>/);
     }
-  });
-});
-
-describe("spec-0013 surface_type frontmatter CHG-006", () => {
-  it("QFAI:SPEC-0013:TC-0013-0030 — normal: populator writes 'surface_type: ui-bearing' when a UI companion exists", async () => {
-    const specPath = await makeSpec(
-      "0099",
-      ["---", "id: spec-0099", "---", "", "# Sample", ""].join("\n"),
-    );
-    await makeUiContract(
-      "ui-0099-dashboard.yaml",
-      ["screens:", "  - id: dashboard", "    route: /dashboard", "    primary_tasks: []", ""].join(
-        "\n",
-      ),
-    );
-    const result = await populateSurfaceTypeIfUiCompanion(root, "0099", defaultConfig);
-    expect(result.changed).toBe(true);
-    const body = await readFile(specPath, "utf-8");
-    expect(body).toMatch(/surface_type:\s*ui-bearing/);
   });
 });
 

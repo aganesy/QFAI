@@ -105,9 +105,7 @@ describe("TC-0013-0032: the primary_tasks ceiling is documented and named in the
   it("references/ui-contract-guide.md documents the ceiling", async () => {
     const guide = await readFile(GUIDE_PATH, "utf-8");
     expect(guide).toMatch(/at most 7/);
-    // And says there is no floor, which is the half a reader reaching for
-    // a count would otherwise have to infer from the table.
-    expect(guide).toMatch(/no lower bound/i);
+    expect(guide).toMatch(/required minimum is one/i);
   });
 
   it("the QFAI-AUD-020 warning message names the ceiling", async () => {

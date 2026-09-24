@@ -376,7 +376,7 @@ describe("spec-0015 stale-ref report CHG-006", () => {
     const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "handoff.md"), "# Handoff\nUses handoff.yaml.\n", "utf-8");
-    const issues = await validateStaleReferences(root);
+    const issues = await validateStaleReferences(root, { config: (await loadConfig(root)).config });
     expect(issues.filter((i) => i.code === "W-STALE-REFERENCE")).toEqual([]);
   });
 
@@ -388,9 +388,9 @@ describe("spec-0015 stale-ref report CHG-006", () => {
       "# Handoff\nUses session-handoff.yaml.\n",
       "utf-8",
     );
-    const findings = (await validateStaleReferences(root)).filter(
-      (i) => i.code === "W-STALE-REFERENCE",
-    );
+    const findings = (
+      await validateStaleReferences(root, { config: (await loadConfig(root)).config })
+    ).filter((i) => i.code === "W-STALE-REFERENCE");
     expect(findings.length).toBeGreaterThanOrEqual(1);
     expect(findings[0]?.severity).toBe("warning");
   });

@@ -82,6 +82,41 @@ async function prototypingPreflight(
   const previousExitCode = process.exitCode;
   try {
     await seedPrototypingPreflightFixture(root, target.url, uiContract);
+    const lock = await readFile(
+      path.join(root, ".qfai/contracts/design/DESIGN.md.lock.yaml"),
+      "utf-8",
+    );
+    await rm(path.join(root, ".qfai/specs"), { recursive: true, force: true });
+    await rm(path.join(root, ".qfai/contracts"), { recursive: true, force: true });
+    const contractRoot = path.join(root, ".qfai/spec/03_contract");
+    await mkdir(path.join(contractRoot, "ui"), { recursive: true });
+    await mkdir(path.join(contractRoot, "design"), { recursive: true });
+    await writeFile(
+      path.join(contractRoot, "ui/ui-0001.yaml"),
+      `# QFAI-CONTRACT-ID: CON-UI-0001\n${uiContract}`,
+      "utf-8",
+    );
+    await writeFile(path.join(contractRoot, "design/DESIGN.md.lock.yaml"), lock, "utf-8");
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      [
+        "paths:",
+        "  specsDir: .qfai/spec",
+        "  contractsDir: .qfai/spec/03_contract",
+        "  discussionDir: .qfai/discussion",
+        "  outDir: .qfai/report",
+        "  skillsDir: .qfai/assistant/skill",
+        "  srcDir: src",
+        "  testsDir: tests",
+        "prototyping:",
+        "  primaryUiContract: CON-UI-0001",
+        "  execution:",
+        `    targetUrl: ${target.url}`,
+        "    browserTool: playwright",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
     const outPath = path.join(root, ".qfai", "report", "preflight.json");
     process.exitCode = undefined;
     await run(
@@ -173,7 +208,7 @@ describe("TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is em
       const message = blocker?.message ?? "";
 
       // 1. File path: contract path appears in the message.
-      expect(message).toMatch(/\.qfai\/contracts\/ui\/sample\.yaml/);
+      expect(message).toMatch(/\.qfai\/spec\/03_contract\/ui\/sample\.yaml/);
       // 2. Screen id: order_create appears in the message.
       expect(message).toMatch(/order_create/);
       // 3. Rule token: QFAI-AUD-001 appears in the message.

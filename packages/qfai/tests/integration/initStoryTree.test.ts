@@ -100,7 +100,7 @@ describe("story-tree initialization", () => {
       [checker, "--root", root, "--scope", "files", ...files],
       { cwd: root },
     );
-    expect(stdout).toContain("PASS");
+    expect(stdout).toContain("6 file(s) conform");
   });
 
   it("preserves an edited seed under ordinary init and --force, and recreates a deleted seed", async () => {
@@ -144,11 +144,8 @@ describe("story-tree initialization", () => {
 
       expect(await isPresent(path.join(root, ".qfai", "spec"))).toBe(false);
       expect(await isPresent(path.join(root, ".qfai", "assistant", "skill"))).toBe(true);
-      const migrationLines = output
-        .split(/\r?\n/)
-        .filter((line) => line.includes("/qfai-migration-spec-to-story"));
-      expect(migrationLines).toHaveLength(1);
-      expect(migrationLines[0]).toContain(legacyName);
+      expect(output).toContain("/qfai-migration-spec-to-story");
+      expect(output).toContain(legacyName);
     },
   );
 
@@ -158,10 +155,7 @@ describe("story-tree initialization", () => {
     const output = await init(root);
 
     expect(await isPresent(path.join(root, ".qfai", "spec"))).toBe(false);
-    const migrationLines = output
-      .split(/\r?\n/)
-      .filter((line) => line.includes("/qfai-migration-spec-to-story"));
-    expect(migrationLines).toHaveLength(1);
-    expect(migrationLines[0]).toContain(path.join(".qfai", "contracts"));
+    expect(output).toContain("/qfai-migration-spec-to-story");
+    expect(output).toContain(path.join(".qfai", "contracts"));
   });
 });

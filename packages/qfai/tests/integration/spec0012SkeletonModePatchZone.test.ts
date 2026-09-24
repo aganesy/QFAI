@@ -106,11 +106,11 @@ async function seedProject(
     configLines.push(`  mode: ${extra.mode}`);
   }
   await writeFile(path.join(root, "qfai.config.yaml"), configLines.join("\n"), "utf-8");
-  const specDir = path.join(root, ".qfai/specs/spec-0001");
-  await mkdir(specDir, { recursive: true });
+  const uiDir = path.join(root, ".qfai/spec/03_contract/ui");
+  await mkdir(uiDir, { recursive: true });
   await writeFile(
-    path.join(specDir, "01_Spec.md"),
-    "# 01\n\n- Spec: spec-0001\n- Parent: CAP-0001\nsurface_type: ui-bearing\n",
+    path.join(uiDir, "ui-0001.yaml"),
+    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n    primary_tasks:\n      - Browse\n",
     "utf-8",
   );
 }
@@ -127,9 +127,14 @@ describe("iterate --cycle 0 --emit-skeletons writes one placeholder HTML per scr
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "screens.yaml"),
-      ["screens:", "  - id: home", "    route: /", "  - id: settings", "    route: /settings"].join(
-        "\n",
-      ),
+      [
+        "# QFAI-CONTRACT-ID: CON-UI-0002",
+        "screens:",
+        "  - id: home",
+        "    route: /",
+        "  - id: settings",
+        "    route: /settings",
+      ].join("\n"),
       "utf-8",
     );
     const exit = await runPrototypingIterate({
@@ -160,9 +165,14 @@ describe("--emit-skeletons opt-in default + --skeleton-mode discriminator", () =
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "screens.yaml"),
-      ["screens:", "  - id: home", "    route: /", "  - id: settings", "    route: /settings"].join(
-        "\n",
-      ),
+      [
+        "# QFAI-CONTRACT-ID: CON-UI-0002",
+        "screens:",
+        "  - id: home",
+        "    route: /",
+        "  - id: settings",
+        "    route: /settings",
+      ].join("\n"),
       "utf-8",
     );
     const exit = await runPrototypingIterate({
