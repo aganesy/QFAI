@@ -2865,11 +2865,17 @@ describe("a permitted rebuild is verified against where the package comes from",
     try {
       const list = path.join(dir, "dependency-builds.txt");
       writeFileSync(list, `# probe\nesbuild\n`, "utf-8");
+      // The package manager's own permission list, which the verifier reads against the one
+      // above. It agrees here, so what each case below measures is the lockfile resolution.
+      const workspace = path.join(dir, "pnpm-workspace.yaml");
+      writeFileSync(workspace, `allowBuilds:\n  esbuild: true\n`, "utf-8");
 
       const verify = (lock: string): number => {
         const lockPath = path.join(dir, "pnpm-lock.yaml");
         writeFileSync(lockPath, lock, "utf-8");
-        const run = spawnSync("node", [VERIFIER, lockPath, list], { encoding: "utf-8" });
+        const run = spawnSync("node", [VERIFIER, lockPath, list, workspace], {
+          encoding: "utf-8",
+        });
         if (run.error !== undefined) throw run.error;
         return run.status ?? -1;
       };

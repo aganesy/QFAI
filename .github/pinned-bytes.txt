@@ -14,9 +14,9 @@
 #
 # `sha256sum -c` format, so the pre-flight needs no parser: two spaces between the digest and
 # the path, paths relative to the repository root.
-c60bf87cda546431c66af0a2b47df1a2a3664540d3fd40b9663ee6f4cf8553d7  .github/actions/setup/action.yml
-0788adad7ac485ca2c340c2c75ed5bf581a1ba3bb17ea6fe0d0994f666dabf2f  .github/actions/setup/dependency-builds.txt
-0816918db6c8833c8d1c4f0cc6218b9eeae7b16a718a0b3113898ae026e4127f  .github/actions/setup/verify-rebuild-sources.mjs
+f5e074f8e4351596ef6a9d5583fafdb8c5a231708cf12528ed364596c640f448  .github/actions/setup/action.yml
+3230335c2f0bc71bfcec72150d56fd51dc30524ca0fb35405197054709bd13b5  .github/actions/setup/dependency-builds.txt
+441dec6a8f7474c6d2c5d70073de4b2aed423daf90ae16f0b59202e61de71f3f  .github/actions/setup/verify-rebuild-sources.mjs
 8e24f084302921b660b8824d9f7fa8779b3fc6272b06906d68f948a1ff946afc  scripts/check-atdd-annotation-ledger.mjs
 b006fcaaa399a3718a55f6e85f12fb3e4f87f22e067d159f6ef05c0f9739e9f4  scripts/check-bidi.mjs
 f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077  scripts/check-build-warnings.mjs

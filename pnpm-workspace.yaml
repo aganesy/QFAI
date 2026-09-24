@@ -1,2 +1,11 @@
 packages:
   - "packages/qfai"
+
+# What may run its own install scripts. `pnpm rebuild` refuses a package this does not name.
+#
+# The decision itself is `.github/actions/setup/dependency-builds.txt`, which travels with the
+# action that reads it so a re-published tag can see it. This is the same decision in the
+# package manager's vocabulary, and `verify-rebuild-sources.mjs` refuses any disagreement
+# between the two before a rebuild runs.
+allowBuilds:
+  esbuild: true

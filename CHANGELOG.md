@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The package manager moves to its twelfth major** (#2225). It refuses to
+  build a dependency its own configuration does not name, so the permission
+  this repository already records for the one dependency that runs an install
+  script is now also stated in `pnpm-workspace.yaml`. The decision stays in the
+  allow-list beside the toolchain action, which travels with it so a
+  re-published tag can read it; the check that runs before any rebuild reads
+  each list against the other and refuses a disagreement in either direction.
+
 - **The test runner moves to its fourth major, and the coverage provider with
   it** (#2173). The two move as a pair: the provider's peer range names the
   runner version exactly, so a provider a major ahead of the runner fails at
