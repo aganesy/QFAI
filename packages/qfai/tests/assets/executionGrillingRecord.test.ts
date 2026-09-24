@@ -52,6 +52,22 @@ describe.each(trees)("%s — execution stage grilling records", (tree) => {
     },
   );
 
+  it.each(["qfai-atdd", "qfai-implement"])(
+    "%s rejects stale, duplicate and unreconciled records",
+    async (skill) => {
+      const body = flatten(await read(tree, `assistant/skill/${skill}/SKILL.md`));
+      expect(body).toContain("one block per invocation");
+      expect(body).toContain("unique session ID");
+      expect(body).toContain("older block cannot pass");
+      expect(body).toContain("working-tree+<hash>");
+      expect(body).toContain("cannot precede the run start");
+      expect(body).toContain("must follow `Ended at`");
+      expect(body).toContain("count must equal");
+      expect(body).toContain("an unanswered escalation is an open node");
+      expect(body).toContain("duplicate session key");
+    },
+  );
+
   it("keeps the five endings in the rule master", async () => {
     const master = await readFile(path.join(repoRoot, ".agents/rules/grilling.md"), "utf-8");
     const section = master.split("### The five endings")[1] ?? "";

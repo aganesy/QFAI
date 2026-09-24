@@ -169,11 +169,19 @@ session is reported to the user without writing the artifact they stopped.
 List each open node beneath the record with its session ID. Record every
 adopted decision and user answer in the Work Orders Summary, keyed to this
 invocation and session; record `none` when no decision was settled.
+Use one block per invocation, with a unique session ID for each row. Give
+the reviewer the run start in its work order so an older block cannot pass
+as the current run. `Revision` is a git revision or
+`working-tree+<hash>`; `Ended at` cannot precede the run start, and
+`Work resumed` must follow `Ended at`. The `Open` count must equal the
+session-keyed open lines. The `Decisions` count must equal the Work Orders
+Summary decisions keyed to the session and invocation; an unanswered escalation
+is an open node, not a settled decision.
 
 The completion reviewer checks the record against this invocation's start
 time, each counted decision and open node, and the source revision. A missing
-record, an unanswered critical decision, or work resumed after a `stopped`
-session is `REVISE`. A `no-question` ending cannot hide an open node:
+record, duplicate session key, unanswered critical decision, or work resumed
+after a `stopped` session is `REVISE`. A `no-question` ending cannot hide an open node:
 record the open question in the stage evidence and leave completion pending.
 
 ## Default Autopilot Policy
