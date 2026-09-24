@@ -287,6 +287,7 @@
     "tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts",
     "tests/integration/spec0006WorkflowsIntegrity.retiredCount.test.ts",
     "tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts",
+    "tests/integration/spec0013SideArtifactPreflight.test.ts",
     "tests/integration/spec0014SaasPackageCertify.test.ts",
     "tests/integration/spec0014VerifyReviewerGate.test.ts",
     "tests/integration/spec0017ArtifactReuse.test.ts",

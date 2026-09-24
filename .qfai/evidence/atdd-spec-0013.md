@@ -5,6 +5,10 @@
 Carry the proof for four of this spec's twelve `done` ledger rows. The other
 eight are not backfilled and the reasons are under Gaps.
 
+The run started 2026-09-24T00:10:50.441Z binds `TDD-0044` and `TDD-0045`, the
+rows `CR-20260913-0012` seeded for `TC-0013-0036` and `TC-0013-0037`, to an
+integration test and hands both over on the falsifiability branch.
+
 ## Inputs reviewed (files/paths)
 
 - `.qfai/specs/spec-0013/06_Test-Cases.md`
@@ -15,6 +19,12 @@ eight are not backfilled and the reasons are under Gaps.
 - `packages/qfai/tests/integration/primaryTasksStructured.test.ts`
 - `packages/qfai/tests/core/activeDiscussionPack.test.ts`
 - `packages/qfai/tests/core/surfaceTypePopulate.test.ts`
+- `.qfai/decisions/CR-20260913-0012-spec-0013-declares-three-acceptance-criterion-ids-twice.md`
+- `.qfai/specs/spec-0013/03_Acceptance-Criteria.md` (`AC-0013-0028`),
+  `04_Business-Rules.md` (`BR-0013-0021`), `05_Examples.md` (`EX-0013-0021`)
+- `packages/qfai/tests/core/sddPreflight.test.ts`
+- `packages/qfai/src/core/preflight/sddPreflight.ts`
+- `packages/qfai/src/core/discussionPack.ts`
 
 ## Decisions made (with rationale)
 
@@ -38,6 +48,38 @@ Three of the five rows this run leaves unbackfilled with a corrected `Selector`
 keep their original `Evidence` cell; `TDD-0023` and `TDD-0026` are unchanged in
 both cells.
 
+For the run started 2026-09-24T00:10:50.441Z:
+
+- The two cases go in a new file,
+  `packages/qfai/tests/integration/spec0013SideArtifactPreflight.test.ts`. The
+  cases the change request names in `tests/core/sddPreflight.test.ts` stay
+  unannotated: that file is outside `tests/integration/**`, and its hash is the
+  `RED test hash` of spec-0002 `TDD-0001`.
+- Each case asserts `packGaps` as well as `status` and `blockers`.
+  `BR-0013-0021` says the preflight's result must not depend on the side
+  artifact, and a gap never blocks. A case reading `status` alone passes against
+  a preflight that lists the side artifact as a gap. The unit case "does not
+  block when latest UI-bearing discussion pack is missing prototyping.yaml" is
+  of that kind, and it passes under the `TDD-0044` mutation below.
+- The invalid-schema and legacy variants of `TC-0013-0037` are two cases, and
+  `TDD-0045`'s `Selector` names both. One case holding both variants stops at
+  its first failing assertion, so the second variant is never observed.
+- The fixture writes the pack's markdown from a list held in the test, not from
+  the product's `REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES`. Built from the
+  product's list, the fixture would write every file the product started to
+  require, and the `TDD-0044` mutation could not fail it.
+
+## Grilling Session
+
+### /qfai-atdd — run started 2026-09-24T00:10:50.441Z
+
+Preflight: confidence high
+
+No session opened. `CR-20260913-0012` fixes both rows, their test cases, the
+entry point and where the tests may go. Each choice above follows from
+`BR-0013-0021` or from `selector-granularity.md`. Nothing surfaced during the
+run that the spec, the change request or those references leave open.
+
 ## Work performed (what changed, where)
 
 - `.qfai/specs/spec-0013/tdd/test-list.md` — seven `Selector` cells rewritten to
@@ -49,6 +91,16 @@ both cells.
   `primary_tasks`, and a structured item missing `label`. `TDD-0029` taken again
   with them, because it shares the second file. The three rows now carry the
   revision of that run in their `Evidence` cells.
+- The run started 2026-09-24T00:10:50.441Z:
+  - `packages/qfai/tests/integration/spec0013SideArtifactPreflight.test.ts` —
+    new, with the `TC-0013-0036` and `TC-0013-0037` annotations and three cases;
+  - `packages/qfai/tsconfig.tests.json` — the new file added to the type-check
+    enumeration;
+  - this file — the `TDD-0044` and `TDD-0045` entries below.
+
+  No production file and no ledger cell changed. Both mutations were reverted
+  from a copy of the unmutated file, and `git status` then listed only the new
+  test file.
 
 ## Commands executed + key outputs
 
@@ -131,6 +183,16 @@ those of the first:
 
 Eight further files and 43 cases in those projects declare themselves inactive
 and did not run.
+
+The run started 2026-09-24T00:10:50.441Z hands over two `todo` rows. Every case
+passed on its first run, so both take branch 2. The mutations are production
+code, so `/qfai-implement` Phase Red step 3c applies them and records the
+falsifiability trio in each entry's `Round 1`.
+
+| TDD-ID     | Obligation     | Layer       | RED provenance | Entry                   |
+| ---------- | -------------- | ----------- | -------------- | ----------------------- |
+| `TDD-0044` | `TC-0013-0036` | Integration | falsifiability | [TDD-0044](#tdd-0044) |
+| `TDD-0045` | `TC-0013-0037` | Integration | falsifiability | [TDD-0045](#tdd-0045) |
 
 ### TDD-0020
 
@@ -355,6 +417,125 @@ failed, 2 passed (7).
 - Checkpoint verification result: PASS — exit 0; Test Files 547 passed (555); Tests 9468 passed (9550)
 - Checkpoint verification revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 
+### TDD-0044
+
+- TDD-ID: TDD-0044
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0013SideArtifactPreflight.test.ts
+- Selector: TC-0013-0036: a complete pack with no side artifact is ready with no blocker and no gap
+- TC-ref: TC-0013-0036
+- Branch: falsifiability — the preflight has never read `prototyping.yaml` since the side artifact stopped being required, so the case passed on its first run
+- Predicate to break: packages/qfai/src/core/discussionPack.ts:39, `REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES` — the closed set of pack files the preflight requires. `inspectLatestDiscussionPack` reads each entry at line 152, reports an absent one as missing at line 156 and a thin one as incomplete at line 159. `prototyping.yaml` is not in the set, so its absence is never reported
+- Mutation: add `"prototyping.yaml",` after `"99_delta.md",` at line 54
+- Why it fails: the preflight now requires the file, so its absence becomes the gap `必須ファイル不足: prototyping.yaml`.
+  `status` stays `ready` and `blockers` stays empty, because a gap never blocks.
+  `expect(result.packGaps).toEqual([])` fails as an assertion, at `tests/integration/spec0013SideArtifactPreflight.test.ts:92:27`, reached from the case at `:99:5`
+- Other rows: `TDD-0045`'s invalid-schema case also fails, at `:107:5`: the mutated preflight reads the short file and reports it as incomplete. Its legacy case passes, because the legacy file is long enough to count as complete. spec-0002 `TDD-0010`'s case, "does not block when latest UI-bearing discussion pack is missing prototyping.yaml", passes: it reads `status` and `blockers`, and neither moves. So does every other case in the sixteen spec-0013 and preflight test files run under the mutation
+
+The case builds a pack whose fifteen required markdown files are complete, and
+writes no `prototyping.yaml`. It calls `runSddPreflight(root, defaultConfig)`
+from `src/core/preflight/sddPreflight.ts`: the function the CLI's
+`runSddPreflightCommand` wraps, and the one `tests/core/sddPreflight.test.ts`
+drives. It asserts the
+result the example states and nothing narrower:
+
+| Assertion                                   | What it rules out                                   |
+| ------------------------------------------- | --------------------------------------------------- |
+| `status` is `ready`                         | the side artifact stopping SDD                      |
+| `selectedInputPath` names the seeded pack   | a ready answer taken from some other source         |
+| `blockers` is empty                         | any blocker, one naming `prototyping.yaml` included |
+| `packGaps` is empty                         | the side artifact entering the result as a gap      |
+
+Under the mutation, with the whole file:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts
+  × TC-0013-0036: a complete pack with no side artifact is ready with no blocker and no gap
+  × TC-0013-0037: a side artifact with an invalid schema leaves the preflight ready with no blocker and no gap
+  ✓ TC-0013-0037: a side artifact in the legacy format leaves the preflight ready with no blocker and no gap
+  Tests 2 failed | 1 passed (3)
+```
+
+And with this row's selector:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts -t "TC-0013-0036: a complete pack with no side artifact is ready with no blocker and no gap"
+  AssertionError: expected [ '必須ファイル不足: prototyping.yaml' ] to deeply equal []
+  Tests 1 failed | 2 skipped (3)
+```
+
+The selector holds no regular-expression metacharacter, so the `-t` pattern is
+the selector as written.
+
+`REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS` at line 57 is not the predicate. It
+is empty, and no code reads its entries, so adding `prototyping.yaml` to it
+changes nothing the preflight returns.
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/core/discussionPack.ts, `REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES` — the closed set of files the preflight requires, which does not hold `prototyping.yaml`
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 992de0e600f7c663de8f672e28ede15818680152ad43b28364ed84358c44df4a
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0013SideArtifactPreflight.test.ts
+```
+
+The manifest is the test file alone. The fixture is built inside it, and the
+case reads no other test-owned file.
+
+### TDD-0045
+
+- TDD-ID: TDD-0045
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0013SideArtifactPreflight.test.ts
+- Selector: ["TC-0013-0037: a side artifact with an invalid schema leaves the preflight ready with no blocker and no gap","TC-0013-0037: a side artifact in the legacy format leaves the preflight ready with no blocker and no gap"]
+- TC-ref: TC-0013-0037
+- Branch: falsifiability — no part of the preflight reads the content of `prototyping.yaml`, so both cases passed on their first run
+- Predicate to break: packages/qfai/src/core/preflight/sddPreflight.ts:360, `resolveStoryWorkshopGaps` — `readSafe(path.join(packDir, "03_Story-Workshop.md"))`, the preflight's own content check, which reads a markdown file of the pack and never the side artifact
+- Mutation: `"03_Story-Workshop.md"` to `"prototyping.yaml"` on line 360
+- Why it fails: the check now reads the side artifact. Neither the invalid-schema file nor the legacy file holds a Mermaid block, so each yields the gap `03_Story-Workshop.md に Mermaid diagram が見つかりません。`.
+  `expect(result.packGaps).toEqual([])` fails as an assertion in both cases, at `tests/integration/spec0013SideArtifactPreflight.test.ts:92:27`, reached from `:107:5` for the invalid-schema case and from `:122:5` for the legacy case.
+  The gap names the story workshop because the message text is fixed; what reaches the result is the side artifact's content
+- Other rows: `TDD-0044`'s case passes. With the file absent, `readSafe` returns an empty string and the check reports nothing. spec-0002 `TDD-0001`'s case, "returns ready when latest discussion-pack passes readiness checks", fails: its pack carries a current-format `prototyping.yaml` with no Mermaid block, and the case asserts `packGaps` is empty. "continues on a pack missing a required file, and names the file once" in the same unit file also fails, and no ledger row names it. The other 196 cases in the sixteen spec-0013 and preflight test files pass
+
+Each selector entry is one variant of the same boundary: a side artifact that
+is present but not in the current shape does not enter the preflight's result.
+The two entries are two cases, so each is observed failing on its own:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts -t "TC-0013-0037: a side artifact with an invalid schema leaves the preflight ready with no blocker and no gap"
+  AssertionError: expected [ Array(1) ] to deeply equal []   at :107:5
+  Tests 1 failed | 2 skipped (3)
+pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts -t "TC-0013-0037: a side artifact in the legacy format leaves the preflight ready with no blocker and no gap"
+  AssertionError: expected [ Array(1) ] to deeply equal []   at :122:5
+  Tests 1 failed | 2 skipped (3)
+```
+
+Neither entry holds a regular-expression metacharacter, so each `-t` pattern is
+the entry as written.
+
+The fixtures are the two shapes `tests/core/sddPreflight.test.ts` uses for the
+same variants: a `prototyping` block with an unknown `recommended_mode` and an
+empty `rationale`, and top-level `recommended_mode`, `rationale`,
+`allowed_modes` and `surface` with no `prototyping` key.
+
+The `TDD-0044` mutation is not this row's. It reaches the invalid-schema case
+only because that file is short enough to count as incomplete, and it leaves
+the legacy case green.
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/core/preflight/sddPreflight.ts, `resolveStoryWorkshopGaps` — the one content check the preflight runs on a named pack file, which reads `03_Story-Workshop.md` and not the side artifact
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 992de0e600f7c663de8f672e28ede15818680152ad43b28364ed84358c44df4a
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0013SideArtifactPreflight.test.ts
+```
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
@@ -369,6 +550,14 @@ every total.
 | ------------------- | -------------------------------------------------------- | ---------------------------- |
 | test-design-analyst | Score the forty-nine obligations and write the matrix    | PASS                         |
 | completion-reviewer | Audit every claim this file makes against the repository | PENDING |
+
+### Rows for the run started 2026-09-24T00:10:50.441Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 3 | acceptance-test-engineer | acceptance-test-engineer | Write the `TC-0013-0036` and `TC-0013-0037` integration cases for `TDD-0044` and `TDD-0045` | CR-20260913-0012 action 3.2; 06_Test-Cases.md `TC-0013-0036`, `TC-0013-0037`; 05_Examples.md `EX-0013-0021`; 04_Business-Rules.md `BR-0013-0021` | `spec0013SideArtifactPreflight.test.ts`; `tsconfig.tests.json` | PASS |
+| 4 | acceptance-test-engineer | acceptance-test-engineer | Take the first run, try each row's mutation, revert it, and hand both rows over on the falsifiability branch | the test file, `discussionPack.ts`, `sddPreflight.ts` | #tdd-0044, #tdd-0045 | PASS |
+| 5 | - | n/a | grilling(-@2026-09-24T00:10:50.441Z/none): none | - | - | PASS |
 
 ## Cross-spec obligations
 
@@ -418,6 +607,35 @@ None.
 
 Recorded per row above, and summarized in the table under
 "Commands executed + key outputs".
+
+### Checks for the run started 2026-09-24T00:10:50.441Z
+
+Taken over `HEAD` `d68a7954e9a8a3f15fe6e22140fd0d94136f5f8c` with the new test
+file and the `tsconfig.tests.json` entry added.
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts
+  Test Files 1 passed (1); Tests 3 passed (3)
+npx tsc --noEmit -p packages/qfai/tsconfig.tests.json                     -> exit 0
+npx eslint on the test file                                               -> exit 0
+npx prettier --check on the test file, tsconfig.tests.json and this file   -> exit 0
+pnpm -C packages/qfai exec vitest run tests/scripts/testTypeCheckEnumeration.test.ts
+  Tests 5 passed (5)
+node scripts/pin-stage-evidence-counts.mjs
+  2442 callsites (tests/assets 2249, tests/e2e 193); already current, nothing to write
+pnpm -C packages/qfai build && node packages/qfai/dist/cli/index.mjs validate --profile tdd --format text
+  counts: info=6 warning=327 error=957; no QFAI-ATDD-112, and no finding names spec-0013 TDD-0044 or TDD-0045
+  the same run without the new test file: error=958, the one more being
+  QFAI-ATDD-112 tests/integration/** -> SPEC-0013:TC-0013-0036, SPEC-0013:TC-0013-0037
+node scripts/check-dogfood-backlog.mjs --profile tdd   -> 957 error(s) across 14 file(s), all within the pinned backlog; exit 0
+node scripts/check-dogfood-backlog.mjs --profile full  -> 973 error(s) across 29 file(s), all within the pinned backlog; exit 0
+```
+
+`validate` still exits 1 on the rest of the repository's backlog, which the two
+backlog checks hold at their pins. Neither check reported a file below its pin,
+so nothing was re-pinned. `pin-guard-bytes.mjs` and
+`pin-verification-bodies.mjs` were not run: this change touches no guard
+program, no composite action and no verification step.
 
 ## Gaps / Open risks
 
