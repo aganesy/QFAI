@@ -53,8 +53,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   never asserted that init leaves the artifact directories out.
 
 - **The `/qfai-atdd` skill spells the RED test hash's `mode` the way the gate
-  hashes it.** The skill said the hash took the revision manifest's shape,
-  whose `mode` is four octal digits. The gate hashes git's tree mode —
+  hashes it** (#2256). The skill said the hash took the revision manifest's
+  shape, whose `mode` is four octal digits. The gate hashes git's tree mode —
   `100644`, `100755` or `120000` — so a hash computed as the skill said never
   matched, and `validate` refused evidence that was complete. Git's form is
   the intended one: the gate recomputes the hash on whichever checkout runs
