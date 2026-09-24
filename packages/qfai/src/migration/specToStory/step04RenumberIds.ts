@@ -861,6 +861,11 @@ export const step04: MigrationStep = {
       return { operations, forAPerson };
     }
     const packs = await Promise.all(packIds.map((id) => readOldPack(context, id)));
+    if (existingMap !== null && packs.every((pack) => pack.retired)) {
+      assertUnchangedPlacements(plan, existingMap);
+      operations.push(...(await rekeyWorklogs(context, existingMap, forAPerson)));
+      return { operations, forAPerson };
+    }
     for (const pack of packs.filter((item) => !item.retired)) {
       for (const story of pack.stories.filter((item) => item.title === "")) {
         forAPerson.push(

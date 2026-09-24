@@ -275,6 +275,12 @@ beforeAll(async () => {
     if (number === 8) beforeLinks = await cloneProject(root);
   }
   const firstHash = await fingerprint(root);
+  const remainingPacks = (await readdir(path.join(root, ".qfai/spec")))
+    .filter((name) => /^spec-\d{4}$/.test(name))
+    .sort();
+  if (remainingPacks.join(",") !== "spec-0002") {
+    throw new Error(`Expected only the retired pack before rerun: ${remainingPacks.join(",")}`);
+  }
   for (let number = 1; number <= 10; number += 1) {
     const again = step(root, number);
     if (again.status === 2 || again.status === null) {
