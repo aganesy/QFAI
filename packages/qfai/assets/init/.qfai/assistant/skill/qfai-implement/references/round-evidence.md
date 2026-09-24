@@ -18,7 +18,10 @@ A value containing several lines belongs in a fenced block. The fence must be lo
 
 ## Review boundary
 
-A RED gatekeeper judgment uses only the RED or falsifiability fields available at that point. A GREEN judgment also reads the GREEN and oracle fields. Completion reviewers read those fields and the refactor verification, plus UI captures where the example is UI affecting. Their own verdict and pack seal are written after the audited subject is taken. The audited-evidence-hash rule defines the exact hash procedure.
+A RED gatekeeper judgment uses only the RED or falsifiability fields available at that point. A GREEN judgment also
+reads the GREEN and oracle fields. Completion reviewers read those fields and the refactor verification, plus UI
+captures where the example is UI affecting. Their own verdict and pack seal are written after the audited subject is
+taken. The audited-evidence-hash rule defines the exact hash procedure.
 
 Every reviewer verdict names its reviewed revision and audited evidence hash. A review of a changed test, implementation, fixture, or capture is repeated. A failed review remains in its original round; the correction and replacement proof are recorded in the next round.
 

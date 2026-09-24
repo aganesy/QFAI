@@ -64,7 +64,10 @@ Decide whether the target is UI-bearing with `references/ui-bearing-playbook.md`
 
 Every UI-bearing pack must produce, as primary truth: `uiux/00_index.md`, `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. That is the whole family, on every UI-bearing surface including `cli`.
 
-Discussion authors no design artifact outside its own pack. Its run also writes this stage's evidence and the cycle's review pack, which record what the run did rather than specify anything. The brand SSOT — root `DESIGN.md` — is authored by `/qfai-sdd`'s `03_contract` step from what this pack records: the classification in `01_Context.md`, the reference registries in `04_Sources.md`, and the `uiux/`
+Discussion authors no design artifact outside its own pack. Its run also writes this stage's evidence and the cycle's
+review pack, which record what the run did rather than specify anything. The brand SSOT — root `DESIGN.md` — is authored
+by `/qfai-sdd`'s `03_contract` step from what this pack records: the classification in `01_Context.md`, the reference
+registries in `04_Sources.md`, and the `uiux/`
 sidecars. Interview for it here, in the depth `references/design-dna-intake.md` sets out, and record the answers; do not write the file.
 
 A **cli-only** pack (`primary_surface: cli`, no visual secondary surface) stays `ui_bearing: true` and keeps all three sidecars, but the brand questions do not apply to it: `/qfai-prototyping` rejects `cli`, so no downstream reader consumes a `visual.*` token tree, and `/qfai-sdd`'s `03_contract` step skips the freeze. The test is the whole classified surface set — `primary_surface` **and** every
@@ -108,7 +111,10 @@ For UI-bearing targets, follow `references/design-dna-intake.md` while authoring
   was rejected, a concrete cue for its recurrence, and its decision or source.
   If none has been established, keep the row `missing` and ask through the
   session; do not manufacture an anti-goal or its evidence.
-- On a visual-prototyping surface, `04_Sources.md` must carry both reference registries, each entry naming what was adopted, what was rejected, and how it was translated. Competitor references are **deviate-from** inputs, not imitate-this; catalogue references are adopt-from. Together they are what `/qfai-sdd`'s `03_contract` step turns into root `DESIGN.md` front-matter and its `# Brand Philosophy`
+- On a visual-prototyping surface, `04_Sources.md` must carry both reference registries, each entry naming what was
+  adopted, what was rejected, and how it was translated. Competitor references are **deviate-from** inputs, not
+  imitate-this; catalogue references are adopt-from. Together they are what `/qfai-sdd`'s `03_contract` step turns into
+  root `DESIGN.md` front-matter and its `# Brand Philosophy`
   body, so an entry left blank leaves a brand field with nothing behind it. A
   registry `reference` resolves to a URL, repository path, or `SRC-ID`.
 - `40_screen_contracts.md` defines each screen contract per the template schema; `50_review_input_bundle.md` documents review inputs for downstream skills.

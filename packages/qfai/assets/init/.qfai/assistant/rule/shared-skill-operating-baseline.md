@@ -83,7 +83,10 @@ A pointer only resolves if the reader knows what base to resolve it against. The
   the interview is what the skill performs, the asking stays in `ask-user`: the bucket carries a category for a decision a declared grilling session puts to the user, open to a skill whose own operation is the interview and to no other. That skill holds a user session; a delegated session puts only its critical decisions to the user (`.agents/rules/grilling.md`). The buckets:
   - `auto-decide` — the skill settles it without asking.
   - `ask-user` — the skill asks before acting.
-  - `hard-required` — no default is possible, so a run may not proceed on a guess. The value is either supplied by the user or read off evidence that settles it. A `testFileGlobs` proposal is settled that way: a glob either matches real files or it does not. Prototyping discovers UI-bearing contracts from the contract inventory without a `primaryUiContract` pin. Brand intent remains hard-required when the required evidence does not establish it.
+  - `hard-required` — no default is possible, so a run may not proceed on a guess. The value is either supplied by the
+    user or read off evidence that settles it. A `testFileGlobs` proposal is settled that way: a glob either matches
+    real files or it does not. Prototyping discovers UI-bearing contracts from the contract inventory without a
+    `primaryUiContract` pin. Brand intent remains hard-required when the required evidence does not establish it.
 
   What a missing hard-required value costs a run is below.
 
@@ -206,7 +209,13 @@ report instead of the completion claim.
 
 ### What the placeholder scan does not flag
 
-**`OQ` and `OPEN QUESTION` are exempt only as tracking structure.** Exempt: the `Open Questions` heading, a register table header, and a question row containing the fields required by its register. Story-tree `open-questions.md` uses `ID | Content | Approach | Status`; an empty register contains the heading and table header without a question row. Discussion registers use their own template fields. Article II and `.qfai/assistant/rule/workflow.md` both end an unverifiable fact by recording an Open Question, so the tracked record they prescribe must never be reported as an unresolved placeholder. Everywhere else the two strings are still scanned: a bare `OQ` or `OPEN QUESTION` left as a value in generated spec prose or a contract field, or a row missing a required field, is a hit like any other token.
+**`OQ` and `OPEN QUESTION` are exempt only as tracking structure.** Exempt: the `Open Questions` heading, a register
+table header, and a question row containing the fields required by its register. Story-tree `open-questions.md` uses
+`ID | Content | Approach | Status`; an empty register contains the heading and table header without a question row.
+Discussion registers use their own template fields. Article II and `.qfai/assistant/rule/workflow.md` both end an
+unverifiable fact by recording an Open Question, so the tracked record they prescribe must never be reported as an
+unresolved placeholder. Everywhere else the two strings are still scanned: a bare `OQ` or `OPEN QUESTION` left as a
+value in generated spec prose or a contract field, or a row missing a required field, is a hit like any other token.
 
 **A documented `TBD` is a compliant record.** `.qfai/assistant/rule/constitution.md` Article II and `.qfai/assistant/rule/thinking.md` require writing `TBD` together with a note of what evidence is missing, and `.qfai/assistant/rule/thinking.md` requires raising the matching Open Question for the same fact. Both halves together are the finished form, not an
 unfinished one; do not report it and do not delete it — deleting it destroys the record of the missing evidence, which is the whole point of the marker. A `TBD` missing either half — no note, or no Open Question — is a hit.

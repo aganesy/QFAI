@@ -243,7 +243,11 @@ satisfied by a file that cannot run.
 
 For each affected AC, EX, and BR, name the contract that realizes it. Resolve every persisted attribute to a concrete field, column, or enum member. If a value lives in another relation, state the join that reaches it. A contract can be syntactically valid yet unable to represent an obligation; resolve that mismatch in the story or contract before the SDD gate.
 
-A `--contract` rerun reads all existing flows that reference the changed contract or its paired contracts. After each contract repair, recompute the affected set and recheck every obligation in it until a pass writes nothing and adds no flow. Read scope can expand; write scope stays within the approved change-request row. If a repair needs an unapproved contract or story edit, stop and append a new decision row covering that change. A confirm-only review is read-only and cannot close a mismatch.
+A `--contract` rerun reads all existing flows that reference the changed contract or its paired contracts. After each
+contract repair, recompute the affected set and recheck every obligation in it until a pass writes nothing and adds no
+flow. Read scope can expand; write scope stays within the approved change-request row. If a repair needs an unapproved
+contract or story edit, stop and append a new decision row covering that change. A confirm-only review is read-only and
+cannot close a mismatch.
 
 ## Review checklist
 

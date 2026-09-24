@@ -264,6 +264,28 @@ describe("doctor", () => {
     }
   });
 
+  it("accepts the shipped empty prompt directory but warns when content is added", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const promptDir = path.join(root, ".qfai", "assistant", "prompt");
+      expect(await readdir(promptDir)).toEqual([".gitkeep"]);
+
+      const fresh = findCheck((await readDoctorData(root)).checks, "paths.promptsDirDeprecated");
+      expect(fresh?.severity).toBe("ok");
+
+      await writeFile(path.join(promptDir, "custom.md"), "Custom prompt\n", "utf-8");
+      const populated = findCheck(
+        (await readDoctorData(root)).checks,
+        "paths.promptsDirDeprecated",
+      );
+      expect(populated?.severity).toBe("warning");
+      expect(populated?.message).toContain("not used by validation");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("warns when deprecated promptsDir is configured", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {

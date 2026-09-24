@@ -13,7 +13,10 @@ A review is completed only when its summary.json exists. Match the resolved pack
 
 ## Stage 1: triage and decisions
 
-Follow sdd-triage.md. Classify each requirement against existing policy, flow, story, example, and contract content. Identify every affected flow. Append decisions and open questions to the two four-column tables before a dependent write. If a row requires approval, obtain it through the shared user-question protocol; in --auto, leave it pending and stop dependent work. A declined change stays as a REJECTED decision row.
+Follow sdd-triage.md. Classify each requirement against existing policy, flow, story, example, and contract content.
+Identify every affected flow. Append decisions and open questions to the two four-column tables before a dependent
+write. If a row requires approval, obtain it through the shared user-question protocol; in --auto, leave it pending and
+stop dependent work. A declined change stays as a REJECTED decision row.
 
 ## Stage 2: policy and flow
 
@@ -37,13 +40,21 @@ Follow sdd-triage.md. Classify each requirement against existing policy, flow, s
 
 ## Stage 5: gate, review, and completion
 
-Run npx qfai validate --profile sdd --fail-on error --flow BF-NNNN for each flow changed. Resolve errors in the owning source and rerun. Record each command, result, log path, and contract executability in .qfai/evidence/sdd-BF-NNNN.md from ../templates/evidence/sdd-flow.md. Route independent reviewers under review-cycle-playbook.md; all blocking verdicts must be PASS. Report unfinished approval, source, or gate work as an incomplete run.
+Run npx qfai validate --profile sdd --fail-on error --flow BF-NNNN for each flow changed. Resolve errors in the owning
+source and rerun. Record each command, result, log path, and contract executability in .qfai/evidence/sdd-BF-NNNN.md
+from ../templates/evidence/sdd-flow.md. Route independent reviewers under review-cycle-playbook.md; all blocking
+verdicts must be PASS. Report unfinished approval, source, or gate work as an incomplete run.
 
 For a contract-scoped change, apply the same gate to every existing BF whose obligations rely on the contract, whether or not its BF file changed. When no BF owns the contract, record the pending ownership in the work log and do not claim a flow gate passed.
 
 ## Contract-scoped rerun
 
-The --contract selector accepts an existing contract ID or a repository-relative path under <paths.contractsDir>. Stop on an unknown target. Read the named contract, its paired contracts, and the AC and EX of every flow that cites them. Reconcile those existing obligations with the changed contract. After each authorized contract write, expand the affected-flow set and repeat until no new flow or contract write appears. Do not edit a story to make a contract-only change appear valid; widen the approved change request first. A confirm-only request checks without repair. If an activated API contract still has no owning flow, leave it planned and report the gap.
+The --contract selector accepts an existing contract ID or a repository-relative path under <paths.contractsDir>. Stop
+on an unknown target. Read the named contract, its paired contracts, and the AC and EX of every flow that cites them.
+Reconcile those existing obligations with the changed contract. After each authorized contract write, expand the
+affected-flow set and repeat until no new flow or contract write appears. Do not edit a story to make a contract-only
+change appear valid; widen the approved change request first. A confirm-only request checks without repair. If an
+activated API contract still has no owning flow, leave it planned and report the gap.
 
 ## Parallel work
 

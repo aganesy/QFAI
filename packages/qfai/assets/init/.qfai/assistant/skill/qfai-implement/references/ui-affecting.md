@@ -6,9 +6,16 @@ Resolve paths.contractsDir from qfai.config.yaml. Read the optional UI surface p
 
 ## Routing
 
-An example is UI affecting when its observed behavior includes a rendered surface, it changes a UI contract, its production or test change implements behavior described by a UI contract, or a changed path matches a declared UI surface path. Follow imports, component use, and contract references to check a changed path. A change to a shared component is UI affecting when a rendered surface consumes it.
+An example is UI affecting when its observed behavior includes a rendered surface, it changes a UI contract, its
+production or test change implements behavior described by a UI contract, or a changed path matches a declared UI
+surface path. Follow imports, component use, and contract references to check a changed path. A change to a shared
+component is UI affecting when a rendered surface consumes it.
 
-Match declared paths after normalizing separators to forward slashes. A pattern with two stars spans zero or more path segments; one star stays in one segment; a question mark matches one character. Matching is case-sensitive, including dot-prefixed segments. If the optional path section is absent or the path relationship is uncertain, use the observed behavior and UI contracts; route an unresolved case as UI affecting and record the uncertainty for product-surface-reviewer. Do not infer that a change has no UI effect from its directory name alone.
+Match declared paths after normalizing separators to forward slashes. A pattern with two stars spans zero or more path
+segments; one star stays in one segment; a question mark matches one character. Matching is case-sensitive, including
+dot-prefixed segments. If the optional path section is absent or the path relationship is uncertain, use the observed
+behavior and UI contracts; route an unresolved case as UI affecting and record the uncertainty for
+product-surface-reviewer. Do not infer that a change has no UI effect from its directory name alone.
 
 ## Evidence
 

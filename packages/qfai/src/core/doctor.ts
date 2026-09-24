@@ -662,17 +662,30 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
 
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
   const deprecatedPromptsExists = await exists(deprecatedPromptsDir);
+  let deprecatedPromptsContainContent = false;
+  if (deprecatedPromptsExists) {
+    try {
+      const entries = await readdir(deprecatedPromptsDir, { withFileTypes: true });
+      deprecatedPromptsContainContent =
+        entries.length !== 1 || entries[0]?.name !== ".gitkeep" || !entries[0].isFile();
+    } catch {
+      // A path that cannot be inspected is not the known empty init seed.
+      deprecatedPromptsContainContent = true;
+    }
+  }
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional: checking deprecated promptsDir for diagnostic
   const deprecatedPromptsConfigured = config.paths.promptsDir !== defaultConfig.paths.promptsDir;
   addCheck(checks, {
     id: "paths.promptsDirDeprecated",
-    severity: deprecatedPromptsExists || deprecatedPromptsConfigured ? "warning" : "ok",
+    severity: deprecatedPromptsContainContent || deprecatedPromptsConfigured ? "warning" : "ok",
     title: "Deprecated path: promptsDir",
     message: deprecatedPromptsConfigured
       ? "promptsDir is deprecated and is set in the config (migrate to skillsDir)"
-      : deprecatedPromptsExists
+      : deprecatedPromptsContainContent
         ? "promptsDir is deprecated; even when it exists it is not used by validation (use skillsDir)"
-        : "promptsDir is deprecated (not being created is fine)",
+        : deprecatedPromptsExists
+          ? "promptsDir is deprecated; the shipped empty directory contains no prompts"
+          : "promptsDir is deprecated (not being created is fine)",
     details: {
       path: toRelativePath(root, deprecatedPromptsDir),
       configured: deprecatedPromptsConfigured,

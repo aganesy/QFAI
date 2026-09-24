@@ -13,7 +13,11 @@ Read the flow and story indexes plus concrete files. A subject match alone is in
 
 ## Operation choice
 
-Choose one primary operation for each affected BF or US. UPDATE is the default when the existing item keeps its identity and purpose. Its sub-operation is APPEND, MODIFY, or REMOVE. CREATE is used when no existing item represents the new outcome. DELETE, SPLIT, MERGE, and SUPERSEDE change identity or scope and require explicit approval. UPDATE:REMOVE also requires approval. A supporting contract update is named in the same decision's Approach or in a linked row; it is not a second fictional flow.
+Choose one primary operation for each affected BF or US. UPDATE is the default when the existing item keeps its identity
+and purpose. Its sub-operation is APPEND, MODIFY, or REMOVE. CREATE is used when no existing item represents the new
+outcome. DELETE, SPLIT, MERGE, and SUPERSEDE change identity or scope and require explicit approval. UPDATE:REMOVE also
+requires approval. A supporting contract update is named in the same decision's Approach or in a linked row; it is not a
+second fictional flow.
 
 Inspect the impact cascade: policy → BF → US → AC → EX → enforcing contract, then every other flow or contract that cites the changed item. Record companion changes. A shared BR remains in its authoritative contract; dependent contracts update rule refs.
 
@@ -21,7 +25,11 @@ Inspect the impact cascade: policy → BF → US → AC → EX → enforcing con
 
 Use <paths.specsDir>/decisions.md and <paths.specsDir>/open-questions.md, each with exactly ID, Content, Approach, Status. Append a row; later only Status may change. Do not edit the first three cells or remove the row. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
 
-A triage decision's Content names the operation, target BF or US, and discussion source as discussion-<id>#REQ-NNNN when there is one. For other sources, name the actual source path or user requirement. Approach states the intended files and rationale, including the change classification Primary and Tags. Status begins TODO if approval is needed, moves to WIP when approved, and becomes REJECTED if declined. Complete applied decisions move to DONE. Do not treat a TODO row as authorization.
+A triage decision's Content names the operation, target BF or US, and discussion source as discussion-<id>#REQ-NNNN when
+there is one. For other sources, name the actual source path or user requirement. Approach states the intended files and
+rationale, including the change classification Primary and Tags. Status begins TODO if approval is needed, moves to WIP
+when approved, and becomes REJECTED if declined. Complete applied decisions move to DONE. Do not treat a TODO row as
+authorization.
 
 A change request is a decision row whose Content begins Change request: and names the paths or IDs it may change. A rejected option is a decision row with Status REJECTED. Record a retired story in a decision row, not a separate retired-story file. Open questions use OQ-NNNN rows; DEFERRED needs a specific future decision point.
 

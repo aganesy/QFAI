@@ -2,7 +2,10 @@
 
 Write this file during `/qfai-sdd` Stage 0 when an imported specification or explicit requirement source is usable and no discussion pack exists. Copy it to `.qfai/evidence/import-lite-<ts>.md` before editing the story tree. Do not manufacture a discussion pack.
 
-`<ts>` is a 17-digit `YYYYMMDDhhmmssSSS` stamp. Claim the path with an exclusive create (`wx` / `O_EXCL`); on collision, take a fresh stamp and retry. Never overwrite an earlier import. Keep this evidence under `.qfai/evidence/` even when the discussion path is configured elsewhere. `QFAI-IMPLITE-001` checks the metadata and the presence of a real source or user excerpt. A file left on placeholders is not a usable input.
+`<ts>` is a 17-digit `YYYYMMDDhhmmssSSS` stamp. Claim the path with an exclusive create (`wx` / `O_EXCL`); on collision,
+take a fresh stamp and retry. Never overwrite an earlier import. Keep this evidence under `.qfai/evidence/` even when
+the discussion path is configured elsewhere. `QFAI-IMPLITE-001` checks the metadata and the presence of a real source or
+user excerpt. A file left on placeholders is not a usable input.
 
 ## Metadata
 
