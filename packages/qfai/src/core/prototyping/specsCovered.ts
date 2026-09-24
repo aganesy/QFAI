@@ -22,7 +22,7 @@ export function readUiContractsCovered(value: unknown): UiContractsCoveredResult
   if (new Set(covered).size !== covered.length) {
     return { kind: "malformed", reason: "uiContractsCovered contains duplicate IDs" };
   }
-  return { kind: "ok", value: covered as string[] };
+  return { kind: "ok", value: [...(covered as string[])] };
 }
 
 export type UiContractScopeDrift = {
