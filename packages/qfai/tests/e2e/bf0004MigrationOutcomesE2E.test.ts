@@ -103,7 +103,6 @@ async function migrationProject(): Promise<string> {
     path.join(root, "tests/e2e/order.test.ts"),
   );
   await rename(path.join(root, "gitignore.input"), path.join(root, ".gitignore"));
-  await rm(path.join(root, ".qfai/assistant/skills.local"), { recursive: true });
   await rename(
     path.join(root, ".qfai/assistant/skill-local.input"),
     path.join(root, ".qfai/assistant/skills.local"),

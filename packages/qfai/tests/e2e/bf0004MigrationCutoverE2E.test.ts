@@ -192,11 +192,6 @@ async function project(): Promise<string> {
   );
   await cp(migratedE2e, path.join(root, "tests/e2e/order.test.ts"));
   await rename(path.join(root, "gitignore.input"), path.join(root, ".gitignore"));
-  const legacyLocal = path.resolve(root, ".qfai/assistant/skills.local");
-  if (!legacyLocal.startsWith(`${path.resolve(root)}${path.sep}`)) {
-    throw new Error("Legacy local-skill path escaped the temporary project");
-  }
-  await rm(legacyLocal, { recursive: true });
   await rename(
     path.join(root, ".qfai/assistant/skill-local.input"),
     path.join(root, ".qfai/assistant/skills.local"),

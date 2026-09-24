@@ -293,7 +293,6 @@ async function project(): Promise<string> {
     path.join(root, "tests/e2e/order.test.ts"),
   );
   await rename(path.join(root, "gitignore.input"), path.join(root, ".gitignore"));
-  await rm(path.join(root, ".qfai/assistant/skills.local"), { recursive: true });
   await rename(
     path.join(root, ".qfai/assistant/skill-local.input"),
     path.join(root, ".qfai/assistant/skills.local"),
@@ -576,7 +575,9 @@ describe("BF-0004 acceptance criteria", () => {
   it("reports an empty step 1 rerun and creates only moved files without optional directories", async () => {
     // QFAI:EX-0004-0003-18
     const root = await project();
-    await rm(path.join(root, ".qfai/assistant/skills.local"), { recursive: true });
+    await expect(lstat(path.join(root, ".qfai/assistant/skills.local"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
     await expect(lstat(path.join(root, ".qfai/prototypes"))).rejects.toMatchObject({
       code: "ENOENT",
     });

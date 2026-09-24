@@ -36,6 +36,10 @@ import { removeTempTree } from "../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const FIXTURE = path.join(PACKAGE_ROOT, "tests/fixtures/migration-spec-to-story/old-layout");
+const CONVERTIBLE_CRITERIA = path.join(
+  PACKAGE_ROOT,
+  "tests/fixtures/bf0004MigrationCutover/legacy-criteria.md",
+);
 const SKILL_SCRIPTS = path.join(
   PACKAGE_ROOT,
   "assets/init/.qfai/assistant/skill/qfai-migration-spec-to-story/scripts",
@@ -139,6 +143,10 @@ async function copyOldProject(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-e2e-"));
   temporary.push(root);
   await cp(FIXTURE, root, { recursive: true });
+  await cp(
+    CONVERTIBLE_CRITERIA,
+    path.join(root, ".qfai/specs/spec-0001/03_Acceptance-Criteria.md"),
+  );
   await rename(path.join(root, "gitignore.input"), path.join(root, ".gitignore"));
   await rename(
     path.join(root, ".qfai/assistant/skill-local.input"),
