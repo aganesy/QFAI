@@ -624,6 +624,71 @@ describe("BF-0004 acceptance criteria", () => {
     ).toContain("const unchangedLine = true;\n");
   });
 
+  it("writes migrated artifacts under configured spec and contract directories", async () => {
+    // QFAI:EX-0004-0003-23
+    const root = await project();
+    await rename(path.join(root, ".qfai/specs"), path.join(root, "docs/specs"));
+    await rename(path.join(root, ".qfai/contracts"), path.join(root, "docs/contracts"));
+    const configPath = path.join(root, "qfai.config.yaml");
+    const config = parseYaml(await readFile(configPath, "utf8")) as {
+      paths: { specsDir: string; contractsDir: string };
+    };
+    config.paths.specsDir = "docs/specs";
+    config.paths.contractsDir = "docs/contracts";
+    await writeFile(configPath, stringifyYaml(config));
+    const configuredPatterns: readonly (readonly RegExp[])[] = [
+      [],
+      [
+        /^docs\/specs\/(?:decisions|open-questions)\.md$/,
+        /^docs\/specs\/(?:spec-\d{4}\/(?:07_Decisions|08_Open-questions|09_delta)|_policies\/(?:08_Decisions|09_Open-questions|10_delta))\.md$/,
+      ],
+      [
+        /^docs\/specs\/(?:_policies|01_policy)\//,
+        /^docs\/contracts\/(?:tech|structure|contracts)\.md$/,
+      ],
+      [/^docs\/specs\/(?:02_business-flow|spec-\d{4}|_policies)\//, /^docs\/contracts\//],
+      [
+        /^docs\/specs\/02_business-flow\/business-flow-\d{4}\/user-story-\d{4}-\d{4}\/03_Example\.md$/,
+      ],
+      [
+        /^docs\/specs\/02_business-flow\/business-flow-\d{4}\/user-story-\d{4}-\d{4}\/02_Acceptance-Criteria\.md$/,
+      ],
+      [/^docs\/specs\/spec-\d{4}\/(?:01_Spec|04_Business-Rules)\.md$/, /^docs\/contracts\//],
+      [],
+      [],
+      [],
+    ];
+    for (let number = 1; number <= 10; number += 1) {
+      const before = await fileSnapshot(root);
+      const result = step(root, number);
+      expect(result.status, `Step ${number}: ${result.stderr}`).toBe(0);
+      const after = await fileSnapshot(root);
+      for (const changed of new Set([...before.keys(), ...after.keys()])) {
+        if (before.get(changed) === after.get(changed)) continue;
+        expect(
+          [
+            ...(changedPathPatterns[number - 1] ?? []),
+            ...(configuredPatterns[number - 1] ?? []),
+          ].some((pattern) => pattern.test(changed)),
+          `Step ${number} changed ${changed}`,
+        ).toBe(true);
+      }
+    }
+    const specs = path.join(root, "docs/specs");
+    const contracts = path.join(root, "docs/contracts");
+    expect(await readFile(path.join(specs, "decisions.md"), "utf8")).toContain("DEC-");
+    expect(await readFile(path.join(specs, "open-questions.md"), "utf8")).toContain("OQ-");
+    expect(await readFile(path.join(specs, "01_policy/objective.md"), "utf8")).toContain(
+      "reliable receipt",
+    );
+    expect(
+      await readFile(path.join(specs, "02_business-flow/business-flows.md"), "utf8"),
+    ).toContain("BF-0001");
+    expect(await readFile(path.join(contracts, "tech.md"), "utf8")).toContain("Standard commands");
+    expect(await readFile(path.join(contracts, "api/order.yaml"), "utf8")).toContain("BR-0001");
+    await expect(lstat(path.join(root, ".qfai/spec"))).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
   // QFAI:AC-0004-0003-06
   it("prints a Markdown report with no person action on completed steps", () => {
     expect(journey.applied).toHaveLength(10);
