@@ -1225,11 +1225,13 @@ export async function collectTestCaseAnnotationHomes(
     if (refs.length === 0) continue;
     // A computed binding (`const run = LIVE ? test : test.skip`) declares a test
     // no literal call shows, and this check reports at `error`, so it counts.
-    // Prose is settled by extension here too: a binding shown in a Markdown
-    // sample declares nothing a runner collects.
-    const prose = PROSE_CARRIER_EXTENSIONS.has(path.extname(file).slice(1).toLowerCase());
+    // Only code can bind a runner name. Markdown and Gherkin are settled by
+    // `hasRunnableTestStructure` alone, so a binding shown in their prose
+    // declares nothing a runner collects.
+    const extension = path.extname(file).slice(1).toLowerCase();
+    const code = !PROSE_CARRIER_EXTENSIONS.has(extension) && extension !== "feature";
     const declaresTest =
-      hasRunnableTestStructure(file, raw) || (!prose && hasComputedSuiteBinding(raw));
+      hasRunnableTestStructure(file, raw) || (code && hasComputedSuiteBinding(raw));
     const into = declaresTest ? homes.tests : homes.carriers;
     for (const ref of refs) recordSpecRef(into, ref.spec, `TC-${ref.id}`, file);
   }

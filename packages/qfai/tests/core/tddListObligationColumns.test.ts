@@ -602,6 +602,45 @@ describe("a done row rests on a test, not on an annotation carrier", () => {
     );
   });
 
+  it("does not count a computed binding in a feature file's description", async () => {
+    const feature = "tests/integration/a.feature";
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues).map((entry) => entry.refs)).toEqual([
+          ["TDD-0001", "TC-0001-0001", feature],
+        ]);
+      },
+      "# TC\n",
+      {
+        files: {
+          "tests/unit/b.test.ts": files["tests/unit/b.test.ts"],
+          [feature]: [
+            "# QFAI:SPEC-0001:TC-0001-0001",
+            "Feature: case a",
+            "  const run = LIVE ? test : test.skip;",
+            '  run("case a", () => {});',
+            "",
+          ].join("\n"),
+        },
+        config: {
+          ...config,
+          validation: {
+            ...config.validation,
+            traceability: {
+              ...config.validation.traceability,
+              testFileGlobs: ["tests/**/*.test.ts", "tests/**/*.feature"],
+            },
+          },
+        },
+      },
+    );
+  });
+
   it("reads the unit tests under paths.testsDir with no project glob", async () => {
     await withLedger(
       [
