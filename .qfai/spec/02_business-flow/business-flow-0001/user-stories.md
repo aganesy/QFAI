@@ -42,27 +42,27 @@
 | US-0001-0036 | assistantPaths.ts SSOT module                                                   | `user-story-0001-0036/` |
 | US-0001-0037 | legacy layout past its sunset                                                   | `user-story-0001-0037/` |
 | US-0001-0038 | Story-tree seeding                                                              | `user-story-0001-0038/` |
-| US-0001-0039 |                                                                                 | `user-story-0001-0039/` |
-| US-0001-0040 |                                                                                 | `user-story-0001-0040/` |
-| US-0001-0041 |                                                                                 | `user-story-0001-0041/` |
-| US-0001-0042 |                                                                                 | `user-story-0001-0042/` |
-| US-0001-0043 |                                                                                 | `user-story-0001-0043/` |
-| US-0001-0044 |                                                                                 | `user-story-0001-0044/` |
-| US-0001-0045 |                                                                                 | `user-story-0001-0045/` |
-| US-0001-0046 |                                                                                 | `user-story-0001-0046/` |
-| US-0001-0047 |                                                                                 | `user-story-0001-0047/` |
-| US-0001-0048 |                                                                                 | `user-story-0001-0048/` |
-| US-0001-0049 |                                                                                 | `user-story-0001-0049/` |
-| US-0001-0050 |                                                                                 | `user-story-0001-0050/` |
-| US-0001-0051 |                                                                                 | `user-story-0001-0051/` |
-| US-0001-0052 |                                                                                 | `user-story-0001-0052/` |
-| US-0001-0053 |                                                                                 | `user-story-0001-0053/` |
-| US-0001-0054 |                                                                                 | `user-story-0001-0054/` |
-| US-0001-0055 |                                                                                 | `user-story-0001-0055/` |
-| US-0001-0056 |                                                                                 | `user-story-0001-0056/` |
-| US-0001-0057 |                                                                                 | `user-story-0001-0057/` |
-| US-0001-0058 |                                                                                 | `user-story-0001-0058/` |
-| US-0001-0059 |                                                                                 | `user-story-0001-0059/` |
+| US-0001-0039 | Deterministic validation gate                                                   | `user-story-0001-0039/` |
+| US-0001-0040 | Declared screen evidence validation                                             | `user-story-0001-0040/` |
+| US-0001-0041 | Canonical production validators                                                 | `user-story-0001-0041/` |
+| US-0001-0042 | Prototyping skill and UI evidence validation                                    | `user-story-0001-0042/` |
+| US-0001-0043 | Canonical assistant-tree layers                                                 | `user-story-0001-0043/` |
+| US-0001-0044 | Work-log frontmatter and link validation                                        | `user-story-0001-0044/` |
+| US-0001-0045 | Reviewer finding justification and handoff validation                           | `user-story-0001-0045/` |
+| US-0001-0046 | Decision promotion and stale work-log warnings                                  | `user-story-0001-0046/` |
+| US-0001-0047 | Deprecated assistant paths and skill project memory                             | `user-story-0001-0047/` |
+| US-0001-0048 | Skill-document references and migration notes                                   | `user-story-0001-0048/` |
+| US-0001-0049 | Profile-specific validation reports                                             | `user-story-0001-0049/` |
+| US-0001-0050 | Prompt-scanner drift justification                                              | `user-story-0001-0050/` |
+| US-0001-0051 | SaaS package validation profile                                                 | `user-story-0001-0051/` |
+| US-0001-0052 | Audit profile task forms                                                        | `user-story-0001-0052/` |
+| US-0001-0053 | Story-tree layout and ID validation                                             | `user-story-0001-0053/` |
+| US-0001-0054 | Contract index and contract-layer validation                                    | `user-story-0001-0054/` |
+| US-0001-0055 | Decision and open-question table validation                                     | `user-story-0001-0055/` |
+| US-0001-0056 | Append-only drift and change-request authorization                              | `user-story-0001-0056/` |
+| US-0001-0057 | Example, criterion, and rule links                                              | `user-story-0001-0057/` |
+| US-0001-0058 | Layer-specific test obligations                                                 | `user-story-0001-0058/` |
+| US-0001-0059 | Business-flow scoped validation                                                 | `user-story-0001-0059/` |
 | US-0001-0060 | Markdown レポート生成                                                           | `user-story-0001-0060/` |
 | US-0001-0061 | JSON レポート生成                                                               | `user-story-0001-0061/` |
 | US-0001-0062 | リポジトリリンク付与                                                            | `user-story-0001-0062/` |
@@ -103,58 +103,58 @@
 | US-0001-0097 | Item Completion Gate                                                            | `user-story-0001-0097/` |
 | US-0001-0098 | Simplified Handoff Schema                                                       | `user-story-0001-0098/` |
 | US-0001-0099 | Design System As Input                                                          | `user-story-0001-0099/` |
-| US-0001-0100 |                                                                                 | `user-story-0001-0100/` |
-| US-0001-0101 |                                                                                 | `user-story-0001-0101/` |
-| US-0001-0102 |                                                                                 | `user-story-0001-0102/` |
-| US-0001-0103 |                                                                                 | `user-story-0001-0103/` |
-| US-0001-0104 |                                                                                 | `user-story-0001-0104/` |
-| US-0001-0105 |                                                                                 | `user-story-0001-0105/` |
-| US-0001-0106 |                                                                                 | `user-story-0001-0106/` |
-| US-0001-0107 |                                                                                 | `user-story-0001-0107/` |
-| US-0001-0108 |                                                                                 | `user-story-0001-0108/` |
-| US-0001-0109 |                                                                                 | `user-story-0001-0109/` |
-| US-0001-0110 |                                                                                 | `user-story-0001-0110/` |
-| US-0001-0111 |                                                                                 | `user-story-0001-0111/` |
-| US-0001-0112 |                                                                                 | `user-story-0001-0112/` |
-| US-0001-0113 |                                                                                 | `user-story-0001-0113/` |
-| US-0001-0114 |                                                                                 | `user-story-0001-0114/` |
-| US-0001-0115 |                                                                                 | `user-story-0001-0115/` |
-| US-0001-0116 |                                                                                 | `user-story-0001-0116/` |
-| US-0001-0117 |                                                                                 | `user-story-0001-0117/` |
-| US-0001-0118 |                                                                                 | `user-story-0001-0118/` |
-| US-0001-0119 |                                                                                 | `user-story-0001-0119/` |
-| US-0001-0120 |                                                                                 | `user-story-0001-0120/` |
-| US-0001-0121 |                                                                                 | `user-story-0001-0121/` |
-| US-0001-0122 |                                                                                 | `user-story-0001-0122/` |
-| US-0001-0123 |                                                                                 | `user-story-0001-0123/` |
-| US-0001-0124 |                                                                                 | `user-story-0001-0124/` |
-| US-0001-0125 |                                                                                 | `user-story-0001-0125/` |
-| US-0001-0126 |                                                                                 | `user-story-0001-0126/` |
-| US-0001-0127 |                                                                                 | `user-story-0001-0127/` |
-| US-0001-0128 |                                                                                 | `user-story-0001-0128/` |
-| US-0001-0129 |                                                                                 | `user-story-0001-0129/` |
-| US-0001-0130 |                                                                                 | `user-story-0001-0130/` |
-| US-0001-0131 |                                                                                 | `user-story-0001-0131/` |
-| US-0001-0132 |                                                                                 | `user-story-0001-0132/` |
-| US-0001-0133 |                                                                                 | `user-story-0001-0133/` |
-| US-0001-0134 |                                                                                 | `user-story-0001-0134/` |
-| US-0001-0135 |                                                                                 | `user-story-0001-0135/` |
-| US-0001-0136 |                                                                                 | `user-story-0001-0136/` |
-| US-0001-0137 |                                                                                 | `user-story-0001-0137/` |
-| US-0001-0138 |                                                                                 | `user-story-0001-0138/` |
-| US-0001-0139 |                                                                                 | `user-story-0001-0139/` |
-| US-0001-0140 |                                                                                 | `user-story-0001-0140/` |
-| US-0001-0141 |                                                                                 | `user-story-0001-0141/` |
-| US-0001-0142 |                                                                                 | `user-story-0001-0142/` |
-| US-0001-0143 |                                                                                 | `user-story-0001-0143/` |
-| US-0001-0144 |                                                                                 | `user-story-0001-0144/` |
-| US-0001-0145 |                                                                                 | `user-story-0001-0145/` |
-| US-0001-0146 |                                                                                 | `user-story-0001-0146/` |
-| US-0001-0147 |                                                                                 | `user-story-0001-0147/` |
-| US-0001-0148 |                                                                                 | `user-story-0001-0148/` |
-| US-0001-0149 |                                                                                 | `user-story-0001-0149/` |
-| US-0001-0150 |                                                                                 | `user-story-0001-0150/` |
-| US-0001-0151 |                                                                                 | `user-story-0001-0151/` |
+| US-0001-0100 | Prototyping delegation scope                                                    | `user-story-0001-0100/` |
+| US-0001-0101 | Convergence and iteration budget                                                | `user-story-0001-0101/` |
+| US-0001-0102 | Prototyping execution plan                                                      | `user-story-0001-0102/` |
+| US-0001-0103 | Shared screenshot capture guidance                                              | `user-story-0001-0103/` |
+| US-0001-0104 | Documented iteration cycle                                                      | `user-story-0001-0104/` |
+| US-0001-0105 | Stable inputs for prototype evaluation                                          | `user-story-0001-0105/` |
+| US-0001-0106 | Structural design checklist                                                     | `user-story-0001-0106/` |
+| US-0001-0107 | Single-prototype evolution                                                      | `user-story-0001-0107/` |
+| US-0001-0108 | Explicit reviewer pivot directive                                               | `user-story-0001-0108/` |
+| US-0001-0109 | Acceptance of the latest iteration                                              | `user-story-0001-0109/` |
+| US-0001-0110 | User-experience review axes                                                     | `user-story-0001-0110/` |
+| US-0001-0111 | Declared layout anti-pattern review                                             | `user-story-0001-0111/` |
+| US-0001-0112 | Deterministic iteration stop codes                                              | `user-story-0001-0112/` |
+| US-0001-0113 | Low-cost per-iteration evidence                                                 | `user-story-0001-0113/` |
+| US-0001-0114 | Cycle-zero design lock recording                                                | `user-story-0001-0114/` |
+| US-0001-0115 | Design lock drift rejection                                                     | `user-story-0001-0115/` |
+| US-0001-0116 | Deterministic design-token violation scan                                       | `user-story-0001-0116/` |
+| US-0001-0117 | Design-system token mirror                                                      | `user-story-0001-0117/` |
+| US-0001-0118 | Project-wide UI-contract resolution                                             | `user-story-0001-0118/` |
+| US-0001-0119 | Reviewer-operated prototype navigation                                          | `user-story-0001-0119/` |
+| US-0001-0120 | Qualitative screen impressions                                                  | `user-story-0001-0120/` |
+| US-0001-0121 | Stock-photo source provenance                                                   | `user-story-0001-0121/` |
+| US-0001-0122 | Unattended prototyping execution                                                | `user-story-0001-0122/` |
+| US-0001-0123 | Per-cycle UI-contract review evidence                                           | `user-story-0001-0123/` |
+| US-0001-0124 | Certification of frozen UI-contract reviews                                     | `user-story-0001-0124/` |
+| US-0001-0125 | Cycle-zero UI-contract set freeze                                               | `user-story-0001-0125/` |
+| US-0001-0126 | Frozen stock-photo license catalog                                              | `user-story-0001-0126/` |
+| US-0001-0127 | Ten-cycle execution limit                                                       | `user-story-0001-0127/` |
+| US-0001-0128 | Tailwind-aware design-token validation                                          | `user-story-0001-0128/` |
+| US-0001-0129 | CSS token reference resolution                                                  | `user-story-0001-0129/` |
+| US-0001-0130 | Safe CSS-wide keywords                                                          | `user-story-0001-0130/` |
+| US-0001-0131 | Shadow-property color scan exclusion                                            | `user-story-0001-0131/` |
+| US-0001-0132 | Language-aware critique length                                                  | `user-story-0001-0132/` |
+| US-0001-0133 | Browser tool migration window                                                   | `user-story-0001-0133/` |
+| US-0001-0134 | Optional prototype capture                                                      | `user-story-0001-0134/` |
+| US-0001-0135 | Optional local prototype server                                                 | `user-story-0001-0135/` |
+| US-0001-0136 | Directly valid iteration evidence                                               | `user-story-0001-0136/` |
+| US-0001-0137 | Prototyping-phase certification check                                           | `user-story-0001-0137/` |
+| US-0001-0138 | UI-contract terminology in prototyping                                          | `user-story-0001-0138/` |
+| US-0001-0139 | Accepted screen capture mirror                                                  | `user-story-0001-0139/` |
+| US-0001-0140 | Recoverable cycle-zero restart                                                  | `user-story-0001-0140/` |
+| US-0001-0141 | Actionable blocked-cycle summary                                                | `user-story-0001-0141/` |
+| US-0001-0142 | Canonical primary UI-contract pin                                               | `user-story-0001-0142/` |
+| US-0001-0143 | Duplicate capture and missing-route findings                                    | `user-story-0001-0143/` |
+| US-0001-0144 | Audited license catalog extension                                               | `user-story-0001-0144/` |
+| US-0001-0145 | Structured prior-cycle context                                                  | `user-story-0001-0145/` |
+| US-0001-0146 | Out-of-range cycle guidance                                                     | `user-story-0001-0146/` |
+| US-0001-0147 | Optional surface skeleton capture                                               | `user-story-0001-0147/` |
+| US-0001-0148 | Design patch zone and hash                                                      | `user-story-0001-0148/` |
+| US-0001-0149 | Exploration and convergence modes                                               | `user-story-0001-0149/` |
+| US-0001-0150 | Explicit critique evidence keywords                                             | `user-story-0001-0150/` |
+| US-0001-0151 | Prototyping mutation log                                                        | `user-story-0001-0151/` |
 | US-0001-0152 | Unified SDD Workflow                                                            | `user-story-0001-0152/` |
 | US-0001-0153 | Discussion-Pack Preflight                                                       | `user-story-0001-0153/` |
 | US-0001-0154 | Required Edge Enforcement                                                       | `user-story-0001-0154/` |
@@ -165,11 +165,11 @@
 | US-0001-0159 | UI contract `primary_tasks` slot per screen                                     | `user-story-0001-0159/` |
 | US-0001-0160 | Resolve active discussion pack via single helper                                | `user-story-0001-0160/` |
 | US-0001-0161 | `primary_tasks` count band + accepted shape documented                          | `user-story-0001-0161/` |
-| US-0001-0162 |                                                                                 | `user-story-0001-0162/` |
-| US-0001-0163 |                                                                                 | `user-story-0001-0163/` |
-| US-0001-0164 |                                                                                 | `user-story-0001-0164/` |
-| US-0001-0165 |                                                                                 | `user-story-0001-0165/` |
-| US-0001-0166 |                                                                                 | `user-story-0001-0166/` |
+| US-0001-0162 | Canonical verification validators                                               | `user-story-0001-0162/` |
+| US-0001-0163 | Truthful verification evidence                                                  | `user-story-0001-0163/` |
+| US-0001-0164 | Contract-first verification gates                                               | `user-story-0001-0164/` |
+| US-0001-0165 | Removed compatibility namespaces                                                | `user-story-0001-0165/` |
+| US-0001-0166 | Scoped SaaS package certificate                                                 | `user-story-0001-0166/` |
 | US-0001-0167 | Agent Cards                                                                     | `user-story-0001-0167/` |
 | US-0001-0168 | Standard Agent Contract                                                         | `user-story-0001-0168/` |
 | US-0001-0169 | Orchestrator Protocol                                                           | `user-story-0001-0169/` |

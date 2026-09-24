@@ -5,7 +5,7 @@
 | US-ID        | Story                                                      | Path                    |
 | ------------ | ---------------------------------------------------------- | ----------------------- |
 | US-0004-0001 | Migration skill shipped and linked                         | `user-story-0004-0001/` |
-| US-0004-0002 |                                                            | `user-story-0004-0002/` |
+| US-0004-0002 | Old spec-layout migration error                            | `user-story-0004-0002/` |
 | US-0004-0003 | Run any migration step without risk to the project         | `user-story-0004-0003/` |
 | US-0004-0004 | Move the QFAI directories to their singular names          | `user-story-0004-0004/` |
 | US-0004-0005 | Merge every record into the two project tables             | `user-story-0004-0005/` |
