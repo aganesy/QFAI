@@ -27,20 +27,49 @@ limit and is not replaced by a later measurement.
 
 `reports/final-rerun/` contains the complete reports and measured exit codes
 for a fresh dry run, real run, and further rerun of each of the ten steps on
-the final tree. Every invocation reports `## Operations` as `none`; the CSV
-records the result for each invocation. Exit 3 on steps 4, 5, and 8 denotes
-historical items in `## For a person`, not a write. Their dispositions are in
-the records above. Step 6 preserves a manually corrected AC reference, and
-step 10 has normalized the managed `.gitignore` block before this final pass.
+the final tree, run on 2026-09-25 with the package built from commit
+`092dfaee2`. All ten dry runs finished before the first real run. Every
+invocation reports `## Operations` as `none`, and `exit-codes.csv` records the
+exit code of each. A hash of every working-tree file, ignored files included,
+was the same before and after the thirty invocations. The comparison left out
+`.git`, `node_modules`, `tmp/`, the build output and the report directory
+itself.
+
+Exit 3 on steps 5 and 8 denotes historical items in `## For a person`, not a
+write:
+
+| Step | Items | Disposition                                                                                                    |
+| ---- | ----- | -------------------------------------------------------------------------------------------------------------- |
+| 5    | 18    | Old test cases in the archived packs, one row each in `step05-step08-tc-disposition.csv`                       |
+| 8    | 18    | Old annotations kept as migration test input, the migration-input rows of `step08-for-a-person-disposition.md` |
+
+The step 8 disposition numbers its rows by the earlier report. Line numbers
+have moved since, and its row 4 is now two lines, 401 and 402 of
+`bf0004MigrationCutoverE2E.test.ts`. Both are expected values asserting that
+step 8 no longer keeps that annotation.
+
+Step 4 exits 0 with no item. The archived work-log whose `spec-0003` scope
+spanned three flows now has `scope: global`, as
+`step04-step07-manual-resolution.md` records. Step 6 preserves a manually
+corrected AC reference, and step 10 has normalized the managed `.gitignore`
+block before this final pass.
 
 ## Validation boundary
 
-The full validation after removal of the old packs returned exit 1 with
-`info=4 warning=20 error=615`. All 615 errors are `QFAI-STORY-006` missing
-test annotations; there are no layout or chain errors. The complete BF, AC,
-and EX obligation list is in `reports/full-validation-20260925.log` (run
-`run-20260925062723201`). The repository dogfood gate tracks this inherited
-coverage debt through its ratchet. This result is not an ATDD PASS.
+The full validation after removal of the old packs returns exit 1 with
+`info=4 warning=19 error=613`. All 613 errors are `QFAI-STORY-006` missing
+test annotations, 396 for AC and 217 for EX. There are no layout or chain
+errors and no BF finding. The complete AC and EX obligation list is in
+`reports/full-validation-20260925-084254.log` (run `run-20260925084254403`).
+
+The earlier log, `reports/full-validation-20260925.log`, reported 615 errors
+and 20 warnings. The step 8 annotation work cleared AC-0001-0167-01 and
+EX-0001-0067-02, and the `W-WORKLOG-SCHEMA` warning for the `spec-0003`
+work-log is gone. One `W-WORKLOG-SCHEMA` warning remains, for the `CHG-007`
+scope of `.qfai/steering/2026-08-09-chg-007-implementation-standing-brief.md`.
+
+The repository dogfood gate tracks this inherited coverage debt through its
+ratchet. This result is not an ATDD PASS.
 
 The final CI result and independent reviewer verdicts remain separate merge
 gates.

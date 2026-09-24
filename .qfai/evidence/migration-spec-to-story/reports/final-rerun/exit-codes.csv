@@ -8,9 +8,9 @@ step,mode,exit_code,operations_none,report
 3,dry,0,true,step03-dry.md
 3,real,0,true,step03-real.md
 3,rerun,0,true,step03-rerun.md
-4,dry,3,true,step04-dry.md
-4,real,3,true,step04-real.md
-4,rerun,3,true,step04-rerun.md
+4,dry,0,true,step04-dry.md
+4,real,0,true,step04-real.md
+4,rerun,0,true,step04-rerun.md
 5,dry,3,true,step05-dry.md
 5,real,3,true,step05-real.md
 5,rerun,3,true,step05-rerun.md
