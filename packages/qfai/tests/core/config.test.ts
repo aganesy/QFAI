@@ -520,6 +520,8 @@ describe("retired validation.traceability keys", () => {
           "    scNoTestSeverity: warning",
           "    orphanContractsPolicy: allow",
           "    scMustHaveTest: false",
+          "    unknownContractIdSeverity: warning",
+          "    testFileGlobs: [tests/**/*.test.ts]",
           "",
         ].join("\n"),
         "utf-8",
@@ -529,8 +531,20 @@ describe("retired validation.traceability keys", () => {
 
       const deprecated = issues.filter((issue) => issue.code === "QFAI-CFG-001");
       const expected = "error";
-      expect(deprecated.map((issue) => issue.severity)).toEqual([expected, expected, expected]);
-      for (const key of ["brMustHaveSc", "scNoTestSeverity", "orphanContractsPolicy"]) {
+      expect(deprecated.map((issue) => issue.severity)).toEqual([
+        expected,
+        expected,
+        expected,
+        expected,
+        expected,
+      ]);
+      for (const key of [
+        "brMustHaveSc",
+        "scNoTestSeverity",
+        "orphanContractsPolicy",
+        "scMustHaveTest",
+        "unknownContractIdSeverity",
+      ]) {
         expect(
           deprecated.some((issue) => issue.message.includes(`validation.traceability.${key}`)),
           `expected a deprecation warning naming ${key}`,
@@ -539,7 +553,7 @@ describe("retired validation.traceability keys", () => {
       // The retired keys must not be rejected outright: an existing config still loads,
       // and the key that is actually wired keeps its effect.
       expect(issues.some((issue) => issue.code === "QFAI_CONFIG_INVALID")).toBe(false);
-      expect(config.validation.traceability.scMustHaveTest).toBe(false);
+      expect(config.validation.traceability.testFileGlobs).toEqual(["tests/**/*.test.ts"]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -573,7 +587,9 @@ describe("retired validation.traceability keys", () => {
     try {
       await writeFile(
         path.join(root, "qfai.config.yaml"),
-        ["validation:", "  traceability:", "    scMustHaveTest: true", ""].join("\n"),
+        ["validation:", "  traceability:", "    testFileGlobs: [tests/**/*.test.ts]", ""].join(
+          "\n",
+        ),
         "utf-8",
       );
 

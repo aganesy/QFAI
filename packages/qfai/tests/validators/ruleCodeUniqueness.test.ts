@@ -59,14 +59,6 @@ const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
   // ownership scan reads there, so the codes are attributed; what is dynamic is
   // only which of the two a given run reaches.
   ["validators/grillingTrace.ts", new Map([["subject.code", 1]])],
-  ["validators/layerCoverage.ts", new Map([["group.code", 1]])],
-  [
-    "validators/orphanProhibition.ts",
-    new Map([
-      ["input.missingCode", 1],
-      ["input.unknownCode", 2],
-    ]),
-  ],
   // Two, not one. The second site is the workflow-set ingestion branch: it emits the
   // finding's own code at `info` while that code's catalog registration is deferred,
   // and the code it emits is the same `code` local the rejection site below uses. The
@@ -142,43 +134,6 @@ const DYNAMIC_SITE_CODES = new Map<string, readonly string[]>([
   // two stages are gated by different profiles — a single code would be claimed
   // whole by both while each evaluated half of it.
   ["validators/grillingTrace.ts", ["QFAI-GRILL-001", "QFAI-GRILL-002"]],
-  [
-    "validators/layerCoverage.ts",
-    [
-      "QFAI-COV-101",
-      "QFAI-COV-102",
-      "QFAI-COV-103",
-      "QFAI-COV-104",
-      "QFAI-COV-201",
-      "QFAI-COV-202",
-      "QFAI-COV-203",
-      "QFAI-COV-204",
-      "QFAI-COV-205",
-      "QFAI-COV-206",
-      "QFAI-COV-207",
-      "QFAI-COV-901",
-      "QFAI-PLAN-001",
-      "QFAI-PLAN-002",
-      "QFAI-PLAN-003",
-      "QFAI-PLAN-004",
-      "QFAI-PLAN-005",
-    ],
-  ],
-  [
-    "validators/orphanProhibition.ts",
-    [
-      "QFAI-ORPHAN-100",
-      "QFAI-ORPHAN-101",
-      "QFAI-ORPHAN-102",
-      "QFAI-ORPHAN-103",
-      "QFAI-ORPHAN-104",
-      "QFAI-ORPHAN-105",
-      "QFAI-ORPHAN-106",
-      "QFAI-ORPHAN-107",
-      "QFAI-ORPHAN-108",
-      "QFAI-ORPHAN-109",
-    ],
-  ],
   [
     // Deliberately re-emits the finding's own code so the justification gap is
     // reported under the code it applies to; those codes belong to

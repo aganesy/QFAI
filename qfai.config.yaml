@@ -11,8 +11,6 @@ validation:
   require:
     specSections: []
   testStrategy:
-    maxE2eScenarioRatio: null
-    maxE2eScenarioCount: null
     # `qfai validate` rejects `it.todo` / `test.todo` / `describe.todo` stubs in
     # files matched by traceability.testFileGlobs (QFAI-TEST-001). Setting this
     # to false is the documented opt-out, and it is not machine-checked: the
@@ -21,7 +19,6 @@ validation:
     # review ourselves; `qfai validate` will not ask for one.
     forbidTestTodoStubs: true
   traceability:
-    scMustHaveTest: true
     testFileGlobs:
       - tests/**/*.test.ts
       - tests/**/*.spec.ts
@@ -34,7 +31,6 @@ validation:
       - features/**/*.feature
       - packages/*/features/**/*.feature
     testFileExcludeGlobs: []
-    unknownContractIdSeverity: error
 output:
   validateJsonPath: .qfai/report/validate.json
 prototyping:

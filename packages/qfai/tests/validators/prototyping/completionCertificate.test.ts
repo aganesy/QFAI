@@ -55,10 +55,8 @@ function makeConfig(): QfaiConfig {
         forbidTestTodoStubs: true,
       },
       traceability: {
-        scMustHaveTest: true,
         testFileGlobs: [],
         testFileExcludeGlobs: [],
-        unknownContractIdSeverity: "warning",
       },
     },
     output: { validateJsonPath: ".qfai/output/validate.json" },

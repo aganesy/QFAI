@@ -17,10 +17,6 @@ import type {
   ValidationTimings,
 } from "../../core/types.js";
 import {
-  THIN_COVERAGE_SIGNAL_CODE,
-  THIN_COVERAGE_SIGNAL_EXPECTATION,
-} from "../../core/validators/layerCoverage.js";
-import {
   PACKAGE_SELF_GOVERNANCE_FAMILIES,
   unevaluatedPackageSelfGovernanceFamilies,
 } from "../../core/validators/packageSelfGovernance.js";
@@ -1204,37 +1200,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Protected story-tree files change through an in-force change request, and decision rows remain append-only.",
   "QFAI-STORY-011": "Every business-flow file contains a Mermaid flowchart or sequence diagram.",
   "QFAI-GRILL-001": "Each affected business flow records its pre-draft grilling checkpoint.",
-  E_SPEC_MISSING_FILESET: "Spec Pack required files (01..18) are complete.",
-  E_LEDGER_MISSING_COLUMN:
-    "Traceability Ledger has all required columns: trace_id,obj_id,init_id,cap_id,flow_id,us_id,ac_id,ex_ids,tc_ids.",
-  E_LEDGER_EMPTY_CELL: "Required Ledger cells and multi-value columns are populated.",
-  E_ID_INVALID_FORMAT: "All IDs follow the required format for each ID kind.",
-  E_REF_NOT_FOUND: "Every referenced ID exists in the corresponding source file.",
-  E_AC_NOT_VERIFIED: "Every AC is connected to EX and TC in the Ledger.",
-  E_TC_ORPHAN: "Every TC is linked in Ledger and traceable up to objective intent.",
-  E_UPWARD_REF_FORBIDDEN: "Upper-to-lower direct references are forbidden outside Ledger.",
-  E_OQ_OPEN_RELEASE_BLOCK: "release_candidate requires zero open items in 15_Open-questions.md.",
-  E_OQ_STATUS_UNPARSEABLE:
-    "Each OQ entry has a valid status (open|resolved|deferred|unadjudicated).",
   "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
-  "QFAI-SPACK-103":
-    "Every open-question register that is present is a regular file this run can read.",
-  E_DELTA_MISSING_REQUIRED:
-    "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
-  "QFAI-DECISION-001":
-    "A `Status: re-open` Decision Record uses the `DR-*` id scheme and names the prior `DR-*` it reconsiders in `Re-opens:` — not itself, and not a record that points back at it.",
-  "QFAI-DECISION-002":
-    "The `Re-opens:` reference resolves to a record declared in the spec's Decisions file or _policies/08_Decisions.md.",
-  "QFAI-DECISION-003":
-    "A `Status: re-open` Decision Record carries the explicit approval the Delta Rejected Guard requires (`Approved by` and an `Approved at` of YYYY-MM-DDThh:mm:ssZ).",
-  "QFAI-DECISION-004":
-    "A delta's `## Rejected` `Re-opened by:` and the spec's `Status: re-open` record name each other.",
-  "QFAI-DECISION-005":
-    "A `Status: re-open` Decision Record states in `Decision:` what changed since the rejection.",
-  "QFAI-DECISION-006":
-    "No candidate listed under a delta's `## Rejected` reappears under `## Adopted` unless that candidate's `Re-opened by:` names a `Status: re-open` record.",
-  "QFAI-DECISION-007":
-    "A `DR-*` id is declared once per Decisions file, so a `Re-opens:` or `Re-opened by:` reference resolves to one decision.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
   "QFAI-PROT-011":
@@ -1247,81 +1213,17 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The qfai that runs a project's gates is resolved from inside that project, so the gating version is pinned by its own lockfile; a global install or a monorepo-root hoist is a benign reading of the same path test.",
   "QFAI-PLATFORM-003":
     "Every `--platform` given is read by the profile it is given to; the discussion / sdd / atdd / tdd profiles never reach platform detection, so a value passed there changes nothing about the run.",
-  "QFAI-TRIAGE-007":
-    "SPLIT / MERGE / SUPERSEDE / DELETE are spec-scoped; item decomposition is UPDATE:MODIFY + UPDATE:APPEND and item removal is UPDATE:REMOVE.",
-  "QFAI-TRIAGE-008":
-    "Every Triage section is introduced by the canonical `## Triage` H2, optionally naming its round in parentheses, so the triage rules read the rows under it.",
-  "QFAI-TRIAGE-009":
-    "`Existing Spec` names its target in one grammar: `spec-NNNN` (multiple joined by `+`), `_policies` for a policy-only row, or `-` on a CREATE row. Every named spec must exist on disk; ranges are not a form.",
-  "QFAI-TRIAGE-010":
-    "A requirement reaches the execution ledger through a spec: at least one of its triage rows targets a spec, not `_policies` alone.",
-  "QFAI-SPLIT-106":
-    "Every `CAP-NNNN` row in the CAP Catalog appears exactly once and its `Spec` cell names exactly one spec directory, and no two rows name the same one.",
   "QFAI-TEST-001":
     "No test file holds a silent placeholder — `it.todo` / `pytest.skip` / `t.Skip` / `@Disabled` / `#[ignore]` and the other dialects' stub forms.",
   "QFAI-TEST-003":
     "No vitest/jest test is parked with a `.skip` modifier; a parked suite is waived per path in `.qfai/waivers.yml` instead.",
-  "QFAI-DENSITY-005":
-    "A `Rule` cell at least 400 chars AND at least 3x the mean of the other `BR` rows in the same file is a size signal (warning): the cell may carry more than its rule. Files with fewer than 3 `BR-ID`/`Rule` rows are not checked.",
-  "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
-  "QFAI-COV-202": "Every BR must be referenced by at least one EX (`BR-Ref`).",
-  "QFAI-COV-203": "Every EX must be referenced by at least one TC (`EX-Ref`).",
-  "QFAI-COV-204": "Every BR row must include at least one AC reference in `AC-Refs`.",
-  "QFAI-COV-205": "Every EX row must include at least one BR reference in `BR-Ref`.",
-  "QFAI-COV-206": "Every TC row must include at least one reference in `AC-Refs` or `EX-Ref`.",
-  [THIN_COVERAGE_SIGNAL_CODE]: THIN_COVERAGE_SIGNAL_EXPECTATION,
-  "QFAI-ATDD-101":
-    "US annotations in test code must reference existing IDs in specs (`QFAI:SPEC-XXXX:US-YYYY`).",
-  "QFAI-ATDD-102":
-    "TC annotations in test code must reference existing IDs in specs (`QFAI:SPEC-XXXX:TC-YYYY`).",
-  "QFAI-ATDD-103":
-    "CON-API annotations in test code must reference declared API contracts (`QFAI:CON-API-XXXX`).",
-  "QFAI-ATDD-111":
-    "Every US must be referenced at least once from tests/e2e/**. Scoped to user-facing specs when any spec declares a surface type; project-wide otherwise.",
-  "QFAI-ATDD-112":
-    "Every TC must be referenced at least once from the test directory its declared Level routes to (default tests/integration/**).",
-  "QFAI-ATDD-118":
-    "User stories declaring `- x-qfai-status: planned` are deferred from the E2E-test obligation.",
-  "QFAI-ATDD-113": "Every declared CON-API must be referenced at least once from tests/api/**.",
-  "QFAI-ATDD-114":
-    "CON-API contracts declaring `x-qfai-status: planned` are deferred from the API-test obligation.",
-  "QFAI-ATDD-121":
-    "tests/api/** must not include TC annotations for a TC whose declared Level is not API.",
-  "QFAI-ATDD-122":
-    "tests/e2e/** must not include TC annotations for a TC whose declared Level is not E2E.",
-  "QFAI-ATDD-123":
-    "tests/integration/** must not include TC annotations for a TC whose declared Level is not Integration.",
-  "QFAI-ATDD-117":
-    "TCs declared Unit/Component are excluded from the ATDD annotation obligation; /qfai-implement's ledger gates them.",
-  "QFAI-ATDD-119":
-    "An obligation whose every annotation carrier declares no test is covered on paper, not by a test.",
-  "QFAI-ATDD-124":
-    "A carrier whose suite is bound through a variable decides at run time whether its tests execute, so the coverage gate reads the annotation and cannot tell a skipped suite from a passing one.",
-  "QFAI-ATDD-125":
-    "A spec that declares test cases and owes none of them an ATDD annotation is named, so a green QFAI-ATDD-112 over a population of zero is not read as coverage.",
 
-  "QFAI-ATDD-126":
-    "A test case whose own block declares `planned` or `external` owes no annotation here, and the declaration keeps the exit visible rather than silent.",
-  "QFAI-ATDD-127":
-    "A test case claiming `x-qfai-status: external` names where the obligation is verified instead; without that pointer the marker is a silencer and the obligation stands.",
-  "QFAI-ATDD-128":
-    "A TC row's declared Level stays within L1-L3. L4 belongs to CON-API-* and L5 to US-*, so a row at either level is an obligation filed under the wrong ID type rather than a test case that happens to be high-layer.",
   "QFAI-ATDD-131":
     "Every BF has a Coverage Depth Matrix at `.qfai/evidence/coverage-depth-BF-NNNN.md`.",
   "QFAI-ATDD-132":
     "The Coverage Depth Matrix and ATDD evidence are tracked or unignored so their justifications are committed.",
   "QFAI-ATDD-133":
     "Each matrix covers its BF, US, AC, and EX obligations, and `.qfai/evidence/atdd-BF-NNNN.md` links it with matching counted totals.",
-  "QFAI-ATDD-134":
-    "The ATDD scan reads every test its globs select: the glob matcher accepts every pattern, every directory the patterns reach is readable, and the selection fits under the file limit.",
-  "QFAI-ATDD-135":
-    "Every directory under the acceptance test roots can be read by the account running `qfai validate`, so every test there is counted.",
-  "QFAI-ATDD-901":
-    "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
-  "QFAI-BFLOW-005":
-    "A `- Flow:` citation names a business flow that `_policies/04_Business-Flow.md` declares, so the edge from a story to the flow that realizes it resolves.",
-  "QFAI-BFLOW-006":
-    "Each business flow is declared once, so a story citing one names a single flow.",
   "QFAI-LINK-001":
     "Every qfai-owned entry in .claude/.agents/.codex/.github skill and agent directories is a symlink that resolves.",
   "QFAI-LINK-002":
@@ -1345,10 +1247,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Legacy discussion naming is deprecated; canonical naming should be used for new outputs.",
   "QFAI-DPACK-011":
     "On a visual surface, every `DESIGN.md` key and archetype a discussion pack proposes is one the front-matter schema accepts.",
-  "QFAI-ID-002":
-    "Within one pack file, each `US`, `AC`, `BR`, `EX` or `TC` ID is declared by at most one heading.",
-  "QFAI-IMPLITE-001":
-    "A project that has spec packs also has a traceable input source: a `discussion-*/06_REQ.md` under the configured discussion directory, or an `.qfai/evidence/import-lite-*.md`.",
   "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
   "QFAI-HYG-002": "Template/sample artifacts should not remain under `paths.specsDir`.",
   "QFAI-REVIEW-001":
@@ -1432,15 +1330,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // time has a backlog to work through rather than a single edit.
   "QFAI-CONTRACT-015":
     "Every contract file states its apply order (`-- Depends on:` for SQL, `x-qfai-depends-on` for YAML/JSON), writing `-` when nothing has to be applied before it.",
-  "QFAI-CONTRACT-030":
-    "Contract index references must match declared contract IDs in .qfai/contracts/**.",
-  "QFAI-CONTRACT-032":
-    "Every contract index table carries a `Depends On` column, the one place a multi-file schema's apply order is written down.",
-  "QFAI-CONTRACT-033":
-    "Every contract index row's `Depends On` cell mirrors the apply order its contract file declares, with `-` for none; a blank cell records nothing and is not read as 'no dependencies'.",
   "QFAI-CONTRACT-034": "Every declared contract has a row in a contract index.",
-  "QFAI-CONTRACT-035":
-    "Every contract index row's `File` cell names a file that declares that row's contract ID.",
   "QFAI-CONTRACT-036":
     "Every table a DB contract's foreign key references is either created by that same contract or by one its declared apply order names, so applying the contracts in the declared order never meets a `REFERENCES` to a table that does not exist yet.",
   // Reads the implementation tree rather than another declaration, so what it
@@ -1457,8 +1347,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
   "QFAI-CONTRACT-042":
     "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, no two entries of one contract share an `id` (each spec's own contract is one), and contracts sharing an `id` state it with the same `title`, `route` and `primary_tasks`, so each entry is a screen every consumer reads.",
-  "QFAI-CONTRACT-043":
-    "Every UI contract is bound by a live spec, through a business rule's `Contract-Refs` cell or a `QFAI-CONTRACT-REF:` line, so its screen obligations reach a test case.",
   // Same rule as `QFAI-BPAP-001` below: `paths.contractsDir` is configurable, so
   // the expected state names the contracts root by role. Pinning the default
   // path sent a project that moved its contracts to repair a directory it does
@@ -1489,17 +1377,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // rung raises an even code when the `Parent` is absent and the odd one above
   // it when the `Parent` is there but names nothing the level above defines —
   // the same two states at five different heights.
-  "QFAI-ORPHAN-100": "Every US declares a `Parent` naming the capability it delivers.",
-  "QFAI-ORPHAN-101": "Every US `Parent` names a `CAP-XXXX` the shared capability policy defines.",
-  "QFAI-ORPHAN-102": "Every AC declares a `Parent` naming the user story it refines.",
-  "QFAI-ORPHAN-103": "Every AC `Parent` names a `US-XXXX` the same spec defines.",
-  "QFAI-ORPHAN-104": "Every BR declares a `Parent` naming the acceptance criterion it constrains.",
-  "QFAI-ORPHAN-105": "Every BR `Parent` names an `AC-XXXX` the same spec defines.",
-  "QFAI-ORPHAN-106":
-    "Every EX scenario carries a `Parent` comment naming the criterion or rule it illustrates.",
-  "QFAI-ORPHAN-107": "Every EX `Parent` names an `AC-XXXX` or `BR-XXXX` the same spec defines.",
-  "QFAI-ORPHAN-108": "Every TC declares a `Parent` naming the example it executes.",
-  "QFAI-ORPHAN-109": "Every TC `Parent` names an `EX-XXXX` the same spec defines.",
   // `paths.skillsDir` is configurable and the diff is taken against whatever it
   // resolves to, so the expected state names the tree by role. The directory
   // actually compared is on the finding's `target:` line.
@@ -1631,8 +1508,6 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // two rows, two CAPs on one directory) pass no `suggested_action`, and one
   // repair covers them: the `Spec` cell is the mapping, so the fix is always to
   // make each row name exactly one directory that no other row names.
-  "QFAI-SPLIT-106":
-    "Edit the `Spec` cell of each `CAP-NNNN` row the message names in `_policies/03_Capabilities.md` so it holds exactly one `spec-NNNN` directory: fill a blank cell with the directory that capability owns, cut a cell that lists several down to the one that owns it, merge a CAP that appears on two rows into one row, and give a directory claimed by two CAPs to only one of them.",
   "QFAI-AGENT-015":
     "Remove the role from the skill's `roles:`, or bind it in the package defaults (`packages/qfai/assets/defaults/agent-routing.yml` or `review-profiles.yml`). For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
   "QFAI-AGENT-016":
@@ -1647,26 +1522,6 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // every rung of the ladder depends on this catalog for its `fix:` line. The
   // even codes are repaired by writing a `Parent`, the odd ones by pointing an
   // existing `Parent` at something the level above actually defines.
-  "QFAI-ORPHAN-100":
-    "Add a `Parent: CAP-XXXX` line to the user story, naming the capability it delivers; register that capability in the shared capability policy first if it is not there yet.",
-  "QFAI-ORPHAN-101":
-    "Point the user story's `Parent` at a capability the shared policy defines — correct the reference, or add the capability there.",
-  "QFAI-ORPHAN-102":
-    "Add a `Parent: US-XXXX` line to the acceptance criterion, naming the user story it refines.",
-  "QFAI-ORPHAN-103":
-    "Point the criterion's `Parent` at a user story the same spec defines — correct the reference, or add the story.",
-  "QFAI-ORPHAN-104":
-    "Add a `Parent: AC-XXXX` line to the business rule, naming the criterion it constrains.",
-  "QFAI-ORPHAN-105":
-    "Point the rule's `Parent` at a criterion the same spec defines — correct the reference, or add the criterion.",
-  "QFAI-ORPHAN-106":
-    "Add a `Parent:` comment to the scenario, naming the criterion (`AC-XXXX`) or rule (`BR-XXXX`) it illustrates.",
-  "QFAI-ORPHAN-107":
-    "Point the scenario's `Parent` at a criterion or rule the same spec defines — correct the reference, or add the criterion or rule.",
-  "QFAI-ORPHAN-108":
-    "Add a `Parent: EX-XXXX` line to the test case, naming the example it executes.",
-  "QFAI-ORPHAN-109":
-    "Point the test case's `Parent` at an example the same spec defines — correct the reference, or add the example.",
   // Only the mirror-only rejection paths pass a `suggested_action`. The rest —
   // a missing `visual.*` block or key, a legacy `checklist.*` key, missing
   // component guidance, a mirror value that diverges from DESIGN.md, and a

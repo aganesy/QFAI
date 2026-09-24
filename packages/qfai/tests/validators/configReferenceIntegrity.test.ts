@@ -53,10 +53,8 @@ function makeConfig(overrides: { primaryUiContract?: string; packPath?: string }
         forbidTestTodoStubs: true,
       },
       traceability: {
-        scMustHaveTest: true,
         testFileGlobs: [],
         testFileExcludeGlobs: [],
-        unknownContractIdSeverity: "warning",
       },
     },
     output: { validateJsonPath: ".qfai/output/validate.json" },

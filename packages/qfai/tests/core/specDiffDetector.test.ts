@@ -271,10 +271,8 @@ const stubConfig: QfaiConfig = {
       maxE2eScenarioCount: null,
     },
     traceability: {
-      scMustHaveTest: true,
       testFileGlobs: ["**/*.test.ts"],
       testFileExcludeGlobs: [],
-      unknownContractIdSeverity: "warning",
     },
   },
   output: { validateJsonPath: ".qfai/out/validate.json" },

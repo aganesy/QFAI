@@ -78,10 +78,8 @@ export type QfaiValidationConfig = {
     requireSizeTags: boolean;
   };
   traceability: {
-    scMustHaveTest: boolean;
     testFileGlobs: string[];
     testFileExcludeGlobs: string[];
-    unknownContractIdSeverity: TraceabilitySeverity;
     /**
      * @deprecated 廃止済み。どの検証も参照しないため設定しても挙動は変わらず、
      * 読み込み時に QFAI-CFG-001 が error として出る。既存の設定
@@ -310,10 +308,8 @@ export const defaultConfig: QfaiConfig = {
       requireSizeTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
     },
     traceability: {
-      scMustHaveTest: true,
       testFileGlobs: [],
       testFileExcludeGlobs: [],
-      unknownContractIdSeverity: "error",
     },
   },
   output: {
@@ -622,13 +618,6 @@ function normalizeValidation(
       ),
     },
     traceability: {
-      scMustHaveTest: readBoolean(
-        traceabilityRaw?.scMustHaveTest,
-        base.traceability.scMustHaveTest,
-        "validation.traceability.scMustHaveTest",
-        configPath,
-        issues,
-      ),
       testFileGlobs: readStringArray(
         traceabilityRaw?.testFileGlobs,
         base.traceability.testFileGlobs,
@@ -640,13 +629,6 @@ function normalizeValidation(
         traceabilityRaw?.testFileExcludeGlobs,
         base.traceability.testFileExcludeGlobs,
         "validation.traceability.testFileExcludeGlobs",
-        configPath,
-        issues,
-      ),
-      unknownContractIdSeverity: readTraceabilitySeverity(
-        traceabilityRaw?.unknownContractIdSeverity,
-        base.traceability.unknownContractIdSeverity,
-        "validation.traceability.unknownContractIdSeverity",
         configPath,
         issues,
       ),
@@ -1102,24 +1084,6 @@ function readFailOn(
   return fallback;
 }
 
-function readTraceabilitySeverity(
-  value: unknown,
-  fallback: TraceabilitySeverity,
-  label: string,
-  configPath: string,
-  issues: Issue[],
-): TraceabilitySeverity {
-  if (value === "warning" || value === "error") {
-    return value;
-  }
-  if (value !== undefined) {
-    issues.push(
-      configIssue(configPath, `${label} は warning|error のいずれかである必要があります。`),
-    );
-  }
-  return fallback;
-}
-
 /**
  * `validation.traceability` keys that were declared, defaulted and parsed but
  * that no validator ever read. They are still accepted so an existing config
@@ -1135,6 +1099,8 @@ const RETIRED_TRACEABILITY_KEYS = [
   "brMustHaveSc",
   "scNoTestSeverity",
   "orphanContractsPolicy",
+  "scMustHaveTest",
+  "unknownContractIdSeverity",
 ] as const;
 
 function reportRetiredTraceabilityKeys(

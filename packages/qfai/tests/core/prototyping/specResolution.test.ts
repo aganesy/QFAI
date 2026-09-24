@@ -48,10 +48,8 @@ function config(primaryUiContract?: string): QfaiConfig {
         forbidTestTodoStubs: true,
       },
       traceability: {
-        scMustHaveTest: true,
         testFileGlobs: [],
         testFileExcludeGlobs: [],
-        unknownContractIdSeverity: "warning",
       },
     },
     output: { validateJsonPath: ".qfai/report/validate.json" },

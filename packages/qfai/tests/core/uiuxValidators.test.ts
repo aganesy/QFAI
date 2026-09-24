@@ -958,6 +958,14 @@ describe("uiux validators", () => {
         "name: frontend-engineer",
         'description: "Implement frontend behavior aligned with the selected direction."',
         "tools: [Read, Write, Edit, Glob, Grep, Bash]",
+        "kind: worker",
+        "domain: frontend",
+        "mission: Implement frontend behavior.",
+        "replaces: [frontend-engineer]",
+        "owned_artifacts: [ui-implementation]",
+        "tool_profile: frontend",
+        "permission_profile: authoring",
+        "specialization_tags: [frontend]",
         "---",
         "",
         "# Frontend Engineer",
@@ -990,7 +998,9 @@ describe("uiux validators", () => {
     );
 
     const issues = await validateAgentDefinition(root, defaultConfig);
-    expect(issues).toEqual([]);
+    expect(
+      issues.filter((item) => item.file === ".qfai/assistant/agent/frontend-engineer.md"),
+    ).toEqual([]);
   });
 
   it("detects key html mock violations with stable code/severity", async () => {

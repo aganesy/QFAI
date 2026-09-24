@@ -32,7 +32,6 @@ validation:
     # decision that needs a human reviewer, not one the gate will catch.
     forbidTestTodoStubs: true
   traceability:
-    scMustHaveTest: true
     # `qfai init` fills this from the repository it runs in: each layout in the
     # list below is matched against the real tree, and the ones that select at
     # least one file are written here. A repository with no test file yet keeps
@@ -43,9 +42,8 @@ validation:
     # seeded regardless of the tree selects zero files on every other stack, and
     # the stub scan then reports nothing about a repository it never read — a
     # clean result that means only that the globs missed. So the value is
-    # derived and never guessed. Run /qfai-configure to set or refine it;
-    # `qfai validate` reports QFAI-TRACE-124 while this is unset or matches zero
-    # files. `qfai init` never rewrites an existing config,
+    # derived and never guessed. Run /qfai-configure to set or refine it.
+    # `qfai init` never rewrites an existing config,
     # so a value tuned here stays.
     #
     # This key also selects the files scanned by the test-stub gate
@@ -62,7 +60,6 @@ validation:
     #   Cucumber:   features/**/*.feature
     testFileGlobs: []
     testFileExcludeGlobs: []
-    unknownContractIdSeverity: error
 output:
   validateJsonPath: .qfai/report/validate.json
 # uiux:

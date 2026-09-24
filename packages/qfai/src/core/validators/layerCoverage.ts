@@ -298,21 +298,6 @@ function normalizeColumnName(value: string): string {
 }
 
 /**
- * Rule code carried by every `## Signals` row so the mandated triage in
- * `qfai-sdd/SKILL.md` and the `warning_signal` entry in `review-gate.rules.yml`
- * refer to something the report actually contains.
- */
-export const THIN_COVERAGE_SIGNAL_CODE = "QFAI-COV-207";
-
-/**
- * Single definition of what `QFAI-COV-207` means, so the spec-coverage report
- * and the validate issue catalog cannot drift apart. The code carries the
- * thin-coverage signal the report prints.
- */
-export const THIN_COVERAGE_SIGNAL_EXPECTATION =
-  "Artifacts covered by exactly 1 downstream case are review signals, not gate failures; triage each one in the spec-coverage report.";
-
-/**
  * Collapses an ID list into contiguous runs on its trailing numeric segment,
  * so `BR-0003-0001 … BR-0003-0009` prints as one range instead of nine
  * identically-shaped lines.
