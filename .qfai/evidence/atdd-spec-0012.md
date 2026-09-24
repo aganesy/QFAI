@@ -1076,7 +1076,7 @@ checks it directly.
 - `completion-reviewer` は内容面を PASS としたが、4ファイルがまだ未コミットである点を merge 前の手続き上の注意として指摘した。
 - `TC-0012-0276` の ordering assertion は string index ベースで、実装の大幅な整形変更には比較的弱い。
 - source-inspection 型 ATDD はこの repo の既存パターンに整合するが、runtime behavior を直接実行するテストではないため rationale を残す。
-- `TC-0012-0490` names `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts` in its `Test file` line, and its test is in `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`. The new file keeps the `RED test hash` of the four `done` rows whose manifest names the other file. Correcting the line is a change to `06_Test-Cases.md`, which this stage does not edit.
+- Resolved by `CR-20260924-0002`: `TC-0012-0490` named `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts` in its `Test file` line while its test is in `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`. The change request points the line at `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`, which keeps the `RED test hash` of the four `done` rows whose manifest names the other file.
 
 ## Final status (PASS/FAIL) + who confirmed
 
