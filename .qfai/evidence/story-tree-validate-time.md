@@ -67,6 +67,7 @@ Each run reported the same code counts:
 The saved reports and summary are under
 `tmp/story-tree-benchmark-p1-2ef635a9-v2/`. The summary SHA-256 is
 `7FB0EB34D85BF609134F5D22F8FEF592C7F74859119AEEBEBEBE826D29C9565B`.
+
 ## Integrated diagnostic and P8 final gate
 
 The initial integrated story-tree commit `df55ba0c2` supplies a retrospective
