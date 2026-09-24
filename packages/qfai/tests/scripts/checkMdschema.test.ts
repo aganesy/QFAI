@@ -149,6 +149,8 @@ describe("check-mdschema driver", () => {
     expect(result.stderr).toContain("story-tech");
   });
 
+  // QFAI:EX-0001-0011-01
+  // QFAI:EX-0001-0011-02
   it("gives every fixed story-tree document and a CLI contract one schema entry", () => {
     const manifest = readFileSync(
       path.join(REPO_ROOT, "packages/qfai/assets/mdschema/manifest.yml"),
@@ -207,6 +209,7 @@ describe("check-mdschema driver", () => {
     ).toEqual(["docs/spec/decisions.md"]);
   });
 
+  // QFAI:EX-0001-0011-03
   it("checks a contract file at the configured contractsDir", async () => {
     const root = await newTempDir();
     const contract = path.join(root, "docs", "contracts", "tech.md");
@@ -222,6 +225,14 @@ describe("check-mdschema driver", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("story-tech");
+
+    const template = path.join(
+      REPO_ROOT,
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/tech.md",
+    );
+    await writeFile(contract, readFileSync(template, "utf-8"), "utf-8");
+    const valid = runDriver(["--root", root, "--scope", "all"]);
+    expect(valid.status, valid.stderr).toBe(0);
   });
 
   it("exits 0 and counts the files when every document conforms", async () => {
@@ -232,6 +243,38 @@ describe("check-mdschema driver", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("1 file(s) conform");
+  });
+
+  // QFAI:EX-0001-0011-04
+  it("accepts a one-flow one-story sample copied from the SDD templates", async () => {
+    const root = await newTempDir();
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+      "utf-8",
+    );
+    const source = path.join(
+      REPO_ROOT,
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/02_business-flow/business-flow-NNNN",
+    );
+    const destination = path.join(root, ".qfai/spec/02_business-flow/business-flow-0001");
+    for (const relative of [
+      "business-flow.md",
+      "user-story-NNNN-NNNN/01_User-story.md",
+      "user-story-NNNN-NNNN/02_Acceptance-Criteria.md",
+      "user-story-NNNN-NNNN/03_Example.md",
+    ]) {
+      const target = path.join(
+        destination,
+        relative.replace("user-story-NNNN-NNNN", "user-story-0001-0001"),
+      );
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, readFileSync(path.join(source, relative), "utf-8"), "utf-8");
+    }
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("4 file(s) conform");
   });
 
   it("exits 1 and names the document type when a document violates its schema", async () => {
