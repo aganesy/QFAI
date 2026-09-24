@@ -98,6 +98,24 @@ describe("link-assistant-tree --check", () => {
     }
   });
 
+  // QFAI:EX-0002-0021-06
+  it("rejects a regular rule mirror where the shipped rule link belongs", async () => {
+    const { root, script, assistant } = await makeIsolatedTree();
+    const created = runIsolated(script, root, false);
+    expect(created.status, created.output).toBe(0);
+    const rule = path.join(assistant, "rule");
+    expect(lstatSync(rule).isSymbolicLink()).toBe(true);
+    expect(runIsolated(script, root, true).status).toBe(0);
+
+    await rm(rule);
+    await mkdir(rule);
+    await writeFile(path.join(rule, "test-layers.md"), "# Local copy\n", "utf-8");
+    const checked = runIsolated(script, root, true);
+    expect(checked.status).toBe(1);
+    expect(checked.output).toContain(".qfai/assistant/rule");
+    expect(checked.output).toContain("not a symlink to");
+  });
+
   it("has no assistant catalog after project context moves to the spec tree", () => {
     expect(existsSync(path.join(ASSISTANT, "catalog"))).toBe(false);
   });

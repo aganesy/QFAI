@@ -91,6 +91,10 @@ relevant Standard command and validation before claiming coverage.
 
 ## CI lane mapping
 
+This section adds no layer token or layer heading and does not activate
+per-level routing. Place test annotations only in paths scanned by
+`validation.traceability.testFileGlobs`.
+
 The project chooses its CI job names. Route Unit and Component tests to a
 fast test job, Integration and API tests to jobs with their required services,
 and E2E tests to a journey job. The full verification gate runs every

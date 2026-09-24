@@ -38,17 +38,6 @@
  * which `constitution/drift-protocol.md` forbids. Routed as `CR-20260818-0007`,
  * which names `TDD-0016` as its blocked set.
  */
-// QFAI:EX-0002-0014-02
-// QFAI:EX-0002-0014-05
-// QFAI:EX-0002-0014-06
-// QFAI:EX-0002-0014-07
-// QFAI:EX-0002-0014-08
-// QFAI:EX-0002-0014-01
-// QFAI:EX-0002-0014-04
-// QFAI:EX-0002-0014-04
-// QFAI:EX-0002-0014-05
-// QFAI:EX-0002-0014-07
-
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -260,6 +249,7 @@ function ownUses(): { where: string; uses: string }[] {
   return out;
 }
 
+// QFAI:EX-0002-0014-02
 describe("TC-0017-0014 (TDD-0014): zero own-CI jobs lack a reachable permission block", () => {
   it("reaches a permission block from every job, and reachability differs from declaration", () => {
     const jobs = ownJobs();
@@ -304,6 +294,7 @@ describe("TC-0017-0014 (TDD-0014): zero own-CI jobs lack a reachable permission 
   });
 });
 
+// QFAI:EX-0002-0014-05
 describe("TC-0017-0019 (TDD-0019): every checkout step refuses to persist credentials", () => {
   it("sets persist-credentials to false on every checkout step in the own tree", () => {
     const steps = checkoutSteps();
@@ -323,6 +314,7 @@ describe("TC-0017-0019 (TDD-0019): every checkout step refuses to persist creden
   });
 });
 
+// QFAI:EX-0002-0014-06
 describe("TC-0017-0021 (TDD-0021): full history is job-scoped, never a workflow default", () => {
   it("requests full history on exactly the jobs that need it", () => {
     const requesting = [
@@ -357,6 +349,7 @@ describe("TC-0017-0021 (TDD-0021): full history is job-scoped, never a workflow 
   });
 });
 
+// QFAI:EX-0002-0014-07
 describe("TC-0017-0022 (TDD-0022): every action reference is a full-SHA pin", () => {
   it("resolves every uses value to a forty-hex commit SHA", () => {
     const uses = ownUses();
@@ -397,6 +390,7 @@ describe("TC-0017-0022 (TDD-0022): every action reference is a full-SHA pin", ()
   });
 });
 
+// QFAI:EX-0002-0014-08
 describe("TC-0017-0024 (TDD-0024): a readable pin trailer stays legal and no guard is widened", () => {
   it("passes the leakage guard with version trailers present, because .github is outside its scope", () => {
     // The trailers this row is about look exactly like the version markers the
@@ -453,6 +447,7 @@ describe("TC-0017-0024 (TDD-0024): a readable pin trailer stays legal and no gua
 // inside leaves the repository broken when it crashes between edit and restore.
 // ───────────────────────────────────────────────────────────────────────────
 
+// QFAI:EX-0002-0014-01
 describe("TC-0017-0015 (TDD-0015): reachability and declaration are two different measurements", () => {
   it("accepts an inheriting fixture job that the declaration-only counter rejects", async () => {
     // The lane exports both counters so this row can compare them. Importing the
@@ -489,6 +484,7 @@ describe("TC-0017-0015 (TDD-0015): reachability and declaration are two differen
   });
 });
 
+// QFAI:EX-0002-0014-04
 describe("TC-0017-0017 (TDD-0017): removing both blocks exits 1 naming the workflow and the job", () => {
   it("reports the workflow and the job whose two permission blocks were both removed", () => {
     // `ci-pass` is the job to strip: it is the only one carrying its OWN block
@@ -511,6 +507,7 @@ describe("TC-0017-0017 (TDD-0017): removing both blocks exits 1 naming the workf
   });
 });
 
+// QFAI:EX-0002-0014-04
 describe("TC-0017-0018 (TDD-0018): restoring either one of the two blocks returns exit 0", () => {
   it("exits 0 with only the workflow-level block, and again with only the job-level one", () => {
     // Two trees, each missing ONE of the pair. The TC's point is that either
@@ -546,6 +543,7 @@ describe("TC-0017-0018 (TDD-0018): restoring either one of the two blocks return
   });
 });
 
+// QFAI:EX-0002-0014-05
 describe("TC-0017-0020 (TDD-0020): deleting the flag from one checkout step exits 1", () => {
   it("names the file and the job of the one step that stopped refusing credentials", () => {
     const dir = plantedTree((d) => {
@@ -575,6 +573,7 @@ describe("TC-0017-0020 (TDD-0020): deleting the flag from one checkout step exit
   });
 });
 
+// QFAI:EX-0002-0014-07
 describe("TC-0017-0023 (TDD-0023): a planted floating reference exits 1 and is named", () => {
   it("names the reference that was replaced by a floating major-version tag", () => {
     const dir = plantedTree((d) => {

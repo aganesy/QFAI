@@ -384,6 +384,7 @@ describe("TC-0003-0033 (TDD-0033): leakage guard exits 1 on a planted convention
   });
 });
 
+// QFAI:EX-0002-0002-02
 describe("TC-0003-0032 (TDD-0032): the shipped third-party allow-list rejects an unsanctioned owner", () => {
   // Realizes TC-0003-0032 (AC-0003-0027, EX-0003-0029). The rule under test is
   // `shipped-third-party` in the workflow-hygiene lane: every third-party

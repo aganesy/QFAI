@@ -273,4 +273,43 @@ describe("BF-0002 CI verdict examples", () => {
       rmSync(planted, { recursive: true, force: true });
     }
   });
+
+  // QFAI:EX-0002-0001-02
+  it("refuses a shipped checkout that no longer disables credential persistence", () => {
+    const clean = plantedTree(() => {});
+    const planted = plantedTree((directory) => {
+      const target = path.join(
+        directory,
+        "packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml",
+      );
+      const before = readFileSync(target, "utf8");
+      const after = before.replace("          persist-credentials: false\n", "");
+      if (after === before) throw new Error("shipped checkout fixture is stale");
+      writeFileSync(target, after, "utf8");
+    });
+    try {
+      const baseline = runLane(clean);
+      expect(baseline.exitCode, baseline.output).toBe(0);
+      const violation = runLane(planted);
+      expect(violation.exitCode).toBe(1);
+      expect(violation.output).toContain("checkout-credentials");
+      expect(violation.output).toContain("qfai-tests.yml");
+      expect(violation.output).toContain("detection");
+      const shipped = readFileSync(
+        path.join(root, "packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml"),
+        "utf8",
+      );
+      const doc = record(parseYaml(shipped), "shipped test workflow");
+      const detection = record(record(doc["jobs"], "shipped jobs")["detection"], "detection");
+      const checkout = detection["steps"];
+      if (!Array.isArray(checkout)) throw new Error("detection steps missing");
+      const first = record(checkout[0], "detection checkout");
+      const withBlock = record(first["with"], "checkout options");
+      expect(withBlock["fetch-depth"]).toBe(0);
+      expect(record(doc["defaults"] ?? {}, "workflow defaults")).not.toHaveProperty("fetch-depth");
+    } finally {
+      rmSync(clean, { recursive: true, force: true });
+      rmSync(planted, { recursive: true, force: true });
+    }
+  });
 });
