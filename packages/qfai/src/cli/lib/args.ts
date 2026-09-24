@@ -777,13 +777,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--max"));
           break;
         }
-        const parsed = Number.parseInt(next, 10);
+        const parsed = parseNonNegativeInteger(next);
         // usage(): `guardrails extract` のみ。runGuardrails は list /
         // check パスで max を読まないため、そこでは誤指定として拒否する。
         if (!ownedByGuardrails("extract")) {
           markInvalid(notValidHere("--max"));
-        } else if (Number.isNaN(parsed)) {
-          markInvalid(badValue("--max", next, "an integer"));
+        } else if (parsed === null) {
+          markInvalid(badValue("--max", next, "a non-negative integer"));
         } else {
           options.guardrailsMax = parsed;
         }

@@ -188,6 +188,17 @@ describe("parseArgs", () => {
     expect(parsed.options.guardrailsKeyword).toBe("layout");
   });
 
+  it.each(["-1", "1.5", "2junk", "+2", "9007199254740992"])(
+    "rejects guardrails extract --max %s as a non-negative integer",
+    (value) => {
+      const parsed = parseArgs(["guardrails", "extract", "--max", value], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.invalidExitCode).toBe(2);
+      expect(parsed.options.guardrailsMax).toBeUndefined();
+      expect(parsed.invalidReason).toContain("Expected: a non-negative integer");
+    },
+  );
+
   it("parses --profile for validate", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--profile", "atdd"], cwd);
