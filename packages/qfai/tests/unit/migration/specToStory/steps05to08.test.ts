@@ -299,6 +299,112 @@ describe("migration steps 5 to 8", () => {
     ).toBe(source);
   });
 
+  const existingRuleFormats = [
+    {
+      contract: "api/orders.yaml",
+      render: (statement: string, examples: string[]) =>
+        `openapi: 3.0.0\nx-qfai-rules:\n  - id: BR-0001\n    statement: ${statement}\n    examples: [${examples.join(", ")}]\n`,
+    },
+    {
+      contract: "api/orders.json",
+      render: (statement: string, examples: string[]) =>
+        `${JSON.stringify({ "x-qfai-rules": [{ id: "BR-0001", statement, examples }] }, null, 2)}\n`,
+    },
+    {
+      contract: "db/orders.sql",
+      render: (statement: string, examples: string[]) =>
+        `CREATE TABLE orders (id INT);\n\n-- Rule BR-0001: ${statement}\n-- Examples: ${examples.join(", ")}\n`,
+    },
+    {
+      contract: "cli/orders.md",
+      render: (statement: string, examples: string[]) =>
+        `# Orders\n\n## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001 | ${statement} | ${examples.join(", ")} |\n`,
+    },
+  ] as const;
+
+  async function existingRuleFixture(contract: string, content: string) {
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      serializeIdMap({
+        version: 1,
+        ids: { [spec]: { "BR-0001-0001": "BR-0001", "EX-0001-0001": "EX-0001-0001-01" } },
+        placements: { [spec]: { "BR-0001-0001": contract } },
+        retiredPacks: {},
+      }),
+    );
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      `flows: []\nrules:\n  - id: BR-0001-0001\n    contract: ${contract}\n`,
+    );
+    const source =
+      "| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | An order total is never negative. |\n";
+    await put(context.root, `.qfai/spec/${spec}/04_Business-Rules.md`, source);
+    await put(
+      context.root,
+      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | Input | Output |\n",
+    );
+    await put(context.root, `.qfai/spec/03_contract/${contract}`, content);
+    return { context, source };
+  }
+
+  for (const format of existingRuleFormats) {
+    it(`preserves an identical existing rule in ${format.contract} during migration`, async () => {
+      const original = format.render("An order total is never negative.", ["EX-0001-0001-01"]);
+      const { context, source } = await existingRuleFixture(format.contract, original);
+      expect(await executePlannedStep(step07, context, false, capture().io)).toBe(0);
+      expect(await readFile(path.join(context.contractsDir, format.contract), "utf8")).toBe(
+        original,
+      );
+      await expect(
+        readFile(path.join(context.specsDir, spec, "04_Business-Rules.md")),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+      expect(
+        await readFile(
+          path.join(
+            context.root,
+            ".qfai/evidence/migration-spec-to-story/retired",
+            spec,
+            "04_Business-Rules.md",
+          ),
+          "utf8",
+        ),
+      ).toBe(source);
+    });
+
+    for (const difference of ["statement", "examples"] as const) {
+      it(`rejects a ${difference} collision in ${format.contract} before writing`, async () => {
+        const original = format.render(
+          difference === "statement" ? "A different rule." : "An order total is never negative.",
+          difference === "examples" ? ["EX-0001-0001-02"] : ["EX-0001-0001-01"],
+        );
+        const { context, source } = await existingRuleFixture(format.contract, original);
+        const report = capture();
+        expect(await executePlannedStep(step07, context, false, report.io)).toBe(2);
+        expect(report.error.join("")).toContain("conflicting rule BR-0001");
+        expect(await readFile(path.join(context.contractsDir, format.contract), "utf8")).toBe(
+          original,
+        );
+        expect(
+          await readFile(path.join(context.specsDir, spec, "04_Business-Rules.md"), "utf8"),
+        ).toBe(source);
+        await expect(
+          readFile(
+            path.join(
+              context.root,
+              ".qfai/evidence/migration-spec-to-story/retired",
+              spec,
+              "04_Business-Rules.md",
+            ),
+          ),
+        ).rejects.toMatchObject({ code: "ENOENT" });
+      });
+    }
+  }
+
   it("writes SQL and Markdown rule forms with mapped example IDs", async () => {
     // QFAI:EX-0004-0009-03
     const context = await fixture();

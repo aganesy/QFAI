@@ -4,7 +4,7 @@ import path from "node:path";
 import { parseDocument } from "yaml";
 
 import { isEnoent } from "../../core/fs/errno.js";
-import { escapeTableCell } from "../../core/specPackParsers.js";
+import { escapeTableCell, splitMarkdownRow } from "../../core/specPackParsers.js";
 import { readIdMap } from "./idMap.js";
 import { parseLegacyRecords, retiredLegacyStatus, withoutLegacyRecords } from "./legacyRecords.js";
 import { MigrationInputError, type MigrationOperation, type MigrationStep } from "./harness.js";
@@ -21,6 +21,107 @@ const RETIRED = ".qfai/evidence/migration-spec-to-story/retired";
 
 function ruleIds(value: string): string[] {
   return [...new Set(value.match(/BR-\d{4}-\d{4}/g) ?? [])];
+}
+
+function ruleFromObject(value: unknown): Rule | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (
+    typeof record.id !== "string" ||
+    typeof record.statement !== "string" ||
+    !Array.isArray(record.examples) ||
+    !record.examples.every((example) => typeof example === "string")
+  )
+    return null;
+  return { id: record.id, statement: record.statement, examples: record.examples };
+}
+
+function pendingRules(
+  current: ReadonlyMap<string, Rule | null>,
+  rules: readonly Rule[],
+  file: string,
+): Rule[] {
+  return rules.filter((rule) => {
+    if (!current.has(rule.id)) return true;
+    const existing = current.get(rule.id);
+    if (
+      !existing ||
+      existing.statement !== rule.statement ||
+      existing.examples.length !== rule.examples.length ||
+      existing.examples.some((example, index) => example !== rule.examples[index])
+    ) {
+      throw new MigrationInputError(`Contract ${file} has conflicting rule ${rule.id}`);
+    }
+    return false;
+  });
+}
+
+function rememberRule(current: Map<string, Rule | null>, id: string, rule: Rule | null): void {
+  current.set(id, current.has(id) ? null : rule);
+}
+
+function structuredRules(values: readonly unknown[]): Map<string, Rule | null> {
+  const current = new Map<string, Rule | null>();
+  for (const value of values) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+    const id = (value as Record<string, unknown>).id;
+    if (typeof id !== "string") continue;
+    rememberRule(current, id, ruleFromObject(value));
+  }
+  return current;
+}
+
+function sqlRules(original: string): Map<string, Rule | null> {
+  const current = new Map<string, Rule | null>();
+  const headers = [...original.matchAll(/^-- Rule (BR-\d{4})(?::([^\r\n]*)|[ \t]*$)/gm)];
+  for (const [index, header] of headers.entries()) {
+    const id = header[1] ?? "";
+    const block = original.slice(header.index, headers[index + 1]?.index).split(/\r?\n/);
+    const examplesIndex = block.findIndex((line) => line.startsWith("-- Examples:"));
+    const continuations = block
+      .slice(1, examplesIndex)
+      .map((line) => (line.startsWith("-- ") ? line.slice(3) : null));
+    if (
+      header[2] === undefined ||
+      examplesIndex < 1 ||
+      continuations.some((line) => line === null)
+    ) {
+      rememberRule(current, id, null);
+      continue;
+    }
+    const statement = [header[2].replace(/^ /, ""), ...(continuations as string[])].join("\n");
+    const examples = (block[examplesIndex] ?? "")
+      .slice("-- Examples:".length)
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    rememberRule(current, id, { id, statement, examples });
+  }
+  return current;
+}
+
+function markdownRules(original: string): Map<string, Rule | null> {
+  const current = new Map<string, Rule | null>();
+  for (const line of original.split(/\r?\n/)) {
+    if (!/^\|\s*BR-\d{4}\s*\|/.test(line)) continue;
+    const cells = splitMarkdownRow(line);
+    const id = cells[0] ?? "";
+    rememberRule(
+      current,
+      id,
+      cells.length === 3
+        ? {
+            id,
+            statement: cells[1] ?? "",
+            examples: (cells[2] ?? "")
+              .split(",")
+              .map((value) => value.trim())
+              .filter(Boolean),
+          }
+        : null,
+    );
+  }
+  return current;
 }
 
 function writeRuleBlock(original: string, file: string, rules: readonly Rule[]): string {
@@ -40,14 +141,9 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
       throw new MigrationInputError(`Contract ${file} has invalid x-qfai-rules`);
     }
     const current: unknown[] = raw === undefined ? [] : (raw as unknown[]);
-    const ids = new Set(
-      current
-        .filter(
-          (item): item is Record<string, unknown> => typeof item === "object" && item !== null,
-        )
-        .map((item) => item.id),
-    );
-    document.set("x-qfai-rules", [...current, ...rules.filter((rule) => !ids.has(rule.id))]);
+    const additional = pendingRules(structuredRules(current), rules, file);
+    if (additional.length === 0) return original;
+    document.set("x-qfai-rules", [...current, ...additional]);
     return String(document);
   }
   if (extension === ".json") {
@@ -64,25 +160,25 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
     if (raw !== undefined && !Array.isArray(raw))
       throw new MigrationInputError(`Contract ${file} has invalid x-qfai-rules`);
     const current: unknown[] = raw === undefined ? [] : (raw as unknown[]);
-    const ids = new Set(
-      current.map((item: unknown) =>
-        typeof item === "object" && item !== null && "id" in item ? item.id : undefined,
-      ),
-    );
-    object["x-qfai-rules"] = [...current, ...rules.filter((rule) => !ids.has(rule.id))];
+    const additional = pendingRules(structuredRules(current), rules, file);
+    if (additional.length === 0) return original;
+    object["x-qfai-rules"] = [...current, ...additional];
     return `${JSON.stringify(object, null, 2)}\n`;
   }
   if (extension === ".sql") {
-    const additional = rules.filter(
-      (rule) => !new RegExp(`^-- Rule ${rule.id}:`, "m").test(original),
-    );
+    const additional = pendingRules(sqlRules(original), rules, file);
     return additional.length === 0
       ? original
       : `${original.trimEnd()}\n\n${additional.map((rule) => `-- Rule ${rule.id}: ${rule.statement.split(/\r?\n/).join("\n-- ")}\n-- Examples: ${rule.examples.join(", ")}`).join("\n\n")}\n`;
   }
   if (extension === ".md") {
-    const additional = rules.filter(
-      (rule) => !new RegExp(`^\\|\\s*${rule.id}\\s*\\|`, "m").test(original),
+    const additional = pendingRules(
+      markdownRules(original),
+      rules.map((rule) => ({
+        ...rule,
+        statement: rule.statement.replace(/\r\n|\r|\n/g, " "),
+      })),
+      file,
     );
     if (additional.length === 0) return original;
     const rows = additional.map(
@@ -236,11 +332,13 @@ export const step07: MigrationStep = {
     for (const [target, rules] of groups) {
       const original = await readMigrationInput(target);
       if (original === null) continue;
-      operations.push({
-        kind: "write",
-        target: repositoryRelative(context.root, target),
-        content: writeRuleBlock(original, target, rules),
-      });
+      const content = writeRuleBlock(original, target, rules);
+      if (content !== original)
+        operations.push({
+          kind: "write",
+          target: repositoryRelative(context.root, target),
+          content,
+        });
     }
     operations.push(...sourceChanges);
     for (const file of await legacyPackFiles(context, "01_Spec.md", false)) {
