@@ -12,7 +12,7 @@ const read = async (tree: string, relative: string): Promise<string> =>
 describe("answered review demands are carried into the next existing request", () => {
   for (const tree of TREES) {
     it(`${tree}: the common rule bounds demands, not reports`, async () => {
-      const text = await read(tree, "assistant/constitution/review-convergence.md");
+      const text = await read(tree, "assistant/rule/review-convergence.md");
       for (const clause of [
         "## Answered demands (MUST)",
         "MUST NOT be re-raised under another wording",
@@ -32,8 +32,8 @@ describe("answered review demands are carried into the next existing request", (
     });
 
     it.each([
-      "assistant/skills/qfai-discussion/templates/14_Review-Request.md",
-      "assistant/skills/qfai-discussion/templates/review/review_request.md",
+      "assistant/skill/qfai-discussion/templates/14_Review-Request.md",
+      "assistant/skill/qfai-discussion/templates/review/review_request.md",
     ])(`${tree}: %s holds each demand beside its accepted answer`, async (relative) => {
       const text = await read(tree, relative);
       expect(text).toContain("## Answered demands");
@@ -53,7 +53,7 @@ describe("answered review demands are carried into the next existing request", (
     it(`${tree}: the reviewer classifies feedback before required fixes gate the cycle`, async () => {
       const text = await read(
         tree,
-        "assistant/skills/qfai-discussion/templates/review/Rxx_reviewer.md",
+        "assistant/skill/qfai-discussion/templates/review/Rxx_reviewer.md",
       );
       expect(text).toContain("Severity: blocking|advisory");
       expect(text).toContain("Traces to:");
@@ -67,7 +67,7 @@ describe("answered review demands are carried into the next existing request", (
       async (skill) => {
         const text = await read(
           tree,
-          `assistant/skills/${skill}/references/review-cycle-playbook.md`,
+          `assistant/skill/${skill}/references/review-cycle-playbook.md`,
         );
         expect(text).toContain("review-convergence.md#answered-demands-must");
         expect(text).toContain("Carry prior answers and newly answered demands");

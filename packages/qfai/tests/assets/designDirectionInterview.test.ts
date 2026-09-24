@@ -21,7 +21,7 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const SKILLS = "assistant/skills";
+const SKILLS = "assistant/skill";
 const INTAKE = `${SKILLS}/qfai-discussion/references/design-dna-intake.md`;
 const MATRIX = `${SKILLS}/qfai-discussion/references/discussion-completion-matrix.md`;
 const CONTEXT_TEMPLATE = `${SKILLS}/qfai-discussion/templates/01_Context.md`;

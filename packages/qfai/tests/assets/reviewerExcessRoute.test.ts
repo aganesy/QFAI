@@ -20,7 +20,7 @@ describe("reviewer cards give excess a blocking route bounded by the safety floo
     "%s keeps an invoked conditional reviewer's blocking findings at the gate",
     async (tree) => {
       const text = await readFile(
-        path.join(ROOT, tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+        path.join(ROOT, tree, "assistant/rule/shared-skill-delegation-baseline.md"),
         "utf-8",
       );
       expect(text.replace(/\s+/g, " ")).toContain(
@@ -43,7 +43,7 @@ describe("reviewer cards give excess a blocking route bounded by the safety floo
   it.each(TREES.flatMap((tree) => REVIEWERS.map((role) => ({ tree, role }))))(
     "$tree/$role files excess against Article VII with its admission rule",
     async ({ tree, role }) => {
-      const text = await readFile(path.join(ROOT, tree, "assistant/agents", `${role}.md`), "utf-8");
+      const text = await readFile(path.join(ROOT, tree, "assistant/agent", `${role}.md`), "utf-8");
       const excessLines = text.match(/^- File excess as.*(?:\r?\n {2}.+)*/m)?.[0];
       expect(excessLines).toBeDefined();
       for (const line of excessLines?.split(/\r?\n/) ?? []) {

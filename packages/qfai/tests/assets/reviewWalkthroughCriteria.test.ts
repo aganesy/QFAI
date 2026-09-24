@@ -31,8 +31,8 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const REVIEWER_PROMPT = "assistant/skills/qfai-prototyping/references/reviewer-prompt.md";
-const CATALOG = "assistant/manifest/agent-catalog.yml";
+const REVIEWER_PROMPT = "assistant/skill/qfai-prototyping/references/reviewer-prompt.md";
+const AGENTS = "assistant/agent";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -101,26 +101,22 @@ describe("the prototype review asks eight answerable questions", () => {
     it(`${tree}: criteria 1 to 4 cite the procurement ladder`, async () => {
       const text = await read(tree, REVIEWER_PROMPT);
 
-      expect(text).toContain("`.qfai/assistant/catalog/ui-procurement.md`");
+      expect(text).toContain("`.qfai/assistant/rule/ui-procurement.md`");
       expect(flat(text)).toContain("Criteria 1 to 4 are the procurement ladder read as questions");
     });
 
     // Each role named in the review carries its line, so the criteria reach the
     // stage that applies them rather than living only in the loop.
     it(`${tree}: every role that checks procurement carries the line`, async () => {
-      const catalog = await read(tree, CATALOG);
-      const cards = catalog.split(/^ {2}- id: /m).slice(1);
-
-      const missing = [
+      const roles = [
         "product-experience-architect",
         "frontend-engineer",
         "product-surface-reviewer",
         "architecture-reviewer",
         "implementation-reviewer",
-      ].filter((role) => {
-        const card = cards.find((entry) => entry.startsWith(`${role}\n`));
-        return card === undefined || !card.includes("ui-procurement.md");
-      });
+      ];
+      const cards = await Promise.all(roles.map((role) => read(tree, `${AGENTS}/${role}.md`)));
+      const missing = roles.filter((_, index) => !cards[index]?.includes("ui-procurement.md"));
 
       expect(missing, "a role named in the review with no procurement line").toEqual([]);
     });
