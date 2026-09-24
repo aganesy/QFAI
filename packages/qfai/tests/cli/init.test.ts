@@ -1565,6 +1565,31 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0028-01
+  it("stops with Developer Mode guidance when Windows rejects a symlink", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-eperm-"));
+    let attempts = 0;
+    try {
+      await expect(
+        runInit(
+          { dir: root, force: false, dryRun: false, yes: true },
+          {
+            platform: "win32",
+            createSymlink: async () => {
+              attempts += 1;
+              throw Object.assign(new Error("operation not permitted"), { code: "EPERM" });
+            },
+          },
+        ),
+      ).rejects.toThrow(
+        /Failed to create a symlink \(EPERM\)\.[\s\S]*Developer Mode has to be enabled[\s\S]*https:\/\/learn\.microsoft\.com\/windows\/apps\/get-started\/enable-your-device-for-development/,
+      );
+      expect(attempts).toBe(1);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   it("still pins core.symlinks locally when only the global config enables it", async () => {
     // The skip decision has to read the same scope the write targets. An
     // unscoped read also sees global/system config, so a `true` inherited from

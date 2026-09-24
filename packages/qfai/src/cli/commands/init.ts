@@ -232,6 +232,11 @@ export type InitOptions = {
   toolVersionOverride?: string;
 };
 
+type InitSymlinkRuntime = {
+  createSymlink?: typeof symlink;
+  platform?: string;
+};
+
 /**
  * Refuses a run whose destination assistant tree resolves into the assets this
  * command copies from.
@@ -279,7 +284,10 @@ async function refuseWritingThroughToOwnAssets(
   );
 }
 
-export async function runInit(options: InitOptions): Promise<void> {
+export async function runInit(
+  options: InitOptions,
+  symlinkRuntime: InitSymlinkRuntime = {},
+): Promise<void> {
   const toolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
   const assetsRoot = getInitAssetsDir();
   const rootAssets = path.join(assetsRoot, "root");
@@ -579,6 +587,8 @@ export async function runInit(options: InitOptions): Promise<void> {
     force: options.force,
     dryRun: options.dryRun,
     installedRuleMasters: installedMasters,
+    createSymlink: symlinkRuntime.createSymlink,
+    platform: symlinkRuntime.platform,
   });
   const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
   const legacyEvidenceIgnoreResult = await ensureLegacyEvidenceIgnoreNegations(
@@ -4360,6 +4370,8 @@ type Note = (message: string) => void;
 type WrapperSyncOptions = {
   force: boolean;
   dryRun: boolean;
+  createSymlink?: typeof symlink;
+  platform?: string;
   /** Previous generated target, accepted only when retargeting a flattened link. */
   legacyTarget?: string;
   /**
@@ -5614,9 +5626,9 @@ async function ensureSymlink(
   if (!options.dryRun) {
     await mkdir(path.dirname(linkPath), { recursive: true });
     try {
-      await symlink(target, linkPath, type);
+      await (options.createSymlink ?? symlink)(target, linkPath, type);
     } catch (err: unknown) {
-      if (isEpermOnWindows(err)) {
+      if (isEpermOnWindows(err, options.platform)) {
         throw new Error(
           [
             "Failed to create a symlink (EPERM).",
@@ -6167,9 +6179,9 @@ function describeError(err: unknown): string {
   return err instanceof Error ? err.message : JSON.stringify(err);
 }
 
-function isEpermOnWindows(err: unknown): boolean {
+function isEpermOnWindows(err: unknown, platform = process.platform): boolean {
   return (
-    process.platform === "win32" &&
+    platform === "win32" &&
     typeof err === "object" &&
     err !== null &&
     "code" in err &&
