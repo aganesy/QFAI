@@ -8,7 +8,7 @@
  * half has exactly one end-to-end surface — run `qfai init` into an empty project and read what
  * arrives — and this file is it.
  *
- * `US-*` is answered from `<testsDir>/e2e/**` (`catalog/test-layers.md`, `QFAI-ATDD-111`), so the
+ * `US-*` is answered from `<testsDir>/e2e/**` (`rule/test-layers.md`, `QFAI-ATDD-111`), so the
  * nine annotations below are this spec's US coverage. Before this file there were none, and the gate
  * reported all nine.
  *
@@ -20,7 +20,7 @@
  *     US-0017-0001  detection job + verdict over toJSON(needs)      SHIPPED
  *     US-0017-0002  SHA pins, persist-credentials: false            SHIPPED
  *     US-0017-0003  no workflow-level Node version literal          SHIPPED
- *     US-0017-0009  the layer-to-CI-lane map                        SHIPPED
+ *     US-0017-0009  the layer-to-CI-lane map in the rule            SHIPPED
  *     US-0017-0004  build reuse + upload hygiene                    no surface: 0 uploads, 0 builds
  *     US-0017-0005  layer lanes without a new check name            5 separate JOBS, not matrix legs
  *     US-0017-0006  a hygiene lint lane pull requests run           not invoked by the shipped set
@@ -72,6 +72,7 @@ import {
   ALLOWED_INIT_CONTENT,
   ALLOWED_INIT_PATHS,
   ALLOWED_INIT_SOURCE_ASSETS,
+  ALLOWED_MIGRATION_SCRIPTS,
   initSourceShipsAsData,
   INIT_SOURCE_MIRRORED_TREE,
   ALLOWED_PROVENANCE_SHAPE,
@@ -564,7 +565,7 @@ describe(
   "E2E: an adopter's lanes do not each rebuild what one could produce (US-0017-0004)",
   { timeout: 120000 },
   () => {
-    it("writes nothing into an adopter's tree that a package manager or a shell runs", async () => {
+    it("writes only the reviewed migration programs and no other executable files", async () => {
       // **What `qfai init` writes at all**, which every pin above is blind to: they read
       // `.github/workflows/**`, and round 17's gate put a `package.json` with a `preinstall` and an
       // `.npmrc` into the shipped root, ran init, and executed the very step body whose digest is pinned —
@@ -574,9 +575,8 @@ describe(
       // agent-instruction trees `INIT_INSTRUCTION_TREES` names, is a list pinned by path and by content —
       // plus the provenance record
       // inside one of those trees, pinned by shape because it gates a delete. WHAT KIND of
-      // file arrives anywhere,
-      // those trees included, is the narrower claim that survives a skill edit: nothing init writes may be
-      // a file a package manager or a shell executes.
+      // file arrives anywhere, those trees included, is whether an executable file is one of the
+      // reviewed, byte-pinned migration programs. No other executable file may arrive.
       const root = await project();
       const shipped: string[] = [];
       const notFiles: string[] = [];
@@ -626,8 +626,12 @@ describe(
         .soft(notFiles, "`qfai init` writes files, and anything else is a channel nobody reviewed")
         .toEqual([]);
 
-      // By KIND, which means reading each file rather than its name: a hook script has no extension,
-      // and round 18's gate shipped one — `#!/bin/sh`, mode 0755 — through the name-only version.
+      const migrationScripts = shipped.filter((file) =>
+        file.includes("/qfai-migration-spec-to-story/scripts/"),
+      );
+      expect(migrationScripts.sort()).toEqual([...ALLOWED_MIGRATION_SCRIPTS.keys()].sort());
+
+      // Inspect bytes and mode so unreviewed programs cannot hide behind a data file name.
       const executable: string[] = [];
       for (const file of shipped) {
         const full = path.join(root, file);
@@ -637,8 +641,7 @@ describe(
       expect
         .soft(
           executable,
-          "`qfai init` must write nothing a package manager or a shell executes — an adopter's install " +
-            "runs their manifest, and a manifest this tree supplied is code this tree supplied",
+          "`qfai init` may ship only the reviewed migration programs as executable files",
         )
         .toEqual([]);
 
@@ -734,13 +737,8 @@ describe(
       // walked it — and then through the mirrored `.qfai/` tree with a file carrying no shebang, no
       // executable bit and no known name, run as `sh <file>`.
       //
-      // Two rules answer those. The PATH enumeration covers everything outside the mirrored tree, and
-      // it is seven files. The KIND rule covers everything including the mirrored tree: the init
-      // source ships data, and data announces itself — by a data extension, or, for a dotfile that
-      // `path.extname` reports as extensionless, by a whole name somebody enumerated. That is the
-      // fourth question about who runs a file, arrived at after three rounds of enumerating the
-      // dangerous side — which cannot be finished, and which is the mistake this file's own design
-      // principle exists to avoid.
+      // The path list covers the source outside the mirrored tree. The kind check covers every file,
+      // allowing data formats and the explicitly reviewed migration programs.
       const source = path.resolve(process.cwd(), "..", "..", "packages", "qfai", "assets", "init");
       const found: string[] = [];
       const unenumerated: string[] = [];
@@ -769,6 +767,11 @@ describe(
       };
       await walk(source);
 
+      const migrationScripts = found.filter((file) =>
+        file.includes("/qfai-migration-spec-to-story/scripts/"),
+      );
+      expect(migrationScripts.sort()).toEqual([...ALLOWED_MIGRATION_SCRIPTS.keys()].sort());
+
       expect(found.length, "the init source must have files to read").toBeGreaterThan(100);
       expect(
         unenumerated.sort(),
@@ -783,11 +786,9 @@ describe(
       ).toEqual([]);
       expect(
         wrongKind.sort(),
-        "an init source file that does not ship as data. Round 20's payload had no shebang, no " +
-          "executable bit and no name any tool knows — what it did not have was an extension, and " +
-          "every one of the files that belong here does",
+        "an init source file outside the supported data formats, marker, and reviewed migration programs",
       ).toEqual([]);
-      expect(runnable, "an init source file that something would run").toEqual([]);
+      expect(runnable, "an unreviewed executable file in the init source").toEqual([]);
     });
 
     it("agrees with bash about which decorations actually run a build", async (ctx) => {
@@ -1320,21 +1321,19 @@ describe(
 
 // QFAI:BF-0002
 describe(
-  "E2E: an adopter receives the layer-to-CI-lane map, invisibly to the parser (US-0017-0009)",
+  "E2E: an adopter receives the layer-to-CI-lane map in the rule (US-0017-0009)",
   { timeout: 120000 },
   () => {
-    it("ships the mapping beside the catalog and not as the file the loader resolves", async () => {
-      const mapping = path.join(".qfai", "assistant", "catalog", "test-layers-ci-lanes.md");
-      const catalog = path.join(".qfai", "assistant", "catalog", "test-layers.md");
-      expect.soft(await exists(mapping), "the mapping document must reach the adopter").toBe(true);
-      expect.soft(await exists(catalog), "beside the catalog it maps from").toBe(true);
-
-      // The invisibility half, at the adopter's copy: the loader resolves `test-layers.md`, and the
-      // mapping's own header has to say so — an adopter reading the map must not take it for policy.
-      const text = await readFile(path.join(await project(), mapping), "utf-8");
-      expect
-        .soft(text, "the mapping must disclaim the layer-policy loader in its header")
-        .toMatch(/does not read|not the file the loader/i);
+    it("ships the mapping in the rule and retires the former sibling file", async () => {
+      const root = await project();
+      const rule = path.join(".qfai", "assistant", "rule", "test-layers.md");
+      const retired = path.join(".qfai", "assistant", "catalog", "test-layers-ci-lanes.md");
+      expect(await exists(rule)).toBe(true);
+      expect(await exists(retired)).toBe(false);
+      const text = await readFile(path.join(root, rule), "utf-8");
+      expect(text).toContain("## CI lane mapping");
+      expect(text).toContain("layer-integration");
+      expect(text).toContain("layer-api");
     });
   },
 );
