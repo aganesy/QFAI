@@ -106,6 +106,10 @@ the project's Standard commands in `03_contract/tech.md` for its quality gates.
     | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                           |
     | `--version`, `-V`          | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                               |
 
+  - `D-DEPRECATED-PATH` means legacy assistant steering remains past its
+    supported window. Run `npx qfai init --upgrade-assistant-tree` to copy
+    recognized files into the current tree without deleting their sources.
+
 - `npx qfai validate`
   - Validates the story tree, contracts, test obligations and review artifacts
     (`.qfai/review/review-*/summary.json` + minimum schema), writes `.qfai/report/validate.json`,
