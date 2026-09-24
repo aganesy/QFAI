@@ -1,4 +1,3 @@
-// QFAI:BF-0004
 import { spawnSync } from "node:child_process";
 import { cp, mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -146,9 +145,7 @@ afterAll(async () => {
 });
 
 describe("BF-0004 migration outcomes", () => {
-  // QFAI:EX-0004-0009-01
-  // QFAI:EX-0004-0009-02
-  // QFAI:EX-0004-0009-03
+  // QFAI:BF-0004
   it("writes mapped rules and their citing examples into YAML, SQL and Markdown contracts", async () => {
     const ids = map.ids["spec-0001"];
     if (!ids) throw new Error("Missing migrated spec-0001 ID map");
@@ -171,7 +168,7 @@ describe("BF-0004 migration outcomes", () => {
     );
   });
 
-  // QFAI:EX-0004-0010-04
+  // QFAI:BF-0004
   it("leaves an unmapped annotation byte-identical and reports its file and line", async () => {
     const relative = "tests/e2e/order.test.ts";
     const before = await text(root, relative);
@@ -186,7 +183,7 @@ describe("BF-0004 migration outcomes", () => {
     expect(await text(root, relative)).toBe(input);
   });
 
-  // QFAI:EX-0004-0011-02
+  // QFAI:BF-0004
   it("preserves user ignore lines and makes the decision directory visible to Git", async () => {
     const migrated = await text(root, ".gitignore");
     const freshRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-bf0004-init-ignore-"));
@@ -216,7 +213,7 @@ describe("BF-0004 migration outcomes", () => {
     expect(reports[9]?.status).toBe(0);
   });
 
-  // QFAI:EX-0004-0012-04
+  // QFAI:BF-0004
   it("ships the migration guide with the installed skill and the release choices", async () => {
     const skill = await text(root, ".qfai/assistant/skill/qfai-migration-spec-to-story/SKILL.md");
     const guide = await text(
