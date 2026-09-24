@@ -884,6 +884,10 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardow
 - Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts -t "reports a rejected auto\-serve teardown on stdout and keeps the exit code of a resolving teardown"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`, which restores the file as it is at that revision
 
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Run on the tree the reviews read
+- Refactor verify revision: 0413184a06c29c1fae13cbf4ebaaee08440a4448
+
 ## Coverage Depth Matrix
 
 | Obligation | Layer | Implemented in | Depth | Rationale |
@@ -999,6 +1003,7 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardow
 | ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
 | 42 | - | n/a | grilling(-@2026-09-24T02:32:49.865Z/none): none | - | - | PASS |
 | 43 | backend-engineer | backend-engineer | /qfai-implement: TDD-0577 falsifiability run with line 1278 deleted, then the revert and the restored GREEN | #tdd-0577, `prototypingIterate.ts` | Round 1 | PASS |
+| 44 | backend-engineer | backend-engineer | /qfai-implement: TDD-0577 refactor verify on the committed tree | #tdd-0577 | Refactor verify fields | PASS |
 
 ## Execution logs
 
@@ -1114,6 +1119,19 @@ eslint and prettier --check on the test file and tsconfig.tests.json     -> exit
 The build ran before `validate`, and `.qfai/report` was restored after each
 run. `tsconfig.tests.json` enumerates the new test file, so the `tsc` run above
 checks it directly.
+
+### Checks for the /qfai-implement run started 2026-09-24T02:32:49.865Z
+
+```text
+pnpm -C packages/qfai build                                              -> exit 0
+node packages/qfai/dist/cli/index.mjs validate --profile tdd --format text
+  no finding names TDD-0577 or TC-0012-0490
+node scripts/check-dogfood-backlog.mjs --profile tdd                     -> 956 errors, all within the pinned backlog
+node scripts/check-dogfood-backlog.mjs --profile full                    -> 975 errors, all within the pinned backlog
+node scripts/pin-stage-evidence-counts.mjs                               -> already current; nothing to write
+```
+
+`.qfai/report` was restored after each run.
 
 ## Gaps / Open risks
 
