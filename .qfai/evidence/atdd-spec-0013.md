@@ -80,6 +80,15 @@ entry point and where the tests may go. Each choice above follows from
 `BR-0013-0021` or from `selector-granularity.md`. Nothing surfaced during the
 run that the spec, the change request or those references leave open.
 
+### /qfai-implement — run started 2026-09-24T00:29:55.901Z
+
+Preflight: confidence high
+
+No session opened. The handover fixes each row's test file, selector,
+predicate and mutation, and both mutations failed their rows' cases as the
+entries predicted. Nothing surfaced during the run that the spec, the change
+request or the handover leaves open.
+
 ## Work performed (what changed, where)
 
 - `.qfai/specs/spec-0013/tdd/test-list.md` — seven `Selector` cells rewritten to
@@ -474,6 +483,18 @@ changes nothing the preflight returns.
 #### Round 1
 
 - Round 1: Satisfied-by: packages/qfai/src/core/discussionPack.ts, `REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES` — the closed set of files the preflight requires, which does not hold `prototyping.yaml`
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts -t "TC-0013-0036: a complete pack with no side artifact is ready with no blocker and no gap"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). The row's case fails on `AssertionError: expected [ '必須ファイル不足: prototyping.yaml' ] to deeply equal []` at `tests/integration/spec0013SideArtifactPreflight.test.ts:92:27`, in `expectReadyWithNoBlockerAndNoGap`, reached from the case at `:99:5`
+
+The edit:
+
+```diff
+   "99_delta.md",
++  "prototyping.yaml",
+ ] as const;
+```
+
+- Round 1: Falsifiability revision: working-tree+82e3960a821fbb331b78d3829fd7c3e078ef96d13929dd9e23aabebefd39708c
 - Round 1: RED failure mode: falsifiability
 - Round 1: RED test hash: 992de0e600f7c663de8f672e28ede15818680152ad43b28364ed84358c44df4a
 - Round 1: RED test manifest:
@@ -484,6 +505,14 @@ packages/qfai/tests/integration/spec0013SideArtifactPreflight.test.ts
 
 The manifest is the test file alone. The fixture is built inside it, and the
 case reads no other test-owned file.
+
+- Round 1: Revision: e43767b20cdce9f1726f467c59b17e75ffb27d11
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts -t "TC-0013-0036: a complete pack with no side artifact is ready with no blocker and no gap"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3). Taken after the mutation was reverted with `git checkout`, on a tree equal to HEAD outside the evidence and the ledger
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: e43767b20cdce9f1726f467c59b17e75ffb27d11
 
 ### TDD-0045
 
@@ -528,6 +557,17 @@ the legacy case green.
 #### Round 1
 
 - Round 1: Satisfied-by: packages/qfai/src/core/preflight/sddPreflight.ts, `resolveStoryWorkshopGaps` — the one content check the preflight runs on a named pack file, which reads `03_Story-Workshop.md` and not the side artifact
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts -t "TC-0013-0037: a side artifact with an invalid schema leaves the preflight ready with no blocker and no gap"; pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts -t "TC-0013-0037: a side artifact in the legacy format leaves the preflight ready with no blocker and no gap"
+- Round 1: Falsifiability result: each entry ran on its own on the same mutated tree, and each failed: Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). Entry 1, the invalid-schema case, fails on `AssertionError: expected [ Array(1) ] to deeply equal []` at `tests/integration/spec0013SideArtifactPreflight.test.ts:92:27`, reached from `:107:5`. Entry 2, the legacy case, fails on the same assertion at `:92:27`, reached from `:122:5`. In both the received array is `[ "03_Story-Workshop.md に Mermaid diagram が見つかりません。" ]`
+
+The edit:
+
+```diff
+-  const text = await readSafe(path.join(packDir, "03_Story-Workshop.md"));
++  const text = await readSafe(path.join(packDir, "prototyping.yaml"));
+```
+
+- Round 1: Falsifiability revision: working-tree+e1ea19be9ab9a4b6990cc570665e9cb9f7e4df0fb35a13e06611995d7e92d488
 - Round 1: RED failure mode: falsifiability
 - Round 1: RED test hash: 992de0e600f7c663de8f672e28ede15818680152ad43b28364ed84358c44df4a
 - Round 1: RED test manifest:
@@ -535,6 +575,14 @@ the legacy case green.
 ```text
 packages/qfai/tests/integration/spec0013SideArtifactPreflight.test.ts
 ```
+
+- Round 1: Revision: e43767b20cdce9f1726f467c59b17e75ffb27d11
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts -t "TC-0013-0037: a side artifact with an invalid schema leaves the preflight ready with no blocker and no gap" && pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts -t "TC-0013-0037: a side artifact in the legacy format leaves the preflight ready with no blocker and no gap"
+- Round 1: GREEN result: each entry ran on its own and passed: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3), twice. Taken after the mutation was reverted with `git checkout`, on a tree equal to HEAD outside the evidence and the ledger
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: e43767b20cdce9f1726f467c59b17e75ffb27d11
 
 ## Coverage Depth Matrix
 
@@ -558,6 +606,14 @@ every total.
 | 3 | acceptance-test-engineer | acceptance-test-engineer | Write the `TC-0013-0036` and `TC-0013-0037` integration cases for `TDD-0044` and `TDD-0045` | CR-20260913-0012 action 3.2; 06_Test-Cases.md `TC-0013-0036`, `TC-0013-0037`; 05_Examples.md `EX-0013-0021`; 04_Business-Rules.md `BR-0013-0021` | `spec0013SideArtifactPreflight.test.ts`; `tsconfig.tests.json` | PASS |
 | 4 | acceptance-test-engineer | acceptance-test-engineer | Take the first run, try each row's mutation, revert it, and hand both rows over on the falsifiability branch | the test file, `discussionPack.ts`, `sddPreflight.ts` | #tdd-0044, #tdd-0045 | PASS |
 | 5 | - | n/a | grilling(-@2026-09-24T00:10:50.441Z/none): none | - | - | PASS |
+
+### Rows for the /qfai-implement run started 2026-09-24T00:29:55.901Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1 | - | n/a | grilling(-@2026-09-24T00:29:55.901Z/none): none | - | - | PASS |
+| 2 | backend-engineer | backend-engineer | /qfai-implement: TDD-0044 falsifiability mutation run, revert, GREEN and refactor verify | #tdd-0044, `discussionPack.ts` | #tdd-0044 Round 1; ledger `Test file`, `Selector`, `Status`, `Evidence` | PASS |
+| 3 | backend-engineer | backend-engineer | /qfai-implement: TDD-0045 falsifiability mutation run on both selector entries, revert, GREEN and refactor verify | #tdd-0045, `sddPreflight.ts` | #tdd-0045 Round 1; ledger `Test file`, `Selector`, `Status`, `Evidence` | PASS |
 
 ## Cross-spec obligations
 
