@@ -30,139 +30,51 @@ async function loadContent(): Promise<string> {
   return content;
 }
 
-// QFAI:EX-0001-0097-01
-describe("item completion checklist end-to-end enforcement", () => {
-  it("defines a numbered item completion checklist", async () => {
+describe("BF completion gate", () => {
+  it("requires a fresh BF-scoped validator result with no owed EX tests", async () => {
     const c = await loadContent();
-    // The evidence write is its own gate point, so the count in
-    // the heading is not fixed at 11. The obligation is that the checklist
-    // exists and covers every gate item below.
-    const heading = /Item completion checklist \((\d+)-point gate\)/i.exec(c);
-    // Thrown rather than only asserted so the type is narrowed for the lines
-    // below. With optional chaining, a heading that stopped matching would
-    // slice from index 0 and make `declared` NaN, and the failure would surface
-    // as an opaque length mismatch instead of "the heading is missing".
-    if (!heading) {
-      throw new Error("the checklist heading must declare its point count");
-    }
-
-    // Pin the declared count to the list itself: a heading and a list that
-    // disagree is how "12-point gate" shipped over an 11-item list, and a
-    // count-agnostic regex alone cannot see that.
-    const listSection = c.slice(heading.index);
-    const items = Array.from(listSection.matchAll(/^(\d+)\. /gm), (match) => Number(match[1]));
-    const declared = Number(heading[1]);
-    const numbered: number[] = [];
-    for (const item of items) {
-      if (item !== numbered.length + 1) break;
-      numbered.push(item);
-    }
-    expect(numbered).toHaveLength(declared);
-    // Must contain every gate item
-    expect(c).toMatch(/TDD-ID.*selected|selected.*TDD-ID/i);
-    expect(c).toMatch(/failing test.*first|test.first/i);
-    expect(c).toMatch(/RED.*observed|watch it fail/i);
-    expect(c).toMatch(/minimal.*code|minimum.*code/i);
-    expect(c).toMatch(/GREEN.*observed|watch it pass/i);
-    expect(c).toMatch(/refactor.*GREEN|GREEN.*refactor/i);
-    expect(c).toMatch(/completion-reviewer.*PASS|spec review.*PASS/i);
-    expect(c).toMatch(/implementation-reviewer.*PASS|code quality review.*PASS/i);
-    expect(c).toMatch(
-      /prototype parity.*product-surface-reviewer|product-surface-reviewer.*prototype parity/i,
-    );
-    // The gate item is stated against the Evidence *anchor*: the cell
-    // is a pointer, because a GFM cell cannot hold a command's output.
-    expect(c).toMatch(
-      /test-list\.md.*updated|Status.*Evidence.*updated|Evidence cell's anchor resolves to a fresh per-item entry/i,
-    );
-    // The verdict half of the evidence file is
-    // appended only after the reviewers have returned PASS. The obligation is
-    // over *every routed* reviewer, not a fixed pair: a UI-affecting row
-    // routes `product-surface-reviewer` as well, and a count of two left that
-    // verdict unrecorded.
-    // The file is named by item 10, not hard-coded here: an `E2E` / `API` /
-    // `Integration` row's evidence lives in `atdd-<spec-id>.md`, because that
-    // is the stage that ran its RED. Pinning `implement-<spec-id>.md` in this
-    // gate is what made a correctly evidenced ATDD-owned row unable to reach
-    // `done`. `Integration` is in the enumeration because `/qfai-sdd` Phase 2b
-    // seeds those rows and `/qfai-atdd` authors their tests.
-    expect(c).toMatch(
-      /The item's evidence file \(item 10\) is appended with \*\*every routed reviewer's\*\* verdict after items 7-8 returned PASS/,
-    );
-    expect(c).toMatch(
-      /`\.qfai\/evidence\/atdd-<spec-id>\.md` for an `E2E` \/ `API` \/ `Integration` row/,
-    );
-    expect(c).toMatch(/checkpoint.*verif/i);
-  });
-});
-
-// QFAI:EX-0001-0097-01
-describe("item completion blocked: no RED evidence", () => {
-  it("prohibits completion without RED evidence", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/no RED.*evidence[\s\S]*?must not|prohibition[\s\S]*?no RED/i);
-  });
-});
-
-// QFAI:EX-0001-0097-03
-describe("item completion blocked: no GREEN evidence", () => {
-  it("prohibits completion without GREEN evidence", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/no GREEN.*evidence[\s\S]*?must not|prohibition[\s\S]*?no GREEN/i);
-  });
-});
-
-describe("item completion blocked: reviewer not run", () => {
-  it("prohibits completion when completion-reviewer has not been run", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(
-      /reviewer[\s\S]*?not.*run[\s\S]*?must not|prohibition[\s\S]*?reviewer[\s\S]*?not.*run/i,
-    );
+    expect(c).toMatch(/### Select the next example/);
+    expect(c).toMatch(/qfai validate --profile tdd --flow BF-NNNN/);
+    expect(c).toMatch(/generatedAt.*no earlier than this run start/);
+    expect(c).toMatch(/lowest EX ID.*test-obligation EX findings/);
+    expect(c).toMatch(/fresh validate result has no test-obligation EX finding for this BF/);
+    expect(c).toMatch(/qfai validate --profile tdd --fail-on error --flow BF-NNNN/);
   });
 
-  it("prohibits completion when implementation-reviewer has not been run", async () => {
+  it("requires observed RED, GREEN, and Refactor results for every implemented EX", async () => {
     const c = await loadContent();
-    expect(c).toMatch(/implementation-reviewer|code quality review/i);
-    expect(c).toMatch(/completion-reviewer[\s\S]*?implementation-reviewer|Either reviewer/i);
-  });
-});
-
-// QFAI:EX-0001-0097-04
-describe("implementation review remains independent from the implementation agent", () => {
-  it("requires implementation-reviewer evidence instead of self-approval", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/Code quality review.*implementation-reviewer result/i);
+    expect(c).toMatch(/Observe the assertion fail for the intended behavior before changing/);
     expect(c).toMatch(
-      /Only after every required reviewer passes may the item transition to `done`/i,
+      /load error, missing dependency, or broken fixture is\\s+not an admissible RED/,
+    );
+    expect(c).toMatch(/Run the same selector and record\\s+command, outcome, and revision/);
+    expect(c).toMatch(/A failing or unrun gate cannot be reported as PASS/);
+    expect(c).toMatch(/Every implemented EX has an observed RED, GREEN and Refactor result/);
+  });
+
+  it("requires current evidence and independent reviewer PASS for the integrated revision", async () => {
+    const c = await loadContent();
+    expect(c).toMatch(/implementation-reviewer checks code and tests/);
+    expect(c).toMatch(
+      /completion-reviewer checks\\s+obligation, commands, and evidence independently/,
+    );
+    expect(c).toMatch(/author does not certify their own result/);
+    expect(c).toMatch(/Each required reviewer must pass the same final revision/);
+    expect(c).toMatch(/current evidence and the required independent PASS reviews/);
+    expect(c).toMatch(/A reviewer\\s+REVISE follows/);
+  });
+
+  it("runs affected tests and applicable technology commands on the integrated tree", async () => {
+    const c = await loadContent();
+    expect(c).toMatch(/affected tests and the Test, Lint, Typecheck and Build commands from/);
+    expect(c).toMatch(/run on the integrated tree/);
+    expect(c).toMatch(/documented\\s+applicability makes it unnecessary/);
+    expect(c).toMatch(/When no EX work remains at entry, still run the current flow checkpoint/);
+    expect(c).toMatch(
+      /Record unresolved risks and upstream findings without calling\\s+them complete/,
     );
   });
 });
-
-describe("spec-level completion conditions", () => {
-  it("defines spec completion conditions", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/spec completion/i);
-    // All TCs must be in test-list.md
-    expect(c).toMatch(/TC-\*[\s\S]*?test-list\.md|all.*TC/i);
-    // 0 blocking reviewer issues
-    expect(c).toMatch(/0.*blocking.*reviewer|blocking.*issue/i);
-  });
-
-  it("blocks spec completion when items are still in progress", async () => {
-    const c = await loadContent();
-    // Must mention that todo/red/green/refactor items block spec completion
-    expect(c).toMatch(/todo.*red.*green.*refactor[\s\S]*?still|items.*still.*exist/i);
-  });
-});
-
-describe("reviewer rejection/re-approval cycle", () => {
-  it("defines reviewer rejection and re-approval flow", async () => {
-    const c = await loadContent();
-    // Handoff contracts must include FAIL->fix->resubmit flow
-    expect(c).toMatch(/FAIL[\s\S]*?fix|rejection[\s\S]*?resubmit|FAIL.*required fix/i);
-  });
-});
-
 // ---------------------------------------------------------------------------
 // spec-0010: Canonical template generation / deprecation
 // ---------------------------------------------------------------------------

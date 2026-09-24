@@ -1,102 +1,69 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const repoRoot = path.resolve(process.cwd(), "..", "..");
-const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
-const implementSkillPath = path.join(
-  templateRoot,
-  ".qfai",
-  "assistant",
-  "skill",
-  "qfai-implement",
-  "SKILL.md",
-);
+import { getInitAssetsDir } from "../../src/shared/assets.js";
 
-// The per-round field list lives in `references/round-evidence.md`
-// (progressive disclosure: SKILL.md has a line budget). The contract is still
-// shipped, so these obligations read the skill and its references together.
-//
-// Every reference, not a named one: hardcoding `round-evidence.md` would break
-// on the next extraction the budget forces — the per-item evidence contract —
-// moving text that had not otherwise changed. The budget guarantees more
-// extractions; naming them one at a time means re-learning this each time.
-const implementReferencesDir = path.join(path.dirname(implementSkillPath), "references");
+const skillDir = path.join(getInitAssetsDir(), ".qfai", "assistant", "skill", "qfai-implement");
 
-let content: string | undefined;
-
-async function loadContent(): Promise<string> {
-  if (content === undefined) {
-    const parts = [await readFile(implementSkillPath, "utf-8")];
-    const references = (await readdir(implementReferencesDir)).filter((name) =>
-      name.endsWith(".md"),
-    );
-    expect(
-      references.length,
-      "the skill delegates topics to `references/`; reading none of them leaves the corpus as " +
-        "whatever survived the line budget rather than the contract",
-    ).toBeGreaterThan(0);
-    for (const name of references.sort()) {
-      parts.push(await readFile(path.join(implementReferencesDir, name), "utf-8"));
-    }
-    content = parts.join("\n");
-  }
-  return content;
+async function readSkill(): Promise<string> {
+  return readFile(path.join(skillDir, "SKILL.md"), "utf-8");
 }
 
-describe("valid evidence accepted (free-text+labels format)", () => {
-  it("defines evidence with labeled fields: TDD-ID, TC-ref, RED cmd+result, GREEN cmd+result", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/TDD-ID/);
-    expect(c).toMatch(/TC-ref/i);
-    expect(c).toMatch(/RED command|RED cmd/i);
-    expect(c).toMatch(/RED result/i);
-    expect(c).toMatch(/GREEN command|GREEN cmd/i);
-    expect(c).toMatch(/GREEN result/i);
-    expect(c).toMatch(/refactor.verify|refactor.*verify/i);
-    expect(c).toMatch(/spec review/i);
-    expect(c).toMatch(/code quality review/i);
-  });
-});
+async function readReference(name: string): Promise<string> {
+  return readFile(path.join(skillDir, "references", name), "utf-8");
+}
 
-// QFAI:EX-0001-0097-03
-describe("status-only and empty evidence rejected", () => {
-  it("explicitly rejects status-only evidence", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/status.only[\s\S]*?invalid|status.only[\s\S]*?reject/i);
-  });
-
-  it("rejects empty evidence entries", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/empty[\s\S]*?reject|minimum evidence/i);
-  });
-});
-
-// QFAI:EX-0001-0097-03
-describe("thin evidence replaced with full evidence", () => {
-  it("requires both command and result", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/both.*command.*result|command.*result.*required/i);
+describe("implementation evidence contract", () => {
+  it("records each EX and each review round with exact test and phase observations", async () => {
+    const [skill, round] = await Promise.all([readSkill(), readReference("round-evidence.md")]);
+    expect(skill).toContain(".qfai/evidence/implement-BF-NNNN.md");
+    expect(skill).toContain("### EX-NNNN-NNNN-NN");
+    expect(round).toContain("#### Round N");
+    expect(round).toMatch(/exact test selector and test file/);
+    for (const field of [
+      "RED command",
+      "RED result",
+      "GREEN command",
+      "GREEN result",
+      "Refactor verify revision",
+      "Review pack seal",
+      "reviewer verdict",
+    ]) {
+      expect(round).toContain(field);
+    }
   });
 
-  it("rejects reasoning-only evidence", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/should pass.*not acceptable|looks good.*not acceptable/i);
+  it("does not accept an unevidenced status or reasoning as proof of a gate", async () => {
+    const skill = await readSkill();
+    expect(skill).toMatch(/Evidence without a command and result pair does not prove a\s+gate/);
+    expect(skill).toMatch(/A failing or unrun gate cannot be reported as PASS/);
+    expect(skill).toMatch(/Every implemented EX has an observed RED, GREEN and Refactor result/);
   });
-});
 
-describe("evidence with truncated result accepted", () => {
-  it("accepts truncated results as best-effort", async () => {
-    const c = await loadContent();
-    expect(c).toMatch(/truncat[\s\S]*?accept|best.effort/i);
+  it("preserves command output verbatim, including multiline output", async () => {
+    const round = await readReference("round-evidence.md");
+    expect(round).toMatch(/value containing several lines belongs in a fenced block/);
+    expect(round).toMatch(/Preserve the command and output verbatim/);
+    expect(round).toMatch(/fence must be longer than any fence printed by the command output/);
   });
-});
 
-describe("fresh evidence requirement", () => {
-  it("requires fresh evidence and prohibits stale evidence reuse", async () => {
-    const c = await loadContent();
-    expect(c).toContain("fresh evidence");
-    expect(c).toMatch(/stale.*evidence[\s\S]*?must not|stale.*evidence[\s\S]*?reuse/i);
+  it("ties observations and verdicts to the source revision and sealed review pack", async () => {
+    const [round, revision] = await Promise.all([
+      readReference("round-evidence.md"),
+      readReference("evidence-revision.md"),
+    ]);
+    expect(round).toMatch(
+      /Every reviewer verdict names its reviewed revision and audited evidence hash/,
+    );
+    expect(round).toMatch(
+      /review of a changed test, implementation, fixture, or capture is repeated/,
+    );
+    expect(revision).toMatch(/Do not use a timestamp as a revision/);
+    expect(revision).toMatch(
+      /A verdict is stale when the state it claims to have reviewed differs/,
+    );
+    expect(revision).toMatch(/Recompute every recorded seal when the pack is present/);
   });
 });
