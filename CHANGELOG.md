@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The AI work-log surface is retired.** `qfai init` no longer creates
+  `.qfai/steering/`, and `qfai validate` no longer reads its entries or
+  reports work-log findings. Existing project entries remain untouched by init.
+  Under `--force`, an unedited, recorded copy of the withdrawn catalog schema
+  is removed; an edited copy is kept with a note. The skills record decisions,
+  stops and handoffs in their spec, evidence and Change Request files.
+
 - **The test runner moves to its fourth major, and the coverage provider with
   it** (#2173). The two move as a pair: the provider's peer range names the
   runner version exactly, so a provider a major ahead of the runner fails at

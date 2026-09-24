@@ -28,11 +28,10 @@ spec-0003 / spec-0006 / spec-0008 / spec-0015, cascade MODIFYs on spec-0004 /
 spec-0009 / spec-0012, `_policies/01..11`, and the CLI contracts including the
 new `CLI-WFSET` (`.qfai/contracts/cli/shipped-workflows.md`). The wave closed
 with `validate --profile sdd --fail-on error` at error=0 and an 11-round
-reviewer gate at PASS (evidence: `.qfai/evidence/sdd-spec-0017.md`, local;
-review pack `review-20260805082718000`, local; both gitignored — the tracked
-record is `.qfai/report/preflight_summary.md`,
-`.qfai/steering/2026-08-05-chg-007-toolchain-capability.md`, and the
-`_policies/10_delta.md` § CHG-007 triage table).
+reviewer gate at PASS. The tracked evidence is
+`.qfai/evidence/sdd-spec-0017.md`, `.qfai/report/preflight_summary.md`,
+and the `_policies/10_delta.md` § CHG-007 triage table. The review pack
+`review-20260805082718000` is local.
 
 `QFAI-DRIFT-001` (tdd profile) compares this branch against `origin/main` and
 flags every protected-path diff not named by an approved CR. The SDD wave _is_

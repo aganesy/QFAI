@@ -1,8 +1,8 @@
 /**
  * Validator: reviewerJustification (.qfai/review/**\/*.json).
  *
- * Covers TC-0004-0018: empty justification on an advisory-failing finding
- * (R-WORKLOG-DRIFT) causes validate to exit error.
+ * Covers TC-0004-0018: an empty justification on R-WORKLOG-DRIFT raises no
+ * justification finding.
  */
 // QFAI:SPEC-0004:TC-0004-0018
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
@@ -43,26 +43,23 @@ describe("reviewerJustification validator", () => {
     }
   });
 
-  // TC-0004-0018: empty justification on R-WORKLOG-DRIFT
-  it("TC-0004-0018: emits error when R-WORKLOG-DRIFT carries empty justification", async () => {
+  // TC-0004-0018: an empty justification on R-WORKLOG-DRIFT is not rejected
+  it("TC-0004-0018: raises no justification finding when R-WORKLOG-DRIFT carries an empty justification", async () => {
     const root = await newRoot("revjust-empty");
     try {
       await seedReviewerReport(root, {
         findings: [
           { code: "R-WORKLOG-DRIFT", justification: "" },
-          {
-            code: "R-HANDOFF-INCOMPLETE",
-            justification: "missing State and Constraints sections.",
-          },
+          { code: "R-PROMPT-SCANNER-DRIFT", justification: "" },
         ],
       });
       const issues = await validateReviewerJustification(root, await getConfig(root));
+      // Read control: a code that still requires a justification is rejected, so
+      // the report was read.
+      const control = issues.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT");
+      expect(control.map((i) => i.severity)).toEqual(["error"]);
       const drift = issues.filter((i) => i.code === "R-WORKLOG-DRIFT");
-      expect(drift.length).toBe(1);
-      expect(drift[0]?.severity).toBe("error");
-      // Non-empty justification on a different code should NOT fire.
-      const handoff = issues.filter((i) => i.code === "R-HANDOFF-INCOMPLETE");
-      expect(handoff.length).toBe(0);
+      expect(drift).toEqual([]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -84,9 +81,8 @@ describe("reviewerJustification validator", () => {
   // Regression: R-AUTOPILOT-POLICY-WIDENED is an auxiliary warning-class
   // code OUTSIDE the mandatory-justification catalog. An empty
   // `justification:` on WIDENED must NOT trigger the advisory-failing
-  // rejection — only the closed 8-code catalog (plus the historical
-  // R-WORKLOG-DRIFT family + CHG-005 codes) participates in that
-  // contract.
+  // rejection — only the closed 8-code catalog (plus `R-REJECTED-READOPT` and
+  // the second-wave codes) participates in that contract.
   it("does not fire on R-AUTOPILOT-POLICY-WIDENED with empty justification (auxiliary warning-class)", async () => {
     const root = await newRoot("revjust-widened");
     try {

@@ -26,7 +26,6 @@
 // QFAI:SPEC-0003:TC-0003-0019
 // QFAI:SPEC-0003:TC-0003-0020
 // QFAI:SPEC-0003:TC-0003-0021
-// QFAI:SPEC-0003:TC-0003-0022
 // QFAI:SPEC-0003:TC-0003-0023
 // QFAI:SPEC-0003:TC-0003-0024
 // QFAI:SPEC-0003:TC-0003-0025
@@ -218,15 +217,6 @@ describe("TC-0003-0021: 4-layer asset-tree seed", () => {
   });
 });
 
-describe("TC-0003-0022: project-root steering surface seed", () => {
-  it("init declares seedProjectSteering and references _templates/entry.md", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
-    expect(content).toContain("seedProjectSteering");
-    expect(content).toContain("joinProjectSteering");
-    expect(content).toMatch(/entry\.md/);
-  });
-});
-
 describe("TC-0003-0023: --upgrade-assistant-tree migration", () => {
   it("init wires --upgrade-assistant-tree to runUpgradeAssistantTree", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
@@ -253,7 +243,6 @@ describe("TC-0003-0025: assistantPaths.ts SSOT module", () => {
     expect(mod.ASSISTANT_LAYERS).toEqual(["constitution", "manifest", "catalog", "process"]);
     expect(typeof mod.joinAssistantLayer).toBe("function");
     expect(typeof mod.joinLegacyAssistantSteering).toBe("function");
-    expect(typeof mod.joinProjectSteering).toBe("function");
     expect(typeof mod.joinMigrationMemo).toBe("function");
     expect(mod.migrationMemoRelativePath("1.9.0")).toBe(
       ".qfai/assistant/process/migrations/v1.9.0-assistant-layer-recut.md",

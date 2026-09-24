@@ -52,11 +52,11 @@ describe("`--auto` has a stated precedence against approval-required Triage rows
       expect(flattened).toContain("**Never synthesize an `Approved By` value.**");
       expect(flattened).toContain("an invented approver is a false audit record");
       expect(flattened).toContain("**Stop the stage and hand the run back.**");
-      // Awaiting an approval is `consultation-needed`, not a stuck skill.
-      expect(flattened).toContain("write a `consultation-needed` work-log entry");
-      expect(flattened).toContain("**The kind is `consultation-needed`, not `blocker`.**");
-      expect(flattened).toContain("the user's approval releases this stop");
-      expect(flattened).not.toContain("write a `blocker` work-log entry");
+      expect(flattened).toContain(
+        "Leave `Approved By` as `-`, do not enter Phase 0, and report every unapproved row with its Operation and target.",
+      );
+      expect(flattened).not.toContain("work-log");
+      expect(flattened).not.toContain("consultation-needed");
       // The error is the report of a suspended run, not a gate to route around.
       expect(flattened).toContain(
         "The resulting `QFAI-TRIAGE-005` errors are the reported state of a suspended run",
@@ -83,9 +83,12 @@ describe("`--auto` has a stated precedence against approval-required Triage rows
       );
       expect(flattened).toContain("`../SKILL.md#--auto-and-approval-required-rows`");
       expect(flattened).toContain("no question may be asked at all");
-      expect(flattened).toContain("write a `consultation-needed` work-log entry");
+      expect(flattened).toContain(
+        "do not enter Phase 0, report every unapproved row with its Operation and target",
+      );
       expect(flattened).toContain("hand the run back for a rerun without `--auto`");
       expect(flattened).toContain("never synthesize an approver");
+      expect(flattened).not.toContain("work-log");
     });
 
     it(`${tree}: the triage procedure states the --auto path on both steps`, async () => {
@@ -98,13 +101,16 @@ describe("`--auto` has a stated precedence against approval-required Triage rows
         "the column records who authorized the operation, so an invented approver is a false audit record",
       );
       expect(flattened).toContain("Stopping here is a reportable outcome, not a failure to repair");
-      expect(flattened).toContain("write a `consultation-needed` work-log entry");
+      expect(flattened).toContain(
+        "do not enter Phase 0, report every unapproved row with its Operation and target",
+      );
       expect(flattened).toContain(
         "report the `QFAI-TRIAGE-005` errors as the reason the run stopped",
       );
       expect(flattened).toContain(
         "Under `--auto`, also ask for a rerun without `--auto` so the approvals can be collected.",
       );
+      expect(flattened).not.toContain("work-log");
     });
   }
 });

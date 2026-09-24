@@ -692,8 +692,7 @@ commit that bumps the package, and to keep the two from being merged separately.
 │   │       ├── tech.md
 │   │       ├── test-layers-ci-lanes.md
 │   │       ├── test-layers.md
-│   │       ├── ui-definition-protocol.md
-│   │       └── worklog-entry.schema.md
+│   │       └── ui-definition-protocol.md
 │   └── waivers.yml
 └── qfai.config.yaml
 ```
@@ -709,21 +708,6 @@ where it stays current across upgrades. A README beside the artifacts is a
 second copy that nothing refreshes. A release that finds the one earlier
 versions wrote at the root of the assistant tree removes it, and leaves a README
 a project wrote for itself alone.
-
-### AI work-log surface (`.qfai/steering/`)
-
-`qfai init` also creates `.qfai/steering/`, the per-project work-log surface for
-AI coding agents, with an `entry.md` template under `_templates/`. Each entry is a
-markdown file with YAML frontmatter, and `npx qfai validate` polices the surface in
-the `sdd` and full profiles via `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`,
-`W-WORKLOG-STALE`, `W-PENDING-PROMOTION` and `R-HANDOFF-INCOMPLETE`.
-
-The frontmatter contract and the **per-kind write trigger** — which `kind` an
-agent writes when — are in the seeded
-`.qfai/assistant/catalog/worklog-entry.schema.md`.
-
-Note that `.qfai/steering/` (the work-log surface) is a different directory from
-the legacy `.qfai/assistant/steering/` (the pre-recut assistant path).
 
 Integration wrappers are also generated for immediate use:
 

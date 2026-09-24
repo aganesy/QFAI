@@ -16,7 +16,6 @@ This repository uses QFAI (Quality-First AI) to improve the quality and consiste
   - Declarative manifests: `.qfai/assistant/manifest/`
   - Reference catalogs: `.qfai/assistant/catalog/`
   - Process / migration memos: `.qfai/assistant/process/`
-  - AI work-log surface (per-project): `.qfai/steering/` (entry frontmatter schema: `.qfai/contracts/cli/worklog-entry.schema.md`)
 - Legacy `.qfai/assistant/steering/` is read-compatible only during
   the deprecation window (`D-DEPRECATED-PATH` warning fires when it
   is detected). Run `qfai init --upgrade-assistant-tree` to migrate.

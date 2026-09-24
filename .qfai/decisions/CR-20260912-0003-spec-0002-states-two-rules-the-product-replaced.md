@@ -1309,23 +1309,10 @@ internally contradictory.
    option resets. `/qfai-implement` consumes the test and the RED provenance
    `/qfai-atdd` writes, so without this pass those rows stay at `todo`.
 
-10. **The consultation entry closes in the change that sets `Applied at`.**
-    `.qfai/steering/2026-09-12-spec-0002-two-statements-the-product-replaced.md`
-    stands at `status: active` and `blocking: true`, and its body says this
-    record is open and waits on a decision. Later sessions and reviewer input
-    bundles read open work-log entries, so an entry left that way reports a
-    settled conflict as a live blocker. Once `Resolution` is filled and
-    `Applied at` set, the same change:
-    - records the approved option and the date it was applied under the
-      entry's `## What the next session picks up`;
-    - sets `status: archived`, `blocking: false`, and `updated` to that date;
-    - fills `closure-rationale` with this record's ID, its approved option and
-      its `Applied at`. The work-log schema requires that field of an archived
-      entry whose `promote-to` is `null`.
-
-    `promote-to` stays `null`. The decision is recorded in this Change Request,
-    in the Decision Records the reruns amend and in each delta's
-    `## Change Requests` table, so the entry has nothing to promote.
+10. **Close the consultation in this Change Request.** Record the approved
+    option in `Resolution` when setting `Applied at`. The Decision Records
+    amended by the reruns and each delta's `## Change Requests` table carry
+    the resulting obligation changes.
 
 ## Resolution
 

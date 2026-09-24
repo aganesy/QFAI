@@ -4629,6 +4629,24 @@ new gate in the chain, and **exit 1 attributably at `lint:workflow-shape`** when
 mutation is in place. The aggregate genuinely reddens on shipped-shape drift, which is the property
 AC-0003-0035 exists for.
 
+## Document-lane mutation observations
+
+The six document-lane rows had passing tests when their spec restatement was
+requested. Each row's falsifying mutation failed its own assertion while the
+other rows in that case stayed green:
+
+| Row | Mutation | Observed failure |
+| --- | -------- | ---------------- |
+| `TDD-0058` | Change `check: [shape, mermaid]` to `check: [shape]` in `qfai-docs.yml`. | The leg list failed. |
+| `TDD-0059` | Change the docs aggregate's `name:`. | The external check name failed. |
+| `TDD-0060` | Change the drift step's pull-request condition in `qfai-validate.yml`. | The profile invocations failed. |
+| `TDD-0061` | Change the validate aggregate's `name:`. | The external check name failed. |
+| `TDD-0062` | Change the docs aggregate's `exit 1` to `exit 0`. | Six violations replaced none. |
+| `TDD-0063` | Change the result-binding guard in `aggregateFailureViolations`. | One violation replaced none. |
+
+`CR-20260923-0003` records the spec restatement and the order that returned
+these rows to execution.
+
 ## Spec completion determination: spec-0003 does NOT reach COMPLETE
 
 Ledger census at run close: **36 `done` / 17 `exception` / 3 `todo`** (56 rows). This run moved 29 rows

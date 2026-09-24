@@ -90,15 +90,12 @@ import {
 import {
   ASSISTANT_DIR,
   ASSISTANT_LAYERS,
-  HANDOFF_REQUIRED_SECTIONS,
-  WORKLOG_ENTRY_STATUSES,
   joinAssistantAssetLayer,
   joinAssistantLayer,
   joinAssistantReadme,
   joinLegacyAssistantInstructions,
   joinLegacyAssistantSteering,
   joinMigrationMemo,
-  joinProjectSteering,
   legacyAssistantSteeringSunsetLabel,
   type AssistantLayer,
 } from "../../core/paths/assistantPaths.js";
@@ -175,7 +172,7 @@ const execAsync = promisify(execCb);
  * skills and phases into `manifest/agent-routing.yml` — see
  * `core/manifest/routingPhaseMerge.ts` for why it adds and never edits.
  *
- * `specs/`, `contracts/`, `steering/` and everything else stay create-only for
+ * `specs/`, `contracts/` and everything else stay create-only for
  * the same reason: they hold project content.
  */
 const STANDARD_ASSET_PATHS: readonly string[] = ["assistant/skills", "assistant/agents"];
@@ -270,7 +267,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force regenerates .qfai/assistant/skills/**, assistant/agents/** and the symlink assets (.agents/.claude/.github/.codex), and removes the legacy 10_workflow.md and the old wrappers. It also regenerates the qfai-provided plain files .github/copilot-instructions.md and .github/instructions/** (the code-review / principles review instructions) from the shipped templates, so local edits to those are lost. assistant/constitution/** and assistant/catalog/** are refreshed to the installed release only where the file still matches its .assets.lock.json record (a file this release no longer ships is likewise removed only when it matches the record); a diverged file is left untouched and reported as a manual merge (specs/contracts/steering and assistant/manifest/** are not overwritten — the manifest is user configuration edited by `qfai-configure`). Only agent-routing.yml is merged additively, filling in the skills / phases it is missing (existing phases are not rewritten).",
+      "NOTE: --force regenerates .qfai/assistant/skills/**, assistant/agents/** and the symlink assets (.agents/.claude/.github/.codex), and removes the legacy 10_workflow.md and the old wrappers. It also regenerates the qfai-provided plain files .github/copilot-instructions.md and .github/instructions/** (the code-review / principles review instructions) from the shipped templates, so local edits to those are lost. assistant/constitution/** and assistant/catalog/** are refreshed to the installed release only where the file still matches its .assets.lock.json record (a file this release no longer ships is likewise removed only when it matches the record); a diverged file is left untouched and reported as a manual merge (specs/contracts and assistant/manifest/** are not overwritten — the manifest is user configuration edited by `qfai-configure`). Only agent-routing.yml is merged additively, filling in the skills / phases it is missing (existing phases are not rewritten).",
     );
   }
 
@@ -639,12 +636,11 @@ export async function runInit(options: InitOptions): Promise<void> {
     ...governedResult.removed,
   ];
 
-  // 4-layer assistant-tree seed + project-root steering surface seed.
+  // 4-layer assistant-tree seed.
   // These run AFTER copyTemplateTree so they can detect when the
   // asset templates already populated a layer (they fill in only
   // missing .gitkeep / README placeholders).
   const assistantTreeResult = await seedAssistantLayers(destRoot, assistantAssets, options.dryRun);
-  const projectSteeringResult = await seedProjectSteering(destRoot, options.dryRun);
 
   // Activation guidance for newly created instructions files
   const expectedInstructionsDir = path.join(destRoot, ".github", "instructions");
@@ -683,7 +679,6 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...ruleMasterResult.copied,
       ...claudeHooksResult.copied,
       ...assistantTreeResult.copied,
-      ...projectSteeringResult.copied,
       ...upgradeResult.copied,
       ...governedResult.copied,
     ],
@@ -698,7 +693,6 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...ruleMasterResult.skipped,
       ...claudeHooksResult.skipped,
       ...assistantTreeResult.skipped,
-      ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
       ...governedResult.skipped,
     ],
@@ -710,10 +704,6 @@ export async function runInit(options: InitOptions): Promise<void> {
   );
 
   for (const note of [...upgradeResult.preservedNotes, ...routingMergeNotes]) {
-    info(note);
-  }
-
-  for (const note of projectSteeringResult.staleNotes) {
     info(note);
   }
 
@@ -1729,7 +1719,7 @@ function decodeForDetection(bytes: Buffer): string {
 }
 
 // ---------------------------------------------------------------------------
-// 4-layer assistant-tree seed + project-root steering surface seed
+// 4-layer assistant-tree seed
 // ---------------------------------------------------------------------------
 
 /**
@@ -1962,227 +1952,6 @@ async function hasEntries(dir: string): Promise<boolean> {
     }
     throw err;
   }
-}
-
-function buildProjectSteeringEntryTemplate(): string {
-  // Section headings are sourced from HANDOFF_REQUIRED_SECTIONS and the status
-  // enum from WORKLOG_ENTRY_STATUSES (both SSOT in assistantPaths.ts) so
-  // neither can drift from the validator at seed time. An already-seeded
-  // template is create-only; later heading or enum changes are reported by the
-  // drift notice in seedProjectSteering rather than written over the user's
-  // copy.
-  const statusEnum = WORKLOG_ENTRY_STATUSES.join(" | ");
-  const handoffBodyLines = HANDOFF_REQUIRED_SECTIONS.flatMap((heading) => [
-    heading,
-    "",
-    "(Mandatory for kind: handoff. See contract for guidance.)",
-    "",
-  ]);
-  return [
-    "---",
-    // ONE space before each `#`, not a padded column. The alignment reads better in
-    // this source and does not survive contact with a formatter: Prettier collapses a
-    // run of spaces before a YAML trailing comment, so the first `prettier --write`
-    // over an adopter's tree rewrites a file the adopter never touched. The seed is
-    // create-only and re-init compares it byte for byte, so from then on every run
-    // reports `_templates/entry.md differs from the seed this qfai release generates`
-    // — a drift notice about the formatter, printed forever, on a file nobody edited.
-    "id: 2026-MM-DD-kebab-case-id # required; kebab-case ASCII; matches filename stem",
-    `status: active # required; enum: ${statusEnum}`,
-    "kind: decision # required; see .qfai/assistant/catalog/worklog-entry.schema.md",
-    "created: YYYY-MM-DD # required; ISO-8601 date",
-    "updated: YYYY-MM-DD # required; ISO-8601 date; >= created",
-    'scope: global # required; "global" or "spec-NNNN"',
-    "blocking: false # required; boolean",
-    'promote-to: null # required; "spec-NNNN/07_Decisions.md" or null',
-    "links: [] # required; array (may be empty)",
-    "---",
-    "",
-    "# Title of the entry",
-    "",
-    "## Context",
-    "",
-    "What triggered this entry? Reference any spec, contract, or external",
-    "input that informs the entry.",
-    "",
-    "<!-- For `kind: handoff` entries, the 5 sections below are MANDATORY -->",
-    "<!-- (Reviewer Gate emits R-HANDOFF-INCOMPLETE on missing sections). -->",
-    "",
-    ...handoffBodyLines,
-  ].join("\n");
-}
-
-/**
- * Locates the first line at which an on-disk seed file stopped matching the
- * body this release generates, plus both line counts. A full unified diff is
- * deliberately not produced: the notice is printed next to a skipped-paths
- * list that routinely runs to several hundred entries, and the operator's
- * question is only "is my copy current?".
- */
-function summarizeSeedDrift(onDisk: string, generated: string): string {
-  const current = normalizeNewlines(onDisk).split("\n");
-  const latest = normalizeNewlines(generated).split("\n");
-  const span = Math.max(current.length, latest.length);
-  let firstDiffLine = span;
-  for (let i = 0; i < span; i += 1) {
-    if (current[i] !== latest[i]) {
-      firstDiffLine = i + 1;
-      break;
-    }
-  }
-  return `first differing line ${firstDiffLine}; on disk ${current.length} lines, latest seed ${latest.length} lines`;
-}
-
-/**
- * A seed file large enough to be a hand-grown work-log README and still
- * bounded. Past it the comparison is declined rather than paid for: the answer
- * the notice carries is one line long, and no size of file changes it.
- */
-const SEED_DRIFT_MAX_BYTES = 256 * 1024;
-
-/**
- * CRLF-insensitive comparison text.
- *
- * `core.autocrlf=true`, or any editor that saves the seed with CRLF, leaves a
- * byte-for-byte unedited file unequal to the LF body this release generates —
- * and the drift notice then fired on every reinit, naming line 1, for a file
- * nobody had touched. `diffProjectSkillsAgainstInitAssets` in
- * `core/skillsIntegrity.ts` normalises for the same reason.
- */
-function normalizeNewlines(text: string): string {
-  return text.replace(/\r\n/g, "\n");
-}
-
-/**
- * Either the body to compare, or why no comparison was possible.
- *
- * "Could not read it" and "it matches" are different answers, and collapsing
- * them made a silent `skipped` mean either "already current" or "never
- * checked" — the exact ambiguity the drift notice exists to remove.
- */
-type SeedComparison =
-  | { readonly kind: "body"; readonly body: string }
-  | { readonly kind: "uncomparable"; readonly reason: string };
-
-/**
- * Reads an existing seed file for the drift comparison: one `open`, `fstat` on
- * that handle, a bounded read from it.
- *
- * The path is whatever the project already had there, because the seed is
- * create-only — so it is not necessarily a regular file. A FIFO stalls a plain
- * `readFile` until some writer appears, which hung `qfai init` outright, and a
- * multi-gigabyte file at that name loaded whole into memory. `O_NONBLOCK`
- * answers the first (`ENXIO` for a FIFO with no writer) and the `fstat`-then-
- * bounded-read answers the second. Nothing here fails the run: an unreadable
- * path is reported as uncomparable and init carries on.
- */
-async function readSeedBodyForDrift(fullPath: string): Promise<SeedComparison> {
-  const tooLarge: SeedComparison = {
-    kind: "uncomparable",
-    reason: `larger than the ${SEED_DRIFT_MAX_BYTES}-byte comparison ceiling`,
-  };
-  let handle: FileHandle | undefined;
-  try {
-    handle = await open(fullPath, OPEN_READ_FLAGS);
-    const pinned = await handle.stat();
-    if (!pinned.isFile()) {
-      return { kind: "uncomparable", reason: "not a regular file" };
-    }
-    if (pinned.size > SEED_DRIFT_MAX_BYTES) {
-      return tooLarge;
-    }
-    // Read to the end, and one byte past the ceiling: `read` may return fewer
-    // bytes than asked for, and a writer holding this inode can append after
-    // the `fstat`, so stopping at the size just measured would compare a
-    // prefix and report drift the file does not have.
-    const buffer = Buffer.alloc(SEED_DRIFT_MAX_BYTES + 1);
-    let filled = 0;
-    while (filled < buffer.length) {
-      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
-      if (bytesRead === 0) break;
-      filled += bytesRead;
-    }
-    if (filled > SEED_DRIFT_MAX_BYTES) {
-      return tooLarge;
-    }
-    return { kind: "body", body: buffer.subarray(0, filled).toString("utf-8") };
-  } catch (err: unknown) {
-    const code = hasErrnoCode(err) ? err.code : undefined;
-    if (code === "ENXIO" || code === "EISDIR" || code === "ENOTDIR" || code === "ELOOP") {
-      return { kind: "uncomparable", reason: `not a regular file (${code})` };
-    }
-    if (code !== undefined) {
-      return { kind: "uncomparable", reason: `could not be read (${code})` };
-    }
-    return { kind: "uncomparable", reason: `could not be read (${describeError(err)})` };
-  } finally {
-    try {
-      await handle?.close();
-    } catch {
-      // Closing a handle whose entry vanished under us is not a drift signal
-      // and must not fail the run either; the comparison already has its answer.
-    }
-  }
-}
-
-async function seedProjectSteering(
-  destRoot: string,
-  dryRun: boolean,
-): Promise<{ copied: string[]; skipped: string[]; staleNotes: string[] }> {
-  const copied: string[] = [];
-  const skipped: string[] = [];
-  const staleNotes: string[] = [];
-
-  // `derived` marks the bodies built from the SSOT constants. Those are the
-  // ones that go stale when a release extends HANDOFF_REQUIRED_SECTIONS;
-  // `.gitkeep` carries no content to compare.
-  const targets: Array<{ rel: string[]; body: string; derived: boolean }> = [
-    { rel: [".gitkeep"], body: "", derived: false },
-    { rel: ["_templates", "entry.md"], body: buildProjectSteeringEntryTemplate(), derived: true },
-  ];
-
-  for (const target of targets) {
-    const fullPath = joinProjectSteering(destRoot, ...target.rel);
-    if (await pathExists(fullPath)) {
-      skipped.push(fullPath);
-      // The steering seed is create-only and stays that way — see the note on
-      // STANDARD_ASSET_PATHS: this surface holds project content, so not even
-      // --force rewrites it. What the skipped-paths list cannot express is the
-      // difference between "skipped because it is already current" and
-      // "skipped because it no longer matches this release's seed", so the
-      // second case is reported explicitly instead of refreshing silently.
-      if (target.derived) {
-        const rel = path.relative(destRoot, fullPath).replace(/\\/g, "/");
-        const existing = await readSeedBodyForDrift(fullPath);
-        if (existing.kind === "uncomparable") {
-          // Silence has to keep meaning "already current", so a path that could
-          // not be compared says so rather than passing as an ordinary skip.
-          staleNotes.push(
-            `  NOTE: ${rel} could not be compared against the seed this qfai release generates (${existing.reason}); whether it is current is unknown.`,
-          );
-        } else if (normalizeNewlines(existing.body) !== normalizeNewlines(target.body)) {
-          staleNotes.push(
-            `  NOTE: ${rel} differs from the seed this qfai release generates (${summarizeSeedDrift(existing.body, target.body)}).`,
-          );
-        }
-      }
-      continue;
-    }
-    copied.push(fullPath);
-    if (!dryRun) {
-      await mkdir(path.dirname(fullPath), { recursive: true });
-      await writeFile(fullPath, target.body, "utf-8");
-    }
-  }
-
-  if (staleNotes.length > 0) {
-    staleNotes.push(
-      "  The .qfai/steering/ seed is create-only, so the file(s) above were left unchanged.",
-      "  To compare against the current bodies: qfai init --dir <scratch-dir>, then diff <scratch-dir>/.qfai/steering/ against your own.",
-    );
-  }
-
-  return { copied, skipped, staleNotes };
 }
 
 // ---------------------------------------------------------------------------
@@ -8144,7 +7913,6 @@ function buildCopilotInstructions(): string {
     "  - Declarative manifests: `.qfai/assistant/manifest/`",
     "  - Reference catalogs: `.qfai/assistant/catalog/`",
     "  - Process / migration memos: `.qfai/assistant/process/`",
-    "  - AI work-log surface (per-project): `.qfai/steering/` (entry frontmatter schema: `.qfai/assistant/catalog/worklog-entry.schema.md`)",
     "- Legacy `.qfai/assistant/steering/` is read-compatible only during",
     "  the deprecation window (`D-DEPRECATED-PATH` warning fires when it",
     "  is detected). Run `qfai init --upgrade-assistant-tree` to migrate.",

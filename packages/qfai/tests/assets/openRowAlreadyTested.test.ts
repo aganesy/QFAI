@@ -42,6 +42,7 @@ const OPEN_STATUSES = new Set(["todo", "blocked", "red"]);
  * list fails exactly as a new one does.
  */
 const KNOWN_OPEN_BUT_TESTED: readonly string[] = [
+  "spec-0004 TDD-0072 todo TC-0004-0018",
   "spec-0006 TDD-0041 todo TC-0006-0036",
   "spec-0008 TDD-0015 todo TC-0008-0015",
   "spec-0008 TDD-0016 todo TC-0008-0016",

@@ -203,7 +203,7 @@ Detailed procedure: `sdd-triage.md`.
     `Approved By`, and rerun the stage. Under `--auto` the row leaves `--auto`
     scope and no question may be asked at all
     (`../SKILL.md#--auto-and-approval-required-rows`): keep `Approved By` as
-    `-`, write a `consultation-needed` work-log entry naming every unapproved
-    row, and hand the run back for a rerun without `--auto` — never synthesize
-    an approver.
+    `-`, do not enter Phase 0, report every unapproved row with its Operation
+    and target, and hand the run back for a rerun without `--auto` — never
+    synthesize an approver.
 - Validate errors that point to unresolved source-layer gaps
