@@ -546,10 +546,10 @@ describe("BF-0004 migration examples", () => {
     const result = await run(step08, context);
     expect(result.code).toBe(3);
     expect(await read(context.root, "tests/integration/checkout.test.ts")).toBe(
-      integration.replace("QFAI:SPEC-0001:TC-0001-0001", "QFAI:EX-0001-0001-01"),
+      integration.replace("QFAI:SPEC-0001:TC-0001-0001", ["QFAI", "EX-0001-0001-01"].join(":")),
     );
     expect(await read(context.root, "tests/e2e/checkout.test.ts")).toBe(
-      e2e.replace("QFAI:SPEC-0001:US-0001-0001", "QFAI:BF-0001"),
+      e2e.replace("QFAI:SPEC-0001:US-0001-0001", ["QFAI", "BF-0001"].join(":")),
     );
     expect(await read(context.root, ".qfai/spec/01_policy/objective.md")).toContain(
       "x-qfai-status: external",
