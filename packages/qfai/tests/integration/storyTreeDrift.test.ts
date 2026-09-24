@@ -44,6 +44,34 @@ afterEach(async () => {
 });
 
 describe("story-tree drift", () => {
+  // QFAI:EX-0001-0002-04
+  it("reports each protected story-tree edit and excludes evidence", async () => {
+    const protectedFiles = [
+      `${specs}/02_business-flow/business-flow-0001/business-flow.md`,
+      glossary,
+      `${specs}/03_contract/cli/command.md`,
+      `${specs}/open-questions.md`,
+    ];
+    await put(decisions, table);
+    for (const file of protectedFiles) await put(file, "# Original\n");
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+    for (const file of protectedFiles) await put(file, "# Changed\n");
+    await put(".qfai/evidence/notes.md", "new evidence\n");
+    git("add", ".");
+    git("commit", "-m", "edit protected files and evidence");
+    const findings = await validateStoryTreeDrift(root, config(), "tdd");
+    for (const file of protectedFiles) {
+      expect(
+        findings.some((item) => item.file === file),
+        file,
+      ).toBe(true);
+    }
+    expect(findings.some((item) => item.file === ".qfai/evidence/notes.md")).toBe(false);
+  });
+
+  // QFAI:EX-0001-0002-05
   it("reports an unapproved protected edit but accepts an in-force change request", async () => {
     await put(decisions, table);
     await put(glossary, "# Terms\n");
@@ -63,6 +91,70 @@ describe("story-tree drift", () => {
     ).toBe(false);
   });
 
+  // QFAI:EX-0001-0002-06
+  it("keeps a DONE change request in force", async () => {
+    await put(decisions, table);
+    await put(glossary, "# Original\n");
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+    await put(glossary, "# Changed\n");
+    await put(decisions, `${table}| DEC-0001 | Change request: ${glossary} | Approved | DONE |\n`);
+    git("add", ".");
+    git("commit", "-m", "approved edit");
+    expect(
+      (await validateStoryTreeDrift(root, config(), "tdd")).some((item) => item.file === glossary),
+    ).toBe(false);
+  });
+
+  // QFAI:EX-0001-0002-08
+  // QFAI:EX-0001-0002-09
+  // QFAI:EX-0001-0002-10
+  it("allows only appended change-request rows without another authorisation", async () => {
+    await put(decisions, table);
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+    for (const status of ["TODO", "WIP"]) {
+      await put(
+        decisions,
+        `${table}| DEC-0001 | Change request: ${glossary} | Reason | ${status} |\n`,
+      );
+      git("add", ".");
+      git("commit", "-m", `change request ${status}`);
+      expect(
+        (await validateStoryTreeDrift(root, config(), "drift")).some(
+          (item) => item.file === decisions,
+        ),
+      ).toBe(false);
+    }
+    await put(decisions, `${table}| DEC-0001 | Ordinary decision | Reason | TODO |\n`);
+    git("add", ".");
+    git("commit", "-m", "ordinary decision");
+    expect(
+      (await validateStoryTreeDrift(root, config(), "drift")).some(
+        (item) => item.file === decisions,
+      ),
+    ).toBe(true);
+  });
+
+  // QFAI:EX-0001-0002-11
+  it("allows a change-request row to move from TODO to WIP", async () => {
+    await put(decisions, `${table}| DEC-0001 | Change request: ${glossary} | Reason | TODO |\n`);
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+    await put(decisions, `${table}| DEC-0001 | Change request: ${glossary} | Reason | WIP |\n`);
+    git("add", ".");
+    git("commit", "-m", "approve request");
+    expect(
+      (await validateStoryTreeDrift(root, config(), "drift")).some(
+        (item) => item.file === decisions,
+      ),
+    ).toBe(false);
+  });
+
+  // QFAI:EX-0001-0007-07
   it("reports a rewritten decision row in drift even when a change request names the file", async () => {
     await put(decisions, `${table}| DEC-0001 | Choice A | Reason | DONE |\n`);
     git("add", ".");
@@ -77,6 +169,37 @@ describe("story-tree drift", () => {
     const findings = await validateStoryTreeDrift(root, config(), "drift");
     expect(
       findings.some((item) => item.code === "QFAI-STORY-010" && item.message.includes("content")),
+    ).toBe(true);
+  });
+
+  // QFAI:EX-0001-0007-06
+  it("accepts a status advance with an appended decision", async () => {
+    await put(decisions, `${table}| DEC-0001 | Choice A | Reason | TODO |\n`);
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+    await put(
+      decisions,
+      `${table}| DEC-0001 | Choice A | Reason | DONE |\n| DEC-0002 | New choice | Reason | TODO |\n`,
+    );
+    git("add", ".");
+    git("commit", "-m", "advance and append");
+    const findings = await validateStoryTreeDrift(root, config(), "drift");
+    expect(findings.some((item) => item.code === "QFAI-STORY-010")).toBe(false);
+  });
+
+  // QFAI:EX-0001-0007-08
+  it("reports removal of an existing decision row", async () => {
+    await put(decisions, `${table}| DEC-0001 | Choice A | Reason | TODO |\n`);
+    git("add", ".");
+    git("commit", "-m", "base");
+    git("checkout", "-b", "topic");
+    await put(decisions, table);
+    git("add", ".");
+    git("commit", "-m", "remove row");
+    const findings = await validateStoryTreeDrift(root, config(), "drift");
+    expect(
+      findings.some((item) => item.code === "QFAI-STORY-010" && item.message.includes("DEC-0001")),
     ).toBe(true);
   });
 
@@ -106,6 +229,7 @@ describe("story-tree drift", () => {
     }
   });
 
+  // QFAI:EX-0001-0002-07
   it("does not let a TODO change request authorise an edit and ignores unprotected tests", async () => {
     await put(decisions, table);
     await put(glossary, "# Terms\n");

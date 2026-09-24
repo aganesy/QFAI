@@ -3,8 +3,8 @@
 ## User Story
 
 - Parent: CAP-0001
-- Goal: Steering 文書（5 ファイル）、Instructions 文書（5 ファイル）、Review Roster（10 reviewers）、Constitution（Article I~~X）、Canonical Workflow Stages（Stage 0~~6）の設計仕様を定義する
-- Non-goals: A verbatim copy of each document (the SSOT is `steering/*.md` and `instructions/*.md`; with the `rule/ skill/ agent/ prompt/` assistant tree, `.qfai/assistant/rule/*.md`)
+- Goal: 現行の constitution（Article I〜XI）と workflow（Stage 0〜7）を、配布される assistant rule の設計仕様として定義する
+- Non-goals: A verbatim copy of each document (the SSOT is `.qfai/assistant/rule/constitution.md` and `workflow.md`)
 - Notes: REQ-0009 準拠。統合元由来
 
 ## Legacy Source Scope

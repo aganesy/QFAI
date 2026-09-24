@@ -8,7 +8,7 @@
  * migration support, version normalization, module documentation,
  * and canonical template generation.
  */
-import { access, lstat, mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
+import { access, lstat, mkdtemp, readFile, readlink, rm, writeFile, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -39,12 +39,14 @@ async function cleanupTempDir(dir: string): Promise<void> {
 
 // QFAI:BF-0001
 describe("E2E: workspace initialization (US-0003-0001)", () => {
+  // QFAI:EX-0001-0020-01
   it("creates the empty story tree with assistant assets", async () => {
     const tmpDir = await createTempDir();
     try {
       await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
       expect(await pathExists(path.join(tmpDir, ".qfai", "assistant"))).toBe(true);
+      expect(await pathExists(path.join(tmpDir, "qfai.config.yaml"))).toBe(true);
       expect(await pathExists(path.join(tmpDir, ".qfai", "spec", "01_policy", "glossary.md"))).toBe(
         true,
       );
@@ -80,6 +82,7 @@ describe("E2E: workspace initialization (US-0003-0001)", () => {
 
 // QFAI:BF-0001
 describe("E2E: idempotent initialization (US-0003-0002)", () => {
+  // QFAI:EX-0001-0021-01
   it("second init skips existing files and preserves their content", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -131,6 +134,7 @@ describe("E2E: force update (US-0003-0003)", () => {
 
 // QFAI:BF-0001
 describe("E2E: dry-run (US-0003-0004)", () => {
+  // QFAI:EX-0001-0023-01
   it("--dry-run does not create any files", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -165,6 +169,7 @@ describe("E2E: multi-tool wrapper generation (US-0003-0005)", () => {
 
 // QFAI:BF-0001
 describe("E2E: legacy file evacuation (US-0003-0007)", () => {
+  // QFAI:EX-0001-0026-01
   it("--force removes legacy 10_workflow.md from skills", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -191,6 +196,7 @@ describe("E2E: legacy file evacuation (US-0003-0007)", () => {
 
 // QFAI:BF-0001
 describe("E2E: commands/prompts deprecation + skill symlink integration (US-0003-0008)", () => {
+  // QFAI:EX-0001-0027-01
   it("--force removes the commands/prompts wrappers qfai shipped, and only those", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -292,6 +298,7 @@ describe("E2E: commands/prompts deprecation + skill symlink integration (US-0003
 
 // QFAI:BF-0001
 describe("E2E: agent wrapper symlink (US-0003-0006)", () => {
+  // QFAI:EX-0001-0025-01
   it("creates agent symlinks in .claude/agents/ and .github/agents/", async () => {
     const tmpDir = await createTempDir();
     try {
@@ -315,6 +322,9 @@ describe("E2E: agent wrapper symlink (US-0003-0006)", () => {
         for (const entry of mdFiles) {
           const stat = await lstat(path.join(claudeAgentsDir, entry.name));
           expect(stat.isSymbolicLink()).toBe(true);
+          expect((await readlink(path.join(claudeAgentsDir, entry.name))).replace(/\\/g, "/")).toBe(
+            `../../.qfai/assistant/agent/${entry.name}`,
+          );
         }
       }
 
@@ -327,6 +337,9 @@ describe("E2E: agent wrapper symlink (US-0003-0006)", () => {
         for (const entry of agentFiles) {
           const stat = await lstat(path.join(githubAgentsDir, entry.name));
           expect(stat.isSymbolicLink()).toBe(true);
+          expect((await readlink(path.join(githubAgentsDir, entry.name))).replace(/\\/g, "/")).toBe(
+            `../../.qfai/assistant/agent/${entry.name.replace(/\.agent\.md$/, ".md")}`,
+          );
         }
       }
     } finally {

@@ -1452,6 +1452,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0028-02
   it("previews and reports the core.symlinks write to .git/config", async () => {
     // `git config core.symlinks true` is the only change init makes outside
     // the working tree. Neither mode used to mention it, so --dry-run
@@ -1829,6 +1830,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0024-01
   it("uses relative symlink targets", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -1841,12 +1843,13 @@ describe("qfai init", () => {
       expect(path.isAbsolute(target)).toBe(false);
       // Target should contain the canonical source path
       const normalized = target.replace(/\\/g, "/");
-      expect(normalized).toContain(".qfai/assistant/skill/qfai-configure");
+      expect(normalized).toBe("../../.qfai/assistant/skill/qfai-configure");
     } finally {
       await removeTempTree(root);
     }
   });
 
+  // QFAI:EX-0001-0021-02
   it("skips valid symlinks on re-run without --force (idempotent)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -1867,6 +1870,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0021-02
   it("recreates broken symlinks without --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {

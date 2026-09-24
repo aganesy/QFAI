@@ -25,6 +25,7 @@ async function put(file: string, content: string): Promise<void> {
 }
 
 describe("story-tree contract index", () => {
+  // QFAI:EX-0001-0006-04
   it("keys an unlisted declared contract by ID and an unlisted CLI file by path", async () => {
     const config = structuredClone(defaultConfig);
     config.paths.specsDir = ".qfai/spec";
