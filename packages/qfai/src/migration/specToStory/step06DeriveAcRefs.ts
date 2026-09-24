@@ -46,6 +46,8 @@ export const step06: MigrationStep = {
       );
       if (rowIndex < 0) continue;
       const line = lines[rowIndex] ?? "";
+      const currentRef = line.split("|")[2]?.trim() ?? "";
+      if (currentRef && currentRef !== "—" && currentRef !== "-") continue;
       const updated = line.replace(
         new RegExp(`^(\\|\\s*${example}\\s*\\|)\\s*[^|]*\\|`),
         `$1 ${criterion} |`,

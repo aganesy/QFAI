@@ -1,6 +1,6 @@
 # Move spec packs to the story tree
 
-QFAI 2.x uses `.qfai/spec/` with policy, business-flow and contract layers.
+QFAI 2.0.0 introduces `.qfai/spec/` with policy, business-flow and contract layers.
 QFAI 2.x does not read the old spec-pack layout. A project that keeps spec packs
 must stay on a pinned 1.x release. To upgrade, migrate the project before using
 the 2.x validation and authoring workflow.

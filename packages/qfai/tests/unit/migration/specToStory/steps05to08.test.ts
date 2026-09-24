@@ -47,6 +47,7 @@ async function fixture(): Promise<MigrationContext> {
         [spec]: {
           "US-0001-0001": "US-0001-0001",
           "AC-0001-0001": "AC-0001-0001-01",
+          "AC-0001-0002": "AC-0001-0001-02",
           "EX-0001-0001": "EX-0001-0001-01",
           "TC-0001-0001": "EX-0001-0001-02",
           "TC-0001-0002": "EX-0001-0001-01",
@@ -224,6 +225,23 @@ describe("migration steps 5 to 8", () => {
     expect(await readFile(path.join(context.specsDir, story), "utf8")).toContain(
       "EX-0001-0001-01 | AC-0001-0001-01 | Existing input",
     );
+  });
+
+  it("preserves a criterion assigned after migration when old cases disagree", async () => {
+    const context = await fixture();
+    const examplePath = path.join(context.specsDir, story);
+    await put(
+      context.root,
+      `.qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md`,
+      "| TC-ID | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0001-0002 | AC-0001-0001 | EX-0001-0001 | one | yes |\n",
+    );
+    const manual =
+      "# Examples\n\n## Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001-01 | AC-0001-0001-02 | Corrected input | Corrected result |\n";
+    await put(context.root, `.qfai/spec/${story}`, manual);
+    const report = capture();
+    expect(await executePlannedStep(step06, context, false, report.io)).toBe(0);
+    expect(report.output.join("")).toContain("## Operations\nnone");
+    expect(await readFile(examplePath, "utf8")).toBe(manual);
   });
 
   it("writes a mapped rule into its existing YAML contract and leaves unresolved rules in their pack", async () => {

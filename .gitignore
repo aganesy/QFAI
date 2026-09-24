@@ -69,8 +69,6 @@ coverage/
 .qfai/evidence/prototyping/*
 !.qfai/
 !.qfai/evidence/
-!.qfai/decisions/
-!.qfai/decisions/**
 !.qfai/evidence/decision/
 !.qfai/evidence/decision/**
 !.qfai/evidence/prototyping/
