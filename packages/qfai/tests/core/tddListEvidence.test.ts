@@ -4820,6 +4820,12 @@ ${packPair(1).join("\n")}
       expect(
         issues.some(
           ({ code, message }) =>
+            code === "QFAI-TDDLIST-008" && message.includes("valid RED test manifest"),
+        ),
+      ).toBe(false);
+      expect(
+        issues.some(
+          ({ code, message }) =>
             code === "QFAI-TDDLIST-008" && message.includes("RED test hash matching its manifest"),
         ),
       ).toBe(false);
