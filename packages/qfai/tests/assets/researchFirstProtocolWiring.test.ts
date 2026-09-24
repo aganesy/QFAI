@@ -562,8 +562,8 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
 
   it("requires source_id and finding on every reflection entry", async () => {
     const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
-      "```\n\n## Trend Scan",
-      "    - action: defer\n      reason: Second entry without source_id or finding\n```\n\n- Every",
+      "```\n\n## Exploration Direction Inputs",
+      "    - action: defer\n      reason: Second entry without source_id or finding\n```\n\n## Exploration Direction Inputs",
     );
     const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
     const incomplete = issues.find((item) => item.code === "QFAI-RESEARCH-019");

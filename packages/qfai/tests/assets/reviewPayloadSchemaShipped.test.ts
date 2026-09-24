@@ -13,9 +13,9 @@ const ASSISTANT_ROOTS = [
   path.join(repoRoot, ".qfai/assistant"),
 ];
 
-const SCHEMA_REL = "skills/qfai-prototyping/references/review-payload-schema.md";
-const PROMPT_REL = "skills/qfai-prototyping/references/reviewer-prompt.md";
-const SKILL_REL = "skills/qfai-prototyping/SKILL.md";
+const SCHEMA_REL = "skill/qfai-prototyping/references/review-payload-schema.md";
+const PROMPT_REL = "skill/qfai-prototyping/references/reviewer-prompt.md";
+const SKILL_REL = "skill/qfai-prototyping/SKILL.md";
 
 /**
  * The prototyping sources that cite a shipped document as the authority
@@ -34,7 +34,7 @@ const ASSISTANT_DOC_RE = /\.qfai\/assistant\/[A-Za-z0-9_./-]*\.md/g;
 
 /** The 11 required top-level fields of the closed reviewer payload. */
 const REQUIRED_TOP_LEVEL_FIELDS = [
-  "specId",
+  "uiContractId",
   "screenId",
   "cycle",
   "sessionStatus",
@@ -83,7 +83,7 @@ describe("shipped reviewer payload schema", () => {
       for (const feel of FEEL_FIELDS) {
         expect(schema, `missing impressions field ${feel}`).toContain(feel);
       }
-      expect(schema).toContain("iter-NN/<spec-id>/<screen>.review.json");
+      expect(schema).toContain("iter-NN/<ui-contract-id>/<screen>.review.json");
       expect(schema).toContain("closed");
     }
   });
@@ -93,7 +93,7 @@ describe("shipped reviewer payload schema", () => {
   // two outputs each schema belongs to.
   it("keeps the reviewer prompt from pointing the per-screen payload at the summary shape", async () => {
     for (const prompt of await readShipped(PROMPT_REL)) {
-      expect(prompt).toContain(SCHEMA_REL.slice("skills/qfai-prototyping/".length));
+      expect(prompt).toContain(SCHEMA_REL.slice("skill/qfai-prototyping/".length));
       expect(prompt).toContain("<screen>.review.json");
       // The legacy shape stays documented, but only as the per-cycle
       // summary the orchestrator folds into `prototyping.json`.
@@ -111,7 +111,7 @@ describe("shipped reviewer payload schema", () => {
     for (const skill of await readShipped(SKILL_REL)) {
       const c0Row = skill.split("\n").find((line) => line.startsWith("| C0"));
       expect(c0Row, "SKILL.md has no C0 loop row").toBeDefined();
-      expect(c0Row).toContain("iter-00/<spec-id>/<screen>.review.json");
+      expect(c0Row).toContain("iter-00/<ui-contract-id>/<screen>.review.json");
       expect(c0Row).toContain("iter-00/review.json");
     }
   });

@@ -52,6 +52,6 @@ describe.each(trees)("%s research-first protocol owner", (tree) => {
     expect(owner).toBeDefined();
     expect(cards).toContain(owner);
     expect(await framingAgents()).toContain(owner);
-    expect(protocol).toContain("whether or not the work includes UI");
+    expect(protocol.replace(/\s+/g, " ")).toContain("whether or not the work includes UI");
   });
 });

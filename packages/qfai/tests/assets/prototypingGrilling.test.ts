@@ -251,13 +251,13 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
   });
 
   it("scopes every row to the lineage it applies to", async () => {
-    // One invocation runs a lineage per spec and screen, so a record with no
+    // One invocation runs a lineage per UI contract and screen, so a record with no
     // key applies every answer to each of them. `global` is written rather
     // than inferred from a missing key, because a missing key is also what an
     // unscoped row looks like.
     const skill = await read(SKILL);
     expectPhrase(skill, "**Every row names what it applies to**");
-    expectPhrase(skill, "`<spec-id>/<screen>`");
+    expectPhrase(skill, "`<ui-contract-id>/<screen>`");
     expectPhrase(skill, "`global` is a real answer and not a default");
     expectPhrase(
       skill,
@@ -369,7 +369,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // the loss, and a destructive operation is approved on what it says.
     const skill = await read(SKILL);
     expectPhrase(skill, "naming what it destroys in both trees");
-    expectPhrase(skill, "`.qfai/prototypes/iter-00/index.html` is overwritten");
+    expectPhrase(skill, "`.qfai/prototype/iter-00/index.html` is overwritten");
     expectPhrase(skill, "with no backup taken");
 
     // And a refusal has an outcome of its own. Without one the table maps a

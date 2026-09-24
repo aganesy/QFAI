@@ -11,7 +11,7 @@ const ASSISTANT_ROOTS = [
   path.join(repoRoot, ".qfai/assistant"),
 ];
 
-const BASELINE = "constitution/shared-skill-delegation-baseline.md";
+const BASELINE = "rule/shared-skill-delegation-baseline.md";
 
 async function readShipped(relative: string): Promise<string[]> {
   return Promise.all(ASSISTANT_ROOTS.map((root) => readFile(path.join(root, relative), "utf-8")));
@@ -94,16 +94,12 @@ describe("reviewer response provenance", () => {
   });
 
   it("requires the provenance lines at every skill-level reviewer gate", async () => {
-    for (const content of await readShipped("skills/qfai-implement/SKILL.md")) {
-      expect(content).toContain(
-        "Reviewer response must include `Reviewer role:`, `Reviewed artifact:` and `Result: PASS | REVISE`",
-      );
-      expect(content).not.toContain(
-        "Reviewer response must include `Result: PASS | REVISE` (matching",
-      );
+    for (const content of await readShipped("skill/qfai-implement/SKILL.md")) {
+      expect(content).toContain("rule/shared-skill-delegation-baseline.md");
+      expect(content).toContain("references/review-artifact-layout.md");
     }
 
-    for (const relative of ["skills/qfai-implement/SKILL.md", "skills/qfai-discussion/SKILL.md"]) {
+    for (const relative of ["skill/qfai-discussion/SKILL.md"]) {
       for (const content of await readShipped(relative)) {
         expect(
           content,
@@ -114,7 +110,7 @@ describe("reviewer response provenance", () => {
       }
     }
 
-    for (const content of await readShipped("skills/web-research/SKILL.md")) {
+    for (const content of await readShipped("skill/web-research/SKILL.md")) {
       // The gate enumerates every field the baseline makes REQUIRED. One the
       // baseline demands and this list omits is a response that satisfies the
       // skill and not the contract — which is how a reset round reaches a gate

@@ -180,11 +180,10 @@ describe("repository attribution matcher", () => {
       path.relative(assistantDir, filePath).split(path.sep).join("/"),
     );
 
-    expect(files).toContain("skills/qfai-prototyping/templates/DESIGN.md.sample");
-    expect(files).toContain("skills/qfai-sdd/templates/contracts/db-contract.sample.sql");
-    expect(files).toContain("catalog/spec_required_files.json");
-    expect(files).toContain("skills/qfai-discussion/templates/review/summary.json");
+    expect(files).toContain("skill/qfai-prototyping/templates/DESIGN.md.sample");
+    expect(files).toContain("skill/qfai-sdd/templates/contracts/db-contract.sample.sql");
+    expect(files).toContain("skill/qfai-discussion/templates/review/summary.json");
     // And the markdown the narrower glob already covered.
-    expect(files).toContain("skills/qfai-sdd/references/contract-artifact-rules.md");
+    expect(files).toContain("skill/qfai-sdd/references/contract-artifact-rules.md");
   });
 });

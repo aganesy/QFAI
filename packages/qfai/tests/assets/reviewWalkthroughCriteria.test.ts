@@ -1,10 +1,8 @@
 /**
- * The prototype review asks eight questions, and every one is answerable.
+ * The prototype review scores four ordinal UX axes and uses eight diagnostic questions.
  *
- * The loop used to rate four axes. Rating was removed because a number painted
- * on a judgement is not evidence, and what replaced it has to be something a
- * reviewer can actually answer: eight yes/no criteria, each "no" becoming one
- * line in `blockingFindings`.
+ * The ordinal scores summarize the cycle; each diagnostic "no" becomes one
+ * actionable line in `blockingFindings` for its screen.
  *
  * Two of the eight carry method rather than opinion, and those are the ones
  * pinned hardest here.
@@ -42,23 +40,27 @@ const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 
 /** The row numbers of the criteria table, read off the table itself. */
 function criterionNumbers(markdown: string): number[] {
-  const section = markdown.slice(markdown.indexOf("## The eight criteria"));
+  const section = markdown.slice(markdown.indexOf("## Diagnostic criteria"));
   const table = section.slice(0, section.indexOf("Criteria 1 to 4"));
   return Array.from(table.matchAll(/^\|\s*(\d+)\s*\|/gm), (m) => Number(m[1]));
 }
 
-describe("the prototype review asks eight answerable questions", () => {
+describe("four ordinal axes and eight diagnostic questions", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: the criteria table is numbered 1 to 8`, async () => {
       expect(criterionNumbers(await read(tree, REVIEWER_PROMPT))).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     });
 
-    it(`${tree}: a "no" is one line in blockingFindings, and nothing aggregates`, async () => {
+    it(`${tree}: scores the four axes and records each diagnostic defect`, async () => {
       const text = flat(await read(tree, REVIEWER_PROMPT));
 
       expect(text).toContain("A **no** is one line in `blockingFindings`");
-      // The rating this replaced must not come back under another name.
-      expect(text).toContain("No axis, no rating, no aggregate.");
+      expect(text).toContain("Score each axis `weak`, `acceptable`, `strong`, or `exceptional`");
+      expect(text).toContain("informationArchitecture");
+      expect(text).toContain("navigationFlow");
+      expect(text).toContain("usability");
+      expect(text).toContain("functionality");
+      expect(text).toContain("A favorable score never hides a blocking finding");
     });
 
     it(`${tree}: criterion 7 walks the declared tasks with two questions`, async () => {
@@ -88,7 +90,7 @@ describe("the prototype review asks eight answerable questions", () => {
       const text = flat(await read(tree, REVIEWER_PROMPT));
 
       expect(text).toContain("iter-NN/<screen>.signals.json");
-      expect(text).toContain("Read them; do not recount.");
+      expect(text).toContain("Read the counts when the file exists; do not invent them");
       // An absent denominator is unknown. Reading it as zero turns "no task
       // declared" into "no controls", which is the opposite of the capture.
       expect(text).toContain("`null`, which means unknown, not zero");
