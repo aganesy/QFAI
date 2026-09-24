@@ -13,9 +13,10 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { defaultConfig, loadConfig, type QfaiConfig } from "../../src/core/config.js";
+import { loadConfig, type QfaiConfig } from "../../src/core/config.js";
 import { getChangedFilesAgainstBase, withoutPathsGoneAtHead } from "../../src/core/gitChanges.js";
 import { validateTraceabilityIntegrity } from "../../src/core/validators/traceabilityIntegrity.js";
+import { legacyLayoutConfig } from "./legacyLayoutConfig.js";
 
 const tempDirs: string[] = [];
 
@@ -52,7 +53,7 @@ const MODULE_BODY = [
   "",
 ].join("\n");
 
-const config: QfaiConfig = { ...defaultConfig, baseBranch: "base" };
+const config: QfaiConfig = { ...legacyLayoutConfig, baseBranch: "base" };
 
 afterEach(async () => {
   while (tempDirs.length > 0) {
