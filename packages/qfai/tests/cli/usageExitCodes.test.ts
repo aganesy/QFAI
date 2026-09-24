@@ -127,15 +127,14 @@ describe("qfai --help exit-code section", () => {
       section.indexOf("prototyping iterate --check-convergence"),
     );
 
-    // `isConverged` reads three arrays. The four UX axes are still scored and
-    // still reported, and they no longer decide the stop — an operator given
-    // an axis value here would look for a cause the loop never consulted.
+    // Ordinary iterate requires every UX score to be exceptional and all
+    // three blocking arrays to be empty.
     expect(iterateRow).toMatch(
       new RegExp(`${EXIT_CODES.prototypingStop} = STOP: converged[^]*?no blocking finding`),
     );
     expect(iterateRow).toContain("DESIGN.md violation");
     expect(iterateRow).toContain("anti-pattern");
-    expect(iterateRow).not.toMatch(/axis|axes|exceptional/i);
+    expect(iterateRow).toContain("all four UX scores exceptional");
   });
 
   it("names the certify layout incompatibility that also returns 64", async () => {

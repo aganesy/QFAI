@@ -120,8 +120,13 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     await put(root, `${flow}/business-flow.md`, `# ${flowId}: Complete checkout\n`);
     await put(
       root,
+      `${spec}/02_business-flow/business-flows.md`,
+      `# Business Flows\n\n| BF-ID | Name |\n| --- | --- |\n| ${flowId} | Complete checkout |\n`,
+    );
+    await put(
+      root,
       `${flow}/user-stories.md`,
-      `# User Stories\n\n- ${storyId}: Checkout a cart.\n`,
+      `# User Stories\n\n| US-ID | Name |\n| --- | --- |\n| ${storyId} | Checkout a cart |\n`,
     );
     await put(root, `${story}/01_User-story.md`, `# ${storyId}: Checkout a cart\n`);
     await put(

@@ -142,6 +142,12 @@ async function seedIterations(
         index: it.index,
         commitSha: "a".repeat(40),
         blockingFindings: it.allEx ? [] : ["home: the empty state is not represented"],
+        scores: {
+          informationArchitecture: "exceptional",
+          navigationFlow: "exceptional",
+          usability: "exceptional",
+          functionality: "exceptional",
+        },
         proseCritique: "x".repeat(1500),
         layoutAntiPatternsDetected: it.lap ?? [],
         designMdViolations: [],
