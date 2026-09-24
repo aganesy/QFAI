@@ -76,7 +76,7 @@ describe("the short-circuit follows the configured skills directory", () => {
         const codes = new Set(result.issues.map((entry) => entry.code));
 
         // The surface finding is still reported; it is just no longer a reason to
-      // say nothing about everything else.
+        // say nothing about everything else.
         expect(codes.has("QFAI-LINK-001")).toBe(true);
         expect(codes.size).toBeGreaterThan(1);
       } finally {
