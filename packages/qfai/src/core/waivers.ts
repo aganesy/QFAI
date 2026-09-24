@@ -709,7 +709,7 @@ function parseMatch(value: unknown): {
     return { error: "match はオブジェクトで記述してください。" };
   }
   if ("dl_ids" in value) {
-    return { error: "match.dl_ids は使用できません。ID の対象は scope.paths で指定してください。" };
+    return { error: "match.dl_ids is unsupported. Specify ID targets with scope.paths." };
   }
 
   const pathsResult = toStringArray(value.paths);

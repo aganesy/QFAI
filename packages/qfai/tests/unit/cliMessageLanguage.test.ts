@@ -251,6 +251,11 @@ describe("operator-facing CLI message language", () => {
     expect(diff.migrated).toEqual(["core/sample.ts: 古い日本語メッセージ"]);
   });
 
+  it("does not treat a Japanese input matcher as an operator message", () => {
+    const source = ["const key = /(?:reason|理由):/;", 'error("日本語");'].join("\n");
+    expect(findJapaneseLines(source)).toEqual([{ line: 2, text: 'error("日本語");' }]);
+  });
+
   it("reports an extra copy of a message the allowlist already names", () => {
     const found = findJapaneseLines(['error("同じ日本語");', 'warn("同じ日本語");'].join("\n"));
 

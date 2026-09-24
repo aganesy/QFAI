@@ -312,7 +312,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-UI-BEARING-FALSE",
         "Prototyping skill must limit execution to UI contracts with a full CON-UI-NNNN ID and non-empty screens[].",
         "error",
-        "完全な CON-UI-NNNN と非空の screens[] を持つ UI 契約のみ対象と明記してください。",
+        "State that only UI contracts with a full CON-UI-NNNN ID and non-empty screens[] are eligible.",
       ),
     );
   }
