@@ -12,7 +12,7 @@ const skillDir = path.join(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "web-research",
 );
 // The MCP templates live inside the skill that documents them, so `qfai init`

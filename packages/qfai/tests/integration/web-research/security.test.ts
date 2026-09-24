@@ -12,7 +12,7 @@ const skillDir = path.join(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "web-research",
 );
 const sandboxTemplateDir = path.join(repoRoot, "packages", "qfai", "assets", "sandbox-templates");

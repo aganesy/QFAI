@@ -11,7 +11,7 @@ const skillPath = path.join(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "web-research",
   "SKILL.md",
 );
@@ -52,7 +52,7 @@ const baselinePath = path.join(
   "init",
   ".qfai",
   "assistant",
-  "constitution",
+  "rule",
   "shared-skill-delegation-baseline.md",
 );
 
