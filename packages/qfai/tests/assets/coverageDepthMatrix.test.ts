@@ -908,7 +908,7 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
       "utf8",
     );
     expect(
-      carrier.includes("QFAI:BF-0002"),
+      carrier.includes(["QFAI", "BF-0002"].join(":")),
       "a real test file must carry the current flow annotation",
     ).toBe(true);
 
