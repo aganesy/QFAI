@@ -2000,6 +2000,23 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(provenance).toContain("`path + NUL + kind + NUL + mode + NUL + blob hash`");
   });
 
+  it("spells the RED test manifest's mode the way the gate hashes it", async () => {
+    // The gate recomputes the hash with a six-digit mode, because the other
+    // permission bits follow the checkout's umask. Sending the author to the
+    // revision manifest's four octal digits gave a hash no gate reproduces.
+    // Any bit of `0111` selects `100755`, where git reads only the owner's, so
+    // the text says where to read it from.
+    const provenance = flat(await readProvenance(tree));
+    expect(provenance).toContain(
+      "**`mode` is six digits spelled like git's tree mode, not the revision manifest's four octal digits**: `120000` for a symlink, `100755` for a file with any bit of `0111` set, and `100644` for any other file.",
+    );
+    expect(provenance).toContain("Read it from the file on disk, not from `git ls-files -s`");
+    // Windows has no execute bit, so the one bit the record keeps does not
+    // travel between Windows and POSIX checkouts.
+    expect(provenance).toContain("**The execute bit does not cross between Windows and POSIX.**");
+    expect(provenance).not.toContain("the same shape the revision manifest uses");
+  });
+
   it("invalidates the proof whenever the test changed, on either branch", async () => {
     // Phase Green step 2a skips the mutation on a RED-not-observable row as
     // already taken, so a fresh RED would reach re-review with a proof from

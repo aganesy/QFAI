@@ -4672,6 +4672,42 @@ ${packPair(1).join("\n")}
     });
   });
 
+  // `red-provenance.md` spells `mode` in six digits, like git's tree mode. The
+  // revision manifest's four octal digits are the other spelling an author
+  // following the skill could reach for, and the gate must refuse it rather
+  // than accept both:
+  // the permission bits beyond the execute bit follow the checkout's umask.
+  for (const [label, form, accepted] of [
+    ["the six-digit form", "tree", true],
+    ["the revision manifest's four octal digits", "octal", false],
+  ] as const) {
+    it(`${accepted ? "accepts" : "refuses"} a RED test hash whose mode is ${label}`, async () => {
+      await withProject(async (root) => {
+        const pointer =
+          "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+        const testPath = path.join(root, TEST_FILE);
+        await mkdir(path.dirname(testPath), { recursive: true });
+        await writeFile(testPath, "// test\n", "utf-8");
+        const mode =
+          form === "tree"
+            ? "100644"
+            : ((await lstat(testPath)).mode & 0o7777).toString(8).padStart(4, "0");
+        const record = `${TEST_FILE}\0file\0${mode}\0${digest(await readFile(testPath))}`;
+        const evidence = completeEntry("Integration").replace("{{RED_TEST_HASH}}", digest(record));
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+          { ".qfai/evidence/atdd-spec-0001.md": evidence },
+        );
+        const refused = issues.some(
+          ({ code, message }) =>
+            code === "QFAI-TDDLIST-008" && message.includes("RED test hash matching its manifest"),
+        );
+        expect(refused).toBe(!accepted);
+      });
+    });
+  }
+
   it("validates the current manifest without rehashing an earlier round against later bytes", async () => {
     await withProject(async (root) => {
       const pointer =
