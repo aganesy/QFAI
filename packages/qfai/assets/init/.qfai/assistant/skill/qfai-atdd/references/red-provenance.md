@@ -8,6 +8,15 @@ hash of the test plus fixtures or snapshots it reads. The manifest lists
 paths in a stable order. A hash of the test file alone is insufficient when
 its oracle depends on shared artifacts.
 
+For each manifest entry, hash `path + NUL + kind + NUL + mode + NUL + blob hash`
+in sorted path order. `kind` is `file` or `symlink`; `mode` is the six-digit
+Git tree form read from disk: `120000` for a symlink, `100755` for a file with
+any execute bit set, and `100644` for another file. Do not use the revision
+manifest's full permission bits or `git ls-files -s` for this mode. The hash is
+recomputed on another checkout, where non-execute permission bits may differ.
+An executable file can read as non-executable on Windows, so record its hash
+on the platform that will verify it.
+
 ## Observed RED
 
 Run the selected test before code satisfying its predicate exists, or against

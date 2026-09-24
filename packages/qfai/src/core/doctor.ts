@@ -370,7 +370,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   //
   // The `modified.length > 0` conjunct is NOT redundant with the status test
   // and lint cannot prove it either way (TS will not correlate a string
-  // literal with an array length), so it has to be stated: BR-0006-0022
+  // literal with an array length), so it has to be stated: the workflow rule
   // forbids a finding whose `modified` is empty, and once `declined` lands the
   // status is derived from ANY non-empty bucket — the sibling diff already
   // reports `modified` for a `changed`-only or `missing`-only tree. Under that
@@ -504,7 +504,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
         `installed shipped workflow(s) differ from the packaged copy: ${workflowsDiff.modified.join(", ")}. ` +
         `Manual repair: replace each listed file with the copy of the same name in ${workflowsDiff.packagedDir}. ` +
         `The installed file is never overwritten by QFAI: this finding reports the difference and writes nothing.`,
-      // BR-0006-0022's payload. `declined` is carried here and NOWHERE in
+      // The drift payload carries `declined` here and NOWHERE in
       // `message`: the message's repair instruction tells the operator to replace
       // each listed file with the packaged copy, and a declined file listed there
       // would instruct them to undo a removal this check has promised never to
@@ -536,12 +536,12 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // existed, for whom §3's known limitation says this channel is silent.
     //
     // Deliberately the count and not "some name resolved to `installed`":
-    // BR-0006-0022 requires `ok` on a tree whose recorded files were all
+    // The workflow rule requires `ok` on a tree whose recorded files were all
     // deliberately removed, which has zero `installed` names and where the
     // claim is nonetheless true.
     //
     // `details` carries `workflowsDir` and NOTHING else. The four-key payload
-    // of BR-0006-0022 belongs to the drift emission alone: `modified` here
+    // belongs to the drift emission alone: `modified` here
     // would render an empty file list as a drift report, and `declined` here
     // would contradict the declined-only tree's requirement that severity be
     // `ok` while `details.declined` does not appear at all.
@@ -569,8 +569,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       details: { workflowsDir: workflowsDiff.workflowsDir },
     });
   } else if (workflowsDiff.status === "skipped_unresolved") {
-    // BR-0006-0020's closing clause — 「package 同梱 copy を解決できない場合は
-    // severity `info` で skip する」 (TC-0006-0030 leg (c) / AC-0006-0023). The
+    // The unresolved-copy rule requires an info-level skip. The
     // packaged operand could not be resolved, so nothing was compared and nothing
     // may be claimed about the adopter's files in either direction.
     //
@@ -593,7 +592,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     //   - the EXCLUDED tree is what matters, more than the ambiguity.
     //     `comparedCount > 0` excludes a tree the contract requires to be SILENT.
     //     A conjunct here (`packagedDir === undefined`, `comparedCount === 0`)
-    //     would exclude a tree BR-0006-0020 requires to SKIP: a reader that ever
+    //     would exclude a tree the unresolved-copy rule requires to SKIP:
+    //     a reader that ever
     //     reported this status with a resolved-but-unusable operand would fall
     //     through all three arms and emit nothing, which is precisely the defect
     //     this row closes, reintroduced one state along.
@@ -619,7 +619,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // `details` carries `workflowsDir` and NOTHING else, the same width as the
     // `ok` arm: `modified: []` would claim nothing is stale about a tree that was
     // never compared, `packagedDir` is `undefined` here by construction, and
-    // `declined` is part of BR-0006-0022's payload for the DRIFT finding, owned by
+    // `declined` is part of the drift payload, owned by
     // TDD-0036. This arm adds no key of its own, so it decides nothing for that
     // row.
     //
@@ -645,8 +645,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     //
     // It also carries no command token, which is measured rather than asserted:
     // under the mutation that makes this arm fire in TDD-0032's fixture, all eight
-    // of that row's tokens pass on this text. BR-0006-0020 scopes the no-command
-    // rule to the DRIFT finding's body, so no oracle holds it here — but that row's
+    // of that row's tokens pass on this text. The unresolved-copy rule scopes
+    // the no-command rule to the DRIFT finding's body, so no oracle holds it
+    // here — but that row's
     // sweeps do read this message under that mutation, so an edit adding a `qfai`
     // subcommand to it would surface there and not here.
     addCheck(checks, {

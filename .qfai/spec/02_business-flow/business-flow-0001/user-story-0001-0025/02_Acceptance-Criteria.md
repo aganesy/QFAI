@@ -11,6 +11,7 @@ Scenario: Agent file symlinks
   Given a canonical agent card exists at `.qfai/assistant/agents/<name>.md` (`.qfai/assistant/agent/<name>.md` with the `rule/ skill/ agent/ prompt/` assistant tree)
   When `qfai init` runs
   Then `.claude/agents/<name>.md` and `.github/agents/<name>.agent.md` are created as file symlinks to that card
+  And no `README.md` is written into `.agents/`, `.codex/`, `.claude/agents/` or `.github/agents/`
 
 # AC-0001-0025-02
 # Parent: US-0001-0025

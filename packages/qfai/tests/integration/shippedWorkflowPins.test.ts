@@ -363,12 +363,12 @@ describe("TC-0003-0033 (TDD-0033): leakage guard exits 1 on a planted convention
   it("guard-diff-is-empty: the committed script keeps its unfiltered scan line and gains no pragma / allow-list / exclusion handling", async () => {
     const script = await readFile(GUARD_SCRIPT_PATH, "utf-8");
     // The one scan pipeline every distributed surface goes through, pinned
-    // byte-for-byte: all three pattern classes feed a single recursive grep
+    // byte-for-byte: all four pattern classes feed a single recursive grep
     // with no inverted-grep filter, no exclusion flag and no pragma layer
     // in between. (The INTERNAL_VERSION_RE literal feeding it is byte-pinned
     // by TDD-0031's SSOT-sync assertion above — referenced, not repeated.)
     expect(script).toContain(
-      'hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE" "$target" 2>/dev/null || true)',
+      'hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE|$STORY_ID_RE" "$target" 2>/dev/null || true)',
     );
     // No pragma support of any spelling has been added to the guard (the
     // `qfai-shipping:allow` pragma exists only in the pre-build src-comment

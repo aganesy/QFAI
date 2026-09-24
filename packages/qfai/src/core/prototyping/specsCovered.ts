@@ -31,7 +31,11 @@ export type UiContractScopeDrift = {
   removed: string[];
 };
 
-/** Compare the frozen contract IDs with one live snapshot. */
+/**
+ * Compare frozen UI contract IDs with one caller-provided live snapshot.
+ * The frozen set remains the baseline for the run; callers capture the live
+ * set once before comparing. Added and removed IDs are sorted and deduplicated.
+ */
 export function checkUiContractsCoveredDrift(
   frozen: readonly string[],
   currentLive: readonly string[],

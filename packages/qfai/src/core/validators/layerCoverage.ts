@@ -748,7 +748,7 @@ export const THIN_COVERAGE_SIGNAL_EXPECTATION =
 
 /**
  * Collapses an ID list into contiguous runs on its trailing numeric segment,
- * so `BR-0003-0001 … BR-0003-0016` prints as one range instead of sixteen
+ * so `BR-0003-0001 … BR-0003-0009` prints as one range instead of nine
  * identically-shaped lines.
  *
  * The run detection needs the ids in order, and this is exported, so it sorts

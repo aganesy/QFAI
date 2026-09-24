@@ -1,6 +1,6 @@
 /**
  * Reviewer disagreement handler — resolves conflicting reviewer scores
- * using majority rule with tie-breaking (SD-0030-001, BR-0030-0009, BR-0030-0010).
+ * using majority rule with tie-breaking.
  */
 
 import type { Decision, DecisionResult, ReviewerScore, ThresholdConfig } from "./types.js";

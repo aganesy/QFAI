@@ -471,7 +471,7 @@ describe("cli usage text", () => {
     const entry = forceEntry(await captureHelp());
 
     expect(entry).not.toContain("それ以外は既存があればスキップ");
-    expect(entry).toContain("assistant/manifest/**");
+    expect(entry).toContain("adopter-owned assistant/catalog/**");
   });
 });
 

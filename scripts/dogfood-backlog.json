@@ -3,7 +3,7 @@
   "profiles": {
     "tdd": {
       ".qfai/specs/spec-0002/tdd/test-list.md": 9,
-      ".qfai/specs/spec-0003/tdd/test-list.md": 73,
+      ".qfai/specs/spec-0003/tdd/test-list.md": 71,
       ".qfai/specs/spec-0004/tdd/test-list.md": 104,
       ".qfai/specs/spec-0006/tdd/test-list.md": 59,
       ".qfai/specs/spec-0010/tdd/test-list.md": 24,
@@ -12,7 +12,7 @@
       ".qfai/specs/spec-0014/tdd/test-list.md": 15,
       ".qfai/specs/spec-0015/tdd/test-list.md": 43,
       ".qfai/specs/spec-0016/tdd/test-list.md": 56,
-      ".qfai/specs/spec-0017/tdd/test-list.md": 140,
+      ".qfai/specs/spec-0017/tdd/test-list.md": 139,
       "packages/qfai/tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts": 3,
       "packages/qfai/tests/e2e/spec0006DoctorRemediationE2E.test.ts": 3,
       "packages/qfai/tests/integration/spec0004SaasPackageAndPackLocation.test.ts": 3
@@ -31,7 +31,7 @@
       ".qfai/evidence/atdd-spec-0012.md": 1,
       ".qfai/specs/spec-0001": 1,
       ".qfai/specs/spec-0002/tdd/test-list.md": 9,
-      ".qfai/specs/spec-0003/tdd/test-list.md": 73,
+      ".qfai/specs/spec-0003/tdd/test-list.md": 71,
       ".qfai/specs/spec-0004": 1,
       ".qfai/specs/spec-0004/tdd/test-list.md": 104,
       ".qfai/specs/spec-0005": 1,
@@ -51,7 +51,7 @@
       ".qfai/specs/spec-0015/tdd/test-list.md": 43,
       ".qfai/specs/spec-0016": 1,
       ".qfai/specs/spec-0016/tdd/test-list.md": 56,
-      ".qfai/specs/spec-0017/tdd/test-list.md": 140,
+      ".qfai/specs/spec-0017/tdd/test-list.md": 139,
       "packages/qfai/tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts": 3,
       "packages/qfai/tests/e2e/spec0006DoctorRemediationE2E.test.ts": 3,
       "packages/qfai/tests/integration/spec0004SaasPackageAndPackLocation.test.ts": 3

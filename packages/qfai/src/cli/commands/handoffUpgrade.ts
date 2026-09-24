@@ -3,7 +3,7 @@
  * handoff file (e.g. `session-handoff.yaml`) into a conforming
  * canonical `.qfai/handoff.yaml` (CLI-HANDOFF schema).
  *
- * AC-0015-0020: recognized fields map to schema-defined slots; ALL
+ * Recognized fields map to schema-defined slots; ALL
  * original fields are preserved under a `legacy:` key so no data is
  * lost. Malformed / unreadable input fails with a clear error AND
  * does NOT overwrite or partially emit the canonical destination.
@@ -46,7 +46,7 @@ import { error as logError, info as logInfo } from "../lib/logger.js";
  * Sentinel key under which the raw legacy text is captured when the
  * legacy payload cannot be parsed into a plain object (regex fallback
  * case OR YAML returned a non-object like a list / scalar). Preserves
- * the AC-0015-0020 contract — "ALL original fields preserved under
+ * the upgrade contract — "ALL original fields preserved under
  * `legacy:` so no data is lost" — by ensuring callers can always
  * recover the original bytes even when structural keys were not
  * extractable.
@@ -115,7 +115,7 @@ function scanLegacyKeyValueLines(text: string): Record<string, unknown> {
 /**
  * YAML-or-JSON parser for the legacy handoff body. The legacy format is
  * intentionally heterogeneous (skills wrote ad-hoc YAML + JSON
- * variations); we honor AC-0015-0020 ("ALL original fields preserved
+ * variations); we honor the upgrade contract ("ALL original fields preserved
  * under `legacy:` so no data is lost") with a three-stage strategy:
  *
  *   1. Try JSON first — deterministic; lossless when input happens to
@@ -164,7 +164,7 @@ function parseLegacyBody(text: string): Record<string, unknown> | null {
   // legacy scalar scan and ALWAYS attach the raw text under the
   // sentinel key so callers can recover the original bytes.
   //
-  // AC-0015-0020 demands "ALL original fields preserved under
+  // The upgrade contract demands "ALL original fields preserved under
   // `legacy:` so no data is lost"; when neither JSON nor YAML
   // produces a structured object AND no regex keys are extractable
   // we still emit `{__legacy_raw__: <text>}` so the operator's
@@ -182,7 +182,7 @@ function parseLegacyBody(text: string): Record<string, unknown> | null {
  * shape stays predictable for downstream readers. The `legacy:` block
  * is serialized via the `yaml` package's `stringify` so nested
  * structures (e.g. `signature: { by, on }`) round-trip as proper
- * indented YAML — guaranteeing AC-0015-0020's "no data is lost"
+ * indented YAML — guaranteeing the upgrade contract's "no data is lost"
  * contract even when the legacy body carried nested fields that the
  * pre-fix regex scanner would have silently dropped.
  */

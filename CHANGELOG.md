@@ -4,6 +4,76 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **Specs move to the story tree.** Projects using the former
+  `.qfai/specs/spec-*` layout must run the bundled
+  `qfai-migration-spec-to-story` skill before adopting this release, or stay on
+  QFAI 1.x until migration is complete. Assistant assets use singular
+  `agent/`, `prompt/`, `rule/`, and `skill/` directories.
+
+- **The test runner moves to its fourth major, and the coverage provider with
+  it** (#2173). The two move as a pair: the provider's peer range names the
+  runner version exactly, so a provider a major ahead of the runner fails at
+  import rather than at install. Three declarations follow the runner's own
+  changes — the project list is imported by the root configuration instead of
+  being discovered by file name, isolation is declared directly rather than
+  inside a pool block, and `vite` is declared as the peer the runner requires
+  instead of being resolved for it. The supported Node range is unchanged.
+
+- **The type checker moves to TypeScript 6.** The seventh major ships the
+  compiler as a native binary and no longer exposes the classic compiler API
+  from its main entry, which the test tree and the declaration build both read;
+  the linter refuses to load against it at all. The sixth is the newest release
+  every part of this toolchain supports, and it reports the deprecations the
+  seventh turns into errors. The forward lane keeps type-checking against the
+  seventh, so nothing stops tracking it.
+
+  One deprecation is silenced, inside the declaration rollup only: the bundler
+  builds that rollup with `baseUrl` whatever the project declares, and this
+  package declares neither `baseUrl` nor `paths`. The lifting condition is
+  written beside it, and the forward lane now names any such exemption on a
+  passing run instead of reading only the compiler configuration.
+
+### Fixed
+
+- **A blocked ledger row whose Change Request is settled is reported**
+  (#2015). A `blocked` row that named a Change Request stayed `blocked` after
+  the request was decided, and nothing said so. `validate` now warns with
+  `QFAI-TDDLIST-021` when the row's `Blocked-By` cell names only Change
+  Requests — or, with no blocker there, its `Evidence` cell names some — and
+  each is `rejected`, `superseded`, or `approved` with `Applied at` filled. The
+  finding sends the row back through `/qfai-implement`, where `blocked -> todo`
+  is the resumption edge. An open request, an approved one not yet applied, an
+  id with no record in `.qfai/decisions/`, and a `Blocked-By` that names
+  another blocker as well report nothing.
+
+- **The rest of spec-0003 states what `qfai init` and the shipped workflows
+  do now** (#2203). Sixteen more statements still described the product before
+  a deliberate change. They said init creates the artifact directories and a
+  steering README, and that the `.gitignore` block carries README negations.
+  They also said a legacy layout only warns on stdout, two jobs install, one
+  job requests full history, the shape pins nine dimensions, and a second
+  runner tier is deferred. Each now says what the tests and the source do. The
+  one ledger row whose test case moved, `TDD-0001`, is reopened: its test
+  never asserted that init leaves the artifact directories out.
+
+- **The `/qfai-atdd` skill spells the RED test hash's `mode` the way the gate
+  hashes it** (#2256). The skill said the hash took the revision manifest's
+  shape, whose `mode` is four octal digits. The gate hashes six digits spelled
+  like git's tree mode — `100644`, `100755` or `120000` — so a hash computed as
+  the skill said never matched, and `validate` refused evidence that was
+  complete. The six-digit form is the intended one: the gate recomputes the
+  hash on whichever checkout runs it, and every permission bit but the execute
+  bits follows that checkout's umask. The skill now names the three values,
+  says any execute bit selects `100755`, and says to read the mode from the
+  file on disk rather than from git's index. It also says the execute bit does
+  not cross between Windows and POSIX, so a manifest naming an executable file
+  is hashed on the kind of system that recomputes it. The revision manifest
+  keeps its own four digits.
+
+## [1.12.3] - 2026-09-24
+
 ### Fixed
 
 - **spec-0012 states the auto-serve SIGINT path as the runner contract**

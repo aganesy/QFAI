@@ -1,16 +1,80 @@
 /** Init integration traceability and assistant-tree wiring. */
-import { readFile } from "node:fs/promises";
+// QFAI:EX-0001-0020-01
+import { lstat, mkdtemp, readdir, readFile, readlink } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+
+import { runInit } from "../../src/cli/commands/init.js";
+import { captureStdout } from "../helpers/stdout.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const INIT_CLI = path.resolve(__dirname, "..", "..", "src", "cli", "commands", "init.ts");
 
 // TC-0003-0001: Empty directory initialization
 describe("TC-0003-0001: Empty directory initialization", () => {
-  it("init module exports runInit", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
-    expect(content).toContain("runInit");
-    expect(content).toContain(".qfai");
+  const ARTIFACT_DIRS = [
+    "spec",
+    "specs",
+    "contracts",
+    "discussion",
+    "evidence",
+    "review",
+    "report",
+  ];
+  const SKILL_LINK_DIRS = [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"];
+
+  async function kindOf(
+    target: string,
+  ): Promise<"symlink" | "directory" | "file" | "other" | "absent"> {
+    try {
+      const entry = await lstat(target);
+      if (entry.isSymbolicLink()) return "symlink";
+      return entry.isDirectory() ? "directory" : entry.isFile() ? "file" : "other";
+    } catch (err: unknown) {
+      if (err instanceof Error && "code" in err && err.code === "ENOENT") return "absent";
+      throw err;
+    }
+  }
+
+  it("writes the singular assistant tree and skill links without project artifacts", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tc0001-"));
+    try {
+      await captureStdout(() => runInit({ dir, force: false, dryRun: false, yes: true }));
+
+      // Verify bullet 1.
+      expect(await kindOf(path.join(dir, ".qfai", "assistant"))).toBe("directory");
+      const present: string[] = [];
+      for (const sub of ARTIFACT_DIRS) {
+        if ((await kindOf(path.join(dir, ".qfai", sub))) !== "absent") present.push(sub);
+      }
+      expect(present, "init wrote an artifact directory under .qfai/").toEqual([]);
+
+      // Verify bullet 2.
+      expect(await kindOf(path.join(dir, "qfai.config.yaml"))).toBe("file");
+
+      // Verify bullet 3. Init has no fallback for a link it cannot create — it stops with the
+      // Developer Mode message — so a copied directory here is a failure on every platform.
+      const skills = (
+        await readdir(path.join(dir, ".qfai", "assistant", "skill"), { withFileTypes: true })
+      )
+        .filter((entry) => entry.isDirectory() && entry.name.startsWith("qfai-"))
+        .map((entry) => entry.name);
+      expect(skills.length, "init wrote no qfai-* skill").toBeGreaterThan(0);
+      const unlinked: string[] = [];
+      for (const linkDir of SKILL_LINK_DIRS) {
+        for (const skill of skills) {
+          const link = path.join(dir, linkDir, skill);
+          const target =
+            (await kindOf(link)) === "symlink" ? (await readlink(link)).replace(/\\/g, "/") : "";
+          if (!target.endsWith(`.qfai/assistant/skill/${skill}`))
+            unlinked.push(`${linkDir}/${skill}`);
+        }
+      }
+      expect(unlinked, "a skill is not linked to its canonical directory").toEqual([]);
+    } finally {
+      await removeTempTree(dir);
+    }
   });
 });
 

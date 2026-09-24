@@ -357,7 +357,7 @@ describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing
 });
 
 // QFAI:EX-0002-0003-04
-describe("TC-0003-0037 (TDD-0037): two installing job declarations, four and three executing instances, zero secret references", () => {
+describe("TC-0003-0037 (TDD-0037): three installing job declarations, nine and eight executing instances, zero secret references", () => {
   // Setup is TC-0003-0036's init output tree (the scriptless adopter);
   // every count below is taken over EVERY workflow file init wrote.
   // Scope notes, disclosed:
@@ -466,7 +466,7 @@ describe("TC-0003-0037 (TDD-0037): two installing job declarations, four and thr
     return count;
   }
 
-  it("the init-written jobs that install dependencies are exactly the docs and validate lanes, four instances on a pull request and three on a push", async () => {
+  it("the init-written jobs that install dependencies are exactly the docs, test and validate lanes, nine instances on a pull request and eight on a push", async () => {
     const files = await initWorkflowSet();
     // Non-vacuity: the whole multi-file set is what is being counted.
     expect(files.length, "the init-written set must have two or more files").toBeGreaterThanOrEqual(
@@ -502,11 +502,9 @@ describe("TC-0003-0037 (TDD-0037): two installing job declarations, four and thr
       { file: "qfai-validate.yml", jobId: "validate" },
     ]);
 
-    // The declaration count is not the run count. Both installing jobs are
-    // matrix jobs, and the validation profiles are selected by the event, so
-    // what an adopter's runner actually starts is the expansion — four
-    // installs on a pull request, three on a push. A declaration count alone
-    // reads a leg that stopped expanding as unchanged.
+    // The declaration count is not the run count. Matrix expansion and
+    // event-selected validation profiles determine the executing instances.
+    // A declaration count alone would miss a leg that stopped expanding.
     const instances = (event: string): number =>
       installing.reduce((total, entry) => total + matrixInstances(entry.job, event), 0);
     // Nine and eight rather than four and three: the test lane's axis is

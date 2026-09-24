@@ -131,8 +131,8 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
   // SSOT-sync (Nv4N): the regex set below MUST stay in lock-step with
   // - `scripts/check-no-internal-version-leakage.sh` L21..L45 (POSIX
   //   ERE, post-build dist/ scan)
-  // - `tests/integration/distributedSurfaceLeakage.test.ts:54` (JS
-  //   RegExp, smoke against `qfai init` output)
+  // - `tests/helpers/distributedSurfaceScan.ts` (JS RegExp, smoke
+  //   against `qfai init` output)
   // The three sites carry the same forbidden classes. Updating one
   // (e.g. tightening `INTERNAL_VERSION_RE` to a QFAI-context regex)
   // requires updating all three. Cross-reference comments at the other
@@ -215,9 +215,53 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     appliesTo: ["src-comment"],
   },
   {
+    // Each new story-tree shape is rejected only outside the generated
+    // sample band. The DEC/OQ lookahead leaves old numeric composites to
+    // their existing rules above.
+    name: "internal-story-dec-id-jsdoc-leak",
+    re: /\bDEC-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])/,
+    suggestion: "Keep story-tree decision IDs outside shipped source comments.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-story-oq-id-jsdoc-leak",
+    re: /\bOQ-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])/,
+    suggestion: "Keep story-tree open-question IDs outside shipped source comments.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-story-bf-id-jsdoc-leak",
+    re: /\bBF-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])/,
+    suggestion: "Keep story-tree business-flow IDs outside shipped source comments.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-story-us-id-jsdoc-leak",
+    re: /\bUS-(?:(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})-[0-9]{4}|[0-9]{4}-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3}))\b/,
+    suggestion: "Keep story-tree user-story IDs outside shipped source comments.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-story-ac-id-jsdoc-leak",
+    re: /\bAC-(?:(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})-[0-9]{4}-[0-9]{2}|[0-9]{4}-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})-[0-9]{2}|[0-9]{4}-[0-9]{4}-(?:00|[1-9][0-9]))\b/,
+    suggestion: "Keep story-tree acceptance-criterion IDs outside shipped source comments.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-story-ex-id-jsdoc-leak",
+    re: /\bEX-(?:(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})-[0-9]{4}-[0-9]{2}|[0-9]{4}-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})-[0-9]{2}|[0-9]{4}-[0-9]{4}-(?:00|[1-9][0-9]))\b/,
+    suggestion: "Keep story-tree example IDs outside shipped source comments.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    name: "internal-story-br-id-jsdoc-leak",
+    re: /\bBR-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])/,
+    suggestion: "Keep story-tree business-rule IDs outside shipped source comments.",
+    appliesTo: ["src-comment"],
+  },
+  {
     // Legacy cross-spec change IDs (`CHG-NNN`) resolve only inside this
-    // repository. They belong to the same authoring traceability surface
-    // as DEC / DR / OQ, so they get the same pre-build treatment.
+    // repository. They receive the same pre-build treatment as DEC and OQ.
     name: "internal-chg-id-jsdoc-leak",
     re: /\bCHG-\d+\b/,
     suggestion:

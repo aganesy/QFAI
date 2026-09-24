@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "oldPath": ".qfai/decisions/CR-20260923-0011-the-rest-of-spec-0003-still-states-obligations-the-product-reversed.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260923-0011-the-rest-of-spec-0003-still-states-obligations-the-product-reversed.md",
+      "sha256": "465b5e7eb03291ecc7028ab456a2a3f6a5904426d792f72ce1c7799556edf585",
+      "bytes": 15449
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260923-0013-a-renamed-test-leaves-its-completed-row-on-a-stale-proof.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260923-0013-a-renamed-test-leaves-its-completed-row-on-a-stale-proof.md",
+      "sha256": "3f488a0b8056d39bcafdcce4a8c3f808eec2b77cbcaabec703f4aec57f3ac9fb",
+      "bytes": 4052
+    }
+  ]
+}
