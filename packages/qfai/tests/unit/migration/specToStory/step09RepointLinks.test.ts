@@ -4,10 +4,35 @@ import { defaultConfig } from "../../../../src/core/config.js";
 import { executePlannedStep } from "../../../../src/migration/specToStory/harness.js";
 import { step09 } from "../../../../src/migration/specToStory/step09RepointLinks.js";
 
-const repair = vi.hoisted(() => vi.fn());
+type RepairOptions = { includeMissing?: boolean; onlyRelative?: ReadonlySet<string> };
+type Repair = (
+  root: string,
+  dryRun: boolean,
+  report: (line: string) => void,
+  options: RepairOptions,
+) => void | Promise<void>;
+
+const repairStub = vi.hoisted(() => {
+  const calls: Parameters<Repair>[] = [];
+  let implementation: Repair = () => {};
+  return {
+    calls,
+    use(next: Repair) {
+      implementation = next;
+    },
+    async run(...args: Parameters<Repair>) {
+      calls.push(args);
+      await implementation(...args);
+    },
+    reset() {
+      calls.length = 0;
+      implementation = () => {};
+    },
+  };
+});
 
 vi.mock("../../../../src/cli/commands/init.js", () => ({
-  repairIntegrationWrappers: repair,
+  repairIntegrationWrappers: repairStub.run,
 }));
 
 const context = {
@@ -17,11 +42,11 @@ const context = {
   config: structuredClone(defaultConfig),
 };
 
-beforeEach(() => repair.mockClear());
+beforeEach(() => repairStub.reset());
 
 describe("migration integration-link repointing", () => {
   it("journals each host link and delegates one real writer run", async () => {
-    repair.mockImplementation((_root: string, dryRun: boolean, report: (line: string) => void) => {
+    repairStub.use((_root, dryRun, report) => {
       if (!dryRun) return;
       report(
         "autoremediate: integration wrappers — would relink=2, left alone=0, failed=0 (dry-run)",
@@ -37,48 +62,66 @@ describe("migration integration-link repointing", () => {
       target: ".claude/skills/qfai-sdd",
       targets: [".claude/skills/qfai-sdd", ".github/agents/backend-engineer.agent.md"],
     });
-    expect(repair).toHaveBeenCalledWith(context.root, true, expect.any(Function), {
-      includeMissing: true,
-    });
+    expect(repairStub.calls[0]).toEqual([
+      context.root,
+      true,
+      expect.any(Function),
+      {
+        includeMissing: true,
+      },
+    ]);
 
     const operation = plan.operations[0];
     if (operation?.kind !== "delegate") throw new Error("Expected a delegated operation.");
     await operation.apply();
-    expect(repair).toHaveBeenCalledTimes(2);
-    expect(repair).toHaveBeenLastCalledWith(context.root, false, expect.any(Function), {
-      includeMissing: true,
-      onlyRelative: new Set([
-        ".claude/skills/qfai-sdd",
-        ".github/agents/backend-engineer.agent.md",
-      ]),
-    });
+    expect(repairStub.calls).toHaveLength(2);
+    expect(repairStub.calls[1]).toEqual([
+      context.root,
+      false,
+      expect.any(Function),
+      {
+        includeMissing: true,
+        onlyRelative: new Set([
+          ".claude/skills/qfai-sdd",
+          ".github/agents/backend-engineer.agent.md",
+        ]),
+      },
+    ]);
   });
 
   it("returns no operation when every link already points at the current target", async () => {
-    repair.mockImplementation((_root: string, _dryRun: boolean, report: (line: string) => void) => {
+    repairStub.use((_root, _dryRun, report) => {
       report("autoremediate: integration wrappers — nothing to repair");
     });
 
     expect((await step09.plan(context)).operations).toEqual([]);
-    expect(repair).toHaveBeenCalledOnce();
-    expect(repair).toHaveBeenCalledWith(context.root, true, expect.any(Function), {
-      includeMissing: true,
-    });
+    expect(repairStub.calls).toEqual([
+      [
+        context.root,
+        true,
+        expect.any(Function),
+        {
+          includeMissing: true,
+        },
+      ],
+    ]);
   });
 
   it("refuses an unreadable integration surface before any write", async () => {
-    repair.mockImplementation((_root: string, _dryRun: boolean, report: (line: string) => void) => {
+    repairStub.use((_root, _dryRun, report) => {
       report(
         "autoremediate: integration wrappers — skipped: the wrappers could not be inspected (check the permissions and the path)",
       );
     });
 
     await expect(step09.plan(context)).rejects.toThrow("could not be inspected");
-    expect(repair).toHaveBeenCalledOnce();
+    expect(repairStub.calls).toHaveLength(1);
   });
 
   it("maps a filesystem inspection failure to exit 2 before any write", async () => {
-    repair.mockRejectedValue(Object.assign(new Error("permission denied"), { code: "EACCES" }));
+    repairStub.use(() =>
+      Promise.reject(Object.assign(new Error("permission denied"), { code: "EACCES" })),
+    );
 
     let refusal = "";
     const code = await executePlannedStep(step09, context, false, {
@@ -91,11 +134,11 @@ describe("migration integration-link repointing", () => {
     });
     expect(code).toBe(2);
     expect(refusal).toContain("Cannot inspect integration wrappers");
-    expect(repair).toHaveBeenCalledOnce();
+    expect(repairStub.calls).toHaveLength(1);
   });
 
   it("reports an occupied wrapper for a person without overwriting it", async () => {
-    repair.mockImplementation((_root: string, _dryRun: boolean, report: (line: string) => void) => {
+    repairStub.use((_root, _dryRun, report) => {
       report("  left alone .claude/skills/qfai-sdd: a real directory occupies the path");
     });
 
@@ -111,11 +154,11 @@ describe("migration integration-link repointing", () => {
     expect(code).toBe(3);
     expect(output).toContain("## For a person");
     expect(output).toContain("a real directory occupies the path");
-    expect(repair).toHaveBeenCalledOnce();
+    expect(repairStub.calls).toHaveLength(1);
   });
 
   it("repairs a managed link while reporting a preexisting user-owned wrapper with exit 3", async () => {
-    repair.mockImplementation((_root: string, dryRun: boolean, report: (line: string) => void) => {
+    repairStub.use((_root, dryRun, report) => {
       report(
         dryRun ? "  would relink .claude/skills/qfai-sdd" : "  relinked .claude/skills/qfai-sdd",
       );
@@ -136,11 +179,11 @@ describe("migration integration-link repointing", () => {
     expect(code).toBe(3);
     expect(output).toContain(".claude/skills/qfai-sdd: repoint host integration link");
     expect(output).toContain("left alone .github/agents/backend-engineer.agent.md");
-    expect(repair).toHaveBeenCalledTimes(2);
+    expect(repairStub.calls).toHaveLength(2);
   });
 
   it("fails if a planned link becomes occupied before the real writer runs", async () => {
-    repair.mockImplementation((_root: string, dryRun: boolean, report: (line: string) => void) => {
+    repairStub.use((_root, dryRun, report) => {
       report(
         dryRun
           ? "  would relink .claude/skills/qfai-sdd"
@@ -155,7 +198,7 @@ describe("migration integration-link repointing", () => {
   });
 
   it("does not claim a completed repair when the writer reports a real-run failure", async () => {
-    repair.mockImplementation((_root: string, dryRun: boolean, report: (line: string) => void) => {
+    repairStub.use((_root, dryRun, report) => {
       report(
         dryRun
           ? "  would relink .claude/skills/qfai-sdd"

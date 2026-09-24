@@ -493,7 +493,7 @@ describe("migration steps 5 to 8", () => {
     await put(
       context.root,
       ".qfai/evidence/migration-spec-to-story/plan.yaml",
-      "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
+      "flows:\n  - title: Checkout\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
     );
     const source =
       "| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | An order total is never negative. |\n";
