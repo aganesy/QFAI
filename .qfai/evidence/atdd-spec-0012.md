@@ -887,6 +887,8 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardow
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Run on the tree the reviews read
 - Refactor verify revision: 0413184a06c29c1fae13cbf4ebaaee08440a4448
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt 3f1fc9903 + the prototypingIterate.ts:1278 deletion; it matches working-tree+1c8af7d6…; the selector fails as an assertion at autoServeTeardownFailure.test.ts:150:51; RED test hash 297dba1f… recomputes; the mutation stays inside teardownOnce; GREEN 1/1 and whole file 1/1 at 79af8ad63. Gate taken after the revert, on the rebuilt tree
 
 ## Coverage Depth Matrix
 
@@ -1004,6 +1006,7 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardow
 | 42 | - | n/a | grilling(-@2026-09-24T02:32:49.865Z/none): none | - | - | PASS |
 | 43 | backend-engineer | backend-engineer | /qfai-implement: TDD-0577 falsifiability run with line 1278 deleted, then the revert and the restored GREEN | #tdd-0577, `prototypingIterate.ts` | Round 1 | PASS |
 | 44 | backend-engineer | backend-engineer | /qfai-implement: TDD-0577 refactor verify on the committed tree | #tdd-0577 | Refactor verify fields | PASS |
+| 45 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0577 RED phase gate on the rebuilt falsifiability tree | #tdd-0577 | qa-gatekeeper fields | PASS |
 
 ## Execution logs
 
