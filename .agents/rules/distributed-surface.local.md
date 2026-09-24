@@ -30,6 +30,13 @@ the identifier does not belong in it.
 | Internal decision ID         | `DEC-NNNN-NNNN`                     | `DEC-0001-0042`          |
 | Internal design-rationale ID | `DR-NNNN`                           | `DR-0007`                |
 | Internal open-question ID    | `OQ-NNNN-NNNN`                      | `OQ-0012-0006`           |
+| Story decision ID            | `DEC-NNNN`                          | `DEC-0010`               |
+| Story open-question ID       | `OQ-NNNN`                           | `OQ-0010`                |
+| Story business-flow ID       | `BF-NNNN`                           | `BF-0010`                |
+| Story user-story ID          | `US-NNNN-NNNN`                      | `US-0001-0010`           |
+| Story acceptance ID          | `AC-NNNN-NNNN-NN`                   | `AC-0001-0001-10`        |
+| Story example ID             | `EX-NNNN-NNNN-NN`                   | `EX-0001-0010-01`        |
+| Story business-rule ID       | `BR-NNNN`                           | `BR-0010`                |
 | Internal change ID           | `CHG-NNN`                           | `CHG-003`                |
 | Retired trace prefix         | `QFAI-PROT2-NNN`                    |                          |
 | Private version marker       | `vN.M`, `vN.M.P`, `v1.x`            | `v2.0`, `v3.0`           |
@@ -41,6 +48,11 @@ the identifier does not belong in it.
   may appear.
 - `version` in `package.json` is the released version and is not a private
   marker.
+- The seven story-tree shapes are permitted when every four-digit segment is
+  `0001` to `0009` and every two-digit tail is `01` to `09`. An ID with any
+  segment outside that sample band is internal. The short `DEC-NNNN` and
+  `OQ-NNNN` patterns do not consume the leading segment of a legacy
+  `DEC-NNNN-NNNN` or `OQ-NNNN-NNNN` ID; the legacy classes still reject those.
 - The version in the **file name** of
   `.qfai/assistant/process/migrations/v<MAJOR>.<MINOR>.<PATCH>[-*].md` stands.
   `qfai init --upgrade-assistant-tree` writes one memo per upgrade and other

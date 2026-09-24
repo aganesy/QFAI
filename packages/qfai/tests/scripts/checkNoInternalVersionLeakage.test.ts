@@ -38,6 +38,11 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 import { removeTempTree } from "../helpers/tempTree.js";
+import {
+  STORY_ID_BOUNDARIES,
+  STORY_ID_TRAILING_HYPHEN_BOUNDARIES,
+  scanDistributedSurface,
+} from "../helpers/distributedSurfaceScan.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = path.resolve(__dirname, "../..");
@@ -96,6 +101,57 @@ async function stageAssets(root: string, files: ReadonlyArray<[string, string]>)
 }
 
 describe("check-no-internal-version-leakage.sh defense branches", () => {
+  it.each(STORY_ID_BOUNDARIES)(
+    "accepts %s and rejects %s in packed content",
+    async (sample, internal) => {
+      const root = await newTempDir();
+      await stageAssets(root, [["sample.md", `${sample}\n`]]);
+      expect((await scanDistributedSurface(root)).hits).toEqual([]);
+      expect(runGuard(root).status).toBe(0);
+      await writeFile(path.join(root, "assets", "sample.md"), `${internal}\n`, "utf-8");
+      expect((await scanDistributedSurface(root)).hits.map((hit) => hit.className)).toEqual([
+        "internal story id",
+      ]);
+      const result = runGuard(root);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("sample.md");
+    },
+  );
+
+  it.each(STORY_ID_TRAILING_HYPHEN_BOUNDARIES)(
+    "accepts %s and rejects %s at a packed line end",
+    async (sample, internal) => {
+      const root = await newTempDir();
+      await stageAssets(root, [["sample.md", sample]]);
+      expect((await scanDistributedSurface(root)).hits).toEqual([]);
+      expect(runGuard(root).status).toBe(0);
+      await writeFile(path.join(root, "assets", "sample.md"), internal, "utf-8");
+      expect((await scanDistributedSurface(root)).hits.map((hit) => hit.className)).toEqual([
+        "internal story id",
+      ]);
+      const result = runGuard(root);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("sample.md");
+    },
+  );
+
+  it("keeps old composite decisions and questions in their existing class", async () => {
+    const root = await newTempDir();
+    await stageAssets(root, [["sample.md", "DEC-0010-0001 OQ-0010-0001\n"]]);
+    const result = runGuard(root);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("DEC-0010-0001 OQ-0010-0001");
+  });
+
+  it("scans story IDs in packed file names", async () => {
+    const root = await newTempDir();
+    await stageAssets(root, [["BF-0010.md", "clean body\n"]]);
+    const result = runGuard(root);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("FILE NAME");
+    expect(result.stderr).toContain("BF-0010.md");
+  });
+
   it("fails loudly when npm cannot list the package (exit 1)", async () => {
     // Regression: an earlier draft used `mapfile < <(node -e '...')`
     // which silently swallowed node failures, masking corrupt
