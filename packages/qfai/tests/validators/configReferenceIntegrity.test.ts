@@ -35,12 +35,12 @@ afterEach(async () => {
 function makeConfig(overrides: { primaryUiContract?: string; packPath?: string } = {}): QfaiConfig {
   return {
     paths: {
-      contractsDir: ".qfai/contracts",
-      specsDir: ".qfai/specs",
+      contractsDir: ".qfai/spec/03_contract",
+      specsDir: ".qfai/spec",
       discussionDir: ".qfai/discussion",
       outDir: ".qfai/out",
-      skillsDir: ".qfai/assistant/skills",
-      promptsDir: ".qfai/assistant/skills",
+      skillsDir: ".qfai/assistant/skill",
+      promptsDir: ".qfai/assistant/skill",
       srcDir: "src",
       testsDir: "tests",
     },
@@ -50,8 +50,6 @@ function makeConfig(overrides: { primaryUiContract?: string; packPath?: string }
       testStrategy: {
         requireLayerTags: false,
         requireSizeTags: false,
-        maxE2eScenarioRatio: null,
-        maxE2eScenarioCount: null,
         forbidTestTodoStubs: true,
       },
       traceability: {
@@ -83,15 +81,15 @@ describe("validateConfigReferenceIntegrity", () => {
   it("returns empty when a configured UI contract declares screens", async () => {
     const root = await newTempDir();
     await seedDirs(root, [
-      ".qfai/specs",
-      ".qfai/contracts/ui",
+      ".qfai/spec",
+      ".qfai/spec/03_contract/ui",
       ".qfai/discussion",
-      ".qfai/assistant/skills",
+      ".qfai/assistant/skill",
       "src",
       "tests",
     ]);
     await writeFile(
-      path.join(root, ".qfai/contracts/ui/home.yaml"),
+      path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
       "# QFAI-CONTRACT-ID: CON-UI-0012\nscreens: [{id: home}]\n",
       "utf-8",
     );
@@ -105,10 +103,10 @@ describe("validateConfigReferenceIntegrity", () => {
   it("emits QFAI-CFG-LINK-001 when the configured UI contract is absent", async () => {
     const root = await newTempDir();
     await seedDirs(root, [
-      ".qfai/specs",
-      ".qfai/contracts",
+      ".qfai/spec",
+      ".qfai/spec/03_contract",
       ".qfai/discussion",
-      ".qfai/assistant/skills",
+      ".qfai/assistant/skill",
       "src",
       "tests",
     ]);
@@ -150,10 +148,10 @@ describe("validateConfigReferenceIntegrity", () => {
   it("emits QFAI-CFG-LINK-003 (error) when calibration.packPath is missing", async () => {
     const root = await newTempDir();
     await seedDirs(root, [
-      ".qfai/specs",
-      ".qfai/contracts",
+      ".qfai/spec",
+      ".qfai/spec/03_contract",
       ".qfai/discussion",
-      ".qfai/assistant/skills",
+      ".qfai/assistant/skill",
       "src",
       "tests",
     ]);
@@ -169,10 +167,10 @@ describe("validateConfigReferenceIntegrity", () => {
   it("does not require the default calibration pack on a fresh init workspace", async () => {
     const root = await newTempDir();
     await seedDirs(root, [
-      ".qfai/specs",
-      ".qfai/contracts",
+      ".qfai/spec",
+      ".qfai/spec/03_contract",
       ".qfai/discussion",
-      ".qfai/assistant/skills",
+      ".qfai/assistant/skill",
       "src",
       "tests",
     ]);
@@ -186,10 +184,10 @@ describe("validateConfigReferenceIntegrity", () => {
   it("treats outDir absence as silent (lazy creation)", async () => {
     const root = await newTempDir();
     await seedDirs(root, [
-      ".qfai/specs",
-      ".qfai/contracts",
+      ".qfai/spec",
+      ".qfai/spec/03_contract",
       ".qfai/discussion",
-      ".qfai/assistant/skills",
+      ".qfai/assistant/skill",
       "src",
       "tests",
       // No `.qfai/out`

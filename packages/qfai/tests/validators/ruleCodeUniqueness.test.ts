@@ -53,7 +53,6 @@ const KNOWN_COLLISIONS = new Map<string, readonly string[]>([]);
  * here.
  */
 const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
-  ["validators/agentDefinition.ts", new Map([["code", 1]])],
   ["validators/designAudit.ts", new Map([["finding.ruleId", 1]])],
   // One emission site for two stages, each with its own code, taken from the
   // subject table beside it. Both codes are module-level constants the
@@ -74,6 +73,9 @@ const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
   // two codes it can reach are declared in `justificationCatalog.ts` — which this scan
   // reads as their owner — rather than restated here.
   ["validators/reviewerJustification.ts", new Map([["code", 2]])],
+  // Story-tree validators select a code from a closed, module-declared table.
+  ["validators/storyTreeCoverageDepth.ts", new Map([["code", 1]])],
+  ["validators/storyTreeStructure.ts", new Map([["code", 1]])],
 ]);
 
 /**
@@ -135,25 +137,6 @@ const RETIRED_CODES: readonly string[] = [
  * literals, so they appear in `owners` too and a second emitter collides.
  */
 const DYNAMIC_SITE_CODES = new Map<string, readonly string[]>([
-  [
-    "validators/agentDefinition.ts",
-    [
-      "QFAI-AGENT-001",
-      "QFAI-AGENT-002",
-      "QFAI-AGENT-003",
-      "QFAI-AGENT-004",
-      "QFAI-AGENT-005",
-      "QFAI-AGENT-006",
-      "QFAI-AGENT-007",
-      "QFAI-AGENT-008",
-      "QFAI-AGENT-009",
-      "QFAI-AGENT-010",
-      "QFAI-AGENT-011",
-      "QFAI-AGENT-012",
-      "QFAI-AGENT-013",
-      "QFAI-AGENT-014",
-    ],
-  ],
   ["validators/designAudit.ts", ["QFAI-AUD-001", "QFAI-AUD-004", "QFAI-AUD-020", "QFAI-AUD-021"]],
   // One per stage. The check reads a record a stage was told to write, and the
   // two stages are gated by different profiles — a single code would be claimed
@@ -207,6 +190,19 @@ const DYNAMIC_SITE_CODES = new Map<string, readonly string[]>([
       "R-PROMPT-SCANNER-DRIFT",
       "R-REJECTED-READOPT",
       "R-WORKLOG-DRIFT",
+    ],
+  ],
+  ["validators/storyTreeCoverageDepth.ts", ["QFAI-ATDD-131", "QFAI-ATDD-132", "QFAI-ATDD-133"]],
+  [
+    "validators/storyTreeStructure.ts",
+    [
+      "QFAI-SPACK-102",
+      "QFAI-STORY-001",
+      "QFAI-STORY-002",
+      "QFAI-STORY-003",
+      "QFAI-STORY-004",
+      "QFAI-STORY-005",
+      "QFAI-STORY-011",
     ],
   ],
 ]);

@@ -25,7 +25,7 @@ afterEach(async () => {
 });
 
 async function seedUiContracts(root: string): Promise<void> {
-  const contractsDir = path.join(root, ".qfai", "contracts", "ui");
+  const contractsDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
   await mkdir(contractsDir, { recursive: true });
   await writeFile(
     path.join(contractsDir, "ui-0001-orders.yaml"),
@@ -128,7 +128,7 @@ describe("validateUiEvidenceArtifacts", () => {
 
   it("危険な screenId を evidence filename として使わず error を返す", async () => {
     const root = await newTempRoot();
-    const contractsDir = path.join(root, ".qfai", "contracts", "ui");
+    const contractsDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
     await mkdir(contractsDir, { recursive: true });
     await writeFile(
       path.join(contractsDir, "ui-0001-orders.yaml"),
@@ -144,7 +144,7 @@ describe("validateUiEvidenceArtifacts", () => {
     const issues = await validateUiEvidenceArtifacts(root, defaultConfig);
 
     expect(issues.map((issue) => issue.code)).toEqual(["QFAI-UIE-003"]);
-    expect(issues[0]?.file).toContain(".qfai/contracts/ui/ui-0001-orders.yaml#../escape");
+    expect(issues[0]?.file).toContain(".qfai/spec/03_contract/ui/ui-0001-orders.yaml#../escape");
   });
 
   it("reads the evidence where iterate writes it when specsDir is moved", async () => {
@@ -156,7 +156,7 @@ describe("validateUiEvidenceArtifacts", () => {
       ...defaultConfig,
       paths: { ...defaultConfig.paths, specsDir: "workspace/specs" },
     };
-    const contractsDir = path.join(root, ".qfai", "contracts", "ui");
+    const contractsDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
     await mkdir(contractsDir, { recursive: true });
     await writeFile(
       path.join(contractsDir, "ui-0001-orders.yaml"),
@@ -173,9 +173,9 @@ describe("validateUiEvidenceArtifacts", () => {
 
     // A copy beside the moved specs directory is not where iterate writes.
     const beside = await newTempRoot();
-    await mkdir(path.join(beside, ".qfai", "contracts", "ui"), { recursive: true });
+    await mkdir(path.join(beside, ".qfai", "spec", "03_contract", "ui"), { recursive: true });
     await writeFile(
-      path.join(beside, ".qfai", "contracts", "ui", "ui-0001-orders.yaml"),
+      path.join(beside, ".qfai", "spec", "03_contract", "ui", "ui-0001-orders.yaml"),
       ["screens:", "  - id: orders-dashboard", '    route: "/orders"'].join("\n"),
       "utf-8",
     );

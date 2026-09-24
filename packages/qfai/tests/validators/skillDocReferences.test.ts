@@ -1,5 +1,5 @@
 /**
- * Validator: skillDocReferences (.qfai/assistant/skills/<skill>/SKILL.md).
+ * Validator: skillDocReferences (.qfai/assistant/skill/<skill>/SKILL.md).
  *
  * Covers TC-0004-0023 (project_memory enforcement) and TC-0004-0024
  * (W-SKILL-DOC-BROKEN-REF).
@@ -19,7 +19,7 @@ async function newRoot(prefix: string): Promise<string> {
 }
 
 async function seedSkill(root: string, id: string, body: string): Promise<void> {
-  const dir = path.join(root, ".qfai", "assistant", "skills", id);
+  const dir = path.join(root, ".qfai", "assistant", "skill", id);
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, "SKILL.md"), body, "utf-8");
 }

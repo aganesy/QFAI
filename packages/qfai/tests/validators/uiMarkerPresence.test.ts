@@ -61,14 +61,14 @@ afterEach(async () => {
 describe("a marker the contract declares and no source carries", () => {
   it("is reported once, against the contract that declared it", async () => {
     const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractDeclaring("submit"));
+    await write(root, ".qfai/spec/03_contract/ui/order.yaml", contractDeclaring("submit"));
     await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
 
     const issues = await validateUiMarkerPresence(root, defaultConfig);
 
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe(UI_MARKER_NOT_RENDERED_RULE_ID);
-    expect(issues[0]?.file).toBe(".qfai/contracts/ui/order.yaml");
+    expect(issues[0]?.file).toBe(".qfai/spec/03_contract/ui/order.yaml");
     expect(issues[0]?.message).toContain("SCR-ORDER:submit");
   });
 
@@ -76,7 +76,7 @@ describe("a marker the contract declares and no source carries", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       contractDeclaring("submit", { required: true }),
     );
     await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
@@ -88,7 +88,7 @@ describe("a marker the contract declares and no source carries", () => {
 
   it("says nothing about required for an element the contract left unmarked", async () => {
     const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractDeclaring("submit"));
+    await write(root, ".qfai/spec/03_contract/ui/order.yaml", contractDeclaring("submit"));
     await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
 
     const [finding] = await validateUiMarkerPresence(root, defaultConfig);
@@ -100,7 +100,7 @@ describe("a marker the contract declares and no source carries", () => {
 describe("a marker the source mentions", () => {
   it("is not reported when the attribute is written out", async () => {
     const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractDeclaring("submit"));
+    await write(root, ".qfai/spec/03_contract/ui/order.yaml", contractDeclaring("submit"));
     await write(root, "src/OrderForm.tsx", '<button data-qfai="SCR-ORDER:submit">Send</button>\n');
 
     expect(await validateUiMarkerPresence(root, defaultConfig)).toEqual([]);
@@ -108,7 +108,7 @@ describe("a marker the source mentions", () => {
 
   it("is not reported when a framework renders it through a variable", async () => {
     const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractDeclaring("submit"));
+    await write(root, ".qfai/spec/03_contract/ui/order.yaml", contractDeclaring("submit"));
     await write(root, "src/markers.ts", 'export const SUBMIT = "SCR-ORDER:submit";\n');
     await write(root, "src/OrderForm.tsx", "<button {...marker(SUBMIT)} />\n");
 
@@ -117,7 +117,7 @@ describe("a marker the source mentions", () => {
 
   it("is found in any of the extensions a view can be written in", async () => {
     const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractDeclaring("submit"));
+    await write(root, ".qfai/spec/03_contract/ui/order.yaml", contractDeclaring("submit"));
     await write(root, "src/views/order.vue", "<button data-qfai='SCR-ORDER:submit' />\n");
 
     expect(await validateUiMarkerPresence(root, defaultConfig)).toEqual([]);
@@ -125,7 +125,7 @@ describe("a marker the source mentions", () => {
 
   it("is found below the top level of the source tree", async () => {
     const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractDeclaring("submit"));
+    await write(root, ".qfai/spec/03_contract/ui/order.yaml", contractDeclaring("submit"));
     await write(
       root,
       "src/features/order/form/Submit.tsx",
@@ -137,7 +137,7 @@ describe("a marker the source mentions", () => {
 
   it("is not looked for outside the source directory", async () => {
     const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractDeclaring("submit"));
+    await write(root, ".qfai/spec/03_contract/ui/order.yaml", contractDeclaring("submit"));
     await write(root, "app/OrderForm.tsx", '<button data-qfai="SCR-ORDER:submit" />\n');
 
     expect(await validateUiMarkerPresence(root, defaultConfig)).toHaveLength(1);
@@ -149,7 +149,7 @@ describe("where in the contract the marker is written", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       [
         "prototype:",
         "  mode: interactive",
@@ -178,7 +178,7 @@ describe("how the contract wrote the value", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       [
         "id: SCR-ORDER",
         "elements:",
@@ -199,7 +199,7 @@ describe("how the contract wrote the value", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       [
         "id: SCR-ORDER",
         "elements:",
@@ -217,7 +217,7 @@ describe("how the contract wrote the value", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       [
         "id: SCR-ORDER",
         "elements:",
@@ -235,7 +235,7 @@ describe("how the contract wrote the value", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       [
         "id: SCR-ORDER",
         "elements:",
@@ -255,7 +255,7 @@ describe("how the contract wrote the value", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       ["id: SCR-ORDER", "elements:", "  - id: submit", "    selector: [data-qfai=]", ""].join("\n"),
     );
     await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
@@ -269,7 +269,7 @@ describe("what the rule declines to ask for", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       ["id: SCR-ORDER", "elements:", "  - id: submit", "    required: true", ""].join("\n"),
     );
     await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
@@ -286,7 +286,7 @@ describe("what the rule declines to ask for", () => {
 
   it("reports a declared marker even when the source tree is missing", async () => {
     const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractDeclaring("submit"));
+    await write(root, ".qfai/spec/03_contract/ui/order.yaml", contractDeclaring("submit"));
 
     const issues = await validateUiMarkerPresence(root, defaultConfig);
 
@@ -316,7 +316,7 @@ describe("more than one declaration", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       [
         "id: SCR-ORDER",
         "elements:",
@@ -337,8 +337,8 @@ describe("more than one declaration", () => {
 
   it("reports a marker two contracts declare once", async () => {
     const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractDeclaring("submit"));
-    await write(root, ".qfai/contracts/ui/order-mobile.yaml", contractDeclaring("submit"));
+    await write(root, ".qfai/spec/03_contract/ui/order.yaml", contractDeclaring("submit"));
+    await write(root, ".qfai/spec/03_contract/ui/order-mobile.yaml", contractDeclaring("submit"));
     await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
 
     expect(await validateUiMarkerPresence(root, defaultConfig)).toHaveLength(1);
