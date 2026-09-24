@@ -806,14 +806,34 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 - Round 1: GREEN result: One run per entry. Entry 1: Test Files 1 passed (1); Tests 1 passed | 17 skipped (18). Entry 2: Test Files 1 passed (1); Tests 1 passed | 17 skipped (18)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts tests/integration/cli/commands/validate.sddProfileLedgerSeed.test.ts tests/core/tddListObligationColumns.test.ts tests/assets/completedRowNamesItsTestCase.test.ts
-- Refactor verify result: Test Files 4 passed (4); Tests 70 passed (70) — the row's test file 18 of 18, and the three files the rework changed: `validate.sddProfileLedgerSeed.test.ts` 20, `tddListObligationColumns.test.ts` 31, `completedRowNamesItsTestCase.test.ts` 1. No production file changed
-- Refactor verify revision: 7fd71711a7494e4a681cc1513243a3073a11abda
+- Refactor verify result: Test Files 4 passed (4); Tests 70 passed (70). Re-run on the tree the reviews read, which differs from 7fd71711a only in the evidence file
+- Refactor verify revision: b5f1878a689f2ecdd64ba6e9165a060bcf1aaa76
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree ab99c390… matches; both entries fail on their own AssertionError (:139:47, :146:47); both edits inside parseArgs; hash 112bea3e… recomputes; GREEN 2/2 and file 18/18 at HEAD
 
 - Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer: TDD-0514's sdd-profile routing of the new check has no test; TDD-0575's Test 6b bypasses the CLI default at main.ts:398 through a cast; the row goes to review-fix. This row takes the path for a `REVISE` that needs no new production behaviour, and opens no round. The rework adds the `--profile sdd` case for `QFAI-TDDLIST-022` to `validate.sddProfileLedgerSeed.test.ts`. It adds an empty `TC-Refs` cell and a `CON-DB-*` id on a `Unit` row to `tddListObligationColumns.test.ts`. It states in the `CHANGELOG.md` entry and in the check's expected-state text which rows are exempt, and corrects the header of `completedRowNamesItsTestCase.test.ts`. Commit `c505a4bc1de4a002847ef7d2672babf9050798bc`. Removing `TC_REFS_NAME_NO_TEST_CASE_CODE` from the seed-shape set in `tddList.ts` fails the new `--profile sdd` case (`expected [ 'TDDLIST_TC_NOT_COVERED', …(20) ] to include 'QFAI-TDDLIST-022'`); reverted
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260923140000000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): 83fb1d8e77aa7df6c063cff233f7cbb9456146ebc8e82ba4881009cbff8b9a3e
+
+- Round 1: reviewer verdict (attempt 2): PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260923140030000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): 1eaaf75763cc2bea7fb511398e10439e57bec53e1db148e96c1a7eba148cde7e
+- Spec review: PASS
+- Spec reviewed revision: b5f1878a689f2ecdd64ba6e9165a060bcf1aaa76
+- Spec audited evidence hash: 7a53eaf33dd24499bae354a01e9cef8d02f0eba01b83c3d2c247da30c49eafa8
+- Spec review pack: .qfai/review/review-20260923140030000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 1eaaf75763cc2bea7fb511398e10439e57bec53e1db148e96c1a7eba148cde7e
+- Code quality review: PASS
+- Code quality reviewed revision: b5f1878a689f2ecdd64ba6e9165a060bcf1aaa76
+- Code quality audited evidence hash: 7a53eaf33dd24499bae354a01e9cef8d02f0eba01b83c3d2c247da30c49eafa8
+- Code quality review pack: .qfai/review/review-20260923140030000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 1eaaf75763cc2bea7fb511398e10439e57bec53e1db148e96c1a7eba148cde7e
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: b5f1878a689f2ecdd64ba6e9165a060bcf1aaa76
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts tests/integration/cli/commands/validate.sddProfileLedgerSeed.test.ts tests/core/tddListObligationColumns.test.ts tests/assets/completedRowNamesItsTestCase.test.ts
+- Checkpoint verification result: PASS — Test Files 4 passed (4); Tests 70 passed (70). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: b5f1878a689f2ecdd64ba6e9165a060bcf1aaa76
+- Checkpoint verification seal: cba0be0272853b8c83f6bd84f6ac1bb5569cd26e77764a61fb17f411509a433a
 
 ### TDD-0515
 
@@ -1734,14 +1754,14 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 - Round 1: GREEN result: One run per entry. Entry 1: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9). Entry 2: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production file changed in this phase, and the whole test file is the relevant suite. Re-run on the tree the reviews read
-- Refactor verify revision: 7fd71711a7494e4a681cc1513243a3073a11abda
+- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). Re-run on the tree the reviews read, which differs from 7fd71711a only in the evidence file
+- Refactor verify revision: b5f1878a689f2ecdd64ba6e9165a060bcf1aaa76
 - qa-gatekeeper: PASS
-- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 69b80e85… matches; the two combined edits hit separate paths and each entry fails on its own (:209:19, :247:19); hash 9d4193a2… recomputes; GREEN 2/2 and file 9/9 at HEAD
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 69b80e85… matches; the two combined edits hit separate paths and each entry fails on its own (:209:19, :247:19); hash 9d4193a2… recomputes; GREEN 2/2 and file 9/9 at HEAD; qa-gatekeeper#2 PASS — Round 2 tree 69fa8c00… rebuilt from c505a4bc1 matches; Test 5 fails :210:19 and Test 6b :245:19 as assertions, each on its own predicate (main.ts:398 dispatch default, prototypingIterate.ts:473); hash bf9a7565… recomputes; five re-verify records complete and current, each proof re-fails at its recorded line and restores; GREEN 2/2 and file 9/9 at b5f1878a6
 
 - Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer: TDD-0514's sdd-profile routing of the new check has no test; TDD-0575's Test 6b bypasses the CLI default at main.ts:398 through a cast; the row goes to review-fix. This row opens Round 2: Test 6b now runs through the CLI entry point, so the default it asserts is read at `main.ts:398`, and that needs a falsifiability run of its own
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260923140010000 <!-- qfai:not-a-citation -->
-- Round 1: Review pack seal (attempt 1): 0f0400fd6c3ab0036db38484f92ac2d44c62da1002491f224fe8256557c1949d
+- Round 1: Review pack seal (attempt 1): 051ce64eb666ab893fe5e2cf41891c03291e682b5cbbd63471e78b81d6d31c65
 
 #### Round 2
 
@@ -1942,6 +1962,26 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence
 - RED test hash: bf9a7565888fadb44163966f392b86fe675244e5343d56d945a62dcf24c34a7c
 
 The records are read as evidence once this entry is a completed, reviewed item.
+
+- Round 1: reviewer verdict (attempt 2): PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260923140020000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): 5e02f21c027f9c8dfe7c3dade32b2b9c8b138b03336a91c31c4e39748fb4e080
+- Spec review: PASS
+- Spec reviewed revision: b5f1878a689f2ecdd64ba6e9165a060bcf1aaa76
+- Spec audited evidence hash: 1037c7888253587e635556813ab33258c7277aebe2fdec3e683e0350cfdc2c62
+- Spec review pack: .qfai/review/review-20260923140020000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 5e02f21c027f9c8dfe7c3dade32b2b9c8b138b03336a91c31c4e39748fb4e080
+- Code quality review: PASS
+- Code quality reviewed revision: b5f1878a689f2ecdd64ba6e9165a060bcf1aaa76
+- Code quality audited evidence hash: 1037c7888253587e635556813ab33258c7277aebe2fdec3e683e0350cfdc2c62
+- Code quality review pack: .qfai/review/review-20260923140020000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 5e02f21c027f9c8dfe7c3dade32b2b9c8b138b03336a91c31c4e39748fb4e080
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: b5f1878a689f2ecdd64ba6e9165a060bcf1aaa76
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts && pnpm -C packages/qfai exec vitest run
+- Checkpoint verification result: PASS — the row's Test file: Test Files 1 passed (1); Tests 9 passed (9). The full suite, as the last row of the run: Test Files 771 passed | 3 skipped (774), exit 0
+- Checkpoint verification revision: a45096ee899020a91b837103f476588948d4c38a
+- Checkpoint verification seal: 365215471a832fa469c8bde003e1a8381e1e338e0ea771a479828b01d0ac14c3
 
 ### TDD-0576
 

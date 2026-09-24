@@ -328,3 +328,13 @@ Preflight: session opened
 | 48 | backend-engineer | backend-engineer | grilling(S2@2026-09-23T22:29:18.879Z/agents): on `TDD-0514` and `TDD-0515`, set the flag to `false` in the flag's case instead of deleting the line | #tdd-0514; `tmp` run output of the discarded proof | Round 1 of both rows; with the initializer mutation in place a deleted case is masked, so the flag-present test passed. The discarded run is recorded in #tdd-0514 | PASS |
 | 49 | backend-engineer | backend-engineer | grilling(S3@2026-09-23T22:29:18.879Z/agents): stop `TDD-0516` at `todo`: `TC-0012-0486` states five boundaries of `composeCaptureUrl` | 06_Test-Cases.md `TC-0012-0486`; `selector-granularity.md`; the boundary method of CR-20260923-0014 | the row is unchanged; absolute passthrough, route-relative join, fallback with no screen URL, and two rejections naming `--target-url` each sit on their own predicate. A split is `/qfai-sdd` Phase 2b's; no Change Request is raised in this run, per the work order | PASS |
 | 50 | backend-engineer | backend-engineer | grilling(S3@2026-09-23T22:29:18.879Z/agents): stop `TDD-0517` at `todo`: `TC-0012-0487` states two boundaries of `defaultCaptureScreen` | 06_Test-Cases.md `TC-0012-0487`; `selector-granularity.md`; the boundary method of CR-20260923-0014 | the row is unchanged; the rejection of a status of 400 or above and the rejection of a missing response are two predicates with two reasons. A split is `/qfai-sdd` Phase 2b's; no Change Request is raised in this run, per the work order | PASS |
+
+## Record defects
+
+Open entries from the reviews of the `/qfai-implement` run started
+2026-09-23T22:29:18.879Z. Each is repaired in place before spec-0012 completion
+is declared.
+
+- `record:unchecked`, `TDD-0575`, Round 2: the Test 6b rewrite was made inside the `/qfai-implement` run rather than through a `/qfai-atdd` handback, and the round was opened as Round 2 rather than recorded as a test-only replacement. The rewrite moved the predicate to `main.ts:398`, which the same-mutation replacement path does not cover.
+- `record:unchecked`, all thirteen rows of the run, Round 1: the RED gates were taken after the mutations were reverted and the ledger had moved; qa-gatekeeper rebuilt each mutated tree from its recorded address and edit.
+- `record:unchecked`, `TDD-0575`, Round 1 attempt 1: its review pack `review-20260923140010000` was overwritten by the attempt-2 pack of `TDD-0514`, whose name was computed from the same number. The `TDD-0514` pack moved to `review-20260923140030000`, and the `TDD-0575` attempt-1 pack was rebuilt from the same two reviewer responses; its seal changed with the new `created_at`.
