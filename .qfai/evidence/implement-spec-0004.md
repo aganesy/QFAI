@@ -12,8 +12,8 @@ part of the removal of the work-log surface `.qfai/steering/`. The
 
 | TDD-ID | TC-Refs | Layer | Final status |
 | ------ | ------- | ----- | ------------ |
-| TDD-0018 | TC-0004-0018 | unit | refactor (item reviews) |
-| TDD-0072 | TC-0004-0018 | unit | refactor; independent review and second CI pending |
+| TDD-0018 | TC-0004-0018 | unit | done after first full CI checkpoint |
+| TDD-0072 | TC-0004-0018 | unit | done after independent reviews and second full CI checkpoint |
 
 ## Grilling Session
 
@@ -547,14 +547,24 @@ Test Files 1 passed (1); Tests 1 passed (1)
 - Spec audited evidence hash: fba48102d910e87c8da299c66f15b683ec47c56738a32c8877b281bc8429545b
 - Spec review pack: .qfai/review/review-20260924191914961 <!-- qfai:not-a-citation -->
 - Spec review pack seal: 6745bb45b6893d5a16f20f97cd1c7a9bdc4638a8b55c26bebf029c8a0a3c82dc
+- Spec record re-attestation: 270c018051fe0586faeb36abf3f6b2356f2ab88976e9f8b2b93bed5ff8132ad6
+- Spec record re-attestation pack: .qfai/review/review-20260925045433000 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 997f37775dbe17fa0e492b93da2b60fa5064b6b942c928e5042b01ba6e67b09c
 - Code quality review: PASS
 - Code quality reviewed revision: working-tree+139a02682c2218f2acdbd06cb4cb1799ae85f0b7995226830784cec5c229afaa
 - Code quality audited evidence hash: fba48102d910e87c8da299c66f15b683ec47c56738a32c8877b281bc8429545b
 - Code quality review pack: .qfai/review/review-20260924191914961 <!-- qfai:not-a-citation -->
 - Code quality review pack seal: 6745bb45b6893d5a16f20f97cd1c7a9bdc4638a8b55c26bebf029c8a0a3c82dc
+- Code quality record re-attestation: 270c018051fe0586faeb36abf3f6b2356f2ab88976e9f8b2b93bed5ff8132ad6
+- Code quality record re-attestation pack: .qfai/review/review-20260924195452260 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 37e0c51c61375b71c13c3deba9ac367b3598f0824213cfdf0facaa6020952c03
 - Prototype parity reviewed revision: working-tree+139a02682c2218f2acdbd06cb4cb1799ae85f0b7995226830784cec5c229afaa
-- Prototype parity: n/a (the test is not UI-affecting).
-- Ledger write: `todo -> red -> green -> refactor` during this unit cycle; `done` awaits independent review and the second CI run.
+- Prototype parity: n/a (not UI-affecting)
+- Ledger write: `todo -> red -> green -> refactor -> done`; the final transition followed both independent PASS reviews, sealed pack and the second full CI run on e605d324931e202ab520c5a87eff039898e72d58.
+- Checkpoint verification command: `corepack pnpm -C packages/qfai exec vitest run tests/validators/reviewerRejectedReadopt.test.ts --reporter=dot; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:core; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:validators; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:integration; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:e2e; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:cli; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:unit; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:scripts; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:pr-fix; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:pr-merge`
+- Checkpoint verification result: PASS — focused run: one file, one named test; CI run https://github.com/aganesy/QFAI/actions/runs/36048572836: all nine test slices and ci-pass passed at e605d324931e202ab520c5a87eff039898e72d58.
+- Checkpoint verification revision: e605d324931e202ab520c5a87eff039898e72d58
+- Checkpoint verification seal: 4c367f25dba616b520ae51340a79448314a16b6a645810e2c8e26d802adbbb9f
 ## Test results summary
 
 Recorded per row under `## Ledger rows advanced`.
@@ -595,3 +605,8 @@ Recorded per row under `## Ledger rows advanced`.
 - Run: https://github.com/aganesy/QFAI/actions/runs/36026684599
 - Result: PASS — build, lint, types, all nine package test slices, Node floor tests, and ci-pass succeeded.
 - Rows closed: TDD-0018.
+- Second full CI checkpoint: https://github.com/aganesy/QFAI/actions/runs/36048572836 passed at e605d324931e202ab520c5a87eff039898e72d58; TDD-0072 closed.
+
+## Record defects
+
+- `record:QFAI-TDDLIST-008`, `TDD-0072`, Round 1: the first sealed review pack recorded an audited evidence hash computed with fields after the `Prototype parity` review boundary. The canonical phase evidence and coverage slice hash to `270c018051fe0586faeb36abf3f6b2356f2ab88976e9f8b2b93bed5ff8132ad6`. Both reviewers independently re-attested PASS against that hash in new sealed packs, leaving the first pack intact. The record defect is closed.
