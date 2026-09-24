@@ -85,7 +85,12 @@ Commit durable decision rows, envelope-deviation records under .qfai/evidence/de
 
 ## Line endings in the artifacts under review
 
-QFAI seeds attributes for its .qfai tree and named integration files. Review branch changes with the same comparison base and line-ending treatment as the drift gate. An EOL-only diff does not establish changed behavior. Content hashes read on-disk bytes, so normalize a CRLF copy of a locked file before deciding its lock is wrong.
+QFAI seeds `.gitattributes` for its .qfai tree and named integration files.
+Review branch changes with the same comparison base and line-ending treatment
+as the drift gate. Use `git diff --ignore-cr-at-eol` to distinguish an EOL-only
+diff from changed content. When attributes change, apply `git add --renormalize`
+only to reviewed paths. Content hashes read on-disk bytes, so normalize a CRLF
+copy of a locked file before deciding its lock is wrong.
 
 ## Non-negotiable constraints
 
