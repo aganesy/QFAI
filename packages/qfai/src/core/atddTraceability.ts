@@ -1225,13 +1225,12 @@ export async function collectTestCaseAnnotationHomes(
     if (refs.length === 0) continue;
     // A computed binding (`const run = LIVE ? test : test.skip`) declares a test
     // no literal call shows, and this check reports at `error`, so it counts.
-    // Only code can bind a runner name. Markdown and Gherkin are settled by
-    // `hasRunnableTestStructure` alone, so a binding shown in their prose
-    // declares nothing a runner collects.
-    const extension = path.extname(file).slice(1).toLowerCase();
-    const code = !PROSE_CARRIER_EXTENSIONS.has(extension) && extension !== "feature";
+    // The binding is JavaScript syntax, so only a JavaScript-family file can
+    // declare a test through it. In any other file, prose included, the same
+    // text is an example and declares nothing a runner collects.
+    const bindable = COMPUTED_BINDING_EXTENSIONS.has(path.extname(file).slice(1).toLowerCase());
     const declaresTest =
-      hasRunnableTestStructure(file, raw) || (code && hasComputedSuiteBinding(raw));
+      hasRunnableTestStructure(file, raw) || (bindable && hasComputedSuiteBinding(raw));
     const into = declaresTest ? homes.tests : homes.carriers;
     for (const ref of refs) recordSpecRef(into, ref.spec, `TC-${ref.id}`, file);
   }
@@ -2642,6 +2641,18 @@ const COMPUTED_SUITE_BINDING_RE = new RegExp(
     `(?:\\s*\\.\\s*(?:${TEST_MODIFIER_SEGMENT}))*`,
   "gm",
 );
+
+/** The extensions whose source can bind a runner name with `const`, `let` or `var`. */
+const COMPUTED_BINDING_EXTENSIONS: ReadonlySet<string> = new Set([
+  "ts",
+  "tsx",
+  "mts",
+  "cts",
+  "js",
+  "jsx",
+  "mjs",
+  "cjs",
+]);
 
 /**
  * True when the file binds a runner entry point to a name and then calls it.
