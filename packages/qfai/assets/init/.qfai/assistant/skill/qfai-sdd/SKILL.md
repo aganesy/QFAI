@@ -28,6 +28,12 @@ mode: approval-gated
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## User Questions (AskUserQuestion Protocol)
+
+Agents MUST follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`
+for every user question. With `--auto`, they MUST ask nothing and record
+explicit assumptions in the stage evidence.
+
 ## Purpose and order
 
 Turn a requirement into a checkable story tree. The fixed writing order is:
