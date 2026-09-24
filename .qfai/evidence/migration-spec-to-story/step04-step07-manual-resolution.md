@@ -1,5 +1,14 @@
 # Step 4 and step 7 manual resolution
 
+## Final steering scope
+
+The archived document-lane blocker originally used `scope: spec-0003`.
+Its six historical rows span BF-0001, BF-0002, and BF-0004, so no single
+flow can replace that scope. The archived entry now uses `scope: global` and
+keeps all three BF links. Its closure rationale names the approved change
+record and the returned work state. Step 4 no longer has an unresolved
+steering scope to report.
+
 ## Observed migration results
 
 The real step 4 completed with exit 3. Its report lists 129 items for a person:
