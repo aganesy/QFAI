@@ -1577,7 +1577,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // It ships commented out because a project with no user interface declares
   // nothing here, and a live empty map would read as a project that had
   // considered the question and answered none.
-  ["qfai.config.yaml", "53a26ee4b57bc3dea3d1641304c9367848e8c4dedd1b5523f38a58cc31cdc208"],
+  ["qfai.config.yaml", "a6b03c7ab81d09c94c111814d0c7f112901e83493ae04a25ebae28212f1a25b5"],
 ]);
 
 /**

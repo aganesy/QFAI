@@ -395,7 +395,7 @@ describe("BF-0004 migration cutover", () => {
       expect(integration).toContain(`QFAI:${ids[oldId]}`);
     }
     expect(e2e).toContain(["QFAI", "BF-0001"].join(":"));
-    expect(journey.real[4]?.stdout).toContain("TC-0001-0003");
+    expect(journey.real[4]?.stdout).toMatch(/## Cases to examples\r?\nnone/);
     expect(journey.real[7]?.stdout).toContain("QFAI:SPEC-0001:US-0001-0001");
     expect(journey.real[7]?.stdout).toContain("QFAI:CON-API-0001");
   });
