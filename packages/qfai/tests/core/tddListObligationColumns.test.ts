@@ -571,6 +571,37 @@ describe("a done row rests on a test, not on an annotation carrier", () => {
     );
   });
 
+  it("does not count a computed binding shown in a Markdown carrier", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues).map((entry) => entry.refs)).toEqual([
+          ["TDD-0001", "TC-0001-0001", CARRIER],
+        ]);
+      },
+      "# TC\n",
+      {
+        files: {
+          ...files,
+          [CARRIER]: [
+            "# Traceability",
+            "",
+            "- QFAI:SPEC-0001:TC-0001-0001",
+            "",
+            "const run = LIVE ? test : test.skip;",
+            'run("case a", () => {});',
+            "",
+          ].join("\n"),
+        },
+        config,
+      },
+    );
+  });
+
   it("reads the unit tests under paths.testsDir with no project glob", async () => {
     await withLedger(
       [
