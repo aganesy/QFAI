@@ -63,10 +63,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   says where the execute bit is read from. The revision manifest keeps its own
   four digits.
 
-- **The RED test hash reads the execute bit where git reads it.** `validate`
-  took a manifest file's execute bit off the disk. Windows has none, so a file
-  git marks executable hashed as `100644` on a Windows checkout and `100755` on
-  a POSIX one, and evidence recorded on one was refused on the other. The gate
+- **The RED test hash reads the execute bit where git reads it** (#2257).
+  `validate` took a manifest file's execute bit off the disk. Windows has none,
+  so a file git marks executable hashed as `100644` on a Windows checkout and
+  `100755` on a POSIX one, and evidence recorded on one was refused on the
+  other. The gate
   now reads the bit the way `git add` does: from the index where
   `core.fileMode` is `false`, as in a repository git created on Windows, and
   from the owner's execute bit on disk everywhere else. An execute bit held
