@@ -44,8 +44,9 @@ alone does not prove the user-visible result.
 
 ### Preflight
 
-1. Follow `rule/shared-skill-operating-baseline.md` for steering, format,
-   delegated review, and failure handling. Confirm the flow and its links are
+1. Follow `rule/shared-skill-operating-baseline.md` for steering and format,
+   and `rule/shared-skill-delegation-baseline.md` for the first delegation,
+   capability check, and failure handling. Confirm the flow and its links are
    internally consistent. A changed upstream obligation follows
    `rule/drift-protocol.md` before dependent work resumes.
 2. Read the **Standard commands** section of
