@@ -10,6 +10,8 @@ import { validateStoryTreeCoverageDepth } from "../../src/core/validators/storyT
 import type { StoryTreeModel } from "../../src/core/storyTree/tree.js";
 
 const MODEL: StoryTreeModel = {
+  flowIndex: null,
+  storyIndexes: [],
   flows: [
     {
       id: "BF-0001",
