@@ -260,7 +260,7 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     );
     const missingEvidence = await reportAfterPassingTests(root, allTests);
     expect(missingEvidence.testExitCode).toBe(0);
-    expect(missingEvidence.testOutput).toContain("# pass 3");
+    expect(missingEvidence.testOutput).toMatch(/^(?:#|ℹ)\s+pass 3\b/m);
     expect(missingEvidence.validationExitCode).toBe(1);
     expect(missingEvidence.reportExitCode).toBeNull();
     expect(hasFinding(await readFlowFindings(root), "QFAI-ATDD-131", flowId)).toBe(true);
@@ -281,7 +281,7 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     );
     const verified = await reportAfterPassingTests(root, allTests);
     expect(verified.testExitCode).toBe(0);
-    expect(verified.testOutput).toContain("# pass 3");
+    expect(verified.testOutput).toMatch(/^(?:#|ℹ)\s+pass 3\b/m);
     expect(verified.validationExitCode).toBe(0);
     expect(verified.reportExitCode).toBe(0);
     const report = await readFile(path.join(root, ".qfai/report/report.flow-0001.json"), "utf8");
