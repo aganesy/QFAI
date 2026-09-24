@@ -16,6 +16,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import ts from "typescript";
 
 import * as initModule from "../../src/cli/commands/init.js";
 import { copyTemplatePaths } from "../../src/cli/lib/fs.js";
@@ -358,7 +359,8 @@ describe("TC-0003-0045 (TDD-0045): write and prune sets equal the shipped and re
     const workflowsDir = path.join(dir, ".github", "workflows");
     await mkdir(workflowsDir, { recursive: true });
     const orphanPath = path.join(workflowsDir, ORPHAN_NAME);
-    await writeFile(orphanPath, ORPHAN_BODY, "utf-8");
+    // A file above the digest limit must still be protected by name membership.
+    await writeFile(orphanPath, ORPHAN_BODY + "x".repeat(1_048_576), "utf-8");
     const digestBefore = sha256(await readFile(orphanPath));
 
     await runInitQuiet(dir);
@@ -819,9 +821,7 @@ describe("TC-0003-0054 (TDD-0054): an absent (never-installed) name is written a
   //   the bytes init wrote, with the contract's three fields.
   // - The DISK half of the declined contrast — the file must not be
   //   recreated — is TDD-0051's row (copy-set exclusion before the copy
-  //   runs). Today's create-only copy DOES recreate a declined file, so
-  //   file absence is deliberately NOT asserted here; only the RECORD side
-  //   of the absent/declined distinction is.
+  //   runs). This row asserts the RECORD side of that distinction.
   const WORKFLOW_NAME = "qfai-validate.yml";
   const PROVENANCE_REL = ".qfai/install-provenance.json";
   // A seeded declined entry with values a fresh install record could not
@@ -1097,33 +1097,14 @@ describe("TC-0003-0048 (TDD-0048): write and removal path contains no filesystem
 
   const forbiddenCalls = (text: string): string[] => text.match(FORBIDDEN_FS_CALL_RE) ?? [];
 
-  /**
-   * Extracts a function's body text by brace counting from the
-   * `function <name>(` definition marker (call sites never match: they
-   * are not preceded by `function `). Returns undefined when absent so
-   * the caller's assertion is what fails.
-   */
+  /** Returns the body of a named declaration, including typed parameters. */
   function extractFunctionBody(source: string, name: string): string | undefined {
-    const idx = source.indexOf(`function ${name}(`);
-    if (idx === -1) {
-      return undefined;
-    }
-    const braceStart = source.indexOf("{", idx);
-    if (braceStart === -1) {
-      return undefined;
-    }
-    let depth = 1;
-    let end = braceStart + 1;
-    while (end < source.length && depth > 0) {
-      const ch = source.charAt(end);
-      if (ch === "{") {
-        depth += 1;
-      } else if (ch === "}") {
-        depth -= 1;
-      }
-      end += 1;
-    }
-    return source.slice(braceStart + 1, end - 1);
+    const sourceFile = ts.createSourceFile(INIT_MODULE_PATH, source, ts.ScriptTarget.Latest, true);
+    const declaration = sourceFile.statements.find(
+      (statement): statement is ts.FunctionDeclaration =>
+        ts.isFunctionDeclaration(statement) && statement.name?.text === name,
+    );
+    return declaration?.body?.getText(sourceFile);
   }
 
   /**

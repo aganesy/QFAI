@@ -255,3 +255,13 @@ Two things made it dead weight rather than a gate.
 
 `AC-0014-0004` stays: `TC-0014-0028` and `TC-0014-0029` cover the prototyping
 design-system validator, which is a different module and still runs.
+
+## Triage (2026-09-25)
+
+| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale | Depends-On |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| CR-20260913-0005 | Correct reviewer-gate and SaaS certification ledger identities | spec-0014 | UPDATE | MODIFY | user (Codex interactive decision) | The obligations in TC-0014-0009, TC-0014-0035 and TC-0014-0036 remain. Phase 2b re-points TDD-0009, TDD-0035 and TDD-0036 to cases that exercise them, resets their stale evidence, and adds the separate promotion boundary as TDD-0042. TDD-0037 already belongs to an E2E story. No requirement is added or withdrawn. | - |
+| CR-20260913-0006 | Re-level the cycle-0 fullHarness deletion case | spec-0014 | UPDATE | MODIFY | user (Codex interactive decision) | TC-0014-0034 changes from unit to integration because it runs iterate over a seeded file. AC-0014-0006, BR-0014-0006 and EX-0014-0027 retain their obligation. The old TDD-0034 identity is reset with the approved layer change; its test moves to the integration suite. | CR-20260913-0005 |
+| CR-20260913-0002 | Enforce top-level iter-NN captures as verify evidence | spec-0014 | UPDATE | MODIFY | user (Codex interactive decision) | AC-0014-0005, BR-0014-0005, EX-0014-0026 and TC-0014-0033 retain the iter-NN-only requirement. Phase 2b re-points and resets TDD-0033 after spec-0012's capture chain, the iterate CLI contract and policy terms have been re-derived; aggregate copies remain handoff mirrors. | CR-20260913-0006 |
+
+The approved reruns follow CR-20260913-0005, then CR-20260913-0006, then CR-20260913-0002. This Stage 1 record authorizes no Phase 2b write yet.

@@ -438,6 +438,11 @@ Per finding-provenance rules, advisory findings are never implemented as code by
   to the zero-importer module independently verified by the gatekeeper)
 - Review pack: `review-20260805195501000/`
 
+#### TDD-0046 current-tree proof refresh (2026-09-25)
+
+- The historical root-copy `force: false` mutation no longer reaches workflows. `runInit` now copies them through the dedicated `copyTemplatePaths(..., workflowCopyPaths, { force: false, conflictPolicy: "skip" })` call. Replaying the old mutation left this selector green, so that historical oracle is not current proof.
+- On HEAD `848174196`, changing only the dedicated workflow copy's `force: false` to `true` made `TC-0003-0046 (TDD-0046)` fail its `[record absent] byte identity` assertion: 1 failed, 3 passed, exit 1. The source was restored byte-identically (SHA-256 `a500a0332f802120f22078a7f59e2e5c8bbbb1fc45aec46c3bbc9127eb5bad58`); the same selector then passed 4/4, exit 0. The isolated run is recorded in `tmp/cross-spec-mutations-qa/runs9.json` and its mutant/GREEN logs. Independent completion-reviewer re-review: PASS for this proof refresh; authored/edited under review: none; recommended and unadjudicated: none. The broader cross-spec Resolution remains open.
+
 ## Advisory register (TDD-0046 — recorded; disposition noted per item)
 
 16. implementation-reviewer (Traces to CLI-WFSET section 7): `src/cli/lib/provenance.ts`
@@ -804,6 +809,11 @@ TC-0003-0051's third bullet words the control as "create-only 判定を無効化
   All other commands exit 0. Recorded as PASS-with-named-residual per the Stage-0 disclosure;
   the residual burns down as rows complete and ATDD-111 is a later-stage obligation.
 - Review pack: `review-20260805212001000/`
+
+#### TDD-0048 current-tree proof refresh (2026-09-25)
+
+- The previous source extractor began at the first `{` after the function name, which was inside `recordInstalledWorkflows`'s typed parameter. The original planted `rm(` therefore survived the old guard. The test now obtains the named function body with the TypeScript parser, including the whole executable body; its SHA-256 is `7da32bc7f7ffe627fae4d9b1aac541db93982730acde83ff5ae2b113c6b813cc`.
+- Replaying the original `rm(path.join(destRoot, ".github", "workflows", ".qfai-mutation-probe"), { force: true })` mutation against the repaired test made `TC-0003-0048 (TDD-0048)` fail at its `recordInstalledWorkflows` forbidden-call assertion: 1 failed, 2 passed, exit 1. The test SHA-256 was `7da32bc7f7ffe627fae4d9b1aac541db93982730acde83ff5ae2b113c6b813cc` before both the mutant and restored GREEN runs. The source was restored byte-identically (SHA-256 `a500a0332f802120f22078a7f59e2e5c8bbbb1fc45aec46c3bbc9127eb5bad58`); the same selector then passed 3/3, exit 0. The isolated run is recorded in `tmp/cross-spec-mutations-qa/runs17.json` and its mutant/GREEN logs. Independent completion-reviewer re-review: PASS for this proof refresh; authored/edited under review: none; recommended and unadjudicated: none. The broader cross-spec Resolution remains open.
 
 ## Advisory register (TDD-0048 — recorded, not implemented)
 
