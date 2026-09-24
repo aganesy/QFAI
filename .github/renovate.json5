@@ -165,6 +165,24 @@
       matchDepTypes: ["engines", "packageManager"],
       groupName: null,
     },
+    {
+      // The test runner's coverage provider moves only with the runner. Its peer range names
+      // the runner version exactly, so a provider one major ahead is not a version mismatch to
+      // resolve later — it fails at import, in the one lane that reads coverage.
+      //
+      // `constraintsFiltering` cannot hold the two together. It reads a release's own
+      // `engines`, the provider declares none, and every release of it therefore passes
+      // whatever Node range this file states — while the runner, which does declare one, is
+      // dropped the moment its range stops covering ours. The group then arrives with the
+      // member that carries no constraint and without the member that does.
+      //
+      // So a major for the provider is not offered on its own. Minors and patches still flow,
+      // and a major is taken by hand alongside the runner, where one manifest edit shows both.
+      // This rule goes when the two can be offered as one again.
+      matchPackageNames: ["@vitest/coverage-v8"],
+      matchUpdateTypes: ["major"],
+      enabled: false,
+    },
   ],
 
   customManagers: [
