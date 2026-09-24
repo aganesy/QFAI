@@ -120,7 +120,7 @@ describe("TC-0010-0011: detectMockHrefDrift emits R-MOCK-HREF-DRIFT on templateâ
     await seedPair(root, { template: TEMPLATE_PATH_FORM, validator: VALIDATOR_STRICT });
     const legacyTemplate = path.join(
       root,
-      "packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/03_Story-Workshop.md",
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-discussion/templates/03_Story-Workshop.md",
     );
     await mkdir(path.dirname(legacyTemplate), { recursive: true });
     await writeFile(legacyTemplate, TEMPLATE_ANCHOR, "utf-8");
@@ -129,7 +129,7 @@ describe("TC-0010-0011: detectMockHrefDrift emits R-MOCK-HREF-DRIFT on templateâ
     const findings = issues.filter((i) => i.code === "R-MOCK-HREF-DRIFT");
     expect(findings).toHaveLength(1);
     expect(findings[0]?.message).toContain(MOCK_HREF_TEMPLATE_REL);
-    expect(findings[0]?.message).not.toContain("assistant/skills/");
+    expect(findings[0]?.message).not.toContain("assistant/skill/");
   });
 
   it("does not fire when either source file is absent (consumer repo without validator source)", async () => {

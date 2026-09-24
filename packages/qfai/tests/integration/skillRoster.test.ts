@@ -9,7 +9,7 @@ const implementSkillPath = path.join(
   templateRoot,
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-implement",
   "SKILL.md",
 );

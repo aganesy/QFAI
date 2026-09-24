@@ -27,7 +27,7 @@ afterEach(async () => {
 });
 
 async function writeSkillRef(skillId: string, refName: string, body: string): Promise<void> {
-  const dir = path.join(root, ".qfai", "assistant", "skills", skillId, "references");
+  const dir = path.join(root, ".qfai", "assistant", "skill", skillId, "references");
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, refName), body, "utf-8");
 }

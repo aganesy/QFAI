@@ -50,7 +50,7 @@ async function makeDiscussionPack(name: string): Promise<string> {
 }
 
 async function makeUiContract(filename: string, content: string): Promise<void> {
-  const uiDir = path.join(root, ".qfai", "contracts", "ui");
+  const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
   await mkdir(uiDir, { recursive: true });
   await writeFile(path.join(uiDir, filename), content, "utf-8");
 }

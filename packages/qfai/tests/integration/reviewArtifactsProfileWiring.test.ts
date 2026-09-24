@@ -26,7 +26,7 @@ const LAYOUT_DOC = path.join(
   getInitAssetsDir(),
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-implement",
   "references",
   "review-artifact-layout.md",

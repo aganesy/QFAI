@@ -90,12 +90,12 @@ async function seedProject(
   await writeFile(path.join(root, "DESIGN.md"), FIXTURE_DESIGN_MD, "utf-8");
   const configLines = [
     "paths:",
-    "  contractsDir: .qfai/contracts",
-    "  specsDir: .qfai/specs",
+    "  contractsDir: .qfai/spec/03_contract",
+    "  specsDir: .qfai/spec",
     "  discussionDir: .qfai/discussion",
     "  outDir: .qfai/out",
-    "  skillsDir: .qfai/assistant/skills",
-    "  promptsDir: .qfai/assistant/skills",
+    "  skillsDir: .qfai/assistant/skill",
+    "  promptsDir: .qfai/assistant/skill",
     "  srcDir: src",
     "  testsDir: tests",
     "validation:",
@@ -123,7 +123,7 @@ describe("iterate --cycle 0 --emit-skeletons writes one placeholder HTML per scr
     await seedProject(root);
     // Seed UI contracts (project-wide) so the emit-skeletons branch
     // sees a non-empty screen list. Two screens → two .html files.
-    const uiDir = path.join(root, ".qfai/contracts/ui");
+    const uiDir = path.join(root, ".qfai/spec/03_contract/ui");
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "screens.yaml"),
@@ -156,7 +156,7 @@ describe("--emit-skeletons opt-in default + --skeleton-mode discriminator", () =
   it("absence of --emit-skeletons writes zero placeholder HTML files (v1.9.1 no-regression)", async () => {
     const root = await newTempDir();
     await seedProject(root);
-    const uiDir = path.join(root, ".qfai/contracts/ui");
+    const uiDir = path.join(root, ".qfai/spec/03_contract/ui");
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "screens.yaml"),

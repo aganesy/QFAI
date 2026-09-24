@@ -35,7 +35,7 @@ describe("excess vocabulary covers code and product surface without adding tags"
       ].map((role) => ({ tree, role })),
     ),
   )("$tree/$role ships the same vocabulary and product scope", async ({ tree, role }) => {
-    const text = await readFile(path.join(ROOT, tree, "assistant/agents", `${role}.md`), "utf-8");
+    const text = await readFile(path.join(ROOT, tree, "assistant/agent", `${role}.md`), "utf-8");
     const routes = text.match(/^- File excess .*(?:\r?\n {2}.+)*/gm);
     expect(routes).toHaveLength(1);
     const excess = routes?.[0]?.replace(/\s+/g, " ");
@@ -63,7 +63,7 @@ describe("the implementation reviewer flags dropped promises, not uncaught propa
     "%s keeps the correctness class",
     async (tree) => {
       const card = await readFile(
-        path.join(ROOT, tree, "assistant/agents/implementation-reviewer.md"),
+        path.join(ROOT, tree, "assistant/agent/implementation-reviewer.md"),
         "utf-8",
       );
       expect(card.replace(/\s+/g, " ")).toContain("a promise that is neither awaited nor returned");
@@ -72,7 +72,7 @@ describe("the implementation reviewer flags dropped promises, not uncaught propa
         path.join(
           ROOT,
           tree,
-          "assistant/skills/qfai-implement/references/finding-classification.md",
+          "assistant/skill/qfai-implement/references/finding-classification.md",
         ),
         "utf-8",
       );
@@ -88,7 +88,7 @@ describe("reviewer stop conditions distinguish named-rule defects from new produ
       ["completion-reviewer", "implementation-reviewer"].map((role) => ({ tree, role })),
     ),
   )("$tree/$role retains the named-rule defect route", async ({ tree, role }) => {
-    const text = await readFile(path.join(ROOT, tree, "assistant/agents", `${role}.md`), "utf-8");
+    const text = await readFile(path.join(ROOT, tree, "assistant/agent", `${role}.md`), "utf-8");
     const stop = text.split("## Stop conditions")[1]?.split(/^## /m)[0]?.replace(/\s+/g, " ");
     expect(stop).toBeDefined();
     expect(stop).toContain("The finding would add a product obligation upstream never asked for.");
@@ -532,8 +532,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     });
 
     it.each([
-      "packages/qfai/assets/init/.qfai/assistant/constitution/constitution.md",
-      ".qfai/assistant/constitution/constitution.md",
+      "packages/qfai/assets/init/.qfai/assistant/rule/constitution.md",
+      ".qfai/assistant/rule/constitution.md",
     ])("%s names this repository first among the reuse rungs", async (rel) => {
       const text = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
       expect(text).toContain(
@@ -659,9 +659,9 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     // sentence, which is where a rule it has not opened still reaches it.
     it.each([
       "packages/qfai/assets/init/.qfai/assistant/catalog/cli-ux-guidelines.md",
-      "packages/qfai/assets/init/.qfai/assistant/agents/product-experience-architect.md",
-      "packages/qfai/assets/init/.qfai/assistant/agents/frontend-engineer.md",
-      "packages/qfai/assets/init/.qfai/assistant/agents/product-surface-reviewer.md",
+      "packages/qfai/assets/init/.qfai/assistant/agent/product-experience-architect.md",
+      "packages/qfai/assets/init/.qfai/assistant/agent/frontend-engineer.md",
+      "packages/qfai/assets/init/.qfai/assistant/agent/product-surface-reviewer.md",
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain(".agents/rules/interface-clarity.md");
@@ -1199,14 +1199,14 @@ describe("a no-question run opens every node, on every surface that says so", ()
   it.each([
     ".agents/rules/grilling.md",
     "packages/qfai/assets/init/root/.agents/rules/grilling.md",
-    ".qfai/assistant/constitution/constitution.md",
-    "packages/qfai/assets/init/.qfai/assistant/constitution/constitution.md",
-    ".qfai/assistant/constitution/communication.md",
-    "packages/qfai/assets/init/.qfai/assistant/constitution/communication.md",
-    ".qfai/assistant/skills/qfai-grilling/SKILL.md",
-    "packages/qfai/assets/init/.qfai/assistant/skills/qfai-grilling/SKILL.md",
-    ".qfai/assistant/constitution/shared-skill-operating-baseline.md",
-    "packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md",
+    ".qfai/assistant/rule/constitution.md",
+    "packages/qfai/assets/init/.qfai/assistant/rule/constitution.md",
+    ".qfai/assistant/rule/communication.md",
+    "packages/qfai/assets/init/.qfai/assistant/rule/communication.md",
+    ".qfai/assistant/skill/qfai-grilling/SKILL.md",
+    "packages/qfai/assets/init/.qfai/assistant/skill/qfai-grilling/SKILL.md",
+    ".qfai/assistant/rule/shared-skill-operating-baseline.md",
+    "packages/qfai/assets/init/.qfai/assistant/rule/shared-skill-operating-baseline.md",
   ])("%s opens nodes rather than decisions", async (rel) => {
     const text = await readFile(path.join(ROOT, rel), "utf-8");
     expect(text).toMatch(
@@ -1281,8 +1281,8 @@ describe("an open fact survives the surfaces that report a session", () => {
   // where a stage's unanswered questions land. A fact only the user holds
   // disappears at either one unless both carry it.
   it.each([
-    ".qfai/assistant/skills/qfai-grill/SKILL.md",
-    "packages/qfai/assets/init/.qfai/assistant/skills/qfai-grill/SKILL.md",
+    ".qfai/assistant/skill/qfai-grill/SKILL.md",
+    "packages/qfai/assets/init/.qfai/assistant/skill/qfai-grill/SKILL.md",
   ])("%s reports every open node, not every open decision", async (rel) => {
     const text = await readFile(path.join(ROOT, rel), "utf-8");
     expect(text).toMatch(/every\s+node\s+left\s+open/);
@@ -1290,8 +1290,8 @@ describe("an open fact survives the surfaces that report a session", () => {
   });
 
   it.each([
-    ".qfai/assistant/skills/qfai-discussion/templates/11_OQ-Register.md",
-    "packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/11_OQ-Register.md",
+    ".qfai/assistant/skill/qfai-discussion/templates/11_OQ-Register.md",
+    "packages/qfai/assets/init/.qfai/assistant/skill/qfai-discussion/templates/11_OQ-Register.md",
   ])("%s has a row shape for a question asking for a fact", async (rel) => {
     const text = await readFile(path.join(ROOT, rel), "utf-8");
     expect(text).toMatch(/A\s+question\s+asking\s+for\s+a\s+fact\s+is\s+the\s+exception/);

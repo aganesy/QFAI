@@ -18,7 +18,7 @@ import { describe, expect, it } from "vitest";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
-const CONTRACTS_DIR = path.join(ROOT, ".qfai", "contracts");
+const CONTRACTS_DIR = path.join(ROOT, ".qfai", "spec", "03_contract");
 
 /** A note that defers behaviour rather than describing today's. */
 const DEFERRAL_RE = /NOT YET IMPLEMENTED|scheduled for\b/i;

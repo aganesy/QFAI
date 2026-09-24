@@ -18,7 +18,7 @@ const templateBase = path.join(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-discussion",
 );
 const assistantBase = path.join(
@@ -30,7 +30,7 @@ const assistantBase = path.join(
   ".qfai",
   "assistant",
 );
-const agentsDir = path.join(assistantBase, "agents");
+const agentsDir = path.join(assistantBase, "agent");
 const agentCatalogPath = path.join(assistantBase, "manifest", "agent-catalog.yml");
 const skillPath = path.join(templateBase, "SKILL.md");
 const uiuxTemplateDir = path.join(templateBase, "templates", "uiux");
@@ -42,7 +42,7 @@ const completionMatrixPath = path.join(
 const uiBearingPlaybookPath = path.join(templateBase, "references", "ui-bearing-playbook.md");
 const sddExecutionPlaybookPath = path.join(
   repoRoot,
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-execution-playbook.md",
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md",
 );
 
 // Shared vocabulary between the matrix and the Reviewer Gate templates. The
@@ -361,7 +361,7 @@ describe("discussion skill template integration", () => {
     const implementSkill = await readFile(
       path.join(
         repoRoot,
-        "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md",
+        "packages/qfai/assets/init/.qfai/assistant/skill/qfai-implement/SKILL.md",
       ),
       "utf-8",
     );
@@ -385,7 +385,7 @@ describe("discussion skill template integration", () => {
     const implementSkill = await readFile(
       path.join(
         repoRoot,
-        "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md",
+        "packages/qfai/assets/init/.qfai/assistant/skill/qfai-implement/SKILL.md",
       ),
       "utf-8",
     );
@@ -405,7 +405,7 @@ describe("discussion skill template integration", () => {
     const implementSkill = await readFile(
       path.join(
         repoRoot,
-        "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md",
+        "packages/qfai/assets/init/.qfai/assistant/skill/qfai-implement/SKILL.md",
       ),
       "utf-8",
     );

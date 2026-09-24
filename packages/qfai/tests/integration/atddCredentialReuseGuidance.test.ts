@@ -39,7 +39,7 @@ import { getInitAssetsDir } from "../../src/shared/assets.js";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const skillDir = (): string =>
-  path.join(getInitAssetsDir(), ".qfai", "assistant", "skills", "qfai-atdd");
+  path.join(getInitAssetsDir(), ".qfai", "assistant", "skill", "qfai-atdd");
 const GUIDANCE_REL = "references/credential-reuse.md";
 
 let guidance = "";

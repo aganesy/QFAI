@@ -43,12 +43,12 @@ async function withWorkspace(
       path.join(root, "qfai.config.yaml"),
       [
         "paths:",
-        "  contractsDir: .qfai/contracts",
-        "  specsDir: .qfai/specs",
+        "  contractsDir: .qfai/spec/03_contract",
+        "  specsDir: .qfai/spec",
         "  discussionDir: .qfai/discussion",
         "  outDir: .qfai/report",
-        "  skillsDir: .qfai/assistant/skills",
-        "  promptsDir: .qfai/assistant/skills",
+        "  skillsDir: .qfai/assistant/skill",
+        "  promptsDir: .qfai/assistant/skill",
         "  srcDir: src",
         "  testsDir: tests",
         "uiux:",
@@ -59,7 +59,7 @@ async function withWorkspace(
       ].join("\n"),
       "utf-8",
     );
-    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+    const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
     await mkdir(uiDir, { recursive: true });
     await writeFile(path.join(uiDir, "sample.yaml"), seed.uiContract, "utf-8");
     await task(root);
@@ -197,7 +197,7 @@ describe("TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is em
     );
     expect(empty.exitCode).toBe(1);
     expect(empty.errors.map((check) => check.id)).toEqual(["prototyping.uiContracts"]);
-    expect(empty.errors[0]?.message).toContain(".qfai/contracts/ui/ui-0001.yaml#home");
+    expect(empty.errors[0]?.message).toContain(".qfai/spec/03_contract/ui/ui-0001.yaml#home");
   });
 });
 

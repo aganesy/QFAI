@@ -27,7 +27,15 @@ import {
 } from "../helpers/measurementClaim.js";
 
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
-const DECISIONS = path.join(REPO_ROOT, ".qfai", "specs", "spec-0017", "07_Decisions.md");
+const DECISIONS = path.join(
+  REPO_ROOT,
+  ".qfai",
+  "evidence",
+  "migration-spec-to-story",
+  "retired",
+  "spec-0017",
+  "07_Decisions.md",
+);
 
 /** A record in the shape these rules police, with the numbers left out. */
 const WITHOUT_NUMBERS = [

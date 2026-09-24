@@ -36,7 +36,7 @@ const stubConfig: QfaiConfig = {
     specsDir: ".qfai/specs",
     discussionDir: ".qfai/discussion",
     outDir: ".qfai/report",
-    skillsDir: ".qfai/assistant/skills",
+    skillsDir: ".qfai/assistant/skill",
     promptsDir: ".qfai/assistant/prompts",
     srcDir: "src",
     testsDir: "tests",
@@ -849,7 +849,7 @@ describe("cross-doc routing consistency", () => {
       "init",
       ".qfai",
       "assistant",
-      "skills",
+      "skill",
       "qfai-prototyping",
       "SKILL.md",
     );
@@ -876,7 +876,7 @@ describe("vocabulary pass scan", () => {
       "init",
       ".qfai",
       "assistant",
-      "skills",
+      "skill",
       "qfai-prototyping",
       "SKILL.md",
     );
@@ -932,7 +932,7 @@ describe("fixture alignment — exploration-first model", () => {
       "init",
       ".qfai",
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "SKILL.md",
     );
@@ -952,7 +952,7 @@ describe("fixture 4-axis reject", () => {
       "init",
       ".qfai",
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "SKILL.md",
     );

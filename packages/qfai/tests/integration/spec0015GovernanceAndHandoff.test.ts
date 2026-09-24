@@ -268,46 +268,19 @@ describe("spec-0015 finding-code catalog CHG-006", () => {
    * change (`UPDATE:APPEND` only, `Approved By` filled in), so its text is history rather than a
    * live contract and must not be rewritten to match.
    */
-  const CATALOG_SHAPE_SURFACES = [
-    "01_Spec.md",
-    "02_User-stories.md",
-    "03_Acceptance-Criteria.md",
-    "04_Business-Rules.md",
-    "06_Test-Cases.md",
-    "10_Plan.md",
-  ] as const;
-
   const repoRoot = path.resolve(__dirname, "../../../..");
-
-  const readSurface = async (name: string): Promise<string> =>
-    readFile(path.join(repoRoot, ".qfai", "specs", "spec-0015", name), "utf-8");
-
-  it.each(CATALOG_SHAPE_SURFACES)(
-    "QFAI:EX-0001-0178-01 — normal: %s states the catalog's membership-only shape",
-    async (surface) => {
-      const text = await readSurface(surface);
-      // The stored shape: membership, and explicitly no severity column on the entry.
-      expect(text).toMatch(/membership only/i);
-      expect(text).toMatch(/per-code severity/i);
-      // Over-correction pin — dropping the severity column must not drop the justification
-      // obligation or the error-severity refusal of an empty one.
-      expect(text).toMatch(/non-empty `justification:`/);
-      expect(text).toMatch(/severity error/i);
-    },
-  );
-
-  it("QFAI:EX-0001-0178-01 — error: the plan does not tell an implementer to register the catalog at a severity", async () => {
-    const text = await readSurface("10_Plan.md");
-    const item = text.split(/\r?\n/).find((line) => line.includes("BR-0015-0013"));
-    expect(item).toBeDefined();
-    // The superseded instruction, verbatim. It put the severity on the registration itself,
-    // which is the column `JUSTIFICATION_CATALOG` entries do not carry (asserted above).
-    expect(item).not.toContain("at severity error with mandatory non-empty");
-    expect(item).toMatch(/membership only/i);
-    expect(item).toMatch(/no per-code severity column/i);
-    // What the plan must still require of the implementer.
-    expect(item).toMatch(/non-empty `justification:`/);
-    expect(item).toMatch(/rejects an empty \/ whitespace-only value at severity error/i);
+  it("QFAI:EX-0001-0178-01 — the active routing contract keeps membership and severity separate", async () => {
+    const text = await readFile(
+      path.join(repoRoot, ".qfai", "spec", "03_contract", "cli", "assistant-routing.md"),
+      "utf-8",
+    );
+    const rule = text.split(/\r?\n/).find((line) => line.includes("| BR-0354 |"));
+    expect(rule).toBeDefined();
+    expect(rule).toMatch(/membership only/i);
+    expect(rule).toMatch(/per-code severity/i);
+    expect(rule).toMatch(/non-empty `justification:`/);
+    expect(rule).toMatch(/severity error/i);
+    expect(rule).not.toContain("at severity error with mandatory non-empty");
   });
 });
 
@@ -400,7 +373,7 @@ describe("spec-0015 handoff upgrade CHG-006", () => {
 
 describe("spec-0015 stale-ref report CHG-006", () => {
   it("QFAI:EX-0001-0181-01 — normal: rewritten in-PR refs report zero stale references at HEAD", async () => {
-    const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
+    const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "handoff.md"), "# Handoff\nUses handoff.yaml.\n", "utf-8");
     const issues = await validateStaleReferences(root);
@@ -408,7 +381,7 @@ describe("spec-0015 stale-ref report CHG-006", () => {
   });
 
   it("QFAI:EX-0001-0181-01 — error: a stale ref at HEAD reports warning", async () => {
-    const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
+    const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(
       path.join(dir, "handoff.md"),

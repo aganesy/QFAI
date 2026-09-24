@@ -21,26 +21,22 @@ import { escapeRegExp } from "../../src/core/regex.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 
 const assistantDir = path.join(getInitAssetsDir(), ".qfai", "assistant");
-const DRIFT_PROTOCOL = path.join(assistantDir, "constitution", "drift-protocol.md");
-const DELEGATION_BASELINE = path.join(
-  assistantDir,
-  "constitution",
-  "shared-skill-delegation-baseline.md",
-);
-const IMPLEMENT_SKILL = path.join(assistantDir, "skills", "qfai-implement", "SKILL.md");
+const DRIFT_PROTOCOL = path.join(assistantDir, "rule", "drift-protocol.md");
+const DELEGATION_BASELINE = path.join(assistantDir, "rule", "shared-skill-delegation-baseline.md");
+const IMPLEMENT_SKILL = path.join(assistantDir, "skill", "qfai-implement", "SKILL.md");
 // Gate item 10's rule lives in the reference the gate line cites, not inline in
 // the gate (`tests/assets/gateItemBudget.test.ts` holds the gate to that shape).
 // The obligations below are item 10's, so this is the document that states them.
 const RECORD_CONTRACT = path.join(
   assistantDir,
-  "skills",
+  "skill",
   "qfai-implement",
   "references",
   "record-contract.md",
 );
 const FINDING_CLASSIFICATION = path.join(
   assistantDir,
-  "skills",
+  "skill",
   "qfai-implement",
   "references",
   "finding-classification.md",
@@ -48,21 +44,21 @@ const FINDING_CLASSIFICATION = path.join(
 const CONFIGURE_SKILL = path.join(assistantDir, "skill", "qfai-configure", "SKILL.md");
 const REVIEW_ARTIFACT_LAYOUT = path.join(
   assistantDir,
-  "skills",
+  "skill",
   "qfai-implement",
   "references",
   "review-artifact-layout.md",
 );
 const EVIDENCE_REVISION = path.join(
   assistantDir,
-  "skills",
+  "skill",
   "qfai-implement",
   "references",
   "evidence-revision.md",
 );
 const REVIEWER_AGENTS = [
-  path.join(assistantDir, "agents", "completion-reviewer.md"),
-  path.join(assistantDir, "agents", "implementation-reviewer.md"),
+  path.join(assistantDir, "agent", "completion-reviewer.md"),
+  path.join(assistantDir, "agent", "implementation-reviewer.md"),
 ];
 
 const DEFECT_CLASSES = ["defect:correctness", "defect:security", "defect:code-quality"] as const;

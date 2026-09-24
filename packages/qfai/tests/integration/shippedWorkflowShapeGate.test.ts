@@ -3,7 +3,7 @@
  * gate.
  *
  * Covers the gate half of the shipped-workflows contract
- * (`.qfai/contracts/cli/shipped-workflows.md`, CLI-WFSET §5): ONE declared
+ * (`.qfai/spec/03_contract/cli/shipped-workflows.md`, CLI-WFSET §5): ONE declared
  * shape, whose values live in exactly one module (`shippedWorkflowShape.ts`
  * beside this file), diffed against a workflow tree and reporting
  * `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` with the drifted value and the expected
@@ -61,10 +61,24 @@ const TESTS_DIR = path.join(packageRoot, "tests");
 const SHAPE_MODULE_REL = "integration/shippedWorkflowShape.ts";
 
 /** The contract file whose §5 fixes the dimension set and forbids restating values. */
-const CONTRACT_PATH = path.join(repoRoot, ".qfai", "contracts", "cli", "shipped-workflows.md");
+const CONTRACT_PATH = path.join(
+  repoRoot,
+  ".qfai",
+  "spec",
+  "03_contract",
+  "cli",
+  "shipped-workflows.md",
+);
 
-/** The owning spec pack, scanned for value restatements. */
-const SPEC_DIR = path.join(repoRoot, ".qfai", "specs", "spec-0003");
+/** The owning story, scanned for value restatements. */
+const SPEC_DIR = path.join(
+  repoRoot,
+  ".qfai",
+  "spec",
+  "02_business-flow",
+  "business-flow-0002",
+  "user-story-0002-0008",
+);
 
 /**
  * The contract's dimension ordinals — a CLOSED set of nine. The ordinals are
@@ -630,10 +644,7 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
     // The dimension set is closed and the contract is where it is closed. A
     // title that drifts from its item leaves the gate reporting one obligation
     // and the contract stating another, with nothing between them.
-    const contract = await readFile(
-      path.resolve(__dirname, "../../../..", ".qfai/contracts/cli/shipped-workflows.md"),
-      "utf8",
-    );
+    const contract = await readFile(CONTRACT_PATH, "utf8");
     const section = contract.slice(
       contract.indexOf("## 5. Declared structural shape"),
       contract.indexOf("## 6. Hygiene rules"),
@@ -1062,12 +1073,9 @@ describe("TC-0003-0050 (TDD-0050): gate is wired into the lint aggregate and not
       `the subsumed reference ${SUBSUMED_ANNOTATION} is not registered in a comment on the shape-gate side`,
     ).toBeGreaterThanOrEqual(1);
 
-    // And registered where the repository's traceability registry reads it.
-    const registry = await readFile(
-      path.join(repoRoot, "tests", "integration", "qfai-traceability.md"),
-      "utf-8",
-    );
-    expect(registry).toContain(`- ${SUBSUMED_ANNOTATION}`);
+    // The active story carries the same example identifier as the gate annotation.
+    const example = await readFile(path.join(SPEC_DIR, "03_Example.md"), "utf-8");
+    expect(example).toContain(SUBSUMED_ANNOTATION.slice("QFAI:".length));
 
     // Neither carrier lost its own test-case annotation, and each still points
     // at the gate that subsumed its dimension-5 assertion — "not deleted"

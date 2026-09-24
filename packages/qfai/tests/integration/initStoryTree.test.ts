@@ -33,7 +33,7 @@ const templateRoot = path.join(
   getInitAssetsDir(),
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-sdd",
   "templates",
   "spec",
@@ -143,7 +143,7 @@ describe("story-tree initialization", () => {
       const output = await init(root);
 
       expect(await isPresent(path.join(root, ".qfai", "spec"))).toBe(false);
-      expect(await isPresent(path.join(root, ".qfai", "assistant", "skills"))).toBe(true);
+      expect(await isPresent(path.join(root, ".qfai", "assistant", "skill"))).toBe(true);
       const migrationLines = output
         .split(/\r?\n/)
         .filter((line) => line.includes("/qfai-migration-spec-to-story"));

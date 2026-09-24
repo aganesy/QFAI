@@ -26,7 +26,7 @@ const TEMPLATE_PATH = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-sdd",
   "templates",
   "contracts",
@@ -41,7 +41,7 @@ const AGENT_GUIDE_PATH = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "agents",
+  "agent",
   "requirements-analyst.md",
 );
 

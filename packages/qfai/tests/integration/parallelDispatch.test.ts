@@ -9,7 +9,7 @@ const implementSkillPath = path.join(
   templateRoot,
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-implement",
   "SKILL.md",
 );
@@ -22,7 +22,7 @@ const parallelPolicyPath = path.join(
   templateRoot,
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-implement",
   "references",
   "parallelization-policy.md",

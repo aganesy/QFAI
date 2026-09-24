@@ -9,7 +9,7 @@ const uiuxTemplateDir = path.join(
   templateRoot,
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-discussion",
   "templates",
   "uiux",
@@ -18,7 +18,7 @@ const implementSkillPath = path.join(
   templateRoot,
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-implement",
   "SKILL.md",
 );

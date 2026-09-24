@@ -118,7 +118,7 @@ describe("TC-0015-0019: Reviewer Gate emits R-PROMPT-SCANNER-DRIFT with 3-part j
     });
     const legacyPrompt = path.join(
       root,
-      "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md",
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md",
     );
     await mkdir(path.dirname(legacyPrompt), { recursive: true });
     await writeFile(legacyPrompt, PROMPT_SCAFFOLD, "utf-8");
@@ -128,7 +128,7 @@ describe("TC-0015-0019: Reviewer Gate emits R-PROMPT-SCANNER-DRIFT with 3-part j
     expect(findings.length).toBeGreaterThanOrEqual(1);
     expect(findings[0]?.severity).toBe("error");
     expect(findings[0]?.message).toContain(PROMPT_REL);
-    expect(findings[0]?.message).not.toContain("assistant/skills/");
+    expect(findings[0]?.message).not.toContain("assistant/skill/");
   });
 
   it("emits R-PROMPT-SCANNER-DRIFT when prompt mentions a clause but scanner does not", async () => {

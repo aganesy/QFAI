@@ -12,7 +12,7 @@ const agentsDir = path.join(
   "init",
   ".qfai",
   "assistant",
-  "agents",
+  "agent",
 );
 const instructionsDir = path.join(
   repoRoot,
@@ -22,7 +22,7 @@ const instructionsDir = path.join(
   "init",
   ".qfai",
   "assistant",
-  "constitution",
+  "rule",
 );
 // Post-recut: agent-catalog.yml moved from steering/ to manifest/.
 const manifestDir = path.join(

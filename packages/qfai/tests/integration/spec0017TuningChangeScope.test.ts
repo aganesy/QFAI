@@ -36,7 +36,15 @@ import workspace from "../../vitest.workspace";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
-const DECISIONS = path.join(REPO_ROOT, ".qfai", "specs", "spec-0017", "07_Decisions.md");
+const DECISIONS = path.join(
+  REPO_ROOT,
+  ".qfai",
+  "evidence",
+  "migration-spec-to-story",
+  "retired",
+  "spec-0017",
+  "07_Decisions.md",
+);
 
 /** A GitHub Actions run identifier: a long bare integer. */
 const RUN_ID = /\b\d{9,14}\b/g;

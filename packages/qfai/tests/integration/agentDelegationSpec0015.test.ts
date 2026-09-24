@@ -169,7 +169,7 @@ describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
       baselineContent,
       "### Delegation Failure (Hard Stop)",
     );
-    const skillHardStopSection = getSection(skillContent, "### Delegation Failure (Hard Stop)");
+    expect(skillContent).toContain("rule/shared-skill-delegation-baseline.md");
 
     expect(capabilitySection).toContain("If the delegation fails, classify the failure first");
     expect(capabilitySection).toContain(
@@ -184,20 +184,13 @@ describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
       "Retry condition: rerun after the required delegation succeeds",
     );
 
-    expect(skillHardStopSection).toContain("No additional overrides.");
-    expect(skillHardStopSection).toContain("Do not simulate roles.");
-    expect(skillHardStopSection).toContain("Classify the failure per the baseline taxonomy first");
-
     // Live operational files must satisfy the same hard-stop reporting contract
     const liveCapabilitySection = getSection(liveBaselineContent, "### Capability Probe (MUST)");
     const liveBaselineHardStopSection = getSection(
       liveBaselineContent,
       "### Delegation Failure (Hard Stop)",
     );
-    const liveSkillHardStopSection = getSection(
-      liveSkillContent,
-      "### Delegation Failure (Hard Stop)",
-    );
+    expect(liveSkillContent).toContain("rule/shared-skill-delegation-baseline.md");
 
     expect(liveCapabilitySection).toContain("If the delegation fails, classify the failure first");
     expect(liveCapabilitySection).toContain(
@@ -210,12 +203,6 @@ describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
     expect(liveBaselineHardStopSection).toContain("User action needed:");
     expect(liveBaselineHardStopSection).toContain(
       "Retry condition: rerun after the required delegation succeeds",
-    );
-
-    expect(liveSkillHardStopSection).toContain("No additional overrides.");
-    expect(liveSkillHardStopSection).toContain("Do not simulate roles.");
-    expect(liveSkillHardStopSection).toContain(
-      "Classify the failure per the baseline taxonomy first",
     );
   });
 });
@@ -236,8 +223,7 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
       baselineContent,
       "### Delegation Failure (Hard Stop)",
     );
-    const skillCapabilitySection = getSection(skillContent, "### Capability Probe (MUST)");
-    const skillHardStopSection = getSection(skillContent, "### Delegation Failure (Hard Stop)");
+    expect(skillContent).toContain("rule/shared-skill-delegation-baseline.md");
 
     expect(baselineContent.indexOf("### Capability Probe (MUST)")).toBeLessThan(
       baselineContent.indexOf("### Delegation Failure (Hard Stop)"),
@@ -251,13 +237,6 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
     expect(baselineCapabilitySection).toContain(
       "If the delegation fails, classify the failure first",
     );
-
-    expect(skillCapabilitySection).toContain("No additional overrides.");
-    expect(skillCapabilitySection).not.toMatch(/preflight|synthetic/i);
-    expect(skillContent.indexOf("### Capability Probe (MUST)")).toBeLessThan(
-      skillContent.indexOf("### Delegation Failure (Hard Stop)"),
-    );
-    expect(skillHardStopSection).toContain("Classify the failure per the baseline taxonomy first");
 
     expect(baselineHardStopSection).toContain("Delegation failure:");
     expect(baselineHardStopSection).toContain("Attempted role:");
@@ -279,11 +258,7 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
       liveBaselineContent,
       "### Delegation Failure (Hard Stop)",
     );
-    const liveSkillCapabilitySection = getSection(liveSkillContent, "### Capability Probe (MUST)");
-    const liveSkillHardStopSection = getSection(
-      liveSkillContent,
-      "### Delegation Failure (Hard Stop)",
-    );
+    expect(liveSkillContent).toContain("rule/shared-skill-delegation-baseline.md");
 
     expect(liveBaselineContent.indexOf("### Capability Probe (MUST)")).toBeLessThan(
       liveBaselineContent.indexOf("### Delegation Failure (Hard Stop)"),
@@ -296,15 +271,6 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
     );
     expect(liveBaselineCapabilitySection).toContain(
       "If the delegation fails, classify the failure first",
-    );
-
-    expect(liveSkillCapabilitySection).toContain("No additional overrides.");
-    expect(liveSkillCapabilitySection).not.toMatch(/preflight|synthetic/i);
-    expect(liveSkillContent.indexOf("### Capability Probe (MUST)")).toBeLessThan(
-      liveSkillContent.indexOf("### Delegation Failure (Hard Stop)"),
-    );
-    expect(liveSkillHardStopSection).toContain(
-      "Classify the failure per the baseline taxonomy first",
     );
 
     expect(liveBaselineHardStopSection).toContain("Delegation failure:");
@@ -377,20 +343,29 @@ describe("delegation failure taxonomy is actionable", () => {
       // the code span `Status (PASS/REVISE)` and the bare Work Orders table
       // header `| ... | Status (PASS/REVISE) |`.
       expect(content).not.toContain("Status (PASS/REVISE)");
-      expect(content).toContain("Status (PASS/REVISE/PENDING)");
+      expect(content).toContain("shared-skill-delegation-baseline.md");
     }
   });
 
-  it("keeps spec-0015 obligations aligned with the two-class contract", async () => {
-    const specDir = path.resolve(__dirname, "..", "..", "..", "..", ".qfai", "specs", "spec-0015");
-    const [ac, br] = await Promise.all([
-      readAsset(path.join(specDir, "03_Acceptance-Criteria.md")),
-      readAsset(path.join(specDir, "04_Business-Rules.md")),
-    ]);
-    for (const content of [ac, br]) {
-      expect(content).toContain("`unavailable`");
-      expect(content).toContain("`saturated`");
-    }
-    expect(br).toContain("classify it before responding");
+  it("keeps the active routing contract aligned with the two failure classes", async () => {
+    const contract = await readAsset(
+      path.resolve(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        "..",
+        ".qfai",
+        "spec",
+        "03_contract",
+        "cli",
+        "assistant-routing.md",
+      ),
+    );
+    const rule = contract.split(/\r?\n/).find((line) => line.includes("| BR-0344 |"));
+    expect(rule).toBeDefined();
+    expect(rule).toContain("`unavailable`");
+    expect(rule).toContain("`saturated`");
+    expect(rule).toContain("classify it before responding");
   });
 });

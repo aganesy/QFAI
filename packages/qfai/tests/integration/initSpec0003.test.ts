@@ -13,15 +13,7 @@ const INIT_CLI = path.resolve(__dirname, "..", "..", "src", "cli", "commands", "
 
 // TC-0003-0001: Empty directory initialization
 describe("TC-0003-0001: Empty directory initialization", () => {
-  const ARTIFACT_DIRS = [
-    "spec",
-    "specs",
-    "contracts",
-    "discussion",
-    "evidence",
-    "review",
-    "report",
-  ];
+  const ARTIFACT_DIRS = ["specs", "contracts", "discussion", "evidence", "review"];
   const SKILL_LINK_DIRS = [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"];
 
   async function kindOf(
@@ -48,7 +40,8 @@ describe("TC-0003-0001: Empty directory initialization", () => {
       for (const sub of ARTIFACT_DIRS) {
         if ((await kindOf(path.join(dir, ".qfai", sub))) !== "absent") present.push(sub);
       }
-      expect(present, "init wrote an artifact directory under .qfai/").toEqual([]);
+      expect(present, "init wrote a retired artifact directory under .qfai/").toEqual([]);
+      expect(await kindOf(path.join(dir, ".qfai", "spec", "01_policy"))).toBe("directory");
 
       // Verify bullet 2.
       expect(await kindOf(path.join(dir, "qfai.config.yaml"))).toBe("file");

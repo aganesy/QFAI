@@ -624,26 +624,30 @@ describe("this repository's own Codex profiles", () => {
       "solution-architect",
     ];
     const reuseRoles = ["backend-engineer", "frontend-engineer", "devops-ci-engineer"];
-    const firstRungMeaning =
-      /the first rung is this stage's — whether the thing needs to exist\.\s+After a spec row is agreed, that question is a Change Request\./;
-    const reuseMeaning =
-      /check this codebase before the\s+standard library, native platform features and installed dependencies\.\s+Mark\s+a deliberate shortcut with its ceiling and the condition that lifts it\./;
-    for (const [roles, meaning] of [
-      [firstRungRoles, firstRungMeaning],
-      [reuseRoles, reuseMeaning],
-    ] as const) {
+    const rule = await readFile(
+      path.join(repoRoot, ".agents", "rules", "minimal-implementation.md"),
+      "utf-8",
+    );
+    expect(rule).toContain("Once a spec row is agreed, asking");
+    expect(rule).toContain("a Change Request");
+    expect(rule).toContain("Is it already in this codebase?");
+    expect(rule).toContain("Does the standard library do it?");
+    expect(rule).toContain("Does a native platform feature cover it?");
+    expect(rule).toContain("Does an already-installed dependency solve it?");
+    expect(rule).toContain("the condition that lifts it");
+    for (const roles of [firstRungRoles, reuseRoles]) {
       for (const role of roles) {
         for (const directory of [
           templateAgentsDir,
           path.join(repoRoot, ".qfai", "assistant", "agent"),
         ]) {
-          expect(await readFile(path.join(directory, `${role}.md`), "utf-8"), role).toMatch(
-            meaning,
+          expect(await readFile(path.join(directory, `${role}.md`), "utf-8"), role).toContain(
+            ".agents/rules/minimal-implementation.md",
           );
         }
         const profile = parseTomlDocument(await readFile(codexAgentPath(repoRoot, role), "utf-8"));
         expect(profile["developer_instructions"], `${role}.toml`).toEqual(
-          expect.stringMatching(meaning),
+          expect.stringContaining(".agents/rules/minimal-implementation.md"),
         );
       }
     }

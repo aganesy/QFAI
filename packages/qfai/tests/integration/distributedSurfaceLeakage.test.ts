@@ -147,14 +147,7 @@ describe("distributed surface leakage smoke", () => {
     // DESIGN.md, because `/qfai-discussion` emits one and only for a
     // visual-prototyping surface.
     expect(visitedRelative).toContain(
-      path.join(
-        ".qfai",
-        "assistant",
-        "skills",
-        "qfai-prototyping",
-        "templates",
-        "DESIGN.md.sample",
-      ),
+      path.join(".qfai", "assistant", "skill", "qfai-prototyping", "templates", "DESIGN.md.sample"),
     );
 
     // The walk must actually reach the symlinked wrappers, or the name pass
@@ -162,7 +155,7 @@ describe("distributed surface leakage smoke", () => {
     // Directories have to be in the list too: an empty one is otherwise
     // reachable by no path at all.
     const walked = new Set(visitedRelative.map((entry) => entry.split(path.sep).join("/")));
-    expect(walked).toContain(".qfai/assistant/skills");
+    expect(walked).toContain(".qfai/assistant/skill");
     const symlinked = [...walked].filter((entry) =>
       /^\.(claude|codex|github|agents)\/skills\//.test(entry),
     );
@@ -240,7 +233,7 @@ describe("distributed surface leakage smoke", () => {
       getInitAssetsDir(),
       ".qfai",
       "assistant",
-      "skills",
+      "skill",
       "qfai-prototyping",
       "templates",
       "DESIGN.md.sample",

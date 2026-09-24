@@ -29,12 +29,12 @@ async function withWorkspace(uiContract: string, task: (root: string) => Promise
       path.join(root, "qfai.config.yaml"),
       [
         "paths:",
-        "  contractsDir: .qfai/contracts",
-        "  specsDir: .qfai/specs",
+        "  contractsDir: .qfai/spec/03_contract",
+        "  specsDir: .qfai/spec",
         "  discussionDir: .qfai/discussion",
         "  outDir: .qfai/report",
-        "  skillsDir: .qfai/assistant/skills",
-        "  promptsDir: .qfai/assistant/skills",
+        "  skillsDir: .qfai/assistant/skill",
+        "  promptsDir: .qfai/assistant/skill",
         "  srcDir: src",
         "  testsDir: tests",
         "uiux:",
@@ -44,7 +44,7 @@ async function withWorkspace(uiContract: string, task: (root: string) => Promise
       ].join("\n"),
       "utf-8",
     );
-    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+    const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
     await mkdir(uiDir, { recursive: true });
     await writeFile(path.join(uiDir, "sample.yaml"), uiContract, "utf-8");
     await task(root);
