@@ -8,9 +8,11 @@ The story tree contains 16 stories, 34 criteria and 44 examples. The existing BF
 
 See [coverage-depth-BF-0003.md](coverage-depth-BF-0003.md).
 
-✅ 0 / ⚠️ 67 / ❌ 223 across 290 scored cells; 274 cells are not applicable.
+✅ 0 / ⚠️ 73 / ❌ 217 across 290 scored cells; 274 cells are not applicable.
 
-The new [BF-0003 acceptance integration tests](../../packages/qfai/tests/integration/bf0003Acceptance.test.ts) assert configuration presence and absence, configured path diagnostics, JSON and file output, failure thresholds, and workflow drift placement. The BF E2E journey now attributes seven stories to specific assertions. These 19 depth cells remain candidates until CI executes them. The workflow drift placement assertion currently expresses a known contract mismatch: `AC-0003-0011-02` requires the `warnings advisory of drift` group, while `formatDoctorText` renders a different group heading. The cell remains a gap pending implementation and CI proof.
+The new [BF-0003 acceptance integration tests](../../packages/qfai/tests/integration/bf0003Acceptance.test.ts) assert configuration presence and absence, configured path diagnostics, JSON and file output, failure thresholds, and workflow drift placement. The BF E2E journey now attributes seven stories to specific assertions. These 19 depth cells remain candidates until CI executes them. The workflow drift placement assertion checks the `warnings advisory of drift` heading required by `AC-0003-0011-02`.
+
+The [BF-0003 example tests](../../packages/qfai/tests/unit/bf0003Examples.test.ts) cover doctor summary counts and explicit guardrail listing, ordering, and LLM formatting. The former coverage placeholders for `BR-0006-0006`, `BR-0007-0005`, and `BR-0007-0010` now state observable behavior. The extract example is `EX-0003-0014-03` under its owning story and criterion; it replaces `EX-0003-0013-05`. These assertions remain candidates until CI executes them.
 
 ## Execution and disposition
 
