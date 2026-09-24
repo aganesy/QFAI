@@ -49,6 +49,11 @@ const changedPathPatterns: readonly (readonly RegExp[])[] = [
   [
     /^\.qfai\/(?:specs|contracts)\//,
     /^\.qfai\/spec\/(?:_policies|spec-\d{4}|03_contract)\//,
+    /^\.qfai\/(?:prototypes|prototype)\//,
+    /^\.qfai\/assistant\/(?:skills(?:\.local)?|skill(?:\.local)?|agents|agent|prompts|prompt)\//,
+    /^\.qfai\/evidence\/(?:decisions|decision)\//,
+    /^\.qfai\/steering\/_templates?\//,
+    /^\.qfai\/report\/specs?-coverage\//,
     /^\.qfai\/evidence\/migration-spec-to-story\/legacy\/(?:specs|contracts)\//,
     /^qfai\.config\.yaml$/,
   ],
@@ -526,6 +531,48 @@ describe("BF-0004 acceptance criteria", () => {
     expect(journey.idMapUnchangedOnRerun).toBe(true);
   });
 
+  it("completes step 1 after half of the old spec entries were already moved", async () => {
+    // QFAI:EX-0004-0003-13
+    const uninterrupted = await project();
+    const partial = await project();
+    const source = path.join(partial, ".qfai/specs");
+    const destination = path.join(partial, ".qfai/spec");
+    expect((await readdir(source)).sort()).toEqual(["_policies", "spec-0001"]);
+    await mkdir(destination, { recursive: true });
+    await rename(path.join(source, "_policies"), path.join(destination, "_policies"));
+    expect((await readdir(source)).sort()).toEqual(["spec-0001"]);
+    expect((await readdir(destination)).sort()).toEqual(["_policies"]);
+    expect(step(uninterrupted, 1).status).toBe(0);
+    expect(step(partial, 1).status).toBe(0);
+    expect(await fingerprint(partial)).toBe(await fingerprint(uninterrupted));
+  });
+
+  it("reports an empty step 1 rerun and creates only moved files without optional directories", async () => {
+    // QFAI:EX-0004-0003-18
+    const root = await project();
+    await rm(path.join(root, ".qfai/assistant/skills.local"), { recursive: true });
+    await expect(lstat(path.join(root, ".qfai/prototypes"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+    const before = await fileSnapshot(root);
+    const result = step(root, 1);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toMatch(/^## Operations\n- /);
+    const after = await fileSnapshot(root);
+    const added = [...after.keys()].filter((name) => !before.has(name));
+    expect(added.length).toBeGreaterThan(0);
+    for (const name of added) {
+      const oldName = name.startsWith(".qfai/spec/03_contract/")
+        ? name.replace(".qfai/spec/03_contract/", ".qfai/contracts/")
+        : name.replace(".qfai/spec/", ".qfai/specs/");
+      expect(before.get(oldName), name).toBe(after.get(name));
+    }
+    const again = step(root, 1);
+    expect(again.status).toBe(0);
+    expect(again.stdout).toContain("## Operations\nnone\n");
+    expect(await fileSnapshot(root)).toEqual(after);
+  });
+
   // QFAI:AC-0004-0003-05
   // QFAI:EX-0004-0003-14
   // QFAI:EX-0004-0003-15
@@ -581,7 +628,7 @@ describe("BF-0004 acceptance criteria", () => {
       ["10_Plan.md", "# Original plan\n"],
       ["16_Traceability-ledger.md", "# Original trace\n"],
       ["tdd/test-list.md", "# Original test list\n"],
-    ]) {
+    ] as const) {
       expect(
         await readFile(
           path.join(journey.root, ".qfai/evidence/migration-spec-to-story/retired/spec-0001", name),
@@ -709,6 +756,7 @@ describe("BF-0004 acceptance criteria", () => {
 
   // QFAI:AC-0004-0007-02
   // QFAI:EX-0004-0007-07
+  // QFAI:EX-0004-0007-09
   it("leaves an unplaced story in its old pack and lists it for a person", async () => {
     const root = await project();
     const source = path.join(root, ".qfai/specs/spec-0001/02_User-stories.md");
@@ -728,6 +776,41 @@ describe("BF-0004 acceptance criteria", () => {
       await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
     ) as Journey["map"];
     expect(map.ids["spec-0001"]).not.toHaveProperty("US-0001-0002");
+    const planPath = path.join(root, ".qfai/evidence/migration-spec-to-story/plan.yaml");
+    const originalPlan = parseYaml(await readFile(planPath, "utf8")) as {
+      flows: Array<{
+        title: string;
+        from?: string;
+        stories: Array<{ id: string; criteria?: string[] }>;
+      }>;
+      rules: Array<{ id: string; contract: string }>;
+    };
+    const movedPlan = structuredClone(originalPlan);
+    const firstFlow = movedPlan.flows[0];
+    if (!firstFlow) throw new Error("Migration fixture has no first flow");
+    const movedStory = firstFlow.stories.shift();
+    if (!movedStory) throw new Error("Migration fixture has no mapped story");
+    movedPlan.flows.push({ title: "Another flow", stories: [movedStory] });
+    for (const [name, changedPlan, offender] of [
+      ["moving a mapped story", movedPlan, "US-0001-0001"],
+      [
+        "placing an unplaced story",
+        {
+          ...originalPlan,
+          flows: originalPlan.flows.map((flow, index) =>
+            index === 0 ? { ...flow, stories: [...flow.stories, { id: "US-0001-0002" }] } : flow,
+          ),
+        },
+        "US-0001-0002",
+      ],
+    ] as const) {
+      await writeFile(planPath, stringifyYaml(changedPlan));
+      const before = await fingerprint(root);
+      const retry = step(root, 4);
+      expect(retry.status, name).toBe(2);
+      expect(retry.stderr, name).toContain(offender);
+      expect(await fingerprint(root), name).toBe(before);
+    }
   });
 
   it("places an ambiguous criterion explicitly and creates a template for a new flow", async () => {
@@ -740,9 +823,12 @@ describe("BF-0004 acceptance criteria", () => {
       `${await readFile(stories, "utf8")}\n## US-0001-0002: Track the receipt\n\nAs a buyer, I can track it.\n`,
     );
     const criteria = path.join(root, ".qfai/specs/spec-0001/03_Acceptance-Criteria.md");
+    const legacyCriteria = await readFile(criteria, "utf8");
     await writeFile(
       criteria,
-      (await readFile(criteria, "utf8")).replace("- Parent: US-0001-0001\n", ""),
+      legacyCriteria
+        .replace("- Parent: US-0001-0001\n", "")
+        .replace("- Parent: US-0001-0001\n", "- Parent: US-0001-0002\n"),
     );
     const planPath = path.join(root, ".qfai/evidence/migration-spec-to-story/plan.yaml");
     const plan = parseYaml(await readFile(planPath, "utf8")) as {
@@ -751,7 +837,12 @@ describe("BF-0004 acceptance criteria", () => {
         from?: string;
         stories: Array<{ id: string; criteria?: string[] }>;
       }>;
+      rules: Array<{ id: string; contract: string }>;
     };
+    const firstStory = plan.flows[0]?.stories[0];
+    if (!firstStory || !plan.rules[0]) throw new Error("Migration fixture is incomplete");
+    firstStory.criteria = ["AC-0001-0001"];
+    plan.rules[0].contract = "api/orders.yaml";
     plan.flows.push({ title: "Track a receipt", stories: [{ id: "US-0001-0002" }] });
     await writeFile(planPath, stringifyYaml(plan));
     prepareThrough(root, 3);
@@ -762,12 +853,37 @@ describe("BF-0004 acceptance criteria", () => {
     );
     const map = JSON.parse(
       await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
-    ) as Journey["map"];
+    ) as Journey["map"] & { placements: Record<string, Record<string, string>> };
     expect(map.ids["spec-0001"]).toMatchObject({
       "US-0001-0001": "US-0001-0001",
       "US-0001-0002": "US-0002-0001",
       "AC-0001-0001": "AC-0001-0001-01",
+      "AC-0001-0002": "AC-0002-0001-01",
+      "BR-0001-0001": "BR-0001-0001",
     });
+    expect(map.placements["spec-0001"]).toMatchObject({
+      "US-0001-0001": "Place an order",
+      "US-0001-0002": "Track a receipt",
+      "BR-0001-0001": "api/orders.yaml",
+    });
+    expect(
+      await readFile(
+        path.join(
+          root,
+          ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/02_Acceptance-Criteria.md",
+        ),
+        "utf8",
+      ),
+    ).toContain("AC-0001-0001-01");
+    expect(
+      await readFile(
+        path.join(
+          root,
+          ".qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0001/02_Acceptance-Criteria.md",
+        ),
+        "utf8",
+      ),
+    ).toContain("AC-0002-0001-01");
     const secondFlow = await readFile(
       path.join(root, ".qfai/spec/02_business-flow/business-flow-0002/business-flow.md"),
       "utf8",
