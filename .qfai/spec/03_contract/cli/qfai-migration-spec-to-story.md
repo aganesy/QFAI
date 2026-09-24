@@ -17,8 +17,8 @@
     integration-directory and managed-block writers"
 - Phase 0 decisions N11, N14 and N15 in
   `.qfai/evidence/sdd-batch-20260923100952585.md#phase-0-grilling-decisions`
-- Implementation module: none yet. The P5 change that creates it adds its
-  `SSOT modules:` entry here; the entry is on the OQ-0170 landing list
+- SSOT module: `packages/qfai/src/migration/specToStory/index.ts`, with
+  ordered step implementations and the shared harness in the same directory
 
 ## No `qfai` subcommand
 

@@ -3,7 +3,7 @@
 ## Repo layout (high level)
 
 - Top-level directories: `packages/` (the workspace), `scripts/` (repository
-  tooling), `tests/` (the annotation carrier and the traceability ledger),
+  tooling), `tests/` (BF, AC and EX test annotations),
   `.github/` (this repository's own CI), `.qfai/` (its workflow artifacts and
   the assistant tree), `.agents/` (the cross-agent rule masters), `tmp/` (the
   scratch area, untracked)

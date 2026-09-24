@@ -7,40 +7,46 @@ version: 1.0.0
 
 # ドメイン概要（QFAI Toolkit）
 
-QFAI は「要件 → 仕様 → 契約 → 検証/レポート」の流れを支える仕様書駆動のツールキットです。
+QFAI supports discussion, story-tree authoring, contracts, tests, validation
+and reporting.
 
 ## 主な構成要素
 
-- `.qfai/specs/`: the spec packs. `_policies/` carries the cross-spec layer and
-  each `spec-NNNN/` its own; both file sets are listed in `02_project/naming.md`.
-- `.qfai/contracts/`: the contracts, one directory per kind. A contract file
-  declares `QFAI-CONTRACT-ID: CON-<TYPE>-<NUMBER>`.
+- `.qfai/spec/01_policy/`: project objective, initiative, principle, glossary
+  and constraints.
+- `.qfai/spec/02_business-flow/`: business-flow index, BF directories, and
+  their US, AC and EX files. This repository has four flows: development,
+  pull request CI, workspace diagnosis, and spec-pack migration.
+- `.qfai/spec/03_contract/`: contract index, technology and structure rules,
+  and contracts grouped by kind. API, DB, UI and design contracts retain their
+  `QFAI-CONTRACT-ID: CON-<TYPE>-<NUMBER>` declarations. CLI contracts use
+  `CLI-*` short IDs in `contracts.md`.
+- `.qfai/spec/decisions.md` and `open-questions.md`: project-wide decision and
+  question tables. Explicit `DG-NNNN` entries in policy and contract Markdown
+  supply decision guardrails.
 - `.qfai/discussion/`: discussion packs, the optional upstream input to a spec.
-- `.qfai/assistant/`: the assistant tree — `constitution/`, `manifest/`,
-  `catalog/`, `skills/`, `agents/`, `process/`.
+- `.qfai/assistant/`: the assistant tree — `rule/`, `skill/`, `agent/`,
+  `prompt/`, plus project-local `skill.local/` where needed.
 - `.qfai/evidence/`: the per-run evidence a skill is required to write.
-- `.qfai/decisions/`, `.qfai/steering/`, `.qfai/review/`: decision records,
-  steering input, and review packs.
+- `.qfai/steering/`, `.qfai/review/`: work-log entries and review packs.
 - `.qfai/report/`: where `validate` and `report` write.
 - `qfai.config.yaml`: パス/検証ルール/出力設定
 
 ## ID とトレーサビリティ
 
-The chain is `REQ → US → AC → BR → EX → TC`, each link declared by the
-downstream item.
+The chain is `BF → US → AC → EX ← BR`. A BF contains stories; each EX names
+one AC; each BR lives in a contract and cites one or more EX IDs.
 
-| ID          | Declared in                    | Carries                     |
-| ----------- | ------------------------------ | --------------------------- |
-| `CAP-NNNN`  | `_policies/03_Capabilities.md` | the spec that implements it |
-| `spec-NNNN` | `01_Spec.md`                   | `Parent: CAP-NNNN`          |
-| `US-NNNN`   | `02_User-stories.md`           | `Parent: CAP-NNNN`          |
-| `AC-NNNN`   | `03_Acceptance-Criteria.md`    | —                           |
-| `BR-NNNN`   | `04_Business-Rules.md`         | `AC-Refs`                   |
-| `EX-NNNN`   | `05_Examples.md`               | `BR-Ref`                    |
-| `TC-NNNN`   | `06_Test-Cases.md`             | `AC-Refs`, `EX-Ref`         |
+| ID             | Declared in                                                |
+| -------------- | ---------------------------------------------------------- |
+| `BF-NNNN`      | `business-flow-NNNN/business-flow.md`                      |
+| `US-NNNN-NNNN` | `business-flow-NNNN/user-story-NNNN-NNNN/01_User-story.md` |
+| `AC-…-NN`      | `user-story-NNNN-NNNN/02_Acceptance-Criteria.md`           |
+| `EX-…-NN`      | `user-story-NNNN-NNNN/03_Example.md`                       |
+| `BR-NNNN`      | a contract under `.qfai/spec/03_contract/`                 |
 
-Contract IDs are `CON-UI-*`, `CON-API-*` and `CON-DB-*`, one per contract file.
-`validate` checks their shape and reports duplicates.
+Tests annotate BF in E2E, AC in integration or API, and EX in a selected
+non-E2E test. `validate` checks IDs, links, layers and uncovered obligations.
 
 Full grammar: `02_project/naming.md`.
 
