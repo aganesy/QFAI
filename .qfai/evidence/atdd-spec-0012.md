@@ -138,6 +138,16 @@ and the example value the case uses. The work order put the test in a new file
 rather than in the file the case's `Test file` line names; that line is
 recorded under Gaps / Open risks.
 
+### /qfai-implement — run started 2026-09-24T02:32:49.865Z
+
+Preflight: confidence high
+
+No session opened. `CR-20260924-0001` fixes the row, its case and its
+boundary, the `/qfai-atdd` handover names the predicate and the mutation, and
+`CR-20260924-0002` points the case at the file that holds its test. The named
+line holds the named call at this revision, and nothing surfaced during the run
+that the spec, the change requests or the handover leave open.
+
 ## Ledger rows advanced
 
 This run takes up the rows `CR-20260923-0002` owes, as `CR-20260923-0004`
@@ -846,6 +856,34 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardow
 None. The test file is new and `tests/helpers/stdout.ts` is read unchanged, so
 no recorded `RED test hash` moves.
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingIterate.ts, `runPrototypingIterate`, the `catch` in `teardownOnce` — the `warn(...)` at line 1278 that reports a rejected teardown on stdout
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts -t "reports a rejected auto\-serve teardown on stdout and keeps the exit code of a resolving teardown"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected [] to deeply equal [ Array(1) ]` at `tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts:150:51`
+
+The edit, line 1278 deleted and the `catch` left empty:
+
+```diff
+     } catch (cause) {
+-      warn(`qfai prototyping iterate --auto-serve: teardown failed (${String(cause)})`);
+     }
+```
+
+- Round 1: Falsifiability revision: working-tree+1c8af7d6aaa95b24c0583cd1b607f3192a179fd79c73d01a32ba37c0251cb1f2
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 297dba1fdd4ccaf18eb931b2a0d8b6a877da2dcddf0d65c7c56653800e5e248e
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts
+```
+
+- Round 1: Revision: 3f1fc99036e3cf19a59c127776299260ac13acff
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts -t "reports a rejected auto\-serve teardown on stdout and keeps the exit code of a resolving teardown"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`, which restores the file as it is at that revision
+
 ## Coverage Depth Matrix
 
 | Obligation | Layer | Implemented in | Depth | Rationale |
@@ -954,6 +992,13 @@ no recorded `RED test hash` moves.
 | 39 | acceptance-test-engineer | acceptance-test-engineer | Hand over `TDD-0577` on the falsifiability branch | the test file, `prototypingIterate.ts` | #tdd-0577 | PASS |
 | 40 | acceptance-test-engineer | acceptance-test-engineer | Add `TC-0012-0490` to the Coverage Depth Matrix | 06_Test-Cases.md | #coverage-depth-matrix | PASS |
 | 41 | - | n/a | grilling(-@2026-09-24T01:49:59.342Z/none): none | - | - | PASS |
+
+### Rows for the /qfai-implement run started 2026-09-24T02:32:49.865Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 42 | - | n/a | grilling(-@2026-09-24T02:32:49.865Z/none): none | - | - | PASS |
+| 43 | backend-engineer | backend-engineer | /qfai-implement: TDD-0577 falsifiability run with line 1278 deleted, then the revert and the restored GREEN | #tdd-0577, `prototypingIterate.ts` | Round 1 | PASS |
 
 ## Execution logs
 
