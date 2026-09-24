@@ -1,126 +1,83 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  classifyFrozenSpecsCoveredMultiSpec,
-  readFrozenSpecsCovered,
+  checkUiContractsCoveredDrift,
+  readUiContractsCovered,
 } from "../../../src/core/prototyping/specsCovered.js";
 
-describe("readFrozenSpecsCovered (SSOT)", () => {
-  it("accepts a non-empty array of non-empty strings", () => {
-    expect(readFrozenSpecsCovered({ specsCovered: ["0001"] })).toEqual(["0001"]);
-    expect(readFrozenSpecsCovered({ specsCovered: ["0001", "0002"] })).toEqual(["0001", "0002"]);
+describe("readUiContractsCovered", () => {
+  it("accepts a non-empty, unique array of UI contract IDs", () => {
+    expect(readUiContractsCovered({ uiContractsCovered: ["CON-UI-0001", "CON-UI-0002"] })).toEqual({
+      kind: "ok",
+      value: ["CON-UI-0001", "CON-UI-0002"],
+    });
   });
 
-  it("returns null for non-record input", () => {
-    expect(readFrozenSpecsCovered(null)).toBeNull();
-    expect(readFrozenSpecsCovered(undefined)).toBeNull();
-    expect(readFrozenSpecsCovered("string")).toBeNull();
-    expect(readFrozenSpecsCovered(42)).toBeNull();
-    expect(readFrozenSpecsCovered([])).toBeNull();
+  it.each([null, undefined, "string", 42, []])("rejects a non-record input: %s", (value) => {
+    expect(readUiContractsCovered(value)).toEqual({
+      kind: "malformed",
+      reason: "record is not an object",
+    });
   });
 
-  it("returns null when specsCovered is missing", () => {
-    expect(readFrozenSpecsCovered({})).toBeNull();
-    expect(readFrozenSpecsCovered({ otherKey: "value" })).toBeNull();
+  it.each([{}, { uiContractsCovered: null }, { uiContractsCovered: [] }])(
+    "rejects a missing or empty UI contract scope: %s",
+    (value) => {
+      expect(readUiContractsCovered(value)).toEqual({
+        kind: "malformed",
+        reason: "uiContractsCovered must be a non-empty array",
+      });
+    },
+  );
+
+  it.each([
+    { uiContractsCovered: [""] },
+    { uiContractsCovered: ["0001"] },
+    { uiContractsCovered: ["CON-UI-1"] },
+    { uiContractsCovered: ["CON-API-0001"] },
+    { uiContractsCovered: ["CON-UI-0001", 42] },
+  ])("rejects an invalid UI contract ID: %s", (value) => {
+    expect(readUiContractsCovered(value)).toEqual({
+      kind: "malformed",
+      reason: "uiContractsCovered entries must match CON-UI-NNNN",
+    });
   });
 
-  it("returns null when specsCovered is not an array", () => {
-    expect(readFrozenSpecsCovered({ specsCovered: "0001" })).toBeNull();
-    expect(readFrozenSpecsCovered({ specsCovered: 42 })).toBeNull();
-    expect(readFrozenSpecsCovered({ specsCovered: { primary: "0001" } })).toBeNull();
+  it("rejects duplicate IDs so a frozen scope is unambiguous", () => {
+    expect(readUiContractsCovered({ uiContractsCovered: ["CON-UI-0001", "CON-UI-0001"] })).toEqual({
+      kind: "malformed",
+      reason: "uiContractsCovered contains duplicate IDs",
+    });
   });
 
-  it("returns null when specsCovered is an empty array", () => {
-    expect(readFrozenSpecsCovered({ specsCovered: [] })).toBeNull();
-  });
-
-  it("returns null when any entry is an empty string", () => {
-    expect(readFrozenSpecsCovered({ specsCovered: [""] })).toBeNull();
-    expect(readFrozenSpecsCovered({ specsCovered: ["0001", ""] })).toBeNull();
-  });
-
-  it("returns null when any entry is not a string", () => {
-    expect(readFrozenSpecsCovered({ specsCovered: [42] })).toBeNull();
-    expect(readFrozenSpecsCovered({ specsCovered: [null] })).toBeNull();
-    expect(readFrozenSpecsCovered({ specsCovered: ["0001", 42] })).toBeNull();
-    expect(readFrozenSpecsCovered({ specsCovered: ["0001", null] })).toBeNull();
+  it.each([
+    { specsCovered: ["0001"], uiContractsCovered: ["CON-UI-0001"] },
+    { frozenSpecsCovered: null, uiContractsCovered: ["CON-UI-0001"] },
+  ])("rejects a legacy scope rather than silently certifying it: %s", (value) => {
+    expect(readUiContractsCovered(value)).toEqual({ kind: "legacy" });
   });
 });
 
-describe("classifyFrozenSpecsCoveredMultiSpec (absent vs malformed)", () => {
-  // Pins the contract: `absent` lets the certify caller fall back to
-  // the legacy single-spec `specsCovered`; `malformed` MUST fail closed
-  // so a partial / corrupt edit cannot silently downgrade certification
-  // scope and let missing secondary-spec review evidence ship a sealed
-  // certificate.
-
-  it("returns `absent` when the record is not an object", () => {
-    expect(classifyFrozenSpecsCoveredMultiSpec(null)).toEqual({ kind: "absent" });
-    expect(classifyFrozenSpecsCoveredMultiSpec(undefined)).toEqual({ kind: "absent" });
-    expect(classifyFrozenSpecsCoveredMultiSpec("string")).toEqual({ kind: "absent" });
-    expect(classifyFrozenSpecsCoveredMultiSpec(42)).toEqual({ kind: "absent" });
-    expect(classifyFrozenSpecsCoveredMultiSpec([])).toEqual({ kind: "absent" });
-  });
-
-  it("returns `absent` when the frozenSpecsCovered key is missing on the record", () => {
-    expect(classifyFrozenSpecsCoveredMultiSpec({})).toEqual({ kind: "absent" });
-    expect(classifyFrozenSpecsCoveredMultiSpec({ specsCovered: ["0001"] })).toEqual({
-      kind: "absent",
-    });
-  });
-
-  it("returns `malformed` when the key is present but value is explicitly null", () => {
-    // A hand-edited `"frozenSpecsCovered": null` is a corrupt edit,
-    // not a "field omitted" record — falling back to legacy
-    // `specsCovered` here would silently downgrade multi-spec
-    // certification scope. The classifier distinguishes "key absent
-    // on record" from "key present with invalid value", and fails
-    // closed for the latter.
-    const r = classifyFrozenSpecsCoveredMultiSpec({ frozenSpecsCovered: null });
-    expect(r.kind).toBe("malformed");
-    if (r.kind === "malformed") expect(r.reason).toContain("null");
-  });
-
-  it("returns `malformed` when the key is present but value is explicitly undefined", () => {
-    const r = classifyFrozenSpecsCoveredMultiSpec({ frozenSpecsCovered: undefined });
-    expect(r.kind).toBe("malformed");
-    if (r.kind === "malformed") expect(r.reason).toContain("undefined");
-  });
-
-  it("returns `malformed` when the value is not an array", () => {
-    const r1 = classifyFrozenSpecsCoveredMultiSpec({ frozenSpecsCovered: "0001" });
-    expect(r1.kind).toBe("malformed");
-    if (r1.kind === "malformed") expect(r1.reason).toContain("not an array");
-    const r2 = classifyFrozenSpecsCoveredMultiSpec({ frozenSpecsCovered: { 0: "0001" } });
-    expect(r2.kind).toBe("malformed");
-    if (r2.kind === "malformed") expect(r2.reason).toContain("not an array");
-  });
-
-  it("returns `malformed` when the array is empty", () => {
-    const r = classifyFrozenSpecsCoveredMultiSpec({ frozenSpecsCovered: [] });
-    expect(r.kind).toBe("malformed");
-    if (r.kind === "malformed") expect(r.reason).toContain("empty");
-  });
-
-  it("returns `malformed` when any entry is not a string", () => {
-    const r = classifyFrozenSpecsCoveredMultiSpec({ frozenSpecsCovered: [42] });
-    expect(r.kind).toBe("malformed");
-    if (r.kind === "malformed") expect(r.reason).toContain("non-string");
-  });
-
-  it("returns `malformed` when any entry is an empty string", () => {
-    const r = classifyFrozenSpecsCoveredMultiSpec({ frozenSpecsCovered: ["0001", ""] });
-    expect(r.kind).toBe("malformed");
-    if (r.kind === "malformed") expect(r.reason).toContain("empty-string");
-  });
-
-  it("returns `ok` with the validated value for a well-formed array", () => {
-    expect(classifyFrozenSpecsCoveredMultiSpec({ frozenSpecsCovered: ["0001"] })).toEqual({
-      kind: "ok",
-      value: ["0001"],
-    });
+describe("checkUiContractsCoveredDrift", () => {
+  it("reports added and removed contracts in stable order", () => {
     expect(
-      classifyFrozenSpecsCoveredMultiSpec({ frozenSpecsCovered: ["0001", "spec-0007"] }),
-    ).toEqual({ kind: "ok", value: ["0001", "spec-0007"] });
+      checkUiContractsCoveredDrift(
+        ["CON-UI-0003", "CON-UI-0001"],
+        ["CON-UI-0004", "CON-UI-0002", "CON-UI-0002"],
+      ),
+    ).toEqual({
+      drifted: true,
+      added: ["CON-UI-0002", "CON-UI-0004"],
+      removed: ["CON-UI-0001", "CON-UI-0003"],
+    });
+  });
+
+  it("accepts the same contract set regardless of order", () => {
+    expect(
+      checkUiContractsCoveredDrift(
+        ["CON-UI-0002", "CON-UI-0001"],
+        ["CON-UI-0001", "CON-UI-0002"],
+      ),
+    ).toEqual({ drifted: false, added: [], removed: [] });
   });
 });
