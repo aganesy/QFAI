@@ -73,3 +73,15 @@ full validation cannot yet assess the new tree.
 The four residual files in spec-0001 and spec-0003 were formatted after the
 initial audit; the audit CSV records their current source hashes. Archived
 source hashes and residual clause identifiers are unchanged.
+
+## Cutover verification
+
+On 2026-09-25, the operator removed the 11 remaining old pack directories
+under `.qfai/spec/` after checking their archived copies. A fresh count of
+`.qfai/spec/spec-*` directories is zero. The removal block above records the
+earlier automation limit; it is no longer the current state.
+
+On the tracked tree after removal, `node scripts/check-dogfood-backlog.mjs --profile full`
+reports 615 inherited missing-test-annotation errors and no
+`QFAI-LAYOUT-001`. The full-profile debt remains visible in
+`scripts/dogfood-backlog.json`; the layout cutover is complete.

@@ -127,11 +127,11 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   {
     label: "prototyping iterate",
     lines: [
-      `${EXIT_CODES.ok} = continue (next cycle), or a no-op exit with no UI-bearing spec,`,
+      `${EXIT_CODES.ok} = continue (next cycle), or a no-op exit with no UI contract,`,
       `${EXIT_CODES.inputError} = an input or lock-drift error, or a runtime error`,
       `      (--auto-serve could not start the server; --capture was refused by the runner or failed on I/O),`,
-      `${EXIT_CODES.prototypingStop} = STOP: converged (no DESIGN.md violation, no layout`,
-      `      anti-pattern, no blocking finding),`,
+      `${EXIT_CODES.prototypingStop} = STOP: converged (all four UX scores exceptional for every`,
+      `      UI contract/screen; no DESIGN.md violation, layout anti-pattern, or blocking finding),`,
       `${EXIT_CODES.prototypingBudgetExhausted} = STOP: budget exhausted (max iterations),`,
       `${EXIT_CODES.prototypingLicenseFailure} = STOP: license-verify failed`,
     ],
