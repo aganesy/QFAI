@@ -51,7 +51,7 @@ async function seedDiscussionPack(name: string): Promise<string> {
 }
 
 async function seedSpec(specId: string, body: string): Promise<string> {
-  const specDir = path.join(root, ".qfai", "specs", `spec-${specId}`);
+  const specDir = path.join(root, ".qfai", "spec", `spec-${specId}`);
   await mkdir(specDir, { recursive: true });
   const specPath = path.join(specDir, "01_Spec.md");
   await writeFile(specPath, body, "utf-8");
@@ -65,7 +65,7 @@ async function seedSpec(specId: string, body: string): Promise<string> {
 }
 
 async function seedUiCompanion(filename: string, body: string): Promise<void> {
-  const uiDir = path.join(root, ".qfai", "contracts", "ui");
+  const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
   await mkdir(uiDir, { recursive: true });
   await writeFile(path.join(uiDir, filename), body, "utf-8");
 }

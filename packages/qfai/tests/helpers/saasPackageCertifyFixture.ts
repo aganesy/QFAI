@@ -77,7 +77,7 @@ export async function seedSaasPackageCertifyProject(root: string): Promise<void>
       "  contractsDir: .qfai/spec/03_contract",
       "  specsDir: .qfai/spec",
       "  discussionDir: .qfai/discussion",
-      "  outDir: .qfai/output",
+      "  outDir: .qfai/report",
       "  skillsDir: .qfai/assistant/skill",
       "  srcDir: src",
       "  testsDir: tests",
@@ -100,11 +100,10 @@ export async function seedSaasPackageCertifyProject(root: string): Promise<void>
     profile: "prototyping",
     counts: { error: 0, warning: 0, info: 0 },
   });
-  await writeText(root, ".qfai/report/validate.json", validateBody);
-  await writeText(root, ".qfai/output/validate.json", validateBody);
+  await writeText(root, ".qfai/report/validate-prototyping.json", validateBody);
   await writeText(
     root,
-    ".qfai/output/verify.json",
+    ".qfai/report/verify.json",
     JSON.stringify({ status: "PASS", scope: "prototyping" }),
   );
   await writeText(

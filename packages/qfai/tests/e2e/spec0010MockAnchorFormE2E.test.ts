@@ -23,7 +23,7 @@ const discussionSkillDir = path.join(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-discussion",
 );
 const workshopTemplate = path.join(discussionSkillDir, "templates", "03_Story-Workshop.md");
@@ -43,7 +43,7 @@ function config(): QfaiConfig {
   return {
     paths: {
       discussionDir: ".qfai/discussion",
-      specsDir: ".qfai/specs",
+      specsDir: ".qfai/spec",
     },
     uiux: { htmlMockTimeout: 5000 },
   } as unknown as QfaiConfig;

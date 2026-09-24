@@ -33,7 +33,7 @@ const ASSET_REF_PATH = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-prototyping",
   "references",
   "evidence-requirements.md",
