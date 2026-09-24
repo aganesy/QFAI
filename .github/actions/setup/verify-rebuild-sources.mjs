@@ -26,8 +26,19 @@
  * guard that needs `node_modules` to decide whether `node_modules` is trustworthy has a hole in
  * the middle of it.
  *
- * Usage: `node verify-rebuild-sources.mjs <pnpm-lock.yaml> <dependency-builds.txt>`.
+ * The package manager keeps a permission list of its own, and the two have to agree. Under
+ * `--ignore-scripts` its list grants nothing, so in this job the allow-list beside this file is
+ * what decides; on any other install the manager's list is what decides, and a name present
+ * there and absent here is a permission nobody reviewed. Each list is therefore read against
+ * the other.
+ *
+ * Usage:
+ * `node verify-rebuild-sources.mjs <pnpm-lock.yaml> <dependency-builds.txt> <pnpm-workspace.yaml>`.
  * Exits 1 on any finding.
+ *
+ * SHIPPED-CI: not-applicable
+ * Because: the shipped templates install with an adopter's own package manager and lockfile and
+ * deliberately run install scripts, so there is no allow-list there for this to check.
  */
 import { readFileSync } from "node:fs";
 import { argv, exit, stdout } from "node:process";
@@ -41,6 +52,38 @@ function allowedNames(listPath) {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line !== "" && !line.startsWith("#"));
+}
+
+/**
+ * The packages the package manager's own configuration permits to build.
+ *
+ * Scanned line by line, for the reason the lockfile is: this runs before anything guarantees a
+ * dependency is present, and a guard that needs `node_modules` to decide whether `node_modules`
+ * is trustworthy has a hole in the middle of it.
+ *
+ * Only a `true` is a permission. An explicit `false` is a denial and needs no counterpart here.
+ *
+ * @param {string} workspacePath the workspace configuration file
+ * @returns {string[]} the permitted package names
+ */
+function permittedNames(workspacePath) {
+  const lines = readFileSync(workspacePath, "utf-8").split(/\r?\n/);
+  const names = [];
+  let inBlock = false;
+  for (const line of lines) {
+    if (/^allowBuilds:\s*$/.test(line)) {
+      inBlock = true;
+      continue;
+    }
+    if (!inBlock) continue;
+    if (line.trim() === "") continue;
+    if (!/^\s/.test(line)) break;
+    const entry = /^\s+(?:'([^']+)'|"([^"]+)"|([^\s:#][^:]*?))\s*:\s*(\S+)\s*$/.exec(line);
+    if (entry === null) continue;
+    const name = entry[1] ?? entry[2] ?? entry[3];
+    if (name !== undefined && entry[4] === "true") names.push(name);
+  }
+  return names;
 }
 
 /**
@@ -99,7 +142,7 @@ function resolutionsFor(lockText, wanted) {
   return found;
 }
 
-function main(lockPath, listPath) {
+function main(lockPath, listPath, workspacePath) {
   let names;
   try {
     names = allowedNames(listPath);
@@ -109,6 +152,38 @@ function main(lockPath, listPath) {
     );
     return 1;
   }
+  let permitted;
+  try {
+    permitted = permittedNames(workspacePath);
+  } catch {
+    stdout.write(
+      `::error::verify-rebuild-sources: cannot read ${workspacePath}, so what the package manager permits to build cannot be compared with the allow-list.\n`,
+    );
+    return 1;
+  }
+
+  // Both directions. A name the manager permits and the list does not is a permission nobody
+  // reviewed; a name the list carries and the manager does not is a rebuild that cannot run,
+  // and naming it here beats reading it out of the manager's own error one step later.
+  let disagreed = false;
+  for (const name of permitted) {
+    if (!names.includes(name)) {
+      stdout.write(
+        `::error::verify-rebuild-sources: ${name} may build according to ${workspacePath} and is absent from ${listPath}. What may run install scripts is decided in one place, and the list is that place.\n`,
+      );
+      disagreed = true;
+    }
+  }
+  for (const name of names) {
+    if (!permitted.includes(name)) {
+      stdout.write(
+        `::error::verify-rebuild-sources: ${name} is on ${listPath} and ${workspacePath} does not permit it to build, so the rebuild beside this check cannot run it.\n`,
+      );
+      disagreed = true;
+    }
+  }
+  if (disagreed) return 1;
+
   if (names.length === 0) {
     // An empty allow-list is a legitimate state: nothing is rebuilt, so nothing needs verifying.
     stdout.write("verify-rebuild-sources: the allow-list names no package\n");
@@ -162,4 +237,10 @@ function main(lockPath, listPath) {
   return 0;
 }
 
-exit(main(argv[2] ?? "pnpm-lock.yaml", argv[3] ?? ".github/actions/setup/dependency-builds.txt"));
+exit(
+  main(
+    argv[2] ?? "pnpm-lock.yaml",
+    argv[3] ?? ".github/actions/setup/dependency-builds.txt",
+    argv[4] ?? "pnpm-workspace.yaml",
+  ),
+);

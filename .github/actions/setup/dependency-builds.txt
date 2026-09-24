@@ -27,5 +27,10 @@
 # and NOT for a registry tarball, so none of those ever executed here. `esbuild` is the one with a
 # real `postinstall`, and it links the platform binary that vite and vitest need.
 #
+# The package manager carries the same permission in `pnpm-workspace.yaml`, under `allowBuilds`,
+# because `pnpm rebuild` refuses a package that file does not name. Two declarations of one
+# decision drift, so `verify-rebuild-sources.mjs` reads each against the other and refuses a
+# disagreement in either direction before anything is rebuilt.
+#
 # One name per line, matched against the package name pnpm knows it by.
 esbuild
