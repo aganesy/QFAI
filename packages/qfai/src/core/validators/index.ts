@@ -10,8 +10,15 @@ export { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
 export { validateStoryTreeCoverageDepth } from "./storyTreeCoverageDepth.js";
 export { validateStorySteeringPlaceholders } from "./assistantAssets.js";
 export { validateStoryTreeContractReferences } from "./contractReferences.js";
-export { validateStoryTreeObligations } from "./storyTreeObligations.js";
-export { validateStoryTreeStructure } from "./storyTreeStructure.js";
+export {
+  validateStoryTreeObligations,
+  validateStoryTreeObligationsModel,
+} from "./storyTreeObligations.js";
+export {
+  validateStoryDirectories,
+  validateStoryTreeStructure,
+  validateStoryTreeStructureModel,
+} from "./storyTreeStructure.js";
 export { validateStoryTreeDrift } from "./upstreamSsotGuard.js";
 export { validateScaffoldPlaceholder } from "./scaffoldPlaceholder.js";
 export { validatePrototypingEvidence, validateScreenIdCasing } from "./prototypingEvidence.js";

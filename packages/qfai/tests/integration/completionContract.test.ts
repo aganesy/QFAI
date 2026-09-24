@@ -94,7 +94,7 @@ describe("BF completion gate", () => {
       path.join(path.dirname(implementSkillPath), "references", "parallelization-policy.md"),
       "utf8",
     );
-    expect(c).toContain("Record command, selector, failure, test hash, and revision");
+    expect(c).toMatch(/Record command, selector, failure, test hash, and\s+revision/);
     expect(c).toContain("Run the same selector and record");
     expect(c).toContain("current evidence and the required independent PASS reviews");
     expect(parallelPolicy).toContain("Retake evidence whose source revision changed");

@@ -139,10 +139,10 @@ describe("operator-facing CLI message language", () => {
    *
    * A merge absorbing the base's new messages is the case that legitimately
    * adds entries, and it still moves this number — which is the point. The
-   * addition stops being an invisible edit inside a 700-line data file and
+   * addition stops being an invisible edit inside the allowlist and
    * becomes a line a reviewer is asked about.
    */
-  const ALLOWLISTED_MESSAGE_COUNT = 401;
+  const ALLOWLISTED_MESSAGE_COUNT = 297;
 
   it("holds the allowlist to a count that only a reviewed change moves", () => {
     const counted = Object.values(SRC_JAPANESE_ALLOWLIST).reduce(

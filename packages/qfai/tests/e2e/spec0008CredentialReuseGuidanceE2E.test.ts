@@ -39,7 +39,7 @@ afterAll(async () => {
 });
 
 async function skillDir(): Promise<string> {
-  return path.join(await project(), ".qfai", "assistant", "skills", "qfai-atdd");
+  return path.join(await project(), ".qfai", "assistant", "skill", "qfai-atdd");
 }
 
 // QFAI:BF-0001

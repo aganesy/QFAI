@@ -263,6 +263,7 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     expect(missingEvidence.testOutput).toMatch(/^(?:#|ℹ)\s+pass 3\b/m);
     expect(missingEvidence.validationExitCode).toBe(1);
     expect(missingEvidence.reportExitCode).toBeNull();
+    await runValidate({ root, strict: false, profile: "atdd", failOn: "never", flowIds: [flowId] });
     expect(hasFinding(await readFlowFindings(root), "QFAI-ATDD-131", flowId)).toBe(true);
     await expect(
       access(path.join(root, ".qfai/report/report.flow-0001.json")),

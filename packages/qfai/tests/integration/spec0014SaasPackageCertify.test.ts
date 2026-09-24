@@ -10,7 +10,7 @@
 // QFAI:EX-0001-0166-01
 // QFAI:EX-0001-0166-01
 
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -38,8 +38,6 @@ async function newProject(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-certify-cli-"));
   roots.push(root);
   await seedSaasPackageCertifyProject(root);
-  const validate = await readFile(path.join(root, ".qfai/report/validate.json"), "utf-8");
-  await writeFile(path.join(root, ".qfai/report/validate-prototyping.json"), validate, "utf-8");
   return root;
 }
 
