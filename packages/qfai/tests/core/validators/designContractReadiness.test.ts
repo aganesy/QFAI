@@ -119,7 +119,7 @@ async function seedUiBearingProject(root: string): Promise<void> {
   await mkdir(path.join(root, ".qfai/spec/03_contract/design"), { recursive: true });
   await writeFile(
     path.join(root, ".qfai/spec/03_contract/ui/ui-0001.yaml"),
-    "screens:\n  - id: home\n    title: Home\n    route: /\n",
+    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    title: Home\n    route: /\n",
     "utf-8",
   );
 }
@@ -424,9 +424,14 @@ procurement:
     const withDashboard = async (root: string): Promise<void> => {
       await writeFile(
         path.join(root, ".qfai/spec/03_contract/ui/ui-0002.yaml"),
-        ["screens:", "  - id: dashboard", "    title: Dashboard", "    route: /dashboard", ""].join(
-          "\n",
-        ),
+        [
+          "# QFAI-CONTRACT-ID: CON-UI-0002",
+          "screens:",
+          "  - id: dashboard",
+          "    title: Dashboard",
+          "    route: /dashboard",
+          "",
+        ].join("\n"),
         "utf-8",
       );
     };
