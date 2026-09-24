@@ -1983,6 +1983,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // names a tier the ceremony rules recognise.
   "QFAI-TDDLIST-010":
     "Every filled `Tier` cell in a TDD Execution Ledger names one of `T1`, `T2`, `T3` or `-`, so the ceremony a row owes is the one its author declared.",
+  // Pairs the ledger with `.qfai/decisions/`, so the expected state names the
+  // record a blocked row waits on as well as the row.
+  "QFAI-TDDLIST-021":
+    "No `Status=blocked` row waits only on Change Requests that are already settled: a row whose `Blocked-By` cell (or, with no blocker there, its `Evidence` cell) names only `CR-*` records that are `rejected`, `superseded`, or `approved` with `Applied at` filled has been released through `/qfai-implement`.",
   "QFAI-RESEARCH-015":
     "Every `source_id` in the Research Summary resolves to an `id` in the same `sources[]` list.",
   "QFAI-RESEARCH-016":

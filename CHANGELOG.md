@@ -36,6 +36,56 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   written beside it, and the forward lane now names any such exemption on a
   passing run instead of reading only the compiler configuration.
 
+### Fixed
+
+- **A blocked ledger row whose Change Request is settled is reported**
+  (#2015). A `blocked` row that named a Change Request stayed `blocked` after
+  the request was decided, and nothing said so. `validate` now warns with
+  `QFAI-TDDLIST-021` when the row's `Blocked-By` cell names only Change
+  Requests — or, with no blocker there, its `Evidence` cell names some — and
+  each is `rejected`, `superseded`, or `approved` with `Applied at` filled. The
+  finding sends the row back through `/qfai-implement`, where `blocked -> todo`
+  is the resumption edge. An open request, an approved one not yet applied, an
+  id with no record in `.qfai/decisions/`, and a `Blocked-By` that names
+  another blocker as well report nothing.
+
+- **The rest of spec-0003 states what `qfai init` and the shipped workflows
+  do now** (#2203). Sixteen more statements still described the product before
+  a deliberate change. They said init creates the artifact directories and a
+  steering README, and that the `.gitignore` block carries README negations.
+  They also said a legacy layout only warns on stdout, two jobs install, one
+  job requests full history, the shape pins nine dimensions, and a second
+  runner tier is deferred. Each now says what the tests and the source do. The
+  one ledger row whose test case moved, `TDD-0001`, is reopened: its test
+  never asserted that init leaves the artifact directories out.
+
+- **The `/qfai-atdd` skill spells the RED test hash's `mode` the way the gate
+  hashes it** (#2256). The skill said the hash took the revision manifest's
+  shape, whose `mode` is four octal digits. The gate hashes six digits spelled
+  like git's tree mode — `100644`, `100755` or `120000` — so a hash computed as
+  the skill said never matched, and `validate` refused evidence that was
+  complete. The six-digit form is the intended one: the gate recomputes the
+  hash on whichever checkout runs it, and every permission bit but the execute
+  bits follows that checkout's umask. The skill now names the three values and
+  says where the execute bit is read from. The revision manifest keeps its own
+  four digits.
+
+- **The RED test hash reads the execute bit where git reads it** (#2257).
+  `validate` took a manifest file's execute bit off the disk. Windows has none,
+  so a file git marks executable hashed as `100644` on a Windows checkout and
+  `100755` on a POSIX one, and evidence recorded on one was refused on the
+  other. The gate now reads the bit the way `git add` does: from the index where
+  `core.fileMode` is `false`, as in a repository git created on Windows, and
+  from the owner's execute bit on disk everywhere else. An execute bit held
+  only by the group or others no longer selects `100755`; git never recorded
+  it either.
+
+  Two kinds of recorded evidence now hash differently, and `validate` refuses
+  them until their `RED test hash` is recorded again: evidence recorded on
+  Windows whose manifest names a file git marks executable, and evidence whose
+  manifest names a file executable by the group or others but not its owner.
+  POSIX checkouts already refused the first kind.
+
 ## [1.12.3] - 2026-09-24
 
 ### Fixed

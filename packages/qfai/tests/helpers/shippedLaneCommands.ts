@@ -1349,7 +1349,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what
     // it wrote; dropping that one bullet reproduces `7f4f473a…` byte for byte.
     ".github/copilot-instructions.md",
-    "754c7708fb3ae107f637700c4e87d68b3743b65801537a3446fb5ae51637faab",
+    "93630ab64c512abc3bddda120a64c1f1ded8ccc09981bafa93e6a63cd81eba55",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it

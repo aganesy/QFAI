@@ -23,9 +23,10 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
 - `.qfai/specs/spec-0017/tdd/test-list.md` — 101 rows: 81 `Integration`,
-  11 `Unit`; **81 `refactor`, 6 `blocked`, 14 `todo`**. The other nine rows are `E2E`, one per story,
-  seeded at `todo`. Five `todo` rows are `Integration` and are therefore this stage's to route — see
-  § "Ledger rows advanced"
+  11 `Unit`; **81 `refactor`, 0 `blocked`, 11 `todo`**, with 6 `done` and 3 `review-fix`. Nine rows are `E2E`, one per story,
+  seeded at `todo`. Eleven `todo` rows are `Integration` and are therefore this stage's to route.
+  The run started 2026-09-23T10:23:39.000Z hands ten of them over — see § "Ledger rows advanced".
+  `TDD-0012` is the eleventh, and that run's work order did not name it
 - `.qfai/assistant/catalog/test-layers.md` — the layer derivation and the directory each `Level`
   routes to
 - `packages/qfai/assets/init/root/.github/workflows/**` — the shipped surface, measured before any
@@ -291,6 +292,40 @@ That experiment also produced a repo-wide finding this stage did not go looking 
 claims in `tests/e2e/qfai-traceability.md` are backed by no annotation in any E2E test file** (126
 across every test directory in the repository). `spec-0017` is the only spec at zero. `spec-0012`
 alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a cross-spec obligation.
+
+## Grilling Session
+
+### /qfai-atdd — run started 2026-09-23T10:23:39.000Z
+
+Preflight: confidence high
+
+The work order fixes the ten rows, their test cases and the procedure. One
+session opened on detection, after the ten tests had been run and mutated.
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-23T11:08:49.201Z | cbfc3f56258750c07c4a41f05418360f41558825 | 2026-09-23T11:09:26.304Z | three of the ten tests reach less than their test case states, or read their predicate from test code | empty | none in flight | 3 | 0 | 0 |
+
+S1 changes no settled input. Whether the `TDD-0062` test case covers the
+release workflow's two sliced jobs is a question about the spec, so the
+drift protocol routes it to a Change Request. The work order leaves that
+request to the orchestrator, and this run's report carries the question.
+
+### /qfai-implement — run started 2026-09-23T11:16:15.344Z
+
+Preflight: confidence high
+
+No session opened. The handover fixes the nine rows, their tests, the
+predicate each mutation breaks and the failure it predicts, and every run
+failed and passed as predicted.
+
+Two things are left to `qa-gatekeeper` rather than decided here:
+
+- whether step 3c's clause for a predicate inside the `Test file` extends to
+  the test helper that `TDD-0033`, `TDD-0034` and `TDD-0035` mutate;
+- the order of the step: each mutation was reverted before the gate was
+  routed. Each `Falsifiability revision` is recorded so the gate can rebuild
+  the mutated tree from `6b9fb192c` and the recorded edit.
 
 ## Work performed (what changed, where)
 
@@ -1263,7 +1298,7 @@ selection. That leaves exactly the two below, and `references/red-provenance.md#
 does **not** cover them: it is scoped to a spec with zero `E2E`/`API` rows, and says nothing about
 `Integration` rows at `todo`.
 
-### TDD-0069
+### TDD-0069, routed before its test existed
 
 - `Layer`: `Integration`
 - `Test file`: `packages/qfai/tests/assets/actionPinBumpOwner.test.ts`
@@ -1348,7 +1383,7 @@ looked for an exact match and found none.)
 **And the writer owes the `Evidence` cell in the same edit** — see the subsection above. Step 3b's own
 malformed-entry rule is what makes that a condition rather than a courtesy.
 
-### TDD-0070
+### TDD-0070, routed before its test existed
 
 - `Layer`: `Integration`
 - `Test file`: `packages/qfai/tests/assets/actionPinBumpOwner.test.ts`
@@ -1378,6 +1413,687 @@ user-approved `TDDLIST-001` waiver, or the row is parked and the spec stays open
 open.** These two rows and the six `blocked` ones are why the completion status below is `FAIL`, and
 none of them is closeable by this stage. `US-0017-0007` was named here too until round 14; it is
 covered, and it was never one of the reasons this spec cannot close.
+
+### Rows handed over by the run started 2026-09-23T10:23:39.000Z
+
+Ten `Integration` rows sit at `todo` whose tests already exist, carry their
+`QFAI:SPEC-0017:TC-*` annotation and pass. For eight of them the ledger's
+`Test file` names a file that does not hold the test. Each entry below names
+the test that carries the row's annotation, and `/qfai-implement` Phase Red
+step 3b writes `Test file` and `Selector` from it.
+
+Every selector is the `it` title of one test, unique across the package's
+tests and free of regular-expression metacharacters. Each was run alone at
+`cbfc3f562` and passed as the only case its file ran.
+
+Nine rows take branch 2. `TDD-0062` is held with no branch, for the gap its
+entry records, so step 3b leaves it at `todo`.
+
+The two entries above headed "routed before its test existed" describe
+`TDD-0069` as `blocked` and `TDD-0070` as branch 3 under `DR-0017-0023`. Neither
+routing reached the ledger. Both rows now have an annotated test that passes, so
+branch 2 applies to them, and the entries below replace that routing.
+
+Each mutation was applied to the tree at `cbfc3f562`, run, and reverted with
+`git checkout`. The row's own case failed on an assertion every time. The five
+test files these rows name were run in full under every mutation, together with
+`tests/scripts/ownWorkflowTopology.test.ts` and
+`tests/scripts/workflowHygiene.test.ts` for a workflow mutation, and
+`tests/scripts/vitestWorkspaceKnobs.test.ts` and
+`tests/assets/actionPinBumpOwner.test.ts` for a runner-configuration or
+decision-record mutation. `Other rows` names what failed there. The proof is
+still `/qfai-implement` step 3c's to take.
+
+| TDD-ID | Obligation | Layer | RED provenance | Entry |
+| ------ | ---------- | ----- | -------------- | ----- |
+| `TDD-0016` | `TC-0017-0016` | Integration | falsifiability | [TDD-0016](#tdd-0016) |
+| `TDD-0030` | `TC-0017-0030` | Integration | falsifiability | [TDD-0030](#tdd-0030) |
+| `TDD-0032` | `TC-0017-0032` | Integration | falsifiability | [TDD-0032](#tdd-0032) |
+| `TDD-0033` | `TC-0017-0033` | Integration | falsifiability | [TDD-0033](#tdd-0033) |
+| `TDD-0034` | `TC-0017-0034` | Integration | falsifiability | [TDD-0034](#tdd-0034) |
+| `TDD-0035` | `TC-0017-0035` | Integration | falsifiability | [TDD-0035](#tdd-0035) |
+| `TDD-0062` | `TC-0017-0062` | Integration | none — held on a coverage gap | [TDD-0062](#tdd-0062) |
+| `TDD-0069` | `TC-0017-0069` | Integration | falsifiability | [TDD-0069](#tdd-0069) |
+| `TDD-0070` | `TC-0017-0070` | Integration | falsifiability | [TDD-0070](#tdd-0070) |
+| `TDD-0083` | `TC-0017-0083` | Integration | falsifiability | [TDD-0083](#tdd-0083) |
+
+### TDD-0016
+
+- TDD-ID: TDD-0016
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts
+- Selector: grants no permission block beyond the three that are deliberate
+- TC-ref: TC-0017-0016
+- Branch: falsifiability — the test and the workflows it reads predate this run, and the case passed on its first run
+- Predicate to break: .github/workflows/release.yml:839, the `publish` job's permission block — `id-token: write # npm provenance`, the grant that makes `publish` the third departure from `{ contents: read }`
+- Mutation: delete line 839
+- Why it fails: `publish` then grants exactly `{ contents: read }`, so it drops out of the departure set and the set has two members.
+  `expect(departures.sort()).toEqual([...three...])` fails as an assertion at `spec0017OwnWorkflowScope.test.ts:136:7`
+- Other rows: none. `TDD-0030` still passes, and so does every case in the other six files
+- Note: the ledger's current `Test file`, `tests/scripts/workflowHygiene.test.ts`, holds no test for this case. Its header comment at line 33 still says the case is absent. That comment is left alone
+
+#### Round 1
+
+- Round 1: Satisfied-by: .github/workflows/release.yml, the `publish` job's `permissions` block, `id-token: write # npm provenance` — the grant that makes `publish` the third deliberate departure from `{ contents: read }`
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017OwnWorkflowScope.test.ts -t "grants no permission block beyond the three that are deliberate"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 1 skipped (2). The row's case fails on `AssertionError: the set of permission blocks departing from the literal '{ contents: read }' must be exactly the three declared exceptions: a fourth is a supply-chain change someone should read, and a missing one means a job lost a grant it needs: expected [ 'ci.yml#ci-pass: {}', …(1) ] to deeply equal [ 'ci.yml#ci-pass: {}', …(2) ]` at `tests/integration/spec0017OwnWorkflowScope.test.ts:136:7`
+
+The edit:
+
+```diff
+-      id-token: write # npm provenance
+```
+
+- Round 1: Falsifiability revision: working-tree+9ab5d48feb5c43b336a7f14a20597f5138cff26ed87845981cb45dcb40ec935c
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 7cfed7b0c1f4809702f8cf5addeaa3178d772572173c9c9b83c0fae2fc1f3035
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts
+```
+
+- Round 1: Revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017OwnWorkflowScope.test.ts -t "grants no permission block beyond the three that are deliberate"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017OwnWorkflowScope.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+9ab5d48feb5c43b336a7f14a20597f5138cff26ed87845981cb45dcb40ec935c matches; assertion at :136:7, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 748e93732be7fa1449ea97f148058b05688f6bccb0512da744c1438ad939d93d, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited 8916ccb035d67265be32503915db26c214c42bf8576861030196105f3358ff27, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Spec review: PASS
+- Spec reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Spec audited evidence hash: 0281f94ff328dd4888179e5fa5e553434d0f6f202bb5701638d0ac59df786757
+- Spec review pack: .qfai/review/review-20260923120000000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 24aa22151594593a65f54c84762f806aa091fba9bc6e3ee6bfe4b53379cd3484
+- Code quality review: PASS
+- Code quality reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Code quality audited evidence hash: 0281f94ff328dd4888179e5fa5e553434d0f6f202bb5701638d0ac59df786757
+- Code quality review pack: .qfai/review/review-20260923120000000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 24aa22151594593a65f54c84762f806aa091fba9bc6e3ee6bfe4b53379cd3484
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017OwnWorkflowScope.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 2 passed (2). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification seal: 2e86643b6bea0acf3d5bb5ac1365fbc1a98ec5bcb6d01e93a3e84da84ce9a203
+
+### TDD-0030
+
+- TDD-ID: TDD-0030
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts
+- Selector: leaves exactly the publishing job's declared literal and routes every other job through the shared setup
+- TC-ref: TC-0017-0030
+- Branch: falsifiability — the test and the workflows it reads predate this run, and the case passed on its first run
+- Predicate to break: .github/workflows/release.yml:81, the workflow-level `env:` block — `NODE_PUBLISH: "24"` is its only Node version literal
+- Mutation: insert `  NODE_LTS: "22"` after line 81
+- Why it fails: the scan finds a second workflow-level Node literal.
+  `expect([...literals].sort()).toEqual(["release.yml#env.NODE_PUBLISH: 24"])` fails as an assertion at `spec0017OwnWorkflowScope.test.ts:260:7`
+- Other rows: none. `TDD-0016` still passes, and so does every case in the other six files
+- Note: the ledger's current `Test file`, `tests/scripts/ownWorkflowTopology.test.ts`, holds no test for this case. Its comment at line 577 still says the case is not written there. That comment is left alone
+
+#### Round 1
+
+- Round 1: Satisfied-by: .github/workflows/release.yml, the workflow-level `env:` block — `NODE_PUBLISH: "24"` is its only Node version literal
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017OwnWorkflowScope.test.ts -t "leaves exactly the publishing job's declared literal and routes every other job through the shared setup"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 1 skipped (2). The row's case fails on `AssertionError: the publishing job's Node literal is the one declared exception (BR-0017-0027): it encodes npm's own engine range for trusted publishing, which no file in this repository expresses. A second literal is a second answer to one question, and the stale one wins as often as not: expected [ Array(2) ] to deeply equal [ 'release.yml#env.NODE_PUBLISH: 24' ]` at `tests/integration/spec0017OwnWorkflowScope.test.ts:260:7`
+
+The edit:
+
+```diff
++  NODE_LTS: "22"
+```
+
+- Round 1: Falsifiability revision: working-tree+cd0d0b3bbae61cce7bc7c0705e523a099a9093b22d765432a5ae64d516381c07
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 7cfed7b0c1f4809702f8cf5addeaa3178d772572173c9c9b83c0fae2fc1f3035
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts
+```
+
+- Round 1: Revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017OwnWorkflowScope.test.ts -t "leaves exactly the publishing job's declared literal and routes every other job through the shared setup"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017OwnWorkflowScope.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+cd0d0b3bbae61cce7bc7c0705e523a099a9093b22d765432a5ae64d516381c07 matches; assertion at :260:7, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited e222cceed2a7c333dc86f2bce82a8240abeb5226be95f9be1231beba47376215, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited 5ac583bffa5f15648bc69c92d2ec7cc2826acac63f42e90707eafc2e1a6c7c20, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Spec review: PASS
+- Spec reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Spec audited evidence hash: 13a100a0f956d2ad50031738361699835c86f7dce1cb4a7f43438bbdc2debc91
+- Spec review pack: .qfai/review/review-20260923120001000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: dcb1c9c49939891f70805c58d4c5dd8dd1c164bd590c521272934dcc33f74b26
+- Code quality review: PASS
+- Code quality reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Code quality audited evidence hash: 13a100a0f956d2ad50031738361699835c86f7dce1cb4a7f43438bbdc2debc91
+- Code quality review pack: .qfai/review/review-20260923120001000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: dcb1c9c49939891f70805c58d4c5dd8dd1c164bd590c521272934dcc33f74b26
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017OwnWorkflowScope.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 2 passed (2). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification seal: 2e86643b6bea0acf3d5bb5ac1365fbc1a98ec5bcb6d01e93a3e84da84ce9a203
+
+### TDD-0032
+
+- TDD-ID: TDD-0032
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017ArtifactReuse.test.ts
+- Selector: names the legs that would change, and binds the numbers to the moment one of them downloads
+- TC-ref: TC-0017-0032
+- Branch: falsifiability — the test and the workflow it reads predate this run, and the case passed on its first run
+- Predicate to break: .github/workflows/ci.yml:645-647, the `test` job's `Build qfai (e2e + integration slices)` step — each leg builds the bundle itself, and no step in the job takes it from an artifact
+- Mutation: insert `      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0` after line 647
+- Why it fails: a leg now downloads the build while `e2e` and `integration` still build it, so the rule no longer holds vacuously.
+  `expect(live.holds, live.reason).toBe(true)` fails as an assertion at `spec0017ArtifactReuse.test.ts:156:37`, with the reason "reuse is adopted but e2e, integration still invoke the bundler"
+- Other rows: none of the ten. Every case of the hygiene lane that runs it over the own tree fails, because its required-context rule refuses an external action `.github/required-status-contexts.json` does not enumerate: `TDD-0018`, `TDD-0044`, `TDD-0045`, `TDD-0046`, `TDD-0047`, `TDD-0048`, `TDD-0051`, `TDD-0053`, `TDD-0057`, `TDD-0059` (two cases), `TDD-0093`, and four cases no row names
+- Note: changing line 646 to `if: matrix.slice == 'e2e'` also fails this case, at `:148:7` on the enumerated legs, and fails only one other case, the unannotated floor-lane case "builds before it tests". It breaks the enumeration rather than the live verdict, so it is not this row's proof
+- Note: the adopted half of the rule — the recorded count falls and nothing still rebuilds — is `reuseRuleHolds` in the test file itself, exercised on constructed states. No workflow implements it yet, as `06_Test-Cases.md` says
+
+#### Round 1
+
+- Round 1: Resumed-from-blocked (resumption 1): CR-20260820-0007 — blocked at todo
+- Round 1: Satisfied-by: .github/workflows/ci.yml, the `test` job's `Build qfai (e2e + integration slices)` step — each leg builds the bundle itself and no step in the job takes it from an artifact, so the reuse rule holds vacuously
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017ArtifactReuse.test.ts -t "names the legs that would change, and binds the numbers to the moment one of them downloads"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: reuse is adopted but e2e, integration still invoke the bundler, so the build is not produced once: expected false to be true // Object.is equality` at `tests/integration/spec0017ArtifactReuse.test.ts:156:37`
+
+The edit:
+
+```diff
++      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+```
+
+- Round 1: Falsifiability revision: working-tree+678f7ffc13c685c64e500efd4822a2721b874acd34500f54b489108df10e819e
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: e850f67e5b47070701c4f2320102bf332bf51f313b37b78b44c84e2d232c68af
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0017ArtifactReuse.test.ts
+```
+
+- Round 1: Revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017ArtifactReuse.test.ts -t "names the legs that would change, and binds the numbers to the moment one of them downloads"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017ArtifactReuse.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+678f7ffc13c685c64e500efd4822a2721b874acd34500f54b489108df10e819e matches; assertion at :156:37, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 23d4a78f350b5cdf120266fcf0b8d4e8c8105a0f010fab793e64838bad6368b7, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited f2176866f29e50d3ce5d6000d70e3b1ab653e6efe1fab5ed0d6733fc4638b588, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer (TDD-0032, TDD-0069) and completion-reviewer with implementation-reviewer (TDD-0083): the test does not pin its case as written; the row goes to review-fix
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923120002000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): bef2849366327988facb2154fe54aa01e4e300900261e415c6ac7bde04a907fc
+
+### TDD-0033
+
+- TDD-ID: TDD-0033
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
+- Selector: rejects a saving asserted on argument, and accepts the same claim once the numbers are quoted
+- TC-ref: TC-0017-0033
+- Branch: falsifiability — the test and its helper predate this run, and the case passed on its first run
+- Predicate to break: packages/qfai/tests/helpers/measurementClaim.ts:92, `evaluateMeasurementClaim` — `if (pairs.length === 0) {`, which rejects a claim whose record quotes no before-and-after pair
+- Mutation: `if (pairs.length === 0) {` to `if (pairs.length < 0) {`
+- Why it fails: a saving with no numbers is then accepted.
+  `expect(bare.satisfied).toBe(false)` fails as an assertion at `spec0017MeasurementClaims.test.ts:70:7`
+- Other rows: `TDD-0035` also fails, because `resolveArtifactReuse` accepts an unmeasured regression only through this check. `TDD-0034` still passes
+- Predicate ownership: the predicate is a test helper, not product code. No script, workflow or source file implements the rule, and the case reads only fixtures written in the test file. The helper is in the manifest below, so the mutation edits a file the RED test hash covers. Whether that is admissible falsifiability is `qa-gatekeeper`'s judgement
+
+#### Round 1
+
+- Round 1: Resumed-from-blocked (resumption 1): CR-20260820-0007 — blocked at todo
+- Round 1: Satisfied-by: packages/qfai/tests/helpers/measurementClaim.ts, `evaluateMeasurementClaim`, `if (pairs.length === 0) {` — the check that rejects a claim quoting no before-and-after pair. This is a test helper, not product code: no script, workflow or source file implements the rule, and the case reads only fixtures its Test file writes, so no shipped file can fail the case
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts -t "rejects a saving asserted on argument, and accepts the same claim once the numbers are quoted"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 3 skipped (4). The row's case fails on `AssertionError: the evidence tree is ignored by git, so a saving whose numbers are not IN the record is a saving nobody can review: expected true to be false // Object.is equality` at `tests/integration/spec0017MeasurementClaims.test.ts:70:7`
+
+The edit:
+
+```diff
+-  if (pairs.length === 0) {
++  if (pairs.length < 0) {
+```
+
+Where the mutation lands: `packages/qfai/tests/helpers/measurementClaim.ts`, a test helper the
+`Test file` imports and the RED test manifest lists. It is not the `Test file` itself.
+`/qfai-implement` Phase Red step 3c admits the mutation of "a predicate that lives in the `Test file`
+itself", a checker no production edit can make fail, and names no helper the `Test file` imports.
+Its hash-ordering clause does reach this case, since it applies "whenever the mutation lands in a
+file its manifest lists": the RED test hash below was taken before the mutation, over the restored
+bytes, and matches the handover's. `red-not-observable.md` asks that a seam or helper be recorded
+as what it is, so `Satisfied-by` names it as a test helper. Whether the step 3c clause extends from
+the `Test file` to a helper in its manifest is `qa-gatekeeper`'s judgement.
+
+- Round 1: Falsifiability revision: working-tree+17e44df9f635084a85878acd7b81d104c2fd5d2db737d1fa781b2bd8d0f2d886
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 8b155a201f01239fc5ddefc5496bbee50b40d2b17431aa99f5986cb0aba79fad
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/measurementClaim.ts
+packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
+```
+
+- Round 1: Revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts -t "rejects a saving asserted on argument, and accepts the same claim once the numbers are quoted"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+17e44df9f635084a85878acd7b81d104c2fd5d2db737d1fa781b2bd8d0f2d886 matches; assertion at :70:7, row case only; mutation of the manifest-listed helper admitted as the only implementation of the check) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 11b7b92978a0afe71eae6a5735f109e2775eec03cd78a83eeb6c2ca4c4ed555a, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited e5aa3452482347735791785778dbe3d6f28a5fe765ac663afd6da742052d2865, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Spec review: PASS
+- Spec reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Spec audited evidence hash: de9f330a7575bf7356c4e0949f9e1d06b63b4c3db966488dd7c59650e1a02273
+- Spec review pack: .qfai/review/review-20260923120003000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 715007a2c642d32ac20ee70f95243ab7dd534a565c743f190c9f0ca0062c03b3
+- Code quality review: PASS
+- Code quality reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Code quality audited evidence hash: de9f330a7575bf7356c4e0949f9e1d06b63b4c3db966488dd7c59650e1a02273
+- Code quality review pack: .qfai/review/review-20260923120003000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 715007a2c642d32ac20ee70f95243ab7dd534a565c743f190c9f0ca0062c03b3
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 4 passed (4). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification seal: 9eb7a5d7dc275e87ae3eeb485376558734d7d8f121f93c437d444a4d36bc63cc
+
+### TDD-0034
+
+- TDD-ID: TDD-0034
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
+- Selector: resolves the criterion satisfied on a measured regression, and only while the rebuilds are there
+- TC-ref: TC-0017-0034
+- Branch: falsifiability — the test and its helper predate this run, and the case passed on its first run
+- Predicate to break: packages/qfai/tests/helpers/measurementClaim.ts:137, the last return of `resolveArtifactReuse` — `satisfied: true,`, the accepting outcome for a measured regression with the rebuilds kept
+- Mutation: `satisfied: true,` at line 137 to `satisfied: false,`
+- Why it fails: a measured regression with the rebuilds kept no longer resolves the criterion.
+  `expect(kept.satisfied).toBe(true)` fails as an assertion at `spec0017MeasurementClaims.test.ts:100:7`
+- Other rows: none. `TDD-0033` and `TDD-0035` still pass
+- Predicate ownership: as `TDD-0033` — the predicate is the test helper, and the case reads only fixtures
+
+#### Round 1
+
+- Round 1: Resumed-from-blocked (resumption 1): CR-20260820-0007 — blocked at todo
+- Round 1: Satisfied-by: packages/qfai/tests/helpers/measurementClaim.ts, `resolveArtifactReuse`, its last return, `satisfied: true,` — the accepting outcome for a measured regression with the rebuilds kept. This is a test helper, not product code: no script, workflow or source file implements the rule, and the case reads only fixtures its Test file writes, so no shipped file can fail the case
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts -t "resolves the criterion satisfied on a measured regression, and only while the rebuilds are there"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 3 skipped (4). The row's case fails on `AssertionError: a measured negative result is an accepting outcome — it is what keeps the requirement falsifiable in both directions instead of inviting a re-run until the answer agrees: expected false to be true // Object.is equality` at `tests/integration/spec0017MeasurementClaims.test.ts:100:7`
+
+The edit:
+
+```diff
+-    satisfied: true,
++    satisfied: false,
+```
+
+Where the mutation lands: `packages/qfai/tests/helpers/measurementClaim.ts`, a test helper the
+`Test file` imports and the RED test manifest lists. It is not the `Test file` itself.
+`/qfai-implement` Phase Red step 3c admits the mutation of "a predicate that lives in the `Test file`
+itself", a checker no production edit can make fail, and names no helper the `Test file` imports.
+Its hash-ordering clause does reach this case, since it applies "whenever the mutation lands in a
+file its manifest lists": the RED test hash below was taken before the mutation, over the restored
+bytes, and matches the handover's. `red-not-observable.md` asks that a seam or helper be recorded
+as what it is, so `Satisfied-by` names it as a test helper. Whether the step 3c clause extends from
+the `Test file` to a helper in its manifest is `qa-gatekeeper`'s judgement.
+
+- Round 1: Falsifiability revision: working-tree+909c07423d099615e15531cd28119b5ed74d664b5c3187fb4bd2d85675cfeabf
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 8b155a201f01239fc5ddefc5496bbee50b40d2b17431aa99f5986cb0aba79fad
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/measurementClaim.ts
+packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
+```
+
+- Round 1: Revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts -t "resolves the criterion satisfied on a measured regression, and only while the rebuilds are there"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+909c07423d099615e15531cd28119b5ed74d664b5c3187fb4bd2d85675cfeabf matches; assertion at :100:7, row case only; helper mutation admitted) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited c0b7e7f5569c18fe1dfa439f8d9a4b0cf61cf3a3d8214d686a2543a267f5df29, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited c7de2e48db032dca6f0b758a858bcd3f7071011f88784e9f577f5aac70568c80, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Spec review: PASS
+- Spec reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Spec audited evidence hash: 6908d03ffe4c345ae5f8435a0803166fbf04355e1eedd46b2b0d41adcc489d76
+- Spec review pack: .qfai/review/review-20260923120004000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 7a87a7a04b5e074d572c2c7ea2f5b4c8789e8d32d7afb585a7ad29e89840c3f7
+- Code quality review: PASS
+- Code quality reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Code quality audited evidence hash: 6908d03ffe4c345ae5f8435a0803166fbf04355e1eedd46b2b0d41adcc489d76
+- Code quality review pack: .qfai/review/review-20260923120004000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 7a87a7a04b5e074d572c2c7ea2f5b4c8789e8d32d7afb585a7ad29e89840c3f7
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 4 passed (4). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification seal: 9eb7a5d7dc275e87ae3eeb485376558734d7d8f121f93c437d444a4d36bc63cc
+
+### TDD-0035
+
+- TDD-ID: TDD-0035
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
+- Selector: refuses to close the criterion on an unmeasured regression, rebuilds present or not
+- TC-ref: TC-0017-0035
+- Branch: falsifiability — the test and its helper predate this run, and the case passed on its first run
+- Predicate to break: packages/qfai/tests/helpers/measurementClaim.ts:128, `resolveArtifactReuse` — `if (!backing.satisfied) return backing;`, which refuses a regression claimed with no numbers
+- Mutation: delete line 128
+- Why it fails: an unmeasured regression with the rebuilds present then resolves the criterion.
+  `expect(verdict.satisfied).toBe(false)` fails as an assertion at `spec0017MeasurementClaims.test.ts:138:9`, on the `rebuildsPresent=true` pass
+- Other rows: none. `TDD-0033` calls `evaluateMeasurementClaim` directly and `TDD-0034`'s records quote numbers, so both still pass
+- Predicate ownership: as `TDD-0033` — the predicate is the test helper, and the case reads only fixtures
+
+#### Round 1
+
+- Round 1: Resumed-from-blocked (resumption 1): CR-20260820-0007 — blocked at todo
+- Round 1: Satisfied-by: packages/qfai/tests/helpers/measurementClaim.ts, `resolveArtifactReuse`, `if (!backing.satisfied) return backing;` — the check that refuses a regression claimed with no numbers. This is a test helper, not product code: no script, workflow or source file implements the rule, and the case reads only fixtures its Test file writes, so no shipped file can fail the case
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts -t "refuses to close the criterion on an unmeasured regression, rebuilds present or not"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 3 skipped (4). The row's case fails on `AssertionError: an unmeasured regression must not close the criterion (rebuildsPresent=true); otherwise the cheapest way to satisfy it is to assert the reuse would be slower and stop: expected true to be false // Object.is equality` at `tests/integration/spec0017MeasurementClaims.test.ts:138:9`
+
+The edit:
+
+```diff
+-  if (!backing.satisfied) return backing;
+```
+
+Where the mutation lands: `packages/qfai/tests/helpers/measurementClaim.ts`, a test helper the
+`Test file` imports and the RED test manifest lists. It is not the `Test file` itself.
+`/qfai-implement` Phase Red step 3c admits the mutation of "a predicate that lives in the `Test file`
+itself", a checker no production edit can make fail, and names no helper the `Test file` imports.
+Its hash-ordering clause does reach this case, since it applies "whenever the mutation lands in a
+file its manifest lists": the RED test hash below was taken before the mutation, over the restored
+bytes, and matches the handover's. `red-not-observable.md` asks that a seam or helper be recorded
+as what it is, so `Satisfied-by` names it as a test helper. Whether the step 3c clause extends from
+the `Test file` to a helper in its manifest is `qa-gatekeeper`'s judgement.
+
+- Round 1: Falsifiability revision: working-tree+2a72096081a23d3f3ea894a81465d3eec7af2808f225f3826a38b451440ed5ce
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 8b155a201f01239fc5ddefc5496bbee50b40d2b17431aa99f5986cb0aba79fad
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/measurementClaim.ts
+packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
+```
+
+- Round 1: Revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts -t "refuses to close the criterion on an unmeasured regression, rebuilds present or not"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+2a72096081a23d3f3ea894a81465d3eec7af2808f225f3826a38b451440ed5ce matches; assertion at :138:9, row case only; helper mutation admitted) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 22dea35623f2a618f2bcb7d8117b11521d450bd223db971518768c700e6d2d08, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited 850b33fc2db466fa37b4130f4358609c02570968fe66db7bb83fb3c51b061a18, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Spec review: PASS
+- Spec reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Spec audited evidence hash: 36acbf8b7ac480546dc18f662844800bb88fa68f1ae649070cbcdb61e9fb507f
+- Spec review pack: .qfai/review/review-20260923120005000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: a5d9df96bd41109a4b945015403168a21b9e40d7532f9bd913a6fab1b52fcbba
+- Code quality review: PASS
+- Code quality reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Code quality audited evidence hash: 36acbf8b7ac480546dc18f662844800bb88fa68f1ae649070cbcdb61e9fb507f
+- Code quality review pack: .qfai/review/review-20260923120005000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: a5d9df96bd41109a4b945015403168a21b9e40d7532f9bd913a6fab1b52fcbba
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017MeasurementClaims.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 4 passed (4). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification seal: 9eb7a5d7dc275e87ae3eeb485376558734d7d8f121f93c437d444a4d36bc63cc
+
+### TDD-0062
+
+- TDD-ID: TDD-0062
+- Layer: Integration
+- Test file: packages/qfai/tests/scripts/sliceSurfaceAlignment.test.ts
+- Selector: agrees across the runner workspace, both CI matrices and the per-slice scripts
+- TC-ref: TC-0017-0062
+- Branch: none — held on a coverage gap until the orchestrator decides whether the test case needs a Change Request. `/qfai-implement` step 3b leaves the row at `todo`
+- Gap: `TC-0017-0062` requires the slice list of every CI job that expands over the slice set to equal the runner project set. Four jobs do: `ci.yml`'s `test` and `node-floor`, and `release.yml`'s `gate-tests` and `gate-floor`. The test reads only the first two (`SLICED_JOBS` at `sliceSurfaceAlignment.test.ts:164`). With `pr-merge` removed from `release.yml:218` (`SUITE_SLICES`), `:507` and `:573`, this case and all 195 cases of the seven files pass. `ownWorkflowTopology.test.ts` compares the two release matrices with `SUITE_SLICES` only, so a release slice set that shrinks as a whole is checked by nothing
+- Predicate to break: .github/workflows/ci.yml:621, the `test` job's `matrix.slice` list
+- Mutation: remove `, pr-merge` from line 621
+- Why it fails: the `test` matrix no longer names every runner project.
+  `expect.soft(sorted(matrixSlices(job))).toEqual(projects)` fails as an assertion at `sliceSurfaceAlignment.test.ts:242:10`
+- Other rows: none of the ten. `TDD-0007`, `TDD-0043`, `TDD-0096` and the unannotated floor-lane case "runs one slice per leg" fail in `ownWorkflowTopology.test.ts`. In `workflowHygiene.test.ts` the same cases as under `TDD-0032`'s mutation fail, and `TDD-0095` as well, because the code-path cost pin and the required-context slice list both move
+- Note: the ledger's current `Selector` is the enclosing `describe` title. Passed to `-t` unescaped, its parentheses are read as a regular-expression group, and it selects no test
+
+#### Round 1
+
+- Round 1: RED test hash: 046dff80e5cba7ecde983ec2757ac0697912faab5a2410bc293c4371f6b65b92
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/runnerProjects.ts
+packages/qfai/tests/scripts/sliceSurfaceAlignment.test.ts
+```
+
+### TDD-0069
+
+- TDD-ID: TDD-0069
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
+- Selector: reads every project, and finds the departing set holds no more than the largest one
+- TC-ref: TC-0017-0069
+- Branch: falsifiability — the test and the runner configuration it reads predate this run, and the case passed on its first run
+- Predicate to break: packages/qfai/vitest.knobs.ts:209-215, `projectKnobs` — the knob set every project spreads, which declares no root-only axis, so no project departs from the declared value
+- Mutation: insert `  maxWorkers: 2,` after line 214
+- Why it fails: all nine projects then declare a root-only axis and depart, so the departing set has more than one member.
+  `expect(described.length > 1 ? described : []).toEqual([])` fails as an assertion at `spec0017TuningChangeScope.test.ts:174:7`
+- Other rows: `TDD-0083` also fails, because nine moved projects carry no run identifiers. `TDD-0060` fails in `vitestWorkspaceKnobs.test.ts`. `TDD-0070` still passes. A move this row catches is always one `TDD-0083` also catches, since no record holds run identifiers for any project
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/vitest.knobs.ts, `projectKnobs` — the knob set every project spreads, which declares no root-only axis, so no project departs from the declared value
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts -t "reads every project, and finds the departing set holds no more than the largest one"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). The row's case fails on `AssertionError: one tuning change per pull request (OC-80): batching two makes an emergent race unattributable, so a second departing project fails this however the run history reads: expected [ …(9) ] to deeply equal []` at `tests/integration/spec0017TuningChangeScope.test.ts:174:7`
+
+The edit:
+
+```diff
++  maxWorkers: 2,
+```
+
+- Round 1: Falsifiability revision: working-tree+7ab6e9082d952b4cc25e283fc2467d5b1d392a6b0e0e248a53ab8cc2cef104aa
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 6c36e0c3920bdc0939e999e63990792cf9e731edb6a98f635d85cdb6fd42ec5f
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
+```
+
+- Round 1: Revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts -t "reads every project, and finds the departing set holds no more than the largest one"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+7ab6e9082d952b4cc25e283fc2467d5b1d392a6b0e0e248a53ab8cc2cef104aa matches; assertion at :174:7, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green), audited 659a2218bdb311191665e0f84ebb8ef9599ba1dcd52c0c3e0378d981ba5a3e38, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited 9886408fec98205f4356c90e07a70a099613e6a7d383decc9ae60b4fcc043f28, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer (TDD-0032, TDD-0069) and completion-reviewer with implementation-reviewer (TDD-0083): the test does not pin its case as written; the row goes to review-fix
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923120006000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 4a3156fe70007256466980791a619d21cd1ea3602b8c1b93fc3110ea1caf8a84
+
+### TDD-0070
+
+- TDD-ID: TDD-0070
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
+- Selector: holds the post-merge budget open, and finds no merged tuning change owing it anything
+- TC-ref: TC-0017-0070
+- Branch: falsifiability — the test and the decision record it reads predate this run, and the case passed on its first run
+- Predicate to break: .qfai/specs/spec-0017/07_Decisions.md:1-938 — no section records a tuned project in the form `` tuned `<project>` ``, so no merged tuning change owes the post-merge budget anything
+- Mutation: insert `` tuned `unit` `` after line 938
+- Why it fails: the last section then records a tuning change.
+  `expect(tuningRecords.length).toBe(0)` fails as an assertion at `spec0017TuningChangeScope.test.ts:279:7`
+- Other rows: none. `TDD-0069` and `TDD-0083` read the record only for a moved project, and none is moved
+- Predicate ownership: the rate rule itself — above one in twenty reopens the setting — is `budgetHolds` in the test file, exercised on constructed inputs. No product code computes a rerun-to-green rate. The only tree input is the decision record, and the case fails on the first tuning record it finds whatever that record's rate is
+
+#### Round 1
+
+- Round 1: Satisfied-by: .qfai/specs/spec-0017/07_Decisions.md, and the property it already had: no section records a tuned project in the form `` tuned `<project>` ``, so no merged tuning change owes the post-merge budget anything
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts -t "holds the post-merge budget open, and finds no merged tuning change owing it anything"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). The row's case fails on `AssertionError: no tuning change has merged, so the post-merge rate has nothing to be a rate OF; the day one merges, its record is what this reads: expected 1 to be +0 // Object.is equality` at `tests/integration/spec0017TuningChangeScope.test.ts:279:7`
+
+The edit:
+
+```diff
++tuned `unit`
+```
+
+- Round 1: Falsifiability revision: working-tree+4bf5be94ad7b30f94621d55b0d8e96ea06fac0938e5c113f03beee0080ed63d4
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 6c36e0c3920bdc0939e999e63990792cf9e731edb6a98f635d85cdb6fd42ec5f
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
+```
+
+- Round 1: Revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts -t "holds the post-merge budget open, and finds no merged tuning change owing it anything"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
+
+
+- Round 1: reviewer verdict: REVISE — qa-gatekeeper#1, RED phase gate: the Round 1 mutation trips the tuning-record check at `:279` and leaves `budgetHolds`, the rate rule this row owns, untested
+- Round 1: Review pack: .qfai/review/review-20260923120009000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 07d43822881332ac964f230bc584c5e26f13b087af062a4f5aa9d845eba4d704
+
+#### Round 2
+
+Opened by qa-gatekeeper#1's REVISE. The Round 1 mutation added a tuning record, and the
+record check at `:279` fails on any tuning record whatever its rate, so that proof never
+reached `budgetHolds`, the rate rule this row owns. Round 1 stays in the record as evidence
+that the record scan works. It is not this row's proof; Round 2 is.
+
+- Round 2: Satisfied-by: packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts, `budgetHolds`, `input.rerunsToGreen * 20 > input.defaultBranchRuns` — a checker in the Test file itself, exercised on constructed inputs. No shipped file can fail the case, because no product code computes a rerun-to-green rate
+- Round 2: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts -t "holds the post-merge budget open, and finds no merged tuning change owing it anything"
+- Round 2: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). The row's case fails on `AssertionError: exactly one in twenty is inside the budget: expected false to be true // Object.is equality` at `tests/integration/spec0017TuningChangeScope.test.ts:299:7`
+
+The edit:
+
+```diff
+-  const exceeds = input.rerunsToGreen * 20 > input.defaultBranchRuns;
++  const exceeds = input.rerunsToGreen * 20 >= input.defaultBranchRuns;
+```
+
+- Round 2: Falsifiability revision: working-tree+4a6d34bc0907baf3ed67e3e86d18f8521db3315834bfafa48922ba1c1d819360
+- Round 2: RED failure mode: falsifiability
+- Round 2: RED test hash: 6c36e0c3920bdc0939e999e63990792cf9e731edb6a98f635d85cdb6fd42ec5f
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
+```
+
+- Round 2: Revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Round 2: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts -t "holds the post-merge budget open, and finds no merged tuning change owing it anything"
+- Round 2: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the Round 2 mutation of the test file was reverted before this run. The row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 REVISE, RED phase gate (falsifiability; rebuilt working-tree+4bf5be94ad7b30f94621d55b0d8e96ea06fac0938e5c113f03beee0080ed63d4 matches, but the mutation trips the tuning-record check at :279 and leaves budgetHolds, the rate rule the row owns, untested; re-take on budgetHolds), audited a61c2ca3903ecd46c3e3c55bb1747a5866b5bee61269dd5a03e2253e836509bc, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#2 PASS, RED phase gate, Round 2 (falsifiability, taken before the revert; content address of the mutated tree working-tree+4a6d34bc0907baf3ed67e3e86d18f8521db3315834bfafa48922ba1c1d819360 matches; the budgetHolds mutation at :259 fails the row's case as an assertion at :299:7, row case only; RED test hash 6c36e0c3920bdc0939e999e63990792cf9e731edb6a98f635d85cdb6fd42ec5f recomputes over the restored test), audited 07e830a262aaa4edf21521d19b1c577b9d9f6a50130c0746318e85a15631d1bf, reviewed revision working-tree+4a6d34bc0907baf3ed67e3e86d18f8521db3315834bfafa48922ba1c1d819360; qa-gatekeeper#3 PASS, build-phase GREEN + oracle proof gate, Round 2 (mutation reverted, tree matches HEAD; GREEN command identical to the Falsifiability command, re-run 1 passed | 2 skipped (3) with the row's case passing; the Round 2 falsifiability trio is the oracle proof; refactor verify re-run 3 passed (3) at 04b2eed30), audited 92797a84b359ebb0617619b9a03cda97664a2a796983f674950ac588ad2371fe, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Spec review: PASS
+- Spec reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Spec audited evidence hash: 459548e75700c455333ae7c46657a8a63799345b8071bd1aa9d230105d65dc41
+- Spec review pack: .qfai/review/review-20260923120007000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 1e76b514f1bf4fe19ce7b0542eca6e288e84859c1a5d49687b3e10df3fe14346
+- Spec record re-attestation: c1f9d8cff797fceca442d9e3726c56775a7528ac05a8a678165d5b05de6c03c6
+- Spec record re-attestation pack: .qfai/review/review-20260923120010000 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 2c198510b919f0c93c5ca8a63b8c1b090b541e830967424594096a8588398eab
+- Code quality review: PASS
+- Code quality reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Code quality audited evidence hash: 459548e75700c455333ae7c46657a8a63799345b8071bd1aa9d230105d65dc41
+- Code quality review pack: .qfai/review/review-20260923120007000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 1e76b514f1bf4fe19ce7b0542eca6e288e84859c1a5d49687b3e10df3fe14346
+- Code quality record re-attestation: c1f9d8cff797fceca442d9e3726c56775a7528ac05a8a678165d5b05de6c03c6
+- Code quality record re-attestation pack: .qfai/review/review-20260923120010000 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 2c198510b919f0c93c5ca8a63b8c1b090b541e830967424594096a8588398eab
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run --maxWorkers=7 --testTimeout=600000
+- Checkpoint verification result: PASS — the last row of this run, so the full suite ran: Test Files 771 passed | 3 skipped (774); Tests 14564 passed | 82 skipped (14646)
+- Checkpoint verification revision: daf9d8afa24b024ab4249c385eccdc1e656e340c
+- Checkpoint verification seal: 99a248bfb5da75ecd3df1321213d651c973ba248125610fcafc851829c75024f
+
+Two earlier full-suite runs were discarded. The first, at 04b2eed30, failed 39 tests: five repository-only asset tests still listed the released rows, and the guard-byte pins lagged the dogfood pin. Those were repaired in daf9d8afa. The second, at daf9d8afa, failed seven cases of `tests/scripts/ownWorkflowTopology.test.ts` on a 100 ms script timeout while another full suite ran on the same machine. The run above is the same tree with nothing else running.
+
+### TDD-0083
+
+- TDD-ID: TDD-0083
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
+- Selector: requires three recorded runs against the change that moved it, and none against no change
+- TC-ref: TC-0017-0083
+- Branch: falsifiability — the test and the runner configuration it reads predate this run, and the case passed on its first run
+- Predicate to break: packages/qfai/vitest.workspace.ts:59, the `e2e` project — `name: "e2e",` with the project knobs spread unchanged, so the project is not moved
+- Mutation: `name: "e2e",` to `name: "e2e", maxConcurrency: 3,`
+- Why it fails: `e2e` is then moved, and no decision-record section naming it quotes a run identifier.
+  `expect(unjustifiedMoves(...)).toEqual([])` fails as an assertion at `spec0017TuningChangeScope.test.ts:213:7`
+- Other rows: `TDD-0069` still passes, because one project is moved and `e2e` is the largest, at 219 test files. `TDD-0061` fails in `vitestWorkspaceKnobs.test.ts`, in three cases
+- Oracle limit: the case ties a run identifier to a change by the project name in the same decision-record section, and counts identifiers rather than checking that the runs were consecutive. Two tuning changes to one project would share their identifiers
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/vitest.workspace.ts, the `e2e` project — `name: "e2e",` with `projectKnobs` spread unchanged, so the project is not moved
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts -t "requires three recorded runs against the change that moved it, and none against no change"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). The row's case fails on `AssertionError: a project moved off the declared value without three recorded runs is a parallelism claim landing on argument, which is the thing BR-0017-0030 and this rule both forbid: expected [ Array(1) ] to deeply equal []` at `tests/integration/spec0017TuningChangeScope.test.ts:213:7`
+
+The edit:
+
+```diff
+-      name: "e2e",
++      name: "e2e", maxConcurrency: 3,
+```
+
+- Round 1: Falsifiability revision: working-tree+954431945deba10b08585c489b488cd0bbc83ad1571f8099008b4f321ade380e
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 6c36e0c3920bdc0939e999e63990792cf9e731edb6a98f635d85cdb6fd42ec5f
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
+```
+
+- Round 1: Revision: 6b9fb192c81af71be4a5132f805cae8b97d6fc34
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts -t "requires three recorded runs against the change that moved it, and none against no change"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0017TuningChangeScope.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 04b2eed300af284f44dc5fa08017f1205f58b0d0
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate (falsifiability; rebuilt working-tree+954431945deba10b08585c489b488cd0bbc83ad1571f8099008b4f321ade380e matches; assertion at :213:7, row case only) and build-phase GREEN + oracle proof gate (GREEN and refactor verify re-run green); PASS covers the observation only, coverage of TC-0017-0083 routed to the reviews, audited 829b2c20d06b72441edf2c52fd02afa978448fabf061bc15c79fe09964aaad71, reviewed revision d1a454c3e9c764999916c940f34084a3c93cffe6; qa-gatekeeper#1 PASS re-attested on the re-taken refactor verify, audited 3a4b0ada33f3df284b550bde2ce19e5680bae64117fc6c558e41c8265d67dc08, reviewed revision 04b2eed300af284f44dc5fa08017f1205f58b0d0
+
+- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer (TDD-0032, TDD-0069) and completion-reviewer with implementation-reviewer (TDD-0083): the test does not pin its case as written; the row goes to review-fix
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260923120008000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): fc0fdbf3019ec0992afde3178b4aa726ca7e620d1d2df4d9556d6364e7a7f9a4
 
 ## Coverage Depth Matrix
 
@@ -1420,6 +2136,38 @@ and this record were all authored by the party that also judged them. **The revi
 been run** — round 1, two independent blocking reviewers, both `REVISE`, findings applied above — but
 the P2-P4 work orders did not happen and cannot be reconstructed retroactively. That half of the
 deviation stands.
+
+### Rows for the run started 2026-09-23T10:23:39.000Z
+
+This run was one `acceptance-test-engineer` working order from the
+orchestrator. It wrote no test, and no reviewer was routed from it.
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1 | acceptance-test-engineer | acceptance-test-engineer | Find the test carrying each of the ten rows' annotations, run it alone, and check it against today's test case | 06_Test-Cases.md, 05_Examples.md, 04_Business-Rules.md, tdd/test-list.md | #rows-handed-over-by-the-run-started-2026-09-23t102339000z | PASS |
+| 2 | acceptance-test-engineer | acceptance-test-engineer | Apply, run and revert one mutation per row | the five test files, the workflows and runner configuration they read | the `Predicate to break`, `Mutation`, `Why it fails` and `Other rows` fields of each entry | PASS |
+| 3 | acceptance-test-engineer | acceptance-test-engineer | Hand over nine rows on the falsifiability branch and hold `TDD-0062` | steps 1 and 2 | #tdd-0016, #tdd-0030, #tdd-0032, #tdd-0033, #tdd-0034, #tdd-0035, #tdd-0062, #tdd-0069, #tdd-0070, #tdd-0083 | PASS |
+| 4 | acceptance-test-engineer | acceptance-test-engineer | Restate the ledger cross-tabulation in `## Inputs reviewed` from the ledger as this run read it | tdd/test-list.md | #inputs-reviewed-filespaths | PASS |
+| 5 | acceptance-test-engineer | acceptance-test-engineer | grilling(S1@2026-09-23T10:23:39.000Z/agents): hold `TDD-0062` with no branch, and neither widen its test nor raise the Change Request here | TC-0017-0062, BR-0017-0057, AC-0017-0027, `release.yml` `gate-tests` / `gate-floor` | #tdd-0062; widening the test would settle by assertion whether the release gate's jobs are in the test case's scope, which is the spec's question, and the work order leaves the Change Request to the orchestrator; no position disagreed | PASS |
+| 6 | acceptance-test-engineer | acceptance-test-engineer | grilling(S1@2026-09-23T10:23:39.000Z/agents): hand `TDD-0033`, `TDD-0034` and `TDD-0035` over with the test helper named as the predicate | `tests/helpers/measurementClaim.ts`, TC-0017-0033..0035 | #tdd-0033, #tdd-0034, #tdd-0035; each test covers its case as the case is written, no product code implements the rule to mutate instead, and holding the rows would leave them stranded on a judgement `qa-gatekeeper` owns; the opposing position, holding them as a gap, is recorded in each entry's `Predicate ownership` field | PASS |
+| 7 | acceptance-test-engineer | acceptance-test-engineer | grilling(S1@2026-09-23T10:23:39.000Z/agents): hand `TDD-0070` and `TDD-0083` over and record their oracle limits rather than hold them | TC-0017-0070, TC-0017-0083, EX-0017-0054, EX-0017-0067 | #tdd-0070, #tdd-0083; each test asserts the case its title names, and what it reaches less precisely — a rate computed only on constructed inputs, identifiers tied to a change by project name — is a precision limit of what the record can carry, not an unread surface like `TDD-0062`'s; no position disagreed | PASS |
+
+### Rows for the /qfai-implement run started 2026-09-23T11:16:15.344Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 8 | - | n/a | grilling(-@2026-09-23T11:16:15.344Z/none): none | - | - | PASS |
+| 9 | backend-engineer | backend-engineer | /qfai-implement: copy each handover's `Test file` and `Selector` into the nine rows and write `todo -> red` | #rows-handed-over-by-the-run-started-2026-09-23t102339000z | tdd/test-list.md | PASS |
+| 10 | backend-engineer | backend-engineer | /qfai-implement: TDD-0016 step 3c mutation, restore and GREEN | #tdd-0016 | Round 1 | PASS |
+| 11 | backend-engineer | backend-engineer | /qfai-implement: TDD-0030 step 3c mutation, restore and GREEN | #tdd-0030 | Round 1 | PASS |
+| 12 | backend-engineer | backend-engineer | /qfai-implement: TDD-0032 step 3c mutation, restore and GREEN | #tdd-0032 | Round 1 | PASS |
+| 13 | backend-engineer | backend-engineer | /qfai-implement: TDD-0033 step 3c mutation of the test helper, restore and GREEN | #tdd-0033 | Round 1 | PASS |
+| 14 | backend-engineer | backend-engineer | /qfai-implement: TDD-0034 step 3c mutation of the test helper, restore and GREEN | #tdd-0034 | Round 1 | PASS |
+| 15 | backend-engineer | backend-engineer | /qfai-implement: TDD-0035 step 3c mutation of the test helper, restore and GREEN | #tdd-0035 | Round 1 | PASS |
+| 16 | backend-engineer | backend-engineer | /qfai-implement: TDD-0069 step 3c mutation, restore and GREEN | #tdd-0069 | Round 1 | PASS |
+| 17 | backend-engineer | backend-engineer | /qfai-implement: TDD-0070 step 3c mutation, restore and GREEN | #tdd-0070 | Round 1 | PASS |
+| 18 | backend-engineer | backend-engineer | /qfai-implement: TDD-0083 step 3c mutation, restore and GREEN | #tdd-0083 | Round 1 | PASS |
+| 19 | backend-engineer | backend-engineer | /qfai-implement: refactor verify of the nine rows over each whole test file, and `red -> green -> refactor` | #tdd-0016 … #tdd-0083 | Refactor verify fields; tdd/test-list.md | PASS |
 
 ## Execution logs
 
@@ -2264,7 +3012,7 @@ a merge can invalidate has no author to hold responsible for it.
 The count and its split across the two include roots are on one line, and both are derived by the same
 walk:
 
-e2e callsites at this tree: 2426 (packages/qfai/tests/assets 2233, packages/qfai/tests/e2e 193)
+e2e callsites at this tree: 2427 (packages/qfai/tests/assets 2234, packages/qfai/tests/e2e 193)
 
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is

@@ -44,6 +44,10 @@ One `Integration` ledger row is in scope: `TDD-0039`, bound to `TC-0015-0007`'s 
 | `TC-0015-0007` `legacy-profile-preservation` | `packages/qfai/tests/integration/spec0015LegacyProfilePreservation.test.ts` | First run PASS; falsifiability assertion FAIL; byte-equal restoration and GREEN PASS |
 | `CON-API-*`, active `CON-DB-*` | None referenced by this spec's boundary | Not applicable |
 
+## Coverage Depth Matrix
+
+See `.qfai/evidence/coverage-depth-spec-0015.md` (committed). Totals: ✅ 21 / ⚠️ 25 / ❌ 6.
+
 ## Ledger rows advanced
 
 ### TDD-0039

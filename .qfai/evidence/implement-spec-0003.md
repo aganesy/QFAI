@@ -4674,3 +4674,12 @@ populated, and it resets no rows.
 
 **Closing status: `blocked-pending-spec-0017` for the Phase E tail, and `pending-upstream` for the
 US-level E2E coverage.**
+
+## Record defects
+
+Open entries from the completion review of the `/qfai-implement` run started
+2026-09-23T11:42:45.972Z, attempt 1. Each is repaired in place before spec-0003
+completion is declared.
+
+- `record:unchecked`, `TDD-0037`, Round 1: the entry's `Branch:` line says it records a test-only replacement and changes no branch, and a paragraph says the ledger still holds the old describe title. After `CR-20260923-0013` the entry carries the row's own falsifiability proof, and the ledger holds the renamed title.
+- `record:unchecked`, `TDD-0037`, Round 1: the round carries `RED test replacement` / `Replacement proof` fields, which `round-evidence.md` reserves for a `REVISE` that replaced the test. The proof was re-taken because a change request reset the row.

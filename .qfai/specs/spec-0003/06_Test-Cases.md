@@ -96,7 +96,7 @@ Setup: 一時ディレクトリを作成する。
 Action: `runInit({ dir, force: false, dryRun: false, yes: true })` を実行する。
 Verify:
 
-- `.qfai/` 配下に assistant/, specs/, contracts/ 等が存在する
+- `.qfai/assistant/` exists, and none of `specs/`, `contracts/`, `discussion/`, `evidence/`, `review/` and `report/` exists under `.qfai/`
 - `qfai.config.yaml` が存在する
 - symlink が 4 つの skills/ ディレクトリに生成されている
 

@@ -36,6 +36,20 @@ function normalizeForComparison(p) {
   return process.platform === "win32" ? n.toLowerCase() : n;
 }
 
+function execNpm(args, options) {
+  if (process.platform === "win32") {
+    const cli = path.join(
+      path.dirname(process.execPath),
+      "node_modules",
+      "npm",
+      "bin",
+      "npm-cli.js",
+    );
+    return execFileSync(process.execPath, [cli, ...args], options);
+  }
+  return execFileSync("npm", args, options);
+}
+
 const root = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const pkgDir = path.join(root, "packages", "qfai");
 const tmpDir = path.join(root, "tmp", "pack");
@@ -46,7 +60,7 @@ const reportPath = path.join(outputDir, ".qfai", "report", "report.md");
 rmSync(tmpDir, { recursive: true, force: true });
 mkdirSync(tmpDir, { recursive: true });
 
-const packOutput = execFileSync("npm", ["pack"], {
+const packOutput = execNpm(["pack"], {
   cwd: pkgDir,
   encoding: "utf-8",
 }).trim();
@@ -182,8 +196,8 @@ if (!existsSync(workflowFile) || !lstatSync(workflowFile).isFile()) {
 
 rmSync(sandboxDir, { recursive: true, force: true });
 mkdirSync(sandboxDir, { recursive: true });
-execFileSync("npm", ["init", "-y"], { cwd: sandboxDir, stdio: "inherit" });
-execFileSync("npm", ["install", tarballPath], {
+execNpm(["init", "-y"], { cwd: sandboxDir, stdio: "inherit" });
+execNpm(["install", tarballPath], {
   cwd: sandboxDir,
   stdio: "inherit",
 });
