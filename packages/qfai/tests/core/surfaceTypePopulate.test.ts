@@ -13,7 +13,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { defaultConfig } from "../../src/core/config.js";
+import { legacyLayoutConfig as defaultConfig } from "./legacyLayoutConfig.js";
 import { populateSurfaceTypeIfUiCompanion } from "../../src/core/detection/surfaceType.js";
 import { validateProject } from "../../src/core/validate.js";
 
