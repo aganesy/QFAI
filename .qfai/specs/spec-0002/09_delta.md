@@ -34,3 +34,15 @@
 
 - `_policies/05_Contracts.md` と `spec-0013` の contract normalization 記述を同期
 - `spec-0012` / `spec-0014` の prototyping / verify 記述を winner-derived design system 前提に同期
+
+## Change Requests
+
+| CR ID            | Upstream artifact            | Mode      | Approved by             | Applied at |
+| ---------------- | ---------------------------- | --------- | ----------------------- | ---------- |
+| CR-20260924-0003 | `spec-0002/tdd/test-list.md` | re-derive | user (2026-09-24 reply) | 2026-09-24 |
+
+### CR-20260924-0003: Correct unsupported ledger completion claims
+
+`TC-0002-0009` remains outstanding. `TDD-0009` returns to `todo` with no test file or selector because its former skill-guidance test did not prove the planner-first violation. Its former Evidence was `current e2e guidance test pass`.
+
+`TDD-0010` is retired and its ID is reserved. Its former preflight test covered optional artifact handling rather than the cited case. Its former Evidence was `current preflight unit test pass`. The runtime tests belong to `spec-0013` under `CR-20260913-0012`. The separate product decision remains open in `CR-20260912-0003`.

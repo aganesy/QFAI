@@ -18,7 +18,7 @@
   - Contract-first mandatory outputs: `.qfai/contracts/(api|db|ui|design)/**`
   - UI-bearing discussion UIUX sidecar の downstream contract への正規化
   - Contract Index in `_policies/05_Contracts.md` with short IDs (DB-001, API-001, UI-001)
-  - Discussion-pack preflight validation (latest pack, readiness checks)
+  - Discussion-pack preflight and usable-source checks
   - Phase order enforcement (Contracts-first -> Outline -> Slice -> Plan -> Delta)
   - Reference direction rules (upper-to-lower forbidden, lower-to-upper allowed)
   - Required edges: US -> AC -> BR -> EX -> TC
@@ -28,8 +28,7 @@
   - Density Review Pass using `QFAI-COV-207` warnings
   - Preflight summary report (`.qfai/report/preflight_summary.md`)
   - Validate gate (`qfai validate --fail-on error`)
-  - discussion-pack markdown readiness gate
-  - optional side artifacts are ignored by preflight
+  - optional side artifacts do not change preflight readiness
   - Phase 0 freeze of root `DESIGN.md` sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml`
   - drop legacy design contracts (`exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, `reference-pool.yaml`, `brand-design.yaml`)
   - emit only `design-system.yaml`, `prototype-handoff.yaml`, `DESIGN.md`, `DESIGN.md.lock.yaml`, and the design-system mirror validator as the active design-contract surface
@@ -50,7 +49,7 @@
 ## Applicable Policy
 
 - Policy: Drift Protocol mandatory
-- Discussion-pack preflight is mandatory (stop if missing/incomplete)
+- Discussion-pack preflight is mandatory; stop only when no usable source exists
 - `10_Plan.md` is How-only SSOT; do not create `specs/plan.md`
 
 ## Evidence Summary
@@ -66,18 +65,14 @@
 - REQ-0004: Slice phase -- `spec-XXXX/01..08` with slice gate (US->AC, AC->BR, TC->EX)
 - REQ-0005: Plan phase -- `spec-XXXX/10_Plan.md` finalized after slice gate pass
 - REQ-0006: Delta phase -- `spec-XXXX/09_delta.md` with adoption/rejection rationale, DO NOT / Temptation
-- REQ-0007: Discussion-pack preflight -- validate latest pack readiness before SDD
+- REQ-0007: Discussion-pack preflight -- select available reference material before SDD and stop only when no usable source exists
 - REQ-0008: Batch mode -- no-argument processes all capabilities from `_policies/03_Capabilities.md`
 - REQ-0009: Spec Auto-Discovery -- 4-source diff detection integrated from spec-0038
 - REQ-0010: Reference direction enforcement -- upper-to-lower forbidden, lower-to-upper allowed
 - REQ-0011: Required edges -- US -> AC -> BR -> EX -> TC completeness
 - REQ-0012: Validate gate -- `qfai validate --fail-on error --format github` with error=0
 - REQ-0013: Density Review -- `QFAI-COV-207` warnings triaged from specs-coverage reports
-- REQ-0014: Discussion-Pack Markdown Gate — SDD preflight は discussion-pack の必須 markdown readiness を検証し、欠落・未完成時のみブロックする
 - REQ-0015: Optional Side Artifact Neutrality — SDD preflight は optional side artifact の欠落や旧形式の補助 prototyping artifact だけではブロックしない
-- REQ-0016: Exploration-brief normalization — `uiux/30_exploration_brief.md` を `.qfai/contracts/design/exploration-brief.yaml` に正規化する
-- REQ-0017: Evaluation-rubric normalization — `uiux/33_exploration_rubric.md` を `.qfai/contracts/design/evaluation-rubric.yaml` に正規化する
-- REQ-0018: Evaluator-calibration normalization — `uiux/34_evaluator_calibration.md` を `.qfai/contracts/design/evaluator-calibration.yaml` に正規化する
 - REQ-0019: UI contract normalization — `uiux/40_screen_contracts.md` を `.qfai/contracts/ui/*.yaml` に正規化する
 - REQ-0020: Downstream boundary — `/qfai-sdd` 以降の skill は discussion pack を直接読まず、正規化済み specs/contracts を読む
 - REQ-0021: `selected-direction.yaml` と `design-system.yaml` は prototyping でさらに更新され得る downstream design contracts だが、UI-bearing flow では `/qfai-sdd` 完了時点で downstream validate readiness のために存在していなければならない

@@ -5,11 +5,11 @@
 - Raised by: `qfai-sdd`
 - Raised at: `2026-09-13T09:30:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
+- Status: `approved`
+- Approved by: `user` (2026-09-24 reply)
+- Approved at: `2026-09-24T09:00:00Z`
 - Approved option: `-`
-- Applied at: `-`
+- Applied at: `2026-09-24T09:46:00Z`
 - Superseded by: `-`
 
 ## Context
@@ -496,4 +496,7 @@ at its own granularity, so this record does not decompose it below that.
 
 ## Resolution
 
-Not yet resolved.
+The user approved the remaining ledger repair on 2026-09-24. The current
+ledger already had fifteen columns and thirteen E2E rows; the owner rerun
+applied the remaining rows and independent story boundaries. Rows disputed by
+other open Change Requests remain blocked under their own records.

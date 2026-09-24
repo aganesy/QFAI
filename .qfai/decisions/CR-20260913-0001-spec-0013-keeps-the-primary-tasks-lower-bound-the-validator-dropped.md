@@ -105,18 +105,20 @@ because what they were rejected against is still written where they are.
 
 ## Blocked downstream items
 
-| Item                 | Kind         | Why it depends on the artifact                                                                  |
-| -------------------- | ------------ | ----------------------------------------------------------------------------------------------- |
-| `spec-0013/TDD-0027` | `ledger-row` | `TC-0013-0032` names the band the shipped documents are required to state                       |
-| `spec-0013/TDD-0028` | `ledger-row` | `TC-0013-0033` states the floor the validator does not raise                                    |
-| `spec-0004/TDD-0050` | `ledger-row` | `TC-0004-0070` is on the test that asserts the ceiling, under a `REQ-0164` that states the band |
+| Item                                                                   | Kind         | Why it depends on the artifact                                                                                 |
+| ---------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------- |
+| `spec-0013/TDD-0027`, `TDD-0068`, `TDD-0069`                           | `ledger-row` | The original `TC-0013-0032` aggregate row now separates the template, guide, and warning-text band statements. |
+| `spec-0013/TDD-0028`, `TDD-0070` to `TDD-0072`                         | `ledger-row` | The original `TC-0013-0033` aggregate row now separates the lower bound, upper bound, and inclusive endpoints. |
+| `spec-0013/TDD-0043`, `TDD-0098` to `TDD-0101`, `TDD-0106`, `TDD-0107` | `ledger-row` | The `US-0013-0014` E2E row now separates the band documentation, warning, and boundary outcomes.               |
+| `spec-0004/TDD-0050`                                                   | `ledger-row` | `TC-0004-0070` is on the test that asserts the ceiling, under a `REQ-0164` that states the band.               |
 
-- Not blocked by this CR: the other ten `done` rows of `spec-0013`'s ledger,
-  and every `spec-0004` row but `TDD-0050`.
-  Their obligations are independent of the band, so the evidence backfill that
-  covers them continues. **Those three are the exception**: writing evidence for
-  a row whose obligation the product states the opposite of records the
-  contradiction rather than discharging it.
+The former `TDD-0027` maps to `TDD-0027/0068/0069`; former `TDD-0028` maps to
+`TDD-0028/0070/0071/0072`. The previously unallocated `US-0013-0014` E2E
+obligation is now `TDD-0043/0098/0099/0100/0101/0106/0107` for the band.
+Rows for structured task shapes (`TDD-0029/0030` and their siblings) remain
+available; their obligations do not change with the band decision. Every other
+`spec-0004` row but `TDD-0050` is also outside this blocked set.
+
 - Overlapping open CRs: `CR-20260913-0010`, which corrects the template path
   the same `spec-0013` statements and `DR-0267` name, and sweeps `TDD-0027` for
   it. This record is written against those statements as that record leaves

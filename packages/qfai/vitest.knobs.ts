@@ -14,11 +14,11 @@ import process from "node:process";
  * ## Why the set is SPLIT, and not all per project
  *
  * The worker and file-parallelism axes bound the run as a whole: how many test files are in
- * flight at once is one number for the run, not nine. A project inherits every option the
+ * flight at once is one number for the run, not seven. A project inherits every option the
  * root declares, so declaring them once at the root is what every project then uses.
  *
- * Repeating them per project would put one measured value in nine places, where eight of
- * them can drift from the ninth without anything failing. Measured on the `validators`
+ * Repeating them per project would put one measured value in seven places, where six of
+ * them can drift from the seventh without anything failing. Measured on the `validators`
  * project against an older runner that ignored a project-level worker declaration outright,
  * constraining the override to one gave a wall-clock ratio of 0.93 — noise. The value
  * belongs to the run, and the run's configuration is the root.
@@ -83,11 +83,7 @@ export const DECLARED_WORKERS = Math.min(DECLARED_START, availableParallelism())
  * cores the machine actually has.
  *
  * The axis bounds concurrent cases inside one process rather than forks, so the cap above
- * does not cover it and needed its own measurement. Taken on
- * `tests/pr-fix/prFixMonitor.test.ts`, whose cases each spawn a shell that runs a script
- * through its poll loop and shells out once per poll. That file and
- * `tests/pr-merge/prMergePlan.test.ts` are the two this axis is for, each in a runner project
- * of its own, and no other file in the suite carries that cost.
+ * does not cover it. A sweep of process-heavy tests measured the cost of this axis.
  * One full run per setting, on four cores, the count `ubuntu-latest` gives:
  *
  * ```text
@@ -229,7 +225,7 @@ export const projectKnobs = {
  *
  * The lesson is the file's own docblock: this is the PARALLELISM knob set. `setupFiles` is not a
  * parallelism knob, and anything spread into a foreign root has to be about that root. Kept here
- * as a separate export rather than inlined nine times in `vitest.workspace.ts`, so there is
+ * as a separate export rather than inlined seven times in `vitest.workspace.ts`, so there is
  * still one definition — it is the SPREAD that had to stop, not the sharing.
  *
  * ## Why every project and not one
