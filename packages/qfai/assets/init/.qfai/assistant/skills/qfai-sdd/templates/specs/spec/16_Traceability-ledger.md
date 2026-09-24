@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Link each `BR-*` / `AC-*` in this spec to the implementation file that realizes it and the test file
-that proves it. `npx qfai validate` reads this file to enforce **implementation integrity**: when a
-spec's `03_Acceptance-Criteria.md` or `04_Business-Rules.md` changes on a branch, every
-implementation file linked from a changed spec must also have changed in that branch, otherwise
-`QFAI-TRACE-001` (severity `error`) fires.
+Link each `BR-*` / `AC-*` to its implementation and test. For an adopted ledger,
+`npx qfai validate --profile tdd` and `--profile full` compare each obligation with its merge-base
+copy. A changed or new obligation needs an active or explicit planned binding. An unchanged active
+implementation needs current, independently reviewed test proof. Missing or ambiguous bindings,
+failed proof and an unavailable merge-base fail validation.
 
 This file is **optional**. A spec without it is not invalid — validation emits `QFAI-TRACE-002` at
 severity `warning` and skips the integrity check, so `--fail-on error` still passes. Add it to any
@@ -14,31 +14,52 @@ spec whose BR/AC you want held to implementation drift.
 
 ## Ledger Table (required when this file exists)
 
-The **first** Markdown table in this file is the one the validator reads, and the only one: any
-further table in this document is prose, never a ledger row, even if its first cell looks like a
-`BR`/`AC` ID. Its header must have at least three columns and one of them must be named
-`Implementation File`. Each data row's first cell must be a `BR-NNNN` or `AC-NNNN` ID, and the
-second cell must be a repository-root-relative path to the implementation file.
+The **first** Markdown table holds active bindings. Further tables cannot add active bindings.
+The first table's header must have at least three columns, including `Implementation File`. Its
+first cell holds one `BR-NNNN` or `AC-NNNN` ID; its second holds one repository-root-relative
+implementation path. The optional fifth `Proof` column holds one `TDD-NNNN` ID or `-`.
 
-| BR/AC   | Implementation File       | Test File                             | Notes   |
-| ------- | ------------------------- | ------------------------------------- | ------- |
-| AC-0001 | src/<module>/<file>.<ext> | tests/integration/<spec>/<file>.<ext> | <notes> |
-| BR-0001 | src/<module>/<file>.<ext> | tests/unit/<spec>/<file>.<ext>        | <notes> |
+| BR/AC   | Implementation File       | Test File                             | Notes   | Proof    |
+| ------- | ------------------------- | ------------------------------------- | ------- | -------- |
+| AC-0001 | src/<module>/<file>.<ext> | tests/integration/<spec>/<file>.<ext> | <notes> | -        |
+| BR-0001 | src/<module>/<file>.<ext> | tests/unit/<spec>/<file>.<ext>        | <notes> | TDD-0001 |
 
 ### Column rules
 
-- `BR/AC` — a single `BR-NNNN` or `AC-NNNN` ID defined in this spec. Rows whose first cell does not
-  match that shape are ignored by the validator; use them for grouping headings if you like.
+- `BR/AC` — one ID defined in this spec. A changed or new ID must have an active row or an explicit
+  Planned bindings entry. Do not repeat an ID-and-path pair; distinct paths for one ID use separate
+  rows.
 - `Implementation File` — one repository-root-relative path, no globs, no `./` prefix. This is the
-  path compared against `git diff --name-only <baseBranch>..HEAD`.
-- `Test File` — the test that proves the row. Not machine-checked here; TC-level coverage is
-  enforced separately from `06_Test-Cases.md` and `tdd/test-list.md`.
-- Extra trailing columns are allowed and ignored.
+  path compared with the merge-base branch diff. A removed path cannot satisfy an active row.
+- `Test File` — the test that proves the row. A `Proof` reference must resolve to this same file.
+- `Proof` — use one TDD ID only when the obligation changed but this active implementation did not.
+  The matching TDD row and current ATDD evidence must agree on test file, selector, TC and BR/AC
+  references; `Satisfied-by` must name this path. The evidence must match the restored source
+  SHA-256 and current RED test manifest/hash, record a passing GREEN run, and carry an independent
+  `qa-gatekeeper` PASS. One TDD result may support several obligations if its TC/BR/AC chain matches
+  each one. RED and GREEN commands must filter the project's runner to this selector or TDD ID; the
+  results and independent review must verify that same selection. The static check accepts the ATDD
+  scanner's file-level runnable TC annotation across supported languages. The live reviewer checks
+  the selected test's predicate, which a file-level annotation cannot establish. The validator
+  checks the record; CI executes the test. A written `PASS` is insufficient.
+- Other trailing columns are ignored.
 
 ### One obligation per row
 
 Write one row per `BR`/`AC` ↔ implementation-file pair. If one `AC-*` is realized by three files,
 write three rows with the same `AC` ID. A row naming several files in one cell will not match.
+
+### Planned bindings
+
+Declare future paths separately. They do not count as active implementations or proof. The
+validator reads this table only to check that a changed or new obligation has an explicit binding;
+promote a row to the first table when its implementation file is created or first edited for that
+obligation. An existing file left unchanged may remain planned until that edit. Set `State today`
+to `present` or `absent` after checking the path in the current tree.
+
+| Implementation File       | State today | BR / AC it will realize | Test File (planned)                 | Promotion trigger           |
+| ------------------------- | ----------- | ----------------------- | ----------------------------------- | --------------------------- |
+| src/<module>/<next>.<ext> | absent      | BR-0002                 | tests/unit/<spec>/<next>.test.<ext> | File creation or first edit |
 
 ## Authoring and maintenance
 

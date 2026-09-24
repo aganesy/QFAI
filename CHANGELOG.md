@@ -4,6 +4,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Removed
+
+- The repository's `pr-fix` and `pr-merge` skills, their scripts, and their
+  dedicated test suites. CI and release checks now run seven test slices. An
+  older tag with the retired slices uses the whole-suite release gate.
+
 ### Changed
 
 - **The test runner moves to its fourth major, and the coverage provider with

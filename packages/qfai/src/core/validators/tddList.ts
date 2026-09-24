@@ -1327,7 +1327,7 @@ const EVIDENCE_COMMAND_NOT_RUN = [
   /\b(?:wasn|weren|isn|aren|hasn|haven|didn|don|doesn|couldn)['’]t\s+(?:been\s+)?(?:run|ran|executed|invoked)\b/i,
 ];
 
-function isExecutedEvidenceCommand(value: string): boolean {
+export function isExecutedEvidenceCommand(value: string): boolean {
   return hasCommandShape(value) && !EVIDENCE_COMMAND_NOT_RUN.some((form) => form.test(value));
 }
 
@@ -1370,7 +1370,7 @@ function evidenceResultOutcomeText(value: string): string {
 const EVIDENCE_RESULT_RAN_NOTHING =
   /\b(?:0|zero)\s+(?:tests?|specs?|examples?)\b(?!\s*(?:failed|failing|failures?|errors?))|\b0\s+passed\b|\bno\s+tests?\s+(?:ran|run|found|matched|executed)\b|\bno\s+test\s+files?\s+found\b/i;
 
-function isPassingEvidenceResult(value: string): boolean {
+export function isPassingEvidenceResult(value: string): boolean {
   const outcome = evidenceResultOutcomeText(value);
   // A COUNTED outcome is what a runner reports about the cases it was given:
   // `0 failed` says there were no failures, and `35 skipped` says the suite
@@ -1395,7 +1395,7 @@ function isPassingEvidenceResult(value: string): boolean {
   );
 }
 
-function isFailingEvidenceResult(value: string): boolean {
+export function isFailingEvidenceResult(value: string): boolean {
   const outcome = evidenceResultOutcomeText(value);
   const withoutZeroFailures = outcome.replace(/\b0\s+(?:failed|failures?|errors?)\b/gi, "");
   if (/\b(?:not|never|did\s+not)\s+(?:fail(?:ed)?|error)\b/i.test(outcome)) return false;
@@ -2038,7 +2038,7 @@ async function artifactRecord(
   return `${safePath}\0${kind}\0${mode}\0${sha256(bytes)}`;
 }
 
-async function redTestManifestHash(root: string, manifest: string): Promise<string | null> {
+export async function redTestManifestHash(root: string, manifest: string): Promise<string | null> {
   const paths = manifest
     .replace(/\r\n/g, "\n")
     .split("\n")
@@ -5152,7 +5152,7 @@ function normalizeSelector(selector: string): string | null {
  * comma rule: before the array form a multi-entry cell was a comma-separated list, and read as one
  * name such a row can never resolve again.
  */
-function selectorResolves(selector: string, content: string): boolean {
+export function selectorResolves(selector: string, content: string): boolean {
   const entries = selectorEntries(selector);
   if (entries.every((entry) => entryResolves(entry, content))) {
     return true;

@@ -144,3 +144,16 @@
 - Given one item `"Review orders"` (string-only) and one `{id: t1, label: "Mark shipped", acceptance: "order status flips to shipped"}` (structured) and one `{id: t2, label: "x"}` (missing `acceptance`)
 - When `auditProfile.ts` evaluates them during the deprecation window
 - Then the string-only and the complete structured item are accepted; the item missing `acceptance` is rejected (all-required, closed schema)
+
+## EX-0013-0021: Optional Side Artifact States
+
+- BR-Ref: BR-0013-0021
+- Given a discussion pack with usable markdown and no `prototyping.yaml`
+- When SDD preflight runs
+- Then it reports ready without treating the absent side artifact as a blocker
+- Given the same pack with a `prototyping.yaml` whose namespaced schema is invalid
+- When SDD preflight runs
+- Then it reports ready without treating the malformed optional artifact as a blocker
+- Given the same pack with a legacy-only `prototyping.yaml` that has no `prototyping` namespace
+- When SDD preflight runs
+- Then it reports ready without treating the legacy optional artifact as a blocker

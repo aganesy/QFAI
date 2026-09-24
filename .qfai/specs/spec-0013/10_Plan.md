@@ -2,7 +2,7 @@
 
 ## Implementation approach
 
-1. Discussion-pack preflight: validate latest pack readiness
+1. Discussion-pack preflight: use the available pack as reference material, or stop if no usable source exists
 2. Contract-first phase: create/update `.qfai/contracts/(api|db|ui)/**`
 3. Outline phase: generate `_policies/01..10` layered artifacts
 4. Slice phase: generate `spec-XXXX/01..08` with slice gate enforcement
@@ -19,7 +19,7 @@
 
 ## Dependencies
 
-- Requires: discussion pack from `/qfai-discussion`
+- Requires: a discussion pack, import-lite input, or explicit user requirement
 - Consumed by: `/qfai-prototyping` or `/qfai-atdd` as next steps
 
 ## Risk mitigation
@@ -29,7 +29,7 @@
 
 ## v1.8.1 Implementation Notes
 
-- Discussion readiness gate: `packages/qfai/src/core/preflight/sddPreflight.ts` — blockers are derived from required markdown readiness and blocking OQ state
+- Discussion preflight: `packages/qfai/src/core/preflight/sddPreflight.ts` — use the available pack as reference material and stop only when no usable source exists
 - Optional side artifacts: `packages/qfai/src/core/discussionPack.ts` retains `missingSideArtifacts` only as a compatibility-shaped empty array
 - Current sync reflects the removal of required prototyping side artifacts from preflight.
 

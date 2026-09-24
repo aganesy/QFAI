@@ -363,8 +363,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/integration/web-research/pipeline.test.ts",
   "tests/integration/web-research/security.test.ts",
   "tests/integration/web-research/skill.test.ts",
-  "tests/pr-fix/prFixMonitor.test.ts",
-  "tests/pr-merge/prMergePlan.test.ts",
   "tests/scripts/checkBidi.test.ts",
   "tests/scripts/checkBranchVersionPin.test.ts",
   "tests/scripts/checkMdschema.test.ts",

@@ -2825,6 +2825,25 @@ function hasRunnableTestStructure(file: string, text: string): boolean {
   return matchesAny(runnableTestPatterns(extension, text), text);
 }
 
+/** A readable test file that declares this TC in a runnable carrier. */
+export function hasRunnableTcCarrier(
+  file: string,
+  text: string,
+  specNumber: string,
+  tcId: string,
+): boolean {
+  const extension = path.extname(file).slice(1).toLowerCase();
+  if (extension !== "feature" && !TEST_PATTERNS_BY_EXTENSION.has(extension)) return false;
+  const annotations = extractSpecScopedAnnotations(
+    maskTestSource(file, text),
+    TC_TEST_ANNOTATION_RE,
+  );
+  return (
+    annotations.some((ref) => ref.spec === specNumber && `TC-${ref.id}` === tcId) &&
+    hasRunnableTestStructure(file, text)
+  );
+}
+
 /** True when any of `patterns` matches `text` once its non-code spans are gone. */
 function matchesAny(patterns: readonly RegExp[], text: string): boolean {
   const code = stripCommentsAndLiterals(text);
