@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
-import { plantedTree, runLane } from "../scripts/helpers/hygieneTree.js";
+import { editWorkflow, plantedTree, runLane } from "../scripts/helpers/hygieneTree.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const workflowPath = path.join(root, ".github/workflows/ci.yml");
@@ -80,6 +80,42 @@ function needsWith(result: string): Record<string, { result: string }> {
 }
 
 describe("BF-0002 CI verdict examples", () => {
+  // QFAI:EX-0002-0013-05
+  it("rejects a proposed job addition that hand-enumerates the verdict", () => {
+    const future = "future-check";
+    expect(verdictProgram()).not.toContain(future);
+    const observed = evaluateVerdict({ ...needsWith("success"), [future]: { result: "failure" } });
+    expect(observed.exitCode).toBe(1);
+    expect(observed.output).toContain(future);
+
+    const proposed = plantedTree((directory) => {
+      editWorkflow(directory, "ci.yml", (before) => {
+        const jobAnchor = "  ci-pass:\n";
+        const needAnchor = "        build,\n      ]";
+        const derivation = "const entries = Object.entries(needs);";
+        for (const anchor of [jobAnchor, needAnchor, derivation]) {
+          if (!before.includes(anchor)) throw new Error(`workflow fixture is stale: ${anchor}`);
+        }
+        return before
+          .replace(
+            jobAnchor,
+            `  ${future}:\n    permissions: {}\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    steps:\n      - run: "true"\n\n${jobAnchor}`,
+          )
+          .replace(needAnchor, `        build,\n        ${future},\n      ]`)
+          .replace(derivation, "const entries = Object.entries({ lint: needs.lint });");
+      });
+    });
+    try {
+      const refused = runLane(proposed);
+      expect(refused.exitCode, refused.output).toBe(1);
+      expect(refused.output).toContain("required-context");
+      expect(refused.output).toContain("Derive the verdict from the serialized needs map");
+      expect(refused.output).toContain("body digest");
+    } finally {
+      rmSync(proposed, { recursive: true, force: true });
+    }
+  });
+
   it("evaluates a newly wired need without an edit to the verdict body", () => {
     // QFAI:EX-0002-0013-01
     const source = verdictProgram().replace(/^\s*\/\/.*$/gm, "");

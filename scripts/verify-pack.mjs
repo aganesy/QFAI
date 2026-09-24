@@ -6,7 +6,6 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -26,6 +25,7 @@ import {
   readBaseline,
   writeBaseline,
 } from "./fresh-init-findings.mjs";
+import { assertPackagedGithubTopology } from "./lib/pack-github-topology.mjs";
 
 function toPosix(p) {
   return p.split(path.sep).join("/");
@@ -186,59 +186,8 @@ for (const removedDir of [".claude", ".codex"]) {
   }
 }
 
-// `qfai init` ships
-// `.github/workflows/qfai-validate.yml` to downstream consumers, so the
-// `.github` subtree itself is required (not optional). The previous
-// `if (existsSync(rootGithubDir))` wrapper would have silently allowed
-// a packed artifact missing `assets/init/root/.github` entirely.
-// Allow-list the immediate children of `.github` (only `workflows/`) so
-// misplaced files such as `dependabot.yml`, `ISSUE_TEMPLATE/`, or any
-// other future GitHub config directory cannot accidentally be packed —
-// runInit synthesizes those wrappers via symlinks at init time, not
-// from the packed tarball.
 const rootGithubDir = path.join(rootAssetsDir, ".github");
-if (!existsSync(rootGithubDir)) {
-  throw new Error("assets/init/root/.github must exist.");
-}
-// Confirm `.github` itself is a directory before iterating; otherwise
-// readdirSync would surface as an ENOTDIR stack trace and obscure the
-// real packaging defect.
-if (!lstatSync(rootGithubDir).isDirectory()) {
-  throw new Error("assets/init/root/.github must be a directory (got non-directory entry).");
-}
-const allowedRootGithubEntries = new Set(["workflows"]);
-const githubEntries = readdirSync(rootGithubDir);
-// workflows/ is required, not just allowed. An empty .github/ would
-// silently strip the qfai-validate.yml shipping path
-// on downstream init consumers, so reject it here.
-if (!githubEntries.includes("workflows")) {
-  throw new Error("assets/init/root/.github must contain workflows/.");
-}
-for (const entry of githubEntries) {
-  if (!allowedRootGithubEntries.has(entry)) {
-    throw new Error(
-      `assets/init/root/.github/${entry} must not exist (only workflows/ is permitted).`,
-    );
-  }
-  // Allow-list passes only if the entry is a real directory. A regular file
-  // or broken symlink at .github/workflows would corrupt downstream `qfai
-  // init` consumers, so reject anything that is not a directory.
-  const entryPath = path.join(rootGithubDir, entry);
-  if (!lstatSync(entryPath).isDirectory()) {
-    throw new Error(
-      `assets/init/root/.github/${entry} must be a directory (got non-directory entry).`,
-    );
-  }
-}
-// Confirm the actual workflow file ships. workflows/ existing without
-// qfai-validate.yml inside it is the same downstream regression as a
-// missing workflows/ — the file is the contract, not just the folder.
-const workflowFile = path.join(rootGithubDir, "workflows", "qfai-validate.yml");
-if (!existsSync(workflowFile) || !lstatSync(workflowFile).isFile()) {
-  throw new Error(
-    "assets/init/root/.github/workflows/qfai-validate.yml must exist as a regular file.",
-  );
-}
+assertPackagedGithubTopology(rootGithubDir);
 
 removePackTree(sandboxDir);
 mkdirSync(sandboxDir, { recursive: true });
