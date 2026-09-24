@@ -1407,6 +1407,48 @@ describe("BF-0004 acceptance criteria", () => {
     ).toEqual([]);
   });
 
+  it("names only the newly uncovered BF, AC and EX obligations after the ten steps", async () => {
+    // QFAI:EX-0004-0012-03
+    const ids = ["BF-0001", "AC-0001-0001-01", "EX-0001-0001-01"] as const;
+    const e2e = path.join(journey.root, "tests/e2e/order.test.ts");
+    const integration = path.join(journey.root, "tests/integration/order.test.ts");
+    const originalE2e = await readFile(e2e, "utf8");
+    const originalIntegration = await readFile(integration, "utf8");
+    const baseline = await validateProject(journey.root);
+    const missing = (issues: typeof baseline.issues): string[] =>
+      issues
+        .filter((issue) => issue.code === "QFAI-STORY-006")
+        .flatMap((issue) => issue.refs?.slice(0, 1) ?? [])
+        .sort();
+    for (const id of ids) expect(missing(baseline.issues)).not.toContain(id);
+    const removeAnnotation = (content: string, id: string): string => {
+      const annotation = ["QFAI", id].join(":");
+      expect(content).toContain(annotation);
+      return content.replaceAll(annotation, `removed ${id}`);
+    };
+    await writeFile(e2e, removeAnnotation(originalE2e, ids[0]));
+    await writeFile(
+      integration,
+      removeAnnotation(removeAnnotation(originalIntegration, ids[1]), ids[2]),
+    );
+    try {
+      const result = await validateProject(journey.root);
+      expect(
+        result.issues.filter(
+          (issue) =>
+            issue.severity === "error" &&
+            /^(QFAI-LAYOUT-|QFAI-STORY-(?!006)|QFAI-CONTRACT-|QFAI-SPACK-|QFAI-FLOW-)/.test(
+              issue.code,
+            ),
+        ),
+      ).toEqual([]);
+      expect(missing(result.issues)).toEqual([...missing(baseline.issues), ...ids].sort());
+    } finally {
+      await writeFile(e2e, originalE2e);
+      await writeFile(integration, originalIntegration);
+    }
+  });
+
   // QFAI:AC-0004-0012-03
   it("ships a guide that explains the 2.0.0 cutover and the pinned 1.x alternative", async () => {
     const guide = await readFile(
