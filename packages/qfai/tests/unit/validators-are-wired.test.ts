@@ -72,34 +72,6 @@ const DEPRECATED_LEGACY_VALIDATORS: ReadonlySet<string> = new Set<string>([
 ]);
 
 /**
- * The old layered-spec validators are no longer dispatched by story-tree
- * validation. Each named function remains directly exercised by a legacy
- * behavior test while that API is retired. The test path is evidence for this
- * narrow exception: a missing function or direct call makes the entry stale.
- * New validators cannot join this map merely because they are unwired.
- */
-const LEGACY_DIRECT_CALL_VALIDATORS: ReadonlyMap<string, string> = new Map([
-  ["validateAtddCodeTraceability", "core/atddCodeTraceability.test.ts"],
-  ["validateBusinessFlowTraceability", "core/businessFlowTraceability.test.ts"],
-  ["validateContractReferences", "core/contractReferences.test.ts"],
-  ["validateDefinedIds", "core/duplicateHeadingIds.test.ts"],
-  ["validateDensityHints", "core/densityHints.test.ts"],
-  ["validateLayerCoverage", "core/layerCoverage.test.ts"],
-  ["validateLayeredTraceability", "core/layeredValidators.test.ts"],
-  ["validateMermaidEnforcement", "core/mermaidEnforcement.test.ts"],
-  ["validateNavigationFlow", "core/navigationFlow.test.ts"],
-  ["validateOrphanProhibition", "core/layeredValidators.test.ts"],
-  ["validateSpecRequiredFilesCatalog", "validators/specRequiredFilesCatalog.test.ts"],
-  ["validateSpecSplitByCapability", "core/specSplitScopeAttribution.test.ts"],
-  ["validateSpecPacks", "validators/specPack/openQuestionsRegisterReading.test.ts"],
-  ["validateSpecStatus", "validators/specPack/statusValidation.test.ts"],
-  ["validateCreateRowCapabilityRefs", "validators/specPack/triageSection.test.ts"],
-  ["validateTriageSection", "validators/specPack/triageSection.test.ts"],
-  ["validateStatusInSpecs", "core/statusInSpecs.test.ts"],
-  ["validateTraceabilityIntegrity", "core/traceabilityIntegrity.test.ts"],
-]);
-
-/**
  * Both analyses parse the whole `src/` graph, so they are computed once and
  * shared: they only read files this suite never writes, and re-running them per
  * test cost ~25s of CI time for an identical answer.
@@ -126,7 +98,6 @@ const BARREL_EXPORT_RE = /export\s*\{([^}]*)\}\s*from\s*["']([^"']+)["']/g;
  * module reachable from `validate.ts`", and three names the looser rule had
  * been passing surfaced at once. They are pre-existing gaps, each out of scope
  * here:
- * - `validateImportLiteEvidencePresence` (QFAI-IMPLITE-001);
  * - `validateDelegationMapIssues` — reached only through the barrel;
  * - `validateTasteInterview`, `validateTrendScan`, `validateStrategyStrong` —
  *   UI-bearing checks absent from `runCanonicalUixValidators`, whose only
@@ -134,7 +105,6 @@ const BARREL_EXPORT_RE = /export\s*\{([^}]*)\}\s*from\s*["']([^"']+)["']/g;
  *   what `qfai validate` reports, so it belongs to a UIX change, not here.
  */
 const KNOWN_UNWIRED_BARREL_EXPORTS: ReadonlySet<string> = new Set<string>([
-  "validateImportLiteEvidencePresence",
   "validateDelegationMapIssues",
   "validateTasteInterview",
   "validateTrendScan",
@@ -520,12 +490,7 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
     const reachable = await collectReachableModules(await collectBarrelExports());
     const referenced = await namesWithReachableCallSite(barrel, reachable);
     const unwired = Array.from(barrel.keys())
-      .filter(
-        (name) =>
-          !referenced.has(name) &&
-          !KNOWN_UNWIRED_BARREL_EXPORTS.has(name) &&
-          !LEGACY_DIRECT_CALL_VALIDATORS.has(name),
-      )
+      .filter((name) => !referenced.has(name) && !KNOWN_UNWIRED_BARREL_EXPORTS.has(name))
       .sort();
 
     expect(
@@ -715,12 +680,7 @@ const BARREL_EXPORT_EXEMPT: ReadonlySet<string> = new Set<string>([
   "validateContracts",
   "validateDbContractExecutability",
   "validateDiscussionMermaid",
-  "validateDefinedIds",
   "validateSkillsIntegrity",
-  "validateSpecPacks",
-  "validateSpecStatus",
-  "validateCreateRowCapabilityRefs",
-  "validateTriageSection",
   "validateClassification",
   "validateExplorationArtifacts",
   "validateSidecarMissing",
@@ -755,30 +715,6 @@ const BARREL_EXPORT_EXEMPT_INITIAL_KEYS: ReadonlySet<string> = new Set<string>([
 const DATED_ENTRY_RE = /^\d{4}-\d{2}-\d{2}\s/;
 
 describe("meta-test: validators are wired into the pipeline", () => {
-  it("legacy direct-call exceptions still have their exact validator and test call", async () => {
-    const validators = await publicValidators();
-    const declared = new Set(validators.map(({ name }) => name));
-    const stale: string[] = [];
-    for (const [name, testFile] of LEGACY_DIRECT_CALL_VALIDATORS) {
-      if (!declared.has(name)) {
-        stale.push(`${name}: validator was removed`);
-        continue;
-      }
-      const file = path.resolve(__dirname, "..", testFile);
-      const source = parse(file, await readFile(file, "utf-8"));
-      let called = false;
-      const visit = (node: ts.Node): void => {
-        if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
-          if (node.expression.text === name) called = true;
-        }
-        ts.forEachChild(node, visit);
-      };
-      visit(source);
-      if (!called) stale.push(`${name}: no direct call in ${testFile}`);
-    }
-    expect(stale, "Remove an exception when its legacy direct-call test is retired").toEqual([]);
-  });
-
   it("every public Issue[]-returning validator under validators/ is reachable from validate.ts", async () => {
     const validators = await publicValidators();
     const reachable = await reachableNames();
@@ -788,7 +724,6 @@ describe("meta-test: validators are wired into the pipeline", () => {
     const unwired: Array<{ name: string; file: string }> = [];
     for (const { name, file } of validators) {
       if (PENDING_WIRING.has(name)) continue;
-      if (LEGACY_DIRECT_CALL_VALIDATORS.has(name)) continue;
       if (!reachable.has(name)) {
         unwired.push({ name, file });
       }

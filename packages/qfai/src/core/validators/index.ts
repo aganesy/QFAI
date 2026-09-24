@@ -4,17 +4,9 @@
 
 export { validateDiscussionPackReadiness } from "./discussionPack.js";
 export { validateDiscussionVisuals } from "./discussionVisuals.js";
-export { validateDensityHints } from "./densityHints.js";
 export { validateDesignDirectionProposal } from "./designDirectionProposal.js";
-export { validateImportLiteEvidencePresence } from "./importLite.js";
-export { validateLayerCoverage } from "./layerCoverage.js";
-export { validateLayeredTraceability } from "./layeredTraceability.js";
-export { validateMermaidEnforcement } from "./mermaidEnforcement.js";
-export { validateBusinessFlowTraceability } from "./businessFlowTraceability.js";
-export { validateContractReferences } from "./contractReferences.js";
 export { validateContractSsotModules } from "./contractSsotModules.js";
 export { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
-export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";
 export { validateStoryTreeCoverageDepth } from "./storyTreeCoverageDepth.js";
 export { validateStorySteeringPlaceholders } from "./assistantAssets.js";
 export { validateStoryTreeContractReferences } from "./contractReferences.js";
@@ -29,7 +21,6 @@ export {
 } from "./storyTreeStructure.js";
 export { validateStoryTreeDrift } from "./upstreamSsotGuard.js";
 export { validateScaffoldPlaceholder } from "./scaffoldPlaceholder.js";
-export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validatePrototypingEvidence, validateScreenIdCasing } from "./prototypingEvidence.js";
 export {
   validateDelegationMapIssues,
@@ -41,8 +32,6 @@ export { validatePrototypingArtifactRefIntegrity } from "./prototyping/refIntegr
 export { validateSpecIdLinkage } from "./prototyping/specIdLinkage.js";
 export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateReviewArtifacts } from "./reviewArtifacts.js";
-export { validateSpecSplitByCapability } from "./specSplitByCapability.js";
-export { validateStatusInSpecs } from "./statusInSpecs.js";
 export { validateDesignToken } from "./designToken.js";
 export { validateHtmlMock } from "./htmlMock.js";
 export type { HtmlMockTiming } from "./htmlMock.js";
@@ -57,7 +46,6 @@ export { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 export { validateResearchSummary } from "./researchSummary.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
 export { validateSkillRoles } from "./skillRoles.js";
-export { validateNavigationFlow } from "./navigationFlow.js";
 export { validateRenderCritique } from "./renderCritique.js";
 export { validateDesignAudit } from "./designAudit.js";
 export { loadLayoutAntiPatterns, findLayoutAntiPatterns } from "./layoutAntiPatterns.js";
@@ -82,9 +70,6 @@ export { validateTrendScan } from "./uix/trendScan.js";
 export { validateScreenContractSchema } from "./uix/screenContract.js";
 export { runCanonicalUixValidators } from "./uix/canonical.js";
 export { validateCompetitiveReferences } from "./uix/competitiveRefs.js";
-export { validateSpecRequiredFilesCatalog } from "./specRequiredFilesCatalog.js";
-export { validateTraceability } from "./traceability.js";
-export { validateTraceabilityIntegrity } from "./traceabilityIntegrity.js";
 export { validatePrototypingSkillContent } from "./skill/prototypingSkill.js";
 export {
   STUB_SOURCE_FILE_PATTERN,

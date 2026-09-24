@@ -1,4 +1,8 @@
-import { isTableSeparator, looksLikeTableRow, splitMarkdownRow } from "../specPackParsers.js";
+import {
+  isTableSeparator,
+  looksLikeTableRow,
+  splitMarkdownRow,
+} from "../../src/core/specPackParsers.js";
 
 export type TableArityMismatch = {
   /** 1-based line of the offending data row. */

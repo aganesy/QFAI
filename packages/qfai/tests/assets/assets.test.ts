@@ -14,7 +14,7 @@ import { defaultConfig } from "../../src/core/config.js";
 import { MAX_ITERATION_INDEX, MAX_ITERATIONS } from "../../src/core/prototyping/iteration.js";
 import { PROTOTYPING_SUPPORTED_SURFACES } from "../../src/core/review/prototyping.js";
 import { parseAllMarkdownTables } from "../../src/core/specPackParsers.js";
-import { findTableArityMismatches } from "../../src/core/validators/markdownTableArity.js";
+import { findTableArityMismatches } from "../helpers/markdownTableArity.js";
 import { validateSkillDocReferences } from "../../src/core/validators/skillDocReferences.js";
 import {
   findRepositoryAttribution,

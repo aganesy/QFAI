@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { findTableArityMismatches } from "../../../../src/core/validators/markdownTableArity.js";
+import { findTableArityMismatches } from "../../../helpers/markdownTableArity.js";
 
 describe("Markdown table arity", () => {
   it("names the malformed row and its table", () => {

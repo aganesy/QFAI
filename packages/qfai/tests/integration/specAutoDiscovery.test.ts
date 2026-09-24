@@ -14,7 +14,6 @@ vi.mock("node:child_process", () => ({
   execFileSync: vi.fn(),
 }));
 
-import { gitDiffListings } from "../helpers/gitDiffMock.js";
 import {
   detectPolicyChanges,
   detectSourceC,
@@ -24,7 +23,6 @@ import {
 } from "../../src/core/specDiffDetector.js";
 import type { QfaiConfig } from "../../src/core/config.js";
 import { loadConfig } from "../../src/core/config.js";
-import { validateTraceabilityIntegrity } from "../../src/core/validators/traceabilityIntegrity.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 // ---------------------------------------------------------------------------
@@ -58,20 +56,6 @@ const stubConfig: QfaiConfig = {
   output: { validateJsonPath: ".qfai/report/validate.json" },
   baseBranch: "origin/main",
 };
-
-/**
- * Creates a spec directory the layout SSOT recognises as **layered**.
- *
- * `validateTraceabilityIntegrity` enumerates layered specs only: the legacy
- * spec-pack layout gives `16_Traceability-ledger.md` a different, nine-column
- * schema that `QFAI-LEDGER-001` owns, so a bare `mkdir spec-NNNN` is classified
- * spec-pack and is invisible to the layered checks.
- */
-async function seedLayeredSpec(specDir: string): Promise<void> {
-  await mkdir(specDir, { recursive: true });
-  await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
-  await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 User stories\n", "utf-8");
-}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Group 1: specDiffDetector file operations
@@ -441,118 +425,6 @@ describe("full pipeline — custom baseBranch via options", () => {
       expect.objectContaining({ cwd: tmpRoot }),
     );
     expect(result.entries.some((e) => e.specId === "spec-0001")).toBe(true);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Group 3: traceabilityIntegrity
-// ═══════════════════════════════════════════════════════════════════════════
-
-describe("spec BR changed + impl unchanged → QFAI-TRACE-001", () => {
-  let tmpRoot: string;
-
-  beforeEach(async () => {
-    vi.mocked(execFileSync).mockReset();
-    tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-trace1-"));
-  });
-
-  afterEach(async () => {
-    await removeTempTree(tmpRoot);
-  });
-
-  it("emits QFAI-TRACE-001 error when BR changed but linked impl not changed", async () => {
-    const specsRoot = path.join(tmpRoot, ".qfai", "specs");
-    const specDir = path.join(specsRoot, "spec-0001");
-    await seedLayeredSpec(specDir);
-
-    const ledger = [
-      "# Traceability Ledger",
-      "",
-      "| BR/AC | Implementation File | Test File |",
-      "| --- | --- | --- |",
-      "| BR-0001-0001 | src/core/someModule.ts | tests/core/someModule.test.ts |",
-    ].join("\n");
-    await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
-
-    // Git shows BR file changed but NOT the implementation file
-    vi.mocked(execFileSync).mockImplementation(
-      gitDiffListings({ changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md"] }),
-    );
-
-    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
-    expect(issues.length).toBeGreaterThanOrEqual(1);
-    expect(issues.some((i) => i.code === "QFAI-TRACE-001")).toBe(true);
-    expect(issues.find((i) => i.code === "QFAI-TRACE-001")?.severity).toBe("error");
-  });
-});
-
-describe("spec BR changed + impl changed → PASS", () => {
-  let tmpRoot: string;
-
-  beforeEach(async () => {
-    vi.mocked(execFileSync).mockReset();
-    tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-trace2-"));
-  });
-
-  afterEach(async () => {
-    await removeTempTree(tmpRoot);
-  });
-
-  it("emits no QFAI-TRACE-001 when both BR and impl are changed", async () => {
-    const specsRoot = path.join(tmpRoot, ".qfai", "specs");
-    const specDir = path.join(specsRoot, "spec-0001");
-    await seedLayeredSpec(specDir);
-
-    const ledger = [
-      "# Traceability Ledger",
-      "",
-      "| BR/AC | Implementation File | Test File |",
-      "| --- | --- | --- |",
-      "| BR-0001-0001 | src/core/someModule.ts | tests/core/someModule.test.ts |",
-    ].join("\n");
-    await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
-
-    // Git shows BOTH BR file and implementation file changed
-    vi.mocked(execFileSync).mockImplementation(
-      gitDiffListings({
-        changed: [
-          "1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md",
-          "1\t1\tsrc/core/someModule.ts",
-        ],
-      }),
-    );
-
-    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
-    expect(issues.some((i) => i.code === "QFAI-TRACE-001")).toBe(false);
-  });
-});
-
-describe("missing traceability ledger → QFAI-TRACE-002 warning", () => {
-  let tmpRoot: string;
-
-  beforeEach(async () => {
-    vi.mocked(execFileSync).mockReset();
-    tmpRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-trace3-"));
-  });
-
-  afterEach(async () => {
-    await removeTempTree(tmpRoot);
-  });
-
-  it("emits QFAI-TRACE-002 warning when ledger file is missing", async () => {
-    const specsRoot = path.join(tmpRoot, ".qfai", "specs");
-    const specDir = path.join(specsRoot, "spec-0001");
-    await seedLayeredSpec(specDir);
-    // Deliberately do NOT create 16_Traceability-ledger.md
-
-    // Git shows BR file changed
-    vi.mocked(execFileSync).mockImplementation(
-      gitDiffListings({ changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md"] }),
-    );
-
-    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
-    expect(issues.some((i) => i.code === "QFAI-TRACE-002")).toBe(true);
-    expect(issues.find((i) => i.code === "QFAI-TRACE-002")?.severity).toBe("warning");
   });
 });
 
