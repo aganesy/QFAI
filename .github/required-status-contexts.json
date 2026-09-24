@@ -252,12 +252,13 @@
         "scripts/check-workflow-hygiene.mjs": "58a6fd7de5fa5f97bd6ac703a52eed5fbac0a9388204baa55eb1366ff9830cd7",
         "scripts/derive-cli-message-allowlist-count.mjs": "6c67359c0073519a0fa5b3be5fc9866c49b1ec5bd4bce3feff985ba2fd962d87",
         "scripts/derive-e2e-callsites.mjs": "0185bc5abdcfa2fef223c02362aea44838a3c8dac53157c050d5c3285448c6d3",
-        "scripts/dogfood-backlog.json": "a1781445bab1327560928ef4ad34adad26224091df21a8853d67dd9754990210",
+        "scripts/dogfood-backlog.json": "6439c13ac3a8de3b0fa2b219919fb8c33620ea7f770a3f55ed79cb7ed8226aaf",
         "scripts/fresh-init-findings.json": "591fbd87f24ba68427460af193101621beae50ab7885975fbc0bd6065180d7e1",
         "scripts/fresh-init-findings.mjs": "032493d612d6999edef2233ef94718a84d7c21843722c4c5050f2b879d165331",
         "scripts/gen-codex-agents.mjs": "276e9af87f49df9de8332365ea79a4ddfe5d03b72af9666cc58dab7d818ea637",
         "scripts/gh-budget.mjs": "7d63b0909ea4afa667cdcf699fee0565716b8775919f99426d8436974f0dca5e",
         "scripts/lib/bounded-read.mjs": "1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444",
+        "scripts/lib/pack-github-topology.mjs": "9d41d310d32bc59c6712be5b74610f9de4655f76cc6c29e76fa99c9682a88679",
         "scripts/lib/pin-cost.mjs": "68c1c68351fce620f61d73b550ca3b92beecd5a150f720723730bab931c0ab43",
         "scripts/lib/ts-specifier-hook.mjs": "b6501b31043719b5bb131994fce0aa3ed28b8bf6b4e8d77035610778681dad24",
         "scripts/lib/write-declaration.mjs": "cfdd1a0a2dc37ce06a183338e3550e9d6bd169ef633cc0cfbd1110d19d5e9dc9",
@@ -273,7 +274,7 @@
         "scripts/shipped-workflow-cost.mjs": "8241e3a11d29373cec29bfac8bcce928ffd187ff88baff0a6ec1629309627087",
         "scripts/smoke-qfai-cli.mjs": "82f30997dc88e617531e5f59f86fd8b7c1793a134564853019366e590a639c1d",
         "scripts/sync-init-to-root.mjs": "f053272f5a47c1e08fd53112255b52366b4da3bd62718c1ca57d30f7787d3af3",
-        "scripts/verify-pack.mjs": "914e73f753cf8c7e74ec38c8a8dcc5694e4d5fcfb00d35dfc05cceedabf4ad03"
+        "scripts/verify-pack.mjs": "f2a886679ab7f0b1526300b27e654ccc31c5b4f3c5df1af1e41c43fb3bd2ad82"
       },
       "pinnedBytesNote": [
         "The bytes of every local composite action and every guard program, pinned by path.",
@@ -422,9 +423,9 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ff046bcf7d3956e0",
-        "Verify the toolchain action before running it": "8fb2eca36fcf6a11",
+        "Verify the toolchain action before running it": "5fbe234932080475",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
-        "Run build & pack verification": "fbf1c865423b58b6",
+        "Run build & pack verification": "07e9409297112e7e",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "ab3992bc885d45c7",
         "QFAI self-validate this repo (dogfooding — TDD gates)": "b6ef9102a1a21993",
         "QFAI self-validate this repo (dogfooding — SDD gates)": "3223507c0ac759e9",
