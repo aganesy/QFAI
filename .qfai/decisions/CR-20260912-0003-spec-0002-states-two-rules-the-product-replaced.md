@@ -5,10 +5,10 @@
 - Raised by: `/qfai-implement orchestrator, repairing the spec-0002 execution ledger`
 - Raised at: `2026-09-12T12:40:00Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
+- Status: `approved`
+- Approved by: `user` — Option 1 selected through the structured question tool
+- Approved at: `2026-09-24T23:26:20Z`
+- Approved option: `1`
 - Applied at: `-`
 - Superseded by: `-`
 
