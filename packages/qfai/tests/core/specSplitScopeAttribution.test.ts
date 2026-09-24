@@ -20,7 +20,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { defaultConfig, resolvePath } from "../../src/core/config.js";
+import { resolvePath } from "../../src/core/config.js";
 import {
   isFindingInSpecScope,
   resolveSpecScope,
@@ -28,6 +28,7 @@ import {
 } from "../../src/core/specScope.js";
 import type { Issue } from "../../src/core/types.js";
 import { validateSpecSplitByCapability } from "../../src/core/validators/specSplitByCapability.js";
+import { legacyLayoutConfig as defaultConfig } from "./legacyLayoutConfig.js";
 
 async function seedCapabilities(root: string, capIds: readonly string[]): Promise<void> {
   const policiesDir = path.join(root, ".qfai", "specs", "_policies");
