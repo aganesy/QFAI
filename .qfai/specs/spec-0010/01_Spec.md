@@ -23,6 +23,27 @@
   - legacy trend-derived scoring sidecar など旧 evaluation sidecar family
   - discussion 時点の brand archetype selection
   - discussion 時点の design system generation
+- In (2026-09-24, intent-driven entry):
+  - `/qfai-discussion` as a stage of a workflow run: it resolves only the scope
+    the run has not settled;
+  - its entry check and worker behaviour, and the operations its
+    `references/orchestrated-mode.md` declares.
+- Out (2026-09-24, intent-driven entry):
+  - how a discovery run continues after the discussion stage, which is the
+    plan's: `discovery` ends by returning the run to routing (spec-0018);
+  - the workflow control core, the built-in plans and the `qfai-run` skill
+    (spec-0018);
+  - the shared stage-skill rules: descriptions, the one-line citation and
+    standalone invocation (spec-0001);
+  - grilling inside a run in general (spec-0015).
+
+## Applicable Contracts
+
+- `.qfai/contracts/cli/qfai-workflow.md` (CLI-WF): `### Work order` (the `settled`
+  field, which records what the run has settled) and `### host:stage-skill-handover` (the
+  entry check and the worker).
+- `.qfai/contracts/cli/workflow-files.schema.md` (CLI-WFFILE): `### Vocabulary`
+  and `### The Operations table` (what the skill declares).
 
 ## Applicable NFR
 
@@ -54,6 +75,14 @@
 - REQ-0154: `QFAI-MOCK-010` direction — the `qfai-discussion` mock template emits anchor-form `<a href="#<name>">` by default and SKILL.md instructs authors accordingly; the validator stays strict (anchors `#name` + external `http(s)://` continue to PASS). Template ↔ validator are a new SSOT-sync pair (`R-MOCK-HREF-DRIFT`).
 - REQ-0155: active discussion session pointer (writer side) — `/qfai-discussion` WRITES `.qfai/state.json#discussion.currentId` as the single SSOT for the active session; `qfai discussion list --active` is a read view over it. Multiple-active ambiguity is rejected with an error naming the candidate dirs and the recovery command (`qfai discussion use <id>`).
 
+### discussion-20260923171450572 (2026-09-24)
+
+| Requirement                             | Home                       |
+| --------------------------------------- | -------------------------- |
+| `discussion-20260923171450572#REQ-0055` | BR-0010-0013               |
+| `discussion-20260923171450572#REQ-0051` | BR-0010-0014               |
+| `discussion-20260923171450572#REQ-0052` | BR-0010-0014, BR-0010-0015 |
+
 ## Consumer View — Second-Wave (v1.9.2) behavior copy-down
 
 - Mock HTML in `03_Story-Workshop.md` uses anchor-form hrefs (`<a href="#name">`); same-origin absolute paths (`/path/`) are NOT emitted by the template. External `http(s)://` and `#anchor` hrefs PASS `QFAI-MOCK-010`.
@@ -61,5 +90,5 @@
 
 ## Entry points
 
-- US range in this spec: US-0010-0001..US-0010-0012
+- US range in this spec: US-0010-0001..US-0010-0013
 - Primary actors: QFAI user, discussion agents, reviewer

@@ -14,6 +14,7 @@
 - US-0010-0010: Legacy Sidecar Drop
 - US-0010-0011: Mock template emits anchor-form hrefs by default
 - US-0010-0012: Discussion writes the active session pointer
+- US-0010-0013: Resolve only the unsettled scope as a stage of a run
 
 ## US-0010-0001: Exploration Brief Authoring
 
@@ -62,3 +63,14 @@ As a discussion author writing HTML mocks in `03_Story-Workshop.md`, I want the 
 ## US-0010-0012: Discussion writes the active session pointer
 
 As a QFAI user finishing a `/qfai-discussion` run, I want the skill to write `.qfai/state.json#discussion.currentId` so the just-authored pack becomes the discoverable active session for downstream skills, and I want a clear error naming the candidate dirs and the recovery command when the active pointer is missing or ambiguous. (REQ-0155 / DR-0266)
+
+## US-0010-0013: Resolve only the unsettled scope as a stage of a run
+
+- Parent: CAP-0010
+- Source: discussion-20260923171450572#REQ-0055
+- Goal: As an operator whose request needs a discussion before it can be
+  planned, I want the discussion stage of a run to ask only about what the run
+  has not settled, so that I am not asked again what I already answered.
+- Non-goals: how the run continues afterwards (spec-0018); grilling inside a run
+  in general (spec-0015).
+- Notes: its E2E row is `Blocked-By` spec-0018, whose run drives the stage.

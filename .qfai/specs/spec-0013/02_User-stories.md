@@ -9,13 +9,16 @@
 - US-0013-0005: Required Edge Enforcement
 - US-0013-0006: Validate Gate Integration
 - US-0013-0007: Delta Phase with Rejected Guardrails
-- US-0013-0008: Discussion Markdown-Only Preflight
+- US-0013-0008: Optional Side Artifacts Do Not Block Preflight
 - US-0013-0009: DESIGN.md sha256 Lock at Phase 0
 - US-0013-0010: Active Design Contract Surface Reduction
 - US-0013-0011: UI contract `primary_tasks` slot per screen
 - US-0013-0012: Resolve active discussion pack via single helper
 - US-0013-0013: Auto-populate `surface_type: ui-bearing` frontmatter
 - US-0013-0014: `primary_tasks` count band + accepted shape documented
+- US-0013-0015: Stage 1 checks a routing-time CREATE approval instead of asking
+- US-0013-0016: Seed a diagnosed missing-test row without a Change Request
+- US-0013-0017: Run `/qfai-sdd` as a stage of a run
 
 ## US-0013-0001: Unified SDD Workflow
 
@@ -45,9 +48,9 @@ As a QFAI user, I want `qfai validate --fail-on error` to pass with error=0 befo
 
 As a QFAI user, I want `09_delta.md` to include adoption/rejection rationale with DO NOT and Temptation sections, so that rejected options are guarded against reintroduction.
 
-## US-0013-0008: Discussion Markdown-Only Preflight
+## US-0013-0008: Optional Side Artifacts Do Not Block Preflight
 
-As a QFAI user, I want SDD preflight to block only on discussion-pack markdown readiness, so that optional side artifacts do not prevent spec generation.
+As a QFAI user, I want absent, malformed, or legacy optional side artifacts to leave SDD preflight ready when the discussion pack is usable, so that optional files do not prevent spec generation.
 
 ## US-0013-0009: DESIGN.md sha256 Lock at Phase 0
 
@@ -72,3 +75,39 @@ As a QFAI user running `/qfai-sdd`, I want the skill to set `surface_type: ui-be
 ## US-0013-0014: `primary_tasks` count band + accepted shape documented
 
 As a requirements-analyst authoring UI contracts, I want the recommended `primary_tasks` count band (3..7) documented in the `ui-spec.yaml` template comments and `references/ui-contract-guide.md` and named in the `QFAI-AUD-020` warning, and I want `auditProfile.ts` to accept both string-only and structured `{id, label, acceptance}` task items during the deprecation window, so that the audit guidance is explicit and structured tasks become testable without breaking legacy string-only contracts. (REQ-0164 / DR-0267 / DR-0268)
+
+## US-0013-0015: Stage 1 checks a routing-time CREATE approval instead of asking
+
+- Parent: CAP-0013
+- Source: discussion-20260923171450572#DUS-001
+- Goal: As an operator who approved a new capability when the run was routed, I
+  want `/qfai-sdd` Stage 1 to check that approval rather than ask me again, and
+  to stop rather than guess when the approval is missing, does not match or has
+  gone stale.
+- Non-goals: asking the `CREATE` question a second time; letting `--auto`, a mode
+  or an agent-written value stand in for my answer; judging the row after the run
+  has finished, which is the validator's.
+- Notes: `US-0013-0004` and its standalone no-argument batch are unchanged.
+
+## US-0013-0016: Seed a diagnosed missing-test row without a Change Request
+
+- Parent: CAP-0013
+- Source: discussion-20260923171450572#DUS-002
+- Goal: As an operator fixing a bug the spec already describes, I want the
+  missing test that diagnosis found to be appended as one test case and one ledger
+  row, with the diagnosis as the reason, so that the defect is fixed against the
+  existing specification without a Change Request for a change that did not
+  happen.
+- Non-goals: changing an AC or a BR; reopening a `done` row; letting implement
+  add the row.
+
+## US-0013-0017: Run `/qfai-sdd` as a stage of a run
+
+- Parent: CAP-0013
+- Source: discussion-20260923171450572#REQ-0051
+- Goal: As the workflow harness, I want `/qfai-sdd` to do exactly the work order it
+  is handed, for exactly the target the work order names, and as the operator I
+  want a direct `/qfai-sdd` to end at SDD, so that a run stays inside its scope and
+  the expert path keeps working as it does today.
+- Non-goals: running every capability when a work order names no target;
+  continuing from a direct call into implementation.

@@ -4,7 +4,7 @@
 
 - Verify examples and acceptance criteria with explicit refs.
 - Cover not only normal paths but also error paths, boundary values and edge cases.
-- Every one of the 36 acceptance criteria carries at least one `normal` row **and** at least one
+- Every one of the 39 acceptance criteria carries at least one `normal` row **and** at least one
   `error` or `boundary` row. A criterion covered only by a happy path cannot falsify the
   requirement it belongs to, and every gate in this spec has a failure direction that is itself
   load-bearing.
@@ -155,15 +155,22 @@ set is one table and is never split into two.
 | TC-0017-0090 | integration | AC-0017-0036               | EX-0017-0070 | normal   | Capable tags execute the complete independent checks                | The actual classifier selects operations only for a complete sliced manifest; the four entry points expand to the original ordered command vector and run alongside one complete suite on each runtime                                                                                                                                                                                         |
 | TC-0017-0091 | integration | AC-0017-0036               | EX-0017-0070 | error    | Partial capabilities and failed operations cannot skip verification | Removing any operation script retains the aggregate, whole-suite tags stay aggregate, and unknown checks outputs or unsuccessful required operation results refuse publication                                                                                                                                                                                                                 |
 | TC-0017-0092 | integration | AC-0017-0036               | EX-0017-0070 | boundary | Operation jobs preserve isolation and artifact ordering             | Every operation job needs only verify, checks out its immutable tag before the immutable setup sidecar, uses the shared toolchain and read-only permissions, and gate retains build then pack then leakage scan ordering                                                                                                                                                                       |
+| TC-0017-0093 | integration | AC-0017-0037               | EX-0017-0071 | normal   | The Windows job runs exactly the declared suite list                | The job on `windows-latest` in the parsed `ci.yml` runs `test:windows-parity` and no other test command, and the script's suite list equals the literal set the test holds, compared both ways, so an extra suite fails as a missing one does                                                                                                                                                  |
+| TC-0017-0094 | integration | AC-0017-0037               | EX-0017-0074 | boundary | Every suite-list entry resolves to a collected test file            | Each entry of the script's list matches at least one tracked test file that the workspace `include` globs collect; an entry that matches none fails the test, naming the entry                                                                                                                                                                                                                 |
+| TC-0017-0095 | integration | AC-0017-0037               | EX-0017-0071 | normal   | The job points TEMP and TMP at a directory with a space             | In the parsed job, a step before the first test step creates one directory whose name contains a space and sets both `TEMP` and `TMP` to it                                                                                                                                                                                                                                                    |
+| TC-0017-0096 | integration | AC-0017-0038               | EX-0017-0072 | normal   | The job follows change detection and joins the verdict              | The parsed job has `needs: [detect]`, an `if:` string equal to the `test` job's, and a key in `ci-pass`'s `needs`                                                                                                                                                                                                                                                                              |
+| TC-0017-0097 | integration | AC-0017-0038               | EX-0017-0072 | error    | A failing Windows job fails the aggregate verdict                   | The actual `ci-pass` verdict body, evaluated over a needs map in which only the Windows job, under its real name, concluded `failure`, exits 1. Integration, not unit: the oracle needs the job's real name and the real body                                                                                                                                                                  |
+| TC-0017-0098 | integration | AC-0017-0039               | EX-0017-0073 | normal   | A package build precedes the job's first test step                  | In the parsed job, a step building `packages/qfai` comes before the first step that runs a test                                                                                                                                                                                                                                                                                                |
+| TC-0017-0099 | integration | AC-0017-0039               | EX-0017-0073 | boundary | The job neither needs build nor downloads its artifact              | The parsed job's `needs` holds no `build`, and no step uses a download-artifact action, so `dist/` is produced on the Windows runner                                                                                                                                                                                                                                                           |
 
 ## Coverage summary
 
-- 92 test cases against 36 acceptance criteria and 70 examples.
+- 99 test cases against 39 acceptance criteria and 74 examples.
 - Every acceptance criterion in `03_Acceptance-Criteria.md` is referenced by at least one row's
   `AC-Refs`, and every example in `05_Examples.md` by at least one row's `EX-Ref`.
-- Type distribution: 40 `normal`, 23 `error`, 29 `boundary`. Every acceptance criterion carries at
+- Type distribution: 44 `normal`, 24 `error`, 31 `boundary`. Every acceptance criterion carries at
   least one `normal` row and at least one `error` or `boundary` row.
-- Level distribution: 11 `unit`, 81 `integration`. The skew is a property of the subject, not of
+- Level distribution: 11 `unit`, 88 `integration`. The skew is a property of the subject, not of
   the test design — a rule about what a checked-in workflow, script or manifest contains is only
   falsifiable against the real tree. The eleven `unit` rows are exactly the obligations whose
   oracle is a value the test supplies rather than a file it reads.
@@ -195,3 +202,22 @@ contain. Those files belong to `spec-0003`. The rows that name the shipped tree 
 TC-0017-0051, TC-0017-0052, TC-0017-0053 and TC-0017-0054 — assert the behaviour of **the lane
 that scans it** under the shipped-file rules of `.qfai/contracts/cli/shipped-workflows.md` §6, and
 introduce no finding code beyond the two that contract already declares.
+
+## The Windows job (2026-09-24)
+
+- TC-0017-0093 to TC-0017-0099 read the workflow tree and the package script. What the job
+  did at run time is not a row: the trial run's per-suite file and test counts, and its timings,
+  are delivery evidence recorded with DR-0017-0024.
+- US-0017-0016's journey is one annotated describe in a new file,
+  `packages/qfai/tests/e2e/spec0017WindowsParityE2E.test.ts`. It is not added to
+  `spec0017LayeredCiScaffoldE2E.test.ts`, whose describe count a committed evidence sentence
+  states.
+- The seven cases live in `packages/qfai/tests/integration/windowsParity/`, one module per
+  BR: `suiteList.test.ts` (BR-0017-0070), `selectionAndVerdict.test.ts` (BR-0017-0071),
+  `inJobBuild.test.ts` (BR-0017-0072) and `suitesLandFirst.test.ts` (BR-0017-0073). They read
+  `ci.yml` and the package script, so they are not on the `test:windows-parity` list.
+- The `test:windows-parity` list names spec-0003's new init suites by their directory,
+  `tests/integration/init/`, beside `tests/cli/init`.
+- No row repeats a property an existing rule already holds for every job: the permission block,
+  `timeout-minutes`, credential persistence, action pins, the shared setup, the expected-context
+  declaration and the cost and inventory pins.

@@ -241,6 +241,8 @@ observable:
 | CR ID            | Upstream artifact                                                                          | Mode      | Approved by                                                    | Applied at           |
 | ---------------- | ------------------------------------------------------------------------------------------ | --------- | -------------------------------------------------------------- | -------------------- |
 | CR-20260923-0003 | `spec-0003/04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md` | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T03:05:00Z |
+| CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                     | re-derive | user                                                           | 2026-09-24T18:26:35Z |
+| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`     | re-derive | user                                                           | 2026-09-24T19:00:08Z |
 
 ## Triage (2026-09-15)
 
@@ -253,3 +255,119 @@ Source: the user's explicit instruction to parallelize independent work in both 
 | User instruction | Require independent document checks and validation profiles to complete before aggregate success | spec-0003     | UPDATE    | APPEND | -           | Add narrowly scoped acceptance, rule, example and test coverage within the existing shipped-workflow capability, and extend the US-0003-0023 note that AC-0003-0038 hangs from. Independent checks are declared as legs of one job; aggregate success requires every required result to succeed. Failure, cancellation and unexpected skipping cannot produce aggregate success. Preserve create-only installation, declined files, existing check coverage and the prohibition on cross-file workflow references. CAP-0003 remains the sole capability: the existing AC/TC count threshold breach warrants review, not a count-driven SPLIT. |
 
 The capability-ownership review keeps all three rows in spec-0003. The existing size signal does not identify a second capability. The own-CI implementation and hygiene lane remain owned by spec-0017; this scheduling change alters none of that spec's obligations and needs no companion edit there. The derived byte pins under `.github/` move with `scripts/dogfood-backlog.json` whenever its contents change, and carry no obligation of their own. No workflow refresh, overwrite, version change or publishing operation is introduced.
+
+## Triage (2026-09-24 intent-driven entry)
+
+Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` and the policy rows are in `_policies/10_delta.md` under the same heading. None of the rows below needs approval. `REQ-0033` in `Depends-On` stands for the `CREATE` row: the row cites items `spec-0018` defines, so it waits until that spec has them.
+
+| Source   | Subject                                                                                                                                                                   | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                                                                                            | Depends-On                  |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| REQ-0024 | The managed `.gitignore` block ignores `.qfai/runs/` and keeps `.qfai/evidence/workflow/` tracked                                                                         | spec-0003     | UPDATE    | MODIFY | -           | BR-0003-0013 fixes the block at nine lines and AC-0003-0015 lists them. Both gain the ignore entry and the negation under `.qfai/evidence/*`. Size signal: AC 38 is over 30 and TC 58 over 50 before this change. spec-0003 owns only CAP-0003, so there is no split, and every row here stays an append or a modify | REQ-0033                    |
+| REQ-0059 | Fresh install and upgrade both leave the workflow mode at `active`                                                                                                        | spec-0003     | UPDATE    | APPEND | -           | D7 makes `active` the default for every adopter, on fresh install and on upgrade. OQ-0010 decides whether init writes a key or relies on an absent key meaning `active`                                                                                                                                              | REQ-0033, OQ-0010           |
+| REQ-0064 | Init and upgrade install `qfai-run` and `qfai-maintain` with their host wrappers, the updated stage skills and references, the plan definitions and the entry instruction | spec-0003     | UPDATE    | APPEND | -           | spec-0003 owns the assistant-tree seed, the host wrappers and the agent entry points. OQ-0017 decides how the entry instruction reaches each host                                                                                                                                                                    | REQ-0033, REQ-0049, OQ-0017 |
+| REQ-0065 | Upgrade migration: three install states, a check that skill contracts and manifests correspond, a migration record, and a rerun that duplicates nothing                   | spec-0003     | UPDATE    | APPEND | -           | AC-0003-0019 and AC-0003-0020 already keep user edits. This adds the correspondence check and the record. `--force` still leaves `manifest/` alone apart from the add-only routing-phase merge                                                                                                                       | REQ-0033, REQ-0049          |
+| NFR-0011 | Init and upgrade behave the same on Windows, including CRLF checkouts and paths with spaces                                                                               | spec-0003     | UPDATE    | APPEND | -           | Companion to the Windows parity target in `spec-0018`. The user answered OQ-0012 with A: the `windows-latest` job on spec-0017 runs these suites                                                                                                                                                                     | -                           |
+
+## 2026-09-24 — Intent-driven entry: change summary
+
+- Change ID: DELTA-0002
+- Date: 2026-09-24
+- Primary: Behavior
+- Tags: @docs, @test
+- Summary: the five rows of `## Triage (2026-09-24 intent-driven entry)` applied. `qfai init`
+  and an upgrade install the workflow entry: `qfai-run` and `qfai-maintain` with their wrappers,
+  the orchestrated-mode references, the plans, the entry directive and the mode line. An upgrade
+  keeps the plans' provenance, records its conflicts, and reports what a plain run leaves out of
+  step, with `qfai init --force` as the fix where that command clears it.
+- Modified: AC-0003-0015 and BR-0003-0013, rewritten in English with their IDs kept. The
+  managed block gains `.qfai/runs/` and `!.qfai/evidence/workflow/`, and BR-0003-0013 no longer
+  states a line count: `packages/qfai/src/core/gitignore.ts` defines the set.
+- Appended: US-0003-0029; AC-0003-0039..0049; BR-0003-0049..0060; DR-0003-0013,
+  DR-0003-0014. US-0003-0014 is retired and not reused.
+- The user's answer on a plain upgrade (2026-09-24): a plain upgrade merges no manifest, names
+  each absent routing entry with `qfai init --force`, and leaves `active` configured but not
+  started until that command runs. This falls short of the pack's "active on upgrade" for a
+  plain upgrade, as the user accepted. The record is DR-0015-0007 in `spec-0015`; this spec
+  carries the contract rules (BR-0003-0055, BR-0003-0056, BR-0003-0057, BR-0003-0059,
+  BR-0003-0060) and no second record.
+- Resolved pack questions:
+  - `discussion-20260923171450572#OQ-0010` (the mode setting): CLI-INIT `### Mode line` and
+    CLI-WF `## Modes` — init writes no key, and an absent key means `active`.
+  - `discussion-20260923171450572#OQ-0017` (how the entry instruction reaches each host):
+    CLI-INIT `### Entry directive` (DR-0003-0014).
+  - `discussion-20260923171450572#OQ-0012` (how Windows parity is verified): answered A by the
+    user, realized as the `windows-latest` job of `spec-0017`.
+- `08_Open-questions.md` mirrors deferred questions only, so it gains no row. OQ-0003-0003 is
+  unchanged.
+- Size: AC 38 → 49 and TC 58 → about 89, both over the thresholds before this change. One
+  capability (CAP-0003), so no split.
+
+- Phase 2c.1 (obligation reconciliation): CLI-INIT `### Windows parity` now states that lock keys use `/`, so its existing Contract Realization row covers all of BR-0003-0058, and no row is added. BR-0003-0056 was re-read against the narrowed `reviewer-missing` message of CLI-WF `## Fail-closed`: it already names `qfai init --force` for an absent entry only.
+
+- Validate and the installed plans: `spec-0004` now reports `process/workflows` as a governed layer (BR-0004-0038), from its own approval-free row. This spec adds no item. The helper beside `GOVERNED_ASSISTANT_LAYERS` that maps a path to its governed layer, and the lock-key fix in `assistantAssetProvenance.ts`, are already obliged by BR-0003-0053, and land in the same change as the validator's two layer reads.
+
+## Decision Log
+
+One entry per `07_Decisions.md` record added on 2026-09-24.
+
+### DL-0001
+
+DR-0003-0013: `qfai init` keeps exit 0 on a conflicted upgrade.
+
+#### Meta
+
+```yaml
+id: DL-0001
+date: 2026-09-24
+primary: Behavior
+tags: ["@docs", "@test"]
+compat: Compatibility
+scope:
+  - .qfai/contracts/cli/qfai-init.md
+  - packages/qfai/src/cli/commands/init.ts
+notes: The released exit-code table stands; a conflict is reported in the summary and refused by start
+```
+
+#### Migration / Follow-ups
+
+- No migration required. The exit-code table is unchanged.
+
+#### Rejected
+
+- option: exit 1 on a conflicted upgrade
+  reason: it breaks the released exit-code table and every script that runs init on a project with edited assets
+  do_not: make qfai init fail because the project's files differ from the shipped ones
+  temptation: a non-zero exit is harder to miss
+
+### DL-0002
+
+DR-0003-0014: the entry directive goes through the review-pointer mechanism.
+
+#### Meta
+
+```yaml
+id: DL-0002
+date: 2026-09-24
+primary: Behavior
+tags: ["@docs", "@test"]
+compat: Improvement
+scope:
+  - .qfai/contracts/cli/qfai-init.md
+  - packages/qfai/src/core/agentEntryPoints.ts
+notes: One mechanism carries the review directive and the entry directive, with one set of refusals
+```
+
+#### Migration / Follow-ups
+
+- No migration required. An existing entry point gains the directive on its next `qfai init`.
+
+#### Rejected
+
+- option: a line in the managed rules section
+  reason: an entry point that already has the section is not rewritten, so an upgraded adopter never gets the line
+  do_not: rely on the managed rules section to reach an upgraded adopter
+  temptation: it is where the other rule citations live
+- option: a new rule master
+  reason: it adds a file every adopter keeps, and still needs a citation to reach the agent
+  do_not: add a rule document to carry one sentence
+  temptation: a rule master is cited from every entry point

@@ -148,3 +148,99 @@ Rows owned by this spec.
   - REQ-0164 validator-implementation side is shared with spec-0004 (`auditProfile.ts` / `QFAI-AUD-020` enforcement). This slice owns the SDD authoring + doc + template surface (`ui-spec.yaml` comments, `references/ui-contract-guide.md`).
   - REQ-0163: `D-SURFACE-TYPE-MISSING` warns during the deprecation window and sunsets to error; `resolveAllUiBearingSpecs()` keeps the frontmatter as the strict downstream signal (no behavioral change downstream).
 - Source: REQ-0155, REQ-0163, REQ-0164 (discussion-20260527075558258)
+
+## Triage (2026-09-24 intent-driven entry)
+
+Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` and the policy rows are in `_policies/10_delta.md` under the same heading. None of the rows below needs approval. `REQ-0033` in `Depends-On` stands for the `CREATE` row: the row cites items `spec-0018` defines, so it waits until that spec has them.
+
+| Source                       | Subject                                                                                                    | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Depends-On        |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| REQ-0042                     | Stage 1 checks a routing-time `CREATE` authorization instead of asking                                     | spec-0013     | UPDATE    | APPEND | -           | D5. Stage 1 checks that the `human_decision` exists, matches the row's operation and capability and is not stale. If it is missing, mismatched or stale, the stage stops and the run waits in `awaiting_input`. The other approval-required operations keep today's question. No spec-0013 item covers Stage 1 approval today, and the policy half is in `_policies/11_Slice-Policy.md`. Size signal: 30 AC headings today, 27 distinct IDs, because AC-0013-0008 to AC-0013-0010 are used twice. New ACs are numbered from AC-0013-0028, and the appends in this table take the count past 30. spec-0013 owns only CAP-0013, so there is no split | REQ-0041, OQ-0007 |
+| REQ-0043                     | The triage row format carries a reference to its workflow authorization                                    | spec-0013     | UPDATE    | APPEND | -           | Covers `references/sdd-triage.md` and the Stage 1 text. OQ-0006 decides between a new column and a value form                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | REQ-0041, OQ-0006 |
+| REQ-0044                     | `--auto` stays a no-question mode inside and outside a run                                                 | spec-0013     | UPDATE    | APPEND | -           | An approval-required row under `--auto` still stops with a `consultation-needed` entry and `Approved By` left `-`. The degrade regression test keeps active-run authority and legacy `--auto` as separate cases                                                                                                                                                                                                                                                                                                                                                                                                                                    | REQ-0033          |
+| REQ-0047                     | Phase 2b seeds a diagnosed missing-test row without a Change Request                                       | spec-0013     | UPDATE    | APPEND | -           | D13. The TC and its ledger row are appended with the diagnosed defect as the reason, AC and BR are unchanged, and the row runs from `todo` to RED to GREEN. An acceptance-layer row gets its test from ATDD. This is the `sdd_append` stage of REQ-0006 under the predicate `missing_test_row_needed`, and OQ-0009 fixes its name                                                                                                                                                                                                                                                                                                                  | REQ-0033, OQ-0009 |
+| REQ-0013                     | Work-order target binding: a missing target never means every capability                                   | spec-0013     | UPDATE    | APPEND | -           | A work order carries a fixed operation and target. A new spec arrives as `target: new_capability` and is bound to the created ID afterwards. US-0013-0004 and BR-0013-0007, the standalone no-argument batch, are unchanged                                                                                                                                                                                                                                                                                                                                                                                                                        | REQ-0033          |
+| REQ-0053                     | Standalone `/qfai-sdd` ends at SDD and never continues into implementation                                 | spec-0013     | UPDATE    | APPEND | -           | A request to go "to the end" is handed to a whole run                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | REQ-0033          |
+| REQ-0051, REQ-0052, REQ-0056 | Orchestrated mode for `/qfai-sdd`: the entry check, the work-order scope and Stage 0 shared-snapshot reuse | spec-0013     | UPDATE    | APPEND | -           | One reference cited by one line from `SKILL.md` (D12)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | REQ-0033          |
+
+## Change Summary
+
+- Change ID: DELTA-0001
+- Date: 2026-09-24
+- Primary: `/qfai-sdd` as a stage of an intent-driven run (`discussion-20260923171450572`)
+- Tags: @docs, @test
+- Summary: Stage 1 checks a routing-time `CREATE` approval instead of asking;
+  the triage format carries `Authorization-Ref`; Phase 2b seeds a diagnosed
+  missing-test row without a Change Request; and the skill gains its
+  orchestrated mode. Contract-backed rules cite CLI-WF, CLI-WFFILE and CLI-VAL
+  and copy none of their fields.
+- Items appended: US-0013-0015..US-0013-0017; AC-0013-0028..AC-0013-0041;
+  BR-0013-0022..BR-0013-0035. The examples start at EX-0013-0022 and the test
+  cases at TC-0013-0038. No existing item changes: US-0013-0004 and
+  BR-0013-0007, the standalone no-argument batch, stand as written.
+- At the intent-driven entry, BR-0013-0021, EX-0013-0021, TC-0013-0036 and
+  TC-0013-0037 were reserved for `CR-20260913-0012`. DELTA-0004 applies that
+  CR, using AC-0013-0042 as the next free criterion ID.
+- Resolved pack questions:
+  - `discussion-20260923171450572#OQ-0006`: CLI-VAL
+    `## Triage authorization reference` — an optional `Authorization-Ref` column.
+  - `discussion-20260923171450572#OQ-0007`: CLI-WF `## Authorizations` — when a
+    routing-time approval is stale.
+  - `discussion-20260923171450572#OQ-0009`: CLI-WFFILE `### Vocabulary` and
+    `_policies/08_Decisions.md` DR-0297 — stage kind `sdd_append`, operation
+    `defect-row-seeding`.
+- Policy: DR-0296 and DR-0297, cited in `01_Spec.md` `## Applicable Policy`. No
+  spec decision record is added, and `08_Open-questions.md` stays at zero.
+- Size: 27 distinct AC IDs under 30 headings become 41 under 44, and TC 35
+  passes 50 once the test cases are appended. No split: spec-0013 owns only
+  CAP-0013.
+
+- Change ID: DELTA-0002
+- Date: 2026-09-24
+- Primary: Phase 2c obligation reconciliation, against CLI-VAL
+  `## Triage authorization reference` as revised: `Authorization-Ref` on a
+  `CREATE` row only
+- Tags: @docs, @test
+- Summary:
+  - BR-0013-0024 and AC-0013-0030 state how the other five approval-required
+    operations are approved inside a run. The question is a `decision` question
+    the stage result opens, the row copies the answerer into `Approved By`, and
+    the row carries no `Authorization-Ref`.
+  - BR-0013-0026 and AC-0013-0032 limit the column to a `CREATE` row.
+  - BR-0013-0036 is added under AC-0013-0034: a seeded row beside an existing row
+    on the same obligation names a `Boundary`, and that sibling gains its slug
+    with `Status` and `Evidence` unchanged.
+  - BR-0013-0028 and AC-0013-0034 are retitled to "no existing row's status",
+    because the slug is the one cell seeding writes on an existing row.
+  - IDs are unchanged apart from the new BR-0013-0036. BR-0013-0021 stays
+    reserved.
+
+- Change ID: DELTA-0003
+- Date: 2026-09-24
+- Primary: Phase 2c second pass
+- Tags: @docs
+- Summary: the titles of BR-0013-0028 and AC-0013-0034 end "no existing row's
+  status or evidence", which is what BR-0013-0028 and BR-0013-0036 hold. IDs and
+  rule text are unchanged.
+
+- Change ID: DELTA-0004
+- Date: 2026-09-25
+- Primary: CR-20260913-0012 Option 1 owner rerun
+- Tags: @docs, @test
+- Summary: The first AC-0013-0008, AC-0013-0009 and AC-0013-0010 keep their
+  IDs. The contradictory second AC-0013-0008 and superseded second
+  AC-0013-0010 are removed with REQ-0014 and REQ-0016..0018. The live
+  optional-side-artifact criterion becomes AC-0013-0042, with BR-0013-0021,
+  EX-0013-0021, normal TC-0013-0036 and error TC-0013-0037. US-0013-0008
+  now states only the optional-artifact promise. Phase 2b seeds TDD-0061 and
+  TDD-0062 at todo with this CR in DR-ID; no existing TDD obligation changes.
+  The stale duplicate-ID pin and pending-application text in 10_Plan.md are
+  removed. The earlier migration and triage counts remain historical records.
+
+## Change Requests
+
+| CR ID            | Upstream artifact                                                                      | Mode      | Approved by | Applied at           |
+| ---------------- | -------------------------------------------------------------------------------------- | --------- | ----------- | -------------------- |
+| CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-24T18:26:35Z |
+| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-24T19:00:08Z |
+| CR-20260913-0012 | `spec-0013/01..06`, `09_delta.md`, `10_Plan.md`, `tdd/test-list.md`                    | re-derive | user        | 2026-09-24T19:55:40Z |

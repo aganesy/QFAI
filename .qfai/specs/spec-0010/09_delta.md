@@ -107,3 +107,35 @@ The user-story layer was repaired separately; see the entry above it.
   - REQ-0155 spans spec-0010 (writer) and spec-0013 (reader) — same Source REQ, file-local IDs per spec. Reader side declared in spec-0013.
   - `R-MOCK-HREF-DRIFT` (template ↔ `QFAI-MOCK-010` SSOT-sync) and `QFAI-MOCK-010` validator implementation enforcement route through spec-0004; this slice owns the discussion-side template + SKILL.md authoring surface and the pointer-writer behavior.
 - Source: REQ-0154, REQ-0155 (discussion-20260527075558258)
+
+## Triage (2026-09-24 intent-driven entry)
+
+Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` and the policy rows are in `_policies/10_delta.md` under the same heading. None of the rows below needs approval. `REQ-0033` in `Depends-On` stands for the `CREATE` row: the row cites items `spec-0018` defines, so it waits until that spec has them.
+
+D4 named seven specs for Change Requests, and this spec is not one of them. The user added it on 2026-09-24 by answering `OQ-0020` with A, because this skill's contract changes.
+
+| Source             | Subject                                                     | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                             | Depends-On |
+| ------------------ | ----------------------------------------------------------- | ------------- | --------- | ------ | ----------- | --------------------------------------------------------------------- | ---------- |
+| REQ-0055           | An orchestrated discussion covers only the unresolved scope | spec-0010     | UPDATE    | APPEND | -           | Decisions already settled are not asked again                         | REQ-0033   |
+| REQ-0051, REQ-0052 | Orchestrated mode for `/qfai-discussion`                    | spec-0010     | UPDATE    | APPEND | -           | `qfai-discussion` is a skill a built-in plan dispatches (OQ-0015 = A) | REQ-0033   |
+
+## 2026-09-24 — Intent-driven entry: change summary
+
+- Appended: US-0010-0013; AC-0010-0013..0015; BR-0010-0013..0015; the
+  `## Contract Realization` table in `04_Business-Rules.md`.
+- No existing item changes. No decision record and no open question are added.
+- The retired AC-0010-0002..0004 and BR-0010-0002..0004 are not reused.
+- Size: AC 10 → 13, under the threshold.
+
+## 2026-09-24 — Phase 2c.1 obligation amendment
+
+- BR-0010-0013 and AC-0010-0013 are reworded, IDs kept. What the run has settled
+  is read from the work order's `settled` field (CLI-WF `### Work order`), not
+  from its `inputs`, which carry only file paths and digests.
+
+## Change Requests
+
+| CR ID            | Upstream artifact                                                                      | Mode      | Approved by | Applied at           |
+| ---------------- | -------------------------------------------------------------------------------------- | --------- | ----------- | -------------------- |
+| CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-24T18:26:35Z |
+| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-24T19:00:08Z |

@@ -144,3 +144,112 @@
 - Given one item `"Review orders"` (string-only) and one `{id: t1, label: "Mark shipped", acceptance: "order status flips to shipped"}` (structured) and one `{id: t2, label: "x"}` (missing `acceptance`)
 - When `auditProfile.ts` evaluates them during the deprecation window
 - Then the string-only and the complete structured item are accepted; the item missing `acceptance` is rejected (all-required, closed schema)
+
+## EX-0013-0021: Optional prototyping side artifact does not block preflight
+
+- BR-Ref: BR-0013-0021
+- Given a usable discussion pack with complete required markdown and no `prototyping.yaml`
+- When SDD preflight runs
+- Then it reports ready and no blocker for the absent optional artifact
+- The same readiness holds when `prototyping.yaml` is present with an invalid namespaced schema or a legacy-only format
+
+## EX-0013-0022: A matching routing-time approval is checked, not asked
+
+- BR-Ref: BR-0013-0022
+- Given an SDD work order bound to slot `slot-1`, citing the `human_decision` `run-20260924045712999/create-0001` with `operation: CREATE`, `answeredBy: yusuke_senaga` and a `recordedAt` on 2026-09-24
+- And Stage 1 triages a `CREATE` row for the capability that slot names, and the record is not stale
+- When Stage 1 writes the row
+- Then no question is asked, and the row carries `Authorization-Ref` `run-20260924045712999/create-0001` and `Approved By` `yusuke_senaga@2026-09-24`
+
+## EX-0013-0023: An approval that does not hold stops Stage 1
+
+- BR-Ref: BR-0013-0023
+- Given the work order of EX-0013-0022, changed one way: the cited record is missing, its capability differs from the row's, or its scope has changed since it was recorded
+- When Stage 1 triages the `CREATE` row
+- Then `09_delta.md` gains no triage row, no question is put to the operator, and the stage returns `awaiting_input` naming the row and the reason
+
+## EX-0013-0024: A routing-time approval answers only a CREATE
+
+- BR-Ref: BR-0013-0024
+- Given a run that holds a routing-time `CREATE` approval, and Stage 1 triages a `DELETE` row
+- When Stage 1 reaches the row
+- Then the `CREATE` approval is not cited for it, and Stage 1 asks the operator nothing itself: its stage result opens the approval question as a `decision` question, with outcome `awaiting_input`
+- And once `yusuke_senaga` answers on 2026-09-24 and the next attempt receives the answer through `authorizationRefs`, the row is written with `Approved By` `yusuke_senaga@2026-09-24` and no `Authorization-Ref`
+
+## EX-0013-0025: `--auto` inside a run approves nothing
+
+- BR-Ref: BR-0013-0025
+- Given `/qfai-sdd --auto` running under a work order, and a `SPLIT` row with no `human_decision` that answers it
+- When Stage 1 reaches the row
+- Then Stage 1 stops with a `consultation-needed` entry naming the row, and `Approved By` stays `-`
+
+## EX-0013-0026: The triage format documents `Authorization-Ref`
+
+- BR-Ref: BR-0013-0026
+- Given `references/sdd-triage.md`
+- When a reader looks up the triage table format
+- Then `Authorization-Ref` is an optional column found by its header name and filled on a `CREATE` row only, its value form is cited from CLI-VAL, a row that cites a record copies `answeredBy@YYYY-MM-DD` into `Approved By`, a `DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` or `UPDATE:REMOVE` row carries no reference, and a row without the column is still valid
+
+## EX-0013-0027: A missing-test diagnosis becomes one test case and one row
+
+- BR-Ref: BR-0013-0027
+- Given an `sdd_append` work order for a spec whose diagnosis says no test covers a backward move out of `green`
+- When Phase 2b defect row seeding runs
+- Then `06_Test-Cases.md` gains one test case and `tdd/test-list.md` one row, no Change Request is filed, and the test case's `Notes` state the defect and the run ID and name no path under `.qfai/runs/`
+
+## EX-0013-0028: Seeding changes nothing upstream and no existing row's status or evidence
+
+- BR-Ref: BR-0013-0028, BR-0013-0036
+- Given the work order of EX-0013-0027, where the diagnosis matched one existing AC of that spec and one existing example of that AC's BR, and the ledger row covering that behaviour is `done`
+- When the test case and row are appended
+- Then the test case cites that AC in `AC-Refs` and that example in `EX-Ref`, no US, AC, BR or EX changes, the new row is `todo`, and the `done` row keeps its `Status` and `Evidence`
+- And where the new row carries an obligation an existing row already carries, the new row names a `Boundary` and the existing row, if it has none, gains its slug; that slug is the only cell written on the existing row, whose `Status` and `Evidence` stay unchanged
+
+## EX-0013-0029: The layer decides who writes the missing test
+
+- BR-Ref: BR-0013-0029
+- Given two diagnosed missing tests: one whose oracle reads a real ledger file, and one whose oracle observes a parser's return value only
+- When Phase 2b derives each test case's `Level` by `test-layers.md`
+- Then the first is `L3` with an `Integration` row left for ATDD, the second is `L1` with a `Unit` row left for implement, and seeding writes neither test
+
+## EX-0013-0030: The append is recorded as an approval-free delta row
+
+- BR-Ref: BR-0013-0030
+- Given the seeding of EX-0013-0027
+- When the run records it
+- Then that spec's `09_delta.md` gains one `UPDATE` / `APPEND` triage row for the appended test case, with `Approved By` `-`
+
+## EX-0013-0031: A work order without a target is refused
+
+- BR-Ref: BR-0013-0031
+- Given an orchestrated `/qfai-sdd` work order whose `target` is absent, and a second one whose `target` is `{ kind: "new_capability", slotId: "slot-1" }`
+- When `/qfai-sdd` starts each
+- Then the first is refused and the no-argument batch does not run, and the second's result reports a `bindings` entry for each capability it created
+
+## EX-0013-0032: `/qfai-sdd` invoked by name ends at SDD
+
+- BR-Ref: BR-0013-0032
+- Given the operator types `/qfai-sdd`, and later `/qfai-sdd` with a request to take the change to the end
+- When SDD completes the first
+- Then the skill stops with no run created, and the second request is handed to a whole run rather than continued past SDD
+
+## EX-0013-0033: The entry check before any edit
+
+- BR-Ref: BR-0013-0033
+- Given `/qfai-sdd` selected in mode `active` three ways: with no name and no work order, with a work order that matches no issued one, and with a valid work order
+- When the entry check runs
+- Then the first edits nothing and passes the request to `qfai-run`, the second edits nothing and returns the refusal, and the third does only the work order's work
+
+## EX-0013-0034: The Operations table of `/qfai-sdd`
+
+- BR-Ref: BR-0013-0034
+- Given `qfai-sdd/references/orchestrated-mode.md`
+- When its `## Operations` table is read
+- Then the `Operation` column holds exactly `new-capability`, `delta-or-applicability-check` and `defect-row-seeding`
+
+## EX-0013-0035: Stage 0 reuse keeps SDD's own check live
+
+- BR-Ref: BR-0013-0035
+- Given a run whose Stage 0 snapshot was recorded by an earlier stage, and a `/qfai-sdd` work order in the same run after one policy file changed
+- When `/qfai-sdd` starts
+- Then it recomputes the snapshot key, refreshes the entries that policy file feeds and reuses the rest, and runs `npx qfai sdd preflight` again

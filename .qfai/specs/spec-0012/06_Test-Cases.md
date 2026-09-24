@@ -110,15 +110,6 @@
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
 - Verify `shouldStop([iter])` returns `null` when `layoutAntiPatternsDetected: ["lap-007-state-not-represented"]` is non-empty.
 
-## TC-0012-0321
-
-- Status: superseded — replaced by TC-0012-0357 (`index === 9` terminator under 10-cycle budget).
-- EX-Ref: EX-0012-0110
-- AC-Refs: AC-0012-0029
-- Level: L1
-- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
-- Verify `shouldStop([iter])` returns `"max-iterations"` when the latest iter has `index === 14`.
-
 ## TC-0012-0322
 
 - EX-Ref: EX-0012-0110
@@ -211,21 +202,13 @@
 - Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
 - Verify `computePivotDirective(history)` returns `"continue"` when ≥ 2 of the 4 UX axes strictly improve by `ordinalIndex` (weak=0, acceptable=1, strong=2, exceptional=3) versus the prior iter; otherwise returns `"refine"` (when not `pivot`).
 
-## TC-0012-0334
-
-- EX-Ref: EX-0012-0110
-- AC-Refs: AC-0012-0033
-- Level: L1
-- Test file: `packages/qfai/tests/core/prototyping/certificate.test.ts`
-- Verify completion certificate v2.0 round-trip: parse → serialize yields byte-equivalent output for the v2.0 schema.
-
 ## TC-0012-0335
 
 - EX-Ref: EX-0012-0114
 - AC-Refs: AC-0012-0036
-- Level: L1
-- Test file: `packages/qfai/tests/core/prototyping/certificate.test.ts`
-- Verify `design-system.yaml` post-handoff content is byte-equivalent to root `DESIGN.md` token tables (color / typography / radius / shadow).
+- Level: L3
+- Test file: `packages/qfai/tests/integration/prototypingHandoffOutput.test.ts`
+- Verify the post-handoff writer produces `.qfai/contracts/design/design-system.yaml` from the frozen root `DESIGN.md`. Compare the complete declared token-key sets and exact serialized values in color, typography, radius, and shadow, including missing and extra tokens. The oracle reads the generated output after the writer or faithful workflow harness runs; metadata outside those token tables is not compared.
 
 ## TC-0012-0336
 
@@ -1473,6 +1456,38 @@
 - Type: integration
 - Test file: `packages/qfai/tests/integration/cli/commands/prototypingCertify.validateFreshness.test.ts`
 - Verify REQ-0174: the freshness scan skips a cycle-0 reset's backups, so a file inside one that is newer than the run still seals.
+
+## TC-0012-0489
+
+- EX-Ref: EX-0012-0192
+- AC-Refs: AC-0012-0176
+- Type: integration
+- Level: L3
+- Verify the entry check: the shipped `qfai-prototyping/SKILL.md` has exactly one line citing `references/orchestrated-mode.md`, and that reference cites the entry check of the shared operating baseline.
+
+## TC-0012-0490
+
+- EX-Ref: EX-0012-0193
+- AC-Refs: AC-0012-0177
+- Type: integration
+- Level: L3
+- Verify the Operations table: in the shipped `qfai-prototyping/references/orchestrated-mode.md`, the first table under `## Operations` has a first column headed `Operation` whose backticked IDs are exactly the set the test holds, `existing-runtime-contract`.
+
+## TC-0012-0491
+
+- EX-Ref: EX-0012-0194
+- AC-Refs: AC-0012-0178
+- Type: integration
+- Level: L3
+- Verify the work-order scope: the shipped `qfai-prototyping/references/orchestrated-mode.md` states that under a work order the skill works only on the spec its `target` names, settles the one visual decision within the existing `DESIGN.md` and contracts, and creates no contract, and that a standalone invocation still resolves every UI-bearing spec.
+
+## TC-0012-0492
+
+- EX-Ref: EX-0012-0195
+- AC-Refs: AC-0012-0178
+- Type: integration
+- Level: L3
+- Verify the error path: the shipped `qfai-prototyping/references/orchestrated-mode.md` states that when the target spec is not UI-bearing the skill writes no `DESIGN.md`, no UI contract and no surface declaration, and returns outcome `blocked`, listing the cause in `debts` with `resolvingOwner` `operator`. This is the one kept failure of the orchestrated rule. Refusing a `blocked` result that lists a repairable finding is the workflow core's.
 
 ## Legacy Coverage Continuity
 

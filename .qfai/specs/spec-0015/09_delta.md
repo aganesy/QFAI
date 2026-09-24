@@ -77,11 +77,50 @@ notes: Keep optional advisory review of concrete coverage without numeric or abs
     - .qfai/evidence/sdd-spec-0015.md
 ```
 
+### DL-0002
+
+#### Meta
+
+```yaml
+id: DL-0002
+date: 2026-09-24
+primary: Behavior
+tags: ["@docs"]
+compat: Compatibility
+scope:
+  - spec-0015
+  - manifest/agent-routing.yml
+  - contracts/cli/qfai-init.md
+notes: An upgraded project gains the qfai-run and qfai-maintain routing entries through qfai init --force (DR-0015-0007).
+```
+
+#### Migration / Follow-ups
+
+- The upgrade report and the fail-closed refusal at `start` name
+  `qfai init --force`. Their tests belong to spec-0003 and spec-0018.
+
+#### Rejected
+
+- option: Merge routing entries on every qfai init
+  reason: It changes the released --force behaviour the init contract states.
+  do_not: Run the add-only routing merge without --force.
+  temptation: The merge only adds entries.
+- option: Make manifest/ a provenance-governed layer
+  reason: It rewrites a layer qfai-configure owns.
+  do_not: Put the manifests under the provenance lock.
+  temptation: The lock already refreshes unmodified copies.
+
+#### Verification
+
+- The routing-manifest test case of BR-0015-0018 reads the shipped manifests only.
+
 ## Change Requests
 
-| CR ID            | Upstream artifact                | Mode      | Approved by                                             | Applied at |
-| ---------------- | -------------------------------- | --------- | ------------------------------------------------------- | ---------- |
-| CR-20260913-0007 | `spec-0015/04_Business-Rules.md` | re-derive | user (current session's delegated implementation scope) | -          |
+| CR ID            | Upstream artifact                                                                      | Mode      | Approved by                                             | Applied at           |
+| ---------------- | -------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------- | -------------------- |
+| CR-20260913-0007 | `spec-0015/04_Business-Rules.md`                                                       | re-derive | user (current session's delegated implementation scope) | -                    |
+| CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user                                                    | 2026-09-24T18:26:35Z |
+| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user                                                    | 2026-09-24T19:00:08Z |
 
 - Scoped physical changes are recorded. Applied at matches the CR and remains unset until the required owner gates complete.
 
@@ -249,3 +288,38 @@ Upstream: `_policies/10_delta.md` § 2026-08-22 (policy-only UPDATE:MODIFY — t
 - Regression: `packages/qfai/tests/assets/assets.test.ts` checks that each shipped `SKILL.md` hard-required bucket stays within the two common entries plus whatever that skill declares, and carries no withdrawn entry. It does not check the count, because narrowing is allowed.
 - ID stability: no US / AC / BR / EX / TC is renumbered, and nothing is appended.
 - Approved By: yusuke_senaga
+
+## Triage (2026-09-24 intent-driven entry)
+
+Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` and the policy rows are in `_policies/10_delta.md` under the same heading. None of the rows below needs approval. `REQ-0033` in `Depends-On` stands for the `CREATE` row: the row cites items `spec-0018` defines, so it waits until that spec has them.
+
+| Source             | Subject                                                                                                                                   | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                   | Depends-On        |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| REQ-0049, REQ-0057 | `agent-routing.yml` and `review-profiles.yml` gain `qfai-run` and `qfai-maintain`, each with a routing profile, roles and a routing block | spec-0015     | UPDATE    | APPEND | -           | AC-0015-0009 makes the routing manifest the single source. A new skill needs its profile, roles and routing block in the same change. Size: 22 AC today and 26 after the appends in this table, under the threshold                         | REQ-0033          |
+| REQ-0013           | A valid run binding counts as a supplied `primarySpecId`                                                                                  | spec-0015     | UPDATE    | MODIFY | -           | BR-0015-0010 lists `primarySpecId` as hard-required when absent. A binding a run supplies now counts as present, and the shared baseline states the exception. AC-0015-0015 and US-0015-0009 follow                                         | REQ-0033          |
+| REQ-0057           | How the three authorization kinds relate to the Default Autopilot Policy buckets                                                          | spec-0015     | UPDATE    | APPEND | -           | BR-0015-0010 owns the buckets. OQ-0008's recommendation maps `human_decision` onto the ask-user bucket and adds no new concept                                                                                                              | REQ-0033, OQ-0008 |
+| REQ-0040           | The history of authors, recommenders and reviewers is carried across a run                                                                | spec-0015     | UPDATE    | APPEND | -           | An agent never counts as the independent reviewer of its own authoring or recommendation anywhere in the run, and no reviewer is dropped to save tokens. An unavailable required delegation stops the run, as BR-0015-0003 already requires | REQ-0033          |
+| REQ-0055           | Grilling inside a run works only the remaining frontier                                                                                   | spec-0015     | UPDATE    | APPEND | -           | Settled inputs are taken as given, the split between user and delegated sessions is kept, and the run never invokes `qfai-grill`. No spec owns the grilling skills, and skill integration is this spec's                                    | REQ-0033          |
+
+## 2026-09-24 — Intent-driven entry: change summary
+
+- Modified in place, IDs kept, no `Source` added: US-0015-0009, AC-0015-0015 and
+  BR-0015-0010. A `primarySpecId` that a workflow run's binding supplies counts
+  as supplied. The existing test cases are unchanged.
+- Appended: AC-0015-0023..0026; BR-0015-0018..0021; DR-0015-0007 with DL-0002;
+  the `## Contract Realization` table in `04_Business-Rules.md`. No story is
+  added: AC-0015-0023 sits under US-0015-0001, because AC-0015-0009, the
+  routing-manifest criterion, traces to no story. AC-0015-0024 sits under
+  US-0015-0009, and AC-0015-0025 and AC-0015-0026 under US-0015-0003.
+- Resolved pack question: `discussion-20260923171450572#OQ-0008`, recorded in
+  `08_Open-questions.md`.
+- DR-0015-0100, cited by exception rows of the ledger, is not reused.
+- Size: AC 22 → 26, under the threshold. Test cases are budgeted at 14 new ones,
+  keeping the count at 50 or under.
+
+## 2026-09-24 — Phase 2c.1 obligation amendment
+
+- BR-0015-0021 is reworded, ID kept. A grilling session inside a run reads what
+  is settled from the work order's `settled` field (CLI-WF `### Work order`).
+- `## Contract Realization` gains two rows: BR-0015-0003 against CLI-WF
+  `### Stage result` (`delegation`), and BR-0015-0021 against `### Work order`.

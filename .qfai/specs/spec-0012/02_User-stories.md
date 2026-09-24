@@ -54,6 +54,7 @@
 - US-0012-0140: a `prototyping.mode` discriminator (`convergence` | `exploration`) settable via `qfai.config.yaml#prototyping.…
 - US-0012-0141: `QFAI-CRIT-009` error text to name every required keyword (`cta_visibility`, `four_state_check`, and any other…
 - US-0012-0142: `iterate` and `certify` to append a `.qfai/evidence/prototyping/mutation-log.jsonl` JSON-Lines entry shaped `{…
+- US-0012-0144: the prototype stage of a run to settle one visual decision for the spec the work order names
 
 ## Active User Stories
 
@@ -266,6 +267,18 @@ As a reviewer authoring `taskFidelity` evidence, I want `QFAI-CRIT-009` error te
 ## US-0012-0142
 
 As a maintainer auditing evidence churn, I want `iterate` and `certify` to append a `.qfai/evidence/prototyping/mutation-log.jsonl` JSON-Lines entry shaped `{ ts, caller, path, action, priorSize, newSize }` for every destructive mutation (delete / overwrite) under `iter-NN/*` (including each file moved by `--cycle 0 --force`), git-ignored by default, so that iter-NN evidence disappearance becomes forensically reproducible; a code path mutating iter-NN without a mutation-log call surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (error). (REQ-0165)
+
+## US-0012-0144
+
+- Parent: CAP-0012
+- Source: discussion-20260923171450572#REQ-0051
+- Goal: As an operator whose change needs a visual decision, I want the prototype
+  stage of a run to settle that one decision for the spec the run names, within
+  the existing `DESIGN.md` and contracts, so that the run does not stop for a
+  separate `/qfai-prototyping` invocation.
+- Non-goals: when the run dispatches the stage (spec-0018); `iterate` and
+  `certify`, which a run does not change.
+- Notes: its E2E row is `Blocked-By` spec-0018, whose run drives the stage.
 
 ## Legacy Coverage Continuity
 

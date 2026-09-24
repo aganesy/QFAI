@@ -19,6 +19,11 @@
 - Out (CHG-007 境界): QFAI 自身の `.github/workflows/**`、ルート `scripts/**`、`packages/qfai/scripts/**`、`vitest.workspace.ts` は `toolchain` slice category（spec-0017 / CAP-0017）が所有する。境界は **配布されるか否か** であり、`package.json#files` に含まれないものは本 spec の対象外（\_policies/10_delta.md CHG-007 DR-0276）
 - Out (CHG-007 境界): 導入済み配布 workflow の drift 検出（stale ファイルを名指しする advisory finding）は `qfai doctor` 側 = spec-0006 が所有する。本 spec は検出結果が依拠する所有権コントラクトの定義のみを持つ
 - Out (CHG-007 境界): composite-action テンプレートの配布。`scripts/verify-pack.mjs` の `allowedRootGithubEntries` は配布 `.github/` の直下に `workflows` のみを許可し、`actions/` ディレクトリは hard pack failure になるため構造的に不可能
+- In (2026-09-24 intent-driven entry): the workflow entry that `qfai init` installs and upgrades — `qfai-run` and `qfai-maintain` with their host wrappers, each stage skill's `references/orchestrated-mode.md`, the built-in plans, the entry directive in `AGENTS.md` and `CLAUDE.md`, the mode line, the plans' provenance, the upgrade record and the upgrade conflict report (CLI-INIT `## Workflow entry`). Also the two managed ignore lines for run state and run evidence.
+- Out (2026-09-24 intent-driven entry): the workflow core, `start`'s enforcement of the correspondence check, the plan contents, the shipped schemas, and the config issue `qfai validate` reports for an invalid `workflow.mode` — `spec-0018`.
+- Out (2026-09-24 intent-driven entry): the routing and review manifest entries for `qfai-run` and `qfai-maintain`, and the record of the user's answer on what a plain upgrade does to them — `spec-0015`.
+- Out (2026-09-24 intent-driven entry): the rule that no stage skill carries `disable-model-invocation` — `spec-0001`.
+- Out (2026-09-24 intent-driven entry): the `windows-latest` CI job that runs the init and migration suites — `spec-0017`.
 
 ## Applicable NFR
 
@@ -42,6 +47,7 @@
 - NFR-C0013 (CHG-007 NFR-0013): shipped steps degrade in the direction their input permits - degraded run が「確立していない結果を green と主張する」なら fail closed、そうでなければ warning annotation 付きで conservative superset を続行する（substitution test）
 - NFR-C0014 (CHG-007 NFR-0014): gate placement is effective, not nominal - 本 spec が導入する gate は pull request で実行される。release 専用 aggregate には置かない
 - NFR-C0016 (CHG-007 NFR-0016): adopter cost does not rise on install - an adopter that declares no optional test script executes zero test lanes. Two shipped jobs declare a dependency install: the document-check job and the validation job. The orchestrator's detection and verdict jobs and both aggregate jobs install nothing. Both installing jobs carry a matrix, so the count is of executing job instances per event: a pull request runs four (two document checks, two validation profiles) and a push runs three (two document checks, one validation profile). That repeated setup is the scheduling cost the parallel legs buy, in exchange for checks that run independently of each other
+- `discussion-20260923171450572#NFR-0011`: init and upgrade behave the same on Windows as on Linux, CRLF checkouts and paths with spaces included. Held by BR-0003-0058 and its test cases, which the `windows-latest` job of `spec-0017` runs.
 
 ## Applicable Policy
 
@@ -61,6 +67,9 @@ Contract short IDs resolve through `_policies/05_Contracts.md#Contract Index`.
   - §5 宣言形状が pin すべき 9 dimension と gate placement（`pnpm ci:lint`、never `pnpm ci:gate`）
   - §6 配布ツリー固有の hygiene 規則と pin trailer 解決
   - §7 detection surface は `qfai doctor`（spec-0006 / CLI-DOC）が所有し、state vocabulary は §3 の enum をそのまま使う
+- CLI-INIT `## Workflow entry` (2026-09-24) — what init installs for `npx qfai workflow`: the install set, the ignore entries, the mode line, the plans' provenance and the upgrade record, the upgrade conflicts and the entry directive. New rules name the section they realize in `04_Business-Rules.md` § `Contract Realization`.
+- CLI-WF — `.qfai/contracts/cli/qfai-workflow.md`. Only triggers (b) and (c) of `## Fail-closed`, which init runs after the copy, and `## Modes`, which gives the mode an absent key means.
+- CLI-WFFILE — `.qfai/contracts/cli/workflow-files.schema.md`. Only the plan files and the Operations table init installs.
 
 ## Evidence Summary
 
@@ -108,9 +117,23 @@ Contract short IDs resolve through `_policies/05_Contracts.md#Contract Index`.
 - REQ-0031 (CHG-007、上流 pack REQ-0021): 配布 set の structural contract gate - テストスイート内に保持された**宣言された期待形状**に対して配布 set を diff し、配布ファイルがそこから drift したら fail する gate。REQ-0026 の generic invariant（permission block が在る / timeout が在る / floating 参照が無い）に対する残余は semantic であり、load-bearing な**値** — 各配布 lane がどの subcommand を呼ぶか、どの profile か、どの failure threshold か、どの repository variable を読むか、どの lane が存在するか、各 lane を inert にしているのは何か — を 1 つの承認済み期待形状に対して assert する。**値の SSOT は test suite 側の 1 箇所**であり、spec も CLI-WFSET も値を再記載しない（第二のコピーは DTC-5 が記録する drift クラスを再生産する）。contract が固定するのは形状が pin すべき **dimension 集合**（CLI-WFSET §5 の 9 項目）であり、1 つでも欠落した形状は判断の問題ではなく contract 違反として扱う。既存 asset test の配布 validate workflow に対する ad-hoc string assertion を **subsume して置き換える**ため、それらが持つ test-case annotation は保持または再登録する。配置は load-bearing: `pnpm ci:lint` から実行し、`pnpm ci:gate`（release workflow のみが invoke する）からは実行しない。failure code は `R-SHIPPED-WORKFLOW-SHAPE-DRIFT`（bare `R-` lint namespace）。catalog 所属は severity class で決まるため本 error-class code は `JUSTIFICATION_CATALOG` に属すべきだが、登録は lockstep 変更として deferred（`spec-0015` `OQ-0015-0001`）。現時点の不在は一時的乖離であり恒久的性質ではない。ordering: spec-0017 の上流 pack REQ-0025（リポジトリ自身の配布 workflow 複製の廃止）と**同一変更またはそれ以前**に着地する必要がある
   - The lane dimension covers aggregate lanes as well: a job that declares an always-run condition together with a `needs` list, asserted against the exact list.
 
+### discussion-20260923171450572 (2026-09-24)
+
+The requirements of this spec's rows in `## Triage (2026-09-24 intent-driven entry)` of
+`09_delta.md`. The IDs are the pack's and are written with the pack half: the local
+`REQ-0024` above is CHG-007's and means something else.
+
+| Requirement                             | Home                                                                                                                                                                             |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `discussion-20260923171450572#REQ-0024` | CLI-INIT `### Ignore entries`; BR-0003-0013                                                                                                                                      |
+| `discussion-20260923171450572#REQ-0059` | CLI-INIT `### Mode line`; BR-0003-0052                                                                                                                                           |
+| `discussion-20260923171450572#REQ-0064` | CLI-INIT `### What it installs`, `### Entry directive`; BR-0003-0049, BR-0003-0050, BR-0003-0051                                                                                 |
+| `discussion-20260923171450572#REQ-0065` | CLI-INIT `### Plan provenance and the upgrade record`, `### Upgrade conflicts`; BR-0003-0053, BR-0003-0054, BR-0003-0055, BR-0003-0056, BR-0003-0057, BR-0003-0059, BR-0003-0060 |
+| `discussion-20260923171450572#NFR-0011` | CLI-INIT `### Windows parity`; BR-0003-0058                                                                                                                                      |
+
 ## Entry points
 
-- US range in this spec: US-0003-0001..US-0003-0028
+- US range in this spec: US-0003-0001..US-0003-0029 (US-0003-0014 is retired and not reused)
 - Primary actors: AI エージェント統合開発者
 - Notes: `npx qfai init` でプロジェクトに QFAI ワークスペースを導入する
 

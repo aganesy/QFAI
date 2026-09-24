@@ -197,3 +197,46 @@
 - AC-Refs: AC-0004-0039
 - The lane MUST pass silently (no `R-PACK-LOCATION-DRIFT`) when pack directories are added only under allowed roots or when no pack directory is touched.
 - Pre-existing legacy packs on unrelated PRs MUST NOT be re-flagged — scope is staged/changed dirs only (per DR-0274).
+
+## BR-0004-0034: One approval set
+
+- AC-Refs: AC-0004-0040
+- The triage approval check treats a row as needing approval exactly when `requiresApproval()` is true for its operation, and the validator keeps no approval set of its own.
+
+## BR-0004-0035: A cited authorization must pass every check
+
+- AC-Refs: AC-0004-0041
+- A triage row whose `Authorization-Ref` fails any check in the closed set CLI-VAL `## Triage authorization reference` lists raises `QFAI-TRIAGE-011` at error severity, naming the row and the failed check.
+
+## BR-0004-0036: A row without a reference keeps the legacy check
+
+- AC-Refs: AC-0004-0042
+- A row with no `Authorization-Ref` column, or `-` in it, keeps the `QFAI-TRIAGE-005` approval check unchanged.
+
+## BR-0004-0037: No check where no approval is needed
+
+- AC-Refs: AC-0004-0043
+- A reference on a row whose operation needs no approval raises no finding.
+
+## BR-0004-0038: The installed plans are a governed layer
+
+- AC-Refs: AC-0004-0044
+- `qfai validate` applies the governed-layer provenance checks to `process/workflows` as to every other governed layer:
+  - an installed plan edited so that it matches neither the shipped copy nor the lock is reported as a fork (`QFAI-ASSETS-005`), and one that still holds what an earlier release wrote is reported as stale (`QFAI-ASSETS-004`), both at `error`, the fixed severity of the provenance checks;
+  - a `process/workflows/` layer the lock records and the tree no longer has is reported once, against the layer (`QFAI-ASSETS-007`).
+- `process/migrations/` is not a governed layer, and nothing under it is reported.
+- The governed layer of a path is read through the helper beside `GOVERNED_ASSISTANT_LAYERS`, so a two-segment layer is found wherever the checks read a layer.
+
+## Contract Realization
+
+The contract section that realizes each contract-backed rule added on
+2026-09-24. Each names the rule and its section, and copies no check, code or
+set member.
+
+| Contract | Section                             | Rules                                                  |
+| -------- | ----------------------------------- | ------------------------------------------------------ |
+| CLI-VAL  | `## Triage authorization reference` | BR-0004-0034, BR-0004-0035, BR-0004-0036, BR-0004-0037 |
+
+BR-0004-0038 is a spec rule. No contract states the `QFAI-ASSETS` family; CLI-INIT
+`### Plan provenance and the upgrade record` defines the `process/workflows` layer
+the rule applies the existing checks to.

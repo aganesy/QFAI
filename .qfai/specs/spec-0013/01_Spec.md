@@ -28,15 +28,33 @@
   - Density Review Pass using `QFAI-COV-207` warnings
   - Preflight summary report (`.qfai/report/preflight_summary.md`)
   - Validate gate (`qfai validate --fail-on error`)
-  - discussion-pack markdown readiness gate
   - optional side artifacts are ignored by preflight
   - Phase 0 freeze of root `DESIGN.md` sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml`
   - drop legacy design contracts (`exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, `reference-pool.yaml`, `brand-design.yaml`)
   - emit only `design-system.yaml`, `prototype-handoff.yaml`, `DESIGN.md`, `DESIGN.md.lock.yaml`, and the design-system mirror validator as the active design-contract surface
+  - Stage 1 inside a workflow run: checking a routing-time `CREATE` authorization instead of asking, and the `Authorization-Ref` column of the triage table format (`references/sdd-triage.md`)
+  - Phase 2b defect row seeding (operation `defect-row-seeding`, stage kind `sdd_append`): the diagnosed missing-test TC and ledger row, and the `sdd-phase-checklists.md` downstream-row line for that one case
+  - Orchestrated mode: `references/orchestrated-mode.md` (the entry check, the Operations table, the target binding, Stage 0 reuse), cited by one `SKILL.md` line; standalone invocation ends at SDD
 - Out:
   - Writing production code or runnable tests
   - Skipping phase order or bypassing gates
   - Reintroducing rejected options without re-open approval
+  - The workflow core, the plans and their predicates, the schemas, the authorization record, the staleness judgment when a work order is issued and accepted, and the entry skills (spec-0018)
+  - The shared stage-skill rules: trigger-condition descriptions, the shape of `orchestrated-mode.md`, the entry check and Stage 0 reuse in the operating baseline, and the drift-protocol carve-out (spec-0001)
+  - The validator's checks of `Authorization-Ref` and the one approval set (spec-0004)
+  - Implement's refusal to seed a row, and its two scope-gap lines (spec-0011)
+  - Authoring the acceptance-layer test for a seeded row (spec-0008)
+
+## Applicable Contracts
+
+| Contract   | File                                           | Governs here                                                                                                              |
+| ---------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| CLI-WF     | `.qfai/contracts/cli/qfai-workflow.md`         | `### Work order`, `### Stage result`, `## Authorizations`, `## Ledger row-set check`, `### host:stage-skill-handover`     |
+| CLI-WFFILE | `.qfai/contracts/cli/workflow-files.schema.md` | `## Authorization record`, `### Vocabulary`, `### The Operations table`                                                   |
+| CLI-VAL    | `.qfai/contracts/cli/qfai-validate.md`         | Only the `Authorization-Ref` column and its value form in `## Triage authorization reference`; the checks are spec-0004's |
+
+The CLI contracts declare no `CON-*` ID. `04_Business-Rules.md` names the section
+each rule added on 2026-09-24 is realized by, in `## Contract Realization`.
 
 ## Applicable NFR
 
@@ -52,6 +70,9 @@
 - Policy: Drift Protocol mandatory
 - Discussion-pack preflight is mandatory (stop if missing/incomplete)
 - `10_Plan.md` is How-only SSOT; do not create `specs/plan.md`
+- `_policies/08_Decisions.md` DR-0296: a new capability is approved once, at routing. Stage 1 checks the cited `human_decision` instead of asking; `DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` and `UPDATE:REMOVE` keep the question; `--auto` approves nothing
+- `_policies/08_Decisions.md` DR-0297: a diagnosed missing-test row is appended in Phase 2b with no Change Request, and AC and BR do not change
+- `_policies/11_Slice-Policy.md` decision procedure steps 3 and 4: the in-run `CREATE` approval, and the `Authorization-Ref` and `Approved By` cells of a row it approves
 
 ## Evidence Summary
 
@@ -73,11 +94,7 @@
 - REQ-0011: Required edges -- US -> AC -> BR -> EX -> TC completeness
 - REQ-0012: Validate gate -- `qfai validate --fail-on error --format github` with error=0
 - REQ-0013: Density Review -- `QFAI-COV-207` warnings triaged from specs-coverage reports
-- REQ-0014: Discussion-Pack Markdown Gate — SDD preflight は discussion-pack の必須 markdown readiness を検証し、欠落・未完成時のみブロックする
 - REQ-0015: Optional Side Artifact Neutrality — SDD preflight は optional side artifact の欠落や旧形式の補助 prototyping artifact だけではブロックしない
-- REQ-0016: Exploration-brief normalization — `uiux/30_exploration_brief.md` を `.qfai/contracts/design/exploration-brief.yaml` に正規化する
-- REQ-0017: Evaluation-rubric normalization — `uiux/33_exploration_rubric.md` を `.qfai/contracts/design/evaluation-rubric.yaml` に正規化する
-- REQ-0018: Evaluator-calibration normalization — `uiux/34_evaluator_calibration.md` を `.qfai/contracts/design/evaluator-calibration.yaml` に正規化する
 - REQ-0019: UI contract normalization — `uiux/40_screen_contracts.md` を `.qfai/contracts/ui/*.yaml` に正規化する
 - REQ-0020: Downstream boundary — `/qfai-sdd` 以降の skill は discussion pack を直接読まず、正規化済み specs/contracts を読む
 - REQ-0021: `selected-direction.yaml` と `design-system.yaml` は prototyping でさらに更新され得る downstream design contracts だが、UI-bearing flow では `/qfai-sdd` 完了時点で downstream validate readiness のために存在していなければならない
@@ -88,6 +105,24 @@
 - REQ-0164: `QFAI-AUD-020` `primary_tasks` recommended count band (3..7, DR-0267) is documented in `templates/contracts/ui-spec.yaml` comments and `references/ui-contract-guide.md`; the warning text names the band. `auditProfile.ts` accepts string-only AND structured `{id,label,acceptance}` (all-required, closed schema, DR-0268) items during the deprecation window; string-only continues to PASS.
 - REQ-0117: QFAI-AUD-001 deprecation-window downgrade for slot-less contracts — 現状 QFAI-AUD-001 (visualHierarchy) finding は key-absent (`primary_tasks` slot を持たない legacy contracts) と key-empty (新規 authored だが slot 未充填) を同一 severity=error/tier-1 として扱う。これを 2-stage emission に分割: key-absent → severity=info (informational, non-blocking) を one-minor-release deprecation window 配下で発火、key-empty → severity=error (blocking, intentional violation)。Sunset window は OC-60 と整合 (one minor release; sunset = qfai 1.10.0)。Test surface: TC-0013-0027 sub-case "b" を現行 strict-semantics guard から 2-stage emission に flip する。deferral pointer は `packages/qfai/tests/integration/sddPrimaryTasksLane.test.ts` 内 inline TODO marker に保持。Acceptance signal: key-absent fixture は severity=info / non-blocking finding を emit し `qfai validate --fail-on error` を通過、key-empty fixture は severity=error を emit して fail する。
 
+### discussion-20260923171450572 (2026-09-24)
+
+Pack-qualified, because the local list above already uses `REQ-0013` for a
+different requirement. `Home` is the contract section that realizes the
+requirement and the rules of `04_Business-Rules.md` that state it.
+
+| Requirement                             | Home                                                                                                              |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `discussion-20260923171450572#REQ-0013` | CLI-WF `### Work order`, `### Stage result`; BR-0013-0031                                                         |
+| `discussion-20260923171450572#REQ-0042` | CLI-WF `## Authorizations`; CLI-VAL `## Triage authorization reference`; BR-0013-0022, BR-0013-0023, BR-0013-0024 |
+| `discussion-20260923171450572#REQ-0043` | CLI-VAL `## Triage authorization reference`; CLI-WFFILE `## Authorization record`; BR-0013-0026                   |
+| `discussion-20260923171450572#REQ-0044` | CLI-WF `## Authorizations`; BR-0013-0025                                                                          |
+| `discussion-20260923171450572#REQ-0047` | CLI-WF `## Ledger row-set check`; CLI-WFFILE `### Vocabulary`; BR-0013-0027..BR-0013-0030, BR-0013-0036           |
+| `discussion-20260923171450572#REQ-0051` | CLI-WF `### host:stage-skill-handover`; BR-0013-0033                                                              |
+| `discussion-20260923171450572#REQ-0052` | CLI-WFFILE `### The Operations table`, `### Vocabulary`; BR-0013-0034                                             |
+| `discussion-20260923171450572#REQ-0053` | CLI-WF `### host:stage-skill-handover`; BR-0013-0032                                                              |
+| `discussion-20260923171450572#REQ-0056` | BR-0013-0035                                                                                                      |
+
 ## Consumer View — Second-Wave (v1.9.2) behavior copy-down
 
 - Active discussion pack is resolved through one helper reading `.qfai/state.json#discussion.currentId` (SSOT written by `/qfai-discussion`, spec-0010); never inferred from filesystem mtime. Missing/duplicate `currentId` raises an error naming candidate `discussion-*` dirs and `qfai discussion use <id>`.
@@ -96,7 +131,7 @@
 
 ## Entry points
 
-- US range in this spec: US-0013-0001..US-0013-0014
+- US range in this spec: US-0013-0001..US-0013-0017
 - Primary actors: QFAI user (developer), AI Agent (requirements-analyst, solution-architect, test-design-analyst)
 - Notes: Receives discussion-pack as input; produces spec artifacts and downstream-ready contracts for later execution skills
 

@@ -44,6 +44,9 @@ is why the internal-version-leakage guard has no jurisdiction here.
   `packages/qfai/assets/init/.qfai/assistant/catalog/` so the SSOT mirror gate stays satisfied.
 - Retirement of the repository's own duplicate of the shipped validate workflow, and the fold
   of its full-profile run into the job carrying the required status context.
+- The `windows-parity` job: a `windows-latest` job that runs the control-core suites and the
+  init and migration suites, and the `test:windows-parity` script that holds its suite list
+  (DR-0017-0024).
 
 ### Out
 
@@ -82,6 +85,20 @@ is why the internal-version-leakage guard has no jurisdiction here.
   scanning (NFR-0015, DTC-8, DTC-9).
 - Branch-protection changes, repository-settings changes, version bumps, CHANGELOG release
   headings, tags and publishes (OC-1, OC-4). `OQ-0022` carries the required-context hand-off.
+- The suites the `windows-parity` job runs: the control-core suites are `spec-0018`'s, and the
+  init and migration suites are `spec-0003`'s, including their CRLF fixtures and the space in
+  each fixture root.
+- The guard that keeps the release-gate evaluation runner out of every workflow — `spec-0018`.
+
+## Applicable Contracts
+
+| Contract  | File                                       | Governs here                                                                                                       |
+| --------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| CLI-WFSET | `.qfai/contracts/cli/shipped-workflows.md` | The shipped tree this spec's hygiene lane scans, as `04_Business-Rules.md` § `Reference Column Conventions` states |
+| CLI-INIT  | `.qfai/contracts/cli/qfai-init.md`         | Only `### Windows parity`, the sentence that names the `windows-latest` job                                        |
+
+The CLI contracts declare no `CON-*` ID. `04_Business-Rules.md` names the section that realizes
+each rule added on 2026-09-24 in `## Contract Realization`.
 
 ## Applicable NFR
 
@@ -122,6 +139,16 @@ shipped half of NFR-0012, belong to `spec-0003`.
   pull request; none is placed in the release-only gate aggregate (DTC-18).
 - NFR-0015: The layer vocabulary does not grow — the layer-vocabulary warning count is unchanged
   and the built-in layer token set is untouched after every change.
+
+The numbers above are those of `discussion-20260804173914356`. One requirement of
+`discussion-20260923171450572` is written with its pack half, because the same number means
+something else in the list above:
+
+- `discussion-20260923171450572#NFR-0011`, own-CI half: the control-core suites and the init
+  and migration suites run on `windows-latest` on every code-path pull request, and the
+  aggregate verdict fails when they fail. The property itself is held by those suites (their
+  owners are named under `### Out`); this spec holds the job that runs them: BR-0017-0070,
+  BR-0017-0071, BR-0017-0072 and BR-0017-0073.
 
 ## Applicable Policy
 
@@ -302,9 +329,19 @@ this spec owns the own-CI half only.
 Upstream `REQ-0014..0022` and `REQ-0024` are **not** owned here. The CHG-007 Triage Table
 allocates them to `spec-0003`, `spec-0006` and `spec-0008`; see `## Scope` → `### Out`.
 
+### discussion-20260923171450572 (2026-09-24)
+
+The requirement of this spec's row in `## Triage (2026-09-24 intent-driven entry)` of
+`09_delta.md`. It is written with its pack half and gets no spec-local number.
+
+| Requirement                             | Home                                                                                  |
+| --------------------------------------- | ------------------------------------------------------------------------------------- |
+| `discussion-20260923171450572#NFR-0011` | CLI-INIT `### Windows parity`; BR-0017-0070, BR-0017-0071, BR-0017-0072, BR-0017-0073 |
+
 ## Entry points
 
-- US range in this spec: US-0017-0001..US-0017-0009
+- US range in this spec: US-0017-0001..US-0017-0009 and US-0017-0016. `US-0017-0010..0015` are
+  not used: a retired spec that once held this number cites them in `spec-0012/09_delta.md`.
 - Primary actors: QFAI maintainer, release engineer, contributor opening a pull request,
   QFAI's own CI runner
 - Notes: user stories map from discussion `DUS-001`, `DUS-005` and `DUS-006`. `US-0017-0009`

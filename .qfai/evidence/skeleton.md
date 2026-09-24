@@ -43,3 +43,20 @@ entrypoints; this repository has one.
   and whether it writes it correctly, belongs to `US-0003-0001`'s own test
   cases; asserting it here would be the predicate the phase forbids.
 - Skeleton cycles: 1 of 3
+
+### Re-run for the current implementation invocation
+
+- Revision: `ccca63a7ad553c8eb4bbd4da38f52d2d74189cdd` (HEAD at the run).
+- Runtime: Node.js `v24.18.0`.
+- Skeleton command: `node scripts/smoke-qfai-cli.mjs`
+- Skeleton script: `scripts/smoke-qfai-cli.mjs@82f30997dc88e617531e5f59f86fd8b7c1793a134564853019366e590a639c1d`
+  (SHA-256 rechecked before the run; unchanged from the previous record).
+- Skeleton result:
+
+  ```text
+  $ node scripts/smoke-qfai-cli.mjs
+  smoke-qfai-cli: qfai -> US-0003-0001 reached; the dry run planned 325 path(s)
+  exit=0
+  ```
+
+- Skeleton gatekeeper: PASS — an independent `qa-gatekeeper` re-ran the command with exit 0, matched the recorded script digest, and confirmed the stdio response identifies the initialization surface.

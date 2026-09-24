@@ -35,11 +35,27 @@
   - workflow-hygiene CI lane (CHG-007): a repository script wired into `pnpm ci:lint`, emitting `R-WORKFLOW-HYGIENE-DRIFT` / `R-SHIPPED-WORKFLOW-SHAPE-DRIFT`. Recorded here because this spec owns the `pnpm ci:lint` lane inventory; the lane's own rule set is owned by spec-0017 (`CAP-0017`) and its shipped-file targets by spec-0003. No validator and no finding code is added to `qfai validate` itself — same posture as the pack-location lane below.
   - pack-location CI lane (REQ-0167): `packages/qfai/scripts/check-pack-locations.mjs` wired into `pnpm ci:lint`, emits `R-PACK-LOCATION-DRIFT` (DR-0274 scope)
   - tracked-scratch CI lane: `scripts/check-tracked-scratch.mjs` wired into `pnpm ci:lint`, failing when git tracks any path under the scratch directory. Recorded here because this spec owns the `pnpm ci:lint` lane inventory; the script is a root toolchain file and belongs to spec-0017. No validator and no finding code is added to `qfai validate` itself — same posture as the two lanes above
+  - triage authorization reference: the triage approval check reads the one approval set `requiresApproval()` defines, and a row citing a workflow authorization in `Authorization-Ref` is checked against the record it names (`QFAI-TRIAGE-011`)
+  - governed-layer provenance for the installed plans under `.qfai/assistant/process/workflows/`, which the existing `QFAI-ASSETS-*` checks read as they read every other governed layer
 - Out:
   - report rendering details
   - prototyping runtime execution
   - deleted prototyping recommendation validator surface
   - legacy compatibility namespaces removed from package surface
+  - the `Authorization-Ref` column in the triage table format, and the `/qfai-sdd` Stage 1 check that writes it (spec-0013)
+  - the provenance lock's key for a two-segment layer, and the helper that maps a path to its governed layer (spec-0003)
+  - the workflow run, the authorization record, the staleness judgment while a run proceeds, the `workflow.mode` config issue and the refusals of `npx qfai workflow` (spec-0018)
+
+## Applicable Contracts
+
+| Contract   | File                                           | Governs here                                                                                                                       |
+| ---------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| CLI-VAL    | `.qfai/contracts/cli/qfai-validate.md`         | `## Triage authorization reference`: the one approval set, the column, the checks behind `QFAI-TRIAGE-011` and what is not checked |
+| CLI-INIT   | `.qfai/contracts/cli/qfai-init.md`             | `### Plan provenance and the upgrade record`: `process/workflows` is a governed layer. It states no finding                        |
+| CLI-WFFILE | `.qfai/contracts/cli/workflow-files.schema.md` | `## Authorization record` and the `summary.json` `targetBindings` of `## Tracked tree`: what the checks read                       |
+
+The CLI contracts declare no `CON-*` ID. `04_Business-Rules.md` names the section
+each rule added on 2026-09-24 is realized by, in `## Contract Realization`.
 
 ## Applicable NFR
 
@@ -47,11 +63,13 @@
 - NFR-0002: Same input yields same validate result
 - NFR-0003: Non-UI packs do not over-fire UI-bearing validators
 - NFR-0004: Actionable issues include concrete file/rule guidance
+- `discussion-20260923171450572#NFR-0017`: the `QFAI-TRIAGE-011` message is English. Held by the existing message-language guard, `packages/qfai/tests/unit/cliMessageLanguage.test.ts`; no rule here
 
 ## Applicable Policy
 
 - Policy: validate is the mechanical truth gate
 - Policy: new UI validators must stay deterministic
+- `_policies/08_Decisions.md` DR-0296: a new capability is approved once, at routing. The validator resolves the record a triage row cites and does not judge its staleness
 
 ## Evidence Summary
 
@@ -109,12 +127,24 @@
 - REQ-0167: `packages/qfai/scripts/check-pack-locations.mjs` (DR-0274 staged/changed-dir scope) integrated into `pnpm ci:lint`; rejects misplaced `review-*/` / `discussion-*/` dirs with `R-PACK-LOCATION-DRIFT` referencing `.agents/rules/root-additions-policy.md`
 - REQ-0150: lint-shipping ID-class guard expansion — `packages/qfai/scripts/lint-shipping.ts` の `src-comment` ルールセットを拡張し、`REQ-NNNN` / `REQ-NNNN-NNNN` / `AC-NNNN-NNNN` / `TC-NNNN-NNNN` / `US-NNNN-NNNN` / `BR-NNNN-NNNN` の composite ID class を `src/**/*.ts` のコメント行で catch する (現状は確立済みの forbidden class のみ scan)。CHG-005 cycle で spec-0006 doctor.ts にこれら ID が leak し、manual implementation-reviewer audit のみで検出された defect を automation 化する。layer-2 post-build guard (`packages/qfai/scripts/check-no-internal-version-leakage.sh`) と SSOT-sync invariant に従い同一の regex 集合をミラーする。Acceptance signal: `pnpm ci:lint` 実行時に `REQ-0001-0001` などの composite ID class を含む新規コメント行を含む変更が exit 1 で fail する。
 
+### discussion-20260923171450572 (2026-09-24)
+
+Pack-qualified, because the local list above already uses `REQ-0043` for a
+different requirement. `Home` is the contract section that realizes the
+requirement and the rules of `04_Business-Rules.md` that state it.
+
+| Requirement                             | Home                                                                                  |
+| --------------------------------------- | ------------------------------------------------------------------------------------- |
+| `discussion-20260923171450572#REQ-0043` | CLI-VAL `## Triage authorization reference`; BR-0004-0034..BR-0004-0037               |
+| `discussion-20260923171450572#REQ-0057` | CLI-INIT `### Plan provenance and the upgrade record` defines the layer; BR-0004-0038 |
+| `discussion-20260923171450572#REQ-0065` | CLI-INIT `### Plan provenance and the upgrade record` defines the layer; BR-0004-0038 |
+
 ## Entry points
 
-- US range in this spec: US-0004-0001..US-0004-0039
-- AC range: AC-0004-0001..AC-0004-0039
-- BR range: BR-0004-0001..BR-0004-0033
-- EX range: EX-0004-0001..EX-0004-0041
-- TC range: TC-0004-0001..TC-0004-0073
+- US range in this spec: US-0004-0001..US-0004-0040
+- AC range: AC-0004-0001..AC-0004-0044
+- BR range: BR-0004-0001..BR-0004-0038
+- EX range: EX-0004-0001..EX-0004-0055
+- TC range: TC-0004-0001..TC-0004-0083
 - Primary actors: QA engineer, AI agent, CI pipeline
 - Notes: validate is the machine gate for current skill-first, contract-first downstream

@@ -132,6 +132,29 @@ because the setup dedup is what changes its arithmetic.
   provides no local binary. That inverts the dogfooding, so the fold into `build` is the only
   option that exercises the change under review.
 
+### Intent-driven entry (CAP-0018)
+
+This change introduces no architectural element. The job and its script are one
+lane and its command. They serve NFR-0011 of
+`discussion-20260923171450572`.
+
+Units and work. The order across the batch is spec-0018 `10_Plan.md` `### Implementation order`. Everything here is **U5**. It lands after U1 and U4,
+once every suite entry resolves (BR-0017-0073), and does not wait for U6:
+
+- In `.github/workflows/ci.yml`, a `windows-parity` job:
+  - it needs `detect` with the `test` job's condition, and is listed in
+    `ci-pass`'s `needs` (BR-0017-0071);
+  - `permissions: contents: read`, SHA pins and the shared setup action;
+  - an in-job build (BR-0017-0072), and `TEMP` and `TMP` under a path with a
+    space;
+  - a `SHIPPED-CI: not-applicable` marker.
+- `test:windows-parity` in `packages/qfai/package.json`, listing exactly the
+  declared suites (BR-0017-0070).
+- The job's entry in the expected-context declaration.
+
+Left out: the eval runner and its no-workflow guard (spec-0018); any change to
+the required status check (OC-73).
+
 ## Test approach
 
 - **What is proven where.** The hygiene script, the verdict logic and the workspace knob set are
@@ -168,6 +191,89 @@ because the setup dedup is what changes its arithmetic.
   figure and one a minute away from it are the two outcomes the comparison decides between, and a
   case that meets only the first proves the rule reads the field rather than that it refuses
   anything.
+
+### Intent-driven entry (CAP-0018)
+
+Levels follow `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
+
+**Layers.**
+
+| Layer       | What it proves                                                                                                                                                              | Where                                                                  |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| integration | TC-0017-0093..0099 over the parsed `ci.yml` and `test:windows-parity` script: the suite list and its resolution, the temp root, detection and the verdict, the in-job build | `packages/qfai/tests/integration/windowsParity/`, one module per BR    |
+| E2E         | US-0017-0016, one annotated describe                                                                                                                                        | a new file, `packages/qfai/tests/e2e/spec0017WindowsParityE2E.test.ts` |
+
+These cases read the workflow tree and the package script. What the job did at run time is
+not a row: the trial run's per-suite counts and timings are delivery evidence, recorded with
+DR-0017-0024.
+
+**Modules, one per BR.**
+
+| Module under `tests/integration/windowsParity/` | BR           | Cases                      |
+| ----------------------------------------------- | ------------ | -------------------------- |
+| `suiteList.test.ts`                             | BR-0017-0070 | TC-0017-0093, TC-0017-0095 |
+| `selectionAndVerdict.test.ts`                   | BR-0017-0071 | TC-0017-0096, TC-0017-0097 |
+| `inJobBuild.test.ts`                            | BR-0017-0072 | TC-0017-0098, TC-0017-0099 |
+| `suitesLandFirst.test.ts`                       | BR-0017-0073 | TC-0017-0094               |
+
+**Cases that stand alone.**
+
+- **The suite list is compared both ways** (TC-0017-0093), so an extra suite fails as a
+  missing one does.
+- **Each list entry resolves to a collected test file** (TC-0017-0094). vitest stays green
+  when one of several filters matches nothing, so without this case a renamed directory
+  shrinks the suite silently.
+- **The kept failure** is TC-0017-0097: the real `ci-pass` body, run over a needs map in
+  which only the Windows job failed, exits 1. It is integration, not unit, because its oracle
+  needs the job's real name and the real body. A unit row could never be taken RED, since the
+  verdict already fails on any failing need.
+- Each of the three criteria keeps this file's rule of one `normal` row and one `error` or
+  `boundary` row.
+
+**What existing guards hold.** No case here repeats them:
+
+- the permission block, `timeout-minutes`, `persist-credentials: false` and SHA pins: the
+  hygiene lane;
+- the shared setup action and the expected-context declaration: the topology tests;
+- the documentation-only and code-path cost pins and the check-name inventory: their existing
+  rows, re-pinned in the change that adds the job;
+- the `SHIPPED-CI: not-applicable` marker: the parity guard in `ci:lint`, which reads the
+  pull request's diff;
+- no workflow naming the routing-eval runner: spec-0018's guard.
+
+**Order.** The job is unit U5 of spec-0018 `10_Plan.md`. It runs once tier 1 and spec-0003's
+init suite are green, per `### Order in which the rows go green` there, and does not wait for
+the journeys. It lands only in the change where every suite entry has a test file:
+`tests/unit/workflow/` and `tests/integration/workflow/` (spec-0018), and
+`tests/integration/init/` (spec-0003). Landing it earlier fails TC-0017-0094 by design
+(BR-0017-0073). The E2E journey lands with the job.
+
+**Windows parity, as the job runs it.**
+
+- The job builds `packages/qfai` itself, so the suites that spawn the built CLI see a `dist/`
+  made on Windows.
+- Links a case needs are made at run time in its temp root. No tracked link is on the suite
+  list, so the checkout needs no `core.symlinks` step.
+- The temp root comes from the environment: the job points `TEMP` and `TMP` at a directory
+  whose name contains a space (TC-0017-0095), and every case reads it through `os.tmpdir()`.
+- A case that is red on the trial run is classed as platform-inapplicable, a parity defect or
+  a test defect, and none leaves the list.
+
+**Tier.** The seven Integration rows carry `Tier` `T2`. They parse `ci.yml` and a package
+script, which is CI infrastructure, and the Phase 2b seeding rule raises a row that touches
+infrastructure to `T2`. The older rows of this ledger keep the tier they were seeded with.
+
+**Findings carried on purpose.**
+
+| Finding                                                                                                           | Why it is expected                                                                                                                                                                              | Until                                                                                                           |
+| ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `QFAI-ATDD-111` for US-0017-0016                                                                                  | The journey file does not exist yet                                                                                                                                                             | The job and its journey land                                                                                    |
+| `QFAI-ATDD-112` for TC-0017-0093..0099                                                                            | The integration tests do not exist yet                                                                                                                                                          | ATDD writes them                                                                                                |
+| `QFAI-TRACE-001` × 3: BR-0017-0068 and BR-0017-0069 on `release.yml`, and BR-0017-0069 on the root `package.json` | This spec's `03` and `04` changed and those files did not. The user accepted them as known (Y1 = A). CI never reports them: the `build` job has no `origin/main`, so the check is skipped there | A change that narrows the check to changed BRs. Revisit if the count differs, or if `build` gains `origin/main` |
+| The `tdd` pin of 140 errors on `tdd/test-list.md`                                                                 | Pre-existing; this change appends rows and repairs none                                                                                                                                         | A later change that repairs them                                                                                |
+
+Each push to the batch's draft pull request lists these in the batch evidence, and its CI
+log is read against that list.
 
 ## NFR approach
 
@@ -209,16 +315,39 @@ because the setup dedup is what changes its arithmetic.
   spells the same boolean quoted in some files and unquoted in others, so nothing is copied
   verbatim; every new YAML file is written to this repository's formatter output.
 
+### Intent-driven entry (CAP-0018)
+
+- **`discussion-20260923171450572#NFR-0011`, own-CI half: the control-core suites and the init and
+  migration suites run on Windows on every code-path pull request.** Met by the `windows-parity`
+  job, which runs the `test:windows-parity` list under a temp root with a space and builds the
+  package on its own runner (BR-0017-0070..0072). Breach: a red `windows-parity`, read on `ci-pass`
+  because the job gates no merge (the risk row below). The trial run's per-suite counts and
+  timings, recorded in DR-0017-0024, are the baseline a later run is compared with.
+- **NFR-0001 and NFR-0002 for the added job.** A documentation-only pull request skips the job, so
+  its executed-instance floor is unchanged. The code-path pin moves and is re-pinned in the same
+  change, with before-and-after numbers in DR-0017-0024 (BR-0017-0030, BR-0017-0067). Breach: the
+  committed code-path pin disagreeing with what the workflow tree recomputes.
+- **NFR-0007 and NFR-0012 for the added job.** Met by the existing hygiene lane: the job carries a
+  permission block, a timeout, SHA pins and `persist-credentials: false`. Breach: the hygiene lane
+  exiting 1 on the job.
+
 ## Risk mitigation
 
-| Risk                                                                                                                                                      | Likelihood / impact | Mitigation                                                                                                                                                                                 | Trigger to act                                                                                                                              |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `build` survives by name while pack verification and the publish dry run move out of it, leaving the only required status check green over almost nothing | med / high          | BR-0017-0032 and BR-0017-0033 make the enumerated verification set, not the name, the obligation; the declaration check (BR-0017-0043) asserts it from a pull request                      | A diff that moves any step out of the `build` job, or that adds a condition to `build` or to anything it depends on                         |
-| The hygiene lane merges before the tree it asserts is hardened, so it lands instantly red and gets weakened to land                                       | med / high          | DR-0017-0005 edge 2 makes the order a review rejection; the preference order is satisfy the guard, then adjust the convention, then narrow — never weaken to merge                         | A pull request that adds a hygiene rule and a rule exemption in the same diff                                                               |
-| Step 4 stalls because pinning the Node version wants a new root-level file that no agent may create                                                       | high / low          | The plan proceeds on `package.json#engines.node`, which needs no approval, and records the root file as the approval-gated alternative with its exact semantic difference                  | The resolved Node version drifting off `20.19` in a run log, which is the observable cost of the no-approval option                         |
-| More workers surface real filesystem races against temporary trees and the spawned binary, and there is no retry to hide them                             | high / med          | One project per pull request, largest first, three consecutive green verdicts before merge, and zero retry settings so the race is visible rather than masked                              | A second non-deterministic failure in the same project within one tuning pull request — stop tuning that project and record the measurement |
-| A later contributor "restores" the source repository's one-workflow-file-per-layer topology                                                               | med / med           | BR-0017-0035 states the narrowing as a rule with its reason, and the reason is recorded as the current one (every check name is an unconfigurable settings surface), not the withdrawn one | A new file appearing under `.github/workflows/` in a layer-separation diff                                                                  |
-| A ledger row is promoted before its file exists, turning every later acceptance-criteria edit into a `QFAI-TRACE-001` error                               | med / med           | DR-0017-0006's promotion rule plus the `State today` column above, so the two files cannot disagree about which paths exist                                                                | `QFAI-TRACE-001` naming a path this plan marks `to be created`                                                                              |
-| The composite action is authored under the shipped asset tree by reflex, making `pnpm verify:pack` throw                                                  | low / high          | BR-0017-0028 states the exclusion; `verify-pack.mjs` allow-lists only `workflows` under the shipped `.github/` and throws on any other child                                               | `pnpm verify:pack` failing with an unexpected shipped `.github/` child                                                                      |
-| SHA pins go stale because no automated bump lane exists                                                                                                   | high / low          | DR-0017-0003 names the owner and binds the obligation to release preparation, which is the one recurring moment the branch-name version pin makes structurally observable                  | A pinned SHA more than one upstream minor behind at a release-preparation pass                                                              |
-| The documentation-only exclusion list drifts as directories are added, so cost creeps back                                                                | med / low           | BR-0017-0009 keeps the recognized-directory list closed and fails open, so drift costs runner minutes and never correctness                                                                | The hygiene lane reporting the committed documentation-only pin and its recomputation disagreeing, in the executing job list or in the sum  |
+| Risk                                                                                                                                                      | Likelihood / impact | Mitigation                                                                                                                                                                                                                 | Trigger to act                                                                                                                              |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `build` survives by name while pack verification and the publish dry run move out of it, leaving the only required status check green over almost nothing | med / high          | BR-0017-0032 and BR-0017-0033 make the enumerated verification set, not the name, the obligation; the declaration check (BR-0017-0043) asserts it from a pull request                                                      | A diff that moves any step out of the `build` job, or that adds a condition to `build` or to anything it depends on                         |
+| The hygiene lane merges before the tree it asserts is hardened, so it lands instantly red and gets weakened to land                                       | med / high          | DR-0017-0005 edge 2 makes the order a review rejection; the preference order is satisfy the guard, then adjust the convention, then narrow — never weaken to merge                                                         | A pull request that adds a hygiene rule and a rule exemption in the same diff                                                               |
+| Step 4 stalls because pinning the Node version wants a new root-level file that no agent may create                                                       | high / low          | The plan proceeds on `package.json#engines.node`, which needs no approval, and records the root file as the approval-gated alternative with its exact semantic difference                                                  | The resolved Node version drifting off `20.19` in a run log, which is the observable cost of the no-approval option                         |
+| More workers surface real filesystem races against temporary trees and the spawned binary, and there is no retry to hide them                             | high / med          | One project per pull request, largest first, three consecutive green verdicts before merge, and zero retry settings so the race is visible rather than masked                                                              | A second non-deterministic failure in the same project within one tuning pull request — stop tuning that project and record the measurement |
+| A later contributor "restores" the source repository's one-workflow-file-per-layer topology                                                               | med / med           | BR-0017-0035 states the narrowing as a rule with its reason, and the reason is recorded as the current one (every check name is an unconfigurable settings surface), not the withdrawn one                                 | A new file appearing under `.github/workflows/` in a layer-separation diff                                                                  |
+| A ledger row is promoted before its file exists, turning every later acceptance-criteria edit into a `QFAI-TRACE-001` error                               | med / med           | DR-0017-0006's promotion rule plus the `State today` column above, so the two files cannot disagree about which paths exist                                                                                                | `QFAI-TRACE-001` naming a path this plan marks `to be created`                                                                              |
+| The composite action is authored under the shipped asset tree by reflex, making `pnpm verify:pack` throw                                                  | low / high          | BR-0017-0028 states the exclusion; `verify-pack.mjs` allow-lists only `workflows` under the shipped `.github/` and throws on any other child                                                                               | `pnpm verify:pack` failing with an unexpected shipped `.github/` child                                                                      |
+| SHA pins go stale because no automated bump lane exists                                                                                                   | high / low          | DR-0017-0003 names the owner and binds the obligation to release preparation, which is the one recurring moment the branch-name version pin makes structurally observable                                                  | A pinned SHA more than one upstream minor behind at a release-preparation pass                                                              |
+| The documentation-only exclusion list drifts as directories are added, so cost creeps back                                                                | med / low           | BR-0017-0009 keeps the recognized-directory list closed and fails open, so drift costs runner minutes and never correctness                                                                                                | The hygiene lane reporting the committed documentation-only pin and its recomputation disagreeing, in the executing job list or in the sum  |
+| A Windows regression merges, because `windows-parity` gates no merge while the only required status check is `build` (OC-73)                              | med / high          | `ci-pass` turns red on the pull request that causes it (DR-0017-0024); moving the required context to `ci-pass` is OQ-0017-0002, a repository setting no agent changes                                                     | A red `windows-parity` on the default branch, or OQ-0017-0002 still open at the release that claims Windows parity                          |
+| `QFAI-TRACE-001` fires locally on this spec's three ledger rows (`release.yml` twice, the root `package.json`) at the implement and verify gates          | high / low          | Accepted and recorded as known, by the user's answer on 2026-09-24; a follow-up asks to narrow the check to rows whose BR or AC changed. CI's dogfood lanes cannot run the check, because `build` fetches no `origin/main` | The count differs from three, or CI's `build` job gains `origin/main`, which turns the three into CI errors                                 |
+
+### Intent-driven entry (CAP-0018)
+
+- The last two rows of the table above are this entry's.
+- spec-0014 carries the other four `QFAI-TRACE-001` rows of the same decision.

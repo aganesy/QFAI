@@ -73,3 +73,88 @@
 - Out-of-scope (this spec): 旧 layout の deprecation 受理は spec-0004 が記述。`assistantPaths.ts` SSOT module は spec-0003 / spec-0004 が記述
 - Implementation-phase 詳細 US/AC/BR/EX/TC は次回の per-spec SDD pass で append される
 - Source: REQ-0001
+
+## Triage (2026-09-24 intent-driven entry)
+
+Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` and the policy rows are in `_policies/10_delta.md` under the same heading. None of the rows below needs approval. `REQ-0033` in `Depends-On` stands for the `CREATE` row: the row cites items `spec-0018` defines, so it waits until that spec has them.
+
+| Source                                 | Subject                                                                                                                                                                                                     | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                                                                                                                                      | Depends-On        |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| REQ-0001, REQ-0049                     | The skill catalog gains `qfai-run` and `qfai-maintain`                                                                                                                                                      | spec-0001     | UPDATE    | MODIFY | -           | AC-0001-0010 and BR-0001-0020 enumerate the catalog, and the enumeration changes with two more skills. No other catalog entry changes in this row                                                                                                                                                                                                              | REQ-0033          |
+| REQ-0006                               | The skill order gains the entry above the stage skills, and the built-in route plans                                                                                                                        | spec-0001     | UPDATE    | MODIFY | -           | AC-0001-0011 and BR-0001-0021 fix one stage order. Each route plan selects part of it, so the rule has to say that the order holds within a plan and that `qfai-run` sits above it                                                                                                                                                                             | REQ-0033, OQ-0009 |
+| REQ-0050, REQ-0051, REQ-0052, REQ-0053 | Shared contract for stage skills: descriptions as trigger conditions, an entry check that hands over to `qfai-run`, one `references/orchestrated-mode.md` cited by one line, and standalone invocation kept | spec-0001     | UPDATE    | APPEND | -           | spec-0001 owns the skill orchestration contract every skill shares. OQ-0015 and OQ-0016 were settled as A: the skills a built-in plan dispatches (`qfai-sdd`, `qfai-atdd`, `qfai-implement`, `qfai-verify`, `qfai-discussion`, `qfai-prototyping`), plus `qfai-maintain` for the description rewrite. Each skill spec carries its own behaviour in its own row | REQ-0033          |
+| REQ-0056                               | Inside an active run, Stage 0 validates and reuses the shared snapshot and refreshes only what changed                                                                                                      | spec-0001     | UPDATE    | MODIFY | -           | AC-0001-0012 and BR-0001-0023 make Stage 0 mandatory at every skill start. Inside a run a validated shared snapshot satisfies it. Outside a run it is unchanged, and stage-specific checks are never served from the cache                                                                                                                                     | REQ-0033          |
+| REQ-0057                               | The constitution and `workflow.md` state request authority and orchestrated binding, and that routes are orthogonal to change types                                                                         | spec-0001     | UPDATE    | APPEND | -           | Steering & Governance belongs to this spec. BR-0001-0024 (the articles are non-negotiable) is unchanged: the new text adds statements and excepts no article                                                                                                                                                                                                   | REQ-0033, OQ-0008 |
+| REQ-0046, REQ-0047                     | Drift protocol: a spec-unchanged bugfix raises no Change Request, and a diagnosed missing-test row is appended without one                                                                                  | spec-0001     | UPDATE    | MODIFY | -           | BR-0001-0018 sends every upstream change through a Change Request, and BR-0001-0019 lists the only exception. D13 adds a second exception for the Phase 2b append, which leaves AC and BR untouched. REQ-0046 forbids a Change Request that states a change which did not happen. The five steps for real drift stand                                          | REQ-0033, OQ-0009 |
+
+## 2026-09-24 — Intent-driven entry: change summary
+
+- Modified in place, IDs kept, no `Source` added: AC-0001-0010 and BR-0001-0020
+  (the catalog gains `qfai-run` and `qfai-maintain`; the count is dropped),
+  AC-0001-0011 and BR-0001-0021 (the order holds within each built-in plan, and
+  `qfai-run` sits above it), AC-0001-0012 and BR-0001-0023 (Stage 0 reuse inside
+  a run), BR-0001-0019 (three drift exceptions). BR-0001-0018 and AC-0001-0009
+  stand.
+- Appended: US-0001-0010; AC-0001-0013..0019; BR-0001-0025..0031; the
+  `## Contract Realization` table in `04_Business-Rules.md`.
+- Resolved pack questions this entry waited on:
+  - `discussion-20260923171450572#OQ-0008`, settled by CLI-WF `## Authorizations`;
+  - `discussion-20260923171450572#OQ-0009`, settled by CLI-WFFILE `### Vocabulary`
+    and DR-0297.
+- Not changed by this entry: the other catalog entries of AC-0001-0010 and
+  BR-0001-0020, including the deprecated `tdd-*` skills, and US-0001-0008. The
+  triage row bounds the edit to the two added skills.
+- Reserved IDs: US-0001-0011..0014 name stories of the former spec-0001 in
+  `spec-0003/09_delta.md`, so the next new story here is US-0001-0015. New test
+  cases stay below TC-0001-0050, because a test fixture carries
+  `QFAI:SPEC-0001:TC-0001-0050`, `-0051`, `-0100` and `-0101` as strings.
+- Size: AC 12 → 19, under the threshold.
+
+## Decision Log
+
+### DL-0001
+
+#### Meta
+
+```yaml
+id: DL-0001
+date: 2026-09-24
+primary: Behavior
+tags: ["@docs", "@test"]
+compat: Improvement
+scope:
+  - spec-0001
+  - assistant/constitution/shared-skill-operating-baseline.md
+  - assistant/skills/*/SKILL.md
+notes: The stage-skill rules name their skill set as every skill a built-in plan names (DR-0001-0010).
+```
+
+#### Migration / Follow-ups
+
+- `qfai-maintain` is in the set. Its description and `orchestrated-mode.md` are
+  authored under spec-0018.
+
+#### Rejected
+
+- option: The six-skill list typed at triage
+  reason: The workflow file contract requires every skill a plan names to declare its operations, and the `direct` plan names `qfai-maintain`.
+  do_not: Type the skill list into a business rule.
+  temptation: A literal list reads as more precise.
+
+#### Verification
+
+- The test case for BR-0001-0028 holds the literal skill set.
+
+## 2026-09-24 — Phase 2c.1 obligation amendment
+
+- BR-0001-0019 is reworded, ID kept. The rule no longer counts the exceptions. It
+  says the drift protocol's minimal whitelist keeps every exception it lists and
+  gains the two bugfix exceptions (DR-0297). The whitelist itself is not copied
+  into this spec.
+
+## Change Requests
+
+| CR ID            | Upstream artifact                                                                      | Mode      | Approved by | Applied at           |
+| ---------------- | -------------------------------------------------------------------------------------- | --------- | ----------- | -------------------- |
+| CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-24T18:26:35Z |
+| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-24T19:00:08Z |

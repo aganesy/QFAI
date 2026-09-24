@@ -18,6 +18,7 @@
 - US-0004-0037: `qfai validate --profile saas-package` to PASS when the prototyping-profile validate PASSes, a DCON-005 design…
 - US-0004-0038: `auditProfile.ts` to accept both the legacy string-only `primary_tasks` form and the structured `{id, label, a…
 - US-0004-0039: a `check-pack-locations.mjs` CI lane wired into `pnpm ci:lint` to reject `review-*/` or `discussion-*/` direct…
+- US-0004-0040: Validate resolves a triage row's workflow authorization
 
 ## US-0004-0001
 
@@ -82,3 +83,16 @@ As a UI-contract author, I want `auditProfile.ts` to accept both the legacy stri
 ## US-0004-0039
 
 As a contributor opening a PR, I want a `check-pack-locations.mjs` CI lane wired into `pnpm ci:lint` to reject `review-*/` or `discussion-*/` directories introduced outside the allowed roots (`tmp/`, `.qfai/review/<ts>/`, `.qfai/discussion/<ts>/`), emitting `R-PACK-LOCATION-DRIFT` that references `.agents/rules/root-additions-policy.md` and proposes the correct path, so that the textual root-additions rule becomes structural enforcement (REQ-0167).
+
+## US-0004-0040: Validate resolves a triage row's workflow authorization
+
+- Parent: CAP-0004
+- Source: discussion-20260923171450572#REQ-0043
+- Goal: As a maintainer, I want `qfai validate` to check a triage row that cites a
+  workflow authorization against the record it names, and to decide which rows
+  need approval from the one set the triage code defines, so that an approval
+  recorded during a run is verifiable from a fresh clone and the two approval
+  sets cannot drift apart.
+- Non-goals: judging whether the record went stale after its run; writing the
+  column or the record.
+- Notes: no pack story holds this requirement, so `Source` cites it directly.

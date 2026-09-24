@@ -241,3 +241,82 @@ Companion rows live in the named spec's own delta; none of them is authored here
   clears both ATDD gates from that directory today. The remaining `QFAI-ATDD-111` / `112` findings are
   ordinary later-stage annotation work dischargeable from those ledgers. `OQ-0017-0006` is `resolved`;
   no owner and no due date remain, and no user decision is outstanding.
+
+## Triage (2026-09-24 intent-driven entry)
+
+Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` and the policy rows are in `_policies/10_delta.md` under the same heading. None of the rows below needs approval. `REQ-0033` in `Depends-On` stands for the `CREATE` row: the row cites items `spec-0018` defines, so it waits until that spec has them.
+
+D4 named seven specs for Change Requests, and this spec is not one of them. The user added it on 2026-09-24 by answering `OQ-0012` with A: a `windows-latest` job limited to the control-core and init and migration suites.
+
+| Source   | Subject                                                                      | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                           | Depends-On |
+| -------- | ---------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| NFR-0011 | A `windows-latest` CI job for the control-core and init and migration suites | spec-0017     | UPDATE    | APPEND | -           | spec-0017 owns the job topology of `.github/workflows/**`, and the job needs a `SHIPPED-CI:` disposition. Size signal: AC 36 and TC 92 are over both thresholds. spec-0017 owns only CAP-0017, so there is no split | REQ-0033   |
+
+## 2026-09-24 — Intent-driven entry: change summary
+
+- Change ID: DELTA-0002
+- Date: 2026-09-24
+- Primary: Ops
+- Tags: @test
+- Summary: the one row of `## Triage (2026-09-24 intent-driven entry)` applied. A
+  `windows-parity` job on `windows-latest` runs the control-core suites and the init and
+  migration suites through the `test:windows-parity` script, is selected like the other test
+  lanes, and joins the aggregate verdict.
+- Appended: US-0017-0016; AC-0017-0037..0039; BR-0017-0070..0073; DR-0017-0024. Modified:
+  none. `US-0017-0010..0015` are skipped because `spec-0012/09_delta.md` cites them for a retired
+  spec that once held this number.
+- Resolved pack question: `discussion-20260923171450572#OQ-0012` (how Windows parity is
+  verified), answered A by the user on 2026-09-24 and recorded in DR-0017-0024. OQ-0017-0002 is
+  unchanged; the job's merge gating waits on it.
+- `SHIPPED-CI:` disposition: `not-applicable`, on the lines the change adds at the new job in
+  `.github/workflows/ci.yml`. The shipped test lanes run the adopter's own scripts on the runner
+  the adopter names, so the shipped set has no QFAI suite or fixed platform to add. The
+  `test:windows-parity` script is in `packages/qfai/package.json`, which the parity guard does not
+  watch, so `.github/shipped-ci-dispositions.md` gets no entry.
+- Known finding, by the user's decision: once committed, this change to `03` and `04` makes
+  `QFAI-TRACE-001` report the three first-table rows of `16_Traceability-ledger.md` whose files
+  it does not touch (`.github/workflows/release.yml` twice and the root `package.json`) under
+  `tdd` and `full`. The user chose on 2026-09-24 to record them as known and proceed; narrowing
+  the check to rows whose BR or AC changed is a follow-up.
+- Size: AC 36 → 39 and TC 92 → about 99, both over the thresholds before this change. One
+  capability (CAP-0017), so no split (DR-0017-0001).
+
+## Decision Log
+
+One entry per `07_Decisions.md` record added on 2026-09-24.
+
+### DL-0001
+
+DR-0017-0024: a `windows-latest` job runs the control-core and init suites, and gates no merge
+yet.
+
+#### Meta
+
+```yaml
+id: DL-0001
+date: 2026-09-24
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - .github/workflows/ci.yml
+  - .github/required-status-contexts.json
+  - packages/qfai/package.json
+notes: The user's answer A to the pack's question on Windows verification; the job is not merge-gating until the required context moves
+```
+
+#### Migration / Follow-ups
+
+- No migration required. The code-path cost pin is re-pinned by the change that adds the job,
+  with the trial run's numbers appended to DR-0017-0024.
+
+#### Rejected
+
+- option: a recorded manual Windows run before each release
+  reason: a regression then ships from the pull request that caused it
+  do_not: rely on a manual run to find a Windows regression
+  temptation: it costs no runner minutes
+- option: make the job named build depend on the Windows job
+  reason: build would be skipped whenever detection skips the job, and a skipped job reports success
+  do_not: put a conditional job under the required-context job
+  temptation: it would gate merges today

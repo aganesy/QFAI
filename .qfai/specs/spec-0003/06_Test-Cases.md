@@ -83,6 +83,37 @@ stays the first markdown table in this file):
 | TC-0003-0056 | integration | AC-0003-0038               | EX-0003-0050 | normal   | delivered document checks: isolated legs, preserved check name      |
 | TC-0003-0057 | integration | AC-0003-0038               | EX-0003-0050 | normal   | delivered validation profiles: isolated legs, preserved verdict     |
 | TC-0003-0058 | integration | AC-0003-0038               | EX-0003-0051 | error    | aggregate failure protection: bad result and missing binding        |
+| TC-0003-0059 | integration | AC-0003-0015               | EX-0003-0016 | normal   | Fresh init: `git check-ignore` on the run and evidence paths        |
+| TC-0003-0060 | integration | AC-0003-0015               | EX-0003-0052 | boundary | Upgrade over the previous managed block, then a rerun               |
+| TC-0003-0061 | integration | AC-0003-0015, AC-0003-0048 | EX-0003-0053 | boundary | The previous managed block in a CRLF `.gitignore`                   |
+| TC-0003-0062 | integration | AC-0003-0039               | EX-0003-0054 | normal   | Fresh init installs the entry skills, plans and references          |
+| TC-0003-0063 | integration | AC-0003-0039               | EX-0003-0055 | normal   | Four host skill dirs resolve both entry skills to one source        |
+| TC-0003-0064 | integration | AC-0003-0039               | EX-0003-0056 | normal   | Upgrade over an install without the workflow entry                  |
+| TC-0003-0065 | integration | AC-0003-0040               | EX-0003-0057 | normal   | No `agents/openai.yaml` after init and after `--force`              |
+| TC-0003-0066 | integration | AC-0003-0041               | EX-0003-0058 | normal   | Fresh init: directive in AGENTS.md and CLAUDE.md, not Copilot       |
+| TC-0003-0067 | integration | AC-0003-0041, AC-0003-0048 | EX-0003-0059 | edge     | Directive prepended to existing CRLF entry points, bytes kept       |
+| TC-0003-0068 | integration | AC-0003-0041               | EX-0003-0060 | boundary | Entry directive with and without `REVIEW.md`                        |
+| TC-0003-0069 | integration | AC-0003-0041               | EX-0003-0061 | boundary | Operative copy on a rerun, and a copy only inside a fence           |
+| TC-0003-0070 | integration | AC-0003-0041               | EX-0003-0062 | error    | A symlinked `AGENTS.md` is refused                                  |
+| TC-0003-0071 | integration | AC-0003-0042               | EX-0003-0063 | normal   | Fresh non-interactive init: no mode key, mode line `active`         |
+| TC-0003-0072 | integration | AC-0003-0042               | EX-0003-0064 | normal   | Upgrade with no mode key: config unchanged, mode `active`           |
+| TC-0003-0073 | integration | AC-0003-0042               | EX-0003-0065 | boundary | Mode line for `active`, `shadow`, `off` and an invalid value        |
+| TC-0003-0074 | integration | AC-0003-0043               | EX-0003-0066 | normal   | Fresh init records every plan in the lock, and no memo              |
+| TC-0003-0075 | integration | AC-0003-0043               | EX-0003-0067 | boundary | Upgrade refreshes an older plan, keeps edited plan and memo         |
+| TC-0003-0076 | integration | AC-0003-0043, AC-0003-0048 | EX-0003-0068 | boundary | A CRLF copy of an unmodified plan is not a conflict                 |
+| TC-0003-0077 | integration | AC-0003-0043               | EX-0003-0069 | edge     | A rerun writes nothing and leaves the tree byte-identical           |
+| TC-0003-0078 | integration | AC-0003-0044               | EX-0003-0070 | normal   | The lock records the running package version                        |
+| TC-0003-0079 | integration | AC-0003-0044               | EX-0003-0071 | edge     | The lock's conflict list is replaced on each run                    |
+| TC-0003-0080 | integration | AC-0003-0048               | EX-0003-0072 | boundary | Every provenance lock key is a slash-separated path                 |
+| TC-0003-0081 | integration | AC-0003-0045               | EX-0003-0073 | error    | Active mode: an edited plan and a dropped reviewer reported         |
+| TC-0003-0082 | integration | AC-0003-0045               | EX-0003-0074 | boundary | Shadow and off modes print the plain mode line                      |
+| TC-0003-0083 | integration | AC-0003-0045               | EX-0003-0075 | boundary | Exit 0 on every conflicted upgrade                                  |
+| TC-0003-0084 | integration | AC-0003-0045               | EX-0003-0076 | normal   | A benign manifest customization is not a conflict                   |
+| TC-0003-0085 | integration | AC-0003-0046               | EX-0003-0077 | error    | Plain upgrade leaves a customized `agent-routing.yml` untouched     |
+| TC-0003-0086 | integration | AC-0003-0046               | EX-0003-0078 | error    | `--force` named for an absent entry, not a dropped reviewer         |
+| TC-0003-0087 | integration | AC-0003-0047               | EX-0003-0079 | normal   | `--force` adds the absent entry and keeps the project's own         |
+| TC-0003-0088 | integration | AC-0003-0048               | EX-0003-0080 | normal   | Built CLI init and upgrade under a root with a space                |
+| TC-0003-0089 | integration | AC-0003-0049               | EX-0003-0081 | boundary | Plain upgrade counts skipped skills; a CRLF-only copy is not one    |
 
 ## TC-0003-0001: 空ディレクトリでの初期化
 
@@ -764,3 +795,515 @@ Verify:
 - a body whose failing exit has been replaced passes none of those results
 - an aggregate that no longer binds its dependency's result is rejected and named
 - a step that could not preserve failure — conditional, tolerant shell, `continue-on-error`, an action, or work of its own — is rejected as well
+
+## TC-0003-0059: Fresh init: `git check-ignore` on the run and evidence paths
+
+**Level:** integration
+**EX Refs:** EX-0003-0016
+**AC Refs:** AC-0003-0015
+**Type:** normal
+
+Setup: an empty temp root, initialized as a git repository, with no `.gitignore`.
+Action: run `qfai init`, then `git check-ignore` on `.qfai/runs/x` and on `.qfai/evidence/workflow/x/summary.json`.
+Verify:
+
+- `.qfai/runs/x` is reported ignored
+- `.qfai/evidence/workflow/x/summary.json` is reported not ignored
+- the marker line occurs exactly once
+
+Notes: The oracle is git's own answer, not a line count: the block's SSOT is `packages/qfai/src/core/gitignore.ts`. Test module: `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`, one module per BR.
+
+## TC-0003-0060: Upgrade over the previous managed block, then a rerun
+
+**Level:** integration
+**EX Refs:** EX-0003-0052
+**AC Refs:** AC-0003-0015
+**Type:** boundary
+
+Setup: a fresh install with overlay `older-gitignore`, in a git repository.
+Action: run a plain `qfai init`, record `.gitignore`, then run it again.
+Verify:
+
+- the marker, `.qfai/runs/` and `!.qfai/evidence/workflow/` each occur exactly once
+- `git check-ignore` gives the two results of TC-0003-0059
+- the second run leaves `.gitignore` byte-identical
+
+Notes: The previous block's lines must be read as known lines, or the block is duplicated. Test module: `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`, one module per BR.
+
+## TC-0003-0061: The previous managed block in a CRLF `.gitignore`
+
+**Level:** integration
+**EX Refs:** EX-0003-0053
+**AC Refs:** AC-0003-0015, AC-0003-0048
+**Type:** boundary
+
+Setup: overlay `older-gitignore` with every line ending rewritten to CRLF by the fixture.
+Action: run a plain `qfai init`.
+Verify:
+
+- the marker occurs exactly once and no block line is duplicated
+- `git check-ignore` gives the two results of TC-0003-0059
+
+Notes: Windows parity. CRLF comes from the fixture, never from `core.autocrlf`. Test module: `packages/qfai/tests/integration/init/windowsParity.test.ts`, one module per BR.
+
+## TC-0003-0062: Fresh init installs the entry skills, plans and references
+
+**Level:** integration
+**EX Refs:** EX-0003-0054
+**AC Refs:** AC-0003-0039
+**Type:** normal
+
+Setup: an empty temp root.
+Action: run `qfai init`.
+Verify:
+
+- the two entry skills exist, each with its `SKILL.md`
+- the five plan files exist; the test holds the literal set of names
+- every stage skill a plan names carries `references/orchestrated-mode.md`
+- no workflow schema file is written under the project
+
+Notes: Each `orchestrated-mode.md` belongs to its own stage skill's spec. Needs assets from spec-0018, spec-0008, spec-0010, spec-0011, spec-0012, spec-0013, spec-0014; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`, one module per BR.
+
+## TC-0003-0063: Four host skill dirs resolve both entry skills to one source
+
+**Level:** integration
+**EX Refs:** EX-0003-0055
+**AC Refs:** AC-0003-0039
+**Type:** normal
+
+Setup: an empty temp root.
+Action: run `qfai init`, then resolve the real path of each entry.
+Verify:
+
+- matrix of four host directories by two skills: eight boundaries
+- each entry's real path is the matching canonical skill directory
+
+Notes: One executable test discharges this row and the host-adapter matrix spec-0018 holds for the same wrappers, and carries both specs' annotations. Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`, one module per BR.
+
+## TC-0003-0064: Upgrade over an install without the workflow entry
+
+**Level:** integration
+**EX Refs:** EX-0003-0056
+**AC Refs:** AC-0003-0039
+**Type:** normal
+
+Setup: a fresh install with overlay `absent-skills`.
+Action: run a plain `qfai init`.
+Verify:
+
+- the install set of TC-0003-0062 is present
+- the eight wrappers of TC-0003-0063 resolve
+- every other skill directory is byte-identical to before the run
+
+Notes: Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`, one module per BR.
+
+## TC-0003-0065: No `agents/openai.yaml` after init and after `--force`
+
+**Level:** integration
+**EX Refs:** EX-0003-0057
+**AC Refs:** AC-0003-0040
+**Type:** normal
+
+Setup: an empty temp root.
+Action: run `qfai init`, check, run `qfai init --force`, check again.
+Verify:
+
+- after each run, no skill directory reached through a host skill directory contains `agents/openai.yaml`
+
+Notes: Only the `openai.yaml` half. The `disable-model-invocation` property has its own single test elsewhere. Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/noOpenaiYaml.test.ts`, one module per BR.
+
+## TC-0003-0066: Fresh init: directive in AGENTS.md and CLAUDE.md, not Copilot
+
+**Level:** integration
+**EX Refs:** EX-0003-0058
+**AC Refs:** AC-0003-0041
+**Type:** normal
+
+Setup: an empty temp root.
+Action: run `qfai init` and read the three entry points.
+Verify:
+
+- matrix of three files: three boundaries
+- `AGENTS.md` and `CLAUDE.md` each begin with exactly one directive naming `qfai-run`
+- `.github/copilot-instructions.md` holds no such directive
+
+Notes: The oracle is the directive's structure and the skill it names, never its wording. Test module: `packages/qfai/tests/integration/init/entryDirective.test.ts`, one module per BR.
+
+## TC-0003-0067: Directive prepended to existing CRLF entry points, bytes kept
+
+**Level:** integration
+**EX Refs:** EX-0003-0059
+**AC Refs:** AC-0003-0041, AC-0003-0048
+**Type:** edge
+
+Setup: a project whose `AGENTS.md` and `CLAUDE.md` hold project text with CRLF endings and no directive.
+Action: run a plain `qfai init`.
+Verify:
+
+- each file equals the directive line, terminated by CRLF, followed by the original bytes
+
+Notes: Windows parity. CRLF comes from the fixture. Test module: `packages/qfai/tests/integration/init/entryDirective.test.ts`, one module per BR.
+
+## TC-0003-0068: Entry directive with and without `REVIEW.md`
+
+**Level:** integration
+**EX Refs:** EX-0003-0060
+**AC Refs:** AC-0003-0041
+**Type:** boundary
+
+Setup: two projects without directives, one holding `REVIEW.md`.
+Action: run a plain `qfai init` in each.
+Verify:
+
+- two boundaries
+- both projects' entry points carry the entry directive
+- only the project with `REVIEW.md` carries the review directive
+
+Notes: Test module: `packages/qfai/tests/integration/init/entryDirective.test.ts`, one module per BR.
+
+## TC-0003-0069: Operative copy on a rerun, and a copy only inside a fence
+
+**Level:** integration
+**EX Refs:** EX-0003-0061
+**AC Refs:** AC-0003-0041
+**Type:** boundary
+
+Setup: a project initialized once; a second project whose `AGENTS.md` holds the directive only inside a fenced block.
+Action: run a plain `qfai init` in each.
+Verify:
+
+- two boundaries
+- the rerun leaves `AGENTS.md` and `CLAUDE.md` byte-identical
+- the fenced copy is not operative: one directive is prepended, and the fence is unchanged
+
+Notes: Test module: `packages/qfai/tests/integration/init/entryDirective.test.ts`, one module per BR.
+
+## TC-0003-0070: A symlinked `AGENTS.md` is refused
+
+**Level:** integration
+**EX Refs:** EX-0003-0062
+**AC Refs:** AC-0003-0041
+**Type:** error
+
+Setup: a project whose `AGENTS.md` is a symbolic link to another file in the project.
+Action: run a plain `qfai init`.
+Verify:
+
+- the output names `AGENTS.md` and the reason for refusing it
+- the link and its target are byte-identical
+
+Notes: One representative refusal. The shared writer's other refusals keep their existing tests. Test module: `packages/qfai/tests/integration/init/entryDirective.test.ts`, one module per BR.
+
+## TC-0003-0071: Fresh non-interactive init: no mode key, mode line `active`
+
+**Level:** integration
+**EX Refs:** EX-0003-0063
+**AC Refs:** AC-0003-0042
+**Type:** normal
+
+Setup: an empty temp root.
+Action: run `qfai init` without `--yes`, with stdin closed.
+Verify:
+
+- `qfai.config.yaml` has no `workflow` key
+- no prompt is printed
+- the summary carries one line naming mode `active`
+
+Notes: Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/modeLine.test.ts`, one module per BR.
+
+## TC-0003-0072: Upgrade with no mode key: config unchanged, mode `active`
+
+**Level:** integration
+**EX Refs:** EX-0003-0064
+**AC Refs:** AC-0003-0042
+**Type:** normal
+
+Setup: a fresh install whose config has no `workflow` key.
+Action: run a plain `qfai init`.
+Verify:
+
+- `qfai.config.yaml` is byte-identical
+- the mode line names `active`
+
+Notes: Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/modeLine.test.ts`, one module per BR.
+
+## TC-0003-0073: Mode line for `active`, `shadow`, `off` and an invalid value
+
+**Level:** integration
+**EX Refs:** EX-0003-0065
+**AC Refs:** AC-0003-0042
+**Type:** boundary
+
+Setup: four fresh installs, each config setting `workflow.mode` to one of the four values.
+Action: run a plain `qfai init` in each.
+Verify:
+
+- four boundaries
+- the mode line names each value, and names `bogus` as invalid
+- each config is byte-identical
+- each run exits 0
+
+Notes: The `validate` finding for an invalid value belongs to spec-0018. Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/modeLine.test.ts`, one module per BR.
+
+## TC-0003-0074: Fresh init records every plan in the lock, and no memo
+
+**Level:** integration
+**EX Refs:** EX-0003-0066
+**AC Refs:** AC-0003-0043
+**Type:** normal
+
+Setup: an empty temp root.
+Action: run `qfai init` and read `.qfai/assistant/.assets.lock.json`.
+Verify:
+
+- one record per file under `process/workflows/`
+- no record under `process/migrations/`
+
+Notes: Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/governedPlans.test.ts`, one module per BR.
+
+## TC-0003-0075: Upgrade refreshes an older plan, keeps edited plan and memo
+
+**Level:** integration
+**EX Refs:** EX-0003-0067
+**AC Refs:** AC-0003-0043
+**Type:** boundary
+
+Setup: a fresh install with overlays `older-plan`, `edited-plan` and `edited-memo`.
+Action: run a plain `qfai init`.
+Verify:
+
+- three boundaries
+- the older plan holds the package's bytes
+- the edited plan is byte-identical
+- the edited migration memo is byte-identical
+
+Notes: Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/governedPlans.test.ts`, one module per BR.
+
+## TC-0003-0076: A CRLF copy of an unmodified plan is not a conflict
+
+**Level:** integration
+**EX Refs:** EX-0003-0068
+**AC Refs:** AC-0003-0043, AC-0003-0048
+**Type:** boundary
+
+Setup: a fresh install with overlay `crlf-plan`.
+Action: run a plain `qfai init`.
+Verify:
+
+- the lock's conflict list is empty
+- the summary prints the plain mode line
+
+Notes: Windows parity: provenance compares text after CRLF normalization. Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/windowsParity.test.ts`, one module per BR.
+
+## TC-0003-0077: A rerun writes nothing and leaves the tree byte-identical
+
+**Level:** integration
+**EX Refs:** EX-0003-0069
+**AC Refs:** AC-0003-0043
+**Type:** edge
+
+Setup: a fresh install.
+Action: run a plain `qfai init`, digest the tree, run it again.
+Verify:
+
+- the second run reports no written path
+- the tree digest, the lock and `.gitignore` included, is unchanged
+
+Notes: Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/governedPlans.test.ts`, one module per BR.
+
+## TC-0003-0078: The lock records the running package version
+
+**Level:** integration
+**EX Refs:** EX-0003-0070
+**AC Refs:** AC-0003-0044
+**Type:** normal
+
+Setup: an empty temp root; a second install with overlay `older-lock`.
+Action: run `qfai init` in the first and a plain `qfai init` in the second.
+Verify:
+
+- both locks record the version the test reads from `packages/qfai/package.json` when it runs, never a literal
+
+Notes: Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/upgradeRecord.test.ts`, one module per BR.
+
+## TC-0003-0079: The lock's conflict list is replaced on each run
+
+**Level:** integration
+**EX Refs:** EX-0003-0071
+**AC Refs:** AC-0003-0044
+**Type:** edge
+
+Setup: a fresh install with overlay `edited-plan`.
+Action: run a plain `qfai init`, restore the plan, run it again.
+Verify:
+
+- the first lock's conflict list names the plan
+- the second lock's conflict list is empty
+
+Notes: Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/upgradeRecord.test.ts`, one module per BR.
+
+## TC-0003-0080: Every provenance lock key is a slash-separated path
+
+**Level:** integration
+**EX Refs:** EX-0003-0072
+**AC Refs:** AC-0003-0048
+**Type:** boundary
+
+Setup: an empty temp root.
+Action: run `qfai init` and read every key of `.qfai/assistant/.assets.lock.json`.
+Verify:
+
+- every key is relative and uses `/` as its only separator
+
+Notes: Windows parity. The lock is tracked, so a key written with a backslash would read as a different file on Linux. Test module: `packages/qfai/tests/integration/init/windowsParity.test.ts`, one module per BR.
+
+## TC-0003-0081: Active mode: an edited plan and a dropped reviewer reported
+
+**Level:** integration
+**EX Refs:** EX-0003-0073
+**AC Refs:** AC-0003-0045
+**Type:** error
+
+Setup: two fresh installs in mode `active`, one with `edited-plan`, one with `dropped-reviewer`.
+Action: run a plain `qfai init` in each.
+Verify:
+
+- two boundaries
+- each conflicting file is named once, with its difference and trigger
+- one line follows, saying `active` will not start until they are resolved
+- the plain mode line is absent
+
+Notes: One fixture per trigger. The full correspondence matrix belongs to spec-0018. Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/conflictReport.test.ts`, one module per BR.
+
+## TC-0003-0082: Shadow and off modes print the plain mode line
+
+**Level:** integration
+**EX Refs:** EX-0003-0074
+**AC Refs:** AC-0003-0045
+**Type:** boundary
+
+Setup: the installs of TC-0003-0081, with `workflow.mode` set to `shadow` and to `off`.
+Action: run a plain `qfai init` in each.
+Verify:
+
+- two boundaries
+- the plain mode line is printed
+- no conflict block is printed
+
+Notes: Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/conflictReport.test.ts`, one module per BR.
+
+## TC-0003-0083: Exit 0 on every conflicted upgrade
+
+**Level:** integration
+**EX Refs:** EX-0003-0075
+**AC Refs:** AC-0003-0045
+**Type:** boundary
+
+Setup: four fresh installs, one per listed overlay or setting.
+Action: run a plain `qfai init` in each.
+Verify:
+
+- four boundaries
+- each run exits 0
+
+Notes: DR-0003-0013: the released exit table is kept. Needs assets from spec-0018, spec-0015; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/conflictReport.test.ts`, one module per BR.
+
+## TC-0003-0084: A benign manifest customization is not a conflict
+
+**Level:** integration
+**EX Refs:** EX-0003-0076
+**AC Refs:** AC-0003-0045
+**Type:** normal
+
+Setup: a fresh install with overlay `benign-manifest`.
+Action: run a plain `qfai init`.
+Verify:
+
+- no conflict is reported
+- the plain mode line is printed
+
+Notes: Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/conflictReport.test.ts`, one module per BR.
+
+## TC-0003-0085: Plain upgrade leaves a customized `agent-routing.yml` untouched
+
+**Level:** integration
+**EX Refs:** EX-0003-0077
+**AC Refs:** AC-0003-0046
+**Type:** error
+
+Setup: a fresh install with overlay `absent-route`.
+Action: run a plain `qfai init`.
+Verify:
+
+- `agent-routing.yml` is byte-identical
+
+Notes: Seed `discussion-20260923171450572#FAULT-023`, init side. The test file cites `FAULT-023`. Needs assets from spec-0018, spec-0015; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/plainRunManifest.test.ts`, one module per BR.
+
+## TC-0003-0086: `--force` named for an absent entry, not a dropped reviewer
+
+**Level:** integration
+**EX Refs:** EX-0003-0078
+**AC Refs:** AC-0003-0046
+**Type:** error
+
+Setup: two fresh installs, one with `absent-route`, one with `dropped-reviewer`.
+Action: run a plain `qfai init` in each.
+Verify:
+
+- two boundaries
+- the absent entry is named with `qfai init --force`
+- the dropped reviewer is named with its trigger, and `qfai init --force` does not appear with it
+- each lock's conflict list holds its conflict
+
+Notes: Seed `discussion-20260923171450572#FAULT-023`, init side. The test file cites `FAULT-023`. `--force` never restores a dropped agent, so naming it there would not clear the conflict. Needs assets from spec-0018, spec-0015; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/forceGuidance.test.ts`, one module per BR.
+
+## TC-0003-0087: `--force` adds the absent entry and keeps the project's own
+
+**Level:** integration
+**EX Refs:** EX-0003-0079
+**AC Refs:** AC-0003-0047
+**Type:** normal
+
+Setup: a fresh install with overlays `absent-route` and `dropped-reviewer`.
+Action: run `qfai init --force`, then a plain `qfai init`.
+Verify:
+
+- the absent entry is present
+- the project's own entries, their order and the dropped reviewer are unchanged
+- the second summary names the dropped reviewer and no absent entry
+
+Notes: Needs assets from spec-0018, spec-0015; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/forceRoutingMerge.test.ts`, one module per BR.
+
+## TC-0003-0088: Built CLI init and upgrade under a root with a space
+
+**Level:** integration
+**EX Refs:** EX-0003-0080
+**AC Refs:** AC-0003-0048
+**Type:** normal
+
+Setup: a temp root whose name contains a space; the built CLI under `packages/qfai/dist/`.
+Action: spawn the built CLI for `qfai init`, then for a plain `qfai init`.
+Verify:
+
+- both runs exit 0
+- the mode line, the lock and the wrapper real paths equal those of the same runs made in process
+
+Notes: Windows parity. A path reaches a spawned process only here; the in-process runs never pass one through a spawn. Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/windowsParity.test.ts`, one module per BR.
+
+## TC-0003-0089: Plain upgrade counts skipped skills; a CRLF-only copy is not one
+
+**Level:** integration
+**EX Refs:** EX-0003-0081
+**AC Refs:** AC-0003-0049
+**Type:** boundary
+
+Setup: a fresh install; one shipped skill's `SKILL.md` edited, another rewritten with CRLF endings only.
+Action: run a plain `qfai init`.
+Verify:
+
+- two boundaries
+- both skills are byte-identical
+- the summary counts one skipped skill, not two
+- the line names `qfai init --force` and says it replaces the skill with the shipped version, overwriting local edits
+
+Notes: Test module: `packages/qfai/tests/integration/init/skippedSkillCount.test.ts`, one module per BR.

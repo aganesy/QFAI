@@ -51,3 +51,45 @@ Given a UI-bearing discussion pack, when inspected, then it does not declare a f
 - Given `.qfai/state.json#discussion.currentId` is absent OR resolves to a missing/duplicate pack,
 - When the active pointer is resolved,
 - Then an error is raised naming the candidate `discussion-*` dirs and the recovery command (`qfai discussion use <id>`); the active session is NOT inferred from mtime.
+
+## AC-0010-0013: An orchestrated discussion asks only what the run has not settled
+
+- US-Refs: US-0010-0013
+
+```gherkin
+# AC-0010-0013
+# Source: discussion-20260923171450572#REQ-0055
+Scenario: A discussion stage does not re-ask a settled decision
+  Given a discussion work order whose settled field lists the checked route proposal and the answered questions
+  When the discussion stage runs
+  Then it covers only the scope that settled leaves unresolved
+  And it asks no question settled already answers
+```
+
+## AC-0010-0014: The discussion skill hands over or works its order
+
+- US-Refs: US-0010-0013
+
+```gherkin
+# AC-0010-0014
+# Source: discussion-20260923171450572#REQ-0051
+Scenario: The entry check of qfai-discussion
+  Given workflow mode active
+  When qfai-discussion starts with no name invocation and no work order
+  Then it edits nothing and passes the request to qfai-run
+  And with a valid work order it does only that work
+  And its SKILL.md cites references/orchestrated-mode.md with one line
+```
+
+## AC-0010-0015: The discussion skill declares its operations
+
+- US-Refs: US-0010-0013
+
+```gherkin
+# AC-0010-0015
+# Source: discussion-20260923171450572#REQ-0052
+Scenario: The Operations table of qfai-discussion
+  Given references/orchestrated-mode.md of qfai-discussion
+  When its Operations table is read
+  Then it lists exactly the operations the workflow vocabulary assigns to qfai-discussion
+```

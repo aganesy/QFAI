@@ -34,6 +34,26 @@
 - Out:
   - runtime execution engines
   - removed prototyping CLI behavior
+- In (2026-09-24, intent-driven entry):
+  - routing entries for `qfai-run` and `qfai-maintain` in the shipped manifests;
+  - how the workflow authorization kinds satisfy the Default Autopilot Policy
+    buckets, and the `primarySpecId` exception a run binding makes;
+  - the author, recommender and reviewer history carried across a run;
+  - grilling inside a run.
+- Out (2026-09-24, intent-driven entry):
+  - how `qfai init` merges manifests on upgrade, and its upgrade report
+    (spec-0003);
+  - the workflow control core, the built-in plans and the refusals the core
+    raises (spec-0018);
+  - the shared stage-skill rules (spec-0001).
+
+## Applicable Contracts
+
+- `.qfai/contracts/cli/qfai-workflow.md` (CLI-WF): `## Authorizations` (the
+  bucket mapping and `--auto`), `### Work order` (the run binding and
+  `actorHistory`), `### Stage result` (the independence refusal).
+- `.qfai/contracts/cli/workflow-files.schema.md` (CLI-WFFILE): `### Vocabulary`
+  (no plan names `qfai-grill`).
 
 ## Applicable NFR
 
@@ -45,6 +65,8 @@
 
 - Orchestrator delegates; it does not simulate missing roles.
 - Blocking reviewer findings gate completion.
+- DR-0296 (`_policies/08_Decisions.md`): a new capability is approved once, at
+  routing, and `--auto` approves nothing. BR-0015-0019 relates it to the buckets.
 
 ## Evidence Summary
 
@@ -73,6 +95,16 @@
 - REQ-0172: `qfai handoff upgrade <legacy>` adapter helper (SHOULD); preserves originals under `legacy:`
 - REQ-0173: cross-skill documentation realignment to the OQ-0152..0157 outcomes; `qfai validate --report` reports every stale reference left at HEAD as a warning
 - REQ-0015-0015: PROMPT_SCANNER_PAIRS manifest expansion — `packages/qfai/src/core/validators/promptScannerPairs.ts` は現状 proof-of-concept として単一 clause (`color-literal-ban`) のみを encode している。これを残りの DesignMd violation kinds (`font-family-ban` / `radius-literal-ban` / `shadow-rgba-ban`) まで拡張する。各 entry は scanner-source token 集合と対応する `generator-prompt.md` clause token を pair で持ち、drift 時に R-PROMPT-SCANNER-DRIFT emission で unmatched clause を triage 用に naming する。validator code は既に data-driven (`for (const pair of ...)` loop) であり、本 REQ は manifest の growth + 対応 fixture coverage を pin する。Acceptance signal: 4 entries (color / font / radius / shadow) が manifest に揃い、各 entry に対し scanner-only edit と prompt-only edit のいずれもが `R-PROMPT-SCANNER-DRIFT` を fire する unit/integration test が green。
+
+### discussion-20260923171450572 (2026-09-24)
+
+| Requirement                             | Home                       |
+| --------------------------------------- | -------------------------- |
+| `discussion-20260923171450572#REQ-0049` | BR-0015-0018               |
+| `discussion-20260923171450572#REQ-0057` | BR-0015-0018, BR-0015-0019 |
+| `discussion-20260923171450572#REQ-0013` | BR-0015-0010               |
+| `discussion-20260923171450572#REQ-0040` | BR-0015-0020               |
+| `discussion-20260923171450572#REQ-0055` | BR-0015-0021               |
 
 ## Entry points
 

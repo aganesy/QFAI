@@ -18,3 +18,7 @@
 - OQ-0158 (`primary_tasks` recommended count band) — RESOLVED by `_policies/08_Decisions.md` DR-0267 = `3..7`. Reflected in BR-0004-0031 / AC-0004-0037 (`QFAI-AUD-020` warning text names the band).
 - OQ-0159 (structured `primary_tasks` JSON Schema) — RESOLVED by DR-0268 = closed `{id, label, acceptance}` (all required, `additionalProperties: false`). Reflected in BR-0004-0031; string-only continues to PASS during the deprecation window.
 - OQ-0167 (pack-location lint scope dimension) — RESOLVED by DR-0274 = staged/changed-dir scope against the three allowed roots. Reflected in BR-0004-0032 / BR-0004-0033. The distinct register row OQ-0167 (`qfai sdd lint --fix` autofix for `surface_type`-absent specs) remains deferred.
+
+## Resolved (2026-09-24 intent-driven entry)
+
+- `discussion-20260923171450572#OQ-0006` (where a triage row cites its workflow authorization) — RESOLVED by CLI-VAL `## Triage authorization reference`: an optional `Authorization-Ref` column, read by its header name and carried by a `CREATE` row only, and `Approved By` keeps its meaning. Reflected in BR-0004-0035 / AC-0004-0041.

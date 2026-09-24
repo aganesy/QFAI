@@ -11,3 +11,17 @@
 | BR-0010-0010 | AC-0010-0010 | Template content and `QFAI-MOCK-010` validator behavior form an SSOT-sync pair (Pair V) that MUST be updated in lockstep; asymmetric edits MUST surface Reviewer-Gate finding `R-MOCK-HREF-DRIFT` (severity error).                                                                                                                                                       |
 | BR-0010-0011 | AC-0010-0011 | `/qfai-discussion` MUST write `.qfai/state.json#discussion.currentId` (the single SSOT for the active discussion session) on pack finalization; `qfai discussion list --active` is a read view over it and MUST NOT infer the active pointer from filesystem mtime (DR-0266).                                                                                             |
 | BR-0010-0012 | AC-0010-0012 | When `currentId` is absent or resolves to a missing/duplicate pack, resolution MUST be rejected with an error naming the candidate `discussion-*` dirs and the recovery command (`qfai discussion use <id>`). Ephemeral session state lives in `state.json`, not committed `qfai.config.yaml`.                                                                            |
+| BR-0010-0013 | AC-0010-0013 | Under a work order, `/qfai-discussion` takes what the work order's `settled` field records, the checked proposal's routing result and every answered question with its chosen answer, as settled (CLI-WF `### Work order`). It covers only the scope `settled` leaves unresolved and asks no question it already answers.                                                 |
+| BR-0010-0014 | AC-0010-0014 | The entry check and worker behaviour of `/qfai-discussion` follow CLI-WF `### host:stage-skill-handover`, and its `SKILL.md` cites `references/orchestrated-mode.md` with one line.                                                                                                                                                                                       |
+| BR-0010-0015 | AC-0010-0015 | The Operations table in `references/orchestrated-mode.md` of `/qfai-discussion` lists exactly the operations CLI-WFFILE `### Vocabulary` assigns to `qfai-discussion`.                                                                                                                                                                                                    |
+
+## Contract Realization
+
+The BR IDs sit in the last column: a row whose first cell is a BR ID is read as
+that rule's definition.
+
+| Contract   | Section                                      | Realized by  |
+| ---------- | -------------------------------------------- | ------------ |
+| CLI-WF     | `### Work order`                             | BR-0010-0013 |
+| CLI-WF     | `### host:stage-skill-handover`              | BR-0010-0014 |
+| CLI-WFFILE | `### Vocabulary`, `### The Operations table` | BR-0010-0015 |

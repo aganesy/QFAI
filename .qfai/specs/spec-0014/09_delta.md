@@ -255,3 +255,39 @@ Two things made it dead weight rather than a gate.
 
 `AC-0014-0004` stays: `TC-0014-0028` and `TC-0014-0029` cover the prototyping
 design-system validator, which is a different module and still runs.
+
+## Triage (2026-09-24 intent-driven entry)
+
+Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` and the policy rows are in `_policies/10_delta.md` under the same heading. None of the rows below needs approval. `REQ-0033` in `Depends-On` stands for the `CREATE` row: the row cites items `spec-0018` defines, so it waits until that spec has them.
+
+| Source             | Subject                                                                                                                                        | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                             | Depends-On |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| REQ-0060           | Repository gates are accepted from this run's `verify.json` plus an independent qa-gatekeeper review, and each receipt records its trust level | spec-0014     | UPDATE    | APPEND | -           | D10. The `status` and `scope` enums of `verify.json` are unchanged                                                                                    | REQ-0033   |
+| REQ-0063           | Verify receipts stay with the run and the stage instance that produced them                                                                    | spec-0014     | UPDATE    | APPEND | -           | Shared legacy reports are copied per stage instance. A receipt from another run, another spec or a shared file is never taken as this run's           | REQ-0033   |
+| REQ-0035           | Verify's stage result keeps outcome and test observation apart, and the new values never enter `verify.json`                                   | spec-0014     | UPDATE    | APPEND | -           | Validation that did not run is `unrun`, never a pass. An error in the final verify never completes a run                                              | REQ-0033   |
+| REQ-0039           | Verify routes a finding to its owner instead of repairing it                                                                                   | spec-0014     | UPDATE    | APPEND | -           | A spec gap goes to SDD, an acceptance-test defect to ATDD, an implementation defect to implement, and a missing environment to an environment blocker | REQ-0033   |
+| REQ-0051, REQ-0052 | Orchestrated mode for `/qfai-verify`                                                                                                           | spec-0014     | UPDATE    | APPEND | -           | One reference cited by one line from `SKILL.md` (D12)                                                                                                 | REQ-0033   |
+
+## Change Summary
+
+- Change ID: DELTA-0008
+- Date: 2026-09-24
+- Primary: Behavior
+- Tags: @docs, @test
+- Summary: the five rows of `## Triage (2026-09-24 intent-driven entry)` applied.
+  `/qfai-verify` gains its orchestrated mode as the final stage of a run, names
+  this run's `verify.json` and its qa-gatekeeper review in the stage result, and
+  sends each finding to its owner instead of repairing it. `verify.json` keeps its
+  path, fields and values.
+- Appended: US-0014-0021; AC-0014-0023..0029; BR-0014-0026..0032. Modified: none.
+  No decision record and no open question is added.
+- Size: AC 7 → 14, under the threshold of 30.
+- Reserved IDs: none.
+- Phase 2c.1 (obligation reconciliation): BR-0014-0030 is split. It keeps the three repair kinds, each a `needs_repair` finding with `resolvingOwner` `qfai-sdd`, `qfai-atdd` or `qfai-implement`. The new BR-0014-0033 returns `blocked` with blocker `stage-blocked`, cleared by `operator`, for a missing environment. AC-0014-0027 is reworded to match, and keeps its ID. The source is CLI-WF `### Stage result` (the domain of `resolvingOwner`) and `## State machine` (blockers).
+
+## Change Requests
+
+| CR ID            | Upstream artifact                                                                      | Mode      | Approved by | Applied at           |
+| ---------------- | -------------------------------------------------------------------------------------- | --------- | ----------- | -------------------- |
+| CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-24T18:26:35Z |
+| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-24T19:00:08Z |

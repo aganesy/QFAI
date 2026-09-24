@@ -274,3 +274,107 @@
 - Given a PR that adds `.qfai/discussion/discussion-20260527075558258/` (under an allowed root) and edits an unrelated README
 - When `check-pack-locations.mjs` runs
 - Then the lane passes silently with no `R-PACK-LOCATION-DRIFT`, and a pre-existing legacy `review-old/` directory untouched by the PR is not re-flagged
+
+## EX-0004-0042
+
+- BR-Ref: BR-0004-0034
+- Given a triage table with one row each for `CREATE`, `DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE`, `UPDATE` / `REMOVE`, `UPDATE` / `APPEND` and `UPDATE` / `MODIFY`, every row with `Approved By` `-` and no `Authorization-Ref` column
+- When `qfai validate --profile sdd` runs
+- Then `QFAI-TRIAGE-005` is raised on the six rows `requiresApproval()` is true for, and on neither `UPDATE` / `APPEND` nor `UPDATE` / `MODIFY`
+
+## EX-0004-0043
+
+- BR-Ref: BR-0004-0035
+- Given a `CREATE` row whose Rationale cites `CAP-0018` and `CAP-0019`, with `Approved By` `yusuke_senaga@2026-09-24` and `Authorization-Ref` `run-20260924045712999/create-0001`
+- And `.qfai/evidence/workflow/run-20260924045712999/authorizations/create-0001.json` holds a `human_decision` with `operation: CREATE`, `answeredBy: yusuke_senaga` and slot `slot-1`
+- And the run's `summary.json` `targetBindings` binds `slot-1` to `CAP-0019` only
+- When `qfai validate --profile sdd` runs, once with the column before `Depends-On` and once after it
+- Then neither run raises `QFAI-TRIAGE-011` or `QFAI-TRIAGE-005`: one bound CAP among those the Rationale cites is enough
+
+## EX-0004-0044
+
+- BR-Ref: BR-0004-0035
+- Given the passing row of EX-0004-0043, changed one way at a time
+- When `Authorization-Ref` is `run-2026092404571299/create-0001` (16 digits), `run-20260924045712999/create.0001` (a character outside the grammar), `run-20260924045712999/../../x` or `run-20260924045712999/a/b` (not two segments)
+- Or the run directory is a link whose real path lies outside `.qfai/evidence/workflow/`
+- Or the value is well formed and no file is at `authorizations/create-0001.json`
+- Or that file is not valid JSON
+- Then each case raises `QFAI-TRIAGE-011` naming the row and the `Resolves` check, and no file outside `.qfai/evidence/workflow/` is read
+
+## EX-0004-0045
+
+- BR-Ref: BR-0004-0035
+- Given the passing row of EX-0004-0043, whose cited record has `kind: request_scope`
+- When `qfai validate --profile sdd` runs
+- Then `QFAI-TRIAGE-011` names the row and the `Kind` check
+
+## EX-0004-0046
+
+- BR-Ref: BR-0004-0035
+- Given the passing row of EX-0004-0043, whose cited `human_decision` answers a question other than a `create` question, so its `operation` is `null`
+- Or a `DELETE` row with `Approved By` `yusuke_senaga@2026-09-24` whose `Authorization-Ref` cites the resolving `CREATE` record of EX-0004-0043, a reference only a `CREATE` row may carry
+- When `qfai validate --profile sdd` runs
+- Then each case raises `QFAI-TRIAGE-011` naming the row and the `Operation` check
+
+## EX-0004-0047
+
+- BR-Ref: BR-0004-0035
+- Given the passing row of EX-0004-0043, whose run binds `slot-1` to `CAP-0020`, a CAP the Rationale does not cite
+- When `qfai validate --profile sdd` runs
+- Then `QFAI-TRIAGE-011` names the row and the `Binding` check
+
+## EX-0004-0048
+
+- BR-Ref: BR-0004-0035
+- Given the passing row of EX-0004-0043, whose record has `answeredBy: Yusuke_Senaga`
+- When `qfai validate --profile sdd` runs
+- Then `QFAI-TRIAGE-011` names the row and the `Answerer` check: the part of `Approved By` before `@` is compared by exact match, so a difference in case is a mismatch
+
+## EX-0004-0049
+
+- BR-Ref: BR-0004-0035
+- Given the passing row of EX-0004-0043, whose record's `target.capability.goal` differs from the statement `_policies/03_Capabilities.md` now gives `CAP-0019`, and whose `recordedAt` is a year old
+- When `qfai validate --profile sdd` runs
+- Then no `QFAI-TRIAGE-011` is raised: staleness is not judged by the validator
+
+## EX-0004-0050
+
+- BR-Ref: BR-0004-0036
+- Given a `DELETE` row with `Approved By` `-` and `-` in its `Authorization-Ref` column
+- When `qfai validate --profile sdd` runs
+- Then the row raises `QFAI-TRIAGE-005` exactly as the same row with no `Authorization-Ref` column does, and no `QFAI-TRIAGE-011`
+
+## EX-0004-0051
+
+- BR-Ref: BR-0004-0037
+- Given an `UPDATE` / `APPEND` row with `Approved By` `-` and `Authorization-Ref` `run-20260924045712999/missing-0001`, which resolves to no file
+- When `qfai validate --profile sdd` runs
+- Then the row raises no `QFAI-TRIAGE-*` finding
+
+## EX-0004-0052
+
+- BR-Ref: BR-0004-0038
+- Given a project made by `qfai init`, whose provenance lock records `.qfai/assistant/process/workflows/bugfix.yml`, and in which that file has been edited so it matches neither the shipped plan nor the lock record
+- When `qfai validate` runs
+- Then one `QFAI-ASSETS-*` finding names `process/workflows/bugfix.yml` as a governed file that differs from the shipped one, at the provenance severity (`error`)
+
+## EX-0004-0053
+
+- BR-Ref: BR-0004-0038
+- Given the same project with the whole `.qfai/assistant/process/workflows/` directory deleted, while the lock still records the layer
+- When `qfai validate` runs
+- Then exactly one `QFAI-ASSETS-007` finding names the `process/workflows/` layer, and no finding names the five plan files one by one
+
+## EX-0004-0054
+
+- BR-Ref: BR-0004-0038
+- Given the same project with a file under `.qfai/assistant/process/migrations/` edited, and a new file added there
+- When `qfai validate` runs
+- Then no `QFAI-ASSETS-*` finding names anything under `process/migrations/`
+
+## EX-0004-0055
+
+- BR-Ref: BR-0004-0038
+- Given a fresh project made by the built `qfai init`, with no edit
+- When `qfai validate` runs
+- Then no `QFAI-ASSETS-*` finding names anything under `process/workflows/`

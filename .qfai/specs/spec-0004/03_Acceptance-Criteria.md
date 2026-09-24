@@ -242,3 +242,77 @@
 - Given a PR that adds `review-*/` or `discussion-*/` directories only under allowed roots (or touches no pack directories at all)
 - When the `check-pack-locations.mjs` lane runs
 - Then the lane passes silently with no `R-PACK-LOCATION-DRIFT` finding; pre-existing legacy packs on unrelated PRs are not re-flagged (staged/changed-dir scope, not a full-tree walk, per DR-0274)
+
+## AC-0004-0040: One approval set decides which rows need approval
+
+- US-Refs: US-0004-0040
+
+```gherkin
+# AC-0004-0040
+# Source: discussion-20260923171450572#REQ-0043
+Scenario: The triage approval check uses the approval set the triage code defines
+  Given a triage table with one row per operation and sub-operation, each with `Approved By` `-`
+  When `qfai validate` runs
+  Then `QFAI-TRIAGE-005` is raised on exactly the rows `requiresApproval()` is true for
+  And every existing triage-validator test passes unchanged
+```
+
+## AC-0004-0041: A cited authorization is checked against its record
+
+- US-Refs: US-0004-0040
+
+```gherkin
+# AC-0004-0041
+# Source: discussion-20260923171450572#REQ-0043
+Scenario: A triage row citing a workflow authorization passes only when the record matches it
+  Given a triage row whose `Authorization-Ref` cites a record under `.qfai/evidence/workflow/`
+  When `qfai validate` runs
+  Then a reference that fails a check CLI-VAL lists raises `QFAI-TRIAGE-011` at error severity, naming the row and the failed check
+  And a reference that passes every check raises neither `QFAI-TRIAGE-011` nor `QFAI-TRIAGE-005`
+  And a reference on an approval-required row that is not a `CREATE` fails the `Operation` check
+  And the column is found by its header name wherever it sits in the table
+  And a record whose run has since moved its scope still passes, because staleness is not checked here
+```
+
+## AC-0004-0042: A row with no reference keeps today's approval check
+
+- US-Refs: US-0004-0040
+
+```gherkin
+# AC-0004-0042
+# Source: discussion-20260923171450572#REQ-0043
+Scenario: A legacy row is judged by `Approved By` alone
+  Given an approval-required triage row with no `Authorization-Ref` column, or with `-` in it
+  When `qfai validate` runs
+  Then the row raises `QFAI-TRIAGE-005` exactly as it does today, and no `QFAI-TRIAGE-011`
+```
+
+## AC-0004-0043: A reference on a row that needs no approval raises nothing
+
+- US-Refs: US-0004-0040
+
+```gherkin
+# AC-0004-0043
+# Source: discussion-20260923171450572#REQ-0043
+Scenario: The reference is not checked where no approval is needed
+  Given an `UPDATE` / `APPEND` triage row whose `Authorization-Ref` resolves to nothing
+  When `qfai validate` runs
+  Then the row raises no triage finding
+```
+
+## AC-0004-0044: Installed plans are a governed layer to validate
+
+- US-Refs: US-0004-0028
+
+```gherkin
+# AC-0004-0044
+# Source: discussion-20260923171450572#REQ-0065
+Scenario: validate vouches for process/workflows as for every governed layer
+  Given a project whose provenance lock records the installed plans under `.qfai/assistant/process/workflows/`
+  When an installed plan differs from the shipped one and `qfai validate` runs
+  Then an edited plan is reported as a fork, `QFAI-ASSETS-005`, at error severity
+  And a plan that still holds what an earlier release wrote is reported as stale, `QFAI-ASSETS-004`, at error severity
+  And when the recorded `process/workflows/` layer is deleted whole, one finding names the layer
+  And a file under `process/migrations/` raises no `QFAI-ASSETS-*` finding
+  And a fresh `qfai init` tree raises no `QFAI-ASSETS-*` finding under `process/workflows`
+```

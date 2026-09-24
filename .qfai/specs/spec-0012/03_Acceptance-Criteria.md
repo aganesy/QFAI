@@ -565,6 +565,50 @@
 - When `qfai prototyping iterate --cycle 0` runs, with or without `--force`,
 - Then both directories MUST be moved into `aggregate.backup-<ISO>/` before any iteration directory is cleared, each moved file MUST appear in `mutation-log.jsonl`, and the backups MUST be left out of the completion certificate's evidence digests and of its freshness scan.
 
+## AC-0012-0176: The prototyping skill hands over or works its order
+
+- US-Refs: US-0012-0144
+
+```gherkin
+# AC-0012-0176
+# Source: discussion-20260923171450572#REQ-0051
+Scenario: The entry check of qfai-prototyping
+  Given workflow mode active
+  When qfai-prototyping starts with no name invocation and no work order
+  Then it edits nothing and passes the request to qfai-run
+  And with a valid work order it does only that work
+  And its SKILL.md cites references/orchestrated-mode.md with one line
+```
+
+## AC-0012-0177: The prototyping skill declares its operation
+
+- US-Refs: US-0012-0144
+
+```gherkin
+# AC-0012-0177
+# Source: discussion-20260923171450572#REQ-0052
+Scenario: The Operations table of qfai-prototyping
+  Given references/orchestrated-mode.md of qfai-prototyping
+  When its Operations table is read
+  Then it lists exactly the operations the workflow vocabulary assigns to qfai-prototyping
+```
+
+## AC-0012-0178: Under a work order the skill works on its target spec only
+
+- US-Refs: US-0012-0144
+
+```gherkin
+# AC-0012-0178
+# Source: discussion-20260923171450572#REQ-0051
+Scenario: A prototype stage stays inside its work order
+  Given a prototype work order whose target names one spec
+  When qfai-prototyping runs under it
+  Then it works on that spec only and settles the one visual decision within the existing DESIGN.md and contracts
+  And it creates no contract
+  And when that spec is not UI-bearing it writes nothing and returns blocked, listing the cause as a finding the operator clears
+  And a standalone invocation still resolves every UI-bearing spec
+```
+
 ## Completion Gate
 
 - `/qfai-prototyping` completion requires `qfai validate --fail-on error` pass.

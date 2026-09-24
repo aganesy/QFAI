@@ -6,10 +6,10 @@
 - Raised at: `2026-09-18T03:05:00Z`
 - Class: `defect`
 - Status: `approved`
-- Approved by: `claude-code` — under the user's standing instruction to process every issue of this session with its own judgment; NOT a user decision on these options
-- Approved at: `2026-09-22T22:00:00Z`
+- Approved by: `user` — explicit selection of Option 1 in this session
+- Approved at: `2026-09-24T19:43:11Z` (approval recorded; exact reply time unavailable)
 - Approved option: `1`
-- Applied at: `-`
+- Applied at: `2026-09-24T19:55:40Z`
 - Superseded by: `-`
 
 ## Context
@@ -101,7 +101,8 @@ Option 1.
 1. The first heading of each pair keeps its id. None of the six references
    above moves.
 2. **Optional Side Artifact Does Not Block Preflight** takes the next free
-   criterion id, `AC-0013-0026` when this record is applied first. It gains the
+   criterion id, `AC-0013-0042` after the intent-driven additions recorded
+   in `09_delta.md`. It gains the
    chain `REQ-0011` requires of every criterion:
    - one business rule, `BR-0013-0021`, stating that the preflight's result
      does not depend on whether an optional side artifact is present, absent,
@@ -152,8 +153,8 @@ the same file, which is how this duplicate went unreported.
   heading.
 - Overlapping open CRs:
   - `CR-20260912-0003` names "the side-artifact `AC-0013-0009`", and says its
-    option `2B` cannot be approved until this repair lands. Once this record is
-    applied, that criterion is `AC-0013-0026`, and `CR-20260912-0003` is read
+    option `2B` cannot be approved until this repair lands. After this owner
+    rerun, that criterion is `AC-0013-0042`, and `CR-20260912-0003` is read
     with that id.
   - The other open records that edit `spec-0013`'s upstream files name none of
     the ids this record removes, renumbers or allocates. **This record is
@@ -165,7 +166,7 @@ the same file, which is how this duplicate went unreported.
 ## Impact scope
 
 - Specs: `spec-0013`
-- Plans: `none`
+- Plans: `.qfai/specs/spec-0013/10_Plan.md` — remove only the stale duplicate-ID pin and pending-application wording
 - Tests: the rows Phase 2b seeds for `TC-0013-0036` and `TC-0013-0037`,
   against `packages/qfai/tests/core/sddPreflight.test.ts`; and, through the
   `/qfai-atdd spec-0013` pass in action 3, every other ATDD-owned `spec-0013`
@@ -182,6 +183,7 @@ the same file, which is how this duplicate went unreported.
   `.qfai/specs/spec-0013/05_Examples.md`,
   `.qfai/specs/spec-0013/06_Test-Cases.md`,
   `.qfai/specs/spec-0013/09_delta.md`,
+  `.qfai/specs/spec-0013/10_Plan.md`,
   `.qfai/specs/spec-0013/tdd/test-list.md`
 
 ## Decision needed from user
@@ -196,7 +198,9 @@ requirements beneath them?
    records this Change Request as one row in `spec-0013/09_delta.md`'s
    `## Change Requests` table — `CR ID`, `Upstream artifact`, `Mode`,
    `Approved by`, `Applied at` — not as a `## Triage` row. It makes the edits in
-   `## Proposed change`, steps 1 to 5, and no other upstream edit.
+   `## Proposed change`, steps 1 to 5. It also removes the now-stale
+   duplicate-ID pin and pending-application wording from `10_Plan.md`; this
+   is a direct consequence of the selected option and adds no obligation.
 
 2. Phase 2b of that rerun seeds one `Integration` row per new test case, at
    `todo`, recording this CR's ID in `DR-ID`. It resets no existing row: no
@@ -221,10 +225,28 @@ requirements beneath them?
 
 ## Resolution
 
-Approved under option 1, the recommendation. It removes the two criteria the
-rest of the pack already contradicts or supersedes, and keeps the one that is
-live, so it adds the least of the three and restores nothing an approved record
-retired. Not yet applied.
+The user explicitly selected Option 1 in this session, replacing the earlier
+agent-entered approval recorded in the prior version of this file. The
+`Approved at` field is the time this explicit selection was recorded; the
+reply's original timestamp is unavailable. This option removes the two
+criteria the rest of the pack already contradicts or supersedes, and keeps
+the one that is live. `/qfai-sdd spec-0013` ran in `re-derive` mode. The
+first AC-0013-0008/0009/0010 headings retain their IDs; the contradictory
+second AC-0013-0008 and superseded second AC-0013-0010 are removed with
+REQ-0014 and REQ-0016..0018. The live optional side-artifact criterion is
+AC-0013-0042, with BR-0013-0021, EX-0013-0021, TC-0013-0036 and
+TC-0013-0037. Phase 2b seeded TDD-0061 and TDD-0062 at `todo` with this CR
+in `DR-ID`. No existing row changed status, obligation or evidence. The
+Plan's obsolete duplicate-ID pin and pending-application statements were
+removed as direct consequences of the chosen option.
+
+The SDD and drift profiles pass at error 0. The next execution is the
+approved-action handoff: `/qfai-implement spec-0013` preflight, then
+`/qfai-atdd spec-0013` for the two new rows and other owed ATDD rows, then
+`/qfai-implement spec-0013` resume. The ATDD pass must preserve the
+spec-0002 TDD-0001 test-file hash as the precondition below states. The
+repository's dogfood backlog pin also needs a gate-owner refresh after the
+duplicate-ID errors disappear.
 
 One precondition for action 3.2, found when approving. `packages/qfai/tests/core/sddPreflight.test.ts`
 is the file the two new rows bind to, and `.qfai/evidence/atdd-spec-0002.md`

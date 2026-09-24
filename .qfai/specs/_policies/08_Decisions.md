@@ -1947,3 +1947,103 @@ The sixth is `OQ-0028`: no validator reconciles a delta's declared ID ranges aga
   binding it needs per-script segmentation.
 - Related: supersedes `DR-0001-0003`. `spec-0012` REQ-0012-0059, `spec-0004`
   REQ-0028, QFAI-PROT-002.
+
+### DR-0296..0297: Intent-driven entry (2026-09-24)
+
+Source: discussion-20260923171450572, decisions D5 and D13 recorded in that
+pack's `99_delta.md`. The pack is not tracked, so each record states its reason
+here. The mechanism is the contracts' and is cited, not restated: CLI-WF
+(`.qfai/contracts/cli/qfai-workflow.md`), CLI-WFFILE
+(`.qfai/contracts/cli/workflow-files.schema.md`) and CLI-VAL
+(`.qfai/contracts/cli/qfai-validate.md`).
+
+#### DR-0296: A new capability is approved once, at routing
+
+- Status: accepted
+- Date: 2026-09-23
+- Context: `/qfai-sdd` Stage 1 asks the user to approve every `CREATE`. Inside a
+  workflow run, routing already finds that the plan needs a new capability, so
+  asking there and again at Stage 1 puts the same question twice. The approval
+  still has to be a person's answer: an agent-written approval, a mode or a
+  confidence value authorizes nothing.
+- Evidence: discussion-20260923171450572 `REQ-0042`, `REQ-0043` and `REQ-0044`;
+  the design's acceptance criterion that a feature run asks the CREATE question
+  exactly once and SDD Stage 1 asks none;
+  `packages/qfai/tests/assets/autoModeApprovalDegrade.test.ts`.
+- Decision:
+  - A new capability is approved once, at routing, by the operator's answer,
+    recorded through `npx qfai workflow decision` as a `human_decision` and bound
+    to the SDD work order's `new_capability` slot.
+  - `/qfai-sdd` Stage 1 does not ask. It checks the authorization before it
+    persists any triage row, and a failed check returns the run to
+    `awaiting_input` for a new question. The checks are CLI-WF
+    `## Authorizations`.
+  - Declining ends the run `cancelled`, with nothing tracked (CLI-WF
+    `## Decline audit`).
+  - `DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` and `UPDATE:REMOVE` keep the Stage 1
+    question.
+  - `--auto` approves nothing.
+- Rejected: an additive `CREATE` authorized by policy, with no question asked
+  - DO NOT: let a `project_policy`, however broad its scope, answer the CREATE
+    question. Temptation: a project that always wants new capabilities seems to
+    gain nothing from being asked.
+- Rejected: Stage 1 asks again
+  - DO NOT: put the routing-time question a second time. Temptation: Stage 1
+    already has the question, and asking twice looks like the safe side.
+- Rejected: the validator judges staleness
+  - DO NOT: re-judge a finished run's approval against today's scope.
+    Temptation: a stale approval looks like a finding, but every row approved in
+    the past would fail as soon as the scope moved on. Staleness is judged while
+    the run proceeds.
+- Rejected: a provisional capability ID minted at routing
+  - DO NOT: create a catalog ID outside `/qfai-sdd`, which owns the catalog.
+    Temptation: the approval could then name its capability by ID.
+- Consequences: a triage row cites the record in `Authorization-Ref`, and
+  `Approved By` copies its answerer. `QFAI-TRIAGE-011` fails a reference that
+  does not resolve or does not match (CLI-VAL
+  `## Triage authorization reference`). The validator's approval set becomes
+  `requiresApproval()`. A row without a reference keeps today's check. The
+  record's fields are CLI-WFFILE `## Authorization record`.
+- Related: `spec-0004`, `spec-0013`, `spec-0018`; `_policies/11_Slice-Policy.md`
+  operation table and decision procedure.
+
+#### DR-0297: A diagnosed missing-test row is appended without a Change Request
+
+- Status: accepted
+- Date: 2026-09-23
+- Context: the shipped rules send a missing test found downstream through a
+  Change Request. On a bugfix where the spec is unchanged, nothing upstream
+  changed, so the Change Request would record a change that did not happen. A
+  `done` row stays `done` (D6), so the fix cannot reopen the existing row
+  either. D14, a defective existing test, and D18, a regression an existing
+  correct test catches, are the other two bugfix branches; they are named here
+  and not decided.
+- Evidence: discussion-20260923171450572 `REQ-0046` and `REQ-0047`, and its
+  `09_Constraints.md` DTC-19, which lists the four shipped rules concerned.
+- Decision:
+  - When diagnosis finds a missing test, `/qfai-sdd` appends the test case and its
+    ledger row through Phase 2b "defect row seeding" (stage kind `sdd_append`,
+    operation `defect-row-seeding`), recording the diagnosis as the reason.
+  - No Change Request is filed. AC and BR do not change.
+  - The new row runs `todo` → RED → GREEN. An acceptance-layer row gets its test
+    from ATDD.
+  - Implement never seeds a row, and a `done` row never moves back.
+  - Scope: a carve-out in those four rules for this case, not a general
+    relaxation of them.
+- Rejected: a defect-reopen transition with a `Repair-Ref` column
+  - DO NOT: move a `done` row back to `todo`. Temptation: the defect is on that
+    row's behaviour, so reopening it looks like the direct fix.
+- Rejected: an `sdd_reconcile` stage
+  - DO NOT: add a reconciliation stage for a row that only needs appending.
+    Temptation: a general stage looks like it covers more cases.
+- Rejected: a Change Request for the upstream change
+  - DO NOT: file a Change Request for a change that did not happen. Temptation:
+    it is what the shipped rules say today.
+- Rejected: implement seeds the row
+  - DO NOT: let the implementer add a ledger row. Temptation: the implementer
+    already knows the missing test.
+- Consequences: the appended test case is recorded in the spec's `09_delta.md`
+  as an `UPDATE` / `APPEND` row, which needs no approval. Inside a run, `accept`
+  refuses a row added by any stage but `sdd_append` and a row moved off `done`
+  (CLI-WF `## Ledger row-set check`).
+- Related: `spec-0001` (drift protocol), `spec-0011`, `spec-0013`, `spec-0018`.

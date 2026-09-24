@@ -18,6 +18,24 @@ UX-loop shape. It was rejected in CHG-002 and its surfaces were purged rather
 than deprecated, because a quantitative threshold on a qualitative judgement
 reads as a measurement while being a vote.
 
+### Intent-driven entry (CAP-0018)
+
+This change introduces no architectural element. It writes
+`qfai-prototyping`'s own `references/orchestrated-mode.md` in the table format
+CLI-WFFILE owns.
+
+Units and work. The order across the batch is spec-0018 `10_Plan.md` `### Implementation order`. Everything here is **U2**:
+
+- `qfai-prototyping/references/orchestrated-mode.md`, holding:
+  - the entry check (BR-0012-0136);
+  - the Operations table, `existing-runtime-contract` (BR-0012-0137);
+  - work on the target spec only, and on a target that is not UI-bearing, a
+    `blocked` result listing its cause for `operator` (BR-0012-0138).
+- One citation line in `qfai-prototyping/SKILL.md`.
+- `iterate` and `certify` are unchanged.
+
+Left out: the core's refusals (spec-0018); any new design contract.
+
 ## Current State
 
 - `/qfai-prototyping` resolves every UI-bearing spec in one invocation via `resolveAllUiBearingSpecs()` in `core/prototyping/specResolution.ts`; per-invocation primary-spec selection is removed.
@@ -72,6 +90,52 @@ Two boundaries need their own cases rather than a shared one:
   a case asserting "it stopped" cannot tell two of them apart; each class asserts
   its own discriminator.
 
+### Intent-driven entry (CAP-0018)
+
+Every case this change adds reads a shipped file, so it is `L3`, under
+`packages/qfai/tests/integration/`. One module holds the cases of one business
+rule.
+
+| Layer | What it proves                                                                                                                                                | Module                                                      | Cases                      |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | -------------------------- |
+| `L3`  | `SKILL.md` cites `references/orchestrated-mode.md` with one line, and the reference cites the shared entry check                                              | `prototypingEntryCheckSpec0012.test.ts`                     | TC-0012-0489               |
+| `L3`  | The Operations table lists exactly `existing-runtime-contract`                                                                                                | `prototypingOperationsSpec0012.test.ts`                     | TC-0012-0490               |
+| `L3`  | Under a work order the skill works on its target spec only and creates no contract; the non-UI stop                                                           | `prototypingWorkOrderScopeSpec0012.test.ts`                 | TC-0012-0491, TC-0012-0492 |
+| E2E   | The prototype stage of a `feature` run, through the prototype variant that spec-0018 `10_Plan.md` `### Which journey discharges which stage story` maps to it | The spec-0018 journey's module, annotated with US-0012-0144 | US-0012-0144 (TDD-0566)    |
+
+**Cases that stand alone, and the kept failure.**
+
+- The non-UI stop has its own case, TC-0012-0492, and is the one kept failure.
+  On a target that is not UI-bearing, the skill writes no `DESIGN.md`, no UI
+  contract and no surface declaration. It returns `blocked`, listing the cause in
+  `debts` with `resolvingOwner` `operator`.
+- No case is matrix-shaped.
+
+**Held elsewhere, so no case is written for it.**
+
+- Dispatch only under `prototype_decision_needed`, and the refusal of a
+  `blocked` result that lists a repairable finding: spec-0018's.
+- `iterate`, `certify` and the standalone loop are unchanged, and keep their
+  existing cases.
+- The 800-line `SKILL.md` ceiling: the doctor line budget.
+
+**Order.** The four `L3` rows are tier 2 of spec-0018 `10_Plan.md`
+`### Order in which the rows go green`, and land before spec-0018's journeys. The
+prototype variant waits on them, and the E2E row closes at tier 5.
+
+**Findings carried on purpose.** Pushes follow spec-0018 `10_Plan.md`
+`### Findings carried on purpose`.
+
+| Finding                                                                                    | Why it is expected                                                   | Until                                                                                                               |
+| ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `QFAI-ATDD-111` for US-0012-0144                                                           | Its journey variant does not exist yet                               | The spec-0018 prototype variant lands                                                                               |
+| `QFAI-ATDD-112` for TC-0012-0489..0492                                                     | Their integration tests do not exist yet                             | ATDD writes them                                                                                                    |
+| The eight pinned `QFAI-TDDLIST-017` groups, and the 415 `tdd` errors of `tdd/test-list.md` | Pinned rows this change does not repair; the new rows add to neither | A later change                                                                                                      |
+| `QFAI-ATDD-131` on this spec, pinned at 1 under `full`                                     | The spec has no Coverage Depth Matrix                                | ATDD writes the first one, and that push re-pins with `node scripts/check-dogfood-backlog.mjs --profile full --pin` |
+
+TDD-0561 stays unused: an approved Change Request that is not yet applied
+reserves it.
+
 ## v1.9.2 Second-Wave maintenance steps (How-only)
 
 - REQ-0150 (`--emit-skeletons`, DR-0261 / DR-0273): in `cli/lib/args.ts` parse `--emit-skeletons` (boolean, opt-in) and `--skeleton-mode full|placeholder|stub` (default `placeholder`); in `core/prototyping/skeletonEmit.ts` (new) emit one token-styled placeholder HTML per `frozenSurfaceUnion` `screens[].id` reading DESIGN.md tokens, NO per-screen LLM call at cycle 0; ensure the convergence path populates `evidenceRefs[]` with both `screenshot` and `html` kinds for every union screen. Default (flag absent) preserves v1.9.1 emit path.
@@ -100,6 +164,15 @@ Coupled production wire-ins (no production caller yet; tests-only):
 - `evaluatorReview.ts#parseEvaluatorReview` — wire in the same wave as TDD-0384 so per-`(spec, screen)` review.json schema fails fast at iterate/certify.
 - `handoff.ts#validateImageSources` — wire in once the prototype-handoff.yaml population path lands; until then `licenseVerify` consumes `prototyping.json#imageSources` directly.
 
+## NFR approach
+
+- NFR-0001..0010 are unchanged by this entry: a prototype stage inside a run uses the same loop, budgets and evidence layout.
+
+### Intent-driven entry (CAP-0018)
+
+- `discussion-20260923171450572#NFR-0002` (asset ceiling): the new `qfai-prototyping/references/orchestrated-mode.md` and the one citation line (`SKILL.md` 535 → 536) stay within 800 lines and 400 characters per line. A breach shows in the `assets.lineBudget` doctor check and `packages/qfai/src/core/doctor/assetLineBudget.ts`.
+- `discussion-20260923171450572#NFR-0015` (distributed surface): the new reference carries no internal identifier. A breach shows in the pre-build shipping lint, the post-build leakage guard or the init smoke test (`.agents/rules/distributed-surface.local.md` `## Four guards`).
+
 ## Risk mitigation
 
 | Risk                                                                                                                                  | Likelihood / impact | Mitigation                                                                                                                                                                     | Trigger to act                                                      |
@@ -109,3 +182,9 @@ Coupled production wire-ins (no production caller yet; tests-only):
 | A stock-photo fill lands with an unknown or non-allowlisted licence and ships in the handoff                                          | low / high          | `licenseVerify` runs against the cycle-0 frozen catalogue and hard-stops with exit 66; every fill records `{url, license, attribution, source}`                                | A fill appears with no `license` field                              |
 | Qualitative convergence is relaxed back into a numeric threshold because it is easier to compute                                      | med / high          | Convergence is the AND over `(spec, screen)` of all four axes exceptional plus empty `lap[]` and `designMdViolations[]`; the quantitative surfaces were purged, not deprecated | A pass-percentage appears anywhere on the convergence path          |
 | A destructive mutation runs unlogged, so an evidence tree cannot be reconstructed after a `--cycle 0 --force`                         | med / med           | `mutationLog.ts` is an append-only writer called from every destructive mutation; `R-EVIDENCE-MUTATION-UNLOGGED` (error) fires when one is missing                             | An iter-NN mutation lands with no writer call                       |
+
+### Intent-driven entry (CAP-0018)
+
+| Risk                                                                                       | Likelihood / impact | Mitigation                                                                                                                             | Trigger to act                                                                                                   |
+| ------------------------------------------------------------------------------------------ | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| A prototype stage whose target has no UI surface writes the project's first surface signal | low / high          | Under a work order whose target spec is not UI-bearing, the skill writes nothing and returns `blocked` naming the cause (BR-0012-0138) | A new `surface_type`, `DESIGN.md` or UI contract after a run, or `resolveSurfaceUnion` returning a non-empty set |

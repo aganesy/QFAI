@@ -2,7 +2,8 @@
 
 - Contract scope: public CLI surface for project initialization and assistant-tree upgrade
 - Owning spec: `spec-0003`
-- Used-by: `spec-0003`, `spec-0004` (path SSOT consumer), `spec-0011`, `spec-0014`
+- Used-by: `spec-0003`, `spec-0004` (path SSOT consumer), `spec-0011`, `spec-0014`,
+  `spec-0018` (the workflow core recomputes the upgrade check)
 - SSOT modules:
   - `packages/qfai/src/cli/commands/init.ts`
   - `packages/qfai/src/core/paths/assistantPaths.ts` (canonical relative paths SSOT)
@@ -16,6 +17,10 @@
   - `.qfai/contracts/cli/shipped-workflows.md` — the ownership boundary,
     provenance record and file-state enum for the GitHub Actions workflows this
     command writes into an adopter's `.github/workflows/`
+  - `.qfai/contracts/cli/qfai-workflow.md` (CLI-WF) and
+    `.qfai/contracts/cli/workflow-files.schema.md` (CLI-WFFILE) — the command
+    and the files this command installs for it, see
+    [Workflow entry](#workflow-entry)
 
 ## Public sub-commands
 
@@ -32,7 +37,8 @@ Required outputs (created if absent; merged or refreshed if present per the exis
 - `.qfai/assistant/constitution/**` — global invariants and protocols (drift-protocol, constitution, quality, distributed-surface, workflow, agent-selection, change-classification, requirements-decomposition, communication, thinking, shared-skill-{delegation,operating}-baseline)
 - `.qfai/assistant/manifest/**` — machine-loaded routing/policy YAML configs (`agent-catalog.yml`, `agent-routing.yml`, `review-profiles.yml`)
 - `.qfai/assistant/catalog/**` — reference materials, rule lists, and registry artifacts that humans read (`test-layers.md`, `review-gate.rules.yml`, `spec_required_files.json`, `manifest.md` template, `product.md`, `structure.md`, `tech.md`, `cli-ux-guidelines.md`, `ui-definition-protocol.md`)
-- `.qfai/assistant/process/**` — workflow, methodology, `migrations/`
+- `.qfai/assistant/process/**` — workflow, methodology, `migrations/`, and
+  `workflows/`, the built-in plans ([Workflow entry](#workflow-entry))
 - `.qfai/assistant/agents/**`, `.qfai/assistant/skills/**` — unchanged from prior layouts
 - `.qfai/steering/` (project-root work-log surface, NOT under `assistant/`) seeded with:
   - `.gitkeep`
@@ -254,8 +260,8 @@ The obligations that are specific to this command:
   `pruneStaleQfaiWrappers` cover generated wrapper directories QFAI owns
   entirely; `.github/workflows/` is adopter-authored and is not one of them.
 - Running init twice into the same tree writes nothing and changes no
-  provenance entry, except for the missing rule citations or review directive
-  described below.
+  provenance entry, except for the missing rule citations, review directive or
+  entry directive described below.
 
 ### Rule citations in an existing entry point
 
@@ -397,6 +403,120 @@ Reporting drift on an already-installed shipped workflow is **not** this
 command's job — it belongs to `qfai doctor`
 (`.qfai/contracts/cli/qfai-doctor.md` §`workflows.integrity`). `qfai init`
 stays silent about a `modified` file; it skips it like any other existing file.
+
+## Workflow entry
+
+`qfai init` installs what `npx qfai workflow` and the free-text entry need, on a
+fresh install and on an upgrade alike. The command is CLI-WF, and the files it
+reads are CLI-WFFILE.
+
+### What it installs
+
+- `qfai-run` and `qfai-maintain` under `.qfai/assistant/skills/`, the stage
+  skills with their `references/orchestrated-mode.md`, and the built-in plans
+  under `.qfai/assistant/process/workflows/`.
+- Host wrappers for `qfai-run` and `qfai-maintain`, generated from the one skill
+  source by the same wrapper sync as every other skill. A wrapper carries no
+  policy of its own. No stage skill sets `disable-model-invocation`, and init
+  writes no `agents/openai.yaml`.
+
+Realizes: `discussion-20260923171450572#REQ-0051`,
+`discussion-20260923171450572#REQ-0064`.
+
+### Ignore entries
+
+The managed `.gitignore` block gains two lines: `.qfai/runs/`, and after the
+`.qfai/evidence/*` ignore line, the negation `!.qfai/evidence/workflow/`. After
+init, `git check-ignore` reports `.qfai/runs/x` ignored and
+`.qfai/evidence/workflow/x/summary.json` not ignored.
+
+Realizes: `discussion-20260923171450572#REQ-0024`.
+
+### Mode line
+
+Init writes no `workflow.mode` key and asks no mode question. The summary gains
+one line naming the mode in force, which is `active` when the key is absent. A
+value other than `active`, `shadow` or `off` is named as invalid on that line, and
+`qfai validate` reports it (CLI-VAL). The line keeps its form on a rerun, a fresh
+install and an unmodified upgrade.
+
+Realizes: `discussion-20260923171450572#REQ-0059`.
+
+### Plan provenance and the upgrade record
+
+- `process/workflows` joins `constitution` and `catalog` as a governed layer of
+  `.assets.lock.json`. An unmodified installed plan is refreshed on upgrade once
+  its provenance matches, and an edited one is never overwritten. The rest of
+  `process/` stays ungoverned, because `process/migrations/` holds one memo per
+  release.
+- The lock also records the package version that wrote it, which is the
+  migration's identity, and the conflict list this run computed. The list is
+  overwritten on every run. `npx qfai workflow start` recomputes it and never
+  reads it.
+- A rerun duplicates nothing.
+
+Realizes: `discussion-20260923171450572#REQ-0057`,
+`discussion-20260923171450572#REQ-0065`.
+
+### Upgrade conflicts
+
+An upgrade treats three states apart: a fresh install gets the latest templates;
+an unmodified shipped asset is updated once its provenance matches; a
+user-modified asset or manifest is never overwritten. `--force` still leaves
+`manifest/` alone apart from the add-only routing-phase merge above.
+
+After the copy, init runs the correspondence check that `start` enforces:
+triggers (b) and (c) of CLI-WF `## Fail-closed`, from the same module. A
+conflict is a file whose difference trips one of them.
+
+- When the mode in force is `active` and the list is not empty, the summary names
+  each conflicting file once, with its difference and the trigger it trips. One
+  line follows, saying `active` is configured and will not start until they are
+  resolved. It replaces the plain mode line.
+- A plain upgrade does not merge `agent-routing.yml`. When a routing entry the
+  shipped manifest carries is absent from the project's copy, as for a skill the
+  release adds, the entry trips trigger (c). The summary names each absent entry
+  and gives `qfai init --force` as the command that adds it. Until the operator
+  runs it, `start` refuses and automatic chaining does not begin.
+- The same summary counts the shipped skills the plain run skipped because the
+  project's copy differs from the template's, compared ignoring line endings. It
+  names `qfai init --force` as the command that updates them, and says that it
+  replaces those skills with the shipped versions, overwriting any local edits.
+  The plain run itself changes none of them.
+- Otherwise the plain mode line is printed.
+- The exit code is 0, as the exit-code table above gives for a successful run. The
+  conflict is enforced where it matters: `start` refuses `fail-closed` on
+  trigger (b) or (c).
+
+Realizes: `discussion-20260923171450572#REQ-0059`,
+`discussion-20260923171450572#REQ-0065`.
+
+### Entry directive
+
+The mechanism that adds the review directive, under
+[Rule citations in an existing entry point](#rule-citations-in-an-existing-entry-point),
+adds a second directive the same way. Init prepends the entry directive to
+`AGENTS.md` and `CLAUDE.md` when no operative copy exists. It tells the agent to
+send a first free-text change request to `qfai-run`.
+
+- Unlike the review directive, it does not depend on `REVIEW.md`.
+- It is not written into `.github/copilot-instructions.md`. Copilot keeps
+  receiving the skills with no support claim, and the directive would send it to
+  a skill that fails closed there.
+- Existing text and line endings are preserved, and the refusals of that section
+  apply.
+
+Realizes: `discussion-20260923171450572#REQ-0058`,
+`discussion-20260923171450572#REQ-0064`.
+
+### Windows parity
+
+Init and upgrade behave the same on Windows as on Linux, including CRLF checkouts
+and paths with spaces. Provenance compares text after CRLF normalization
+(`hashAssistantAssetText`), and lock keys are project-relative paths with `/`.
+The `windows-latest` job runs the init and migration suites.
+
+Realizes: `discussion-20260923171450572#NFR-0011`.
 
 ## Path SSOT enforcement
 
