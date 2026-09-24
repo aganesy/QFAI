@@ -97,26 +97,11 @@ describe("nondeterministic gates", () => {
       expect(baseline).toContain("it goes in the stop report like any other");
     });
 
-    it(`${tree}: the implement evidence rules forbid selective reporting`, async () => {
+    it(`${tree}: implementation inherits the shared nondeterministic-gate protocol`, async () => {
       const skill = flat(await read(tree, SKILL));
-
-      expect(skill).toContain(
-        "**Selective reporting of repeated runs of the same gate is invalid.**",
-      );
-      expect(skill).toContain(
-        "a clean rerun after a red one is an `environment/tooling` finding, not a pass",
-      );
-    });
-
-    it(`${tree}: the post-parallel rollback needs a reproducible failure`, async () => {
-      const skill = flat(await read(tree, SKILL));
-
-      expect(skill).toContain("re-run it once with no intervening change before acting");
-      expect(skill).toContain("A failure that does **not** reproduce is an");
-      expect(skill).toContain("not a rollback trigger");
-      expect(skill).toContain(
-        "Only a **reproducible** failure flags all slices for re-examination and rolls back the merge",
-      );
+      expect(skill).toContain("Follow `rule/shared-skill-operating-baseline.md`");
+      expect(skill).toContain("A failing or unrun gate cannot be reported as PASS");
+      expect(skill).toContain("Evidence without a command and result pair does not prove a gate");
     });
   }
 });
