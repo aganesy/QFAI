@@ -43,7 +43,6 @@ const gateSurface = (): Promise<GateSurface> => (cached ??= collectPrototypingGa
  * same reason, by `tests/validators/ruleCodeUniqueness.test.ts`.
  */
 const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
-  ["core/validators/agentDefinition.ts", new Map([["code", 1]])],
   ["core/validators/designAudit.ts", new Map([["finding.ruleId", 1]])],
 ]);
 

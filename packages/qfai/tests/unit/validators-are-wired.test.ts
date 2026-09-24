@@ -348,11 +348,9 @@ async function collectBarrelValidators(): Promise<Map<string, string>> {
  * comments, string / template literals, and `import … from "…"` /
  * `export { … } from "…"` declarations all go away.
  *
- * Without this, prose about a rule counts as wiring. `validateTddList` is
- * named in four comments under `src/core/`, so a substring scan keeps calling
- * it "wired" even after `validate.ts` drops both its import and its call —
- * exactly the regression this guard exists to catch. A bare re-export is not
- * a call site either: it only moves the name one module further along.
+ * Without this, prose about a rule counts as wiring even after `validate.ts`
+ * drops both its import and its call. A bare re-export is not a call site
+ * either: it only moves the name one module further along.
  */
 function codeOnly(source: string): string {
   return withoutCommentsOrLiterals(source)
@@ -1084,8 +1082,9 @@ const ATDD_GATE_MODULE = path.resolve(VALIDATORS_DIR, "atddCodeTraceability.ts")
 /** The exported entry point every `qfai validate` profile runs through. */
 const VALIDATE_ENTRY = "validateProject";
 
-/** The orchestrator `--profile atdd` dispatches to; the ATDD profile boundary. */
-const ATDD_PROFILE_ENTRY = "runAtddValidators";
+/** The profile dispatcher and its ATDD-only closure. */
+const STORY_PROFILE_ENTRY = "runStoryProfileValidators";
+const ATDD_PROFILE_ENTRY = "atdd";
 
 const ATDD_CODE_PATTERN = /^QFAI-ATDD-\d+$/;
 /** Static `from "./x.js"` plus dynamic `await import("./x.js")` specifiers. */
@@ -1093,6 +1092,41 @@ const MODULE_SPECIFIER_RE = /(?:from\s*|import\s*\(\s*)["'](\.\.?\/[\w./-]+)["']
 
 function parse(fileName: string, body: string): ts.SourceFile {
   return ts.createSourceFile(fileName, body, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+}
+
+/** The atdd case must invoke the ATDD closure, not merely declare it. */
+function atddProfileDispatches(body: string): boolean {
+  const source = parse(VALIDATE_TS, body);
+  for (const statement of source.statements) {
+    if (!ts.isFunctionDeclaration(statement) || statement.name?.text !== STORY_PROFILE_ENTRY) {
+      continue;
+    }
+    let dispatched = false;
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isSwitchStatement(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "profile"
+      ) {
+        for (const clause of node.caseBlock.clauses) {
+          if (!ts.isCaseClause(clause) || !ts.isStringLiteralLike(clause.expression)) continue;
+          if (clause.expression.text !== "atdd") continue;
+          dispatched = clause.statements.some(
+            (item) =>
+              ts.isReturnStatement(item) &&
+              item.expression !== undefined &&
+              ts.isCallExpression(item.expression) &&
+              ts.isIdentifier(item.expression.expression) &&
+              item.expression.expression.text === ATDD_PROFILE_ENTRY,
+          );
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    if (statement.body !== undefined) visit(statement.body);
+    return dispatched;
+  }
+  return false;
 }
 
 /** Every string literal in a module, `code` constants included. Comments are not literals. */
@@ -1589,6 +1623,7 @@ function collectCallEdges(
 type CallGraph = {
   edges: Map<string, Set<string>>;
   nodeOf: (file: string, name: string) => string | undefined;
+  nestedNodeOf: (file: string, parent: string, name: string) => string | undefined;
 };
 
 function buildCallGraph(modules: ReadonlyMap<string, string>): CallGraph {
@@ -1600,7 +1635,21 @@ function buildCallGraph(modules: ReadonlyMap<string, string>): CallGraph {
   for (const module of facts.values()) {
     collectCallEdges(facts, module, edges);
   }
-  return { edges, nodeOf: (file, name) => facts.get(file)?.topLevel.get(name) };
+  return {
+    edges,
+    nodeOf: (file, name) => facts.get(file)?.topLevel.get(name),
+    nestedNodeOf: (file, parent, name) => {
+      const module = facts.get(file);
+      const parentId = module?.topLevel.get(parent);
+      if (module === undefined || parentId === undefined) return undefined;
+      for (const [node, id] of module.functionIds) {
+        if (bindingName(node) !== name) continue;
+        const enclosing = module.scopes.get(node)?.parent;
+        if (enclosing !== undefined && module.functionIds.get(enclosing) === parentId) return id;
+      }
+      return undefined;
+    },
+  };
 }
 
 /** Names transitively invoked starting from `roots`. */
@@ -1682,7 +1731,7 @@ function executedFromEntry(execution: ExecutionGraph): Set<string> {
  * branch — still reachable from `validateProject` — reads as unwired here.
  */
 function executedFromAtddProfile(execution: ExecutionGraph): Set<string> {
-  const entry = execution.graph.nodeOf(VALIDATE_TS, ATDD_PROFILE_ENTRY);
+  const entry = execution.graph.nestedNodeOf(VALIDATE_TS, STORY_PROFILE_ENTRY, ATDD_PROFILE_ENTRY);
   return entry === undefined ? new Set<string>() : reachableFrom(execution.graph.edges, [entry]);
 }
 
@@ -2076,11 +2125,22 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
     const execution = await buildExecutionGraph();
     const executed = executedFromAtddProfile(execution);
 
-    const atddEntry = execution.graph.nodeOf(VALIDATE_TS, ATDD_PROFILE_ENTRY);
+    const dispatcher = execution.graph.nodeOf(VALIDATE_TS, STORY_PROFILE_ENTRY);
+    const atddEntry = execution.graph.nestedNodeOf(
+      VALIDATE_TS,
+      STORY_PROFILE_ENTRY,
+      ATDD_PROFILE_ENTRY,
+    );
     expect(
-      atddEntry !== undefined && executedFromEntry(execution).has(atddEntry),
-      "runAtddValidators must itself be reachable from validateProject, or the check below " +
-        "measures nothing.",
+      dispatcher !== undefined && executedFromEntry(execution).has(dispatcher),
+      "runStoryProfileValidators must be reachable from validateProject.",
+    ).toBe(true);
+    expect(
+      dispatcher !== undefined &&
+        atddEntry !== undefined &&
+        atddProfileDispatches(execution.modules.get(VALIDATE_TS) ?? "") &&
+        reachableFrom(execution.graph.edges, [dispatcher]).has(atddEntry),
+      "The atdd case must invoke its own closure; an orphaned declaration does not run.",
     ).toBe(true);
 
     const unwired: string[] = [];
@@ -2103,7 +2163,7 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
     expect(
       unwired,
       "Each ATDD validator must be invoked on a path that actually executes under " +
-        "`--profile atdd` — runAtddValidators, or an orchestrator it reaches. Being importable " +
+        "`--profile atdd` — the atdd closure, or an orchestrator it reaches. Being importable " +
         "is not wiring: a re-export from validators/index.ts, a commented-out call, and a call " +
         "inside a helper nobody invokes all leave the validator's issue codes unable to appear " +
         "in validate.json — exactly the dead-validator state QFAI-ATDD-001 was in. Reachability " +

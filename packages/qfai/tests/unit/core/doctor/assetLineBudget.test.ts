@@ -467,7 +467,7 @@ describe("doctor assets.lineBudget check", () => {
     "escapes control characters in a path before rendering it into the message",
     async () => {
       await withTempRoot(async (root) => {
-        const assistantDir = path.join(root, ".qfai", "assistant", "skills", "qfai-demo");
+        const assistantDir = path.join(root, ".qfai", "assistant", "skill", "qfai-demo");
         await mkdir(assistantDir, { recursive: true });
         const hostileName = "over\n[ok] injected: not a real finding.md";
         await writeFile(

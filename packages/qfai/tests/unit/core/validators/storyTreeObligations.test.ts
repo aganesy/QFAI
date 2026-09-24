@@ -72,7 +72,7 @@ describe("story-tree test obligations", () => {
     ).toBe(true);
     expect(
       findings.some(
-        (item) => item.message.includes("EX-0001-0001-99") && item.message.includes("undeclared"),
+        (item) => item.code === "QFAI-STORY-008" && item.refs?.includes("EX-0001-0001-99"),
       ),
     ).toBe(true);
   });

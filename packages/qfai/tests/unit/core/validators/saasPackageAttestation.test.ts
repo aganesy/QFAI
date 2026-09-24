@@ -3,7 +3,7 @@
  * (TC-0004-0068 / TDD-0048).
  *
  * - Given a repo where the prototyping-profile findings PASS (no
- *   error-severity issues), but `.qfai/contracts/design/design-system.yaml`
+ *   error-severity issues), but `.qfai/spec/03_contract/design/design-system.yaml`
  *   is REMOVED, the saas-package profile MUST fail and the failure
  *   message MUST name the absent attestation.
  * - When the attestation is present, the saas-package profile emits
@@ -39,7 +39,7 @@ afterEach(async () => {
 });
 
 async function seedAttestation(): Promise<void> {
-  const dir = path.join(root, ".qfai", "contracts", "design");
+  const dir = path.join(root, ".qfai", "spec", "03_contract", "design");
   await mkdir(dir, { recursive: true });
   await writeFile(
     path.join(dir, "design-system.yaml"),
@@ -70,7 +70,7 @@ describe("TC-0004-0068: saas-package profile rejects missing DCON-005 attestatio
       "QFAI-STORY-010",
     ]);
   });
-  it("fails (error severity) when .qfai/contracts/design/design-system.yaml is absent — failure names the attestation", async () => {
+  it("fails (error severity) when .qfai/spec/03_contract/design/design-system.yaml is absent — failure names the attestation", async () => {
     // No attestation seeded. Prototyping issues are passed as an empty
     // list (clean prototyping pipeline) so the only failure source is
     // the attestation gate.
@@ -82,7 +82,9 @@ describe("TC-0004-0068: saas-package profile rejects missing DCON-005 attestatio
       attestationError,
       "expected an error finding that names the absent design-system.yaml attestation",
     ).toBeDefined();
-    expect(attestationError?.message ?? "").toContain(".qfai/contracts/design/design-system.yaml");
+    expect(attestationError?.message ?? "").toContain(
+      ".qfai/spec/03_contract/design/design-system.yaml",
+    );
   });
 
   it("does NOT emit the attestation-missing finding when the file is present", async () => {

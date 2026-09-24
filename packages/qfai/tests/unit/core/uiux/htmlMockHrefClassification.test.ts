@@ -28,7 +28,7 @@ const TEMPLATE_REL = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-discussion",
   "templates",
   "03_Story-Workshop.md",
@@ -43,7 +43,7 @@ const SKILL_REL = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-discussion",
   "SKILL.md",
 );
