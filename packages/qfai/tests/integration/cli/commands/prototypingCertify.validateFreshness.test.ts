@@ -100,22 +100,16 @@ async function seedHappyPath(root: string, verifyJson: object): Promise<void> {
     path.join(root, "qfai.config.yaml"),
     [
       "paths:",
-      "  contractsDir: .qfai/contracts",
-      "  specsDir: .qfai/specs",
+      "  contractsDir: .qfai/spec/03_contract",
+      "  specsDir: .qfai/spec",
       "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/output",
-      "  skillsDir: .qfai/assistant/skills",
-      "  promptsDir: .qfai/assistant/skills",
+      "  skillsDir: .qfai/assistant/skill",
+      "  promptsDir: .qfai/assistant/prompt",
       "  srcDir: src",
       "  testsDir: tests",
       "",
     ].join("\n"),
-    "utf-8",
-  );
-  await mkdir(path.join(root, ".qfai/specs/spec-0012"), { recursive: true });
-  await writeFile(
-    path.join(root, ".qfai/specs/spec-0012/01_Spec.md"),
-    "---\nsurface_type: ui-bearing\n---\n\n# spec-0012\n",
     "utf-8",
   );
   await writeFile(path.join(root, "DESIGN.md"), CERT_DESIGN_MD, "utf-8");
@@ -129,9 +123,8 @@ async function seedHappyPath(root: string, verifyJson: object): Promise<void> {
     profile: "prototyping",
     counts: { error: 0, warning: 0, info: 0 },
   });
-  await writeFile(path.join(root, ".qfai/report/validate.json"), validateBody, "utf-8");
-  await writeFile(path.join(root, ".qfai/output/validate.json"), validateBody, "utf-8");
-  await writeFile(path.join(root, ".qfai/output/verify.json"), JSON.stringify(verifyJson), "utf-8");
+  await writeFile(path.join(root, ".qfai/report/validate-prototyping.json"), validateBody, "utf-8");
+  await writeFile(path.join(root, ".qfai/report/verify.json"), JSON.stringify(verifyJson), "utf-8");
   const protoBody = {
     mode: { effective: "standard", source: "explicit-request", rationale: "test" },
     surface: "web",
@@ -184,8 +177,7 @@ async function stampValidateJson(root: string, generatedAt: string | null): Prom
     counts: { error: 0, warning: 0, info: 0 },
     ...(generatedAt === null ? {} : { generatedAt }),
   });
-  await writeFile(path.join(root, ".qfai/report/validate.json"), body, "utf-8");
-  await writeFile(path.join(root, ".qfai/output/validate.json"), body, "utf-8");
+  await writeFile(path.join(root, ".qfai/report/validate-prototyping.json"), body, "utf-8");
 }
 
 const PASS_VERIFY = { status: "PASS", scope: "prototyping" } as const;

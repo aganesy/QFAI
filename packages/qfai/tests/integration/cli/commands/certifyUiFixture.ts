@@ -7,7 +7,7 @@ export const CERTIFY_UI_CONTRACT = "CON-UI-0012";
 
 /** Seed the UI surface and its accepted per-screen review together. */
 export async function seedCertifyUiEvidence(root: string, iterationDir: string): Promise<void> {
-  const uiDir = path.join(root, ".qfai/contracts/ui");
+  const uiDir = path.join(root, ".qfai/spec/03_contract/ui");
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "index.yaml"),

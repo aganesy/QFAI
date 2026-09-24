@@ -94,22 +94,16 @@ async function seedSaasPackageHappyPath(root: string): Promise<void> {
     path.join(root, "qfai.config.yaml"),
     [
       "paths:",
-      "  contractsDir: .qfai/contracts",
-      "  specsDir: .qfai/specs",
+      "  contractsDir: .qfai/spec/03_contract",
+      "  specsDir: .qfai/spec",
       "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/output",
-      "  skillsDir: .qfai/assistant/skills",
-      "  promptsDir: .qfai/assistant/skills",
+      "  skillsDir: .qfai/assistant/skill",
+      "  promptsDir: .qfai/assistant/prompt",
       "  srcDir: src",
       "  testsDir: tests",
       "",
     ].join("\n"),
-    "utf-8",
-  );
-  await mkdir(path.join(root, ".qfai/specs/spec-0014"), { recursive: true });
-  await writeFile(
-    path.join(root, ".qfai/specs/spec-0014/01_Spec.md"),
-    "---\nsurface_type: ui-bearing\n---\n\n# spec-0014\n",
     "utf-8",
   );
   await writeFile(path.join(root, "DESIGN.md"), CERT_DESIGN_MD, "utf-8");
@@ -123,10 +117,9 @@ async function seedSaasPackageHappyPath(root: string): Promise<void> {
     profile: "prototyping",
     counts: { error: 0, warning: 0, info: 0 },
   });
-  await writeFile(path.join(root, ".qfai/report/validate.json"), validateBody, "utf-8");
-  await writeFile(path.join(root, ".qfai/output/validate.json"), validateBody, "utf-8");
+  await writeFile(path.join(root, ".qfai/report/validate-prototyping.json"), validateBody, "utf-8");
   await writeFile(
-    path.join(root, ".qfai/output/verify.json"),
+    path.join(root, ".qfai/report/verify.json"),
     JSON.stringify({ status: "PASS", scope: "prototyping" }),
     "utf-8",
   );
