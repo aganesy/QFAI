@@ -107,31 +107,9 @@
         "a dependency condition."
       ],
       "dependencyMatrices": {
-        "test": {
-          "slice": [
-            "core",
-            "validators",
-            "integration",
-            "e2e",
-            "cli",
-            "unit",
-            "scripts",
-            "pr-fix",
-            "pr-merge"
-          ]
-        },
+        "test": { "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"] },
         "node-floor": {
-          "slice": [
-            "core",
-            "validators",
-            "integration",
-            "e2e",
-            "cli",
-            "unit",
-            "scripts",
-            "pr-fix",
-            "pr-merge"
-          ]
+          "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"]
         }
       },
       "dependencyMatricesNote": [
@@ -148,7 +126,7 @@
         "shell the digest cannot see. This is the same obligation `verificationBodies` carries for a",
         "step's text, applied to the other half of what the step actually runs.",
         "",
-        "TWO lanes are sliced now, and each is pinned separately. `node-floor` runs the same nine",
+        "TWO lanes are sliced now, and each is pinned separately. `node-floor` runs the same seven",
         "slices, so a value rewritten in its list reaches its shell exactly as one rewritten in the",
         "`test` job's reaches that one — and a value dropped from it stops a slice being exercised on",
         "the engines floor while the `test` job still runs it and the lane still reports green. That",
@@ -423,7 +401,7 @@
         "unconditional verification and joins `verificationSet` with the rest."
       ],
       "verificationBodies": {
-        "Classify the change against the enumerated directory lists": "ff046bcf7d3956e0",
+        "Classify the change against the enumerated directory lists": "1c0127391f64ac1c",
         "Verify the toolchain action before running it": "c4e7fc38fa629fbb",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "211656e97a2f3714",
@@ -495,9 +473,9 @@
         "because the verdict executes and is not one of its own dependencies."
       ],
       "codePathCostPin": {
-        "instances": 26,
-        "timeoutMinutesSum": 350,
-        "installInstances": 24,
+        "instances": 22,
+        "timeoutMinutesSum": 290,
+        "installInstances": 20,
         "buildJobs": ["build", "node-floor", "test"]
       },
       "codePathCostPinNote": [

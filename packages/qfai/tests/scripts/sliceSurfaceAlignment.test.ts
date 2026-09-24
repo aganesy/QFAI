@@ -3,12 +3,13 @@
  * they name the SAME set — plus the obligation that no named slice can match
  * zero test files.
  *
- * There are four, and nothing kept them in step:
+ * The current declarations are:
  *
  *   1. the runner workspace — `packages/qfai/vitest.workspace.ts` `name:` values
- *   2. the `test` job's matrix — `.github/workflows/ci.yml` `strategy.matrix.slice`
- *   3. the per-slice scripts — `packages/qfai/package.json`'s `test:<slice>` keys
- *   4. the `node-floor` job's matrix, in the same workflow
+ *   2. the per-slice scripts — `packages/qfai/package.json`'s `test:<slice>` keys
+ *   3. the `test` and `node-floor` matrices in `ci.yml`
+ *   4. the `gate-tests` and `gate-floor` matrices in `release.yml`
+ *   5. the release shape step's `SUITE_SLICES` list
  *
  * At the revision this file was written they held three different sets: eight
  * projects (one of them matching zero files), seven matrix entries, and five
@@ -17,7 +18,7 @@
  * matrix handed the project name to a generic script; a missing script is only
  * noticed by whoever tries to run it.
  *
- * ## Why the second sliced job is its own surface
+ * ## Why each sliced job is its own surface
  *
  * `node-floor` runs the same suite on the floor `engines.node` promises, and it
  * is sliced for the reason the `test` job is: one pool over the whole suite is
@@ -26,14 +27,10 @@
  * legs partition the suite — which is the very property claims 1 to 3 establish
  * for the other list.
  *
- * Reading surface 2 alone does not reach it. A slice dropped from the floor
- * matrix leaves all three original surfaces in perfect agreement: the project
- * exists, the script exists, the `test` job runs it. Nothing is unreachable from
- * CI and nothing advertises coverage that cannot exist. What stops is that slice
- * being exercised on the floor at all — the eight remaining legs go green, the
- * lane rolls up green, and an API absent in the floor release breaks exactly the
- * supported users the lane was added for. That is the same class of silent
- * divergence as the three above, arriving through a job this file did not read.
+ * A slice dropped from one matrix leaves the other declarations aligned while
+ * that job stops exercising it. The release shape list also selects whether a
+ * tagged tree runs the matrix or the whole suite, so it must agree with the
+ * matrices that run after selection.
  *
  * ## Exit status does not distinguish an absent slice from an empty one
  *
@@ -83,7 +80,7 @@ const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
 const WORKSPACE = path.join(PACKAGE_ROOT, "vitest.workspace.ts");
 const PACKAGE_JSON = path.join(PACKAGE_ROOT, "package.json");
-const CI_WORKFLOW = path.join(REPO_ROOT, ".github", "workflows", "ci.yml");
+const WORKFLOW_DIR = path.join(REPO_ROOT, ".github", "workflows");
 
 /**
  * The project name that stopped being declared, kept as a literal.
@@ -132,7 +129,7 @@ function runnerProjects(): string[] {
 }
 
 /**
- * Surfaces 2 and 4 — the slice list a named CI job expands over.
+ * The slice list a named workflow job expands over.
  *
  * Parameterised by job rather than duplicated, so a second sliced lane costs a
  * call site instead of a second reader that can be updated out of step with the
@@ -140,16 +137,20 @@ function runnerProjects(): string[] {
  * are supposed to have one, and returning an empty list there would report as a
  * set mismatch rather than as the missing matrix it is.
  */
-function matrixSlices(job: string): string[] {
-  const doc: unknown = parseYaml(readFileSync(CI_WORKFLOW, "utf-8"));
+function workflowJob(workflow: string, job: string): Record<string, unknown> {
+  const doc: unknown = parseYaml(readFileSync(path.join(WORKFLOW_DIR, workflow), "utf-8"));
   if (!isRecord(doc) || !isRecord(doc["jobs"]) || !isRecord(doc["jobs"][job])) {
-    throw new Error(`ci.yml declares no \`${job}\` job`);
+    throw new Error(`${workflow} declares no \`${job}\` job`);
   }
-  const strategy = doc["jobs"][job]["strategy"];
+  return doc["jobs"][job];
+}
+
+function matrixSlices(workflow: string, job: string): string[] {
+  const strategy = workflowJob(workflow, job)["strategy"];
   const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
   const slices = isRecord(matrix) ? matrix["slice"] : undefined;
   if (!Array.isArray(slices) || !slices.every((s) => typeof s === "string")) {
-    throw new Error(`ci.yml's ${job} job declares no string matrix.slice list`);
+    throw new Error(`${workflow}'s ${job} job declares no string matrix.slice list`);
   }
   return slices;
 }
@@ -161,7 +162,12 @@ function matrixSlices(job: string): string[] {
  * `matrix.slice` would make the claim vacuous in the direction that matters: a
  * lane that stopped declaring one would stop being checked instead of failing.
  */
-const SLICED_JOBS = ["test", "node-floor"] as const;
+const SLICED_JOBS = [
+  { workflow: "ci.yml", job: "test" },
+  { workflow: "ci.yml", job: "node-floor" },
+  { workflow: "release.yml", job: "gate-tests" },
+  { workflow: "release.yml", job: "gate-floor" },
+] as const;
 
 /**
  * Surface 3 — the per-slice scripts, identified by what they DO rather than by
@@ -177,16 +183,8 @@ const SLICED_JOBS = ["test", "node-floor"] as const;
  * The first draft of this row did use the prefix, and the RED caught it by
  * demanding that `test:assets` select an `assets` project that does not exist.
  */
-// `[a-z0-9-]+` and not `[a-z]+`: one project is named `e2e`, and `pr-fix` and
-// `pr-merge` carry a hyphen. The first draft used the letters-only class, so surface 3
-// silently lost `test:e2e` and the equality claim would have failed for a reason that
-// had nothing to do with alignment. A count check in the implementation script caught
-// it; the character class is recorded here because every project whose name reaches
-// outside the letters hits it the same way, and the miss is silent in the direction
-// that matters — the slice drops out of surface 3, so the count claim passes while the
-// equality claim fails. The digit was the first such character and the hyphen the
-// second. A name using a third needs this class widened before its slice is read here
-// at all.
+// Project names may contain digits or hyphens. A narrower selector would silently
+// omit those scripts from the surface comparison.
 const PROJECT_SELECTOR = /^vitest run --project ([a-z0-9-]+)$/;
 
 function perSliceScriptEntries(): { key: string; slice: string }[] {
@@ -208,22 +206,28 @@ function perSliceScripts(): string[] {
 }
 
 /** A named job's steps, narrowed. Used by `TC-0017-0064` to read what each matrix runs. */
-function jobSteps(job: string): Record<string, unknown>[] {
-  const doc: unknown = parseYaml(readFileSync(CI_WORKFLOW, "utf-8"));
-  if (!isRecord(doc) || !isRecord(doc["jobs"]) || !isRecord(doc["jobs"][job])) {
-    throw new Error(`ci.yml declares no \`${job}\` job`);
-  }
-  const steps = doc["jobs"][job]["steps"];
+function jobSteps(workflow: string, job: string): Record<string, unknown>[] {
+  const steps = workflowJob(workflow, job)["steps"];
   if (!Array.isArray(steps)) {
-    throw new Error(`ci.yml's ${job} job declares no steps`);
+    throw new Error(`${workflow}'s ${job} job declares no steps`);
   }
   return steps.filter(isRecord);
 }
 
+function releaseShapeSlices(): string[] {
+  const shape = jobSteps("release.yml", "verify").find((step) => step["id"] === "shape");
+  const env = shape?.["env"];
+  const value = isRecord(env) ? env["SUITE_SLICES"] : undefined;
+  if (typeof value !== "string") {
+    throw new Error("release.yml's shape step declares no SUITE_SLICES list");
+  }
+  return value.trim().split(/\s+/).filter(Boolean);
+}
+
 const sorted = (xs: readonly string[]): string[] => [...xs].sort();
 
-describe("TC-0017-0062 (TDD-0062): the slice surfaces hold one set of nine names", () => {
-  it("agrees across the runner workspace, both CI matrices and the per-slice scripts", () => {
+describe("TC-0017-0062 (TDD-0062): the slice surfaces hold one set of seven names", () => {
+  it("agrees across the runner, scripts, CI and release declarations", () => {
     const projects = sorted(runnerProjects());
     const scripts = sorted(perSliceScripts());
 
@@ -232,27 +236,31 @@ describe("TC-0017-0062 (TDD-0062): the slice surfaces hold one set of nine names
     // or a script naming a project that does not exist is meaningless, while a
     // project with neither is merely unreachable from CI.
     //
-    // Every sliced job, not just the first. The two lists are identical today and
-    // are still two declarations in the workflow, so one of them can be edited
-    // alone — and a slice missing from `node-floor` leaves the runner, the scripts
-    // and the `test` job in agreement while that slice stops running on the floor.
-    for (const job of SLICED_JOBS) {
+    // Each job declares its own matrix. A missing slice in any one job stops
+    // that job from testing the whole suite while the other declarations agree.
+    for (const { workflow, job } of SLICED_JOBS) {
       expect
-        .soft(sorted(matrixSlices(job)), `the ${job} matrix names exactly the runner's projects`)
+        .soft(
+          sorted(matrixSlices(workflow, job)),
+          `${workflow}'s ${job} matrix names exactly the runner's projects`,
+        )
         .toEqual(projects);
     }
+    expect
+      .soft(sorted(releaseShapeSlices()), "the release shape list names the runner's projects")
+      .toEqual(projects);
     expect
       .soft(scripts, "the per-slice scripts name exactly the runner's projects")
       .toEqual(projects);
 
-    // CLAIM 2 — and there are nine. The count is asserted because the spec states
+    // CLAIM 2 — and there are seven. The count is asserted because the spec states
     // it, and it is asserted LAST: if the sets disagree, the count is not the
     // useful thing to be told.
     //
     // A number rather than a phrase, because this is the only claim that catches a
     // shrink every surface agreed to: drop a slice from all three and CLAIM 1 still
     // holds.
-    expect.soft(projects.length, "the aligned set has nine members").toBe(9);
+    expect.soft(projects.length, "the aligned set has seven members").toBe(7);
   });
 });
 
@@ -305,7 +313,7 @@ describe("TC-0017-0063 (TDD-0063): no declared slice can match zero test files",
   });
 });
 
-describe("TC-0017-0064 (TDD-0064): the two missing per-slice scripts exist and are used", () => {
+describe("TC-0017-0064 (TDD-0064): every sliced job uses its per-slice scripts", () => {
   it("gives every slice its own script and stops the matrix passing a project name to a generic one", () => {
     const scripts = perSliceScripts();
 
@@ -343,11 +351,13 @@ describe("TC-0017-0064 (TDD-0064): the two missing per-slice scripts exist and a
     // script of its own still run, and either sliced lane can reintroduce it on its
     // own — at which point surface 3 stops being load-bearing for that lane and the
     // alignment claim above describes nothing.
-    for (const job of SLICED_JOBS) {
-      const runValues = jobSteps(job)
+    for (const { workflow, job } of SLICED_JOBS) {
+      const runValues = jobSteps(workflow, job)
         .map((step) => step["run"])
         .filter((run): run is string => typeof run === "string");
-      expect(runValues.length, `the ${job} job must declare run steps`).toBeGreaterThan(0);
+      expect(runValues.length, `${workflow}'s ${job} job must declare run steps`).toBeGreaterThan(
+        0,
+      );
 
       const genericWithProject = runValues.filter((run) => /\btest\b[^\n]*--project/.test(run));
       expect

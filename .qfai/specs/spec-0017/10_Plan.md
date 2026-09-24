@@ -11,24 +11,22 @@ Every path below was checked against the tree. `present` means the file exists t
 spec edits it; `to be created` means no such path exists yet. `OQ-0025` exists because three
 spec-claimed paths in other specs were never checked, so the column is not decoration.
 
-| Path                                                                        | State today   | What this spec does with it                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| --------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.github/workflows/ci.yml`                                                  | present       | 7 jobs today. Gains per-job permissions, checkout flags, SHA pins, the derived verdict, the detection job, layer-separated jobs, upload hygiene, the folded full-profile validate run. Job set grows; file count does not.                                                                                                                                                                                                                                      |
-| `.github/workflows/release.yml`                                             | present       | 4 jobs today, one workflow-level permission block. Gains checkout flags and SHA pins; the gate job also moves onto the shared setup definition, dropping the `NODE_LTS` workflow-level literal. `NODE_PUBLISH` stays as the one declared exception (BR-0017-0027). Filename is frozen input (OC-74); contents may harden.                                                                                                                                       |
-| `.github/workflows/qfai-validate.yml`                                       | present       | **Deleted.** This is the repository's own duplicate of the shipped validate workflow — the 13th install, the 6th build, and the second unconditional pull-request trigger.                                                                                                                                                                                                                                                                                      |
-| `.github/actions/setup/action.yml`                                          | to be created | The single setup-preamble definition. New subdirectory `.github/actions/` under an already-tracked directory, so the root-additions policy does not apply; it is emphatically **not** authored under the shipped asset tree (OC-68).                                                                                                                                                                                                                            |
-| `.github/required-status-contexts.json`                                     | to be created | The checked-in expected-required-context declaration the hygiene script reads. Co-located with what it describes, inside the existing `.github/`, so no root-level addition.                                                                                                                                                                                                                                                                                    |
-| `scripts/check-workflow-hygiene.mjs`                                        | to be created | The hygiene lane, and the executor for the declaration check (DR-0017-0004). Root `scripts/` already holds 11 `check-*.mjs` siblings, so the naming and the home are the existing convention. Root-level `scripts/` is the right home rather than `packages/qfai/scripts/`: its subject is repository-level and it must be invokable from the root aggregate.                                                                                                   |
-| `scripts/pin-documentation-only-cost.mjs`                                   | to be created | Re-derives the documentation-only cost pin — the executing job list and their declared-minutes sum — from `.github/workflows/ci.yml` and writes it into the declaration through the existing `scripts/lib/write-declaration.mjs`. The recomputation is an export of `check-workflow-hygiene.mjs`, so the lane and the pinner cannot hold two answers to one rule. A program under `scripts/` is itself pinned by bytes, so its digest lands in the same change. |
-| `package.json` (repository root)                                            | present       | `ci:lint` gains the hygiene lane. `ci:gate` is deliberately untouched — a gate there blocks no pull request (OC-72).                                                                                                                                                                                                                                                                                                                                            |
-| `packages/qfai/package.json`                                                | present       | Gains the two missing per-slice scripts, and one for each slice a process-spawning test file takes, so the per-slice script set holds nine names.                                                                                                                                                                                                                                                                                                               |
-| `packages/qfai/vitest.workspace.ts`                                         | present       | 8 projects, each carrying only `name` / `include` / `testTimeout` and zero parallelism settings. Gains the full knob set per project; the zero-file `compatibility` project is deleted and each test file that spawns a process per case takes a project of its own, leaving 9.                                                                                                                                                                                 |
-| `packages/qfai/tests/pr-fix/`                                               | to be created | The `pr-fix` project's only include glob. It holds the suite that drives `run-pr-fix.ps1`, which spawns a process per case; the project exists so that suite has a runner to itself. Its consumers are the `test:pr-fix` script, the `test` leg, the `node-floor` leg, and the `dependencyMatrices` entry that pins both.                                                                                                                                       |
-| `packages/qfai/tests/pr-merge/`                                             | to be created | The `pr-merge` project's only include glob, on the same terms for `run-pr-merge.ps1`. Separate from `pr-fix` rather than beside it: two suites of this cost on one runner ask for every core it has, so neither goes faster.                                                                                                                                                                                                                                    |
-| `packages/qfai/vitest.config.ts`                                            | present       | Read as the coverage SSOT and left alone unless a knob genuinely belongs at workspace root. No retry setting enters either file.                                                                                                                                                                                                                                                                                                                                |
-| `packages/qfai/assets/init/.qfai/assistant/catalog/test-layers-ci-lanes.md` | to be created | The layer-to-CI-lane mapping, authored here because this is the authoring side of the mirror (OC-70). The filename deliberately does not begin a hyphenated layer-prefixed phrase, and the loader resolves `catalog/test-layers.md` by exact path, so a sibling is invisible to it.                                                                                                                                                                             |
-| `.qfai/assistant/catalog/test-layers-ci-lanes.md`                           | to be created | The generated mirror. Produced by `pnpm sync:ssot`, never authored. A change that edits only this copy is reverted and fails the tracked-tree diff.                                                                                                                                                                                                                                                                                                             |
-| `packages/qfai/assets/init/.qfai/assistant/catalog/test-layers.md`          | present       | Gains one cross-link to the sibling. Nothing else: the loader parses this file, so prose here can extract as a token (BR-0017-0036).                                                                                                                                                                                                                                                                                                                            |
+| Path                                                                        | State today | What this spec does with it                                                                                                                                                                                       |
+| --------------------------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.github/workflows/ci.yml`                                                  | present     | Runs the derived verdict, detection, test and node-floor matrices, lint and build gates. Its two slice matrices match the seven runner projects and scripts.                                                      |
+| `.github/workflows/release.yml`                                             | present     | Runs the release gates. The gate-tests and gate-floor matrices and verify SUITE_SLICES match the seven runner projects and scripts. Older tag manifests with extra slices use the complete whole-suite aggregate. |
+| `.github/workflows/qfai-validate.yml`                                       | absent      | The repository duplicate of the shipped validate workflow is retired; its full-profile run belongs to the build job.                                                                                              |
+| `.github/actions/setup/action.yml`                                          | present     | The single repository-internal setup preamble. It is not shipped to adopters.                                                                                                                                     |
+| `.github/required-status-contexts.json`                                     | present     | The checked-in expected required-context and workflow cost declaration read by the hygiene script.                                                                                                                |
+| `scripts/check-workflow-hygiene.mjs`                                        | present     | The own-workflow hygiene lane and executor for the required-context declaration check.                                                                                                                            |
+| `scripts/pin-documentation-only-cost.mjs`                                   | present     | Re-derives and writes the documentation-only cost pin from the own workflow tree.                                                                                                                                 |
+| `package.json` (repository root)                                            | present     | `ci:lint` gains the hygiene lane. `ci:gate` is deliberately untouched — a gate there blocks no pull request (OC-72).                                                                                              |
+| `packages/qfai/package.json`                                                | present     | The per-slice script set holds the same seven names as the runner projects, both CI matrices, both release matrices and release verify SUITE_SLICES.                                                              |
+| `packages/qfai/vitest.workspace.ts`                                         | present     | Each current project declares the full parallelism knob set and matches tests. The zero-file compatibility project and retired pr-fix and pr-merge projects are absent, leaving seven.                            |
+| `packages/qfai/vitest.config.ts`                                            | present     | Read as the coverage SSOT and left alone unless a knob genuinely belongs at workspace root. No retry setting enters either file.                                                                                  |
+| `packages/qfai/assets/init/.qfai/assistant/catalog/test-layers-ci-lanes.md` | present     | The authored layer-to-CI-lane mapping. Its sibling mirror is generated by pnpm sync:ssot.                                                                                                                         |
+| `.qfai/assistant/catalog/test-layers-ci-lanes.md`                           | present     | The generated assistant-tree mirror of the packaged mapping.                                                                                                                                                      |
+| `packages/qfai/assets/init/.qfai/assistant/catalog/test-layers.md`          | present     | Gains one cross-link to the sibling. Nothing else: the loader parses this file, so prose here can extract as a token (BR-0017-0036).                                                                              |
 
 ### Files this spec reads and must not change
 
@@ -46,7 +44,9 @@ spec-claimed paths in other specs were never checked, so the column is not decor
 ### The shape of the change, in order
 
 The order is not a preference; it is DR-0017-0005, and inverting an edge is a review rejection.
-Eleven changes, each independently mergeable:
+Twelve activities. The release classifier change in step 12 lands with the
+slice retirement in step 5; their intermediate states would classify older
+tags against the wrong slice set.
 
 1. **Derived verdict.** Replace the hand-written six-way condition with an iteration over the
    serialized needs map. Nothing else in the same change, so the diff is reviewable as the
@@ -59,16 +59,23 @@ Eleven changes, each independently mergeable:
    `.github/actions/setup/action.yml` and consume it from every toolchain job. The Node version
    moves out of the `NODE_LTS` workflow-level literal into a file-derived read — see the
    alternative below, which carries a decision this spec cannot make alone.
-5. **Slice-surface alignment.** Delete the `compatibility` project, give each test file that
-   spawns a process per case a slice of its own — `pr-fix` and `pr-merge` — and add every
-   per-slice script the set lacks. Cheap, and it sits inside the file step 6 rewrites.
+   Three separate jobs in `.github/workflows/ci.yml` use the action: `lint` before
+   `pnpm ci:lint`, `mirror-surface` before `pnpm -C packages/qfai lint:mirror-surface`,
+   and `check-types` before `pnpm check-types`.
+5. **Slice-surface alignment.** Delete the zero-file `compatibility` project. Retire the
+   `pr-fix` and `pr-merge` projects, scripts and matrix legs with their suites. Keep the
+   seven remaining names equal across the runner, scripts, both CI matrices,
+   both release matrices and release verify's `SUITE_SLICES`. Land step 12 with
+   this change.
 6. **Parallelism structure.** The knob set per project with the declared starting value of ten.
    Structure only; the final value is a later change per project.
 7. **Retire the duplicate.** Delete `.github/workflows/qfai-validate.yml` and fold its
    full-profile run into `build` as a named item of that job's verification set. Requires
    `spec-0003`'s shipped-set gate at or before this point.
 8. **Change detection and lane selection.** The detection job, plus a derived condition on every
-   declared leg. The lint lane and the required-context job stay unconditional.
+   retained leg. The lint lane and the required-context job stay unconditional. Re-pin both
+   selection-state check-name inventories and the code-path cost declaration after the retired
+   legs leave the matrices.
 9. **Layer separation.** Jobs and matrix legs inside `ci.yml`, partitioned by the cost data step 6
    produces. It waits on that data, because the partition is the only part of this spec that needs a
    measurement it does not itself take.
@@ -102,6 +109,11 @@ Eleven changes, each independently mergeable:
     obligation is inherited from the rule rather than created here. `dependencyConditionsNote` gains
     the reason it cannot be skipped, which review reads and no lane parses. That entry belongs to
     this step rather than step 10, because it names a job step 11 creates.
+12. **Release tag compatibility.** Classify a tag as sliced only when its suite slice script
+    set equals the current workflow's seven names. An older tag with the retired
+    `pr-fix` and `pr-merge` slices takes its complete whole-suite aggregate path.
+    The regression case checks the older tag shape alongside the current and
+    whole-suite shapes.
 
 Build-artifact reuse is deliberately absent from that list: it is a measurement, not a step, and
 its outcome may legitimately be "keep the rebuilds" (BR-0017-0031). It is attempted after step 4,
@@ -158,9 +170,14 @@ because the setup dedup is what changes its arithmetic.
   verification-set item removed. The middle one is the case a single-property test would miss,
   and it is the one DTC-28 calls the quiet failure.
 - **Boundary cases that must not share a case.** NFR-0002's documentation-only instance floor at
-  five versus four (they differ by a repository setting no agent changes); the nine-name equality
-  across every slice surface versus the deleted project name no longer resolving; ten workers
+  five versus four (they differ by a repository setting no agent changes); seven-name equality
+  across the runner, scripts, four matrices and `SUITE_SLICES` versus the deleted project name
+  no longer resolving; ten workers
   measured against a second value versus ten workers declared.
+- **Release classifier boundary.** The current seven-slice tag may enter the
+  sliced operations path. An older nine-slice tag containing all seven names
+  must take the complete whole-suite aggregate. Re-execute TDD-0099 and
+  TDD-0100 after the classifier changes.
 - **What is not proven by execution here.** The bump-owner record and the build-reuse baseline are
   DR-0017-0002's subject. The layer partition's _quality_ is a judgement, not an oracle; only the
   file count and the check name are asserted.

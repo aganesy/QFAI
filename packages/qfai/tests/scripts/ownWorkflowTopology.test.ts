@@ -1156,15 +1156,14 @@ describe("TC-0017-0006 (TDD-0006): the executing set and its declared timeout su
   });
 });
 
-describe("TC-0017-0007 (TDD-0007): unneeded legs stay declared and are skipped, never removed", () => {
+describe("TC-0017-0007 (TDD-0007): retained legs are skipped without changing the matrix", () => {
   it("keeps every matrix leg declared and puts the condition on the job, not the list", () => {
     const test = ciJobs()["test"];
     expect(test, "ci.yml must declare a `test` job").not.toBeUndefined();
     if (test === undefined) return;
 
-    // CLAIM 1 — the leg list is untouched. `BR-0017-0006` forbids removing a leg to
-    // achieve a narrower run: a removed leg takes its check name with it, and branch
-    // protection then needs a repository setting change.
+    // CLAIM 1 — retained legs stay declared across selection states. Removing a
+    // suite is a separate change to the full-run matrix, not a selection result.
     const strategy = test["strategy"];
     const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
     const slices = isRecord(matrix) ? matrix["slice"] : undefined;
@@ -1173,17 +1172,7 @@ describe("TC-0017-0007 (TDD-0007): unneeded legs stay declared and are skipped, 
         Array.isArray(slices) ? [...slices].sort() : slices,
         "every declared slice must stay in the matrix so its check name persists",
       )
-      .toEqual([
-        "cli",
-        "core",
-        "e2e",
-        "integration",
-        "pr-fix",
-        "pr-merge",
-        "scripts",
-        "unit",
-        "validators",
-      ]);
+      .toEqual(["cli", "core", "e2e", "integration", "scripts", "unit", "validators"]);
 
     // CLAIM 2 — and the condition sits on the JOB. A condition inside the matrix would
     // change the leg set, which is CLAIM 1's removal by another route.
@@ -1418,12 +1407,7 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
     // guards move into the lint lane, which selection never skips, so the mirrors keep their
     // saving without losing their guard.
     //
-    // A round of this work implemented option B instead — the four members were removed — on the
-    // measurement that `lint:mirror-surface` did not cover the tests that read the mirrors. The
-    // measurement was right and the conclusion was not: the CR had already been decided, by the
-    // user, the other way. So the fix was to FINISH option A, and the lane now runs every test
-    // whose subject is a root mirror tree — the three that were missing are `codex/agents`,
-    // `core/prFixSkillDocs` and `core/prMergeSkillDocs`.
+    // The lane runs every remaining test whose subject is a root mirror tree.
     const mirrors = runClassifier({
       paths: [".claude/rules/temporary-files.md", ".codex/skills/whatever.md"],
     });
@@ -1450,13 +1434,6 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
       "tests/core/integrationSurfaceReadErrors.test.ts",
       "tests/assets/reviewerVerdictVocabulary.test.ts",
       "tests/codex/agents.test.ts",
-      // The `pr-fix` prose assertions, in their own file. `../pr-fix/prFixMonitor.test.ts`
-      // holds the rest of that coverage and reads nothing from a mirror tree but
-      // the script — an executable, which the classifier keeps out of the
-      // documentation-only set, so the test job runs for a change to it.
-      "tests/core/prFixSkillDocs.test.ts",
-      // The `pr-merge` prose assertions, in their own file, for the same reason.
-      "tests/core/prMergeSkillDocs.test.ts",
     ]) {
       expect
         .soft(
@@ -1485,10 +1462,8 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
     const docs = runClassifier({ paths: ["packages/qfai/docs/anything.md"] });
     expect.soft(docs.full, "the docs directory still selects nothing").toBe(false);
 
-    // The executable half still holds, and it is doing real work again now that the directory
-    // is documentation-only: a PowerShell script is not a mirror, so a change to one selects
-    // everything. `CR-20260820-0004` calls this the half that needed no decision.
-    const script = runClassifier({ paths: [".agents/skills/pr-fix/scripts/run-pr-fix.ps1"] });
+    // An executable under a documentation directory selects full CI.
+    const script = runClassifier({ paths: [".agents/skills/example/scripts/run.ps1"] });
     expect
       .soft(script.full, "an executable under an instruction mirror must select everything")
       .toBe(true);
@@ -1659,7 +1634,7 @@ describe("the required-context job and the lint lane both stay unconditional", (
 
 // ── change 9: layer separation stays inside the file, and no check name moves ─
 //
-// The layer split ALREADY exists: nine matrix legs of the `test` job, one per runner
+// The layer split has seven matrix legs of the `test` job, one per runner
 // project. `BR-0017-0035` is what keeps it that way — "test-layer separation MUST be
 // expressed as jobs and matrix legs inside the existing own-CI workflow file", with the
 // file count and the aggregate check name unchanged.
@@ -1741,8 +1716,6 @@ const FULL_CI_CHECK_NAMES = [
   "node-floor (core)",
   "node-floor (e2e)",
   "node-floor (integration)",
-  "node-floor (pr-fix)",
-  "node-floor (pr-merge)",
   "node-floor (scripts)",
   "node-floor (unit)",
   "node-floor (validators)",
@@ -1751,8 +1724,6 @@ const FULL_CI_CHECK_NAMES = [
   "test (core)",
   "test (e2e)",
   "test (integration)",
-  "test (pr-fix)",
-  "test (pr-merge)",
   "test (scripts)",
   "test (unit)",
   "test (validators)",
@@ -1829,15 +1800,15 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
       .soft(ownWorkflowFiles(), "layer separation may not add a workflow file")
       .toEqual([...OWN_WORKFLOW_FILES]);
 
-    // CLAIM 2 — the layers are legs of a job, not one job each. Nine jobs would satisfy
-    // "inside the existing file" and still create eight new check names, so the shape is
+    // CLAIM 2 — the layers are legs of a job, not one job each. Seven jobs would satisfy
+    // "inside the existing file" and still create six new check names, so the shape is
     // asserted and not just the location.
     //
     // Two jobs express the split: `test`, and `node-floor` running the same slices on the
     // engines floor. That is the same shape applied twice rather than an exception to it —
     // what `AC-0017-0018` rejects is a layer becoming a job of its own, and each lane is
-    // ONE job whose legs are the layers. Expressing either lane as nine jobs would create
-    // nine check names the same way, and the axis claim below is what refuses it.
+    // ONE job whose legs are the layers. Expressing either lane as seven jobs would create
+    // seven check names the same way, and the axis claim below is what refuses it.
     //
     // A LITERAL list, so a third sliced lane arrives as a failing test naming the new member
     // rather than as a diff to interpret — the reason `CI_CHECK_NAMES` is a literal too.
@@ -2029,7 +2000,7 @@ describe("one lane runs on the floor `engines.node` declares", () => {
     // The ORDER is asserted, not just the presence: a build after the test step is a build that
     // ran too late.
     //
-    // And the CONDITION. The build runs on two of nine legs, so "a build step exists" does not
+    // And the CONDITION. The build runs on two of seven legs, so "a build step exists" does not
     // imply that the legs reading `dist/` get one: a condition narrowed to one slice, or widened
     // to a slice that reads nothing, is invisible to the order claim. It is asserted against the
     // `test` job's rather than restated, because the two jobs run the same slices over the same
@@ -2068,13 +2039,13 @@ describe("one lane runs on the floor `engines.node` declares", () => {
 
   it("runs one slice per leg, over the set the `test` job declares", () => {
     // The lane's claim is about the WHOLE package suite on the engines floor. Slicing it keeps
-    // that claim only while the legs partition the suite, and the nine names are the partition
+    // that claim only while the legs partition the suite, and the seven names are the partition
     // `sliceSurfaceAlignment` holds against the runner workspace. A value dropped here stops a
     // slice being exercised on the floor while the `test` job still runs it on the resolved
     // release, and every remaining leg reports green.
     //
     // Read from the `test` job rather than written out, for the reason the build condition is:
-    // two lists of the same nine names drift one edit at a time, and the drift is silent.
+    // two lists of the same seven names drift one edit at a time, and the drift is silent.
     const jobs = ciJobs();
     const sliceList = (job: unknown): unknown => {
       const strategy = isRecord(job) ? job["strategy"] : undefined;
@@ -3699,7 +3670,7 @@ describe("release automation performs decisions rather than making them", () => 
  *
  * So the rows below assert a MULTISET, not a set: every package test script the gate jobs would
  * invoke for one tag, counted, must be exactly one cover of the suite — `test` alone, or the
- * nine slices. A second copy of `test` shows up as a duplicate, a dropped slice as a short list,
+ * declared slices. A second copy of `test` shows up as a duplicate, a dropped slice as a short list,
  * and a mixed run as neither.
  *
  * ## Executed, not pattern-matched
@@ -3721,13 +3692,71 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
   const RELEASE_WORKFLOW = path.join(WORKFLOWS_DIR, "release.yml");
 
   /**
-   * The script key sets three real tags declare, and the body of the aggregate each one carries.
+   * The script key sets four real tags declare, and the body of the aggregate each one carries.
    *
-   * Three and not all of them: these are the three shapes. Every tag from `v1.11.0` on matches
-   * `v1.12.0`, the `v1.9.x` and `v1.10.x` line matches `v1.10.0`, and everything before matches
-   * `v1.8.0`.
+   * The recent tag has the retired pair of slices, so the current release workflow
+   * must route it through the whole-suite gate. The older tags exercise missing
+   * slice scripts and the aggregate-only gate.
    */
   const TAGGED_MANIFESTS = {
+    "v1.12.3": {
+      root: [
+        "preinstall",
+        "build",
+        "sync:ssot",
+        "ci:gate",
+        "ci:gate:checks",
+        "ci:gate:ssot",
+        "ci:gate:lint",
+        "ci:gate:types",
+        "ci:gate:build",
+        "ci:gate:structure",
+        "ci:gate:scans",
+        "ci:lint",
+        "ci:lint:structure",
+        "ci:lint:scans",
+        "ci:build-verify",
+        "ci:coverage",
+        "lint",
+        "lint:md",
+        "lint:mermaid",
+        "lint:mdschema",
+        "lint:doc-clarity",
+        "format",
+        "format:check",
+        "check-types",
+        "check-types:future",
+        "test:assets",
+        "verify:pack",
+        "prepack",
+      ],
+      package: [
+        "build",
+        "prepack",
+        "lint",
+        "lint:branch-version",
+        "lint:md:shipped",
+        "lint:shipping",
+        "lint:workflow-shape",
+        "lint:mirror-surface",
+        "generate:rule-codes",
+        "generate:governed-manifest",
+        "check-types",
+        "test",
+        "test:coverage",
+        "test:core",
+        "test:validators",
+        "test:integration",
+        "test:e2e",
+        "test:cli",
+        "test:unit",
+        "test:scripts",
+        "test:pr-fix",
+        "test:pr-merge",
+        "test:assets",
+        "self-validate",
+      ],
+    },
     "v1.12.0": {
       root: [
         "preinstall",
@@ -4195,6 +4224,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
         expect([result.shape, result.checks]).toEqual(["sliced", "aggregate"]);
       }
     }
+    expect(classifyTag("v1.12.3").shape).toBe("whole");
     const whole = classify(currentRoot(), manifestWith(["test"]));
     expect([whole.shape, whole.checks]).toEqual(["whole", "aggregate"]);
   });
@@ -4301,16 +4331,20 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
       expect.soft(result.status, `${tag}: ${result.output}`).toBe(0);
       seen.set(tag, result.shape);
     }
-    // Every tag cut so far predates `ci:gate:checks`, so all three read as the old shape. The
-    // current tree is the other one, and asserting it here is what keeps the row from passing on
-    // a classifier that answers `whole` to everything.
+    // Recorded older tags, including the nine-slice release, use the whole gate.
+    // The current tree uses the seven-slice gate.
     expect(
       Object.fromEntries(seen),
       "an existing tag must read as the shape its tree carries",
-    ).toEqual({ "v1.12.0": "whole", "v1.10.0": "whole", "v1.8.0": "whole" });
+    ).toEqual({
+      "v1.12.3": "whole",
+      "v1.12.0": "whole",
+      "v1.10.0": "whole",
+      "v1.8.0": "whole",
+    });
     expect(
       classify(currentRoot(), currentPackage()).shape,
-      "this tree declares ci:gate:checks and all nine slices, so it is the sliced shape",
+      "this tree declares ci:gate:checks and all seven slices, so it is the sliced shape",
     ).toBe("sliced");
   });
 
@@ -4392,7 +4426,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
             isCover,
             `${tag} takes the ${shape} path and its ${floor ? "floor" : "range"} jobs run the ` +
               `suite as [${runs.join(", ")}] — one cover is the whole suite exactly once, either ` +
-              "`test` or the nine slices, so this is a double run, a partial one, or none at all",
+              "`test` or the seven slices, so this is a double run, a partial one, or none at all",
           )
           .toBe(true);
       }
@@ -4425,6 +4459,16 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     }
   });
 
+  it("runs a tag with retired slice scripts through the whole-suite gate", () => {
+    const packageScripts = [...scriptKeys(currentPackage()), "test:pr-fix", "test:pr-merge"];
+    const result = classify(currentRoot(), manifestWith(packageScripts));
+    expect(result.status, result.output).toBe(0);
+    expect(result.shape).toBe("whole");
+    expect(result.checks).toBe("aggregate");
+    expect(suiteRuns(result.shape, result.checks, false)).toEqual(["test"]);
+    expect(suiteRuns(result.shape, result.checks, true)).toEqual(["test"]);
+  });
+
   it("refuses rather than passing when it can classify the tree as neither shape", () => {
     const slices = declaredSlices();
     const allSlices = slices.map((slice) => `test:${slice}`);
@@ -4434,6 +4478,11 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
         "the sliced aggregate, a slice short, and no fallback aggregate",
         manifestWith(["ci:gate:checks"]),
         manifestWith(["test", ...allSlices.slice(1)]),
+      ],
+      [
+        "an extra retired slice and no fallback aggregate",
+        manifestWith(["ci:gate:checks"]),
+        manifestWith(["test", ...allSlices, "test:pr-fix"]),
       ],
       [
         "the old aggregate with no package test script behind it",

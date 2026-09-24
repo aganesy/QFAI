@@ -4367,3 +4367,57 @@ ba2f2c08e56c777846ca904c072db8e2a4922dec review_request.md
   1. The saved workflow is restored after each mutation.
 - The same helper evaluates both sliced jobs. An unmodelled matrix condition
   fails explicitly; it cannot silently turn into a successful inventory check.
+
+## Retired slice verification
+
+- Change Request: CR-20260924-0001.
+- Scope: TDD-0007, TDD-0043, TDD-0062, TDD-0064, TDD-0099 and TDD-0100.
+- The six ledger rows remain at `todo` after the upstream reset. These targeted
+  runs show the revised assertions pass and reject the mutations below. They
+  do not replace the per-row implementation cycle and reviewer evidence
+  required before advancing a row.
+
+### Current GREEN runs
+
+| Obligation | Command | Result |
+| ---------- | ------- | ------ |
+| TC-0017-0062 and TC-0017-0064 | `pnpm -C packages/qfai exec vitest run tests/scripts/sliceSurfaceAlignment.test.ts` | 3 passed |
+| TC-0017-0007 | `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-0007` | 1 passed |
+| TC-0017-0043 | `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-0043` | 1 passed |
+| TC-0017-0090 and TC-0017-0091 | `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-009` | 5 passed |
+| TC-0017-0091, including the older tag | `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-0091` | 2 passed |
+
+The release gate selection with four real tag shapes also passed all 17
+selected tests. The older `v1.12.3` tag is asserted as `whole`.
+
+### Falsifiability runs
+
+| Obligation | Temporary mutation | Observed failure |
+| ---------- | ------------------ | ---------------- |
+| TC-0017-0007 | Restore `pr-fix` and `pr-merge` in both `ci.yml` test matrices | The targeted test failed on the retired legs. |
+| TC-0017-0043 | The same two-leg restoration | The targeted check-name inventory failed. |
+| TC-0017-0062 | Remove `scripts` from both release matrix slice lists | The targeted test failed: 1 failed, 2 skipped. |
+| TC-0017-0064 | Replace the release `gate-tests` per-slice script with a generic project command | The targeted per-slice script test failed. |
+| TC-0017-0090 | Force the release checks classifier to return false | The targeted operation-capability test failed. |
+| TC-0017-0091 | Replace exact slice-set equality with subset membership | The older tag was misclassified as sliced and the targeted test failed once. |
+
+The mutation commands were:
+
+- TC-0017-0007:
+  `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-0007`
+- TC-0017-0043:
+  `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-0043`
+- TC-0017-0062:
+  `pnpm -C packages/qfai exec vitest run tests/scripts/sliceSurfaceAlignment.test.ts --testNamePattern=TC-0017-0062`
+- TC-0017-0064:
+  `pnpm -C packages/qfai exec vitest run tests/scripts/sliceSurfaceAlignment.test.ts --testNamePattern=TC-0017-0064`
+- TC-0017-0090:
+  `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-0090`
+- TC-0017-0091:
+  `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-0091`
+
+Each mutation was reverted in a `finally` path. The restored
+`.github/workflows/release.yml` SHA-256 was
+`76AADA7906349F0D29157099DA8107C476513DBCCE5F827FCE67CFB67831C1A4`.
+The mutated `ci.yml` and release workflow files were reported restored with
+matching pre-mutation hashes.

@@ -207,15 +207,14 @@ jobs:
         id: shape
         env:
           RELEASE_SHA: ${{ steps.pin.outputs.sha }}
-          # The slice set, declared once and checked in full. Eight of the nine is not the new
-          # shape: the ninth leg would find no script, and a leg with nothing to run is a green
-          # check over nothing.
+          # The slice set, declared once and checked in full. A tag with more or fewer
+          # slice scripts runs its whole suite, so no tests disappear from a re-publish.
           #
           # SHIPPED-CI: not-applicable
           # Because: the shipped set carries no publish workflow, so it holds no release gate.
           # Its three lanes run an adopter's own documents, validation and layer-named test
           # scripts, never this repository's suite, so a slice of ours has nothing to join there.
-          SUITE_SLICES: core validators integration e2e cli unit scripts pr-fix pr-merge
+          SUITE_SLICES: core validators integration e2e cli unit scripts
         run: |
           set -euo pipefail
           # The tag's manifests, read as DATA. `git show` puts each one in a variable and the
@@ -275,6 +274,13 @@ jobs:
           // Only names from the list above ever appear here, so reporting them says nothing the
           // tag chose.
           const absent = slices.filter((slice) => !declares(pkg, `test:${slice}`));
+          const packageScripts = pkg.scripts;
+          const scriptNames = packageScripts !== null && typeof packageScripts === "object" &&
+            !Array.isArray(packageScripts) ? Object.keys(packageScripts) : [];
+          const sliceScripts = scriptNames.filter((name) =>
+            name.startsWith("test:") && name !== "test:assets" && name !== "test:coverage"
+          );
+          const exactSlices = absent.length === 0 && sliceScripts.length === slices.length;
 
           const operationScripts = [
             "ci:gate:ssot", "ci:gate:lint", "ci:gate:types", "ci:gate:build",
@@ -288,7 +294,7 @@ jobs:
             process.exit(0);
           };
 
-          if (declares(root, "ci:gate:checks") && absent.length === 0) {
+          if (declares(root, "ci:gate:checks") && exactSlices) {
             emit(
               "sliced",
               "the tree declares ci:gate:checks and a script for all " +
@@ -484,18 +490,20 @@ jobs:
   # ── 2a. The package suite, sliced, on the tagged tree ────────────
   # The aggregate beside this job ran the suite itself, in one process pool, and that pool is what a
   # release waited on: measured, running the whole aggregate and running the suite alone both cost
-  # twelve to fourteen minutes. Sliced over the nine projects the runner workspace declares, this
-  # lane costs its longest slice — `cli`, measured at 349 seconds — instead of the sum of all nine,
+  # twelve to fourteen minutes. Sliced over the seven projects the runner workspace declares, this
+  # lane costs its longest slice — `cli`, measured at 349 seconds — instead of their sum,
   # and every check that ran before a publish still runs before one.
   #
-  # The same nine values `ci.yml` declares, for the same reason it declares them: the slices
+  # The same seven values `ci.yml` declares, for the same reason it declares them: the slices
   # partition the suite, so the legs together carry the whole claim. `fail-fast: false`, so one red
   # leg does not hide which of the others would also have failed.
+  # SHIPPED-CI: not-applicable
+  # Because: the shipped set has no publish workflow or this repository's test slices.
   #
   # Only for a tag whose tree declares the sliced shape. On any other tag the aggregate in `gate`
-  # runs the suite whole, so these nine legs would be a second run of the same tests — and the
+  # runs the suite whole, so these seven legs would be a second run of the same tests — and the
   # condition sits on the JOB, where it is evaluated before the matrix expands, rather than inside
-  # each leg where nine legs would report green having run nothing.
+  # each leg where seven legs would report green having run nothing.
   gate-tests:
     needs: verify
     if: needs.verify.outputs.suite-shape == 'sliced'
@@ -504,7 +512,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        slice: [core, validators, integration, e2e, cli, unit, scripts, pr-fix, pr-merge]
+        slice: [core, validators, integration, e2e, cli, unit, scripts]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -528,7 +536,7 @@ jobs:
           sparse-checkout-cone-mode: false
       - uses: ./.ci-actions/.github/actions/setup
       # `dist/` is not committed and two slices read it: `integration` fails without a shipped
-      # bundle to measure, and `e2e` spawns the built CLI. The other seven run pure TS through
+      # bundle to measure, and `e2e` spawns the built CLI. The other five run pure TS through
       # vitest's loader and would pay for a build nothing in them reads.
       - name: Build qfai (the slices that read dist/)
         if: matrix.slice == 'e2e' || matrix.slice == 'integration'
@@ -558,7 +566,7 @@ jobs:
   # Over the same slice matrix as the lane beside it, and for the same reason `ci.yml` slices its own
   # floor lane: one process pool over the whole suite sets the wall clock for the release. Each leg
   # asserts the floor for itself, because a leg running the wrong Node is what that assertion is for
-  # and a single leg checking it would leave the other eight unverified.
+  # and a single leg checking it would leave the other six unverified.
   #
   # Only for a tag whose tree declares the sliced shape. A tag that predates it has no per-slice
   # script for these legs to run, and the floor is covered for it by `gate-floor-whole` below.
@@ -570,7 +578,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        slice: [core, validators, integration, e2e, cli, unit, scripts, pr-fix, pr-merge]
+        slice: [core, validators, integration, e2e, cli, unit, scripts]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -616,7 +624,7 @@ jobs:
             echo "::error::gate-floor expected ${expected} but is running ${actual}; pin-engines-floor did not take effect"
             exit 1
           fi
-      # The two slices that read `dist/`, which is not committed. The other seven run pure TS through
+      # The two slices that read `dist/`, which is not committed. The other five run pure TS through
       # vitest's loader, and an always-red leg here would stop a release for a missing bundle rather
       # than for a floor break.
       - name: Build qfai on the floor (the slices that read dist/)
@@ -634,10 +642,10 @@ jobs:
   # none — so for such a tag the floor is exercised here instead, by the one script it does
   # declare. This is what that tag's floor lane always was, before the suite was sliced.
   #
-  # Its own job rather than a tenth leg of the lane above. The two are mutually exclusive on
+  # Its own job rather than an eighth leg of the lane above. The two are mutually exclusive on
   # `verify`'s answer, and a matrix leg cannot be that: the matrix expands after the job's
   # condition is read, so an "everything" leg would have to decide inside the shell, where the
-  # other nine legs skip themselves and report green.
+  # other seven legs skip themselves and report green.
   #
   # Nothing else runs the suite on the floor — `gate` beside it resolves the newest Node
   # satisfying the range — so this is the whole of the floor claim for such a tag.
