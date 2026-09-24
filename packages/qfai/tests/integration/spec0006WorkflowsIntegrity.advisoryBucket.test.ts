@@ -43,7 +43,7 @@
  *
  * The TC (and BR-0006-0011, and DR-0006-0004's plan entry) spell the bucket
  * "warnings advisory of drift". `formatDoctorText` renders
- * `== advisory findings (drift, non-blocking by default) ==`. The two DENOTE the
+ * `== warnings advisory of drift ==`. The two DENOTE the
  * same bucket — BR-0006-0011 declares the group header strings stable
  * identifiers and `.qfai/contracts/cli/qfai-doctor.md` § "Finding grouping"
  * mandates exactly the two buckets — so this file needles the RENDERED literal
@@ -139,7 +139,7 @@ const FINDING_ID = "workflows.integrity";
  * already pin, so this row mints no third spelling of either.
  */
 const BLOCKING_HEADER = "errors blocking the active profile";
-const ADVISORY_HEADER = "advisory findings (drift, non-blocking by default)";
+const ADVISORY_HEADER = "warnings advisory of drift";
 
 describe("TC-0006-0029 (TDD-0040): the drift advisory renders below the advisory-findings header and not in the blocking bucket", () => {
   it("places the drift finding inside the advisory bucket, outside the blocking bucket, tagged [info]", async () => {

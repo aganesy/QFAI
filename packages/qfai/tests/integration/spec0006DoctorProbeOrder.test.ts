@@ -254,10 +254,10 @@ describe("TC-0006-0018: doctor summary 2-group split routes skills.integrity to 
     });
     const text = await readFile(outPath, "utf-8");
     expect(text).toContain("errors blocking the active profile");
-    expect(text).toContain("advisory findings (drift, non-blocking by default)");
+    expect(text).toContain("warnings advisory of drift");
 
     const errorsHeaderIdx = text.indexOf("errors blocking the active profile");
-    const advisoryHeaderIdx = text.indexOf("advisory findings (drift, non-blocking by default)");
+    const advisoryHeaderIdx = text.indexOf("warnings advisory of drift");
     expect(errorsHeaderIdx).toBeGreaterThan(-1);
     expect(advisoryHeaderIdx).toBeGreaterThan(errorsHeaderIdx);
 
