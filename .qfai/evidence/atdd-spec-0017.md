@@ -23,8 +23,8 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
 - `.qfai/specs/spec-0017/tdd/test-list.md` — 101 rows: 81 `Integration`,
-  11 `Unit`; **81 `refactor`, 0 `blocked`, 11 `todo`**, with 6 `done` and 3 `review-fix`. Nine rows are `E2E`, one per story,
-  seeded at `todo`. Eleven `todo` rows are `Integration` and are therefore this stage's to route.
+  11 `Unit`; **76 `refactor`, 0 `blocked`, 16 `todo`**, with 6 `done` and 3 `review-fix`. Nine rows are `E2E`, one per story,
+  seeded at `todo`. At the 2026-09-23 run, eleven `todo` rows were `Integration` and were this stage's to route.
   The run started 2026-09-23T10:23:39.000Z hands ten of them over — see § "Ledger rows advanced".
   `TDD-0012` is the eleventh, and that run's work order did not name it
 - `.qfai/assistant/catalog/test-layers.md` — the layer derivation and the directory each `Level`

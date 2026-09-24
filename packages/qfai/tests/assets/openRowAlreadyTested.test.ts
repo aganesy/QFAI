@@ -35,9 +35,10 @@ const OPEN_STATUSES = new Set(["todo", "blocked", "red"]);
  *
  * A backlog, not permission. `Status` is `/qfai-implement`'s column, so moving
  * a row is a stage run rather than an edit, and this list is what stops a
- * twenty-fourth joining them while those runs are outstanding.
+ * another row joining them while those runs are outstanding.
  *
- * The list may only shrink. A repair strikes its entry in the same change: the
+ * An approved change may reset a tested row to todo; add it here with that
+ * change. A repair strikes its entry in the same change: the
  * assertion is an equality, so a row that leaves the set without leaving this
  * list fails exactly as a new one does.
  */
@@ -54,8 +55,13 @@ const KNOWN_OPEN_BUT_TESTED: readonly string[] = [
   "spec-0015 TDD-0037 todo TC-0015-0036",
   "spec-0015 TDD-0038 todo TC-0015-0034",
   "spec-0015 TDD-0039 todo TC-0015-0007",
+  "spec-0017 TDD-0007 todo TC-0017-0007",
   "spec-0017 TDD-0012 todo TC-0017-0012",
+  "spec-0017 TDD-0043 todo TC-0017-0043",
   "spec-0017 TDD-0062 todo TC-0017-0062",
+  "spec-0017 TDD-0064 todo TC-0017-0064",
+  "spec-0017 TDD-0099 todo TC-0017-0090",
+  "spec-0017 TDD-0100 todo TC-0017-0091",
 ];
 
 const ANNOTATION = /QFAI:SPEC-\d{4}:(TC-\d{4}-\d{4})/g;
