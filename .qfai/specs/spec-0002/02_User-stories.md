@@ -34,7 +34,7 @@ As a maintainer, I want UI-bearing detection to control whether exploration-firs
 
 ## US-0002-0005: planner-first design authoring
 
-As a discussion facilitator, I want discussion to define exploration conditions and anti-goals without selecting a visual winner, so that prototyping remains the place where design direction is chosen.
+As a discussion facilitator, I want discussion to define exploration conditions and anti-goals and to carry the screen explorations unranked, recording only the brand direction the user chooses, so that prototyping remains the place where the screen design is chosen.
 
 ## US-0002-0008: discussion-to-SDD handoff
 
