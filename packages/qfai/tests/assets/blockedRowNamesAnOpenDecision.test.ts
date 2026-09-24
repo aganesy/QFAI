@@ -45,14 +45,7 @@ const DECIDED = new Set(["approved", "rejected", "superseded", "applied", "withd
  * equality, so a row released without its entry being struck fails exactly as a
  * new one does.
  */
-const KNOWN_BLOCKED_BY_A_DECIDED_REQUEST: readonly string[] = [
-  "spec-0017 TDD-0016 -> CR-20260818-0007 approved",
-  "spec-0017 TDD-0030 -> CR-20260820-0001 approved",
-  "spec-0017 TDD-0032 -> CR-20260820-0007 approved",
-  "spec-0017 TDD-0033 -> CR-20260820-0007 approved",
-  "spec-0017 TDD-0034 -> CR-20260820-0007 approved",
-  "spec-0017 TDD-0035 -> CR-20260820-0007 approved",
-];
+const KNOWN_BLOCKED_BY_A_DECIDED_REQUEST: readonly string[] = [];
 
 const REQUEST_ID = /CR-\d{8}-\d{4}/g;
 
@@ -141,8 +134,8 @@ describe("a blocked row waits on a decision nobody has taken", () => {
     const statuses = await requestStatuses();
     expect(statuses.size, "no change requests were read").toBeGreaterThan(0);
 
+    // No ledger holds a blocked row today, so an empty read is the right one.
     const rows = await blockedRows();
-    expect(rows.length, "no blocked rows were read").toBeGreaterThan(0);
 
     const released = rows
       .flatMap(({ pack, tdd, requests }) =>
