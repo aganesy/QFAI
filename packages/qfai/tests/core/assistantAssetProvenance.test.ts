@@ -23,7 +23,6 @@ import {
   replaceGovernedAsset,
   retireVerifiedGovernedAsset,
   runInit,
-  SHIPPED_WORKFLOW_NAMES,
 } from "../../src/cli/commands/init.js";
 import { defaultConfig } from "../../src/core/config.js";
 import {
@@ -656,19 +655,6 @@ describe("assistant asset provenance", () => {
     await rename(path.join(root, ".qfai"), outsideQfai);
     await symlink(outsideQfai, path.join(root, ".qfai"), "junction");
 
-    // The shipped workflows are put on disk first, so this run has none to
-    // write. `.qfai` being a link is refused by the install-provenance writer
-    // too, and that refusal THROWS — deliberately, so the workflow copy it
-    // belongs to is rolled back rather than left unrecorded. Reached here it
-    // would end the run before the governed-asset sync below ever executes,
-    // and this test would then pass without exercising the guard it exists
-    // for. A shipped workflow already present on disk is not `absent`, so no
-    // entry is added, and the record write is never attempted.
-    await mkdir(path.join(root, ".github", "workflows"), { recursive: true });
-    for (const name of SHIPPED_WORKFLOW_NAMES) {
-      await writeFile(path.join(root, ".github", "workflows", name), "on: push\n", "utf-8");
-    }
-
     const outsideAssistant = path.join(outsideQfai, "assistant");
     const refreshVictim = path.join(outsideAssistant, "rule", "test-layers.md");
     const refreshVictimBody = "# an older release wrote this, outside the project\n";
@@ -686,7 +672,9 @@ describe("assistant asset provenance", () => {
       },
     });
 
-    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+    await expect(
+      captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true })),
+    ).rejects.toThrow(/refused to seed the story tree through a symlink/);
 
     expect(await readFile(refreshVictim, "utf-8")).toBe(refreshVictimBody);
     expect(await readFile(retireVictim, "utf-8")).toBe(retireVictimBody);
@@ -843,7 +831,7 @@ describe("assistant asset provenance", () => {
     // extraction leaves, and the one the layer-root check cannot see.
     await rm(path.join(install, "rule", "quality.md"));
 
-    await expect(buildShippedAssistantHashes(install)).rejects.toThrow(/product\.md/);
+    await expect(buildShippedAssistantHashes(install)).rejects.toThrow(/rule\/quality\.md/);
   });
 
   // The compiled manifest is the whole basis for the paragraph above, so it has
