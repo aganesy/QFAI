@@ -20,7 +20,7 @@ import process from "node:process";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { ensureRootGitignoreEntries, runInit } from "../../src/cli/commands/init.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateProject } from "../../src/core/validate.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
@@ -56,6 +56,8 @@ type Journey = {
   rerunUnchanged: boolean;
   changedPaths: string[][];
   map: { ids: Record<string, Record<string, string>> };
+  afterStep7DirectoriesRemoved: boolean;
+  idMapUnchangedOnRerun: boolean;
 };
 
 function run(root: string, command: string, args: string[]): Result {
@@ -179,6 +181,20 @@ async function project(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf4-ac-"));
   temporary.push(root);
   await cp(fixtureRoot, root, { recursive: true });
+  await mkdir(path.join(root, "docs"), { recursive: true });
+  await mkdir(path.join(root, "src"), { recursive: true });
+  await writeFile(path.join(root, "docs/notes.md"), "Project notes stay here.\n");
+  await writeFile(path.join(root, "src/index.ts"), "export const original = true;\n");
+  await writeFile(path.join(root, ".qfai/specs/spec-0001/10_Plan.md"), "# Original plan\n");
+  await writeFile(
+    path.join(root, ".qfai/specs/spec-0001/16_Traceability-ledger.md"),
+    "# Original trace\n",
+  );
+  await mkdir(path.join(root, ".qfai/specs/spec-0001/tdd"), { recursive: true });
+  await writeFile(
+    path.join(root, ".qfai/specs/spec-0001/tdd/test-list.md"),
+    "# Original test list\n",
+  );
   await rm(path.join(root, ".qfai/specs/spec-0002"), { recursive: true });
   for (const [oldName, newName] of [
     ["constitution", "rule"],
@@ -206,6 +222,10 @@ async function project(): Promise<string> {
   const integration = path.join(root, "tests/integration/order.test.ts");
   await cp(path.join(completeRoot, "order.integration.test.ts"), integration);
   await writeFile(integration, (await readFile(integration, "utf8")).replaceAll("QFAI~", "QFAI:"));
+  await writeFile(
+    integration,
+    `${await readFile(integration, "utf8")}\nconst unchangedLine = true;\n`,
+  );
   await cp(
     path.join(completeRoot, "order.e2e.test.ts"),
     path.join(root, "tests/e2e/order.test.ts"),
@@ -235,6 +255,7 @@ beforeAll(async () => {
   const applied: Result[] = [];
   const dryUnchanged: boolean[] = [];
   const changedPaths: string[][] = [];
+  let afterStep7DirectoriesRemoved = false;
   for (let number = 1; number <= 10; number += 1) {
     const before = await fingerprint(root);
     const preview = step(root, number, ["--dry-run"], ["--require", preload]);
@@ -255,8 +276,26 @@ beforeAll(async () => {
         .filter((name) => beforeFiles.get(name) !== afterFiles.get(name))
         .sort(),
     );
+    if (number === 7) {
+      afterStep7DirectoriesRemoved = await Promise.all(
+        [path.join(root, ".qfai/spec/spec-0001"), path.join(root, ".qfai/spec/_policies")].map(
+          async (directory) => {
+            try {
+              await lstat(directory);
+              return false;
+            } catch (error) {
+              if ((error as NodeJS.ErrnoException).code === "ENOENT") return true;
+              throw error;
+            }
+          },
+        ),
+      ).then((results) => results.every(Boolean));
+    }
   }
   const beforeRerun = await fingerprint(root);
+  const mapBeforeRerun = await readFile(
+    path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"),
+  );
   for (let number = 1; number <= 10; number += 1) {
     const again = step(root, number, [], ["--require", preload]);
     if (again.status !== 0) throw new Error("Rerun step " + number + ": " + again.stderr);
@@ -268,6 +307,10 @@ beforeAll(async () => {
     dryUnchanged,
     rerunUnchanged: (await fingerprint(root)) === beforeRerun,
     changedPaths,
+    afterStep7DirectoriesRemoved,
+    idMapUnchangedOnRerun: (
+      await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"))
+    ).equals(mapBeforeRerun),
     map: JSON.parse(
       await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
     ) as Journey["map"],
@@ -338,6 +381,7 @@ describe("BF-0004 acceptance criteria", () => {
   });
 
   // QFAI:AC-0004-0003-03
+  // QFAI:EX-0004-0003-10
   it("previews the ordered operations without changing files", () => {
     expect(journey.dryUnchanged).toEqual(Array(10).fill(true));
     expect(journey.dry.map((result) => section(result.stdout, "Operations"))).toEqual(
@@ -346,12 +390,17 @@ describe("BF-0004 acceptance criteria", () => {
   });
 
   // QFAI:AC-0004-0003-04
+  // QFAI:EX-0004-0003-12
+  // QFAI:EX-0004-0007-06
   it("repeats the complete migration without changing a file", () => {
     expect(journey.rerunUnchanged).toBe(true);
+    expect(journey.idMapUnchangedOnRerun).toBe(true);
   });
 
   // QFAI:AC-0004-0003-05
-  it("keeps every step inside its write boundary without opening the network", () => {
+  // QFAI:EX-0004-0003-14
+  // QFAI:EX-0004-0003-15
+  it("keeps every step inside its write boundary without opening the network", async () => {
     const hostPrefixes = [".claude/", ".agents/", ".codex/", ".github/"];
     expect(journey.changedPaths).toHaveLength(10);
     for (const [index, paths] of journey.changedPaths.entries()) {
@@ -370,6 +419,15 @@ describe("BF-0004 acceptance criteria", () => {
       }
     }
     expect(journey.changedPaths.flat().length).toBeGreaterThan(0);
+    expect(await readFile(path.join(journey.root, "docs/notes.md"), "utf8")).toBe(
+      "Project notes stay here.\n",
+    );
+    expect(await readFile(path.join(journey.root, "src/index.ts"), "utf8")).toBe(
+      "export const original = true;\n",
+    );
+    expect(
+      await readFile(path.join(journey.root, "tests/integration/order.test.ts"), "utf8"),
+    ).toContain("const unchangedLine = true;\n");
   });
 
   // QFAI:AC-0004-0003-06
@@ -383,7 +441,10 @@ describe("BF-0004 acceptance criteria", () => {
   });
 
   // QFAI:AC-0004-0003-07
+  // QFAI:EX-0004-0003-20
+  // QFAI:EX-0004-0003-22
   it("removes consumed old packs and keeps the retired rule source", async () => {
+    expect(journey.afterStep7DirectoriesRemoved).toBe(true);
     await expect(lstat(path.join(journey.root, ".qfai/specs"))).rejects.toMatchObject({
       code: "ENOENT",
     });
@@ -395,6 +456,18 @@ describe("BF-0004 acceptance criteria", () => {
       "utf8",
     );
     expect(archived).toContain("A valid order receives a receipt.");
+    for (const [name, content] of [
+      ["10_Plan.md", "# Original plan\n"],
+      ["16_Traceability-ledger.md", "# Original trace\n"],
+      ["tdd/test-list.md", "# Original test list\n"],
+    ]) {
+      expect(
+        await readFile(
+          path.join(journey.root, ".qfai/evidence/migration-spec-to-story/retired/spec-0001", name),
+          "utf8",
+        ),
+      ).toBe(content);
+    }
   });
 
   // QFAI:AC-0004-0004-01
@@ -514,6 +587,7 @@ describe("BF-0004 acceptance criteria", () => {
   });
 
   // QFAI:AC-0004-0007-02
+  // QFAI:EX-0004-0007-07
   it("leaves an unplaced story in its old pack and lists it for a person", async () => {
     const root = await project();
     const source = path.join(root, ".qfai/specs/spec-0001/02_User-stories.md");
@@ -529,6 +603,10 @@ describe("BF-0004 acceptance criteria", () => {
     expect(
       await readFile(path.join(root, ".qfai/spec/spec-0001/02_User-stories.md"), "utf8"),
     ).toContain("US-0001-0002");
+    const map = JSON.parse(
+      await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
+    ) as Journey["map"];
+    expect(map.ids["spec-0001"]).not.toHaveProperty("US-0001-0002");
   });
 
   // QFAI:AC-0004-0008-01
@@ -581,6 +659,8 @@ describe("BF-0004 acceptance criteria", () => {
   });
 
   // QFAI:AC-0004-0008-03
+  // QFAI:EX-0004-0008-08
+  // QFAI:EX-0004-0008-09
   it("derives one criterion and retains examples with none or two", async () => {
     const root = await project();
     const examples = path.join(root, ".qfai/specs/spec-0001/05_Examples.md");
@@ -615,6 +695,13 @@ describe("BF-0004 acceptance criteria", () => {
     const retained = await readFile(path.join(root, ".qfai/spec/spec-0001/05_Examples.md"), "utf8");
     expect(retained).toContain("EX-0001-0004");
     expect(retained).toContain("EX-0001-0005");
+    const map = JSON.parse(
+      await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
+    ) as Journey["map"];
+    expect(map.ids["spec-0001"]).not.toHaveProperty("EX-0001-0004");
+    expect(map.ids["spec-0001"]).not.toHaveProperty("EX-0001-0005");
+    expect(mapped).not.toContain("No citing case");
+    expect(mapped).not.toContain("Two citing criteria");
   });
 
   // QFAI:AC-0004-0010-01
@@ -696,9 +783,13 @@ describe("BF-0004 acceptance criteria", () => {
   });
 
   // QFAI:AC-0004-0011-02
+  // QFAI:EX-0004-0011-02
   it("keeps decision evidence visible to Git after the ignore update", async () => {
     const ignore = await readFile(path.join(journey.root, ".gitignore"), "utf8");
     expect(ignore).toContain("!.qfai/evidence/decision/");
+    expect(ignore).not.toContain("!.qfai/evidence/decisions/");
+    expect(ignore).toContain("# Local notes stay ignored.\nscratch/");
+    expect((await ensureRootGitignoreEntries(journey.root, true, () => {})).copied).toEqual([]);
     const record = ".qfai/evidence/decision/bf4-acceptance.json";
     await mkdir(path.dirname(path.join(journey.root, record)), { recursive: true });
     await writeFile(path.join(journey.root, record), "{}\n");
