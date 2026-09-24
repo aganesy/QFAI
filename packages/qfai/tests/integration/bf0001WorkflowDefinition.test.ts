@@ -42,7 +42,7 @@ describe("BF-0001 workflow definition", () => {
     expect(sdd).toContain("`03_contract/");
     expect(sdd).toContain("BF → US → AC → EX ← BR");
 
-    const seed = path.join(getInitAssetsDir(), ".qfai", "spec");
+    const seed = path.join(assistant, "skill", "qfai-sdd", "templates", "spec");
     const layers = await readdir(seed);
     expect(layers).toEqual(
       expect.arrayContaining(["01_policy", "02_business-flow", "03_contract"]),
