@@ -386,7 +386,19 @@ The canonical file set is defined by skill templates under `.qfai/assistant/skil
 
 Not owed by every run. Leaving one out is a valid outcome, so neither this skill's gate nor the completion reviewer treats an absent entry as unfinished work.
 
-- `spec-*/16_Traceability-ledger.md` — opt in per layered spec when its `BR-*` / `AC-*` should be held to implementation drift. For an adopted ledger, the `tdd` and `full` gates compare each obligation with the merge-base copy. Every changed or new obligation needs an active or explicit planned binding. An unchanged active implementation needs a `Proof` reference to a current, independently reviewed test result; a Markdown `PASS` claim is insufficient. Missing or ambiguous bindings, failed proof and an unavailable merge-base fail the gate. A spec without this ledger remains valid: `QFAI-TRACE-002` (`warning`) records the opt-out. The `sdd` profile checks ledger shape without requiring implementation or Git proof. Create it from `templates/specs/spec/16_Traceability-ledger.md` and refresh bindings in the same change as the BR/AC they describe. See `references/spec-traceability-rules.md#traceability-ledger-16_traceability-ledgermd`.
+- `spec-*/16_Traceability-ledger.md` — opt in per layered spec when its `BR-*` /
+  `AC-*` should be held to implementation drift. For an adopted ledger, the
+  `tdd` and `full` gates compare each obligation with the merge-base copy.
+  Every changed or new obligation needs an active or explicit planned binding.
+  An unchanged active implementation needs a `Proof` reference to a current,
+  independently reviewed test result; a Markdown `PASS` claim is insufficient.
+  Missing or ambiguous bindings, failed proof and an unavailable merge-base
+  fail the gate. A spec without this ledger remains valid: `QFAI-TRACE-002`
+  (`warning`) records the opt-out. The `sdd` profile checks ledger shape without
+  requiring implementation or Git proof. Create it from
+  `templates/specs/spec/16_Traceability-ledger.md` and refresh bindings in the
+  same change as the BR/AC they describe. See
+  `references/spec-traceability-rules.md#traceability-ledger-16_traceability-ledgermd`.
 
 ## Phase 0 DESIGN.md Freeze (visual-prototyping surfaces only)
 

@@ -71,6 +71,36 @@ async function seedLayeredSpec(specDir: string): Promise<void> {
   await mkdir(specDir, { recursive: true });
   await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
   await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 User stories\n", "utf-8");
+  await writeFile(
+    path.join(specDir, "04_Business-Rules.md"),
+    "# Business Rules\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | The current rule applies. |\n",
+    "utf-8",
+  );
+  const root = path.resolve(specDir, "..", "..", "..");
+  await mkdir(path.join(root, "src", "core"), { recursive: true });
+  await writeFile(path.join(root, "src", "core", "someModule.ts"), "export const value = 1;\n");
+}
+
+function traceabilityGitDiffListings(listings: Parameters<typeof gitDiffListings>[0]) {
+  const diff = gitDiffListings(listings);
+  return (...call: unknown[]): string => {
+    const args = Array.isArray(call[1]) ? call[1].map(String) : [];
+    if (args[0] === "merge-base") return "fixture-base\n";
+    if (args[0] === "ls-tree") return "present\0";
+    if (args[0] === "show") {
+      if ((args[1] ?? "").endsWith("/04_Business-Rules.md")) {
+        return [
+          "# Business Rules",
+          "",
+          "| BR-ID | Rule |",
+          "| --- | --- |",
+          "| BR-0001-0001 | The prior rule applies. |",
+        ].join("\n");
+      }
+      throw new Error(`unexpected git show ${args[1] ?? ""}`);
+    }
+    return diff(...call);
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -476,7 +506,9 @@ describe("spec BR changed + impl unchanged → QFAI-TRACE-001", () => {
 
     // Git shows BR file changed but NOT the implementation file
     vi.mocked(execFileSync).mockImplementation(
-      gitDiffListings({ changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md"] }),
+      traceabilityGitDiffListings({
+        changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md"],
+      }),
     );
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
@@ -514,7 +546,7 @@ describe("spec BR changed + impl changed → PASS", () => {
 
     // Git shows BOTH BR file and implementation file changed
     vi.mocked(execFileSync).mockImplementation(
-      gitDiffListings({
+      traceabilityGitDiffListings({
         changed: [
           "1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md",
           "1\t1\tsrc/core/someModule.ts",
@@ -547,7 +579,9 @@ describe("missing traceability ledger → QFAI-TRACE-002 warning", () => {
 
     // Git shows BR file changed
     vi.mocked(execFileSync).mockImplementation(
-      gitDiffListings({ changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md"] }),
+      traceabilityGitDiffListings({
+        changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md"],
+      }),
     );
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
