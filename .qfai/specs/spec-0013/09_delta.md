@@ -149,8 +149,21 @@ Rows owned by this spec.
   - REQ-0163: `D-SURFACE-TYPE-MISSING` warns during the deprecation window and sunsets to error; `resolveAllUiBearingSpecs()` keeps the frontmatter as the strict downstream signal (no behavioral change downstream).
 - Source: REQ-0155, REQ-0163, REQ-0164 (discussion-20260527075558258)
 
+## 2026-09-24 — CR-20260913-0012 — Duplicate criterion ids resolved
+
+`03_Acceptance-Criteria.md` declared `AC-0013-0008`, `AC-0013-0009` and `AC-0013-0010` twice each. The first heading of each pair keeps its id, because every reference in the pack means it.
+
+| Second heading                                  | Outcome                                                                                                                                                  |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Missing Markdown Blocks Preflight               | removed, with `REQ-0014` and the scope line "discussion-pack markdown readiness gate". `AC-0013-0003` states the rule for an incomplete pack             |
+| Optional Side Artifact Does Not Block Preflight | renumbered to `AC-0013-0028`, with `BR-0013-0021`, `EX-0013-0021`, `TC-0013-0036` and `TC-0013-0037`. `US-0013-0008` keeps only its side-artifact clause |
+| Design Contract Normalization                   | removed, with `REQ-0016`, `REQ-0017` and `REQ-0018`. `AC-0013-0016` and `AC-0013-0017` state the active design-contract set                              |
+
+- Ledger: `TDD-0044` and `TDD-0045` seeded at `todo`. No existing row was reset.
+
 ## Change Requests
 
-| CR ID            | Upstream artifact                                                                 | Mode         | Approved by                                                    | Applied at           |
-| ---------------- | --------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------- | -------------------- |
-| CR-20260923-0010 | `spec-0013/03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `06_Test-Cases.md` | confirm-only | claude-code (the user's standing instruction for this session) | 2026-09-23T10:52:00Z |
+| CR ID            | Upstream artifact                                                                                                                                                          | Mode         | Approved by                                                    | Applied at           |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------- | -------------------- |
+| CR-20260923-0010 | `spec-0013/03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `06_Test-Cases.md`                                                                                          | confirm-only | claude-code (the user's standing instruction for this session) | 2026-09-23T10:52:00Z |
+| CR-20260913-0012 | `spec-0013/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `09_delta.md`, `tdd/test-list.md` | re-derive    | claude-code (the user's standing instruction for this session) | 2026-09-24T00:08:00Z |

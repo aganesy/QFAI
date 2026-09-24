@@ -9,7 +9,7 @@
 - Approved by: `claude-code` — under the user's standing instruction to process every issue of this session with its own judgment; NOT a user decision on these options
 - Approved at: `2026-09-22T22:00:00Z`
 - Approved option: `1`
-- Applied at: `-`
+- Applied at: `2026-09-24T00:08:00Z` — see Resolution
 - Superseded by: `-`
 
 ## Context
@@ -224,7 +224,7 @@ requirements beneath them?
 Approved under option 1, the recommendation. It removes the two criteria the
 rest of the pack already contradicts or supersedes, and keeps the one that is
 live, so it adds the least of the three and restores nothing an approved record
-retired. Not yet applied.
+retired.
 
 One precondition for action 3.2, found when approving. `packages/qfai/tests/core/sddPreflight.test.ts`
 is the file the two new rows bind to, and `.qfai/evidence/atdd-spec-0002.md`
@@ -232,3 +232,25 @@ records a hash of that whole file as spec-0002 `TDD-0001`'s RED test hash. An
 annotation added there moves the hash, and `--profile tdd` then reports
 `QFAI-TDDLIST-008` on that row. The pass that binds the new rows re-records that
 evidence in the same run, or binds them to a test in another file.
+
+Applied under option 1, actions 1 and 2.
+
+- The planned id `AC-0013-0026` was taken, and so was `AC-0013-0027`. Under
+  the fallback clause the side-artifact criterion is `AC-0013-0028`. The rest
+  of its chain took the ids planned for it, which were still free:
+  `BR-0013-0021`, `EX-0013-0021`, `TC-0013-0036` and `TC-0013-0037`.
+- `AC-0013-0008`, `AC-0013-0009` and `AC-0013-0010` are each declared once,
+  under their first heading. No reference to them moved.
+- Removed: the markdown-stop and normalization criteria, `REQ-0014`,
+  `REQ-0016`, `REQ-0017`, `REQ-0018` and the scope line "discussion-pack
+  markdown readiness gate". `US-0013-0008` keeps only its side-artifact clause.
+- `spec-0013/09_delta.md` records the removals and carries this request in its
+  `## Change Requests` table, mode `re-derive`.
+- Ledger: `TDD-0044` and `TDD-0045` are seeded at `todo` as `Integration` rows,
+  with this record in `DR-ID`. No existing row was reset. `TDD-0038`, the E2E
+  row for `US-0013-0008`, was already `todo`.
+
+Left open: action 3. Until `/qfai-atdd spec-0013` binds the two new rows,
+`QFAI-ATDD-112` reports `TC-0013-0036` and `TC-0013-0037`. Their `Level` routes
+them to `tests/integration/**`, and the tests that already cover the behaviour
+are in `packages/qfai/tests/core/sddPreflight.test.ts`.

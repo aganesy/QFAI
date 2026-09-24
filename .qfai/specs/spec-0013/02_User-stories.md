@@ -47,7 +47,7 @@ As a QFAI user, I want `09_delta.md` to include adoption/rejection rationale wit
 
 ## US-0013-0008: Discussion Markdown-Only Preflight
 
-As a QFAI user, I want SDD preflight to block only on discussion-pack markdown readiness, so that optional side artifacts do not prevent spec generation.
+As a QFAI user, I want SDD preflight to ignore optional side artifacts, so that their absence or format does not prevent spec generation.
 
 ## US-0013-0009: DESIGN.md sha256 Lock at Phase 0
 

@@ -31,6 +31,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0013 declares each acceptance criterion id once** (#2211). Three ids
+  were each declared twice, and the second criterion of each pair had no test
+  case. The side-artifact criterion is now `AC-0013-0028`, with its own rule,
+  example and two test cases. The other two are removed: an approved change
+  had already retired the one, and two other criteria already covered the
+  other.
+
 - **The rest of spec-0003 states what `qfai init` and the shipped workflows
   do now** (#2203). Sixteen more statements still described the product before
   a deliberate change. They said init creates the artifact directories and a

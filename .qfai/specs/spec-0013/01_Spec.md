@@ -28,7 +28,6 @@
   - Density Review Pass using `QFAI-COV-207` warnings
   - Preflight summary report (`.qfai/report/preflight_summary.md`)
   - Validate gate (`qfai validate --fail-on error`)
-  - discussion-pack markdown readiness gate
   - optional side artifacts are ignored by preflight
   - Phase 0 freeze of root `DESIGN.md` sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml`
   - drop legacy design contracts (`exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, `reference-pool.yaml`, `brand-design.yaml`)
@@ -73,11 +72,7 @@
 - REQ-0011: Required edges -- US -> AC -> BR -> EX -> TC completeness
 - REQ-0012: Validate gate -- `qfai validate --fail-on error --format github` with error=0
 - REQ-0013: Density Review -- `QFAI-COV-207` warnings triaged from specs-coverage reports
-- REQ-0014: Discussion-Pack Markdown Gate — SDD preflight は discussion-pack の必須 markdown readiness を検証し、欠落・未完成時のみブロックする
 - REQ-0015: Optional Side Artifact Neutrality — SDD preflight は optional side artifact の欠落や旧形式の補助 prototyping artifact だけではブロックしない
-- REQ-0016: Exploration-brief normalization — `uiux/30_exploration_brief.md` を `.qfai/contracts/design/exploration-brief.yaml` に正規化する
-- REQ-0017: Evaluation-rubric normalization — `uiux/33_exploration_rubric.md` を `.qfai/contracts/design/evaluation-rubric.yaml` に正規化する
-- REQ-0018: Evaluator-calibration normalization — `uiux/34_evaluator_calibration.md` を `.qfai/contracts/design/evaluator-calibration.yaml` に正規化する
 - REQ-0019: UI contract normalization — `uiux/40_screen_contracts.md` を `.qfai/contracts/ui/*.yaml` に正規化する
 - REQ-0020: Downstream boundary — `/qfai-sdd` 以降の skill は discussion pack を直接読まず、正規化済み specs/contracts を読む
 - REQ-0021: `selected-direction.yaml` と `design-system.yaml` は prototyping でさらに更新され得る downstream design contracts だが、UI-bearing flow では `/qfai-sdd` 完了時点で downstream validate readiness のために存在していなければならない
