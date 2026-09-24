@@ -2,8 +2,9 @@
 
 ## Objective
 
-Carry the proof for four of this spec's twelve `done` ledger rows. The other
-eight are not backfilled and the reasons are under Gaps.
+The original backfill proves four of the twelve rows that were `done` at that
+run. The other eight are listed under Gaps. This update adds falsifiability
+evidence for three newly seeded optional-side-artifact rows.
 
 ## Inputs reviewed (files/paths)
 
@@ -101,7 +102,8 @@ the Coverage Depth Matrix below.
 
 ## Ledger rows advanced
 
-No row changed status. Every row below was already `done`.
+The original four rows were already `done`. The three new rows remain `todo`
+until the orchestrator writes their ledger cells after implementation gates.
 
 | TDD-ID     | Obligation      | Layer       | RED provenance | Status |
 | ---------- | --------------- | ----------- | -------------- | ------ |
@@ -109,6 +111,9 @@ No row changed status. Every row below was already `done`.
 | `TDD-0024` | `TC-0013-0029`  | integration | falsifiability | done   |
 | `TDD-0029` | `TC-0013-0034`  | integration | falsifiability | done   |
 | `TDD-0030` | `TC-0013-0035`  | integration | falsifiability | done   |
+| `TDD-0081` | `TC-0013-0036`  | integration | falsifiability | todo   |
+| `TDD-0082` | `TC-0013-0037`  | integration | falsifiability | todo   |
+| `TDD-0083` | `TC-0013-0037`  | integration | falsifiability | todo   |
 
 One of the four reaches part of a multi-clause obligation. The part each reaches
 is recorded with the row, so the evidence says what it proves rather than
@@ -355,6 +360,194 @@ failed, 2 passed (7).
 - Checkpoint verification result: PASS — exit 0; Test Files 547 passed (555); Tests 9468 passed (9550)
 - Checkpoint verification revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 
+### Optional side artifact handoff (TDD-0081 to TDD-0083)
+
+The three tests use a usable markdown discussion pack and exercise SDD
+preflight through `runSddPreflight`. `TC-0013-0036` covers absence;
+`TC-0013-0037` has separate invalid and legacy selectors. The `01_Context.md`
+fixture does not claim a UI classification, so the missing-artifact test title
+was narrowed to the input it actually supplies before the final proof.
+
+Live falsifiability observations ran in an isolated worktree at HEAD
+`c0fba3fb3c9786a497fbdcc7fc36e0aab3c260b0`. The scratch tree held an
+identical copy of the test and production source. Each mutation was retained
+while an independent `qa-gatekeeper` inspected the source, test, command,
+assertion failure, SHA-256 values and content-addressed revision. After each
+PASS verdict, the source was restored byte-for-byte and the same selector
+passed. The restored source SHA-256 was
+`9214217580cf6aa0c20ab374749ca81899ed6ff864a88a01d40c59b2ba2dff53`.
+The restored scratch revision was
+`working-tree+75d032c3913c0b9533e2fdb4629da26e89cd727adcfc5e3a45dc4c9173466c0f`.
+The test file SHA-256 in scratch and the PR worktree was
+`da430c65829cd4921f596bcba29a942c113896dd600ccc4ae357347da01a3e1e`.
+The direct PR-worktree run of all three cases passed (one file, three tests).
+
+Commands below ran from the isolated `packages/qfai` directory via the
+`tmp/hold-spec0013-optional-mutant.mjs` wrapper. That wrapper inserted the
+stated condition after `resolvePreflightBlockers(readiness)`, ran the exact
+Vitest command, and left the mutated source for live inspection. Its `restore`
+action restored the production source before the same command ran again.
+The ignored `tmp/` logs were inspection aids, not committed evidence.
+
+### TDD-0081
+
+- TDD-ID: TDD-0081
+- Layer: integration
+- Test file: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Selector: does not block when a usable discussion pack is missing prototyping.yaml
+- TC-ref: TC-0013-0036
+- RED provenance: falsifiability, branch 2; the production path already made
+  this assertion pass before the test was moved.
+
+#### Round 1
+
+- Round 1: Revision: working-tree+75d032c3913c0b9533e2fdb4629da26e89cd727adcfc5e3a45dc4c9173466c0f
+- Round 1: Satisfied-by: packages/qfai/src/core/preflight/sddPreflight.ts,
+  `runSddPreflight` and `resolvePreflightBlockers`; absence of an optional
+  `prototyping.yaml` is not a blocker.
+- Round 1: Falsifiability command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when a usable discussion pack is missing prototyping.yaml"`
+- Round 1: Falsifiability result: exit 1; one assertion failed, two tests
+  skipped. At test line 37, `result.status` was `blocked` instead of `ready`.
+Observed failure output (excerpt):
+
+```text
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 skipped (3)
+ FAIL  |integration| tests/integration/sddOptionalArtifactPreflight.test.ts > SDD preflight optional discussion side artifact > does not block when a usable discussion pack is missing prototyping.yaml
+AssertionError: expected 'blocked' to be 'ready' // Object.is equality
+Expected: "ready"
+Received: "blocked"
+ ❯ tests/integration/sddOptionalArtifactPreflight.test.ts:37:29
+```
+
+- Round 1: Falsifiability revision: working-tree+4402324589c0660a78330be7b125a7767b1b0bee89e3bcf538b3ed6f30db0141
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: eee65283a88b54eb2b8f7be0fc46cd6087ac802cca46eea6b39b5746670ef329
+- Round 1: RED test manifest: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Round 1: GREEN command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when a usable discussion pack is missing prototyping.yaml"`
+- Round 1: GREEN result: exit 0; one passed, two skipped after restoration.
+Observed GREEN output (excerpt):
+
+```text
+ Test Files  1 passed (1)
+      Tests  1 passed | 2 skipped (3)
+```
+
+- P1d qa-gatekeeper verdict: PASS after live inspection of the mutated tree,
+  failed assertion, revision and both file hashes; restoration was then
+  verified by the GREEN run.
+
+Mutation: read the optional side artifact and add a blocker when its content is
+empty. The mutant source SHA-256 was
+`f35493eac5773cb4456ac16531960bfecc5ee761f437ba2577e5614c782e1647`.
+
+### TDD-0082
+
+- TDD-ID: TDD-0082
+- Layer: integration
+- Test file: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Selector: does not block when prototyping.yaml exists but namespaced schema is invalid
+- TC-ref: TC-0013-0037
+- RED provenance: falsifiability, branch 2.
+
+#### Round 1
+
+- Round 1: Revision: working-tree+75d032c3913c0b9533e2fdb4629da26e89cd727adcfc5e3a45dc4c9173466c0f
+- Round 1: Satisfied-by: packages/qfai/src/core/preflight/sddPreflight.ts,
+  `runSddPreflight` and `resolvePreflightBlockers`; an invalid optional
+  `prototyping.yaml` does not enter the blocker list.
+- Round 1: Falsifiability command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when prototyping.yaml exists but namespaced schema is invalid"`
+- Round 1: Falsifiability result: exit 1; one assertion failed, two tests
+  skipped. At test line 57, `result.status` was `blocked` instead of `ready`.
+Observed failure output (excerpt):
+
+```text
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 skipped (3)
+ FAIL  |integration| tests/integration/sddOptionalArtifactPreflight.test.ts > SDD preflight optional discussion side artifact > does not block when prototyping.yaml exists but namespaced schema is invalid
+AssertionError: expected 'blocked' to be 'ready' // Object.is equality
+Expected: "ready"
+Received: "blocked"
+ ❯ tests/integration/sddOptionalArtifactPreflight.test.ts:57:29
+```
+
+- Round 1: Falsifiability revision: working-tree+601b350bffcaa514b48cf4e0a259157bd856d5b89adba669703745e60b3c0274
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: eee65283a88b54eb2b8f7be0fc46cd6087ac802cca46eea6b39b5746670ef329
+- Round 1: RED test manifest: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Round 1: GREEN command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when prototyping.yaml exists but namespaced schema is invalid"`
+- Round 1: GREEN result: exit 0; one passed, two skipped after restoration.
+Observed GREEN output (excerpt):
+
+```text
+ Test Files  1 passed (1)
+      Tests  1 passed | 2 skipped (3)
+```
+
+- P1d qa-gatekeeper verdict: PASS after live inspection of the mutated tree,
+  failed assertion, revision and both file hashes; restoration was then
+  verified by the GREEN run.
+
+Mutation: read the optional side artifact and add a blocker when it has a
+`prototyping:` namespace without the expected `full-harness` recommendation.
+The mutant source SHA-256 was
+`bb45b400a7c82a7ce1c82d46fe215efabc748c64ad3d49312309c800c5ed47f0`.
+
+### TDD-0083
+
+- TDD-ID: TDD-0083
+- Layer: integration
+- Test file: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Selector: does not block when prototyping.yaml uses legacy-only schema
+- TC-ref: TC-0013-0037
+- RED provenance: falsifiability, branch 2.
+
+#### Round 1
+
+- Round 1: Revision: working-tree+75d032c3913c0b9533e2fdb4629da26e89cd727adcfc5e3a45dc4c9173466c0f
+- Round 1: Satisfied-by: packages/qfai/src/core/preflight/sddPreflight.ts,
+  `runSddPreflight` and `resolvePreflightBlockers`; a legacy optional
+  `prototyping.yaml` is not a blocker.
+- Round 1: Falsifiability command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when prototyping.yaml uses legacy-only schema"`
+- Round 1: Falsifiability result: exit 1; one assertion failed, two tests
+  skipped. At test line 83, `result.status` was `blocked` instead of `ready`.
+Observed failure output (excerpt):
+
+```text
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 skipped (3)
+ FAIL  |integration| tests/integration/sddOptionalArtifactPreflight.test.ts > SDD preflight optional discussion side artifact > does not block when prototyping.yaml uses legacy-only schema (no prototyping namespace)
+AssertionError: expected 'blocked' to be 'ready' // Object.is equality
+Expected: "ready"
+Received: "blocked"
+ ❯ tests/integration/sddOptionalArtifactPreflight.test.ts:83:29
+```
+
+- Round 1: Falsifiability revision: working-tree+7bf3bef2b6fd19caa142e497b55b3c294a3aa3555570f400c086a6d29dac16ac
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: eee65283a88b54eb2b8f7be0fc46cd6087ac802cca46eea6b39b5746670ef329
+- Round 1: RED test manifest: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Round 1: GREEN command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when prototyping.yaml uses legacy-only schema"`
+- Round 1: GREEN result: exit 0; one passed, two skipped after restoration.
+Observed GREEN output (excerpt):
+
+```text
+ Test Files  1 passed (1)
+      Tests  1 passed | 2 skipped (3)
+```
+
+- P1d qa-gatekeeper verdict: PASS after live inspection of the mutated tree,
+  failed assertion, revision and both file hashes; restoration was then
+  verified by the GREEN run.
+
+Mutation: read the optional side artifact and add a blocker when it exists
+without a `prototyping:` namespace. The mutant source SHA-256 was
+`7fe08b235fd2a0053fc7bfe5995689cef3e572cd521e8c94f9402e60d5c36667`.
+
+These three rows still require an integrated-tree checkpoint, review-pack seal,
+and completion-reviewer verdict before the ledger can reach `done`. The old
+Coverage Depth Matrix below predates `BR-0013-0021` and these two new TCs;
+its revision is a separate stage-wide obligation.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
@@ -503,7 +696,10 @@ pair, so a change to one can silently diverge from the other.
 
 ## Final status
 
-PASS for the four rows recorded here, each for the part of its obligation named
+Historical PASS for the original four rows, each for the part of its obligation named
 under "Ledger rows advanced". This is a per-row verdict, not a stage verdict:
 the pack is not clean, and eight of its twelve `done` rows are listed under Gaps
 rather than claimed.
+
+The three new rows have live P1d falsifiability PASS and focused GREEN. Their
+full checkpoint, review pack and completion verdict remain pending.

@@ -22,9 +22,11 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
 - `.qfai/specs/spec-0017/07_Decisions.md` — `DR-0017-*`, read for the rejected alternatives this
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
-- `.qfai/specs/spec-0017/tdd/test-list.md` — 101 rows: 81 `Integration`,
-  11 `Unit`; **81 `refactor`, 0 `blocked`, 11 `todo`**, with 6 `done` and 3 `review-fix`. Nine rows are `E2E`, one per story,
-  seeded at `todo`. Eleven `todo` rows are `Integration` and are therefore this stage's to route.
+- `.qfai/specs/spec-0017/tdd/test-list.md` — 110 rows: 90 `Integration`,
+  11 `Unit`; **75 `refactor`, 0 `blocked`, 26 `todo`**, with 6 `done` and 3 `review-fix`.
+  The nine additional `Integration` rows split six acceptance cases into independent outcomes and remain `todo`.
+  At the 2026-09-23 run, nine rows were `E2E`, one per story, seeded at `todo`.
+  Eleven `todo` rows were `Integration` and were this stage's to route.
   The run started 2026-09-23T10:23:39.000Z hands ten of them over — see § "Ledger rows advanced".
   `TDD-0012` is the eleventh, and that run's work order did not name it
 - `.qfai/assistant/catalog/test-layers.md` — the layer derivation and the directory each `Level`
@@ -364,7 +366,7 @@ Two things are left to `qa-gatekeeper` rather than decided here:
   that the case list and the grammar name the same members, a sweep that deletes each member in turn and
   requires a case to notice, and the eleven real builds it planted in a shipped lane — ten of which the
   story did not see
-- **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 6 tests deriving the Coverage
+- **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 8 tests deriving the Coverage
   Depth Matrix's totals, partition, class assignment, per-class justification and row width from the
   table itself
 - **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 14 tests deriving this record's own
@@ -422,8 +424,8 @@ node scripts/check-atdd-annotation-ledger.mjs        (repo-wide)
 
 pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotationLedger.test.ts
   -> Tests 63 passed (63), exit 0
-pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
-  -> Tests 6 passed (6), exit 0
+cd packages/qfai && npm exec -- vitest run tests/assets/coverageDepthMatrix.test.ts
+  -> Tests 8 passed (8), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
   -> Tests 12 passed | 2 skipped (14), exit 0
   the two skipped read the review archive and are skipped by name where this
@@ -1888,6 +1890,36 @@ packages/qfai/tests/helpers/runnerProjects.ts
 packages/qfai/tests/scripts/sliceSurfaceAlignment.test.ts
 ```
 
+#### Round 2 — CR-20260924-0002
+
+- TDD-ID: TDD-0062
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017SliceAlignment.test.ts`
+- Selector: `agrees across the runner, scripts, CI and release declarations`
+- TC-ref: TC-0017-0062
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 2: RED failure mode: falsifiability.
+- Round 2: RED test hash: 4f6607d4a52348fe78c4987065c5f3dbe69a0a209886aefb9862d508ff0dea68
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts
+packages/qfai/tests/integration/spec0017SliceAlignment.test.ts
+```
+
+- Satisfied-by: `.github/workflows/release.yml::jobs.gate-tests.strategy.matrix.slice`
+- Mutation: Remove scripts from release gate-tests matrix.
+- Mutant SHA-256: `5d3969fda571eeaf1b0c915bae3adb2e2b907ed09979047707c6a52525edb781`. Restored SHA-256: `6a3be0f764bd13c98a531f89920228b32b5229b5c277decc22109860ca3ce9a1`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017SliceAlignment.test.ts --reporter=verbose --testNamePattern=TDD-0062`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: release.yml#gate-tests: expected [ 'cli', 'core', 'e2e', …(3) ] to deeply equal [ 'cli', 'core', 'e2e', …(4) ] `❯ tests/integration/spec0017SliceAlignment.test.ts:19:73`.
+- Round 2: Falsifiability revision: working-tree+7f5e4607e06ee90313e8fa50847c0229a4753268427b0848a8d998ee6227a695
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017SliceAlignment.test.ts:19:73; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017SliceAlignment.test.ts --reporter=verbose --testNamePattern=TDD-0062`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 3 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+
 ### TDD-0069
 
 - TDD-ID: TDD-0069
@@ -2097,9 +2129,16 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 
 ## Coverage Depth Matrix
 
-See `.qfai/evidence/coverage-depth-spec-0017.md` (committed). Totals by `Status`:
-**✅ 3 / ⚠️ 2 / ❌ 4**, derived from the table by
-`packages/qfai/tests/assets/coverageDepthMatrix.test.ts` so the two cannot part again.
+See `.qfai/evidence/coverage-depth-spec-0017.md`. For the historical nine-story
+E2E table, Totals by `Status`: **✅ 3 / ⚠️ 2 / ❌ 4**. This figure is checked by
+`packages/qfai/tests/assets/coverageDepthMatrix.test.ts`.
+
+The current matrix covers **9 US and 92 TC** rows. Its scored cells are
+**✅ 20 / ⚠️ 197 / ❌ 333 / n/a 359**; its status totals are
+**✅ 3 / ⚠️ 28 / ❌ 70**. These counts include **66 existing L3 placement gaps**
+whose test files still sit outside `tests/integration/**`. The six TC migrations in
+this round are recorded separately in that matrix. Their current scores remain
+provisional until the Integration selectors have final GREEN, live QA, and review evidence.
 
 Three numbers, in order, because the sequence matters: the file declared `✅ 3 / ⚠️ 2 / ❌ 4`, which
 the table never held; round 1's `qa-gatekeeper` cross-tabulated it to `✅ 2 / ⚠️ 2 / ❌ 5`; and two
@@ -3012,7 +3051,7 @@ a merge can invalidate has no author to hold responsible for it.
 The count and its split across the two include roots are on one line, and both are derived by the same
 walk:
 
-e2e callsites at this tree: 2443 (packages/qfai/tests/assets 2249, packages/qfai/tests/e2e 194)
+e2e callsites at this tree: 2446 (packages/qfai/tests/assets 2254, packages/qfai/tests/e2e 192)
 
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is
@@ -4293,6 +4332,36 @@ ba2f2c08e56c777846ca904c072db8e2a4922dec review_request.md
 - Oracle: replacing `ci:gate:types` with `echo omitted` made the ordered
   coverage test fail, exit 1. Restoring the saved manifest returned the test green.
 
+#### Round 1 — CR-20260924-0002
+
+- TDD-ID: TDD-0099
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts`
+- Selector: `classifies exact operation capabilities`
+- TC-ref: TC-0017-0090
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 1: RED failure mode: falsifiability.
+- Round 1: RED test hash: 305f8ec04cdd8604a6e8bc8f41de05eba84f021f69ba901ddd704edf1cc3301a
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017Release.ts
+packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts
+```
+
+- Satisfied-by: `package.json::scripts.ci:gate:ssot`
+- Mutation: Remove one required operation script.
+- Mutant SHA-256: `9a002d1a47b3ec1815c7cd9d3cdabf4751dc0a46e2fc0cb01b351f3538b59cc2`. Restored SHA-256: `381befab24fee7f1cf770e44b900ec0880aa47a3b47dcabf91173f17ba50c31b`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseOperations.test.ts --reporter=verbose --testNamePattern=TDD-0099`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: expected [ 'sliced', 'aggregate' ] to deeply equal [ 'sliced', 'operations' ] `❯ tests/integration/spec0017ReleaseOperations.test.ts:23:45`.
+- Round 1: Falsifiability revision: working-tree+743e2003757c51d98b1f676f1c5594078eaab24522560ef41d8a46f7ca76cd30
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017ReleaseOperations.test.ts:23:45; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseOperations.test.ts --reporter=verbose --testNamePattern=TDD-0099`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 2 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+
 ### TDD-0100
 
 - TC: TC-0017-0091. Implementation revision: `9c9febc3c`.
@@ -4305,6 +4374,36 @@ ba2f2c08e56c777846ca904c072db8e2a4922dec review_request.md
   whole and sliced manifests, missing and unknown outputs, and the forbidden
   whole/operations combination. Existing prerequisite cases cover every added
   job's failed, cancelled, timed-out, skipped, unknown, empty and missing result.
+
+#### Round 1 — CR-20260924-0002
+
+- TDD-ID: TDD-0100
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017ReleaseFallback.test.ts`
+- Selector: `missing operation scripts retain aggregate checks`
+- TC-ref: TC-0017-0091
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 1: RED failure mode: falsifiability.
+- Round 1: RED test hash: 3ebf49a22c27ee4fdb1fa1b542eca9ab1f239cc4e9ec4b4e43990d4de9d05c9b
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017Release.ts
+packages/qfai/tests/integration/spec0017ReleaseFallback.test.ts
+```
+
+- Satisfied-by: `.github/workflows/release.yml::jobs.verify.steps.shape.operationScripts`
+- Mutation: Omit build from the required-operation list.
+- Mutant SHA-256: `92514651119d6d6468ce3fc65310487cfa96b9bfc7fcb77a99d0effd998b8471`. Restored SHA-256: `6a3be0f764bd13c98a531f89920228b32b5229b5c277decc22109860ca3ce9a1`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseFallback.test.ts --reporter=verbose --testNamePattern=TDD-0100`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: expected [ 'sliced', 'operations' ] to deeply equal [ 'sliced', 'aggregate' ] `❯ tests/integration/spec0017ReleaseFallback.test.ts:33:47`.
+- Round 1: Falsifiability revision: working-tree+99314f83d316473b61979c2347c4499c9fb44b8df9cc9dff4fa246438dff0709
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017ReleaseFallback.test.ts:33:47; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseFallback.test.ts --reporter=verbose --testNamePattern=TDD-0100`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 2 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
 
 ### TDD-0101
 
@@ -4367,3 +4466,484 @@ ba2f2c08e56c777846ca904c072db8e2a4922dec review_request.md
   1. The saved workflow is restored after each mutation.
 - The same helper evaluates both sliced jobs. An unmodelled matrix condition
   fails explicitly; it cannot silently turn into a successful inventory check.
+
+## Retired slice verification
+
+- Change Request: CR-20260924-0001.
+- Scope: TDD-0007, TDD-0043, TDD-0062, TDD-0064, TDD-0099 and TDD-0100.
+- The six ledger rows remain at `todo` after the upstream reset. These targeted
+  runs show the revised assertions pass and reject the mutations below. They
+  do not replace the per-row implementation cycle and reviewer evidence
+  required before advancing a row.
+
+### Current GREEN runs
+
+| Obligation | Command | Result |
+| ---------- | ------- | ------ |
+| TC-0017-0062 and TC-0017-0064 | `pnpm -C packages/qfai exec vitest run tests/scripts/sliceSurfaceAlignment.test.ts` | 3 passed |
+| TC-0017-0007 | `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-0007` | 1 passed |
+| TC-0017-0043 | `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-0043` | 1 passed |
+| TC-0017-0090 and TC-0017-0091 | `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-009` | 5 passed |
+| TC-0017-0091, including the older tag | `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-0091` | 2 passed |
+
+The release gate selection with four real tag shapes also passed all 17
+selected tests. The older `v1.12.3` tag is asserted as `whole`.
+
+### Falsifiability runs
+
+| Obligation | Temporary mutation | Observed failure |
+| ---------- | ------------------ | ---------------- |
+| TC-0017-0007 | Restore `pr-fix` and `pr-merge` in both `ci.yml` test matrices | The targeted test failed on the retired legs. |
+| TC-0017-0043 | The same two-leg restoration | The targeted check-name inventory failed. |
+| TC-0017-0062 | Remove `scripts` from both release matrix slice lists | The targeted test failed: 1 failed, 2 skipped. |
+| TC-0017-0064 | Replace the release `gate-tests` per-slice script with a generic project command | The targeted per-slice script test failed. |
+| TC-0017-0090 | Force the release checks classifier to return false | The targeted operation-capability test failed. |
+| TC-0017-0091 | Replace exact slice-set equality with subset membership | The older tag was misclassified as sliced and the targeted test failed once. |
+
+The mutation commands were:
+
+- TC-0017-0007:
+  `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-0007`
+- TC-0017-0043:
+  `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-0043`
+- TC-0017-0062:
+  `pnpm -C packages/qfai exec vitest run tests/scripts/sliceSurfaceAlignment.test.ts --testNamePattern=TC-0017-0062`
+- TC-0017-0064:
+  `pnpm -C packages/qfai exec vitest run tests/scripts/sliceSurfaceAlignment.test.ts --testNamePattern=TC-0017-0064`
+- TC-0017-0090:
+  `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-0090`
+- TC-0017-0091:
+  `pnpm -C packages/qfai exec vitest run tests/scripts/ownWorkflowTopology.test.ts --testNamePattern=TC-0017-0091`
+
+Each mutation was reverted in a `finally` path. The restored
+`.github/workflows/release.yml` SHA-256 was
+`76AADA7906349F0D29157099DA8107C476513DBCCE5F827FCE67CFB67831C1A4`.
+The mutated `ci.yml` and release workflow files were reported restored with
+matching pre-mutation hashes.
+
+## 2026-09-24 split-boundary acceptance evidence
+
+CR-20260924-0002 approved 15 independent Integration boundaries. Six existing
+rows and nine new rows remain `todo` until their implementation completion
+checks pass. Earlier aggregate results remain historical.
+
+The final four-file Integration suite passed all 15 tests. Each row below has a
+focused assertion failure while its production predicate was mutated, an
+independent live `qa-gatekeeper` PASS, and a focused GREEN after exact
+restoration. The test content hash and working-tree revision identify each
+observation. These results do not assert completion review, pack seals, or
+checkpoints.
+
+Preliminary runs under `tests/scripts/**` did not qualify as L3 coverage. The
+first isolated run also exposed a 100 ms VM timeout on restored GREEN for
+TDD-0108 and TDD-0110 under concurrent load; the release test helper now uses
+a 1,000 ms limit. A three-file Integration layout then failed the shared-helper
+consumer rule and was split into the final four-file layout. None of those
+preliminary runs is counted as the current RED/GREEN result.
+
+| Row | Obligation | Selector | Live oracle review | Evidence |
+| --- | --- | --- | --- | --- |
+| TDD-0007 | TC-0017-0007 | `keeps every retained matrix leg declared` | PASS | [row](#tdd-0007) |
+| TDD-0102 | TC-0017-0007 | `derives the skip from detection at the job level` | PASS | [row](#tdd-0102) |
+| TDD-0103 | TC-0017-0007 | `retires project, script and matrix legs together` | PASS | [row](#tdd-0103) |
+| TDD-0043 | TC-0017-0043 | `reports all expanded check names on full runs` | PASS | [row](#tdd-0043) |
+| TDD-0104 | TC-0017-0043 | `reports bare skipped matrix jobs on documentation-only runs` | PASS | [row](#tdd-0104) |
+| TDD-0062 | TC-0017-0062 | `agrees across the runner, scripts, CI and release declarations` | PASS | [row](#tdd-0062) |
+| TDD-0105 | TC-0017-0062 | `declares exactly the seven approved names` | PASS | [row](#tdd-0105) |
+| TDD-0064 | TC-0017-0064 | `names each script after its selected project` | PASS | [row](#tdd-0064) |
+| TDD-0106 | TC-0017-0064 | `four sliced jobs invoke per-slice scripts` | PASS | [row](#tdd-0106) |
+| TDD-0099 | TC-0017-0090 | `classifies exact operation capabilities` | PASS | [row](#tdd-0099) |
+| TDD-0107 | TC-0017-0093 | `preserves the ordered operation vector` | PASS | [row](#tdd-0107) |
+| TDD-0108 | TC-0017-0090 | `runs one complete suite on each runtime` | PASS | [row](#tdd-0108) |
+| TDD-0100 | TC-0017-0091 | `missing operation scripts retain aggregate checks` | PASS | [row](#tdd-0100) |
+| TDD-0109 | TC-0017-0091 | `older and whole-suite tags use the whole aggregate` | PASS | [row](#tdd-0109) |
+| TDD-0110 | TC-0017-0091 | `refuses invalid checks outputs` | PASS | [row](#tdd-0110) |
+
+### TDD-0007
+
+- TDD-ID: TDD-0007
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017CiMatrix.test.ts`
+- Selector: `keeps every retained matrix leg declared`
+- TC-ref: TC-0017-0007
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 1: RED failure mode: falsifiability.
+- Round 1: RED test hash: a423448d19d2c6a3cf31137d139a4f15d66c08784740da5f0bd901943cc3ef73
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts
+packages/qfai/tests/integration/spec0017CiMatrix.test.ts
+```
+
+- Satisfied-by: `.github/workflows/ci.yml::jobs.test/node-floor.strategy.matrix.slice`
+- Mutation: Remove scripts from node-floor matrix.
+- Mutant SHA-256: `29ec2e7c6bedcbc7dbf96751a9cd28ee93f2491cc8657cee12c4f901a7698bd3`. Restored SHA-256: `fadc0f04ce432486721adddbdc0be7a55eac6b739434294327e864dc795aebfa`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017CiMatrix.test.ts --reporter=verbose --testNamePattern=TDD-0007`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: node-floor: expected [ 'cli', 'core', 'e2e', …(3) ] to deeply equal [ 'cli', 'core', 'e2e', …(4) ] `❯ tests/integration/spec0017CiMatrix.test.ts:55:56`.
+- Round 1: Falsifiability revision: working-tree+d006370df6a8d905bcaf42b49e0b6a64cb330c9529774d4252d3bc9fb063d0c3
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017CiMatrix.test.ts:55:56; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017CiMatrix.test.ts --reporter=verbose --testNamePattern=TDD-0007`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 4 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+
+### TDD-0102
+
+- TDD-ID: TDD-0102
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017CiMatrix.test.ts`
+- Selector: `derives the skip from detection at the job level`
+- TC-ref: TC-0017-0007
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 1: RED failure mode: falsifiability.
+- Round 1: RED test hash: a423448d19d2c6a3cf31137d139a4f15d66c08784740da5f0bd901943cc3ef73
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts
+packages/qfai/tests/integration/spec0017CiMatrix.test.ts
+```
+
+- Satisfied-by: `.github/workflows/ci.yml::jobs.test.if`
+- Mutation: Replace the test job condition with true.
+- Mutant SHA-256: `209750ffab3ab3596481e869cda6ae13296ea65273efbdcea7908e0274b2c84d`. Restored SHA-256: `fadc0f04ce432486721adddbdc0be7a55eac6b739434294327e864dc795aebfa`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017CiMatrix.test.ts --reporter=verbose --testNamePattern=TDD-0102`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: test: expected '${{ true }}' to contain 'needs.detect.outputs.full' `❯ tests/integration/spec0017CiMatrix.test.ts:63:41`.
+- Round 1: Falsifiability revision: working-tree+2411813f9f90adc0a4b29052210b06ee52327fb7b95fe3ee97256bf76e521cce
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017CiMatrix.test.ts:63:41; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017CiMatrix.test.ts --reporter=verbose --testNamePattern=TDD-0102`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 4 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+
+### TDD-0103
+
+- TDD-ID: TDD-0103
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017CiMatrix.test.ts`
+- Selector: `retires project, script and matrix legs together`
+- TC-ref: TC-0017-0007
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 1: RED failure mode: falsifiability.
+- Round 1: RED test hash: a423448d19d2c6a3cf31137d139a4f15d66c08784740da5f0bd901943cc3ef73
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts
+packages/qfai/tests/integration/spec0017CiMatrix.test.ts
+```
+
+- Satisfied-by: `packages/qfai/package.json::scripts`
+- Mutation: Restore the retired test:pr-fix script.
+- Mutant SHA-256: `cab0fade07609adf4058dc11baf89b9237f1c34bfcfa917ed278fda5dde21a84`. Restored SHA-256: `58642f03771f03cb169ea2e29e18d0da43a43b4e0cd709200136c380a0947daa`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017CiMatrix.test.ts --reporter=verbose --testNamePattern=TDD-0103`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: expected [ 'build', 'prepack', 'lint', …(20) ] to not include 'test:pr-fix' `❯ tests/integration/spec0017CiMatrix.test.ts:79:30`.
+- Round 1: Falsifiability revision: working-tree+d8cf319501be0639736ed909453d738af40e257a0e526b16c509f41b9b9bd93c
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017CiMatrix.test.ts:79:30; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017CiMatrix.test.ts --reporter=verbose --testNamePattern=TDD-0103`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 4 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+
+### TDD-0043
+
+- TDD-ID: TDD-0043
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017CiMatrix.test.ts`
+- Selector: `reports all expanded check names on full runs`
+- TC-ref: TC-0017-0043
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 1: RED failure mode: falsifiability.
+- Round 1: RED test hash: a423448d19d2c6a3cf31137d139a4f15d66c08784740da5f0bd901943cc3ef73
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts
+packages/qfai/tests/integration/spec0017CiMatrix.test.ts
+```
+
+- Satisfied-by: `.github/workflows/ci.yml::jobs.node-floor.strategy.matrix.slice`
+- Mutation: Replace one retained matrix leg with pr-fix.
+- Mutant SHA-256: `56036967b10a0cab468e06f095750f88d153ff4bfe2e97c59292d979b2a3e9aa`. Restored SHA-256: `fadc0f04ce432486721adddbdc0be7a55eac6b739434294327e864dc795aebfa`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017CiMatrix.test.ts --reporter=verbose --testNamePattern=TDD-0043`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: expected [ 'build', 'check-types', …(20) ] to deeply equal [ 'build', 'check-types', …(20) ] `❯ tests/integration/spec0017CiMatrix.test.ts:92:32`.
+- Round 1: Falsifiability revision: working-tree+81e39cdd597ebd956b4df1a2337a21b1d253c43a7debc07b114723dba84248dd
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017CiMatrix.test.ts:92:32; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017CiMatrix.test.ts --reporter=verbose --testNamePattern=TDD-0043`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 4 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+
+### TDD-0104
+
+- TDD-ID: TDD-0104
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017CiMatrix.test.ts`
+- Selector: `reports bare skipped matrix jobs on documentation-only runs`
+- TC-ref: TC-0017-0043
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 1: RED failure mode: falsifiability.
+- Round 1: RED test hash: a423448d19d2c6a3cf31137d139a4f15d66c08784740da5f0bd901943cc3ef73
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts
+packages/qfai/tests/integration/spec0017CiMatrix.test.ts
+```
+
+- Satisfied-by: `.github/workflows/ci.yml::jobs.test.name`
+- Mutation: Rename the skipped test job.
+- Mutant SHA-256: `094039945ead5e8a9b7b6410377ed655f4718848277c25476f80abc485579b0a`. Restored SHA-256: `fadc0f04ce432486721adddbdc0be7a55eac6b739434294327e864dc795aebfa`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017CiMatrix.test.ts --reporter=verbose --testNamePattern=TDD-0104`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: expected [ 'build', 'check-types', …(8) ] to deeply equal [ 'build', 'check-types', …(8) ] `❯ tests/integration/spec0017CiMatrix.test.ts:119:46`.
+- Round 1: Falsifiability revision: working-tree+f852f2fb1dc260e3e00a50afb95abe38be6425c6751354d8fe41a4d186e594b5
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017CiMatrix.test.ts:119:46; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017CiMatrix.test.ts --reporter=verbose --testNamePattern=TDD-0104`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 4 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+
+### TDD-0105
+
+- TDD-ID: TDD-0105
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017SliceAlignment.test.ts`
+- Selector: `declares exactly the seven approved names`
+- TC-ref: TC-0017-0062
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 1: RED failure mode: falsifiability.
+- Round 1: RED test hash: 4f6607d4a52348fe78c4987065c5f3dbe69a0a209886aefb9862d508ff0dea68
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts
+packages/qfai/tests/integration/spec0017SliceAlignment.test.ts
+```
+
+- Satisfied-by: `packages/qfai/vitest.workspace.ts::projects`
+- Mutation: Rename scripts project to pr-fix.
+- Mutant SHA-256: `1f3a56012d079d2bdd26256c548bf3ae726eabd947c752303ea882a1bb59ac37`. Restored SHA-256: `5a6abedf8e84cc0ddfd65f2530d2b149bf0e265dc46ada848597ff1706025d79`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017SliceAlignment.test.ts --reporter=verbose --testNamePattern=TDD-0105`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: expected [ 'cli', 'core', 'e2e', …(4) ] to deeply equal [ 'cli', 'core', 'e2e', …(4) ] `❯ tests/integration/spec0017SliceAlignment.test.ts:26:38`.
+- Round 1: Falsifiability revision: working-tree+980bd45c996ae1c41e0f1aaa2112d82084a9211d15a105340b34927f7f10042a
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017SliceAlignment.test.ts:26:38; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017SliceAlignment.test.ts --reporter=verbose --testNamePattern=TDD-0105`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 3 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+
+### TDD-0064
+
+- TDD-ID: TDD-0064
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017SliceAlignment.test.ts`
+- Selector: `names each script after its selected project`
+- TC-ref: TC-0017-0064
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 1: RED failure mode: falsifiability.
+- Round 1: RED test hash: 4f6607d4a52348fe78c4987065c5f3dbe69a0a209886aefb9862d508ff0dea68
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts
+packages/qfai/tests/integration/spec0017SliceAlignment.test.ts
+```
+
+- Satisfied-by: `packages/qfai/package.json::scripts.test:scripts`
+- Mutation: Make test:scripts select core.
+- Mutant SHA-256: `a74ed4488ac38ba51d542afecc82780c3cc0626c445604e62321b993944cac11`. Restored SHA-256: `58642f03771f03cb169ea2e29e18d0da43a43b4e0cd709200136c380a0947daa`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017SliceAlignment.test.ts --reporter=verbose --testNamePattern=TDD-0064`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: expected [ 'core', 'validators', …(5) ] to include 'scripts' `❯ tests/integration/spec0017SliceAlignment.test.ts:40:51`.
+- Round 1: Falsifiability revision: working-tree+c7b80ecc9446bc972d6a6cc8350c268ea37b8278bc58e2766319324b99a3cb11
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017SliceAlignment.test.ts:40:51; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017SliceAlignment.test.ts --reporter=verbose --testNamePattern=TDD-0064`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 3 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+
+### TDD-0106
+
+- TDD-ID: TDD-0106
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017SliceAlignment.test.ts`
+- Selector: `four sliced jobs invoke per-slice scripts`
+- TC-ref: TC-0017-0064
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 1: RED failure mode: falsifiability.
+- Round 1: RED test hash: 4f6607d4a52348fe78c4987065c5f3dbe69a0a209886aefb9862d508ff0dea68
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts
+packages/qfai/tests/integration/spec0017SliceAlignment.test.ts
+```
+
+- Satisfied-by: `.github/workflows/ci.yml::jobs.node-floor.steps.run`
+- Mutation: Invoke generic test --project from node-floor.
+- Mutant SHA-256: `7ae2920302091bda28cec7dac852d2e349ebb762a78e3f22140c97faad2c9727`. Restored SHA-256: `fadc0f04ce432486721adddbdc0be7a55eac6b739434294327e864dc795aebfa`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017SliceAlignment.test.ts --reporter=verbose --testNamePattern=TDD-0106`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: expected [ Array(1) ] to deeply equal [] `❯ tests/integration/spec0017SliceAlignment.test.ts:53:73`.
+- Round 1: Falsifiability revision: working-tree+d282fe8ae1f910550d02b9d8e5eff38268e788315816e44d58243938962b17e7
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017SliceAlignment.test.ts:53:73; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017SliceAlignment.test.ts --reporter=verbose --testNamePattern=TDD-0106`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 3 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+
+### TDD-0107
+
+- TDD-ID: TDD-0107
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts`
+- Selector: `preserves the ordered operation vector`
+- TC-ref: TC-0017-0093
+- DR-ID: CR-20260924-0004 (scope reassignment); Round 1 was recorded under CR-20260924-0002, and Round 2 verifies the current TC annotation.
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 1: RED failure mode: falsifiability.
+- Round 1: RED test hash: 305f8ec04cdd8604a6e8bc8f41de05eba84f021f69ba901ddd704edf1cc3301a
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017Release.ts
+packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts
+```
+
+- Satisfied-by: `package.json::scripts.ci:gate:checks`
+- Mutation: Swap the first two operations.
+- Mutant SHA-256: `5518203f9c825e9c71362e3b7f66705c9f21710e0bfa64cca2d15e3c796fe568`. Restored SHA-256: `381befab24fee7f1cf770e44b900ec0880aa47a3b47dcabf91173f17ba50c31b`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseOperations.test.ts --reporter=verbose --testNamePattern=TDD-0107`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: expected 'pnpm ci:gate:lint && pnpm ci:gate:sso…' to be 'pnpm ci:gate:ssot && pnpm ci:gate:lin…' // Object.is equality `❯ tests/integration/spec0017ReleaseOperations.test.ts:31:39`.
+- Round 1: Falsifiability revision: working-tree+5495d16a03da301c9258b66c59aa7883cf134b5519004153260d08ee2c9c776b
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017ReleaseOperations.test.ts:31:39; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseOperations.test.ts --reporter=verbose --testNamePattern=TDD-0107`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 2 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+
+#### Round 2 — TC-0017-0093 annotation and selector
+
+The approved scope split changed this test's TC annotation and name. The first
+round remains the historical live observation for the same assertion. This
+round re-exercised the current test bytes in the isolated worktree. The
+production command vector and assertion body did not change.
+
+- Round 2: RED failure mode: falsifiability.
+- Round 2: RED test hash: a6dab809f826afd8d684d41d9afd286dd826a9d996c0d02a65adcf6225f506a8
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017Release.ts
+packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts
+```
+
+- Round 2: Test file SHA-256: `f0299823ba6597a07f446041bf40b3d86a82376db70ddc3cc821efa3ffdc5ae7`.
+- Round 2: Helper SHA-256: `c028b1d024fe3477ec8566a25c2e0138db8d7b154ba423a8fc4f4510ae5f8c87`.
+- Satisfied-by: `package.json::scripts.ci:gate:checks`
+- Round 2: Mutation: swap the first two operations in the isolated `package.json` only.
+- Round 2: Mutant SHA-256: `72ab82ec9b00bc6ab352fe6732f452c680b1100216b5d0eca852c1b1567d826f`. Restored SHA-256: `381befab24fee7f1cf770e44b900ec0880aa47a3b47dcabf91173f17ba50c31b`.
+- Round 2: Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseOperations.test.ts --reporter=verbose --testNamePattern=TDD-0107`
+- Round 2: Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed | 2 skipped`. The selected `TC-0017-0093 (TDD-0107)` assertion at `tests/integration/spec0017ReleaseOperations.test.ts:31:39` expected `ssot` then `lint` and received `lint` then `ssot`.
+- Round 2: Falsifiability revision: working-tree+4f7d03547baff9b164f5075c007a316ebe0a3451ddeff2ea2eedd39bc4f0f7fd
+- Round 2: GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseOperations.test.ts --reporter=verbose --testNamePattern=TDD-0107`
+- Round 2: GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 2 skipped` for `TC-0017-0093 (TDD-0107)`.
+- Round 2: GREEN revision: working-tree+23e266a1eb09c8322daf1e74b0e85a1b3fd6aa8822245dd10b66f2dbaa9cac27
+- Round 2: qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017ReleaseOperations.test.ts:31:39; exit=1. This verdict covers the live proof only; the implementation checkpoint is pending.
+
+### TDD-0108
+
+- TDD-ID: TDD-0108
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts`
+- Selector: `runs one complete suite on each runtime`
+- TC-ref: TC-0017-0090
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 1: RED failure mode: falsifiability.
+- Round 1: RED test hash: 305f8ec04cdd8604a6e8bc8f41de05eba84f021f69ba901ddd704edf1cc3301a
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017Release.ts
+packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts
+```
+
+- Satisfied-by: `.github/workflows/release.yml::jobs.gate-tests.steps.run`
+- Mutation: Replace one per-slice invocation with whole test.
+- Mutant SHA-256: `27dfc733bdd6b0f09d9952c346cf1941c63bc4882d69e9b9e12cc0825a753f6a`. Restored SHA-256: `6a3be0f764bd13c98a531f89920228b32b5229b5c277decc22109860ca3ce9a1`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseOperations.test.ts --reporter=verbose --testNamePattern=TDD-0108`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: range: expected [ Array(7) ] to deeply equal [ 'test:cli', 'test:core', …(5) ] `❯ tests/integration/spec0017ReleaseOperations.test.ts:54:83`.
+- Round 1: Falsifiability revision: working-tree+b18ebe8a18f3189805f573a2c84d2b3e56290d85143fe686a650fdeca2ebf4c2
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017ReleaseOperations.test.ts:54:83; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseOperations.test.ts --reporter=verbose --testNamePattern=TDD-0108`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 2 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+
+### TDD-0109
+
+- TDD-ID: TDD-0109
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017ReleaseFallback.test.ts`
+- Selector: `older and whole-suite tags use the whole aggregate`
+- TC-ref: TC-0017-0091
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 1: RED failure mode: falsifiability.
+- Round 1: RED test hash: 3ebf49a22c27ee4fdb1fa1b542eca9ab1f239cc4e9ec4b4e43990d4de9d05c9b
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017Release.ts
+packages/qfai/tests/integration/spec0017ReleaseFallback.test.ts
+```
+
+- Satisfied-by: `.github/workflows/release.yml::jobs.verify.steps.shape.exactSlices`
+- Mutation: Remove the exact slice-script count comparison.
+- Mutant SHA-256: `da626997ea24c5e7f15ae6dc92d3da3c27cb4006a018a18bfd9a7f305f60ad69`. Restored SHA-256: `6a3be0f764bd13c98a531f89920228b32b5229b5c277decc22109860ca3ce9a1`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseFallback.test.ts --reporter=verbose --testNamePattern=TDD-0109`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: v1.12.3: expected [ 'sliced', 'operations' ] to deeply equal [ 'whole', 'aggregate' ] `❯ tests/integration/spec0017ReleaseFallback.test.ts:43:50`.
+- Round 1: Falsifiability revision: working-tree+d0e5aebeb611d2b357607f856cddbbc46b20fd21f7896bef802e8c18a1c62059
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017ReleaseFallback.test.ts:43:50; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseFallback.test.ts --reporter=verbose --testNamePattern=TDD-0109`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 2 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+
+### TDD-0110
+
+- TDD-ID: TDD-0110
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/spec0017ReleaseFallback.test.ts`
+- Selector: `refuses invalid checks outputs`
+- TC-ref: TC-0017-0091
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability; production already satisfies the approved reset.
+- Round 1: RED failure mode: falsifiability.
+- Round 1: RED test hash: 3ebf49a22c27ee4fdb1fa1b542eca9ab1f239cc4e9ec4b4e43990d4de9d05c9b
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017Release.ts
+packages/qfai/tests/integration/spec0017ReleaseFallback.test.ts
+```
+
+- Satisfied-by: `.github/workflows/release.yml::jobs.github-release/publish.if`
+- Mutation: Accept any checks shape except operations.
+- Mutant SHA-256: `3d3899064fdd03c4cc3a2df159f257f515f27c2974d5d37be7b5cbb46f8da7f5`. Restored SHA-256: `6a3be0f764bd13c98a531f89920228b32b5229b5c277decc22109860ca3ce9a1`.
+- Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseFallback.test.ts --reporter=verbose --testNamePattern=TDD-0110`
+- Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed`. AssertionError: github-release whole aggregate -> undefined: expected true to be false // Object.is equality AssertionError: github-release whole aggregate -> : expected true to be false // Object.is equality `❯ tests/integration/spec0017ReleaseFallback.test.ts:86:14`.
+- Round 1: Falsifiability revision: working-tree+6d6c45b625123f875e3b0f4857d7ae07f76000b4f20aa69eb4dbcf83df54b96c
+- qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017ReleaseFallback.test.ts:86:14; exit=1.
+- GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseFallback.test.ts --reporter=verbose --testNamePattern=TDD-0110`
+- GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 2 skipped`.
+- GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
+- Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.

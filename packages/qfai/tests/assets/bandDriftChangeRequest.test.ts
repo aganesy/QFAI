@@ -120,11 +120,21 @@ describe("the primary_tasks band drift has a Change Request", () => {
   });
 
   it("blocks the rows whose obligation the product contradicts", async () => {
-    await expectPhrase("| `spec-0013/TDD-0027` | `ledger-row` |");
-    await expectPhrase("| `spec-0013/TDD-0028` | `ledger-row` |");
     // The two packs share the decision, so settling it for one leaves the
     // shared record and one of its readers disagreeing.
-    await expectPhrase("| `spec-0004/TDD-0050` | `ledger-row` |");
+    const section = (await changeRequest())
+      .split("## Blocked downstream items\n")[1]
+      ?.split("\n## ")[0];
+    const items = section
+      ?.split("\n")
+      .filter((line) => line.startsWith("|") && line.includes("`ledger-row`"))
+      .map((line) => line.split("|").map((cell) => cell.trim())[1]);
+    expect(items).toEqual([
+      "`spec-0013/TDD-0027`, `TDD-0068`, `TDD-0069`",
+      "`spec-0013/TDD-0028`, `TDD-0070` to `TDD-0072`",
+      "`spec-0013/TDD-0043`, `TDD-0098` to `TDD-0101`, `TDD-0106`, `TDD-0107`",
+      "`spec-0004/TDD-0050`",
+    ]);
   });
 
   it("leaves the rows' stale selectors to the stage that may rewrite them", async () => {
@@ -167,9 +177,12 @@ describe("the primary_tasks band drift has a Change Request", () => {
 
   it("says which rows it does not block, and why", async () => {
     // A halt nobody can check the edge of stops more than it was meant to.
-    await expectPhrase("Not blocked by this CR: the other ten `done` rows");
     await expectPhrase(
-      "writing evidence for a row whose obligation the product states the opposite of records the contradiction rather than discharging it",
+      "Rows for structured task shapes (`TDD-0029/0030` and their siblings) remain",
+    );
+    await expectPhrase("their obligations do not change with the band decision");
+    await expectPhrase(
+      "Every other `spec-0004` row but `TDD-0050` is also outside this blocked set",
     );
   });
 
