@@ -66,6 +66,8 @@ import { argv, env, exit, stdout, stderr } from "node:process";
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
   "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md";
+const PREVIOUS_PROMPT_REL =
+  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md";
 
 /** The one section of the prompt that states the compliance contract. */
 const PROMPT_SCOPE_HEADING = "## Hard constraints (enforced by the compliance gate)";
@@ -264,7 +266,7 @@ function fencedLines(lines) {
 }
 
 function scopedSections(text) {
-  const lines = text.split("\n");
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
   const fenced = fencedLines(lines);
   const isHeading = (i) => !fenced[i] && /^## (?!#)/.test(lines[i]);
   const found = [];
@@ -283,10 +285,23 @@ function scopedSections(text) {
   return found.length === 0 ? null : found.join("\n");
 }
 
+function normalizePreviousPromptSection(section) {
+  return section
+    .replaceAll(".qfai/prototypes/iter-NN/index.html", ".qfai/prototype/iter-NN/index.html")
+    .replaceAll(".qfai/prototypes/iter-00/", ".qfai/prototype/iter-00/")
+    .replaceAll(
+      "All declared spec screens reachable; loading / empty / error /",
+      "All declared UI contract screens reachable; loading / empty / error /",
+    );
+}
+
 /** A file's content at a ref, or `null` when the ref does not carry it. */
 function blobAt(ref, relativePath) {
   try {
-    return execFileSync("git", ["show", `${ref}:${relativePath}`], { encoding: "utf-8" });
+    return execFileSync("git", ["show", `${ref}:${relativePath}`], {
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
   } catch {
     return null;
   }
@@ -299,9 +314,10 @@ function blobAt(ref, relativePath) {
  * number, so a section that moved down the file because something was
  * inserted above it did not change.
  *
- * Unknowable answers resolve to `true`. A missing blob is a file this
- * branch added or removed, and a missing heading is a contract this guard
- * can no longer see — both are cases to pair on, not to wave through.
+ * The prior assistant layout used `skills/`. If the current path did not
+ * exist at the merge base, compare its old path with the current path. A
+ * second copy left at the old path is not a move and remains in scope.
+ * Missing blobs or headings still count as changes.
  */
 function promptContractChanged(base) {
   let mergeBase;
@@ -310,13 +326,22 @@ function promptContractChanged(base) {
   } catch {
     return true;
   }
-  const before = blobAt(mergeBase, PROMPT_REL);
+  let before = blobAt(mergeBase, PROMPT_REL);
+  let previousLayout = false;
+  if (before === null) {
+    before = blobAt(mergeBase, PREVIOUS_PROMPT_REL);
+    if (before !== null && blobAt("HEAD", PREVIOUS_PROMPT_REL) !== null) return true;
+    previousLayout = before !== null;
+  }
   const after = blobAt("HEAD", PROMPT_REL);
   if (before === null || after === null) return true;
   const beforeSection = scopedSections(before);
   const afterSection = scopedSections(after);
   if (beforeSection === null || afterSection === null) return true;
-  return beforeSection !== afterSection;
+  return (
+    (previousLayout ? normalizePreviousPromptSection(beforeSection) : beforeSection) !==
+    afterSection
+  );
 }
 
 function normalizeCsvSet(csv) {

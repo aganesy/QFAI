@@ -23,7 +23,7 @@
  * through a real repository and a real base ref.
  */
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -49,6 +49,8 @@ const CHECK_SCRIPT = path.resolve(
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
   "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md";
+const PREVIOUS_PROMPT_REL =
+  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md";
 
 /** Two lines each, so a rewrite has something to re-terminate. */
 const SCANNER_SEED = 'export const KIND = "color";\nexport const OTHER = "font";\n';
@@ -153,6 +155,48 @@ const PROMPT_WITH_SECTIONS = [
   "- One file per screen.",
   "",
 ].join("\n");
+const MIGRATED_PROMPT = PROMPT_WITH_SECTIONS.replace(
+  "- No color literal outside the design document.",
+  [
+    "- No color literal outside the design document.",
+    "`.qfai/prototype/iter-NN/index.html` is rendered.",
+    "Backed up: `.qfai/prototype/iter-00/` remains.",
+    "All declared UI contract screens reachable; loading / empty / error / ready.",
+  ].join("\n"),
+);
+const PREVIOUS_LAYOUT_PROMPT = MIGRATED_PROMPT.replaceAll(
+  ".qfai/prototype/iter-NN/index.html",
+  ".qfai/prototypes/iter-NN/index.html",
+)
+  .replaceAll(".qfai/prototype/iter-00/", ".qfai/prototypes/iter-00/")
+  .replace("All declared UI contract screens reachable", "All declared spec screens reachable");
+
+describe("a prompt moved from the previous assistant layout", () => {
+  beforeEach(async () => {
+    await rm(path.join(repo, PROMPT_REL));
+    await seed(PREVIOUS_PROMPT_REL, PREVIOUS_LAYOUT_PROMPT);
+    await git("add", "-A");
+    await git("commit", "-qm", "seed the previous prompt path");
+    await rm(path.join(repo, PREVIOUS_PROMPT_REL));
+  });
+
+  it("passes when the compliance section is unchanged", async () => {
+    expect(await commitAndRun(PROMPT_REL, MIGRATED_PROMPT)).not.toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+
+  it("fires when a compliance clause changes during the move", async () => {
+    const edited = MIGRATED_PROMPT.replace(
+      "- No color literal outside the design document.",
+      "- Color literals are allowed outside the design document.",
+    );
+    expect(await commitAndRun(PROMPT_REL, edited)).toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+
+  it("fires when the compliance heading disappears during the move", async () => {
+    const edited = MIGRATED_PROMPT.replace(SCOPE_HEADING, "## Constraints");
+    expect(await commitAndRun(PROMPT_REL, edited)).toMatch(/R-PROMPT-SCANNER-DRIFT/);
+  });
+});
 
 describe("the prompt half is scoped to the section that states the contract", () => {
   beforeEach(async () => {
