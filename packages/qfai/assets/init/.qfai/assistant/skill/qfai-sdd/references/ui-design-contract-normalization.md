@@ -3,15 +3,17 @@
 `/qfai-sdd` reads discussion-pack UI/UX sidecars to author contracts.
 Downstream skills read the story tree, contracts, and evidence.
 
-## DESIGN.md SSOT freeze (new)
+## DESIGN.md SSOT freeze
 
 The brand SSOT is the root `DESIGN.md` at
-`<consuming-project-root>/DESIGN.md`. `/qfai-discussion` emits the
-draft; `/qfai-sdd` validates and freezes it for a UI-bearing flow.
+`<consuming-project-root>/DESIGN.md`. `/qfai-discussion` records the
+user's direction; `/qfai-sdd` authors, validates, and freezes the file
+for a visual-prototyping flow. If the file already exists, SDD validates
+and freezes it without overwriting it.
 
-Required UI-bearing outputs in the new SSOT model:
+Required outputs for a visual-prototyping flow:
 
-- root `DESIGN.md` (already present; not authored here)
+- root `DESIGN.md` (authored by SDD when missing)
 - `<paths.contractsDir>/design/DESIGN.md.lock.yaml` (authored during SDD
   freeze; see `templates/contracts/design-md-lock.sample.yaml`)
 - `<paths.contractsDir>/ui/*.yaml` (screen contracts)
@@ -23,7 +25,8 @@ The first two are **visual-prototyping surfaces only**. A cli-only target
 
 Freeze procedure:
 
-1. Read `DESIGN.md`.
+1. Read the direction in the discussion pack. Author `DESIGN.md` if it is
+   missing, following `design-md-authoring.md`, then read the file.
 2. Call `parseDesignMd(text)`; halt on `{ error: ... }`. On success, pass
    the parsed `DesignMd` from `result.data` to `validateDesignMd`; halt
    on any issue.

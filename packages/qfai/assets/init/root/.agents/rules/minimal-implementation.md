@@ -62,8 +62,9 @@ is still a Change Request.
 The ladder trims code, not obligations. These stay whatever rung you stop at.
 
 - Required traceability annotations.
-  The execution ledger and full Article V chain also stay: Require → Spec →
-  US → AC → BR → EX → TC → Tests → Code → Verification evidence.
+  The execution ledger and Article V links also stay: BF → US → AC → EX →
+  Tests → Code → Verification evidence. A BR lives in its enforcing contract
+  and cites the relevant EX.
 - Repository quality gates and their verification evidence.
 - Validation of input crossing a trust boundary.
 - Error handling that prevents data loss.
