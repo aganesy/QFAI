@@ -102,10 +102,10 @@ const convergedIteration = (index: number): Iteration => ({
   layoutAntiPatternsDetected: [],
   designMdViolations: [],
   pivotDirective: "continue",
-  evidenceRefs: {
-    screenshot: `iter-0${index}/screenshot.png`,
-    html: `iter-0${index}/index.html`,
-  },
+  evidenceRefs: [
+    { kind: "screenshot", path: `iter-0${index}/screenshot.png` },
+    { kind: "html", path: `iter-0${index}/index.html` },
+  ],
 });
 
 describe("TC-0012-0434: Tailwind contract convergence within 3 cycles", () => {
