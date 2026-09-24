@@ -257,3 +257,19 @@ Tracked for separate implementation as OQ-0016
 - Type: error
 - Level: integration
 - Verify a structured item missing any of `id` / `label` / `acceptance`, or carrying extra keys (closed schema violation), is rejected by `auditProfile.ts` (DR-0268).
+
+## TC-0013-0036: Missing Optional Side Artifact Leaves Preflight Ready
+
+- EX-Ref: EX-0013-0021
+- AC-Refs: AC-0013-0028
+- Type: normal
+- Level: integration
+- Verify SDD preflight reports ready for a pack with usable markdown when its optional `prototyping.yaml` is absent.
+
+## TC-0013-0037: Invalid or Legacy Optional Side Artifact Leaves Preflight Ready
+
+- EX-Ref: EX-0013-0021
+- AC-Refs: AC-0013-0028
+- Type: error
+- Level: integration
+- Verify SDD preflight reports ready for a pack with usable markdown when its optional `prototyping.yaml` has an invalid schema or a legacy format without a `prototyping` namespace.

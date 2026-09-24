@@ -39,7 +39,7 @@ Scenario: The verdict distinguishes "nothing needed running" from "nothing was v
 # Source: discussion-20260804173914356#DAC-001-01
 Scenario: A Markdown-only change runs the jobs the pin records, and skips the rest
   Given the repository's duplicate validate workflow has already been retired
-  And every test matrix leg is declared and its job carries a condition derived from the detection output
+  And every retained test matrix leg is declared and its job carries a condition derived from the detection output
   When a pull request touches only Markdown files outside the recognized source directories
   Then the jobs that execute are the ones carrying no condition plus the aggregate verdict, whose condition is always
   And that set, and the sum of its members' declared timeout-minutes, are the values pinned for this path
@@ -288,17 +288,20 @@ Scenario: Parallelism becomes explicit per project
   And the declared starting value on the within-file concurrency axis is ten
   And each declared value is overridable rather than fixed
 
-# AC-0017-0027: Every slice surface holds the same nine names
+# AC-0017-0027: Every slice surface holds the same seven names
 # Parent: US-0017-0007
 # Source: discussion-20260804173914356#DAC-006-05
 Scenario: One slice name resolves on every surface that declares the slice set
   Given the runner workspace declares one project per slice
   And the package manifest declares a per-slice script for each slice
-  And every CI job that expands over the slice set lists the slices it runs
-  When the three surfaces are compared
-  Then the runner project set, the per-slice script set and the slice list of every CI job that expands over the slice set are equal
-  And each of those sets holds nine names
+  And the test and node-floor CI jobs each declare a slice matrix
+  And the gate-tests and gate-floor release jobs each declare a slice matrix
+  And release verify declares SUITE_SLICES
+  When all seven surfaces are compared
+  Then the runner project set, the per-slice script set, all four matrix lists and SUITE_SLICES are equal
+  And each of those sets holds seven names
   And no declared runner project matches zero files
+  And neither `pr-fix` nor `pr-merge` has a project, script or matrix leg
 
 # AC-0017-0028: A worker value is adopted only against a recorded measurement
 # Parent: US-0017-0007
@@ -395,13 +398,14 @@ Scenario: Splitting release checks preserves the publication barrier
 # Source: discussion-20260804173914356#DSC-019
 Scenario: Release checks run independently without abandoning older tags
   Given verify reads the tagged manifests as data
-  When all four operation scripts and all suite slice scripts are declared
+  When all four operation scripts are declared and the tag's suite slice script set exactly equals the current workflow's slice set
   Then SSOT sync, lint, types and the build chain each need only verify
   And each job uses an isolated checkout of the verified tag and the shared setup
   And the build, pack verification and leakage scan remain ordered in one workspace
   And the local aggregate still invokes exactly the original checks in their original order
   And a tag missing any operation script uses its complete existing aggregate
   And a whole-suite tag never enters the operation path
+  And an older tag with additional slice scripts uses its complete whole-suite aggregate
   And an unknown checks shape or an unsuccessful required operation refuses upload
 ```
 
@@ -435,7 +439,7 @@ Scenario: Release checks run independently without abandoning older tags
 | AC-0017-0024 | The lane runs from the aggregate a pull request executes           | Edge / boundary (gate placement), US-0017-0006, REQ-0012                        | Should   |
 | AC-0017-0025 | The lane checks the expected-required-context declaration          | Edge / boundary, US-0017-0006, REQ-0012                                         | Must     |
 | AC-0017-0026 | Every project declares the knob set with the decided value         | Happy path, US-0017-0007, REQ-0010                                              | Must     |
-| AC-0017-0027 | Every slice surface holds the same nine names                      | Happy path plus boundary (three surfaces, one name set), US-0017-0007, REQ-0011 | Must     |
+| AC-0017-0027 | Every slice surface holds the same seven names                     | Happy path plus boundary (three surfaces, one name set), US-0017-0007, REQ-0011 | Must     |
 | AC-0017-0028 | A worker value is adopted only against a recorded measurement      | Happy path plus negative measurement, US-0017-0007, REQ-0010                    | Must     |
 | AC-0017-0029 | No retry setting, and one tuning change per pull request           | Edge / boundary (flake budget), US-0017-0007, REQ-0010                          | Must     |
 | AC-0017-0030 | Exactly one pull-request-triggered workflow, full profile folded   | Happy path, US-0017-0008, REQ-0015                                              | Must     |

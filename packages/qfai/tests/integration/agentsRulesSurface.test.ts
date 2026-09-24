@@ -1371,10 +1371,9 @@ describe("rule overlays", () => {
         // What a pin authorizes, and when it is done.
         "chore(release): qfai X.Y.Z",
         "Do this once",
-        // How each guard reads a branch name. One token per row, taken from
-        // the half of the row no other row repeats.
+        // The remaining guard's branch-name rule and CI location.
         "exits 1 rather than reading",
-        "a suffix after",
+        "packages/qfai/scripts/check-branch-version-pin.sh",
         // The override, and the unpinned case.
         "coordinated release",
         "On an unpinned branch",

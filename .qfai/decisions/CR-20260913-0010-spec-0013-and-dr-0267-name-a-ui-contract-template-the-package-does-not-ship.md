@@ -132,28 +132,33 @@ No `spec-0004` statement names either file.
 
 ## Blocked downstream items
 
-| Item                                                                                                     | Kind         | Why it depends on the artifact                                                                                             |
-| -------------------------------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `spec-0013/TDD-0027`                                                                                     | `ledger-row` | Carries `TC-0013-0032`, which names the file this record corrects. Its test reads the shipped one                          |
-| Every other `spec-0013` row whose `TC-Refs` names `TC-0013-0032` or whose `US-Refs` names `US-0013-0014` | `ledger-row` | Carries a statement this record corrects. None exists today, and the rule reaches any the ledger holds when the sweep runs |
+| Item                 | Kind         | Why it depends on the artifact                                                                                     |
+| -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `spec-0013/TDD-0027` | `ledger-row` | The former `TC-0013-0032` aggregate row keeps the template documentation boundary whose path this record corrects. |
+| `spec-0013/TDD-0043` | `ledger-row` | The `US-0013-0014` E2E row now keeps the template documentation boundary and reads the same path.                  |
+
+The old→new mapping is `TDD-0027 → TDD-0027/0068/0069` and the previously
+unallocated `US-0013-0014` E2E row → `TDD-0043/0098/0099/0100/0101/0102/0103/0104/0105/0106/0107/0108/0109`.
+Only `TDD-0027` and `TDD-0043` verify the template path this record changes.
 
 - Not blocked by this CR:
   - `spec-0013/TDD-0028`. It carries `TC-0013-0033`, which states the count
     boundary and names no file. `EX-0013-0019` and `AC-0013-0024` sit above it
     too, but the clause corrected in them is the documentation clause, which
     only `TC-0013-0032` verifies.
-  - `spec-0013/TDD-0019`. Its `TC-0013-0025` already names the shipped
-    template.
+  - `spec-0013/TDD-0068` and `TDD-0069`. They carry the guide and warning-text
+    boundaries of `TC-0013-0032`, neither of which names the template path.
+  - `spec-0013/TDD-0019`. Its `TC-0013-0025` already names the shipped template.
   - Every other row of `spec-0013` and of `spec-0004`. None carries a statement
     this record corrects.
 - Overlapping open CRs:
   - `CR-20260913-0001` names every statement this record corrects, and blocks
-    `TDD-0027` too. **This record is applied first**, and `CR-20260913-0001` is
+    `TDD-0027` and `TDD-0043` too. **This record is applied first**, and `CR-20260913-0001` is
     written against the statements as this one leaves them. The correction
     holds under each of its options: options 1 and 2 rewrite what the
     statements say the file documents and keep the file named here, and option
-    3 edits no statement. `TDD-0027` resumes only once both records have
-    released it.
+    3 edits no statement. `TDD-0027` and `TDD-0043` resume only once both
+    records have released them.
 
 ## Impact scope
 
