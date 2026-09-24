@@ -4,11 +4,16 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { classifyRecordRow, parseRecordTable } from "../../src/core/storyTree/tables.js";
 import { buildStoryTreeModel } from "../../src/core/storyTree/tree.js";
 import {
   validateStoryDirectories,
   validateStoryTreeStructureModel,
 } from "../../src/core/validators/storyTreeStructure.js";
+import {
+  validateStoryTreeObligationsModel,
+  type StoryTestFile,
+} from "../../src/core/validators/storyTreeObligations.js";
 
 const roots: string[] = [];
 const spec = ".qfai/spec";
@@ -43,6 +48,20 @@ function findings(contents: Map<string, string>, code: string) {
   return validateStoryTreeStructureModel(buildStoryTreeModel(contents)).filter(
     (entry) => entry.code === code,
   );
+}
+
+function table(rows: string[] = []): string {
+  return ["| ID | Content | Approach | Status |", "| --- | --- | --- | --- |", ...rows, ""].join(
+    "\n",
+  );
+}
+
+function testFile(file: string, kind: StoryTestFile["kind"], annotation: string): StoryTestFile {
+  return { file, kind, content: `// ${annotation}\n`, selectedForExample: true };
+}
+
+function annotation(kind: "BF" | "AC" | "EX", id: string): string {
+  return `QFAI:${kind}-${id}`;
 }
 
 async function put(root: string, relative: string, content: string): Promise<void> {
@@ -296,5 +315,286 @@ describe("BF-0001 EX and BR reference examples", () => {
         }),
       ]),
     );
+  });
+});
+
+describe("BF-0001 decision and question examples", () => {
+  it("rejects malformed supersession and a question-only status", () => {
+    // QFAI:EX-0001-0055-02
+    const contents = files();
+    contents.set(
+      `${spec}/decisions.md`,
+      table(["| DEC-0001 | First decision | Reason | SUPERSEDED by DEC-0002 |"]),
+    );
+    contents.set(
+      `${spec}/open-questions.md`,
+      table(["| OQ-0001 | Open question | Reason | REJECTED |"]),
+    );
+    const issues = findings(contents, "QFAI-STORY-003");
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: `${spec}/decisions.md`,
+          message: expect.stringContaining("DEC-0001"),
+        }),
+        expect.objectContaining({
+          file: `${spec}/open-questions.md`,
+          message: expect.stringContaining("OQ-0001"),
+        }),
+      ]),
+    );
+    contents.set(
+      `${spec}/decisions.md`,
+      table(["| DEC-0001 | First decision | Reason | SUPERSEDED (by DEC-0002) |"]),
+    );
+    expect(
+      findings(contents, "QFAI-STORY-003").some((entry) => entry.file === `${spec}/decisions.md`),
+    ).toBe(false);
+  });
+
+  it("rejects a question ID declared in the decision table", () => {
+    // QFAI:EX-0001-0055-03
+    const contents = files();
+    contents.set(`${spec}/decisions.md`, table(["| OQ-0001 | Wrong ID kind | Reason | TODO |"]));
+    expect(findings(contents, "QFAI-STORY-003")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: `${spec}/decisions.md`,
+          message: expect.stringContaining("OQ-0001"),
+        }),
+      ]),
+    );
+  });
+
+  it("classifies test exceptions and change requests by status and references", () => {
+    // QFAI:EX-0001-0055-04
+    const rows = parseRecordTable(
+      table([
+        "| DEC-0001 | Test exception: EX-0001-0001-01, AC-0001-0001-01 | Reason | DONE |",
+        "| DEC-0002 | Change request: 01_policy/glossary.md | Reason | TODO |",
+      ]),
+      "decisions",
+    ).rows;
+    expect(rows).toHaveLength(2);
+    const [exception, change] = rows;
+    if (!exception || !change) throw new Error("Expected both decision rows");
+    expect(classifyRecordRow(exception)).toMatchObject({
+      kind: "test-exception",
+      refs: ["EX-0001-0001-01", "AC-0001-0001-01"],
+      inForce: true,
+    });
+    expect(classifyRecordRow(change)).toMatchObject({
+      kind: "change-request",
+      refs: ["01_policy/glossary.md"],
+      inForce: false,
+    });
+  });
+
+  it("blocks an unadjudicated WIP question and releases it at DONE", () => {
+    // QFAI:EX-0001-0055-05
+    const contents = files();
+    contents.set(
+      `${spec}/open-questions.md`,
+      table(["| OQ-0001 | Unadjudicated: choose layout | Pending answer | WIP |"]),
+    );
+    const pending = findings(contents, "QFAI-SPACK-102");
+    expect(pending).toEqual([
+      expect.objectContaining({
+        file: `${spec}/open-questions.md`,
+        severity: "error",
+        message: expect.stringContaining("OQ-0001"),
+      }),
+    ]);
+    contents.set(
+      `${spec}/open-questions.md`,
+      table(["| OQ-0001 | Unadjudicated: choose layout | Settled | DONE |"]),
+    );
+    expect(findings(contents, "QFAI-SPACK-102")).toEqual([]);
+  });
+});
+
+describe("BF-0001 layer and exception examples", () => {
+  it("requires an E2E annotation for a business flow", () => {
+    // QFAI:EX-0001-0058-01
+    const model = buildStoryTreeModel(files());
+    const integration = testFile(
+      "tests/integration/flow.test.ts",
+      "integration",
+      annotation("BF", "0001"),
+    );
+    const uncovered = validateStoryTreeObligationsModel(model, [integration], "atdd");
+    expect(uncovered).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "QFAI-STORY-006",
+          file: `${flow}/business-flow.md`,
+          refs: ["BF-0001"],
+        }),
+      ]),
+    );
+    const e2e = testFile("tests/e2e/flow.test.ts", "e2e", annotation("BF", "0001"));
+    expect(
+      validateStoryTreeObligationsModel(model, [integration, e2e], "atdd").some(
+        (entry) => entry.code === "QFAI-STORY-006" && entry.refs?.includes("BF-0001"),
+      ),
+    ).toBe(false);
+  });
+
+  it("requires integration or API for AC coverage", () => {
+    // QFAI:EX-0001-0058-02
+    const contents = files();
+    contents.set(
+      `${story}/02_Acceptance-Criteria.md`,
+      `${contents.get(`${story}/02_Acceptance-Criteria.md`) ?? ""}\n\`\`\`gherkin\n# AC-0001-0001-02\nScenario: Second criterion\n  Given a project\n\`\`\`\n`,
+    );
+    const model = buildStoryTreeModel(contents);
+    const tests = [
+      testFile("tests/e2e/criterion.test.ts", "e2e", annotation("AC", "0001-0001-01")),
+      testFile("tests/api/criterion.test.ts", "api", annotation("AC", "0001-0001-02")),
+    ];
+    const issues = validateStoryTreeObligationsModel(model, tests, "atdd");
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "QFAI-STORY-006",
+          file: `${story}/02_Acceptance-Criteria.md`,
+          refs: ["AC-0001-0001-01"],
+        }),
+      ]),
+    );
+    expect(
+      issues.some(
+        (entry) => entry.code === "QFAI-STORY-006" && entry.refs?.includes("AC-0001-0001-02"),
+      ),
+    ).toBe(false);
+  });
+
+  it("respects configured EX selection and does not credit an unselected annotation", () => {
+    // QFAI:EX-0001-0058-03
+    const contents = files();
+    contents.set(
+      `${story}/03_Example.md`,
+      "| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001-01 | AC-0001-0001-01 | first | passes |\n| EX-0001-0001-02 | AC-0001-0001-01 | second | passes |\n",
+    );
+    const model = buildStoryTreeModel(contents);
+    const unselected = testFile(
+      "tests/unit/unselected.test.ts",
+      null,
+      annotation("EX", "0001-0001-01"),
+    );
+    unselected.selectedForExample = false;
+    const selected = testFile(
+      "tests/unit/selected.test.ts",
+      null,
+      annotation("EX", "0001-0001-02"),
+    );
+    const issues = validateStoryTreeObligationsModel(model, [unselected, selected], "tdd");
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "QFAI-STORY-006",
+          file: `${story}/03_Example.md`,
+          refs: ["EX-0001-0001-01"],
+        }),
+      ]),
+    );
+    expect(
+      issues.some(
+        (entry) => entry.code === "QFAI-STORY-006" && entry.refs?.includes("EX-0001-0001-02"),
+      ),
+    ).toBe(false);
+  });
+
+  it("names BF and AC annotations in the wrong test layers", () => {
+    // QFAI:EX-0001-0058-04
+    const model = buildStoryTreeModel(files());
+    const tests = [
+      testFile("tests/integration/flow.test.ts", "integration", annotation("BF", "0001")),
+      testFile("tests/unit/criterion.test.ts", null, annotation("AC", "0001-0001-01")),
+    ];
+    const issues = validateStoryTreeObligationsModel(model, tests, "atdd");
+    for (const file of tests.map((entry) => entry.file)) {
+      expect(issues).toEqual(
+        expect.arrayContaining([expect.objectContaining({ code: "QFAI-STORY-007", file })]),
+      );
+    }
+  });
+
+  it("names undeclared BF and EX annotations in both profiles", () => {
+    // QFAI:EX-0001-0058-05
+    const model = buildStoryTreeModel(files());
+    const tests = [
+      testFile("tests/e2e/unknown-flow.test.ts", "e2e", annotation("BF", "9999")),
+      testFile("tests/unit/unknown-example.test.ts", null, annotation("EX", "0001-0001-99")),
+    ];
+    for (const profile of ["atdd", "tdd"] as const) {
+      const issues = validateStoryTreeObligationsModel(model, tests, profile);
+      expect(issues.filter((entry) => entry.code === "QFAI-STORY-008")).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ file: tests[0]?.file, refs: ["BF-9999"] }),
+          expect.objectContaining({ file: tests[1]?.file, refs: ["EX-0001-0001-99"] }),
+        ]),
+      );
+    }
+  });
+
+  it("applies a DONE BF test exception without exempting its AC", () => {
+    // QFAI:EX-0001-0058-06
+    const contents = files();
+    contents.set(
+      `${spec}/decisions.md`,
+      table(["| DEC-0001 | Test exception: BF-0001 | No E2E environment | DONE |"]),
+    );
+    const done = validateStoryTreeObligationsModel(buildStoryTreeModel(contents), [], "atdd");
+    expect(done).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "QFAI-STORY-009", refs: ["BF-0001", "DEC-0001"] }),
+        expect.objectContaining({ code: "QFAI-STORY-006", refs: ["AC-0001-0001-01"] }),
+      ]),
+    );
+    expect(
+      done.some((entry) => entry.code === "QFAI-STORY-006" && entry.refs?.includes("BF-0001")),
+    ).toBe(false);
+    contents.set(
+      `${spec}/decisions.md`,
+      table(["| DEC-0001 | Test exception: BF-0001 | No E2E environment | WIP |"]),
+    );
+    expect(validateStoryTreeObligationsModel(buildStoryTreeModel(contents), [], "atdd")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "QFAI-STORY-006", refs: ["BF-0001"] }),
+      ]),
+    );
+  });
+
+  it("does not apply a test exception to a misspelled EX", () => {
+    // QFAI:EX-0001-0058-07
+    const contents = files();
+    contents.set(
+      `${story}/03_Example.md`,
+      "| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001-01 | AC-0001-0001-01 | first | passes |\n| EX-0001-0001-02 | AC-0001-0001-01 | second | passes |\n",
+    );
+    contents.set(
+      `${spec}/decisions.md`,
+      table([
+        "| DEC-0001 | Test exception: EX-0001-0001-01, EX-0001-0001-03 | No test yet | DONE |",
+      ]),
+    );
+    const issues = validateStoryTreeObligationsModel(buildStoryTreeModel(contents), [], "tdd");
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "QFAI-STORY-009",
+          severity: "info",
+          refs: ["EX-0001-0001-01", "DEC-0001"],
+        }),
+        expect.objectContaining({ code: "QFAI-STORY-006", refs: ["EX-0001-0001-02"] }),
+      ]),
+    );
+    expect(issues.some((entry) => entry.refs?.includes("EX-0001-0001-03"))).toBe(false);
+    expect(
+      issues.some(
+        (entry) => entry.code === "QFAI-STORY-006" && entry.refs?.includes("EX-0001-0001-01"),
+      ),
+    ).toBe(false);
   });
 });
