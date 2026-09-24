@@ -11,7 +11,7 @@
  *      it should, and ignores what it should via pragma / source-comment
  *      exclusions).
  */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -63,6 +63,68 @@ describe("lint-shipping invariant — actual package", () => {
 });
 
 describe("lint-shipping fixture — detection rules", () => {
+  // QFAI:EX-0002-0012-01
+  it("reports each above-sample story ID at its source-comment line", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(
+      path.join(root, "src/guard.ts"),
+      "// BF-0010\n// AC-0001-0001-10\nexport const guard = true;\n",
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(
+      violations.map(({ file, line, pattern, matched }) => ({ file, line, pattern, matched })),
+    ).toEqual([
+      {
+        file: "src/guard.ts",
+        line: 1,
+        pattern: "internal-story-bf-id-jsdoc-leak",
+        matched: "BF-0010",
+      },
+      {
+        file: "src/guard.ts",
+        line: 2,
+        pattern: "internal-story-ac-id-jsdoc-leak",
+        matched: "AC-0001-0001-10",
+      },
+    ]);
+    const scripts = JSON.parse(
+      await readFile(path.resolve(PKG_ROOT, "../../package.json"), "utf-8"),
+    ) as {
+      scripts: Record<string, string>;
+    };
+    expect(scripts.scripts["ci:lint"]).toContain("run-lint-checks.sh");
+    expect(scripts.scripts["ci:lint:structure"]).toContain("lint:shipping");
+    expect(
+      await readFile(path.resolve(PKG_ROOT, "../../scripts/run-lint-checks.sh"), "utf-8"),
+    ).toContain("pnpm ci:lint:structure");
+  });
+
+  // QFAI:EX-0002-0012-02
+  it("keeps sample story IDs and reports a composite decision once", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(
+      path.join(root, "src/guard.ts"),
+      "// US-0001-0002\n// EX-0001-0001-09\n// DEC-0001-0042\nexport const guard = true;\n",
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(
+      violations.map(({ file, line, pattern, matched }) => ({ file, line, pattern, matched })),
+    ).toEqual([
+      {
+        file: "src/guard.ts",
+        line: 3,
+        pattern: "internal-dec-id-jsdoc-leak",
+        matched: "DEC-0001-0042",
+      },
+    ]);
+  });
+
   it("scans built-in routing defaults outside the init tree", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "assets/defaults"), { recursive: true });

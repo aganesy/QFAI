@@ -81,6 +81,24 @@ function runCheck(): { status: number; output: string } {
 }
 
 describe("link-assistant-tree --check", () => {
+  // QFAI:EX-0002-0022-01
+  it("keeps the singular assistant links and catalog absence on the SSOT gate path", async () => {
+    const scripts = JSON.parse(await readFile(path.join(repoRoot, "package.json"), "utf-8")) as {
+      scripts: Record<string, string>;
+    };
+    expect(scripts.scripts["sync:ssot"]).toContain("link-assistant-tree.mjs");
+    expect(scripts.scripts["ci:gate:ssot"]).toContain("pnpm sync:ssot");
+    expect(scripts.scripts["ci:gate:ssot"]).toContain("git diff --exit-code .qfai/");
+    expect(existsSync(path.join(ASSISTANT, "catalog"))).toBe(false);
+    for (const layer of ["rule", "skill", "agent", "prompt"]) {
+      const entry = path.join(ASSISTANT, layer);
+      expect(lstatSync(entry).isSymbolicLink(), `${layer} must be a symlink`).toBe(true);
+      expect(realpathSync(entry)).toBe(realpathSync(path.join(ASSETS, layer)));
+    }
+    const checked = runCheck();
+    expect(checked.status, checked.output).toBe(0);
+  });
+
   it("passes on the current tree", () => {
     const { status, output } = runCheck();
 
@@ -179,6 +197,7 @@ describe("link-assistant-tree --check", () => {
     expect(checked.output).toContain("not a literal string list");
   });
 
+  // QFAI:EX-0002-0022-02
   it("reports a retired layer even when it is a symlink", async () => {
     const { root, script, assistant } = await makeIsolatedTree();
     await symlink(
@@ -191,15 +210,17 @@ describe("link-assistant-tree --check", () => {
     expect(checked.output).toContain(".qfai/assistant/skills");
   });
 
+  // QFAI:EX-0002-0022-02
   it("reports a retired real directory without deleting its contents", async () => {
     const { root, script, assistant } = await makeIsolatedTree();
     const retired = path.join(assistant, "process");
-    await mkdir(retired);
-    await writeFile(path.join(retired, "local.md"), "# Local\n", "utf-8");
+    const memo = path.join(retired, "migrations", "memo.md");
+    await mkdir(path.dirname(memo), { recursive: true });
+    await writeFile(memo, "# Local\n", "utf-8");
     const checked = runIsolated(script, root, true);
     expect(checked.status).toBe(1);
     expect(checked.output).toContain(".qfai/assistant/process");
-    expect(await readFile(path.join(retired, "local.md"), "utf-8")).toBe("# Local\n");
+    expect(await readFile(memo, "utf-8")).toBe("# Local\n");
   });
 
   it("no longer carries the legacy steering residue", () => {

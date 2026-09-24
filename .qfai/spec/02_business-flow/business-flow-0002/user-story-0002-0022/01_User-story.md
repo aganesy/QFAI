@@ -13,7 +13,7 @@
   both names are accepted; changing what the sync writes for any directory the rename leaves
   alone; renaming host-defined integration directories
 - Notes: covers spec-local REQ-0016. Applies with the `rule/ skill/ agent/ prompt/` assistant
-  tree. The adopter-owned catalog files stay real files while `catalog/` still holds them.
+  tree. Project context now lives in the policy and contract trees, so `catalog/` is absent.
 
 ## Legacy Source Scope
 
@@ -37,11 +37,9 @@
   and the per-project pool / worker / concurrency / file-parallelism / hook-timeout knobs.
 - Slice-surface alignment: the vitest project set, the `test:<slice>` script set, and the matrix
   slice list of every CI job that expands over the slice set, held to one shared name set.
-- The layer-to-CI-lane mapping document, authored under
-  `packages/qfai/assets/init/.qfai/assistant/catalog/` so the SSOT mirror gate stays satisfied.
-  With the `rule/ skill/ agent/ prompt/` assistant tree it is a section of
-  `packages/qfai/assets/init/.qfai/assistant/rule/test-layers.md` instead, and the sibling file
-  is gone.
+- The layer-to-CI-lane mapping section of
+  `packages/qfai/assets/init/.qfai/assistant/rule/test-layers.md`, linked into the repository-root
+  assistant tree. There is no sibling mapping file.
 - The link set `scripts/link-assistant-tree.mjs` maintains under the repository-root
   `.qfai/assistant/`, and its `--check` mode, as `pnpm sync:ssot` and `pnpm ci:gate:ssot` run them.
 - The shape table in `.agents/rules/distributed-surface.local.md`, held in step with the pattern
