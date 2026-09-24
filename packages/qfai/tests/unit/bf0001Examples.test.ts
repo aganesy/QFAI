@@ -4,6 +4,9 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { defaultConfig } from "../../src/core/config.js";
+import { nextId } from "../../src/core/storyTree/ids.js";
+import { resolveStoryTreeRoots } from "../../src/core/storyTree/layout.js";
 import { classifyRecordRow, parseRecordTable } from "../../src/core/storyTree/tables.js";
 import { buildStoryTreeModel } from "../../src/core/storyTree/tree.js";
 import {
@@ -71,6 +74,19 @@ async function put(root: string, relative: string, content: string): Promise<voi
 }
 
 describe("BF-0001 story-directory examples", () => {
+  it("resolves a custom contract layer outside the spec root", () => {
+    // QFAI:EX-0001-0005-02
+    const config = structuredClone(defaultConfig);
+    config.paths.specsDir = ".qfai/spec";
+    config.paths.contractsDir = "docs/contracts";
+    const roots = resolveStoryTreeRoots("project", config);
+    expect(roots.specsDir.replaceAll("\\", "/")).toMatch(/project\/\.qfai\/spec$/);
+    expect(roots.contractsDir.replaceAll("\\", "/")).toMatch(/project\/docs\/contracts$/);
+    expect(path.relative(roots.specsDir, roots.contractsDir).replaceAll("\\", "/")).not.toBe(
+      "03_contract",
+    );
+  });
+
   it("accepts exactly the three story files", async () => {
     // QFAI:EX-0001-0005-04
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-story-"));
@@ -127,6 +143,32 @@ describe("BF-0001 story-directory examples", () => {
 });
 
 describe("BF-0001 ID examples", () => {
+  it("allocates the next story ID after a gap without reusing the gap", () => {
+    // QFAI:EX-0001-0008-07
+    expect(nextId("US", ["US-0001-0001", "US-0001-0003"], "BF-0001")).toBe("US-0001-0004");
+  });
+
+  it("treats flow and story IDs in indexes and policy prose as citations", () => {
+    // QFAI:EX-0001-0008-08
+    const contents = files();
+    contents.set(
+      `${spec}/02_business-flow/business-flows.md`,
+      "| BF-ID | Path |\n| --- | --- |\n| BF-0001 | business-flow-0001/ |\n",
+    );
+    contents.set(
+      `${spec}/01_policy/glossary.md`,
+      "# Glossary\n\nUS-0001-0001 is the first story.\n",
+    );
+    const model = buildStoryTreeModel(contents);
+    expect(model.declarations.filter((entry) => entry.id === "BF-0001")).toEqual([
+      expect.objectContaining({ file: `${flow}/business-flow.md` }),
+    ]);
+    expect(model.declarations.filter((entry) => entry.id === "US-0001-0001")).toEqual([
+      expect.objectContaining({ file: `${story}/01_User-story.md` }),
+    ]);
+    expect(findings(contents, "QFAI-STORY-002")).toEqual([]);
+  });
+
   it("rejects an AC with a three-digit tail and names its file", () => {
     // QFAI:EX-0001-0008-02
     const contents = files();
@@ -195,6 +237,88 @@ describe("BF-0001 ID examples", () => {
 });
 
 describe("BF-0001 EX and BR reference examples", () => {
+  it("reads a YAML rule with its statement and example", () => {
+    // QFAI:EX-0001-0009-12
+    const contents = files();
+    contents.delete(`${spec}/03_contract/cli/check.md`);
+    contents.set(
+      `${spec}/03_contract/api/orders.yaml`,
+      "x-qfai-rules:\n  - id: BR-0001\n    statement: Check the order\n    examples: [EX-0001-0001-01]\n",
+    );
+    const model = buildStoryTreeModel(contents);
+    expect(model.rules).toEqual([
+      {
+        id: "BR-0001",
+        statement: "Check the order",
+        examples: ["EX-0001-0001-01"],
+        file: `${spec}/03_contract/api/orders.yaml`,
+      },
+    ]);
+    expect(findings(contents, "QFAI-STORY-005")).toEqual([]);
+  });
+
+  it("reads a SQL rule with its adjacent examples line", () => {
+    // QFAI:EX-0001-0009-13
+    const contents = files();
+    contents.delete(`${spec}/03_contract/cli/check.md`);
+    contents.set(
+      `${spec}/03_contract/db/orders.sql`,
+      "-- Rule BR-0001: Save the order\n-- Examples: EX-0001-0001-01\nSELECT 1;\n",
+    );
+    expect(buildStoryTreeModel(contents).rules).toEqual([
+      {
+        id: "BR-0001",
+        statement: "Save the order",
+        examples: ["EX-0001-0001-01"],
+        file: `${spec}/03_contract/db/orders.sql`,
+      },
+    ]);
+    expect(findings(contents, "QFAI-STORY-005")).toEqual([]);
+  });
+
+  it("reads a Markdown Rules table with its statement and example", () => {
+    // QFAI:EX-0001-0009-14
+    const model = buildStoryTreeModel(files());
+    expect(model.rules).toEqual([
+      {
+        id: "BR-0001",
+        statement: "Check the project",
+        examples: ["EX-0001-0001-01"],
+        file: `${spec}/03_contract/cli/check.md`,
+      },
+    ]);
+    expect(findings(files(), "QFAI-STORY-005")).toEqual([]);
+  });
+
+  it("keeps a cross-contract rule reference separate from its declaration", () => {
+    // QFAI:EX-0001-0009-15
+    const contents = files();
+    contents.set(
+      `${spec}/03_contract/api/orders.json`,
+      JSON.stringify({ "x-qfai-rule-refs": ["BR-0001"] }),
+    );
+    const model = buildStoryTreeModel(contents);
+    expect(model.rules.filter((entry) => entry.id === "BR-0001")).toHaveLength(1);
+    expect(model.ruleRefs).toEqual([
+      { id: "BR-0001", file: `${spec}/03_contract/api/orders.json` },
+    ]);
+    expect(findings(contents, "QFAI-STORY-005")).toEqual([]);
+  });
+
+  it("reports an undefined SQL rule reference at its contract file", () => {
+    // QFAI:EX-0001-0009-16
+    const contents = files();
+    contents.set(`${spec}/03_contract/db/orders.sql`, "-- Rule refs: BR-9999\nSELECT 1;\n");
+    expect(findings(contents, "QFAI-STORY-005")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: `${spec}/03_contract/db/orders.sql`,
+          message: expect.stringContaining("BR-9999 is not defined"),
+        }),
+      ]),
+    );
+  });
+
   function invalidAcRef(acRef: string) {
     const issue = findings(files(acRef), "QFAI-STORY-004").find((entry) =>
       entry.refs?.includes("EX-0001-0001-01"),
