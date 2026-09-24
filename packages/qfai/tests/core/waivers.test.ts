@@ -757,7 +757,6 @@ describe("applyWaivers", () => {
   it.each([
     ["QFAI-CONTRACT-031", "a code the emitter names through a constant"],
     ["CONTRACT-031", "the back-compat stripped alias"],
-    ["E_OQ_STATUS_UNPARSEABLE", "an underscore-shaped code"],
     ["W-STALE-REFERENCE", "a single-segment prefixed code"],
   ])("keeps a waiver for the quiet rule %s active (%s)", async (rule) => {
     const root = await createRoot();
@@ -783,6 +782,41 @@ describe("applyWaivers", () => {
 
       expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
       expect(result.waivers.active.map((item) => item.id)).toEqual(["WVR-20260208-12"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // These codes belong to the retired spec-pack validators. Migration may
+  // still read that format, but validate cannot emit these findings, so a
+  // quiet waiver must not be accepted as if it could suppress a future one.
+  it.each([
+    "E_OQ_STATUS_UNPARSEABLE",
+    "QFAI-ATDD-112",
+    "ATDD-112",
+    "QFAI-ORPHAN-100",
+    "QFAI-PLAN-002",
+  ])("reports a waiver for retired rule %s as unmatched", async (rule) => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-12R",
+          `    rule: ${rule}`,
+          "    scope:",
+          '      paths: [".qfai/spec/**"]',
+          '    reason: "retired validator"',
+          '    expires: "2099-01-01"',
+          '    evidence: "migration.md"',
+          "",
+        ].join("\n"),
+      );
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(true);
+      expect(result.waivers.active).toHaveLength(0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -825,8 +859,11 @@ describe("applyWaivers", () => {
   // same waiver file would otherwise be active on a clean run and rejected on
   // the run that finally fires the rule.
   it.each([
-    ["QFAI-ATDD-112", "the code the CLI prints"],
-    ["ATDD-112", "the back-compat stripped alias"],
+    ["QFAI-STORY-006", "the code the CLI prints"],
+    ["STORY-006", "the back-compat stripped alias"],
+    ["QFAI-STORY-002", "a structure wrapper with fixed error severity"],
+    ["QFAI-SPACK-102", "an open decision rejected by the story-tree wrapper"],
+    ["QFAI-ATDD-131", "a coverage matrix wrapper with fixed error severity"],
   ])("blocks a waiver for the quiet error-only rule %s (%s)", async (rule) => {
     const root = await createRoot();
     try {
@@ -892,7 +929,7 @@ describe("applyWaivers", () => {
 
   // The property-resolved emitters must reach the registry too: a waiver for
   // one of them read as an unknown rule on every run where it stayed quiet.
-  it.each([["QFAI-AUD-001"], ["QFAI-ORPHAN-100"], ["QFAI-PLAN-002"]])(
+  it.each([["QFAI-AUD-001"], ["QFAI-AUD-020"]])(
     "recognises the quiet rule %s, whose emitter names it through a property",
     async (rule) => {
       const root = await createRoot();

@@ -30,14 +30,14 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * The shape a waiver's `rule:` may take.
  *
  * `/^[A-Z]+-\d{3}$/` accepts **none** of the identifiers `qfai validate`
- * publishes: an operator copying `QFAI-ATDD-112` out of `validate.json` —
+ * publishes: an operator copying `QFAI-STORY-006` out of `validate.json` —
  * the only spelling the CLI, the JSON report and the GitHub annotations ever
  * print — would get a hard `QFAI-WAIVER-001`, since the form the engine
- * actually keys on (`ATDD-112`, the capture group inside `resolveRuleKeys`)
+ * actually keys on (`STORY-006`, the capture group inside `resolveRuleKeys`)
  * appears in no shipped artifact.
  *
- * It accepts every code shape the package emits, including `QFAI-ATDD-112`,
- * `D-SCAFFOLD-PLACEHOLDER`, and the stripped `ATDD-112` spelling.
+ * It accepts every code shape the package emits, including `QFAI-STORY-006`,
+ * `D-SCAFFOLD-PLACEHOLDER`, and the stripped `STORY-006` spelling.
  */
 const RULE_ID_RE = /^[A-Z][A-Z0-9]*(?:[-_][A-Z0-9]+)*$/;
 
@@ -327,7 +327,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: rule には findings が報告する code をそのまま指定してください（例: 'QFAI-ATDD-112'、'QFAI-STORY-006'）。許容形式: ^[A-Z][A-Z0-9]*([-_][A-Z0-9]+)*$`,
+          `${label}: rule には findings が報告する code をそのまま指定してください（例: 'QFAI-STORY-006'、'QFAI-ATDD-131'）。許容形式: ^[A-Z][A-Z0-9]*([-_][A-Z0-9]+)*$`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -1146,10 +1146,25 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
   // one waiver file. `error` matches the emitter in
   // `validators/testTodoStubs.ts`, so the refusal is the same either way.
   { keys: ["QFAI-TEST-003", "TEST-003"], severity: "error" },
+  // The story-tree structure and coverage-depth validators use local wrappers
+  // with a fixed error severity. The generated scanner sees their code-first
+  // calls but cannot read through the wrappers to prove that severity. Pin
+  // their error-only status so a quiet run cannot accept an unsafe waiver.
+  ...[
+    "QFAI-STORY-001",
+    "QFAI-STORY-002",
+    "QFAI-STORY-003",
+    "QFAI-STORY-004",
+    "QFAI-STORY-005",
+    "QFAI-STORY-011",
+    "QFAI-SPACK-102",
+    "QFAI-ATDD-131",
+    "QFAI-ATDD-132",
+    "QFAI-ATDD-133",
+  ].map((code) => ({ keys: [code, code.slice("QFAI-".length)], severity: "error" as const })),
   // This module's own findings, emitted on every run that parses a waiver file.
   { keys: ["QFAI-WAIVER-001", "WAIVER-001"], severity: "error" },
   { keys: ["QFAI-WAIVER-002", "WAIVER-002"], severity: "error" },
   { keys: ["QFAI-WAIVER-003", "WAIVER-003"], severity: "warning" },
   { keys: ["QFAI-WAIVER-004", "WAIVER-004"], severity: "warning" },
-  { keys: ["QFAI-WAIVER-005", "WAIVER-005"], severity: "warning" },
 ];
