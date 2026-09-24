@@ -33,7 +33,7 @@ jobs:
       full: ${{ steps.classify.outputs.full }}
       reason: ${{ steps.classify.outputs.reason }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Full history: the diff is against the base commit, and a shallow clone is
           # one of the two failures BR-0017-0008 requires to fail open with an
@@ -319,7 +319,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           # pair-changed CI lane (check-prompt-scanner-pair.mjs) needs
@@ -389,7 +389,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          d4a0b889b3c51fee1bba08e1c250b6f063b08ea9fc80a58e2b794fb769917cde  .github/pinned-bytes.txt
+          7a17c46b6314b147e3bd569aa14ae1765a1b1bdb3dcb1ad4b92bca3fb99abaf0  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -438,7 +438,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       # The four-step toolchain preamble, defined once in
@@ -457,7 +457,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       # The four-step toolchain preamble, defined once in
@@ -476,7 +476,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       # The four-step toolchain preamble, defined once in
@@ -524,7 +524,7 @@ jobs:
       matrix:
         slice: [core, validators, integration, e2e, cli, unit, scripts, pr-fix, pr-merge]
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Same reason as the `test` job's: `stageEvidenceCounts` runs in the
           # `e2e` slice, and that test needs the base tip's objects to tell an
@@ -620,7 +620,7 @@ jobs:
       matrix:
         slice: [core, validators, integration, e2e, cli, unit, scripts, pr-fix, pr-merge]
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The merge commit and its parents. `stageEvidenceCounts` tells a
           # count this branch moved from one the base moved, and on a pull
@@ -685,7 +685,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       # The four-step toolchain preamble, defined once in
@@ -699,7 +699,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           # The dogfooding lanes below run `QFAI-TDDLIST-009`, which asks
@@ -877,7 +877,7 @@ jobs:
         # upload is most useful when the job FAILED, and worth nothing when nobody
         # waited for the result. `always()` spends runner minutes on both.
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: qfai-report
           # Seven days, not the action's default of ninety. These are diagnostic

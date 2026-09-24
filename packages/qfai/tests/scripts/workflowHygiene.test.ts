@@ -580,7 +580,7 @@ describe("TC-0017-0023 (TDD-0023): a planted floating reference exits 1 and is n
     const dir = plantedTree((d) => {
       editWorkflow(d, "ci.yml", (t) =>
         t.replace(
-          "        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2",
+          "        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
           "        uses: actions/upload-artifact@" + "v" + "4",
         ),
       );
