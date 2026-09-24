@@ -1997,6 +1997,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // needs to be told the expectation is about the surface, not about any spec.
   "QFAI-TDDLIST-016":
     "`.qfai/steering/` is walkable and every entry in it is readable, so the check for a work-log entry accounting for a stop has an answer to give.",
+  // Pairs the ledger with `.qfai/decisions/`, so the expected state names the
+  // record a blocked row waits on as well as the row.
+  "QFAI-TDDLIST-021":
+    "No `Status=blocked` row waits only on Change Requests that are already settled: a row whose `Blocked-By` cell (or, with no blocker there, its `Evidence` cell) names only `CR-*` records that are `rejected`, `superseded`, or `approved` with `Applied at` filled has been released through `/qfai-implement`.",
   "QFAI-RESEARCH-015":
     "Every `source_id` in the Research Summary resolves to an `id` in the same `sources[]` list.",
   "QFAI-RESEARCH-016":

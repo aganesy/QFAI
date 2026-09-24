@@ -55,16 +55,7 @@ const KNOWN_OPEN_BUT_TESTED: readonly string[] = [
   "spec-0015 TDD-0038 todo TC-0015-0034",
   "spec-0015 TDD-0039 todo TC-0015-0007",
   "spec-0017 TDD-0012 todo TC-0017-0012",
-  "spec-0017 TDD-0016 blocked TC-0017-0016",
-  "spec-0017 TDD-0030 blocked TC-0017-0030",
-  "spec-0017 TDD-0032 blocked TC-0017-0032",
-  "spec-0017 TDD-0033 blocked TC-0017-0033",
-  "spec-0017 TDD-0034 blocked TC-0017-0034",
-  "spec-0017 TDD-0035 blocked TC-0017-0035",
   "spec-0017 TDD-0062 todo TC-0017-0062",
-  "spec-0017 TDD-0069 todo TC-0017-0069",
-  "spec-0017 TDD-0070 todo TC-0017-0070",
-  "spec-0017 TDD-0083 todo TC-0017-0083",
 ];
 
 const ANNOTATION = /QFAI:SPEC-\d{4}:(TC-\d{4}-\d{4})/g;

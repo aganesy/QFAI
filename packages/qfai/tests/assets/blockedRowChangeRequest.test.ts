@@ -35,14 +35,7 @@ const SPECS = path.join(repoRoot, ".qfai", "specs");
  * because the assertion below is an equality: a row that leaves the set without
  * leaving this list fails exactly as a new one does.
  */
-const KNOWN_BLOCKED_OVER_A_DECISION: readonly string[] = [
-  "spec-0017 TDD-0016 CR-20260818-0007 approved",
-  "spec-0017 TDD-0030 CR-20260820-0001 approved",
-  "spec-0017 TDD-0032 CR-20260820-0007 approved",
-  "spec-0017 TDD-0033 CR-20260820-0007 approved",
-  "spec-0017 TDD-0034 CR-20260820-0007 approved",
-  "spec-0017 TDD-0035 CR-20260820-0007 approved",
-];
+const KNOWN_BLOCKED_OVER_A_DECISION: readonly string[] = [];
 
 /** The one `Status` a change request carries while it still blocks anything. */
 const OPEN = "open";
