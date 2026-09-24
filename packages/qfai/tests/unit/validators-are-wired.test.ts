@@ -72,6 +72,34 @@ const DEPRECATED_LEGACY_VALIDATORS: ReadonlySet<string> = new Set<string>([
 ]);
 
 /**
+ * The old layered-spec validators are no longer dispatched by story-tree
+ * validation. Each named function remains directly exercised by a legacy
+ * behavior test while that API is retired. The test path is evidence for this
+ * narrow exception: a missing function or direct call makes the entry stale.
+ * New validators cannot join this map merely because they are unwired.
+ */
+const LEGACY_DIRECT_CALL_VALIDATORS: ReadonlyMap<string, string> = new Map([
+  ["validateAtddCodeTraceability", "core/atddCodeTraceability.test.ts"],
+  ["validateBusinessFlowTraceability", "core/businessFlowTraceability.test.ts"],
+  ["validateContractReferences", "core/contractReferences.test.ts"],
+  ["validateDefinedIds", "core/duplicateHeadingIds.test.ts"],
+  ["validateDensityHints", "core/densityHints.test.ts"],
+  ["validateLayerCoverage", "core/layerCoverage.test.ts"],
+  ["validateLayeredTraceability", "core/layeredValidators.test.ts"],
+  ["validateMermaidEnforcement", "core/mermaidEnforcement.test.ts"],
+  ["validateNavigationFlow", "core/navigationFlow.test.ts"],
+  ["validateOrphanProhibition", "core/layeredValidators.test.ts"],
+  ["validateSpecRequiredFilesCatalog", "validators/specRequiredFilesCatalog.test.ts"],
+  ["validateSpecSplitByCapability", "core/specSplitScopeAttribution.test.ts"],
+  ["validateSpecPacks", "validators/specPack/openQuestionsRegisterReading.test.ts"],
+  ["validateSpecStatus", "validators/specPack/statusValidation.test.ts"],
+  ["validateCreateRowCapabilityRefs", "validators/specPack/triageSection.test.ts"],
+  ["validateTriageSection", "validators/specPack/triageSection.test.ts"],
+  ["validateStatusInSpecs", "core/statusInSpecs.test.ts"],
+  ["validateTraceabilityIntegrity", "core/traceabilityIntegrity.test.ts"],
+]);
+
+/**
  * Both analyses parse the whole `src/` graph, so they are computed once and
  * shared: they only read files this suite never writes, and re-running them per
  * test cost ~25s of CI time for an identical answer.
@@ -492,7 +520,12 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
     const reachable = await collectReachableModules(await collectBarrelExports());
     const referenced = await namesWithReachableCallSite(barrel, reachable);
     const unwired = Array.from(barrel.keys())
-      .filter((name) => !referenced.has(name) && !KNOWN_UNWIRED_BARREL_EXPORTS.has(name))
+      .filter(
+        (name) =>
+          !referenced.has(name) &&
+          !KNOWN_UNWIRED_BARREL_EXPORTS.has(name) &&
+          !LEGACY_DIRECT_CALL_VALIDATORS.has(name),
+      )
       .sort();
 
     expect(
@@ -722,6 +755,30 @@ const BARREL_EXPORT_EXEMPT_INITIAL_KEYS: ReadonlySet<string> = new Set<string>([
 const DATED_ENTRY_RE = /^\d{4}-\d{2}-\d{2}\s/;
 
 describe("meta-test: validators are wired into the pipeline", () => {
+  it("legacy direct-call exceptions still have their exact validator and test call", async () => {
+    const validators = await publicValidators();
+    const declared = new Set(validators.map(({ name }) => name));
+    const stale: string[] = [];
+    for (const [name, testFile] of LEGACY_DIRECT_CALL_VALIDATORS) {
+      if (!declared.has(name)) {
+        stale.push(`${name}: validator was removed`);
+        continue;
+      }
+      const file = path.resolve(__dirname, "..", testFile);
+      const source = parse(file, await readFile(file, "utf-8"));
+      let called = false;
+      const visit = (node: ts.Node): void => {
+        if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+          if (node.expression.text === name) called = true;
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(source);
+      if (!called) stale.push(`${name}: no direct call in ${testFile}`);
+    }
+    expect(stale, "Remove an exception when its legacy direct-call test is retired").toEqual([]);
+  });
+
   it("every public Issue[]-returning validator under validators/ is reachable from validate.ts", async () => {
     const validators = await publicValidators();
     const reachable = await reachableNames();
@@ -731,6 +788,7 @@ describe("meta-test: validators are wired into the pipeline", () => {
     const unwired: Array<{ name: string; file: string }> = [];
     for (const { name, file } of validators) {
       if (PENDING_WIRING.has(name)) continue;
+      if (LEGACY_DIRECT_CALL_VALIDATORS.has(name)) continue;
       if (!reachable.has(name)) {
         unwired.push({ name, file });
       }
@@ -1066,27 +1124,35 @@ describe("meta-test: validators are wired into the pipeline", () => {
 });
 
 // ---------------------------------------------------------------------------
-// ATDD family: the same dead-code failure mode outside validators/prototyping/
+// Story-tree test obligations: the same dead-code failure mode outside
+// validators/prototyping/
 // ---------------------------------------------------------------------------
 
 const VALIDATORS_DIR = path.resolve(__dirname, "../../src/core/validators");
 
 /**
- * The module that owns the ATDD gate family. Pinned by name so that deleting
- * it cannot be disguised by some other module happening to emit an ATDD code:
+ * The module that owns BF/AC/EX test obligations. Pinned by name so deletion
+ * cannot be disguised by some other module happening to emit a story code:
  * `modules.length > 0` alone would still hold and every other assertion would
  * vacuously pass.
  */
-const ATDD_GATE_MODULE = path.resolve(VALIDATORS_DIR, "atddCodeTraceability.ts");
+const STORY_GATE_MODULE = path.resolve(VALIDATORS_DIR, "storyTreeObligations.ts");
 
 /** The exported entry point every `qfai validate` profile runs through. */
 const VALIDATE_ENTRY = "validateProject";
 
-/** The profile dispatcher and its ATDD-only closure. */
+/** The profile dispatcher and its acceptance/test closures. */
 const STORY_PROFILE_ENTRY = "runStoryProfileValidators";
-const ATDD_PROFILE_ENTRY = "atdd";
+const TEST_PROFILE_ENTRIES = ["atdd", "tdd"] as const;
+type TestProfileEntry = (typeof TEST_PROFILE_ENTRIES)[number];
 
-const ATDD_CODE_PATTERN = /^QFAI-ATDD-\d+$/;
+const STORY_OBLIGATION_CODES: ReadonlySet<string> = new Set([
+  "QFAI-STORY-006",
+  "QFAI-STORY-007",
+  "QFAI-STORY-008",
+  "QFAI-STORY-009",
+  "QFAI-SCAN-002",
+]);
 /** Static `from "./x.js"` plus dynamic `await import("./x.js")` specifiers. */
 const MODULE_SPECIFIER_RE = /(?:from\s*|import\s*\(\s*)["'](\.\.?\/[\w./-]+)["']/g;
 
@@ -1094,8 +1160,8 @@ function parse(fileName: string, body: string): ts.SourceFile {
   return ts.createSourceFile(fileName, body, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
 }
 
-/** The atdd case must invoke the ATDD closure, not merely declare it. */
-function atddProfileDispatches(body: string): boolean {
+/** Each profile case must invoke its closure, not merely declare it. */
+function testProfileDispatches(body: string, profile: TestProfileEntry): boolean {
   const source = parse(VALIDATE_TS, body);
   for (const statement of source.statements) {
     if (!ts.isFunctionDeclaration(statement) || statement.name?.text !== STORY_PROFILE_ENTRY) {
@@ -1110,14 +1176,14 @@ function atddProfileDispatches(body: string): boolean {
       ) {
         for (const clause of node.caseBlock.clauses) {
           if (!ts.isCaseClause(clause) || !ts.isStringLiteralLike(clause.expression)) continue;
-          if (clause.expression.text !== "atdd") continue;
+          if (clause.expression.text !== profile) continue;
           dispatched = clause.statements.some(
             (item) =>
               ts.isReturnStatement(item) &&
               item.expression !== undefined &&
               ts.isCallExpression(item.expression) &&
               ts.isIdentifier(item.expression.expression) &&
-              item.expression.expression.text === ATDD_PROFILE_ENTRY,
+              item.expression.expression.text === profile,
           );
         }
       }
@@ -1125,6 +1191,44 @@ function atddProfileDispatches(body: string): boolean {
     };
     if (statement.body !== undefined) visit(statement.body);
     return dispatched;
+  }
+  return false;
+}
+
+/** The shared validator must receive the matching BF/AC or EX profile value. */
+function storyObligationUsesProfile(body: string, profile: TestProfileEntry): boolean {
+  const source = parse(VALIDATE_TS, body);
+  for (const statement of source.statements) {
+    if (!ts.isFunctionDeclaration(statement) || statement.name?.text !== STORY_PROFILE_ENTRY) {
+      continue;
+    }
+    let matched = false;
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.name.text === profile &&
+        node.initializer !== undefined
+      ) {
+        const inspect = (child: ts.Node): void => {
+          if (
+            ts.isCallExpression(child) &&
+            ts.isIdentifier(child.expression) &&
+            child.expression.text === "validateStoryTreeObligations" &&
+            child.arguments[2] !== undefined &&
+            ts.isStringLiteralLike(child.arguments[2]) &&
+            child.arguments[2].text === profile
+          ) {
+            matched = true;
+          }
+          ts.forEachChild(child, inspect);
+        };
+        inspect(node.initializer);
+      }
+      ts.forEachChild(node, visit);
+    };
+    if (statement.body !== undefined) visit(statement.body);
+    return matched;
   }
   return false;
 }
@@ -1142,9 +1246,8 @@ function collectStringLiterals(fileName: string, body: string): string[] {
 
 /**
  * `const RULE_ID = "QFAI-..."` bindings, by name. Rule IDs are routinely named
- * this way (`upstreamSsotGuard.ts:30` exports `UPSTREAM_SSOT_EDIT_RULE_ID` and
- * passes it to `issue()`), so a literal-only reader would see such a module
- * emit nothing and drop it from the ATDD family altogether.
+ * this way (`upstreamSsotGuard.ts` exports `UPSTREAM_SSOT_EDIT_RULE_ID` and
+ * passes it to `issue()`), so a literal-only reader could miss a story gate.
  */
 function collectStringConstants(source: ts.SourceFile): Map<string, string> {
   const constants = new Map<string, string>();
@@ -1178,16 +1281,12 @@ function constantValue(
  * call, plus any `code:` property in an Issue literal — as a string literal, or
  * as an identifier resolved against the module's own string constants.
  *
- * Prose is deliberately invisible here. `scaffoldPlaceholder.ts` and
- * `tddList.ts` both discuss `QFAI-ATDD-112` in comments and in the message text
- * of a `D-SCAFFOLD-*` / `TDDLIST_*` finding while emitting no ATDD code at all —
- * a whole-file text scan counted them as ATDD emitters, so a deletion of the
- * real gate module would have left the guard green on two impostors.
+ * Prose is deliberately invisible here. A comment or message that mentions
+ * `QFAI-STORY-006` is not a gate emission. A whole-file text scan would count
+ * that as an emitter and could hide deletion of the real module.
  *
  * Known limit: a rule ID *imported* from another module still reads as no code.
- * No validator does that today, and the `QFAI-ATDD-001` retirement check below
- * scans every string literal under `src/` precisely so a cross-module constant
- * cannot smuggle the retired code back in.
+ * No story obligation validator imports a rule ID from another module today.
  */
 function collectEmittedCodes(fileName: string, body: string): string[] {
   const source = parse(fileName, body);
@@ -1726,12 +1825,14 @@ function executedFromEntry(execution: ExecutionGraph): Set<string> {
 }
 
 /**
- * Declarations that run for `qfai validate --profile atdd`. Rooted at the
- * profile's own orchestrator so that a validator moved to another profile's
- * branch — still reachable from `validateProject` — reads as unwired here.
+ * Declarations reachable from one story-test profile's closure. Rooting each
+ * profile separately prevents a validator in another branch from counting.
  */
-function executedFromAtddProfile(execution: ExecutionGraph): Set<string> {
-  const entry = execution.graph.nestedNodeOf(VALIDATE_TS, STORY_PROFILE_ENTRY, ATDD_PROFILE_ENTRY);
+function executedFromTestProfile(
+  execution: ExecutionGraph,
+  profile: TestProfileEntry,
+): Set<string> {
+  const entry = execution.graph.nestedNodeOf(VALIDATE_TS, STORY_PROFILE_ENTRY, profile);
   return entry === undefined ? new Set<string>() : reachableFrom(execution.graph.edges, [entry]);
 }
 
@@ -1761,17 +1862,17 @@ async function collectReExportedNames(file: string): Promise<Set<string>> {
   return names;
 }
 
-type AtddModule = { file: string; codes: string[]; exports: string[] };
+type StoryObligationModule = { file: string; codes: string[]; exports: string[] };
 
-/** Validator modules that emit at least one `QFAI-ATDD-NNN` issue code. */
-async function collectAtddEmittingModules(): Promise<AtddModule[]> {
+/** Validator modules that emit a BF/AC/EX obligation or scan issue. */
+async function collectStoryObligationModules(): Promise<StoryObligationModule[]> {
   const files = await listTsFiles(VALIDATORS_DIR);
-  const out: AtddModule[] = [];
+  const out: StoryObligationModule[] = [];
   for (const file of files) {
     if (path.basename(file) === "index.ts") continue;
     const body = await readFile(file, "utf-8");
     const codes = collectEmittedCodes(file, body)
-      .filter((c) => ATDD_CODE_PATTERN.test(c))
+      .filter((code) => STORY_OBLIGATION_CODES.has(code))
       .sort();
     if (codes.length === 0) continue;
     out.push({ file, codes, exports: collectExportedValidatorNames(file, body) });
@@ -1779,9 +1880,9 @@ async function collectAtddEmittingModules(): Promise<AtddModule[]> {
   return out;
 }
 
-describe("meta-test: ATDD validators are reachable from the production graph", () => {
+describe("meta-test: story-tree test obligations are reachable from each profile", () => {
   const SAMPLE_FILE = path.join(SRC_ROOT, "atddSample.ts");
-  const SAMPLE_SOURCE = "export async function validateAtddSample() {\n  return [];\n}";
+  const SAMPLE_SOURCE = "export async function validateStorySample() {\n  return [];\n}";
   const caller = (file: string, source: string): ReadonlyMap<string, string> =>
     new Map([
       [SAMPLE_FILE, SAMPLE_SOURCE],
@@ -1798,7 +1899,7 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
     if (root === undefined) {
       throw new Error(`fixture ${path.basename(file)} declares no module-scope ${name}`);
     }
-    const sample = graph.nodeOf(SAMPLE_FILE, "validateAtddSample");
+    const sample = graph.nodeOf(SAMPLE_FILE, "validateStorySample");
     if (sample === undefined) throw new Error("the sample validator is missing from the graph");
     return reachableFrom(graph.edges, [root]).has(sample);
   };
@@ -1809,30 +1910,30 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
       caller(
         barrel,
         [
-          'export { validateAtddSample } from "./atddSample.js";',
-          'import { validateAtddSample } from "./atddSample.js";',
-          "async function runAtddValidators() {",
-          "  // return [...(await validateAtddSample(root, config))];",
+          'export { validateStorySample } from "./atddSample.js";',
+          'import { validateStorySample } from "./atddSample.js";',
+          "async function runStoryTestValidators() {",
+          "  // return [...(await validateStorySample(root, config))];",
           "  return [];",
           "}",
         ].join("\n"),
       ),
     );
-    expect(reachesSample(graph, barrel, "runAtddValidators")).toBe(false);
+    expect(reachesSample(graph, barrel, "runStoryTestValidators")).toBe(false);
 
     const live = path.join(SRC_ROOT, "live.ts");
     const liveGraph = buildCallGraph(
       caller(
         live,
         [
-          'import { validateAtddSample } from "./atddSample.js";',
-          "async function runAtddValidators() {",
-          "  return [...(await validateAtddSample())];",
+          'import { validateStorySample } from "./atddSample.js";',
+          "async function runStoryTestValidators() {",
+          "  return [...(await validateStorySample())];",
           "}",
         ].join("\n"),
       ),
     );
-    expect(reachesSample(liveGraph, live, "runAtddValidators")).toBe(true);
+    expect(reachesSample(liveGraph, live, "runStoryTestValidators")).toBe(true);
   });
 
   it("a call inside a function nobody invokes is not reachable", () => {
@@ -1841,17 +1942,17 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
       caller(
         orphan,
         [
-          'import { validateAtddSample } from "./atddSample.js";',
-          "async function runAtddValidators() {",
+          'import { validateStorySample } from "./atddSample.js";',
+          "async function runStoryTestValidators() {",
           "  return [];",
           "}",
           "async function unusedHelper() {",
-          "  return validateAtddSample();",
+          "  return validateStorySample();",
           "}",
         ].join("\n"),
       ),
     );
-    expect(reachesSample(graph, orphan, "runAtddValidators")).toBe(false);
+    expect(reachesSample(graph, orphan, "runStoryTestValidators")).toBe(false);
     expect(reachesSample(graph, orphan, "unusedHelper")).toBe(true);
   });
 
@@ -1870,7 +1971,7 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
             "function check() {",
             "  return [];",
             "}",
-            "async function runAtddValidators() {",
+            "async function runStoryTestValidators() {",
             "  return check();",
             "}",
           ].join("\n"),
@@ -1878,15 +1979,15 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
         [
           orphan,
           [
-            'import { validateAtddSample } from "./atddSample.js";',
+            'import { validateStorySample } from "./atddSample.js";',
             "function check() {",
-            "  return validateAtddSample();",
+            "  return validateStorySample();",
             "}",
           ].join("\n"),
         ],
       ]),
     );
-    expect(reachesSample(graph, wired, "runAtddValidators")).toBe(false);
+    expect(reachesSample(graph, wired, "runStoryTestValidators")).toBe(false);
     expect(reachesSample(graph, orphan, "check")).toBe(true);
   });
 
@@ -1901,22 +2002,22 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
       caller(
         mixed,
         [
-          'import { validateAtddSample } from "./atddSample.js";',
+          'import { validateStorySample } from "./atddSample.js";',
           "function check() {",
           "  return [];",
           "}",
           "class Adapter {",
           "  check() {",
-          "    return validateAtddSample();",
+          "    return validateStorySample();",
           "  }",
           "}",
-          "async function runAtddValidators() {",
+          "async function runStoryTestValidators() {",
           "  return check();",
           "}",
         ].join("\n"),
       ),
     );
-    expect(reachesSample(graph, mixed, "runAtddValidators")).toBe(false);
+    expect(reachesSample(graph, mixed, "runStoryTestValidators")).toBe(false);
 
     // Over-correction pin: the top-level `check()` is still a live call target
     // next to a same-named method, so a validator it does call stays wired.
@@ -1925,55 +2026,55 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
       caller(
         wired,
         [
-          'import { validateAtddSample } from "./atddSample.js";',
+          'import { validateStorySample } from "./atddSample.js";',
           "function check() {",
-          "  return validateAtddSample();",
+          "  return validateStorySample();",
           "}",
           "class Adapter {",
           "  check() {",
           "    return [];",
           "  }",
           "}",
-          "async function runAtddValidators() {",
+          "async function runStoryTestValidators() {",
           "  return check();",
           "}",
         ].join("\n"),
       ),
     );
-    expect(reachesSample(wiredGraph, wired, "runAtddValidators")).toBe(true);
+    expect(reachesSample(wiredGraph, wired, "runStoryTestValidators")).toBe(true);
   });
 
   it("a nested declaration does not answer for its module-scope namesake", () => {
     // The same merge one level down: `helper` declared inside an unreachable
-    // function is not the module-scope `helper` that runAtddValidators calls.
+    // function is not the module-scope `helper` that runStoryTestValidators calls.
     const nested = path.join(SRC_ROOT, "nestedScopes.ts");
     const graph = buildCallGraph(
       caller(
         nested,
         [
-          'import { validateAtddSample } from "./atddSample.js";',
+          'import { validateStorySample } from "./atddSample.js";',
           "function helper() {",
           "  return [];",
           "}",
           "function unusedOuter() {",
           "  function helper() {",
-          "    return validateAtddSample();",
+          "    return validateStorySample();",
           "  }",
           "  return helper();",
           "}",
-          "async function runAtddValidators() {",
+          "async function runStoryTestValidators() {",
           "  return helper();",
           "}",
         ].join("\n"),
       ),
     );
-    expect(reachesSample(graph, nested, "runAtddValidators")).toBe(false);
+    expect(reachesSample(graph, nested, "runStoryTestValidators")).toBe(false);
     // Over-correction pin: inside `unusedOuter`, `helper()` still resolves to
     // the nested declaration — scopes are searched innermost first.
     expect(reachesSample(graph, nested, "unusedOuter")).toBe(true);
   });
 
-  it("a validator reached only from another profile's branch is not ATDD-wired", () => {
+  it("a validator reached only from another profile's branch is not profile-wired", () => {
     // `switch (profile)` is not evaluated by a static graph: rooting at
     // validateProject merges every branch, so profile membership must be read
     // from the profile's own orchestrator instead.
@@ -1982,29 +2083,29 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
       caller(
         entry,
         [
-          'import { validateAtddSample } from "./atddSample.js";',
+          'import { validateStorySample } from "./atddSample.js";',
           "export async function validateProject(profile) {",
           "  return runProfileOwnValidators(profile);",
           "}",
           "async function runProfileOwnValidators(profile) {",
           "  switch (profile) {",
           '    case "atdd":',
-          "      return runAtddValidators();",
+          "      return runStoryTestValidators();",
           "    default:",
           "      return runUiuxValidators();",
           "  }",
           "}",
-          "async function runAtddValidators() {",
+          "async function runStoryTestValidators() {",
           "  return [];",
           "}",
           "async function runUiuxValidators() {",
-          "  return validateAtddSample();",
+          "  return validateStorySample();",
           "}",
         ].join("\n"),
       ),
     );
     expect(reachesSample(graph, entry, "validateProject")).toBe(true);
-    expect(reachesSample(graph, entry, "runAtddValidators")).toBe(false);
+    expect(reachesSample(graph, entry, "runStoryTestValidators")).toBe(false);
   });
 
   it("a property call does not borrow a same-named local declaration", () => {
@@ -2016,17 +2117,17 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
       caller(
         receiver,
         [
-          'import { validateAtddSample } from "./atddSample.js";',
-          "async function runAtddValidators(adapter) {",
+          'import { validateStorySample } from "./atddSample.js";',
+          "async function runStoryTestValidators(adapter) {",
           "  return adapter.check();",
           "}",
           "function check() {",
-          "  return validateAtddSample();",
+          "  return validateStorySample();",
           "}",
         ].join("\n"),
       ),
     );
-    expect(reachesSample(graph, receiver, "runAtddValidators")).toBe(false);
+    expect(reachesSample(graph, receiver, "runStoryTestValidators")).toBe(false);
     expect(reachesSample(graph, receiver, "check")).toBe(true);
   });
 
@@ -2036,19 +2137,19 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
       caller(
         registry,
         [
-          'import { validateAtddSample } from "./atddSample.js";',
+          'import { validateStorySample } from "./atddSample.js";',
           "const pending = [];",
           "function register(task) {",
           "  pending.push(task);",
           "}",
-          "async function runAtddValidators() {",
-          "  register(() => validateAtddSample());",
+          "async function runStoryTestValidators() {",
+          "  register(() => validateStorySample());",
           "  return [];",
           "}",
         ].join("\n"),
       ),
     );
-    expect(reachesSample(graph, registry, "runAtddValidators")).toBe(false);
+    expect(reachesSample(graph, registry, "runStoryTestValidators")).toBe(false);
 
     // A callback a combinator invokes where it stands still counts as running.
     const mapped = path.join(SRC_ROOT, "mapped.ts");
@@ -2056,123 +2157,104 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
       caller(
         mapped,
         [
-          'import { validateAtddSample } from "./atddSample.js";',
-          "async function runAtddValidators(specs) {",
-          "  return (await Promise.all(specs.map((spec) => validateAtddSample(spec)))).flat();",
+          'import { validateStorySample } from "./atddSample.js";',
+          "async function runStoryTestValidators(specs) {",
+          "  return (await Promise.all(specs.map((spec) => validateStorySample(spec)))).flat();",
           "}",
         ].join("\n"),
       ),
     );
-    expect(reachesSample(mappedGraph, mapped, "runAtddValidators")).toBe(true);
+    expect(reachesSample(mappedGraph, mapped, "runStoryTestValidators")).toBe(true);
   });
 
-  it("prose that merely names an ATDD code does not make a module an emitter", () => {
+  it("prose that merely names a story code does not make a module an emitter", () => {
     const proseOnly = [
-      "// `QFAI-ATDD-112` stopped demanding an annotation for L1/L2, so this",
-      "// ledger is their only gate.",
+      "// `QFAI-STORY-006` requires an annotation for the declared item.",
       "const findings = [",
-      '  issue("D-SCAFFOLD-PLACEHOLDER", "left exactly as QFAI-ATDD-112 saw it", "warning"),',
+      '  issue("D-SCAFFOLD-PLACEHOLDER", "left exactly as QFAI-STORY-006 saw it", "warning"),',
       "];",
     ].join("\n");
     expect(collectEmittedCodes("proseOnly.ts", proseOnly)).toEqual(["D-SCAFFOLD-PLACEHOLDER"]);
 
-    const emitter = 'return [issue("QFAI-ATDD-112", "TC lacks a test annotation", "error")];';
-    expect(collectEmittedCodes("emitter.ts", emitter)).toEqual(["QFAI-ATDD-112"]);
+    const emitter = 'return [issue("QFAI-STORY-006", "BF lacks a test annotation", "error")];';
+    expect(collectEmittedCodes("emitter.ts", emitter)).toEqual(["QFAI-STORY-006"]);
   });
 
   it("a rule ID handed to issue() through a constant is still an emitted code", () => {
     // `upstreamSsotGuard.ts:30,169` is the live instance of this shape. A
-    // literal-only reader saw no code at all, so an ATDD validator written the
+    // literal-only reader saw no code at all, so a story validator written the
     // same way dropped out of the family and skipped every check below.
     const viaConstant = [
-      'const ATDD_RULE_ID = "QFAI-ATDD-999";',
-      'return [issue(ATDD_RULE_ID, "message", "error")];',
+      'const STORY_RULE_ID = "QFAI-STORY-006";',
+      'return [issue(STORY_RULE_ID, "message", "error")];',
     ].join("\n");
-    expect(collectEmittedCodes("viaConstant.ts", viaConstant)).toEqual(["QFAI-ATDD-999"]);
+    expect(collectEmittedCodes("viaConstant.ts", viaConstant)).toEqual(["QFAI-STORY-006"]);
 
     const viaCodeProperty = [
-      'const ATDD_RULE_ID = "QFAI-ATDD-998";',
-      "return [{ code: ATDD_RULE_ID, severity: \"error\", message: 'm' }];",
+      'const STORY_RULE_ID = "QFAI-STORY-007";',
+      "return [{ code: STORY_RULE_ID, severity: \"error\", message: 'm' }];",
     ].join("\n");
-    expect(collectEmittedCodes("viaProperty.ts", viaCodeProperty)).toEqual(["QFAI-ATDD-998"]);
+    expect(collectEmittedCodes("viaProperty.ts", viaCodeProperty)).toEqual(["QFAI-STORY-007"]);
   });
 
-  it("the ATDD gate module still exists and still emits the routing codes", async () => {
-    const modules = await collectAtddEmittingModules();
-    const gate = modules.find((m) => m.file === ATDD_GATE_MODULE);
-
+  it("the BF/AC/EX obligation module still emits every current gate", async () => {
+    const modules = await collectStoryObligationModules();
     expect(
-      gate?.file,
-      "validators/atddCodeTraceability.ts owns the QFAI-ATDD-* family. If it was deleted or " +
-        "stopped emitting, the reachability assertions below go vacuous.",
-    ).toBe(ATDD_GATE_MODULE);
-    // US -> tests/e2e/**, TC -> tests/integration/**, CON-API -> tests/api/**.
-    // QFAI-ATDD-113 is the CON-API leg: without it pinned here, dropping the
-    // CON-API coverage gate alone leaves every assertion in this file green.
-    expect(gate?.codes).toEqual(
-      expect.arrayContaining([
-        "QFAI-ATDD-111",
-        "QFAI-ATDD-112",
-        "QFAI-ATDD-113",
-        "QFAI-ATDD-121",
-        "QFAI-ATDD-122",
-      ]),
-    );
+      modules.map(({ file }) => file),
+      "A moved or split obligation gate needs an explicit profile reachability review.",
+    ).toEqual([STORY_GATE_MODULE]);
+    expect(modules[0]?.codes).toEqual([...STORY_OBLIGATION_CODES].sort());
+    expect(modules[0]?.exports).toEqual([
+      "validateStoryTreeObligationsModel",
+      "validateStoryTreeObligations",
+    ]);
   });
 
-  it("every exported validator of an ATDD-emitting module runs on the atdd profile", async () => {
-    const modules = await collectAtddEmittingModules();
+  it("the BF/AC/EX gate runs through both test profiles", async () => {
+    const modules = await collectStoryObligationModules();
     const execution = await buildExecutionGraph();
-    const executed = executedFromAtddProfile(execution);
-
     const dispatcher = execution.graph.nodeOf(VALIDATE_TS, STORY_PROFILE_ENTRY);
-    const atddEntry = execution.graph.nestedNodeOf(
-      VALIDATE_TS,
-      STORY_PROFILE_ENTRY,
-      ATDD_PROFILE_ENTRY,
-    );
     expect(
       dispatcher !== undefined && executedFromEntry(execution).has(dispatcher),
       "runStoryProfileValidators must be reachable from validateProject.",
     ).toBe(true);
-    expect(
-      dispatcher !== undefined &&
-        atddEntry !== undefined &&
-        atddProfileDispatches(execution.modules.get(VALIDATE_TS) ?? "") &&
-        reachableFrom(execution.graph.edges, [dispatcher]).has(atddEntry),
-      "The atdd case must invoke its own closure; an orphaned declaration does not run.",
-    ).toBe(true);
 
-    const unwired: string[] = [];
-    for (const { file, exports, codes } of modules) {
-      const rel = path.relative(SRC_ROOT, file);
-      if (exports.length === 0) {
-        unwired.push(`${rel} (emits ${codes.join(", ")} but exports no validate* function)`);
-        continue;
+    for (const profile of TEST_PROFILE_ENTRIES) {
+      const profileEntry = execution.graph.nestedNodeOf(VALIDATE_TS, STORY_PROFILE_ENTRY, profile);
+      expect(
+        dispatcher !== undefined &&
+          profileEntry !== undefined &&
+          testProfileDispatches(execution.modules.get(VALIDATE_TS) ?? "", profile) &&
+          storyObligationUsesProfile(execution.modules.get(VALIDATE_TS) ?? "", profile) &&
+          reachableFrom(execution.graph.edges, [dispatcher]).has(profileEntry),
+        `The ${profile} case must invoke its closure with the matching obligation profile.`,
+      ).toBe(true);
+
+      const executed = executedFromTestProfile(execution, profile);
+      const unwired: string[] = [];
+      for (const { file, exports, codes } of modules) {
+        const rel = path.relative(SRC_ROOT, file);
+        if (exports.length === 0) {
+          unwired.push(`${rel} (emits ${codes.join(", ")} but exports no validate* function)`);
+          continue;
+        }
+        for (const name of exports) {
+          const node = execution.graph.nodeOf(file, name);
+          if (node === undefined || !executed.has(node)) unwired.push(`${rel}#${name}`);
+        }
       }
-      // Per validator, not per module: a module that co-locates a wired
-      // `validateA` with an unwired `validateB` must still fail on B.
-      for (const name of exports) {
-        const node = execution.graph.nodeOf(file, name);
-        // No node at all means the module is not even in validate.ts's import
-        // closure — the strictest form of unwired.
-        if (node === undefined || !executed.has(node)) unwired.push(`${rel}#${name}`);
-      }
+
+      expect(
+        unwired,
+        `Each story obligation validator must execute under --profile ${profile}. ` +
+          "A barrel export, comment, callback nobody invokes, or another profile's branch " +
+          "does not satisfy this gate.",
+      ).toEqual([]);
     }
-
-    expect(
-      unwired,
-      "Each ATDD validator must be invoked on a path that actually executes under " +
-        "`--profile atdd` — the atdd closure, or an orchestrator it reaches. Being importable " +
-        "is not wiring: a re-export from validators/index.ts, a commented-out call, and a call " +
-        "inside a helper nobody invokes all leave the validator's issue codes unable to appear " +
-        "in validate.json — exactly the dead-validator state QFAI-ATDD-001 was in. Reachability " +
-        "from some *other* profile's branch is not wiring either.",
-    ).toEqual([]);
   });
 
-  it("validators/index.ts re-exports every ATDD-emitting validator", async () => {
-    const modules = await collectAtddEmittingModules();
+  it("validators/index.ts re-exports every story obligation validator", async () => {
+    const modules = await collectStoryObligationModules();
     const reExported = await collectReExportedNames(VALIDATORS_INDEX);
 
     const missing: string[] = [];
@@ -2184,7 +2266,7 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
 
     expect(
       missing,
-      `validators/index.ts must re-export every ATDD-emitting validator. Missing: ${missing.join(", ")}`,
+      `validators/index.ts must re-export every story obligation validator. Missing: ${missing.join(", ")}`,
     ).toEqual([]);
   });
 
@@ -2193,12 +2275,12 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
     const { names } = reExportFacts(
       barrel,
       [
-        '// export { validateAtddCommented } from "./commented.js";',
-        '/* export { validateAtddBlock } from "./block.js"; */',
-        'export { validateAtddLive } from "./live.js";',
+        '// export { validateStoryCommented } from "./commented.js";',
+        '/* export { validateStoryBlock } from "./block.js"; */',
+        'export { validateStoryLive } from "./live.js";',
       ].join("\n"),
     );
-    expect([...names]).toEqual(["validateAtddLive"]);
+    expect([...names]).toEqual(["validateStoryLive"]);
   });
 
   it("QFAI-ATDD-001 stays retired", async () => {
@@ -2218,9 +2300,8 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
 
     expect(
       emitters,
-      "QFAI-ATDD-001 fired on the *absence* of <spec-dir>/atdd/coverage-ledger.md, a file " +
-        "`qfai init` never ships and that qfai-atdd/SKILL.md and catalog/test-layers.md both " +
-        "classify as optional legacy. The code is retired; do not reintroduce it.",
+      "The old coverage-ledger-missing gate is retired; story-tree test obligations " +
+        "use BF/AC/EX annotations instead.",
     ).toEqual([]);
   });
 });
