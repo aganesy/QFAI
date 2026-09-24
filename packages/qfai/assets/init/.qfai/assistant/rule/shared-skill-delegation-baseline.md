@@ -186,17 +186,18 @@ Both live in `.qfai/assistant/rule/review-convergence.md`: the two-round budget,
 
 A finding outside the reviewing stage's remit is recorded and deferred, never blocking:
 
-| Stage              | In scope                                                                                            | Out of scope (record and defer)                                                         |
-| ------------------ | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `/qfai-discussion` | Requirement clarity, scope boundary, decision traceability                                          | Spec structure, runtime behavior                                                        |
-| `/qfai-sdd`        | Spec / contract consistency, testability, traceability edges                                        | Runtime enforcement correctness, code quality                                           |
-| `/qfai-atdd`       | Obligation coverage, layer placement, annotation validity                                           | Implementation structure                                                                |
-| `/qfai-implement`  | Code quality, spec alignment of the item, RED/GREEN evidence                                        | Upstream spec content, contract design                                                  |
-| `/qfai-configure`  | Config / manifest validity and the surfaces the run generated                                       | Spec content, implementation structure                                                  |
-| `/qfai-verify`     | Gate execution, evidence completeness, report / artifact fidelity                                   | Authoring quality of the artifacts it verifies                                          |
-| `/web-research`    | Source authority and freshness, citation accuracy, claim support                                    | Spec content, implementation structure                                                  |
-| `/qfai-grilling`   | Decisions asked rather than assumed, facts naming where they were read, the session's end condition | The merit of what the user decided, and the artifacts the invoking stage writes from it |
-| `/qfai-grill`      | The same, reported to the user rather than to a stage                                               | The merit of what the user decided; there is no artifact to review                      |
+| Stage                           | In scope                                                                                            | Out of scope (record and defer)                                                         |
+| ------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `/qfai-discussion`              | Requirement clarity, scope boundary, decision traceability                                          | Spec structure, runtime behavior                                                        |
+| `/qfai-sdd`                     | Spec / contract consistency, testability, traceability edges                                        | Runtime enforcement correctness, code quality                                           |
+| `/qfai-atdd`                    | Obligation coverage, layer placement, annotation validity                                           | Implementation structure                                                                |
+| `/qfai-implement`               | Code quality, spec alignment of the item, RED/GREEN evidence                                        | Upstream spec content, contract design                                                  |
+| `/qfai-migration-spec-to-story` | Migration plan and report fidelity, ID mapping, archive completeness                                | New story content and downstream implementation quality                                 |
+| `/qfai-configure`               | Config / manifest validity and the surfaces the run generated                                       | Spec content, implementation structure                                                  |
+| `/qfai-verify`                  | Gate execution, evidence completeness, report / artifact fidelity                                   | Authoring quality of the artifacts it verifies                                          |
+| `/web-research`                 | Source authority and freshness, citation accuracy, claim support                                    | Spec content, implementation structure                                                  |
+| `/qfai-grilling`                | Decisions asked rather than assumed, facts naming where they were read, the session's end condition | The merit of what the user decided, and the artifacts the invoking stage writes from it |
+| `/qfai-grill`                   | The same, reported to the user rather than to a stage                                               | The merit of what the user decided; there is no artifact to review                      |
 
 Article VII excess in the reviewing stage's own artifacts is in scope;
 quality of downstream implementation code is deferred at upstream stages.

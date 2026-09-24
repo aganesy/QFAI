@@ -90,10 +90,7 @@ describe("the convergence stop condition is stated as the three finding arrays",
       iterate.indexOf(`${EXIT_CODES.prototypingBudgetExhausted} = STOP`),
     );
 
-    expect(stopLine).toContain("no DESIGN.md violation");
-    expect(stopLine).toContain("no layout");
-    expect(stopLine).toContain("anti-pattern");
-    expect(stopLine).toContain("no blocking finding");
+    expect(stopLine).toContain("no DESIGN.md violation, layout anti-pattern, or blocking finding");
     expect(stopLine).toContain("exceptional");
   });
 });

@@ -1714,7 +1714,7 @@ describe("assets guardrails", () => {
     const normalizedNpm = normalizeReadme(stripUrls(npmReadme));
     // v2.0 (spec-0012 v2.0 absorbed): replaced v1.x phrasing with single-thread loop language.
     expect(normalizedNpm).toMatch(/single-thread evolution loop|qfai prototyping iterate/);
-    expect(normalizedNpm).toMatch(/per-iteration evidence.*review\.json/i);
+    expect(normalizedNpm).toMatch(/per-iteration evidence[\s\S]*?review\.json/i);
   });
 
   it("keeps root copilot-instructions aligned with skill symlink guidance", async () => {

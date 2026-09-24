@@ -22,5 +22,5 @@ flow's ATDD evidence file. A skipped or uncollected test never discharges
 the BF or AC obligation.
 
 `qfai.config.yaml#atdd.scaffoldEscalateCycles` sets how many consecutive
-`qfai validate` runs may retain a placeholder before the finding becomes an
+`npx qfai validate` runs may retain a placeholder before the finding becomes an
 error. The default is 3. Set it to 0 to keep the finding a warning.
