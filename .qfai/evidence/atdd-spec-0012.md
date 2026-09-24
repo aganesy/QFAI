@@ -807,7 +807,7 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.cliCapture.test.ts tests/integration/cli/commands/validate.sddProfileLedgerSeed.test.ts tests/core/tddListObligationColumns.test.ts tests/assets/completedRowNamesItsTestCase.test.ts
 - Refactor verify result: Test Files 4 passed (4); Tests 70 passed (70) — the row's test file 18 of 18, and the three files the rework changed: `validate.sddProfileLedgerSeed.test.ts` 20, `tddListObligationColumns.test.ts` 31, `completedRowNamesItsTestCase.test.ts` 1. No production file changed
-- Refactor verify revision: c505a4bc1de4a002847ef7d2672babf9050798bc
+- Refactor verify revision: 7fd71711a7494e4a681cc1513243a3073a11abda
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree ab99c390… matches; both entries fail on their own AssertionError (:139:47, :146:47); both edits inside parseArgs; hash 112bea3e… recomputes; GREEN 2/2 and file 18/18 at HEAD
 
@@ -1734,8 +1734,8 @@ pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototyping
 - Round 1: GREEN result: One run per entry. Entry 1: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9). Entry 2: Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production file changed in this phase, and the whole test file is the relevant suite. Re-run on the tree Round 2 closed on
-- Refactor verify revision: c505a4bc1de4a002847ef7d2672babf9050798bc
+- Refactor verify result: Test Files 1 passed (1); Tests 9 passed (9). No production file changed in this phase, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: 7fd71711a7494e4a681cc1513243a3073a11abda
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 69b80e85… matches; the two combined edits hit separate paths and each entry fails on its own (:209:19, :247:19); hash 9d4193a2… recomputes; GREEN 2/2 and file 9/9 at HEAD
 
@@ -1842,7 +1842,7 @@ was re-applied as the entry records it, and that run is the one below.
 ##### spec-0012/TDD-0497
 
 - Evidence file: .qfai/evidence/atdd-spec-0012.md
-- Revision: c505a4bc1de4a002847ef7d2672babf9050798bc
+- Revision: 7fd71711a7494e4a681cc1513243a3073a11abda
 - Selector: Test 1: cycle 9 + converged loop (converged + accepted) -> exit 0 + report
 - Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 1: cycle 9 \+ converged loop \(converged \+ accepted\) -> exit 0 \+ report"
 - Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
@@ -1861,7 +1861,7 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence
 ##### spec-0012/TDD-0572
 
 - Evidence file: .qfai/evidence/atdd-spec-0012.md
-- Revision: c505a4bc1de4a002847ef7d2672babf9050798bc
+- Revision: 7fd71711a7494e4a681cc1513243a3073a11abda
 - Selector: ["converged with a negative acceptedIterationIndex is NOT converged","Test 2: max-iterations + acceptedIterationIndex null -> exit 2 + Not converged","Test 3: license-verify-fail -> exit 2 + Not converged + reason"]
 - Re-verify command:
 
@@ -1887,7 +1887,7 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence
 ##### spec-0012/TDD-0573
 
 - Evidence file: .qfai/evidence/atdd-spec-0012.md
-- Revision: c505a4bc1de4a002847ef7d2672babf9050798bc
+- Revision: 7fd71711a7494e4a681cc1513243a3073a11abda
 - Selector: Test 4: prototyping.json missing -> exit 2 + diagnostic
 - Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 4: prototyping\.json missing -> exit 2 \+ diagnostic"
 - Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
@@ -1906,7 +1906,7 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence
 ##### spec-0012/TDD-0574
 
 - Evidence file: .qfai/evidence/atdd-spec-0012.md
-- Revision: c505a4bc1de4a002847ef7d2672babf9050798bc
+- Revision: 7fd71711a7494e4a681cc1513243a3073a11abda
 - Selector: Test 6a: --check-convergence WITHOUT --cycle parses as a known flag
 - Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 6a: --check-convergence WITHOUT --cycle parses as a known flag"
 - Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
@@ -1925,7 +1925,7 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence
 ##### spec-0012/TDD-0576
 
 - Evidence file: .qfai/evidence/atdd-spec-0012.md
-- Revision: c505a4bc1de4a002847ef7d2672babf9050798bc
+- Revision: 7fd71711a7494e4a681cc1513243a3073a11abda
 - Selector: Test 7: --check-convergence does NOT invoke iterate (no iter-NN/iterate-plan.json written)
 - Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts -t "Test 7: --check-convergence does NOT invoke iterate \(no iter-NN/iterate-plan\.json written\)"
 - Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 8 skipped (9)
