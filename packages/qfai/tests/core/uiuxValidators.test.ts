@@ -516,7 +516,7 @@ describe("uiux validators", () => {
     const template = await readFile(
       path.resolve(
         process.cwd(),
-        "assets/init/.qfai/assistant/skills/qfai-discussion/templates/04_Sources.md",
+        "assets/init/.qfai/assistant/skill/qfai-discussion/templates/04_Sources.md",
       ),
       "utf-8",
     );
@@ -1200,7 +1200,7 @@ async function newTempDir(): Promise<string> {
 
 async function seedAgentDefinitionFixture(root: string, agentMarkdown: string): Promise<void> {
   const steeringDir = path.join(root, ".qfai", "assistant", "steering");
-  const agentsDir = path.join(root, ".qfai", "assistant", "agents");
+  const agentsDir = path.join(root, ".qfai", "assistant", "agent");
   await mkdir(steeringDir, { recursive: true });
   await mkdir(agentsDir, { recursive: true });
 

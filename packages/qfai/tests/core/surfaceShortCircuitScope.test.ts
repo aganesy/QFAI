@@ -86,15 +86,14 @@ describe("the short-circuit follows the configured skills directory", () => {
   );
 });
 
-describe("the short-circuit does not reach a sibling of the skills directory", () => {
+describe("the short-circuit covers the agent directory read by full", () => {
   // POSIX only: the ENOTDIR shape, which Windows folds into ENOENT.
   it.skipIf(process.platform === "win32")(
-    "lets `full` run when only the agents tree is a regular file",
+    "stops `full` when the agent directory is a regular file",
     async () => {
-      // `validateSkillsIntegrity` and `validateAssistantAssets` walk the skills
-      // directory, not its parent, and a missing agent is an ordinary finding
-      // rather than an exception — so damage confined to the sibling stops
-      // nothing, and story tree findings are still reported.
+      // `validateAgentDefinition` lists the agent directory under `full`.
+      // A file at that path must surface as a repairable link finding before
+      // the profile reaches its own `readdir`.
       const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-scope-"));
       try {
         await mkdir(path.join(root, ".qfai", "assistant", "skill"), { recursive: true });
@@ -103,6 +102,12 @@ describe("the short-circuit does not reach a sibling of the skills directory", (
           "not a directory\n",
           "utf-8",
         );
+        const wrapper = path.join(root, ".claude", "agents", "completion-reviewer.md");
+        await mkdir(path.dirname(wrapper), { recursive: true });
+        await symlink(
+          path.join("..", "..", ".qfai", "assistant", "agent", "completion-reviewer.md"),
+          wrapper,
+        );
         await mkdir(path.join(root, ".qfai"), { recursive: true });
         await writeFile(path.join(root, ".qfai", "install-provenance.json"), "{}\n", "utf-8");
 
@@ -110,7 +115,7 @@ describe("the short-circuit does not reach a sibling of the skills directory", (
         const codes = new Set(result.issues.map((entry) => entry.code));
 
         expect(codes.has("QFAI-LINK-001")).toBe(true);
-        expect(codes.size).toBeGreaterThan(1);
+        expect([...codes]).toEqual(["QFAI-LINK-001"]);
       } finally {
         await rm(root, { recursive: true, force: true });
       }

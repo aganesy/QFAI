@@ -674,7 +674,9 @@ describe("assistant asset provenance", () => {
 
     await expect(
       captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true })),
-    ).rejects.toThrow(/refused to seed the story tree through a symlink/);
+    ).rejects.toThrow(
+      /refusing to write the install-provenance record|refused to seed the story tree through a symlink/,
+    );
 
     expect(await readFile(refreshVictim, "utf-8")).toBe(refreshVictimBody);
     expect(await readFile(retireVictim, "utf-8")).toBe(retireVictimBody);
