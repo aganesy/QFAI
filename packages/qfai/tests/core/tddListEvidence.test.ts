@@ -1547,6 +1547,54 @@ describe("QFAI-TDDLIST-008", () => {
     });
   });
 
+  it("measures a done row over what its test imports, not all of srcDir", async () => {
+    // The wiring row for the at-rest scope. Over all of `src`, a change to a
+    // module the test never imports staled every completed row, so in an active
+    // repository `done` could not be held.
+    await withProject(async (root) => {
+      const testBody = 'import { used } from "../../src/used.js";\nit("sample", () => used);\n';
+      await repoWithRevision(root);
+      await mkdir(path.join(root, "src"), { recursive: true });
+      await mkdir(path.join(root, "tests", "unit"), { recursive: true });
+      await writeFile(path.join(root, "src", "used.ts"), "export const used = 1;\n");
+      await writeFile(path.join(root, "src", "unrelated.ts"), "export const other = 1;\n");
+      await writeFile(path.join(root, TEST_FILE), testBody);
+      commitAll(root, "observed");
+      const observed = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf-8",
+      }).trim();
+      await seedProject(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        [],
+        {
+          ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replaceAll(
+            DEFAULT_REVISION,
+            observed,
+          ),
+        },
+        { revision: observed },
+      );
+      // The seed writes a placeholder test; put back the one the observation ran.
+      await writeFile(path.join(root, TEST_FILE), testBody);
+      commitAll(root, "record the row");
+
+      await writeFile(path.join(root, "src", "unrelated.ts"), "export const other = 2;\n");
+      commitAll(root, "change a module the test does not import");
+      const stale = (issues: Awaited<ReturnType<typeof validateTddList>>) =>
+        issues.filter((i) => i.code === "QFAI-TDDLIST-009");
+      expect(stale(await validateTddList(root, defaultConfig))).toEqual([]);
+
+      await writeFile(path.join(root, "src", "used.ts"), "export const used = 2;\n");
+      commitAll(root, "change the module the test imports");
+      const reported = stale(await validateTddList(root, defaultConfig));
+      expect(reported).toHaveLength(1);
+      expect(reported[0]?.message).toContain("src/used.ts");
+      expect(reported[0]?.message).not.toContain("src/unrelated.ts");
+    });
+  });
+
   it("accepts an anchor that resolves to the row's evidence heading", async () => {
     await withProject(async (root) => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
