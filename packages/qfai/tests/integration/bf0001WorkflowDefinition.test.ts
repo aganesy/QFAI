@@ -104,4 +104,37 @@ describe("BF-0001 workflow definition", () => {
       "An owner skill may change its own upstream artifact after the required approval",
     );
   });
+
+  // QFAI:EX-0001-0007-09
+  // QFAI:EX-0001-0007-10
+  it("routes retirement, triage and change requests into decision rows", async () => {
+    const sdd = await readFile(skill("qfai-sdd"), "utf8");
+    const triage = await readFile(
+      path.join(assistant, "skill", "qfai-sdd", "references", "sdd-triage.md"),
+      "utf8",
+    );
+    expect(sdd).toContain(
+      "Record triage, change requests, retired stories, and rejected options as rows",
+    );
+    expect(sdd).toContain(
+      "Do not write a second decision-record directory or a retired story file",
+    );
+    expect(triage).toContain(
+      "Record a retired story in a decision row, not a separate retired-story file",
+    );
+  });
+
+  // QFAI:EX-0001-0012-03
+  // QFAI:EX-0001-0012-04
+  it("keeps shared drift rules under rule and ATDD-only guidance under its references", async () => {
+    const drift = await readFile(rule("drift-protocol.md"), "utf8");
+    const atdd = await readFile(skill("qfai-atdd"), "utf8");
+    const crossSpec = await readFile(
+      path.join(assistant, "skill", "qfai-atdd", "references", "cross-spec-obligations.md"),
+      "utf8",
+    );
+    expect(drift).toContain("# Drift Protocol");
+    expect(atdd).toContain("rule/drift-protocol.md");
+    expect(crossSpec).toContain("# Findings outside the active flow");
+  });
 });

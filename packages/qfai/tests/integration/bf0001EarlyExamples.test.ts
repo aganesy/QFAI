@@ -58,6 +58,7 @@ describe("BF-0001 project records", () => {
 describe("BF-0001 init preserves project content", () => {
   // QFAI:EX-0001-0006-01
   // QFAI:EX-0001-0006-02
+  // QFAI:EX-0001-0012-01
   // QFAI:EX-0001-0022-01
   // QFAI:EX-0001-0029-01
   // QFAI:EX-0001-0029-02
@@ -88,6 +89,9 @@ describe("BF-0001 init preserves project content", () => {
         ]),
       );
       const assistant = path.join(root, ".qfai", "assistant");
+      expect(await readdir(assistant)).toEqual(
+        expect.arrayContaining(["rule", "skill", "agent", "prompt"]),
+      );
       const skill = path.join(assistant, "skill", "qfai-discussion", "SKILL.md");
       const localSkill = path.join(assistant, "skill.local", "my-skill", "SKILL.md");
       const copilot = path.join(root, ".github", "copilot-instructions.md");
@@ -95,6 +99,7 @@ describe("BF-0001 init preserves project content", () => {
 
       await mkdir(path.dirname(localSkill), { recursive: true });
       await writeFile(localSkill, "# My skill\n", "utf8");
+      expect(await readdir(assistant)).toContain("skill.local");
       await writeFile(skill, "# Stale shipped skill\n", "utf8");
       await writeFile(
         copilot,

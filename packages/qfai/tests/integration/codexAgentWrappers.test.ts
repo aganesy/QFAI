@@ -126,8 +126,10 @@ describe("qfai init generates the Codex agent profiles", () => {
     expect(written).toEqual(expected.map((name) => `${name}${CODEX_AGENT_WRAPPER_SUFFIX}`));
   });
 
+  // QFAI:EX-0001-0025-02
   it("carries the canonical body, frontmatter metadata and the reviewer sandbox", async () => {
     const root = await initProject();
+    const kinds = new Set<string>();
     for (const name of await canonicalAgentNames()) {
       const raw = await readFile(codexAgentPath(root, name), "utf-8");
       const profile = parseTomlDocument(raw);
@@ -139,6 +141,7 @@ describe("qfai init generates the Codex agent profiles", () => {
       );
       const kind = parseAgentCardKind(canonical, name);
       expect(kind, `${name}: kind`).not.toBeNull();
+      if (kind) kinds.add(kind);
       const frontmatter = canonical.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1] ?? "";
       const parsedFrontmatter: unknown = parseYaml(frontmatter);
       const description =
@@ -156,6 +159,7 @@ describe("qfai init generates the Codex agent profiles", () => {
         expect("sandbox_mode" in profile, `${name}: worker must not pin a sandbox`).toBe(false);
       }
     }
+    expect(kinds).toEqual(new Set(["reviewer", "worker"]));
   });
 
   it("leaves an existing profile alone, and --force regenerates the stale one", async () => {
