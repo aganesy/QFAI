@@ -985,6 +985,21 @@ describe("BF-0004 acceptance criteria", () => {
         "- Parent: US-0001-0002",
       ),
     );
+    const pack = path.join(root, ".qfai/specs/spec-0001");
+    for (const [name, id] of [
+      ["05_Examples.md", "EX-0001-0003"],
+      ["06_Test-Cases.md", "TC-0001-0003"],
+      ["04_Business-Rules.md", "BR-0001-0003"],
+    ] as const) {
+      const file = path.join(pack, name);
+      await writeFile(
+        file,
+        (await readFile(file, "utf8"))
+          .split(/\r?\n/)
+          .filter((line) => !line.includes(`| ${id} |`))
+          .join("\n"),
+      );
+    }
     const planPath = path.join(root, ".qfai/evidence/migration-spec-to-story/plan.yaml");
     const plan = parseYaml(await readFile(planPath, "utf8")) as {
       flows: Array<{
@@ -1034,7 +1049,23 @@ describe("BF-0004 acceptance criteria", () => {
 
   it("keeps malformed criteria in the old pack while preserving the complete flow output", async () => {
     // QFAI:EX-0004-0007-04
-    const complete = path.join(journey.root, ".qfai/spec/02_business-flow");
+    const normal = await project();
+    for (const [name, id] of [
+      ["05_Examples.md", "EX-0001-0003"],
+      ["06_Test-Cases.md", "TC-0001-0003"],
+    ] as const) {
+      const file = path.join(normal, ".qfai/specs/spec-0001", name);
+      await writeFile(
+        file,
+        (await readFile(file, "utf8"))
+          .split(/\r?\n/)
+          .filter((line) => !line.includes(`| ${id} |`))
+          .join("\n"),
+      );
+    }
+    prepareThrough(normal, 3);
+    expect(step(normal, 4).status).toBe(0);
+    const complete = path.join(normal, ".qfai/spec/02_business-flow");
     const flow = path.join(complete, "business-flow-0001");
     expect(await readFile(path.join(complete, "business-flows.md"), "utf8")).toContain(
       "| BF-0001 | Place an order |",
