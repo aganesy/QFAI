@@ -104,7 +104,9 @@ describe("skillDocReferences validator", () => {
       const issues = await validateSkillDocReferences(root, await getConfig(root));
       const broken = issues.filter((i) => i.code === "W-SKILL-DOC-BROKEN-REF");
       expect(broken.length).toBe(1);
-      expect(broken[0]?.message).toContain("agent-routing.yml has moved");
+      expect(broken[0]?.message).toContain("non-canonical path");
+      expect(broken[0]?.message).toContain("Agent routing defaults are shipped with qfai");
+      expect(broken[0]?.message).toContain("project overrides live in qfai.config.yaml");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

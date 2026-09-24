@@ -20,7 +20,9 @@ async function withProject(
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "main.yaml"),
-      ["screens:", "  - id: SCR-001", '    route: "/"'].join("\n"),
+      ["# QFAI-CONTRACT-ID: CON-UI-0001", "screens:", "  - id: SCR-001", '    route: "/"'].join(
+        "\n",
+      ),
       "utf-8",
     );
 
