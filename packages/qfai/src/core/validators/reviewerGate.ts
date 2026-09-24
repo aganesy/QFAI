@@ -10,7 +10,7 @@
  *
  * Both findings carry a 3-part justification embedded directly in
  * the issue `message` so downstream `qfai validate` ingestion can
- * assert against BR-0004-0028's non-empty justification contract.
+ * assert against the non-empty justification requirement.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";

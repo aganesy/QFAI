@@ -454,7 +454,7 @@ export async function validateWorklogSurface(
       typeof promo.entry.frontmatter?.status === "string" ? promo.entry.frontmatter.status : "";
     const promotedToRaw = promo.entry.frontmatter?.["promoted-to"];
     const promotedToBackRef = typeof promotedToRaw === "string" ? promotedToRaw.trim() : "";
-    // Promotion satisfaction (REQ-0037 / AC-0004-0020) requires ALL
+    // Promotion satisfaction requires ALL
     // THREE of:
     //   1. A row in the DECLARED target file references this entry's
     //      id. The target is matched against per-spec
@@ -472,7 +472,7 @@ export async function validateWorklogSurface(
     const targetRows = decisionRowsByTarget.get(targetKey) ?? [];
     const referenced = entryId.length > 0 && rowsReferenceEntryId(targetRows, entryId);
     const isArchived = status === "archived";
-    // `promoted-to:` back-ref semantics per BR-0004-0019: the value
+    // `promoted-to:` back-ref semantics: the value
     // is the DR-ID (Decision Row id, e.g. `DR-3`) that was appended
     // to the target file when the decision was promoted, NOT the
     // file path. We only check that the back-ref is set; format

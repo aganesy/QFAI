@@ -47,7 +47,7 @@ export const ID_PREFIXES: IdPrefix[] = [
 const DIGIT_AHEAD = "(?=[A-Za-z0-9_-]*\\d)";
 
 /**
- * A wildcard segment written after an ID base, e.g. the `-*` of `AC-0017-*`.
+ * A wildcard segment written after an ID base, e.g. the `-*` of `AC-0007-*`.
  *
  * The loose patterns end on `\b`, and `-` is not a word character, so
  * `US-0006-*` backtracks to `US-0006` — a truncation artifact that is also the
@@ -276,7 +276,7 @@ export function extractInvalidIdOccurrences(
 }
 
 /**
- * True when `candidate` is the base of a prose wildcard such as `AC-0017-*`,
+ * True when `candidate` is the base of a prose wildcard such as `AC-0007-*`,
  * i.e. the wildcard stands in for one more numeric segment and the result is a
  * canonical ID.
  *

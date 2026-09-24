@@ -1,6 +1,5 @@
 /**
- * Reviewer-Gate finding-code justification catalog (SSOT for
- * AC-0015-0018).
+ * Reviewer-Gate finding-code justification catalog.
  *
  * The eight registered codes MUST carry a mandatory non-empty
  * `justification:` field when emitted by a Reviewer subagent.

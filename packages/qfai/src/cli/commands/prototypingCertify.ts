@@ -632,7 +632,7 @@ export async function runPrototypingCertify(
     }
   }
 
-  // ─── Per-(spec × screen) review.json presence (AC-0012-0047) ───────────
+  // ─── Per-(spec × screen) review.json presence ───────────
   //
   // Under the multi-spec schema, every spec in the cycle-0 frozen set must
   // have a `<screen>.review.json` for every declared screen at the
@@ -1296,7 +1296,7 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   // silently downgrade to legacy single-spec scope even when the operator
   // intended a multi-spec frozen scope but corrupted the JSON. certify
   // already treats a present-but-malformed `frozenSpecsCovered` as a hard
-  // error (AC-0012-0045 class (h)); show-spec must mirror that contract on
+  // error; show-spec must mirror that contract on
   // its own surface so operators / automation making recovery decisions
   // from the scope output cannot be misled. (iterate-side present-but-
   // malformed `frozenSpecsCovered` is handled separately: iterate consumes

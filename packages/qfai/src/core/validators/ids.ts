@@ -19,7 +19,7 @@ const US_DEF_RE = /^\s*\|\s*(US-\d{4}-\d{4})\s*\|/i;
 const AC_DEF_RE = /^\s*\|\s*(AC-\d{4}-\d{4})\s*\|/i;
 const BR_DEF_RE = /^\s*\|\s*(BR-\d{4}-\d{4})\s*\|/i;
 const CASE_DEF_RE = /^\s*\|\s*(CASE-\d{4}-\d{4})\s*\|/i;
-/** A heading that declares a layered item: `## AC-0013-0003: Usable-Source Preflight Stop`. */
+/** A heading that declares a layered item: `## AC-0003-0003: Usable-Source Preflight Stop`. */
 const HEADING_DEF_RE = /^#{2,6}[ \t]+((?:US|AC|BR|EX|TC)-\d{4}-\d{4})\b/;
 
 export async function validateDefinedIds(root: string, config: QfaiConfig): Promise<Issue[]> {

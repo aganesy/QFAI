@@ -23,14 +23,14 @@ fail=0
 # The regex set below is mirrored in
 #   - packages/qfai/scripts/lint-shipping.ts `src-comment` rules
 #     (pre-build, JSDoc → dist/*.d.ts path)
-#   - packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts
-#     `PATTERNS` array (smoke against `qfai init` output)
+#   - packages/qfai/tests/helpers/distributedSurfaceScan.ts
+#     pattern array (smoke against `qfai init` output)
 # Updating a regex here (e.g. tightening INTERNAL_VERSION_RE to a
 # QFAI-context pattern) requires updating both other sites in the same
 # change. The guard table in `.agents/rules/distributed-surface.md`
 # lists the layers.
 #
-# The same three regexes are applied twice per surface: once to file
+# The same forbidden classes are applied twice per surface: once to file
 # CONTENT and once to file NAMES (see the loop at the bottom). The smoke
 # test mirrors both dimensions; `lint-shipping.ts` scans `src/**` comment
 # text only, and source file names reach the distributed surface as
@@ -73,6 +73,18 @@ INTERNAL_VERSION_RE='\bv[0-9]+\.[0-9]+(\.[0-9]+)?\b|\bv1\.x\b'
 # resolves to nothing outside this repository, so a consuming project that
 # receives one has no way to look it up.
 INTERNAL_ID_RE='\bCAP-0*[1-9][0-9]+\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b|\bCHG-[0-9]+\b'
+
+# The generated sample band is 0001..0009 for four-digit segments and
+# 01..09 for AC/EX tails. Any segment outside that band is internal.
+# The short-ID suffix excludes legacy numeric composites, which the old
+# INTERNAL_ID_RE still catches for DEC/OQ. It accepts a trailing hyphen
+# only when no numeric segment follows it.
+OUTSIDE_FOUR='(0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})'
+OUTSIDE_TWO='(00|[1-9][0-9])'
+SINGLE_ID_END='(-([^0-9]|$)|[^0-9-]|$)'
+STORY_ID_RE="\b(DEC|OQ|BF|BR)-$OUTSIDE_FOUR\b$SINGLE_ID_END"
+STORY_ID_RE="$STORY_ID_RE|\bUS-($OUTSIDE_FOUR-[0-9]{4}|[0-9]{4}-$OUTSIDE_FOUR)\b"
+STORY_ID_RE="$STORY_ID_RE|\b(AC|EX)-($OUTSIDE_FOUR-[0-9]{4}-[0-9]{2}|[0-9]{4}-$OUTSIDE_FOUR-[0-9]{2}|[0-9]{4}-[0-9]{4}-$OUTSIDE_TWO)\b"
 
 # Version-class exemption for the FILE NAME pass below.
 #
@@ -188,7 +200,7 @@ fi
 for idx in "${!SCAN_PATHS[@]}"; do
   target="${SCAN_PATHS[$idx]}"
   relative_target="${SCAN_RELATIVES[$idx]}"
-  hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE" "$target" 2>/dev/null || true)
+  hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE|$STORY_ID_RE" "$target" 2>/dev/null || true)
   if [[ -n "$hits" ]]; then
     echo "FAIL: internal spec id, version marker, or trace id leaked in $target:" >&2
     echo "$hits" | head -20 >&2
@@ -215,7 +227,7 @@ for idx in "${!SCAN_PATHS[@]}"; do
     target_paths=""
   fi
   name_hits=$(printf '%s\n' "$target_paths" \
-    | grep -E "$INTERNAL_SPEC_RE|$INTERNAL_ID_RE" || true)
+    | grep -E "$INTERNAL_SPEC_RE|$INTERNAL_ID_RE|$STORY_ID_RE" || true)
   version_name_hits=$(printf '%s\n' "$target_paths" \
     | sed -E "$MIGRATION_MEMO_STAMP_SED" \
     | grep -E "$INTERNAL_VERSION_RE" || true)

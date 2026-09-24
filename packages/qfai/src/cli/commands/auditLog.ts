@@ -1,7 +1,7 @@
 /**
  * `qfai audit log` — list `.qfai/evidence/decisions/<ts>.json` records.
  *
- * AC-0015-0019: SHOULD-level CLI; lists records newest-first and
+ * Audit-log CLI: lists records newest-first and
  * supports `--scope` / `--operator` / `--clause` filters plus
  * `--format table|json` (table is the default).
  *

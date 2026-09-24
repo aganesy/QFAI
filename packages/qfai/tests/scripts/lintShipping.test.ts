@@ -19,6 +19,11 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { formatViolations, runLintShipping } from "../../scripts/lint-shipping.js";
+import {
+  STORY_ID_BOUNDARIES,
+  STORY_ID_TRAILING_HYPHEN_BOUNDARIES,
+  scanDistributedSurface,
+} from "../helpers/distributedSurfaceScan.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,6 +63,64 @@ describe("lint-shipping invariant — actual package", () => {
 });
 
 describe("lint-shipping fixture — detection rules", () => {
+  it.each(STORY_ID_BOUNDARIES)(
+    "keeps %s but flags %s in a source comment",
+    async (sample, internal) => {
+      const root = await newTempDir();
+      await mkdir(path.join(root, "src"), { recursive: true });
+      await writeFile(
+        path.join(root, "src", "guard.ts"),
+        `/**\n * ${sample}\n * ${internal}\n */\nexport const guard = true;\n`,
+        "utf-8",
+      );
+
+      expect((await scanDistributedSurface(root)).hits.map((hit) => hit.className)).toEqual([
+        "internal story id",
+      ]);
+      const { violations } = await runLintShipping(root);
+      expect(violations.filter((violation) => violation.matched.includes(sample))).toEqual([]);
+      expect(
+        violations.some(
+          (violation) => violation.line === 3 && violation.matched.includes(internal),
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it.each(STORY_ID_TRAILING_HYPHEN_BOUNDARIES)(
+    "keeps %s but flags %s at a comment line end",
+    async (sample, internal) => {
+      const root = await newTempDir();
+      await mkdir(path.join(root, "src"), { recursive: true });
+      await writeFile(
+        path.join(root, "src", "guard.ts"),
+        `// ${sample}\n// ${internal}\nexport const guard = true;\n`,
+        "utf-8",
+      );
+      expect((await scanDistributedSurface(root)).hits.map((hit) => hit.className)).toEqual([
+        "internal story id",
+      ]);
+      const { violations } = await runLintShipping(root);
+      expect(violations.map((violation) => violation.line)).toEqual([2]);
+    },
+  );
+
+  it("keeps old composite decisions and questions in their existing class only", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(
+      path.join(root, "src", "guard.ts"),
+      "/**\n * DEC-0010-0001 and OQ-0010-0001\n */\nexport const guard = true;\n",
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(violations.map((violation) => violation.pattern)).toEqual([
+      "internal-dec-id-jsdoc-leak",
+      "internal-oq-id-jsdoc-leak",
+    ]);
+  });
+
   it("detects spec-id-literal and spec-path-literal in shipped runtime YAML", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "assets/init/.qfai"), { recursive: true });

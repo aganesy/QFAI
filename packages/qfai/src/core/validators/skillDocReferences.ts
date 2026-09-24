@@ -139,7 +139,7 @@ export async function validateSkillDocReferences(
     //          Any other indented content (e.g. indented prose
     //          paragraph, indented standalone value, indented HTML
     //          comment) is rejected so the trailing block does not
-    //          silently absorb non-YAML text per BR-0004-0022.
+    //          silently absorb non-YAML text under the YAML block rule.
     //      Reject:
     //        - any line starting with `#` (markdown heading) — the
     //          strongest "not trailing" signal
