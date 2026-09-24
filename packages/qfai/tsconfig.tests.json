@@ -377,6 +377,7 @@
     "tests/unit/cliMessageLanguage.allowlist.ts",
     "tests/unit/cliMessageLanguage.test.ts",
     "tests/validators/justificationCatalogEmitters.test.ts",
+    "tests/validators/reviewerRejectedReadopt.test.ts",
     "tests/cli/dbDrift.test.ts",
     "tests/core/dbSchemaDrift.test.ts",
     "tests/integration/dbSchemaDriftEngine.test.ts",
