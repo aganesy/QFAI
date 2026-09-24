@@ -161,7 +161,11 @@ describe("BF-0004 migration acceptance boundaries", () => {
       ".qfai/spec/_policies/04_Business-Flow.md",
       "# Business Flow\n\n## Flow\n\n```mermaid\nflowchart LR\n  A --> B\n```\n",
     );
-    await put(root, ".qfai/spec/spec-0001/01_Spec.md", "# Spec\n\n- Status: active\n");
+    await put(
+      root,
+      ".qfai/spec/spec-0001/01_Spec.md",
+      "# Spec\n\n- Status: active\n\n## Scope\n\nAn order is placed from a cart.\n",
+    );
     await put(
       root,
       ".qfai/spec/spec-0001/02_User-stories.md",
@@ -190,7 +194,7 @@ describe("BF-0004 migration acceptance boundaries", () => {
     );
 
     const migrated = await step(root, 4);
-    expect([0, 3]).toContain(migrated.code);
+    expect(migrated.code).toBe(0);
     const mapFile = path.join(root, evidence, "id-map.json");
     const idMap = await readFile(mapFile, "utf8");
     const parsed = JSON.parse(idMap) as { ids: Record<string, Record<string, string>> };
