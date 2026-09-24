@@ -1052,7 +1052,7 @@ describe("BF-0004 acceptance criteria", () => {
     const source = path.join(root, ".qfai/specs/spec-0001/03_Acceptance-Criteria.md");
     const original = await readFile(source, "utf8");
     const malformed = original.replace(
-      "Given an empty order, when it is submitted, then no receipt is returned.",
+      "```gherkin\nScenario: Reject an empty order\n  Given an empty order\n  When it is submitted\n  Then no receipt is returned\n```",
       "The empty order still needs a reviewed scenario.",
     );
     expect(malformed).not.toBe(original);
@@ -1079,7 +1079,7 @@ describe("BF-0004 acceptance criteria", () => {
     const criteria = path.join(pack, "03_Acceptance-Criteria.md");
     await writeFile(criteria, (await readFile(criteria, "utf8")).split("## AC-0001-0002")[0] ?? "");
     for (const [name, omitted] of [
-      ["05_Examples.md", ["EX-0001-0002"]],
+      ["05_Examples.md", ["EX-0001-0002", "EX-0001-0003"]],
       ["04_Business-Rules.md", ["BR-0001-0002", "BR-0001-0003"]],
       ["06_Test-Cases.md", ["TC-0001-0002"]],
     ] as const) {
@@ -1090,6 +1090,14 @@ describe("BF-0004 acceptance criteria", () => {
         .join("\n");
       await writeFile(file, content);
     }
+    const cases = path.join(pack, "06_Test-Cases.md");
+    const caseContent = await readFile(cases, "utf8");
+    const caseOnly = caseContent.replace(
+      "| TC-0001-0003 | AC-0001-0001 | EX-0001-0003 |",
+      "| TC-0001-0003 | AC-0001-0001 | —            |",
+    );
+    expect(caseOnly).not.toBe(caseContent);
+    await writeFile(cases, caseOnly);
     const planPath = path.join(root, ".qfai/evidence/migration-spec-to-story/plan.yaml");
     const plan = parseYaml(await readFile(planPath, "utf8")) as {
       flows: Array<{ title: string; stories: Array<{ id: string; criteria: string[] }> }>;
