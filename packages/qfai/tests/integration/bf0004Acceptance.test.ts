@@ -370,6 +370,61 @@ describe("BF-0004 acceptance criteria", () => {
     expect(await fingerprint(root)).toBe(before);
   });
 
+  it("rejects each malformed migration plan before an ID map or tree write", async () => {
+    // QFAI:EX-0004-0003-05
+    const root = await project();
+    prepareThrough(root, 3);
+    const plan = path.join(root, ".qfai/evidence/migration-spec-to-story/plan.yaml");
+    const valid = await readFile(plan, "utf8");
+    const oldFlow = path.join(root, ".qfai/spec/_policies/04_Business-Flow.md");
+    const oldFlowContent = await readFile(oldFlow, "utf8");
+    const invalid = [
+      { name: "unclosed YAML", content: "flows: [\nrules: []\n" },
+      { name: "unknown field", content: `${valid}unexpected: true\n` },
+      { name: "duplicate YAML key", content: `${valid}rules: []\n` },
+      {
+        name: "duplicate story",
+        content:
+          "flows:\n  - title: F1\n    stories:\n      - id: US-0001-0001\n      - id: US-0001-0001\nrules: []\n",
+      },
+      {
+        name: "unknown story",
+        content: "flows:\n  - title: F1\n    stories:\n      - id: US-9999-0001\nrules: []\n",
+      },
+      {
+        name: "missing flow selector",
+        content:
+          "flows:\n  - title: F1\n    from: 'CHG-9999: Missing'\n    stories:\n      - id: US-0001-0001\nrules: []\n",
+      },
+      { name: "repeated flow selector", content: valid, duplicateHeading: true },
+      {
+        name: "absolute contract",
+        content: valid.replace("contract: api/order.yaml", "contract: /tmp/orders.yaml"),
+      },
+      {
+        name: "traversing contract",
+        content: valid.replace("contract: api/order.yaml", "contract: ../orders.yaml"),
+      },
+    ];
+    for (const scenario of invalid) {
+      await writeFile(plan, scenario.content);
+      await writeFile(
+        oldFlow,
+        scenario.duplicateHeading
+          ? `${oldFlowContent}\n## CHG-0001: Order flow\n\nDuplicate.\n`
+          : oldFlowContent,
+      );
+      const before = await fingerprint(root);
+      const result = step(root, 4);
+      expect(result.status, scenario.name).toBe(2);
+      expect(result.stderr, scenario.name).toContain("plan.yaml");
+      expect(await fingerprint(root), scenario.name).toBe(before);
+      await expect(
+        lstat(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json")),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+    }
+  });
+
   // QFAI:AC-0004-0003-02
   it("refuses a dependent step before its input exists", async () => {
     const root = await project();
