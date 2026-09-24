@@ -30,7 +30,15 @@ afterEach(async () => {
 
 function files(acRef = "AC-0001-0001-01"): Map<string, string> {
   return new Map([
+    [
+      `${spec}/02_business-flow/business-flows.md`,
+      "| BF-ID | Path |\n| --- | --- |\n| BF-0001 | business-flow-0001/ |\n",
+    ],
     [`${flow}/business-flow.md`, "# BF-0001: Develop and verify\n"],
+    [
+      `${flow}/user-stories.md`,
+      "| US-ID | Path |\n| --- | --- |\n| US-0001-0001 | user-story-0001-0001/ |\n",
+    ],
     [`${story}/01_User-story.md`, "# US-0001-0001: First story\n"],
     [
       `${story}/02_Acceptance-Criteria.md`,
