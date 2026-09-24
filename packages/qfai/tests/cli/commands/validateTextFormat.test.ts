@@ -269,7 +269,7 @@ const SYNTHETIC_ISSUES: Issue[] = [
     severity: "error",
     category: "change",
     message: "multi-line suggested action",
-    file: ".qfai/assistant/skills/qfai-verify/SKILL.md",
+    file: ".qfai/assistant/skill/qfai-verify/SKILL.md",
     suggested_action: MULTILINE_FIX.join("\n"),
     rule: "test.multiline",
   },
@@ -304,7 +304,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
         // the issue's refs, so the real line for this finding carries a
         // `refs=` slot. Dropping it here would let the example drift.
         message: "Circular reference detected: semantic.color.primary",
-        file: ".qfai/contracts/design/design-tokens.yaml",
+        file: ".qfai/spec/03_contract/design/design-tokens.yaml",
         refs: ["semantic.color.primary"],
       },
       {

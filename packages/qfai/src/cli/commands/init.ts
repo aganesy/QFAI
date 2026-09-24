@@ -2710,6 +2710,8 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   "!atdd-*.md",
   "!coverage-depth-*.md",
   "!skeleton.md",
+  "!decision/",
+  "!decision/**",
   "!decisions/",
   "!decisions/**",
   // The per-item RED/GREEN records. Every root negation this block adds needs

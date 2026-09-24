@@ -581,7 +581,7 @@ describe("parseArgs", () => {
         "qfai discussion: unknown or missing subcommand. Expected: list|use",
       );
       expect(parseArgs(["prototyping"], cwd).invalidReason).toBe(
-        "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-ui-contract",
+        "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-ui-contract|rescope",
       );
       expect(parseArgs(["guardrails"], cwd).invalidReason).toBe(
         "qfai guardrails: unknown or missing subcommand. Expected: list|extract|check",
@@ -595,7 +595,7 @@ describe("parseArgs", () => {
       const parsed = parseArgs(["prototyping", "bogusaction"], process.cwd());
       expect(parsed.invalid).toBe(true);
       expect(parsed.invalidReason).toBe(
-        'qfai prototyping: unknown subcommand "bogusaction". Expected: preflight|iterate|certify|show-ui-contract',
+        'qfai prototyping: unknown subcommand "bogusaction". Expected: preflight|iterate|certify|show-ui-contract|rescope',
       );
     });
 

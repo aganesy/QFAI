@@ -78,11 +78,14 @@ describe("cli root discovery", () => {
         expect(process.exitCode).toBe(0);
 
         const validatePath = path.join(root, ".qfai", "report", "validate.json");
-        const parsed = JSON.parse(await readFile(validatePath, "utf-8")) as { counts: unknown };
+        const parsed = JSON.parse(await readFile(validatePath, "utf-8")) as {
+          counts: { info: number; warning: number; error: number };
+          issues: unknown[];
+        };
         const seededPath = path.join(root, ".qfai", "report", "validate.seeded.json");
         await writeFile(
           seededPath,
-          `${JSON.stringify({ ...parsed, counts: { info: 0, warning: 0, error: 1 } }, null, 2)}\n`,
+          `${JSON.stringify({ ...parsed, issues: [...parsed.issues, { code: "QFAI-STORY-006", severity: "error", category: "canonical", message: "Missing BF test" }], counts: { ...parsed.counts, error: parsed.counts.error + 1 } }, null, 2)}\n`,
           "utf-8",
         );
 
@@ -401,7 +404,7 @@ describe("cli usage errors", () => {
       {
         argv: ["prototyping", "bogusaction"],
         expected:
-          'qfai prototyping: unknown subcommand "bogusaction". Expected: preflight|iterate|certify|show-spec',
+          'qfai prototyping: unknown subcommand "bogusaction". Expected: preflight|iterate|certify|show-ui-contract|rescope',
       },
     ];
     for (const { argv, expected } of cases) {

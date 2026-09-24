@@ -87,7 +87,7 @@ describe("qfai --help exit-code section", () => {
     expect(section).toMatch(
       new RegExp(`guardrails[\\s\\S]*?${EXIT_CODES.findings} = check found a violation`),
     );
-    // report / show-spec exit 2 on a missing or unreadable input file — the
+    // report / show-ui-contract exit 2 on missing or malformed input — the
     // catch-all "1 = a usage error" row would misreport them.
     expect(section).toMatch(
       new RegExp(
@@ -96,7 +96,7 @@ describe("qfai --help exit-code section", () => {
     );
     expect(section).toMatch(
       new RegExp(
-        `prototyping show-spec\\s+${EXIT_CODES.ok} = success,[\\s\\S]*?${EXIT_CODES.inputError} = prototyping.json`,
+        `prototyping show-ui-contract\\s+${EXIT_CODES.ok} = success,[\\s\\S]*?${EXIT_CODES.inputError} = prototyping.json`,
       ),
     );
     expect(section).toContain("--check found a certificate digest or gate mismatch");
@@ -202,6 +202,9 @@ describe("qfai --help exit-code section", () => {
     tempDirs.push(dir);
     const inputPath = path.join(dir, "validate.json");
     await writeFile(inputPath, "{ not json", "utf-8");
+    const specsDir = path.join(dir, ".qfai", "spec");
+    await mkdir(specsDir, { recursive: true });
+    await writeFile(path.join(specsDir, "decisions.md"), "# Decisions\n", "utf-8");
 
     // The throw is what cli/index.ts maps to exit 1; the row now names it.
     await expect(run(["report", "--root", dir, "--in", inputPath], dir)).rejects.toBeInstanceOf(
@@ -330,27 +333,23 @@ describe("qfai --help exit-code section", () => {
     }
   });
 
-  it("documents show-spec's 1 for a spec-resolution I/O error, not only the 0 / 2 pair", async () => {
+  it("documents show-ui-contract's runtime and input error codes", async () => {
     const help = await captureHelp();
     const section = help.slice(help.indexOf("Exit codes:"));
-    const showSpecRow = section.slice(
-      section.indexOf("prototyping show-spec"),
-      section.indexOf("その他のコマンド"),
+    const showUiContractRow = section.slice(
+      section.indexOf("prototyping show-ui-contract"),
+      section.indexOf("atdd scaffold"),
     );
 
-    // resolveSurfaceUnion() re-throws every non-ENOENT spec-body read error
-    // rather than classifying the spec as non-UI, so 1 is reachable with a
-    // perfectly valid prototyping.json.
-    expect(showSpecRow).toMatch(new RegExp(`${EXIT_CODES.findings} = a runtime error`));
-    expect(showSpecRow).toContain("an I/O exception while resolving the spec");
-    // Over-correction pin: the missing / corrupt prototyping.json stays 2.
-    expect(showSpecRow).toMatch(
-      new RegExp(`${EXIT_CODES.inputError} = prototyping.json is missing or corrupt`),
+    expect(showUiContractRow).toMatch(new RegExp(`${EXIT_CODES.findings} = a runtime error`));
+    expect(showUiContractRow).toContain("an I/O exception while reading UI contracts");
+    expect(showUiContractRow).toMatch(
+      new RegExp(`${EXIT_CODES.inputError} = prototyping.json is missing, legacy, or malformed`),
     );
   });
 
-  it("exits 1 when show-spec hits a non-ENOENT spec read failure", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "qfai-showspec-io-"));
+  it("exits 2 when show-ui-contract receives legacy prototyping state", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "qfai-show-ui-contract-legacy-"));
     tempDirs.push(dir);
     const protoJson = path.join(dir, ".qfai", "evidence", "prototyping", "prototyping.json");
     await mkdir(path.dirname(protoJson), { recursive: true });
@@ -359,17 +358,14 @@ describe("qfai --help exit-code section", () => {
       `${JSON.stringify({ frozenSpecsCovered: ["spec-0001"], specsCovered: ["spec-0001"] }, null, 2)}\n`,
       "utf-8",
     );
-    // A directory named 01_Spec.md makes readFile fail with EISDIR — the
-    // non-ENOENT class resolveSurfaceUnion re-throws. Same reason as above:
-    // chmod-based unreadability is a no-op for uid 0.
-    await mkdir(path.join(dir, ".qfai", "specs", "spec-0001", "01_Spec.md"), { recursive: true });
-
     const spy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
     try {
-      await expect(run(["prototyping", "show-spec", "--root", dir], dir)).rejects.toBeInstanceOf(
-        Error,
-      );
+      await run(["prototyping", "show-ui-contract", "--root", dir], dir);
+      expect(process.exitCode).toBe(EXIT_CODES.inputError);
     } finally {
+      process.exitCode = previousExitCode;
       spy.mockRestore();
     }
   });
