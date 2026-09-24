@@ -1,6 +1,6 @@
 # Move spec packs to the story tree
 
-QFAI 2.0.0 uses `.qfai/spec/` with policy, business-flow and contract layers.
+QFAI 2.x uses `.qfai/spec/` with policy, business-flow and contract layers.
 QFAI 2.x does not read the old spec-pack layout. A project that keeps spec packs
 must stay on a pinned 1.x release. To upgrade, migrate the project before using
 the 2.x validation and authoring workflow.
@@ -10,7 +10,7 @@ the 2.x validation and authoring workflow.
 1. Save the current project state in version control. Inspect custom
    `paths.specsDir` and `paths.contractsDir` in `qfai.config.yaml`; the scripts
    honor configured paths and may write there even when outside `.qfai/`.
-2. Install `qfai@2.0.0` as a local project dependency with the project's
+2. Install a QFAI 2.x release as a local project dependency with the project's
    package manager. A copy available only through `npx` is insufficient.
    Complete the launcher preflight in `.qfai/assistant/rule/shared-skill-operating-baseline.md`:
    confirm the local binary or the Plug'n'Play package and loader before invoking the CLI.
