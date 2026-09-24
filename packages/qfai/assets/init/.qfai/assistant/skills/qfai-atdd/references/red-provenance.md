@@ -151,9 +151,22 @@ gate condition where it is defined below.
       **Record the manifest, not only the hash.** `RED test manifest` lists the
       repo-relative path of every file that went into it, sorted, one per line —
       and the hash is taken over `path + NUL + kind + NUL + mode + NUL + blob hash`
-      in that order, the same shape the revision manifest uses. `kind` and `mode`
-      are in it for the reason they are in that one, and more so here: after
-      Phase Green the original `RED revision` cannot be recomputed, so this hash
+      in that order. `kind` is `file` or `symlink`, and every part but `mode` is
+      written the way the revision manifest writes it.
+
+      **`mode` is git's six-digit tree mode, not the revision manifest's four
+      octal digits**: `120000` for a symlink, `100755` for a file with an
+      execute bit set, and `100644` for any other file. The consumer and
+      `npx qfai validate` recompute this hash on their own checkouts, where the
+      other permission bits follow that machine's umask — a `0644` here is
+      `0664` there and `0666` on Windows — so a record carrying them never
+      recomputes anywhere else, and the gate refuses evidence that was complete.
+      The revision manifest is compared only on the tree it was taken from, so
+      it can afford the full bits.
+
+      `kind` and `mode` are in it for the reason they are in that one, and more
+      so here: after Phase Green the original `RED revision` cannot be
+      recomputed, so this hash
       is the only thing still watching the test-owned artifacts — without them a
       `chmod +x` on an acceptance script, or a file swapped for a symlink with
       the same payload, changes how the test runs and moves nothing. Naming the _kinds_ of file is not enough:

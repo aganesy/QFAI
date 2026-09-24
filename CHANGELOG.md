@@ -52,6 +52,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   one ledger row whose test case moved, `TDD-0001`, is reopened: its test
   never asserted that init leaves the artifact directories out.
 
+- **The `/qfai-atdd` skill spells the RED test hash's `mode` the way the gate
+  hashes it.** The skill said the hash took the revision manifest's shape,
+  whose `mode` is four octal digits. The gate hashes git's tree mode —
+  `100644`, `100755` or `120000` — so a hash computed as the skill said never
+  matched, and `validate` refused evidence that was complete. Git's form is
+  the intended one: the gate recomputes the hash on whichever checkout runs
+  it, and every permission bit but the execute bit follows that checkout's
+  umask. The skill now names the three values, and the revision manifest
+  keeps its own four digits.
+
 ## [1.12.3] - 2026-09-24
 
 ### Fixed
