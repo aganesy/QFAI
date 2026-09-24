@@ -83,8 +83,8 @@ const PROFILE_INDEPENDENT_CODES: ReadonlyMap<string, Exemption> = new Map([
   // by it — `--spec` resolution precedes the group dispatch, and provenance
   // survives the short-circuit so the operator still learns which qfai ran.
   ...raisedBy("src/core/validate.ts", {
-    "QFAI-SCOPE-001": "the `--spec` value's shape, resolved before any group is chosen",
-    "QFAI-SCOPE-002": "as QFAI-SCOPE-001, for a spec directory that does not exist",
+    "QFAI-FLOW-001": "the `--flow` value is resolved before a profile is dispatched",
+    "QFAI-LAYOUT-001": "old spec-pack layout is rejected before a profile is dispatched",
     "QFAI-TOOL-001": "which copy of qfai is running — a property of the invocation, not of a gate",
     "QFAI-TOOL-002": "as QFAI-TOOL-001",
   }),
@@ -111,7 +111,6 @@ const PROFILE_INDEPENDENT_CODES: ReadonlyMap<string, Exemption> = new Map([
     "QFAI-WAIVER-002": "as QFAI-WAIVER-001",
     "QFAI-WAIVER-003": "as QFAI-WAIVER-001",
     "QFAI-WAIVER-004": "as QFAI-WAIVER-001",
-    "QFAI-WAIVER-005": "as QFAI-WAIVER-001",
   }),
   ...raisedBy("src/core/phasePolicy.ts", {
     "QFAI-VALIDATE-017":
@@ -280,6 +279,16 @@ interface DualEmitter {
 }
 
 const DUAL_EMITTED_CODES: ReadonlyMap<string, DualEmitter> = new Map([
+  [
+    "QFAI-FLOW-001",
+    {
+      modules: ["src/core/validate.ts", "src/core/validators/mermaidScreenFlow.ts"],
+      treatment:
+        "The invocation-level `--flow` check runs before every profile. Its code is therefore " +
+        "profile-independent, even though the prototyping validator also emits it for a " +
+        "screen-flow defect. PROFILE_INDEPENDENT_CODES records the invocation emitter.",
+    },
+  ],
   [
     "R-AUTOPILOT-POLICY-MISSING",
     {

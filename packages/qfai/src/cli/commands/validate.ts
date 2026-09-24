@@ -450,20 +450,13 @@ export const GATE_GROUP_FAMILIES = {
   ],
   "grilling-flow": ["QFAI-GRILL-001"],
   "story-contract-index": ["QFAI-CONTRACT-034"],
-  "story-atdd-obligations": [
-    "QFAI-STORY-006 (BF/AC)",
-    "QFAI-STORY-008 (BF/AC)",
-    "QFAI-STORY-009 (BF/AC)",
+  "story-test-obligations": [
+    "QFAI-STORY-006",
+    "QFAI-STORY-007",
+    "QFAI-STORY-008",
+    "QFAI-STORY-009",
     "QFAI-SCAN-002",
   ],
-  "story-tdd-obligations": [
-    "QFAI-STORY-006 (EX)",
-    "QFAI-STORY-008 (EX)",
-    "QFAI-STORY-009 (EX)",
-    "QFAI-SCAN-002",
-  ],
-  "story-atdd-placement": ["QFAI-STORY-007 (BF/AC)"],
-  "story-tdd-placement": ["QFAI-STORY-007 (EX)"],
   "story-atdd-depth": ["QFAI-ATDD-131", "QFAI-ATDD-132", "QFAI-ATDD-133"],
   sdd: [
     "QFAI-AUTOPILOT-*",
@@ -527,7 +520,8 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-UIE-*",
     "QFAI-DT-*",
     "QFAI-MOCK-*",
-    "QFAI-FLOW-*",
+    "QFAI-FLOW-002",
+    "QFAI-FLOW-004",
     "QFAI-BPAP-*",
     "QFAI-CONSISTENCY-*",
     "QFAI-AGENT-*",
@@ -602,16 +596,9 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "review-artifacts",
   ],
   prototyping: PROTOTYPING_GATE_GROUPS,
-  atdd: [
-    "story-atdd-obligations",
-    "story-atdd-placement",
-    "story-atdd-depth",
-    "atdd-scaffold",
-    "test-stubs",
-  ],
+  atdd: ["story-test-obligations", "story-atdd-depth", "atdd-scaffold", "test-stubs"],
   tdd: [
-    "story-tdd-obligations",
-    "story-tdd-placement",
+    "story-test-obligations",
     "test-stubs",
     "drift",
     "contracts",
@@ -1205,9 +1192,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-STORY-003": "The decisions and open-questions tables have valid records.",
   "QFAI-STORY-004": "Each story has acceptance criteria and examples with valid references.",
   "QFAI-STORY-005": "Every business rule and contract reference resolves.",
-  "QFAI-STORY-006": "Each BF, AC, and EX obligation has a selected test annotation.",
-  "QFAI-STORY-007": "BF, AC, and EX annotations occur in their required test layers.",
-  "QFAI-STORY-008": "Every BF, AC, and EX test annotation names a declared story-tree ID.",
+  "QFAI-STORY-006":
+    "The selected profile's story obligations have test annotations: BF and AC in ATDD, EX in TDD.",
+  "QFAI-STORY-007":
+    "The selected profile checks its story annotations in the required test layers: BF and AC in ATDD, EX in TDD.",
+  "QFAI-STORY-008":
+    "The selected profile's BF, AC, or EX test annotations name declared story-tree IDs.",
   "QFAI-STORY-009":
     "Each test exception cites a declared BF, AC, or EX ID and a decision row in force.",
   "QFAI-STORY-010":
@@ -1575,6 +1565,36 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
  * values that failed the check.
  */
 export const ISSUE_FIX_BY_CODE: Record<string, string> = {
+  "QFAI-ATDD-131":
+    "Create the Coverage Depth Matrix for the named business flow under .qfai/evidence/.",
+  "QFAI-ATDD-132": "Track the named coverage matrix and ATDD evidence file in Git.",
+  "QFAI-ATDD-133":
+    "Repair the named matrix rows and six coverage axes, then make its counts match the linked ATDD evidence.",
+  "QFAI-CONTRACT-034":
+    "Correct the named contract index row or add its missing contract file, then rerun validate.",
+  "QFAI-DRIFT-001":
+    "Restore the protected file or record an in-force change request authorizing the named change.",
+  "QFAI-FLOW-001": "Use an existing BF-NNNN ID for --flow, or create the flow before selecting it.",
+  "QFAI-LAYOUT-001":
+    "Run qfai migration-spec-to-story for the old spec pack before validating the story tree.",
+  "QFAI-SCAN-002":
+    "Fix the unreadable test path or reduce the configured test globs so the selected tests can all be scanned.",
+  "QFAI-SPACK-102":
+    "Record the user's decision in the open-question row, or leave it open until the decision is made.",
+  "QFAI-STORY-001": "Create the required policy or contract file named in the finding.",
+  "QFAI-STORY-002": "Correct the named story-tree ID or directory so the ID and path agree.",
+  "QFAI-STORY-003": "Repair the named decisions or open-questions row and its required fields.",
+  "QFAI-STORY-004": "Add the missing AC or EX record and repair the cited story reference.",
+  "QFAI-STORY-005": "Define the missing business rule or contract, or correct the cited reference.",
+  "QFAI-STORY-006":
+    "Add a real test in the required layer with a QFAI annotation for the named BF, AC, or EX.",
+  "QFAI-STORY-007":
+    "Move the named test annotation to its required E2E, integration, API, or unit layer.",
+  "QFAI-STORY-008":
+    "Correct the annotation to a declared BF, AC, or EX ID, or remove a stale annotation.",
+  "QFAI-STORY-010":
+    "Restore the protected row or record an in-force change request for the named file change.",
+  "QFAI-STORY-011": "Add a Mermaid flowchart or sequence diagram to the named business-flow file.",
   // The finding already names the offending key and the release the window
   // closes at; this is the catalog half, which `qfai report` renders for
   // codes whose `issue(...)` sites carry no `suggested_action` of their own.

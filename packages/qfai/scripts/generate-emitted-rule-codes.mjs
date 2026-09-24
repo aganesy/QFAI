@@ -692,6 +692,10 @@ function collectStringConstants(sources) {
  */
 async function collectEmittedRuleCodes(srcDir, outputFile) {
   const skip = path.resolve(outputFile);
+  const activeFiles =
+    path.resolve(srcDir) === path.resolve(DEFAULT_SRC_DIR)
+      ? await activeValidateModules(srcDir)
+      : null;
   const sources = [];
   /**
    * Sources excluded because their findings land after `applyWaivers`. Scanned
@@ -702,6 +706,9 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
   const postWaiver = [];
   for (const file of await listTypeScriptFiles(srcDir)) {
     if (path.resolve(file) === skip) {
+      continue;
+    }
+    if (activeFiles !== null && !activeFiles.has(path.resolve(file))) {
       continue;
     }
     if (isPostWaiverSource(file)) {
@@ -739,8 +746,15 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
   const aliasSet = new Set();
   for (const source of sources) {
     const resolvable = { ...source, properties: collectPropertyValues(source, constants) };
-    scanFactoryCalls(resolvable, factories, constants, emissions, aliasSet);
-    scanIssueObjectLiterals(resolvable, constants, emissions);
+    const found = new Map();
+    scanFactoryCalls(resolvable, factories, constants, found, aliasSet);
+    scanIssueObjectLiterals(resolvable, constants, found);
+    for (const [code, entry] of found) {
+      if (activeFiles !== null && isRetiredSpecPackEmission(srcDir, source.file, code)) continue;
+      const combined = emissions.get(code) ?? { severities: new Set() };
+      entry.severities.forEach((severity) => combined.severities.add(severity));
+      emissions.set(code, combined);
+    }
   }
 
   // The post-waiver codes, resolved the same way and against the same
@@ -768,6 +782,97 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
     .filter((alias) => !emissions.has(alias))
     .sort((a, b) => a.localeCompare(b, "en"));
   return { codes, errorOnly, aliases, postWaiverCodes };
+}
+
+/**
+ * Follow the validate entry points instead of treating every retained legacy
+ * validator as a live waiver rule. The validator barrel exports migration and
+ * spec-pack readers for other commands; only bindings imported by validate
+ * can contribute to its finding stream. A new direct import is followed
+ * automatically, so the generated registry remains fail-closed on additions.
+ */
+async function activeValidateModules(srcDir) {
+  const entry = path.join(srcDir, "core", "validate.ts");
+  const cliEntry = path.join(srcDir, "cli", "commands", "validate.ts");
+  const barrel = path.join(srcDir, "core", "validators", "index.ts");
+  const entryText = await readFile(entry, "utf-8");
+  // These functions remain exported for migration and artifact readers, but
+  // `validate` no longer dispatches them. If a profile adopts one again, stop
+  // generation until its rule family has an honest profile owner.
+  for (const name of [
+    "validateLayerCoverage",
+    "validateTraceability",
+    "validateContractReferences",
+  ]) {
+    if (new RegExp(`\\b${name}\\s*\\(`).test(entryText)) {
+      throw new Error(`retired spec-pack validator ${name} is dispatched by validate`);
+    }
+  }
+  const barrelImport = /import\s*\{([^}]+)\}\s*from\s*["']\.\/validators\/index\.js["']/g;
+  const selected = new Set();
+  for (const match of entryText.matchAll(barrelImport)) {
+    for (const name of match[1].split(",")) {
+      const binding = name
+        .trim()
+        .replace(/^type\s+/, "")
+        .split(/\s+as\s+/)[0];
+      if (binding) selected.add(binding);
+    }
+  }
+  const visited = new Set();
+  const queue = [entry, cliEntry];
+  while (queue.length > 0) {
+    const file = path.resolve(queue.pop());
+    if (visited.has(file)) continue;
+    visited.add(file);
+    let raw;
+    try {
+      raw = await readFile(file, "utf-8");
+    } catch (error) {
+      throw new Error(`failed to read active validate module ${file}: ${toMessage(error)}`, {
+        cause: error,
+      });
+    }
+    const statement = /\b(?:import|export)\s+([\s\S]*?)\s+from\s+["'](\.[^"']+)["'];/g;
+    for (const match of raw.matchAll(statement)) {
+      const target = path.resolve(path.dirname(file), match[2].replace(/\.js$/, ".ts"));
+      if (!target.startsWith(path.resolve(srcDir) + path.sep)) continue;
+      if (file === barrel) {
+        const named = /\{([^}]+)\}/.exec(match[1]);
+        if (
+          named &&
+          !named[1].split(",").some((name) => {
+            const exported = name
+              .trim()
+              .split(/\s+as\s+/)
+              .at(-1);
+            return selected.has(exported);
+          })
+        )
+          continue;
+      }
+      queue.push(target);
+    }
+    for (const match of raw.matchAll(/\bimport\(\s*["'](\.[^"']+)["']\s*\)/g)) {
+      queue.push(path.resolve(path.dirname(file), match[1].replace(/\.js$/, ".ts")));
+    }
+  }
+  return visited;
+}
+
+/** Rule emissions retained for migration helpers but absent from validate. */
+function isRetiredSpecPackEmission(srcDir, file, code) {
+  const relative = path.relative(srcDir, file).split(path.sep).join("/");
+  if (relative === "core/validators/layerCoverage.ts") {
+    return /^QFAI-(?:COV|PLAN)-/.test(code);
+  }
+  if (relative === "core/validators/traceability.ts") {
+    return /^QFAI-TRACE-/.test(code);
+  }
+  if (relative === "core/validators/contractReferences.ts") {
+    return /^QFAI-CONTRACT-(?:030|032|033|035|043)$/.test(code);
+  }
+  return false;
 }
 
 /**
