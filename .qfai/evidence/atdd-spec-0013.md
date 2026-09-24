@@ -512,7 +512,9 @@ case reads no other test-owned file.
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: e43767b20cdce9f1726f467c59b17e75ffb27d11
+- Refactor verify revision: 980a2d71c34a7a3d9353466403b983a8cc7f193e
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt e43767b20+mutation address matches working-tree+82e3960a…; the row's selector fails as an assertion at :92:27 via :99:5; RED test hash recomputes; mutation stays inside REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES; GREEN 1 passed and whole-file refactor verify 3/3 at 980a2d71c
 
 ### TDD-0045
 
@@ -582,14 +584,16 @@ packages/qfai/tests/integration/spec0013SideArtifactPreflight.test.ts
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: e43767b20cdce9f1726f467c59b17e75ffb27d11
+- Refactor verify revision: 980a2d71c34a7a3d9353466403b983a8cc7f193e
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt e43767b20+mutation address matches working-tree+e1ea19be…; both selector entries fail as assertions on one tree (:92:27 via :107:5 and :122:5); RED test hash recomputes; mutation stays inside resolveStoryWorkshopGaps; GREEN 1 passed per entry and whole-file refactor verify 3/3 at 980a2d71c
 
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
-Totals: ✅ 66 / ⚠️ 116 / ❌ 312, with 7 not applicable, across 501 scored cells —
-441 matrix depth cells (49 rows × 9 columns) and 60 business rule cells
-(20 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
+Totals: ✅ 73 / ⚠️ 121 / ❌ 321, with 7 not applicable, across 522 scored cells —
+459 matrix depth cells (51 rows × 9 columns) and 63 business rule cells
+(21 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
 
 ## Work Orders Summary

@@ -3,11 +3,11 @@
 ## Scope
 
 This matrix scores every active obligation this pack declares: the **14 user stories** of
-`02_User-stories.md` (`US-0013-0001` … `US-0013-0014`) and the **35 test cases** of
-`06_Test-Cases.md` (`TC-0013-0001` … `TC-0013-0035`, one `## TC-0013-NNNN:` heading each). Both sets
+`02_User-stories.md` (`US-0013-0001` … `US-0013-0014`) and the **37 test cases** of
+`06_Test-Cases.md` (`TC-0013-0001` … `TC-0013-0037`, one `## TC-0013-NNNN:` heading each). Both sets
 are read from the pack in full, not from the rows of `.qfai/specs/spec-0013/tdd/test-list.md`. The
-business rule table below carries all **20** `BR-0013-*` headings of `04_Business-Rules.md`. None
-carries a status retiring it, so all twenty are active and all twenty own a row.
+business rule table below carries all **21** `BR-0013-*` headings of `04_Business-Rules.md`. None
+carries a status retiring it, so all twenty-one are active and all twenty-one own a row.
 
 `Status` is a row verdict, not a mark, and is excluded from every total below. The scored cells are
 the nine depth columns of the matrix and the `Positive case` / `Negative case` /
@@ -34,15 +34,15 @@ existing somewhere in the repository is not coverage here. Ownership is read in 
 The two steps do not overlap: the first turns on an annotation pointing elsewhere, the second on
 there being no annotation to point anywhere. Neither admits a case that another spec owns.
 
-**Twenty-three of the forty-nine obligations are discharged by nothing, or by a test about something
+**Twenty-three of the fifty-one obligations are discharged by nothing, or by a test about something
 else.** Ten have no test at all: `US-0013-0001`, `-0002`, `-0004`, `-0005`, `-0006`, `-0007`,
 `-0009`, `-0010`, and `TC-0013-0023`, `-0024`. Five more are discharged by substring
 assertions over the shipped `qfai-sdd/SKILL.md` that carry none of the obligation they are annotated
 to. Two are self-referential coverage placeholders whose annotated `describe` tests the diff
-detector. Those seventeen rows carry 153 of the matrix's 286 `❌` cells between them. Six further
+detector. Those seventeen rows carry 153 of the matrix's 295 `❌` cells between them. Six further
 wording rows carry another 45.
 
-The remaining twenty-six rows are scored on their merits and range widely. `US-0013-0014`,
+The remaining twenty-eight rows are scored on their merits and range widely. `US-0013-0014`,
 `TC-0013-0035`, `TC-0013-0033` and `TC-0013-0026` are the strongest work in the pack: a closed-schema
 rejection suite naming the offending field and item in every message, a ceiling exercised on both
 sides with the SUT's own constant imported into the assertion, and a lane refusal required to name the
@@ -55,9 +55,9 @@ spec-0013 annotation anywhere. `US-0013-0011` and `TC-0013-0025` are narrow, and
 records the disagreement. A fifth, `US-0013-0003`, is covered by tests that fix its direction while
 contradicting its own acceptance criterion. See Findings 1, 2, 3 and 8.
 
-Section "Every `❌` cell, named" accounts for all 312 of them in named groups whose coordinates are
+Section "Every `❌` cell, named" accounts for all 321 of them in named groups whose coordinates are
 fully enumerated, so that "one justification per `❌`" is checkable rather than asserted, and section
-"Every `⚠️` cell, named" does the same for all 116 partial scores, which the PASS criterion also
+"Every `⚠️` cell, named" does the same for all 121 partial scores, which the PASS criterion also
 requires a rationale for.
 
 ## What was measured, and how
@@ -401,41 +401,44 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | TC-0013-0033 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ⚠️             | ❌                | ⚠️            | ✅              | ❌     |
 | TC-0013-0034 | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ |
 | TC-0013-0035 | ✅ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ❌ | ⚠️ | ✅ | ⚠️ |
+| TC-0013-0036 | ⚠️                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ✅              | ⚠️     |
+| TC-0013-0037 | ✅                     | ✅          | ✅         | ❌         | ❌              | ⚠️             | ❌                | ⚠️            | ✅              | ⚠️     |
 
-Totals across the nine scored depth columns, 441 cells (49 rows × 9): **✅ 53 / ⚠️ 102 / ❌ 286**.
+Totals across the nine scored depth columns, 459 cells (51 rows × 9): **✅ 60 / ⚠️ 104 / ❌ 295**.
 
 `Status` is the row verdict and is not a scored cell, so it is excluded from that total and from the
-grand total at the end. Its distribution across the 49 rows, for reading only, is ✅ 0 / ⚠️ 18 /
-❌ 31. No row reaches `Status = ✅`; every row is capped by the carrier-only condition described
-above.
+grand total at the end. Its distribution across the 51 rows, for reading only, is ✅ 0 / ⚠️ 20 /
+❌ 31. No row reaches `Status = ✅`. The first forty-nine rows are capped by the carrier-only
+condition described above; `TC-0013-0036` and `TC-0013-0037` are held at `⚠️` by their own `❌`
+cells.
 
-Per scored depth column, 49 cells each:
+Per scored depth column, 51 cells each:
 
 | Column                 | ✅  | ⚠️  | ❌  |
 | ---------------------- | --- | --- | --- |
-| Equivalence partitions | 13  | 14  | 22  |
-| Normal path | 19 | 11 | 19 |
-| Error path | 9 | 6 | 34 |
-| Edge cases             | 2   | 14  | 33  |
-| Boundary values        | 1   | 11  | 37  |
-| Special values         | 1   | 8   | 40  |
-| State transitions      | 1   | 0   | 48  |
-| Combinatorial          | 0   | 18  | 31  |
-| Oracle strength        | 8   | 19  | 22  |
+| Equivalence partitions | 14  | 15  | 22  |
+| Normal path | 21 | 11 | 19 |
+| Error path | 10 | 6 | 35 |
+| Edge cases             | 2   | 14  | 35  |
+| Boundary values        | 1   | 11  | 39  |
+| Special values         | 1   | 9   | 41  |
+| State transitions      | 1   | 0   | 50  |
+| Combinatorial          | 0   | 19  | 32  |
+| Oracle strength        | 10  | 19  | 22  |
 
-The shape of that table is the pack's central fact: nineteen rows have a passing normal path, one
+The shape of that table is the pack's central fact: twenty-one rows have a passing normal path, one
 row in the whole pack observes a state transition, one row exercises a boundary in both directions,
 and no row reaches `✅` on combinatorial coverage. Coverage here is wide at the happy path and thin
 everywhere the checklist asks for depth.
 
 ### Business rule coverage
 
-One row per active `BR-0013-*`. All twenty headings in `04_Business-Rules.md` are active, so none is
-omitted.
+One row per active `BR-0013-*`. All twenty-one headings in `04_Business-Rules.md` are active, so
+none is omitted.
 
 `Covering TC` is derived from the `BR-Ref` of the example each test case cites — that is, from
 `06_Test-Cases.md#EX-Ref` joined to `05_Examples.md#BR-Ref`. That route is stated by the pack itself
-and is exactly one-to-one: each of the twenty `BR-0013-*` owns one `EX-0013-*`, and every `EX-0013-*`
+and is exactly one-to-one: each of the twenty-one `BR-0013-*` owns one `EX-0013-*`, and every `EX-0013-*`
 is cited by at least one `TC-0013-*`. The other derivation route, each rule's own `AC-Refs`, is
 **broken for five of the twenty rules** and is not used here; see Findings 7.
 
@@ -461,17 +464,18 @@ is cited by at least one `TC-0013-*`. The other derivation route, each rule's ow
 | BR-0013-0018 | ⚠️            | ✅            | ❌                   | TC-0013-0030, TC-0013-0031                      | ❌     |
 | BR-0013-0019 | ⚠️            | ⚠️            | ❌                   | TC-0013-0032, TC-0013-0033                      | ❌     |
 | BR-0013-0020 | ✅            | ✅            | ⚠️                   | TC-0013-0034, TC-0013-0035                      | ⚠️     |
+| BR-0013-0021 | ⚠️            | ✅            | ⚠️                   | TC-0013-0036, TC-0013-0037                      | ⚠️     |
 
-Totals across the three scored columns, 60 cells: **✅ 12 / ⚠️ 15 / n/a 7 / ❌ 26**.
+Totals across the three scored columns, 63 cells: **✅ 13 / ⚠️ 17 / n/a 7 / ❌ 26**.
 
-`Status` here is likewise a row verdict and is not counted. Its distribution across the 20 rows is
-✅ 0 / ⚠️ 5 / ❌ 15.
+`Status` here is likewise a row verdict and is not counted. Its distribution across the 21 rows is
+✅ 0 / ⚠️ 6 / ❌ 15.
 
 `n/a` is used seven times in the `Conditional branches` column, for `BR-0013-0001`, `-0004`, `-0006`,
 `-0007`, `-0008`, `-0009` and `-0011`. Each states its rule unconditionally — "MUST follow",
 "MUST happen after", "MUST include", "is SSOT", "MUST include a `Type` column", "MUST agree", "MUST be
 exported … AND MUST be imported" — so there is no branch to cover. It is not used anywhere an
-obligation exists and is unmet. The remaining thirteen rules each state at least one condition and
+obligation exists and is unmet. The remaining fourteen rules each state at least one condition and
 are scored.
 
 `BR-0013-0019` was in that list and is not unconditional. "The recommended band is 3..7" names two
@@ -484,9 +488,9 @@ when the reason is stated. No row reaches `✅`.
 
 ## Every ❌ cell, named
 
-The matrix carries **286** `❌` scored cells and the business rule table carries **26** — **312 in
-all**. They are accounted for below in seven groups. Every group names every coordinate it covers
-and states its count, and the seven counts sum to 312:
+The matrix carries **295** `❌` scored cells and the business rule table carries **26** — **321 in
+all**. They are accounted for below in eight groups. Every group names every coordinate it covers
+and states its count, and the eight counts sum to 321:
 
 | Group                                                             | Cells   |
 | ----------------------------------------------------------------- | ------- |
@@ -497,7 +501,8 @@ and states its count, and the seven counts sum to 312:
 | 5. Remaining scored cells of the twenty-six tested rows | 86 |
 | 6. Business rule scored columns | 26 |
 | 7. Two story cells credited to a case bound elsewhere             | 2       |
-| **Total** | **312** |
+| 8. The two side-artifact preflight rows                           | 9       |
+| **Total** | **321** |
 
 ### Group 1 — ten obligations with no test at all (90 cells)
 
@@ -970,10 +975,47 @@ obligation, and a mark is the second claim.
   window, error at close. `validateSurfaceTypeDrift` hard-codes `error` with no window logic at all,
   so there is no branch in the product for a case to take.
 
+### Group 8 — the 9 ❌ cells of the two side-artifact preflight rows
+
+Coordinates: `TC-0013-0036` × `Error path`, `Edge cases`, `Boundary values`, `Special values`,
+`State transitions`, `Combinatorial`; `TC-0013-0037` × `Edge cases`, `Boundary values`,
+`State transitions`. 6 + 3 = **9**.
+
+Both rows carry annotated cases in
+`tests/integration/spec0013SideArtifactPreflight.test.ts`, so step 2 of "What credits a cell" does
+not reach the unannotated side-artifact cases in `tests/core/sddPreflight.test.ts`. Only the three
+annotated cases are scored.
+
+- `TC-0013-0036` × `Error path` — the failure direction belongs to `TC-0013-0037`. Within this row
+  nothing fails.
+- `TC-0013-0036` × `Edge cases` — the row's input is an absent file. No case supplies the forms of
+  absence a presence check can misread: a directory named `prototyping.yaml`, or a link to nothing.
+- `TC-0013-0036` × `Boundary values` — the required markdown is written well above the minimum
+  content check. No case places it at that threshold, so the ready verdict is never shown to hold at
+  the edge of completeness.
+- `TC-0013-0036` × `Special values` — no zero-byte `prototyping.yaml` is supplied. That value sits
+  closest to absence, and a presence check and a content check answer it differently.
+- `TC-0013-0036` × `State transitions` — one workspace, one run. No case removes the file between
+  two runs and requires the same verdict.
+- `TC-0013-0036` × `Combinatorial` — one pack in one state. The absent file is never crossed with
+  incomplete markdown or a blocking OQ, which is what would show it neither adds nor removes a
+  blocker.
+- `TC-0013-0037` × `Edge cases` — both fixtures are well-formed YAML. No file that does not parse,
+  no top level that is a list or a scalar, and no zero-byte file is supplied. A scalar
+  `prototyping: invalid` case exists in `sddPreflight.test.ts`, but it is unannotated and this row
+  has annotated cases, so it does not credit the row.
+- `TC-0013-0037` × `Boundary values` — the `TDD-0044` record in `.qfai/evidence/atdd-spec-0013.md`
+  shows that the legacy case passes a mutation that lists `prototyping.yaml` as required, because
+  that fixture is long enough to count as complete. The file's length against the minimum content
+  check therefore decides what the oracle can detect, and no case sits on either side of it.
+- `TC-0013-0037` × `State transitions` — each fixture is a fresh `mkdtemp` workspace. No case
+  changes a valid file to an invalid or legacy one between runs.
+
 ## Every ⚠️ cell, named
 
-101 scored depth cells in the matrix and 15 scored cells in the business rule table are `⚠️` —
-**116 in all**. The PASS criterion requires a documented rationale for each, so each is named here,
+104 scored depth cells in the matrix and 17 scored cells in the business rule table are `⚠️` —
+**121 in all**. The two subsections below hold the first 101 and 15; the last subsection holds the
+three matrix cells and two rule cells of the side-artifact preflight rows. The PASS criterion requires a documented rationale for each, so each is named here,
 grouped by column with a per-coordinate reason.
 
 ### Matrix depth cells (101)
@@ -1399,6 +1441,30 @@ rested on is over the run-summary artifact, and this column is scored per obliga
   list. The window's other side has no case, and nothing in the product or the tests states what
   closes it.
 
+### Side-artifact preflight rows (5)
+
+Three matrix depth cells and two business rule cells.
+
+- `TC-0013-0036` × `Equivalence partitions` — the absent class has a representative. The claim is
+  that the verdict does not depend on the file, and no case supplies a present, well-formed
+  `prototyping.yaml` to contrast absence with.
+- `TC-0013-0037` × `Special values` — `rationale: ''` is an empty string and
+  `recommended_mode: invalid-mode` is outside the allowed set. Both sit in one fixture, so neither is
+  shown to be harmless on its own.
+- `TC-0013-0037` × `Combinatorial` — the invalid-schema fixture carries two defects at once. Neither
+  variant is crossed with incomplete markdown, and the two variants never meet each other or a second
+  optional file.
+- `BR-0013-0021` × `Positive case` — the rule names four states: present, absent, malformed and old
+  format. Absent, schema-invalid and old format each have a case that requires `ready` with no
+  blocker and no gap. Present and well-formed has none.
+- `BR-0013-0021` × `Conditional branches` — three of the four named states are taken. The fourth,
+  present and well-formed, is not, and "malformed" is taken only as a schema error: no case supplies
+  a file that does not parse.
+
+`BR-0013-0021` × `Negative case` is `✅`. `TC-0013-0037` supplies both failure-side inputs the rule
+names, and the `TDD-0044` and `TDD-0045` records show each of the three cases failing when the
+preflight is mutated to require the file.
+
 ## Findings
 
 Nine things were found while producing this matrix that the reviewing stage should act on. None of
@@ -1502,6 +1568,13 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    criterion stated, and `TC-0013-0012` and `TC-0013-0010` cite them. The `qfai-sdd` skill now states
    `BR-0013-0005`'s `none` clause, and `sddSkillSpec0013.test.ts` asserts it. The scores above are
    unchanged until the next coverage refresh. The duplicate ids stay open under `CR-20260913-0012`.
+
+   **Resolution (`CR-20260913-0012`, 2026-09-24).** `AC-0013-0008`, `AC-0013-0009` and
+   `AC-0013-0010` are each declared once, under their first heading. The second `AC-0013-0008`
+   (Missing Markdown Blocks Preflight) and the second `AC-0013-0010` (Design Contract Normalization)
+   are removed, with `REQ-0014`, `REQ-0016`, `REQ-0017` and `REQ-0018`. The second `AC-0013-0009` is
+   now `AC-0013-0028` (Optional Side Artifact Does Not Block Preflight), with `BR-0013-0021`,
+   `EX-0013-0021`, `TC-0013-0036` and `TC-0013-0037` under it.
 8. **`US-0013-0003` and `AC-0013-0003` require opposite behaviour, and the runtime implements the
    story.** The story reads "I want SDD to validate the latest discussion pack and **stop if
    incomplete or has blocking OQs**". Its acceptance criterion reads "SDD MUST NOT stop on a pack that
@@ -1527,9 +1600,9 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    the same document accepted by the other two. No case in the pack supplies such a document.
 
 Two smaller observations that belong with the above but do not need their own numbered entry. First,
-`06_Test-Cases.md` declares no `Type` on twelve of its thirty-five rows (`TC-0013-0001` …
+`06_Test-Cases.md` declares no `Type` on twelve of its thirty-seven rows (`TC-0013-0001` …
 `TC-0013-0012`), which `BR-0013-0008`'s own first bullet forbids; the pack breaks the rule it
-introduces. Second, no `Level` is declared on twenty-four of the thirty-five rows (`TC-0013-0001` …
+introduces. Second, no `Level` is declared on twenty-four of the thirty-seven rows (`TC-0013-0001` …
 `TC-0013-0024`), so layer ownership for two thirds of this pack is settled by the default routing
 rather than by the spec.
 
@@ -1538,8 +1611,8 @@ rather than by the spec.
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 66 / ⚠️ 116 / ❌ 312**, with `n/a 7`, across all 501 scored cells — 441 matrix depth cells and
-60 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
+**✅ 73 / ⚠️ 121 / ❌ 321**, with `n/a 7`, across all 522 scored cells — 459 matrix depth cells and
+63 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
 counts.
 
 Seven obligations in this pack cannot be moved by testing alone. `US-0013-0009` names artifacts and
@@ -1578,3 +1651,84 @@ of the same kind and is counted apart from the seven, because what it needs reco
 acceptance criterion rather than the product: until that is settled neither it nor the criterion can
 be scored honestly at all. Until those are
 settled, the honest verdict for all of them is the one recorded above.
+
+## Update of 2026-09-24: `CR-20260913-0012`
+
+This update brings the matrix in line with the pack after `CR-20260913-0012` was applied. Earlier
+findings and the run records above are left as written.
+
+What the pack now declares, and what this update adds:
+
+| Pack change                                                              | In this matrix                  |
+| ------------------------------------------------------------------------ | ------------------------------- |
+| Second `AC-0013-0008`, with `REQ-0014`, removed                          | No row scored it; nothing moves |
+| Second `AC-0013-0010`, with `REQ-0016` … `REQ-0018`, removed             | No row scored it; nothing moves |
+| Second `AC-0013-0009` renumbered to `AC-0013-0028`                       | Recorded under Findings 7       |
+| `BR-0013-0021`, `EX-0013-0021` added                                     | New business rule row           |
+| `TC-0013-0036` (normal) and `TC-0013-0037` (error), `Level: integration` | New matrix rows, scored below   |
+| `US-0013-0008` keeps only its side-artifact clause                       | Row left as scored; see below   |
+
+The two new rows are scored from the three cases in
+`tests/integration/spec0013SideArtifactPreflight.test.ts`, which carry
+`QFAI:SPEC-0013:TC-0013-0036` and `QFAI:SPEC-0013:TC-0013-0037`. Their ledger rows are `TDD-0044`
+and `TDD-0045`, and their falsifiability proofs are in `.qfai/evidence/atdd-spec-0013.md`. The file
+was run from `packages/qfai` at revision `980a2d71c34a7a3d9353466403b983a8cc7f193e`:
+
+```text
+$ pnpm exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+```
+
+Every case asserts the whole result: `status` is `ready`, the selected pack is the seeded one, and
+`blockers` and `packGaps` are both empty. That is why `Oracle strength` is `✅` on both rows. The
+`❌` cells are in Group 8 and the `⚠️` cells in "Side-artifact preflight rows".
+
+Counts after this update:
+
+| Count                         | Before | After |
+| ----------------------------- | ------ | ----- |
+| Test cases                    | 35     | 37    |
+| Business rules                | 20     | 21    |
+| Obligations (stories and TCs) | 49     | 51    |
+| Matrix depth cells            | 441    | 459   |
+| Business rule cells           | 60     | 63    |
+| All scored cells              | 501    | 522   |
+
+| Scored cells   | ✅  | ⚠️  | ❌  | n/a |
+| -------------- | --- | --- | --- | --- |
+| Matrix, before | 54  | 101 | 286 | 0   |
+| Matrix, after  | 60  | 104 | 295 | 0   |
+| Rules, before  | 12  | 15  | 26  | 7   |
+| Rules, after   | 13  | 17  | 26  | 7   |
+| All, before    | 66  | 116 | 312 | 7   |
+| All, after     | 73  | 121 | 321 | 7   |
+
+The matrix totals line read `✅ 53 / ⚠️ 102` before this update. The table it sums counts 54 and
+101, which is what the per-column table and the grand total already used, so the line now states
+the table's count.
+
+`US-0013-0008` is not re-scored here. Its row was scored against the story's two clauses, and the
+justifications that name the incomplete-to-ready progression now belong to `US-0013-0003` alone.
+The story still has no annotated case, so step 2 of "What credits a cell" still reaches the
+unannotated side-artifact cases in `tests/core/sddPreflight.test.ts`. Re-scoring the row against
+the narrowed story is left to the next coverage refresh.
+
+The annotation coverage section above records a run whose scan matched two files. A run of the same
+two commands at the revision above reads differently, because the scan now reaches the package's
+tests:
+
+```text
+{
+ "matchedFileCount": 190,
+ "carrierOnlyTc": 7,
+ "carrierOnlyUs": 10,
+ "missingTc": 0,
+ "missingUs": 0,
+ "excludedUnitComponentTc": 0,
+ "tcCensus": { "spec": "0013", "declared": 37, "exempt": 0, "owed": 37 }
+}
+```
+
+`TC-0013-0036` and `TC-0013-0037` are answered at their layer, not by the carrier alone. The cap
+that section places on every row's `Status` is not re-read for the first forty-nine rows here.
