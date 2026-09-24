@@ -17,7 +17,7 @@ import { describe, expect, it } from "vitest";
 
 // tests/core/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
-const CONTRACT = path.join(repoRoot, ".qfai", "contracts", "cli", "qfai-prototyping.md");
+const CONTRACT = path.join(repoRoot, ".qfai", "spec", "03_contract", "cli", "qfai-prototyping.md");
 
 describe("`qfai prototyping` CLI contract surface", () => {
   it("does not exclude in its non-goals what its capture section specifies", async () => {

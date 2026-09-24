@@ -17,7 +17,7 @@ import {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
 async function seedContract(root: string, name: string, lines: string[]): Promise<string> {
-  const dir = path.join(root, ".qfai", "contracts", "cli");
+  const dir = path.join(root, ".qfai", "spec", "03_contract", "cli");
   await mkdir(dir, { recursive: true });
   const file = path.join(dir, name);
   await writeFile(file, `${lines.join("\n")}\n`, "utf-8");
@@ -182,7 +182,7 @@ describe("validateContractSsotModules", () => {
       // the release that ends that window while it is open.
       expect(dead[0]?.severity).toBe("error");
       expect(dead[0]?.refs).toContain("src/core/worklog/parseEntry.ts");
-      expect(dead[0]?.file).toBe(".qfai/contracts/cli/qfai-init.md");
+      expect(dead[0]?.file).toBe(".qfai/spec/03_contract/cli/qfai-init.md");
       expect(dead[0]?.loc?.line).toBe(5);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -373,7 +373,7 @@ describe("validateContractSsotModules", () => {
   });
 
   // Dogfooding: this repository's own contracts must route to modules that
-  // exist. Before the fix, `.qfai/contracts/cli/` cited four never-written
+  // exist. Before the fix, `.qfai/spec/03_contract/cli/` cited four never-written
   // `core/worklog/*` / `core/assistantAssets.ts` paths across six entry lines.
   it("finds no dead SSOT modules entry in this repository's contracts", async () => {
     const issues = await validateContractSsotModules(repoRoot, defaultConfig);
@@ -491,7 +491,7 @@ describe("the boundary this gate claims", () => {
         expect(reported).toHaveLength(1);
         expect(reported[0]?.rule).toBe("contracts.ssotModuleUnreadable");
       } finally {
-        await chmod(path.join(root, ".qfai", "contracts", "cli", "qfai-init.md"), 0o600).catch(
+        await chmod(path.join(root, ".qfai", "spec", "03_contract", "cli", "qfai-init.md"), 0o600).catch(
           () => undefined,
         );
         await rm(root, { recursive: true, force: true });
