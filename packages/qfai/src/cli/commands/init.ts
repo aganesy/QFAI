@@ -234,7 +234,7 @@ export type InitOptions = {
 
 type InitSymlinkRuntime = {
   createSymlink?: typeof symlink;
-  platform?: string;
+  platform?: NodeJS.Platform;
 };
 
 /**
@@ -587,8 +587,7 @@ export async function runInit(
     force: options.force,
     dryRun: options.dryRun,
     installedRuleMasters: installedMasters,
-    createSymlink: symlinkRuntime.createSymlink,
-    platform: symlinkRuntime.platform,
+    ...symlinkRuntime,
   });
   const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
   const legacyEvidenceIgnoreResult = await ensureLegacyEvidenceIgnoreNegations(
@@ -4371,7 +4370,7 @@ type WrapperSyncOptions = {
   force: boolean;
   dryRun: boolean;
   createSymlink?: typeof symlink;
-  platform?: string;
+  platform?: NodeJS.Platform;
   /** Previous generated target, accepted only when retargeting a flattened link. */
   legacyTarget?: string;
   /**
