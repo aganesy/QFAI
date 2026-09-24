@@ -164,5 +164,5 @@ describe("BF-0002 own-CI verdict and code-path release cost", () => {
     } finally {
       await removeTempTree(root);
     }
-  }, 60_000);
+  });
 });

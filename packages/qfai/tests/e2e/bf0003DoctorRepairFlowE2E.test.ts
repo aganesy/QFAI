@@ -217,7 +217,7 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
     expect(listed.stdout).toContain("DG-0001");
     expect(await exists(beforePath)).toBe(true);
     expect(await exists(afterPath)).toBe(true);
-  }, 60_000);
+  });
 
   // QFAI:US-0003-0016
   it("reports malformed configuration and explicit guardrail input failures", async () => {
@@ -252,5 +252,5 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
     expect(JSON.parse(missingPath.stdout)).toMatchObject({
       error: { code: "load-failed", details: [{ path: "missing.md" }] },
     });
-  }, 60_000);
+  });
 });
