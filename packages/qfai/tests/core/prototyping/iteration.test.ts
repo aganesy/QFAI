@@ -51,7 +51,7 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
     expect(shouldStop([iter])).toBeNull();
   });
 
-  // QFAI:AC-0001-0120-02
+  // AC-0001-0120-02 behavior is exercised here; acceptance coverage belongs to integration.
   it.each(["informationArchitecture", "navigationFlow", "usability", "functionality"] as const)(
     "does not converge when %s is only strong",
     (axis) => {

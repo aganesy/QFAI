@@ -1,4 +1,3 @@
-// QFAI:EX-0004-0001-05
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";

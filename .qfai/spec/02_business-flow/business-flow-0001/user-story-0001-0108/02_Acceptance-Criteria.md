@@ -10,7 +10,7 @@ Feature:
 Scenario: pivotDirective Enum
   Given any `iter-NN/review.json`,
   When validated,
-  Then `pivotDirective` is exactly one of `"continue" | "refine" | "pivot"`. Other values raise `QFAI-PROT-023`.
+  Then `pivotDirective` is exactly one of `"continue" | "refine" | "pivot"`. Other values raise `QFAI-PROT-002`.
 
 # AC-0001-0108-02
 # Parent: US-0001-0108

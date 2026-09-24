@@ -142,7 +142,7 @@ export async function validateStoryTreeContractReferences(
     for (const row of table.rows) {
       const id = canonicalCellContractId(row.cells[idColumn] ?? "");
       if (id) indexedIds.add(id);
-      const listed = (row.cells[fileColumn] ?? "").replace(/[`*_]/g, "").trim();
+      const listed = (row.cells[fileColumn] ?? "").trim().replace(/^[`*]+|[`*]+$/g, "");
       if (listed) indexedPaths.add(toPosixPath(listed).replace(/^\.\//, ""));
     }
   }
@@ -150,7 +150,12 @@ export async function validateStoryTreeContractReferences(
   const issues: Issue[] = [];
   const listedPath = (file: string): boolean => {
     const relative = toPosixPath(path.relative(contractsDir, file));
-    return indexedPaths.has(relative) || indexedPaths.has(toPosixPath(file));
+    const repoRelative = toPosixPath(path.relative(root, file));
+    return (
+      indexedPaths.has(relative) ||
+      indexedPaths.has(repoRelative) ||
+      indexedPaths.has(toPosixPath(file))
+    );
   };
   for (const file of model.contractFiles) {
     const declared = [...index.idToFiles.entries()]

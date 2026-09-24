@@ -15,8 +15,9 @@ Scenario: --upgrade-assistant-tree flag
 
 # AC-0001-0035-02
 # Parent: US-0001-0035
-Scenario: W-USER-EDIT-PRESERVED 出力
-  Given 旧 `.qfai/assistant/steering/` 配下にユーザー編集のあるファイルが存在する
+Scenario: Existing destination is preserved with an informational note
+  Given a recognized file exists under legacy `.qfai/assistant/steering/` and its new-layer destination already contains user edits
   When `qfai init --upgrade-assistant-tree` を実行する
-  Then ユーザー編集ファイルは新 layer 側にコピーされ、ファイルパスを naming した `W-USER-EDIT-PRESERVED` informational note が stdout に少なくとも 1 件出力される
+  Then the existing destination remains unchanged and the legacy file is not deleted
+  And stdout contains a `W-USER-EDIT-PRESERVED` informational note naming the destination path.
 ```

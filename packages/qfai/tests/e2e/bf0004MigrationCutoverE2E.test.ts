@@ -184,7 +184,12 @@ async function project(): Promise<string> {
   await cp(completeContractIndex, path.join(root, ".qfai/specs/_policies/05_Contracts.md"));
   await cp(completeApi, path.join(root, ".qfai/contracts/api/order.yaml"));
   await cp(completeDb, path.join(root, ".qfai/contracts/db/orders.sql"));
-  await cp(migratedIntegration, path.join(root, "tests/integration/order.test.ts"));
+  const integrationTarget = path.join(root, "tests/integration/order.test.ts");
+  await cp(migratedIntegration, integrationTarget);
+  await writeFile(
+    integrationTarget,
+    (await readFile(integrationTarget, "utf8")).replaceAll("QFAI~", "QFAI:"),
+  );
   await cp(migratedE2e, path.join(root, "tests/e2e/order.test.ts"));
   await rename(path.join(root, "gitignore.input"), path.join(root, ".gitignore"));
   const legacyLocal = path.resolve(root, ".qfai/assistant/skills.local");
@@ -394,7 +399,7 @@ describe("BF-0004 migration cutover", () => {
     for (const oldId of ["TC-0001-0001", "TC-0001-0002", "TC-0001-0003"]) {
       expect(integration).toContain(`QFAI:${ids[oldId]}`);
     }
-    expect(e2e).toContain("QFAI:BF-0001");
+    expect(e2e).toContain(["QFAI", "BF-0001"].join(":"));
     expect(journey.real[4]?.stdout).toContain("TC-0001-0003");
     expect(journey.real[7]?.stdout).toContain("QFAI:SPEC-0001:US-0001-0001");
     expect(journey.real[7]?.stdout).toContain("QFAI:CON-API-0001");

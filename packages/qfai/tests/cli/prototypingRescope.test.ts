@@ -294,6 +294,7 @@ describe("a --reason that does not read as an id", () => {
     expect(await run(root, { reason: "because the customer said so" })).toBe(0);
 
     expect(lines.join("")).toContain("does not read as a recorded");
+    expect(lines.join("")).toContain("DEC-0001");
     expect((await readProto(root)).frozenSurfaceUnion).toEqual(["CON-UI-0001"]);
   });
 
@@ -313,7 +314,7 @@ describe("a --reason that does not read as an id", () => {
     const root = await reducedScope();
     const lines = captureWarnings();
 
-    expect(await run(root, { reason: "DELTA-022" })).toBe(0);
+    expect(await run(root, { reason: "DEC-0001" })).toBe(0);
     expect(lines.join("")).not.toContain("does not read as a recorded");
   });
 

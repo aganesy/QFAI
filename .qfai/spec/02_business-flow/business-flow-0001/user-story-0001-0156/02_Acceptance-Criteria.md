@@ -7,15 +7,16 @@ Feature: Discussion Markdown-Only Preflight
 
 # AC-0001-0156-01
 # Parent: US-0001-0156
-Scenario: Missing Markdown Blocks Preflight
-  Given a discussion-pack with missing required markdown files
+Scenario: No usable source stops SDD preflight
+  Given there is no discussion pack, import-lite input, or explicit user requirement
   When SDD preflight runs
-  Then SDD is blocked with the missing markdown listed in blockers.
+  Then SDD stops because it has no usable source.
 
 # AC-0001-0156-02
 # Parent: US-0001-0156
-Scenario: Optional Side Artifact Does Not Block Preflight
-  Given a discussion-pack whose required markdown is complete but optional side artifacts are absent or malformed
+Scenario: An incomplete but usable pack remains source material
+  Given a usable discussion pack has an incomplete markdown file, a blocking OQ, or a missing optional side artifact
   When SDD preflight runs
-  Then side artifact state alone does not block SDD.
+  Then those defects alone do not block SDD from reading the pack as source material
+  And SDD does not edit or rerun the discussion pack to clear its own gate.
 ```

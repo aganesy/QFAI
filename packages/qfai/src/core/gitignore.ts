@@ -115,12 +115,10 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // Neither line widens the managed block. `!.qfai/` and `!.qfai/evidence/`
   // match the directories only, so the `.qfai/<subtree>/*` ignores above still
   // win for every generated file (evidence/prototyping, report, discussion,
-  // review); the only paths they re-expose are the ones QFAI already expects to
-  // be tracked (`specs/`, `contracts/`, `assistant/`).
+  // review); the only paths they re-expose are governed files elsewhere under
+  // `.qfai/`.
   "!.qfai/",
   "!.qfai/evidence/",
-  "!.qfai/decisions/",
-  "!.qfai/decisions/**",
   // The real durable-decision write target: `writeDecisionRecord` persists
   // `.qfai/evidence/decision/<ISO8601-stamp>.json` (see
   // `core/decisionRecord.ts#DECISIONS_REL`). Git never descends into an
@@ -291,6 +289,8 @@ export const QFAI_GITIGNORE_LEGACY_LINES: readonly string[] = [
   "!.qfai/review/",
   "!.qfai/evidence/decisions/",
   "!.qfai/evidence/decisions/**",
+  "!.qfai/decisions/",
+  "!.qfai/decisions/**",
 ] as const;
 
 export const QFAI_GITIGNORE_BLOCK = [

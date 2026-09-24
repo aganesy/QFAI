@@ -93,6 +93,7 @@ describe("story-tree core", () => {
   });
 
   it("checks exact shapes, parent prefixes, and never fills an ID gap", () => {
+    const marker = "QFAI:";
     expect(isStoryTreeId("AC-0001-0002-01", "AC")).toBe(true);
     expect(isStoryTreeId("AC-0001-0002-1", "AC")).toBe(false);
     expect(storyIdMatchesFlow("US-0001-0002", "BF-0001")).toBe(true);
@@ -109,7 +110,7 @@ describe("story-tree core", () => {
     expect(() => nextId("US", [], "BF-1")).toThrow(TypeError);
     expect(
       parseStoryTestAnnotations(
-        "QFAI:BF-0001 QFAI:BF-0001-0002 QFAI:AC-0001-0001-01 QFAI:EX-0001-0001-01",
+        `${marker}BF-0001 ${marker}BF-0001-0002 ${marker}AC-0001-0001-01 ${marker}EX-0001-0001-01`,
       ),
     ).toEqual({
       BF: ["BF-0001"],
@@ -129,6 +130,22 @@ describe("story-tree core", () => {
     expect(model.rules.map((rule) => [rule.id, rule.examples])).toEqual([
       ["BR-0001", ["EX-0001-0001-01"]],
     ]);
+  });
+
+  it("reads rules from the contract layer's tech and structure files", () => {
+    const files = new Map(storyFiles);
+    files.delete(".qfai/spec/03_contract/api/pay.yaml");
+    files.set(
+      ".qfai/spec/03_contract/structure.md",
+      "# Structure\n\n## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001 | Payment succeeds | EX-0001-0001-01 |\n",
+    );
+    files.set(
+      ".qfai/spec/03_contract/tech.md",
+      "# Tech\n\n## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0002 | The CLI runs | EX-0001-0001-01 |\n",
+    );
+
+    const model = buildStoryTreeModel(files);
+    expect(model.rules.map((rule) => rule.id)).toEqual(["BR-0001", "BR-0002"]);
   });
 
   it("retains malformed declarations so the validator can report their source", () => {

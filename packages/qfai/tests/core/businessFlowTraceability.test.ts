@@ -116,7 +116,9 @@ describe("parseStoryFlowRefs", () => {
 
 describe("parseTestFlowRefs", () => {
   it("reads the annotation form and deduplicates it", () => {
-    expect(parseTestFlowRefs("/* QFAI:BF-0002 */\n// QFAI:BF-0001\n// QFAI:BF-0001")).toEqual([
+    const flowOne = ["QFAI", "BF-0001"].join(":");
+    const flowTwo = ["QFAI", "BF-0002"].join(":");
+    expect(parseTestFlowRefs(`/* ${flowTwo} */\n// ${flowOne}\n// ${flowOne}`)).toEqual([
       "BF-0001",
       "BF-0002",
     ]);
@@ -178,7 +180,7 @@ describe("a flow annotation answers the stories that name the flow", () => {
     await withProject(async (root) => {
       await seedFlows(root, ["BF-0001"]);
       await seedStory(root, "0001", "US-0001", ["BF-0001"], ["US-0002"]);
-      await seedE2eTest(root, "flow.test.ts", "/* QFAI:BF-0001 */");
+      await seedE2eTest(root, "flow.test.ts", `/* ${["QFAI", "BF-0001"].join(":")} */`);
 
       const result = await evaluateAtddCodeTraceability(root, defaultConfig);
       expect(result.missing.us).toEqual([]);
@@ -194,7 +196,7 @@ describe("a flow annotation answers the stories that name the flow", () => {
     await withProject(async (root) => {
       await seedFlows(root, ["BF-0001"]);
       await seedStory(root, "0001", "US-0001", ["BF-0001"], ["US-0002"], { unflowed: ["US-0002"] });
-      await seedE2eTest(root, "flow.test.ts", "/* QFAI:BF-0001 */");
+      await seedE2eTest(root, "flow.test.ts", `/* ${["QFAI", "BF-0001"].join(":")} */`);
 
       const result = await evaluateAtddCodeTraceability(root, defaultConfig);
       expect(result.missing.us).toEqual(["SPEC-0001:US-0002"]);
@@ -205,7 +207,7 @@ describe("a flow annotation answers the stories that name the flow", () => {
     await withProject(async (root) => {
       await seedFlows(root, ["BF-0001"]);
       await seedStory(root, "0001", "US-0001", ["BF-0001"]);
-      await seedE2eTest(root, "flow.test.ts", "/* QFAI:BF-0009 */");
+      await seedE2eTest(root, "flow.test.ts", `/* ${["QFAI", "BF-0009"].join(":")} */`);
 
       const result = await evaluateAtddCodeTraceability(root, defaultConfig);
       // Not silence: the obligation the annotation was meant to answer is still
@@ -218,7 +220,7 @@ describe("a flow annotation answers the stories that name the flow", () => {
     await withProject(async (root) => {
       await seedFlows(root, ["BF-0001"]);
       await seedStory(root, "0001", "US-0001", ["BF-0001"]);
-      await seedTest(root, "integration", "flow.test.ts", "/* QFAI:BF-0001 */");
+      await seedTest(root, "integration", "flow.test.ts", `/* ${["QFAI", "BF-0001"].join(":")} */`);
 
       const result = await evaluateAtddCodeTraceability(root, defaultConfig);
       expect(result.missing.us).toEqual(["SPEC-0001:US-0001"]);

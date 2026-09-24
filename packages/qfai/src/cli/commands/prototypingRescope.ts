@@ -49,25 +49,20 @@ export async function runPrototypingRescope(options: RescopeOptions): Promise<nu
   }
   if (options.reason.trim().length === 0) {
     warn(
-      "qfai prototyping rescope: --reason <delta-id> is required. A recorded decision id is " +
+      "qfai prototyping rescope: --reason <decision-id> is required. A recorded decision id is " +
         "what separates an applied scope reduction from the lock drift the frozen union exists " +
         "to detect, and it is what the audit entry preserves.",
     );
     return 2;
   }
 
-  // Warned, not refused. Resolving the id would need every place a delta or
-  // decision can live — `.qfai/decisions/`, a spec's `09_delta.md`,
-  // `_policies/10_delta.md`, and whatever a consuming project uses — and a
-  // resolver that misses one refuses a LEGITIMATE reduction, which is worse
-  // than a weak field: it blocks the operation this exists to provide. A shape
-  // check has the same failure against a project whose id convention is its
-  // own. The audit entry is the real control; this just means the operator
-  // hears about a thin reason now rather than a reviewer reading the log later.
+  // The story tree records decisions in `<paths.specsDir>/decisions.md`.
+  // Keep this hint non-blocking: a project can cite an external decision id,
+  // and the audit entry must preserve the supplied reason verbatim.
   if (!looksLikeDecisionId(options.reason)) {
     warn(
       `qfai prototyping rescope: --reason "${options.reason}" does not read as a recorded ` +
-        "delta or decision id (e.g. DELTA-022, CR-20260904-0001). Proceeding — it is written " +
+        "decision id (e.g. DEC-0001). Proceeding — it is written " +
         "to rescopeLog as given — but an entry nobody can trace back is the audit trail this " +
         "operation exists to leave.",
     );
@@ -172,15 +167,8 @@ function sameIds(left: readonly string[], right: readonly string[]): boolean {
  * Whether `reason` reads as an id rather than as prose.
  *
  * Deliberately loose and deliberately non-blocking: it looks for an
- * uppercase-prefixed token with a digit somewhere, which every id convention
- * in reach happens to satisfy (`DELTA-022`, `CR-20260904-0001`, and the
- * decision-record form). A project spelling its ids differently gets a warning
- * it can ignore, which is the failure mode a shape CHECK would not have had —
- * it would have refused them.
- *
- * The third example is described rather than spelled: `.agents/rules/
- * distributed-surface.md` forbids an internal design-rationale ID in `src/`
- * JSDoc, because tsup keeps JSDoc in `dist/*.d.ts` and it would ship.
+ * uppercase-prefixed token with a digit somewhere, including `DEC-0001`.
+ * A project spelling its ids differently gets a warning it can ignore.
  */
 function looksLikeDecisionId(reason: string): boolean {
   return /[A-Z][A-Z0-9]*[-_]?\d/.test(reason.trim());

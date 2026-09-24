@@ -7,8 +7,8 @@ Feature:
 
 # AC-0001-0114-01
 # Parent: US-0001-0114
-Scenario: Cycle 0 Records designMdSha256
+Scenario: Cycle 0 records the locked design hash
   Given `qfai prototyping iterate --cycle 0`,
   When it completes,
-  Then `prototyping.json#designMdSha256` is set to `sha256(DESIGN.md bytes)` and matches `<paths.contractsDir>/design/DESIGN.md.lock.yaml#sha256` exactly.
+  Then `prototyping.json#designMd.sha256` is set to `sha256(DESIGN.md bytes)` and matches `<paths.contractsDir>/design/DESIGN.md.lock.yaml#designMdSha256` exactly.
 ```

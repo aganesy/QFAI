@@ -2117,8 +2117,8 @@ export function extractLiteralRequiredInputs(content: string): string[] {
         .filter((item) => !/\boptional\b|\bwhen available\b/iu.test(item))
         .map((item) => leadingPath(item.replace(/`/gu, "").trim()))
         // A glob names a set and a `<placeholder>` names a shape, so neither is
-        // a file to find: `.qfai/specs/<spec-id>/tdd/test-list.md` is one path
-        // per spec and none of them is at that name. Tested on the path so
+        // a file to find: `.qfai/spec/02_business-flow/business-flow-<id>/business-flow.md`
+        // names a shape and no file exists at that literal path. Tested on the path so
         // that a glob or a placeholder written in a bullet's explanation does
         // not drop the file the bullet actually requires.
         .filter((item) => item.startsWith(".") && !/[*?<>]/u.test(item)),

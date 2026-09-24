@@ -63,7 +63,10 @@ describe("story-tree Coverage Depth Matrix", () => {
     root = await mkdtemp(path.join(os.tmpdir(), "qfai-story-coverage-"));
     await mkdir(path.join(root, ".qfai", "evidence"), { recursive: true });
     await mkdir(path.join(root, "tests", "e2e"), { recursive: true });
-    await writeFile(path.join(root, "tests", "e2e", "flow.test.ts"), "// QFAI:BF-0001\n");
+    await writeFile(
+      path.join(root, "tests", "e2e", "flow.test.ts"),
+      `// ${["QFAI", "BF-0001"].join(":")}\n`,
+    );
   });
 
   afterEach(async () => {
@@ -114,7 +117,10 @@ describe("story-tree Coverage Depth Matrix", () => {
   });
 
   it("rejects a linked E2E test that belongs to another BF", async () => {
-    await writeFile(path.join(root, "tests", "e2e", "flow.test.ts"), "// QFAI:BF-0002\n");
+    await writeFile(
+      path.join(root, "tests", "e2e", "flow.test.ts"),
+      `// ${["QFAI", "BF-0002"].join(":")}\n`,
+    );
     await writeEvidence();
     expect((await validateStoryTreeCoverageDepth(root, MODEL))[0]?.message).toContain(
       "E2E obligation",
@@ -126,7 +132,7 @@ describe("story-tree Coverage Depth Matrix", () => {
     try {
       await mkdir(path.join(testsDir, "e2e"));
       const externalTest = path.join(testsDir, "e2e", "flow.test.ts");
-      await writeFile(externalTest, "// QFAI:BF-0001\n");
+      await writeFile(externalTest, `// ${["QFAI", "BF-0001"].join(":")}\n`);
       const relative = path
         .relative(path.join(root, ".qfai", "evidence"), externalTest)
         .replace(/\\/g, "/");

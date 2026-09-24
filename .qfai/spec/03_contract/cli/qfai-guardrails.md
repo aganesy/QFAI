@@ -1,7 +1,7 @@
 # CLI Contract: `qfai guardrails`
 
 - Contract scope: the public decision-guardrail command and its source grammar
-- Owning spec: `spec-0007`
+- Migration origin: `spec-0007`
 - Used-by: operators and skills reading explicit non-goals, deferrals, and trade-offs
 - SSOT modules: `packages/qfai/src/cli/commands/guardrails.ts` and `packages/qfai/src/core/decisionGuardrails.ts`
 

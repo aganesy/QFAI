@@ -31,7 +31,7 @@ describe("cli root discovery", () => {
           path.join(root, "tests", "integration", "US-0008-0007", "AC-0008-0007-01.test.ts"),
           "utf8",
         ),
-      ).toContain("QFAI:AC-0008-0007-01");
+      ).toContain(["QFAI:", "AC-0008-0007-01"].join(""));
       await run(["atdd", "scaffold", "--root", root, "--spec", "spec-0008"], root);
       expect(process.exitCode).toBe(2);
       await run(["atdd", "scaffold", "--root", root, "--story", "US-8-7"], root);

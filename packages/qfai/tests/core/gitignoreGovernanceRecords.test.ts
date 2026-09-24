@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
+  QFAI_GITIGNORE_LEGACY_LINES,
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
 } from "../../src/core/gitignore.js";
@@ -60,6 +61,14 @@ describe("the managed block keeps governance records tracked", () => {
     expect(lines.indexOf("!.qfai/evidence/decision/")).toBeLessThan(
       lines.indexOf("!.qfai/evidence/decision/**"),
     );
+  });
+
+  it("retires the obsolete decision directory negations", () => {
+    for (const line of ["!.qfai/decisions/", "!.qfai/decisions/**"]) {
+      expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).not.toContain(line);
+      expect(QFAI_GITIGNORE_LEGACY_LINES).toContain(line);
+      expect(QFAI_GITIGNORE_BLOCK.split("\n")).not.toContain(line);
+    }
   });
 
   it("keeps the Phase: Skeleton record trackable", () => {
@@ -166,7 +175,6 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     // check also accepts.
     ".qfai/evidence/import-lite-20260101000000000.md",
     ".qfai/evidence/import-lite.md",
-    ".qfai/decisions/CR-0001.md",
     ".qfai/evidence/skeleton.md",
   ];
 

@@ -51,7 +51,7 @@ describe("re-init preserves what the project chose to track", () => {
       // drop one governance negation so the freshness check fails on re-init.
       const pruned = (await readGitignore(root))
         .split("\n")
-        .filter((line) => line !== ".qfai/evidence/*" && line !== "!.qfai/decisions/**")
+        .filter((line) => line !== ".qfai/evidence/*" && line !== "!.qfai/evidence/decision/**")
         .join("\n");
       await writeFile(path.join(root, ".gitignore"), pruned, "utf-8");
 
@@ -60,7 +60,7 @@ describe("re-init preserves what the project chose to track", () => {
       const after = await readGitignore(root);
       expect(after.split("\n")).not.toContain(".qfai/evidence/*");
       // …while the missing governance negation is restored.
-      expect(after).toContain("!.qfai/decisions/**");
+      expect(after).toContain("!.qfai/evidence/decision/**");
       expect(after.split(QFAI_GITIGNORE_MARKER).length - 1).toBe(1);
     });
   });
@@ -77,6 +77,8 @@ describe("re-init preserves what the project chose to track", () => {
           QFAI_GITIGNORE_MARKER,
           ".qfai/report/*",
           "!.qfai/report/README.md",
+          "!.qfai/decisions/",
+          "!.qfai/decisions/**",
           ".qfai/discussion/discussion-*/",
           "",
         ].join("\n"),
@@ -88,13 +90,15 @@ describe("re-init preserves what the project chose to track", () => {
       const after = (await readGitignore(root)).split("\n");
       // Retired lines go.
       expect(after).not.toContain("!.qfai/report/README.md");
+      expect(after).not.toContain("!.qfai/decisions/");
+      expect(after).not.toContain("!.qfai/decisions/**");
       expect(after).not.toContain(".qfai/discussion/discussion-*/");
       // A renamed line keeps its successor — dropping it alone would remove an
       // ignore the project never gave up.
       expect(after).toContain(".qfai/discussion/*");
       // But an ignore this block simply never had is NOT added.
       expect(after).not.toContain(".qfai/evidence/*");
-      expect(after).toContain("!.qfai/decisions/**");
+      expect(after).toContain("!.qfai/evidence/decision/**");
     });
   });
 

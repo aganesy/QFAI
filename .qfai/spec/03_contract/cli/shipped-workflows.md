@@ -3,10 +3,10 @@
 - Contract scope: the workflow files QFAI distributes into an adopter's
   `.github/workflows/`, the ownership boundary over that directory, and the
   declared structural shape a gate diffs against
-- Owning spec: `spec-0003` (`qfai init` — the command that writes the set)
+- Migration origin: `spec-0003` (`qfai init` — the command that writes the set)
 - Used-by:
   - `spec-0006` (`qfai doctor` — reads the provenance record; emits the
-    stale-drift advisory, see `.qfai/contracts/cli/qfai-doctor.md`)
+    stale-drift advisory, see `.qfai/spec/03_contract/cli/qfai-doctor.md`)
   - `spec-0017` (repository toolchain — the workflow-hygiene lint lane that
     scans this tree)
   - `spec-0004` (`pnpm ci:lint` lane registry — where the gates are wired)
@@ -358,7 +358,7 @@ every SSOT that must move together; see `spec-0015`.
 ## 7. Detection surface
 
 `qfai doctor` owns the adopter-facing report. See
-`.qfai/contracts/cli/qfai-doctor.md` §`workflows.integrity`. The state
+`.qfai/spec/03_contract/cli/qfai-doctor.md` §`workflows.integrity`. The state
 vocabulary there is exactly §3's enum; doctor introduces no state of its own.
 
 ## 8. Non-goals

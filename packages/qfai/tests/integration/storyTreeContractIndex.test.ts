@@ -1,4 +1,3 @@
-// QFAI:EX-0004-0001-04
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -47,7 +46,7 @@ describe("story-tree contract index", () => {
 
     await put(
       `${base}/contracts.md`,
-      "| Short ID | Entity | Declared ID | File | Depends On | Reconciled With | Purpose |\n| --- | --- | --- | --- | --- | --- | --- |\n| API-001 | Orders | CON-API-0001 | api/orders.yaml | - | - | Orders |\n| CLI | Command | - | cli/new-command.md | - | - | Command |\n",
+      "| Short ID | Entity | Declared ID | File | Depends On | Reconciled With | Purpose |\n| --- | --- | --- | --- | --- | --- | --- |\n| API-001 | Orders | CON-API-0001 | api/orders.yaml | - | - | Orders |\n| CLI | Command | - | .qfai/spec/03_contract/cli/new-command.md | - | - | Command |\n",
     );
     expect(await validateStoryTreeContractReferences(root, config, model)).toEqual([]);
   });

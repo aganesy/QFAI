@@ -1,4 +1,3 @@
-// QFAI:EX-0004-0001-03
 import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

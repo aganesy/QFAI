@@ -339,9 +339,9 @@ describe("migration steps 5 to 8", () => {
     expect(await executePlannedStep(step08, context, false, c.io)).toBe(3);
     expect(
       await readFile(path.join(context.root, "tests/integration/checkout.test.ts"), "utf8"),
-    ).toContain("QFAI:EX-0001-0001-02");
+    ).toContain(["QFAI", "EX-0001-0001-02"].join(":"));
     expect(await readFile(path.join(context.root, "tests/e2e/checkout.test.ts"), "utf8")).toContain(
-      "QFAI:BF-0001",
+      ["QFAI", "BF-0001"].join(":"),
     );
     expect(c.output.join("")).toContain("Annotations kept");
     expect(c.output.join("")).toContain("QFAI:SPEC-0001:US-0001-0001");

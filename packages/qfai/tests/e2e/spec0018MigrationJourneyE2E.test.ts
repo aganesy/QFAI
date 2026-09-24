@@ -400,9 +400,9 @@ describe("spec-0018: one shipped-script migration journey", () => {
     const e2e = await textAt(journey.root, "tests/e2e/order.test.ts");
     const integration = await textAt(journey.root, "tests/integration/order.test.ts");
     const report = journey.applied[7]?.stdout ?? "";
-    expect(e2e).toContain("QFAI:BF-0001");
-    expect(e2e).toContain("QFAI:EX-0001-0001-01");
-    expect(integration).toContain("QFAI:EX-0001-0001-03");
+    expect(e2e).toContain(["QFAI", "BF-0001"].join(":"));
+    expect(e2e).toContain(["QFAI", "EX-0001-0001-01"].join(":"));
+    expect(integration).toContain(["QFAI", "EX-0001-0001-03"].join(":"));
     expect(integration).toContain("QFAI:SPEC-0001:US-0001-0001");
     expect(report).toContain("QFAI:CON-API-0001");
     expect(report).toContain("QFAI:SPEC-0001:US-0001-0001");

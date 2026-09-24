@@ -203,7 +203,11 @@ describe("migration harness", () => {
         Promise.resolve({
           annotationTargets: [target],
           operations: [
-            { kind: "write", target, content: "// QFAI:BF-0001 checkout has changed\n" },
+            {
+              kind: "write",
+              target,
+              content: `// ${["QFAI", "BF-0001"].join(":")} checkout has changed\n`,
+            },
           ],
         }),
     };
@@ -251,7 +255,9 @@ describe("migration harness", () => {
     await put(ctx.root, target, "// QFAI:SPEC-0001:TC-0001-0001\n");
     await mkdir(ctx.specsDir, { recursive: true });
     expect(await executePlannedStep(step08, ctx, false, capture().io)).toBe(0);
-    expect(await readFile(path.join(ctx.root, target), "utf8")).toBe("// QFAI:EX-0001-0001-01\n");
+    expect(await readFile(path.join(ctx.root, target), "utf8")).toBe(
+      `// ${["QFAI", "EX-0001-0001-01"].join(":")}\n`,
+    );
   });
 
   it("refuses an unselected test and a path outside the project", async () => {
@@ -270,7 +276,13 @@ describe("migration harness", () => {
         plan: () =>
           Promise.resolve({
             annotationTargets: [...annotationTargets],
-            operations: [{ kind: "write" as const, target, content: "// QFAI:EX-0001-0001-01\n" }],
+            operations: [
+              {
+                kind: "write" as const,
+                target,
+                content: `// ${["QFAI", "EX-0001-0001-01"].join(":")}\n`,
+              },
+            ],
           }),
       };
       expect(await executePlannedStep(step, ctx, false, capture().io)).toBe(2);

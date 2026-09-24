@@ -1,7 +1,7 @@
 # CLI Contract: `qfai audit log`
 
 - Contract scope: the public read-only command for envelope-deviation decision records
-- Owning spec: `spec-0015` (`REQ-0171`, `AC-0015-0019`, `BR-0015-0014`)
+- Migration origin: `spec-0015` (`REQ-0171`, `AC-0015-0019`, `BR-0015-0014`)
 - Used-by: operators reviewing approvals recorded under `REQ-0158`
 - SSOT modules:
   - `packages/qfai/src/cli/lib/args.ts` and `packages/qfai/src/cli/main.ts`

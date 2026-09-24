@@ -1,7 +1,7 @@
 # CLI Contract: `qfai handoff upgrade`
 
 - Contract scope: the public legacy-handoff conversion command
-- Owning spec: `spec-0015`
+- Migration origin: `spec-0015`
 - Used-by: operators migrating a legacy handoff
 - SSOT modules: `packages/qfai/src/cli/commands/handoffUpgrade.ts` and `packages/qfai/src/core/handoff/`
 

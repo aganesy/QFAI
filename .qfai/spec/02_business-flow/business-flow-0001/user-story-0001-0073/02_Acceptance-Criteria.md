@@ -14,10 +14,11 @@ Scenario: Forbidden Reference Enforcement
 
 # AC-0001-0073-02
 # Parent: US-0001-0073
-Scenario: Stage Gate Enforcement
-  Given the ATDD workflow
-  When all stage gates P0-P8 are evaluated
-  Then no gate is skipped and each gate produces a PASS/FAIL result with evidence.
+Scenario: Required acceptance-test gates and handoff
+  Given an ATDD run scoped to a business flow
+  When the run reaches completion review
+  Then preflight, test design, observable RED or falsifiability, scoped validation, and independent review have recorded evidence
+  And a missing required gate or unresolved coverage gap prevents a PASS handoff.
 
 # AC-0001-0073-03
 # Parent: US-0001-0073
