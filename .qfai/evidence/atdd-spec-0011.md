@@ -122,7 +122,7 @@ No ledger cell is written here: `/qfai-implement` writes `Status`, `DR-ID` and `
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0011RecordHomes.test.ts
 - Selector: TC-0011-0013: the qfai-implement skill records a stop in Blocked-By and sends decisions, consultations and discoveries to /qfai-sdd as a Change Request
-- TC-ref: TC-0011-0013 (boundary `record-homes-stated`)
+- TC-ref: TC-0011-0013
 - EX-ref: EX-0011-0010; AC-ref: AC-0011-0012; BR-ref: BR-0011-0009
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: the recording constraint in `SKILL.md` `## CRITICAL CONSTRAINTS (Read First)` sends a stop, a decision and a consultation to a `.qfai/steering/<id>.md` work-log entry. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+2d31f83a01de922411629aeea5788fc3beee710b71763d4d8200234911c37d55 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
@@ -200,7 +200,7 @@ packages/qfai/tests/integration/spec0011RecordHomes.test.ts
 - Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose -t "TC-0011-0013: the qfai-implement skill records a stop in Blocked-By and sends decisions, consultations and discoveries to /qfai-sdd as a Change Request"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it
   changes no test.)
-- Round 1: RED result: the approved RED, run at 2026-09-24T00:51:05.020Z after the scope
+- Round 1: RED result: exit 1; Test Files 1 failed (1); Tests 1 failed, 2 skipped (3). The approved RED ran at 2026-09-24T00:51:05.020Z after the scope
   PASS. Before the run the file hash recomputed to the approved value, and the tree
   address was taken twice with equal results; HEAD `536fc4ddd`, with the uncommitted
   GREENs of spec-0004 `TDD-0069` and `TDD-0071`, which touch no skill text, and no
@@ -315,7 +315,19 @@ exit=0
 - Round 1: Revision: working-tree+c292c15294d9d938c98ea2b44f8628d362f65785919015b7c37e29791107264e
 - Round 1: GREEN command: `cd packages/qfai && npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose -t "TC-0011-0013: the qfai-implement skill records a stop in Blocked-By and sends decisions, consultations and discoveries to /qfai-sdd as a Change Request"`
 - Round 1: GREEN result: exit 0; Test Files 1 passed (1); Tests 1 passed, 2 skipped (3). The named selector passed on the shipped skill text.
-- Round 1: Oracle proof: The planned temporary mutation deleted `or an out-of-scope discovery` from `SKILL.md`. The same selector exited 1 at the `missing` assertion (`spec0011RecordHomes.test.ts:108`), reporting the decision, consultation and discovery route as absent. Restoring `SKILL.md` returned SHA-256 `FF6421F065E89A374667E871B06A24DC2277E5440624DF6C77326422A0F35A83`; the selector then passed again.
+- Round 1: Oracle proof:
+
+  ```text
+  Mutation: delete `or an out-of-scope discovery` from SKILL.md.
+  Command: cd packages/qfai && npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose -t "TC-0011-0013: the qfai-implement skill records a stop in Blocked-By and sends decisions, consultations and discoveries to /qfai-sdd as a Change Request"
+  × |integration| tests/integration/spec0011RecordHomes.test.ts > TC-0011-0013: records go to existing homes > TC-0011-0013: the qfai-implement skill records a stop in Blocked-By and sends decisions, consultations and discoveries to /qfai-sdd as a Change Request
+  AssertionError: expected [ Array(1) ] to deeply equal []
+  + "SKILL.md: a decision, a consultation and an out-of-scope discovery sent to /qfai-sdd as a Change Request"
+  ❯ tests/integration/spec0011RecordHomes.test.ts:108:21
+  Test Files  1 failed (1)
+  Tests  1 failed | 2 skipped (3)
+  Restoration: SKILL.md SHA-256 FF6421F065E89A374667E871B06A24DC2277E5440624DF6C77326422A0F35A83; the same selector passed again.
+  ```
 - Round 1: Oracle proof command: `cd packages/qfai && npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose -t "TC-0011-0013: the qfai-implement skill records a stop in Blocked-By and sends decisions, consultations and discoveries to /qfai-sdd as a Change Request"`
 - Round 1: Oracle proof result: exit 1; Test Files 1 failed (1); Tests 1 failed, 2 skipped (3); assertion failure inside the selected test, followed by byte-equal restoration and exit 0 on the restored GREEN command.
 
@@ -353,6 +365,12 @@ exit=0
 - Code quality audited evidence hash: f8a4696c1a4b95ffe85df2014be38a185c56fbe684903e9bf167f2cab0585cd5
 - Code quality review pack: .qfai/review/review-20260924121914333 <!-- qfai:not-a-citation -->
 - Code quality review pack seal: dafa3a85a6d4708c38bd146451d0a85be3c3b3fd213ebc502981b48d7af5425e
+- Spec record re-attestation: 75357b85873ce4c8fa5debd122b8a1d46c117ea48a63c3f47785769faf17aadb
+- Spec record re-attestation pack: .qfai/review/review-20260924172220836 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: d177f45c529bafb401814f38f8fbfe28ac1163b0edafa3b23c345fb1d15b25e3
+- Code quality record re-attestation: 75357b85873ce4c8fa5debd122b8a1d46c117ea48a63c3f47785769faf17aadb
+- Code quality record re-attestation pack: .qfai/review/review-20260924172220836 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: d177f45c529bafb401814f38f8fbfe28ac1163b0edafa3b23c345fb1d15b25e3
 - Prototype parity: n/a (not UI-affecting)
 - Prototype parity reviewed revision: working-tree+c292c15294d9d938c98ea2b44f8628d362f65785919015b7c37e29791107264e
 - Checkpoint verification command: `cd packages/qfai && npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose; corepack pnpm check-types (root); cd packages/qfai && npm run -s check-types; cd packages/qfai && node scripts/generate-emitted-rule-codes.mjs --check`
@@ -366,7 +384,7 @@ exit=0
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0011RecordHomes.test.ts
 - Selector: TC-0011-0013: the blocked -> todo bullet of execution-ledger.md closes no record
-- TC-ref: TC-0011-0013 (boundary `resume-closes-no-record`)
+- TC-ref: TC-0011-0013
 - EX-ref: EX-0011-0010; AC-ref: AC-0011-0012; BR-ref: BR-0011-0009
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: the `blocked -> todo` bullet of `references/execution-ledger.md` says to close the entry that accounted for the stop by setting its `status:` to `archived`. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+2d31f83a01de922411629aeea5788fc3beee710b71763d4d8200234911c37d55 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
@@ -425,7 +443,7 @@ packages/qfai/tests/integration/spec0011RecordHomes.test.ts
 - Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose -t "TC-0011-0013: the blocked -> todo bullet of execution-ledger.md closes no record"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it
   changes no test.)
-- Round 1: RED result: the approved RED, run at 2026-09-24T00:51:08.487Z after the scope
+- Round 1: RED result: exit 1; Test Files 1 failed (1); Tests 1 failed, 2 skipped (3). The approved RED ran at 2026-09-24T00:51:08.487Z after the scope
   PASS. Before the run the file hash recomputed to the approved value, and the tree
   address was taken twice with equal results; HEAD `536fc4ddd`, with the uncommitted
   GREENs of spec-0004 `TDD-0069` and `TDD-0071`, which touch no skill text, and no
@@ -537,7 +555,19 @@ exit=0
 - Round 1: Revision: working-tree+c292c15294d9d938c98ea2b44f8628d362f65785919015b7c37e29791107264e
 - Round 1: GREEN command: `cd packages/qfai && npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose -t "TC-0011-0013: the blocked -> todo bullet of execution-ledger.md closes no record"`
 - Round 1: GREEN result: exit 0; Test Files 1 passed (1); Tests 1 passed, 2 skipped (3). The named selector found no closure instruction in the resumption bullet.
-- Round 1: Oracle proof: The planned temporary mutation inserted `Set its status to archived` with the literal Markdown `status:` and `archived` tokens into the `blocked -> todo` bullet. The same selector exited 1 at the `found` assertion (`spec0011RecordHomes.test.ts:126`), reporting `archived`. Restoring `execution-ledger.md` returned SHA-256 `EA6040257643BC423ECBB872AF1A146577CDBB258D06AA6C90093623C758E1BB`; the selector then passed again.
+- Round 1: Oracle proof:
+
+  ```text
+  Mutation: insert `Set its status to archived` with the literal Markdown `status:` and `archived` tokens into the `blocked -> todo` bullet.
+  Command: cd packages/qfai && npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose -t "TC-0011-0013: the blocked -> todo bullet of execution-ledger.md closes no record"
+  × |integration| tests/integration/spec0011RecordHomes.test.ts > TC-0011-0013: records go to existing homes > TC-0011-0013: the blocked -> todo bullet of execution-ledger.md closes no record
+  AssertionError: expected [ 'archived' ] to deeply equal []
+  + "archived"
+  ❯ tests/integration/spec0011RecordHomes.test.ts:126:19
+  Test Files  1 failed (1)
+  Tests  1 failed | 2 skipped (3)
+  Restoration: execution-ledger.md SHA-256 EA6040257643BC423ECBB872AF1A146577CDBB258D06AA6C90093623C758E1BB; the same selector passed again.
+  ```
 - Round 1: Oracle proof command: `cd packages/qfai && npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose -t "TC-0011-0013: the blocked -> todo bullet of execution-ledger.md closes no record"`
 - Round 1: Oracle proof result: exit 1; Test Files 1 failed (1); Tests 1 failed, 2 skipped (3); assertion failure inside the selected test, followed by byte-equal restoration and exit 0 on the restored GREEN command.
 
@@ -575,6 +605,12 @@ exit=0
 - Code quality audited evidence hash: 347c0e04e568d402d9e6be1a69cefcd717b992e3f9ffd6ebd8b6a3b7713cf7b5
 - Code quality review pack: .qfai/review/review-20260924121914334 <!-- qfai:not-a-citation -->
 - Code quality review pack seal: 38f25dbe0579fdb4ea10f417321532ece42b7c6fe3138e60f6565c23cad66603
+- Spec record re-attestation: 84c5aa8bb04bf51dac2570e223659ffde2a882643ed41082164e1530c51e4b05
+- Spec record re-attestation pack: .qfai/review/review-20260924172220856 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 752b48db565e378cdc577ec2e5d49886b0edff619ad4e271e818415b66c57909
+- Code quality record re-attestation: 84c5aa8bb04bf51dac2570e223659ffde2a882643ed41082164e1530c51e4b05
+- Code quality record re-attestation pack: .qfai/review/review-20260924172220856 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 752b48db565e378cdc577ec2e5d49886b0edff619ad4e271e818415b66c57909
 - Prototype parity: n/a (not UI-affecting)
 - Prototype parity reviewed revision: working-tree+c292c15294d9d938c98ea2b44f8628d362f65785919015b7c37e29791107264e
 - Checkpoint verification command: `cd packages/qfai && npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose; corepack pnpm check-types (root); cd packages/qfai && npm run -s check-types; cd packages/qfai && node scripts/generate-emitted-rule-codes.mjs --check`
@@ -588,7 +624,7 @@ exit=0
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0011RecordHomes.test.ts
 - Selector: TC-0011-0013: no qfai-implement skill file names .qfai/steering/ or worklog-entry.schema.md or a work-log entry
-- TC-ref: TC-0011-0013 (boundary `no-surface-reference`)
+- TC-ref: TC-0011-0013
 - EX-ref: EX-0011-0010; AC-ref: AC-0011-0012; BR-ref: BR-0011-0009
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: `SKILL.md` and `references/execution-ledger.md` name `.qfai/steering/`, and `SKILL.md` names `worklog-entry.schema.md`. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+2d31f83a01de922411629aeea5788fc3beee710b71763d4d8200234911c37d55 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
@@ -641,7 +677,7 @@ packages/qfai/tests/integration/spec0011RecordHomes.test.ts
 - Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose -t "TC-0011-0013: no qfai-implement skill file names .qfai/steering/ or worklog-entry.schema.md or a work-log entry"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it
   changes no test.)
-- Round 1: RED result: the approved RED, run at 2026-09-24T00:51:11.105Z after the scope
+- Round 1: RED result: exit 1; Test Files 1 failed (1); Tests 1 failed, 2 skipped (3). The approved RED ran at 2026-09-24T00:51:11.105Z after the scope
   PASS. Before the run the file hash recomputed to the approved value, and the tree
   address was taken twice with equal results; HEAD `536fc4ddd`, with the uncommitted
   GREENs of spec-0004 `TDD-0069` and `TDD-0071`, which touch no skill text, and no
@@ -757,7 +793,19 @@ exit=0
 - Round 1: Revision: working-tree+c292c15294d9d938c98ea2b44f8628d362f65785919015b7c37e29791107264e
 - Round 1: GREEN command: `cd packages/qfai && npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose -t "TC-0011-0013: no qfai-implement skill file names .qfai/steering/ or worklog-entry.schema.md or a work-log entry"`
 - Round 1: GREEN result: exit 0; Test Files 1 passed (1); Tests 1 passed, 2 skipped (3). The directory walk found no forbidden token.
-- Round 1: Oracle proof: The planned temporary mutation inserted a `.qfai/steering/<id>.md` sentence in `SKILL.md`. The same selector exited 1 at the `found` assertion (`spec0011RecordHomes.test.ts:155`), reporting `SKILL.md: .qfai/steering/`. Restoring `SKILL.md` returned SHA-256 `FF6421F065E89A374667E871B06A24DC2277E5440624DF6C77326422A0F35A83`; the selector then passed again.
+- Round 1: Oracle proof:
+
+  ```text
+  Mutation: insert a `.qfai/steering/<id>.md` sentence in SKILL.md.
+  Command: cd packages/qfai && npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose -t "TC-0011-0013: no qfai-implement skill file names .qfai/steering/ or worklog-entry.schema.md or a work-log entry"
+  × |integration| tests/integration/spec0011RecordHomes.test.ts > TC-0011-0013: records go to existing homes > TC-0011-0013: no qfai-implement skill file names .qfai/steering/ or worklog-entry.schema.md or a work-log entry
+  AssertionError: expected [ 'SKILL.md: .qfai/steering/' ] to deeply equal []
+  + "SKILL.md: .qfai/steering/"
+  ❯ tests/integration/spec0011RecordHomes.test.ts:155:19
+  Test Files  1 failed (1)
+  Tests  1 failed | 2 skipped (3)
+  Restoration: SKILL.md SHA-256 FF6421F065E89A374667E871B06A24DC2277E5440624DF6C77326422A0F35A83; the same selector passed again.
+  ```
 - Round 1: Oracle proof command: `cd packages/qfai && npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose -t "TC-0011-0013: no qfai-implement skill file names .qfai/steering/ or worklog-entry.schema.md or a work-log entry"`
 - Round 1: Oracle proof result: exit 1; Test Files 1 failed (1); Tests 1 failed, 2 skipped (3); assertion failure inside the selected test, followed by byte-equal restoration and exit 0 on the restored GREEN command.
 
@@ -795,6 +843,12 @@ exit=0
 - Code quality audited evidence hash: a314e2b1ec12675d8828203c55c9cd97c2451ca87008d7df89ec060a4876d29e
 - Code quality review pack: .qfai/review/review-20260924121914335 <!-- qfai:not-a-citation -->
 - Code quality review pack seal: 87e686ee391bc57bb4f1f14cc514844201fe802f7bd332c56b3b18b64cb5c0d7
+- Spec record re-attestation: f818ab3b46daf2ae2e485632ded98dbbd755012825e85aa197bb89507eec53f5
+- Spec record re-attestation pack: .qfai/review/review-20260924172220863 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 302af2e8956047de7a12d60072f8c242412ea39f911bf494495cbaed835e5434
+- Code quality record re-attestation: f818ab3b46daf2ae2e485632ded98dbbd755012825e85aa197bb89507eec53f5
+- Code quality record re-attestation pack: .qfai/review/review-20260924172220863 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 302af2e8956047de7a12d60072f8c242412ea39f911bf494495cbaed835e5434
 - Prototype parity: n/a (not UI-affecting)
 - Prototype parity reviewed revision: working-tree+c292c15294d9d938c98ea2b44f8628d362f65785919015b7c37e29791107264e
 - Checkpoint verification command: `cd packages/qfai && npx vitest run tests/integration/spec0011RecordHomes.test.ts --reporter=verbose; corepack pnpm check-types (root); cd packages/qfai && npm run -s check-types; cd packages/qfai && node scripts/generate-emitted-rule-codes.mjs --check`
@@ -883,3 +937,16 @@ None yet; the REDs are recorded per row when they run.
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
 Pending. P8 has not been reached, and no review pack is open.
+
+## First full CI checkpoint
+
+- Revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
+- Run: https://github.com/aganesy/QFAI/actions/runs/36026684599
+- Result: PASS — build, lint, types, all nine package test slices, Node floor tests, and ci-pass succeeded.
+- Rows closed: TDD-0021, TDD-0022, TDD-0023.
+
+## Record defects
+
+- `record:QFAI-TDDLIST-008`, `TDD-0021`, Round 1: the TC reference, RED result and Oracle proof placed observed results outside the fields read by validation. The record now identifies the actual failing assertion, command and ledger TC reference. Re-attestation PASS in `.qfai/review/review-20260924172220836`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0022`, Round 1: the TC reference, RED result and Oracle proof placed observed results outside the fields read by validation. The record now identifies the actual failing assertion, command and ledger TC reference. Re-attestation PASS in `.qfai/review/review-20260924172220856`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0023`, Round 1: the TC reference, RED result and Oracle proof placed observed results outside the fields read by validation. The record now identifies the actual failing assertion, command and ledger TC reference. Re-attestation PASS in `.qfai/review/review-20260924172220863`; the original sealed review remains historical.

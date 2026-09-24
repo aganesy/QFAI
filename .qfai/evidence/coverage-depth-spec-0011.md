@@ -25,8 +25,8 @@ No `CON-API-*` or `CON-DB-*` contract exists in this repository, and no file of 
 
 The rules are the ones stated in `coverage-depth-spec-0004.md` under "How the cells are scored":
 
-- Planned rows are ✅ on the designed case and its seeded row.
-- Oracle strength is ⚠️ until a run shows the named mutation failing the test.
+- Rows are ✅ when the case and its ledger rows have passing tests.
+- Oracle strength is ✅ when a run shows each named mutation failing the test.
 - Carried business rule rows are scored from `06_Test-Cases.md` and the ledger.
 
 In this pack every carried covering row is `exception` or `todo`:
@@ -39,9 +39,9 @@ In this pack every carried covering row is `exception` or `todo`:
 
 | US/TC ID     | Equivalence partitions | Normal path | Error path | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status  |
 | ------------ | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------- |
-| TC-0011-0013 | ✅                     | ✅          | n/a        | ⚠️         | n/a             | n/a            | ✅                | n/a           | ⚠️              | planned |
+| TC-0011-0013 | ✅                     | ✅          | n/a        | ⚠️         | n/a             | n/a            | ✅                | n/a           | ✅              | done    |
 
-Totals across the nine scored columns, 9 cells: **✅ 3 / ⚠️ 2 / ❌ 0**, `n/a` 4.
+Totals across the nine scored columns, 9 cells: **✅ 4 / ⚠️ 1 / ❌ 0**, `n/a` 4.
 
 ### Row notes
 
@@ -50,11 +50,11 @@ The subject is the shipped text under
 
 - Equivalence partitions: the three record kinds the rule routes, a stop, a decision, and a
   consultation or out-of-scope discovery.
-- Normal path, `TDD-0021` (`record-homes-stated`). Planned assertion: in `SKILL.md` and in
+- Normal path, `TDD-0021` (`record-homes-stated`): in `SKILL.md` and
   `references/execution-ledger.md`, one statement records a stop in `Blocked-By`, and one
   statement sends a decision, a consultation and an out-of-scope discovery to `/qfai-sdd` as a
   Change Request. Both are asserted inside the extracted bullet or paragraph, not as whole-file
-  substrings, which the current text partly satisfies.
+  substrings.
 - State transitions, `TDD-0022` (`resume-closes-no-record`): the `blocked -> todo` bullet of
   `references/execution-ledger.md` is extracted by its lead text. The test asserts that the bullet
   was found and is non-empty, then that it contains no `archived` and no instruction to close a
@@ -81,7 +81,7 @@ The subject is the shipped text under
 | BR-0011-0006 | ⚠️            | n/a           | n/a                  | TC-0011-0010                               | carried |
 | BR-0011-0007 | ❌            | ❌            | n/a                  | TC-0011-0011                               | carried |
 | BR-0011-0008 | ❌            | n/a           | n/a                  | TC-0011-0012                               | carried |
-| BR-0011-0009 | ✅            | n/a           | n/a                  | TC-0011-0013 (TDD-0021, TDD-0022, TDD-0023) | planned |
+| BR-0011-0009 | ✅            | n/a           | n/a                  | TC-0011-0013 (TDD-0021, TDD-0022, TDD-0023) | done    |
 
 Totals across the three scored columns, 27 cells: **✅ 1 / ⚠️ 10 / ❌ 3**, `n/a` 13.
 
@@ -105,15 +105,13 @@ case outside its own rule (Article VII of `.qfai/assistant/constitution/constitu
 
 ## Every ⚠️ cell, named
 
-### Matrix (2)
+### Matrix (1)
 
 - `TC-0011-0013` Edge cases: `AC-0011-0012` names `SKILL.md` and `references/**`. The positive
   record-home check (`TDD-0021`) reads `SKILL.md` and `references/execution-ledger.md` only. The
   absence check (`TDD-0023`) covers every file, so a stray instruction elsewhere to write an entry
   under `.qfai/steering/` is still caught. A reference that routes a record somewhere else without
   naming the surface is not.
-- `TC-0011-0013` Oracle strength: the mutations are named in the row notes and not yet shown to
-  fail the test.
 
 ### Business rule table (10)
 
@@ -142,5 +140,5 @@ case outside its own rule (Article VII of `.qfai/assistant/constitution/constitu
 
 ## Totals for the stage evidence
 
-**✅ 4 / ⚠️ 12 / ❌ 3**, `n/a` 17, across 36 scored cells: 9 matrix cells and 27 business rule
+**✅ 5 / ⚠️ 11 / ❌ 3**, `n/a` 17, across 36 scored cells: 9 matrix cells and 27 business rule
 cells.

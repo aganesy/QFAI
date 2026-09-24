@@ -445,7 +445,8 @@ failed, 2 passed (7).
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0013RecordHomes.test.ts
 - Selector: TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
-- TC-ref: TC-0013-0036 (boundary `record-homes-stated`)
+- TC-ref: TC-0013-0036
+- Boundary: `record-homes-stated`
 - EX-ref: EX-0013-0021; AC-ref: AC-0013-0028; BR-ref: BR-0013-0021
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: `SKILL.md` `## Work-log entries` sends these records to a `.qfai/steering/<id>.md` entry, and no text of the skill sends an out-of-scope discovery anywhere. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
@@ -520,7 +521,7 @@ packages/qfai/tests/integration/spec0013RecordHomes.test.ts
 - Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it changes
   no test.)
-- Round 1: RED result: the approved RED, run at 2026-09-24T01:00:45.861Z after the scope
+- Round 1: RED result: exit 1; the approved RED, run at 2026-09-24T01:00:45.861Z after the scope
   PASS at 00:59:11Z. Before the run both spec-0013 file hashes recomputed to the approved
   values, and the tree address was taken twice with equal results; HEAD `536fc4ddd`, with
   the uncommitted GREENs of spec-0004 `TDD-0069` and `TDD-0071`, which touch no skill text,
@@ -647,7 +648,7 @@ exit=0
  Test Files  1 passed (1)
       Tests  1 passed | 3 skipped (4)
 ```
-- Round 1: Oracle proof: The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
+- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`; Result: exit 1, assertion failed inside selector `TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 
 1. Removed `out-of-scope discovery` from the `08_Open-questions.md` sentence; the result reported `consultationOrDiscovery: false` at `spec0013RecordHomes.test.ts:88:20`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
 
@@ -706,8 +707,6 @@ AssertionError: expected { decision: false, …(1) } to deeply equal { decision:
 - Refactor verify revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Build-phase qa-gatekeeper: PASS for this row's GREEN and Oracle proof at working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 - Ledger write: todo -> red at 2026-09-24T12:36:53.149Z; red -> green at 2026-09-24T13:08:14.513Z; green -> refactor at 2026-09-24T13:16:42.266Z. The green write followed the build-phase qa-gatekeeper PASS.
-- Prototype parity: n/a (not UI-affecting); no declared UI path or UI contract links this skill-document row.
-- Prototype parity reviewed revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Round 1: reviewer verdict: PASS
 - Round 1: Review pack: .qfai/review/review-20260924131612877 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal: 7458317017e72ce45f412e7bd0d4bfff5c600370e67b5de89cceb9646e9e5724
@@ -721,6 +720,14 @@ AssertionError: expected { decision: false, …(1) } to deeply equal { decision:
 - Code quality audited evidence hash: f68373598e550909ac9885175b561d00abe9b197dd1e3c435239749b652325e7
 - Code quality review pack: .qfai/review/review-20260924131612877 <!-- qfai:not-a-citation -->
 - Code quality review pack seal: 7458317017e72ce45f412e7bd0d4bfff5c600370e67b5de89cceb9646e9e5724
+- Spec record re-attestation: 92c2348be2179f2c21afc4d73db02c3b4c8847a8573c33f601a2331766fd042c
+- Spec record re-attestation pack: .qfai/review/review-20260924172220870 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: aa1416c1a3682478868b00ad33213abf3a8cbe66ad4e50e7cd1e3ba8513c582c
+- Code quality record re-attestation: 92c2348be2179f2c21afc4d73db02c3b4c8847a8573c33f601a2331766fd042c
+- Code quality record re-attestation pack: .qfai/review/review-20260924172220870 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: aa1416c1a3682478868b00ad33213abf3a8cbe66ad4e50e7cd1e3ba8513c582c
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Checkpoint verification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/assets/autoModeApprovalDegrade.test.ts tests/integration/spec0013RecordHomes.test.ts tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose; corepack pnpm check-types (root); cd packages/qfai && npm run -s check-types; cd packages/qfai && node scripts/generate-emitted-rule-codes.mjs --check`
 - Checkpoint verification result: PASS — Test Files 3 passed (3); Tests 16 passed (16); root and package type checks passed; emitted rule-code drift check passed. Final-head full suite remains assigned to CI.
 - Checkpoint verification revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
@@ -733,7 +740,8 @@ AssertionError: expected { decision: false, …(1) } to deeply equal { decision:
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0013RecordHomes.test.ts
 - Selector: TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section
-- TC-ref: TC-0013-0036 (boundary `no-worklog-section`)
+- TC-ref: TC-0013-0036
+- Boundary: `no-worklog-section`
 - EX-ref: EX-0013-0021; AC-ref: AC-0013-0028; BR-ref: BR-0013-0021
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: `SKILL.md` has a `## Work-log entries` section. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
@@ -802,7 +810,7 @@ packages/qfai/tests/integration/spec0013RecordHomes.test.ts
 - Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it changes
   no test.)
-- Round 1: RED result: the approved RED, run at 2026-09-24T01:00:52.703Z after the scope
+- Round 1: RED result: exit 1; the approved RED, run at 2026-09-24T01:00:52.703Z after the scope
   PASS at 00:59:11Z. Before the run both spec-0013 file hashes recomputed to the approved
   values, and the tree address was taken twice with equal results; HEAD `536fc4ddd`, with
   the uncommitted GREENs of spec-0004 `TDD-0069` and `TDD-0071`, which touch no skill text,
@@ -918,7 +926,7 @@ exit=0
  Test Files  1 passed (1)
       Tests  1 passed | 3 skipped (4)
 ```
-- Round 1: Oracle proof: The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
+- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section"`; Result: exit 1, assertion failed inside selector `TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 
 1. Reinserted the `## Work-log entries` heading into `SKILL.md`; the result found the heading at `spec0013RecordHomes.test.ts:99:74`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
 
@@ -950,8 +958,6 @@ AssertionError: expected [ '## Work-log entries' ] to deeply equal []
 - Refactor verify revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Build-phase qa-gatekeeper: PASS for this row's GREEN and Oracle proof at working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 - Ledger write: todo -> red at 2026-09-24T12:37:08.368Z; red -> green at 2026-09-24T13:08:28.327Z; green -> refactor at 2026-09-24T13:16:46.790Z. The green write followed the build-phase qa-gatekeeper PASS.
-- Prototype parity: n/a (not UI-affecting); no declared UI path or UI contract links this skill-document row.
-- Prototype parity reviewed revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Round 1: reviewer verdict: PASS
 - Round 1: Review pack: .qfai/review/review-20260924131612879 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal: 9b33eabac7464954637b419af2bc6bf0ab97f43ef9b8e82e65b15657ec0bd96c
@@ -965,6 +971,14 @@ AssertionError: expected [ '## Work-log entries' ] to deeply equal []
 - Code quality audited evidence hash: 7bcb902fb5a88d426b9d591ffc2534753b105c28715d229e1281b03e582d24ca
 - Code quality review pack: .qfai/review/review-20260924131612879 <!-- qfai:not-a-citation -->
 - Code quality review pack seal: 9b33eabac7464954637b419af2bc6bf0ab97f43ef9b8e82e65b15657ec0bd96c
+- Spec record re-attestation: 05aa4663d3a9053787d4fbcf5dcd24ad3a7b3a05b897fbaabfd04f55839079bd
+- Spec record re-attestation pack: .qfai/review/review-20260924172220886 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: d2aa898af56c9b4ea4c92bd874523c11ba507d56a75688537518b8b7d8b2c6d8
+- Code quality record re-attestation: 05aa4663d3a9053787d4fbcf5dcd24ad3a7b3a05b897fbaabfd04f55839079bd
+- Code quality record re-attestation pack: .qfai/review/review-20260924172220886 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: d2aa898af56c9b4ea4c92bd874523c11ba507d56a75688537518b8b7d8b2c6d8
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Checkpoint verification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/assets/autoModeApprovalDegrade.test.ts tests/integration/spec0013RecordHomes.test.ts tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose; corepack pnpm check-types (root); cd packages/qfai && npm run -s check-types; cd packages/qfai && node scripts/generate-emitted-rule-codes.mjs --check`
 - Checkpoint verification result: PASS — Test Files 3 passed (3); Tests 16 passed (16); root and package type checks passed; emitted rule-code drift check passed. Final-head full suite remains assigned to CI.
 - Checkpoint verification revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
@@ -977,7 +991,8 @@ AssertionError: expected [ '## Work-log entries' ] to deeply equal []
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0013RecordHomes.test.ts
 - Selector: TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
-- TC-ref: TC-0013-0036 (boundary `no-pending-promotion-example`)
+- TC-ref: TC-0013-0036
+- Boundary: `no-pending-promotion-example`
 - EX-ref: EX-0013-0021; AC-ref: AC-0013-0028; BR-ref: BR-0013-0021
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: `SKILL.md` cites a `W-PENDING-PROMOTION` decision as an example of carry-over. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
@@ -1038,7 +1053,7 @@ packages/qfai/tests/integration/spec0013RecordHomes.test.ts
 - Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it changes
   no test.)
-- Round 1: RED result: the approved RED, run at 2026-09-24T01:01:01.175Z after the scope
+- Round 1: RED result: exit 1; the approved RED, run at 2026-09-24T01:01:01.175Z after the scope
   PASS at 00:59:11Z. Before the run both spec-0013 file hashes recomputed to the approved
   values, and the tree address was taken twice with equal results; HEAD `536fc4ddd`, with
   the uncommitted GREENs of spec-0004 `TDD-0069` and `TDD-0071`, which touch no skill text,
@@ -1151,7 +1166,7 @@ exit=0
  Test Files  1 passed (1)
       Tests  1 passed | 3 skipped (4)
 ```
-- Round 1: Oracle proof: The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
+- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`; Result: exit 1, assertion failed inside selector `TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 
 1. Reinserted the `W-PENDING-PROMOTION` example in the preflight sentence; the result found that line at `spec0013RecordHomes.test.ts:110:74`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
 
@@ -1183,8 +1198,6 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 - Refactor verify revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Build-phase qa-gatekeeper: PASS for this row's GREEN and Oracle proof at working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 - Ledger write: todo -> red at 2026-09-24T12:37:15.283Z; red -> green at 2026-09-24T13:08:33.131Z; green -> refactor at 2026-09-24T13:16:49.033Z. The green write followed the build-phase qa-gatekeeper PASS.
-- Prototype parity: n/a (not UI-affecting); no declared UI path or UI contract links this skill-document row.
-- Prototype parity reviewed revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Round 1: reviewer verdict: PASS
 - Round 1: Review pack: .qfai/review/review-20260924131612880 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal: 1aa186161bdca91602c108d75a343950f7ba491314c03f144f06c3415b95c568
@@ -1198,6 +1211,14 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 - Code quality audited evidence hash: 14d49f90d5dd8d5d7f8e286e257fb2c77d4c6b9b1a88082a19b8cf069e19b2f0
 - Code quality review pack: .qfai/review/review-20260924131612880 <!-- qfai:not-a-citation -->
 - Code quality review pack seal: 1aa186161bdca91602c108d75a343950f7ba491314c03f144f06c3415b95c568
+- Spec record re-attestation: 0f30fe0de447a293cf11ef5063f33b36dbc561f0eaf4c777753cf6cd19b7e798
+- Spec record re-attestation pack: .qfai/review/review-20260924172220893 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 1585484419ac3909b88dc964739443963c9d4180bc0e19e1a108972e4d4b1cad
+- Code quality record re-attestation: 0f30fe0de447a293cf11ef5063f33b36dbc561f0eaf4c777753cf6cd19b7e798
+- Code quality record re-attestation pack: .qfai/review/review-20260924172220893 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 1585484419ac3909b88dc964739443963c9d4180bc0e19e1a108972e4d4b1cad
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Checkpoint verification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/assets/autoModeApprovalDegrade.test.ts tests/integration/spec0013RecordHomes.test.ts tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose; corepack pnpm check-types (root); cd packages/qfai && npm run -s check-types; cd packages/qfai && node scripts/generate-emitted-rule-codes.mjs --check`
 - Checkpoint verification result: PASS — Test Files 3 passed (3); Tests 16 passed (16); root and package type checks passed; emitted rule-code drift check passed. Final-head full suite remains assigned to CI.
 - Checkpoint verification revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
@@ -1210,7 +1231,8 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0013RecordHomes.test.ts
 - Selector: TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
-- TC-ref: TC-0013-0036 (boundary `no-surface-reference-in-tree`)
+- TC-ref: TC-0013-0036
+- Boundary: `no-surface-reference-in-tree`
 - EX-ref: EX-0013-0021; AC-ref: AC-0013-0028; BR-ref: BR-0013-0021
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: the shipped tree holds `catalog/worklog-entry.schema.md`, and the `/qfai-implement` and `/qfai-sdd` skills name `.qfai/steering/`. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
@@ -1285,7 +1307,7 @@ packages/qfai/tests/integration/spec0013RecordHomes.test.ts
 - Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it changes
   no test.)
-- Round 1: RED result: the approved RED, run at 2026-09-24T01:01:07.350Z after the scope
+- Round 1: RED result: exit 1; the approved RED, run at 2026-09-24T01:01:07.350Z after the scope
   PASS at 00:59:11Z. Before the run both spec-0013 file hashes recomputed to the approved
   values, and the tree address was taken twice with equal results; HEAD `536fc4ddd`, with
   the uncommitted GREENs of spec-0004 `TDD-0069` and `TDD-0071`, which touch no skill text,
@@ -1415,7 +1437,7 @@ exit=0
  Test Files  1 passed (1)
       Tests  1 passed | 3 skipped (4)
 ```
-- Round 1: Oracle proof: The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
+- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`; Result: exit 1, assertion failed inside selector `TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 
 1. Reinserted `.qfai/steering/<id>.md` into the `SKILL.md` record sentence; the result named `skills/qfai-sdd/SKILL.md: .qfai/steering/` at `spec0013RecordHomes.test.ts:130:19`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
 
@@ -1447,8 +1469,6 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 - Refactor verify revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Build-phase qa-gatekeeper: PASS for this row's GREEN and Oracle proof at working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 - Ledger write: todo -> red at 2026-09-24T12:37:24.740Z; red -> green at 2026-09-24T13:08:38.272Z; green -> refactor at 2026-09-24T13:16:51.990Z. The green write followed the build-phase qa-gatekeeper PASS.
-- Prototype parity: n/a (not UI-affecting); no declared UI path or UI contract links this skill-document row.
-- Prototype parity reviewed revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Round 1: reviewer verdict: PASS
 - Round 1: Review pack: .qfai/review/review-20260924131612881 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal: 778935ea262fcae2247daefd121bb209aa393e91912ca31eec10f75f3714f178
@@ -1462,6 +1482,14 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 - Code quality audited evidence hash: 9d4728f2e1d2e8ac9202e2c56397a7ce11207f1e942e0e65600d3ba5e9946d8c
 - Code quality review pack: .qfai/review/review-20260924131612881 <!-- qfai:not-a-citation -->
 - Code quality review pack seal: 778935ea262fcae2247daefd121bb209aa393e91912ca31eec10f75f3714f178
+- Spec record re-attestation: c97d9e677261538ab77d73f9f1b85bb834133998729832525d532445b6f2824b
+- Spec record re-attestation pack: .qfai/review/review-20260924172221050 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: ca37cbff09bddf03f0a5b039ee784287ada054c506cd16ca17f2167dbba66dee
+- Code quality record re-attestation: c97d9e677261538ab77d73f9f1b85bb834133998729832525d532445b6f2824b
+- Code quality record re-attestation pack: .qfai/review/review-20260924172221050 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: ca37cbff09bddf03f0a5b039ee784287ada054c506cd16ca17f2167dbba66dee
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Checkpoint verification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/assets/autoModeApprovalDegrade.test.ts tests/integration/spec0013RecordHomes.test.ts tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose; corepack pnpm check-types (root); cd packages/qfai && npm run -s check-types; cd packages/qfai && node scripts/generate-emitted-rule-codes.mjs --check`
 - Checkpoint verification result: PASS — Test Files 3 passed (3); Tests 16 passed (16); root and package type checks passed; emitted rule-code drift check passed. Final-head full suite remains assigned to CI.
 - Checkpoint verification revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
@@ -1474,7 +1502,8 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0013ApprovalStop.test.ts
 - Selector: TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps
-- TC-ref: TC-0013-0037 (boundary `stop-steps-stated`)
+- TC-ref: TC-0013-0037
+- Boundary: `stop-steps-stated`
 - EX-ref: EX-0013-0022; AC-ref: AC-0013-0029; BR-ref: BR-0013-0022
 - Branch: observed-red (branch 1), confirmed by the fresh RED below. The superseded RED is kept
   after it as history. The surface exists and states the predicate wrongly: the three files each tie the stop to a `consultation-needed` work-log entry, and the playbook and the triage step do not state all three steps. No seam is needed: the test reads shipped files and imports nothing from `src`.
@@ -1559,7 +1588,7 @@ packages/qfai/tests/integration/spec0013ApprovalStop.test.ts
 - Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it changes
   no test.)
-- Round 1: RED result: the fresh approved RED, run at 2026-09-24T01:01:15.709Z after the scope
+- Round 1: RED result: exit 1; the fresh approved RED, run at 2026-09-24T01:01:15.709Z after the scope
   PASS at 00:59:11Z. Before the run both spec-0013 file hashes recomputed to the approved
   values, and the tree address was taken twice with equal results; HEAD `536fc4ddd`, with
   the uncommitted GREENs of spec-0004 `TDD-0069` and `TDD-0071`, which touch no skill text,
@@ -1795,7 +1824,7 @@ exit=0
  Test Files  1 passed (1)
       Tests  1 passed | 1 skipped (2)
 ```
-- Round 1: Oracle proof: The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
+- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`; Result: exit 1, assertion failed inside selector `TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 
 1. Removed `do not enter Phase 0` from the `SKILL.md` stop; the result named `SKILL.md: do not enter Phase 0` at `spec0013ApprovalStop.test.ts:111:21`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
 
@@ -1827,8 +1856,6 @@ AssertionError: expected [ 'SKILL.md: do not enter Phase 0' ] to deeply equal []
 - Refactor verify revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Build-phase qa-gatekeeper: PASS for this row's GREEN and Oracle proof at working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 - Ledger write: todo -> red at 2026-09-24T12:37:01.272Z; red -> green at 2026-09-24T13:08:24.275Z; green -> refactor at 2026-09-24T13:16:44.616Z. The green write followed the build-phase qa-gatekeeper PASS.
-- Prototype parity: n/a (not UI-affecting); no declared UI path or UI contract links this skill-document row.
-- Prototype parity reviewed revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Round 1: reviewer verdict: PASS
 - Round 1: Review pack: .qfai/review/review-20260924131612878 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal: ab19a199352527af17297881c6f9827dae0360903f44c140f04ab75c05a65ea3
@@ -1842,6 +1869,14 @@ AssertionError: expected [ 'SKILL.md: do not enter Phase 0' ] to deeply equal []
 - Code quality audited evidence hash: 18dc8a547a43316c5203cf8eb8c1801a38bc1d9722f504d35cff6ca6223a5bf3
 - Code quality review pack: .qfai/review/review-20260924131612878 <!-- qfai:not-a-citation -->
 - Code quality review pack seal: ab19a199352527af17297881c6f9827dae0360903f44c140f04ab75c05a65ea3
+- Spec record re-attestation: 1a4021d1381e34a8c9e5d54664c6b8676b723c8fc3d2c3f92072d347ec4c7a9c
+- Spec record re-attestation pack: .qfai/review/review-20260924172220877 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: a199ca32641a50a6c3ce49d62c2301148bd6ed305ab9787a9da8577d3acc367a
+- Code quality record re-attestation: 1a4021d1381e34a8c9e5d54664c6b8676b723c8fc3d2c3f92072d347ec4c7a9c
+- Code quality record re-attestation pack: .qfai/review/review-20260924172220877 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: a199ca32641a50a6c3ce49d62c2301148bd6ed305ab9787a9da8577d3acc367a
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Checkpoint verification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/assets/autoModeApprovalDegrade.test.ts tests/integration/spec0013RecordHomes.test.ts tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose; corepack pnpm check-types (root); cd packages/qfai && npm run -s check-types; cd packages/qfai && node scripts/generate-emitted-rule-codes.mjs --check`
 - Checkpoint verification result: PASS — Test Files 3 passed (3); Tests 16 passed (16); root and package type checks passed; emitted rule-code drift check passed. Final-head full suite remains assigned to CI.
 - Checkpoint verification revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
@@ -1854,7 +1889,8 @@ AssertionError: expected [ 'SKILL.md: do not enter Phase 0' ] to deeply equal []
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0013ApprovalStop.test.ts
 - Selector: TC-0013-0037: none of the three files names a work-log entry or consultation-needed
-- TC-ref: TC-0013-0037 (boundary `no-worklog-entry-named`)
+- TC-ref: TC-0013-0037
+- Boundary: `no-worklog-entry-named`
 - EX-ref: EX-0013-0022; AC-ref: AC-0013-0029; BR-ref: BR-0013-0022
 - Branch: observed-red (branch 1), confirmed by the fresh RED below. The superseded RED is kept
   after it as history. The surface exists and states the predicate wrongly: all three files name a `consultation-needed` work-log entry. No seam is needed: the test reads shipped files and imports nothing from `src`.
@@ -1922,7 +1958,7 @@ packages/qfai/tests/integration/spec0013ApprovalStop.test.ts
 - Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: none of the three files names a work-log entry or consultation-needed"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it changes
   no test.)
-- Round 1: RED result: the fresh approved RED, run at 2026-09-24T01:01:22.195Z after the scope
+- Round 1: RED result: exit 1; the fresh approved RED, run at 2026-09-24T01:01:22.195Z after the scope
   PASS at 00:59:11Z. Before the run both spec-0013 file hashes recomputed to the approved
   values, and the tree address was taken twice with equal results; HEAD `536fc4ddd`, with
   the uncommitted GREENs of spec-0004 `TDD-0069` and `TDD-0071`, which touch no skill text,
@@ -2142,7 +2178,7 @@ exit=0
  Test Files  1 passed (1)
       Tests  1 passed | 1 skipped (2)
 ```
-- Round 1: Oracle proof: The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `82170e4164cfef2820ed107fca00608ccc0b9aa33e52835c69325a7a1d1954cf`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
+- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: none of the three files names a work-log entry or consultation-needed"`; Result: exit 1, assertion failed inside selector `TC-0013-0037: none of the three files names a work-log entry or consultation-needed`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `82170e4164cfef2820ed107fca00608ccc0b9aa33e52835c69325a7a1d1954cf`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 
 1. Reinserted a `consultation-needed` work-log entry into the playbook stop; the result named both `work-log` and `consultation-needed` in `references/sdd-execution-playbook.md` at `spec0013ApprovalStop.test.ts:126:19`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: none of the three files names a work-log entry or consultation-needed"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
 
@@ -2175,8 +2211,6 @@ AssertionError: expected [ …(2) ] to deeply equal []
 - Refactor verify revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Build-phase qa-gatekeeper: PASS for this row's GREEN and Oracle proof at working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 - Ledger write: todo -> red at 2026-09-24T12:37:32.421Z; red -> green at 2026-09-24T13:08:42.648Z; green -> refactor at 2026-09-24T13:16:54.217Z. The green write followed the build-phase qa-gatekeeper PASS.
-- Prototype parity: n/a (not UI-affecting); no declared UI path or UI contract links this skill-document row.
-- Prototype parity reviewed revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Round 1: reviewer verdict: PASS
 - Round 1: Review pack: .qfai/review/review-20260924131612882 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal: 52152e43d98b4c7362e0cceaba4d382047359249469a7292c889113a75406570
@@ -2190,6 +2224,14 @@ AssertionError: expected [ …(2) ] to deeply equal []
 - Code quality audited evidence hash: 043460281b7d0503d9f2ad733f6efec1439bbce4810c44c1b350a2396f47fda4
 - Code quality review pack: .qfai/review/review-20260924131612882 <!-- qfai:not-a-citation -->
 - Code quality review pack seal: 52152e43d98b4c7362e0cceaba4d382047359249469a7292c889113a75406570
+- Spec record re-attestation: eca62e968eb38e1b5101f36772ca9c8bad37fa0aca62c5b042b2d581e34db5ad
+- Spec record re-attestation pack: .qfai/review/review-20260924172221208 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 718b6485b35b442d82126dbc1d7d1d490b317520f2489a5e7a13242f0f2ae65e
+- Code quality record re-attestation: eca62e968eb38e1b5101f36772ca9c8bad37fa0aca62c5b042b2d581e34db5ad
+- Code quality record re-attestation pack: .qfai/review/review-20260924172221208 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 718b6485b35b442d82126dbc1d7d1d490b317520f2489a5e7a13242f0f2ae65e
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
 - Checkpoint verification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/assets/autoModeApprovalDegrade.test.ts tests/integration/spec0013RecordHomes.test.ts tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose; corepack pnpm check-types (root); cd packages/qfai && npm run -s check-types; cd packages/qfai && node scripts/generate-emitted-rule-codes.mjs --check`
 - Checkpoint verification result: PASS — Test Files 3 passed (3); Tests 16 passed (16); root and package type checks passed; emitted rule-code drift check passed. Final-head full suite remains assigned to CI.
 - Checkpoint verification revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
@@ -2420,3 +2462,19 @@ PASS for the four rows recorded here, each for the part of its obligation named
 under "Ledger rows advanced". This is a per-row verdict, not a stage verdict:
 the pack is not clean, and eight of its twelve `done` rows are listed under Gaps
 rather than claimed.
+
+## First full CI checkpoint
+
+- Revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
+- Run: https://github.com/aganesy/QFAI/actions/runs/36026684599
+- Result: PASS — build, lint, types, all nine package test slices, Node floor tests, and ci-pass succeeded.
+- Rows closed: TDD-0044, TDD-0045, TDD-0046, TDD-0047, TDD-0048, TDD-0049.
+
+## Record defects
+
+- `record:QFAI-TDDLIST-008`, `TDD-0044`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. Re-attestation PASS in `.qfai/review/review-20260924172220870`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0045`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. Re-attestation PASS in `.qfai/review/review-20260924172220877`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0046`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. Re-attestation PASS in `.qfai/review/review-20260924172220886`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0047`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. Re-attestation PASS in `.qfai/review/review-20260924172220893`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0048`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. Re-attestation PASS in `.qfai/review/review-20260924172221050`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0049`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. Re-attestation PASS in `.qfai/review/review-20260924172221208`; the original sealed review remains historical.

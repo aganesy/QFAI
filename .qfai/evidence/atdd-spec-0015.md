@@ -56,7 +56,8 @@ See `.qfai/evidence/coverage-depth-spec-0015.md` (committed). Totals: âœ… 21 / â
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0015LegacyProfilePreservation.test.ts
 - Selector: preserves adopter profile bytes and refreshes only a recorded older catalog
-- TC-ref: TC-0015-0007 (`legacy-profile-preservation`)
+- TC-ref: TC-0015-0007
+- Boundary: legacy-profile-preservation
 - EX-ref: EX-0015-0004; AC-refs: AC-0015-0007, AC-0015-0009; BR-ref: BR-0015-0005
 - Branch: falsifiability. The current initializer already passes this selector. No natural RED is available on the current production tree.
 - Satisfied-by: `packages/qfai/src/cli/commands/init.ts::runInit`, the `syncGovernedAssistantAssets` call's `force: options.force` setting. It refreshes a recorded older catalog under `--force`; a temporary `force: false` left that catalog in place and failed the refreshed-catalog assertion. The test file and its helpers were unchanged.
@@ -66,7 +67,8 @@ See `.qfai/evidence/coverage-depth-spec-0015.md` (committed). Totals: âœ… 21 / â
 #### Round 1
 
 - Round 1: Revision: working-tree+91d36dd525df7e9ee09367b2e8f792c063bf3ea866da1d16123f1ce522ce88df
-- Round 1: RED failure mode: falsifiability; first selector run passed against the existing implementation.
+- Round 1: RED failure mode: falsifiability
+- Round 1: First selector run passed against the existing implementation.
 - Round 1: RED test manifest:
 
 ```text
@@ -115,18 +117,24 @@ packages/qfai/tests/integration/spec0015LegacyProfilePreservation.test.ts
 - Refactor verify result: exit 0; Test Files 1 passed (1), Tests 1 passed (1), duration 5.40s. The source address read before this run was `working-tree+21020bfa0c992308fee2d5926044ed6191935f9a006889bd8dd677beb242a000`; the post-run capture agreed. No source edit was made during this verification.
 - Refactor verify revision: working-tree+21020bfa0c992308fee2d5926044ed6191935f9a006889bd8dd677beb242a000
 - Round 1: reviewer verdict: PASS
-- Round 1: Review pack: .qfai/review/review-20260924140518254 <!-- qfai:not-a-citation -->
-- Round 1: Review pack seal: 1646360e1772f293421b0ad1f28542ad75a3a2b4c52ecfbb661d712f10616a1a
+- Round 1: Review pack: .qfai/review/review-20260924174336967 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 0e518327dcd2bc1a37d477fc178cb3299d6450cb18e0d9c3ea502f6b58ecea2f
 - Spec review: PASS
 - Spec reviewed revision: working-tree+21020bfa0c992308fee2d5926044ed6191935f9a006889bd8dd677beb242a000
-- Spec audited evidence hash: 95c72b7cef20eaca274bd8165b8de7cb5b9e8288ba7141b9a59b63d4f657a969
-- Spec review pack: .qfai/review/review-20260924140518254 <!-- qfai:not-a-citation -->
-- Spec review pack seal: 1646360e1772f293421b0ad1f28542ad75a3a2b4c52ecfbb661d712f10616a1a
+- Spec audited evidence hash: da28eee8bb6d5f6c0cda426f7ec13a2f3315c59a86eb072be15712b1cfaab6b3
+- Spec review pack: .qfai/review/review-20260924174336967 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 0e518327dcd2bc1a37d477fc178cb3299d6450cb18e0d9c3ea502f6b58ecea2f
 - Code quality review: PASS
 - Code quality reviewed revision: working-tree+21020bfa0c992308fee2d5926044ed6191935f9a006889bd8dd677beb242a000
-- Code quality audited evidence hash: 95c72b7cef20eaca274bd8165b8de7cb5b9e8288ba7141b9a59b63d4f657a969
-- Code quality review pack: .qfai/review/review-20260924140518254 <!-- qfai:not-a-citation -->
-- Code quality review pack seal: 1646360e1772f293421b0ad1f28542ad75a3a2b4c52ecfbb661d712f10616a1a
+- Code quality audited evidence hash: da28eee8bb6d5f6c0cda426f7ec13a2f3315c59a86eb072be15712b1cfaab6b3
+- Code quality review pack: .qfai/review/review-20260924174336967 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 0e518327dcd2bc1a37d477fc178cb3299d6450cb18e0d9c3ea502f6b58ecea2f
+- Spec record re-attestation: da28eee8bb6d5f6c0cda426f7ec13a2f3315c59a86eb072be15712b1cfaab6b3
+- Spec record re-attestation pack: .qfai/review/review-20260924172221520 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 62f2bec19e7bbd70a10946afb34b1c2a307c6f2ad2688d358757bb89f0b7300d
+- Code quality record re-attestation: da28eee8bb6d5f6c0cda426f7ec13a2f3315c59a86eb072be15712b1cfaab6b3
+- Code quality record re-attestation pack: .qfai/review/review-20260924172221520 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 62f2bec19e7bbd70a10946afb34b1c2a307c6f2ad2688d358757bb89f0b7300d
 - Prototype parity: n/a (not UI-affecting)
 - Prototype parity reviewed revision: working-tree+21020bfa0c992308fee2d5926044ed6191935f9a006889bd8dd677beb242a000
 - Checkpoint verification command: `corepack pnpm -C packages/qfai exec vitest run tests/integration/spec0015LegacyProfilePreservation.test.ts --reporter=dot`
@@ -151,4 +159,15 @@ packages/qfai/tests/integration/spec0015LegacyProfilePreservation.test.ts
 
 ## Final status
 
-`TDD-0039` has a test identity, a failing falsifiability mutation, byte-equal restoration, a passing GREEN, both qa-gatekeeper gates PASS, a file-scoped Refactor verify PASS, and both blocking reviews PASS. The ledger is `refactor`; the orchestrator owns the final `refactor -> done` transition.
+`TDD-0039` has a test identity, a failing falsifiability mutation, byte-equal restoration, a passing GREEN, both qa-gatekeeper gates PASS, a file-scoped Refactor verify PASS, and both blocking reviews PASS. The ledger is `done` after the first full CI checkpoint.
+
+## First full CI checkpoint
+
+- Revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
+- Run: https://github.com/aganesy/QFAI/actions/runs/36026684599
+- Result: PASS â€” build, lint, types, all nine package test slices, Node floor tests, and ci-pass succeeded.
+- Rows closed: TDD-0039.
+
+## Record defects
+
+- `record:QFAI-TDDLIST-008`, `TDD-0039`, Round 1: the TC reference and falsifiability failure mode carried explanatory text where validation requires an exact value. The corrected record was re-attested by both reviewers, then formally re-reviewed in `.qfai/review/review-20260924174336967`. The original sealed review remains at `.qfai/review/review-20260924140518254` as history.

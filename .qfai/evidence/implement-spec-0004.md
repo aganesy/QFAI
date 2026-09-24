@@ -105,7 +105,8 @@ Escalated S5: Q6 — the order TDD-0072 runs in. No order closes on the single f
 - Layer: unit
 - Test file: packages/qfai/tests/validators/reviewerJustification.test.ts
 - Selector: TC-0004-0018: raises no justification finding when R-WORKLOG-DRIFT carries an empty justification
-- TC-ref: TC-0004-0018 (boundary `worklog-drift-ignored`)
+- TC-ref: TC-0004-0018
+- Boundary: `worklog-drift-ignored`
 - EX-ref: EX-0004-0016; AC-ref: AC-0004-0018; BR-ref: BR-0004-0017
 - DR-ID: DR-0296, the reset that returned the row to `todo`. The earlier
   cycle (v1.9.0, the reversed oracle) is recorded only in the ledger's former
@@ -179,7 +180,7 @@ packages/qfai/tests/validators/reviewerJustification.test.ts
 ```
 
 - Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/validators/reviewerJustification.test.ts --reporter=verbose -t "TC-0004-0018: raises no justification finding when R-WORKLOG-DRIFT carries an empty justification"`
-- Round 1: RED result: run at 2026-09-24T05:28:27Z (vitest start 14:28:27
+- Round 1: RED result: FAIL — run at 2026-09-24T05:28:27Z (vitest start 14:28:27
   local), after the scope PASS. The test hash and the tree address were
   recomputed equal to the approved values first, and no other test process was
   running. Exit 1: the selector executed and failed on the absence assertion
@@ -306,7 +307,7 @@ exit=0
     four changed files exit 0.
 - Round 1: Revision: working-tree+63b9d5384b13883d4bd889c2bce67aea49f61b4073591f3527e76605e8bfcfd5
 - Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/validators/reviewerJustification.test.ts --reporter=verbose -t "TC-0004-0018: raises no justification finding when R-WORKLOG-DRIFT carries an empty justification"`
-- Round 1: GREEN result: the restored run after the Oracle proof below was
+- Round 1: GREEN result: PASS — the restored run after the Oracle proof below was
   reverted. The GREEN file was byte-equal to its copy, the tree address
   equal to `Round 1: Revision` before the mutation and after the revert, and
   the RED test hash still `93364462…f067`.
@@ -325,7 +326,8 @@ exit=0
 exit=0
 ```
 
-- Round 1: Oracle proof: the planned mutation. `R-WORKLOG-DRIFT` goes back
+- Round 1: Oracle proof: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/validators/reviewerJustification.test.ts --reporter=verbose -t "TC-0004-0018: raises no justification finding when R-WORKLOG-DRIFT carries an empty justification"` — FAIL: the selector's absence assertion failed at line 62 after `R-WORKLOG-DRIFT` was restored to `ADVISORY_FAILING_CODES`.
+- Round 1: Oracle proof detail: The mutation put `R-WORKLOG-DRIFT` back
   into `ADVISORY_FAILING_CODES` in
   `packages/qfai/src/core/validators/reviewerJustification.ts`, the row's
   `Owning module`. Command: the GREEN command above. Exit 1 on the absence
@@ -422,7 +424,8 @@ exit=1
   the file did not change. The full package suite runs on the final head's CI.
   This deviates from the widen-to-package rule of
   `references/relevant-test-suite.md`, as recorded for `TDD-0067`.
-- Refactor verify command: from the repository root, in this order, with no
+- Refactor verify command: `cd packages/qfai && npx tsc -p tsconfig.json --noEmit`; `cd packages/qfai && npx tsc -p tsconfig.tests.json --noEmit`; `cd packages/qfai && node scripts/generate-emitted-rule-codes.mjs --check`; `./node_modules/.bin/eslint --max-warnings 0`; `./node_modules/.bin/prettier --check`; `cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose` (the 46 files listed below).
+- Refactor verify scope: from the repository root, in this order, with no
   other test process running:
   1. `cd packages/qfai && npx tsc -p tsconfig.json --noEmit`
   2. `cd packages/qfai && npx tsc -p tsconfig.tests.json --noEmit`
@@ -450,22 +453,32 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
   `validate.profileCoverageNotice.test.ts` and carry no selector of this row.
   The tree address was equal before step 1 and after step 5.
 - Refactor verify revision: working-tree+63b9d5384b13883d4bd889c2bce67aea49f61b4073591f3527e76605e8bfcfd5
-- Prototype parity: n/a (not UI-affecting). `structure.md` declares
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260924165136990 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 11f68927651ebe78ea1d578c1441b58474c57611ad09368c3af85d37e67e1167
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity rationale: `structure.md` declares
   `ui_paths: none`, and no `<contractsDir>/ui/**` contract exists, so no clause
   of `references/ui-affecting.md` selects the row. Evaluated at working-tree+63b9d5384b13883d4bd889c2bce67aea49f61b4073591f3527e76605e8bfcfd5.
 - Prototype parity reviewed revision: working-tree+63b9d5384b13883d4bd889c2bce67aea49f61b4073591f3527e76605e8bfcfd5
-- Code quality review: PASS (implementation-reviewer, instance `impl-review-0018`, 2026-09-24T05:45:09Z, Round 1).
+- Code quality review: PASS
+- Code quality review context: implementation-reviewer instance `impl-review-0018`, 2026-09-24T05:45:09Z, Round 1.
 - Code quality reviewed revision: working-tree+63b9d5384b13883d4bd889c2bce67aea49f61b4073591f3527e76605e8bfcfd5
-- Code quality audited evidence hash: fdb7b70cf4d2519432fffee6d895adb8630fa1c9efca909e257622e2351ba43f
-- Round 1: reviewer verdict (attempt 1): completion-reviewer REVISE (instance
+- Code quality audited evidence hash: b50eadcdd33d36fade703849fa99ba5b6488bcac4648ea346ac37ae088b57749
+- Code quality review pack: .qfai/review/review-20260924165136990 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 11f68927651ebe78ea1d578c1441b58474c57611ad09368c3af85d37e67e1167
+- Historical reviewer feedback (attempt 1): completion-reviewer REVISE (instance
   `impl-cr-0018`). F1: the `## Cross-spec obligations` entry was too narrow.
   Answered outside this section: the entry now covers every other spec's `done`
   row under `packages/qfai/`, with the rows in the checkpoint set named and the
   rest left to the CI full-suite checkpoint. No new production behaviour, so no
   round was opened.
-- Round 1: reviewer verdict (attempt 2): completion-reviewer PASS (instance `impl-cr-0018`), reviewed revision working-tree+63b9d5384b13883d4bd889c2bce67aea49f61b4073591f3527e76605e8bfcfd5.
+- Historical reviewer feedback (attempt 2): completion-reviewer PASS (instance `impl-cr-0018`), reviewed revision working-tree+63b9d5384b13883d4bd889c2bce67aea49f61b4073591f3527e76605e8bfcfd5.
 - Spec reviewed revision: working-tree+63b9d5384b13883d4bd889c2bce67aea49f61b4073591f3527e76605e8bfcfd5
-- Spec audited evidence hash: fdb7b70cf4d2519432fffee6d895adb8630fa1c9efca909e257622e2351ba43f
+- Spec review: PASS
+- Spec audited evidence hash: b50eadcdd33d36fade703849fa99ba5b6488bcac4648ea346ac37ae088b57749
+- Spec review pack: .qfai/review/review-20260924165136990 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 11f68927651ebe78ea1d578c1441b58474c57611ad09368c3af85d37e67e1167
 - Checkpoint: deferred. The checkpoint fields and seal are written from the
   final head's CI run (the user's decision, recorded in `### TDD-0067` of
   `atdd-spec-0004.md`).
@@ -473,6 +486,11 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
 - Checkpoint timing: this row stops at `refactor`, and its checkpoint fields
   and seal are written from the final head's CI run (the user's decision,
   recorded in `### TDD-0067` of `atdd-spec-0004.md`).
+
+- Checkpoint verification command: `corepack pnpm -C packages/qfai exec vitest run tests/validators/reviewerJustification.test.ts --reporter=verbose; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:core; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:validators; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:integration; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:e2e; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:cli; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:unit; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:scripts; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:pr-fix; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:pr-merge`
+- Checkpoint verification result: PASS — file-scoped run: 1 file, 4 test(s) passed, selector named in verbose output; CI run https://github.com/aganesy/QFAI/actions/runs/36026684599: all nine test slices and ci-pass passed at b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d.
+- Checkpoint verification revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
+- Checkpoint verification seal: 9fbbe571d84987a7d05c2950598a008a65f180885332a02a34a0a347117ca4dc
 
 ## Test results summary
 
@@ -507,3 +525,10 @@ re-run by the CI full-suite checkpoint.
 ## Commands executed
 
 Recorded per row under `## Ledger rows advanced`.
+
+## First full CI checkpoint
+
+- Revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
+- Run: https://github.com/aganesy/QFAI/actions/runs/36026684599
+- Result: PASS — build, lint, types, all nine package test slices, Node floor tests, and ci-pass succeeded.
+- Rows closed: TDD-0018.

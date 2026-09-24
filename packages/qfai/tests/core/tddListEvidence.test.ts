@@ -299,6 +299,7 @@ async function writeRoundPack(
 interface EvidenceOptions {
   requestOnlyPassRole?: string;
   reviewRequestTddId?: string;
+  reviewRequestText?: string;
   /**
    * The `Audited evidence hash` lines each review pack response carries, given
    * the row's own hash. Omitted, a response carries the one bare line of a row
@@ -509,7 +510,9 @@ async function materializeEvidence(
   await mkdir(packDir, { recursive: true });
   const responseDir = path.join(packDir, options.responseDirectory ?? "");
   await mkdir(responseDir, { recursive: true });
-  const request = [`TDD-ID: ${options.reviewRequestTddId ?? "TDD-0001"}\n`];
+  const request = [
+    options.reviewRequestText ?? `TDD-ID: ${options.reviewRequestTddId ?? "TDD-0001"}\n`,
+  ];
   for (const [role, packAuditHash] of reviews) {
     const hashLines =
       options.auditedHashLines?.(packAuditHash) ?? `Audited evidence hash: ${packAuditHash}\n`;
@@ -3568,6 +3571,30 @@ ${packPair(1).join("\n")}
       expect(issues.map((issue) => issue.message).join("\n")).toContain(
         "Spec review pack carrying request, summary, and named reviewer PASS provenance",
       );
+    });
+  });
+
+  it("accepts the documented TDD IDs list in a review request", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
+        { reviewRequestText: "# Review Request\n\n## TDD IDs\n\n- TDD-0001\n" },
+      );
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it("matches a review response's sha256-prefixed hash to the row's bare hash", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
+        { auditedHashLines: (hash) => `Audited evidence hash: sha256:${hash}\n` },
+      );
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 

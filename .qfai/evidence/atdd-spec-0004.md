@@ -422,7 +422,7 @@ packages/qfai/tests/integration/spec0004WorklogSurfaceRemoval.test.ts
 ```
 
 - Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0004WorklogSurfaceRemoval.test.ts -t "TC-0004-0074: validate --profile full reports no work-log code and no .qfai/steering/ path"`
-- Round 1: RED result: the approved RED, run at 2026-09-23T20:34:08Z after the
+- Round 1: RED result: exit 1; 1 test failed. The approved RED, run at 2026-09-23T20:34:08Z after the
   scope approval above. Before the run, the test hash recomputed to the approved
   `5c2400e2…d3ba1`, and the tree address was taken twice with equal results.
   Exit 1; Test Files 1 failed (1); Tests 1 failed (1). The failure is the
@@ -608,7 +608,7 @@ exit=0
     `US-0004-0029` and `US-0004-0031` removed.
 - Round 1: Revision: working-tree+6bd3dce938ff90e748781d76e25d0dec2f4538bdd7d90f40496b14437d813b05
 - Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0004WorklogSurfaceRemoval.test.ts -t "TC-0004-0074: validate --profile full reports no work-log code and no .qfai/steering/ path"`
-- Round 1: GREEN result: the restored run after both mutations were reverted.
+- Round 1: GREEN result: exit 0; 1 test passed. The restored run after both mutations were reverted.
   The tree address was taken before the first mutation and after each revert,
   and was equal each time. The RED test hash still recomputes to
   `5c2400e2…d3ba1`, so the test did not move under the RED. Vitest's report
@@ -626,7 +626,8 @@ exit=0
 exit=0
 ```
 
-- Round 1: Oracle proof: the two planned mutations, each applied at the call site
+- Round 1: Oracle proof: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0004WorklogSurfaceRemoval.test.ts -t "TC-0004-0074: validate --profile full reports no work-log code and no .qfai/steering/ path"` — exit 1; selector assertion failed.
+  The two planned mutations, each applied at the call site
   the GREEN removed, inside `runSddValidators` in
   `packages/qfai/src/core/validate.ts`. That function is private to the row's
   `Owning module`, and `validateProject` reaches it through
@@ -812,7 +813,7 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
   `vitestWorkspaceKnobs`. Main also moved the toolchain to TypeScript 6.0.3 and
   vitest 4.1.11. So the observations above cover a tree that no longer exists,
   and item 6 is re-taken on the merged commit below.
-- Refactor verify command: from the repository root, after
+- Refactor verify command: `cd packages/qfai && npx tsc -p tsconfig.json --noEmit`. From the repository root, after
   `cd packages/qfai && ./node_modules/.bin/tsup` (exit 0), in this order:
   1. `cd packages/qfai && npx tsc -p tsconfig.json --noEmit`
   2. `cd packages/qfai && npx tsc -p tsconfig.tests.json --noEmit`
@@ -837,12 +838,6 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
   None carries this row's selector. `git status --porcelain` was empty before
   and after the run.
 - Refactor verify revision: 536fc4ddda6894af728745a0765999aa82438ec5
-- Prototype parity: n/a (not UI-affecting). `structure.md` declares
-  `ui_paths: none`, and no `<contractsDir>/ui/**` contract exists, so no clause
-  of `references/ui-affecting.md` selects the row. Evaluated at
-  working-tree+c40624af1b883bac9fd9b5db5ce141bf3db77edf404ed2633f5dd701429db549,
-  and again at 536fc4ddda6894af728745a0765999aa82438ec5 with the same answer.
-- Prototype parity reviewed revision: 536fc4ddda6894af728745a0765999aa82438ec5
 - `qa-gatekeeper` (routing phase `build`), qa-gatekeeper#3 on the Round 1 GREEN and
   Oracle proof: PASS (instance `atdd-red-gate`, reviewed revision working-tree+6bd3dce938ff90e748781d76e25d0dec2f4538bdd7d90f40496b14437d813b05 at HEAD 45587f6b2d358fe9f7fbf1eac79681c4d1ff4285).
   - Freshness: the gatekeeper recomputed the tree address, equal to `Round 1: Revision`,
@@ -879,10 +874,23 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
     `oracle-strength.md` asks for. One unconditional `W-WORKLOG-SCHEMA` issue would
     do. Size is not a reject condition, and this mutation also re-creates the
     directory read the obligation forbids, so it stands.
-- Code quality review: PASS (implementation-reviewer, instance `impl-ir-0067`, 2026-09-23T22:15Z). Diff reviewed: `src/core/validate.ts`, `src/core/validators/index.ts`, the deleted `src/core/validators/worklogSurface.ts`, the regenerated `src/core/emittedRuleCodes.ts`, `src/cli/commands/validate.ts`, the seven test-side edits, the deleted `tests/validators/worklogSurface.test.ts`, `tsconfig.tests.json` and the two root carriers. Re-run by this reviewer: both type checks (`tsc -p tsconfig.json` and `tsc -p tsconfig.tests.json`, `--noEmit`), exit 0 with no diagnostic; the row's selector, 1 passed. The S1 decisions of Work Orders rows 21–30 match the diff. `R-HANDOFF-INCOMPLETE` and `R-WORKLOG-DRIFT` stay in `reviewer-gate-sdd` and in `ADVISORY_FAILING_CODES`. `handoffUpgrade.ts`, `R-HANDOFF-SCHEMA-DRIFT`, `assistantPaths.ts` and the `LEGACY_ASSISTANT_*` code are untouched. No removed symbol or code has a remaining importer or emitter. No blocking finding. Advisory findings: source and test comments still name the deleted `worklogSurface.ts` as the authority (`worklogEntries.ts`, `assistantPaths.ts`, `parse/spec.ts`, `prototypingEvidence.ts`, `ruleCodeUniqueness.test.ts`, `tddListBlockedStatus.test.ts`, `worklogSchemaShipped.test.ts`). Both READMEs and `docs/finding-codes.md` still name the removed codes. Decision 23 defers both to later steps, and they must be gone before the change's head. The tree moved during review: HEAD went from `45587f6b2` to `4c48e72f1` in a commit this reviewer did not make. Under `packages/qfai` and `tests/`, `4c48e72f1` is the reviewed diff with nothing added, so the verdict is pinned to the revision below.
-- Code quality reviewed revision: working-tree+c40624af1b883bac9fd9b5db5ce141bf3db77edf404ed2633f5dd701429db549
-- Code quality audited evidence hash: bbd512123998133679aa865d8d885104439e658d8acae8b70c75eac365073eb9
-- Round 1: reviewer verdict: completion-reviewer PASS (completion-reviewer
+
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260924175617099 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 61e9926c910a073542ffd6c469a76bbfea32e01a28bea9285ee136a0867b6c63
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity rationale: `structure.md` declares
+  `ui_paths: none`, and no `<contractsDir>/ui/**` contract exists, so no clause
+  of `references/ui-affecting.md` selects the row. Evaluated at
+  working-tree+c40624af1b883bac9fd9b5db5ce141bf3db77edf404ed2633f5dd701429db549,
+  and again at 536fc4ddda6894af728745a0765999aa82438ec5 with the same answer.
+- Historical Prototype parity reviewed revision: 536fc4ddda6894af728745a0765999aa82438ec5
+- Historical review record: The verdicts, reviewed revisions, and audited hashes below belong to earlier evidence and do not attest to this revised section.
+
+- Historical Code quality review: PASS (implementation-reviewer, instance `impl-ir-0067`, 2026-09-23T22:15Z). Diff reviewed: `src/core/validate.ts`, `src/core/validators/index.ts`, the deleted `src/core/validators/worklogSurface.ts`, the regenerated `src/core/emittedRuleCodes.ts`, `src/cli/commands/validate.ts`, the seven test-side edits, the deleted `tests/validators/worklogSurface.test.ts`, `tsconfig.tests.json` and the two root carriers. Re-run by this reviewer: both type checks (`tsc -p tsconfig.json` and `tsc -p tsconfig.tests.json`, `--noEmit`), exit 0 with no diagnostic; the row's selector, 1 passed. The S1 decisions of Work Orders rows 21–30 match the diff. `R-HANDOFF-INCOMPLETE` and `R-WORKLOG-DRIFT` stay in `reviewer-gate-sdd` and in `ADVISORY_FAILING_CODES`. `handoffUpgrade.ts`, `R-HANDOFF-SCHEMA-DRIFT`, `assistantPaths.ts` and the `LEGACY_ASSISTANT_*` code are untouched. No removed symbol or code has a remaining importer or emitter. No blocking finding. Advisory findings: source and test comments still name the deleted `worklogSurface.ts` as the authority (`worklogEntries.ts`, `assistantPaths.ts`, `parse/spec.ts`, `prototypingEvidence.ts`, `ruleCodeUniqueness.test.ts`, `tddListBlockedStatus.test.ts`, `worklogSchemaShipped.test.ts`). Both READMEs and `docs/finding-codes.md` still name the removed codes. Decision 23 defers both to later steps, and they must be gone before the change's head. The tree moved during review: HEAD went from `45587f6b2` to `4c48e72f1` in a commit this reviewer did not make. Under `packages/qfai` and `tests/`, `4c48e72f1` is the reviewed diff with nothing added, so the verdict is pinned to the revision below.
+- Historical Code quality reviewed revision: working-tree+c40624af1b883bac9fd9b5db5ce141bf3db77edf404ed2633f5dd701429db549
+- Historical Code quality audited evidence hash: bbd512123998133679aa865d8d885104439e658d8acae8b70c75eac365073eb9
+- Historical Round 1: reviewer verdict: completion-reviewer PASS (completion-reviewer
   `impl-cr-0067`, item review, reviewed revision working-tree+c40624af1b883bac9fd9b5db5ce141bf3db77edf404ed2633f5dd701429db549
   at HEAD 45587f6b2d358fe9f7fbf1eac79681c4d1ff4285). Pinned to that revision.
   - Tree: at review time HEAD was 4c48e72f1fce1659a8e7d2c899f3135792e06743 with
@@ -903,7 +911,7 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
     waits for a passing full suite on the reviewed content. The pull request's
     CI tests GitHub's merge of the branch with main, which is 18 commits past
     45587f6b2, so that run is not on this tree.
-- Round 1: reviewer verdict: completion-reviewer PASS (completion-reviewer
+- Historical Round 1: reviewer verdict: completion-reviewer PASS (completion-reviewer
   `impl-cr-0067`, re-review after the merge of main, reviewed revision
   536fc4ddda6894af728745a0765999aa82438ec5). Pinned to that revision. The
   verdict above is kept as history.
@@ -927,9 +935,9 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
     after this merge) and 536fc4ddd. Its tree differs from 536fc4ddd in
     `packages/qfai/package.json` and `pnpm-lock.yaml`, so a CI run on it is not
     a checkpoint of 536fc4ddd.
-- Code quality review: PASS (implementation-reviewer, instance `impl-ir-0067`, re-review at the merged commit `536fc4ddd`, 2026-09-23T22:50Z). The verdict above, pinned to `working-tree+c40624af…d549`, is kept as history, and this one supersedes it. `git diff 4c48e72f1 536fc4ddd` leaves every file of this row's diff byte-identical except `packages/qfai/tsconfig.tests.json`. There, main added one `include` entry for its own new test, `shippedWorkflowCheckIndependence.test.ts`, and this row's entry is unchanged. Main's `src/core/validators/tddList.ts` hunks cover the record re-attestation fields (added to the gate-field boundary), PASS-verdict parsing and shared-artifact re-verify staleness. None of them touches Check 8b, `worklogEntries.js`, the audit-subject extraction for this entry, or a removed symbol or code. No added line in main's 13 changed files under `packages/qfai/src`, `packages/qfai/tests` and `tests` names `worklogSurface`, `validateWorklogSurface`, `W-WORKLOG-*`, `W-PENDING-PROMOTION`, `R-HANDOFF-INCOMPLETE`, `R-WORKLOG-DRIFT` or `.qfai/steering`. Main adds no finding code and no type assertion in `src`. Re-run by this reviewer at `536fc4ddd` (TypeScript 6.0.3): both type checks (`tsc -p tsconfig.json` and `tsc -p tsconfig.tests.json`, `--noEmit`), exit 0 with no diagnostic; the row's selector, 1 passed. No blocking finding. The advisory findings of the verdict above stand unchanged: stale `worklogSurface.ts` comments, and removed code names in both READMEs and `docs/finding-codes.md`. Decision 23 defers both, and they must be gone before the change's head. The audited evidence hash is recomputed, because the phase-authored region now holds the re-taken `Refactor verify` fields at `536fc4ddd`.
-- Code quality reviewed revision: 536fc4ddda6894af728745a0765999aa82438ec5
-- Code quality audited evidence hash: dada6af460d9628b9a0df1c4b54d5c0e2afdbf90fe71e01883837bd436f694ad
+- Historical Code quality review: PASS (implementation-reviewer, instance `impl-ir-0067`, re-review at the merged commit `536fc4ddd`, 2026-09-23T22:50Z). The verdict above, pinned to `working-tree+c40624af…d549`, is kept as history, and this one supersedes it. `git diff 4c48e72f1 536fc4ddd` leaves every file of this row's diff byte-identical except `packages/qfai/tsconfig.tests.json`. There, main added one `include` entry for its own new test, `shippedWorkflowCheckIndependence.test.ts`, and this row's entry is unchanged. Main's `src/core/validators/tddList.ts` hunks cover the record re-attestation fields (added to the gate-field boundary), PASS-verdict parsing and shared-artifact re-verify staleness. None of them touches Check 8b, `worklogEntries.js`, the audit-subject extraction for this entry, or a removed symbol or code. No added line in main's 13 changed files under `packages/qfai/src`, `packages/qfai/tests` and `tests` names `worklogSurface`, `validateWorklogSurface`, `W-WORKLOG-*`, `W-PENDING-PROMOTION`, `R-HANDOFF-INCOMPLETE`, `R-WORKLOG-DRIFT` or `.qfai/steering`. Main adds no finding code and no type assertion in `src`. Re-run by this reviewer at `536fc4ddd` (TypeScript 6.0.3): both type checks (`tsc -p tsconfig.json` and `tsc -p tsconfig.tests.json`, `--noEmit`), exit 0 with no diagnostic; the row's selector, 1 passed. No blocking finding. The advisory findings of the verdict above stand unchanged: stale `worklogSurface.ts` comments, and removed code names in both READMEs and `docs/finding-codes.md`. Decision 23 defers both, and they must be gone before the change's head. The audited evidence hash is recomputed, because the phase-authored region now holds the re-taken `Refactor verify` fields at `536fc4ddd`.
+- Historical Code quality reviewed revision: 536fc4ddda6894af728745a0765999aa82438ec5
+- Historical Code quality audited evidence hash: dada6af460d9628b9a0df1c4b54d5c0e2afdbf90fe71e01883837bd436f694ad
 - Checkpoint timing (user decision, AskUserQuestion, 2026-09-23): the change is
   green only at its head. So every row of this change stops at `refactor` once
   its RED, GREEN, reviews and local per-row checkpoint are recorded. The
@@ -937,13 +945,30 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
   then every row moves to `done`. This row stays at `refactor` until then. Its
   checkpoint fields and seal are written from that CI run.
 
+- Spec review: PASS
+- Spec reviewed revision: 536fc4ddda6894af728745a0765999aa82438ec5
+- Spec audited evidence hash: 404d961fae34cbd2d615b3d0e208bac9b6b4bd79a9216bf1887588cb9f940547
+- Spec review pack: .qfai/review/review-20260924175617099 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 61e9926c910a073542ffd6c469a76bbfea32e01a28bea9285ee136a0867b6c63
+- Code quality review: PASS
+- Code quality reviewed revision: 536fc4ddda6894af728745a0765999aa82438ec5
+- Code quality audited evidence hash: 404d961fae34cbd2d615b3d0e208bac9b6b4bd79a9216bf1887588cb9f940547
+- Code quality review pack: .qfai/review/review-20260924175617099 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 61e9926c910a073542ffd6c469a76bbfea32e01a28bea9285ee136a0867b6c63
+- Prototype parity reviewed revision: 536fc4ddda6894af728745a0765999aa82438ec5
+- Checkpoint verification command: `corepack pnpm -C packages/qfai exec vitest run tests/integration/spec0004WorklogSurfaceRemoval.test.ts --reporter=verbose; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:core; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:validators; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:integration; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:e2e; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:cli; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:unit; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:scripts; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:pr-fix; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:pr-merge`
+- Checkpoint verification result: PASS — file-scoped run: 1 file, 1 test(s) passed, selector named in verbose output; CI run https://github.com/aganesy/QFAI/actions/runs/36026684599: all nine test slices and ci-pass passed at b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d.
+- Checkpoint verification revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
+- Checkpoint verification seal: 36c4413f5ebd2df82845bef9110a88b1ff86fa4f162d6b7d6d4f35753a3918a5
+
 ### TDD-0069
 
 - TDD-ID: TDD-0069
 - Layer: integration
 - Test file: packages/qfai/tests/integration/spec0004BlockedRowNeedsOnlyBlockedBy.test.ts
 - Selector: TC-0004-0076: a blocked row with a well-formed Blocked-By and no .qfai/steering/ raises no error
-- TC-ref: TC-0004-0076 (first tree; boundary `blocked-by-named`)
+- TC-ref: TC-0004-0076
+- Boundary: first tree; boundary `blocked-by-named`
 - EX-ref: EX-0004-0044, first clause; AC-ref: AC-0004-0041, first clause;
   BR-ref: BR-0004-0035, as amended by `CR-20260923-0011`
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface
@@ -1078,7 +1103,7 @@ packages/qfai/tests/integration/spec0004BlockedRowNeedsOnlyBlockedBy.test.ts
 ```
 
 - Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0004BlockedRowNeedsOnlyBlockedBy.test.ts -t "TC-0004-0076: a blocked row with a well-formed Blocked-By and no .qfai/steering/ raises no error"`
-- Round 1: RED result: the approved RED, run at 2026-09-23T23:23:00Z after the
+- Round 1: RED result: exit 1; 1 test failed. The approved RED, run at 2026-09-23T23:23:00Z after the
   scope PASS at 23:21:57Z. Before the run, the test hash recomputed to the
   approved `ddf4adda…dba10`, and the tree address was taken twice with equal
   results; HEAD `536fc4ddd`. Exit 1; Test Files 1 failed (1); Tests 1 failed (1).
@@ -1266,7 +1291,7 @@ exit=0
     `HANDOFF_REQUIRED_SECTIONS`).
 - Round 1: Revision: working-tree+66f265784e365f4d16870ec097515ce65966ab9360048c7a35c5d49a0996b3b9
 - Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/integration/spec0004BlockedRowNeedsOnlyBlockedBy.test.ts -t "TC-0004-0076: a blocked row with a well-formed Blocked-By and no .qfai/steering/ raises no error"`
-- Round 1: GREEN result: the restored run after all three mutations were
+- Round 1: GREEN result: exit 0; 1 test passed. The restored run after all three mutations were
   reverted. The GREEN file was byte-equal to its copy, the tree address equal to
   `Round 1: Revision` before the first mutation and after each revert, and the
   RED test hash still `ddf4adda…dba10`. `--reporter=verbose` is added to the
@@ -1288,7 +1313,8 @@ exit=0
 exit=0
 ```
 
-- Round 1: Oracle proof: the three planned mutations, each applied to a copy of
+- Round 1: Oracle proof: `cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/integration/spec0004BlockedRowNeedsOnlyBlockedBy.test.ts -t "TC-0004-0076: a blocked row with a well-formed Blocked-By and no .qfai/steering/ raises no error"` — exit 1; selector assertion failed.
+  The three planned mutations, each applied to a copy of
   the GREEN `packages/qfai/src/core/validators/tddList.ts` and reverted by
   restoring that copy. Command for all three: the GREEN command above. Each
   fails on the absence assertion at line 118 with an `AssertionError`, not on a
@@ -1522,7 +1548,7 @@ exit=1
     imports `cli/commands/validate.ts`. It holds `TDD-0068`'s deliberate RED,
     under that row's own RED gate, and passing is not what it owes yet.
   59 files in all.
-- Refactor verify command: from the repository root, in this order:
+- Refactor verify command: `cd packages/qfai && npx tsc -p tsconfig.json --noEmit`. From the repository root, in this order:
   1. `cd packages/qfai && npx tsc -p tsconfig.json --noEmit`
   2. `cd packages/qfai && npx tsc -p tsconfig.tests.json --noEmit`
   3. `cd packages/qfai && node scripts/generate-emitted-rule-codes.mjs --check`
@@ -1558,17 +1584,23 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
   step 5 ran on. The address after the run is
   `working-tree+e5d63a1bc487af979ea2745e76f9672c10ff50edf3fbc50ac5b407bb60184502`.
 - Refactor verify revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
-- Prototype parity: n/a (not UI-affecting). `structure.md` declares
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260924175617131 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: ad27d9d18020da94915c336a48356df38ceec99e8550ea18f4340baeed4d20a3
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity rationale: `structure.md` declares
   `ui_paths: none`, and no `<contractsDir>/ui/**` contract exists, so no clause
   of `references/ui-affecting.md` selects the row. Evaluated at working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a.
-- Prototype parity reviewed revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
+- Historical Prototype parity reviewed revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
 - Checkpoint timing: this row stops at `refactor`, and its checkpoint fields
   and seal are written from the final head's CI run (the user's decision,
   recorded in `### TDD-0067`).
-- Code quality review: PASS (implementation-reviewer, instance `impl-ir-0067`, 2026-09-23T23:59Z). Diff reviewed: `git diff 536fc4ddd` over `src/core/validators/tddList.ts`, the deleted `src/core/worklogEntries.ts`, `src/cli/commands/validate.ts`, the regenerated `src/core/emittedRuleCodes.ts`, `tests/core/tddListBlockedStatus.test.ts`, the new `tests/integration/spec0004BlockedRowNeedsOnlyBlockedBy.test.ts` and its `tsconfig.tests.json` entry. The removal matches the plan's `tddList.ts` list and S2 decisions 38–47, and adds nothing. The "parked items must be visible in CI" Check 8b, `TDDLIST_BLOCKED_MISSING_REF` and `parseBlockedBy` are intact. No file under `src`, `tests` or `scripts` still names `worklogEntries`, `collectStoppedSpecIds`, `collectWorklogEntries`, `unreadableWorklogEntries`, `WORKLOG_STOP_KINDS`, `blockedWithoutWorklog`, `readSteeringIndex`, `BlockedWorklogGate` or `StoppedSpecIndex`. `QFAI-TDDLIST-015` / `-016` remain only in the shipped `qfai-implement` skill text and `implementWorklogObligation.test.ts`, which decision 43 defers. `PROJECT_STEERING_DIR` and `HANDOFF_REQUIRED_SECTIONS` stay for the `init.ts` seed, which spec-0003 removes later. `assistantPaths.ts`, the legacy `.qfai/assistant/steering/` code, `handoffUpgrade.ts`, `.qfai/handoff.yaml` and `R-HANDOFF-SCHEMA-DRIFT` are untouched. No bare `as`, no dropped promise and no internal id in `src`. Re-run by this reviewer at `536fc4ddd` plus the working tree: both type checks (`tsc -p tsconfig.json` and `tsc -p tsconfig.tests.json`, `--noEmit`), exit 0 with no diagnostic; this row's selector and `TDD-0071`'s, 2 passed. No blocking finding. Advisory, `defect:code-quality`: `ReportedIssue`, `stringsOf`, `reportedIssues` and the stub-pack writer loop are now copied in four spec-0004 integration files (`spec0004WorklogSurfaceRemoval`, `spec0004BlockedRowNeedsOnlyBlockedBy`, `spec0004SteeringUnreadableBlockedRow`, `spec0004WithdrawnSchemaFinding`), past the third-occurrence limit on sharing. They are acceptance tests that `/qfai-atdd` owns, so the extraction into `tests/helpers/` is that stage's to make. Advisory, `record:QFAI-TDDLIST-008`: this entry's `TC-ref` holds `TC-0004-0076 (first tree; boundary ...)`, not the ledger's `TC-0004-0076`, so gate item 10's identity check refuses the row at `done` until the value is exactly the ledger's.
-- Code quality reviewed revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
-- Code quality audited evidence hash: 931c4de428d3c43506c726059805ffaab3dbf9066d449973174cb5d26afc07bc
-- Round 1: reviewer verdict: completion-reviewer PASS (completion-reviewer
+- Historical review record: The verdicts, reviewed revisions, and audited hashes below belong to earlier evidence and do not attest to this revised section.
+
+- Historical Code quality review: PASS (implementation-reviewer, instance `impl-ir-0067`, 2026-09-23T23:59Z). Diff reviewed: `git diff 536fc4ddd` over `src/core/validators/tddList.ts`, the deleted `src/core/worklogEntries.ts`, `src/cli/commands/validate.ts`, the regenerated `src/core/emittedRuleCodes.ts`, `tests/core/tddListBlockedStatus.test.ts`, the new `tests/integration/spec0004BlockedRowNeedsOnlyBlockedBy.test.ts` and its `tsconfig.tests.json` entry. The removal matches the plan's `tddList.ts` list and S2 decisions 38–47, and adds nothing. The "parked items must be visible in CI" Check 8b, `TDDLIST_BLOCKED_MISSING_REF` and `parseBlockedBy` are intact. No file under `src`, `tests` or `scripts` still names `worklogEntries`, `collectStoppedSpecIds`, `collectWorklogEntries`, `unreadableWorklogEntries`, `WORKLOG_STOP_KINDS`, `blockedWithoutWorklog`, `readSteeringIndex`, `BlockedWorklogGate` or `StoppedSpecIndex`. `QFAI-TDDLIST-015` / `-016` remain only in the shipped `qfai-implement` skill text and `implementWorklogObligation.test.ts`, which decision 43 defers. `PROJECT_STEERING_DIR` and `HANDOFF_REQUIRED_SECTIONS` stay for the `init.ts` seed, which spec-0003 removes later. `assistantPaths.ts`, the legacy `.qfai/assistant/steering/` code, `handoffUpgrade.ts`, `.qfai/handoff.yaml` and `R-HANDOFF-SCHEMA-DRIFT` are untouched. No bare `as`, no dropped promise and no internal id in `src`. Re-run by this reviewer at `536fc4ddd` plus the working tree: both type checks (`tsc -p tsconfig.json` and `tsc -p tsconfig.tests.json`, `--noEmit`), exit 0 with no diagnostic; this row's selector and `TDD-0071`'s, 2 passed. No blocking finding. Advisory, `defect:code-quality`: `ReportedIssue`, `stringsOf`, `reportedIssues` and the stub-pack writer loop are now copied in four spec-0004 integration files (`spec0004WorklogSurfaceRemoval`, `spec0004BlockedRowNeedsOnlyBlockedBy`, `spec0004SteeringUnreadableBlockedRow`, `spec0004WithdrawnSchemaFinding`), past the third-occurrence limit on sharing. They are acceptance tests that `/qfai-atdd` owns, so the extraction into `tests/helpers/` is that stage's to make. Advisory, `record:QFAI-TDDLIST-008`: this entry's `TC-ref` holds `TC-0004-0076 (first tree; boundary ...)`, not the ledger's `TC-0004-0076`, so gate item 10's identity check refuses the row at `done` until the value is exactly the ledger's.
+- Historical Code quality reviewed revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
+- Historical Code quality audited evidence hash: 931c4de428d3c43506c726059805ffaab3dbf9066d449973174cb5d26afc07bc
+- Historical Round 1: reviewer verdict: completion-reviewer PASS (completion-reviewer
   `impl-cr-0067`, item review for `refactor`, reviewed revision working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
   at HEAD 536fc4ddda6894af728745a0765999aa82438ec5). Pinned to that revision.
   - Tree: at review time the address was `working-tree+e5d63a1b…184502`.
@@ -1593,13 +1625,30 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
     `cli/commands/validate.ts`, `emittedRuleCodes.ts`) is not the change the
     `TDD-0067` entries describe.
 
+- Spec review: PASS
+- Spec reviewed revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
+- Spec audited evidence hash: a9f6936fee6045a7f91517c5c927fc5d40c05f23f56a12674dcfa8cce51a670a
+- Spec review pack: .qfai/review/review-20260924175617131 <!-- qfai:not-a-citation -->
+- Spec review pack seal: ad27d9d18020da94915c336a48356df38ceec99e8550ea18f4340baeed4d20a3
+- Code quality review: PASS
+- Code quality reviewed revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
+- Code quality audited evidence hash: a9f6936fee6045a7f91517c5c927fc5d40c05f23f56a12674dcfa8cce51a670a
+- Code quality review pack: .qfai/review/review-20260924175617131 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: ad27d9d18020da94915c336a48356df38ceec99e8550ea18f4340baeed4d20a3
+- Prototype parity reviewed revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
+- Checkpoint verification command: `corepack pnpm -C packages/qfai exec vitest run tests/integration/spec0004BlockedRowNeedsOnlyBlockedBy.test.ts --reporter=verbose; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:core; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:validators; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:integration; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:e2e; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:cli; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:unit; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:scripts; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:pr-fix; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:pr-merge`
+- Checkpoint verification result: PASS — file-scoped run: 1 file, 1 test(s) passed, selector named in verbose output; CI run https://github.com/aganesy/QFAI/actions/runs/36026684599: all nine test slices and ci-pass passed at b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d.
+- Checkpoint verification revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
+- Checkpoint verification seal: 89031a2682649ca0d495f9abcdb671a7e34af947f73ccf29886660111bb230a1
+
 ### TDD-0071
 
 - TDD-ID: TDD-0071
 - Layer: integration
 - Test file: packages/qfai/tests/integration/spec0004SteeringUnreadableBlockedRow.test.ts
 - Selector: TC-0004-0076: a well-formed blocked row beside an unreadable .qfai/steering/ file: no finding names .qfai/steering/
-- TC-ref: TC-0004-0076 (third tree; boundary `steering-unreadable`)
+- TC-ref: TC-0004-0076
+- Boundary: third tree; boundary `steering-unreadable`
 - EX-ref: EX-0004-0044, third clause; AC-ref: AC-0004-0041, third clause;
   BR-ref: BR-0004-0035 ("Ledger checks do not read `.qfai/steering/`"), as
   amended by `CR-20260923-0011`
@@ -1765,7 +1814,7 @@ packages/qfai/tests/integration/spec0004SteeringUnreadableBlockedRow.test.ts
 ```
 
 - Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0004SteeringUnreadableBlockedRow.test.ts -t "TC-0004-0076: a well-formed blocked row beside an unreadable .qfai/steering/ file: no finding names .qfai/steering/"`
-- Round 1: RED result: the approved RED, run at 2026-09-23T23:46:13Z after the
+- Round 1: RED result: exit 1; 1 test failed. The approved RED, run at 2026-09-23T23:46:13Z after the
   scope PASS at 23:45:01Z. Before the run, the test hash recomputed to the
   approved `9f0091e3…06e7dc`, and the tree address was taken twice with equal
   results; HEAD `536fc4ddd`. Host: Windows 11 (win32), Node.js v24.18.0, so the
@@ -1940,7 +1989,7 @@ exit=0
   with it). That is the read this row's RED failed on.
 - Round 1: Revision: working-tree+66f265784e365f4d16870ec097515ce65966ab9360048c7a35c5d49a0996b3b9
 - Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/integration/spec0004SteeringUnreadableBlockedRow.test.ts -t "TC-0004-0076: a well-formed blocked row beside an unreadable .qfai/steering/ file: no finding names .qfai/steering/"`
-- Round 1: GREEN result: passes on `TDD-0069` Round 1's tree, with no change
+- Round 1: GREEN result: exit 0; 1 test passed on `TDD-0069` Round 1's tree, with no change
   of its own. This is the restored run after the mutation below was reverted.
   The GREEN file was byte-equal to its copy, the tree address equal to
   `Round 1: Revision`, and the RED test hash still `9f0091e3…e7dc`.
@@ -1957,7 +2006,8 @@ exit=0
 exit=0
 ```
 
-- Round 1: Oracle proof: the planned mutation, applied to a copy of the GREEN
+- Round 1: Oracle proof: `cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/integration/spec0004SteeringUnreadableBlockedRow.test.ts -t "TC-0004-0076: a well-formed blocked row beside an unreadable .qfai/steering/ file: no finding names .qfai/steering/"` — exit 1; selector assertion failed.
+  The planned mutation, applied to a copy of the GREEN
   `packages/qfai/src/core/validators/tddList.ts` and reverted by restoring that
   copy. It re-adds a `.qfai/steering/` read when the ledger holds a `blocked`
   row, and one `QFAI-TDDLIST-016` at `error` whose `file` is each entry that
@@ -2072,7 +2122,7 @@ exit=1
     imports `cli/commands/validate.ts`. It holds `TDD-0068`'s deliberate RED,
     under that row's own RED gate, and passing is not what it owes yet.
   59 files in all.
-- Refactor verify command: from the repository root, in this order:
+- Refactor verify command: `cd packages/qfai && npx tsc -p tsconfig.json --noEmit`. From the repository root, in this order:
   1. `cd packages/qfai && npx tsc -p tsconfig.json --noEmit`
   2. `cd packages/qfai && npx tsc -p tsconfig.tests.json --noEmit`
   3. `cd packages/qfai && node scripts/generate-emitted-rule-codes.mjs --check`
@@ -2108,17 +2158,23 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
   step 5 ran on. The address after the run is
   `working-tree+e5d63a1bc487af979ea2745e76f9672c10ff50edf3fbc50ac5b407bb60184502`.
 - Refactor verify revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
-- Prototype parity: n/a (not UI-affecting). `structure.md` declares
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260924175617152 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: d0ac8e9b1352e5249b51d9ed3bb86ef0d1bd23e24dec4e09df26060df432e985
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity rationale: `structure.md` declares
   `ui_paths: none`, and no `<contractsDir>/ui/**` contract exists, so no clause
   of `references/ui-affecting.md` selects the row. Evaluated at working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a.
-- Prototype parity reviewed revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
+- Historical Prototype parity reviewed revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
 - Checkpoint timing: this row stops at `refactor`, and its checkpoint fields
   and seal are written from the final head's CI run (the user's decision,
   recorded in `### TDD-0067`).
-- Code quality review: PASS (implementation-reviewer, instance `impl-ir-0067`, 2026-09-23T23:59Z). This row changes no production code. Its GREEN is `TDD-0069`'s removal, reviewed in `### TDD-0069` at the same revision, so every production observation there applies here. Row-specific review of `tests/integration/spec0004SteeringUnreadableBlockedRow.test.ts` and its `tsconfig.tests.json` entry: `denyRead` and `restoreRead` are awaited, `restoreRead` runs in `finally` before the tree is removed, and `readFile` is asserted to reject before validate runs, so a permission change that did nothing cannot pass as a result. No bare `as`. Re-run by this reviewer: both type checks exit 0; this row's selector, 1 passed (win32). No blocking finding. Advisory, `defect:code-quality`: the same four-file copy of `ReportedIssue`, `stringsOf` and `reportedIssues` as in `### TDD-0069`, which `/qfai-atdd` owns. Advisory, `record:QFAI-TDDLIST-008`: this entry's `TC-ref` holds `TC-0004-0076 (third tree; boundary ...)`, not the ledger's `TC-0004-0076`, so gate item 10 refuses the row at `done` until the value matches exactly.
-- Code quality reviewed revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
-- Code quality audited evidence hash: d7ed3598742b903fea3dd1a11864e8e4ab4d0c03665fdc1e9270148077a34723
-- Round 1: reviewer verdict: completion-reviewer PASS (completion-reviewer
+- Historical review record: The verdicts, reviewed revisions, and audited hashes below belong to earlier evidence and do not attest to this revised section.
+
+- Historical Code quality review: PASS (implementation-reviewer, instance `impl-ir-0067`, 2026-09-23T23:59Z). This row changes no production code. Its GREEN is `TDD-0069`'s removal, reviewed in `### TDD-0069` at the same revision, so every production observation there applies here. Row-specific review of `tests/integration/spec0004SteeringUnreadableBlockedRow.test.ts` and its `tsconfig.tests.json` entry: `denyRead` and `restoreRead` are awaited, `restoreRead` runs in `finally` before the tree is removed, and `readFile` is asserted to reject before validate runs, so a permission change that did nothing cannot pass as a result. No bare `as`. Re-run by this reviewer: both type checks exit 0; this row's selector, 1 passed (win32). No blocking finding. Advisory, `defect:code-quality`: the same four-file copy of `ReportedIssue`, `stringsOf` and `reportedIssues` as in `### TDD-0069`, which `/qfai-atdd` owns. Advisory, `record:QFAI-TDDLIST-008`: this entry's `TC-ref` holds `TC-0004-0076 (third tree; boundary ...)`, not the ledger's `TC-0004-0076`, so gate item 10 refuses the row at `done` until the value matches exactly.
+- Historical Code quality reviewed revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
+- Historical Code quality audited evidence hash: d7ed3598742b903fea3dd1a11864e8e4ab4d0c03665fdc1e9270148077a34723
+- Historical Round 1: reviewer verdict: completion-reviewer PASS (completion-reviewer
   `impl-cr-0067`, item review for `refactor`, reviewed revision working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
   at HEAD 536fc4ddda6894af728745a0765999aa82438ec5). Pinned to that revision.
   - Tree: as for `TDD-0069`. The RED test hash recomputes to `9f0091e3…06e7dc`.
@@ -2132,6 +2188,22 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
     puts that read back.
   - Not judged: the checkpoint, which closes on the final head's CI by the
     user's decision, and the P5/P6 inputs.
+
+- Spec review: PASS
+- Spec reviewed revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
+- Spec audited evidence hash: 77b10355f86f61ac36bd82b1c33392cc15739097169768b9e5a8c3858c666080
+- Spec review pack: .qfai/review/review-20260924175617152 <!-- qfai:not-a-citation -->
+- Spec review pack seal: d0ac8e9b1352e5249b51d9ed3bb86ef0d1bd23e24dec4e09df26060df432e985
+- Code quality review: PASS
+- Code quality reviewed revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
+- Code quality audited evidence hash: 77b10355f86f61ac36bd82b1c33392cc15739097169768b9e5a8c3858c666080
+- Code quality review pack: .qfai/review/review-20260924175617152 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: d0ac8e9b1352e5249b51d9ed3bb86ef0d1bd23e24dec4e09df26060df432e985
+- Prototype parity reviewed revision: working-tree+1a69d4ec296c917f359ff233f83a83b9c22631318b15607093a3636b861e260a
+- Checkpoint verification command: `corepack pnpm -C packages/qfai exec vitest run tests/integration/spec0004SteeringUnreadableBlockedRow.test.ts --reporter=verbose; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:core; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:validators; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:integration; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:e2e; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:cli; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:unit; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:scripts; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:pr-fix; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:pr-merge`
+- Checkpoint verification result: PASS — file-scoped run: 1 file, 1 test(s) passed, selector named in verbose output; CI run https://github.com/aganesy/QFAI/actions/runs/36026684599: all nine test slices and ci-pass passed at b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d.
+- Checkpoint verification revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
+- Checkpoint verification seal: 88e59614616ca1c04a8fb10973468668057734a29e2b169b92d16e999853a424
 
 ### TDD-0068
 
@@ -2286,7 +2358,7 @@ packages/qfai/tests/integration/spec0004WithdrawnSchemaFinding.test.ts
 - Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0004WithdrawnSchemaFinding.test.ts --reporter=verbose -t "TC-0004-0075: validate --profile full reports a remaining catalog/worklog-entry.schema.md as an error QFAI-ASSETS-006"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too;
   it changes no test.)
-- Round 1: RED result: the approved RED, run at 2026-09-24T00:08:57Z after the
+- Round 1: RED result: exit 1; 1 test failed. The approved RED, run at 2026-09-24T00:08:57Z after the
   scope PASS at 00:04:58Z. Before the run, the test hash recomputed to the
   approved `d27c64b0…48805c`, and the tree address was taken twice with equal
   results; HEAD `536fc4ddd`. That tree holds `TDD-0069`'s uncommitted GREEN and
@@ -2479,7 +2551,7 @@ exit=0
     --noEmit` from `packages/qfai`: both exit 0 with no diagnostic.
 - Round 1: Revision: working-tree+73bc7ce72b88241119b80e5b5eef327de074ad02bbc9152729d42e65e0221ba9
 - Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0004WithdrawnSchemaFinding.test.ts --reporter=verbose -t "TC-0004-0075: validate --profile full reports a remaining catalog/worklog-entry.schema.md as an error QFAI-ASSETS-006"`
-- Round 1: GREEN result: the restored run after the Oracle proof below was
+- Round 1: GREEN result: exit 0; 1 test passed. The restored run after the Oracle proof below was
   reverted. The manifest was byte-equal to its GREEN copy, the asset absent, the
   tree address equal to `Round 1: Revision` before the mutation and after the
   revert, and the RED test hash still `d27c64b0…48805c`.
@@ -2495,7 +2567,8 @@ exit=0
 exit=0
 ```
 
-- Round 1: Oracle proof: the planned mutation. `"catalog/worklog-entry.schema.md"`
+- Round 1: Oracle proof: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0004WithdrawnSchemaFinding.test.ts --reporter=verbose -t "TC-0004-0075: validate --profile full reports a remaining catalog/worklog-entry.schema.md as an error QFAI-ASSETS-006"` — exit 1; selector assertion failed.
+  The planned mutation. `"catalog/worklog-entry.schema.md"`
   goes back into `SHIPPED_GOVERNED_ASSISTANT_FILES` in
   `packages/qfai/src/core/governedAssistantManifest.ts`, the row's
   `Owning module`, by restoring the pre-GREEN copy. The asset file is restored
@@ -2585,7 +2658,7 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
   `README.md and packages/qfai/README.md are aligned (799 lines).`, exit 0.
   `prettier --check` on both: exit 0. `Round 1: Revision` stays
   `working-tree+73bc7ce7…1ba9`, and the build-gate PASS of step 80 stands.
-- Refactor verify command: from the repository root, in this order, on the
+- Refactor verify command: `cd packages/qfai && ./node_modules/.bin/tsup`. From the repository root, in this order, on the
   repaired tree, with no other test process running:
   1. `cd packages/qfai && ./node_modules/.bin/tsup`
   2. `cd packages/qfai && node scripts/generate-governed-assistant-manifest.mjs --check`
@@ -2631,18 +2704,40 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
 - The local R-D10 checkpoint re-run is that same run, on the same tree. The
   checkpoint fields and seal stay deferred to the final head's CI run (the
   user's decision, recorded in `### TDD-0067`).
-- Prototype parity: n/a (not UI-affecting). `structure.md` declares
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260924175617115 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: a88248c753a23d8cb47ff045e0496072e94faa000d444a6c71a082d5ff21904f
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity rationale: `structure.md` declares
   `ui_paths: none`, and no `<contractsDir>/ui/**` contract exists, so no clause
   of `references/ui-affecting.md` selects the row. Evaluated at working-tree+fd08d44308fd2227144f6e4b1d1ec27c59f169dd130bc18a8a1f7e0d3874f37b.
-- Prototype parity reviewed revision: working-tree+fd08d44308fd2227144f6e4b1d1ec27c59f169dd130bc18a8a1f7e0d3874f37b
-- Code quality review: PASS (implementation-reviewer, instance `impl-review-0068`, 2026-09-24T02:30:53Z, Round 1). The production change is the withdrawal of the shipped schema asset, the regenerated `governedAssistantManifest.ts`, the mirror symlink and `worklogSchemaShipped.test.ts` deletions, and the refactor-phase README repair.
-- Code quality reviewed revision: working-tree+fd08d44308fd2227144f6e4b1d1ec27c59f169dd130bc18a8a1f7e0d3874f37b
-- Code quality audited evidence hash: 80d2feb5635ce3b6817563477ecee3e07872d944ae311f54bfeeba4e6fdc919a
-- Round 1: reviewer verdict: completion-reviewer PASS (instance `impl-cr-0068`), reviewed revision working-tree+fd08d44308fd2227144f6e4b1d1ec27c59f169dd130bc18a8a1f7e0d3874f37b.
-- Spec reviewed revision: working-tree+fd08d44308fd2227144f6e4b1d1ec27c59f169dd130bc18a8a1f7e0d3874f37b
-- Spec audited evidence hash: 80d2feb5635ce3b6817563477ecee3e07872d944ae311f54bfeeba4e6fdc919a
+- Historical Prototype parity reviewed revision: working-tree+fd08d44308fd2227144f6e4b1d1ec27c59f169dd130bc18a8a1f7e0d3874f37b
+- Historical review record: The verdicts, reviewed revisions, and audited hashes below belong to earlier evidence and do not attest to this revised section.
+
+- Historical Code quality review: PASS (implementation-reviewer, instance `impl-review-0068`, 2026-09-24T02:30:53Z, Round 1). The production change is the withdrawal of the shipped schema asset, the regenerated `governedAssistantManifest.ts`, the mirror symlink and `worklogSchemaShipped.test.ts` deletions, and the refactor-phase README repair.
+- Historical Code quality reviewed revision: working-tree+fd08d44308fd2227144f6e4b1d1ec27c59f169dd130bc18a8a1f7e0d3874f37b
+- Historical Code quality audited evidence hash: 80d2feb5635ce3b6817563477ecee3e07872d944ae311f54bfeeba4e6fdc919a
+- Historical Round 1: reviewer verdict: completion-reviewer PASS (instance `impl-cr-0068`), reviewed revision working-tree+fd08d44308fd2227144f6e4b1d1ec27c59f169dd130bc18a8a1f7e0d3874f37b.
+- Historical Spec reviewed revision: working-tree+fd08d44308fd2227144f6e4b1d1ec27c59f169dd130bc18a8a1f7e0d3874f37b
+- Historical Spec audited evidence hash: 80d2feb5635ce3b6817563477ecee3e07872d944ae311f54bfeeba4e6fdc919a
 - Checkpoint: deferred. The checkpoint fields and seal are written from the
   final head's CI run (the user's decision, recorded in `### TDD-0067`).
+
+- Spec review: PASS
+- Spec reviewed revision: working-tree+fd08d44308fd2227144f6e4b1d1ec27c59f169dd130bc18a8a1f7e0d3874f37b
+- Spec audited evidence hash: 5e8ea0ba4fe8d0478d1a267db2b39867aee12d402482af6eb078f646f75daf17
+- Spec review pack: .qfai/review/review-20260924175617115 <!-- qfai:not-a-citation -->
+- Spec review pack seal: a88248c753a23d8cb47ff045e0496072e94faa000d444a6c71a082d5ff21904f
+- Code quality review: PASS
+- Code quality reviewed revision: working-tree+fd08d44308fd2227144f6e4b1d1ec27c59f169dd130bc18a8a1f7e0d3874f37b
+- Code quality audited evidence hash: 5e8ea0ba4fe8d0478d1a267db2b39867aee12d402482af6eb078f646f75daf17
+- Code quality review pack: .qfai/review/review-20260924175617115 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: a88248c753a23d8cb47ff045e0496072e94faa000d444a6c71a082d5ff21904f
+- Prototype parity reviewed revision: working-tree+fd08d44308fd2227144f6e4b1d1ec27c59f169dd130bc18a8a1f7e0d3874f37b
+- Checkpoint verification command: `corepack pnpm -C packages/qfai exec vitest run tests/integration/spec0004WithdrawnSchemaFinding.test.ts --reporter=verbose; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:core; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:validators; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:integration; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:e2e; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:cli; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:unit; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:scripts; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:pr-fix; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:pr-merge`
+- Checkpoint verification result: PASS — file-scoped run: 1 file, 1 test(s) passed, selector named in verbose output; CI run https://github.com/aganesy/QFAI/actions/runs/36026684599: all nine test slices and ci-pass passed at b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d.
+- Checkpoint verification revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
+- Checkpoint verification seal: 6dfa75e54b9b11e10a4e428edabdb0f81df7f27634437363842f64e3a088e47f
 
 ### TDD-0070
 
@@ -2650,7 +2745,8 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/assets/as
 - Layer: integration
 - Test file: packages/qfai/tests/integration/spec0004BlockedRowEmptyBlockedBy.test.ts
 - Selector: TC-0004-0076: a blocked row with an empty Blocked-By raises TDDLIST_BLOCKED_MISSING_REF naming the row
-- TC-ref: TC-0004-0076 (second tree; boundary `blocked-by-empty`)
+- TC-ref: TC-0004-0076
+- Boundary: second tree; boundary `blocked-by-empty`
 - EX-ref: EX-0004-0044, second clause; AC-ref: AC-0004-0041, second clause; BR-ref:
   BR-0004-0035, as amended by `CR-20260923-0011`
 - Branch: falsifiability (branch 2), confirmed by the classification run below, which passed
@@ -2838,7 +2934,7 @@ packages/qfai/tests/integration/spec0004BlockedRowEmptyBlockedBy.test.ts
 ```
 
 - Round 1: Falsifiability command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0004BlockedRowEmptyBlockedBy.test.ts --reporter=verbose -t "TC-0004-0076: a blocked row with an empty Blocked-By raises TDDLIST_BLOCKED_MISSING_REF naming the row"`
-- Round 1: Falsifiability result: the predicate to break above, applied to
+- Round 1: Falsifiability result: exit 1; 1 test failed on an assertion. The predicate to break above, applied to
   `parseBlockedBy` in `packages/qfai/src/core/validators/tddList.ts`, the row's
   `Owning module`. With an empty or `-` cell parsed as `ok`, the blocked-row
   loop's `if (parsed.ok) continue;` skips row 1, and no
@@ -2902,7 +2998,7 @@ exit=1
   test hash still recomputes to `a4c8d3a8…063971`.
 - Round 1: Revision: working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870
 - Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0004BlockedRowEmptyBlockedBy.test.ts --reporter=verbose -t "TC-0004-0076: a blocked row with an empty Blocked-By raises TDDLIST_BLOCKED_MISSING_REF naming the row"`
-- Round 1: GREEN result: the restored run, taken on the tree named by
+- Round 1: GREEN result: exit 0; 1 test passed. The restored run, taken on the tree named by
   `Round 1: Revision`. The mutation above is this row's `Oracle proof`, so Phase
   Green step 2a is not repeated.
 
@@ -2936,7 +3032,7 @@ exit=0
   package suite runs on CI at the final head, where every row's checkpoint
   closes. This deviates from the widen-to-package rule of
   `references/relevant-test-suite.md`, as recorded for `TDD-0067`.
-- Refactor verify command: from the repository root, in this order:
+- Refactor verify command: `cd packages/qfai && npx tsc -p tsconfig.json --noEmit`. From the repository root, in this order:
   1. `cd packages/qfai && npx tsc -p tsconfig.json --noEmit`
   2. `cd packages/qfai && npx tsc -p tsconfig.tests.json --noEmit`
   3. `cd packages/qfai && node scripts/generate-emitted-rule-codes.mjs --check`
@@ -2959,14 +3055,6 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/integrati
   address after the run is
   `working-tree+f658df6c098b87251337de2a73566a1e30b1fce22715fc2b49e31c75c81c8e67`.
 - Refactor verify revision: working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870
-- Prototype parity: n/a (not UI-affecting). `structure.md` declares
-  `ui_paths: none`, and no `<contractsDir>/ui/**` contract exists, so no clause
-  of `references/ui-affecting.md` selects the row. Evaluated at working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870.
-- Prototype parity reviewed revision: working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870
-- Checkpoint timing: this row stops at `refactor`, and its checkpoint fields
-  and seal are written from the final head's CI run (the user's decision,
-  recorded in `### TDD-0067`).
-
 - `qa-gatekeeper` (routing phase `build`), qa-gatekeeper#2 on the Round 1 GREEN and Oracle proof: PASS (instance `atdd-red-gate`, reviewed revision working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5).
   - Freshness: the live tree addresses to `working-tree+f658df6c…c8e67`. With only the untracked `.qfai/decisions/CR-20260924-0001-the-out-of-project-refusal-of-init-force-has-no-test-case.md` excluded, it addresses to `Round 1: Revision` `ea5fbfa4…a2870` exactly. That file is read by neither the test nor the code under test. The RED test hash still recomputes to `a4c8d3a8…063971`.
   - Restore: `packages/qfai/src/core/validators/tddList.ts` is byte-equal to the pre-mutation copy the gatekeeper kept (the `TDD-0069` GREEN copy), so the falsifiability mutation is gone and no other production change came with the revert. `Round 1: Revision` equals the hand-off tree, which is the expected result for a row that writes no production code.
@@ -2974,24 +3062,55 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/integrati
   - Oracle proof: the step 3c mutation of `parseBlockedBy` that qa-gatekeeper#1 passed on `c1ba0661…7784` is this row's proof. Phase Green step 2a is not repeated on branch 2, as `qfai-implement/SKILL.md` step 3c states. It was in the `Owning module`, it broke the predicate `Satisfied-by` names, it failed at the line 103 assertion, and it ran the same command as this GREEN.
   - Model: the same shape as the `TDD-0071` build gate: no production change of its own, and a GREEN on the tree the predicate already holds on, with that source named in `Satisfied-by`.
   - Order: the ledger wrote `red -> green` at 01:17:44Z, before this gate. This PASS supplies the missing build-phase confirmation of the same GREEN observation. It does not rewrite when the transition was made. That deviation belongs to the completion review that raised it.
-- Code quality review: PASS (implementation-reviewer, instance `impl-review-0070`, 2026-09-24T01:38:53Z, Round 1, no blocking finding; the PASS was re-confirmed on the current section). This row changes no production code; its GREEN is the kept `TDDLIST_BLOCKED_MISSING_REF` check named in `Satisfied-by`.
-- Code quality reviewed revision: working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870
-- Code quality audited evidence hash: 7977465003ce3c4b8bb870abc439ce7f6737ef1cdfcd7bdad84e430f56bff9f1
+
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260924175617142 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 4a32df171c56588a674e014295c782fd201685ebf5549df3dfc22533ef857a4c
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity rationale: `structure.md` declares
+  `ui_paths: none`, and no `<contractsDir>/ui/**` contract exists, so no clause
+  of `references/ui-affecting.md` selects the row. Evaluated at working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870.
+- Historical Prototype parity reviewed revision: working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870
+- Checkpoint timing: this row stops at `refactor`, and its checkpoint fields
+  and seal are written from the final head's CI run (the user's decision,
+  recorded in `### TDD-0067`).
+
+- Historical review record: The verdicts, reviewed revisions, and audited hashes below belong to earlier evidence and do not attest to this revised section.
+
+- Historical Code quality review: PASS (implementation-reviewer, instance `impl-review-0070`, 2026-09-24T01:38:53Z, Round 1, no blocking finding; the PASS was re-confirmed on the current section). This row changes no production code; its GREEN is the kept `TDDLIST_BLOCKED_MISSING_REF` check named in `Satisfied-by`.
+- Historical Code quality reviewed revision: working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870
+- Historical Code quality audited evidence hash: 7977465003ce3c4b8bb870abc439ce7f6737ef1cdfcd7bdad84e430f56bff9f1
   (the gate's `completedEvidenceAuditHash` rule: the section cut at `- Prototype parity:`,
   plus line 57 and the first line of the paragraph at line 87 of
   `coverage-depth-spec-0004.md`)
-- Round 1: reviewer verdict (attempt 1): completion-reviewer REVISE (instance
+- Historical Round 1: reviewer verdict (attempt 1): completion-reviewer REVISE (instance
   `impl-cr-0070`). `red -> green`
   was written at 01:17:44Z before any build-phase `qa-gatekeeper` gate had run.
   Path: no new production behaviour, so no round was opened. The build gate
   then ran and passed (`qa-gatekeeper#2`, Work Orders step 77), and the ordering
   note under `Ledger writes` records it.
-- Round 1: reviewer verdict (attempt 2): completion-reviewer PASS (instance
+- Historical Round 1: reviewer verdict (attempt 2): completion-reviewer PASS (instance
   `impl-cr-0070`), reviewed revision working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870.
-- Spec reviewed revision: working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870
-- Spec audited evidence hash: 9be0b2f72f0312ed7364ebe443589b801e68f02102d46b4a8cfcc07aa3464b08
+- Historical Spec reviewed revision: working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870
+- Historical Spec audited evidence hash: 9be0b2f72f0312ed7364ebe443589b801e68f02102d46b4a8cfcc07aa3464b08
 - Checkpoint: deferred. The checkpoint fields and seal are written from the
   final head's CI run (the user's decision, recorded in `### TDD-0067`).
+
+- Spec review: PASS
+- Spec reviewed revision: working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870
+- Spec audited evidence hash: 1cd510ddf6efbd333d9de2d8ff97c3790665e889923c9abe571f00266288ea6e
+- Spec review pack: .qfai/review/review-20260924175617142 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 4a32df171c56588a674e014295c782fd201685ebf5549df3dfc22533ef857a4c
+- Code quality review: PASS
+- Code quality reviewed revision: working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870
+- Code quality audited evidence hash: 1cd510ddf6efbd333d9de2d8ff97c3790665e889923c9abe571f00266288ea6e
+- Code quality review pack: .qfai/review/review-20260924175617142 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 4a32df171c56588a674e014295c782fd201685ebf5549df3dfc22533ef857a4c
+- Prototype parity reviewed revision: working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870
+- Checkpoint verification command: `corepack pnpm -C packages/qfai exec vitest run tests/integration/spec0004BlockedRowEmptyBlockedBy.test.ts --reporter=verbose; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:core; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:validators; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:integration; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:e2e; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:cli; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:unit; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:scripts; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:pr-fix; QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:pr-merge`
+- Checkpoint verification result: PASS — file-scoped run: 1 file, 1 test(s) passed, selector named in verbose output; CI run https://github.com/aganesy/QFAI/actions/runs/36026684599: all nine test slices and ci-pass passed at b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d.
+- Checkpoint verification revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
+- Checkpoint verification seal: 20e5f323c64ccc7b6a1e974562fb687f1f149a4be6d4ca4b23e890cc1a2fa0a0
 
 ## Coverage Depth Matrix
 
@@ -3180,3 +3299,10 @@ Pending: the `done` rows other specs gained through the merge of main are added 
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
 Pending. P8 has not been reached, and no review pack is open.
+
+## First full CI checkpoint
+
+- Revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
+- Run: https://github.com/aganesy/QFAI/actions/runs/36026684599
+- Result: PASS — build, lint, types, all nine package test slices, Node floor tests, and ci-pass succeeded.
+- Rows closed: TDD-0067, TDD-0068, TDD-0069, TDD-0070, TDD-0071.
