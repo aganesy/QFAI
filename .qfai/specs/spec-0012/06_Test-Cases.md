@@ -1489,7 +1489,7 @@
 - AC-Refs: AC-0012-0084
 - Type: integration
 - Level: integration
-- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts`
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`
 - Verify REQ-0012-0062 failed teardown: with an injected runner whose teardown rejects, iterate prints a line on stdout naming the `--auto-serve` teardown and the rejection's reason, and exits with the code a cycle whose teardown resolves exits with.
 
 ## Legacy Coverage Continuity
