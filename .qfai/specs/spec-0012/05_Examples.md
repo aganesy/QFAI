@@ -633,3 +633,10 @@
 - Given an existing non-empty `iter-00/<spec-id>/home.review.json` (2048 bytes),
 - When `qfai prototyping iterate --cycle 0 --force` moves it into `iter-00.backup-<ISO>/` before clearing,
 - Then `.qfai/evidence/prototyping/mutation-log.jsonl` gains a line `{"ts":"2026-05-27T...","caller":"iterate","path":"iter-00/<spec-id>/home.review.json","action":"move","priorSize":2048,"newSize":0}` for that file; the log is git-ignored. A reviewer who finds a code path overwriting `iter-03/<spec-id>/settings.review.json` without calling the mutation-log writer surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (error).
+
+## EX-0012-0190: A Teardown That Rejects At Cycle End
+
+- BR-Ref: BR-0012-0068
+- Given a server runner whose teardown rejects with `Error: port 3000 still bound`,
+- When `iterate --auto-serve` completes a cycle that would otherwise exit 0,
+- Then stdout carries `qfai prototyping iterate --auto-serve: teardown failed (Error: port 3000 still bound)`, and iterate exits 0.

@@ -31,6 +31,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0012 states what `--auto-serve` does when its teardown fails**
+  (#2208). A case once required a failed teardown to be reported, and that
+  clause was lost when the case was rewritten, so the report could be removed
+  with no test failing. `REQ-0012-0062` now states it as the product behaves:
+  iterate prints a line on stdout naming the `--auto-serve` teardown and the
+  reason it failed, and returns the exit code the cycle would otherwise have
+  returned. A new case, `TC-0012-0490`, and a ledger row, `TDD-0577`, carry
+  it.
+
 - **A blocked ledger row whose Change Request is settled is reported**
   (#2015). A `blocked` row that named a Change Request stayed `blocked` after
   the request was decided, and nothing said so. `validate` now warns with

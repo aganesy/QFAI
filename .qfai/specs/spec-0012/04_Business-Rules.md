@@ -409,3 +409,9 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 - `iterate --cycle 0 --force` MUST emit a mutation-log entry naming each moved file (mirrors REQ-0117 backup discipline).
 - The mutation-log MUST be git-ignored by default.
 - A code path mutating iter-NN evidence without a mutation-log call surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (severity error).
+
+## BR-0012-0068: a failed `--auto-serve` teardown is reported, not raised
+
+- AC-Refs: AC-0012-0084
+- When the teardown the server runner returns rejects, iterate MUST print `qfai prototyping iterate --auto-serve: teardown failed (<reason>)` on stdout, `<reason>` being the rejection's reason.
+- The rejection MUST NOT change the exit code: iterate returns what the cycle returned.
