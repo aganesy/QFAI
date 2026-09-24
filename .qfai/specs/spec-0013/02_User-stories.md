@@ -9,7 +9,7 @@
 - US-0013-0005: Required Edge Enforcement
 - US-0013-0006: Validate Gate Integration
 - US-0013-0007: Delta Phase with Rejected Guardrails
-- US-0013-0008: Discussion Markdown-Only Preflight
+- US-0013-0008: Optional Side Artifact Does Not Block Preflight
 - US-0013-0009: DESIGN.md sha256 Lock at Phase 0
 - US-0013-0010: Active Design Contract Surface Reduction
 - US-0013-0011: UI contract `primary_tasks` slot per screen
@@ -45,7 +45,7 @@ As a QFAI user, I want `qfai validate --fail-on error` to pass with error=0 befo
 
 As a QFAI user, I want `09_delta.md` to include adoption/rejection rationale with DO NOT and Temptation sections, so that rejected options are guarded against reintroduction.
 
-## US-0013-0008: Discussion Markdown-Only Preflight
+## US-0013-0008: Optional Side Artifact Does Not Block Preflight
 
 As a QFAI user, I want SDD preflight to ignore optional side artifacts, so that their absence or format does not prevent spec generation.
 

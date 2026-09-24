@@ -250,7 +250,7 @@ Applied under option 1, actions 1 and 2.
   with this record in `DR-ID`. No existing row was reset. `TDD-0038`, the E2E
   row for `US-0013-0008`, was already `todo`.
 
-Left open: action 3. Until `/qfai-atdd spec-0013` binds the two new rows,
-`QFAI-ATDD-112` reports `TC-0013-0036` and `TC-0013-0037`. Their `Level` routes
-them to `tests/integration/**`, and the tests that already cover the behaviour
-are in `packages/qfai/tests/core/sddPreflight.test.ts`.
+Action 3 is done: `/qfai-atdd spec-0013` bound `TDD-0044` and `TDD-0045` to three cases in `packages/qfai/tests/integration/spec0013SideArtifactPreflight.test.ts`, which carry `TC-0013-0036` and `TC-0013-0037`. The cases in `packages/qfai/tests/core/sddPreflight.test.ts` stay unannotated.
+
+- `CR-20260912-0003` is read with `AC-0013-0028`, the id the side-artifact criterion took under the fallback clause. Its body and the 2026-09-12 steering entry still name the side-artifact criterion as `AC-0013-0009`, which now belongs to Delta Rejected Guardrails.
+- `US-0013-0008` is titled after the one clause it keeps.
