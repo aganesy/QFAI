@@ -424,6 +424,59 @@ describe("automerge is declared together with the check that decides whether any
         "describes is the only thing standing between a dependency bump and the default branch",
     ).not.toHaveLength(0);
   });
+
+  it("names every package the policy above does not reach, and why each is out", () => {
+    // The row above reads `automerge` at the top level, and a rule that switches a package off
+    // leaves it passing over a key that no longer decides that package. Its own comment says so.
+    // So the exceptions are enumerated here: one entry per package the bot may not offer, and
+    // nothing else may carry `enabled: false`.
+    //
+    // The list is the claim. A rule that later widened to another package, or to an update type
+    // on a package that still moves, changes this set and fails here rather than passing green
+    // over an invariant it no longer holds.
+    const EXEMPT = ["@vitest/coverage-v8"];
+
+    const config = configText();
+    const disabled = [
+      ...config.matchAll(/matchPackageNames:\s*\[([^\]]*)\][\s\S]{0,400}?enabled:\s*false/g),
+    ]
+      .flatMap((match) => [...(match[1] ?? "").matchAll(/"([^"]+)"/g)].map((name) => name[1]))
+      .filter((name): name is string => name !== undefined)
+      .sort();
+
+    expect(
+      disabled,
+      "a package switched off is an exception to the automerge policy the row above pins, and " +
+        "the policy is read from a top-level key that says nothing about it. Adding one means " +
+        "adding it here, where the set is what a reader checks",
+    ).toEqual([...EXEMPT].sort());
+
+    // And the exception is a refusal to offer the package at all, not a narrowing to one update
+    // type. A narrowing leaves the same pairing broken on every other update type, which is the
+    // reading the provider's own peer range makes unsafe.
+    for (const name of EXEMPT) {
+      const rule = new RegExp(
+        `matchPackageNames:\\s*\\[[^\\]]*"${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^\\]]*\\][\\s\\S]{0,400}?enabled:\\s*false`,
+      );
+      const block = rule.exec(config)?.[0] ?? "";
+      expect(
+        block,
+        `${name} must be switched off outright: a \`matchUpdateTypes\` beside it would leave the ` +
+          "update types it does not name arriving exactly as before",
+      ).not.toMatch(/matchUpdateTypes/);
+    }
+
+    // And the guide a maintainer reads says the same, because the rule alone tells nobody that
+    // the package now moves by hand.
+    const guide = readFileSync(path.join(REPO_ROOT, ".github/renovate.md"), "utf-8");
+    for (const name of EXEMPT) {
+      expect(
+        guide,
+        `.github/renovate.md promises that nothing waits for a human, so it has to name ${name} ` +
+          "as the package that does",
+      ).toContain(name);
+    }
+  });
 });
 
 describe("only one of the two files schedules this bot", () => {

@@ -176,11 +176,16 @@
       // dropped the moment its range stops covering ours. The group then arrives with the
       // member that carries no constraint and without the member that does.
       //
-      // So a major for the provider is not offered on its own. Minors and patches still flow,
-      // and a major is taken by hand alongside the runner, where one manifest edit shows both.
-      // This rule goes when the two can be offered as one again.
+      // Narrowing this to majors is not enough. The provider's peer range names the runner
+      // version exactly, and every runner release since its third major excludes at least one
+      // odd Node line — so the filter drops all of them against the range below, and a provider
+      // minor or patch arrives unpaired for the same reason a major does.
+      //
+      // So the provider is not offered at all, and the pair moves by hand: one manifest edit
+      // raising both, where a reviewer sees the two versions together. This rule goes when the
+      // two can be offered as one again, which is a question about the declared Node range
+      // rather than about this package.
       matchPackageNames: ["@vitest/coverage-v8"],
-      matchUpdateTypes: ["major"],
       enabled: false,
     },
   ],
