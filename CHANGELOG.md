@@ -6,11 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **The suites that read the delivered workflow set share one set-up**
-  (#2193). Three suites each built their own `qfai init` project, parsed a
-  delivered workflow's jobs and ran a step's `run:` body under bash, so a fix
-  to one copy — how bash is found, how the tree is removed — did not reach the
-  others. The three now come from one test helper. No assertion changed.
+- **The end-to-end suites that read the delivered workflow set share one
+  set-up** (#2193). Each built its own `qfai init` project, parsed a delivered
+  workflow's jobs and ran a step's `run:` body under bash, so a fix to one copy
+  — how bash is found, how the tree is removed — did not reach the other. Both
+  now use one test helper. The integration suite keeps its own copy: completed
+  ledger rows record a hash of that file and the files it imports, and moving
+  its set-up would reopen them. No assertion changed.
 
 - **The test runner moves to its fourth major, and the coverage provider with
   it** (#2173). The two move as a pair: the provider's peer range names the
