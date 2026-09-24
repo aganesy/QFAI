@@ -53,6 +53,7 @@ function shellArg(value: string): string {
 const LEGACY_BODY = `# legacy session handoff
 companyName: Acme
 primarySpecId: spec-0012
+primaryUiContract: CON-UI-0012
 startDate: 2026-05-27
 unrecognizedField: legacy-only-data
 customNotes: "remember to migrate"
@@ -74,7 +75,9 @@ describe("TC-0015-0030: handoff upgrade emits conforming yaml + preserves origin
     const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     // Canonical slots mapped.
     expect(body).toMatch(/companyName: "Acme"/);
-    expect(body).toMatch(/primarySpecId: "spec-0012"/);
+    expect(body).toMatch(/^primaryUiContract: "CON-UI-0012"$/m);
+    expect(body).toMatch(/^  primarySpecId: spec-0012$/m);
+    expect(body).not.toMatch(/^primarySpecId:/m);
     expect(body).toMatch(/startDate: "2026-05-27"/);
     // legacy: key carries the full original payload (lossless).
     expect(body).toMatch(/legacy:/);
@@ -113,7 +116,7 @@ describe("TC-0015-0030: handoff upgrade emits conforming yaml + preserves origin
     const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     // Canonical slots mapped.
     expect(body).toMatch(/companyName: "Acme"/);
-    expect(body).toMatch(/primarySpecId: "spec-0012"/);
+    expect(body).toMatch(/^  primarySpecId: spec-0012$/m);
     // Nested signature.by / signature.on preserved under legacy:.
     expect(body).toMatch(/signature:/);
     expect(body).toMatch(/by: user-alpha/);
@@ -205,7 +208,7 @@ describe("TC-0015-0030: handoff upgrade emits conforming yaml + preserves origin
     expect(code).toBe(0);
     const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     expect(body).toMatch(/companyName: "JsonCo"/);
-    expect(body).toMatch(/primarySpecId: "spec-0099"/);
+    expect(body).toMatch(/^  primarySpecId: spec-0099$/m);
     // Nested original payload preserved under legacy:
     expect(body).toMatch(/customExtra/);
   });
@@ -246,7 +249,7 @@ metadata:
     const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     // Canonical slots from the recognized fields.
     expect(body).toMatch(/companyName: "Acme"/);
-    expect(body).toMatch(/primarySpecId: "spec-0012"/);
+    expect(body).toMatch(/^  primarySpecId: spec-0012$/m);
     // Nested mapping values must appear in the emitted legacy: block.
     // Pre-fix the column-0 regex scanner would drop these silently.
     expect(body).toMatch(/signature:/);

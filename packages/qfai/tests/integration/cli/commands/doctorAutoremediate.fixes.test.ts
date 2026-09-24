@@ -45,7 +45,7 @@ describe("doctor --autoremediate fixes install + clean + config", () => {
     const root = await newTempDir("fixes");
 
     // Seed skill manifest with one declared runtime dep, none installed.
-    const manifestDir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping");
+    const manifestDir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping");
     await mkdir(manifestDir, { recursive: true });
     await writeFile(
       path.join(manifestDir, "manifest.json"),
@@ -287,7 +287,7 @@ describe("doctor --autoremediate fixes install + clean + config", () => {
   // "not found" would send the user chasing a --profile typo.
   it("says the manifest is unreadable when the skill directory is a regular file", async () => {
     const root = await newTempDir("skilldir-file");
-    const skillsRoot = path.join(root, ".qfai", "assistant", "skills");
+    const skillsRoot = path.join(root, ".qfai", "assistant", "skill");
     await mkdir(skillsRoot, { recursive: true });
     await writeFile(path.join(skillsRoot, "qfai-prototyping"), "not a directory", "utf-8");
 
@@ -309,7 +309,7 @@ describe("doctor --autoremediate fixes install + clean + config", () => {
 
   it("still says 'all installed' when a real manifest declares zero deps", async () => {
     const root = await newTempDir("zero-deps");
-    const manifestDir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping");
+    const manifestDir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping");
     await mkdir(manifestDir, { recursive: true });
     await writeFile(
       path.join(manifestDir, "manifest.json"),

@@ -77,7 +77,7 @@ describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
   it("--dry-run yields no install / archive / config-write side effects", async () => {
     const root = await newTempDir("dry");
     // Seed skill manifest declaring a missing dep.
-    const manifestDir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping");
+    const manifestDir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping");
     await mkdir(manifestDir, { recursive: true });
     await writeFile(
       path.join(manifestDir, "manifest.json"),

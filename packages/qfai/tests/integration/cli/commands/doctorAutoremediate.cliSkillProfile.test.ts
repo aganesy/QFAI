@@ -80,7 +80,7 @@ afterEach(async () => {
 describe("doctor CLI threads skillProfile into autoremediate", () => {
   it("invokes the install runner for the skill's runtimeDependencies via the CLI dispatch path", async () => {
     const root = await newTempDir("dispatch");
-    const manifestDir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping");
+    const manifestDir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping");
     await mkdir(manifestDir, { recursive: true });
     await writeFile(
       path.join(manifestDir, "manifest.json"),
@@ -257,7 +257,7 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
 
     // Case B: with skillProfile → note must NOT appear.
     const rootB = await newTempDir("note-present-profile");
-    const manifestDir = path.join(rootB, ".qfai", "assistant", "skills", "qfai-prototyping");
+    const manifestDir = path.join(rootB, ".qfai", "assistant", "skill", "qfai-prototyping");
     await mkdir(manifestDir, { recursive: true });
     await writeFile(
       path.join(manifestDir, "manifest.json"),
