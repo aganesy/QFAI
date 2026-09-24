@@ -31,6 +31,8 @@ skill from the project root, where `qfai.config.yaml` and a locally installed
 do not add a `qfai` subcommand or make network calls.
 Complete the launcher preflight in `.qfai/assistant/rule/shared-skill-operating-baseline.md`
 before running a CLI command.
+Use `rule/shared-skill-delegation-baseline.md` to route the declared roles and
+keep authors separate from reviewers.
 
 ### Procedure
 
@@ -58,7 +60,7 @@ before running a CLI command.
    Preserve any item the scripts could not place. After step 4 writes
    `id-map.json`, do not change `plan.yaml` to move a mapped item. Resolve
    remaining content in the new tree through `/qfai-sdd`.
-6. After step 10, run `npx qfai validate` through the project's local dependency (or `yarn exec qfai validate` for Plug'n'Play). Resolve
+6. After step 10, run `npx qfai validate` through the launcher proven by preflight. Resolve
    layout and chain errors. Use its BF, AC and EX test-obligation findings to
    finish test coverage or record a permitted decision exception.
 
