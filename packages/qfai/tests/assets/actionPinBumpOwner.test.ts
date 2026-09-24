@@ -8,8 +8,8 @@
  *
  * That is worth doing rather than skipping. A rule satisfied by "somebody decided this"
  * degrades to nothing the moment the person who decided it stops reading pull requests. A
- * rule satisfied by a paragraph in `07_Decisions.md`, asserted here, fails when the
- * paragraph is deleted or reworded past the point where it still carries the reason.
+ * rule satisfied by a row in `.qfai/spec/decisions.md`, asserted here, fails when the
+ * row is deleted or reworded past the point where it still carries the reason.
  *
  * ## What this file must NOT do
  *
@@ -62,7 +62,7 @@ import { declaredIncludeGlobs, testFileCount } from "../helpers/runnerProjects.j
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
-const DECISIONS = path.join(REPO_ROOT, ".qfai", "specs", "spec-0017", "07_Decisions.md");
+const DECISIONS = path.join(REPO_ROOT, ".qfai", "spec", "decisions.md");
 
 /** The decision this pair of rows reads. */
 const RETIREMENT_DR = "DR-0017-0007";
@@ -102,19 +102,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * One decision's section, from its heading to the next one.
+ * One imported decision's row in the consolidated decision register.
  *
- * Sliced rather than read whole, so a phrase present somewhere else in the register cannot
+ * Selected rather than read whole, so a phrase present somewhere else in the register cannot
  * satisfy a claim about this decision.
  */
 function decisionSection(id: string): string {
   const source = readFileSync(DECISIONS, "utf-8");
-  const start = source.indexOf(`### ${id}`);
-  if (start < 0) {
-    return "";
-  }
-  const next = source.indexOf("\n### ", start + 1);
-  return next < 0 ? source.slice(start) : source.slice(start, next);
+  return (
+    source.split(/\r?\n/).find((line) => /^\| DEC-\d+ \|/.test(line) && line.includes(`#${id}:`)) ??
+    ""
+  );
 }
 
 describe("TC-0017-0074 (TDD-0074): deleting the copy with no shipped-set gate is rejected", () => {

@@ -39,14 +39,12 @@ describe("autopilot inputs follow story-tree and UI-contract scope", () => {
 
   it("the CLI contract rejects a bare primary UI contract ID", async () => {
     const contract = await readFile(
-      path.join(root, ".qfai/contracts/cli/qfai-prototyping.md"),
+      path.join(root, ".qfai/spec/03_contract/cli/qfai-prototyping.md"),
       "utf-8",
     );
-    expect(contract).toContain("--primary-ui-contract <CON-UI-NNNN>");
-    expect(contract).toContain(
-      "The flag and the config key accept the full `CON-UI-NNNN` form only",
-    );
-    expect(contract).toContain("a bare");
+    expect(contract).toContain("`--primary-ui-contract` flag");
+    expect(contract).toContain("Both MUST accept only the full `CON-UI-NNNN` form");
+    expect(contract).toContain("a bare `NNNN` included");
     expect(contract).toContain("No input is normalised");
   });
 });

@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../.
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(root, tree, rel), "utf-8");
+const flat = (content: string): string => content.replace(/\s+/g, " ");
 
 describe.each(trees)("%s ATDD obligations", (tree) => {
   it("assigns BF and AC acceptance tests to their required layers", async () => {
@@ -25,7 +26,9 @@ describe.each(trees)("%s ATDD obligations", (tree) => {
     const skill = await read(tree, "assistant/skill/qfai-atdd/SKILL.md");
     expect(skill).toContain("`QFAI:EX-NNNN-NNNN-NN`");
     expect(skill).toContain("/qfai-implement");
-    expect(skill).toContain("an annotation or a generated placeholder alone never proves behavior");
+    expect(flat(skill)).toContain(
+      "an annotation or a generated placeholder alone never proves behavior",
+    );
     expect(skill).toContain(
       "Every BF and AC obligation in scope has an executed, behavior-checking test",
     );
@@ -43,7 +46,7 @@ describe.each(trees)("%s ATDD obligations", (tree) => {
       tree,
       "assistant/skill/qfai-atdd/references/test-case-depth-checklist.md",
     );
-    expect(checklist).toContain("one row per US, AC and EX");
+    expect(flat(checklist)).toContain("one row per US, AC and EX");
     expect(checklist).toContain("A BF-level E2E obligation");
     expect(checklist).toContain("EX rows remain in this flow's matrix");
     expect(checklist).toContain("does not become `✅` when a file or skeleton appears");

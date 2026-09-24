@@ -12,13 +12,16 @@ describe("autopilot choices cannot supply missing approval", () => {
   for (const tree of trees) {
     it(tree + ": SDD classifies its own decisions and stops for pending approval", async () => {
       const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+      const triage = await read(tree, "assistant/skill/qfai-sdd/references/sdd-triage.md");
       expect(skill).toContain("## Default Autopilot Policy");
       for (const bucket of ["auto-decide:", "ask-user:", "hard-required:"]) {
         expect(skill).toContain(bucket);
       }
-      expect(skill).toContain("approval-required change operations");
-      expect(skill).toContain("`--auto` asks no questions and never supplies its own approval");
-      expect(skill).toContain("stop before the dependent write and report pending approvals");
+      expect(skill).toContain("sdd-triage.md");
+      expect(triage).toContain("CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE");
+      expect(triage).toContain("Do not self-approve");
+      expect(triage).toContain("In --auto, ask no question, leave approval-required rows at TODO");
+      expect(triage).toContain("stop before their dependent writes");
     });
 
     it(tree + ": the shared rule keeps mandatory approvals outside the prompt budget", async () => {

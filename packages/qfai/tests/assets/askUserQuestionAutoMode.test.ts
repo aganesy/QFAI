@@ -16,7 +16,8 @@ describe("--auto question and approval boundary", () => {
       const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
       const triage = await read(tree, "assistant/skill/qfai-sdd/references/sdd-triage.md");
       expect(baseline).toContain("When `--auto` is active, ask nothing");
-      expect(skill).toContain("never supplies its own approval");
+      expect(skill).toContain("sdd-triage.md");
+      expect(triage).toContain("Do not self-approve");
       expect(triage).toContain("In --auto, ask no question");
       expect(triage).toContain("stop before their dependent writes");
     });
