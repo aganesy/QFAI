@@ -102,7 +102,7 @@ describe("a UI contract entry no screen is read from is reported", () => {
         "    primary_tasks: []",
       ],
     });
-    const screens = await readUiContractScreenContracts(root);
+    const screens = await readUiContractScreenContracts(root, defaultConfig.paths.contractsDir);
     const findings = await validateUiScreenEntries(root, defaultConfig);
     expect(findings).toHaveLength(1);
     const read = screens.find((item) => item.screenId === "home");
