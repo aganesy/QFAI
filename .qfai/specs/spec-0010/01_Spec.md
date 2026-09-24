@@ -17,11 +17,13 @@
   - `04_Sources.md` reference research posture
   - `40_screen_contracts.md`
   - `50_review_input_bundle.md`
-  - root `DESIGN.md` draft authoring as Phase output (brand vision / visual identity SSOT for downstream)
+  - the brand direction the user chooses, recorded in `01_Context.md#Design Direction` as the
+    input `/qfai-sdd` Phase 0 authors root `DESIGN.md` from
   - drop legacy sidecars (`uiux/33_exploration_rubric.md`, `uiux/34_evaluator_calibration.md`, `uiux/30_exploration_brief.md`, `uiux/31_reference_pool.md`, `uiux/32_design_anti_goals.md`) — DESIGN.md replaces them
 - Out:
   - legacy trend-derived scoring sidecar など旧 evaluation sidecar family
-  - discussion 時点の brand archetype selection
+  - an assistant choosing the brand direction on the user's behalf
+  - authoring root `DESIGN.md`, which `/qfai-sdd` Phase 0 does from the recorded direction
   - discussion 時点の design system generation
 - In (2026-09-24, intent-driven entry):
   - `/qfai-discussion` as a stage of a workflow run: it resolves only the scope
@@ -53,7 +55,8 @@
 
 ## Applicable Policy
 
-- Discussion creates exploration inputs, not the final direction.
+- Discussion records the brand direction the user chooses and carries the screen explorations
+  unranked; prototyping ranks them.
 - Reference research remains mandatory for UI-bearing packs.
 - Downstream skills consume normalized specs/contracts, not raw discussion sidecars.
 
@@ -71,7 +74,8 @@
 - REQ-0005: UI-bearing discussion packs create `34_evaluator_calibration.md`
 - REQ-0006: `04_Sources.md` stores traceable reference research used by the reference pool
 - REQ-0007: `50_review_input_bundle.md` records best-of-history assumptions for downstream critique
-- REQ-0008: discussion does not create a final design system or selected direction
+- REQ-0008: discussion ranks no screen exploration and finalizes no design system; the one
+  direction it records is the brand direction the user chooses
 - REQ-0154: `QFAI-MOCK-010` direction — the `qfai-discussion` mock template emits anchor-form `<a href="#<name>">` by default and SKILL.md instructs authors accordingly; the validator stays strict (anchors `#name` + external `http(s)://` continue to PASS). Template ↔ validator are a new SSOT-sync pair (`R-MOCK-HREF-DRIFT`).
 - REQ-0155: active discussion session pointer (writer side) — `/qfai-discussion` WRITES `.qfai/state.json#discussion.currentId` as the single SSOT for the active session; `qfai discussion list --active` is a read view over it. Multiple-active ambiguity is rejected with an error naming the candidate dirs and the recovery command (`qfai discussion use <id>`).
 

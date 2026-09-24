@@ -1,5 +1,35 @@
 # 09 Delta
 
+## 2026-09-25 — The direction rule binds the screen explorations, and the producer is `/qfai-sdd`
+
+Two chains stated a rule the product had replaced. `US-0010-0008` said discussion
+selects no direction at all, while the shipped skill has the user choose the brand
+direction during discussion. `US-0010-0009` said discussion authors root
+`DESIGN.md`, while `/qfai-sdd` Phase 0 authors it from the direction the pack
+records.
+
+Both chains now state the product as intended. Discussion carries the screen
+explorations unranked and finalizes no design system. The brand direction is the
+user's choice, recorded in `01_Context.md#Design Direction`, and `/qfai-sdd`
+Phase 0 authors root `DESIGN.md` from it.
+
+| Op ID  | Op Type | Target                                                                | Summary                                                                   |
+| ------ | ------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| OP-001 | UPDATE  | 01_Spec.md (scope, applicable policy, REQ-0008)                       | the rule binds the screen explorations; the brand is recorded             |
+| OP-002 | UPDATE  | US-0010-0008, AC-0010-0006, BR-0010-0006, EX-0010-0006                | the direction rule, narrowed to the screen explorations                   |
+| OP-003 | UPDATE  | TC-0010-0006                                                          | four observable boundaries, one per ledger row                            |
+| OP-004 | UPDATE  | US-0010-0009, AC-0010-0007, BR-0010-0007, EX-0010-0007, TC-0010-0007  | discussion records the direction; `/qfai-sdd` Phase 0 authors `DESIGN.md` |
+| OP-005 | UPDATE  | 07_Decisions.md (DR-0010-0001)                                        | the decision narrowed the same way                                        |
+| OP-006 | UPDATE  | tdd/test-list.md (TDD-0006, -0007, -0008, -0010, -0011, -0025, -0026) | reset to `todo` under the Change Request; four rows gain a `Boundary`     |
+
+### Rejected
+
+- Candidate: keep discussion free of every direction, brand included.
+- Reason: no stage after discussion asks the user for the brand, so an
+  assistant would pick it.
+- DO NOT: let an assistant choose the brand direction on the user's behalf.
+- Temptation: a pack that asks nothing about the brand looks simpler.
+
 ## 2026-09-22 — The five stories whose sidecar moved now name where it went
 
 `AC-0010-0008` forbids five legacy sidecars, and five user stories were written
@@ -139,3 +169,4 @@ D4 named seven specs for Change Requests, and this spec is not one of them. The 
 | ---------------- | -------------------------------------------------------------------------------------- | --------- | ----------- | -------------------- |
 | CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-24T18:26:35Z |
 | CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-24T19:00:08Z |
+| CR-20260912-0003 | `spec-0010` `US-0010-0008` and `US-0010-0009` chains                                   | re-derive | user        | -                    |

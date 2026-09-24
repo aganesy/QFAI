@@ -6,7 +6,8 @@
 
 - Replace old design-evaluation sidecar family references with exploration-first sidecar references.
 - Keep `04_Sources.md` as the reference-research registry.
-- Ensure discussion artifacts stop before winner selection and design-system finalization.
+- Ensure discussion artifacts carry the screen explorations unranked and stop before design-system finalization.
+- Record the brand direction the user chooses in `01_Context.md#Design Direction`; `/qfai-sdd` Phase 0 authors root `DESIGN.md` from it, so discussion writes no `DESIGN.md`.
 - The alternative considered was letting discussion carry the winner and the design system through to finalization. It was rejected because it collapses exploration and decision into one pass, and the pack then has no state in which options are still open.
 
 ### Intent-driven entry (CAP-0018)
@@ -67,12 +68,12 @@ waits on them, and the E2E row closes at tier 5.
 **Findings carried on purpose.** Pushes follow spec-0018 `10_Plan.md`
 `### Findings carried on purpose`.
 
-| Finding                                                                           | Why it is expected                                                   | Until                                                                                                               |
-| --------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `QFAI-ATDD-111` for US-0010-0013                                                  | Its journey variant does not exist yet                               | The spec-0018 discussion variant lands                                                                              |
-| `QFAI-ATDD-112` for TC-0010-0014..0016                                            | Their integration tests do not exist yet                             | ATDD writes them                                                                                                    |
-| `QFAI-TDDLIST-017` on TC-0010-0006, and the 24 `tdd` errors of `tdd/test-list.md` | Pinned rows this change does not repair; the new rows add to neither | A later change                                                                                                      |
-| `QFAI-ATDD-131` on this spec, pinned at 1 under `full`                            | The spec has no Coverage Depth Matrix                                | ATDD writes the first one, and that push re-pins with `node scripts/check-dogfood-backlog.mjs --profile full --pin` |
+| Finding                                                | Why it is expected                                                | Until                                                                                                               |
+| ------------------------------------------------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `QFAI-ATDD-111` for US-0010-0013                       | Its journey variant does not exist yet                            | The spec-0018 discussion variant lands                                                                              |
+| `QFAI-ATDD-112` for TC-0010-0014..0016                 | Their integration tests do not exist yet                          | ATDD writes them                                                                                                    |
+| The `tdd` errors of `tdd/test-list.md`                 | Pinned rows this change does not repair; the new rows add to none | A later change                                                                                                      |
+| `QFAI-ATDD-131` on this spec, pinned at 1 under `full` | The spec has no Coverage Depth Matrix                             | ATDD writes the first one, and that push re-pins with `node scripts/check-dogfood-backlog.mjs --profile full --pin` |
 
 ## Second-Wave (v1.9.2) — How
 
