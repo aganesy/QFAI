@@ -12,15 +12,13 @@ As a discussion facilitator, I want discussion to record the user's brand theme 
   - OQ-driven completion
   - planner-first authoring rules
   - review input bundle and review request semantics
+  - canonical UI sidecars: `uiux/00_index.md`, `uiux/40_screen_contracts.md` and `uiux/50_review_input_bundle.md`
   - `/qfai-sdd` への upstream handoff
 - Out:
   - visual winner selection in discussion
   - discussion 時点での design system 固定
   - old 3-layer evaluation sidecar family
   - legacy single-winner / comparison canonical path
-  - exploration-first UI sidecar family (v1.8.9: retired together with
-    `discussionDesignHardening`; downstream behaviors are owned by the
-    post-1.8.9 prototyping spec via root `DESIGN.md` + `validateDesignContractReadiness`)
 
 ## Source Provenance
 
