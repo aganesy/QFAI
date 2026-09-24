@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -56,6 +56,8 @@ describe("BF-0001 project records", () => {
 });
 
 describe("BF-0001 init preserves project content", () => {
+  // QFAI:EX-0001-0006-01
+  // QFAI:EX-0001-0006-02
   // QFAI:EX-0001-0022-01
   // QFAI:EX-0001-0029-01
   // QFAI:EX-0001-0029-02
@@ -63,6 +65,28 @@ describe("BF-0001 init preserves project content", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-early-init-"));
     try {
       await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+      const spec = path.join(root, ".qfai", "spec");
+      expect(await readdir(path.join(spec, "01_policy"))).toEqual(
+        expect.arrayContaining([
+          "objective.md",
+          "initiative.md",
+          "principle.md",
+          "glossary.md",
+          "constraint.md",
+        ]),
+      );
+      expect(await readdir(path.join(spec, "03_contract"))).toEqual(
+        expect.arrayContaining([
+          "contracts.md",
+          "tech.md",
+          "structure.md",
+          "api",
+          "db",
+          "ui",
+          "cli",
+          "design",
+        ]),
+      );
       const assistant = path.join(root, ".qfai", "assistant");
       const skill = path.join(assistant, "skill", "qfai-discussion", "SKILL.md");
       const localSkill = path.join(assistant, "skill.local", "my-skill", "SKILL.md");

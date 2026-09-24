@@ -25,6 +25,7 @@ async function put(file: string, content: string): Promise<void> {
 }
 
 describe("story-tree contract index", () => {
+  // QFAI:EX-0001-0006-03
   // QFAI:EX-0001-0006-04
   it("keys an unlisted declared contract by ID and an unlisted CLI file by path", async () => {
     const config = structuredClone(defaultConfig);
@@ -37,17 +38,21 @@ describe("story-tree contract index", () => {
     );
     await put(`${base}/api/orders.yaml`, "# QFAI-CONTRACT-ID: CON-API-0001\nopenapi: 3.1.0\n");
     await put(`${base}/cli/new-command.md`, "# New command\n");
+    await put(`${base}/design/screen.md`, "# Design contract\n");
     const model = await readStoryTreeModel(root, config);
     const findings = await validateStoryTreeContractReferences(root, config, model);
-    expect(findings.filter((item) => item.code === "QFAI-CONTRACT-034")).toHaveLength(2);
+    expect(findings.filter((item) => item.code === "QFAI-CONTRACT-034")).toHaveLength(3);
     expect(findings.some((item) => item.refs?.includes("CON-API-0001"))).toBe(true);
     expect(
       findings.some((item) => item.refs?.some((ref) => ref.endsWith("cli/new-command.md"))),
     ).toBe(true);
+    expect(
+      findings.some((item) => item.refs?.some((ref) => ref.endsWith("design/screen.md"))),
+    ).toBe(true);
 
     await put(
       `${base}/contracts.md`,
-      "| Short ID | Entity | Declared ID | File | Depends On | Reconciled With | Purpose |\n| --- | --- | --- | --- | --- | --- | --- |\n| API-001 | Orders | CON-API-0001 | api/orders.yaml | - | - | Orders |\n| CLI | Command | - | .qfai/spec/03_contract/cli/new-command.md | - | - | Command |\n",
+      "| Short ID | Entity | Declared ID | File | Depends On | Reconciled With | Purpose |\n| --- | --- | --- | --- | --- | --- | --- |\n| API-001 | Orders | CON-API-0001 | api/orders.yaml | - | - | Orders |\n| CLI | Command | - | .qfai/spec/03_contract/cli/new-command.md | - | - | Command |\n| Design | Screen | - | design/screen.md | - | - | Screen |\n",
     );
     expect(await validateStoryTreeContractReferences(root, config, model)).toEqual([]);
   });
