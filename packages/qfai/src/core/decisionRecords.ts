@@ -328,3 +328,142 @@ export function parseDecisionRecordEntries(text: string): DecisionRecordEntry[] 
 export function collectReOpenEntries(text: string): DecisionRecordEntry[] {
   return parseDecisionRecordEntries(text).filter((entry) => entry.status === RE_OPEN_STATUS);
 }
+
+/**
+ * What a Change Request record says about whether it is resolved.
+ *
+ * The header fields are `null` when absent, and otherwise hold the record's
+ * value with the template's backticks and trailing comment removed; `id` is
+ * upper-cased, and `status` and `changeClass` lower-cased.
+ */
+export type ChangeRequestHeader = {
+  id: string | null;
+  status: string | null;
+  changeClass: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  approvedOption: string | null;
+  appliedAt: string | null;
+  supersededBy: string | null;
+  /** True when the `## Resolution` section holds text outside comments. */
+  hasResolution: boolean;
+  /** The text of the `## Blocked downstream items` section, comments removed. */
+  blockedItems: string;
+};
+
+/**
+ * The `Status` values the shipped Change Request template defines as leaving
+ * `open`: `open | approved | rejected | superseded`. A value outside that
+ * vocabulary is not read as settled.
+ */
+const CHANGE_REQUEST_SETTLED_STATUSES: ReadonlySet<string> = new Set([
+  "approved",
+  "rejected",
+  "superseded",
+]);
+
+/** A heading of level 2 or deeper, which is where a record's header block ends. */
+const SECTION_HEADING_RE = new RegExp(`^${BLOCK_INDENT}#{2,6}(?:\\s|$)`);
+/** A heading of level 1 or 2, which is where a read section ends. */
+const TOP_SECTION_HEADING_RE = new RegExp(`^${BLOCK_INDENT}#{1,2}(?:\\s|$)`);
+const RESOLUTION_HEADING_RE = new RegExp(`^${BLOCK_INDENT}##\\s+Resolution\\s*#*\\s*$`, "i");
+const BLOCKED_HEADING_RE = new RegExp(
+  `^${BLOCK_INDENT}##\\s+Blocked downstream items\\s*#*\\s*$`,
+  "i",
+);
+
+/** The two body sections whose text is kept. */
+type ChangeRequestBodySection = "resolution" | "blocked";
+type ChangeRequestSection = "header" | "body" | ChangeRequestBodySection;
+
+/** The section a heading line moves the reader into, or `null` when it moves nowhere. */
+function nextChangeRequestSection(
+  line: string,
+  section: ChangeRequestSection,
+): ChangeRequestSection | null {
+  if (RESOLUTION_HEADING_RE.test(line)) return "resolution";
+  if (BLOCKED_HEADING_RE.test(line)) return "blocked";
+  const leaves =
+    section === "header" || section === "body" ? SECTION_HEADING_RE : TOP_SECTION_HEADING_RE;
+  return leaves.test(line) ? "body" : null;
+}
+
+/**
+ * Parse a `.qfai/decisions/CR-*.md` record: its header bullet list, whether
+ * its `## Resolution` section says anything, and what its
+ * `## Blocked downstream items` section lists.
+ *
+ * Fields are read only before the first `##` heading. The body of a Change
+ * Request quotes its own fields freely, so a `- Status:` line in a section is
+ * prose about the record, not the record. Comments and fenced blocks are
+ * masked as in {@link parseDecisionRecordEntries}: the template's own comment
+ * lists the status vocabulary, and a quoted example is not the record — nor
+ * does a heading inside one end the header. The first occurrence of a field
+ * wins. Text inside a fence in `## Resolution` counts as content.
+ */
+export function parseChangeRequestHeader(text: string): ChangeRequestHeader {
+  const fields = new Map<string, string>();
+  const bodies: Record<ChangeRequestBodySection, string[]> = { resolution: [], blocked: [] };
+  let section: ChangeRequestSection = "header";
+  let openFence: RegExp | null = null;
+  let inComment = false;
+  for (const raw of text.replace(/\r\n/g, "\n").split("\n")) {
+    if (openFence) {
+      if (openFence.test(raw)) openFence = null;
+      else if (section === "resolution" || section === "blocked") bodies[section].push(raw);
+      continue;
+    }
+    const masked = maskLineComments(raw, inComment);
+    inComment = masked.open;
+    const line = masked.text;
+    const fenceOpen = FENCE_OPEN_RE.exec(line);
+    if (fenceOpen?.[1]) {
+      openFence = closeFenceRe(fenceOpen[1]);
+      if (openFence) continue;
+    }
+    const next = nextChangeRequestSection(line, section);
+    if (next !== null) {
+      section = next;
+      continue;
+    }
+    if (section === "resolution" || section === "blocked") bodies[section].push(line);
+    if (section !== "header") continue;
+    const field = FIELD_RE.exec(line);
+    if (!field?.[1]) continue;
+    const key = normalizeKey(field[1]);
+    if (!fields.has(key)) fields.set(key, cleanValue(field[2] ?? ""));
+  }
+  return {
+    id: fields.get("id")?.toUpperCase() ?? null,
+    status: fields.get("status")?.toLowerCase() ?? null,
+    changeClass: fields.get("class")?.toLowerCase() ?? null,
+    approvedBy: fields.get("approved-by") ?? null,
+    approvedAt: fields.get("approved-at") ?? null,
+    approvedOption: fields.get("approved-option") ?? null,
+    appliedAt: fields.get("applied-at") ?? null,
+    supersededBy: fields.get("superseded-by") ?? null,
+    hasResolution: bodies.resolution.some((line) => line.trim().length > 0),
+    blockedItems: bodies.blocked.join("\n"),
+  };
+}
+
+/**
+ * True when a Change Request is resolved: the record the completion gate asks
+ * for is complete, so nothing is left open.
+ *
+ * A half-filled record is unresolved. Every settled status needs `Approved by`,
+ * `Approved at` and a `Resolution` that says something. On top of that,
+ * `superseded` needs `Superseded by`, and `approved` needs `Applied at` — the
+ * approved actions have been carried out — and `Approved option` unless the
+ * request is of class `defect`, which has no options to choose between.
+ */
+export function isChangeRequestSettled(header: ChangeRequestHeader): boolean {
+  const { status } = header;
+  if (status === null || !CHANGE_REQUEST_SETTLED_STATUSES.has(status)) return false;
+  if (isPlaceholderValue(header.approvedBy) || isPlaceholderValue(header.approvedAt)) return false;
+  if (!header.hasResolution) return false;
+  if (status === "superseded") return !isPlaceholderValue(header.supersededBy);
+  if (status !== "approved") return true;
+  if (isPlaceholderValue(header.appliedAt)) return false;
+  return header.changeClass === "defect" || !isPlaceholderValue(header.approvedOption);
+}
