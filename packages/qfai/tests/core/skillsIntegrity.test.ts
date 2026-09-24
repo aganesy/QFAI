@@ -162,7 +162,7 @@ describe("diffProjectSkillsAgainstInitAssets", () => {
         root,
         ".qfai",
         "assistant",
-        "skills",
+        "skill",
         "qfai-discussion",
         "10_workflow.md",
       );
