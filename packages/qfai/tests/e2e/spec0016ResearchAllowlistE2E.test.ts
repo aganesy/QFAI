@@ -21,7 +21,7 @@ beforeAll(async () => {
   projectRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-research-"));
   await captureStdout(() => runInit({ dir: projectRoot, force: false, dryRun: false, yes: true }));
   researchSkill = await readFile(
-    path.join(projectRoot, ".qfai", "assistant", "skills", "web-research", "SKILL.md"),
+    path.join(projectRoot, ".qfai", "assistant", "skill", "web-research", "SKILL.md"),
     "utf-8",
   );
 });

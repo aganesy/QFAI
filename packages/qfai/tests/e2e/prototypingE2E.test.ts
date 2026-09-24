@@ -80,12 +80,11 @@ async function seedRepo(root: string): Promise<void> {
     path.join(root, "qfai.config.yaml"),
     [
       "paths:",
-      "  contractsDir: .qfai/contracts",
-      "  specsDir: .qfai/specs",
+      "  contractsDir: .qfai/spec/03_contract",
+      "  specsDir: .qfai/spec",
       "  discussionDir: .qfai/discussion",
-      "  outDir: .qfai/out",
-      "  skillsDir: .qfai/assistant/skills",
-      "  promptsDir: .qfai/assistant/skills",
+      "  outDir: .qfai/report",
+      "  skillsDir: .qfai/assistant/skill",
       "  srcDir: src",
       "  testsDir: tests",
       "validation:",
@@ -102,11 +101,11 @@ async function seedRepo(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
-  const specDir = path.join(root, ".qfai/specs/spec-0001");
-  await mkdir(specDir, { recursive: true });
+  const uiDir = path.join(root, ".qfai/spec/03_contract/ui");
+  await mkdir(uiDir, { recursive: true });
   await writeFile(
-    path.join(specDir, "01_Spec.md"),
-    "# 01 Spec — e2e\n\n- Spec: spec-0001\n- Parent: CAP-0001\nsurface_type: ui-bearing\n",
+    path.join(uiDir, "home.yaml"),
+    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
   await writeFile(path.join(root, "DESIGN.md"), E2E_DESIGN_MD, "utf-8");
@@ -125,9 +124,9 @@ async function seedIterations(
   await writeFile(
     path.join(dir, "prototyping.json"),
     JSON.stringify({
-      specsCovered: ["0001"],
-      frozenSpecsCovered: ["0001"],
-      frozenSurfaceUnion: ["0001"],
+      uiContractsCovered: ["CON-UI-0001"],
+      frozenSurfaceUnion: ["CON-UI-0001"],
+      runId: "run-e2e",
       frozenLicenseCatalog: {
         allowedSources: ["unsplash", "pexels"],
         licenseTiers: {

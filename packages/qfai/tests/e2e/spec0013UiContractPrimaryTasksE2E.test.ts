@@ -74,7 +74,7 @@ async function seedWorkspace(root: string, uiContract: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
-  const uiDir = path.join(root, ".qfai", "contracts", "ui");
+  const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
   await mkdir(uiDir, { recursive: true });
   await writeFile(path.join(uiDir, "sample.yaml"), uiContract, "utf-8");
 }
