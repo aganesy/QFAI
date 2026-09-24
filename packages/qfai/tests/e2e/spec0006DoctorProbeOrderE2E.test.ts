@@ -4,7 +4,6 @@
  *   2-group summary + skills.integrity severity downgrade.
  */
 // QFAI:BF-0003
-// QFAI:BF-0003
 
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -77,7 +76,7 @@ describe("US-0006-0007: doctor summary splits into 2 groups and downgrades skill
     const root = await newTempDir("us07");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-    const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+    const skillsDir = path.join(root, ".qfai", "assistant", "skill");
     const targetSkill = path.join(skillsDir, "qfai-atdd", "SKILL.md");
     const skillOriginal = await readFile(targetSkill, "utf-8");
     await writeFile(targetSkill, `${skillOriginal}\n<!-- e2e drift -->\n`, "utf-8");
@@ -93,8 +92,8 @@ describe("US-0006-0007: doctor summary splits into 2 groups and downgrades skill
     const text = await readFile(outPath, "utf-8");
 
     expect(text).toContain("errors blocking the active profile");
-    expect(text).toContain("advisory findings (drift, non-blocking by default)");
-    const advisoryIdx = text.indexOf("advisory findings (drift, non-blocking by default)");
+    expect(text).toContain("warnings advisory of drift");
+    const advisoryIdx = text.indexOf("warnings advisory of drift");
     const skillsIdx = text.indexOf("skills.integrity");
     expect(skillsIdx).toBeGreaterThan(advisoryIdx);
   });

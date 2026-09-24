@@ -183,6 +183,18 @@ async function seedStoryTree(root: string, assetsRoot: string, dryRun: boolean) 
       throw new Error(`Story-tree seed is not a file: ${sourceFile}`);
     }
   }
+  const seedTargets = [
+    ...STORY_SEED_PATHS.map((relative) => path.join(destination, relative)),
+    ...CONTRACT_KIND_DIRS.map((kind) => path.join(destination, "03_contract", kind)),
+  ];
+  for (const target of seedTargets) {
+    const linked = await firstLinkedComponent(target, root);
+    if (linked !== null) {
+      throw new Error(
+        `qfai init refused to seed the story tree through a symlink: ${formatReportPath(linked)}`,
+      );
+    }
+  }
   const copied = await copyTemplatePaths(source, destination, [...STORY_SEED_PATHS], {
     force: false,
     dryRun,

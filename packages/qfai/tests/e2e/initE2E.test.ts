@@ -39,12 +39,23 @@ async function cleanupTempDir(dir: string): Promise<void> {
 
 // QFAI:BF-0001
 describe("E2E: workspace initialization (US-0003-0001)", () => {
-  it("creates .qfai/ with assistant assets and no artifact scaffold", async () => {
+  it("creates the empty story tree with assistant assets", async () => {
     const tmpDir = await createTempDir();
     try {
       await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
       expect(await pathExists(path.join(tmpDir, ".qfai", "assistant"))).toBe(true);
+      expect(await pathExists(path.join(tmpDir, ".qfai", "spec", "01_policy", "glossary.md"))).toBe(
+        true,
+      );
+      expect(
+        await pathExists(
+          path.join(tmpDir, ".qfai", "spec", "02_business-flow", "business-flows.md"),
+        ),
+      ).toBe(true);
+      expect(
+        await pathExists(path.join(tmpDir, ".qfai", "spec", "03_contract", "contracts.md")),
+      ).toBe(true);
 
       const artifactDirs = ["specs", "contracts", "discussion", "evidence", "report", "review"];
       for (const sub of artifactDirs) {
@@ -92,7 +103,7 @@ describe("E2E: idempotent initialization (US-0003-0002)", () => {
 
 // QFAI:BF-0001
 describe("E2E: force update (US-0003-0003)", () => {
-  it("--force overwrites skills and does not create skills.local", async () => {
+  it("--force overwrites skills and does not create skill.local", async () => {
     const tmpDir = await createTempDir();
     try {
       await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
@@ -101,7 +112,7 @@ describe("E2E: force update (US-0003-0003)", () => {
         tmpDir,
         ".qfai",
         "assistant",
-        "skills",
+        "skill",
         "qfai-discussion",
         "SKILL.md",
       );
@@ -111,7 +122,7 @@ describe("E2E: force update (US-0003-0003)", () => {
 
       const after = await readFile(skillPath, "utf-8");
       expect(after).not.toBe("custom content");
-      expect(await pathExists(path.join(tmpDir, ".qfai", "assistant", "skills.local"))).toBe(false);
+      expect(await pathExists(path.join(tmpDir, ".qfai", "assistant", "skill.local"))).toBe(false);
     } finally {
       await cleanupTempDir(tmpDir);
     }
@@ -160,7 +171,7 @@ describe("E2E: legacy file evacuation (US-0003-0007)", () => {
       await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
       // Place a legacy file inside a skill directory
-      const skillDir = path.join(tmpDir, ".qfai", "assistant", "skills");
+      const skillDir = path.join(tmpDir, ".qfai", "assistant", "skill");
       const subdirs = await (await import("node:fs/promises")).readdir(skillDir);
       const firstSkill = subdirs.find((d) => d.startsWith("qfai-"));
       // A run that shipped no skill leaves nothing to plant the legacy file in,
@@ -419,10 +430,9 @@ describe("E2E: internal module workflow documentation", () => {
       path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
       "utf-8",
     );
-    // The validate pipeline should include validators that cover internal modules
-    expect(validateSrc).toContain("validateSpecPacks");
-    expect(validateSrc).toContain("validateTraceability");
-    expect(validateSrc).toContain("validateAtddCodeTraceability");
+    expect(validateSrc).toContain("validateStoryTreeStructure");
+    expect(validateSrc).toContain("validateStoryTreeContractReferences");
+    expect(validateSrc).toContain("validateStoryTreeObligations");
     expect(validateSrc).toContain("validateDiscussionPackReadiness");
   });
 });
@@ -436,13 +446,10 @@ describe("E2E: canonical template generation", () => {
       const assistantDir = path.join(tmpDir, ".qfai", "assistant");
       expect(await pathExists(assistantDir)).toBe(true);
 
-      // Skills directory should contain canonical skill directories
-      const skillsDir = path.join(assistantDir, "skills");
-      if (await pathExists(skillsDir)) {
-        const entries = await (await import("node:fs/promises")).readdir(skillsDir);
-        const qfaiSkills = entries.filter((e) => e.startsWith("qfai-"));
-        expect(qfaiSkills.length).toBeGreaterThan(0);
-      }
+      const skillsDir = path.join(assistantDir, "skill");
+      const entries = await (await import("node:fs/promises")).readdir(skillsDir);
+      const qfaiSkills = entries.filter((e) => e.startsWith("qfai-"));
+      expect(qfaiSkills.length).toBeGreaterThan(0);
     } finally {
       await cleanupTempDir(tmpDir);
     }
