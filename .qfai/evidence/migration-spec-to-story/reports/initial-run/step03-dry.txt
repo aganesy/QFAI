@@ -1,0 +1,23 @@
+## Operations
+- .qfai/spec/03_contract/structure.md: write
+- .qfai/spec/03_contract/tech.md: write
+- .qfai/spec/01_policy/principle.md: write
+- .qfai/spec/01_policy/constraint.md: write
+- .qfai/spec/01_policy/glossary.md: write
+- .qfai/spec/03_contract/contracts.md: write
+- .qfai/spec/01_policy/initiative.md: write
+- .qfai/spec/01_policy/objective.md: write
+- .qfai/spec/_policies/01_Objective.md → .qfai/evidence/migration-spec-to-story/retired/_policies/01_Objective.md: move
+- .qfai/spec/_policies/02_Initiative.md → .qfai/evidence/migration-spec-to-story/retired/_policies/02_Initiative.md: move
+- .qfai/spec/_policies/05_Contracts.md → .qfai/evidence/migration-spec-to-story/retired/_policies/05_Contracts.md: move
+- .qfai/spec/_policies/06_Glossary.md → .qfai/evidence/migration-spec-to-story/retired/_policies/06_Glossary.md: move
+- .qfai/spec/_policies/07_Constraints.md → .qfai/evidence/migration-spec-to-story/retired/_policies/07_Constraints.md: move
+- .qfai/assistant/catalog/product.md → .qfai/evidence/migration-spec-to-story/retired/assistant/catalog/product.md: move
+- .qfai/assistant/catalog/manifest.md → .qfai/evidence/migration-spec-to-story/retired/assistant/catalog/manifest.md: move
+- .qfai/assistant/catalog/tech.md → .qfai/evidence/migration-spec-to-story/retired/assistant/catalog/tech.md: move
+- .qfai/assistant/catalog/structure.md → .qfai/evidence/migration-spec-to-story/retired/assistant/catalog/structure.md: move
+- .qfai/spec/_policies/11_Slice-Policy.md → .qfai/evidence/migration-spec-to-story/retired/_policies/11_Slice-Policy.md: move
+- .qfai/assistant/catalog: remove empty directory
+
+## For a person
+none
