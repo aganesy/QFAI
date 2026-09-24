@@ -221,7 +221,7 @@
         "workspace package's lifecycle exactly as it runs the root's."
       ],
       "pinnedBytes": {
-        ".github/actions/setup/action.yml": "c60bf87cda546431c66af0a2b47df1a2a3664540d3fd40b9663ee6f4cf8553d7",
+        ".github/actions/setup/action.yml": "891b0acbeb937911083c4e35893ed11b19298e419cca17601534c34832c7e0ad",
         ".github/actions/setup/dependency-builds.txt": "0788adad7ac485ca2c340c2c75ed5bf581a1ba3bb17ea6fe0d0994f666dabf2f",
         ".github/actions/setup/verify-rebuild-sources.mjs": "0816918db6c8833c8d1c4f0cc6218b9eeae7b16a718a0b3113898ae026e4127f",
         "scripts/check-atdd-annotation-ledger.mjs": "8e24f084302921b660b8824d9f7fa8779b3fc6272b06906d68f948a1ff946afc",
@@ -299,8 +299,8 @@
         "file says, and no file under either pinned root is missing from it."
       ],
       "closureActions": [
-        "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
-        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+        "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
       ],
       "closureActionsNote": [
         "The EXTERNAL actions a step in this context's closure may invoke directly, as",
@@ -316,7 +316,7 @@
         "job starts with, and the artifact upload the aggregate uses. Pinned to the SHA, so a bump is a",
         "change read here as well as in the workflow."
       ],
-      "nestedActions": ["actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444"],
+      "nestedActions": ["actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"],
       "nestedActionsNote": [
         "The EXTERNAL actions a local composite action reached from this context's closure may invoke,",
         "as `owner/repo@<40-hex sha>`, exactly.",
@@ -340,7 +340,7 @@
       "preflight": {
         "job": "lint",
         "step": "Verify the toolchain action before running it",
-        "mayPrecede": ["actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"]
+        "mayPrecede": ["actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"]
       },
       "preflightNote": [
         "The step that must run before any local composite action does, and the job it runs in.",
@@ -424,7 +424,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ff046bcf7d3956e0",
-        "Verify the toolchain action before running it": "1ea289c0598c7b82",
+        "Verify the toolchain action before running it": "088a4fe5374223dc",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "211656e97a2f3714",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "f98ff7751afa6bbb",
