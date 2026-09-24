@@ -14,6 +14,7 @@ const roots: string[] = [];
 
 type CliResult = { status: number | null; stdout: string; stderr: string };
 type DoctorResult = {
+  config: { found: boolean; configPath: string };
   summary: { error: number; warning: number };
   checks: Array<{ id: string; severity: string; message: string }>;
 };
@@ -64,6 +65,12 @@ afterEach(async () => {
 });
 
 describe("BF-0003: diagnose and repair a QFAI workspace", () => {
+  // QFAI:US-0003-0001
+  // QFAI:US-0003-0002
+  // QFAI:US-0003-0005
+  // QFAI:US-0003-0012
+  // QFAI:US-0003-0013
+  // QFAI:US-0003-0015
   it("QFAI:BF-0003 records the finding, owner, targeted repair and confirming checks", async () => {
     const root = await fixture();
     const beforePath = path.join(root, ".qfai/report/doctor.before.json");
@@ -84,6 +91,7 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
     );
     expect(before.status).toBe(0);
     const beforeData = JSON.parse(await readFile(beforePath, "utf8")) as DoctorResult;
+    expect(beforeData.config).toMatchObject({ found: true, configPath: "qfai.config.yaml" });
     expect(beforeData.summary.error).toBe(0);
     expect(beforeData.checks.find((check) => check.id === "paths.specsDir")).toMatchObject({
       severity: "warning",
@@ -211,6 +219,7 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
     expect(await exists(afterPath)).toBe(true);
   }, 60_000);
 
+  // QFAI:US-0003-0016
   it("reports malformed configuration and explicit guardrail input failures", async () => {
     const root = await fixture();
     await writeFile(
