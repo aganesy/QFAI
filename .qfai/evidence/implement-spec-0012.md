@@ -297,3 +297,11 @@ Branch `feature/v1.8.10` is pinned. Per CLAUDE.md version-discipline ("On a pinn
 - Wave 1 deferred Playwright TCs (TDD-0401/0402): when is live Playwright integration scheduled?
 - TDD-0384 per-spec iter layout migration: is this its own spec-0012 follow-on Change Request, or rolled into a different spec?
 - Should the legacy `resolvePrimaryPrototypingSpec` be physically removed in v1.8.11, or left as deprecated for one more release cycle?
+
+## Record defects
+
+Open entries from the reviews of the `/qfai-implement` run started
+2026-09-24T02:32:49.865Z. Each is repaired in place before spec-0012 completion
+is declared.
+
+- `record:unchecked`, `TDD-0577`, Round 1: the row-level `qa-gatekeeper: PASS` line does not name the attempt, round and trees its one attempt covered — the RED gate on the rebuilt mutated tree and the build-phase GREEN at 79af8ad63. That is written only in the `qa-gatekeeper attempts` line. The gate ran after the ledger had already moved to `green` and `refactor`.
