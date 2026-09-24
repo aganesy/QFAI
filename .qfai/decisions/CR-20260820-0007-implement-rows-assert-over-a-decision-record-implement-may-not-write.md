@@ -9,7 +9,7 @@
 - Approved by: `user (interactive decision, /qfai-atdd session)`
 - Approved at: `2026-08-23T00:00:00Z`
 - Approved option: `1` — ratify the three decision records and add the ordering rule
-- Applied at: `-`
+- Applied at: `2026-08-23T00:00:00Z` — see Resolution
 - Superseded by: `-`
 - Blocked set: `spec-0017 TDD-0032, TDD-0033, TDD-0034, TDD-0035, TDD-0052, TDD-0066, TDD-0067, TDD-0074, TDD-0075` — all nine, held while this CR is open
 
@@ -213,7 +213,13 @@ append-only writes (option 4)?
 
 ## Resolution
 
-<!--
-Filled in when Status leaves `open`. Record which option was taken, and for option 1 the ordering
-rule as it was written into SKILL.md.
--->
+Applied under option 1, mode `confirm-only`.
+
+- `DR-0017-0007`, `DR-0017-0008` and `DR-0017-0009` stay in
+  `spec-0017/07_Decisions.md` unchanged, adopted as `/qfai-sdd`'s own output.
+  `spec-0017/09_delta.md` records this request in its Triage table.
+- The ordering rule is in `qfai-implement/references/upstream-artifact-ordering.md`:
+  a test case whose assertion reads an upstream artifact's content is not
+  routed to `/qfai-implement` before that artifact exists.
+- No row is reset. The four rows this request held back from implementation,
+  `TDD-0032` to `TDD-0035`, are released to `/qfai-implement`.
