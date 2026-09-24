@@ -5,10 +5,10 @@
 - Raised by: `architecture-reviewer`
 - Raised at: `2026-09-24T12:13:02Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
+- Status: `approved`
+- Approved by: `user`
+- Approved at: `2026-09-24T18:09:25Z`
+- Approved option: `3`
 - Applied at: `-`
 - Superseded by: `-`
 
@@ -18,6 +18,7 @@
 behavior. Its local `ci:gate:checks` command-order clause is unchanged.
 `package.json` already preserves that order, and the active
 `16_Traceability-ledger.md` correctly links the clause to that file.
+`AC-0017-0036` also asserts that unchanged local command order.
 
 The ledger and shipped `qfai-sdd` guidance define `QFAI-TRACE-001` per spec:
 changing any acceptance criterion or business rule requires a branch diff in
@@ -30,10 +31,12 @@ obligation with an already satisfied local command-order obligation.
 
 Give the unchanged local command-order clause its own business-rule identity.
 Keep its truthful `package.json` binding and keep the release capability binding
-to `.github/workflows/release.yml`. Define traceability validation around the
-affected obligation and its bindings. A changed or newly introduced obligation
-whose implementation remains unchanged must carry explicit test evidence that
-the existing implementation satisfies it. Missing or ambiguous bindings, an
+to `.github/workflows/release.yml`. Keep `AC-0017-0036` bound to `package.json`
+for its local-order assertion, with `TDD-0107` as proof that the unchanged
+implementation satisfies it. Define traceability validation around the affected
+obligation and its bindings. A changed or newly introduced obligation whose
+implementation remains unchanged must carry explicit test evidence that the
+existing implementation satisfies it. Missing or ambiguous bindings, an
 unavailable diff, and failed evidence must never pass silently.
 
 ## Options (at least 3) and recommendation
@@ -76,8 +79,11 @@ None of those shortcuts is an approved resolution.
   validator tests
 - Contracts: traceability behavior documented in the `qfai-sdd` skill
 - Schema: none
+- Reviewed unchanged: `.qfai/specs/spec-0017/03_Acceptance-Criteria.md`;
+  `AC-0017-0036` already states the local command-order obligation.
 - Upstream paths edited under this CR:
   `.qfai/specs/spec-0017/04_Business-Rules.md`,
+  `.qfai/specs/spec-0017/05_Examples.md`,
   `.qfai/specs/spec-0017/06_Test-Cases.md`,
   `.qfai/specs/spec-0017/09_delta.md`,
   `.qfai/specs/spec-0017/10_Plan.md`,
@@ -111,4 +117,5 @@ complete bindings and proof when their implementation is unchanged?
 
 ## Resolution
 
-Pending user decision.
+The user approved option 3 on 2026-09-24. The implementation and its
+validation remain pending; record `Applied at` after they are complete.

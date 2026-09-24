@@ -23,8 +23,8 @@ describe("spec-0017 release operation capabilities", () => {
     expect([current.shape, current.checks]).toEqual(["sliced", "operations"]);
   });
 
-  // QFAI:SPEC-0017:TC-0017-0090
-  it("TC-0017-0090 (TDD-0107): preserves the ordered operation vector", () => {
+  // QFAI:SPEC-0017:TC-0017-0093
+  it("TC-0017-0093 (TDD-0107): preserves the ordered operation vector", () => {
     const parsed: unknown = JSON.parse(currentRoot());
     if (!isRecord(parsed) || !isRecord(parsed["scripts"])) throw new Error("root scripts missing");
     const scripts = parsed["scripts"];

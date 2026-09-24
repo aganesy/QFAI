@@ -23,7 +23,7 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
 - `.qfai/specs/spec-0017/tdd/test-list.md` — 110 rows: 90 `Integration`,
-  11 `Unit`; **76 `refactor`, 0 `blocked`, 25 `todo`**, with 6 `done` and 3 `review-fix`.
+  11 `Unit`; **75 `refactor`, 0 `blocked`, 26 `todo`**, with 6 `done` and 3 `review-fix`.
   The nine additional `Integration` rows split six acceptance cases into independent outcomes and remain `todo`.
   At the 2026-09-23 run, nine rows were `E2E`, one per story, seeded at `todo`.
   Eleven `todo` rows were `Integration` and were this stage's to route.
@@ -3051,7 +3051,7 @@ a merge can invalidate has no author to hold responsible for it.
 The count and its split across the two include roots are on one line, and both are derived by the same
 walk:
 
-e2e callsites at this tree: 2444 (packages/qfai/tests/assets 2252, packages/qfai/tests/e2e 192)
+e2e callsites at this tree: 2446 (packages/qfai/tests/assets 2254, packages/qfai/tests/e2e 192)
 
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is
@@ -4553,7 +4553,7 @@ preliminary runs is counted as the current RED/GREEN result.
 | TDD-0064 | TC-0017-0064 | `names each script after its selected project` | PASS | [row](#tdd-0064) |
 | TDD-0106 | TC-0017-0064 | `four sliced jobs invoke per-slice scripts` | PASS | [row](#tdd-0106) |
 | TDD-0099 | TC-0017-0090 | `classifies exact operation capabilities` | PASS | [row](#tdd-0099) |
-| TDD-0107 | TC-0017-0090 | `preserves the ordered operation vector` | PASS | [row](#tdd-0107) |
+| TDD-0107 | TC-0017-0093 | `preserves the ordered operation vector` | PASS | [row](#tdd-0107) |
 | TDD-0108 | TC-0017-0090 | `runs one complete suite on each runtime` | PASS | [row](#tdd-0108) |
 | TDD-0100 | TC-0017-0091 | `missing operation scripts retain aggregate checks` | PASS | [row](#tdd-0100) |
 | TDD-0109 | TC-0017-0091 | `older and whole-suite tags use the whole aggregate` | PASS | [row](#tdd-0109) |
@@ -4805,8 +4805,8 @@ packages/qfai/tests/integration/spec0017SliceAlignment.test.ts
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts`
 - Selector: `preserves the ordered operation vector`
-- TC-ref: TC-0017-0090
-- DR-ID: CR-20260924-0002
+- TC-ref: TC-0017-0093
+- DR-ID: CR-20260924-0004 (scope reassignment); Round 1 was recorded under CR-20260924-0002, and Round 2 verifies the current TC annotation.
 - Branch: falsifiability; production already satisfies the approved reset.
 - Round 1: RED failure mode: falsifiability.
 - Round 1: RED test hash: 305f8ec04cdd8604a6e8bc8f41de05eba84f021f69ba901ddd704edf1cc3301a
@@ -4828,6 +4828,35 @@ packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts
 - GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 2 skipped`.
 - GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
 - Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+
+#### Round 2 — TC-0017-0093 annotation and selector
+
+The approved scope split changed this test's TC annotation and name. The first
+round remains the historical live observation for the same assertion. This
+round re-exercised the current test bytes in the isolated worktree. The
+production command vector and assertion body did not change.
+
+- Round 2: RED failure mode: falsifiability.
+- Round 2: RED test hash: a6dab809f826afd8d684d41d9afd286dd826a9d996c0d02a65adcf6225f506a8
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017Release.ts
+packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts
+```
+
+- Round 2: Test file SHA-256: `f0299823ba6597a07f446041bf40b3d86a82376db70ddc3cc821efa3ffdc5ae7`.
+- Round 2: Helper SHA-256: `c028b1d024fe3477ec8566a25c2e0138db8d7b154ba423a8fc4f4510ae5f8c87`.
+- Satisfied-by: `package.json::scripts.ci:gate:checks`
+- Round 2: Mutation: swap the first two operations in the isolated `package.json` only.
+- Round 2: Mutant SHA-256: `72ab82ec9b00bc6ab352fe6732f452c680b1100216b5d0eca852c1b1567d826f`. Restored SHA-256: `381befab24fee7f1cf770e44b900ec0880aa47a3b47dcabf91173f17ba50c31b`.
+- Round 2: Falsifiability command (isolated worktree, cwd `packages/qfai`): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseOperations.test.ts --reporter=verbose --testNamePattern=TDD-0107`
+- Round 2: Falsifiability result: exit 1; `Test Files 1 failed; Tests 1 failed | 2 skipped`. The selected `TC-0017-0093 (TDD-0107)` assertion at `tests/integration/spec0017ReleaseOperations.test.ts:31:39` expected `ssot` then `lint` and received `lint` then `ssot`.
+- Round 2: Falsifiability revision: working-tree+4f7d03547baff9b164f5075c007a316ebe0a3451ddeff2ea2eedd39bc4f0f7fd
+- Round 2: GREEN command (after exact restoration): `.\node_modules\.bin\vitest.cmd run tests/integration/spec0017ReleaseOperations.test.ts --reporter=verbose --testNamePattern=TDD-0107`
+- Round 2: GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 2 skipped` for `TC-0017-0093 (TDD-0107)`.
+- Round 2: GREEN revision: working-tree+23e266a1eb09c8322daf1e74b0e85a1b3fd6aa8822245dd10b66f2dbaa9cac27
+- Round 2: qa-gatekeeper live mutation review: `PASS`; Integration selector=True, live SHA=True, canonical revision twice=True, runner assertion=True, independent same-command assertion=True; own location=tests/integration/spec0017ReleaseOperations.test.ts:31:39; exit=1. This verdict covers the live proof only; the implementation checkpoint is pending.
 
 ### TDD-0108
 

@@ -262,12 +262,17 @@ describe("the current spec-0017 acceptance coverage", () => {
     const rows = currentTable(section, CURRENT_COVERAGE_COLUMNS);
     const expectedIds = [
       ...Array.from({ length: 9 }, (_, index) => `US-0017-${String(index + 1).padStart(4, "0")}`),
-      ...Array.from({ length: 92 }, (_, index) => `TC-0017-${String(index + 1).padStart(4, "0")}`),
+      ...Array.from({ length: 93 }, (_, index) => `TC-0017-${String(index + 1).padStart(4, "0")}`),
     ];
     expect(
       rows.map((row) => row[0]).sort(),
       "the current table must carry each US and TC exactly once",
     ).toEqual(expectedIds.sort());
+    const localVector = rows.find((row) => row[0] === "TC-0017-0093");
+    expect(localVector?.[11], "the local command vector has its own test case").toContain(
+      "`preserves the ordered operation vector` (TDD-0107",
+    );
+    expect(rows.find((row) => row[0] === "TC-0017-0090")?.[11]).not.toContain("TDD-0107");
 
     const scored = currentTally(rows.flatMap((row) => row.slice(1, 10)));
     const status = currentStatusTally(rows.map((row) => row[10] ?? ""));
@@ -278,7 +283,7 @@ describe("the current spec-0017 acceptance coverage", () => {
     expect(declared, "the current matrix must state its derived totals").not.toBeNull();
     expect(declared?.slice(1).map(Number)).toEqual([
       9,
-      92,
+      93,
       scored["✅"],
       scored["⚠️"],
       scored["❌"],
@@ -294,16 +299,17 @@ describe("the current spec-0017 acceptance coverage", () => {
     const section = sectionOf(text, "### Current business rule coverage");
     const rows = currentTable(section, CURRENT_RULE_COLUMNS);
     const expectedIds = Array.from(
-      { length: 69 },
+      { length: 70 },
       (_, index) => `BR-0017-${String(index + 1).padStart(4, "0")}`,
     );
     expect(
       rows.map((row) => row[0]).sort(),
       "the current table must carry each business rule exactly once",
     ).toEqual(expectedIds);
+    expect(rows.find((row) => row[0] === "BR-0017-0070")?.[4]).toBe("TC-0017-0093");
 
     const testCaseIds = new Set(
-      Array.from({ length: 92 }, (_, index) => `TC-0017-${String(index + 1).padStart(4, "0")}`),
+      Array.from({ length: 93 }, (_, index) => `TC-0017-${String(index + 1).padStart(4, "0")}`),
     );
     for (const row of rows) {
       const coveringCases = (row[4] ?? "").split(",").map((id) => id.trim());
@@ -321,7 +327,7 @@ describe("the current spec-0017 acceptance coverage", () => {
       );
     expect(declared, "the business rule table must state its derived totals").not.toBeNull();
     expect(declared?.slice(1).map(Number)).toEqual([
-      69,
+      70,
       scored["✅"],
       scored["⚠️"],
       scored["❌"],

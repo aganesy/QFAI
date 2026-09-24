@@ -4,7 +4,7 @@ Historical E2E scope: the nine `US-0017-*` this spec declares, scored against
 `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts`, and `US-0017-0007` against
 `packages/qfai/tests/e2e/spec0017RunnerParallelismE2E.test.ts`. **All nine are covered**, the ninth since
 round 12 — its claim was withdrawn in round 1 for asserting that a file exists, and it is carried now by a
-test that observes the runner's pool. The current spec declares 92 `TC-0017-*` cases. The original
+test that observes the runner's pool. The current spec declares 93 `TC-0017-*` cases. The original
 assessment below considered only the nine story E2E rows; the complete current US/TC and BR tables
 are appended at the end of this file.
 
@@ -631,11 +631,11 @@ of it was visible until `qfai init` was run and the step bodies — not the job 
 
 ## Current ATDD coverage (2026-09-24)
 
-This section scores the complete active US/TC and BR set against the test files currently named by the TDD ledger. The historical nine-story E2E assessment above remains unchanged. A test under `tests/scripts/**` or `tests/assets/**` is a useful candidate, but it does not satisfy a declared L3 Integration acceptance row. Unit rows retain their L1 evidence. The six newly moved cases have `⚠️` status and explicit pending reasons until their Integration live results are recorded.
+This section scores the complete active US/TC and BR set against the test files currently named by the TDD ledger. The historical nine-story E2E assessment above remains unchanged. A test under `tests/scripts/**` or `tests/assets/**` is a useful candidate, but it does not satisfy a declared L3 Integration acceptance row. Unit rows retain their L1 evidence. The six moved cases retain `⚠️` status after their individual Integration live results because the implementation checkpoint remains pending.
 
-The `Evidence` column identifies the current file and exact selector. A `⚠️` is partial evidence, not an inferred pass. The current table includes the pre-existing 66 L3 placement gaps separately from the six TC migrations (`TC-0017-0007`, `-0043`, `-0062`, `-0064`, `-0090`, `-0091`).
+The `Evidence` column identifies the current file and exact selector. A `⚠️` is partial evidence, not an inferred pass. The current table includes the pre-existing 66 L3 placement gaps separately from the six TC migrations (`TC-0017-0007`, `-0043`, `-0062`, `-0064`, `-0090`, `-0091`). CR-20260924-0004 moved TDD-0107 from TC-0017-0090 to the separate TC-0017-0093 and BR-0017-0070 obligation. [The ATDD evidence](atdd-spec-0017.md#tdd-0107) preserves its earlier live result and records a fresh RED/GREEN run for the updated TC annotation. The TDD row remains `todo` while the implementation checkpoint is pending.
 
-The 359 US/TC and 67 BR `n/a` cells are provisional absence classifications based on TC Type, sibling cases under each AC, and the declared scenario or rule text. Formal QA must reconcile them against every active AC/BR clause before treating this section as a final coverage verdict. The `✅` cells retain the prior E2E score or identify a direct L1/L3 selector; they do not certify the surrounding `⚠️` or `❌` cells.
+The 364 US/TC and 68 BR `n/a` cells are provisional absence classifications based on TC Type, sibling cases under each AC, and the declared scenario or rule text. Formal QA must reconcile them against every active AC/BR clause before treating this section as a final coverage verdict. The `✅` cells retain the prior E2E score or identify a direct L1/L3 selector; they do not certify the surrounding `⚠️` or `❌` cells.
 
 ### Current US/TC coverage matrix
 
@@ -739,11 +739,12 @@ The 359 US/TC and 67 BR `n/a` cells are provisional absence classifications base
 | TC-0017-0087 | ❌ | ❌ | ❌ | n/a | ❌ | n/a | n/a | n/a | ⚠️ | ❌ | [ownWorkflowTopology.test.ts](../../packages/qfai/tests/scripts/ownWorkflowTopology.test.ts) · `TC-0017-0087 (TDD-0096): the code path's cost agrees with the committed pin` (TDD-0096) |
 | TC-0017-0088 | ❌ | ❌ | ❌ | ❌ | n/a | n/a | ❌ | ❌ | ⚠️ | ❌ | [ownWorkflowTopology.test.ts](../../packages/qfai/tests/scripts/ownWorkflowTopology.test.ts) · `TC-0017-0088 (TDD-0097): release prerequisites accept complete gate paths` (TDD-0097) |
 | TC-0017-0089 | ❌ | n/a | ❌ | n/a | n/a | ❌ | ❌ | ❌ | ⚠️ | ❌ | [ownWorkflowTopology.test.ts](../../packages/qfai/tests/scripts/ownWorkflowTopology.test.ts) · `TC-0017-0089 (TDD-0098): release prerequisites reject invalid gate paths` (TDD-0098) |
-| TC-0017-0090 | ❌ | ❌ | ❌ | n/a | ❌ | n/a | n/a | n/a | ⚠️ | ⚠️ | [spec0017ReleaseOperations.test.ts](../../packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts) · `classifies exact operation capabilities` (TDD-0099)<br>[spec0017ReleaseOperations.test.ts](../../packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts) · `preserves the ordered operation vector` (TDD-0107)<br>[spec0017ReleaseOperations.test.ts](../../packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts) · `runs one complete suite on each runtime` (TDD-0108) |
+| TC-0017-0090 | ❌ | ❌ | ❌ | n/a | ❌ | n/a | n/a | n/a | ⚠️ | ⚠️ | [spec0017ReleaseOperations.test.ts](../../packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts) · `classifies exact operation capabilities` (TDD-0099)<br>[spec0017ReleaseOperations.test.ts](../../packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts) · `runs one complete suite on each runtime` (TDD-0108) |
 | TC-0017-0091 | ❌ | n/a | ❌ | ❌ | ❌ | ❌ | n/a | ❌ | ⚠️ | ⚠️ | [spec0017ReleaseFallback.test.ts](../../packages/qfai/tests/integration/spec0017ReleaseFallback.test.ts) · `missing operation scripts retain aggregate checks` (TDD-0100)<br>[spec0017ReleaseFallback.test.ts](../../packages/qfai/tests/integration/spec0017ReleaseFallback.test.ts) · `older and whole-suite tags use the whole aggregate` (TDD-0109)<br>[spec0017ReleaseFallback.test.ts](../../packages/qfai/tests/integration/spec0017ReleaseFallback.test.ts) · `refuses invalid checks outputs` (TDD-0110) |
 | TC-0017-0092 | ❌ | n/a | ❌ | n/a | ❌ | n/a | ❌ | ❌ | ⚠️ | ❌ | [ownWorkflowTopology.test.ts](../../packages/qfai/tests/scripts/ownWorkflowTopology.test.ts) · `TC-0017-0092 (TDD-0101): runs independent checks in isolated verified workspaces` (TDD-0101) |
+| TC-0017-0093 | ⚠️ | ⚠️ | n/a | n/a | ⚠️ | n/a | n/a | n/a | ✅ | ⚠️ | [spec0017ReleaseOperations.test.ts](../../packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts) · `preserves the ordered operation vector` (TDD-0107; individual RED/GREEN and QA PASS recorded; checkpoint pending) |
 
-Current matrix: **US 9 / TC 92**; scored cells **✅ 20 / ⚠️ 197 / ❌ 333 / n/a 359**; status **✅ 3 / ⚠️ 28 / ❌ 70**.
+Current matrix: **US 9 / TC 93**; scored cells **✅ 21 / ⚠️ 200 / ❌ 333 / n/a 364**; status **✅ 3 / ⚠️ 29 / ❌ 70**.
 
 ### Current business rule coverage
 
@@ -820,8 +821,9 @@ The `Covering TC` list follows each rule's declared AC references. It names cand
 | BR-0017-0067 | ❌ | ❌ | ❌ | TC-0017-0006, TC-0017-0007, TC-0017-0041, TC-0017-0042, TC-0017-0043, TC-0017-0084, TC-0017-0086, TC-0017-0087 | ❌ |
 | BR-0017-0068 | ❌ | ❌ | ❌ | TC-0017-0088, TC-0017-0089 | ❌ |
 | BR-0017-0069 | ❌ | ❌ | ❌ | TC-0017-0090, TC-0017-0091, TC-0017-0092 | ❌ |
+| BR-0017-0070 | ⚠️ | ⚠️ | n/a | TC-0017-0093 | ⚠️ |
 
-Current business rules: **BR 69**; scored cells **✅ 0 / ⚠️ 42 / ❌ 98 / n/a 67**; status **✅ 0 / ⚠️ 13 / ❌ 56**.
+Current business rules: **BR 70**; scored cells **✅ 0 / ⚠️ 44 / ❌ 98 / n/a 68**; status **✅ 0 / ⚠️ 14 / ❌ 56**.
 
 ### Current gap reasons
 
@@ -965,6 +967,8 @@ Each entry names every `❌` coordinate in its row. These are open gaps, not pas
 - **BR-0017-0067** (AC-0017-0003, AC-0017-0018) — candidate TC-0017-0006 at [ownWorkflowTopology.test.ts](../../packages/qfai/tests/scripts/ownWorkflowTopology.test.ts), selector `TC-0017-0006 (TDD-0006): the executing set and its declared timeout sum match the pin`: `Positive case` = no qualifying L3 evidence for a rule-positive case; `Negative case` = no qualifying L3 evidence for the kept rejection; `Conditional branches` = no qualifying L3 evidence for all declared alternatives.
 - **BR-0017-0068** (AC-0017-0035) — candidate TC-0017-0088 at [ownWorkflowTopology.test.ts](../../packages/qfai/tests/scripts/ownWorkflowTopology.test.ts), selector `TC-0017-0088 (TDD-0097): release prerequisites accept complete gate paths`: `Positive case` = no qualifying L3 evidence for a rule-positive case; `Negative case` = no qualifying L3 evidence for the kept rejection; `Conditional branches` = no qualifying L3 evidence for all declared alternatives.
 - **BR-0017-0069** (AC-0017-0036) — TC-0017-0090 at [spec0017ReleaseOperations.test.ts](../../packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts), selector `classifies exact operation capabilities`, and TC-0017-0091 at [spec0017ReleaseFallback.test.ts](../../packages/qfai/tests/integration/spec0017ReleaseFallback.test.ts), selector `missing operation scripts retain aggregate checks`: `Positive case` = per-row GREEN/QA recorded; implementation checkpoint pending; `Negative case` = fallback GREEN/QA recorded; implementation checkpoint pending; `Conditional branches` = the moved selectors and the still-scripted TC-0017-0092 have no complete L3 branch proof.
+
+BR-0017-0070 has a direct Integration selector for its local command order. The TDD-0107 live mutation and restored GREEN received individual QA PASS under the earlier combined case. Its `Positive case` and `Negative case` remain `⚠️` while the TDD status is `todo` and the implementation checkpoint is pending; no complete business-rule verdict is recorded.
 
 ### Partial-score basis
 

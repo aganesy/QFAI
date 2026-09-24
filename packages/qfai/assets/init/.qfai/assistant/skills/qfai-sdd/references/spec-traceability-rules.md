@@ -578,27 +578,48 @@ Template: `templates/specs/spec/16_Traceability-ledger.md`.
   implementation-integrity check; the spec is still valid. Presence is a property of the working
   tree, so this is checked for every **layered** spec on every run — it does not depend on the branch
   diff. Both `--profile sdd` and `--profile tdd` evaluate it.
-- With it, `QFAI-TRACE-001` (`error`) fires when a spec's `03_Acceptance-Criteria.md` or
-  `04_Business-Rules.md` changed on the branch but a linked implementation file did not. Only
-  `--profile tdd` / `full` evaluate it: `/qfai-sdd` hands implementation to `/qfai-implement`, so at
-  the `--profile sdd` gate the linked code is untouched by design.
-- `QFAI-TRACE-001` needs the branch diff. When git cannot produce one (base ref absent, shallow CI
-  clone, not a repository) `QFAI-TRACE-003` (`info`) says so and that check is skipped for every
-  spec; fetch the base ref or set `baseBranch` at the **top level** of `qfai.config.yaml` (it is not
-  read from under `validation`). `QFAI-TRACE-003` also fires per spec when the diff carries BR/AC
-  changes for a spec the working tree no longer holds as layered (whole-spec `DELETE`, rename,
-  conversion): the ledger went with it, so the check is un-runnable rather than passing.
+- With a ledger, `--profile tdd` / `full` compare each `BR-*` and `AC-*` with its merge-base copy.
+  For each changed or new ID, the ledger must name every current implementation file in its active
+  table or explicitly name a future file in Planned bindings. Distinct files may share an ID; a
+  repeated ID-and-path pair, a path naming several files, or a binding that cannot be resolved is
+  ambiguous and fails `QFAI-TRACE-001` (`error`). An unchanged obligation does not make its linked
+  files owe an unrelated edit. A planned binding does not prove a current implementation: promote
+  it when its file is created or first edited for that obligation.
+- For each active binding of a changed or new obligation, a branch edit to the linked implementation
+  file satisfies the change check. An unchanged file needs one `Proof` TDD ID in that row. The ID
+  must resolve to the same test file and selector, the same obligation through its TC and BR/AC
+  references, and current ATDD evidence. That evidence must name the implementation path in
+  `Satisfied-by`, match the restored implementation SHA-256 and current RED test manifest/hash,
+  record a passing GREEN run, and carry an independent `qa-gatekeeper` PASS. Missing, stale or
+  failed proof is `QFAI-TRACE-001` (`error`). The validator verifies the record; CI runs the test.
+  The RED and GREEN commands must use the project's runner filter to select this row's selector or
+  TDD ID. Their results and the independent review must concern that same selection. The static
+  check uses the project's selector syntax and the ATDD scan's file-level TC annotation and
+  runnable-test rules across supported languages. It does not infer which declaration an annotation
+  belongs to; the live reviewer verifies that the selected test asserts the named predicate.
+  One TDD result may prove several obligations only when its TC/BR/AC chain matches each one.
+  Prose saying `PASS` is not proof. `/qfai-sdd` hands implementation to `/qfai-implement`, so the
+  `sdd` profile checks ledger shape without asking for branch edits or proof.
+- The comparison needs a merge-base. If Git cannot produce one (base ref absent, shallow clone,
+  not a repository), `QFAI-TRACE-003` is an `error` under `tdd` / `full`: the integrity check did
+  not run. Fetch the base ref or set `baseBranch` at the **top level** of `qfai.config.yaml` (not
+  under `validation`). The same code reports a changed spec that no longer exists as layered
+  (whole-spec deletion, rename or conversion), because its ledger cannot be checked.
 - A ledger path that is not a regular file (FIFO, socket, device, directory) is never opened: it is
   reported as `QFAI-TRACE-002` and that spec's integrity check is skipped.
-- Schema for the **layered** layout — the first Markdown table is the one read; header needs ≥3
-  columns, one named `Implementation File`:
+- Schema for the **layered** layout — the first Markdown table contains active bindings; its header
+  needs at least three columns, including `Implementation File`. An optional fifth `Proof` column
+  holds one TDD ID or `-`:
 
-  | BR/AC   | Implementation File | Test File |
-  | ------- | ------------------- | --------- |
-  | AC-0001 | src/…               | tests/…   |
+  | BR/AC   | Implementation File | Test File | Notes | Proof    |
+  | ------- | ------------------- | --------- | ----- | -------- |
+  | AC-0001 | src/…               | tests/…   | -     | TDD-0001 |
 
   First cell must be a `BR-NNNN` / `AC-NNNN` ID; second cell one repo-root-relative path (no globs,
-  no `./`). One row per BR/AC ↔ file pair. Extra trailing columns are ignored.
+  no `./`). One row per BR/AC ↔ file pair. `Proof` is needed only when the obligation changed but
+  its active implementation file did not. Other trailing columns are ignored. The later Planned
+  bindings table is read only for changed-ID binding completeness, not as an active implementation
+  or as proof.
 
 - The legacy **spec-pack** layout uses the same filename with a different schema
   (`trace_id, obj_id, init_id, cap_id, flow_id, us_id, ac_id, ex_ids, tc_ids`, checked by
