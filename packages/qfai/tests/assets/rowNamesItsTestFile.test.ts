@@ -9,6 +9,7 @@ const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const read = (tree: string, relative: string): Promise<string> =>
   readFile(path.join(root, tree, "assistant/skill", relative), "utf-8");
+const flat = (content: string): string => content.replace(/\s+/g, " ");
 
 describe("flow evidence identifies the test it proves", () => {
   for (const tree of trees) {
@@ -16,8 +17,8 @@ describe("flow evidence identifies the test it proves", () => {
       const guidance = await read(tree, "qfai-atdd/references/red-provenance.md");
       expect(guidance).toContain("`.qfai/evidence/atdd-BF-NNNN.md`");
       expect(guidance).toContain("Name the test file and selector");
-      expect(guidance).toContain("the exact command");
-      expect(guidance).toContain("manifest and hash of the test plus fixtures");
+      expect(flat(guidance)).toContain("the exact command");
+      expect(flat(guidance)).toContain("manifest and hash of the test plus fixtures");
     });
 
     it(`${tree}: the handoff carries the same test identity into implementation`, async () => {

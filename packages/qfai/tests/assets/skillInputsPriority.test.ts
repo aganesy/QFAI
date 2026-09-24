@@ -17,7 +17,9 @@ describe("skills read the governing inputs for their current stage", () => {
         expect(skill).toContain(".qfai/assistant/rule/*");
         expect(skill).not.toContain(".qfai/assistant/constitution/*");
       }
-      expect(await read(tree, "qfai-discussion")).toContain(".qfai/assistant/catalog/");
+      expect(await read(tree, "qfai-discussion")).toContain(
+        "project context under `<paths.specsDir>/01_policy/**`",
+      );
       expect(await read(tree, "qfai-prototyping")).toContain("project context in the story tree");
     });
 

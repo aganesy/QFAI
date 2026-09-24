@@ -69,9 +69,15 @@ describe("answered review demands are carried into the next existing request", (
           tree,
           `assistant/skill/${skill}/references/review-cycle-playbook.md`,
         );
-        expect(text).toContain("review-convergence.md#answered-demands-must");
-        expect(text).toContain("Carry prior answers and newly answered demands");
-        expect(text).toContain("next cycle's `review_request.md` before dispatching reviewers");
+        if (skill === "qfai-discussion") {
+          expect(text).toContain("review-convergence.md#answered-demands-must");
+          expect(text).toContain("Carry prior answers and newly answered demands");
+          expect(text).toContain("next cycle's `review_request.md` before dispatching reviewers");
+        } else {
+          expect(text).toContain("review-convergence.md");
+          expect(text).toContain("previous answered demands");
+          expect(text).toContain("next cycle's request before dispatch");
+        }
       },
     );
   }

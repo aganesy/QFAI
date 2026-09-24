@@ -1,24 +1,21 @@
 /**
  * One stop condition, stated the same way everywhere it is stated.
  *
- * The loop stops when the latest iteration has `blockingFindings`,
- * `layoutAntiPatternsDetected` and `designMdViolations` all empty. Two places
- * apply it — `isConverged` in the iterate command and the `QFAI-PROT-005`
- * consistency check — and several more describe it: the skill an agent reads
- * before deciding whether to keep iterating, and the `--help` line an operator
- * reads to interpret exit 64.
+ * The loop stops when all four ordinal UX scores are exceptional and the
+ * latest iteration has `blockingFindings`, `layoutAntiPatternsDetected` and
+ * `designMdViolations` all empty. The core convergence check applies this
+ * contract. The skill and CLI help must describe it consistently.
  *
  * A description that names a different condition is worse than none. It
  * explains a stop by a gate nobody applied, and leaves a run that keeps going
- * looking unexplained. So the descriptions are pinned to the three arrays, and
- * the rating vocabulary that used to stand in for them is pinned out.
+ * looking unexplained. The descriptions are pinned to both the score and
+ * finding requirements.
  */
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
 import { EXIT_CODES, formatExitCodesSection } from "../../src/cli/lib/exitCodes.js";
@@ -35,21 +32,6 @@ const FINDING_ARRAYS = [
   "designMdViolations",
 ] as const;
 
-/**
- * The rating that used to decide the stop.
- *
- * The subject is an ordinal VALUE, not the axes. Four axes are still scored by
- * the reviewer and still reported, so the shipped skill names them on purpose —
- * in its reference index and in the per-cycle transcription row. What must not
- * appear is a value off the scale those axes are drawn on, because the only
- * thing such a value can be doing in this tree is deciding something.
- *
- * Matched in its code-span form, which is how a document writes a value. Three
- * of the four are ordinary English words as well ("your strong recommendation"),
- * and banning those bans prose.
- */
-const RETIRED_RATING = /`(?:weak|acceptable|strong|exceptional)`/i;
-
 const read = (relative: string): Promise<string> =>
   readFile(path.join(repoRoot, relative), "utf-8");
 
@@ -65,6 +47,7 @@ describe("the convergence stop condition is stated as the three finding arrays",
       for (const array of FINDING_ARRAYS) {
         expect(stopLine, `the exit-code line omits ${array}`).toContain(`\`${array}\``);
       }
+      expect(stopLine).toContain("all four per-cycle ordinal UX scores `exceptional`");
     });
 
     it(`${tree}: the loop reference defines exit 64 as the three arrays`, async () => {
@@ -74,6 +57,7 @@ describe("the convergence stop condition is stated as the three finding arrays",
       for (const array of FINDING_ARRAYS) {
         expect(stopLine, `the exit-64 definition omits ${array}`).toContain(`\`${array}\``);
       }
+      expect(stopLine).toContain("all four per-cycle ordinal scores are `exceptional`");
     });
 
     // Naming two of the three is the shape this drifted into last time: the
@@ -86,25 +70,16 @@ describe("the convergence stop condition is stated as the three finding arrays",
       expect(text).not.toMatch(/both finding arrays/);
     });
 
-    it(`${tree}: no prototyping document rates the stop`, async () => {
-      const files = await fg("**/*.md", {
-        cwd: path.join(repoRoot, tree, SKILL_DIR),
-        absolute: true,
-      });
-
-      const offenders: string[] = [];
-      for (const file of files) {
-        const found = (await readFile(file, "utf-8")).match(new RegExp(RETIRED_RATING, "gi"));
-        if (found) {
-          offenders.push(`${path.relative(repoRoot, file)}: ${[...new Set(found)].join(", ")}`);
-        }
+    it(`${tree}: the reviewer applies the score and findings together`, async () => {
+      const text = flat(await read(path.join(tree, SKILL_DIR, "references/reviewer-prompt.md")));
+      expect(text).toContain("Convergence requires all four summary scores to be `exceptional`");
+      for (const array of FINDING_ARRAYS) {
+        expect(text).toContain(`\`${array}[]\``);
       }
-
-      expect(offenders, "a shipped document states the stop as a rating").toEqual([]);
     });
   }
 
-  it("the operator's exit-64 line names what is empty, not what scored", () => {
+  it("the operator's exit-64 line names the scores and empty findings", () => {
     const help = formatExitCodesSection();
     const iterate = help.slice(
       help.indexOf("prototyping iterate"),
@@ -119,6 +94,6 @@ describe("the convergence stop condition is stated as the three finding arrays",
     expect(stopLine).toContain("no layout");
     expect(stopLine).toContain("anti-pattern");
     expect(stopLine).toContain("no blocking finding");
-    expect(iterate).not.toMatch(RETIRED_RATING);
+    expect(stopLine).toContain("exceptional");
   });
 });

@@ -49,7 +49,7 @@ describe.each(trees)("%s ATDD obligations", (tree) => {
     expect(flat(checklist)).toContain("one row per US, AC and EX");
     expect(checklist).toContain("A BF-level E2E obligation");
     expect(checklist).toContain("EX rows remain in this flow's matrix");
-    expect(checklist).toContain("does not become `✅` when a file or skeleton appears");
+    expect(flat(checklist)).toContain("does not become `✅` when a file or skeleton appears");
   });
 
   it("requires observed tests and flow-scoped validation before PASS", async () => {

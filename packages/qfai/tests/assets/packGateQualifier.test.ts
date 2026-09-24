@@ -19,7 +19,7 @@ describe("packaging verification is conditional on distribution", () => {
         "Every BF and AC obligation in scope has an executed, behavior-checking test",
       );
       expect(atdd).toContain("Routed reviewers and qa-gatekeeper passed the current work");
-      expect(atdd).toContain("/qfai-verify runs the repository gate");
+      expect(atdd).toContain("`/qfai-verify` runs the repository gate");
       expect(atdd).not.toMatch(/pack\/verify.*pass with evidence/);
     });
 

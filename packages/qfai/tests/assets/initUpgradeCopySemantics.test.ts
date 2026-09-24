@@ -33,8 +33,8 @@ describe("assistant-tree upgrade preserves adopter files", () => {
       expect(contract).toContain(file);
     }
     expect(contract).toContain("are not copied. Migration step 3 merges them into the spec tree");
-    expect(contract).toMatch(
-      /writes nothing under .constitution.. .manifest.. .catalog. or .process./,
+    expect(contract).toContain(
+      "Init writes no `README.md` or assistant `manifest/`, `catalog/`, `constitution/` or `process/` tree",
     );
     expect(contract).toContain("writes no migration memo");
   });
