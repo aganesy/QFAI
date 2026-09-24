@@ -19,7 +19,15 @@ const story = `${specs}/02_business-flow/business-flow-0001/user-story-0001-0001
 
 function model(overrides: Record<string, string> = {}) {
   const files = new Map<string, string>([
+    [
+      `${specs}/02_business-flow/business-flows.md`,
+      "| BF-ID | Flow | Path |\n| --- | --- | --- |\n| BF-0001 | Checkout | `business-flow-0001/` |",
+    ],
     [`${specs}/02_business-flow/business-flow-0001/business-flow.md`, "# BF-0001: Checkout"],
+    [
+      `${specs}/02_business-flow/business-flow-0001/user-stories.md`,
+      "| US-ID | Story | Path |\n| --- | --- | --- |\n| US-0001-0001 | Checkout | `user-story-0001-0001/` |",
+    ],
     [`${story}/01_User-story.md`, "# US-0001-0001: Checkout"],
     [`${story}/02_Acceptance-Criteria.md`, "```gherkin\n# AC-0001-0001-01\nScenario: paid\n```"],
     [
@@ -129,6 +137,24 @@ describe("story-tree structure", () => {
 
   it("accepts a linked story, example, rule and the four-column registers", () => {
     expect(validateStoryTreeStructureModel(model())).toEqual([]);
+  });
+
+  it("checks flow and story index membership against declarations", () => {
+    const findings = validateStoryTreeStructureModel(
+      model({
+        [`${specs}/02_business-flow/business-flows.md`]:
+          "| BF-ID | Flow | Path |\n| --- | --- | --- |\n| BF-0002 | Unknown | `business-flow-0002/` |",
+        [`${specs}/02_business-flow/business-flow-0001/user-stories.md`]:
+          "| US-ID | Story | Path |\n| --- | --- | --- |\n| US-0001-0001 | Checkout | `user-story-0001-0001/` |\n| US-0001-0001 | Duplicate | `user-story-0001-0001/` |",
+      }),
+    );
+    expect(findings.some((item) => item.message.includes("does not list BF-0001"))).toBe(true);
+    expect(findings.some((item) => item.message.includes("unknown or duplicate BF-0002"))).toBe(
+      true,
+    );
+    expect(
+      findings.some((item) => item.message.includes("unknown or duplicate US-0001-0001")),
+    ).toBe(true);
   });
 
   it("reports an example that cites another story and an uncited criterion", () => {

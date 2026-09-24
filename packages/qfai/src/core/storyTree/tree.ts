@@ -6,6 +6,7 @@ import { parseHeadings } from "../parse/markdown.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { extractFencedCodeBlocks } from "../validators/mermaidUtils.js";
 import { parseContractRules, type ContractRule } from "./contractRules.js";
+import { nextId, type StoryTreeIdKind } from "./ids.js";
 import { resolveStoryTreeRoots } from "./layout.js";
 import { parseRecordTable, type ParsedRecordTable } from "./tables.js";
 
@@ -15,9 +16,12 @@ export type StoryDefinition = StoryTreeDeclaration & { flowId: string; directory
 export type CriterionDefinition = StoryTreeDeclaration & { storyId: string };
 export type ExampleDefinition = StoryTreeDeclaration & { storyId: string; acRef: string };
 export type RuleReference = StoryTreeDeclaration;
+export type StoryTreeIndex = { file: string; ids: string[] };
 
 export type StoryTreeModel = {
   flows: FlowDefinition[];
+  flowIndex: StoryTreeIndex | null;
+  storyIndexes: StoryTreeIndex[];
   stories: StoryDefinition[];
   acceptanceCriteria: CriterionDefinition[];
   examples: ExampleDefinition[];
@@ -36,6 +40,8 @@ export type StoryTreeModel = {
 export type StoryTreeModelOptions = { specsDir?: string; contractsDir?: string };
 
 const FLOW_FILE = /(?:^|\/)02_business-flow\/business-flow-(\d{4})\/business-flow\.md$/;
+const FLOW_INDEX_FILE = /(?:^|\/)02_business-flow\/business-flows\.md$/;
+const STORY_INDEX_FILE = /(?:^|\/)02_business-flow\/business-flow-\d{4}\/user-stories\.md$/;
 const STORY_FILE =
   /(?:^|\/)02_business-flow\/business-flow-(\d{4})\/user-story-(\d{4}-\d{4})\/01_User-story\.md$/;
 const CRITERIA_FILE =
@@ -53,6 +59,31 @@ function firstH1Id(text: string, prefix: "BF" | "US"): string | null {
   return (
     new RegExp(`^(${prefix}-[A-Za-z0-9_-]+)(?::|\\s|$)`).exec(heading?.title ?? "")?.[1] ?? null
   );
+}
+
+function indexIds(text: string, column: "BF-ID" | "US-ID"): string[] {
+  return parseAllMarkdownTables(text).flatMap((table) => {
+    const columnIndex = table.headers.indexOf(column);
+    return columnIndex < 0 ? [] : table.rows.map((row) => row[columnIndex] ?? "");
+  });
+}
+
+const RESERVED_ID =
+  /\b(?:BF-\d{4}|US-\d{4}-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2}|BR-\d{4}|DEC-\d{4}|OQ-\d{4})(?![\d-])/g;
+
+/** Allocates after every declaration and every ID named in a decision row. */
+export function nextStoryTreeId(
+  model: StoryTreeModel,
+  kind: StoryTreeIdKind,
+  parentId?: string,
+): string {
+  const named = model.declarations.map(({ id }) => id);
+  for (const row of model.decisions?.rows ?? []) {
+    named.push(
+      ...[...`${row.content} ${row.approach}`.matchAll(RESERVED_ID)].map((match) => match[0]),
+    );
+  }
+  return nextId(kind, named, parentId);
 }
 
 function recordTableFor(
@@ -82,6 +113,8 @@ export function buildStoryTreeModel(
   const contractRoot = options.contractsDir ? normalize(options.contractsDir) : null;
   const model: StoryTreeModel = {
     flows: [],
+    flowIndex: null,
+    storyIndexes: [],
     stories: [],
     acceptanceCriteria: [],
     examples: [],
@@ -99,6 +132,14 @@ export function buildStoryTreeModel(
   for (const [file, text] of [...texts.entries()].sort(([left], [right]) =>
     left.localeCompare(right),
   )) {
+    if (FLOW_INDEX_FILE.test(file)) {
+      model.flowIndex = { file, ids: indexIds(text, "BF-ID") };
+      continue;
+    }
+    if (STORY_INDEX_FILE.test(file)) {
+      model.storyIndexes.push({ file, ids: indexIds(text, "US-ID") });
+      continue;
+    }
     const flow = FLOW_FILE.exec(file);
     if (flow) {
       const id = firstH1Id(text, "BF");
@@ -183,6 +224,7 @@ export function buildStoryTreeModel(
       []),
   ].sort((left, right) => left.id.localeCompare(right.id) || left.file.localeCompare(right.file));
   model.flows.sort((left, right) => left.id.localeCompare(right.id));
+  model.storyIndexes.sort((left, right) => left.file.localeCompare(right.file));
   model.stories.sort((left, right) => left.id.localeCompare(right.id));
   model.acceptanceCriteria.sort((left, right) => left.id.localeCompare(right.id));
   model.examples.sort((left, right) => left.id.localeCompare(right.id));

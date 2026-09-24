@@ -10,7 +10,7 @@ import {
 } from "../storyTree/ids.js";
 import { resolveStoryTreeRoots, STORY_FILES } from "../storyTree/layout.js";
 import { classifyRecordRow } from "../storyTree/tables.js";
-import { readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
+import { readStoryTreeModel, type StoryTreeIndex, type StoryTreeModel } from "../storyTree/tree.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -18,9 +18,53 @@ function finding(code: string, message: string, file: string, refs: string[] = [
   return issue(code, message, "error", file, "storyTree.structure", refs);
 }
 
+function validateIndex(
+  index: StoryTreeIndex | null,
+  file: string,
+  expected: readonly string[],
+): Issue[] {
+  if (!index) {
+    return [finding("QFAI-STORY-002", `Missing index ${file}`, file, [...expected])];
+  }
+  const actual = new Set(index.ids);
+  const expectedIds = new Set(expected);
+  const issues: Issue[] = [];
+  const seen = new Set<string>();
+  for (const id of expectedIds) {
+    if (!actual.has(id)) {
+      issues.push(finding("QFAI-STORY-002", `${index.file} does not list ${id}`, index.file, [id]));
+    }
+  }
+  for (const id of index.ids) {
+    if (!expectedIds.has(id) || seen.has(id)) {
+      issues.push(
+        finding("QFAI-STORY-002", `${index.file} lists unknown or duplicate ${id}`, index.file, [
+          id,
+        ]),
+      );
+    }
+    seen.add(id);
+  }
+  return issues;
+}
+
 /** Checks relationships in the parsed tree without reading the filesystem again. */
 export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] {
   const issues: Issue[] = [];
+  const flowIndexFile = model.flowIndex?.file ?? "02_business-flow/business-flows.md";
+  issues.push(
+    ...validateIndex(
+      model.flowIndex,
+      flowIndexFile,
+      model.flows.map(({ id }) => id),
+    ),
+  );
+  for (const flow of model.flows) {
+    const file = `${flow.directory}/user-stories.md`;
+    const index = model.storyIndexes.find((candidate) => candidate.file === file) ?? null;
+    const storyIds = model.stories.filter((story) => story.flowId === flow.id).map(({ id }) => id);
+    issues.push(...validateIndex(index, file, storyIds));
+  }
   const kindFor = (id: string): StoryTreeIdKind | undefined => {
     const prefix = id.split("-")[0];
     return ["BF", "US", "AC", "EX", "BR", "DEC", "OQ"].includes(prefix ?? "")

@@ -26,7 +26,7 @@ import {
   diffRecordTables,
   parseRecordTable,
 } from "../../../src/core/storyTree/tables.js";
-import { buildStoryTreeModel } from "../../../src/core/storyTree/tree.js";
+import { buildStoryTreeModel, nextStoryTreeId } from "../../../src/core/storyTree/tree.js";
 
 const storyFiles = new Map([
   [".qfai/spec/02_business-flow/business-flow-0001/business-flow.md", "# BF-0001: Checkout\n"],
@@ -117,6 +117,16 @@ describe("story-tree core", () => {
       AC: ["AC-0001-0001-01"],
       EX: ["EX-0001-0001-01"],
     });
+  });
+
+  it("reserves IDs named by decision rows when allocating a story ID", () => {
+    const files = new Map(storyFiles);
+    files.set(
+      ".qfai/spec/decisions.md",
+      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Retired US-0001-0004 | Keep its ID reserved | DONE |\n",
+    );
+    const tree = buildStoryTreeModel(files);
+    expect(nextStoryTreeId(tree, "US", "BF-0001")).toBe("US-0001-0005");
   });
 
   it("reads every declaration from the declaring file, not index citations", () => {
