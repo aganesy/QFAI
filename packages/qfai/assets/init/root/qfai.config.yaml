@@ -87,5 +87,5 @@ atdd:
   # warning to error. 0 disables the escalation and keeps it a warning forever.
   # This is the in-code default, restated here so the knob the ATDD skill
   # advertises is readable from the file it sends you to. See
-  # `.qfai/assistant/skills/qfai-atdd/references/scaffolding.md`.
+  # `.qfai/assistant/skill/qfai-atdd/references/scaffolding.md`.
   scaffoldEscalateCycles: 3

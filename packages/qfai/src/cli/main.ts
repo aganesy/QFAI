@@ -507,7 +507,7 @@ Options:
   --capture                     prototyping iterate: opt-in PNG/HTML capture (default OFF; Playwright is imported dynamically)
   --auto-serve                  prototyping iterate: opt-in in-process local HTTP server (default OFF; default port 4321; node:http; SIGINT teardown <= 2s; EADDRINUSE is a refusal)
   --license-patch <file>        prototyping iterate: apply an add-only license allowlist patch on any cycle (not cycle 0 only; appended to the audit ledger and replayed on later cycles. sourceHosts are not replayed)
-  --primary-spec-id <value>     prototyping iterate: pick the primary spec explicitly when several UI-bearing specs exist
+  --primary-ui-contract <CON-UI-NNNN>  prototyping iterate: pick the primary UI contract when several apply
   --emit-skeletons              prototyping iterate --cycle 0: emit a placeholder HTML per frozenSurfaceUnion screen (default OFF; opt-in)
   --skeleton-mode <placeholder|full|stub>  prototyping iterate --cycle 0 --emit-skeletons: output mode (default placeholder)
   --mode <convergence|exploration>  prototyping iterate: loop posture (default convergence; exploration relaxes soft-rubric gates only, to warning at medium)
