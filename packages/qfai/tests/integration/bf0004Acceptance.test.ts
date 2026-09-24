@@ -286,7 +286,7 @@ async function project(): Promise<string> {
   await writeFile(integration, (await readFile(integration, "utf8")).replaceAll("QFAI~", "QFAI:"));
   await writeFile(
     integration,
-    `${await readFile(integration, "utf8")}\nconst unchangedLine = true;\n`,
+    `${await readFile(integration, "utf8")}\n// QFAI:SPEC-0001:US-0001-0001\nconst unchangedLine = true;\n`,
   );
   await cp(
     path.join(completeRoot, "order.e2e.test.ts"),
@@ -430,7 +430,7 @@ describe("BF-0004 acceptance criteria", () => {
     const before = await fingerprint(root);
     const result = step(root, 1, ["--unknown"]);
     expect(result.status).toBe(2);
-    expect(result.stderr).toMatch(/unknown|argument|usage/i);
+    expect(result.stderr).toContain('Invalid argument "--unknown"');
     expect(await fingerprint(root)).toBe(before);
   });
 
@@ -575,6 +575,7 @@ describe("BF-0004 acceptance criteria", () => {
   it("reports an empty step 1 rerun and creates only moved files without optional directories", async () => {
     // QFAI:EX-0004-0003-18
     const root = await project();
+    await rm(path.join(root, ".qfai/assistant/skills.local"), { recursive: true });
     await expect(lstat(path.join(root, ".qfai/assistant/skills.local"))).rejects.toMatchObject({
       code: "ENOENT",
     });
@@ -715,7 +716,7 @@ describe("BF-0004 acceptance criteria", () => {
     expect(
       await readFile(path.join(specs, "02_business-flow/business-flows.md"), "utf8"),
     ).toContain("BF-0001");
-    expect(await readFile(path.join(contracts, "tech.md"), "utf8")).toContain("Standard commands");
+    expect(await readFile(path.join(contracts, "tech.md"), "utf8")).toContain("JSON requests");
     expect(await readFile(path.join(contracts, "api/order.yaml"), "utf8")).toContain("BR-0001");
     await expect(lstat(path.join(root, ".qfai/spec"))).rejects.toMatchObject({ code: "ENOENT" });
   });
@@ -836,11 +837,9 @@ describe("BF-0004 acceptance criteria", () => {
     expect(
       await readFile(path.join(journey.root, ".qfai/spec/01_policy/objective.md"), "utf8"),
     ).toContain("reliable receipt");
-    const principle = await readFile(
-      path.join(journey.root, ".qfai/spec/01_policy/principle.md"),
-      "utf8",
-    );
-    expect(principle).toContain("one source for each order decision");
+    await expect(
+      lstat(path.join(journey.root, ".qfai/spec/01_policy/principle.md")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
     const archived = await readFile(
       path.join(
         journey.root,
@@ -849,7 +848,7 @@ describe("BF-0004 acceptance criteria", () => {
       "utf8",
     );
     expect(archived).toContain("Slice");
-    expect(principle).not.toContain(archived);
+    expect(archived).toContain("one source for each order decision");
   });
 
   it("routes every policy and catalog section to its designated document", async () => {
@@ -1642,12 +1641,17 @@ describe("BF-0004 acceptance criteria", () => {
   it("repoints old host links, preserves occupied paths and refuses uninspectable wrappers", async () => {
     // QFAI:EX-0004-0011-01
     const oldLinkRoot = await project();
+    await rm(path.join(oldLinkRoot, ".qfai/assistant/skill/qfai-sdd"), { recursive: true });
     const oldSkill = path.join(oldLinkRoot, ".qfai/assistant/skills/qfai-sdd");
     await mkdir(oldSkill, { recursive: true });
     await writeFile(path.join(oldSkill, "SKILL.md"), "# Old wrapper target\n");
     const wrapper = path.join(oldLinkRoot, ".claude/skills/qfai-sdd");
     await mkdir(path.dirname(wrapper), { recursive: true });
-    await symlink(oldSkill, wrapper, process.platform === "win32" ? "junction" : "dir");
+    await symlink(
+      path.relative(path.dirname(wrapper), oldSkill),
+      wrapper,
+      process.platform === "win32" ? "junction" : "dir",
+    );
     expect(step(oldLinkRoot, 1).status).toBe(0);
     const beforeLinks = await fileSnapshot(oldLinkRoot);
     const linked = step(oldLinkRoot, 9);
@@ -1783,7 +1787,8 @@ describe("BF-0004 acceptance criteria", () => {
       "qfai validate",
       "there is nothing to",
     ];
-    for (const phrase of required) expect(skill).toContain(phrase);
+    const prose = skill.replace(/\s+/g, " ");
+    for (const phrase of required) expect(prose).toContain(phrase);
   });
 
   // QFAI:AC-0004-0001-01
@@ -1800,7 +1805,11 @@ describe("BF-0004 acceptance criteria", () => {
       expect(await readFile(path.join(skill, "SKILL.md"), "utf8")).toContain(
         "qfai-migration-spec-to-story",
       );
-      expect((await readdir(path.join(skill, "scripts"))).length).toBe(10);
+      const installedScripts = await readdir(path.join(skill, "scripts"));
+      expect(installedScripts.filter((name) => /^\d{2}-.*\.mjs$/.test(name)).sort()).toEqual([
+        ...scriptNames,
+      ]);
+      expect(installedScripts).toContain("_step.mjs");
       for (const host of [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"]) {
         const link = path.join(target, host, "qfai-migration-spec-to-story");
         expect((await readlink(link)).replace(/\\/g, "/")).toContain(

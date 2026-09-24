@@ -1041,7 +1041,8 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
     return 2;
   }
   if (argv.length > 1 || (argv.length === 1 && argv[0] !== "--dry-run")) {
-    io.stderr.write("Only --dry-run is accepted.\n");
+    const invalid = argv.find((arg, index) => arg !== "--dry-run" || index > 0) ?? argv[0];
+    io.stderr.write(`Invalid argument ${JSON.stringify(invalid)}. Only --dry-run is accepted.\n`);
     return 2;
   }
   const root = path.resolve(io.cwd);
