@@ -507,6 +507,67 @@ describe("migration steps 5 to 8", () => {
     );
   });
 
+  it("reports an applicable NFR beside both contracts that received the pack's rules", async () => {
+    // QFAI:EX-0004-0009-08
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      serializeIdMap({
+        version: 1,
+        ids: {
+          [spec]: {
+            "BR-0001-0001": "BR-0001",
+            "BR-0001-0002": "BR-0002",
+            "EX-0001-0001": "EX-0001-0001-01",
+            "EX-0001-0002": "EX-0001-0001-02",
+          },
+        },
+        placements: {
+          [spec]: { "BR-0001-0001": "api/orders.yaml", "BR-0001-0002": "db/orders.sql" },
+        },
+        retiredPacks: {},
+      }),
+    );
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n  - id: BR-0001-0002\n    contract: db/orders.sql\n",
+    );
+    await put(
+      context.root,
+      `.qfai/spec/${spec}/01_Spec.md`,
+      "# Orders\n\n## Applicable NFR\n\n- P95 under 200 ms\n",
+    );
+    await put(
+      context.root,
+      `.qfai/spec/${spec}/04_Business-Rules.md`,
+      "| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | Accept valid orders. |\n| BR-0001-0002 | Persist accepted orders. |\n",
+    );
+    await put(
+      context.root,
+      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | First | Accepted |\n| EX-0001-0002 | BR-0001-0002 | Second | Stored |\n",
+    );
+    await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
+    await put(
+      context.root,
+      ".qfai/spec/03_contract/db/orders.sql",
+      "CREATE TABLE orders (id INT);\n",
+    );
+    const report = capture();
+    expect(await executePlannedStep(step07, context, false, report.io)).toBe(3);
+    const output = report.output.join("");
+    expect(output).toContain("Applicable NFR: - P95 under 200 ms");
+    expect(output).toContain("contracts: api/orders.yaml, db/orders.sql");
+    expect(await readFile(path.join(context.contractsDir, "api/orders.yaml"), "utf8")).toContain(
+      "BR-0001",
+    );
+    expect(await readFile(path.join(context.contractsDir, "db/orders.sql"), "utf8")).toContain(
+      "BR-0002",
+    );
+  });
+
   it("refuses changed or unknown rule placements before writing a contract", async () => {
     const context = await fixture();
     await put(
