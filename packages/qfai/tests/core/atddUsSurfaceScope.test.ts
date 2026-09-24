@@ -44,7 +44,7 @@ const missingUsRefs = (
 ): string[] => issues.find((entry) => entry.code === "QFAI-ATDD-111")?.refs ?? [];
 
 describe("QFAI-ATDD-111 is scoped by surface type", () => {
-  it("exempts a non-UI spec once the project uses surface typing", async () => {
+  it("keeps both legacy US obligations when only one spec declares a UI surface", async () => {
     await withProject(async (root) => {
       await seed(root, [
         { specNumber: "0001", usIds: ["US-0001"], uiBearing: true },
@@ -55,7 +55,7 @@ describe("QFAI-ATDD-111 is scoped by surface type", () => {
       // Spec-qualified: a bare "0001" also matches `US-0001`, which both specs
       // carry, so the positive check could pass on the wrong spec's ref.
       expect(refs.some((ref) => ref.includes("SPEC-0001"))).toBe(true);
-      expect(refs.some((ref) => ref.includes("SPEC-0002"))).toBe(false);
+      expect(refs.some((ref) => ref.includes("SPEC-0002"))).toBe(true);
     });
   });
 

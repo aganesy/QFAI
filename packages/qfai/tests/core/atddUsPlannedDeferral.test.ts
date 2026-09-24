@@ -212,7 +212,7 @@ describe("QFAI-ATDD-118 — US deferral by `- x-qfai-status: planned`", () => {
     );
   });
 
-  it("does not report a deferral for a spec that owes no E2E reference", async () => {
+  it("reports every planned legacy US without a surface-type carve-out", async () => {
     await withProject(
       {
         us: TWO_H3_STORIES.replace(
@@ -221,8 +221,7 @@ describe("QFAI-ATDD-118 — US deferral by `- x-qfai-status: planned`", () => {
         ),
         tests: { "tests/e2e/slice.test.ts": "// QFAI:SPEC-0001:US-0001-0001\n" },
         files: {
-          // spec-0001 is the only UI-bearing spec, so the project has opted into
-          // surface typing and spec-0002 is outside `QFAI-ATDD-111` already.
+          // A legacy surface marker does not exempt another story from test scope.
           ".qfai/specs/spec-0001/01_Spec.md": "---\nsurface_type: ui-bearing\n---\n\n# Spec\n",
           ".qfai/specs/spec-0002/01_Spec.md": "# Spec\n",
           ".qfai/specs/spec-0002/02_User-stories.md": userStories(
@@ -234,11 +233,9 @@ describe("QFAI-ATDD-118 — US deferral by `- x-qfai-status: planned`", () => {
       },
       async (root) => {
         const issues = await validateAtddCodeTraceability(root, defaultConfig);
-        // Nothing was suspended for spec-0002: its stories never owed an E2E
-        // reference, and its remediation would ask for the annotation-only E2E
-        // the surface-scope rule exists to prevent.
         expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
           "SPEC-0001:US-0001-0002",
+          "SPEC-0002:US-0002-0001",
         ]);
       },
     );
