@@ -156,21 +156,23 @@ gate condition where it is defined below.
 
       **`mode` is six digits spelled like git's tree mode, not the revision
       manifest's four octal digits**: `120000` for a symlink, `100755` for a
-      file with any bit of `0111` set, and `100644` for any other file. Read it
-      from the file on disk, not from `git ls-files -s`: git looks at the
-      owner's execute bit alone, so a `0654` file is `100644` there and
-      `100755` here. The consumer and `npx qfai validate` recompute this hash
-      on their own checkouts, where the other permission bits follow that
-      machine's umask — a `0644` here is `0664` there and `0666` on Windows —
-      so a record carrying them never recomputes anywhere else, and the gate
-      refuses evidence that was complete. The revision manifest is compared
-      only on the tree it was taken from, so it can afford the full bits.
+      file `git add` would record as executable, and `100644` for any other
+      file. The consumer and `npx qfai validate` recompute this hash on their
+      own checkouts, where the other permission bits follow that machine's
+      umask — a `0644` here is `0664` there and `0666` on Windows — so a record
+      carrying them never recomputes anywhere else, and the gate refuses
+      evidence that was complete. The revision manifest is compared only on
+      the tree it was taken from, so it can afford the full bits.
 
-      **The execute bit does not cross between Windows and POSIX.** Windows
-      has none, so an executable file there reads `100644`, and the same file
-      reads `100755` on a POSIX checkout. When the manifest names an
-      executable file, record the hash on the kind of system that will
-      recompute it; otherwise the gate refuses the row.
+      **Read the execute bit where git reads it.** Where `core.fileMode` is
+      `false`, as in a repository git created on Windows, take it from the
+      index — `100755` when `git ls-files -s` says so, and `100644` for a file
+      git does not track. Everywhere else, take the owner's execute bit off
+      the disk: a `0654` file is `100644`. Windows has no execute bit on disk,
+      so the index is what carries it there, and two checkouts of one commit
+      read the same mode on Windows and on POSIX.
+      Resolve and stage a merge conflict in a manifest file before recording
+      the hash; the gate rejects an unmerged index entry.
 
       `kind` and `mode` are in it for the reason they are in that one, and more
       so here: after Phase Green the original `RED revision` cannot be

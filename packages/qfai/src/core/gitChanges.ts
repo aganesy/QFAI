@@ -14,7 +14,7 @@ export function normalizeRepoPath(p: string): string {
 }
 
 /** Runs git for its stdout, or returns `null` when the command cannot run. */
-function gitStdout(root: string, args: readonly string[]): string | null {
+export function gitStdout(root: string, args: readonly string[]): string | null {
   try {
     return execFileSync("git", [...args], {
       cwd: root,

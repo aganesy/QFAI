@@ -469,9 +469,10 @@ async function materializeEvidence(
   const metadata = await lstat(testPath);
   const testBlob = digest(await readFile(testPath));
   // Git's mode, mirroring `artifactRecord`: the raw permission bits made the
-  // record depend on the writing machine's umask.
+  // record depend on the writing machine's umask. No fixture here marks a file
+  // executable in git's index, so the owner's bit on disk is the answer.
   const redHash = digest(
-    `${TEST_FILE}\0file\0${(metadata.mode & 0o111) === 0 ? "100644" : "100755"}\0${testBlob}`,
+    `${TEST_FILE}\0file\0${(metadata.mode & 0o100) === 0 ? "100644" : "100755"}\0${testBlob}`,
   );
   let content = rawContent.replaceAll("{{RED_TEST_HASH}}", redHash);
   const matrixRecord = coverageDepthRecord(options.coverageDepthMatrix, options.obligationValue);
@@ -4708,6 +4709,158 @@ ${packPair(1).join("\n")}
     });
   }
 
+  // Where `core.fileMode` is false — a Windows repository — the execute bit
+  // comes from git's index, which a checkout on any system reads the same way.
+  // The file on disk carries no execute bit here on every platform, so a gate
+  // reading the disk would take `100644` and refuse the index's `100755`.
+  for (const [spelling, accepted] of [
+    ["100755", true],
+    ["100644", false],
+  ] as const) {
+    it(`${accepted ? "accepts" : "refuses"} ${spelling} for a file the index marks executable where core.fileMode is false`, async () => {
+      await withProject(async (root) => {
+        const pointer =
+          "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+        const testPath = path.join(root, TEST_FILE);
+        await mkdir(path.dirname(testPath), { recursive: true });
+        await writeFile(testPath, "// test\n", "utf-8");
+        await chmod(testPath, 0o644);
+        const git = (...args: string[]): void => {
+          execFileSync("git", args, { cwd: root, stdio: ["ignore", "ignore", "ignore"] });
+        };
+        git("init");
+        git("config", "core.fileMode", "false");
+        git("add", TEST_FILE);
+        git("update-index", "--chmod=+x", TEST_FILE);
+        const record = `${TEST_FILE}\0file\0${spelling}\0${digest(await readFile(testPath))}`;
+        const evidence = completeEntry("Integration").replace("{{RED_TEST_HASH}}", digest(record));
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+          { ".qfai/evidence/atdd-spec-0001.md": evidence },
+        );
+        const refused = issues.some(
+          ({ code, message }) =>
+            code === "QFAI-TDDLIST-008" && message.includes("RED test hash matching its manifest"),
+        );
+        expect(refused).toBe(!accepted);
+      });
+    });
+  }
+
+  it("reads the disk outside a repository even when global core.fileMode is false", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+      const previousGlobalConfig = process.env.GIT_CONFIG_GLOBAL;
+      const globalConfig = path.join(root, "global.gitconfig");
+      await writeFile(globalConfig, "[core]\n\tfileMode = false\n");
+      process.env.GIT_CONFIG_GLOBAL = globalConfig;
+      try {
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+          { ".qfai/evidence/atdd-spec-0001.md": completeEntry("Integration") },
+        );
+        expect(
+          issues.some(
+            ({ code, message }) =>
+              code === "QFAI-TDDLIST-008" &&
+              (message.includes("valid RED test manifest") ||
+                message.includes("RED test hash matching its manifest")),
+          ),
+        ).toBe(false);
+      } finally {
+        if (previousGlobalConfig === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+        else process.env.GIT_CONFIG_GLOBAL = previousGlobalConfig;
+      }
+    });
+  });
+
+  it("rejects an unmerged manifest path instead of choosing a conflict stage's mode", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+      await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+        { ".qfai/evidence/atdd-spec-0001.md": completeEntry("Integration") },
+      );
+      const git = (...args: string[]): Buffer =>
+        execFileSync("git", args, { cwd: root, stdio: ["ignore", "pipe", "ignore"] });
+      git("init");
+      git("config", "core.fileMode", "false");
+      const oid = git("hash-object", "-w", TEST_FILE).toString().trim();
+      execFileSync("git", ["update-index", "--index-info"], {
+        cwd: root,
+        input: `100644 ${oid} 2\t${TEST_FILE}\n100755 ${oid} 3\t${TEST_FILE}\n`,
+        stdio: ["pipe", "ignore", "ignore"],
+      });
+      const issues = await validateTddList(root, defaultConfig);
+      expect(
+        issues.some(
+          ({ code, message }) =>
+            code === "QFAI-TDDLIST-008" && message.includes("valid RED test manifest"),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("reads executable index modes when a manifest exceeds the Windows argument limit", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+      const evidencePath = ".qfai/evidence/atdd-spec-0001.md";
+      const extraPaths = Array.from(
+        { length: 240 },
+        (_, index) => `tests/unit/${String(index).padStart(3, "0")}-${"a".repeat(140)}.test.ts`,
+      );
+      const paths = [...extraPaths, TEST_FILE].sort((left, right) =>
+        Buffer.from(left).compare(Buffer.from(right)),
+      );
+      await seedProject(
+        root,
+        ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+        extraPaths,
+        { [evidencePath]: completeEntry("Integration") },
+      );
+      const git = (...args: string[]): void => {
+        execFileSync("git", args, { cwd: root, stdio: ["ignore", "ignore", "ignore"] });
+      };
+      git("init");
+      git("config", "core.fileMode", "false");
+      git("add", "-A");
+      git("update-index", "--chmod=+x", TEST_FILE);
+      const blob = digest("// test\n");
+      const hash = digest(
+        paths
+          .map((entry) => `${entry}\0file\0${entry === TEST_FILE ? "100755" : "100644"}\0${blob}`)
+          .join("\n"),
+      );
+      const file = path.join(root, evidencePath);
+      const evidence = (await readFile(file, "utf-8"))
+        .replace(/^- Round 1: RED test hash:.*$/m, `- Round 1: RED test hash: ${hash}`)
+        .replace(
+          "- Round 1: RED test manifest: tests/unit/sample.test.ts",
+          ["- Round 1: RED test manifest:", "", "~~~text", ...paths, "~~~"].join("\n"),
+        );
+      await writeFile(file, evidence);
+      const issues = await validateTddList(root, defaultConfig);
+      expect(
+        issues.some(
+          ({ code, message }) =>
+            code === "QFAI-TDDLIST-008" && message.includes("valid RED test manifest"),
+        ),
+      ).toBe(false);
+      expect(
+        issues.some(
+          ({ code, message }) =>
+            code === "QFAI-TDDLIST-008" && message.includes("RED test hash matching its manifest"),
+        ),
+      ).toBe(false);
+    });
+  });
+
   it("validates the current manifest without rehashing an earlier round against later bytes", async () => {
     await withProject(async (root) => {
       const pointer =
@@ -4894,13 +5047,16 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")
     ["a group-writable umask", 0o664],
     ["a read-only checkout", 0o444],
     ["the Windows-shaped mode", 0o666],
+    // Git records the owner's execute bit alone, so a bit only the group and
+    // others hold is one more permission bit that does not travel.
+    ["an execute bit only the group and others hold", 0o655],
   ] as const) {
     it(`recomputes the RED test hash under ${label}`, async () => {
       await withProject(async (root) => {
         await seedProject(root, reverifyLedger(), [], {
           ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(editingEntry()),
         });
-        // Only the permission bits move: same bytes, same executable bit.
+        // Only the permission bits move: same bytes, same owner execute bit.
         await chmod(path.join(root, TEST_FILE), mode);
         const issues = (await validateTddList(root, defaultConfig)).map((i) => ({
           code: i.code,

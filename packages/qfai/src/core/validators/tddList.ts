@@ -8,7 +8,7 @@ import { resolvePath } from "../config.js";
 import { REVISION_FORM_SOURCE } from "../evidenceRevision.js";
 import { isEnoent } from "../fs/errno.js";
 import type { ChangedSince } from "../gitChanges.js";
-import { changedFilesSince } from "../gitChanges.js";
+import { changedFilesSince, gitStdout } from "../gitChanges.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import { isSpecInScope, type SpecScope } from "../specScope.js";
 import {
@@ -1934,7 +1934,71 @@ async function hasPlainParentComponents(root: string, safePath: string): Promise
   return true;
 }
 
-async function artifactRecord(root: string, relativePath: string): Promise<string | null> {
+/**
+ * The paths among `paths` that git's index marks `100755`. `null` means git
+ * reads the disk; `undefined` means the index could not be read safely.
+ *
+ * The execute bit is read the way `git add` reads it, because git is what
+ * carries it between checkouts. Where `core.fileMode` is `false` — as git sets
+ * it in a repository it creates on Windows, whose file system has no execute
+ * bit — git keeps the mode the index already holds, and a file it does not
+ * track is `100644`. Everywhere else git reads the owner's bit off the disk,
+ * and a checkout writes that bit from the index. Either way, two checkouts of
+ * one commit read the same mode. Read off the disk on Windows, a file git
+ * marks executable would be `100644` there and `100755` on a POSIX checkout,
+ * and evidence recorded on one would be refused on the other.
+ *
+ * A directory git cannot answer for — no `git`, no repository — reads the
+ * disk. An index read failure or an unmerged entry invalidates the manifest.
+ */
+function indexExecutablesWhereGitIgnoresDisk(
+  root: string,
+  paths: readonly string[],
+): ReadonlySet<string> | null | undefined {
+  if (gitStdout(root, ["config", "--bool", "core.fileMode"])?.trim() !== "false") return null;
+  // A global setting can be false even when `root` is outside a repository.
+  if (gitStdout(root, ["rev-parse", "--is-inside-work-tree"])?.trim() !== "true") return null;
+  const executables = new Set<string>();
+  // Keep both the Windows command line and gitStdout's output buffer bounded.
+  // `--literal-pathspecs` prevents `*` and `[` in a manifest path from widening a batch.
+  for (let offset = 0; offset < paths.length;) {
+    const batch: string[] = [];
+    let characters = 0;
+    while (
+      offset < paths.length &&
+      batch.length < 100 &&
+      (batch.length === 0 || characters + (paths[offset]?.length ?? 0) < 8000)
+    ) {
+      const next = paths[offset];
+      if (next === undefined) return undefined;
+      batch.push(next);
+      characters += next.length;
+      offset += 1;
+    }
+    const listing = gitStdout(root, [
+      "--literal-pathspecs",
+      "ls-files",
+      "-s",
+      "-z",
+      "--",
+      ...batch,
+    ]);
+    if (listing === null) return undefined;
+    for (const entry of listing.split("\0")) {
+      if (entry.length === 0) continue;
+      const tab = entry.indexOf("\t");
+      if (tab < 0 || entry[tab - 1] !== "0") return undefined;
+      if (entry.startsWith("100755 ")) executables.add(entry.slice(tab + 1));
+    }
+  }
+  return executables;
+}
+
+async function artifactRecord(
+  root: string,
+  relativePath: string,
+  indexExecutables: ReadonlySet<string> | null,
+): Promise<string | null> {
   const safePath = safeRepoRelativePath(relativePath);
   if (safePath === null) return null;
   if (!(await hasPlainParentComponents(root, safePath))) return null;
@@ -1965,8 +2029,12 @@ async function artifactRecord(root: string, relativePath: string): Promise<strin
   // tracked content reads `664` under one umask, `644` under another and `666`
   // on Windows, so evidence recorded on one checkout could not recompute on any
   // other and every handed-over row went unresolved for a difference Git does
-  // not even store. The executable bit is the one permission that travels.
-  const mode = kind === "symlink" ? "120000" : (metadata.mode & 0o111) === 0 ? "100644" : "100755";
+  // not even store. The owner's execute bit is the one permission that
+  // travels, and `indexExecutablesWhereGitIgnoresDisk` says where it is read
+  // from.
+  const executable =
+    indexExecutables === null ? (metadata.mode & 0o100) !== 0 : indexExecutables.has(safePath);
+  const mode = kind === "symlink" ? "120000" : executable ? "100755" : "100644";
   return `${safePath}\0${kind}\0${mode}\0${sha256(bytes)}`;
 }
 
@@ -1986,9 +2054,13 @@ async function redTestManifestHash(root: string, manifest: string): Promise<stri
   ) {
     return null;
   }
+  const safePaths = paths.map(safeRepoRelativePath);
+  if (!safePaths.every((entry): entry is string => entry !== null)) return null;
+  const indexExecutables = indexExecutablesWhereGitIgnoresDisk(root, safePaths);
+  if (indexExecutables === undefined) return null;
   const records: string[] = [];
   for (const entry of paths) {
-    const record = await artifactRecord(root, entry);
+    const record = await artifactRecord(root, entry, indexExecutables);
     if (record === null) return null;
     records.push(record);
   }
