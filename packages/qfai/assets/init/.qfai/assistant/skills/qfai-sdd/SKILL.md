@@ -1,7 +1,7 @@
 ---
 name: qfai-sdd
 title: QFAI SDD Unified (Triage/Outline/Slice/Plan/Delta)
-description: "Triage incoming requirements against existing specs, then create or update layered SDD artifacts (_policies + spec-*) in one workflow."
+description: "Use when invoked by name or handed a QFAI work order. Writes and updates the layered SDD specs (_policies + spec-*) a request needs, against the specs that already exist."
 argument-hint: "[<spec-id-or-name>] [--contract <CON-ID-or-path>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:
@@ -31,6 +31,8 @@ QFAI Skill Body (SSOT)
 ## /qfai-sdd - Unified SDD Workflow
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Inside a `qfai workflow` run, follow `references/orchestrated-mode.md`.
 
 ## Stage and Phase Order (Fixed)
 

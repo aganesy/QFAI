@@ -1,15 +1,23 @@
 /**
  * Reading the assistant tree `qfai init` ships, for tests that assert what a shipped rule says.
  */
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { parse } from "yaml";
 
 import { nextHeadingAt } from "./recordProse.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 export const SHIPPED_ASSISTANT = path.join(packageRoot, "assets", "init", ".qfai", "assistant");
+
+/** Whether the shipped assistant tree holds `relativePath`. */
+export function shippedExists(relativePath: string): boolean {
+  return existsSync(path.join(SHIPPED_ASSISTANT, relativePath));
+}
 
 /** A file under the shipped assistant tree, by its path relative to that tree. */
 export function readShipped(relativePath: string): Promise<string> {
@@ -33,6 +41,28 @@ export function sectionOf(text: string, heading: string): string {
 
 function headingLevel(line: string): number {
   return /^#+/.exec(line)?.[0].length ?? 0;
+}
+
+/**
+ * Every skill a built-in workflow plan names, held literally so a change to the set is a change to
+ * the tests that read it.
+ */
+export const PLAN_SKILLS = [
+  "qfai-sdd",
+  "qfai-atdd",
+  "qfai-implement",
+  "qfai-verify",
+  "qfai-discussion",
+  "qfai-prototyping",
+  "qfai-maintain",
+] as const;
+
+/** The YAML front matter of a shipped `SKILL.md`, parsed; `{}` when there is none. */
+export function frontMatterOf(text: string): Record<string, unknown> {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(text);
+  const parsed: unknown = match ? parse(match[1]) : null;
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+  return Object.fromEntries(Object.entries(parsed));
 }
 
 /** The first table row of `text` whose cells hold `token`, or `""`. */
