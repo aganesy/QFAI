@@ -69,9 +69,11 @@ item 10 does not run on a spec with no rows, so this block is checked where the
 stage's own pack seal is: it is inside the sealed stage evidence, so a record
 added after the fact moves the seal. A stage block is read only from
 `.qfai/evidence/coverage-depth-<spec-id>.md` and only when that file's
-`## Final status` names its `Review pack` and a `Review pack seal` that still
-recomputes from it — the stage has no item entry to hold an audit hash, so the
-seal is what stands in its place.
+`## Final status` names its `Review pack` and a `Review pack seal`. Where the
+pack is present, the seal has to recompute from it. Where it is absent, as on a
+fresh clone or in CI, the recorded path and seal have to be well formed. The
+stage has no item entry to hold an audit hash, so the seal is what stands in its
+place.
 
 **A passing re-run is not enough on a row that has a proof.** Weakening an
 assertion helper, a snapshot or an expected-value fixture leaves the earlier

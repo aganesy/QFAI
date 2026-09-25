@@ -329,7 +329,7 @@ interface EvidenceOptions {
   /**
    * The stage review pack a zero-row `coverage-depth-spec-NNNN.md` seals.
    * `"absent"` records a seal over a pack that is then removed: the fresh-clone
-   * shape, where nothing in the repository can contradict the recorded digest.
+   * shape, where the gate reads the recorded fields instead of the pack.
    */
   stagePack?: "present" | "absent";
   /**
@@ -5316,7 +5316,8 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
   /**
    * A zero-row ATDD stage owns no item entry, so its `## Final status` seal is
    * what stands in for one. `qfai-atdd/references/shared-test-artifacts.md`
-   * reads the block only while that seal "still recomputes" from the pack.
+   * reads the block only while that seal recomputes from the pack, or, where
+   * the pack is absent, while the recorded fields are well formed.
    */
   function stageEvidence(): string {
     return `# Coverage depth
@@ -5380,12 +5381,10 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
     });
   });
 
-  // A stage records only a path and a digest — no committed hash over committed
-  // evidence, the way an item entry does. With the pack gone, nothing in the
-  // repository can contradict either, so a canonical-looking path, any 64 hex
-  // digits and a hand-written block cleared a stale RED hash on every clone but
-  // the author's.
-  it("rejects a stage re-verify whose recorded review pack is absent", async () => {
+  // Review packs are local-only, so CI and every fresh clone have none. The
+  // stage record is read on its committed fields there, so it is judged the
+  // same as on the machine that wrote it.
+  it("accepts a stage re-verify whose recorded review pack is absent", async () => {
     await withProject(async (root) => {
       const codes = await runOn(
         root,
@@ -5396,9 +5395,42 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
         },
         { stagePack: "absent" },
       );
-      expect(codes).toContain("QFAI-TDDLIST-008");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
+
+  // With the pack absent, the committed fields are all the gate has, so each
+  // of them still has to be well formed.
+  for (const [label, rewrite] of [
+    [
+      "a seal that is not a digest",
+      (evidence: string) => evidence.replace("{{STAGE_PACK_SEAL}}", "sealed"),
+    ],
+    [
+      "a pack path outside the review directory",
+      (evidence: string) => evidence.replace(STAGE_PACK_PATH, ".qfai/evidence/review-pack"),
+    ],
+    [
+      "a Final status that says REVISE",
+      (evidence: string) =>
+        evidence.replace("## Final status\n", "## Final status\n\n- Final status: REVISE\n"),
+    ],
+  ] as const) {
+    it(`rejects a stage re-verify with an absent pack and ${label}`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(
+          root,
+          ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+          {
+            [COVERAGE_DEPTH_PATH]: rewrite(stageEvidence()),
+            ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry(),
+          },
+          { stagePack: "absent" },
+        );
+        expect(codes).toContain("QFAI-TDDLIST-008");
+      });
+    });
+  }
 
   // A seal says the named directory has not been edited since it was recorded.
   // It says nothing about what the directory is about — so any unmodified
