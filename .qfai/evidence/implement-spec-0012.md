@@ -489,6 +489,10 @@ pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+2b1114d882b623ac16a819f86e35b74f0ba8fe9b7de301e1b606416375b4c64c at HEAD e0d26853c; GREEN + oracle proof at 15667dd87)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt e0d26853c + the prototypingIterate.ts:1787 edit; it matches working-tree+2b1114d8…; run separately, entry 1 fails as an assertion at composeCaptureUrl.test.ts:37:20 and entry 2 at :44:20; each -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside the passthrough branch; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
 
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the plan gate, the grilling and the authoring were simulated by one inline agent, not delegated; the rows go back for the routed roles to redo them
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925150000000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 41cc079c1c2f820433d087ed28a8cfed23bfa004f7d36d1c0a742677b051d963
+
 ### TDD-0578
 
 - TDD-ID: TDD-0578
@@ -553,6 +557,10 @@ pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+fd3b026956603d54fea0faded5ab6aa1f89f6cc3a2692c6a810b5833bcc9cea9 at HEAD 349b4a973; GREEN + oracle proof at 15667dd87)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt 349b4a973 + the prototypingIterate.ts:1804 edit; it matches working-tree+fd3b0269…; concatenation fails entry 1 at :52:20 (…/app//orders/new) and entry 2 at :61:20 (…/app/startorders/new), each run separately; each -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside the new URL join; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
 
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the plan gate, the grilling and the authoring were simulated by one inline agent, not delegated; the rows go back for the routed roles to redo them
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925150000000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 41cc079c1c2f820433d087ed28a8cfed23bfa004f7d36d1c0a742677b051d963
+
 ### TDD-0579
 
 - TDD-ID: TDD-0579
@@ -604,6 +612,10 @@ pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+cc84a53600adb3d8f0924a91437cbe44f225330724d31d1310fce4d75b552aca at HEAD bcaf8cc4c; GREEN + oracle proof at 15667dd87)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt bcaf8cc4c + the prototypingIterate.ts:1784 edit; it matches working-tree+cc84a536…; entry 1 fails at :85:20 and entry 2 at :91:20, each run separately; each -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside the screenUrl === undefined fallback; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
 
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the plan gate, the grilling and the authoring were simulated by one inline agent, not delegated; the rows go back for the routed roles to redo them
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925150000000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 41cc079c1c2f820433d087ed28a8cfed23bfa004f7d36d1c0a742677b051d963
+
 ### TDD-0580
 
 - TDD-ID: TDD-0580
@@ -643,6 +655,10 @@ The edit, the missing-base branch never taken:
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+39313e981986337482643858aac11489f7d091ab66887c3738c8327cf7dc628c at HEAD d4c7798e8; GREEN + oracle proof at 15667dd87)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt d4c7798e8 + the prototypingIterate.ts:1790 edit; it matches working-tree+39313e98…; the selector fails as an assertion at :76:27; -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside the targetUrl === undefined branch; advisory: the recorded edit is invisible to the contract, which a mutation at :1797 would catch at :67:23; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
 
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the plan gate, the grilling and the authoring were simulated by one inline agent, not delegated; the rows go back for the routed roles to redo them
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925150000000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 41cc079c1c2f820433d087ed28a8cfed23bfa004f7d36d1c0a742677b051d963
+
 ### TDD-0581
 
 - TDD-ID: TDD-0581
@@ -681,6 +697,10 @@ The edit, the `catch` answering `ok: true`:
 - Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+81818420bf085dc5c0cd6684fd1d3216ad24aad92429c31ae449baaa4a6b30b0 at HEAD 11d0a6112; GREEN + oracle proof at 15667dd87)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt 11d0a6112 + the prototypingIterate.ts:1809 edit; it matches working-tree+81818420…; the selector fails as an assertion at :103:23; -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside the catch; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the plan gate, the grilling and the authoring were simulated by one inline agent, not delegated; the rows go back for the routed roles to redo them
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925150000000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 41cc079c1c2f820433d087ed28a8cfed23bfa004f7d36d1c0a742677b051d963
 
 ### TDD-0517
 
@@ -810,6 +830,10 @@ the gate is taken again on the Round 2 proof.
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt 22b107140 + the defaultCaptureScreen.ts:122 inversion; it matches working-tree+f92f4da3…; the five entries, each run separately, fail as assertions at :79:23, :96:23, :112:23, :143:23 and :157:23; each -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside status >= 400; advisory: status 400 itself is untested; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
 ```
 
+- Round 2: reviewer verdict (attempt 1): REVISE — completion-reviewer: the plan gate, the grilling and the authoring were simulated by one inline agent, not delegated; the rows go back for the routed roles to redo them
+- Round 2: Review pack (attempt 1): .qfai/review/review-20260925150001000 <!-- qfai:not-a-citation -->
+- Round 2: Review pack seal (attempt 1): bbc2d0754efb091f2dc42e136e782407cfef444698a99d65a3f2848dd3d00a9b
+
 ### TDD-0582
 
 - TDD-ID: TDD-0582
@@ -848,6 +872,10 @@ The edit, the missing-response branch never taken:
 - Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+805682d1508c17e117f9b2ab07cefcd2c1a491468636dba810d1f1da2f4dd685 at HEAD 974b74da4; GREEN + oracle proof at 15667dd87)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt 974b74da4 + the defaultCaptureScreen.ts:114 edit; it matches working-tree+805682d1…; the selector fails at :129:27 on the contracted no-response reason; -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside the response === null refusal; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the plan gate, the grilling and the authoring were simulated by one inline agent, not delegated; the rows go back for the routed roles to redo them; its test file also changed after the reviewed revision
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925150002000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): c89343361e34bebb02884e8aa2b762c5bc38bb69b8b3dcb5ab9a581efa84deef
 
 ## Test results summary
 
