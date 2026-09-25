@@ -712,6 +712,95 @@ describe("a done row rests on a test, not on an annotation carrier", () => {
     );
   });
 
+  it("names the declared case in the action, not an undeclared split of it", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        const found = carrierOnly(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.suggested_action).toContain(
+          "Annotate the test that discharges TC-0001-0001 with QFAI:SPEC-0001:TC-0001.",
+        );
+        expect(found[0]?.suggested_action).not.toContain("QFAI:SPEC-0001:TC-0001-0001");
+      },
+      UNIT_TEST_CASE,
+      { files: { [CARRIER]: "- QFAI:SPEC-0001:TC-0001-0001\n" }, config },
+    );
+  });
+
+  it("names a split case in the action when the spec declares it", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        const found = carrierOnly(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.suggested_action).toContain("with QFAI:SPEC-0001:TC-0001-0001.");
+      },
+      UNIT_TEST_CASE.replace("| TC-0001 | unit", "| TC-0001-0001 | unit"),
+      { files: { [CARRIER]: "- QFAI:SPEC-0001:TC-0001-0001\n" }, config },
+    );
+  });
+
+  it("does not count a test in a file the configured patterns leave out", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues).map((entry) => entry.refs)).toEqual([
+          ["TDD-0001", "TC-0001-0001", CARRIER],
+        ]);
+      },
+      "# TC\n",
+      {
+        files: {
+          ...files,
+          "tests/unit/a.disabled.ts": [
+            "// QFAI:SPEC-0001:TC-0001-0001",
+            'it("case a", () => {});',
+            "",
+          ].join("\n"),
+        },
+        config,
+      },
+    );
+  });
+
+  it("reads an annotation in the title of a test declared through a computed binding", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0002 | Unit | tests/unit/b.test.ts | case b | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues)).toEqual([]);
+      },
+      "# TC\n",
+      {
+        files: {
+          ...files,
+          "tests/unit/b.test.ts": [
+            "const deployed = process.env.LIVE ? test : test.skip;",
+            'deployed("QFAI:SPEC-0001:TC-0001-0002 case b", () => {});',
+            "",
+          ].join("\n"),
+        },
+        config,
+      },
+    );
+  });
+
   it("reports a decomposed token once when carriers name both of its forms", async () => {
     const other = "tests/integration/more-traceability.md";
     await withLedger(

@@ -8103,6 +8103,9 @@ function carrierOnlyIssue(
 ): Issue {
   const id = cell(ref, "TDD-ID");
   const files = [...carriers].map((file) => toRelPath(context.root, file)).sort();
+  // The acceptance scan accepts only a declared id, so the annotation names the
+  // case the token resolves to rather than an undeclared split of it.
+  const annotated = resolveDeclaredTcId(testCase, context.knownTcIds) ?? testCase;
   return issue(
     COMPLETED_ROW_CARRIER_ONLY_CODE,
     `${id} in tdd/test-list.md for spec-${context.specNumber} (${ref.label}) is done, but ${testCase} is named only by ${files.join(", ")}, which declares no test. No runner selects the case, so the row's completion rests on a list of obligations`,
@@ -8111,7 +8114,7 @@ function carrierOnlyIssue(
     "tddList.completedRowRunsATest",
     [id, testCase, ...files],
     "change",
-    `Annotate the test that discharges ${testCase} with QFAI:SPEC-${context.specNumber}:${testCase}. If no test discharges it, the row leaves done only through an upstream reset: approve a Change Request, record its CR-* in DR-ID and move the row to todo, then rerun /qfai-implement.`,
+    `Annotate the test that discharges ${testCase} with QFAI:SPEC-${context.specNumber}:${annotated}. If no test discharges it, the row leaves done only through an upstream reset: approve a Change Request, record its CR-* in DR-ID and move the row to todo, then rerun /qfai-implement.`,
   );
 }
 
