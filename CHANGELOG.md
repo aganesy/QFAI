@@ -84,6 +84,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0014's verify-stage rows are reviewed** (#2294). `TDD-0042` to
+  `TDD-0048` and `TDD-0050` had closed at `exception` with their reviews
+  waived. Each now carries a falsifiability record, a `qa-gatekeeper` verdict
+  and sealed `completion-reviewer` and `implementation-reviewer` verdicts.
+  Six rows close at `done`. Two of them, `TDD-0045` and `TDD-0046`, needed a
+  second round: their tests now fail on a lowercase `status` value and on a
+  fourth repair-kind row. `TDD-0042` is blocked on `CR-20260925-0294`,
+  because its example and its test case define an independent reviewer in two
+  ways. `TDD-0044` passed both reviews and stays at `refactor`: its selector
+  contains "did not run", which the completion gate reads as a run that never
+  happened. The spec-0014 waiver is removed, and the Coverage Depth Matrix now
+  scores the new obligations.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

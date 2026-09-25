@@ -642,6 +642,26 @@ packages/qfai/tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts
 - Refactor verify revision: 1a53879a461f658a9c14344efd04570be3285af4
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#2, Round 2 — RED phase gate on working-tree+33ce54526b6874c0667a998d1916d7e9361b7bcded20a75186b824b00b890353 at HEAD 1a53879a461f658a9c14344efd04570be3285af4: verify-output-contract.md:11 mutation adding "needs_repair" to the status row reproduced Test Files 1 failed (1); Tests 1 failed (1), AssertionError: expected [ 'PASS', 'needs_repair', 'FAIL' ] to deeply equal [ 'PASS', 'FAIL' ] at verifyJsonUnchanged.test.ts:40:83 inside the row's selector, the non-capital status value the round-1 review found the /"([A-Z]+)"/ capture missed; RED test hash 3aeb9d5e…a977b1 recomputes over the complete three-file manifest; build-phase GREEN + oracle proof at 1a53879a461f658a9c14344efd04570be3285af4: restored tree gives Test Files 1 passed (1); Tests 1 passed (1) with the TC-0014-0040 (TDD-0045) selector executing and passing, and the falsifiability trio stands as the oracle proof, mutating only the Satisfied-by predicate)
 
+- Round 2: reviewer verdict: PASS
+- Round 2: Review pack: .qfai/review/review-20260926010000000 <!-- qfai:not-a-citation -->
+- Round 2: Review pack seal: 30005e9cc8a7335a52b1f1f470f41d60ad98bcb7f430919a996ab3070803a2d6
+- Spec review: PASS
+- Spec reviewed revision: 1a53879a461f658a9c14344efd04570be3285af4
+- Spec audited evidence hash: 231ba6462eab173964ce34dbe444881f9817a1d684f3e9fe94670faedc94b10f
+- Spec review pack: .qfai/review/review-20260926010000000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 30005e9cc8a7335a52b1f1f470f41d60ad98bcb7f430919a996ab3070803a2d6
+- Code quality review: PASS
+- Code quality reviewed revision: 1a53879a461f658a9c14344efd04570be3285af4
+- Code quality audited evidence hash: 231ba6462eab173964ce34dbe444881f9817a1d684f3e9fe94670faedc94b10f
+- Code quality review pack: .qfai/review/review-20260926010000000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 30005e9cc8a7335a52b1f1f470f41d60ad98bcb7f430919a996ab3070803a2d6
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 1a53879a461f658a9c14344efd04570be3285af4
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts --reporter=verbose
+- Checkpoint verification result: PASS — ✓ |integration| tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts > qfai-verify in a workflow run > TC-0014-0040 (TDD-0045): verify.json keeps its fields and values; Test Files 1 passed (1); Tests 1 passed (1). The row is off a checkpoint boundary, so its narrow suite is the checkpoint
+- Checkpoint verification revision: 1a53879a461f658a9c14344efd04570be3285af4
+- Checkpoint verification seal: 3601e31588f30e1c017a5c7d7fbbe752b38360d0dd492ca8c0318e8ec3625242
+
 ### TDD-0046
 
 - TDD-ID: TDD-0046
@@ -723,6 +743,26 @@ packages/qfai/tests/integration/verify/orchestrated/repairRouting.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). Round 2 changed only the test file and no production file, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: 1a53879a461f658a9c14344efd04570be3285af4
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#2, Round 2 — RED phase gate on working-tree+8ba05fea38b103ba6c161770f7336a26746301af15ef5bcfe88b3276e22750ea at HEAD 1a53879a461f658a9c14344efd04570be3285af4: orchestrated-mode.md:55 insertion of a fourth row \| \`config drift\` \| qfai-maintain \| reproduced Test Files 1 failed (1); Tests 1 failed (1), AssertionError: expected [ [ 'spec gap', 'qfai-sdd' ], …(3) ] to deeply equal [ [ 'spec gap', 'qfai-sdd' ], …(2) ] at repairRouting.test.ts:40:18 inside the row's selector, with the diff showing [ "config drift", "<qfai-maintain>" ], the fourth-row-with-unticked-owner case the round-1 review found the fromEntries map ignored; RED test hash 4564aeff…43c615 recomputes over the complete three-file manifest; build-phase GREEN + oracle proof at 1a53879a461f658a9c14344efd04570be3285af4: restored tree gives Test Files 1 passed (1); Tests 1 passed (1) with the TC-0014-0041 (TDD-0046) selector executing and passing, and the falsifiability trio stands as the oracle proof, mutating only the three-row table the Satisfied-by names)
+
+- Round 2: reviewer verdict: PASS
+- Round 2: Review pack: .qfai/review/review-20260926010001000 <!-- qfai:not-a-citation -->
+- Round 2: Review pack seal: f1a4b39c03026f547f087d3d0fb917b1c720610152580041725bd4a849261d89
+- Spec review: PASS
+- Spec reviewed revision: 1a53879a461f658a9c14344efd04570be3285af4
+- Spec audited evidence hash: 22323403d8a683288ad81837e16c869c581a361cdafeb20e027eb8c5739e2d42
+- Spec review pack: .qfai/review/review-20260926010001000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: f1a4b39c03026f547f087d3d0fb917b1c720610152580041725bd4a849261d89
+- Code quality review: PASS
+- Code quality reviewed revision: 1a53879a461f658a9c14344efd04570be3285af4
+- Code quality audited evidence hash: 22323403d8a683288ad81837e16c869c581a361cdafeb20e027eb8c5739e2d42
+- Code quality review pack: .qfai/review/review-20260926010001000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: f1a4b39c03026f547f087d3d0fb917b1c720610152580041725bd4a849261d89
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 1a53879a461f658a9c14344efd04570be3285af4
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/repairRouting.test.ts --reporter=verbose
+- Checkpoint verification result: PASS — ✓ |integration| tests/integration/verify/orchestrated/repairRouting.test.ts > qfai-verify in a workflow run > TC-0014-0041 (TDD-0046): Verify sends each finding to its owner; Test Files 1 passed (1); Tests 1 passed (1). The row is off a checkpoint boundary, so its narrow suite is the checkpoint
+- Checkpoint verification revision: 1a53879a461f658a9c14344efd04570be3285af4
+- Checkpoint verification seal: a57dd17ede3699a55ba22b15d6ff6c94ddb996d9a00d028a19d09c9729b780b0
 
 ### TDD-0047
 
@@ -968,6 +1008,33 @@ status. Its output is what the `Refactor verify`, `Checkpoint item test` and
 recomputation are not in it — a mutation dirties the tree the suite would be
 measured against, so they were taken separately and before it.
 
+The runs started 2026-09-25T11:57:55.100Z (`/qfai-atdd`) and
+2026-09-25T13:42:05.888Z (`/qfai-implement`) took `TDD-0042` to `TDD-0048` and
+`TDD-0050` through the reviews their closure had waived. Every review response
+is kept in its sealed pack, named in the row's entry.
+
+| Step | Role (sub-agent)         | Agent instance             | Task title                                                                                  | Input (refs)                                        | Output (refs)                                                 | Status (PASS/REVISE/PENDING) |
+| ---- | ------------------------ | -------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------- | ---------------------------- |
+| 1    | -                        | n/a                        | grilling(-@2026-09-25T11:57:55.100Z/none): none                                             | -                                                   | -                                                             | PASS                         |
+| 2    | -                        | n/a                        | grilling(-@2026-09-25T13:42:05.888Z/none): none                                             | -                                                   | -                                                             | PASS                         |
+| 3    | acceptance-test-engineer | acceptance-test-engineer#1 | /qfai-atdd: hand over the eight rows on the falsifiability branch                           | ledger, the eight test files, the shipped reference | #tdd-0042 to #tdd-0050, handover fields                      | PASS                         |
+| 4    | delivery-planner         | delivery-planner#1         | /qfai-implement plan phase                                                                  | ledger, CR set                                      | `implement-spec-0014.md`, Plan phase                          | PASS                         |
+| 5    | test-design-analyst      | test-design-analyst#2      | /qfai-atdd coverage and the plan-phase test-design check                                    | spec-0014 02 to 06, the eight tests                 | `coverage-depth-spec-0014.md`                                 | PASS                         |
+| 6    | backend-engineer         | backend-engineer#1         | /qfai-implement: round-1 falsifiability runs and refactor verify                            | handover fields                                     | Round 1 blocks, Refactor verify fields                        | PASS                         |
+| 7    | qa-gatekeeper            | qa-gatekeeper#1            | round-1 RED phase gate and build-phase GREEN for the eight rows                             | Round 1 blocks                                      | row-level qa-gatekeeper fields                                | PASS                         |
+| 8    | completion-reviewer      | completion-reviewer        | round-1 completion review, one per row                                                      | each row's entry and matrix slice                   | the eight round-1 packs                                       | REVISE                       |
+| 9    | implementation-reviewer  | implementation-reviewer    | round-1 code quality review, one per row                                                    | each row's entry and test                           | the eight round-1 packs                                       | REVISE                       |
+| 10   | acceptance-test-engineer | acceptance-test-engineer#2 | review-fix: tighten the tests of `TDD-0045` and `TDD-0046`                                  | round-1 packs of those rows                         | the two test files, matrix narrative                          | PASS                         |
+| 11   | backend-engineer         | backend-engineer#1         | round-2 falsifiability runs and refactor verify for `TDD-0045` and `TDD-0046`               | Round 2 Satisfied-by                                | Round 2 blocks                                                | PASS                         |
+| 12   | qa-gatekeeper            | qa-gatekeeper#2            | round-2 RED phase gate and build-phase GREEN for `TDD-0045` and `TDD-0046`                  | Round 2 blocks                                      | row-level qa-gatekeeper fields                                | PASS                         |
+| 13   | completion-reviewer      | completion-reviewer        | round-2 completion review of `TDD-0045` and `TDD-0046`                                      | each row's entry and matrix slice                   | the two round-2 packs                                         | PASS                         |
+| 14   | implementation-reviewer  | implementation-reviewer    | round-2 code quality review of `TDD-0045` and `TDD-0046`                                    | each row's entry and test                           | the two round-2 packs                                         | PASS                         |
+| 15   | orchestrator             | orchestrator               | checkpoint verification for the rows that passed review, each off a checkpoint boundary     | each row's test file                                | Checkpoint verification fields                                | PASS                         |
+
+Round 1 returned `PASS` from both reviewers on `TDD-0043`, `TDD-0044`,
+`TDD-0047`, `TDD-0048` and `TDD-0050`. It returned `REVISE` on `TDD-0042`,
+`TDD-0045` and `TDD-0046`; what each needed is under `## Gaps / Open risks`.
+
 ## Reviewer response
 
 **This response is short of the contract, and the missing fields are named
@@ -1036,6 +1103,25 @@ Runs recorded when the eight reopened rows were closed at `exception` under
 | TDD-0050 | `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/missingEnvironment.test.ts --testNamePattern='TC-0014-0044 \(TDD-0050\): A missing environment blocks the stage' --reporter=verbose` | exit 1; `AssertionError: the ## A missing environment section exists: expected '' not to be '' // Object.is equality` | exit 0; 1 passed (1) | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, `packages/qfai/tests/integration/verify/orchestrated/missingEnvironment.test.ts` |
 
 ## Gaps / Open risks
+
+Rows of the review pass for `TDD-0042` to `TDD-0050` that did not close:
+
+| Row        | Status     | Why                                                                                                                                                                                                                                                                                                                              |
+| ---------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TDD-0042` | `blocked`  | The completion review returned `REVISE`: `EX-0014-0030` asks for a reviewer that "authored nothing in the run", while `AC-0014-0023`, `TC-0014-0037`, the shipped reference and the contract ask for one independent of what it reviews. `CR-20260925-0294` puts the choice to the user. The code quality review passed          |
+| `TDD-0044` | `refactor` | Both reviews passed, and the completion gate still refuses the entry. The row's selector contains "did not run", and the gate reads those words in the recorded commands and results as a run that never happened. The row closes once the gate tells the row's own selector apart from an outcome                           |
+
+Advisory findings the reviews left open, none of which blocks a closed row:
+
+- Several tests match a sentence without its end, so an appended qualifier
+  still passes (`TDD-0042`, `TDD-0043`, `TDD-0044`, `TDD-0047`, `TDD-0050`).
+- `TDD-0045` still passes a status value written without double quotes. The
+  contract writes every value in double quotes.
+- `TDD-0046` fails when the three table rows are reordered, and nothing pins
+  the sentence "These three are the only repair kinds."
+- `TDD-0048` relies on `operationsOf`, which reads more lines than the
+  workflow core does. The core's own plan-loading tests cover the difference.
+- The matrix findings 7 to 11 are spec gaps for `/qfai-sdd`.
 
 `TDD-0009` is not backfilled. Its obligation, `TC-0014-0009`, asks that feeding
 `/qfai-verify` a `REVISE` review artifact blocks completion, and its parent
