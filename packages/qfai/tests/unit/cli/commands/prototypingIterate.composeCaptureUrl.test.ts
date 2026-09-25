@@ -61,6 +61,7 @@ describe("composeCaptureUrl — direct unit coverage", () => {
     expect(result).toEqual({ ok: true, url: "http://localhost:3000/app/orders/new" });
   });
 
+  // QFAI:SPEC-0012:TC-0012-0486
   it("returns ok=false with the operator-facing flag named when a route-relative URL has no targetUrl", () => {
     const result = composeCaptureUrl("/orders/new", undefined);
     expect(result.ok).toBe(false);
