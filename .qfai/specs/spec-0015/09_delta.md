@@ -459,3 +459,23 @@ the next free ones:
   `CR-20260924-0008` and `CR-20260925-0022`. `CR-20260925-0003`..`CR-20260925-0007` and
   `CR-20260925-0015` became `CR-20260925-0017`..`CR-20260925-0021` and `CR-20260925-0023`.
   Every reference here follows them.
+
+## 2026-09-26 — Coverage-depth findings: change summary
+
+Source: the Findings section of `.qfai/evidence/coverage-depth-spec-0015.md`.
+No obligation changes, so no ledger status is reset.
+
+- Corrected references, IDs kept:
+  - `BR-0015-0007` cites `AC-0015-0008`, the all-reviewer criterion.
+  - `BR-0015-0006` cites `AC-0015-0027`.
+  - `TC-0015-0013` cites `AC-0015-0027` and `TC-0015-0014` cites
+    `AC-0015-0008`. Each holds the place of one of those two rules.
+  - `TC-0015-0017` states severity info, as `US-0015-0007`, `AC-0015-0013` and
+    its test do.
+- Appended: `AC-0015-0027`, which states the Work Orders Summary rule that
+  `BR-0015-0006` already carried. Size: AC 26 → 27, under the threshold.
+- Decisions: `DR-0015-0011` fixes the meaning of "upgrade", and `BR-0015-0005`
+  states it. `DR-0015-0100` defines the record the parked rows `TDD-0013` and
+  `TDD-0014` already cite; it keeps that number so the ledger does not change.
+- Ledger: `TDD-0013`..`0016`, `TDD-0036` and `TDD-0037` use `-` for an empty
+  `Test file`, as every other seeded row does.

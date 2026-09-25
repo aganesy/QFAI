@@ -217,3 +217,7 @@ Scenario: A grilling session inside a run does not reopen settled inputs
   And it keeps the split between user and delegated sessions
   And the run never invokes qfai-grill
 ```
+
+## AC-0015-0027: Work Orders Summary
+
+Given a major artifact, when checked, then it includes a Work Orders Summary with the columns Step, Role, Task title, Input refs, Output refs and Status, and each Status is PASS or REVISE.

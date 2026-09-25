@@ -1,6 +1,6 @@
 # 07 Decisions
 
-10 items.
+12 items.
 
 ## Decisions
 
@@ -102,3 +102,43 @@ regeneration)` and `### Upgrade conflicts`; `.qfai/contracts/cli/qfai-workflow.m
   spec's test cases do not change; the tests that do are the upgrade-report test
   under spec-0003 and the refusal-message test under spec-0018.
 - Related: BR-0015-0018; DL-0002 in `09_delta.md`.
+
+### DR-0015-0011: "Upgrade" means running `qfai init` again from a newer package
+
+- Status: accepted
+- Date: 2026-09-26
+- Context: AC-0015-0009 and BR-0015-0005 say init and upgrade do not
+  overwrite the adopter manifest. TC-0015-0007, EX-0015-0004, VFY-001 in
+  `09_delta.md` and `10_Plan.md` test a plain and a forced reinit.
+  `qfai init --upgrade-assistant-tree` is another command the word could name,
+  and no case runs it.
+- Evidence: CLI-INIT `### Upgrade conflicts` uses "upgrade" for `qfai init` run
+  on an existing project, and DR-0015-0010 does the same. CLI-INIT
+  `#### --upgrade-assistant-tree` states that the helper does not walk
+  `.qfai/assistant/manifest/*`.
+- Decision: an upgrade is `qfai init` run again on an existing project by a
+  newer package, with or without `--force`. BR-0015-0005 states it.
+  `--upgrade-assistant-tree` is outside this criterion.
+- Consequences: TC-0015-0007's plain and forced reinit paths cover the
+  criterion, and no case is added. A change that makes
+  `--upgrade-assistant-tree` write `manifest/` needs a case under this
+  criterion.
+- Related: AC-0015-0009, BR-0015-0005, EX-0015-0004, TC-0015-0007,
+  DR-0015-0010
+
+### DR-0015-0100: The two coverage-placeholder rows stay at exception
+
+- Status: accepted
+- Date: 2026-09-26
+- Context: TC-0015-0013 and TC-0015-0014 are coverage placeholders. Each checks
+  only that an example exists for BR-0015-0006 or BR-0015-0007, so neither has
+  a behaviour to observe. Ledger rows TDD-0013 and TDD-0014 cite this record as
+  the reason they are at `exception`.
+- Decision: both rows stay at `exception` until a test case exercises the rule
+  behind it. For BR-0015-0006 that is the Work Orders Summary and its six
+  columns. For BR-0015-0007 it is a reviewer FAIL that carries a concrete
+  alternative.
+- Consequences: `qfai validate` keeps reporting both rows as parked. When a
+  real case replaces a placeholder, its row moves `exception -> todo`.
+- Related: AC-0015-0008, AC-0015-0027, BR-0015-0006, BR-0015-0007,
+  TC-0015-0013, TC-0015-0014

@@ -84,6 +84,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0015 agrees with itself and with its tests** (#2410).
+  - `BR-0015-0007` cites the all-reviewer criterion, `AC-0015-0008`.
+  - `BR-0015-0006` cites a new criterion, `AC-0015-0027`, which states the
+    Work Orders Summary rule. `TC-0015-0013` and `TC-0015-0014` cite the
+    criteria of the rules they hold a place for.
+  - `TC-0015-0017` states severity info, as its story and test do.
+  - `DR-0015-0011` records that "upgrade" in `AC-0015-0009` means running
+    `qfai init` again, with or without `--force`, and `BR-0015-0005` says so.
+  - `DR-0015-0100`, which two parked ledger rows cite, is now defined.
+  - Six ledger rows use `-` rather than `—` for an empty `Test file`.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

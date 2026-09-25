@@ -40,17 +40,18 @@
 - Propose additions only to concrete business flows, US, AC, EX and TC, with a rationale for each. Do not set a numeric target.
 - `can_be_na: true`: empty or abstract-only artifacts return N/A, even when BR, NFR, policy, decision or architectural items carry IDs.
 - The shipped review-gate catalog overrides numeric targets, including `default_target`, in preserved `review-profiles.yml`. Init and upgrade do not overwrite adopter manifests.
+- An upgrade is `qfai init` run again on an existing project by a newer package, with or without `--force` (DR-0015-0011). `qfai init --upgrade-assistant-tree` is not an upgrade in this sense.
 - Independently required product obligations, missing mandatory pairings and blocking gates remain required. N/A waives none of them.
 
 ## BR-0015-0006: Work Orders Schema
 
-- AC-Refs: AC-0015-0006
+- AC-Refs: AC-0015-0027
 
 - Every major artifact must include Work Orders Summary with columns: Step, Role, Task title, Input refs, Output refs, Status (PASS/REVISE).
 
 ## BR-0015-0007: All-Reviewer Alternative Obligation
 
-- AC-Refs: AC-0015-0007
+- AC-Refs: AC-0015-0008
 
 - Every reviewer MUST provide concrete alternative or fix on FAIL.
 - Feedback without concrete alternative is invalid and triggers re-judgment.

@@ -79,13 +79,13 @@
 ## TC-0015-0013: Coverage Placeholder for EX-0015-0007
 
 - EX-Ref: EX-0015-0007
-- AC-Refs: AC-0015-0001
+- AC-Refs: AC-0015-0027
 - Verify that migrated example EX-0015-0007 is covered by at least one test case.
 
 ## TC-0015-0014: Coverage Placeholder for EX-0015-0008
 
 - EX-Ref: EX-0015-0008
-- AC-Refs: AC-0015-0001
+- AC-Refs: AC-0015-0008
 - Verify that migrated example EX-0015-0008 is covered by at least one test case.
 
 ## TC-0015-0015: Prototyping Routing Rebuild
@@ -106,7 +106,7 @@
 - AC-Refs: AC-0015-0013
 - Type: error
 - Level: integration
-- Verify that when a fixture certify code path reads a `verify.json` whose profile requires `/qfai-atdd` or `/qfai-implement` artifacts (regressed cycle), the Reviewer Gate emits `R-CERTIFY-VERIFY-CIRCULAR` at severity error with a `justification:` naming the certify path, the offending validator-output profile, and the option-B contract clause violated. Implemented under `packages/qfai/tests/integration/reviewerGateCertifyVerifyCycle.test.ts`.
+- Verify that when a fixture certify code path reads a `verify.json` whose profile requires `/qfai-atdd` or `/qfai-implement` artifacts (regressed cycle), the Reviewer Gate emits `R-CERTIFY-VERIFY-CIRCULAR` at severity info with a `justification:` naming the certify path, the offending validator-output profile, and the option-B contract clause violated. Implemented under `packages/qfai/tests/integration/reviewerGateCertifyVerifyCycle.test.ts`.
 
 ## TC-0015-0018: Option-B Compliant Certify Passes Without R-CERTIFY-VERIFY-CIRCULAR
 
