@@ -90,6 +90,9 @@ The routing work order's result carries the proposal.
   a file that exists, and holds no glob.
 - `newCapabilities` holds `{ goal, covers, excludes, evidence }` for each
   capability no spec owns. `evidence` is what shows no spec owns it.
+- `feature` needs at least one new capability, and the run refuses a `feature`
+  proposal without one. A change to an existing spec that adds no capability is
+  `bounded-change`, with that one spec in `affectedSpecIds`.
 - `proposedWriteScope` never names `.git/`, `.qfai/runs/`, `.qfai/decisions/`,
   `.qfai/evidence/decisions/`, `.qfai/evidence/workflow/`,
   `.qfai/evidence/change-request-*.md` or `.qfai/evidence/decision-*.md`, and
