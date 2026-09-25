@@ -12,6 +12,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The brand catalog names the patterns that mark a design as generated**
+  (#2241). The `DESIGN.md` author now reads five named clusters, and each
+  archetype lists candidate typeface families. The `Tech` and `Minimal`
+  archetypes no longer prescribe all-caps labels, monospace labels or the
+  default sans-serif families. The review bundle's checklist item now points at
+  that list, so a reviewer can fail a prototype on a named pattern.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as
