@@ -223,6 +223,22 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
     }
   });
 
+  it("rewrites an earlier wording of the review directive on upgrade", async () => {
+    const earlier =
+      "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository. Read it before writing the PR description as well.";
+    await withProject(async (root) => {
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        await writeFile(path.join(root, name), `${earlier}\n\n${PROJECT_TEXT}`, "utf-8");
+      }
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        const text = await readEntryPoint(root, name);
+        expect(text.startsWith(`${REVIEW_POINTER}\n\n${PROJECT_TEXT}`)).toBe(true);
+        expect(occurrences(text, "Read `REVIEW.md` before reviewing a pull request")).toBe(1);
+      }
+    });
+  });
+
   it("keeps optional repository review policy in fresh and forced reviewer output", async () => {
     await withProject(async (root) => {
       const pointer =
@@ -1888,6 +1904,43 @@ describe("optional review directive detection", () => {
     const merged = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
     expect(merged).toBe(`\uFEFF${REVIEW_POINTER}\r\n\r\n${existing.slice(1)}`);
     expect(addReviewPointer(merged, `${REVIEW_POINTER}\n`)).toBe(merged);
+  });
+
+  describe("an earlier wording of the directive", () => {
+    const EARLIER =
+      "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository. Read it before writing the PR description as well.";
+
+    it.each(["\n", "\r\n"])("is rewritten in place rather than kept beside the new one", (end) => {
+      const existing = `\uFEFF# Project rules${end}${end}${EARLIER}${end}${end}Keep this text.${end}`;
+      const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
+      expect(updated).toBe(
+        `\uFEFF# Project rules${end}${end}${REVIEW_POINTER}${end}${end}Keep this text.${end}`,
+      );
+      expect(occurrences(updated, "Read `REVIEW.md`")).toBe(1);
+      expect(addReviewPointer(updated, `${REVIEW_POINTER}\n`)).toBe(updated);
+    });
+
+    it("keeps the list marker it was written under", () => {
+      const existing = `# Rules\n\n- ${EARLIER}\n- Keep this bullet.\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `# Rules\n\n- ${REVIEW_POINTER}\n- Keep this bullet.\n`,
+      );
+    });
+
+    it("is left alone when the current wording is already operative", () => {
+      const existing = `${REVIEW_POINTER}\n\n${EARLIER}\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);
+    });
+
+    it.each([
+      ["fenced block", `~~~\n${EARLIER}\n~~~\n`],
+      ["HTML comment", `<!--\n${EARLIER}\n-->\n`],
+      ["block quote", `> ${EARLIER}\n`],
+    ])("is not rewritten inside a %s", (_name, existing) => {
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `${REVIEW_POINTER}\n\n${existing}`,
+      );
+    });
   });
 
   it("does not invent guidance when the template has none", () => {

@@ -220,12 +220,19 @@ function terminatorOf(line: string | undefined): string {
   return (line ?? "").endsWith("\r") ? "\r" : "";
 }
 
-/** Prepend the template's review directive only when no operative copy exists. */
+/**
+ * Prepend the template's review directive only when no operative copy exists.
+ *
+ * An operative line in an earlier wording of the directive is rewritten in
+ * place instead. Left beside the current one, the two disagree on which branch
+ * a reviewer reads `REVIEW.md` from.
+ */
 export function addReviewPointer(existing: string, template: string | null): string {
-  const pointer = template
-    ?.split(/\r?\n/)
-    .find((line) => line.startsWith("Read `REVIEW.md` before reviewing a pull request"));
+  const directive = "Read `REVIEW.md` before reviewing a pull request";
+  const pointer = template?.split(/\r?\n/).find((line) => line.startsWith(directive));
   if (pointer === undefined) return existing;
+  // Where the text of the first operative line in an earlier wording sits.
+  let earlier: { start: number; end: number } | null = null;
 
   const referenceLabels = new Set<string>();
   const normalizeLabel = (label: string): string =>
@@ -878,17 +885,29 @@ export function addReviewPointer(existing: string, template: string | null): str
           paragraph = false;
         quotedParagraph = paragraph && !paragraphInterrupt.test(fenceLine(visible));
       }
-      if (
-        pass === 1 &&
-        container === "" &&
-        !lazyQuote &&
-        visible.trim().replace(/^(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))+/, "") === pointer
-      )
-        return existing;
+      const operative = visible
+        .trim()
+        .replace(/^(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))+/, "");
+      if (pass === 1 && container === "" && !lazyQuote) {
+        if (operative === pointer) return existing;
+        // Only a line that reads exactly as written: rewriting one that carries
+        // markup would drop it.
+        const line = raw.replace(/\r$/, "");
+        const lead =
+          /^\uFEFF?[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))*/.exec(line)?.[0] ?? "";
+        if (
+          earlier === null &&
+          operative.startsWith(directive) &&
+          line.slice(lead.length).trimEnd() === operative
+        )
+          earlier = { start: offset + lead.length, end: offset + lead.length + operative.length };
+      }
       offset += raw.length + 1;
     }
   }
 
+  if (earlier !== null)
+    return `${existing.slice(0, earlier.start)}${pointer}${existing.slice(earlier.end)}`;
   const end = /\r\n|\n/.exec(existing)?.[0] ?? "\n";
   const bom = existing.startsWith("\uFEFF") ? 1 : 0;
   return `${existing.slice(0, bom)}${pointer}${end}${end}${existing.slice(bom)}`;

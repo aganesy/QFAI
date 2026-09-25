@@ -43,6 +43,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Upgrading an entry point rewrites an older review directive instead of
+  keeping it** (#2266). `qfai init` recognised the `REVIEW.md` directive in
+  `AGENTS.md` and `CLAUDE.md` only in its current wording. A file carrying an
+  earlier wording gained the new line above it, and the two lines disagreed on
+  which branch to read `REVIEW.md` from. An operative line that starts like the
+  directive is now replaced with the current wording where it stands, list
+  marker and line ending kept. A file that already holds both lines is left as
+  it is.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
