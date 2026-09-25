@@ -356,6 +356,19 @@ this run does not route.
 | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
 | S1 | adopted | 2026-09-25T03:05:50.000Z | 7937fad2121f5174c479fa1eefcc4cb9f3d494e3 | 2026-09-25T03:06:10.000Z | preflight | empty | none in flight | 2 | 0 | 0 |
 
+### /qfai-atdd — run started 2026-09-25T03:29:44.936Z
+
+Preflight: session opened
+
+The run takes `TDD-0062` back from `review-fix` for the change the
+implementation reviewer asked of its test. The work order asked for a new
+round; the rework rules choose the path by whether the corrected test passes
+on its first run.
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-25T03:29:58.000Z | 08796c47f0f2d64e68fffc82403afc0125224405 | 2026-09-25T03:30:05.000Z | preflight | empty | none in flight | 1 | 0 | 0 |
+
 ## Work performed (what changed, where)
 
 - **new** `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` — 13 tests across 8
@@ -1903,6 +1916,12 @@ packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
 
 ### TDD-0062
 
+The first handover held this row with no branch, before `CR-20260924-0002`
+moved it to another test and selector. That record is kept verbatim in the
+fence below, out of the field grammar. The current identity is the handover
+for the CR-20260924-0002 cycle further down.
+
+````text
 - TDD-ID: TDD-0062
 - Layer: Integration
 - Test file: packages/qfai/tests/scripts/sliceSurfaceAlignment.test.ts
@@ -1916,6 +1935,7 @@ packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
   `expect.soft(sorted(matrixSlices(job))).toEqual(projects)` fails as an assertion at `sliceSurfaceAlignment.test.ts:242:10`
 - Other rows: none of the ten. `TDD-0007`, `TDD-0043`, `TDD-0096` and the unannotated floor-lane case "runs one slice per leg" fail in `ownWorkflowTopology.test.ts`. In `workflowHygiene.test.ts` the same cases as under `TDD-0032`'s mutation fail, and `TDD-0095` as well, because the code-path cost pin and the required-context slice list both move
 - Note: the ledger's current `Selector` is the enclosing `describe` title. Passed to `-t` unescaped, its parentheses are read as a regular-expression group, and it selects no test
+````
 
 #### Round 1
 
@@ -2068,6 +2088,44 @@ tree from that commit and the edit above.
 - Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer: the sliced-matrix check reads only matrix.slice, so an include or exclude on the release matrices changes the legs unnoticed; the row goes back for a new round
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260925130000000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): d115eab5aef594b58623a1e77f44852ba03657c99a07390ea8a44a0d92302f59
+
+#### Review-fix handback — Round 2, attempt 1
+
+The `/qfai-atdd` run started 2026-09-25T03:29:44.936Z changed the test the
+implementation reviewer's attempt-1 `REVISE` names. For each of the four
+sliced jobs, the case now also requires `strategy.matrix` to hold exactly one
+key, `slice`. An `include` or an `exclude` beside it changes the legs that
+run without changing the list the case compares.
+
+The edit is in `spec0017SliceAlignment.test.ts` alone. The shared helper
+`spec0017WorkflowSurfaces.ts` is read unchanged, so no done row's manifest
+moves. The `todo` rows `TDD-0064`, `TDD-0105` and `TDD-0106` read the
+same test file, and their handover hashes now address the file before this
+edit; each is re-taken when its own step 3c runs.
+
+The corrected test passed on its first run, so no RED exists to take and no
+round is opened:
+
+- First-run command: node node_modules/vitest/vitest.mjs run tests/integration/spec0017SliceAlignment.test.ts -t "agrees across the runner, scripts, CI and release declarations" (run from `packages/qfai`)
+- First-run result: PASS — Test Files 1 passed (1); Tests 1 passed | 3 skipped (4)
+- First-run revision: working-tree+6174b897f972999ecc12538b4158e6692d4af7b3849af6d23921273a7e3ffa1f
+
+The Round 2 falsifiability proof above ran against the test before this edit:
+stale — test replaced. `/qfai-implement` re-takes it under the same selector
+and writes `Round 2: Replacement proof revision`.
+
+Test-only replacement, asked by the implementation reviewer's attempt-1
+`REVISE` on Round 2:
+
+- Round 2: RED test hash: b7e91184b52a803982a7063dfbf3b2d5b9caed615b8b946e63602166d61ca838
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts
+packages/qfai/tests/integration/spec0017SliceAlignment.test.ts
+```
+
+The row's `Test file` and `Selector` are unchanged.
 
 ### TDD-0069
 
@@ -2392,6 +2450,17 @@ three review-phase gates were not run here.
 | 35 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: `TDD-0062` RED gate on the rebuilt falsifiability tree, and the build-phase GREEN | #tdd-0062 | qa-gatekeeper fields | PASS |
 | 36 | completion-reviewer | completion-reviewer | /qfai-implement: `TDD-0062` completion review, attempt 1 | #tdd-0062 | review-20260925130000000 <!-- qfai:not-a-citation --> | PASS |
 | 37 | implementation-reviewer | implementation-reviewer | /qfai-implement: `TDD-0062` code review, attempt 1 | #tdd-0062 | review-20260925130000000 <!-- qfai:not-a-citation --> | REVISE |
+
+### Rows for the run started 2026-09-25T03:29:44.936Z
+
+The same agent took the acceptance-test role inline for the review-fix
+handback. Nothing was dispatched.
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 38 | acceptance-test-engineer | stage3-agent (inline) | review-fix: require each sliced job's matrix to hold only `slice` | implementation-reviewer attempt 1 in review-20260925130000000 <!-- qfai:not-a-citation -->, the test file, the helper | `spec0017SliceAlignment.test.ts`; the helper unchanged | PASS |
+| 39 | acceptance-test-engineer | stage3-agent (inline) | review-fix: run the corrected test, replace the Round 2 hash and mark the proof stale | the corrected test | #tdd-0062, review-fix handback; first run passed, so no round opened | PASS |
+| 40 | acceptance-test-engineer | stage3-agent (inline) | grilling(S1@2026-09-25T03:29:44.936Z/agents): take the no-round path rather than open Round 3 | the work order, `qfai-atdd` review-fix rules, `round-evidence.md` | #tdd-0062; the corrected test passes on its first run and no production behaviour changes, so the rules open no round and have the proof re-taken under Round 2. Disagreeing position: the work order asked for a new round | PASS |
 
 ## Execution logs
 
