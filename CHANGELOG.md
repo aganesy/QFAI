@@ -223,6 +223,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now state the product's rules for the discussion stage: it records the brand
   direction the user chooses and ranks none of the screen explorations, and
   `/qfai-sdd` Phase 0 authors root `DESIGN.md` from that direction.
+- **spec-0015's `TDD-0039` GREEN gate is re-attested over its repaired
+  record** (#2409). The row's `GREEN result` was reworded after qa-gatekeeper
+  had hashed it. qa-gatekeeper re-read the entry and returned the same PASS at
+  the same revision, over a recomputed hash. It also filed one new record
+  defect: the coverage-depth slice for `TC-0015-0007` miscounts the mutation
+  runs. The duplicated `Satisfied-by` in the same entry stays open until the
+  skill references agree on where the field goes.
 
 ## [1.12.3] - 2026-09-24
 
