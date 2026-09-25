@@ -1,7 +1,7 @@
 ---
 name: qfai-implement
 title: QFAI Implement (Unified TDD Micro-cycle)
-description: "Unified implementation skill that orchestrates the full TDD micro-cycle (Red/Green/Refactor) one test at a time using test-list.md as the execution ledger."
+description: "Unified implementation skill that orchestrates the full TDD micro-cycle (Red/Green/Refactor) one test at a time using test-list.md as the execution ledger. Use when a spec's tdd/test-list.md has rows left to implement, or a request asks to implement or fix behaviour a spec describes or make its failing tests pass. A failing gate with no code to write belongs to qfai-verify."
 argument-hint: "[spec-id]"
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, TodoWrite, Task, Agent]
 roles:

@@ -12,6 +12,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Every shipped skill the agent may start now says when to use it**
+  (#2247). The `description:` field is what an agent matches a request
+  against, and nine of the ten said only what the skill does. Each now ends
+  with a sentence beginning "Use when", naming the requests and artifacts that
+  select it, and the neighbouring skills that are easy to confuse say where the
+  boundary lies: test cases belong to `qfai-sdd` and their automation to
+  `qfai-atdd`, and code to write belongs to `qfai-implement` while a gate with
+  none belongs to `qfai-verify`. `qfai-grill` is unchanged, because only the
+  user starts it.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as

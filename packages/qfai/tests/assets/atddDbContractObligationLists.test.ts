@@ -72,7 +72,7 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
     // the body, so a DB-contract-only request must be able to match here.
     const atdd = flat(await read(tree));
     expect(atdd).toContain(
-      'description: "Implement automated acceptance tests (E2E/API/Integration) aligned with US/TC/CON-API/CON-DB obligations from specs and contracts."',
+      'description: "Implement automated acceptance tests (E2E/API/Integration) aligned with US/TC/CON-API/CON-DB obligations from specs and contracts.',
     );
     expect(atdd).not.toContain("aligned with US/TC/CON-API obligations");
   });

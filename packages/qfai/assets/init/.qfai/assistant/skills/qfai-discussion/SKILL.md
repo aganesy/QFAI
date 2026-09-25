@@ -1,7 +1,7 @@
 ---
 name: qfai-discussion
 title: QFAI Discussion (Exploration Planner)
-description: "Run structured discussion that defines exploration conditions, evaluation rubric, and anti-goals for downstream prototyping."
+description: "Run structured discussion that defines exploration conditions, evaluation rubric, and anti-goals for downstream prototyping. Use when a request starts from an idea, a problem or a product direction that has no spec yet, or asks to explore, scope or frame what to build before any spec is written."
 argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:

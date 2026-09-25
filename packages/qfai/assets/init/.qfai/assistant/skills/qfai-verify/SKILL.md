@@ -1,7 +1,7 @@
 ---
 name: qfai-verify
 title: QFAI Verify (Quality Gates + Evidence)
-description: "Run and document quality gates (repo + qfai validate/report), fix until PASS."
+description: "Run and document quality gates (repo + qfai validate/report), fix until PASS. Use when a request asks to run the quality gates, qfai validate or qfai report, to check whether work is ready to merge or complete, to triage a failing gate or CI check, or to write verification evidence for a pull request. Writing the code a failing test needs belongs to qfai-implement."
 argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Bash, Write, Edit, TodoWrite, Task, Agent]
 roles:
