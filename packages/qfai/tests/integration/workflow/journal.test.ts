@@ -655,3 +655,22 @@ it("a bugfix run continues past its diagnose stage, carrying the diagnose receip
     priorStageReceiptRefs: [{ ref: "results/diagnose-1.json", validity: "unknown" }],
   });
 });
+
+it("finish names the owner of an unaccepted test fix from the defective row's layer", async () => {
+  const { root, runId } = await routedBugfixRun();
+  const diagnose = workflow(root, ["next", "--run", runId]);
+  const diagnosis = {
+    verdict: "defective-test",
+    reproductionRef: "reproduction.md",
+    matchedRowIds: ["TDD-0001"],
+  };
+  await submit(root, runId, "accept", resultFor(diagnose.json, "diagnose-1", { diagnosis }));
+  const finished = workflow(root, ["finish", "--run", runId]);
+  const unmet = field(finished.json, "unmet");
+
+  expect(
+    (Array.isArray(unmet) ? unmet : []).filter(
+      (entry: unknown) => field(entry, "condition") === "stage-unaccepted",
+    ),
+  ).toEqual([{ condition: "stage-unaccepted", subject: "test-fix", owner: "qfai-implement" }]);
+});

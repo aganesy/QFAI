@@ -419,7 +419,7 @@ async function inputOf(
 
 async function factsOf(root: string, loaded: LoadedRun, input: WorkflowInput) {
   const { snapshot } = loaded;
-  if (input.operation === "finish") return completionFacts(root, loaded.runDir, snapshot);
+  if (input.operation === "finish") return finishFacts(root, loaded.runDir, snapshot);
   if (input.operation === "decision") return { now: new Date().toISOString() };
   const [identity, policyNow] = await Promise.all([identityOf(root), policyNowOf(root)]);
   const facts =
@@ -427,6 +427,17 @@ async function factsOf(root: string, loaded: LoadedRun, input: WorkflowInput) {
       ? await routingFacts(root, input.result?.proposal)
       : await stageFacts(root, snapshot, input);
   return { ...facts, identity, policyNow };
+}
+
+// What `finish` observes, with the bound spec's ledger, whose defective row names the owner of an
+// unaccepted test fix.
+async function finishFacts(root: string, runDir: string, snapshot: WorkflowSnapshot) {
+  const specId = snapshot.specBinding?.specId;
+  const [facts, ledger] = await Promise.all([
+    completionFacts(root, runDir, snapshot),
+    specId ? ledgerFactsOf(root, specId) : undefined,
+  ]);
+  return ledger ? { ...facts, ledger } : facts;
 }
 
 // The bound spec's ledger, read when a work order is issued against it and when its result is

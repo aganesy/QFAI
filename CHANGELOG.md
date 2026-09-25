@@ -239,6 +239,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - one replan for each return to routing for a new plan, which the replan
     budget reads.
 
+- **`qfai workflow finish` names the right owner of an unfinished test fix**
+  (#2329). `finish` did not read the bound spec's ledger, so an unaccepted
+  `test_fix` stage was always owned by `qfai-atdd`. It now reads the ledger and
+  names the skill the defective row's layer selects: `qfai-implement` for a
+  `Unit` or `Component` row, for example.
+
 ## [1.12.3] - 2026-09-24
 
 ### Fixed
