@@ -306,6 +306,34 @@ describe("qfai-implement states one parallelization policy", () => {
       expect(section).toContain("bind the same fixed port, write the same out-of-worktree path");
     });
 
+    it(`${tree}: names the host backstops above the declared shape`, async () => {
+      // The allow and deny conditions are read by the dispatching agent; the
+      // host controls hold whatever it decides, and must sit above the policy.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("## Backstops above the declared shape");
+      // Table padding is prettier's, so cells are compared with it collapsed.
+      const rows = section.replace(/ {2,}/g, " ");
+      for (const control of [
+        "| `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` | 3 |",
+        "| `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` | 20 |",
+        "| The Agent SDK spend cap | none |",
+      ]) {
+        expect(rows).toContain(control);
+      }
+      expect(section).toContain("**A backstop sits above the declared shape, never at it.**");
+      // The reviewer gate stays, and the file says why the self-verification
+      // guidance does not reach it.
+      expect(section).toContain("### The reviewer gate is not self-verification");
+      expect(section).toContain(
+        "shared-skill-delegation-baseline.md#definition-independent-reviewer-normative",
+      );
+      const baseline = await read(
+        tree,
+        "assistant/constitution/shared-skill-delegation-baseline.md",
+      );
+      expect(baseline).toContain("### Definition: independent reviewer (NORMATIVE)");
+    });
+
     it(`${tree}: a read-only shared fixture is not a deny`, async () => {
       const section = unwrap(await policy(tree));
       expect(section).toContain(

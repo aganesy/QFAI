@@ -139,6 +139,42 @@ exception is preferable to a documented way around an upstream SSOT rule.
   only for slices whose seams already exist in the repository. "The test files
   differ" is not an independence claim.
 
+## Backstops above the declared shape
+
+The conditions above are read by the agent doing the dispatch, so a run that has
+lost its way is the one least likely to apply them. Nothing in this policy
+bounds a run that dispatches more workers than it declared, or that nests
+delegation deeper than the stage intended.
+
+The host can. Claude Code 2.1.217 or later provides these controls, which hold
+whatever the dispatching agent decides:
+
+| Control                                | Default | What it bounds                                   |
+| -------------------------------------- | ------- | ------------------------------------------------ |
+| `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` | 3       | How deep delegation nests. `1` turns nesting off |
+| `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` | 20      | How many sub-agents run at once                  |
+| The Agent SDK spend cap                | none    | What one run may cost                            |
+
+QFAI sets none of them, so the defaults stand.
+
+**A backstop sits above the declared shape, never at it.** A cap equal to the
+declared concurrency turns the ceiling into the policy: the first stage that
+legitimately needs its full declared fan-out is blocked by a control that exists
+to catch runaway delegation. The backstop fires when something has gone wrong;
+this policy decides the ordinary case.
+
+### The reviewer gate is not self-verification
+
+Anthropic's prompting guidance advises against using sub-agents to verify or
+double-check an agent's own work
+(<https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5>).
+That guidance does not remove the reviewer gate, because the gate is not that:
+
+- an independent reviewer authored or edited none of the artifacts under review
+  (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`);
+- its verdict is recorded and pinned to a hash of the reviewed state, not
+  consumed by the author.
+
 ## Seam reconciliation (after a parallel run)
 
 The post-merge integration verify detects a broken build. It does not detect

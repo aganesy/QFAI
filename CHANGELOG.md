@@ -12,6 +12,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The implementation skill's parallelization policy names the host limits
+  above it** (#2239). The allow and deny conditions are read by the agent that
+  dispatches, so nothing in the policy bounded a run that spawned more workers,
+  or nested delegation deeper, than it declared. The policy now lists the Claude
+  Code controls for nesting depth, concurrent sub-agents and spend, with their
+  defaults, and states that such a limit sits above the declared shape, never
+  at it. It also says why guidance against sub-agents checking their own work
+  does not reach the independent reviewer gate.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as
