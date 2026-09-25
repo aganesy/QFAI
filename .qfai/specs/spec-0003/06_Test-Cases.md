@@ -46,7 +46,6 @@ stays the first markdown table in this file):
 | TC-0003-0019 | integration | AC-0003-0016               | EX-0003-0017 | edge     | レガシー行除去と管理ブロック置換                                      |
 | TC-0003-0020 | integration | AC-0003-0015               | EX-0003-0016 | boundary | review-\*/ サブディレクトリが gitignore 対象                          |
 | TC-0003-0021 | integration | AC-0003-0017               | EX-0003-0018 | normal   | 4-layer asset-tree seed                                               |
-| TC-0003-0022 | integration | AC-0003-0018               | EX-0003-0019 | normal   | project-root steering seed                                            |
 | TC-0003-0023 | integration | AC-0003-0019, AC-0003-0020 | EX-0003-0020 | normal   | --upgrade-assistant-tree migration                                    |
 | TC-0003-0024 | integration | AC-0003-0021               | EX-0003-0021 | normal   | migration memo authoring                                              |
 | TC-0003-0025 | unit        | AC-0003-0022               | EX-0003-0022 | normal   | assistantPaths.ts SSOT lint                                           |
@@ -85,12 +84,12 @@ stays the first markdown table in this file):
 | TC-0003-0058 | integration | AC-0003-0038               | EX-0003-0051 | error    | aggregate failure protection: bad result and missing binding          |
 | TC-0003-0059 | integration | AC-0003-0039               | EX-0003-0052 | normal   | generated Copilot instructions state the closed legacy window         |
 | TC-0003-0090 | integration | AC-0003-0015               | EX-0003-0016 | normal   | Fresh init: `git check-ignore` on the run and evidence paths          |
-| TC-0003-0060 | integration | AC-0003-0015               | EX-0003-0082 | boundary | Upgrade over the previous managed block, then a rerun                 |
-| TC-0003-0061 | integration | AC-0003-0015, AC-0003-0048 | EX-0003-0053 | boundary | The previous managed block in a CRLF `.gitignore`                     |
-| TC-0003-0062 | integration | AC-0003-0050               | EX-0003-0054 | normal   | Fresh init installs the entry skills, plans and references            |
-| TC-0003-0063 | integration | AC-0003-0050               | EX-0003-0055 | normal   | Four host skill dirs resolve both entry skills to one source          |
+| TC-0003-0091 | integration | AC-0003-0015               | EX-0003-0082 | boundary | Upgrade over the previous managed block, then a rerun                 |
+| TC-0003-0092 | integration | AC-0003-0015, AC-0003-0048 | EX-0003-0083 | boundary | The previous managed block in a CRLF `.gitignore`                     |
+| TC-0003-0093 | integration | AC-0003-0050               | EX-0003-0084 | normal   | Fresh init installs the entry skills, plans and references            |
+| TC-0003-0063 | integration | AC-0003-0050               | EX-0003-0085 | normal   | Four host skill dirs resolve both entry skills to one source          |
 | TC-0003-0064 | integration | AC-0003-0050               | EX-0003-0056 | normal   | Upgrade over an install without the workflow entry                    |
-| TC-0003-0065 | integration | AC-0003-0040               | EX-0003-0057 | normal   | No `agents/openai.yaml` after init and after `--force`                |
+| TC-0003-0065 | integration | AC-0003-0051               | EX-0003-0057 | normal   | No `agents/openai.yaml` after init and after `--force`                |
 | TC-0003-0066 | integration | AC-0003-0041               | EX-0003-0058 | normal   | Fresh init: directive in AGENTS.md and CLAUDE.md, not Copilot         |
 | TC-0003-0067 | integration | AC-0003-0041, AC-0003-0048 | EX-0003-0059 | edge     | Directive prepended to existing CRLF entry points, bytes kept         |
 | TC-0003-0068 | integration | AC-0003-0041               | EX-0003-0060 | boundary | Entry directive with and without `REVIEW.md`                          |
@@ -227,19 +226,6 @@ Verify:
 - 上記いずれの layer にも `.gitkeep` は書かれない（layer が空のときだけ空の `.gitkeep` を置く）
 - 通常実行と `--dry-run` の双方で、`report()` の "skipped paths" に `.qfai/assistant/<layer>/.gitkeep` が現れない（未配置の placeholder は copied/skipped のどちらにも計上しない）
 - `.qfai/assistant/steering/` ディレクトリは存在しない
-
-## TC-0003-0022: project-root steering seed
-
-**Level:** integration
-**EX Refs:** EX-0003-0019
-**AC Refs:** AC-0003-0018
-
-Setup: empty temp dir.
-Action: `runInit({ root })`、その後ユーザー編集をシミュレートして `.qfai/steering/_templates/entry.md` に追記 → `runInit({ root })` を再実行。
-Verify:
-
-- the first run seeds `.qfai/steering/.gitkeep` and `.qfai/steering/_templates/entry.md`, and writes no `.qfai/steering/README.md`
-- 2 回目実行後もユーザー追記内容が `_templates/entry.md` に残っている
 
 ## TC-0003-0023: --upgrade-assistant-tree migration
 
@@ -833,7 +819,7 @@ Verify:
 
 Notes: The oracle is git's own answer, not a line count: the block's SSOT is `packages/qfai/src/core/gitignore.ts`. Test module: `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`, one module per BR.
 
-## TC-0003-0060: Upgrade over the previous managed block, then a rerun
+## TC-0003-0091: Upgrade over the previous managed block, then a rerun
 
 **Level:** integration
 **EX Refs:** EX-0003-0082
@@ -850,10 +836,10 @@ Verify:
 
 Notes: The previous block's lines must be read as known lines, or the block is duplicated. Test module: `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`, one module per BR.
 
-## TC-0003-0061: The previous managed block in a CRLF `.gitignore`
+## TC-0003-0092: The previous managed block in a CRLF `.gitignore`
 
 **Level:** integration
-**EX Refs:** EX-0003-0053
+**EX Refs:** EX-0003-0083
 **AC Refs:** AC-0003-0015, AC-0003-0048
 **Type:** boundary
 
@@ -866,10 +852,10 @@ Verify:
 
 Notes: Windows parity. CRLF comes from the fixture, never from `core.autocrlf`. Test module: `packages/qfai/tests/integration/init/windowsParity.test.ts`, one module per BR.
 
-## TC-0003-0062: Fresh init installs the entry skills, plans and references
+## TC-0003-0093: Fresh init installs the entry skills, plans and references
 
 **Level:** integration
-**EX Refs:** EX-0003-0054
+**EX Refs:** EX-0003-0084
 **AC Refs:** AC-0003-0050
 **Type:** normal
 
@@ -887,7 +873,7 @@ Notes: Each `orchestrated-mode.md` belongs to its own stage skill's spec. Needs 
 ## TC-0003-0063: Four host skill dirs resolve both entry skills to one source
 
 **Level:** integration
-**EX Refs:** EX-0003-0055
+**EX Refs:** EX-0003-0085
 **AC Refs:** AC-0003-0050
 **Type:** normal
 
@@ -911,7 +897,7 @@ Setup: a fresh install with overlay `absent-skills`.
 Action: run a plain `qfai init`.
 Verify:
 
-- the install set of TC-0003-0062 is present
+- the install set of TC-0003-0093 is present
 - the eight wrappers of TC-0003-0063 resolve
 - every other skill directory is byte-identical to before the run
 
@@ -921,7 +907,7 @@ Notes: Needs assets from spec-0018; the order is in `10_Plan.md`. Test module: `
 
 **Level:** integration
 **EX Refs:** EX-0003-0057
-**AC Refs:** AC-0003-0040
+**AC Refs:** AC-0003-0051
 **Type:** normal
 
 Setup: an empty temp root.
@@ -1226,7 +1212,7 @@ Verify:
 - four boundaries
 - each run exits 0
 
-Notes: DR-0003-0013: the released exit table is kept. Needs assets from spec-0018, spec-0015; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/conflictReport.test.ts`, one module per BR.
+Notes: DR-0003-0033: the released exit table is kept. Needs assets from spec-0018, spec-0015; the order is in `10_Plan.md`. Test module: `packages/qfai/tests/integration/init/conflictReport.test.ts`, one module per BR.
 
 ## TC-0003-0084: A benign manifest customization is not a conflict
 

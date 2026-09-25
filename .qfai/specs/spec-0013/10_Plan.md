@@ -11,6 +11,13 @@
 7. Validate gate: run `qfai validate --fail-on error` until error=0
 8. Density review: triage `QFAI-COV-207` warnings
 
+The skill-text part of removing the work-log surface is edited in
+`packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/` and mirrored by
+`pnpm sync:ssot`. It lands in the same change as the removal of
+`QFAI-TDDLIST-015`, in the order spec-0004's `10_Plan.md` states under
+"Removing the work-log surface". The text is checked by review and has no
+test of its own (`CR-20260925-0010`).
+
 ### Intent-driven entry (CAP-0018)
 
 This change introduces no architectural element. It writes `qfai-sdd`'s own
@@ -23,7 +30,7 @@ Units and work. The order across the batch is spec-0018 `10_Plan.md` `### Implem
   - the entry check and standalone end (BR-0013-0032, 0033);
   - the Operations table, `new-capability`, `delta-or-applicability-check`
     and `defect-row-seeding` (BR-0013-0034);
-  - the Stage 1 authorization check (BR-0013-0022, 0023, 0024, 0025);
+  - the Stage 1 authorization check (BR-0013-0037, 0023, 0024, 0025);
   - target binding (BR-0013-0031);
   - the preflight check never cached (BR-0013-0035).
 
@@ -50,17 +57,17 @@ Left out: the `Authorization-Ref` validator (spec-0004); the core's
 
 What each layer proves:
 
-| Layer | What it proves                                                                                                                                                                                                    | Cases                    |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `L3`  | The shipped `qfai-sdd` text: `references/orchestrated-mode.md`, `references/sdd-triage.md`, the Phase 2b defect row seeding text in `references/sdd-phase-checklists.md`, and the one citation line in `SKILL.md` | TC-0013-0038..0051       |
-| E2E   | SDD as a stage of a run, the routing-time CREATE approval checked at Stage 1, and defect row seeding                                                                                                              | US-0013-0015, 0016, 0017 |
+| Layer | What it proves                                                                                                                                                                                                    | Cases                                  |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `L3`  | The shipped `qfai-sdd` text: `references/orchestrated-mode.md`, `references/sdd-triage.md`, the Phase 2b defect row seeding text in `references/sdd-phase-checklists.md`, and the one citation line in `SKILL.md` | TC-0013-0040..0051, TC-0013-0052..0053 |
+| E2E   | SDD as a stage of a run, the routing-time CREATE approval checked at Stage 1, and defect row seeding                                                                                                              | US-0013-0015, 0016, 0017               |
 
 Test modules, one per BR, all under `packages/qfai/tests/integration/sdd/`:
 
 | BR                         | Module                                 | Cases        |
 | -------------------------- | -------------------------------------- | ------------ |
-| BR-0013-0022               | `stage1ApprovalCheck.test.ts`          | TC-0013-0038 |
-| BR-0013-0023               | `stage1ApprovalStop.test.ts`           | TC-0013-0039 |
+| BR-0013-0037               | `stage1ApprovalCheck.test.ts`          | TC-0013-0052 |
+| BR-0013-0038               | `stage1ApprovalStop.test.ts`           | TC-0013-0053 |
 | BR-0013-0024               | `stage1OtherApprovals.test.ts`         | TC-0013-0040 |
 | BR-0013-0025               | `stage1AutoMode.test.ts`               | TC-0013-0041 |
 | BR-0013-0026               | `triageAuthorizationRefColumn.test.ts` | TC-0013-0042 |
@@ -80,13 +87,13 @@ TC-0013-0044 sits with its lower BR.
 Cases that stand alone:
 
 - Four kept failures, each a case of its own:
-  - the failed approval check (TC-0013-0039);
+  - the failed approval check (TC-0013-0053);
   - `--auto` inside a run (TC-0013-0041);
   - a work order with no target (TC-0013-0047);
   - the entry check (TC-0013-0049).
-- The approval check's pass (TC-0013-0038) and its failure (TC-0013-0039) are two
+- The approval check's pass (TC-0013-0052) and its failure (TC-0013-0053) are two
   cases, not one parameterised case.
-- The non-CREATE approval inside a run is TC-0013-0040, apart from TC-0013-0038.
+- The non-CREATE approval inside a run is TC-0013-0040, apart from TC-0013-0052.
   Its row carries no `Authorization-Ref`, and the answerer comes from the
   `decision` question.
 - No case is a matrix. Each reads one shipped file, which is one observation, and
@@ -113,7 +120,7 @@ Order, per spec-0018 `10_Plan.md` `### Order in which the rows go green`:
 
 Findings carried on purpose:
 
-- `QFAI-ATDD-111` (US-0013-0015..0017) and `QFAI-ATDD-112` (TC-0013-0038..0051),
+- `QFAI-ATDD-111` (US-0013-0015..0017) and `QFAI-ATDD-112` (TC-0013-0040..0051, TC-0013-0052..0053),
   until the annotated tests land. Each push lists them in the batch evidence.
 - The ledger's 16 pinned `tdd` errors (8 × `QFAI-TDDLIST-007`, 8 × `-011`) are
   left as they are. No existing row changes.
@@ -157,7 +164,7 @@ Findings carried on purpose:
 | Risk                                                                                                                                 | Likelihood / impact | Mitigation                                                                                    | Trigger to act                                                         |
 | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | The `--auto` degrade guard is extended to the in-run case, merging the two cases `discussion-20260923171450572#REQ-0044` keeps apart | low / med           | The in-run case is its own `L3` case, TC-0013-0041, and the guard keeps the legacy case alone | A diff to `packages/qfai/tests/assets/autoModeApprovalDegrade.test.ts` |
-| Stage 1 persists a `CREATE` row before its authorization check passes                                                                | low / high          | The check runs before any triage row is written (DR-0296, BR-0013-0023)                       | `QFAI-TRIAGE-011` or `QFAI-TRIAGE-005` on a `CREATE` row a run wrote   |
+| Stage 1 persists a `CREATE` row before its authorization check passes                                                                | low / high          | The check runs before any triage row is written (DR-0299, BR-0013-0038)                       | `QFAI-TRIAGE-011` or `QFAI-TRIAGE-005` on a `CREATE` row a run wrote   |
 
 ## v1.8.1 Implementation Notes
 

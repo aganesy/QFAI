@@ -804,23 +804,10 @@ internally contradictory.
    option resets. `/qfai-implement` consumes the test and the RED provenance
    `/qfai-atdd` writes, so without this pass those rows stay at `todo`.
 
-10. **The consultation entry closes in the change that sets `Applied at`.**
-    `.qfai/steering/2026-09-12-spec-0002-two-statements-the-product-replaced.md`
-    stands at `status: active` and `blocking: true`, and its body says this
-    record is open and waits on a decision. Later sessions and reviewer input
-    bundles read open work-log entries, so an entry left that way reports a
-    settled conflict as a live blocker. Once `Resolution` is filled and
-    `Applied at` set, the same change:
-    - records the approved option and the date it was applied under the
-      entry's `## What the next session picks up`;
-    - sets `status: archived`, `blocking: false`, and `updated` to that date;
-    - fills `closure-rationale` with this record's ID, its approved option and
-      its `Applied at`. The work-log schema requires that field of an archived
-      entry whose `promote-to` is `null`.
-
-    `promote-to` stays `null`. The decision is recorded in this Change Request,
-    in the Decision Records the reruns amend and in each delta's
-    `## Change Requests` table, so the entry has nothing to promote.
+10. **Close the consultation in this Change Request.** Record the approved
+    option in `Resolution` when setting `Applied at`. The Decision Records
+    amended by the reruns and each delta's `## Change Requests` table carry
+    the resulting obligation changes.
 
 ## Resolution
 
@@ -833,7 +820,7 @@ The record was refreshed against the tree before it was applied:
   approval. It had been approved unreduced.
 - The `E2E` rows the two ledger repairs seeded joined the blocked set by id:
   `spec-0002/TDD-0016`, `spec-0010/TDD-0025` and `spec-0010/TDD-0026`.
-- `CR-20260925-0005` was applied first. It changed `spec-0012` rows only, and
+- `CR-20260925-0019` was applied first. It changed `spec-0012` rows only, and
   option 1 names no `spec-0012` row, so no reset, retirement or ownership here
   moved because of it.
 - What approved action 4 calls the second `DR-0094` is now
@@ -905,8 +892,7 @@ The `/qfai-implement` Change Request preflight:
   left the carrier-only list of completed rows.
 
 `Applied at` records the completed owner rerun and ledger sweep. The
-consultation entry closes in the same change (action 10). Two later stage runs
-remain:
+consultation closes in this record (action 10). Two later stage runs remain:
 
 - `/qfai-implement spec-0002` re-verifies `TDD-0011` in place (action 7) and
   re-executes the reset rows.

@@ -86,6 +86,7 @@ None. The pack is cli-only, so no visual direction was proposed or rejected.
 | Date       | Trigger                                                                      | Impact Assessment                                                                       | Files Updated                                        |
 | ---------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | 2026-09-23 | The user added the README rewrite (D16) in the closing answer of the session | Scope grows by one documentation task; it joins WP-12's done condition and adds DSC-007 | `05_Scope.md`, `06_REQ.md` (REQ-0067), `99_delta.md` |
+| 2026-09-25 | `origin/main` removed the `.qfai/steering/` work-log surface | REQ-0044 no longer names a work-log entry; an `--auto` stop reports every unapproved row instead, as the shipped skills now say. The behaviour is unchanged | `06_REQ.md` (REQ-0044), `99_delta.md` |
 
 ## Consequences for the Design Package
 

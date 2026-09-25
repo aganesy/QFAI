@@ -58,7 +58,6 @@
 Contract short IDs resolve through `_policies/05_Contracts.md#Contract Index`.
 
 - CLI-INIT — `.qfai/contracts/cli/qfai-init.md`。CHG-007 で `## Shipped GitHub Actions workflows` セクションが追加され、create-only の `force: false` literal が所有権コントラクトの load-bearing 要素であること、`declined` name を copy **実行前**に copy set から除外すること、removal は `pruneMatchingEntries` + retired-name membership predicate のみであること（`startsWith("qfai-")` 禁止）、drift 報告は init の責務ではないことを固定する
-- CLI-WLOG — `.qfai/contracts/cli/worklog-entry.schema.md`。`.qfai/steering/*.md` の frontmatter / body schema（CHG-003）
 - CLI-WFSET — `.qfai/contracts/cli/shipped-workflows.md`。**CHG-007 で新設。REQ-0024..0031 の権威ソース。** 配布 `.github/workflows/**` に対する所有権境界と、gate が diff する宣言形状の dimension 集合を固定する。本 spec の BR / AC は CLI-WFSET を **cite** し、その内容を再記載しない — REQ-0031 の宣言形状の**値**は test suite 側の 1 箇所が SSOT であり、spec も contract も第二のコピーを持たない
   - §1 reserved filename prefix（prefix は reservation notice であり selector ではない）
   - §2 provenance record `.qfai/install-provenance.json`（tracked、`schemaVersion` なし）
@@ -95,7 +94,6 @@ Contract short IDs resolve through `_policies/05_Contracts.md#Contract Index`.
 - REQ-0016: root `.gitignore` managed block (v1.7.18) - `qfai init` appends the QFAI managed block to the adopting project's root `.gitignore`, idempotently, and leaves the project's own lines alone. The block is the marker line, then the ignore lines, which include `.qfai/report/*`, `.qfai/evidence/*`, `.qfai/discussion/*` and `.qfai/review/*`, then the governance negations. It carries no README negation and no `.qfai/discussion/discussion-*/`: both are retired lines, and migration strips them
 - REQ-0017: レガシー管理ブロック移行 (v1.7.18) - 旧バージョンで追記されたレガシー行（`!.qfai/review/review-*/`, `!.qfai/review/review-*/**`）を再実行時に自動除去し、新ブロックで置換する
 - REQ-0018: 4-layer asset-tree seeding (v1.9.0) - `qfai init` は `.qfai/assistant/{constitution,manifest,catalog,process}/` の 4 層を seed する（旧 `steering/` 単層から再構成）。layer 名以外は reject される
-- REQ-0019: project-root `.qfai/steering/` seeding (v1.9.0) - `qfai init` seeds `.qfai/steering/` at the project root with `.gitkeep` and `_templates/entry.md`, and writes no `README.md`: the surface's contract is `.qfai/assistant/catalog/worklog-entry.schema.md`. Re-init preserves user edits
 - REQ-0020: `qfai init --upgrade-assistant-tree` one-shot migration (v1.9.0) - 旧 `.qfai/assistant/steering/` レイアウトから 4-layer へ一括移行する flag。ユーザー編集は `W-USER-EDIT-PRESERVED` informational note 付きで保全
 - REQ-0021: migration memo authoring (v1.9.0) - `qfai init --upgrade-assistant-tree` 実行時、`.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` を生成。commit 後は immutable (OC-53 準拠)
 - REQ-0022: `assistantPaths.ts` SSOT module (v1.9.0) - 配布される assistant-tree のパス文字列は `packages/qfai/src/core/paths/assistantPaths.ts` が唯一の producer。hard-coded literal は lint で reject (NFR-0001 系)
@@ -131,7 +129,7 @@ The requirements of this spec's rows in `## Triage (2026-09-24 intent-driven ent
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `discussion-20260923171450572#REQ-0024` | CLI-INIT `### Ignore entries`; BR-0003-0013                                                                                                                                      |
 | `discussion-20260923171450572#REQ-0059` | CLI-INIT `### Mode line`; BR-0003-0052                                                                                                                                           |
-| `discussion-20260923171450572#REQ-0064` | CLI-INIT `### What it installs`, `### Entry directive`; BR-0003-0061, BR-0003-0050, BR-0003-0051                                                                                 |
+| `discussion-20260923171450572#REQ-0064` | CLI-INIT `### What it installs`, `### Entry directive`; BR-0003-0061, BR-0003-0062, BR-0003-0051                                                                                 |
 | `discussion-20260923171450572#REQ-0065` | CLI-INIT `### Plan provenance and the upgrade record`, `### Upgrade conflicts`; BR-0003-0053, BR-0003-0054, BR-0003-0055, BR-0003-0056, BR-0003-0057, BR-0003-0059, BR-0003-0060 |
 | `discussion-20260923171450572#NFR-0011` | CLI-INIT `### Windows parity`; BR-0003-0058                                                                                                                                      |
 

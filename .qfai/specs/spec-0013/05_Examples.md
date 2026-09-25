@@ -158,18 +158,18 @@
 - When SDD preflight runs
 - Then it reports ready without treating the legacy optional artifact as a blocker
 
-## EX-0013-0022: A matching routing-time approval is checked, not asked
+## EX-0013-0036: A matching routing-time approval is checked, not asked
 
-- BR-Ref: BR-0013-0022
+- BR-Ref: BR-0013-0037
 - Given an SDD work order bound to slot `slot-1`, citing the `human_decision` `run-20260924045712999/create-0001` with `operation: CREATE`, `answeredBy: yusuke_senaga` and a `recordedAt` on 2026-09-24
 - And Stage 1 triages a `CREATE` row for the capability that slot names, and the record is not stale
 - When Stage 1 writes the row
 - Then no question is asked, and the row carries `Authorization-Ref` `run-20260924045712999/create-0001` and `Approved By` `yusuke_senaga@2026-09-24`
 
-## EX-0013-0023: An approval that does not hold stops Stage 1
+## EX-0013-0037: An approval that does not hold stops Stage 1
 
-- BR-Ref: BR-0013-0023
-- Given the work order of EX-0013-0022, changed one way: the cited record is missing, its capability differs from the row's, or its scope has changed since it was recorded
+- BR-Ref: BR-0013-0038
+- Given the work order of EX-0013-0036, changed one way: the cited record is missing, its capability differs from the row's, or its scope has changed since it was recorded
 - When Stage 1 triages the `CREATE` row
 - Then `09_delta.md` gains no triage row, no question is put to the operator, and the stage returns `awaiting_input` naming the row and the reason
 

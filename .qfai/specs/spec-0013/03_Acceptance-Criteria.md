@@ -162,12 +162,12 @@ Scenario: A fresh, matching human decision approves the CREATE row
   And Approved By copies answeredBy@YYYY-MM-DD from the record
 ```
 
-## AC-0013-0029: A missing, mismatched or stale approval stops Stage 1
+## AC-0013-0044: A missing, mismatched or stale approval stops Stage 1
 
 - US-Refs: US-0013-0015
 
 ```gherkin
-# AC-0013-0029
+# AC-0013-0044
 # Source: discussion-20260923171450572#REQ-0042
 Scenario: Stage 1 persists nothing when the approval does not hold
   Given a CREATE row whose cited human_decision is missing, does not match the row, or is stale
@@ -177,12 +177,12 @@ Scenario: Stage 1 persists nothing when the approval does not hold
   And Stage 1 asks the operator nothing itself
 ```
 
-## AC-0013-0030: The other approval-required operations keep the Stage 1 question
+## AC-0013-0045: The other approval-required operations keep the Stage 1 question
 
 - US-Refs: US-0013-0015
 
 ```gherkin
-# AC-0013-0030
+# AC-0013-0045
 # Source: discussion-20260923171450572#REQ-0042
 Scenario: A routing-time approval answers only a CREATE
   Given a DELETE, SPLIT, MERGE, SUPERSEDE or UPDATE:REMOVE row

@@ -5,9 +5,9 @@
  *
  * One case per boundary of the matrix: each changes one thing from the passing row.
  */
-// QFAI:SPEC-0004:TC-0004-0075
-// QFAI:SPEC-0004:TC-0004-0076
-// QFAI:SPEC-0004:TC-0004-0077
+// QFAI:SPEC-0004:TC-0004-0085
+// QFAI:SPEC-0004:TC-0004-0086
+// QFAI:SPEC-0004:TC-0004-0087
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -141,22 +141,22 @@ function refusedBy(check: string) {
   return [{ severity: "error", row: true, check }];
 }
 
-describe("TC-0004-0075: a cited authorization that passes every check", () => {
-  it("TC-0004-0075 create-row: two CAPs cited and one bound raise no QFAI-TRIAGE-011 or QFAI-TRIAGE-005", async () => {
+describe("TC-0004-0085: a cited authorization that passes every check", () => {
+  it("TC-0004-0085 create-row: two CAPs cited and one bound raise no QFAI-TRIAGE-011 or QFAI-TRIAGE-005", async () => {
     const found = codes(await findingsFor());
     expect(found).not.toContain("QFAI-TRIAGE-011");
     expect(found).not.toContain("QFAI-TRIAGE-005");
   });
 
-  it("TC-0004-0075 column-position: the column after Depends-On raises no QFAI-TRIAGE-011 or QFAI-TRIAGE-005", async () => {
+  it("TC-0004-0085 column-position: the column after Depends-On raises no QFAI-TRIAGE-011 or QFAI-TRIAGE-005", async () => {
     const found = codes(await findingsFor({ headers: AFTER }));
     expect(found).not.toContain("QFAI-TRIAGE-011");
     expect(found).not.toContain("QFAI-TRIAGE-005");
   });
 });
 
-describe("TC-0004-0076: a cited authorization that breaks one check", () => {
-  it("TC-0004-0076 resolves-malformed: a value outside the two-segment grammar names the Resolves check", async () => {
+describe("TC-0004-0086: a cited authorization that breaks one check", () => {
+  it("TC-0004-0086 resolves-malformed: a value outside the two-segment grammar names the Resolves check", async () => {
     const values = [
       "run-2026092404571299/create-0001",
       `${RUN}/create.0001`,
@@ -169,7 +169,7 @@ describe("TC-0004-0076: a cited authorization that breaks one check", () => {
     }
   });
 
-  it("TC-0004-0076 resolves-outside: a run directory linked outside the workflow directory names the Resolves check", async () => {
+  it("TC-0004-0086 resolves-outside: a run directory linked outside the workflow directory names the Resolves check", async () => {
     const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
     roots.push(outside);
     await writeRun(outside, RECORD, [BINDING]);
@@ -183,48 +183,48 @@ describe("TC-0004-0076: a cited authorization that breaks one check", () => {
     expect(refusal(findings)).toEqual(refusedBy("Resolves"));
   });
 
-  it("TC-0004-0076 resolves-missing: a well-formed value with no record file names the Resolves check", async () => {
+  it("TC-0004-0086 resolves-missing: a well-formed value with no record file names the Resolves check", async () => {
     const findings = await findingsFor({
       after: (root) => rm(recordFile(path.join(workflowDir(root), RUN))),
     });
     expect(refusal(findings)).toEqual(refusedBy("Resolves"));
   });
 
-  it("TC-0004-0076 resolves-unparsable: a record that is not JSON names the Resolves check", async () => {
+  it("TC-0004-0086 resolves-unparsable: a record that is not JSON names the Resolves check", async () => {
     const findings = await findingsFor({
       after: (root) => writeFile(recordFile(path.join(workflowDir(root), RUN)), "{ not json"),
     });
     expect(refusal(findings)).toEqual(refusedBy("Resolves"));
   });
 
-  it("TC-0004-0076 kind: a request_scope record names the Kind check", async () => {
+  it("TC-0004-0086 kind: a request_scope record names the Kind check", async () => {
     const record = { ...RECORD, kind: "request_scope" };
     expect(refusal(await findingsFor({ record }))).toEqual(refusedBy("Kind"));
   });
 
-  it("TC-0004-0076 operation: a record whose operation is null names the Operation check", async () => {
+  it("TC-0004-0086 operation: a record whose operation is null names the Operation check", async () => {
     const record = { ...RECORD, operation: null };
     expect(refusal(await findingsFor({ record }))).toEqual(refusedBy("Operation"));
   });
 
-  it("TC-0004-0076 operation-non-create: a DELETE row carrying a reference names the Operation check", async () => {
+  it("TC-0004-0086 operation-non-create: a DELETE row carrying a reference names the Operation check", async () => {
     const row = { ...CREATE_ROW, Operation: "DELETE", "Existing Spec": "spec-0001" };
     expect(refusal(await findingsFor({ row }))).toEqual(refusedBy("Operation"));
   });
 
-  it("TC-0004-0076 binding-create: a slot bound to a CAP the Rationale does not cite names the Binding check", async () => {
+  it("TC-0004-0086 binding-create: a slot bound to a CAP the Rationale does not cite names the Binding check", async () => {
     const bindings = [{ ...BINDING, capabilityId: "CAP-0020" }];
     expect(refusal(await findingsFor({ bindings }))).toEqual(refusedBy("Binding"));
   });
 
-  it("TC-0004-0076 answerer: an answeredBy differing only in case names the Answerer check", async () => {
+  it("TC-0004-0086 answerer: an answeredBy differing only in case names the Answerer check", async () => {
     const record = { ...RECORD, answeredBy: "Yusuke_Senaga" };
     expect(refusal(await findingsFor({ record }))).toEqual(refusedBy("Answerer"));
   });
 });
 
-describe("TC-0004-0077: staleness is not judged by the validator", () => {
-  it("TC-0004-0077: a year-old record whose capability text differs from today's raises no QFAI-TRIAGE-011", async () => {
+describe("TC-0004-0087: staleness is not judged by the validator", () => {
+  it("TC-0004-0087: a year-old record whose capability text differs from today's raises no QFAI-TRIAGE-011", async () => {
     const record = {
       ...RECORD,
       recordedAt: "2025-09-24T04:57:12.999Z",

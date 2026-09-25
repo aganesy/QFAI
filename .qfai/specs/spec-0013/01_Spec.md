@@ -70,7 +70,7 @@ each rule added on 2026-09-24 is realized by, in `## Contract Realization`.
 - Policy: Drift Protocol mandatory
 - Discussion-pack preflight is mandatory; stop only when no usable source exists
 - `10_Plan.md` is How-only SSOT; do not create `specs/plan.md`
-- `_policies/08_Decisions.md` DR-0296: a new capability is approved once, at routing. Stage 1 checks the cited `human_decision` instead of asking; `DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` and `UPDATE:REMOVE` keep the question; `--auto` approves nothing
+- `_policies/08_Decisions.md` DR-0299: a new capability is approved once, at routing. Stage 1 checks the cited `human_decision` instead of asking; `DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` and `UPDATE:REMOVE` keep the question; `--auto` approves nothing
 - `_policies/08_Decisions.md` DR-0297: a diagnosed missing-test row is appended in Phase 2b with no Change Request, and AC and BR do not change
 - `_policies/11_Slice-Policy.md` decision procedure steps 3 and 4: the in-run `CREATE` approval, and the `Authorization-Ref` and `Approved By` cells of a row it approves
 
@@ -114,7 +114,7 @@ requirement and the rules of `04_Business-Rules.md` that state it.
 | Requirement                             | Home                                                                                                              |
 | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `discussion-20260923171450572#REQ-0013` | CLI-WF `### Work order`, `### Stage result`; BR-0013-0031                                                         |
-| `discussion-20260923171450572#REQ-0042` | CLI-WF `## Authorizations`; CLI-VAL `## Triage authorization reference`; BR-0013-0022, BR-0013-0023, BR-0013-0024 |
+| `discussion-20260923171450572#REQ-0042` | CLI-WF `## Authorizations`; CLI-VAL `## Triage authorization reference`; BR-0013-0037, BR-0013-0038, BR-0013-0024 |
 | `discussion-20260923171450572#REQ-0043` | CLI-VAL `## Triage authorization reference`; CLI-WFFILE `## Authorization record`; BR-0013-0026                   |
 | `discussion-20260923171450572#REQ-0044` | CLI-WF `## Authorizations`; BR-0013-0025                                                                          |
 | `discussion-20260923171450572#REQ-0047` | CLI-WF `## Ledger row-set check`; CLI-WFFILE `### Vocabulary`; BR-0013-0027..BR-0013-0030, BR-0013-0036           |

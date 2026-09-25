@@ -72,47 +72,12 @@
 - When `qfai validate` runs
 - Then a finding is emitted naming the offending directory; the canonical layer enum (`constitution`, `manifest`, `catalog`, `process`) is enumerated in the finding text; severity is at least warning during the deprecation window (D-DEPRECATED-PATH co-fires per REQ-0040)
 
-## AC-0004-0016
-
-- US-Refs: US-0004-0029
-- Given a work-log entry file at `.qfai/steering/<name>.md` whose YAML frontmatter omits a required field, uses a wrong enum value for `kind`/`status`, or carries a malformed `created`/`updated` timestamp
-- When `qfai validate` runs
-- Then `W-WORKLOG-SCHEMA` is emitted at warning severity (non-blocking) naming the file and the offending field; valid entries do not trigger it
-
-## AC-0004-0017
-
-- US-Refs: US-0004-0029
-- Given a work-log entry whose `links: [spec-0099, discussion-99991231235959999, entry-XXXX-FAKE]` references resources that do not exist on disk
-- When `qfai validate` runs
-- Then `W-WORKLOG-BROKEN-LINK` is emitted at warning severity for each unresolved reference, naming the entry file and the unresolved token
-
 ## AC-0004-0018
 
 - US-Refs: US-0004-0030
-- Given a reviewer report containing an `R-WORKLOG-DRIFT` or `R-REJECTED-READOPT` finding with an empty or missing `justification:` field
+- Given a reviewer report containing an `R-REJECTED-READOPT` finding with an empty or missing `justification:` field
 - When `qfai validate` ingests the reviewer report
-- Then the validator rejects the run with severity error (advisory-failing). A correctly-justified finding (non-empty `justification:` naming the entry ID or Decisions row) passes
-
-## AC-0004-0019
-
-- US-Refs: US-0004-0030
-- Given a work-log entry with `kind: handoff` whose body is missing at least one of the 5 required sections (`## State of the task`, `## Next single action`, `## Constraints to preserve`, `## Open questions`, `## References to consult first` — canonical per `.qfai/contracts/cli/worklog-entry.schema.md`)
-- When `qfai validate` runs
-- Then `R-HANDOFF-INCOMPLETE` is emitted at error severity; the finding text names the missing section(s) and the entry file
-
-## AC-0004-0020
-
-- US-Refs: US-0004-0031
-- Given a work-log entry of `kind: decision` whose `promote-to: 07_Decisions.md` is set but `07_Decisions.md` does NOT yet contain a row referencing the entry AND no `promoted-to` back-ref exists in the entry's frontmatter
-- When `qfai validate` runs
-- Then `W-PENDING-PROMOTION` is emitted at warning severity AND a dedicated section "Pending Promotions" appears in the validate report
-
-## AC-0004-0021
-
-- US-Refs: US-0004-0031
-- Given a `status: active` work-log entry whose `updated` timestamp is older than 90 days from now
-- When `qfai validate` runs
-- Then `W-WORKLOG-STALE` is emitted at warning severity naming the entry and its age in days
+- Then the validator rejects the run with severity error (advisory-failing). A finding with a non-empty `justification:` naming the Decisions row passes
 
 ## AC-0004-0022
 
@@ -144,38 +109,10 @@
 
 ## AC-0004-0026
 
-- US-Refs: US-0004-0029 (sub-criterion of REQ-0035 frontmatter schema; meta-validation of the manifest pipeline that surfaces agent SSOT divergence)
+- US-Refs: US-0004-0001
 - Given the `agent-catalog.yml` entry for any agent declares a `developer_instructions` field that diverges from the canonical `.qfai/assistant/agents/<name>.md` body (from `## Mission` onward, line-ending normalized)
 - When the SSOT-guard test (`tests/codex/agents.test.ts` ssot-guard test) runs
 - Then the test FAILS naming the diverging agent id so the 3-way SSOT (canonical MD ↔ codex TOML ↔ `agent-catalog.yml`) cannot silently drift
-
-## AC-0004-0027
-
-- US-Refs: US-0004-0029 (sub-criterion of REQ-0035 frontmatter schema)
-- Given a `.qfai/steering/<id>.md` entry whose `created` or `updated` field value either (a) does not match the surface regex `^\d{4}-\d{2}-\d{2}$` OR (b) matches the regex but is not a valid calendar date (e.g. `2026-02-30`, `2026-13-01`)
-- When `qfai validate` runs
-- Then `W-WORKLOG-SCHEMA` is emitted at warning severity per non-conformant field (rule: `worklogSurface.schema.createdFormat` / `updatedFormat`) — both branches are handled by `isValidCalendarDate()` round-trip detection so neither bad-syntax nor calendar-rollover dates can silently flow through schema validation
-
-## AC-0004-0028
-
-- US-Refs: US-0004-0029 (sub-criterion of REQ-0035 frontmatter schema)
-- Given a `.qfai/steering/<id>.md` entry whose `updated` ISO-8601 date is strictly earlier than its `created` ISO-8601 date
-- When `qfai validate` runs
-- Then `W-WORKLOG-SCHEMA` (rule: `worklogSurface.schema.updatedOrder`) is emitted at warning severity naming both dates, enforcing the worklog contract's `updated >= created` invariant
-
-## AC-0004-0029
-
-- US-Refs: US-0004-0029 (sub-criterion of REQ-0039 link integrity)
-- Given a `.qfai/steering/<id>.md` entry whose `links` array contains one or more non-string elements (e.g. `links: [123, true]`)
-- When `qfai validate` runs
-- Then `W-WORKLOG-SCHEMA` (rule: `worklogSurface.schema.linksElementType`) is emitted per non-string element so malformed link items cannot bypass schema and broken-link checks
-
-## AC-0004-0030
-
-- US-Refs: US-0004-0029 (sub-criterion of REQ-0035 frontmatter schema)
-- Given a `.qfai/steering/<id>.md` entry whose frontmatter `id` value does not match kebab-case ASCII (`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
-- When `qfai validate` runs
-- Then `W-WORKLOG-SCHEMA` (rule: `worklogSurface.schema.idFormat`) is emitted at warning severity naming the offending id, enforcing the worklog-entry.schema.md Storage-model requirement that `<id>` is kebab-case ASCII
 
 ## AC-0004-0031
 
@@ -243,12 +180,12 @@
 - When the `check-pack-locations.mjs` lane runs
 - Then the lane passes silently with no `R-PACK-LOCATION-DRIFT` finding; pre-existing legacy packs on unrelated PRs are not re-flagged (staged/changed-dir scope, not a full-tree walk, per DR-0274)
 
-## AC-0004-0040: One approval set decides which rows need approval
+## AC-0004-0045: One approval set decides which rows need approval
 
 - US-Refs: US-0004-0040
 
 ```gherkin
-# AC-0004-0040
+# AC-0004-0045
 # Source: discussion-20260923171450572#REQ-0043
 Scenario: The triage approval check uses the approval set the triage code defines
   Given a triage table with one row per operation and sub-operation, each with `Approved By` `-`
@@ -257,12 +194,12 @@ Scenario: The triage approval check uses the approval set the triage code define
   And every existing triage-validator test passes unchanged
 ```
 
-## AC-0004-0041: A cited authorization is checked against its record
+## AC-0004-0046: A cited authorization is checked against its record
 
 - US-Refs: US-0004-0040
 
 ```gherkin
-# AC-0004-0041
+# AC-0004-0046
 # Source: discussion-20260923171450572#REQ-0043
 Scenario: A triage row citing a workflow authorization passes only when the record matches it
   Given a triage row whose `Authorization-Ref` cites a record under `.qfai/evidence/workflow/`

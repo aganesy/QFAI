@@ -79,10 +79,10 @@
 - AC-Refs: AC-0011-0010
 - Verify `/qfai-implement` reads `design-system.yaml` token tables that are byte-equivalent to root `DESIGN.md` token tables after parse normalization, and surfaces drift through the design contract validators.
 
-## TC-0011-0013: The Implement Stage Follows the Stage-Skill Handover
+## TC-0011-0028: The Implement Stage Follows the Stage-Skill Handover
 
-- EX-Ref: EX-0011-0010
-- AC-Refs: AC-0011-0012
+- EX-Ref: EX-0011-0025
+- AC-Refs: AC-0011-0026
 - Type: normal
 - Level: L3
 - Verify, by reading the shipped `qfai-implement/SKILL.md` and `qfai-implement/references/orchestrated-mode.md`, that `SKILL.md` holds exactly one line citing `references/orchestrated-mode.md`, and that the reference states the entry check: in mode `active`, a request with no work order and no name is passed to `qfai-run` with nothing edited, and a worker checks the run, stage instance and work-order IDs and does only that work order's work.

@@ -1353,8 +1353,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // layout is past its compatibility window and that `qfai init` reports it on stderr as a
     // `D-DEPRECATED-PATH` error naming `--upgrade-assistant-tree`. Derived by running `qfai init`
     // into a temp root; restoring the old item reproduces `754c7708…` byte for byte.
+    //
+    // Re-pinned for the work-log surface item, which the run no longer writes into the list of
+    // canonical `.qfai/` locations. Derived by running `qfai init` into a temp root; restoring
+    // that one item reproduces `cac822f9…` byte for byte.
     ".github/copilot-instructions.md",
-    "cac822f91351a52f063ea26feccbcf2bb610fd6ad6937eafb57f8e5014aa2cfd",
+    "b786f88e7f0ffa81f6cd48808656031968028d3a01cbd5480854810c6c3b2e66",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
