@@ -635,13 +635,28 @@ function stageSetGaps(proposal: WorkflowProposal, facts: WorkflowFacts): string[
 // The stages whose work orders bind no spec. Every other stage takes the bound spec as its target.
 const UNTARGETED_STAGES = ["route", "discussion", "maintenance", "verify"];
 
+function takesSpecTarget(stageKind: string): boolean {
+  return !UNTARGETED_STAGES.includes(stageKind);
+}
+
 // A proposal with no new capability binds the one spec it affects, when its plan needs a spec.
 function bindsAffectedSpec(proposal: WorkflowProposal, facts: WorkflowFacts): boolean {
   const plan = proposal.candidateRoute ? facts.plans?.[proposal.candidateRoute] : undefined;
   return (
     proposal.newCapabilities.length === 0 &&
-    (plan?.stages ?? []).some((stage) => !UNTARGETED_STAGES.includes(stage.stageKind))
+    (plan?.stages ?? []).some((stage) => takesSpecTarget(stage.stageKind))
   );
+}
+
+// A work order names the bound spec when its stage takes a spec target, and no target otherwise.
+function targetMatchesBinding(
+  workOrder: WorkflowWorkOrder,
+  stageKind: string,
+  snapshot: WorkflowSnapshot,
+): boolean {
+  const target = workOrder.target;
+  if (!takesSpecTarget(stageKind)) return target === undefined;
+  return target?.kind === "spec" && target.specId === snapshot.specBinding?.specId;
 }
 
 function checkedPlan(proposal: WorkflowProposal, facts: WorkflowFacts): WorkflowPlan | undefined {
@@ -1032,8 +1047,7 @@ function routePlanIsInvalid(
         stages[0].operation !== "non-normative-edit" ||
         stages[1]?.stageKind !== "verify" ||
         stages[1].skill !== "qfai-verify" ||
-        stages[1].operation !== "verify-full" ||
-        !boundToSpec
+        stages[1].operation !== "verify-full"
       );
     case "bugfix":
       return (
@@ -1198,10 +1212,10 @@ function ledgerOf(
   return { specId, rowIds, rowSetDigest };
 }
 
-// The row set of the spec a work order is bound to, as the ledger fact reads it now.
+// The row set of the ledger a work order carries, as the ledger fact reads it now.
 function rowSetOf(workOrder: WorkflowWorkOrder, facts: WorkflowFacts) {
-  const target = workOrder.target;
-  if (target?.kind !== "spec" || facts.ledger?.specId !== target.specId) return undefined;
+  const specId = workOrder.ledger?.specId;
+  if (!specId || facts.ledger?.specId !== specId) return undefined;
   return facts.ledger.rows.map(({ rowId, status, digest }) => ({ rowId, status, digest }));
 }
 
@@ -2474,9 +2488,11 @@ export function decide(
         validity: facts.receiptValidity?.[ref] ?? "unknown",
       }));
     }
+    // A stage that takes no target still carries the bound spec's ledger, when the run has one.
+    const targeted = takesSpecTarget(stage.stageKind);
     if (isDirect || isBugfix || isBounded) {
       const specId = snapshot.specBinding?.specId;
-      if (!specId || !stage.skill || !stage.operation) {
+      if ((targeted && !specId) || !stage.skill || !stage.operation) {
         return {
           verdict: {
             ok: false,
@@ -2486,14 +2502,16 @@ export function decide(
           events: [],
         };
       }
-      nextWorkOrder.target = { kind: "spec", specId };
-      const inputs = diagnosisInputs(stage.stageKind, snapshot.diagnosis, facts);
-      if (inputs.length > 0) nextWorkOrder.inputs = inputs;
-      const ledger = ledgerOf(specId, stage.stageKind, snapshot.diagnosis, facts);
-      if (ledger) nextWorkOrder.ledger = ledger;
+      if (specId) {
+        if (targeted) nextWorkOrder.target = { kind: "spec", specId };
+        const inputs = diagnosisInputs(stage.stageKind, snapshot.diagnosis, facts);
+        if (inputs.length > 0) nextWorkOrder.inputs = inputs;
+        const ledger = ledgerOf(specId, stage.stageKind, snapshot.diagnosis, facts);
+        if (ledger) nextWorkOrder.ledger = ledger;
+      }
     } else if (plan.route === "feature" && stage.stageKind !== "sdd" && snapshot.specBinding) {
       const specId = snapshot.specBinding.specId;
-      nextWorkOrder.target = { kind: "spec", specId };
+      if (targeted) nextWorkOrder.target = { kind: "spec", specId };
       const ledger = ledgerOf(specId, stage.stageKind, snapshot.diagnosis, facts);
       if (ledger) nextWorkOrder.ledger = ledger;
     } else if (stage.stageKind === "sdd") {
@@ -2578,8 +2596,7 @@ export function decide(
       workOrder?.stageInstanceId !== nextStage.stageInstanceId ||
       workOrder.stageKind !== nextStage.stageKind ||
       ((plan.route === "direct" || plan.route === "bugfix" || plan.route === "bounded-change") &&
-        (workOrder.target?.kind !== "spec" ||
-          workOrder.target.specId !== snapshot.specBinding?.specId ||
+        (!targetMatchesBinding(workOrder, nextStage.stageKind, snapshot) ||
           workOrder.executor?.skill !== executorSkill(nextStage, snapshot.diagnosis, facts) ||
           workOrder.operation !== nextStage.operation)) ||
       (plan.route === "bugfix" &&

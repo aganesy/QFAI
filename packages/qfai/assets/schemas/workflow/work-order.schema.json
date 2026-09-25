@@ -25,7 +25,7 @@
   ],
   "if": {
     "required": ["stageKind"],
-    "properties": { "stageKind": { "enum": ["route", "discussion"] } }
+    "properties": { "stageKind": { "enum": ["route", "discussion", "maintenance", "verify"] } }
   },
   "else": { "required": ["target"], "properties": { "target": true } },
   "properties": {
@@ -42,7 +42,7 @@
       "properties": { "skill": { "type": "string", "minLength": 1 } }
     },
     "target": {
-      "description": "Absent only on the routing and discussion work orders, which bind no spec.",
+      "description": "Absent only on the routing, discussion, maintenance and verify work orders, which bind no spec.",
       "oneOf": [
         {
           "type": "object",

@@ -92,6 +92,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A proposal whose plan needs a spec and whose `affectedSpecIds` names none, or
   more than one, is refused with the new reason `spec-binding`.
 
+- **A `direct` workflow run no longer needs a spec, and `maintenance` and
+  `verify` work orders carry no `target`** (#2399). A `direct` run edits
+  nothing normative, so it binds no spec, and `qfai workflow next` used to
+  answer "The plan is not ready." for it. The `maintenance` and `verify` work
+  orders of every route now leave `target` out. A `verify` work order still
+  carries the bound spec's `ledger` when the run has one. The work-order schema
+  accepts both kinds without a `target`.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

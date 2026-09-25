@@ -120,7 +120,6 @@ it("TC-0018-0165 (TDD-0218): Drive a direct run from start to finish with canned
   if (!plan) throw new Error("the routing result is checked into the direct plan");
   const base = {
     plan,
-    specBinding: { specId: "spec-0007" },
     completionTarget: "qfai_done" as const,
     baseline: {
       findings: [],
@@ -130,11 +129,13 @@ it("TC-0018-0165 (TDD-0218): Drive a direct run from start to finish with canned
     },
   };
   const acceptedStages: NonNullable<Snapshot["acceptedStages"]> = [];
+  const targets: unknown[] = [];
   for (const stage of directStages) {
     const issued = decide({ ...base, run, acceptedStages }, { operation: "next" }, {});
     run = record(issued);
     const workOrder = issued.verdict.workOrder;
     if (!workOrder) throw new Error(`the ready run issues ${stage.stageInstanceId}`);
+    targets.push(workOrder.target);
     const reviewed = stage.stageKind === "verify" ? { reviewResults: reviews } : {};
     const snapshot = { ...base, run, acceptedStages, outstandingWorkOrder: workOrder };
     run = record(accept(snapshot, `result-${stage.stageKind}`, {}, reviewed));
@@ -159,6 +160,7 @@ it("TC-0018-0165 (TDD-0218): Drive a direct run from start to finish with canned
     const state = decision.verdict.run?.state ?? "none";
     return created ? ["created", state] : [state];
   });
+  expect(targets).toEqual([undefined, undefined]);
   expect(states).toEqual([
     "created",
     "routing",

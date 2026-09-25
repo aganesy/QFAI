@@ -40,7 +40,6 @@ it("TC-0018-0082 (TDD-0101): A verify result needs_repair whose finding sits in 
     stageInstanceId: "bounded-verify",
     attempt: 1,
     stageKind: "verify",
-    target: { kind: "spec" as const, specId: "spec-0007" },
     executor: { skill: "qfai-verify" },
     operation: "verify-full",
   };

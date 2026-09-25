@@ -334,7 +334,7 @@ const activeSpecs = {
   plans: { bugfix: bugfixPlan },
 };
 
-it("TC-0018-0012: spec-binding", () => {
+it("TC-0018-0012 (TDD-0530): spec-binding", () => {
   const actual = [
     acceptRouting(bugfixProposal(["spec-0007", "spec-0008"]), activeSpecs),
     acceptRouting(bugfixProposal([]), activeSpecs),
