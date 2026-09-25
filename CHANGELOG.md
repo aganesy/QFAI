@@ -37,6 +37,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A ledger row that owes a test case and names none is reported**
+  (#2156). `QFAI-TDDLIST-022` (`error`) reports a ledger row whose `TC-Refs`
+  holds no `TC-*` id: an empty cell, a `-`, `n/a` or a requirement id such as
+  `REQ-0012-0075 (REQ-0109 follow-up)`. The other checks on the column read
+  only the ids it holds, so such a row passed them all. Every row is read
+  except `E2E` and `API` rows and an `Integration` row carrying a `CON-DB-*`
+  contract, which record their obligation in another column.
+  The seven spec-0012 rows it reported now name a case or are retired:
+  `TDD-0420` and `TDD-0496` duplicated other rows and are removed, and the
+  other five name new cases `TC-0012-0484` to `TC-0012-0488` and return to
+  `todo` (`CR-20260923-0001`, `CR-20260923-0012`).
+
 - **spec-0012 states what `--auto-serve` does when its teardown fails**
   (#2208). A case once required a failed teardown to be reported, and that
   clause was lost when the case was rewritten, so the report could be removed
