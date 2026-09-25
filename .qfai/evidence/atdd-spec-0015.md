@@ -95,6 +95,7 @@ packages/qfai/tests/assets/openRowAlreadyTested.test.ts 46ms (unchanged)
 
 Scoped validation, from a fresh repo build (`packages/qfai/node_modules/.bin/tsup`; the `dist/cli` bundles built, the local type-declaration step did not). Both runs exit 1 on backlog that `main` at `65a3437b5` reports the same way; none of the findings names `TDD-0039`.
 
+<!-- qfai:not-a-citation .qfai/report/run-20260925185919671/ -->
 ```text
 $ node packages/qfai/dist/cli/index.cjs validate --profile atdd --fail-on error --spec spec-0015 --format text
 counts: info=3 warning=1 error=9
@@ -337,8 +338,9 @@ P8 review, series `.qfai/evidence/atdd-spec-0015.md + <role> + 1`:
 | 1 | `review-20260925100118250` | REVISE (`completion-reviewer#2`) | REVISE (`qa-gatekeeper#2`) | working-tree+1cda4571992ac33ee7a03251103234a974ec4497334d81556381b96a2325a113 | ce4e9f803e6aeeccff97ebf572eeeb7f68bf0b43d3959cd263f270acc8d29cb9 |
 | 2 | `review-20260925100850645` | REVISE: the `full` dogfood pin for spec-0015 | PASS | working-tree+1cda4571992ac33ee7a03251103234a974ec4497334d81556381b96a2325a113 | ec0946e0cb0054423f677bd7eca95de79b67ae32d8090e71f2f84bc4ce5c9b7a |
 | 2b | `review-20260925102020101` | PASS, verifying the pin fix the user approved | - | working-tree+a13efff5f5b20ecbad486284a7af8c1073d23c5d4e3d03ea3498c4948408d440 | b872409b00d735960617e9d3fa87c1f88862dd53cf8a8cde1c6ef1c385899387 |
+| Record re-attestation | `review-20260925103342317` | PASS, after the citation-marker repair | PASS, re-attesting round 2 | working-tree+2a83a305568c62558994e2220e401d080ef79e8475c97ac5a1015fe1d8e5da65 | ccd85c343012456d172c22e5a101c8631ef25e748c145ed6a16178aebea77624 |
 
-Seals of the earlier rounds' packs: round 1 `71169c79eefc287c3ceb61f89c1c1e76591e18b7f6bcf2e8208b0ec5573ff3d3`, round 2 `f4d0c9dfa118581339edad1a0fbd2678a18129769f9b6d03617ff52fd7f418a1`.
+Seals of the earlier packs: round 1 `71169c79eefc287c3ceb61f89c1c1e76591e18b7f6bcf2e8208b0ec5573ff3d3`, round 2 `f4d0c9dfa118581339edad1a0fbd2678a18129769f9b6d03617ff52fd7f418a1`, round 2b `a43dc79d8850a72dd021f0eadacbc25a2b112497169221776469ce8d253f5851`.
 
 The dogfood backlog checks behind the pin fix ran with the local review packs moved aside, as a fresh clone has none, and with the regenerated `.qfai/report/**` restored afterwards:
 
@@ -351,5 +353,5 @@ $ node scripts/check-dogfood-backlog.mjs --profile tdd
 check-dogfood-backlog: tdd reports 947 error(s) across 13 file(s), all within the pinned backlog.
 ```
 
-Review pack: `.qfai/review/review-20260925102020101/` <!-- qfai:not-a-citation .qfai/review/review-<timestamp>/ -->
-Review pack seal: a43dc79d8850a72dd021f0eadacbc25a2b112497169221776469ce8d253f5851
+Review pack: `.qfai/review/review-20260925103342317/` <!-- qfai:not-a-citation .qfai/review/review-20260925103342317/ -->
+Review pack seal: 7ee11d1fe0b84f5a6665bd117e825c45b222e9f0b99922272ee15d446b417630
