@@ -3855,21 +3855,28 @@ Recorded per row under `## Ledger rows advanced`.
 - The comments inside the `TDD-0037` count case still speak of four and three installs.
   Only the titles were in scope.
 
-- `TDD-0094` stands at `review-fix`, in Round 2. `qa-gatekeeper#2` passed the
-  Round 2 RED. Its GREEN, Oracle proof and Refactor verify are recorded; the
-  build-phase gate on them, both reviews and the checkpoint are owed.
+- `TDD-0094` is `done`. Its Round 2 build-phase gate, both reviews and its
+  checkpoint are rows 82 to 85 of the Work Orders Summary.
+- `TDD-0001`'s `RED test hash` no longer recomputes. The work-log removal edited
+  `packages/qfai/tests/integration/initSpec0003.test.ts` after the row closed, so
+  `validate --profile tdd` reports `QFAI-TDDLIST-008` on it, within the dogfood pin.
+  The cross-spec re-verify of the row sits in
+  `.qfai/evidence/coverage-depth-spec-0003.md`, and it clears nothing on a fresh clone:
+  see that file's `## Shared-artifact re-verify`. `CR-20260926-0003` (open) asks to
+  reset the row so its own entry takes a new proof.
 
 ### /qfai-atdd run 2026-09-23T19:33:24.738Z
 
-- `TDD-0094` … `TDD-0099`: REDs passed by `qa-gatekeeper` (RED phase) on the approved file
-  hashes; handoffs ready. Each GREEN, with its reviews, follows per row.
-- `TDD-0097`'s RED cannot tell whether the plain run or the `--force` run changed the
-  directory; the plain run alone does on this tree. The planned Oracle proof, which seeds
-  only under `--force`, is what shows the row checks the `--force` run.
+- The rows this run handed over are gone. `CR-20260925-0010` withdrew the work-log rows
+  this change numbered `TDD-0094` … `TDD-0099`, with their test cases and tests. The
+  ledger tombstones `TDD-0095` … `TDD-0099`. The `TDD-0094` in the ledger is main's
+  closed-legacy-window row; the withdrawn one is `Withdrawn TDD-0094 (never merged)`.
+  Nothing this run handed over is owed.
 - The `BR-0003-0009` safety-floor cell (S1 D13) is raised as `CR-20260924-0005` (open).
   spec-0003's ATDD is not PASS on that cell until it lands.
-- Checkpoint departure (user decision, see Decisions made): no full-suite checkpoint runs
-  per row. All rows' full-suite checkpoints close together on the final head's CI.
+- Checkpoint departure (user decision, see Decisions made): no full-suite checkpoint ran
+  per row. The rows' full-suite checkpoint closed on the final head's CI, recorded under
+  `## First full CI checkpoint`.
 
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
@@ -3881,9 +3888,12 @@ falsifiability path, and `qa-gatekeeper`, `completion-reviewer` and
 `implementation-reviewer` passed each one. `TDD-0061`, `TDD-0093` and `TDD-0037`
 closed on the full suite.
 
-`TDD-0094` stands at `review-fix`, in Round 2: `qa-gatekeeper#2` passed its
-Round 2 RED, and its GREEN, Oracle proof and Refactor verify are recorded. The
-build-phase gate on the GREEN, both reviews and the checkpoint are owed.
+`TDD-0094` is `done`: `qa-gatekeeper#3` passed its Round 2 build-phase GREEN and
+Oracle proof, `completion-reviewer` and `implementation-reviewer` passed attempt 2,
+and its checkpoint is recorded.
+
+`TDD-0001` is `done` on a `RED test hash` that no longer recomputes, as `## Gaps /
+Open risks` records. `CR-20260926-0003` is open.
 
 ## First full CI checkpoint
 
@@ -3891,3 +3901,6 @@ build-phase gate on the GREEN, both reviews and the checkpoint are owed.
 - Run: https://github.com/aganesy/QFAI/actions/runs/36026684599
 - Result: PASS — build, lint, types, all nine package test slices, Node floor tests, and ci-pass succeeded.
 - Rows closed: TDD-0094, TDD-0095, TDD-0096, TDD-0097, TDD-0098, TDD-0099.
+- Rows withdrawn since: all six, by `CR-20260925-0010`, so this checkpoint is history.
+  The `TDD-0094` it closed is `Withdrawn TDD-0094 (never merged)`, not the ledger's
+  current `TDD-0094`.

@@ -904,6 +904,11 @@ are withdrawn by `CR-20260925-0010`, so the record is stage-level. The completio
 it only once this file's `## Final status` names the stage review pack and a seal that still
 recomputes. That section and its stage review do not exist yet.
 
+A stage review would not make the record count on CI. Review packs under `.qfai/review/` are
+not committed, and the gate treats a pack missing from the checkout as no seal. On a fresh
+clone the record clears nothing, so `QFAI-TDDLIST-008` stays on the row and in the dogfood pin.
+`CR-20260926-0003` (open) asks to reset the row instead, so a new proof lands in its own entry.
+
 ### spec-0003/TDD-0001
 
 - Evidence file: .qfai/evidence/atdd-spec-0003.md

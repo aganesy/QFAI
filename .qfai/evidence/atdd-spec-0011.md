@@ -989,12 +989,12 @@ None yet; the REDs are recorded per row when they run.
 
 ## Gaps / Open risks
 
-- TDD-0021 through TDD-0023 reached `done` after their RED, GREEN, Oracle, Refactor verification, row reviews and the first full CI checkpoint.
+- TDD-0021 through TDD-0023 reached `done` after their RED, GREEN, Oracle, Refactor verification, row reviews and the first full CI checkpoint. `CR-20260925-0010` then withdrew them with `TC-0011-0013` and their test, and the ledger tombstones all three.
 - The four repository-wide accounting failures recorded above were from an earlier source-reading check. All package test slices passed at the first full CI checkpoint.
 - A spec-wide P8 stage review and scoped P5 validation are not recorded here, so no ATDD stage PASS is claimed.
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
-TDD-0021 through TDD-0023 are done after the first full CI checkpoint. This is a scoped row outcome; no spec-wide P8 PASS is claimed here.
+No row this run advanced is live. TDD-0021 through TDD-0023 closed at the first full CI checkpoint, and `CR-20260925-0010` then withdrew them; the ledger tombstones all three. No spec-wide P8 PASS is claimed here.
 
 ## First full CI checkpoint
 
@@ -1002,6 +1002,7 @@ TDD-0021 through TDD-0023 are done after the first full CI checkpoint. This is a
 - Run: https://github.com/aganesy/QFAI/actions/runs/36026684599
 - Result: PASS — build, lint, types, all nine package test slices, Node floor tests, and ci-pass succeeded.
 - Rows closed: TDD-0021, TDD-0022, TDD-0023.
+- Rows withdrawn since: all three, by `CR-20260925-0010`, so this checkpoint is history.
 
 ## Record defects
 

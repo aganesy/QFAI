@@ -4390,7 +4390,8 @@ node scripts/pin-stage-evidence-counts.mjs                               -> alre
 
 ## Gaps / Open risks
 
-Eight of the pack's twelve `done` rows are not backfilled. Four name an
+Eight rows are not backfilled. They are among the twelve rows past `todo` that
+`CR-20260913-0009` reset, and the ledger holds each at `todo` or `blocked`. Four name an
 obligation the product states the opposite of, and one an obligation a sibling
 in the same pack contradicts. The other three have a case that runs and no
 oracle for what the row's own obligation names.
@@ -4477,39 +4478,39 @@ revision, as it is for the three optional-side-artifact rows.
 
 ### /qfai-atdd run 2026-09-23T19:33:24.738Z
 
-- `TDD-0110` … `TDD-0115`: REDs passed by `qa-gatekeeper` (RED phase) on file hashes
-  `b45c049e…64e2e2a` and `c7517a90…1249df`; handoffs ready. The GREEN of `TDD-0110`, `TDD-0111`,
-  `TDD-0112`, `TDD-0113` and `TDD-0115` is the `/qfai-sdd` skill-text round. The earlier REDs of
-  `TDD-0111` and `TDD-0115` are kept as superseded history.
-- `TDD-0114` reads the whole shipped assistant tree, so its GREEN is the tree after the
-  spec-0011 skill-text GREEN and the schema withdrawal as well as its own.
-- Checkpoint departure (user decision, see Decisions made): no full-suite checkpoint runs per
-  row. All rows' full-suite checkpoints close together on the final head's CI.
+- The rows this run handed over are gone. `CR-20260925-0010` withdrew the rows this change
+  numbered `TDD-0110` … `TDD-0115`, with their test cases and tests. The ledger tombstones
+  `TDD-0112` … `TDD-0115`. The `TDD-0110` and `TDD-0111` in the ledger are main's rows; the
+  withdrawn ones are `Withdrawn TDD-0110 (never merged)` and `Withdrawn TDD-0111 (never
+  merged)`. Nothing this run handed over is owed.
+- Checkpoint departure (user decision, see Decisions made): no full-suite checkpoint ran per
+  row. The rows' full-suite checkpoint closed on the final head's CI, recorded under
+  `## First full CI checkpoint`.
 
 ## Final status
 
-Historical PASS for the original four rows, each for the part of its obligation named
-under "Ledger rows advanced". This is a per-row verdict, not a stage verdict:
-the pack is not clean, and eight of its twelve `done` rows are listed under Gaps
-rather than claimed.
+No stage verdict. The ledger holds two `done` rows, `TDD-0110` and `TDD-0111`, closed
+under `CR-20260925-0008`; their entries under "Ledger rows advanced" carry the proof
+and the reviews.
 
-The three new rows have live P1d falsifiability PASS and focused GREEN. Their
-full checkpoint, review pack and completion verdict remain pending.
+The per-row PASS of the original four rows is history. `CR-20260913-0009` reset them
+with the other rows past `todo` of `TDD-0019` … `TDD-0030`, and the ledger holds each
+at `todo` or `blocked`. The eight listed under Gaps are among them.
 
-TDD-0110 through TDD-0115 held a per-row PASS as TDD-0044 through TDD-0049. The
-renumbering returned them to `todo` (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"), so that verdict is history
-until they are completed again.
+The three rows `CR-20260913-0012` names, `TDD-0081` … `TDD-0083`, are at `todo`.
 
-`TDD-0110` and `TDD-0111` are handed over on the falsifiability branch. Their
-mutation runs, `qa-gatekeeper` verdicts, GREEN, review packs and checkpoint are
-`/qfai-implement`'s, and remain pending.
+The rows the work-log removal numbered `TDD-0110` … `TDD-0115` held a per-row PASS as
+`TDD-0044` … `TDD-0049`. `CR-20260925-0010` withdrew all six, so that verdict is
+history. Their rounds are in the `Withdrawn … (never merged)` sections and the
+`TDD-0112` … `TDD-0115` sections.
 
 ## First full CI checkpoint
 
 - Revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
 - Run: https://github.com/aganesy/QFAI/actions/runs/36026684599
 - Result: PASS — build, lint, types, all nine package test slices, Node floor tests, and ci-pass succeeded.
-- Rows closed: TDD-0110, TDD-0111, TDD-0112, TDD-0113, TDD-0114, TDD-0115, shown mapped. They were closed as TDD-0044..TDD-0049 before the renumber, so this checkpoint is history: the rows are `todo` again.
+- Rows closed: TDD-0110, TDD-0111, TDD-0112, TDD-0113, TDD-0114, TDD-0115, shown mapped. They were closed as TDD-0044..TDD-0049 before the renumber, so this checkpoint is history.
+- Rows withdrawn since: all six, by `CR-20260925-0010`. The `TDD-0110` and `TDD-0111` this checkpoint closed are the withdrawn rows, not the ledger's current `TDD-0110` and `TDD-0111`.
 
 ## Record defects
 
