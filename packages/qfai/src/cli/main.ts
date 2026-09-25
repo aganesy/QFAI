@@ -475,7 +475,7 @@ Options:
   --yes           init: reserved flag (no behavioural difference today because init is non-interactive; auto-Yes once prompts are introduced)
   --yes           doctor --autoremediate: skip the interactive confirmation (no effect elsewhere)
   --upgrade-assistant-tree   init: migrate an existing project to the 4-layer assistant tree
-                              (legacy .qfai/assistant/{instructions,steering}/ -> constitution/manifest/catalog/process/)
+                              (legacy .qfai/assistant/{instructions,steering}/ -> rule/ skill/ agent/ prompt/)
   --dry-run       init / doctor / handoff upgrade / prototyping iterate|rescope: show what would change without writing anything
   --verbose       init: expand the run report's skipped-path list (counts only by default)
   --format <text|github>       validate: output format

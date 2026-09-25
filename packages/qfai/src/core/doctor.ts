@@ -1059,7 +1059,7 @@ function formatNextActionHint(actions: ReadonlyArray<string>): string {
  *
  * `assets.lineBudget` measures every assistant asset, not just skills, so a
  * blanket "move a section under the skill's references/" would tell a reader to
- * relocate a constitution document or a manifest YAML into an unrelated skill
+ * relocate a rule document or an agent card into an unrelated skill
  * and break the loader contract that reads it from its own layer.
  */
 function assetLineBudgetNextActions(
@@ -1075,7 +1075,7 @@ function assetLineBudgetNextActions(
   }
   if (hasOtherAsset) {
     actions.push(
-      "split a non-skill asset (constitution/, rule/, manifest/, ...) by topic within its own layer, and update the paths that reference it",
+      "split a non-skill asset (rule/, agent/, prompt/) by topic within its own layer, and update the paths that reference it",
     );
   }
   // A separate action, because the two ceilings ask for different edits. A file
