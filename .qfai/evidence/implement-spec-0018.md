@@ -6263,7 +6263,7 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on first run; already satisfied by TDD-0479: only the kinds the contract lists get record areas, and a prototype on a target that is not UI-bearing is not one of them.
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0491): prototype-not-ui-bearing`
 - Production files: `packages/qfai/src/core/workflow/decide.ts` (the marker only)
-- SIMPLIFIED: a prototype work order names no record, which is the contract's answer for a target that is not UI-bearing. Lift when: the facts say whether a prototype's target is UI-bearing, and the UI-bearing case gets `.qfai/evidence/prototyping/grilling.md`.
+- SIMPLIFIED: a prototype work order names no record, which is the contract's answer for a target that is not UI-bearing. Lift when: the facts say whether a prototype's target is UI-bearing, and the UI-bearing case gets `.qfai/evidence/prototyping/grilling.md`. <!-- qfai:not-a-citation -->
 
 ### TDD-0492
 
@@ -6372,7 +6372,7 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - Test file: `packages/qfai/tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts`
 - Selector: `TC-0018-0255 (TDD-0504): evidence-decisions`
 - RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts --testNamePattern='TC-0018-0255 \(TDD-0504\): evidence-decisions' --reporter=verbose` (cwd `packages/qfai`)
-- RED result: exit 0 on first run; already satisfied by TDD-0019: `.qfai/evidence/decisions/` is one of the core's protected prefixes, so the proposal naming it is refused `protected-surface` and the run stays `routing` with no event.
+- RED result: exit 0 on first run; already satisfied by TDD-0019: `.qfai/evidence/decisions/` is one of the core's protected prefixes, so the proposal naming it is refused `protected-surface` and the run stays `routing` with no event. <!-- qfai:not-a-citation -->
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts > TC-0018-0255 (TDD-0504): evidence-decisions`
 - Production files: none
 
@@ -6382,7 +6382,7 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - Test file: `packages/qfai/tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts`
 - Selector: `TC-0018-0255 (TDD-0505): change-request`
 - RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts --testNamePattern='TC-0018-0255 \(TDD-0505\): change-request' --reporter=verbose` (cwd `packages/qfai`)
-- RED result: exit 0 on first run; already satisfied by TDD-0019: `.qfai/evidence/change-request-` is one of the core's protected prefixes, so the proposal naming it is refused `protected-surface` and the run stays `routing` with no event.
+- RED result: exit 0 on first run; already satisfied by TDD-0019: `.qfai/evidence/change-request-` is one of the core's protected prefixes, so the proposal naming it is refused `protected-surface` and the run stays `routing` with no event. <!-- qfai:not-a-citation -->
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts > TC-0018-0255 (TDD-0505): change-request`
 - Production files: none
 
@@ -6392,7 +6392,7 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - Test file: `packages/qfai/tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts`
 - Selector: `TC-0018-0255 (TDD-0506): decision-record`
 - RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts --testNamePattern='TC-0018-0255 \(TDD-0506\): decision-record' --reporter=verbose` (cwd `packages/qfai`)
-- RED result: exit 0 on first run; already satisfied by TDD-0019: `.qfai/evidence/decision-` is one of the core's protected prefixes, so the proposal naming it is refused `protected-surface` and the run stays `routing` with no event.
+- RED result: exit 0 on first run; already satisfied by TDD-0019: `.qfai/evidence/decision-` is one of the core's protected prefixes, so the proposal naming it is refused `protected-surface` and the run stays `routing` with no event. <!-- qfai:not-a-citation -->
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts > TC-0018-0255 (TDD-0506): decision-record`
 - Production files: none
 
