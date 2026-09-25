@@ -1506,7 +1506,7 @@
 - Type: unit
 - Level: L1
 - Test file: `packages/qfai/tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts`
-- Verify REQ-0012-0075 default runner response guard: a navigation answering 200, 204 or 399 is captured; one answering 404 or 500 fails with a reason naming the status, and one returning no response fails with `no response`; no failing navigation is screenshotted.
+- Verify REQ-0012-0075 default runner response guard: a navigation answering 200, 204 or 399 is captured; one answering 400, 404 or 500 fails with a reason naming the status, and one returning no response fails with `no response`; no failing navigation is screenshotted.
 
 ## TC-0012-0488
 
