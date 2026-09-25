@@ -69,6 +69,37 @@ research_summary:
   `primary`。それらから計算した集計は `secondary`。`url` と `published` は
   公開物のための欄であり、公開されていないものに書いてはならない
 
+## Quotation Rule
+
+Each `best_practices` and `anti_patterns` `description` is the analyst's own
+indirect speech. A phrase kept from the source is marked as a quotation.
+
+An unmarked passage lifted from a page reads as the project's own finding, and
+the `source_id` beside it then attributes the wrong words.
+
+Example. The source says: "Retry idempotent requests with exponential backoff
+and jitter; never retry a non-idempotent write." The entry reads:
+
+```yaml
+description: >-
+  Only a request that is safe to repeat is retried, and the wait between
+  attempts grows and is randomized, which the source calls "exponential
+  backoff and jitter".
+```
+
+This is correct because the claim is restated in the analyst's words, and the
+one phrase kept verbatim is in quotation marks, so a reader can tell which words
+are the source's.
+
+## Name Verification Rule
+
+Where a query centers on a name — a framework, a model, a CLI tool, a component
+catalogue, a theme — that name is what gets verified. Search it as it was
+written.
+
+Recognizing the name is not grounds to skip the search. Partial background on a
+name is what makes an out-of-date answer sound authoritative.
+
 ## Conflict Protocol
 
 - 新しいリサーチ結果が既存の BP/AP ルールと矛盾する場合:

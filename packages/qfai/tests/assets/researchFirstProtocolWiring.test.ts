@@ -214,6 +214,22 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       const protocol = await readFile(protocolPath, "utf-8");
       expect(section(protocol, "## Storage")).toContain("04_Sources.md");
     });
+
+    it(`${path.relative(repoRoot, protocolPath)}: descriptions mark any phrase kept from the source`, async () => {
+      const quotation = section(await readFile(protocolPath, "utf-8"), "## Quotation Rule");
+      expect(quotation).toContain("indirect speech");
+      expect(quotation).toContain("marked as a quotation");
+      // The rule is taught by one worked example: the source, the entry, and why.
+      expect(quotation).toContain("The source says:");
+      expect(quotation).toContain("description:");
+      expect(quotation).toContain("This is correct because");
+    });
+
+    it(`${path.relative(repoRoot, protocolPath)}: a recognized name is still searched`, async () => {
+      const names = section(await readFile(protocolPath, "utf-8"), "## Name Verification Rule");
+      expect(names).toContain("Search it as it was");
+      expect(names).toContain("not grounds to skip the search");
+    });
   }
 
   it("the shipped slot is structurally complete for validateResearchSummary", async () => {
