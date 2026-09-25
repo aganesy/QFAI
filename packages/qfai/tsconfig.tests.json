@@ -384,6 +384,7 @@
     "tests/assets/gateItemBudget.test.ts",
     "tests/core/gitChanges.test.ts",
     "tests/integration/workflow/plans.test.ts",
+    "tests/integration/workflow/schemas.test.ts",
     "tests/integration/workflow/shippedAssets.test.ts",
     "tests/integration/workflow/skillAssets.test.ts",
     "tests/unit/workflow/aBudgetIsNeverAPass.test.ts",

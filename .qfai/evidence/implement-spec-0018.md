@@ -314,6 +314,8 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0446 | TC-0018-0229 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0447 | TC-0018-0230 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0448 | TC-0018-0231 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0452 | TC-0018-0235 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0453 | TC-0018-0236 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0465 | TC-0018-0238 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0466 | TC-0018-0239 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0467 | TC-0018-0239 | Closed `exception` under DR-0298; per-row review waived |
@@ -4917,6 +4919,34 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on its first run; already satisfied by the five schemas this change adds, each `$id` `urn:qfai:workflow:<name>` and none carrying `schemaVersion`; the pre-build lint reports nothing in the plans, and the post-build guard, run over a package publishing the plans and the schemas, exits 0 and fails when `spec-0042` is planted in a schema
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/shippedAssets.test.ts > TC-0018-0231 (TDD-0448): Read the five shipped schemas and the plans`
 - Production files: `packages/qfai/assets/schemas/workflow/authorization.schema.json`, `execution-context.schema.json`, `route-proposal.schema.json`, `stage-result.schema.json`, `work-order.schema.json`
+
+### TDD-0452
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/schemas.test.ts`
+- Selector: `TC-0018-0235 (TDD-0452): Validate every payload example and fixture with the parser and with the five schemas`
+- RED result: not observed: the schemas were written before the test. An Integration row may not record `RED:n-a` (`QFAI-TDDLIST-013`), so the row takes the falsifiability route.
+- Satisfied-by: `packages/qfai/assets/schemas/workflow/route-proposal.schema.json` `$defs.observedReference`, which already required a non-empty `ref`.
+- Falsifiability command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run --config ../../tmp/lane-a/vitest.ajv.config.mjs --reporter=verbose` (cwd `packages/qfai`), with `$defs.observedReference.properties.ref.minLength` set to `0`, then restored with `git checkout`.
+- Falsifiability result: exit 1; `AssertionError` at `tests/integration/workflow/schemas.test.ts`, the `disagreements` array received `"empty ref"` where `[]` was expected.
+- GREEN command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run --config ../../tmp/lane-a/vitest.ajv.config.mjs --reporter=verbose` (cwd `packages/qfai`). The config only includes this test file and aliases `ajv/dist/2020` to a scratch install of `ajv` 8.20.0 under `tmp/`.
+- GREEN result: exit 0; `✓ tests/integration/workflow/schemas.test.ts > TC-0018-0235 (TDD-0452): Validate every payload example and fixture with the parser and with the five schemas`
+- Resolution note: the plain command (`NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/schemas.test.ts`) cannot resolve `ajv` in this checkout, whose `node_modules` predates the dependency. `ajv` is a devDependency in `packages/qfai/package.json` and in the lockfile, so CI installs it and runs the file with the plain command.
+- Production files: `packages/qfai/assets/schemas/workflow/*.schema.json` (five schemas), `packages/qfai/src/core/workflow/parse.ts`
+
+### TDD-0453
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/schemas.test.ts`
+- Selector: `TC-0018-0236 (TDD-0453): A planted payload with an unknown key`
+- RED result: not observed: the schemas were written before the test. An Integration row may not record `RED:n-a` (`QFAI-TDDLIST-013`), so the row takes the falsifiability route.
+- Satisfied-by: `packages/qfai/assets/schemas/workflow/route-proposal.schema.json` `$defs.observedReference`, which already carried `additionalProperties: false`.
+- Falsifiability command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run --config ../../tmp/lane-a/vitest.ajv.config.mjs --reporter=verbose` (cwd `packages/qfai`), with `$defs.observedReference.additionalProperties` set to `true`, then restored with `git checkout`.
+- Falsifiability result: exit 1; `AssertionError: expected { reference: [ false, true ], …(1) } to deeply equal { reference: [ false, false ], …(1) }` at `tests/integration/workflow/schemas.test.ts:166`.
+- GREEN command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run --config ../../tmp/lane-a/vitest.ajv.config.mjs --reporter=verbose` (cwd `packages/qfai`). The config only includes this test file and aliases `ajv/dist/2020` to a scratch install of `ajv` 8.20.0 under `tmp/`.
+- GREEN result: exit 0; `✓ tests/integration/workflow/schemas.test.ts > TC-0018-0236 (TDD-0453): A planted payload with an unknown key`
+- Resolution note: the plain command (`NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/schemas.test.ts`) cannot resolve `ajv` in this checkout, whose `node_modules` predates the dependency. `ajv` is a devDependency in `packages/qfai/package.json` and in the lockfile, so CI installs it and runs the file with the plain command.
+- Production files: `packages/qfai/assets/schemas/workflow/*.schema.json` (five schemas), `packages/qfai/src/core/workflow/parse.ts`
 
 ### TDD-0465
 

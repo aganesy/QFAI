@@ -501,6 +501,8 @@ waivers:
         - TDD-0446
         - TDD-0447
         - TDD-0448
+        - TDD-0452
+        - TDD-0453
         - TDD-0465
         - TDD-0466
         - TDD-0467
