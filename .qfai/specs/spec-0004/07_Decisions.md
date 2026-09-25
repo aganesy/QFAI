@@ -170,7 +170,7 @@
 
 ### DR-0004-0025: Name the upstream requirements without a local ID
 
-- Status: accepted
+- Status: superseded by DR-0004-0048
 - Context: This spec's own REQ-0010 means something different from the discussion pack's REQ-0010, so reusing the pack IDs locally would collide.
 - Decision: `## Relevant Requirements` names each upstream requirement this spec now answers as `- discussion-20260923060900824#REQ-000N: <title>`, for REQ-0002, REQ-0004, REQ-0006 and REQ-0010. Each new criterion also carries a `- Source:` line.
 - Consequences: No local REQ ID is minted.
@@ -371,3 +371,12 @@
 - Re-opens: DR-0004-0040
 - Approved by: user (Claude Code structured question)
 - Approved at: 2026-09-25T04:52:16Z
+
+### DR-0004-0048: [RE-OPEN] The upstream requirement lines follow the withdrawn criteria
+
+- Status: proposed
+- Context: The work-log removal answers discussion-20260923060900824. Its requirements were copied into `01_Spec.md` unevenly. This spec kept four lines, for REQ-0002, REQ-0004, REQ-0006 and REQ-0010, and DL-0030 rejected dropping them. spec-0003, spec-0011 and spec-0013 dropped theirs with the criteria that cited them, on Triage rows the user approved on 2026-09-25. So no `01_Spec.md` cited REQ-0001, REQ-0007 or REQ-0008, while this one still cited four.
+- Decision: What changed is that the four specs now need one rule for these lines. This spec takes the rule the other three already follow. A discussion requirement is copied into `01_Spec.md` while a criterion of the spec answers it. When those criteria are withdrawn, the line goes with them. The Triage rows in `09_delta.md` keep the trace from the requirement to what was removed. The four lines are removed. A requirement that no remaining criterion answers is not one this spec's implementers need, which is the reading this record gives the copy-down rule in the `qfai-sdd` traceability rules.
+- Consequences: No `01_Spec.md` cites a requirement of discussion-20260923060900824 for the removal. Each is traced through the Triage rows of spec-0003, spec-0004, spec-0011 and spec-0013. No criterion, rule, example, case or ledger row changes.
+- Related: DR-0004-0025, DR-0004-0044. `09_delta.md` DL-0030, DL-0034.
+- Re-opens: DR-0004-0044

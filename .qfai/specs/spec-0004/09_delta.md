@@ -224,6 +224,7 @@ only, and a `blocked` ledger row needs nothing beyond its `Blocked-By`.
 | 2026-09-25 | DL-0031 | RE-OPEN of DL-0014: items that assert existing behaviour are dropped           |
 | 2026-09-25 | DL-0032 | RE-OPEN of DL-0018: the R-WORKLOG-DRIFT clause leaves AC-0004-0018             |
 | 2026-09-25 | DL-0033 | RE-OPEN of DL-0026: TDD-0018 is retired                                        |
+| 2026-09-26 | DL-0034 | RE-OPEN of DL-0030: the four upstream requirement lines leave `01_Spec.md`     |
 
 ## Decision Log
 
@@ -1081,6 +1082,8 @@ notes: The work-log absence obligations are withdrawn under CR-20260925-0010, ap
 - `/qfai-atdd` deletes the five `spec0004*` integration test files, and
   `/qfai-implement` removes the TDD-0018 test from
   `reviewerJustification.test.ts`, in the same commit.
+- DL-0034 re-opens its rejection of removing the four requirement lines
+  (DR-0004-0048, proposed).
 
 #### Rejected
 
@@ -1221,6 +1224,32 @@ notes: RE-OPEN of DL-0026 (DR-0004-0047, re-opening DR-0004-0040). The user appr
   reason: The boundary is no longer an obligation.
   do_not: Seed a row for a boundary the case no longer declares.
   temptation: DL-0026 paired retiring with reseeding.
+
+### DL-0034
+
+#### Meta
+
+```yaml
+id: DL-0034
+date: 2026-09-26
+primary: Structural
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0004/01_Spec.md (the four discussion-20260923060900824 requirement lines removed)
+notes: RE-OPEN of DL-0030 (DR-0004-0048, re-opening DR-0004-0044). Proposed, not approved. The four specs of the work-log removal copy its requirements down by one rule, the one spec-0003, spec-0011 and spec-0013 already follow.
+```
+
+#### Migration / Follow-ups
+
+- No migration required. No criterion cites the removed lines.
+
+#### Rejected
+
+- option: Restore the lines in spec-0003, spec-0011 and spec-0013 instead
+  reason: It reverses Triage rows the user approved on 2026-09-25 in three specs, where this change reverses one rejection recorded in one.
+  do_not: Re-add a requirement line an approved Triage row removed without the user's approval.
+  temptation: The copy-down rule reads most naturally as keeping every line.
 
 ## Rejected
 
