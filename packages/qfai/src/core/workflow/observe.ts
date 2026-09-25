@@ -8,6 +8,7 @@ import fg from "fast-glob";
 import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
 import { loadConfig, resolvePath } from "../config.js";
 import { gitStdout, uncommittedPaths } from "../gitChanges.js";
+import { resolveSurfaceUnion } from "../prototyping/specResolution.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { validateProject } from "../validate.js";
 import { collectLedgerTables, isLedgerRow } from "../tddHelpers.js";
@@ -216,6 +217,13 @@ export async function ledgerFactsOf(root: string, specId: string) {
       }));
   });
   return { specId, rows };
+}
+
+// Each spec the project declares UI-bearing, read the way the prototyping loop reads its scope.
+export async function uiBearingSpecIdsOf(root: string): Promise<string[]> {
+  const { config } = await loadConfig(root);
+  const specNumbers = await resolveSurfaceUnion(root, config);
+  return specNumbers.map((specNumber) => `spec-${specNumber}`);
 }
 
 type Dependency = WorkflowDependency;

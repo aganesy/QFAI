@@ -84,6 +84,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A prototype work order on a UI-bearing spec names its session record**
+  (#2331). `qfai workflow next` now issues a `prototype` work order with
+  `.qfai/evidence/prototyping/grilling.md` in `recordAreas` when the bound spec
+  is UI-bearing, as the workflow contract's work-order table states. It named no
+  record for any prototype before. A spec counts as UI-bearing by the same
+  reading `qfai prototyping iterate` uses for its scope. A spec that is not
+  UI-bearing still names none.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
