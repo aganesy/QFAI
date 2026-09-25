@@ -224,6 +224,17 @@ it("TC-0018-0254 (TDD-0502): the per-kind write-scope list in the routing refere
   }).toEqual({ perKind: [true, true, true, true], protectedPaths: [] });
 });
 
+it("A change to several specs runs once per spec, and the announcement names the part left", async () => {
+  const routing = section(await payloads(), "## Routing result").replace(/\s+/g, " ");
+  const announcement = section(await screens(), "## The announcement").replace(/\s+/g, " ");
+
+  expect({
+    oneSpec: /`affectedSpecIds` names exactly one/.test(routing),
+    oncePerSpec: /runs once per spec[^.]*`finish` reports that run, start the next/.test(routing),
+    partLeft: /more than one spec, the part a later run makes/.test(announcement),
+  }).toEqual({ oneSpec: true, oncePerSpec: true, partLeft: true });
+});
+
 // The tree `qfai init` writes, read once for both hosts.
 let initRoot = "";
 
