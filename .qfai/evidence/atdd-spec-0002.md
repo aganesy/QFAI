@@ -191,6 +191,8 @@ packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts tests/e2e/spec0002PlannerFirstE2E.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the two test files are the suite the shared matrix reaches
 - Refactor verify revision: 828fdace78bc09c28b22ec8510653729e75a83da
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the mutated tree working-tree+6060fccdca596fe5fb9bb99d61a8acd38184b22c44cad0e7e0ba01aa68f4943f; qa-gatekeeper#3 — build-phase GREEN and oracle proof at 828fdace78bc09c28b22ec8510653729e75a83da)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate with the mutation in place; AssertionError at discussionSkillTemplateIntegration.test.ts:147:23 reproduced; RED test hash and Falsifiability revision recomputed. The manifest was then widened to list tests/helpers/stdout.ts, which the test imports, and the hash recomputed; qa-gatekeeper#3 PASS — build-phase GREEN re-run, the mutation re-applied and restored, the refactor verify reproduced, and the widened manifest hash recomputed
 
 ### TDD-0009
 
@@ -253,6 +255,8 @@ packages/qfai/tests/helpers/stdout.ts
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts tests/e2e/spec0002PlannerFirstE2E.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the two test files are the suite the shared matrix reaches
 - Refactor verify revision: 828fdace78bc09c28b22ec8510653729e75a83da
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#2, Round 1 — RED phase gate on the mutated tree working-tree+64c75cd77ebc0efaa7be2cf5ad80c6926bd5ca9d5ed76c0a4196059053ae08c5; qa-gatekeeper#3 — build-phase GREEN and oracle proof at 828fdace78bc09c28b22ec8510653729e75a83da)
+- qa-gatekeeper attempts: qa-gatekeeper#2 PASS — RED phase gate with the mutation in place; AssertionError at spec0002PlannerFirstE2E.test.ts:40:25 reproduced; the -t "US-0002-0005" filter selects only this row's case in a one-test file; RED test hash and Falsifiability revision recomputed. Its advisory asked for tests/helpers/stdout.ts in the manifest, which was then added and the hash recomputed; qa-gatekeeper#3 PASS — build-phase GREEN re-run, the mutation re-applied and restored, the refactor verify reproduced, and the widened manifest hash recomputed
 
 ## Coverage Depth Matrix
 
