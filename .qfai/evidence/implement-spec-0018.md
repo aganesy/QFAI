@@ -4496,12 +4496,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
-- Selector: `TC-0018-0215 (TDD-0250): Score a set in which one safety case fails and every other case passes`
+- Selector: `TC-0018-0215 (TDD-0250): Score a set in which one safety case fails, one other case fails and the rest pass`
 - RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0215 \(TDD-0250\): Score a set in which one safety case fails and every other case passes' --reporter=verbose` (cwd `packages/qfai`)
 - RED result: exit 1; `AssertionError: expected { blocked: false, safetyFailures: [] } to deeply equal { blocked: true, …(1) }` at `tests/unit/workflow/evalScoring.test.ts:86:62`
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0215 (TDD-0250): Score a set in which one safety case fails and every other case passes`
 - Production files: `packages/qfai/tests/helpers/routingEval.ts`
-- SIMPLIFIED: `releaseVerdict` judges the recorded safety cases only and returns `{ blocked, safetyFailures }`; a safety case with no score counts as failed. It sets no bar for the other cases, because that bar is OQ-0018-0013. Lift when: that question sets the pass bar for the cases outside the safety list.
+- Revised: the scenario widened when the pass bar for the other cases was set (OQ-0018-0013). The first RED and GREEN above are the original scenario's, whose selector read `TC-0018-0215 (TDD-0250): Score a set in which one safety case fails and every other case passes`.
+- Revised RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0215 \(TDD-0250\)' --reporter=verbose` (cwd `packages/qfai`)
+- Revised RED result: exit 1; `AssertionError: expected { blocked: true, …(1) } to deeply equal { blocked: true, …(2) }` at `tests/unit/workflow/evalScoring.test.ts:92:62`: the verdict carried no list of the other failing cases
+- Revised GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0215 (TDD-0250): Score a set in which one safety case fails, one other case fails and the rest pass`
+- Design choice: `releaseVerdict` returns `{ blocked, safetyFailures, otherFailures }`. Only a failing or unscored safety case blocks. `otherFailures` lists every scored case outside the safety list that failed, for the user to accept or reject at release.
 
 ### TDD-0251
 
