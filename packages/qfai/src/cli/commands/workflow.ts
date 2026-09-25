@@ -36,11 +36,14 @@ import {
   releaseLock,
   RUNS_DIR,
   snapshotOf,
+  TRACKED_DIR,
   writeRecord,
   writeSnapshot,
+  writeTracked,
 } from "../../core/workflow/persistence.js";
 import type { JournalRecord } from "../../core/workflow/persistence.js";
 import type { WorkflowOperation } from "../lib/args.js";
+import { resolveToolVersion } from "../../core/version.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
 
 type Verdict = WorkflowDecision["verdict"];
@@ -124,18 +127,32 @@ async function loadRun(runsDir: string, runId: string): Promise<Loaded> {
   if (!folded) {
     return { ok: false, run: null, error: { code: "unknown-run", message: UNKNOWN_RUN } };
   }
+  if (isNewer(folded.executionContext?.qfaiVersion, await resolveToolVersion())) {
+    return { ok: false, run: folded.run, error: { code: "newer-record", message: NEWER_RECORD } };
+  }
   const digestKey = await digestKeyOf(runDir);
   const snapshot = digestKey ? { ...folded, digestKey } : folded;
   return { ok: true, run: { runId, runDir, ...journal, snapshot } };
 }
 
 const UNKNOWN_RUN = "No run has that ID. Read the status to find the run in progress.";
+const NEWER_RECORD = "A newer version of qfai wrote this run. Upgrade qfai to continue it.";
+
+// Whether a recorded package version is later than the running one, by MAJOR.MINOR.PATCH.
+function isNewer(recorded: string | undefined, running: string): boolean {
+  const parts = (version: string) => version.split(/[.+-]/).slice(0, 3).map(Number);
+  const [left, right] = [parts(recorded ?? ""), parts(running)];
+  if (left.some(Number.isNaN) || right.some(Number.isNaN)) return false;
+  const index = left.findIndex((part, at) => part !== right[at]);
+  return index >= 0 && (left[index] ?? 0) > (right[index] ?? 0);
+}
 const INTEGRITY = "The run's record is damaged, so the run has failed. Start a new run.";
 
-// The worktree's one run that has not ended, or none.
-async function activeRun(runsDir: string): Promise<LoadedRun | undefined> {
+// The worktree's one run that has not ended, or none. A run a newer package wrote is refused.
+async function activeRun(runsDir: string): Promise<LoadedRun | Refusal | undefined> {
   for (const runId of (await listRuns(runsDir)).reverse()) {
     const loaded = await loadRun(runsDir, runId);
+    if (!loaded.ok && loaded.error.code === "newer-record") return loaded.error;
     if (loaded.ok && !TERMINAL.includes(loaded.run.snapshot.run.state)) return loaded.run;
   }
   return undefined;
@@ -151,6 +168,7 @@ async function status(root: string, runsDir: string, runId: string | undefined):
   const mode = await modeOf(root);
   if (runId === undefined) {
     const active = await activeRun(runsDir);
+    if (active && "code" in active) return refuse(null, active);
     if (!active) {
       emit({ ok: true, run: null, mode });
       return EXIT_CODES.ok;
@@ -159,11 +177,11 @@ async function status(root: string, runsDir: string, runId: string | undefined):
   }
   const loaded = await loadRun(runsDir, runId);
   if (loaded.ok) return reportStatus(loaded.run.snapshot, mode);
-  if (loaded.run) {
+  if (loaded.run && EXIT_ONE.includes(loaded.error.code)) {
     emit({ ok: true, run: loaded.run, mode, cause: loaded.error.code });
     return EXIT_CODES.ok;
   }
-  emit({ ok: false, run: null, mode, error: loaded.error });
+  emit({ ok: false, run: loaded.run, mode, error: loaded.error });
   return workflowExitCode(loaded.error);
 }
 
@@ -292,6 +310,17 @@ async function writeReportCopies(runDir: string, copies: ReportCopy[]) {
     if (refused) return refused;
   }
   return undefined;
+}
+
+// Step 7: once tracked evidence has begun, the tracked files follow the journal. `finish` and a
+// run that had already ended leave them as they are.
+async function syncTracked(options: WorkflowOptions, loaded: LoadedRun) {
+  if (options.operation === "finish" || TERMINAL.includes(loaded.snapshot.run.state)) return;
+  const journal = await readJournal(loaded.runDir);
+  const snapshot = journal.ok ? snapshotOf(journal.records) : null;
+  if (!journal.ok || !snapshot) return undefined;
+  const trackedDir = path.join(options.root, TRACKED_DIR, loaded.runId);
+  return writeTracked(trackedDir, journal.records, snapshot);
 }
 
 // Appends the decision's events and rewrites the snapshot from the whole journal.
@@ -426,8 +455,10 @@ function extrasOf(
     const stageKind = snapshot.outstandingWorkOrder?.stageKind;
     const reviews = input.result?.reviewResults;
     const reports = copies.map(({ path: file, digest }) => ({ path: file, digest }));
+    const testObservation = input.result?.testObservation;
     return {
       ...(stageKind ? { stageKind } : {}),
+      ...(testObservation ? { testObservation } : {}),
       ...(reviews ? { reviewResults: reviews } : {}),
       ...(reports.length > 0 ? { reports } : {}),
     };
@@ -454,6 +485,8 @@ async function decideAndPublish(options: WorkflowOptions, loaded: LoadedRun): Pr
     const refused = await publish(loaded, records, decision.verdict);
     if (refused) return refuse(snapshot.run, refused);
   }
+  const untracked = await syncTracked(options, loaded);
+  if (untracked) return refuse(snapshot.run, untracked);
   emit(documentOf(decision.verdict));
   return exitOf(options.operation, decision.verdict);
 }
@@ -551,6 +584,7 @@ async function readJournalRecords(runDir: string) {
 async function startUnderLock(options: WorkflowOptions): Promise<number> {
   const runsDir = path.join(options.root, RUNS_DIR);
   const active = await activeRun(runsDir);
+  if (active && "code" in active) return refuse(null, active);
   if (active) return refuse(null, runActive(active.snapshot.run));
   const payload = await readPayload(options.root, options.inPath, path.join(RUNS_DIR, "inbox"));
   if (isRefusal(payload)) return refuse(null, payload);

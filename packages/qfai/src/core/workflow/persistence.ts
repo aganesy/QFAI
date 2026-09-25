@@ -197,6 +197,7 @@ export type JournalRecord = Omit<WorkflowEvent, "type"> & {
   reviewResults?: NonNullable<WorkflowSnapshot["acceptedStages"]>[number]["reviewResults"];
   // On an accepted stage result: each shared report it named, as copied under the stage.
   reports?: NonNullable<WorkflowSnapshot["acceptedStages"]>[number]["reports"];
+  testObservation?: string;
   // On an operation's last event: what a replay of that operation returns.
   replay?: WorkflowReplay;
 };
@@ -380,6 +381,7 @@ function foldAccepted(snapshot: Snapshot, record: JournalRecord): Snapshot {
     ...(record.reviewResults ? { reviewResults: record.reviewResults } : {}),
     ...(record.debts ? { debts: record.debts } : {}),
     ...(record.reports ? { reports: record.reports } : {}),
+    ...(record.testObservation ? { testObservation: record.testObservation } : {}),
   };
   const { halt: _cleared, ...rest } = withoutWorkOrder(snapshot);
   return { ...rest, acceptedStages: [...(snapshot.acceptedStages ?? []), stage] };
@@ -496,4 +498,96 @@ export function recordsOf(
   if (last && final && final !== state) Object.assign(last, { from: state, to: final });
   if (last && replay) Object.assign(last, { replay: { ...replay, verdict: decision.verdict } });
   return records;
+}
+
+export const TRACKED_DIR = path.join(".qfai", "evidence", "workflow");
+
+const ACCEPTED_OUTCOMES = ["accepted", "accepted_with_debt"];
+const ACCEPTED_EVENTS = ["accept-nonfinal-result", "scope-or-obligation-revision"];
+
+// Tracked evidence begins at the run's first `proceed` authorization or its first result accepted
+// as `accepted` or `accepted_with_debt`. A run that ends before either tracks nothing.
+function trackingBegun(records: readonly JournalRecord[]): boolean {
+  return records.some(
+    (record) =>
+      (record.event === "authorization-recorded" && record.authorization?.effect === "proceed") ||
+      (ACCEPTED_EVENTS.includes(record.event) && ACCEPTED_OUTCOMES.includes(record.outcome ?? "")),
+  );
+}
+
+// The tracked summary, from the journal: IDs, digests and outcomes, never request text, an
+// answer or anything the run settled.
+// SIMPLIFIED: a stage's receipt digests are those of its report copies.
+// Lift when: the core writes each accepted result under `results/` and digests it.
+function summaryOf(records: readonly JournalRecord[], snapshot: WorkflowSnapshot) {
+  const accepted = snapshot.acceptedStages ?? [];
+  return {
+    runId: snapshot.run.id,
+    qfaiVersion: snapshot.executionContext?.qfaiVersion ?? "",
+    route: snapshot.plan?.route ?? null,
+    completionTarget: snapshot.completionTarget ?? "qfai_done",
+    state: snapshot.run.state,
+    targetBindings: records.flatMap((record) =>
+      record.event === "binding-recorded" && record.binding ? [record.binding] : [],
+    ),
+    stages: accepted.map((stage) => ({
+      stageInstanceId: stage.stageInstanceId,
+      stageKind: stage.stageKind,
+      outcome: stage.outcome,
+      testObservation: stage.testObservation ?? "not_applicable",
+      receiptDigests: (stage.reports ?? []).map((report) => report.digest),
+      reviewerRoles: (stage.reviewResults ?? [])
+        .filter((review) => review.verdict === "PASS")
+        .map((review) => review.role),
+    })),
+    authorizationIds: (snapshot.authorizations ?? []).map((each) => each.authorizationId),
+    debts: accepted.flatMap((stage) => stage.debts ?? []),
+    requestDigest: snapshot.executionContext?.requestDigest ?? "",
+    createdAt: records[0]?.recordedAt ?? "",
+  };
+}
+
+function parseObject(bytes: Buffer): Record<string, unknown> | undefined {
+  try {
+    const parsed: unknown = JSON.parse(bytes.toString("utf8"));
+    return isRecord(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function writeNew(file: string, content: string): Promise<IoRefusal | undefined> {
+  if (
+    await readFile(file).then(
+      () => true,
+      () => false,
+    )
+  )
+    return undefined;
+  return writeRecord(file, content);
+}
+
+// Rewrites the tracked summary when the journal says something it does not, and writes each
+// authorization record once. The record itself is never rewritten.
+export async function writeTracked(
+  trackedDir: string,
+  records: readonly JournalRecord[],
+  snapshot: WorkflowSnapshot,
+): Promise<IoRefusal | undefined> {
+  if (!trackingBegun(records)) return undefined;
+  await mkdir(path.join(trackedDir, "authorizations"), { recursive: true });
+  for (const record of records) {
+    const authorization = record.authorization;
+    if (record.event !== "authorization-recorded" || !authorization) continue;
+    const file = path.join(trackedDir, "authorizations", `${authorization.authorizationId}.json`);
+    const refused = await writeNew(file, `${JSON.stringify(authorization, null, 2)}\n`);
+    if (refused) return refused;
+  }
+  const summary = summaryOf(records, snapshot);
+  const file = path.join(trackedDir, "summary.json");
+  const existing = parseObject(await readFile(file).catch(() => Buffer.from("")));
+  const { updatedAt: _written, ...kept } = existing ?? { updatedAt: "" };
+  if (JSON.stringify(kept) === JSON.stringify(summary)) return undefined;
+  const content = { ...summary, updatedAt: new Date().toISOString() };
+  return writeRecord(file, `${JSON.stringify(content, null, 2)}\n`);
 }

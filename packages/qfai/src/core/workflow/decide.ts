@@ -378,6 +378,7 @@ interface WorkflowAcceptedStage {
   stageKind: string;
   outcome: string;
   receiptRef?: string;
+  testObservation?: string;
   // Each shared report the result named, as copied under this stage instance.
   reports?: { path: string; digest: string }[];
   gateResults?: WorkflowGateReceipt[];

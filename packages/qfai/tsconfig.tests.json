@@ -401,6 +401,8 @@
     "tests/integration/workflow/noMoveOffDone.test.ts",
     "tests/integration/workflow/onlySddAppendAddsARow.test.ts",
     "tests/integration/workflow/ledgerFixture.ts",
+    "tests/integration/workflow/aStopCancelsAtOnce.test.ts",
+    "tests/integration/workflow/journal.test.ts",
     "tests/integration/workflow/plans.test.ts",
     "tests/integration/workflow/schemas.test.ts",
     "tests/integration/workflow/shippedAssets.test.ts",

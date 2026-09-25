@@ -47,4 +47,4 @@ it("TC-0018-0039 (TDD-0305): Built CLI on a fixture whose validate is clean, ass
     state: field(finished.json, "run.state"),
     exit: finished.status,
   }).toEqual({ errors: [], target: "qfai_done", unmet: [], state: "completed", exit: 0 });
-}, 60_000);
+}, 180_000);

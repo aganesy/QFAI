@@ -275,8 +275,12 @@ export async function submit(root: string, runId: string, operation: string, pay
 }
 
 /** A started run whose routing result for `proposal` has been submitted. */
-export async function routedRun(root: string, proposal: object = DISCOVERY_PROPOSAL) {
-  const runId = await startRun(root);
+export async function routedRun(
+  root: string,
+  proposal: object = DISCOVERY_PROPOSAL,
+  input: unknown = START_INPUT,
+) {
+  const runId = await startRun(root, input);
   const routing = workflow(root, ["next", "--run", runId]);
   const routed = await submit(
     root,
@@ -289,8 +293,8 @@ export async function routedRun(root: string, proposal: object = DISCOVERY_PROPO
 
 /** A feature run approved and driven, with canned accepted results, until `next` issues a
  * work order of `stageKind`. Returns the run and that `next` output. */
-export async function featureRunAt(root: string, stageKind: string) {
-  const { runId, routed } = await routedRun(root, FEATURE_PROPOSAL);
+export async function featureRunAt(root: string, stageKind: string, input: unknown = START_INPUT) {
+  const { runId, routed } = await routedRun(root, FEATURE_PROPOSAL, input);
   const approved = await submit(root, runId, "decision", {
     questionId: field(routed.json, "questions.0.questionId"),
     answer: { optionIds: ["create"] },
