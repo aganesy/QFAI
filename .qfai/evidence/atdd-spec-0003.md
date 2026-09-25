@@ -581,6 +581,85 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - Checkpoint verification revision: 6368454b0f56a50611aa309f82eb80e8cc35b758
 - Checkpoint verification seal: ecd5b72e49e725620486d0370fe1c18deab941ccc61d2159b62402b80904256f
 
+### TDD-0093
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`
+- Selector: `TC-0003-0059: Fresh init ignores run state and keeps run evidence tracked`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/managedGitignoreBlock.test.ts --testNamePattern='TC-0003-0059: Fresh init ignores run state and keeps run evidence tracked' --reporter=verbose`
+- RED result: exit 1; `AssertionError: .qfai/runs/x: expected false to be true // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/src/core/gitignore.ts`, `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts`
+
+### TDD-0094
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`
+- Selector: `TC-0003-0060: Upgrade over the previous managed block, then a rerun`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/managedGitignoreBlock.test.ts --testNamePattern='TC-0003-0060: Upgrade over the previous managed block, then a rerun' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected +0 to be 1 // Object.is equality` (the upgraded block carried no `.qfai/runs/`)
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/src/core/gitignore.ts`, `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts`
+- An upgrade adds `.qfai/runs/` to an existing block that lacks it; every other ignore line keeps the rule that init never re-adds one the block does not have.
+
+### TDD-0095
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/windowsParity.test.ts`
+- Selector: `TC-0003-0061: The previous managed block in a CRLF .gitignore`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/windowsParity.test.ts --testNamePattern='TC-0003-0061: The previous managed block in a CRLF .gitignore' --reporter=verbose`
+- RED result: exit 1; `AssertionError: no block line is duplicated: expected [ Array(22) ] to deeply equal []` (every governance negation written twice: the block's end was found by comparing lines that still carried their carriage return)
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/tests/integration/init/windowsParity.test.ts`
+
+### TDD-0096
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`
+- Selector: `TC-0003-0062: Fresh init installs the entry skills, plans and references`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryInstallSet.test.ts --testNamePattern='TC-0003-0062: Fresh init installs the entry skills, plans and references' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the plans landed in the asset commit of this chunk and the entry skills and references in earlier batch commits, and the existing asset copy installs them
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/process/workflows/`, `packages/qfai/tests/integration/init/entryInstallSet.test.ts`
+
+### TDD-0097
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`
+- Selector: `TC-0003-0063: Four host skill dirs resolve both entry skills to one source`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryInstallSet.test.ts --testNamePattern='TC-0003-0063: Four host skill dirs resolve both entry skills to one source' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the existing wrapper sync links every shipped skill
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`
+- The test carries only this spec's annotation. The spec-0018 host-adapter case it also discharges is an open row of that spec, whose ledger this change does not edit.
+
+### TDD-0098
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`
+- Selector: `TC-0003-0064: Upgrade over an install without the workflow entry`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryInstallSet.test.ts --testNamePattern='TC-0003-0064: Upgrade over an install without the workflow entry' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); a plain init creates a missing shipped file
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts`
+
+### TDD-0099
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/noOpenaiYaml.test.ts`
+- Selector: `TC-0003-0065: No agents/openai.yaml after init and after --force`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/noOpenaiYaml.test.ts --testNamePattern='TC-0003-0065: No agents/openai.yaml after init and after --force' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); no shipped skill carries the file
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/init/noOpenaiYaml.test.ts`
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / ⚠️ 130 / ❌ 176, with 365 not applicable, across 909 scored cells.
