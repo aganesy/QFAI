@@ -84,6 +84,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A workflow repair reaches an owner outside the plan, and the stage that
+  found it runs again** (#2337). A `needs_repair` result whose first finding
+  is owned by a skill no plan stage serves now returns the run to `routing`,
+  within the replan budget. Once the repair is accepted, the stage that
+  reported the finding is issued again as a new attempt. The run's snapshot
+  now keeps the open repair request when it is rebuilt from the journal. A
+  `needs_repair` result no longer counts as an accepted stage, and an
+  accepted repair replaces that stage's earlier receipt.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
