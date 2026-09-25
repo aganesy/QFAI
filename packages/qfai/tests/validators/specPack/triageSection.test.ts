@@ -72,6 +72,12 @@ describe("validateTriageSection", () => {
     const text = buildDelta([["REQ-1", "subject", "spec-0001", "ARCHIVE", "-", "-", "-"]]);
     const issues = validateTriageSection(text, DELTA_PATH);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-003"]);
+    // The message names every allowed value, so the headline alone is enough
+    // to repair the cell.
+    expect(issues[0]?.message).toContain(
+      "Allowed: CREATE, UPDATE, DELETE, SPLIT, MERGE, SUPERSEDE",
+    );
+    expect(issues[0]?.suggested_action).toContain("Operation = UPDATE, Sub-op = REMOVE");
   });
 
   it("QFAI-TRIAGE-003 points a colon-form Operation at the Sub-op cell", () => {
@@ -80,14 +86,26 @@ describe("validateTriageSection", () => {
     const text = buildDelta([["REQ-1", "subject", "spec-0001", "UPDATE:APPEND", "-", "-", "-"]]);
     const issues = validateTriageSection(text, DELTA_PATH);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-003"]);
-    expect(issues[0]?.suggested_action).toContain("Sub-op");
-    expect(issues[0]?.suggested_action).toContain("APPEND / MODIFY / REMOVE");
+    expect(issues[0]?.suggested_action).toContain("Operation = UPDATE and Sub-op = APPEND");
+  });
+
+  it("QFAI-TRIAGE-003 sends a Sub-op word in the Operation cell to the Sub-op cell", () => {
+    // `REMOVE` is how an author naturally writes a removal; the fix has to
+    // say that a removal is an UPDATE whose Sub-op is REMOVE.
+    const text = buildDelta([["REQ-1", "drop", "spec-0001", "REMOVE", "-", "user@host", "-"]]);
+    const issues = validateTriageSection(text, DELTA_PATH);
+    expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-003"]);
+    expect(issues[0]?.message).toContain("REMOVE. Allowed: CREATE, UPDATE");
+    expect(issues[0]?.suggested_action).toBe(
+      "Write Operation = UPDATE and Sub-op = REMOVE. REMOVE is a Sub-op, not an Operation.",
+    );
   });
 
   it("emits QFAI-TRIAGE-004 when UPDATE has invalid Sub-op", () => {
     const text = buildDelta([["REQ-1", "subject", "spec-0001", "UPDATE", "PATCH", "-", "-"]]);
     const issues = validateTriageSection(text, DELTA_PATH);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-004"]);
+    expect(issues[0]?.message).toContain("PATCH. Allowed: APPEND, MODIFY, REMOVE");
   });
 
   it("emits QFAI-TRIAGE-004 when UPDATE has empty Sub-op", () => {
