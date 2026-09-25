@@ -119,24 +119,26 @@ AC references. These registers are cutover inputs, not migration output.
 | Flow order and titles | Four-flow selection and the exact `from` selectors approved for this repository | User confirmed four flows; development 190, CI 23, diagnostic/repair 16, migration 12 |
 | Active user stories | Every one of 241 active IDs appears once in `plan.yaml#flows[].stories` | All 241 assigned once, including two new diagnostic stories |
 | Ambiguous acceptance criteria | `criteria` lists where old AC-to-US references do not identify one story | Pre-split audit plus six new criteria has 486 sections: 447 mapped and 39 retired |
-| Active business rules | Every one of 514 active IDs appears once in `plan.yaml#rules`, naming a real contract under `<paths.contractsDir>` | All 514 assigned once; destination review remains open |
-| Retired US, AC, EX and BR | No active destination generated; old source retained in evidence archive | US/AC approved source removals archived; EX/BR report reconciliation pending |
-| Test cases and examples | Every TC-only case converted or reported, and every EX derives one AC or is reported | Migration steps 4–6 pending |
+| Active business rules | Every one of 514 active IDs appears once in `plan.yaml#rules`, naming a real contract under `<paths.contractsDir>` | All 514 assigned once and checked by the architecture reviewer; step 7 exits 0 with no item |
+| Retired US, AC, EX and BR | No active destination generated; old source retained in evidence archive | Reconciled: retired rules in `retired-rule-disposition.md`, old examples in `step04-ex-provenance.csv` and `example-disposition.md`; sources archived under `retired/` |
+| Test cases and examples | Every TC-only case converted or reported, and every EX derives one AC or is reported | Steps 4 to 6 ran; steps 4 and 6 exit 0 with no item, and step 5's 18 items are in `step05-step08-tc-disposition.csv` |
 
-The user confirmed four flows. The plan uses the two existing sections as sources for
-the development and CI flows. Diagnostic/repair and legacy migration are new
-flows with no `from`. Step 4 will emit a template diagram and list both under
-`## For a person` with exit 3; their diagrams require authored replacements
-before the cutover is accepted. Authored diagrams and exception paths for all
-four flows are in `business-flow-drafts/BF-0001..0004/business-flow.md` and
-must replace the generated flow bodies after step 4.
+The table's status column reflects the final rerun on 2026-09-25, recorded in
+`p7-cutover-result.md`.
 
-The current `plan.yaml` is a cutover input pending parser, fixture and reviewer
-gates. Step 4 writes an immutable ID map. All 514 active BR destinations are
-listed, including the ten guardrails rules after the OQ-0180 decision.
-Criterion ownership and the example splits have source SDD dispositions;
-steps 4 and 6 must verify their conversion. The conflicting old inventory and
-capture rules have approved P7 REMOVE rows and must not reappear in contracts.
+The user confirmed four flows. The plan uses the two existing sections as
+sources for the development and CI flows. Diagnostic/repair and legacy
+migration are new flows with no `from`. Authored diagrams and exception paths
+for all four flows, drafted in `business-flow-drafts/BF-0001..0004/business-flow.md`,
+replaced the generated flow bodies after step 4. Each
+`business-flow.md` in the tree now has its authored diagram, and validation
+reports no BF finding.
+
+Step 4 wrote the ID map, and `plan.yaml` is no longer revised. All 514 active
+BR destinations are listed, including the ten guardrails rules after the
+OQ-0180 decision. Steps 4 and 6 converted the criterion ownership and the
+example splits. The conflicting old inventory and capture rules have approved
+P7 REMOVE rows and must not reappear in contracts.
 
 ## Launch criteria
 
