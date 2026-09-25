@@ -84,6 +84,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A workflow receipt goes stale when its ledger row or its context changes**
+  (#2342, #2343). A receipt that observed a test held the whole user-story,
+  acceptance-criteria, business-rule and example files of the bound spec, and
+  nothing else. It now holds one fingerprint per ledger row its work order
+  covers. The fingerprint reads the row's `Layer`, `Boundary` and `TC-Refs`,
+  and the text of each AC, BR, US and EX item and contract it cites, directly
+  or through its test cases. `Status`, `Evidence`, the selector and the test
+  file stay out, and so does an item no covered row cites.
+
+  Every receipt also holds what the stage ran under: `qfai.config.yaml`, the
+  lockfiles at the project root, the constitution, the executor skill, the
+  tool, the selected discussion pack and the bound spec's lifecycle. A changed
+  file the stage deleted is held as absent, so the receipt goes stale when the
+  file comes back.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
