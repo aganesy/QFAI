@@ -84,6 +84,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Three spec-0018 workflow-mode ledger rows close with the reviews their
+  earlier close skipped** (#2298). TDD-0376, TDD-0377 and TDD-0378 cover the
+  `workflow.mode` setting: an absent key means `active`, and a mode outside
+  the three is refused. They had closed at `exception` under a review waiver.
+  Each is reopened, shown to fail when its production predicate is broken,
+  and closed at `done` after two qa-gatekeeper turns and a completion and an
+  implementation review. The three rows leave the spec-0018 waiver. The
+  other Integration rows stay under it.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

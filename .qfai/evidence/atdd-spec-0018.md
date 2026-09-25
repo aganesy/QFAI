@@ -130,6 +130,26 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision 8bcbdcf33d3f0426830f5592e5cb7f7e75fedb74; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision af0b531172dcc2eddb7460d518b41bb30ad8fb38
 
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260926020000001 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): f787066f2508f37723a916fdbf17f60737904a0d89ef3cc74d1991608fde4ac8
+- Spec review: PASS
+- Spec reviewed revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
+- Spec audited evidence hash: 77bfe405d5fb589d0b7250367901f537705dbfc400de034813857f5e7b82f506
+- Spec review pack: .qfai/review/review-20260926020000001 <!-- qfai:not-a-citation -->
+- Spec review pack seal: f787066f2508f37723a916fdbf17f60737904a0d89ef3cc74d1991608fde4ac8
+- Code quality review: PASS
+- Code quality reviewed revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
+- Code quality audited evidence hash: 77bfe405d5fb589d0b7250367901f537705dbfc400de034813857f5e7b82f506
+- Code quality review pack: .qfai/review/review-20260926020000001 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: f787066f2508f37723a916fdbf17f60737904a0d89ef3cc74d1991608fde4ac8
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/mode.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 2 passed (2). Off a checkpoint boundary, since other rows of spec-0018 are still open, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
+- Checkpoint verification seal: 430bd2cfde9900a07e22668cd6e55c0fef7cae206acd2cf25b224056524e3ec0
+
 ### TDD-0377
 
 - TDD-ID: TDD-0377
@@ -181,6 +201,26 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision 07dbf529305d1ee19a675a5b68783ffeeabbb483; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision af0b531172dcc2eddb7460d518b41bb30ad8fb38
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260926020000002 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 7c28e70f12a4602c424fe09e762fbaca43858b7e61d2e0b6e8b99e66317e4624
+- Spec review: PASS
+- Spec reviewed revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
+- Spec audited evidence hash: db4fe217933deb7ef390815776e713070433d23e6bf7148e8d007b60a1cae8d7
+- Spec review pack: .qfai/review/review-20260926020000002 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 7c28e70f12a4602c424fe09e762fbaca43858b7e61d2e0b6e8b99e66317e4624
+- Code quality review: PASS
+- Code quality reviewed revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
+- Code quality audited evidence hash: db4fe217933deb7ef390815776e713070433d23e6bf7148e8d007b60a1cae8d7
+- Code quality review pack: .qfai/review/review-20260926020000002 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 7c28e70f12a4602c424fe09e762fbaca43858b7e61d2e0b6e8b99e66317e4624
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/mode.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 2 passed (2). Off a checkpoint boundary, since other rows of spec-0018 are still open, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
+- Checkpoint verification seal: 430bd2cfde9900a07e22668cd6e55c0fef7cae206acd2cf25b224056524e3ec0
 
 ### TDD-0378
 
@@ -234,6 +274,26 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision 42a118538785942d612917133dea6cd6b682b3e2; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision af0b531172dcc2eddb7460d518b41bb30ad8fb38
 
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260926020000003 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): b42d347affa6d2a696147f58332ce6ba99d302083839ff0fbac650e22294b7fb
+- Spec review: PASS
+- Spec reviewed revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
+- Spec audited evidence hash: b2c21650e95bdd71c53918ca2741c3ec1d7bf8e6a150d3f8993bcd5f14b1b0c0
+- Spec review pack: .qfai/review/review-20260926020000003 <!-- qfai:not-a-citation -->
+- Spec review pack seal: b42d347affa6d2a696147f58332ce6ba99d302083839ff0fbac650e22294b7fb
+- Code quality review: PASS
+- Code quality reviewed revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
+- Code quality audited evidence hash: b2c21650e95bdd71c53918ca2741c3ec1d7bf8e6a150d3f8993bcd5f14b1b0c0
+- Code quality review pack: .qfai/review/review-20260926020000003 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: b42d347affa6d2a696147f58332ce6ba99d302083839ff0fbac650e22294b7fb
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/anInvalidModeIsRefused.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, since other rows of spec-0018 are still open, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
+- Checkpoint verification seal: 4333de8d3aa954beaf8453f7e54acbb9a5ec641972d2e072a3483a79da1dd6d4
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0018.md` (committed). Totals: ✅ 820 / ⚠️ 42 / ❌ 6.
@@ -254,6 +314,23 @@ applicable). `Status` is a row verdict and is outside every total.
 | 4 | qa-gatekeeper | qa-gatekeeper#1 | RED phase gate on each falsifiability mutation run, `TDD-0376` to `TDD-0378` | #tdd-0376 to #tdd-0378, 8bcbdcf33, 07dbf5293, 42a118538 | qa-gatekeeper fields | PASS |
 | 5 | qa-gatekeeper | qa-gatekeeper#2 | GREEN, refactor verify and oracle proof, `TDD-0376` to `TDD-0378` | #tdd-0376 to #tdd-0378, af0b531172dcc2eddb7460d518b41bb30ad8fb38 | qa-gatekeeper fields | PASS |
 
+| 6 | completion-reviewer | completion-reviewer#1 | Spec review, `TDD-0376` | #tdd-0376, spec-0018, af0b531172dcc2eddb7460d518b41bb30ad8fb38 | review-20260926020000001 R01 <!-- qfai:not-a-citation --> | PASS |
+| 7 | implementation-reviewer | implementation-reviewer#1 | Code quality review, `TDD-0376` | #tdd-0376, test and production predicate, af0b531172dcc2eddb7460d518b41bb30ad8fb38 | review-20260926020000001 R02 <!-- qfai:not-a-citation --> | PASS |
+| 8 | completion-reviewer | completion-reviewer#2 | Spec review, `TDD-0377` | #tdd-0377, spec-0018, af0b531172dcc2eddb7460d518b41bb30ad8fb38 | review-20260926020000002 R01 <!-- qfai:not-a-citation --> | PASS |
+| 9 | implementation-reviewer | implementation-reviewer#2 | Code quality review, `TDD-0377` | #tdd-0377, test and production predicate, af0b531172dcc2eddb7460d518b41bb30ad8fb38 | review-20260926020000002 R02 <!-- qfai:not-a-citation --> | PASS |
+| 10 | completion-reviewer | completion-reviewer#3 | Spec review, `TDD-0378` | #tdd-0378, spec-0018, af0b531172dcc2eddb7460d518b41bb30ad8fb38 | review-20260926020000003 R01 <!-- qfai:not-a-citation --> | PASS |
+| 11 | implementation-reviewer | implementation-reviewer#3 | Code quality review, `TDD-0378` | #tdd-0378, test and production predicate, af0b531172dcc2eddb7460d518b41bb30ad8fb38 | review-20260926020000003 R02 <!-- qfai:not-a-citation --> | PASS |
+| 12 | orchestrator | orchestrator | Checkpoint verification for `TDD-0376` to `TDD-0378`, off a checkpoint boundary | #tdd-0376 to #tdd-0378 | Checkpoint verification fields | PASS |
+
+## Test results summary
+
+| Suite                                                      | Result                                      |
+| ---------------------------------------------------------- | ------------------------------------------- |
+| `tests/integration/workflow/mode.test.ts`                  | Test Files 1 passed (1); Tests 2 passed (2) |
+| `tests/integration/workflow/anInvalidModeIsRefused.test.ts` | Test Files 1 passed (1); Tests 1 passed (1) |
+
+Both at af0b531172dcc2eddb7460d518b41bb30ad8fb38, after `pnpm -C packages/qfai build`.
+
 ## Cross-spec obligations
 
 None.
@@ -267,3 +344,29 @@ Recorded per row above.
 - The other Integration rows of spec-0018 that were closed under `DR-0298` are
   still at `exception`. This run covers the three rows of `BR-0018-0094` and
   `BR-0018-0095` only.
+- The reviewers raised advisory findings, none blocking. Each is in its pack.
+  - `TDD-0378`'s `Owning module` names `packages/qfai/src/core/workflow/decide.ts`.
+    The refusal is in `start` in `packages/qfai/src/cli/commands/workflow.ts`,
+    and the Plan puts the rule under `packages/qfai/src/core/config.ts`. The
+    cell belongs to `/qfai-sdd`.
+  - The CLI-VAL `## Workflow mode setting` clause asks the message to name the
+    three values. No test asserts that half, and `TC-0018-0174` does not ask
+    for it.
+  - `TC-0018-0175` tests one invalid value. A `workflow` value that is not a
+    mapping, and a `mode` that is not a string, reach the same refusal with no
+    case of their own.
+  - The skill does not say which `Satisfied-by` form a row reopened by
+    `exception` -> `todo` takes when its own earlier cycle wrote the predicate,
+    nor whether that row needs a fresh `/qfai-atdd` handover. These entries
+    classify the rows here and name the production symbol.
+  - `TC-0018-0173` catches a refused `start` into a boolean, and
+    `TC-0018-0174` writes its config after `minimalProject` instead of passing
+    it in. Both are test tidy-ups.
+
+## Final status
+
+PASS for the three rows, confirmed by the orchestrator. `TDD-0376`, `TDD-0377`
+and `TDD-0378` are `done`: each carries a PASS from `qa-gatekeeper`,
+`completion-reviewer` and `implementation-reviewer`. They leave the
+`DR-0298` waiver. The stage stays open for the Integration rows still at
+`exception`.

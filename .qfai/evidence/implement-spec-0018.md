@@ -383,9 +383,9 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0373 | TC-0018-0169 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0374 | TC-0018-0170 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0375 | TC-0018-0171 | Closed `exception` under DR-0298; per-row review waived |
-| TDD-0376 | TC-0018-0173 | Closed `exception` under DR-0298; per-row review waived |
-| TDD-0377 | TC-0018-0174 | Closed `exception` under DR-0298; per-row review waived |
-| TDD-0378 | TC-0018-0175 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0376 | TC-0018-0173 | Reopened and closed `done` with its reviews; see `atdd-spec-0018.md` |
+| TDD-0377 | TC-0018-0174 | Reopened and closed `done` with its reviews; see `atdd-spec-0018.md` |
+| TDD-0378 | TC-0018-0175 | Reopened and closed `done` with its reviews; see `atdd-spec-0018.md` |
 | TDD-0379 | TC-0018-0176 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0380 | TC-0018-0177 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0381 | TC-0018-0177 | Closed `exception` under DR-0298; per-row review waived |
@@ -5780,6 +5780,7 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 
 ### TDD-0376
 
+- Superseded by: `.qfai/evidence/atdd-spec-0018.md#tdd-0376`, after the row was reopened and closed with its reviews
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Test file: `packages/qfai/tests/integration/workflow/mode.test.ts`
 - Selector: `TC-0018-0173 (TDD-0376): Built CLI start with no workflow key in qfai`
@@ -5791,6 +5792,7 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 
 ### TDD-0377
 
+- Superseded by: `.qfai/evidence/atdd-spec-0018.md#tdd-0377`, after the row was reopened and closed with its reviews
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Test file: `packages/qfai/tests/integration/workflow/mode.test.ts`
 - Selector: `TC-0018-0174 (TDD-0377): npx qfai validate with workflow`
@@ -5801,6 +5803,7 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 
 ### TDD-0378
 
+- Superseded by: `.qfai/evidence/atdd-spec-0018.md#tdd-0378`, after the row was reopened and closed with its reviews
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Test file: `packages/qfai/tests/integration/workflow/anInvalidModeIsRefused.test.ts`
 - Selector: `TC-0018-0175 (TDD-0378): Built CLI start with workflow`
