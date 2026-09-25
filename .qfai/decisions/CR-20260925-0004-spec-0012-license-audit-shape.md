@@ -9,7 +9,7 @@
 - Approved by: `user (Codex interactive decision)`
 - Approved at: `2026-09-24T21:13:46Z`
 - Approved option: `2`
-- Applied at: `-`
+- Applied at: `2026-09-25T22:32:07Z`
 - Superseded by: `-`
 
 ## Context
@@ -85,4 +85,23 @@ or defer the decision. Option 2 is recommended to preserve current tier replay.
 
 ## Resolution
 
-Pending user option selection and owner rerun.
+Option 2 applied. `licensePatchAudit.ts` already implements it, so no production code changes.
+
+- **Restated as `UPDATE/MODIFY`:** `AC-0012-0069`, `BR-0012-0057`, `EX-0012-0178` and
+  `TC-0012-0468`. The row has three required fields and an optional `addedLicenseTiers` map from
+  each source to a list of non-empty tier names. Any other field makes it invalid, and
+  `patchSha256` is still the sha256 of the patch bytes.
+- **Split and reset.** `spec-0012/TDD-0507` keeps the required-keys boundary and is at `todo` with
+  this record in `DR-ID`. Its prior `Evidence` is kept after `prior:`. The other three boundaries
+  are new `todo` rows:
+
+  | Row        | Boundary                |
+  | ---------- | ----------------------- |
+  | `TDD-0507` | `required-keys`         |
+  | `TDD-0618` | `optional-tier-map`     |
+  | `TDD-0619` | `no-other-keys`         |
+  | `TDD-0620` | `patch-sha256-of-bytes` |
+
+- **Not edited:** `10_Plan.md` does not bind the row shape. `.qfai/contracts/cli/qfai-prototyping.md`
+  declares none, and `.qfai/contracts/cli/qfai-prototyping-iterate.md` already declares the shape
+  this option adopts.

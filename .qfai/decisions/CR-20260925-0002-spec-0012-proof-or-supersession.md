@@ -165,4 +165,26 @@ six enumerated rows whose TC or parent AC is superseded, followed by `/qfai-sdd 
 
 ## Resolution
 
-Pending explicit approval and owner rerun.
+Partly applied. This pass covers the six rows in action 2 whose case an ordinary test file
+annotates, and the matrix splits. `Applied at` stays unset until the rest of actions 1 to 3 is
+applied: the resets and retirements of the rows whose `done` rests only on an annotation carrier.
+
+- **Reset.** `spec-0012/TDD-0453`, `TDD-0456`, `TDD-0457`, `TDD-0459`, `TDD-0465` and `TDD-0486`
+  are at `todo` with this record in `DR-ID`, each with its prior `Evidence` kept after `prior:`.
+- **Splits.** Each row keeps its first boundary in the order `06_Test-Cases.md` states them, and
+  every other boundary is a new `todo` row:
+
+  | Row        | Case           | Kept boundary                    | New rows                 |
+  | ---------- | -------------- | -------------------------------- | ------------------------ |
+  | `TDD-0456` | `TC-0012-0436` | `scan-colors`                    | `TDD-0606` to `TDD-0608` |
+  | `TDD-0459` | `TC-0012-0459` | `statement-coverage-at-least-90` | `TDD-0609`               |
+  | `TDD-0465` | `TC-0012-0460` | `english-word-cap`               | `TDD-0610`, `TDD-0611`   |
+  | `TDD-0486` | `TC-0012-0457` | `cycle-above-9`                  | `TDD-0612`, `TDD-0613`   |
+
+- **One row per scanner** for `TC-0012-0436`: each scanner has its own safe-literal check, and the
+  five keywords are angles on it. The selectors are the runtime title prefixes the `it.each` loop
+  produces. The file's source does not contain them, so `/qfai-implement` gives each boundary a
+  literal title before the row can advance.
+- **`TDD-0459`** keeps the statement-coverage floor, which no test measures yet, so its `Selector`
+  is `-`. `TDD-0609` takes the test-count floor.
+- **`TDD-0453` and `TDD-0457` are not split.** Each case states one boundary.

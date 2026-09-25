@@ -84,6 +84,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0012 ledger rows no longer claim `done` on a selector that runs no
+  test** (#2416). Five approved Change Requests are applied, one of them in
+  part. Rows whose selector named their case only in a comment now name a
+  test title. Rows that packed several boundaries are split one boundary per
+  row, as `TDD-0590` to `TDD-0620`. Every row they touched is back at `todo`
+  with its prior evidence kept. The unused pivot rule is retired with its
+  criteria, examples, cases and `TDD-0342`. The license-patch audit row is
+  restated as three required fields and an optional tier map, which is what
+  the code already writes.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

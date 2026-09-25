@@ -9,7 +9,7 @@
 - Approved by: `user (Claude Code structured question)`
 - Approved at: `2026-09-24T23:25:27Z`
 - Approved option: `approved defect repair`
-- Applied at: `-`
+- Applied at: `2026-09-25T22:32:07Z`
 - Superseded by: `-`
 
 ## Context
@@ -173,5 +173,35 @@ Approve the enumerated defect correction and reset/split scope above, followed b
 
 ## Resolution
 
-Approved. The owner rerun (`/qfai-sdd spec-0012` in `re-derive` mode, then the downstream sweep
-above) is not yet run.
+Applied. The owner rerun and the ledger sweep (actions 1 and 2) are done. Action 3, the tests and
+proof of each reset or new row, is the downstream work this releases.
+
+- **Selectors.** Each single-boundary row now names an `it` title the test file contains, or a
+  fragment of one where the full title holds regular-expression characters: `TDD-0366`,
+  `TDD-0389` to `TDD-0395`, `TDD-0397`, `TDD-0398`, `TDD-0400`, `TDD-0415`, `TDD-0416`,
+  `TDD-0421` to `TDD-0424` and `TDD-0428`. The review aid the context cites is gone, so each title
+  was read from the test file next to the case's annotation.
+- **Splits.** Each row keeps its first boundary in the order `06_Test-Cases.md` lists them. Every
+  other boundary is a new `todo` row carrying the same case and its own `Boundary`:
+
+  | Row        | Case           | Kept boundary                      | New rows                 |
+  | ---------- | -------------- | ---------------------------------- | ------------------------ |
+  | `TDD-0396` | `TC-0012-0356` | `no-primary-spec-selection-prompt` | `TDD-0590`               |
+  | `TDD-0399` | `TC-0012-0362` | `no-orchestrator-capture-call`     | `TDD-0591`               |
+  | `TDD-0429` | `TC-0012-0409` | `empty-without-a-signal`           | `TDD-0592` to `TDD-0595` |
+  | `TDD-0437` | `TC-0012-0417` | `missing-required-field`           | `TDD-0596` to `TDD-0598` |
+  | `TDD-0438` | `TC-0012-0418` | `bare-numeric-layout`              | `TDD-0599` to `TDD-0601` |
+  | `TDD-0443` | `TC-0012-0423` | `subdirectory-fallback`            | `TDD-0602` to `TDD-0605` |
+
+- **The positive Reviewer dispatch boundary.** `TDD-0591` is that boundary. No test exists for it,
+  so its `Selector` is `-` until `/qfai-atdd` writes one.
+- **`TC-0012-0417`.** It lists four missing-field rejections, and no test covers `softWarnings`.
+  `TDD-0437` keeps the three that exist, and `/qfai-implement` adds the fourth.
+- **Reset.** Every row in action 2 except `TDD-0337` is at `todo`, with this record in `DR-ID` and
+  its prior `Evidence` kept verbatim after `prior:`. The new rows start at `todo`.
+- **`TDD-0337` is not reset.** `CR-20260925-0019` already re-scoped it to `TC-0012-0323`, seeded
+  `TDD-0583` for `TC-0012-0324`, and left the superseded `TC-0012-0325` declared. `TC-0012-0322`
+  keeps `TDD-0366`. Its selector names the executable test
+  `returns 2 when --target-url is missing at cycle 0`. Nothing this record asked of it remains.
+- **`TDD-0422` and `TDD-0424`.** Their stale `Evidence` is kept only as the `prior:` history. The
+  re-execution writes fresh evidence against `TC-0012-0402` and `TC-0012-0404` as they now read.

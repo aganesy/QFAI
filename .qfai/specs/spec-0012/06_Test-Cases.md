@@ -104,7 +104,7 @@
 
 ## TC-0012-0320
 
-- EX-Ref: EX-0012-0111
+- EX-Ref: EX-0012-0118
 - AC-Refs: AC-0012-0024
 - Level: L1
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
@@ -180,27 +180,11 @@
 
 ## TC-0012-0331
 
-- EX-Ref: EX-0012-0111
+- EX-Ref: EX-0012-0118
 - AC-Refs: AC-0012-0025
 - Level: L1
 - Test file: `packages/qfai/tests/core/validators/layoutAntiPatterns.test.ts`
 - Verify `layoutAntiPatternsDetected[]` schema accepts only identifiers the registry declares; a token it does not declare raises `QFAI-PROT-002`.
-
-## TC-0012-0332
-
-- EX-Ref: EX-0012-0111
-- AC-Refs: AC-0012-0026
-- Level: L1
-- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
-- Verify `computePivotDirective(history)` returns `"pivot"` when the latest 3 iters have low IA AND the latest iter has non-empty `layoutAntiPatternsDetected`.
-
-## TC-0012-0333
-
-- EX-Ref: EX-0012-0111, EX-0012-0119
-- AC-Refs: AC-0012-0027
-- Level: L1
-- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
-- Verify `computePivotDirective(history)` returns `"continue"` when ≥ 2 of the 4 UX axes strictly improve by `ordinalIndex` (weak=0, acceptable=1, strong=2, exceptional=3) versus the prior iter; otherwise returns `"refine"` (when not `pivot`).
 
 ## TC-0012-0335
 
@@ -253,7 +237,7 @@
 
 ## TC-0012-0341
 
-- EX-Ref: EX-0012-0111
+- EX-Ref: -
 - AC-Refs: AC-0012-0023
 - Level: L1
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
@@ -317,7 +301,7 @@
 
 ## TC-0012-0349
 
-- EX-Ref: EX-0012-0111, EX-0012-0118
+- EX-Ref: EX-0012-0118
 - AC-Refs: AC-0012-0024
 - Level: L1
 - Test file: `packages/qfai/tests/core/validators/layoutAntiPatterns.test.ts`
@@ -1326,7 +1310,11 @@
 - Type: unit
 - Level: L1
 - Test file: `packages/qfai/tests/unit/core/prototyping/licensePatchAudit.test.ts`
-- Verify REQ-0012-0071 audit-row shape: pure-fn test on the patch-applier asserts the returned audit row carries exactly `{appliedAt, patchSha256, addedSources[]}` (no other fields) and `patchSha256` is the sha256 of the patch file bytes.
+- Verify REQ-0012-0071 audit-row shape, one boundary each:
+  - the row carries the three required fields `{appliedAt, patchSha256, addedSources[]}`, and a row missing any of them is rejected;
+  - `addedLicenseTiers` is optional: a row may carry it as a map from each source to a list of non-empty tier names, and a map of any other shape is rejected;
+  - a row with any other top-level field is rejected;
+  - `patchSha256` is the sha256 of the patch file bytes.
 
 ## TC-0012-0469
 

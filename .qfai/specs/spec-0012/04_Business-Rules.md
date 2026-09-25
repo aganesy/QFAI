@@ -93,19 +93,6 @@
 - `layoutAntiPatternsDetected[]` entries MUST be identifiers declared in `packages/qfai/assets/validators/layoutAntiPatterns.json`. The capture pass writes into the same array, so the declared set covers what the reviewer judges and what the tool computes alike.
 - Detection caps `informationArchitecture` at `acceptable`. Higher score raises `QFAI-PROT-021`.
 
-## BR-0012-0021: pivotDirective Rules
-
-- AC-Refs: AC-0012-0026, AC-0012-0027
-- `pivot` ⇔ latest 3 iters each have low `informationArchitecture` (`weak | acceptable`) AND latest iter has `layoutAntiPatternsDetected.length > 0`.
-- `continue` ⇔ ≥ 2 of the 4 axes strictly improved by `ordinalIndex` (weak=0, acceptable=1, strong=2, exceptional=3) versus the prior iter.
-- Otherwise: `refine`.
-- Implementation lives in `computePivotDirective` (`packages/qfai/src/core/prototyping/evaluatorReview.ts`).
-
-## BR-0012-0022: ordinalIndex Mapping
-
-- AC-Refs: AC-0012-0027
-- `ordinalIndex(weak)=0`, `ordinalIndex(acceptable)=1`, `ordinalIndex(strong)=2`, `ordinalIndex(exceptional)=3`. Code constant in `iteration.ts`.
-
 ## BR-0012-0023: Generator/Evaluator Separation
 
 - AC-Refs: AC-0012-0020
@@ -351,6 +338,8 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 
 - AC-Refs: AC-0012-0069
 - `--license-patch <file>` SHOULD accept add-only diffs; writes new catalog + appends `licensePatchAudit[]` row `{appliedAt, patchSha256, addedSources[]}`.
+- The three fields are required. `addedLicenseTiers` is optional: a map from each source to a list of non-empty tier names, present only when the patch adds tiers. Any other field makes the row invalid.
+- `patchSha256` is the sha256 of the patch file bytes.
 - Deletions and modifications MUST be rejected with cycle-0-restart hint.
 
 ## BR-0012-0058: Subagent iter-context hint (SHOULD)
