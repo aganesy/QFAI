@@ -133,7 +133,8 @@ record waived. Their row-level evidence is in
 
 `TDD-0009` and `TDD-0012` stay at `exception` under `DR-0298`. The plan phase
 found that each answers an `L3` test case from outside `tests/integration/**`,
-so neither can pass a review until its test moves and its `Layer` is corrected.
+so neither can pass a review until its test moves. `TDD-0012` also needs its
+`Layer` corrected.
 
 ### Plan phase
 
@@ -146,5 +147,5 @@ so neither can pass a review until its test moves and its `Layer` is corrected.
 
 | Step | Role (sub-agent)    | Agent instance        | Task title                                                             | Input (refs)                                              | Output (refs) | Status (PASS/REVISE/PENDING) |
 | ---- | ------------------- | --------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------- | ------------- | ---------------------------- |
-| 1    | delivery-planner    | delivery-planner#1    | /qfai-implement plan: order and dispatch for the four reopened rows    | test-list.md, 06_Test-Cases.md, 02_User-stories.md, CR-\* | #plan-phase   | PASS                         |
+| 1    | delivery-planner    | delivery-planner#1    | /qfai-implement plan: order and dispatch for the four rows the waiver parked    | test-list.md, 06_Test-Cases.md, 02_User-stories.md, CR-\* | #plan-phase   | PASS                         |
 | 2    | test-design-analyst | test-design-analyst#1 | /qfai-implement plan: coverage and layer check over the spec-0002 rows | test-list.md, 06_Test-Cases.md, 02_User-stories.md        | #plan-phase   | REVISE                       |

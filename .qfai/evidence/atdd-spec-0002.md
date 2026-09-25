@@ -2,9 +2,10 @@
 
 ## Objective
 
-Carry the proof for the one `Integration` row of this spec's ledger whose test
-could be identified. The pack's other rows are not backfilled here, and the
-reason is recorded under Gaps.
+Carry the proof for the rows of this spec's ledger whose acceptance test
+exists: `TDD-0001`, and `TDD-0008` and `TDD-0016`, which were reopened from
+`exception` under `DR-0298` to take the reviews that record waived. The rows
+not carried here are listed under Gaps with the reason.
 
 ## Inputs reviewed (files/paths)
 
@@ -96,8 +97,8 @@ writes the falsifiability trio into the row's entry.
 | TDD-ID     | Obligation     | Layer       | RED provenance | Status |
 | ---------- | -------------- | ----------- | -------------- | ------ |
 | `TDD-0001` | `TC-0002-0001` | integration | falsifiability | done   |
-| `TDD-0008` | `TC-0002-0008` | integration | falsifiability | todo   |
-| `TDD-0016` | `US-0002-0005` | E2E         | falsifiability | todo   |
+| `TDD-0008` | `TC-0002-0008` | integration | falsifiability | refactor |
+| `TDD-0016` | `US-0002-0005` | E2E         | falsifiability | review-fix |
 
 ### TDD-0001
 
@@ -194,6 +195,7 @@ packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the mutated tree working-tree+6060fccdca596fe5fb9bb99d61a8acd38184b22c44cad0e7e0ba01aa68f4943f; qa-gatekeeper#3 — build-phase GREEN and oracle proof at 828fdace78bc09c28b22ec8510653729e75a83da)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate with the mutation in place; AssertionError at discussionSkillTemplateIntegration.test.ts:147:23 reproduced; RED test hash and Falsifiability revision recomputed. The manifest was then widened to list tests/helpers/stdout.ts, which the test imports, and the hash recomputed; qa-gatekeeper#3 PASS — build-phase GREEN re-run, the mutation re-applied and restored, the refactor verify reproduced, and the widened manifest hash recomputed
 
+
 ### TDD-0009
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -258,6 +260,10 @@ packages/qfai/tests/helpers/stdout.ts
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#2, Round 1 — RED phase gate on the mutated tree working-tree+64c75cd77ebc0efaa7be2cf5ad80c6926bd5ca9d5ed76c0a4196059053ae08c5; qa-gatekeeper#3 — build-phase GREEN and oracle proof at 828fdace78bc09c28b22ec8510653729e75a83da)
 - qa-gatekeeper attempts: qa-gatekeeper#2 PASS — RED phase gate with the mutation in place; AssertionError at spec0002PlannerFirstE2E.test.ts:40:25 reproduced; the -t "US-0002-0005" filter selects only this row's case in a one-test file; RED test hash and Falsifiability revision recomputed. Its advisory asked for tests/helpers/stdout.ts in the manifest, which was then added and the hash recomputed; qa-gatekeeper#3 PASS — build-phase GREEN re-run, the mutation re-applied and restored, the refactor verify reproduced, and the widened manifest hash recomputed
 
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the journey asserts two of the three commitments of US-0002-0005 and none of the first, that discussion defines exploration conditions and anti-goals; implementation-reviewer: PASS. The row moved to review-fix, and the test goes back to /qfai-atdd to assert the first commitment against the tree qfai init writes
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925110715892 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 31e8616f95d222ab8f39bc0cf776cde032a4c2f1b38dc15978990fcf9dc38453
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0002.md`.
@@ -285,6 +291,16 @@ every total.
 | Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
 | ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
 | 4 | - | n/a | grilling(-@2026-09-25T10:08:44.375Z/none): none | - | - | PASS |
+| 5 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0008 falsifiability run with condition 4 finalizing the design system, then the revert and the restored GREEN | #tdd-0008, discussion-completion-matrix.md | Round 1 | PASS |
+| 6 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0008 RED phase gate on the mutated tree | #tdd-0008 | qa-gatekeeper fields | PASS |
+| 7 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0016 falsifiability run with the chosen_by: assumption marker dropped, then the revert and the restored GREEN | #tdd-0016, discussion-completion-matrix.md | Round 1 | PASS |
+| 8 | qa-gatekeeper | qa-gatekeeper#2 | /qfai-implement: TDD-0016 RED phase gate on the mutated tree | #tdd-0016 | qa-gatekeeper fields | PASS |
+| 9 | backend-engineer | backend-engineer#1 | /qfai-implement: widen both RED test manifests to the imported helper, and the refactor verify | #tdd-0008, #tdd-0016 | Refactor verify fields | PASS |
+| 10 | qa-gatekeeper | qa-gatekeeper#3 | /qfai-implement: TDD-0008 and TDD-0016 build-phase GREEN and oracle proof | #tdd-0008, #tdd-0016 | qa-gatekeeper fields | PASS |
+| 11 | completion-reviewer | completion-reviewer#1 | /qfai-implement: TDD-0008 completion review, on the tree before the base branch changed the row's test file; superseded | #tdd-0008 | review-20260925110715891 <!-- qfai:not-a-citation --> | PASS |
+| 12 | implementation-reviewer | implementation-reviewer#1 | /qfai-implement: TDD-0008 code review, on the tree before the base branch changed the row's test file; superseded | #tdd-0008 | review-20260925110715891 <!-- qfai:not-a-citation --> | PASS |
+| 13 | completion-reviewer | completion-reviewer#1 | /qfai-implement: TDD-0016 completion review, attempt 1 | #tdd-0016 | review-20260925110715892 <!-- qfai:not-a-citation --> | REVISE |
+| 14 | implementation-reviewer | implementation-reviewer#1 | /qfai-implement: TDD-0016 code review, attempt 1 | #tdd-0016 | review-20260925110715892 <!-- qfai:not-a-citation --> | PASS |
 
 ## Cross-spec obligations
 
@@ -299,14 +315,15 @@ Recorded per row above, and summarized in the table under
 
 Two rows stay at `exception` under `DR-0298`. Each answers an L3 test case with
 a test outside `tests/integration/**`, so neither can be handed over until its
-test is moved and its `Layer` corrected.
+test is moved. `TDD-0012` also needs its `Layer` corrected.
 
 | Row        | Obligation     | What keeps it at `exception`                                                          |
 | ---------- | -------------- | ------------------------------------------------------------------------------------- |
 | `TDD-0009` | `TC-0002-0009` | Its test is in `tests/e2e/discussionHardeningE2E.test.ts`, with no TC annotation      |
 | `TDD-0012` | `TC-0002-0011` | Its test is in `tests/assets/assets.test.ts`, and its `Layer` cell reads `validators` |
 
-`TDD-0016`'s case reaches only part of `US-0002-0005`.
+`TDD-0016` is at `review-fix`: its case reaches only part of `US-0002-0005`, and
+the completion review requires the rest before the row closes.
 
 | Reached by the case                                   | Not reached                               |
 | ----------------------------------------------------- | ----------------------------------------- |
@@ -321,5 +338,6 @@ discriminate is `skips non-UI packs`, and `TDD-0011` now names it.
 
 ## Final status
 
-PASS for the row recorded here. The pack is not clean; the rows above are
-listed rather than claimed.
+PASS for `TDD-0001` and `TDD-0008`. `TDD-0016` is at `review-fix`, and
+`TDD-0009` and `TDD-0012` stay at `exception`. The pack is not clean; the rows
+above are listed rather than claimed.

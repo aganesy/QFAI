@@ -37,6 +37,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Two spec-0002 rows closed without review now have their reviews**
+  (#2286). `TDD-0008` and `TDD-0016` had been closed at `exception` with their
+  gate and review turns waived. Each now records a falsifiability run on the
+  shipped discussion completion matrix, a `qa-gatekeeper` pass on the RED and
+  on the GREEN, and a completion and code review. `TDD-0008` is `done`.
+  `TDD-0016` is at `review-fix`: its journey does not yet assert that
+  discussion defines exploration conditions and anti-goals. Both rows leave the
+  waiver. `TDD-0009` and `TDD-0012` stay under it, because each answers an
+  `L3` test case from outside `tests/integration/**`.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
