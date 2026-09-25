@@ -1820,7 +1820,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-031":
     "DESIGN.md.lock.yaml must exist under contracts/design/ and contain a designMdSha256 string.",
   "QFAI-DCON-032":
-    "Root DESIGN.md sha256 must match DESIGN.md.lock.yaml#designMdSha256 (re-freeze after intentional edits).",
+    "Root DESIGN.md sha256 must match DESIGN.md.lock.yaml#designMdSha256. After an intended edit, `qfai design refreeze` updates the lock, design-system.yaml and prototype-handoff.yaml together.",
   "QFAI-DCON-033":
     "Root DESIGN.md exists but failed to parse per design-md-spec (front-matter is malformed).",
   "QFAI-DCON-034":

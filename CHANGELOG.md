@@ -4,6 +4,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **`qfai design refreeze` records an intended `DESIGN.md` edit everywhere
+  its hash is kept** (#2267). It checks and hashes `DESIGN.md`, then rewrites
+  the lock's `designMdSha256` and `frozenAt`. Where prototyping has handed
+  off, it also brings `design-system.yaml` (its hash and its `visual` copy)
+  and `prototype-handoff.yaml` to the same hash. Other fields and comments stay
+  as written. `--check` lists the files that are out of date and writes
+  nothing. The first freeze stays with `/qfai-sdd`, so a project without a lock
+  is refused. The validator's hash-mismatch findings now name the command.
+
 ### Removed
 
 - The repository's `pr-fix` and `pr-merge` skills, their scripts, and their

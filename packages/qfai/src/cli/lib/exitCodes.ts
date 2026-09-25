@@ -167,6 +167,14 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     ],
   },
   {
+    label: "design refreeze",
+    lines: [
+      `${EXIT_CODES.ok} = updated, or nothing was out of date,`,
+      `${EXIT_CODES.findings} = --check found a file out of date, or a runtime error,`,
+      `${EXIT_CODES.inputError} = DESIGN.md or the lock is missing or unusable, or DESIGN.md is the sample brand`,
+    ],
+  },
+  {
     label: "other commands",
     lines: [
       `${EXIT_CODES.ok} = success, ${EXIT_CODES.inputError} = a usage error,`,

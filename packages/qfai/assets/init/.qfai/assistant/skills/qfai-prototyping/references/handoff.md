@@ -44,9 +44,11 @@ The mirror copies these keys verbatim from `DESIGN.md`:
 - `visual.radius` (all 4 keys, required)
 - `visual.shadow` (all 3 keys, required)
 
-The mirror also records `source: DESIGN.md` and the
+The mirror also records `source: DESIGN.md` and, as `designMdSha256`, the
 `DESIGN.md.lock.yaml` sha256 so downstream tooling can detect drift.
 LLM assistance is not used here; the mirror is byte-deterministic.
+After an intended edit to `DESIGN.md`, `npx qfai design refreeze` updates
+the mirror, the handoff and the lock together.
 
 QFAI checks the prototype against these tokens. It does not read the
 product's stylesheet or Tailwind config, so a project that holds its

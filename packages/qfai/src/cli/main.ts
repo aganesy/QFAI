@@ -3,6 +3,7 @@ import { runAuditLog } from "./commands/auditLog.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runDbDrift } from "./commands/dbDrift.js";
+import { runDesignRefreeze } from "./commands/designRefreeze.js";
 import { formatGuardrailsErrorJson, runGuardrails } from "./commands/guardrails.js";
 import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
@@ -57,6 +58,7 @@ const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
   "handoff",
   "discussion",
   "prototyping",
+  "design",
 ]);
 
 export async function run(argv: string[], cwd: string): Promise<void> {
@@ -335,6 +337,16 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
         });
       }
       return;
+    case "design":
+      {
+        // A missing or unknown subcommand was refused by parseArgs.
+        const resolvedRoot = await resolveRoot(options);
+        process.exitCode = await runDesignRefreeze({
+          root: resolvedRoot,
+          check: Boolean(options.designCheckOnly),
+        });
+      }
+      return;
     case "prototyping":
       {
         // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
@@ -454,6 +466,9 @@ Commands:
   prototyping rescope --remove <id> --reason <delta-id>
                                         Drop a retired surface from frozenSurfaceUnion
                                         (the loop stays on its current cycle; a surface still being resolved is refused)
+  design refreeze [--check]             Record an intended DESIGN.md edit in the lock, design-system.yaml
+                                        and prototype-handoff.yaml
+                                        [--check] list the files that are out of date without writing
 
 Options:
   --root <path>   Target directory (for init, the output directory when --dir is absent)

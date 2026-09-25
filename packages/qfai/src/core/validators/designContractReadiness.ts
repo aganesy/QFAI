@@ -652,7 +652,7 @@ async function validateRootDesignMdAndLock(
             "designContractReadiness.designMdSha",
             undefined,
             "canonical",
-            "DESIGN.md was edited after the freeze. Re-run /qfai-sdd Phase 0 (or restart prototyping) to refreeze.",
+            "DESIGN.md was edited after the freeze. If the edit is intended, run `qfai design refreeze`: it updates the lock, design-system.yaml and prototype-handoff.yaml together.",
           ),
         );
       }
@@ -1028,7 +1028,7 @@ async function validatePrototypeHandoff(
           "designContractReadiness.prototypeHandoffField",
           undefined,
           "canonical",
-          "Re-run `qfai prototyping certify` (or refreeze the DESIGN.md lock) so the handoff sha matches the frozen root lock.",
+          "Run `qfai design refreeze`, which writes the current DESIGN.md sha256 into the lock and the handoff together.",
         ),
       );
     }
