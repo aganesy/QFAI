@@ -1619,6 +1619,8 @@ describe("QFAI-TDDLIST-008", () => {
       "we did not run npm test",
       "npm test — never run",
       "npm test wasn't run",
+      "we didn't run 'npm test'",
+      '"npm test" was not run',
     ]) {
       it(`rejects a GREEN command that says it was not run: "${negated}"`, async () => {
         await withProject(async (root) => {
@@ -1633,6 +1635,30 @@ describe("QFAI-TDDLIST-008", () => {
             },
           );
           expect(codes).toContain("QFAI-TDDLIST-008");
+        });
+      });
+    }
+
+    // A quoted argument is what the command hands to the runner, such as the
+    // title of a test about gates that did not run. It is not a statement that
+    // the command itself did not run.
+    for (const titled of [
+      "npx vitest run tests/unit/sample.test.ts --testNamePattern='A gate that did not run is reported unrun'",
+      'npx vitest run tests/unit/sample.test.ts -t "a lane that was never run is flagged"',
+    ]) {
+      it(`accepts a GREEN command whose quoted test title mentions an unrun gate: "${titled}"`, async () => {
+        await withProject(async (root) => {
+          const codes = await runOn(
+            root,
+            ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+            {
+              ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replace(
+                "Round 1: GREEN command: npm test",
+                `Round 1: GREEN command: ${titled}`,
+              ),
+            },
+          );
+          expect(codes).not.toContain("QFAI-TDDLIST-008");
         });
       });
     }

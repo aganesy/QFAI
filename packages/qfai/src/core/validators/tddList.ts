@@ -1332,8 +1332,25 @@ const EVIDENCE_COMMAND_NOT_RUN = [
   /\b(?:wasn|weren|isn|aren|hasn|haven|didn|don|doesn|couldn)['’]t\s+(?:been\s+)?(?:run|ran|executed|invoked)\b/i,
 ];
 
+/**
+ * A command with its quoted arguments taken out.
+ *
+ * A quoted argument is data the command hands to the program — a test title, a
+ * name pattern — and says nothing about whether the command ran. A test titled
+ * "A gate that did not run is reported unrun", selected by that title, put the
+ * negation above into its own recorded command, and the row could not close.
+ *
+ * A quote opens only after whitespace, `=` or the start of the value, and
+ * closes only before whitespace or the end. The apostrophe in `didn't` opens
+ * nothing, so `we didn't run 'npm test'` still reads as not run.
+ */
+function evidenceCommandOutsideQuotes(value: string): string {
+  return value.replace(/(?<=^|[\s=])(['"])(?:(?!\1).)*\1(?=\s|$)/g, " ");
+}
+
 export function isExecutedEvidenceCommand(value: string): boolean {
-  return hasCommandShape(value) && !EVIDENCE_COMMAND_NOT_RUN.some((form) => form.test(value));
+  const unquoted = evidenceCommandOutsideQuotes(value);
+  return hasCommandShape(value) && !EVIDENCE_COMMAND_NOT_RUN.some((form) => form.test(unquoted));
 }
 
 /**
