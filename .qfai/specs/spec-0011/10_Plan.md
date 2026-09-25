@@ -10,6 +10,13 @@
 6. Evidence contract: per-item fresh evidence validation
 7. Parallelization policy: independence check, worktree separation, integration verify
 
+The skill-text part of removing the work-log surface is edited in
+`packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/` and
+mirrored by `pnpm sync:ssot`. It lands in the same change as the removal of
+`QFAI-TDDLIST-015`, in the order spec-0004's `10_Plan.md` states under
+"Removing the work-log surface". The text is checked by review and has no
+test of its own (`CR-20260925-0010`).
+
 ## Test approach
 
 - Unit tests: status lifecycle transitions, evidence validation, backward transition rejection

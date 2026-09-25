@@ -46,7 +46,6 @@ stays the first markdown table in this file):
 | TC-0003-0019 | integration | AC-0003-0016               | EX-0003-0017 | edge     | レガシー行除去と管理ブロック置換                                      |
 | TC-0003-0020 | integration | AC-0003-0015               | EX-0003-0016 | boundary | review-\*/ サブディレクトリが gitignore 対象                          |
 | TC-0003-0021 | integration | AC-0003-0017               | EX-0003-0018 | normal   | 4-layer asset-tree seed                                               |
-| TC-0003-0022 | integration | AC-0003-0018               | EX-0003-0019 | normal   | project-root steering seed                                            |
 | TC-0003-0023 | integration | AC-0003-0019, AC-0003-0020 | EX-0003-0020 | normal   | --upgrade-assistant-tree migration                                    |
 | TC-0003-0024 | integration | AC-0003-0021               | EX-0003-0021 | normal   | migration memo authoring                                              |
 | TC-0003-0025 | unit        | AC-0003-0022               | EX-0003-0022 | normal   | assistantPaths.ts SSOT lint                                           |
@@ -196,19 +195,6 @@ Verify:
 - 上記いずれの layer にも `.gitkeep` は書かれない（layer が空のときだけ空の `.gitkeep` を置く）
 - 通常実行と `--dry-run` の双方で、`report()` の "skipped paths" に `.qfai/assistant/<layer>/.gitkeep` が現れない（未配置の placeholder は copied/skipped のどちらにも計上しない）
 - `.qfai/assistant/steering/` ディレクトリは存在しない
-
-## TC-0003-0022: project-root steering seed
-
-**Level:** integration
-**EX Refs:** EX-0003-0019
-**AC Refs:** AC-0003-0018
-
-Setup: empty temp dir.
-Action: `runInit({ root })`、その後ユーザー編集をシミュレートして `.qfai/steering/_templates/entry.md` に追記 → `runInit({ root })` を再実行。
-Verify:
-
-- the first run seeds `.qfai/steering/.gitkeep` and `.qfai/steering/_templates/entry.md`, and writes no `.qfai/steering/README.md`
-- 2 回目実行後もユーザー追記内容が `_templates/entry.md` に残っている
 
 ## TC-0003-0023: --upgrade-assistant-tree migration
 

@@ -194,7 +194,7 @@
 - AC-Refs: AC-0015-0018
 - Type: error
 - Level: integration
-- Verify that a Reviewer report emitting a catalog code with empty / whitespace-only `justification:` is rejected by `qfai validate` ingestion (advisory-failing, R-WORKLOG-DRIFT family pattern), and the same code with a non-empty justification is accepted. The OQ-0119 prompt-augmentation-timing deferral is not exercised.
+- Verify that a Reviewer report emitting a catalog code with empty / whitespace-only `justification:` is rejected by `qfai validate` ingestion (advisory-failing, per the Reviewer-Gate justification contract, `.qfai/contracts/cli/qfai-validate.md#reviewer-gate-input-bundle`), and the same code with a non-empty justification is accepted. The OQ-0119 prompt-augmentation-timing deferral is not exercised.
 
 ## TC-0015-0028: `qfai audit log --scope/--operator/--clause` filters records
 

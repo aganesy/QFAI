@@ -172,7 +172,6 @@ Scenario: レガシー管理ブロックからの自動移行
 | AC-0003-0015 | gitignore 管理ブロック追記                                  | REQ-0016   | P1       |
 | AC-0003-0016 | レガシーブロック自動移行                                    | REQ-0017   | P1       |
 | AC-0003-0017 | 4-layer asset-tree seed                                     | REQ-0018   | P1       |
-| AC-0003-0018 | project-root steering seed                                  | REQ-0019   | P1       |
 | AC-0003-0019 | --upgrade-assistant-tree flag                               | REQ-0020   | P1       |
 | AC-0003-0020 | W-USER-EDIT-PRESERVED 出力                                  | REQ-0020   | P1       |
 | AC-0003-0021 | migration memo authoring                                    | REQ-0021   | P1       |
@@ -201,13 +200,6 @@ Scenario: レガシー管理ブロックからの自動移行
 - Given クリーンな新規プロジェクトディレクトリ
 - When `qfai init` を実行する
 - Then `.qfai/assistant/{constitution,manifest,catalog,process}/` の 4 ディレクトリが出荷アセットの内容で生成される。出荷アセットで満たされた layer には `.gitkeep` を書かない（空の layer にのみ空の `.gitkeep` を置く）。`.qfai/assistant/steering/` (旧層) は生成されない
-
-## AC-0003-0018: project-root steering seed
-
-- US-Refs: US-0003-0016
-- Given クリーンな新規プロジェクトディレクトリ
-- When `qfai init` を実行する
-- Then `.qfai/steering/.gitkeep` and `.qfai/steering/_templates/entry.md` are created at the project root, and no `.qfai/steering/README.md` is written. A later `qfai init` preserves a user's edit to the entry template
 
 ## AC-0003-0019: --upgrade-assistant-tree flag
 

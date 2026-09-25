@@ -23,6 +23,12 @@
 | TDD-0019 | -            | E2E         | T2   | -                                                              | -                                                                       | todo      | -            | -                                                                                 | US-0011-0007 | -            | -             | -          | -      | -        |
 | TDD-0020 | -            | E2E         | T2   | -                                                              | -                                                                       | todo      | -            | -                                                                                 | US-0011-0008 | -            | -             | -          | -      | -        |
 
+## TDD-ID reservations
+
+- ~~TDD-0021~~ — row deleted 2026-09-25, obligation removed by CR-20260925-0010
+- ~~TDD-0022~~ — row deleted 2026-09-25, obligation removed by CR-20260925-0010
+- ~~TDD-0023~~ — row deleted 2026-09-25, obligation removed by CR-20260925-0010
+
 ## Notes
 
 - DR-NOTE-2 (2026-05-06 / CHG-001): TC-0011-0011 / TC-0011-0012 are introduced alongside the spec-0017 decomposition (simplified handoff schema + design-system input). Test files will be authored in the implementation Phase tracked at the parent plan; until then the rows stay `todo`.

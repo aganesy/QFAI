@@ -114,6 +114,13 @@
 | TDD-0110 | TC-0013-0010 | integration | -    | packages/qfai/tests/integration/sddSkillSpec0013.test.ts             | reports a spec id the catalog moves to another capability                           | done      | CR-20260925-0008                                 | RED:falsifiability GREEN:pass ORACLE:proved REV:9cae7bb4b64018c5048704921331e916ad28e4f3 -> .qfai/evidence/atdd-spec-0013.md#tdd-0110                                                                                                                                                                          | -            | -            | -             | -                                                     | BR-0013-0007 | assigned-id-keeps-its-spec            |
 | TDD-0111 | TC-0013-0010 | integration | -    | packages/qfai/tests/integration/sddSkillSpec0013.test.ts             | SKILL.md makes reordering the capability-to-spec mapping a Change Request           | done      | CR-20260925-0008                                 | RED:falsifiability GREEN:pass ORACLE:proved REV:9cae7bb4b64018c5048704921331e916ad28e4f3 -> .qfai/evidence/atdd-spec-0013.md#tdd-0111                                                                                                                                                                          | -            | -            | -             | -                                                     | BR-0013-0007 | reorder-needs-change-request          |
 
+## TDD-ID reservations
+
+- ~~TDD-0112~~ — row deleted 2026-09-25 at `red`, obligation removed by CR-20260925-0010; rounds at `.qfai/evidence/atdd-spec-0013.md#tdd-0112`
+- ~~TDD-0113~~ — row deleted 2026-09-25 at `red`, obligation removed by CR-20260925-0010; rounds at `.qfai/evidence/atdd-spec-0013.md#tdd-0113`
+- ~~TDD-0114~~ — row deleted 2026-09-25 at `red`, obligation removed by CR-20260925-0010; rounds at `.qfai/evidence/atdd-spec-0013.md#tdd-0114`
+- ~~TDD-0115~~ — row deleted 2026-09-25 at `red`, obligation removed by CR-20260925-0010; rounds at `.qfai/evidence/atdd-spec-0013.md#tdd-0115`
+
 ## Notes
 
 - DR-NOTE-3 (2026-05-06 / CHG-001): TC-0013-0022..0024 are introduced alongside the spec-0017 decomposition (SDD Phase 0 design lock + legacy contract drop). Test files will be authored in the implementation Phase tracked at the parent plan; until then the rows stay `todo`.

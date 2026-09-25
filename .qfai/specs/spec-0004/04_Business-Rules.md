@@ -2,7 +2,7 @@
 
 ## BR-0004-0001: Validate Is the Machine Gate
 
-- AC-Refs: AC-0004-0001
+- AC-Refs: AC-0004-0001, AC-0004-0026
 - `qfai validate` checks schema, evidence, and canonical validator rules.
 
 ## BR-0004-0002: UI Evidence Is Screen-Scoped
@@ -78,41 +78,10 @@
 - AC-Refs: AC-0004-0015
 - `.qfai/assistant/` 直下に許可されるディレクトリ名は exactly `{constitution, manifest, catalog, process}` の 4 種類。他名は warning として surface する (deprecation window 中)。validator は `assistantPaths.ts#CANONICAL_LAYER_NAMES` を SSOT として参照する。
 
-## BR-0004-0015: work-log frontmatter schema is closed
-
-- AC-Refs: AC-0004-0016
-- 必須フィールド: `id`, `status`, `kind`, `created`, `updated`, `scope`, `blocking`, `promote-to`, `links`。enum (canonical contract: `.qfai/contracts/cli/worklog-entry.schema.md`):
-  - `status ∈ {active, handoff, archived}`
-  - `kind ∈ {milestone, decision, risk, consultation-needed, unexpected, unscoped-discovery, handoff, blocker, scope-up, scope-down, spike}`
-  - `scope ∈ {global, spec-NNNN}`
-  - `blocking: boolean`
-  - `promote-to: null | "spec-NNNN/07_Decisions.md"`
-- 違反は `W-WORKLOG-SCHEMA` (warning, non-blocking)。
-
-## BR-0004-0016: link-integrity resolution
-
-- AC-Refs: AC-0004-0017
-- `links:` array の各要素は `spec-NNNN` / `discussion-YYYYMMDDhhmmssSSS` / `entry-<id>` のいずれかの prefix。validator は対応するパス (`.qfai/specs/spec-NNNN/`, `.qfai/discussion/discussion-*/`, `.qfai/steering/<id>.md` 等) を probe し、未解決は `W-WORKLOG-BROKEN-LINK` (warning)。
-
-## BR-0004-0017: justification non-empty required for drift findings
+## BR-0004-0017: justification non-empty required for R-REJECTED-READOPT
 
 - AC-Refs: AC-0004-0018
-- `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT` finding objects は `justification: <string>` (non-empty, trimmed length > 0) を必須とする。空文字列・undefined・whitespace-only は schema 違反として advisory-failing error にする。
-
-## BR-0004-0018: handoff entry 5-section schema
-
-- AC-Refs: AC-0004-0019
-- `kind: handoff` の本文は 5 必須セクション (`## State of the task`, `## Next single action`, `## Constraints to preserve`, `## Open questions`, `## References to consult first`) を順序通り含む (canonical contract: `.qfai/contracts/cli/worklog-entry.schema.md`)。1 セクションでも欠落 → `R-HANDOFF-INCOMPLETE` (error, advisory-failing)。順序の入れ替わりは warning ではなく検査対象外 (将来検討)。
-
-## BR-0004-0019: promotion gate triplet
-
-- AC-Refs: AC-0004-0020
-- decision-promotion が satisfied と判定されるためには (a) entry frontmatter に `promote-to: 07_Decisions.md` が設定済み、(b) `07_Decisions.md` 内に entry を citing する行が存在、(c) entry frontmatter に `promoted-to: <DR-ID>` の back-ref が設定済み、の 3 条件すべてが揃っていること。1 つでも欠落 → `W-PENDING-PROMOTION`。
-
-## BR-0004-0020: stale window is 90 days
-
-- AC-Refs: AC-0004-0021
-- `W-WORKLOG-STALE` の閾値は `now - updated > 90 days`。1 day = 86400 seconds、now は validator 実行時の UTC ISO-8601。閾値定数は `assistantPaths.ts#WORKLOG_STALE_DAYS = 90` の SSOT 参照。
+- An `R-REJECTED-READOPT` finding object requires a non-empty `justification: <string>` (trimmed length > 0); an empty, whitespace-only or missing value is an advisory-failing error.
 
 ## BR-0004-0021: sunset minor named in deprecation warning
 
@@ -164,7 +133,8 @@
   1. 修正されたファイル path
   2. 対応する修正が欠落しているカウンターパート path
   3. match を確認できない契約条項 (clause text or anchor)
-- 3 要素のうち 1 つでも欠落した justification は schema 違反として advisory-failing error として扱う。`qfai validate` は empty / whitespace-only / undefined を即時 reject する (BR-0004-0017 の R-WORKLOG-DRIFT パターンと同形)。
+- 3 要素のうち 1 つでも欠落した justification は schema 違反として advisory-failing error として扱う。
+- `qfai validate` rejects an empty, whitespace-only or missing `justification:` at once, the same shape as BR-0004-0017.
 
 ## BR-0004-0029: certify reads validate.json with profile awareness
 

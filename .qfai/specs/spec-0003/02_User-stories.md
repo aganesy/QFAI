@@ -16,7 +16,7 @@
 - US-0003-0012: instructions の force 更新 - --force で instructions を shipped テンプレートへ更新
 - US-0003-0013: instructions アクティベーション案内 - 作成時にガイダンスメッセージ表示
 - US-0003-0015: `.gitignore` managed block (v1.7.18) - `qfai init` ignores the artifacts QFAI generates (report, evidence, review, discussion) and keeps the governance records among them tracked
-- US-0003-0016: 4-layer asset-tree + work-log surface seeding (v1.9.0) - `qfai init` が `.qfai/assistant/{constitution,manifest,catalog,process}/` の 4 層およびプロジェクトルートに `.qfai/steering/` を seed
+- US-0003-0016: 4-layer asset-tree seeding (v1.9.0) - `qfai init` seeds the four layers of `.qfai/assistant/{constitution,manifest,catalog,process}/`
 - US-0003-0017: --upgrade-assistant-tree migration helper (v1.9.0) - 旧 `.qfai/assistant/steering/` レイアウトを 4-layer へ一括移行する flag。ユーザー編集を保全
 - US-0003-0018: migration memo authoring (v1.9.0) - migration 実行時に `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` を生成
 - US-0003-0019: assistantPaths.ts SSOT module (v1.9.0) - assistant-tree のパス文字列を単一の TypeScript module から供給し、hard-coded literal を排除
@@ -30,12 +30,12 @@
 - US-0003-0027: 配布 workflow 所有権コントラクト (CHG-007) - QFAI が adopter の workflows ディレクトリで何を所有するかを文書化・テストし、adopter 作成ファイルと `declined` ファイルを構造的に守る
 - US-0003-0028: 配布 set の structural contract gate (CHG-007) - 宣言された期待形状に対して配布 set を assert する gate が、pull request が実際に走らせる経路から semantic drift を落とす
 
-## US-0003-0016: 4-layer asset-tree + work-log surface seeding
+## US-0003-0016: 4-layer asset-tree seeding
 
 - Parent: CAP-0003
-- Goal: `qfai init` が新規プロジェクトに対して assistant-tree の 4 層 (`constitution/`, `manifest/`, `catalog/`, `process/`) およびプロジェクトルートの `.qfai/steering/` (AI work-log surface) を seed することで、CHG-003 discussion pack で合意された新しいレイアウトを 1 コマンドで実体化する
-- Non-goals: validate-side enforcement (spec-0004 が担当)、frontmatter schema 検証 (spec-0004 担当)、Reviewer-Gate drift findings (spec-0015 担当)
-- Notes: REQ-0018 / REQ-0019 を実装する。`assistantPaths.ts` (REQ-0022) を経由してパス文字列を解決すること
+- Goal: `qfai init` seeds the four assistant-tree layers (`constitution/`, `manifest/`, `catalog/`, `process/`) in a new project, so the layout agreed in the CHG-003 discussion pack exists after one command
+- Non-goals: validate-side enforcement (spec-0004), Reviewer-Gate drift findings (spec-0015)
+- Notes: Implements REQ-0018; resolve paths through `assistantPaths.ts` (REQ-0022)
 
 ## US-0003-0017: --upgrade-assistant-tree migration helper
 

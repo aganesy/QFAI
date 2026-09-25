@@ -237,6 +237,39 @@ the work orders below.
 - No wall-clock improvement is claimed here. The projected figures belong to Plan step 11, which
   owes captured before-and-after numbers under BR-0017-0030.
 
+## Capability split and coverage-density observations
+
+The capability split check derives expected spec names from list position. With
+`N` capabilities it expects the contiguous set `spec-0001` through
+`spec-000N`; it does not use a capability's declared number. A permanent
+reserved gap therefore becomes unsatisfiable when the count reaches it.
+`spec-0017` was a trailing reservation. Adding the seventeenth capability
+either used that reserved name or produced both `QFAI-SPLIT-103` (missing)
+and `QFAI-SPLIT-104` (extra). The slice policy makes reservations temporary:
+renumber a gap when the count reaches it. `OQ-0023` records the possible
+number-based check.
+
+An escalation made during the 2026-08-05 review claimed that
+`paths.testsDir` pointed to a missing repository-root `tests/` directory
+and that satisfying the ATDD gate required a user decision and a new root
+directory. That claim was false. The directory was tracked and held two
+Markdown annotation ledgers with 200 and 486 `QFAI:` annotations. The
+scanner's default glob included Markdown, and `spec-0001` cleared both ATDD
+gates from that directory. Remaining `QFAI-ATDD-111` and `-112` findings
+were annotation work for the ATDD and implementation stages. No SDD-stage
+user decision was outstanding on this point.
+
+`QFAI-COV-207` listed artifacts covered exactly once. The review gave each
+signal a disposition:
+
+| Signal | Disposition |
+| ------ | ----------- |
+| `spec-0017`: 66 business rules with one example each | Accepted. The rule-to-example mapping was intentionally one-to-one and index-aligned, as `05_Examples.md` and `09_delta.md` state. |
+| `spec-0017`: 50 examples with one test case each | Accepted. All 34 acceptance criteria had multiple test cases covering normal and error or boundary behaviour. The 16 examples with multiple cases owned distinct falsifying oracles. |
+| `spec-0003`: 21 acceptance criteria with one test case each | Pre-existing and outside the eight requirements absorbed in this change. All 12 criteria added by this change had at least two cases. |
+
+No density warning was accepted without review, and none required a new case.
+
 ## Final status
 
 - Final status: PASS

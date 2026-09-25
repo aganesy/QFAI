@@ -5,10 +5,10 @@
 - Raised by: `/qfai-implement orchestrator, repairing the spec-0002 execution ledger`
 - Raised at: `2026-09-12T12:40:00Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
+- Status: `approved`
+- Approved by: `user (Codex interactive decision)`
+- Approved at: `2026-09-24T21:12:39Z`
+- Approved option: `1`
 - Applied at: `-`
 - Superseded by: `-`
 
@@ -101,6 +101,8 @@ spec catching up, not the product going back.
 | `spec-0010/TDD-0008` | `ledger-row` | `TC-0010-0006` again; the row is `done`                                                                                                 |
 | `spec-0010/TDD-0010` | `ledger-row` | `TC-0010-0006` is the direction rule itself, which every statement-A outcome re-derives, and the row is `todo`                          |
 | `spec-0010/TDD-0011` | `ledger-row` | `TC-0010-0007` asks that discussion author root `DESIGN.md`, the producer every statement-A outcome re-derives                          |
+| `spec-0010/TDD-0025` | `ledger-row` | `US-0010-0008` E2E row for the direction rule, which approved option 1 re-derives                                                       |
+| `spec-0010/TDD-0026` | `ledger-row` | `US-0010-0009` E2E row for the root `DESIGN.md` producer, which approved option 1 re-derives                                            |
 | `spec-0013/TDD-0016` | `ledger-row` | `TC-0013-0022` asks that `/qfai-sdd` Phase 0 write `DESIGN.md.lock.yaml`, which `2a` moves into `/qfai-prototyping`                     |
 | `spec-0013/TDD-0081` | `ledger-row` | `TC-0013-0036` checks that an absent optional artifact does not block preflight, which `2B` reverses                                    |
 | `spec-0013/TDD-0082` | `ledger-row` | `TC-0013-0037` checks that a malformed optional artifact does not block preflight, which `2B` reverses                                  |
@@ -151,8 +153,9 @@ to do with. A row whose obligation is unchanged waits on nobody.
   option, not a reset: its obligation does not move either.
 - The completed ledger repairs seeded `spec-0002/TDD-0016` and the five
   `spec-0013` E2E rows above. Their option-specific dispositions are in
-  approved actions 3 and 5. The `spec-0010` repair is still pending; its
-  `US-0010-0008` and `US-0010-0009` rows join by id after it lands.
+  approved actions 3 and 5. The `spec-0010` repair seeded
+  `spec-0010/TDD-0025` and `spec-0010/TDD-0026` for `US-0010-0008` and
+  `US-0010-0009`, and both are listed above.
 - Overlapping open Change Requests: two, both over `spec-0014` rows this record
   re-verifies in place.
   `CR-20260913-0005` holds `spec-0014/TDD-0009`, whose `Test file` and
@@ -1295,23 +1298,10 @@ internally contradictory.
    option resets. `/qfai-implement` consumes the test and the RED provenance
    `/qfai-atdd` writes, so without this pass those rows stay at `todo`.
 
-10. **The consultation entry closes in the change that sets `Applied at`.**
-    `.qfai/steering/2026-09-12-spec-0002-two-statements-the-product-replaced.md`
-    stands at `status: active` and `blocking: true`, and its body says this
-    record is open and waits on a decision. Later sessions and reviewer input
-    bundles read open work-log entries, so an entry left that way reports a
-    settled conflict as a live blocker. Once `Resolution` is filled and
-    `Applied at` set, the same change:
-    - records the approved option and the date it was applied under the
-      entry's `## What the next session picks up`;
-    - sets `status: archived`, `blocking: false`, and `updated` to that date;
-    - fills `closure-rationale` with this record's ID, its approved option and
-      its `Applied at`. The work-log schema requires that field of an archived
-      entry whose `promote-to` is `null`.
-
-    `promote-to` stays `null`. The decision is recorded in this Change Request,
-    in the Decision Records the reruns amend and in each delta's
-    `## Change Requests` table, so the entry has nothing to promote.
+10. **Close the consultation in this Change Request.** Record the approved
+    option in `Resolution` when setting `Applied at`. The Decision Records
+    amended by the reruns and each delta's `## Change Requests` table carry
+    the resulting obligation changes.
 
 ## Resolution
 

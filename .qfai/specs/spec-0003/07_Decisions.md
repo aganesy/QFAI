@@ -2,7 +2,7 @@
 
 ## Decisions
 
-12 items.
+32 items.
 
 ### DR-0003-0001: symlink ベースの統合方式
 
@@ -112,3 +112,171 @@
   - Why rejected: 同梱 TOML は canonical markdown の snapshot であり、プロジェクト側で agent を追加・改稿した瞬間に古くなる。`--force` が再生成しない限り Codex だけが取り残される構造は解消しない
 - Scope: 本リポジトリの `.codex/agents/*.toml` も本決定以降は生成物として扱う（`packages/qfai/tests/integration/codexAgentWrappers.test.ts` が generator 出力との byte 一致を検証する）
 - Coverage: AC-0003-0037 / TC-0003-0055 / TDD-0057
+
+### DR-0003-0013: AC-0003-0039 cites a spec-local REQ-0032
+
+- Status: superseded by DR-0003-0030
+- Context: The AC Catalog's `Notes` column holds one spec-local REQ per criterion. The work-log removal answers three upstream requirements: `discussion-20260923060900824` REQ-0001, REQ-0006 and REQ-0010.
+- Decision: Add REQ-0032 to `01_Spec.md` with the upstream ids in brackets, in the form REQ-0024..0031 use, and cite it from the catalog row. Record the upstream ids as the `# Source:` comment in the criterion's Gherkin block.
+- Consequences: The catalog keeps one local id per row. The `# Source:` comment is the one provenance record, where the traceability reader looks for it.
+- Related: AC-0003-0039, US-0003-0016
+
+### DR-0003-0014: US-0003-0016 narrows to the four-layer seed
+
+- Status: accepted
+- Context: The story carried the assistant-tree seed (REQ-0018, AC-0003-0017) and the removed project-root seed. One of its non-goals named a frontmatter schema check that spec-0004 no longer has.
+- Decision: Title the story "4-layer asset-tree seeding". The Goal names the four layers only, and the Notes cite REQ-0018 and REQ-0032. Drop the frontmatter-schema non-goal and keep the other two.
+- Consequences: The E2E row TDD-0064 keeps `US-Refs: US-0003-0016`. It is still `todo`, so the narrower story owes it no reset.
+- Related: US-0003-0016, TDD-0064
+- Amended by: DR-0003-0030. The Notes cite REQ-0018 only, because REQ-0032 is removed.
+
+### DR-0003-0015: AC-0003-0039 belongs to US-0003-0016
+
+- Status: superseded by DR-0003-0030
+- Context: The new criterion needs one parent story.
+- Decision: Parent it on US-0003-0016. The criterion states the negative of the half that story lost, and the withdrawn schema sat in that story's `catalog/` layer.
+- Consequences: No story is added, and the story range in `01_Spec.md` is unchanged.
+- Related: AC-0003-0039
+
+### DR-0003-0016: The absence criterion includes init's report
+
+- Status: superseded by DR-0003-0030
+- Context: Upstream REQ-0001 also names the `--force` NOTE wording, and REQ-0006 says a copy with no lock record stays.
+- Decision: AC-0003-0039 and BR-0003-0049 require that init's report names no path under `.qfai/steering/`. The NOTE wording and the unrecorded copy get no criterion, because no upstream acceptance signal needs one.
+- Consequences: The NOTE wording changes in the implementation without a spec row pinning it.
+- Related: AC-0003-0039, BR-0003-0049
+
+### DR-0003-0017: The withdrawn schema's retirement keeps its own rule and example
+
+- Status: superseded by DR-0003-0030
+- Context: `assistantAssetProvenance.test.ts` already tests the generic retire pass. It proves neither this file's withdrawal nor the edited-content note that upstream REQ-0006's acceptance names.
+- Decision: Keep BR-0003-0050, EX-0003-0054 and TC-0003-0061. The rule states the general behaviour; the example is the concrete case of `catalog/worklog-entry.schema.md`.
+- Consequences: Dropping them would change an approved APPEND row, which only the user can decide.
+- Related: BR-0003-0050, EX-0003-0054, TC-0003-0061
+
+### DR-0003-0018: TC-0003-0060 covers plain init and init --force
+
+- Status: superseded by DR-0003-0030
+- Context: Upstream REQ-0010's acceptance names `init --force`; its description says "with or without `--force`".
+- Decision: TC-0003-0060 reads the directory after a plain run and after a `--force` run.
+- Consequences: Each run has its own ledger row, so a regression on one path fails on its own.
+- Related: TC-0003-0060, TDD-0096, TDD-0097
+
+### DR-0003-0019: EX-0003-0053 uses a partial seed
+
+- Status: superseded by DR-0003-0030
+- Context: A fully seeded, unedited `.qfai/steering/` is left alone by create-only copying, so a test over it passes on the code that still seeds and could never fail first.
+- Decision: The fixture holds an edited `README.md` and one adopter entry, with no `.gitkeep` and no `_templates/entry.md`.
+- Consequences: The test fails while init still writes the two missing files, and passes once the seed is gone.
+- Related: EX-0003-0053, TC-0003-0060
+
+### DR-0003-0020: Six ledger rows for the three new test cases
+
+- Status: superseded by DR-0003-0030
+- Context: Each new test case has two parts that fail independently.
+- Decision: Seed TDD-0094..TDD-0099, two rows per test case, each naming its part in `Boundary`.
+- Consequences: A RED run observes each part, rather than stopping at the first failing assertion.
+- Related: TC-0003-0059, TC-0003-0060, TC-0003-0061
+
+### DR-0003-0021: Cells of the six new ledger rows
+
+- Status: superseded by DR-0003-0030
+- Context: The rows are ATDD-owned integration rows whose tests do not exist yet. They touch init's write set and the governed-asset lock.
+- Decision: `Layer` Integration, `Tier` T2, `Test file` `-`, `Status` todo. `Owning module` is `packages/qfai/src/cli/commands/init.ts` for TDD-0094..0097 and `packages/qfai/src/core/governedAssistantManifest.ts` for TDD-0098..0099, as paths from the repository root.
+- Consequences: `/qfai-atdd` writes the tests, and `/qfai-implement` fills `Test file` and `Selector` when it advances each row.
+- Related: TDD-0094, TDD-0095, TDD-0096, TDD-0097, TDD-0098, TDD-0099
+
+### DR-0003-0022: TDD-ID reservations sit after the ledger table
+
+- Status: accepted
+- Context: `validateTddList` reads the first table in the file as the ledger.
+- Decision: Place `## TDD-ID reservations` after the ledger table and before the implementation notes, as a bullet list.
+- Consequences: The ledger stays the first table in the file.
+- Related: TDD-0022
+
+### DR-0003-0023: Tier is seeded on new rows only
+
+- Status: superseded by DR-0003-0030
+- Context: Most rows in this ledger carry `-` in `Tier`. No Change Request asks for a re-derivation, and raising the tier of an untouched `done` row would reset it to `todo`.
+- Decision: Seed `Tier` on TDD-0094..0099 only, and state the limit in the ledger notes of `09_delta.md`.
+- Consequences: Rows seeded earlier keep `-`, which is read downstream as T1, until a Change Request re-derives them.
+- Related: TDD-0094, TDD-0095, TDD-0096, TDD-0097, TDD-0098, TDD-0099
+
+### DR-0003-0024: The TDD-0025 assertion on a removed symbol goes to /qfai-implement
+
+- Status: accepted
+- Context: Two tests of the `done` row TDD-0025 assert `joinProjectSteering`: `packages/qfai/tests/integration/initSpec0003.test.ts:256`, and `packages/qfai/tests/cli/init.test.ts:4120`, a string check on `init.ts`. Upstream REQ-0005 removes that symbol, and TC-0003-0025's obligation does not change.
+- Decision: Name both lines as a `/qfai-implement` action in the ledger notes of `09_delta.md`. The row keeps its cells and is not reset; the ruling covers both tests.
+- Consequences: Both assertions are removed in the implementation change that removes the symbol.
+- Related: TDD-0025, TC-0003-0025
+
+### DR-0003-0025: BR-0003-0050 cites CLI-INIT
+
+- Status: superseded by DR-0003-0030
+- Context: No contract describes the withdrawn-asset retire pass, and the contracts phase added no line for it.
+- Decision: Set `Contract-Refs` to `CLI-INIT`, the contract of the command that runs the pass. The obligation-reconciliation phase records the lock hash as init's internal record of existing behaviour.
+- Consequences: If that phase rules the hash must resolve to a contract field, the new line in `qfai-init.md` goes to the user.
+- Related: BR-0003-0050
+
+### DR-0003-0026: The recorded hash of BR-0003-0050 resolves through init's own record
+
+- Status: superseded by DR-0003-0030
+- Context: BR-0003-0050 deletes a withdrawn governed file under `--force` only while its content matches its recorded hash. No line of `qfai-init.md` names that record or the pass that retires withdrawn files. The contract speaks of a governed asset's receipt and its provenance classification (`qfai-init.md:150-152`, `:218-219`).
+- Decision: Resolve the hash by a stated join, with no contract write. The receipt is the entry for the file in `.qfai/assistant/.assets.lock.json` (`ASSISTANT_ASSETS_LOCK_BASENAME` in `assistantAssetProvenance.ts`), which maps the file's path to the hash `init` last wrote. `retireWithdrawnGovernedAssets` in `init.ts` reads it, deletes a match, and emits the edited-content note for a mismatch. `catalog/worklog-entry.schema.md` is not in `ADOPTER_OWNED_ASSETS`, so the pass reaches it.
+- Consequences: The rule is realized by existing behaviour of `qfai init`, and `qfai-init.md` gains no line. A line naming the lock would widen the approved contract edits, which is the user's decision.
+- Related: BR-0003-0050, AC-0003-0039, CLI-INIT, DR-0003-0025. `09_delta.md` DL-0014.
+
+### DR-0003-0027: BR-0003-0049 is realized by what init does not write
+
+- Status: superseded by DR-0003-0030
+- Context: BR-0003-0049 is a negative rule. `qfai init` creates, modifies and deletes nothing under `.qfai/steering/`, names nothing there in its report, and writes no work-log line into the instructions file. No contract line forbids those writes.
+- Decision: Record the rule as realized by absence, with no contract write. The required outputs of `qfai-init.md` no longer name the directory. The report lists only what the run wrote (`written paths:`). The instructions text comes from `buildCopilotInstructions` in `init.ts`, whose lines the contract does not fix.
+- Consequences: TC-0003-0059 and TC-0003-0060 hold the rule. Restoring a "must not touch" line in `qfai-init.md` would reverse an approved contract edit, which is the user's decision.
+- Related: BR-0003-0049, AC-0003-0039, CLI-INIT. `09_delta.md` DL-0015.
+
+### DR-0003-0028: The plan states the init part of the removal and cites spec-0004 for the order
+
+- Status: accepted
+- Context: The removal of `.qfai/steering/` spans six specs and lands as one change. Its order is driven by spec-0004's validators.
+- Decision: `10_Plan.md` gets a subsection under `## Implementation approach` naming what leaves `init.ts` by symbol and what is reused unchanged, a subsection under `## Test approach`, and one risk row. It cites spec-0004's `10_Plan.md` for the order and does not restate it. Earlier sections of the plan are not re-audited or rewritten.
+- Consequences: The change adds no architectural element, so the usage-reference check has nothing to count here. The init symbols are named, not given as line ranges, so the plan stays true as the file moves.
+- Related: BR-0003-0049, BR-0003-0050, TC-0003-0059, TC-0003-0060, TC-0003-0061. `09_delta.md` DL-0016.
+- Amended by: DR-0003-0030. The subsection under `## Test approach` now states that the removal adds no test.
+
+### DR-0003-0029: The removal's tests build their own trees
+
+- Status: superseded by DR-0003-0030
+- Context: TC-0003-0060 needs a partly seeded `.qfai/steering/`. spec-0004's TC-0004-0074 and TC-0004-0076 need trees of their own under the same directory.
+- Decision: Each test builds its own tree. No shared fixture or helper is planned.
+- Consequences: The three trees differ, so there is no third identical caller for a shared fixture. Reusing a helper the suite already has is decided when the tests are written.
+- Related: TC-0003-0060, TC-0004-0074, TC-0004-0076. `09_delta.md` DL-0017.
+
+### DR-0003-0030: The work-log absence obligations are withdrawn
+
+- Status: accepted
+- Context: The user decided on 2026-09-25 that no test checks the work-log surface is gone, and that the withdrawn-asset mechanism stays generic with no exemption for the path. `CR-20260925-0010` records it, and its Triage group for this spec was approved at 2026-09-25T04:52:16Z. The production removal stays.
+- Decision: Remove the spec-local REQ-0032, AC-0003-0039, BR-0003-0049, BR-0003-0050, EX-0003-0052..0054 and TC-0003-0059..0061. Delete ledger rows TDD-0094..TDD-0099 and tombstone each ID. US-0003-0016 cites REQ-0018 only. `01_Spec.md` therefore names none of the pack's REQ-0001, REQ-0006 and REQ-0010: REQ-0032 carried them, and the approved Triage group G1 withdraws it. They stay traceable through the 2026-09-23 Triage rows of `09_delta.md`. DR-0003-0013, DR-0003-0015..0021, DR-0003-0023, DR-0003-0025..0027 and DR-0003-0029 decided the withdrawn items and are superseded. DR-0003-0023 is in that set because every row it seeded is deleted.
+- Consequences: `qfai init` writing nothing under `.qfai/steering/` is held by the code having no path to it (NFR-0006's search), not by a test. The generic retire pass keeps its tests in `packages/qfai/tests/core/assistantAssetProvenance.test.ts`. The two test files the rows named are deleted in the same change.
+- Related: REQ-0032, US-0003-0016, AC-0003-0039, BR-0003-0049, BR-0003-0050, EX-0003-0052, EX-0003-0053, EX-0003-0054, TC-0003-0059, TC-0003-0060, TC-0003-0061, TDD-0094..TDD-0099, CR-20260925-0010. `09_delta.md` DL-0018.
+
+### DR-0003-0031: [RE-OPEN] The withdrawn schema needs no rule of its own
+
+- Status: re-open
+- Context: DR-0003-0017 kept BR-0003-0050, EX-0003-0054 and TC-0003-0061 for `catalog/worklog-entry.schema.md`, and DL-0005 rejected relying on the generic retire-pass test "without the user's approval".
+- Decision: What changed is the user's decision in `CR-20260925-0010`: the withdrawn schema is handled by the generic retire pass with no exemption, and its own tests go. The three items are removed, and `assistantAssetProvenance.test.ts` ("retires a governed file the installed release no longer ships") keeps the generic pass tested.
+- Consequences: No test names the withdrawn schema.
+- Related: BR-0003-0050, EX-0003-0054, TC-0003-0061, TDD-0098, TDD-0099, CR-20260925-0010. `09_delta.md` DL-0019.
+- Re-opens: DR-0003-0017
+- Approved by: user (Claude Code structured question)
+- Approved at: 2026-09-25T04:52:16Z
+
+### DR-0003-0032: [RE-OPEN] Neither init run is tested for the absent surface
+
+- Status: re-open
+- Context: DR-0003-0018 had TC-0003-0060 read `.qfai/steering/` after a plain run and after a `--force` run, and DL-0006 rejected leaving the plain run untested.
+- Decision: What changed is the user's decision in `CR-20260925-0010`: no test asserts the surface is absent, for either run. TC-0003-0060 is removed with TDD-0096 and TDD-0097.
+- Consequences: A regression that made init write under `.qfai/steering/` would have to add a path to `packages/qfai/src/**`, which NFR-0006's search reports.
+- Related: TC-0003-0060, TDD-0096, TDD-0097, CR-20260925-0010. `09_delta.md` DL-0020.
+- Re-opens: DR-0003-0018
+- Approved by: user (Claude Code structured question)
+- Approved at: 2026-09-25T04:52:16Z

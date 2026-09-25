@@ -27,6 +27,38 @@
 | `pruneLegacySkillFiles()`   | Remove 10_workflow.md from skill directories                                 |
 | `configureGitSymlinks()`    | Set git config core.symlinks true                                            |
 
+### Removing the work-log seed
+
+`qfai init` stops seeding `.qfai/steering/` and leaves an existing one alone.
+This is the init part of one change across six specs. Its order is stated once,
+in spec-0004's `10_Plan.md` under "Removing the work-log surface".
+
+The change adds no architectural element. What leaves
+`packages/qfai/src/cli/commands/init.ts`:
+
+- `seedProjectSteering`, `buildProjectSteeringEntryTemplate`,
+  `summarizeSeedDrift`, `readSeedBodyForDrift` and `type SeedComparison`;
+- `normalizeNewlines` and `SEED_DRIFT_MAX_BYTES`, which only the seed code
+  reaches (`OPEN_READ_FLAGS` stays, because other readers use it);
+- the folding of `projectSteeringResult` into the run's report;
+- the work-log line that `buildCopilotInstructions` writes;
+- "steering" in the `--force` NOTE's list of what is not overwritten.
+
+`retireWithdrawnGovernedAssets` and the `.assets.lock.json` record it reads stay
+as they are. They are what deletes an unedited, recorded copy of
+`catalog/worklog-entry.schema.md` under `--force` and keeps an edited one with a
+note.
+
+The alternative considered was a new guard that refuses any write under
+`.qfai/steering/`. It was rejected because nothing writes there once the seed
+is gone: no path in `packages/qfai/src/**` names the directory.
+
+What the change leaves out:
+
+- migration or deletion of an adopter's `.qfai/steering/`;
+- any change to the retire pass or the lock record;
+- the legacy `.qfai/assistant/steering/` layout and its sunset.
+
 ## Test approach
 
 ### Integration Tests (`tests/cli/init.test.ts`)
@@ -38,6 +70,15 @@
 | QFAI:SPEC-0003:US-0003-0003 | --force overwrites skills but protects skills.local |
 | QFAI:SPEC-0003:US-0003-0005 | Skill symlinks are valid directory symlinks         |
 | QFAI:SPEC-0003:US-0003-0011 | Instructions files created in new repo              |
+
+### Tests for the work-log removal
+
+- The removal adds no test to this spec (`CR-20260925-0010`). The tests that
+  pinned the seed are deleted with it, and no test asserts that
+  `.qfai/steering/` is absent.
+- The type check fails on any import of a removed function.
+- The withdrawn schema is retired by the generic pass, which
+  `packages/qfai/tests/core/assistantAssetProvenance.test.ts` already tests.
 
 ## Dependencies
 
@@ -86,9 +127,10 @@ New obligations are discharged in `packages/qfai/tests/integration/**` per the A
 
 ## Risk mitigation
 
-| Risk                                                                                                                                       | Likelihood / impact | Mitigation                                                                                                                                              | Trigger to act                                                                            |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| The shipped pin change lands before the pre-build version rule, so pack verification, the leakage guard and the asset suite break together | med / high          | Ordering constraint 1 makes the pre-build rule a co-change rather than a follow-up; the asset suite is updated in the same commit                       | `pnpm verify:pack` or the leakage guard fails on a branch that only touched a shipped pin |
-| The structural contract gate lands after the repository's own copy of the shipped validate workflow is retired, leaving no cross-check     | med / high          | Ordering constraint 2 requires the gate with-or-before the retirement, so the eye-check is replaced before it is removed                                | The own-copy retirement appears in a diff with no gate in the same change                 |
-| The shipped set grows before an owner is declared, so a wider create-only surface ships unowned                                            | low / high          | Ordering constraint 3 lands the ownership contract first; `SHIPPED_WORKFLOW_NAMES` is in-binary, so a new name cannot arrive by globbing the asset tree | A new `qfai-*.yml` asset appears without a matching entry in the shipped-name list        |
-| A refresh path re-implements `pruneMatchingEntries` instead of reusing it, splitting the prune rule in two                                 | med / med           | Ordering constraint 4 exports the helper first, which makes the no-parallel-implementation criterion satisfiable rather than aspirational               | A second prune walk appears anywhere under `src/cli/`                                     |
+| Risk                                                                                                                                       | Likelihood / impact | Mitigation                                                                                                                                                                                                                                                                                                                        | Trigger to act                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| The shipped pin change lands before the pre-build version rule, so pack verification, the leakage guard and the asset suite break together | med / high          | Ordering constraint 1 makes the pre-build rule a co-change rather than a follow-up; the asset suite is updated in the same commit                                                                                                                                                                                                 | `pnpm verify:pack` or the leakage guard fails on a branch that only touched a shipped pin |
+| The structural contract gate lands after the repository's own copy of the shipped validate workflow is retired, leaving no cross-check     | med / high          | Ordering constraint 2 requires the gate with-or-before the retirement, so the eye-check is replaced before it is removed                                                                                                                                                                                                          | The own-copy retirement appears in a diff with no gate in the same change                 |
+| The shipped set grows before an owner is declared, so a wider create-only surface ships unowned                                            | low / high          | Ordering constraint 3 lands the ownership contract first; `SHIPPED_WORKFLOW_NAMES` is in-binary, so a new name cannot arrive by globbing the asset tree                                                                                                                                                                           | A new `qfai-*.yml` asset appears without a matching entry in the shipped-name list        |
+| A refresh path re-implements `pruneMatchingEntries` instead of reusing it, splitting the prune rule in two                                 | med / med           | Ordering constraint 4 exports the helper first, which makes the no-parallel-implementation criterion satisfiable rather than aspirational                                                                                                                                                                                         | A second prune walk appears anywhere under `src/cli/`                                     |
+| Deleting the TC-0003-0022 tests removes a selector a live row still names, because they share files with live rows                         | med / med           | Remove only the `it` blocks whose selector names TC-0003-0022, with their annotations, in `tests/cli/init.test.ts` and `tests/integration/initSpec0003.test.ts`. Remove the `joinProjectSteering` assertions of the TC-0003-0025 tests in `initSpec0003.test.ts` and `init.test.ts` with the symbol, and leave their row as it is | `TDDLIST_SELECTOR_UNRESOLVED` on a row of this ledger that the change did not retire      |

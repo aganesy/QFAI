@@ -655,8 +655,6 @@ describe("GATE_GROUP_FAMILIES files each family under the group that runs it", (
         "QFAI-EX-*",
         "QFAI-TC-*",
         "QFAI-LEDGER-*",
-        "W-WORKLOG-*",
-        "W-PENDING-PROMOTION",
       ]) {
         expect(notice?.message).toContain(family);
       }

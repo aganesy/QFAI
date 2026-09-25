@@ -176,6 +176,18 @@
 - Summary: DR-0012-002 retains optional advisory pattern review across skills, bounded to concrete coverage with no numeric target. The shipped catalog bounds preserved review-profile settings.
 - Rationale: optional review does not require additional abstract rules. Adopter manifests and independently required product obligations, pairings and blocking gates remain protected.
 
+- Date: 2026-09-23
+- Primary: Behavior
+- Tags: @docs
+- Summary: DR-0296 removes the `.qfai/steering/` work-log surface and records
+  that the managed `.gitignore` block never excluded it. DR-0250, DR-0252,
+  DR-0254, DR-0256 and DR-0257 are marked superseded, and DR-0251, DR-0258 and
+  DR-0260 partly superseded. TC-66, TC-70, OC-51, OC-52, 17 glossary terms and
+  the CLI-WLOG index row are removed. Rows in `## Triage (2026-09-23)`.
+- Rationale: `qfai init` no longer seeds the surface and `qfai validate` no
+  longer reads it, so the shared records that set it up would describe
+  behaviour that no longer ships.
+
 ## Rejected Decisions
 
 | Date       | Rejected Option                                      | Reason                                                                              | Recurrence Prevention                                                                                                                                                                        | Source                                                                                                        | Evidence                                    |
@@ -920,6 +932,43 @@ No `UPDATE:REMOVE` row exists in this change. Verified: the vitest `compatibilit
 | Source   | Subject                                                               | Existing Spec                | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                                                                                                                                   |
 | -------- | --------------------------------------------------------------------- | ---------------------------- | --------- | ------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | REQ-0007 | Correct the documentation-only floor `OC-73`'s Impact column restates | \_policies/07_Constraints.md | UPDATE    | MODIFY | -           | `OC-73`'s Impact states the documentation-only floor as a count of executed instances. The `spec-0017` rule that governs that floor now bounds the sum of declared `timeout-minutes` over the jobs the path executes instead, so the count no longer states the measure. The figure is corrected in place rather than left standing beside its replacement. |
+
+## Triage (2026-09-23)
+
+The shared records that establish the project-root work-log surface
+`.qfai/steering/` go. Per-spec rows for the same requirements are in
+`spec-0003`, `spec-0004`, `spec-0006`, `spec-0011`, `spec-0013` and `spec-0015`.
+
+| Source                                | Subject                                                                                                                                                                                                                                                                                                                                               | Existing Spec                | Operation | Sub-op | Approved By   | Rationale                                                                                                                                                                           | Depends-On |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | --------- | ------ | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| discussion-20260923060900824#REQ-0016 | Append DR-0296: the work-log surface is removed; the managed `.gitignore` block never excluded `.qfai/steering/`, although DR-0254 and OC-51 stated it did; the rejected option of DR-0250, a project-level MADR decision register, stays rejected                                                                                                    | \_policies/08_Decisions.md   | UPDATE    | APPEND | yusuke_senaga | The superseding record. DR-0296 is the next unused number                                                                                                                           | -          |
+| discussion-20260923060900824#REQ-0016 | Mark DR-0250, DR-0252, DR-0254, DR-0256 and DR-0257 superseded by DR-0296; mark DR-0251 (the work-log clause), DR-0258 (the `R-WORKLOG-DRIFT` half) and DR-0260 (the auto-archival half) partly superseded, naming the clause                                                                                                                         | \_policies/08_Decisions.md   | UPDATE    | MODIFY | yusuke_senaga | Uses the `- **Status**: SUPERSEDED by ...` line the file already carries, which keeps the history other records cite. DR-0253, DR-0255 and DR-0259 concern the layer recut and stay | -          |
+| discussion-20260923060900824#REQ-0016 | Remove constraints TC-66, TC-70, OC-51 and OC-52                                                                                                                                                                                                                                                                                                      | \_policies/07_Constraints.md | UPDATE    | REMOVE | yusuke_senaga | All four constrain the removed surface. TC-65, TC-67..TC-69, TC-71, OC-50 and OC-53 stay                                                                                            | -          |
+| discussion-20260923060900824#REQ-0016 | Remove 17 glossary terms: Steering work-log, work-log entry, kind (work-log), status (work-log), scope (work-log), promote-to, promoted-to, drift-prevention contract, decision-promotion gate, handoff brief, R-WORKLOG-DRIFT, R-HANDOFF-INCOMPLETE, W-PENDING-PROMOTION, W-WORKLOG-SCHEMA, W-WORKLOG-STALE, W-WORKLOG-BROKEN-LINK, E-WORKLOG-SECRET | \_policies/06_Glossary.md    | UPDATE    | REMOVE | yusuke_senaga | Each names only the removed surface; `E-WORKLOG-SECRET` is emitted by no source file. `R-REJECTED-READOPT` and the layer-recut terms stay                                           | -          |
+| discussion-20260923060900824#REQ-0016 | Reword the `assistant-layer recut` definition's layer list to "(Constitution / Manifest / Catalog / Process partition)"                                                                                                                                                                                                                               | _policies/06_Glossary.md     | UPDATE    | MODIFY | yusuke_senaga | The definition names the removed work-log layer as its fourth                                                                                                                       | -          |
+| discussion-20260923060900824#REQ-0016 | Remove the `CLI-WLOG` Contract Index row and the CHG-003 note on seeding `.qfai/steering/`                                                                                                                                                                                                                                                            | \_policies/05_Contracts.md   | UPDATE    | REMOVE | yusuke_senaga | Phase 0 deletes `.qfai/contracts/cli/worklog-entry.schema.md`; the index row and the file go together so no row names a missing file                                                | -          |
+| discussion-20260923060900824#REQ-0016 | Reword the `CLI-INIT` and `CLI-VAL` purposes and the CHG-003 note that counts three contracts, dropping the work-log surface                                                                                                                                                                                                                          | \_policies/05_Contracts.md   | UPDATE    | MODIFY | yusuke_senaga | Both contracts stay; only the removed surface leaves their description                                                                                                              | -          |
+| discussion-20260923060900824#REQ-0016 | Drop the work-log surface, `R-WORKLOG-DRIFT` and `R-HANDOFF-INCOMPLETE` from the roadmap row of the assistant-layer recut; keep the recut and `R-REJECTED-READOPT`                                                                                                                                                                                    | \_policies/02_Initiative.md  | UPDATE    | MODIFY | yusuke_senaga | The row describes a surface that no longer ships                                                                                                                                    | -          |
+
+- Approved By: yusuke_senaga, through AskUserQuestion on 2026-09-23, for the
+  other rows as one set.
+- The `06_Glossary.md` definition row was approved separately, through
+  AskUserQuestion on 2026-09-23 during the Phase 1 grilling.
+- Contracts, approved in the same session: delete
+  `.qfai/contracts/cli/worklog-entry.schema.md`; remove the seed outputs, reinit
+  bullets and `## Distributed-surface obligations` from `qfai-init.md`; remove the
+  work-log codes, bundle item, SSOT-module line and `## Promote-gate surfacing`
+  from `qfai-validate.md`; reword the precedent sentence in
+  `shipped-workflows.md`.
+- Contract edit approved by yusuke_senaga through AskUserQuestion on
+  2026-09-23, during the Reviewer Gate fix: `qfai-validate.md`
+  `## Reviewer-Gate input bundle` requires a justification, and rejects a
+  report that lacks one, only for `R-REJECTED-READOPT`, the other codes the
+  contract declares with one, and the justification catalog codes. Recorded in
+  spec-0004 as DR-0004-0038 and DR-0004-0039.
+- `.qfai/report/validate.spec-0017.json` stays as the dated record of the run it
+  came from.
+- The CHG-003 history in this file stays as written.
 
 ## Change Requests
 

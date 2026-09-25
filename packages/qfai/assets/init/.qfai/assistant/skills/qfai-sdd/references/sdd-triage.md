@@ -176,10 +176,10 @@ and that none were added or dropped — in the `Rationale` column of the
 7. **Stop.** Do not enter Phase 0 until every required-approval row has
    an approver recorded and every CREATE row cites a registered CAP.
    Stopping here is a reportable outcome, not a failure to repair: leave
-   `Approved By` as `-`, write a `consultation-needed` work-log entry
-   naming each unapproved row with its Operation and target, and report the
-   `QFAI-TRIAGE-005` errors as the reason the run stopped. Under `--auto`,
-   also ask for a rerun without `--auto` so the approvals can be collected.
+   `Approved By` as `-`, do not enter Phase 0, report every unapproved row
+   with its Operation and target, and report the `QFAI-TRIAGE-005` errors as
+   the reason the run stopped. Under `--auto`, also ask for a rerun without
+   `--auto` so the approvals can be collected.
 
 ## Impact cascade (1 REQ → N rows)
 
