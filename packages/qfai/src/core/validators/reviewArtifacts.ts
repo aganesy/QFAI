@@ -57,7 +57,7 @@ export type ReviewArtifactsScope = {
  * attribute: one value per stage, written once when the pack is created, and
  * unrelated to what the pack points at.
  */
-const ALLOWED_PRODUCERS = new Set(["discussion", "sdd", "implement"]);
+const ALLOWED_PRODUCERS = new Set(["discussion", "sdd", "atdd", "implement"]);
 
 /** The producers each stage-scoped profile is the gate for. */
 export const SDD_PACK_PRODUCERS: ReadonlySet<string> = new Set(["sdd"]);
@@ -72,6 +72,7 @@ function producerKind(producer: string): string | null {
     case "discussion":
       return "discussion";
     case "sdd":
+    case "atdd":
     case "implement":
       return "spec";
     default:

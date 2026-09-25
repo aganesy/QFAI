@@ -24,12 +24,12 @@ does not name is the state an agent invents, out of the four forbidden moves.
 
 - `QFAI-ATDD-113` (`CON-API`) and `QFAI-ATDD-115` (`CON-DB`) are attributed to
   `.qfai/contracts/**`, which has no spec owner in the model.
-- `QFAI-TEST-001` is attributed to the test file. A file under the canonical
-  `tests/<layer>/spec-NNNN/**` layout is owned by that spec, so a scoped run
-  drops a sibling's stub the way it drops a sibling's broken reference — the
-  directory decides, whatever the file's annotation says. A test file outside
-  that layout has no owner, so a sibling's stub there still exits 1 in a scoped
-  run. This profile runs the stub
+- `QFAI-TEST-001` and `QFAI-TEST-003` are attributed to the test file. A file
+  under the canonical `tests/<layer>/spec-NNNN/**` layout is owned by that spec,
+  so a scoped run drops a sibling's stub or skipped test the way it drops a
+  sibling's broken reference — the directory decides, whatever the file's
+  annotation says. A test file outside that layout has no owner, so a sibling's
+  stub or skipped test there still exits 1 in a scoped run. This profile runs the stub
   gate over `tests/e2e/**`, `tests/api/**` and `tests/integration/**`, so an
   acceptance test written as a silent stub — `it.todo` in vitest and jest,
   `pytest.skip` in pytest, the equivalent in each supported stack — fails it
@@ -221,14 +221,14 @@ different sibling specs arrive as one finding whose single `Contract ID` and
 into one row each. Write `None` when the scoped run exited 0 — an absent
 section after a run that exited 1 is unrecorded residue, not a clean run.
 
-| Field                       | Meaning                                                                                                                                                                  |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Finding`                   | the rule code that reported this obligation — `QFAI-ATDD-113`, `QFAI-ATDD-115` or `QFAI-TEST-001`; the same code repeats across rows when one finding aggregated several |
-| `Contract ID`               | exactly one `CON-API-*` / `CON-DB-*` from that finding's `refs` — one ID per row, never a list. `-` on a `QFAI-TEST-001` row, which names a file instead                 |
-| `Test file`                 | the stub's file and line on a `QFAI-TEST-001` row, `-` on a contract row                                                                                                 |
-| `Owning spec`               | every sibling spec that owns that contract or that file, resolved above — never this spec, and never blank                                                               |
-| `Why not this stage's work` | one sentence tying the obligation to that spec's scope, not to this run's convenience                                                                                    |
-| `Closed by`                 | the owning spec's next `/qfai-atdd` run, or `/qfai-verify` for the repo-wide run at stage end                                                                            |
+| Field                       | Meaning                                                                                                                                                                                   |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Finding`                   | the rule code that reported this obligation — `QFAI-ATDD-113`, `QFAI-ATDD-115`, `QFAI-TEST-001` or `QFAI-TEST-003`; the same code repeats across rows when one finding aggregated several |
+| `Contract ID`               | exactly one `CON-API-*` / `CON-DB-*` from that finding's `refs` — one ID per row, never a list. `-` on a `QFAI-TEST-*` row, which names a file instead                                    |
+| `Test file`                 | the file and line of the stub (`QFAI-TEST-001`) or skipped test (`QFAI-TEST-003`), `-` on a contract row                                                                                  |
+| `Owning spec`               | every sibling spec that owns that contract or that file, resolved above — never this spec, and never blank                                                                                |
+| `Why not this stage's work` | one sentence tying the obligation to that spec's scope, not to this run's convenience                                                                                                     |
+| `Closed by`                 | the owning spec's next `/qfai-atdd` run, or `/qfai-verify` for the repo-wide run at stage end                                                                                             |
 
 **A sibling's stub is a residue like a sibling's contract.** `QFAI-TEST-001` is
 filed against the test file, which no spec owns in the finding, so it survives
@@ -239,6 +239,10 @@ file under the canonical `tests/<layer>/spec-NNNN/**` layout belongs to _that_
 spec, and otherwise the `QFAI:SPEC-NNNN:` annotation the stub carries names it.
 A stub file with neither is unattributable and stays **this** spec's, exactly as
 an unattributable contract does.
+
+**A sibling's skipped test is the same residue.** `QFAI-TEST-003` is filed
+against the test file too, survives `--spec` on the same terms and is an error,
+so it takes a row of its own, with its owner resolved the same way.
 
 `Owning spec` is the load-bearing field. "A contract elsewhere is uncovered" is
 not a record; "`CON-API-0004` is declared by spec-0004, whose ATDD stage has not

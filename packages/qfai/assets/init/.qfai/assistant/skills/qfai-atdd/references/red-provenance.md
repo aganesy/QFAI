@@ -325,7 +325,7 @@ gate condition where it is defined below.
    row's minimum evidence, and the row proceeds to `green` and `done` normally.
 
    What this stage owes at the handover is the predicate to break and a branch
-   still true of the tree: **record `Satisfied-by` naming the predicate, re-run
+   still true of the tree: **record `Round 1: Satisfied-by` naming the predicate, re-run
    this row's classification test immediately before handing it over (P4b) so
    an earlier branch-1 row's production code has not made the branch stale, and
    hand the row over.** Nothing else in this branch is this stage's to run. The
@@ -381,7 +381,7 @@ Exactly one form per row, never both and never neither:
 | Branch         | Recorded                                                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Observed RED   | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects (`TC-ref` / `US-ref` / `CON-API-ref`), RED command+result, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan                                                                         |
-| Falsifiability | Row identity (as above), `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, `Round 1: RED failure mode: falsifiability`, **`RED test hash` and its manifest**, **`Round 1: Falsifiability revision`**, **`qa-gatekeeper` PASS**, GREEN pair                                                                                                                                                    |
+| Falsifiability | Row identity (as above), `Round 1: Satisfied-by`, `Round 1: Falsifiability command`, `Round 1: Falsifiability result`, `Round 1: RED failure mode: falsifiability`, **`RED test hash` and its manifest**, **`Round 1: Falsifiability revision`**, **`qa-gatekeeper` PASS**, GREEN pair                                                                                                                         |
 | `exception`    | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects, recorded **before** P1d routes the gate — its audit subject is those plus the `DR-ID` and the DR artifact, so a row without them has nothing reproducible for `qa-gatekeeper` to hash. Then write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green. |
 
 `Round 1: RED failure mode` is on both rows because the consumer's per-item contract

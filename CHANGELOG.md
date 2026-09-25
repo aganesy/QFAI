@@ -84,6 +84,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The `/qfai-atdd` and `/qfai-implement` references agree on five
+  evidence-record details** (#2412).
+
+  - The falsifiability handover writes `Round 1: Satisfied-by`,
+    `Round 1: Falsifiability command` and `Round 1: Falsifiability result`, as
+    the round-evidence reference lists them. The ATDD reference named the
+    trio without the prefix, so following both recorded it twice.
+  - The round-evidence reference lists `Round N: Revision` after the GREEN pair.
+    Listed first, it ended the RED audit subject before any RED field.
+  - A sibling spec's skipped test (`QFAI-TEST-003`) is recorded under
+    `## Cross-spec obligations` like a sibling's stub. It survives `--spec` and
+    exits the scoped gate 1, and the `Finding` field did not admit it.
+  - The ATDD `Final status` template says to replace `<timestamp>` in the
+    `qfai:not-a-citation` marker as well as in the pack path. A marker still
+    holding the placeholder is not read as a marker.
+  - `qfai validate` accepts `producer: "atdd"` in a review pack's
+    `summary.json` and `review_request.md`, and the ATDD P8 stage pack
+    declares it. A pack that declared no producer was placed by
+    `target.kind: "spec"` under the SDD gate.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

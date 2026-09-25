@@ -907,6 +907,20 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     // The split has one authority; restating it here is how the two drift.
     expect(provenance).toContain("Do not re-derive the split here");
   });
+
+  // `round-evidence.md` puts the falsifiability trio in the round block. A table
+  // row naming `Satisfied-by` bare told the handover to write it at row level,
+  // and following both references recorded it twice.
+  it("writes the falsifiability trio with the round prefix at the handover", async () => {
+    const provenance = flat(await read(tree, PROVENANCE));
+    const row = provenance.slice(provenance.indexOf("| Falsifiability |"));
+    const cell = row.slice(0, row.indexOf("| `exception`"));
+    for (const field of ["Satisfied-by", "Falsifiability command", "Falsifiability result"]) {
+      expect(cell).toContain(`\`Round 1: ${field}\``);
+      expect(cell).not.toContain(`, \`${field}\``);
+    }
+    expect(provenance).toContain("**record `Round 1: Satisfied-by` naming the predicate");
+  });
 });
 
 describe.each(TREES)("%s (someone can perform every step)", (tree) => {

@@ -20,6 +20,15 @@ that produced it
 A mismatch means the evidence moved after the verdict, and the verdict is not
 fresh — this stage does not declare completion on it.
 
+## Declare the P8 pack's producer
+
+The pack this stage opens says which stage wrote it: `producer: "atdd"` in its
+`summary.json`, and a `- Producer: atdd` line in its `review_request.md`, as
+`../../qfai-implement/references/review-artifact-layout.md` requires of every
+pack. A pack that declares no producer is placed by its `target.kind`, and
+`spec` puts it under the SDD stage's gate, which then judges a pack it did not
+open.
+
 ## Seal the P8 pack
 
 When the last reviewer response lands, and **before this stage writes its
@@ -40,6 +49,10 @@ The path is the gate's operand and not a pointer: `.qfai/review/` is not
 tracked, so a clone carries the record without the pack, and a reader who
 follows the path finds nothing. The marker beside it says the path is not
 provenance to open — the record's own verdict, revision and hash are.
+
+Replace `<timestamp>` in the marker as well as in the path. A marker still
+holding the placeholder is not read as a marker, so the pack path and the
+placeholder's own prefix are both reported as citations of an untracked tree.
 
 Name the run by its id, `review-<timestamp>`, everywhere else in the
 record. The field is the one place the full path belongs, because the gate
