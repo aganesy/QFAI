@@ -684,7 +684,7 @@ async function startUnderLock(options: WorkflowOptions): Promise<number> {
 // `start` reads the mode first: under `shadow` or `off` it writes nothing and reads no payload.
 async function start(options: WorkflowOptions): Promise<number> {
   const mode = await modeOf(options.root);
-  if (mode === "off") return refuse(null, INVALID_MODE);
+  if (mode === null) return refuse(null, INVALID_MODE);
   if (mode !== "active") {
     emit({ ok: true, run: null, mode });
     return EXIT_CODES.ok;
