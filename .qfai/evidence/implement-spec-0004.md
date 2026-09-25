@@ -43,6 +43,19 @@ Rows closed under DR-0298, one entry per row.
 - Note: the case holds once `QFAI-TRIAGE-011` lands: `requiresApproval()` is read before the reference, and is false for this row.
 - Evidence file: this spec has no ATDD evidence file, and creating one owes a committed Coverage Depth Matrix (`QFAI-ATDD-133`), so the entry is recorded here.
 
+### TDD-0081
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: E2E
+- Test file: `packages/qfai/tests/e2e/spec0018DeliverAFeatureE2E.test.ts`
+- Selector: `US-0018-0001, authorization variant (spec-0004 TDD-0081): after the run finishes, validate resolves a CREATE row citing the run's create decision`
+- RED command (cwd `packages/qfai`, after `./node_modules/.bin/tsup`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018DeliverAFeatureE2E.test.ts --testNamePattern='US-0018-0001, authorization variant \(spec-0004 TDD-0081\)' --reporter=verbose`
+- RED result: already satisfied by TDD-0071..0078 and TDD-0082. The first run exited 1 at `spec0018DeliverAFeatureE2E.test.ts:280` only because the test's own filter also counted the `error_code` detail line of the one expected finding; with the filter reading finding lines alone, the case passed with no production change
+- GREEN result: exit 0; `Tests  1 passed | 4 skipped (5)`
+- Changed files: `packages/qfai/tests/e2e/spec0018DeliverAFeatureE2E.test.ts`, `packages/qfai/tests/helpers/triageFixture.ts` (`writeTriagePack` split out of `seedTriageProject`)
+- Note: the journey runs a feature to `qfai_done`, then cites the run's tracked `create` decision from a `CREATE` row. The row whose Rationale names the bound CAP raises nothing, and a control row naming an unbound CAP raises `QFAI-TRIAGE-011` on the Binding check, so the pass is not vacuous.
+- Evidence file: this spec has no ATDD evidence file, and creating one owes a committed Coverage Depth Matrix (`QFAI-ATDD-133`), so the entry is recorded here.
+
 ### TDD-0083
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.

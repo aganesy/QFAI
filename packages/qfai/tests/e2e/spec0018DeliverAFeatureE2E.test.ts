@@ -5,15 +5,19 @@
  * SDD, the prototype stage, acceptance with a seam round trip, implement and verify, each from a
  * work order the run issues, and finishes `qfai_done` on a clean validate. Declining the question
  * cancels the run with nothing tracked. A result for a work order the run never issued is refused
- * and changes nothing.
+ * and changes nothing. After the run, `validate` resolves a triage row that cites the run's create
+ * decision.
  */
+import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { triageTable, writeTriagePack } from "../helpers/triageFixture.js";
 import {
+  CLI,
   FEATURE_PROPOSAL,
   field,
   initProject,
@@ -234,3 +238,44 @@ it("US-0018-0001, handover variant (spec-0001 TDD-0042; spec-0003 TDD-0125): a r
     installed: [true, true],
   });
 }, 180_000);
+
+const TRIAGE_HEADERS = ["Source", "Operation", "Approved By", "Rationale", "Authorization-Ref"];
+
+// The `QFAI-TRIAGE-011` findings the built CLI's `validate` prints over `root`, one line each.
+function authorizationRefFindings(root: string): string[] {
+  const run = spawnSync(process.execPath, [CLI, "validate", "--format", "text"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  return `${run.stdout}${run.stderr}`
+    .split("\n")
+    .filter((line) => line.startsWith("[error] QFAI-TRIAGE-011 "));
+}
+
+// QFAI:SPEC-0018:US-0018-0001
+// QFAI:SPEC-0004:US-0004-0040
+// QFAI:SPEC-0003:US-0003-0029
+it("US-0018-0001, authorization variant (spec-0004 TDD-0081): after the run finishes, validate resolves a CREATE row citing the run's create decision", async () => {
+  const root = await initProject();
+  const { runId, sdd } = await approvedFeature(root);
+  const stages = await throughAcceptance(root, runId, sdd.json);
+  const { next: verify } = await acceptThenNext(root, runId, stages.implement.json, "implement-1");
+  const finished = await verifyAndFinish(root, runId, verify.json);
+  const tracked = path.join(root, ".qfai", "evidence", "workflow", runId, "authorizations");
+  const [record = ""] = await readdir(tracked);
+  const reference = `${runId}/${path.basename(record, ".json")}`;
+  await writeTriagePack(
+    root,
+    triageTable(TRIAGE_HEADERS, [
+      ["R-CITED", "CREATE", "operator@2026-09-25", "new CAP-0001", reference],
+      ["R-UNBOUND", "CREATE", "operator@2026-09-25", "new CAP-0002", reference],
+    ]),
+  );
+  const findings = authorizationRefFindings(root);
+
+  expect({
+    finished: field(finished.json, "target"),
+    cited: findings.filter((line) => line.includes("R-CITED")),
+    unbound: findings.map((line) => line.includes("R-UNBOUND") && line.includes("Binding check")),
+  }).toEqual({ finished: "qfai_done", cited: [], unbound: [true] });
+}, 300_000);
