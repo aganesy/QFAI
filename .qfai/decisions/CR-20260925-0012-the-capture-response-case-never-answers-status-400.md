@@ -9,7 +9,7 @@
 - Approved by: `claude-code` — under the user's standing instruction to process every issue of this session with its own judgment; NOT a user decision on these options
 - Approved at: `2026-09-25T04:31:00Z`
 - Approved option: `1`
-- Applied at: `2026-09-25T04:32:00Z` — see Resolution
+- Applied at: `2026-09-25T04:31:10Z` — see Resolution
 - Superseded by: `-`
 
 ## Context
