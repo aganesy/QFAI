@@ -1252,6 +1252,26 @@ the selector has again been seen to fail.
 - Refactor verify result: PASS — Test Files 9 passed (9); Tests 783 passed (783), exit 0. No production or test file changed in this phase. The suite is the one recorded after Round 1: the row's Test file, every test that reads the generated or the repository's Copilot instructions, and the detection file whose case title this change renamed
 - Refactor verify revision: 1365bf908d90c90ec068a24eeb5c0852de9a3ec1
 
+- Round 2: reviewer verdict (attempt 1): PASS
+- Round 2: Review pack (attempt 1): .qfai/review/review-20260925140010000 <!-- qfai:not-a-citation -->
+- Round 2: Review pack seal (attempt 1): 67a950093ce5e5dbb5f76e4c7cbd1c7ea598bdeb7be388099d0acaffa360a089
+- Spec review: PASS
+- Spec reviewed revision: 1365bf908d90c90ec068a24eeb5c0852de9a3ec1
+- Spec audited evidence hash: 0146a231cf9d4607e9ca825b176d4a8494b141b8eeee7f631cd5f44870b7b201
+- Spec review pack: .qfai/review/review-20260925140010000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 67a950093ce5e5dbb5f76e4c7cbd1c7ea598bdeb7be388099d0acaffa360a089
+- Code quality review: PASS
+- Code quality reviewed revision: 1365bf908d90c90ec068a24eeb5c0852de9a3ec1
+- Code quality audited evidence hash: 0146a231cf9d4607e9ca825b176d4a8494b141b8eeee7f631cd5f44870b7b201
+- Code quality review pack: .qfai/review/review-20260925140010000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 67a950093ce5e5dbb5f76e4c7cbd1c7ea598bdeb7be388099d0acaffa360a089
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 1365bf908d90c90ec068a24eeb5c0852de9a3ec1
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.test.ts tests/cli/init.test.ts tests/cli/initAgentEntryPointRules.test.ts tests/e2e/initE2E.test.ts tests/integration/agentsRulesSurface.test.ts tests/integration/distributedSurfaceLeakage.test.ts tests/assets/outputLanguageSingleSource.test.ts tests/cli/main.test.ts tests/integration/shippedWorkflowDetection.test.ts
+- Checkpoint verification result: PASS — PASS — Test Files 9 passed (9); Tests 783 passed (783). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 1ebcbe0ee2d7578f3cbad0d004cb6e540afb8de3
+- Checkpoint verification seal: e355f7b07a46e63150a7980e9035766f2e37b4c3dd9a99a056ddc79f7581cc15
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 243 / ⚠️ 130 / ❌ 176, with 372 not applicable, across 921 scored cells.
@@ -1335,13 +1355,16 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 243 / 
 | 73 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0094 build-phase GREEN + oracle proof | #tdd-0094 | qa-gatekeeper fields | PASS |
 | 74 | completion-reviewer | completion-reviewer | /qfai-implement: completion review of TDD-0094, attempt 1 | #tdd-0094 | review-20260925140000000 <!-- qfai:not-a-citation --> | REVISE |
 | 75 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of TDD-0094, attempt 1 | #tdd-0094 | review-20260925140000000 <!-- qfai:not-a-citation --> | PASS |
-| 76 | orchestrator | - | /qfai-implement: checkpoint verification of TDD-0094 | #tdd-0094 | not run in this invocation | PENDING |
+| 76 | orchestrator | - | /qfai-implement: checkpoint verification of TDD-0094 | #tdd-0094 | not run in this invocation; taken in the review-fix as row 85 | PENDING |
 | 77 | acceptance-test-engineer | acceptance-test-engineer#1 | /qfai-implement review-fix: TDD-0094 Round 2 RED, taken on the tree with the legacy-layout item in `buildCopilotInstructions` put back to its pre-fix text, and its assertion-stripped run | #tdd-0094; review-20260925140000000 <!-- qfai:not-a-citation --> | #tdd-0094 Round 2 RED fields; packages/qfai/src/cli/commands/init.ts left at its pre-fix text, uncommitted, for the RED gate | PASS |
 | 78 | qa-gatekeeper | qa-gatekeeper#2 | /qfai-implement review-fix: TDD-0094 Round 2 RED phase gate at routing phase red, on the live tree before the fix was restored | #tdd-0094 Round 2 | reviewed revision working-tree+10211e58331aa55965284d65840388a810a5cdac73312e4634f5d957ea196a94 | PASS |
 | 79 | backend-engineer | backend-engineer#1 | /qfai-implement review-fix: TDD-0094 Round 2 GREEN on the restored fix, and its Oracle proof | #tdd-0094 Round 2 | packages/qfai/src/cli/commands/init.ts restored to blob 94c2c242053742f9a45c10e6d8b823390b8749e1; #tdd-0094 Round 2 Revision, GREEN and Oracle proof fields | PASS |
 | 80 | backend-engineer | backend-engineer#1 | /qfai-implement review-fix: TDD-0094 Refactor verify after Round 2 | #tdd-0094 | Refactor verify fields, the Round 1 copies fenced as superseded; the REV of the TDD-0094 ledger row | PASS |
 | 81 | backend-engineer | backend-engineer#1 | /qfai-implement review-fix: correct the matrix totals and the TDD-0094 status lines of this file | coverage-depth-spec-0003.md; #tdd-0094 | Coverage Depth Matrix, Gaps / Open risks and Final status | PASS |
 | 82 | qa-gatekeeper | qa-gatekeeper#3 | /qfai-implement review-fix: TDD-0094 Round 2 build-phase GREEN + oracle proof | #tdd-0094 Round 2 | reviewed revision 1365bf908d90c90ec068a24eeb5c0852de9a3ec1 | PASS |
+| 83 | completion-reviewer | completion-reviewer | /qfai-implement review-fix: completion review of TDD-0094, attempt 2 | #tdd-0094 | review-20260925140010000 <!-- qfai:not-a-citation --> | PASS |
+| 84 | implementation-reviewer | implementation-reviewer | /qfai-implement review-fix: code quality review of TDD-0094, attempt 2 | #tdd-0094 | review-20260925140010000 <!-- qfai:not-a-citation --> | PASS |
+| 85 | orchestrator | orchestrator | /qfai-implement review-fix: checkpoint verification of TDD-0094, off a checkpoint boundary | #tdd-0094 | Checkpoint verification fields | PASS |
 
 ## Cross-spec obligations
 
