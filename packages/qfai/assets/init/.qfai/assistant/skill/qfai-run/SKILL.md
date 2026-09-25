@@ -61,8 +61,8 @@ Classify the request before any write call. Only `change` calls `start`.
    submit again. The operator sees nothing unless a question or a halt follows.
 4. **Announce.** Once the plan is checked, give the goal, the stages in order
    and the write scope. Ask nothing.
-5. **Drive.** Call `next` and act on its work order, or on the run state it reports:
-   - A work order: hand it whole to its executor skill in a sub-agent, write
+5. **Drive.** Call `next` and act on its work order, or on the run state it reports. Repeat. A routing work order goes back to step 2.
+   - Any other work order: hand it whole to its executor skill in a sub-agent, write
      the stage result under `.qfai/run/<runId>/inbox/`, and call `accept`. A
      `retry` names the delay before the same work order is handed over again.
    - `awaiting_input`: put each open question as `references/operator-screens.md`

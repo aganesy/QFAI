@@ -182,8 +182,12 @@ describe("qfai-maintain", () => {
     );
     const inRun = flat(sectionOf(await readShipped(MAINTAIN_RUN), "## A semantic effect"));
     expect(inRun).toMatch(/the outcome is `needs_repair`, and `changedFiles` is empty/i);
+    expect(inRun).toMatch(/`debts` holds one entry for the finding/i);
+    expect(inRun).toMatch(/`findingCode` is `maintain-semantic-effect`/);
+    expect(inRun).toMatch(/`owningFlow` is `null`, because a `direct` run binds no flow/i);
+    expect(inRun).toMatch(/`detectingCommand` names the review or the command that found it/i);
     expect(inRun).toMatch(
-      /`debts` holds the finding\. its `resolvingOwner` is the skill that owns that kind of change, never one the `direct` plan names/i,
+      /`resolvingOwner` is the skill that owns that kind of change, never one the `direct` plan names/i,
     );
   });
 });
