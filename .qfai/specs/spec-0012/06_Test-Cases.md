@@ -243,14 +243,6 @@
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
 - Verify `acceptedIterationIndex === iterations.length - 1` always holds (no best-of-history selection).
 
-## TC-0012-0340
-
-- EX-Ref: EX-0012-0110
-- AC-Refs: AC-0012-0021
-- Level: L1
-- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
-- Verify `isOrdinalScore` accepts only `{weak, acceptable, strong, exceptional}` and rejects other values.
-
 ## TC-0012-0341
 
 - EX-Ref: EX-0012-0111
@@ -322,14 +314,6 @@
 - Level: L1
 - Test file: `packages/qfai/tests/core/validators/layoutAntiPatterns.test.ts`
 - Verify validator emits `QFAI-PROT-021` when `layoutAntiPatternsDetected` is non-empty AND `informationArchitecture` is `strong` or `exceptional`.
-
-## TC-0012-0350
-
-- EX-Ref: EX-0012-0110
-- AC-Refs: AC-0012-0028
-- Level: L1
-- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
-- Verify `allFourAxesExceptional` returns `true` only for the canonical new-shape converged iteration and `false` for old-shape iteration objects.
 
 ## TC-0012-0351
 

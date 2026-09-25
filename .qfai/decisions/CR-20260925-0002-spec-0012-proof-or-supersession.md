@@ -165,4 +165,31 @@ six enumerated rows whose TC or parent AC is superseded, followed by `/qfai-sdd 
 
 ## Resolution
 
-Pending explicit approval and owner rerun.
+Partly applied. `Applied at` stays unset until every action above is done.
+
+Applied to the twelve rows whose `done` rested only on an annotation carrier:
+
+- Reset to `todo` with this record in `DR-ID`: `spec-0012/TDD-0295`, `TDD-0341`,
+  `TDD-0346`, `TDD-0348`, `TDD-0354`, `TDD-0356`, `TDD-0357`, `TDD-0358`,
+  `TDD-0362`.
+- Retired and reserved, with each `Evidence` cell kept verbatim under the
+  ledger's `## TDD-ID reservations`: `spec-0012/TDD-0349`, `TDD-0353`,
+  `TDD-0359`. The cases of `TDD-0349` and `TDD-0359` (`TC-0012-0340`,
+  `TC-0012-0350`) are removed from `06_Test-Cases.md` and from the integration
+  carrier. `TC-0012-0344` is already superseded and is not a coverage target, so
+  it stays.
+- `TDD-0344`, `TDD-0365` and `TDD-0370` were already retired by
+  `CR-20260925-0019`.
+
+Held:
+
+- **The retirement of `TDD-0340` and `TDD-0351`.** Their cases, `TC-0012-0330`
+  and `TC-0012-0342`, are each the only case left for a superseded item
+  (`EX-0012-0117`, `AC-0012-0030`). Removing the case leaves that item with no
+  case, which the `sdd` profile reports as an error. Removing the item edits
+  `05_Examples.md`, which `## Impact scope` does not name. Both rows stay `done`
+  until one of those is decided.
+- **The resets of the other six rows:** `TDD-0453`, `TDD-0456`, `TDD-0457`,
+  `TDD-0459`, `TDD-0465`, `TDD-0486`.
+- **Matrix splits, new boundary rows, and the tests each reset row needs**
+  (action 4).

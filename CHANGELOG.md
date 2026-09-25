@@ -84,6 +84,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Twelve spec-0012 ledger rows no longer claim `done` without a test**
+  (#2160). Each row's selector selected no test, and the only file naming its
+  case was an annotation carrier, which declares none. Under the approved
+  `CR-20260925-0002`, nine rows (`TDD-0295`, `0341`, `0346`, `0348`, `0354`,
+  `0356`, `0357`, `0358`, `0362`) are reset to `todo`. Three rows whose case is
+  superseded (`TDD-0349`, `0353`, `0359`) are retired, and the cases of the
+  first and last, `TC-0012-0340` and `TC-0012-0350`, are removed. The spec-0012
+  ledger reports 48 fewer errors under the `tdd` and `full` profiles.
+  `TDD-0340` and `TDD-0351` stay `done`: retiring them needs a superseded
+  example and criterion removed as well, which the request does not cover.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
