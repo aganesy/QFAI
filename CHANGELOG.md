@@ -84,6 +84,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A route proposal may name a contract the project declares** (#2341).
+  `qfai workflow accept` refused every `contract-id` reference in a routing
+  result as `unknown-id`, because it knew no contract ID. It now reads the
+  IDs from the contract index, the `QFAI-CONTRACT-ID` declarations under the
+  contracts directory, and refuses only a reference that none of them
+  matches.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

@@ -7,6 +7,7 @@ import fg from "fast-glob";
 
 import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
 import { loadConfig, resolvePath } from "../config.js";
+import { buildContractIndex } from "../contractIndex.js";
 import { gitStdout, uncommittedPaths } from "../gitChanges.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { validateProject } from "../validate.js";
@@ -174,17 +175,26 @@ async function specFacts(root: string): Promise<NonNullable<WorkflowFacts["specs
   );
 }
 
+// The contract IDs the project's contract index declares.
+async function contractIdsOf(root: string): Promise<string[]> {
+  const { config } = await loadConfig(root);
+  const index = await buildContractIndex(root, config);
+  return [...index.ids].sort();
+}
+
 // What `accept` of a routing result checks the proposal against.
-// SIMPLIFIED: no contract ID is known, so a `contract-id` reference is refused `unknown-id`.
-// Lift when: a routing result naming a contract ID is accepted by a row that needs it.
 export async function routingFacts(root: string, proposal: unknown): Promise<WorkflowFacts> {
   const realRoot = await realpath(root);
   const refs = [...new Set(pathReferences(proposal))];
   const existence = await Promise.all(
     refs.map(async (ref) => [ref, await isProjectFile(realRoot, root, ref)] as const),
   );
-  const [plans, specs] = await Promise.all([planFacts(), specFacts(root)]);
-  return { pathExistence: Object.fromEntries(existence), plans, specs, contractIds: [] };
+  const [plans, specs, contractIds] = await Promise.all([
+    planFacts(),
+    specFacts(root),
+    contractIdsOf(root),
+  ]);
+  return { pathExistence: Object.fromEntries(existence), plans, specs, contractIds };
 }
 
 // The JSON object the text holds, or an empty one: a report that says nothing passes nothing.
