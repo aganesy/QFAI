@@ -739,6 +739,63 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/src/cli/commands/init.ts` (`countDifferingSkills` and the summary line), `packages/qfai/tests/integration/init/skippedSkillCount.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` captures stdout)
 
+### TDD-0100
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryDirective.test.ts`
+- Selector: `TC-0003-0066: Fresh init: directive in AGENTS.md and CLAUDE.md, not Copilot`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryDirective.test.ts --testNamePattern='TC-0003-0066: Fresh init: directive in AGENTS.md and CLAUDE.md, not Copilot' --reporter=verbose`
+- RED result: exit 1; `AssertionError: AGENTS.md begins with the directive: expected false to be true // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/root/AGENTS.md` and `packages/qfai/assets/init/root/CLAUDE.md` (the entry directive as their first line), `packages/qfai/src/core/agentEntryPoints.ts` (`addEntryPointDirectives`; the operative-copy scan reads the code spans the directive itself holds as visible text), `packages/qfai/src/cli/commands/init.ts` (the directives go through the entry-point writer, and its report names each directive it added), `packages/qfai/tests/integration/init/entryDirective.test.ts`
+
+### TDD-0101
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryDirective.test.ts`
+- Selector: `TC-0003-0067: Directive prepended to existing CRLF entry points, bytes kept`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryDirective.test.ts --testNamePattern='TC-0003-0067: Directive prepended to existing CRLF entry points, bytes kept' --reporter=verbose`
+- RED result: exit 1; `AssertionError: AGENTS.md begins with the directive: expected false to be true // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: as TDD-0100
+- The entry directive is followed by the line break alone, so the project's bytes start on the next line. The review directive keeps its blank line.
+
+### TDD-0102
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryDirective.test.ts`
+- Selector: `TC-0003-0068: Entry directive with and without REVIEW.md`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryDirective.test.ts --testNamePattern='TC-0003-0068: Entry directive with and without REVIEW.md' --reporter=verbose`
+- RED result: exit 1; `AssertionError: AGENTS.md carries the entry directive: expected [] to have a length of 1 but got +0`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: as TDD-0100, plus the existing entry-point tests in `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, whose projects now keep a `REVIEW.md` where they expect the review directive
+- Design choice: follows TC-0003-0068 over the previous unconditional behaviour. Init adds the review directive to an existing entry point only when the project has `REVIEW.md`. A fresh copy of the template still carries it, as the template's own sentence is conditional on the file.
+
+### TDD-0103
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryDirective.test.ts`
+- Selector: `TC-0003-0069: Operative copy on a rerun, and a copy only inside a fence`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryDirective.test.ts --testNamePattern='TC-0003-0069: Operative copy on a rerun, and a copy only inside a fence' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the shipped AGENTS.md carries the entry directive: expected undefined to be defined`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: as TDD-0100
+
+### TDD-0104
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryDirective.test.ts`
+- Selector: `TC-0003-0070: A symlinked AGENTS.md is refused`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryDirective.test.ts --testNamePattern='TC-0003-0070: A symlinked AGENTS.md is refused' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the entry-point writer already refuses a symbolic link and names it
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/init/entryDirective.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` captures stderr, where the refusal is written)
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / ⚠️ 130 / ❌ 176, with 365 not applicable, across 909 scored cells.

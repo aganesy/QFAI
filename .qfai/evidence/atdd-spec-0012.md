@@ -179,3 +179,14 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 - RED result: exit 1; `AssertionError: the ## Work order scope section exists: expected '' not to be '' // Object.is equality`
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md`, `packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts`
+
+### TDD-0562
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/prototypingEntryCheckSpec0012.test.ts`
+- Selector: `TC-0012-0489 (TDD-0562): SKILL.md cites the orchestrated-mode reference once, and it cites the entry check`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingEntryCheckSpec0012.test.ts --testNamePattern='TC-0012-0489 \(TDD-0562\)' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the citation line and the reference landed with the plan skills' orchestrated-mode references
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/prototypingEntryCheckSpec0012.test.ts`

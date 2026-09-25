@@ -25,6 +25,10 @@ export async function initQuietly(root: string, force = false): Promise<string> 
   const log = vi.spyOn(console, "log").mockImplementation(capture);
   const warn = vi.spyOn(console, "warn").mockImplementation(capture);
   const error = vi.spyOn(console, "error").mockImplementation(capture);
+  const stderr = vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    lines.push(String(chunk));
+    return true;
+  });
   let stdout: string;
   try {
     stdout = await captureStdout(() => runInit({ dir: root, force, dryRun: false, yes: true }));
@@ -32,6 +36,7 @@ export async function initQuietly(root: string, force = false): Promise<string> 
     log.mockRestore();
     warn.mockRestore();
     error.mockRestore();
+    stderr.mockRestore();
   }
   return [...lines, stdout].join("\n");
 }
