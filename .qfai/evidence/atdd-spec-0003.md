@@ -102,6 +102,16 @@ Preflight: confidence high
 
 No session was opened: `CR-20260925-0011` settles every decision this row needs.
 
+### /qfai-atdd — run started 2026-09-25T09:07:56.233Z
+
+Preflight: confidence high
+
+No session opened. The defect report on the `TC-0003-0001` bullet 3 check fixes
+the check: compare the resolved path of each link with the resolved path of the
+project's skill directory. How a completed row records a changed test is fixed by
+`references/review-fix-rounds.md` and `references/shared-test-artifacts.md`, and
+nothing surfaced during the run that those, the spec or the report leave open.
+
 ## Work performed (what changed, where)
 
 - New `packages/qfai/tests/integration/shippedWorkflowCheckIndependence.test.ts`: the
@@ -128,6 +138,11 @@ No session was opened: `CR-20260925-0011` settles every decision this row needs.
   `TC-0003-0059` case for `TDD-0094`, annotated `QFAI:SPEC-0003:TC-0003-0059`, and
   listed in `packages/qfai/tsconfig.tests.json`. `tests/integration/qfai-traceability.md`
   carries the case. `CR-20260925-0011` asked for it.
+
+- `packages/qfai/tests/integration/initSpec0003.test.ts`: the `TC-0003-0001` bullet 3
+  check compares the `realpath` of each skill link with the `realpath` of the skill
+  directory in the initialized project, for `TDD-0001`. `readlink` is no longer
+  imported.
 
 ## Commands executed + key outputs
 
@@ -171,6 +186,16 @@ pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.
 
 The RED, stripped, Oracle proof and Refactor verify runs are in the row's entry.
 
+For the `TDD-0001` bullet 3 check:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts
+  Test Files 1 passed (1); Tests 24 passed (24)
+pnpm -C packages/qfai exec prettier --check tests/integration/initSpec0003.test.ts   -> All matched files use Prettier code style!
+```
+
+The trial mutations and the `TDD-0025` re-verify are in the `TDD-0001` entry.
+
 ## Test volume estimate
 
 | Layer | Files touched | Cases |
@@ -196,7 +221,7 @@ The RED, stripped, Oracle proof and Refactor verify runs are in the row's entry.
 | `TDD-0063` | `TC-0003-0058` | Integration | falsifiability | [TDD-0063](#tdd-0063) |
 | `TDD-0092` | `TC-0003-0058` | Integration | falsifiability | [TDD-0092](#tdd-0092) |
 | `TDD-0093` | `TC-0003-0058` | Integration | falsifiability | [TDD-0093](#tdd-0093) |
-| `TDD-0001` | `TC-0003-0001` | Integration | falsifiability | [TDD-0001](#tdd-0001) |
+| `TDD-0001` | `TC-0003-0001` | Integration | falsifiability, test-only replacement | [TDD-0001](#tdd-0001) |
 | `TDD-0037` | `TC-0003-0037` | Integration | falsifiability, test-only replacement | [TDD-0037](#tdd-0037) |
 | `TDD-0094` | `TC-0003-0059` | Integration | observed-red | [TDD-0094](#tdd-0094) |
 
@@ -833,7 +858,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - Test file: packages/qfai/tests/integration/initSpec0003.test.ts
 - Selector: TC-0003-0001: Empty directory initialization
 - TC-ref: TC-0003-0001
-- Branch: falsifiability — init already writes no artifact directory, so the case passes on its first run and no natural RED can be observed
+- Branch: falsifiability — init already writes no artifact directory, so the case passes on its first run and no natural RED can be observed. The bullet 3 change below is a test-only replacement and changes no branch
 - Predicate to break: packages/qfai/src/cli/commands/init.ts:509, `copyTemplateTree(qfaiAssets, destQfai, …)` — it writes under `.qfai/` what `packages/qfai/assets/init/.qfai/` ships, and that tree holds `assistant/` and `waivers.yml` and no artifact directory
 - Mutation: add an empty file `packages/qfai/assets/init/.qfai/specs/.gitkeep`
 - Why it fails: init copies the new `specs/` directory into `.qfai/`, and the bullet 1 assertion at line 75 finds `specs` among the six artifact directories
@@ -847,14 +872,16 @@ three verify bullets of `TC-0003-0001`. No other ledger row cites the case.
 | ------------- | --------- | ---- |
 | 1 | `.qfai/assistant/` is a directory, and none of `specs`, `contracts`, `discussion`, `evidence`, `review` and `report` exists under `.qfai/` | 70, 75 |
 | 2 | `qfai.config.yaml` is a file | 78 |
-| 3 | every `qfai-*` skill directory under `.qfai/assistant/skills/` is a symlink in each of `.claude/skills`, `.agents/skills`, `.codex/skills` and `.github/skills`, and its target ends in `.qfai/assistant/skills/<skill>`; a guard first requires at least one such skill | 87, 98 |
+| 3 | every `qfai-*` skill directory under `.qfai/assistant/skills/` is a symlink in each of `.claude/skills`, `.agents/skills`, `.codex/skills` and `.github/skills`, and the `realpath` of that link equals the `realpath` of `.qfai/assistant/skills/<skill>` in the initialized directory; a guard first requires at least one such skill | 89, 95, 99 |
 
-Bullet 3 is checked the way `tests/cli/init.test.ts` "creates template additions
-with symlinks" checks one skill: `lstat` reports a symbolic link and `readlink`
-names the canonical directory. That file's two helpers are local to it, so the
-check is written inline. It requires a real symlink on every platform, as that
-test does: init has no fallback for a link it cannot create, and on Windows
-without Developer Mode it stops with an error instead.
+Bullet 3 requires `lstat` to report a symbolic link, and the link to resolve to the
+skill directory of the project init wrote. Both paths go through `realpath`, which
+resolves a relative target, an absolute one and a Windows junction the same way. A
+link into another tree whose path ends in `.qfai/assistant/skills/<skill>` resolves
+elsewhere and fails the equality. A dangling link makes `realpath` throw, which
+fails the case. The check requires a real symlink on every platform: init has no
+fallback for a link it cannot create, and on Windows without Developer Mode it stops
+with an error instead.
 
 The describe title is unchanged, so the ledger's `Test file` and `Selector`
 already name the case. The mutation below breaks bullet 1, the obligation the
@@ -884,7 +911,68 @@ The trial shows the mutation discriminates. It is not the row's falsifiability
 trio: `/qfai-implement` Phase Red step 3c applies the mutation, records the
 `Round 1:` fields and routes `qa-gatekeeper` while it is in the tree.
 
-- RED test hash: 5944d673da0c6056d3cb765a2a2bb103efe8ab8595e2f0b3d11715a7bb56ecb3
+The bullet 3 check compares resolved paths. The check it replaces required the raw
+`readlink` value to end in `.qfai/assistant/skills/<skill>`. A dangling link whose
+target text ends that way passed it, and so did a link into another tree whose path
+ends the same way. The stronger check owes no new production behaviour: init already
+links every skill to the project's own directory. The case title, the `Selector` and
+the three files of the manifest are unchanged.
+
+- RED test replacement: test-only replacement — the `TC-0003-0001` bullet 3 check accepted a dangling link and a link into another tree whose path ends in `.qfai/assistant/skills/<skill>`, and its replacement owes no new production behaviour. The Round 1 proof, the `specs/.gitkeep` falsifiability run, is stale — test replaced, and `/qfai-implement` re-takes it under the edited test and writes the `Replacement proof revision` of that run
+- Proof to re-take: the Round 1 mutation, which breaks bullet 1, and the bullet 3 mutation below, which breaks the predicate the edited assertion checks
+- Bullet 3 predicate to break: packages/qfai/src/cli/commands/init.ts, `createSkillSymlinks`, the `target` it passes to `ensureSymlink` — the path from each skills directory to `.qfai/assistant/skills/<skill>` in the initialized project
+- Bullet 3 mutation: for the first skill in `.claude/skills`, copy `.qfai/assistant/skills/<skill>` to `<os.tmpdir()>/qfai-outside-copy/.qfai/assistant/skills/<skill>` and link to that copy by its absolute path. The copy is a real directory, so the link resolves, and its path ends the way the canonical one does
+
+```diff
+diff --git a/packages/qfai/src/cli/commands/init.ts b/packages/qfai/src/cli/commands/init.ts
+index 94c2c2420..4e686c1a4 100644
+--- a/packages/qfai/src/cli/commands/init.ts
++++ b/packages/qfai/src/cli/commands/init.ts
+@@ -5019,10 +5019,16 @@ async function createSkillSymlinks(
+   for (const integDir of SKILL_INTEGRATION_DIRS) {
+     for (const skillId of skills) {
+       const linkPath = path.join(destRoot, integDir, skillId);
+-      const target = path.relative(
++      let target = path.relative(
+         path.join(destRoot, integDir),
+         path.join(destRoot, ".qfai", "assistant", "skills", skillId),
+       );
++      if (integDir === SKILL_INTEGRATION_DIRS[0] && skillId === skills[0]) {
++        const fsp = await import("node:fs/promises");
++        const outside = path.join((await import("node:os")).tmpdir(), "qfai-outside-copy", ".qfai", "assistant", "skills", skillId);
++        await fsp.cp(path.join(destRoot, ".qfai", "assistant", "skills", skillId), outside, { recursive: true });
++        target = outside;
++      }
+ 
+       const result = await ensureSymlink(linkPath, target, "dir", options);
+       if (result === "created") {
+```
+
+- Link mutation trial command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0001: Empty directory initialization"
+- Link mutation trial result: FAIL — Test Files 1 failed (1); Tests 1 failed | 23 skipped (24), exit 1. The case fails on `AssertionError: a skill is not linked to its canonical directory: expected [ '.claude/skills/qfai-atdd' ] to deeply equal []` at `tests/integration/initSpec0003.test.ts:99:76`. Over the whole file the same edit fails this case alone: Tests 1 failed | 23 passed (24)
+- Link mutation trial revision: working-tree+8601d2447593769ef585d4efff4404b49cb2a29cd56a0c56c8d2db948f19d252, taken with the mutation in the tree, before and after the run, with the same value
+- Link mutation trial on the test before the change: the same command and mutation, with `initSpec0003.test.ts` at its committed text: PASS — Test Files 1 passed (1); Tests 1 passed | 23 skipped (24), at working-tree+2f5ba823019987054f27ffcd49ca4aa49377d3bf755d9c27d421ec67ea5ce486
+- Dangling link trial command: the same command, with the link aimed at `<os.tmpdir()>/qfai-no-such-tree/.qfai/assistant/skills/<skill>`, which does not exist
+- Dangling link trial result: FAIL — Test Files 1 failed (1); Tests 1 failed | 23 skipped (24), exit 1. `realpath` throws `Error: ENOENT: no such file or directory, realpath '…\.claude\skills\qfai-atdd'` at `tests/integration/initSpec0003.test.ts:95:65`, at working-tree+09ac95fd179eb6430c403951f3d13590f78934fa5706f7bf48f005572aea0fcb. On the test before the change the same mutation passes: Tests 1 passed | 23 skipped (24), at working-tree+e16fade5a2975d884779f5b58ef20d4a348b64af373da6f21a00332ee1a90ce2
+- Bullet 1 trial command: the same command, with the Round 1 mutation, an empty `packages/qfai/assets/init/.qfai/specs/.gitkeep`
+- Bullet 1 trial result: FAIL — Test Files 1 failed (1); Tests 1 failed | 23 skipped (24). `AssertionError: init wrote an artifact directory under .qfai/: expected [ 'specs' ] to deeply equal []` at `tests/integration/initSpec0003.test.ts:75:72`, at working-tree+bdbb9428ce2840d6101cca4eb371b86895b0322171b60e059f131cd846730863
+- Trial restored GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0001: Empty directory initialization"
+- Trial restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed | 23 skipped (24), after every trial was reverted: `git checkout -- packages/qfai/src/cli/commands/init.ts` for the two link trials, and `rm -rf packages/qfai/assets/init/.qfai/specs` for the bullet 1 trial
+- Trial restored GREEN revision: working-tree+c6bd795c170128b61610db9b5f1738f7db1d237d0dbc53b7ecc7fd49b2a74542
+- Edited test file command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts
+- Edited test file result: PASS — Test Files 1 passed (1); Tests 24 passed (24)
+- Edited test file revision: working-tree+c6bd795c170128b61610db9b5f1738f7db1d237d0dbc53b7ecc7fd49b2a74542
+
+The trials show that the edited check fails on both links the old check accepted,
+and that bullet 1 still fails under the Round 1 mutation. They are not the row's
+proof: `/qfai-implement` re-takes it, with the mutation in the tree while
+`qa-gatekeeper` reviews it.
+
+The pair below replaces the one recorded before this change,
+`5944d673da0c6056d3cb765a2a2bb103efe8ab8595e2f0b3d11715a7bb56ecb3`, which
+addresses the manifest as it was when Round 1 was taken and which Round 1 keeps.
+
+- RED test hash: 1a98b96b14338614a15dda6f4c90aa9d7fc2226e350c044ce7bcf173cf738bbe
 - RED test manifest:
 
 ```text
@@ -895,15 +983,49 @@ packages/qfai/tests/integration/initSpec0003.test.ts
 
 #### Shared-artifact re-verify
 
-No RED test manifest in any evidence file names
-`packages/qfai/tests/integration/initSpec0003.test.ts`, so no recorded hash moves and
-no `spec-NNNN/TDD-NNNN` subsection is owed. The one other `done` row whose Test file
-this is, `spec-0003/TDD-0025`, carries no manifest and no recorded mutation, and its
-describe is unchanged. Its selector was re-run against the edited file:
+The one RED test manifest in any evidence file that names
+`packages/qfai/tests/integration/initSpec0003.test.ts` is this row's own, replaced
+above. The one other `done` row whose Test file this is has its subsection below.
+Its describe is byte-identical after the change. Its row names no evidence file and
+records no manifest and no mutation, so its proof is a trial against the predicate
+its `Evidence` cell names, `ASSISTANT_LAYERS`.
 
+##### spec-0003/TDD-0025
+
+- Evidence file: none — the row's `Evidence` cell is `v1.9.0 RED→GREEN 2026-05-23 (mod.ASSISTANT_LAYERS / joinAssistantLayer / migrationMemoRelativePath)`, with no anchor
+- Revision: working-tree+c6bd795c170128b61610db9b5f1738f7db1d237d0dbc53b7ecc7fd49b2a74542
+- Selector: TC-0003-0025: assistantPaths.ts SSOT module
 - Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0025: assistantPaths.ts SSOT module"
 - Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 23 skipped (24)
-- Re-verify revision: working-tree+7e98884c7e3c2ab9aa28703507d9661672229d1a78219c693a823672c1bb78b0
+- Proof command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0025: assistantPaths.ts SSOT module"
+- Proof result: FAIL — Test Files 1 failed (1); Tests 1 failed | 23 skipped (24), with `"process"` removed from `ASSISTANT_LAYERS` in `packages/qfai/src/core/paths/assistantPaths.ts`. The case fails on `AssertionError: expected [ 'constitution', 'manifest', …(1) ] to deeply equal [ 'constitution', 'manifest', …(2) ]` at `tests/integration/initSpec0003.test.ts:310:34`, at working-tree+be63c078d43002e445a50675a58df40af0fa63afc11beee7852f553485781f99
+- Restored GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0025: assistantPaths.ts SSOT module"
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed | 23 skipped (24), after `git checkout -- packages/qfai/src/core/paths/assistantPaths.ts`
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/initSpec0003.test.ts
+```
+
+- RED test hash: 1a98b96b14338614a15dda6f4c90aa9d7fc2226e350c044ce7bcf173cf738bbe
+
+```diff
+diff --git a/packages/qfai/src/core/paths/assistantPaths.ts b/packages/qfai/src/core/paths/assistantPaths.ts
+index 6f1d5a1ca..a04ef7781 100644
+--- a/packages/qfai/src/core/paths/assistantPaths.ts
++++ b/packages/qfai/src/core/paths/assistantPaths.ts
+@@ -9,7 +9,7 @@ import path from "node:path";
+ 
+ export const ASSISTANT_DIR = ".qfai/assistant" as const;
+ 
+-export const ASSISTANT_LAYERS = ["constitution", "manifest", "catalog", "process"] as const;
++export const ASSISTANT_LAYERS = ["constitution", "manifest", "catalog"] as const;
+ 
+ export type AssistantLayer = (typeof ASSISTANT_LAYERS)[number];
+ 
+```
 
 #### Round 1
 
@@ -1365,6 +1487,15 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 243 / 
 | 83 | completion-reviewer | completion-reviewer | /qfai-implement review-fix: completion review of TDD-0094, attempt 2 | #tdd-0094 | review-20260925140010000 <!-- qfai:not-a-citation --> | PASS |
 | 84 | implementation-reviewer | implementation-reviewer | /qfai-implement review-fix: code quality review of TDD-0094, attempt 2 | #tdd-0094 | review-20260925140010000 <!-- qfai:not-a-citation --> | PASS |
 | 85 | orchestrator | orchestrator | /qfai-implement review-fix: checkpoint verification of TDD-0094, off a checkpoint boundary | #tdd-0094 | Checkpoint verification fields | PASS |
+| 86 | - | n/a | grilling(-@2026-09-25T09:07:56.233Z/none): none | - | - | PASS |
+| 87 | test-design-analyst | - | /qfai-atdd coverage phase: coverage and layer ownership of the TC-0003-0001 bullet 3 check | 06_Test-Cases.md TC-0003-0001; #tdd-0001 | not routed in this invocation | PENDING |
+| 88 | qa-strategist | - | /qfai-atdd coverage phase: the TC-0003-0001 bullet 3 check | 06_Test-Cases.md TC-0003-0001; #tdd-0001 | not routed in this invocation | PENDING |
+| 89 | delivery-planner | - | /qfai-atdd red phase: scope approval of the TDD-0001 selector for the bullet 3 change | #tdd-0001 | not routed in this invocation | PENDING |
+| 90 | acceptance-test-engineer | acceptance-test-engineer#1 | /qfai-atdd: compare resolved paths in the TC-0003-0001 bullet 3 check, replace the TDD-0001 RED test hash, and mark its Round 1 proof stale as a test-only replacement | 06_Test-Cases.md TC-0003-0001; #tdd-0001; review-fix-rounds.md | packages/qfai/tests/integration/initSpec0003.test.ts; #tdd-0001 RED test replacement, RED test hash and manifest | PASS |
+| 91 | acceptance-test-engineer | acceptance-test-engineer#1 | /qfai-atdd: trial runs of the outside-copy and dangling link mutations and of the Round 1 mutation, each reverted | #tdd-0001 | #tdd-0001 trial fields; the outside-copy link fails the edited case at :99:76, the dangling link at :95:65, and both pass the case before the change | PASS |
+| 92 | acceptance-test-engineer | acceptance-test-engineer#1 | /qfai-atdd: shared-artifact re-verify of TDD-0025 under the edited Test file, with a reverted trial against ASSISTANT_LAYERS | #tdd-0001; shared-test-artifacts.md | #tdd-0001 Shared-artifact re-verify, spec-0003/TDD-0025 | PASS |
+| 93 | qa-gatekeeper | - | /qfai-atdd review phase: the TDD-0001 handover and the TDD-0025 re-verify | #tdd-0001 | not routed in this invocation | PENDING |
+| 94 | completion-reviewer | - | /qfai-atdd review phase: completion review of the TDD-0001 handover | #tdd-0001 | not routed in this invocation | PENDING |
 
 ## Cross-spec obligations
 
@@ -1388,9 +1519,13 @@ Recorded per row under `## Ledger rows advanced`.
 - The `TDD-0093` entry's `Mutation:` line names the single-clause edit its handover
   planned. The run it closed on removes both job-shape clauses, and Round 1 records both
   runs.
-- The `TDD-0001` case asserts all three verify bullets of `TC-0003-0001`. Its one
-  mutation breaks bullet 1; no mutation has been run against the bullet 2 and bullet 3
-  assertions.
+- The `TDD-0001` case asserts all three verify bullets of `TC-0003-0001`. Its Round 1
+  mutation breaks bullet 1, and the trial link mutations break bullet 3. No mutation
+  has been run against the bullet 2 assertion.
+- `TDD-0001` is `done` on a Round 1 proof marked stale — test replaced. Its Round 1
+  `RED test hash` no longer recomputes from the edited test. `done` leaves only by
+  an upstream reset, so re-taking the proof needs a Change Request that names the
+  row, as `CR-20260923-0013` did for `TDD-0037`.
 - No mutation has shown the `TDD-0037` count case's nine and eight instance counts
   fail. The planted secret fails the secret case, and the install step on the
   detection job fails the declaration list and the detection case.
@@ -1418,3 +1553,8 @@ closed on the full suite.
 `TDD-0094` stands at `review-fix`, in Round 2: `qa-gatekeeper#2` passed its
 Round 2 RED, and its GREEN, Oracle proof and Refactor verify are recorded. The
 build-phase gate on the GREEN, both reviews and the checkpoint are owed.
+
+`TDD-0001`'s test changed after the row closed. Its entry carries the new
+`RED test hash` and marks the Round 1 proof stale — test replaced. The re-taken
+proof, and this stage's `qa-gatekeeper` and `completion-reviewer` verdicts, are
+owed.

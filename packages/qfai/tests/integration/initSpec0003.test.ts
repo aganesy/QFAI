@@ -32,7 +32,7 @@
 // QFAI:SPEC-0003:TC-0003-0024
 // QFAI:SPEC-0003:TC-0003-0025
 // QFAI:SPEC-0003:TC-0003-0026
-import { lstat, mkdtemp, readdir, readFile, readlink } from "node:fs/promises";
+import { lstat, mkdtemp, readdir, readFile, realpath } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -79,6 +79,8 @@ describe("TC-0003-0001: Empty directory initialization", () => {
 
       // Verify bullet 3. Init has no fallback for a link it cannot create — it stops with the
       // Developer Mode message — so a copied directory here is a failure on every platform.
+      // Each link must resolve to the skill directory in this project, so a link into another
+      // tree whose path ends the same way fails, and a dangling link fails when realpath throws.
       const skills = (
         await readdir(path.join(dir, ".qfai", "assistant", "skills"), { withFileTypes: true })
       )
@@ -86,13 +88,12 @@ describe("TC-0003-0001: Empty directory initialization", () => {
         .map((entry) => entry.name);
       expect(skills.length, "init wrote no qfai-* skill").toBeGreaterThan(0);
       const unlinked: string[] = [];
-      for (const linkDir of SKILL_LINK_DIRS) {
-        for (const skill of skills) {
+      for (const skill of skills) {
+        const canonical = await realpath(path.join(dir, ".qfai", "assistant", "skills", skill));
+        for (const linkDir of SKILL_LINK_DIRS) {
           const link = path.join(dir, linkDir, skill);
-          const target =
-            (await kindOf(link)) === "symlink" ? (await readlink(link)).replace(/\\/g, "/") : "";
-          if (!target.endsWith(`.qfai/assistant/skills/${skill}`))
-            unlinked.push(`${linkDir}/${skill}`);
+          const resolved = (await kindOf(link)) === "symlink" ? await realpath(link) : null;
+          if (resolved !== canonical) unlinked.push(`${linkDir}/${skill}`);
         }
       }
       expect(unlinked, "a skill is not linked to its canonical directory").toEqual([]);
