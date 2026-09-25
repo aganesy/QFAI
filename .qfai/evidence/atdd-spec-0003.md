@@ -102,6 +102,22 @@ Preflight: confidence high
 
 No session was opened: `CR-20260925-0011` settles every decision this row needs.
 
+### /qfai-atdd — run started 2026-09-25T10:10:19.702Z
+
+Preflight: confidence high
+
+No session opened. The mode-line rows `TDD-0106` and `TDD-0107` come back from
+`exception` with their test already written, and the spec, the test cases and
+the passing test settle what each case observes.
+
+### /qfai-implement — run started 2026-09-25T10:10:40.000Z
+
+Preflight: confidence high
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-25T10:13:18Z | b0c0cdcac2558808fcf69800e84c8f53cb8f36de | 2026-09-25T10:13:30Z | the TDD-0108 selector loops the four boundaries of TC-0003-0073 in one case | empty | none in flight | 1 | 0 | 0 |
+
 ## Work performed (what changed, where)
 
 - New `packages/qfai/tests/integration/shippedWorkflowCheckIndependence.test.ts`: the
@@ -128,6 +144,10 @@ No session was opened: `CR-20260925-0011` settles every decision this row needs.
   `TC-0003-0059` case for `TDD-0094`, annotated `QFAI:SPEC-0003:TC-0003-0059`, and
   listed in `packages/qfai/tsconfig.tests.json`. `tests/integration/qfai-traceability.md`
   carries the case. `CR-20260925-0011` asked for it.
+
+- `TDD-0106` and `TDD-0107`: no test or production file changed. Each selector
+  passed on its first run, so both are handed over on the falsifiability branch,
+  naming the mode-line call in `runInit` as the predicate to break.
 
 ## Commands executed + key outputs
 
@@ -171,6 +191,15 @@ pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.
 
 The RED, stripped, Oracle proof and Refactor verify runs are in the row's entry.
 
+For `TDD-0106` and `TDD-0107`:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/init/modeLine.test.ts -t "TC-0003-0071: Fresh non-interactive init: no mode key, mode line active"
+  Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
+pnpm -C packages/qfai exec vitest run tests/integration/init/modeLine.test.ts -t "TC-0003-0072: Upgrade with no mode key: config unchanged, mode active"
+  Test Files 1 passed (1); Tests 1 passed | 2 skipped (3)
+```
+
 ## Test volume estimate
 
 | Layer | Files touched | Cases |
@@ -199,6 +228,8 @@ The RED, stripped, Oracle proof and Refactor verify runs are in the row's entry.
 | `TDD-0001` | `TC-0003-0001` | Integration | falsifiability | [TDD-0001](#tdd-0001) |
 | `TDD-0037` | `TC-0003-0037` | Integration | falsifiability, test-only replacement | [TDD-0037](#tdd-0037) |
 | `TDD-0094` | `TC-0003-0059` | Integration | observed-red | [TDD-0094](#tdd-0094) |
+| `TDD-0106` | `TC-0003-0071` | Integration | falsifiability | [TDD-0106](#tdd-0106) |
+| `TDD-0107` | `TC-0003-0072` | Integration | falsifiability | [TDD-0107](#tdd-0107) |
 
 ### TDD-0058
 
@@ -1494,25 +1525,143 @@ the selector has again been seen to fail.
 
 ### TDD-0106
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0106
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/init/modeLine.test.ts`
-- Selector: `TC-0003-0071: Fresh non-interactive init: no mode key, mode line active`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/modeLine.test.ts --reporter=verbose`
-- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'Workflow mode: active' ]` (the config and no-prompt assertions before it passed)
-- GREEN result: exit 0; 3 passed (3)
-- Changed files: `packages/qfai/src/cli/commands/init.ts` (`workflowModeLine` after the run report), `packages/qfai/tests/integration/init/modeLine.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` takes `yes`)
+- Test file: packages/qfai/tests/integration/init/modeLine.test.ts
+- Selector: TC-0003-0071: Fresh non-interactive init: no mode key, mode line active
+- TC-ref: TC-0003-0071
+- Branch: falsifiability — the mode line predates this cycle, and the selector passed on its first run: `pnpm -C packages/qfai exec vitest run tests/integration/init/modeLine.test.ts -t "TC-0003-0071: Fresh non-interactive init: no mode key, mode line active"` gave Test Files 1 passed (1); Tests 1 passed | 2 skipped (3), exit 0, at HEAD b0c0cdcac2558808fcf69800e84c8f53cb8f36de with only the ledger and this file modified
+- Predicate to break: packages/qfai/src/cli/commands/init.ts::runInit, the `info(await workflowModeLine(destRoot));` call at line 720, with `workflowModeLine` (line 753) beside it — the one place init prints the `Workflow mode:` line
+- Mutation: delete the line `info(await workflowModeLine(destRoot));` from `runInit`
+- Why it fails: init then prints no `Workflow mode:` line, so the assertion `expect(modeLines(output)).toEqual(["Workflow mode: active"])` at `tests/integration/init/modeLine.test.ts:39` receives `[]`
+- Earlier closure: `exception` under DR-0298 on 2026-09-25, with per-row review waived. The RED recorded then was never put to `qa-gatekeeper`, so it is not this row's RED. The predicate itself, `workflowModeLine` and its call in `runInit`, came in with commit 1e8ed2874d18feb020b648a08cc1c4a053ec44af, whose code is what these reviews cover
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/init.ts::runInit, the `info(await workflowModeLine(destRoot));` call at line 720, with `workflowModeLine` (line 753) beside it — the one place init prints the `Workflow mode:` line
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/init/modeLine.test.ts -t "TC-0003-0071: Fresh non-interactive init: no mode key, mode line active"
+- Round 1: Falsifiability result: exit 1; Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). The row's case fails on `AssertionError: expected [] to deeply equal [ 'Workflow mode: active' ]` at `tests/integration/init/modeLine.test.ts:39:33`
+
+The edit, one line removed from `runInit`:
+
+```diff
+@@ -717,7 +717,6 @@ export async function runInit(options: InitOptions): Promise<void> {
+     destRoot,
+     options.verbose ?? false,
+   );
+-  info(await workflowModeLine(destRoot));
+```
+
+- Round 1: Falsifiability revision: working-tree+f4255712335c5ccc3c9d631a37b04934677257da07efb5f2176b43d070c94d2e
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: b576848e8be5537e26d4b64eaf8e3f1cf9b41c2bed1dd95c28ecf33f18769092
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/integration/init/modeLine.test.ts
+packages/qfai/tests/integration/init/upgradeStates.ts
+```
+
+- Round 1: Revision: b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/init/modeLine.test.ts -t "TC-0003-0071: Fresh non-interactive init: no mode key, mode line active"
+- Round 1: GREEN result: exit 0; Test Files 1 passed (1); Tests 1 passed | 2 skipped (3). Run after `git checkout -- packages/qfai/src/cli/commands/init.ts`, which leaves `runInit` as it is at that revision
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/init/modeLine.test.ts
+- Refactor verify result: exit 0; Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+f4255712335c5ccc3c9d631a37b04934677257da07efb5f2176b43d070c94d2e; qa-gatekeeper#1 PASS, build-phase GREEN + oracle proof, reviewed revision b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925110000000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 240c9cc9da3935c703183e75e28e3156ff32c748338f35da702cafeb1c1ce163
+- Spec review: PASS
+- Spec reviewed revision: b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+- Spec audited evidence hash: 998defb4ac8c57fd7259696988d91ee1a3fe6acf8e8694275894c5028ac285d6
+- Spec review pack: .qfai/review/review-20260925110000000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 240c9cc9da3935c703183e75e28e3156ff32c748338f35da702cafeb1c1ce163
+- Code quality review: PASS
+- Code quality reviewed revision: b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+- Code quality audited evidence hash: 998defb4ac8c57fd7259696988d91ee1a3fe6acf8e8694275894c5028ac285d6
+- Code quality review pack: .qfai/review/review-20260925110000000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 240c9cc9da3935c703183e75e28e3156ff32c748338f35da702cafeb1c1ce163
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/init/modeLine.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 3 passed (3). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+- Checkpoint verification seal: b27816a7d585eab5930c824b2ea8d1a645c71666b63d3702fa968c06a3fa0153
 
 ### TDD-0107
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0107
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/init/modeLine.test.ts`
-- Selector: `TC-0003-0072: Upgrade with no mode key: config unchanged, mode active`
-- RED command (cwd `packages/qfai`): as TDD-0106
-- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'Workflow mode: active' ]` (the config was already byte-identical)
-- GREEN result: exit 0; 3 passed (3)
-- Changed files: as TDD-0106
+- Test file: packages/qfai/tests/integration/init/modeLine.test.ts
+- Selector: TC-0003-0072: Upgrade with no mode key: config unchanged, mode active
+- TC-ref: TC-0003-0072
+- Branch: falsifiability — the mode line predates this cycle, and the selector passed on its first run: `pnpm -C packages/qfai exec vitest run tests/integration/init/modeLine.test.ts -t "TC-0003-0072: Upgrade with no mode key: config unchanged, mode active"` gave Test Files 1 passed (1); Tests 1 passed | 2 skipped (3), exit 0, at HEAD b0c0cdcac2558808fcf69800e84c8f53cb8f36de with only the ledger and this file modified
+- Predicate to break: packages/qfai/src/cli/commands/init.ts::runInit, the `info(await workflowModeLine(destRoot));` call at line 720, with `workflowModeLine` (line 753) beside it — the one place init prints the `Workflow mode:` line
+- Mutation: delete the line `info(await workflowModeLine(destRoot));` from `runInit`
+- Why it fails: init then prints no `Workflow mode:` line, so the assertion `expect(modeLines(output)).toEqual(["Workflow mode: active"])` at `tests/integration/init/modeLine.test.ts:51` receives `[]`. The config assertion before it still passes, since the mutation writes nothing
+- Earlier closure: `exception` under DR-0298 on 2026-09-25, with per-row review waived. The RED recorded then was never put to `qa-gatekeeper`, so it is not this row's RED. The predicate itself, `workflowModeLine` and its call in `runInit`, came in with commit 1e8ed2874d18feb020b648a08cc1c4a053ec44af, whose code is what these reviews cover
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/init.ts::runInit, the `info(await workflowModeLine(destRoot));` call at line 720, with `workflowModeLine` (line 753) beside it — the one place init prints the `Workflow mode:` line
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/init/modeLine.test.ts -t "TC-0003-0072: Upgrade with no mode key: config unchanged, mode active"
+- Round 1: Falsifiability result: exit 1; Test Files 1 failed (1); Tests 1 failed | 2 skipped (3). The row's case fails on `AssertionError: expected [] to deeply equal [ 'Workflow mode: active' ]` at `tests/integration/init/modeLine.test.ts:51:33`; the config assertion on line 50 passed before it
+
+The edit, one line removed from `runInit`:
+
+```diff
+@@ -717,7 +717,6 @@ export async function runInit(options: InitOptions): Promise<void> {
+     destRoot,
+     options.verbose ?? false,
+   );
+-  info(await workflowModeLine(destRoot));
+```
+
+- Round 1: Falsifiability revision: working-tree+f4255712335c5ccc3c9d631a37b04934677257da07efb5f2176b43d070c94d2e
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: b576848e8be5537e26d4b64eaf8e3f1cf9b41c2bed1dd95c28ecf33f18769092
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/integration/init/modeLine.test.ts
+packages/qfai/tests/integration/init/upgradeStates.ts
+```
+
+- Round 1: Revision: b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/init/modeLine.test.ts -t "TC-0003-0072: Upgrade with no mode key: config unchanged, mode active"
+- Round 1: GREEN result: exit 0; Test Files 1 passed (1); Tests 1 passed | 2 skipped (3). Run after `git checkout -- packages/qfai/src/cli/commands/init.ts`, which leaves `runInit` as it is at that revision
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/init/modeLine.test.ts
+- Refactor verify result: exit 0; Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+f4255712335c5ccc3c9d631a37b04934677257da07efb5f2176b43d070c94d2e; qa-gatekeeper#1 PASS, build-phase GREEN + oracle proof, reviewed revision b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925110010000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 4a0261496ee100e80c5a3121783b05760e5f221eddd7b5fb4b2f22f949839051
+- Spec review: PASS
+- Spec reviewed revision: b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+- Spec audited evidence hash: 6b3ad662966428d1f7766eec77a2ff35d201732697106eff848d5ab46ff8b11a
+- Spec review pack: .qfai/review/review-20260925110010000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 4a0261496ee100e80c5a3121783b05760e5f221eddd7b5fb4b2f22f949839051
+- Code quality review: PASS
+- Code quality reviewed revision: b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+- Code quality audited evidence hash: 6b3ad662966428d1f7766eec77a2ff35d201732697106eff848d5ab46ff8b11a
+- Code quality review pack: .qfai/review/review-20260925110010000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 4a0261496ee100e80c5a3121783b05760e5f221eddd7b5fb4b2f22f949839051
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/init/modeLine.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 3 passed (3). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+- Checkpoint verification seal: b27816a7d585eab5930c824b2ea8d1a645c71666b63d3702fa968c06a3fa0153
 
 ### TDD-0108
 
@@ -1527,7 +1676,7 @@ the selector has again been seen to fail.
 
 ## Coverage Depth Matrix
 
-See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 243 / ⚠️ 130 / ❌ 176, with 372 not applicable, across 921 scored cells.
+See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 254 / ⚠️ 133 / ❌ 178, with 386 not applicable, across 951 scored cells.
 
 ## Work Orders Summary
 
@@ -1618,6 +1767,24 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 243 / 
 | 83 | completion-reviewer | completion-reviewer | /qfai-implement review-fix: completion review of TDD-0094, attempt 2 | #tdd-0094 | review-20260925140010000 <!-- qfai:not-a-citation --> | PASS |
 | 84 | implementation-reviewer | implementation-reviewer | /qfai-implement review-fix: code quality review of TDD-0094, attempt 2 | #tdd-0094 | review-20260925140010000 <!-- qfai:not-a-citation --> | PASS |
 | 85 | orchestrator | orchestrator | /qfai-implement review-fix: checkpoint verification of TDD-0094, off a checkpoint boundary | #tdd-0094 | Checkpoint verification fields | PASS |
+| 86 | orchestrator | orchestrator | /qfai-implement: sweep TDD-0106, TDD-0107 and TDD-0108 `exception -> todo`, so each row takes the reviews DR-0298 waived | DR-0298; `.qfai/waivers.yml` WVR-20260925-03 | test-list.md rows at `todo`, DR-0298 kept | PASS |
+| 87 | delivery-planner | delivery-planner | /qfai-implement plan phase: tier, groups, dispatch and order for TDD-0106 to TDD-0108 | spec-0003 ledger; 06_Test-Cases.md TC-0003-0071 to TC-0003-0073; modeLine.test.ts | T2 each, no T1 group, serial in ledger order; TDD-0108's selector loops the four boundaries of TC-0003-0073, so that row needs an upstream split before any RED | REVISE |
+| 88 | delivery-planner | delivery-planner | grilling(S1@2026-09-25T10:10:40.000Z/agents): TDD-0108 leaves this invocation and stays at `exception` under DR-0298, its sweep withdrawn | selector-granularity.md; TC-0003-0073 | the split is a /qfai-sdd Phase 2b write behind a Change Request the user approves, which this invocation does not raise; the alternative, `todo -> blocked` on a new Change Request, was not adopted because the work asked for is review of the rows as they stand, not a re-scope | PASS |
+| 89 | test-design-analyst | test-design-analyst | /qfai-atdd: score TC-0003-0071 to TC-0003-0073 and BR-0003-0052 | 06_Test-Cases.md; 04_Business-Rules.md; 03_Acceptance-Criteria.md; modeLine.test.ts | coverage-depth-spec-0003.md, "The three rows added for the mode line" | PASS |
+| 90 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: classify TDD-0106 and TDD-0107 by a first run and hand them over on the falsifiability path | DR-0298; modeLine.test.ts | #tdd-0106, #tdd-0107; both selectors passed on the first run | PASS |
+| 91 | - | n/a | grilling(-@2026-09-25T10:10:19.702Z/none): none | - | - | PASS |
+| 92 | test-design-analyst | test-design-analyst | /qfai-implement plan phase: coverage and layer ownership for TDD-0106 and TDD-0107 | spec-0003 ledger; 06_Test-Cases.md; test-layers.md | Integration fits each Level and directory; every verify bullet has an assertion; advisory that the one mutation does not falsify the config and prompt checks | PASS |
+| 93 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0106 falsifiability run, the mode-line call deleted from `runInit` | #tdd-0106 | #tdd-0106 Round 1 falsifiability fields; the mutation left in the tree for the RED gate | PASS |
+| 94 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0106 RED phase gate on the falsifiability mutation run | #tdd-0106 Round 1 | reviewed revision working-tree+f4255712335c5ccc3c9d631a37b04934677257da07efb5f2176b43d070c94d2e | PASS |
+| 95 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0106 restored GREEN, then the TDD-0107 falsifiability run under the same mutation | #tdd-0106, #tdd-0107 | #tdd-0106 Round 1 GREEN fields; #tdd-0107 Round 1 falsifiability fields | PASS |
+| 96 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0107 RED phase gate on the falsifiability mutation run | #tdd-0107 Round 1 | reviewed revision working-tree+f4255712335c5ccc3c9d631a37b04934677257da07efb5f2176b43d070c94d2e | PASS |
+| 97 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0107 restored GREEN, and the Refactor verify of both rows | #tdd-0106, #tdd-0107 | Round 1 GREEN fields of #tdd-0107; Refactor verify fields of both | PASS |
+| 98 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0106 build-phase GREEN + oracle proof | #tdd-0106 | reviewed revision b0c0cdcac2558808fcf69800e84c8f53cb8f36de | PASS |
+| 99 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0107 build-phase GREEN + oracle proof | #tdd-0107 | reviewed revision b0c0cdcac2558808fcf69800e84c8f53cb8f36de | PASS |
+| 100 | orchestrator | orchestrator | /qfai-implement: name commit 1e8ed2874 beside the predicate of both rows, as qa-gatekeeper#1 advised | #tdd-0106, #tdd-0107 | the `Earlier closure` line of both entries | PASS |
+| 101 | completion-reviewer | completion-reviewer | /qfai-implement: completion review of TDD-0106 and TDD-0107, attempt 1 | #tdd-0106, #tdd-0107 | one response per row, in review-20260925110000000 and review-20260925110010000 <!-- qfai:not-a-citation --> | PASS |
+| 102 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of TDD-0106 and TDD-0107, attempt 1 | #tdd-0106, #tdd-0107; commit 1e8ed2874 | one response per row, in the same two packs | PASS |
+| 103 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0106 and TDD-0107, off a checkpoint boundary; both rows `refactor -> done` and out of WVR-20260925-03 | #tdd-0106, #tdd-0107 | Checkpoint verification fields; test-list.md rows; `.qfai/waivers.yml` | PASS |
 
 ## Cross-spec obligations
 
@@ -1658,6 +1825,17 @@ Recorded per row under `## Ledger rows advanced`.
   Round 2 RED. Its GREEN, Oracle proof and Refactor verify are recorded; the
   build-phase gate on them, both reviews and the checkpoint are owed.
 
+- `TDD-0106` and `TDD-0107` each rest on one mutation, which removes the mode line.
+  It does not show that the "no `workflow` key" and "no prompt" checks of
+  `TDD-0106`, or the unchanged-config check of `TDD-0107`, can fail. The "no
+  prompt" check reads only a line ending in `?`.
+- `TDD-0108` stays at `exception` under `DR-0298` and in `WVR-20260925-03`. Its
+  one case loops over the four boundaries of `TC-0003-0073`, so `/qfai-sdd` has
+  to split the row through a Change Request before its RED can be taken.
+- `TC-0003-0072` does not plant a `workflow` mapping with no `mode`, which the
+  product reads as `active` on a separate branch. That needs a new or wider
+  test case upstream.
+
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
 FAIL — the pack's other ATDD-owned rows are still owed, as the matrix records.
@@ -1671,3 +1849,8 @@ closed on the full suite.
 `TDD-0094` stands at `review-fix`, in Round 2: `qa-gatekeeper#2` passed its
 Round 2 RED, and its GREEN, Oracle proof and Refactor verify are recorded. The
 build-phase gate on the GREEN, both reviews and the checkpoint are owed.
+
+`TDD-0106` and `TDD-0107` are `done`. Each was reopened from `exception` under
+`DR-0298`, taken through a falsifiability run, and passed by `qa-gatekeeper`,
+`completion-reviewer` and `implementation-reviewer`. Both have left
+`WVR-20260925-03`.
