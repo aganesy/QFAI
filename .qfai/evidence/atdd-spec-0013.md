@@ -2457,7 +2457,9 @@ every total.
 
 For the /qfai-atdd run 2026-09-23T19:33:24.738Z: the rows this change adds are scored under
 `## Update: the work-log removal` in the same file. Totals for the stage evidence after
-that update: ✅ 73 / ⚠️ 118 / ❌ 312, `n/a` 22, across 525 scored cells.
+that update: ✅ 85 / ⚠️ 119 / ❌ 312, `n/a` 30, across 546 scored cells —
+477 matrix depth cells (53 rows × 9 columns) and 69 business rule cells
+(23 rows × 3 columns).
 
 ## Work Orders Summary
 
@@ -2684,7 +2686,7 @@ until they are completed again.
 - Revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
 - Run: https://github.com/aganesy/QFAI/actions/runs/36026684599
 - Result: PASS — build, lint, types, all nine package test slices, Node floor tests, and ci-pass succeeded.
-- Rows closed: TDD-0110, TDD-0111, TDD-0112, TDD-0113, TDD-0114, TDD-0115.
+- Rows closed: TDD-0110, TDD-0111, TDD-0112, TDD-0113, TDD-0114, TDD-0115, shown mapped. They were closed as TDD-0044..TDD-0049 before the renumber, so this checkpoint is history: the rows are `todo` again.
 
 ## Record defects
 

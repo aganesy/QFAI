@@ -1637,7 +1637,7 @@ This change appends to the pack and removes nothing (`09_delta.md` `## Triage (2
 - `BR-0013-0023` and `BR-0013-0022`, neither carrying a retiring `Status:`;
 - no user story.
 
-The pack now declares 14 user stories, 37 test cases and 22 business rules. The two new test cases
+The pack now declares 14 user stories, 39 test cases and 23 business rules. The two new test cases
 are carried by six ledger rows, one per boundary: `TDD-0110`, `TDD-0112`, `TDD-0113` and `TDD-0114`
 for `TC-0013-0038`, and `TDD-0111` and `TDD-0115` for `TC-0013-0039`.
 
@@ -1722,7 +1722,7 @@ Totals across the three scored columns, 6 cells: **✅ 2 / ⚠️ 0 / ❌ 0**, `
 Neither rule names a failure, and both state their clauses unconditionally. `BR-0013-0022`'s stop
 is the same with and without `--auto`, so the mode is not a branch.
 
-With these two rows the business rule table covers all 22 active `BR-0013-*` headings.
+With these two rows the business rule table covers all 23 active `BR-0013-*` headings.
 
 ### ❌ and ⚠️ cells added
 
@@ -1733,6 +1733,7 @@ yet shown to fail its test.
 
 ### Totals for the stage evidence
 
-The census totals above, **✅ 66 / ⚠️ 116 / ❌ 312** with `n/a 7` over 501 cells, become
-**✅ 73 / ⚠️ 118 / ❌ 312**, `n/a` 22, across 525 scored cells: 459 matrix depth cells and 66
-business rule cells. `Status` is a row verdict and is excluded.
+The totals `## Follow-up this matrix does not discharge` states, **✅ 78 / ⚠️ 117 / ❌ 312** with
+`n/a 15` over 522 cells, become **✅ 85 / ⚠️ 119 / ❌ 312**, `n/a` 30, across 546 scored cells:
+477 matrix depth cells (53 rows × 9 columns) and 69 business rule cells (23 rows × 3 columns).
+`Status` is a row verdict and is excluded.

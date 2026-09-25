@@ -222,3 +222,338 @@ node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --s
 - Rationale: every routed blocking reviewer returned PASS in cycle 2
   (`review-20260923121814104`), and only the 15 pinned pre-existing errors
   remain repository-wide, three of them the `QFAI-ID-002` in this spec.
+
+---
+
+# Run: re-derive after the merge (2026-09-25)
+
+## Objective
+
+- Spec target: spec-0013
+- Mode: `re-derive`. No Change Request drives it. The driving decision is
+  DR-0013-0017 (`09_delta.md` DL-0013).
+- Objective: move this pack's work-log removal chain off the IDs main gave the
+  optional side artifact rules, onto the next free IDs, without changing its
+  wording or obligations.
+
+## Inputs reviewed
+
+- Merge commit `eeadf8142` (parents `e37b2fa82` and `8214d0fdd`) and fix commit
+  `25d428853`.
+- `.qfai/specs/spec-0013/**`, and `09_delta.md` "Renumbering after the merge
+  (2026-09-25)".
+- Main's spec-0013 at `8214d0fdd`: last IDs `AC-0013-0028`, `BR-0013-0021`,
+  `EX-0013-0021`, `TC-0013-0037` and `TDD-0109`.
+- `.qfai/decisions/CR-20260913-0012-spec-0013-declares-three-acceptance-criterion-ids-twice.md`
+  and
+  `.qfai/decisions/CR-20260923-0010-five-spec-0013-rules-were-repointed-with-no-change-request-on-record.md`,
+  which allocated the old IDs to main's rules.
+- Grilling session `split-2026-09-25` S1: decision D6 and lookups L9, L10 and
+  L11.
+- Every file that cites the chain: spec-0011 `07_Decisions.md` and
+  `09_delta.md`, spec-0004 `10_Plan.md`, `.qfai/evidence/sdd-spec-0011.md`,
+  `.qfai/evidence/sdd-batch-20260923170018664.md`,
+  `.qfai/evidence/atdd-spec-0004.md`, `.qfai/evidence/implement-spec-0004.md`,
+  `.qfai/evidence/atdd-spec-0011.md`, `.qfai/evidence/atdd-spec-0013.md`,
+  `.qfai/evidence/coverage-depth-spec-0013.md`,
+  `packages/qfai/tests/integration/spec0013RecordHomes.test.ts`,
+  `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts` and
+  `packages/qfai/tests/assets/openRowAlreadyTested.test.ts`.
+
+## Preflight summary path
+
+- Preflight run id `run-20260925104025803`: ready, source `discussion-pack`,
+  selected pack `discussion-20260923060900824`, 17 imported requirements, no
+  pack gaps, no blockers. It rewrote the tracked latest-run pointer with this
+  run's id.
+- That result describes the tree after the renumber was written. An earlier
+  preflight, run id `run-20260925062004313`, taken before the merge, was also
+  ready on the same pack with 17 imported requirements and no pack gaps.
+
+## Triage decisions
+
+| Source       | Subject                                                                                                                                                                                                 | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DR-0013-0017 | Renumber the work-log removal chain: AC-0013-0028 to AC-0013-0030, BR-0013-0021 to BR-0013-0023, EX-0013-0021 to EX-0013-0023, TC-0013-0036/0037 to TC-0013-0038/0039, TDD-0044..0049 to TDD-0110..0115 | UPDATE    | MODIFY | -           | Main's approved allocation gave the old IDs their meaning first. Wording and obligations do not change. No ledger row is deleted from the merged ledger, so `sdd-triage.md` Procedure step 5 asks no approval |
+
+- Persisted in `09_delta.md` as `## Triage (2026-09-25)`, with `Existing Spec`
+  `spec-0013` and `Depends-On` `-`, under `## Change Summary` and before
+  `## Triage (2026-09-23)`.
+- Impact cascade: spec-0011 and spec-0004 cite the chain only from a decision
+  record, a delta note, a plan step and evidence. None of their US, AC, BR, EX
+  or TC items names it, so the cascade adds no Triage row on those specs.
+- **The fixed phase order was not kept.** The actual order:
+  1. D6 settled the renumber in session `split-2026-09-25` S1, which ended at
+     2026-09-25T00:04:49Z.
+  2. The merge `eeadf8142` (00:50:12Z) wrote the renumber into the Phase 2,
+     Phase 2b, Phase 3 and Phase 4 artifacts, and the fix `25d428853`
+     (01:19:31Z) corrected it.
+  3. This record's author reset the six `Evidence` cells (Phase 2b) and wrote
+     the Stage 1 table `## Triage (2026-09-25)`.
+  4. Stage 0 ran as `run-20260925104025803` (01:40:25Z).
+  5. The `delivery-planner` Triage gate, the `solution-architect` design gate
+     and the Reviewer Gate ran last.
+- Cause: the renumber was made while the merge conflict with main was being
+  resolved, so it was written before any Stage 0 or Stage 1 step ran.
+- Why no harm follows:
+  - D6 settled the operation before the first write.
+  - `UPDATE` / `MODIFY` is approval-free, and the run deletes no ledger row.
+  - Stage 1 stops for an approval-required row and for a `CREATE` row with no
+    registered capability. This run has neither, so the late table bypassed
+    nothing Stage 1 stops for.
+  - Stage 0 `ready` holds for the tree after the edits, and the preflight taken
+    before the merge was `ready` on the same input.
+
+## Open questions
+
+- none
+
+## Decisions made
+
+- DR-0013-0017 / DL-0013: the work-log removal chain moves to the next free
+  IDs. Main's IDs keep their meaning.
+  - Reason: main's approved `CR-20260913-0012` and `CR-20260923-0010` allocated
+    the old IDs before this branch minted them, and main writes them into
+    tests, evidence and four Change Requests.
+  - Rule 4 of `spec-traceability-rules.md` ("a written `TDD-ID` is never
+    renumbered") cannot hold on both sides. This side breaks it only in commit
+    messages that have not merged, and the renumbering section maps them.
+  - Rejected, recorded as `do_not` in DL-0013: renumbering main's side, and
+    keeping both chains on the same IDs.
+  - Adjudication `agents`: adopted from the recommendation of `split-griller`,
+    and not critical. Disagreeing position: `split-planner`
+    (`delivery-planner`) proposed the same route scoped to spec-0013 and the
+    spec-0011 cross-spec entry. It was rejected on scope only.
+- The six `DR-ID` cells stay `-`. The rows are newly seeded under their new
+  IDs, not reset from an earlier state.
+
+## Work performed
+
+- Phase 2, IDs only:
+  - `03_Acceptance-Criteria.md` `AC-0013-0030`; `04_Business-Rules.md`
+    `BR-0013-0023` and its `AC-Refs`; `05_Examples.md` `EX-0013-0023` and its
+    `BR-Ref`; `06_Test-Cases.md` `TC-0013-0038` and `TC-0013-0039` with their
+    `EX-Ref` and `AC-Refs`.
+  - DR-0013-0005..DR-0013-0016 in `07_Decisions.md` cite the new IDs and change
+    nothing else.
+  - DR-0013-0017 records the renumber itself.
+  - `AC-0013-0029`, `BR-0013-0022` and `EX-0013-0022` keep their IDs.
+- Phase 2b, ledger identity. The six rows are appended after main's
+  `TDD-0109`, at `todo`, with `DR-ID` `-` and `Evidence` `-`:
+
+  | Old TDD-ID | New TDD-ID | TC-Refs      | BR-Ref       | Boundary                       |
+  | ---------- | ---------- | ------------ | ------------ | ------------------------------ |
+  | TDD-0044   | TDD-0110   | TC-0013-0038 | BR-0013-0023 | `record-homes-stated`          |
+  | TDD-0045   | TDD-0111   | TC-0013-0039 | BR-0013-0022 | `stop-steps-stated`            |
+  | TDD-0046   | TDD-0112   | TC-0013-0038 | BR-0013-0023 | `no-worklog-section`           |
+  | TDD-0047   | TDD-0113   | TC-0013-0038 | BR-0013-0023 | `no-pending-promotion-example` |
+  | TDD-0048   | TDD-0114   | TC-0013-0038 | BR-0013-0023 | `no-surface-reference-in-tree` |
+  | TDD-0049   | TDD-0115   | TC-0013-0039 | BR-0013-0022 | `no-worklog-entry-named`       |
+  - Against the rows before the merge, Test file, Layer, Tier, owning module
+    and Boundary are unchanged. Selector and `BR-Ref` change only in the IDs
+    they carry: the six Selectors take the new TC prefix, and the four `BR-Ref`
+    cells that named `BR-0013-0021` name `BR-0013-0023`.
+  - `Evidence` is `-` on all six. It had kept the trail from before the
+    renumber, which no longer describes these rows. Against `25d428853`, those
+    six cells are the only change in the ledger.
+  - Main's `TDD-0044`..`TDD-0049` and `TDD-0081`..`TDD-0083` are untouched. No
+    row is deleted, so no tombstone is owed. The ledger holds 115 rows: main's
+    109 and these six.
+  - The rows are `todo` because a renumbered row keeps no evidence: D6, the
+    reset in `sdd-triage.md` Ledger migration step 5, and the old-to-new
+    correspondence of step 3 there, the SUPERSEDE precedent D6 follows. The
+    test titles and annotations changed with the IDs, so the recorded runs no
+    longer describe the test bytes. Those runs stay in
+    `.qfai/evidence/atdd-spec-0013.md` as earlier rounds under the new
+    headings.
+
+- Phase 3: `10_Plan.md` cites `BR-0013-0023`. Critical Constraint 10: no
+  finding, because the edit adds no architectural element.
+- Phase 4:
+  - `09_delta.md` gains "Renumbering after the merge (2026-09-25)" with the
+    mapping, `## Triage (2026-09-25)` with the renumber row, DL-0013 under
+    `## Decision Log` and its `## Update History` row.
+  - DELTA-0001, the `## Triage (2026-09-23)` rows, the ledger bullets and the
+    earlier Decision Log entries cite the new IDs.
+  - There is no `## Change Requests` row, because no Change Request drives this
+    run.
+  - `## Triage (2026-09-25)` sits under `## Change Summary`, where
+    `sdd-quality-gate.md` § Triage Checks places a Triage section.
+- Phase 0, Phase 1 and Phase 2c were not entered. No contract and no
+  `_policies` file changed. The Phase 2c result DR-0013-0014 still holds under
+  the new IDs, and the API-row delta stays vacuous.
+- Outside spec-0013, the same commits repointed DR-0011-0005 and the spec-0011
+  delta notes, the spec-0004 plan step, `.qfai/evidence/sdd-spec-0011.md`,
+  `.qfai/evidence/sdd-batch-20260923170018664.md`, the two test files and
+  `openRowAlreadyTested.test.ts`.
+- Evidence restating the six rows, corrected by this record's author:
+  - `.qfai/evidence/atdd-spec-0013.md` `## First full CI checkpoint`: the
+    closed rows are shown mapped, as history.
+  - `.qfai/evidence/coverage-depth-spec-0013.md`
+    `## Update: the work-log removal`: 39 test cases and 23 business rules.
+    The totals are recounted over every scored table in that file:
+    ✅ 85 / ⚠️ 119 / ❌ 312, `n/a` 30, across 546 cells. The restatement in
+    `.qfai/evidence/atdd-spec-0013.md` `## Coverage Depth Matrix` carries the
+    same figures.
+- Completeness check. Every remaining occurrence of an old ID in tracked files
+  was read:
+  - Meaning main's rule: spec-0013 `03`..`06` and ledger rows
+    `TDD-0044`..`TDD-0049` and `TDD-0081`..`TDD-0083`; `CR-20260912-0003`,
+    `CR-20260913-0012`, `CR-20260923-0010` and `CR-20260924-0003`;
+    `.qfai/evidence/atdd-spec-0013.md` and
+    `.qfai/evidence/coverage-depth-spec-0013.md`;
+    `sddOptionalArtifactPreflight.test.ts`, `specAutoDiscovery.test.ts` and
+    `openRowAlreadyTested.test.ts`.
+  - Naming the old IDs on purpose: the renumbering section of `09_delta.md`,
+    DR-0013-0017, DL-0013, and the `Renumbered:` lines of
+    `.qfai/evidence/atdd-spec-0013.md`.
+  - Meaning this chain, and repointed by this record's author, each with the
+    old ID in parentheses:
+    - `.qfai/evidence/atdd-spec-0011.md` `## Cross-spec obligations`: spec-0013
+      `TDD-0048` at `done`, now `TDD-0114` at `todo`.
+    - Work Orders row 61, written identically in
+      `.qfai/evidence/atdd-spec-0004.md` and
+      `.qfai/evidence/implement-spec-0004.md`: spec-0013 `TDD-0048`, now
+      `TDD-0114`. The first pass of this check read that row as a spec-0004 row
+      and missed it.
+  - The other `TDD-0044`..`TDD-0049` in the spec-0003, spec-0004, spec-0006,
+    spec-0015 and spec-0017 ledgers, evidence and tests are those specs' own
+    rows.
+
+## Contract executability
+
+- none
+
+## Commands executed
+
+```sh
+git grep -n -E "AC-0013-0028|BR-0013-0021|EX-0013-0021|TC-0013-003[67]" -- .
+git grep -n "spec-0013.*TDD-004[4-9]\|TDD-004[4-9].*spec-0013" -- .
+git grep -c -E "TDD-004[4-9]" -- .
+git diff origin/main HEAD -U0
+cd packages/qfai && ./node_modules/.bin/tsup
+node packages/qfai/dist/cli/index.mjs sdd preflight --fail-on error
+node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --spec spec-0013 --format github
+node packages/qfai/dist/cli/index.mjs validate --profile tdd --spec spec-0013 --format text
+node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --format github
+./node_modules/.bin/prettier --write <the edited spec files>
+```
+
+## Validate evidence paths
+
+- Validate run id `run-20260925102605997`, scope `sdd`, `--spec spec-0013`,
+  before the review pack was written: pass, 0 errors, 12 warnings, 4 info.
+  - Warnings: 9 `QFAI-TRIAGE-010` on `_policies/10_delta.md`, 1
+    `QFAI-LINK-001` on this checkout's skill wrappers, 1 `QFAI-DCON-034` on the
+    sample `DESIGN.md`, and 1 `QFAI-TRACE-002` because spec-0013 has not
+    adopted the optional traceability ledger.
+  - No finding names a renumbered ID. The three `QFAI-ID-002` errors the first
+    run carried are gone, because main removed the duplicate headings.
+- Validate run id `run-20260925103254257`, scope `sdd`, whole repository: fail,
+  11 errors, 61 warnings, 5 info. All 11 are `QFAI-TDDLIST-017` at their pins
+  (spec-0006: 2, spec-0010: 1, spec-0012: 8). None is in spec-0013.
+- Later runs carry the review pack while its verdicts are pending. That adds
+  `QFAI-REVIEW-005` (no `Rxx_*.md` yet) and `QFAI-REVIEW-007` (`PENDING` is not
+  an accepted status) on pack `review-20260925013156223`, which clear when the
+  verdicts are written.
+- After the `Evidence` reset, the Triage table and the preflight:
+  - Validate run id `run-20260925104054319`, scope `sdd`, `--spec spec-0013`:
+    fail, 2 errors, 12 warnings, 4 info. The 2 errors are the pending pack's.
+    The new Triage table raises no finding.
+  - Validate run id `run-20260925104056747`, scope `sdd`, whole repository:
+    fail, 13 errors, 61 warnings, 5 info: the 11 pinned `QFAI-TDDLIST-017` and
+    the pending pack's 2.
+  - Validate run id `run-20260925104152276`, scope `tdd`, `--spec spec-0013`:
+    9 errors, 22 warnings, 5 info. The 9 errors are `QFAI-TEST-003` in spec-0004
+    and spec-0006 test files, pinned in `scripts/dogfood-backlog.json`. On the
+    six rows only `TDDLIST_STALE_STATUS` remains: each test exists and resolves
+    while the row is `todo`, as expected until the rows are completed again.
+- After the fixes for review round 1. `summary.json` still reads `PENDING`,
+  and `QFAI-REVIEW-005` is gone now that the `Rxx_*.md` files exist:
+  - Validate run id `run-20260925111027888`, scope `sdd`, `--spec spec-0013`:
+    fail, 1 error (`QFAI-REVIEW-007` on the pack), 12 warnings, 4 info.
+  - Validate run id `run-20260925111030150`, scope `sdd`, whole repository:
+    fail, 12 errors: the 11 pinned `QFAI-TDDLIST-017` and the same
+    `QFAI-REVIEW-007`.
+  - Validate run id `run-20260925111119367`, scope `tdd`, `--spec spec-0013`:
+    the 9 pinned `QFAI-TEST-003` errors outside spec-0013, and no
+    `QFAI-ATDD-13x` finding on the corrected coverage totals.
+  - `node scripts/check-mdschema.mjs`: 49 files conform.
+- After the verdicts were written into `summary.json`:
+  - Validate run id `run-20260925111737225`, scope `sdd`, `--spec spec-0013`:
+    pass, 0 errors, 12 warnings, 4 info.
+  - Validate run id `run-20260925111739446`, scope `sdd`, whole repository:
+    fail, 11 errors, all the pinned `QFAI-TDDLIST-017`.
+  - `node scripts/check-mdschema.mjs`: 49 files conform.
+
+## Pre-draft Grilling
+
+| Phase | Session | Ended at             | Wrote at             | Frontier                        | Evidence               |
+| ----- | ------- | -------------------- | -------------------- | ------------------------------- | ---------------------- |
+| 2     | run     | 2026-09-25T00:04:49Z | 2026-09-25T00:50:12Z | 1 settled, 0 escalated          | #work-orders-summary-1 |
+| 3     | skipped | -                    | 2026-09-25T00:50:12Z | empty: answered by DR-0013-0017 | -                      |
+
+- Batch record: none
+- These rows belong to this run, the re-derive of 2026-09-25. The anchor
+  `#work-orders-summary-1` is the second `## Work Orders Summary` in this file,
+  the one below.
+- The Phase 2 session is `split-2026-09-25` S1. It was a delegated session
+  held to plan the split of the pull request, not a `/qfai-sdd` Phase 2
+  session, and no Phase 2 drafting role took part. It ran one round and then
+  adopted, because the author could not be reached. The convergence rule
+  adopts after the second round. Recorded decisions answer D6 on their own:
+  `CR-20260913-0012` and `CR-20260923-0010` allocated the old IDs to main. It ended `adopted` at 2026-09-25T00:04:49Z on revision
+  `432346e11`, with 7 decisions, 0 open and 0 escalated. D6 is the only one
+  that bears on spec-0013. No second session was held for this run.
+- `Wrote at` is the merge commit `eeadf8142`, the first write of the renumber.
+- Phase 3 only replaced a cited ID, which DR-0013-0017 already decides.
+- Phase 2b and Phase 4 run no session. Phase 0, Phase 1 and Phase 2c were not
+  entered.
+
+## Work Orders Summary
+
+| Step | Role (sub-agent)                                                                            | Agent instance    | Task title                                                                                                                            | Input (refs)                                                         | Output (refs)                                                                                                                                                                                                                                                                                                  | Status (PASS/REVISE/PENDING) |
+| ---- | ------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| 1    | qa-gatekeeper                                                                               | split-griller     | grilling(2@re-derive-2026-09-25/agents): D6, renumber the work-log removal chain to the next free IDs and complete the six rows again | `split-2026-09-25` S1, lookups L9–L11                                | Adopted as DR-0013-0017. Main's approved allocation holds the old IDs, and renumbering main's side rewrites an approved record written into tests, evidence and four Change Requests. Disagreeing position: `split-planner` (`delivery-planner`), same route, narrower scope; rejected on scope                | PASS                         |
+| 2    | backend-engineer, acting as this re-derive's author; not a drafting role `/qfai-sdd` routes | merge-author      | Apply D6 in the merge: Phase 2, 2b, 3 and 4 writes and the cross-spec repoints                                                        | D6; merge `eeadf8142`                                                | `eeadf8142`: the merge and the renumber across spec-0013 `03`..`07`, `09_delta.md`, `10_Plan.md` and `tdd/test-list.md`, spec-0011 `07` and `09`, spec-0004 `10_Plan.md`, the SDD evidence and the two test files                                                                                              | PASS                         |
+| 3    | backend-engineer, acting as this re-derive's author; not a drafting role `/qfai-sdd` routes | postmerge-author  | Settle what the merge left behind in spec-0013                                                                                        | fix `25d428853`                                                      | `25d428853`: `DR-ID` `-` on the six rows, DR-0013-0017 removed (restored by work order 4), and the stale delta sentence fixed                                                                                                                                                                                  | PASS                         |
+| 4    | test-design-analyst                                                                         | sdd13-author      | Renumber completeness check, Phase 2b `Evidence` reset, DR-0013-0017 and DL-0013, this run's record and review pack                   | the old and new IDs across the tracked tree; the validate runs above | `Evidence` `-` on TDD-0110..TDD-0115; DR-0013-0017; DL-0013; three references repointed in `.qfai/evidence/atdd-spec-0011.md`, `atdd-spec-0004.md` and `implement-spec-0004.md`; counts corrected in `coverage-depth-spec-0013.md` and `atdd-spec-0013.md`; this block; review pack `review-20260925013156223` | PASS                         |
+| 5    | test-design-analyst                                                                         | sdd13-author      | Stage 0 preflight for this re-derive                                                                                                  | current spec and discussion pack                                     | Run id `run-20260925104025803`: ready, 17 imported requirements, no pack gaps                                                                                                                                                                                                                                  | PASS                         |
+| 6    | test-design-analyst                                                                         | sdd13-author      | Persist the renumber row as `## Triage (2026-09-25)` in `09_delta.md`                                                                 | this block's Triage row                                              | `09_delta.md` `## Triage (2026-09-25)`; mdschema and markdownlint pass                                                                                                                                                                                                                                         | PASS                         |
+| 7    | delivery-planner                                                                            | sdd13-triage-gate | Triage gate (`slice-and-scope`, blocking) on the renumber row                                                                         | the persisted Triage row                                             | Round 1 REVISE: R1 Selector and `BR-Ref` statements, R2 phase order not recorded. Round 2 PASS at `working-tree+e8d99603a2ef1af37759bf647f2da7953b6929fe1828608a44ebe2328c56742b`; its advisory A1 (conservation sentence in the Triage `Rationale`) is applied                                                | PASS                         |
+| 8    | solution-architect                                                                          | sdd13-design-gate | `design` span gate (blocking) on the renumbered artifacts                                                                             | spec-0013 `03`..`10`, `tdd/test-list.md`                             | PASS, with advisories A1 to A3, applied                                                                                                                                                                                                                                                                        | PASS                         |
+| 9    | completion-reviewer                                                                         | sdd13-cr          | Reviewer Gate cycle 1 of this run                                                                                                     | review pack `review-20260925013156223`                               | `R01` round 1 REVISE: F-B1 and F-B2. Round 2 PASS at `working-tree+e8d99603a2ef1af37759bf647f2da7953b6929fe1828608a44ebe2328c56742b`; its advisories A2-EOL and A2-WO are applied                                                                                                                              | PASS                         |
+| 10   | qa-gatekeeper                                                                               | sdd13-qa          | Reviewer Gate cycle 1 of this run                                                                                                     | review pack `review-20260925013156223`                               | `R02` round 1 PASS at `working-tree+bb830f1cec2ff077d793b1584a5f355d48c5b990157695638dc5fe7177da6dad`; its advisory A1 (coverage-depth counts) is applied                                                                                                                                                      | PASS                         |
+
+## Gaps / Open risks
+
+- The fixed phase order was not kept: the renumber was written before Stage 0
+  and Stage 1 ran. `## Triage decisions` above records the actual order, the
+  cause and why no harm follows.
+- The review pack's `revision` is the tree round 2 reviewed, `working-tree+e8d99603a2ef1af37759bf647f2da7953b6929fe1828608a44ebe2328c56742b`. One
+  edit followed it: the conservation sentence the Triage gate asked for in
+  `09_delta.md` `## Triage (2026-09-25)`. The final tree is
+  `working-tree+60123ca0ae373b61aef7016b59f80aabaed7a67d0fb322b5ac41902dcdef6646`.
+- `.qfai/evidence/atdd-spec-0011.md` `## Cross-spec obligations` names
+  `TDD-0114` at `todo` but still reads `closed`. D4 of session
+  `split-2026-09-25` S1 settles what happens to it: the cross-spec tables in
+  `.qfai/evidence/atdd-spec-0003.md` and `.qfai/evidence/atdd-spec-0011.md`
+  are rewritten in the fields `cross-spec-ownership.md` defines, with an exact
+  `File` path and a valid `Resolution` in place of `closed`. The spec-0011
+  entry resolves through the completion review of `TDD-0114` when it is
+  completed again on the changed tree.
+- The six rows need `/qfai-atdd` and `/qfai-implement` again before the change
+  is complete.
+- The gaps the first run recorded for `TDD-0114` still hold under its new ID.
+- Not independent reviewers for this run: `sdd13-author`, `split-griller`,
+  `split-planner`, `merge-author` and `postmerge-author`.
+
+## Final status
+
+- Final status: PASS
+- Rationale: every routed blocking gate passed. The Triage gate and `R01`
+  passed in round 2 on `working-tree+e8d99603a2ef1af37759bf647f2da7953b6929fe1828608a44ebe2328c56742b`, and the design gate and `R02` in round 1. The
+  spec-scoped validate reports 0 errors, and the repository carries only the
+  11 pinned errors. The six rows still need `/qfai-atdd` and
+  `/qfai-implement`, and D4 still owes the cross-spec table rewrite; both are
+  downstream work, not gates of this run.

@@ -912,7 +912,7 @@ See `.qfai/evidence/coverage-depth-spec-0011.md` (committed). Totals: âœ… 4 / âš
 
 | Source rows | Dependent spec | Dependent row | Shared artifact | Change | Verification | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| TDD-0021..TDD-0023 | spec-0013 | TDD-0048 (`done`) | Shipped `.qfai/assistant` skill tree | Remove the qfai-implement work-log text | The TDD-0048 selector and the first full-suite checkpoint passed. | closed |
+| TDD-0021..TDD-0023 | spec-0013 | TDD-0114 (`todo`; `TDD-0048` before the renumber in spec-0013 `09_delta.md`) | Shipped `.qfai/assistant` skill tree | Remove the qfai-implement work-log text | The selector of that row, then `TDD-0048`, and the first full-suite checkpoint passed. | closed |
 
 The direct importer scan found no test importing the changed Markdown files. The
 source-reading asset suite passed 179 files and failed four repository-wide

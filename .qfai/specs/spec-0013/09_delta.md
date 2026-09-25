@@ -6,7 +6,7 @@ The main branch gave the first six IDs below to the optional side artifact
 rules before this pack gave them to the work-log removal chain (DELTA-0001).
 `CR-20260913-0012` allocated the test case IDs, and `CR-20260923-0010` gave
 `AC-0013-0028` the same meaning. Main keeps them, and the chain moves to the
-next free IDs. Commit messages written before the merge still carry the old
+next free IDs (DR-0013-0017, DL-0013). Commit messages written before the merge still carry the old
 IDs.
 
 | Old ID       | New ID       | Subject                                       |
@@ -40,6 +40,21 @@ IDs.
   approval stop writes nothing beyond the Triage table and the stop report.
   AC-0013-0030 and AC-0013-0029, each with one BR, EX and TC, are added, seeded
   as TDD-0110..TDD-0115, one row per boundary.
+
+## Triage (2026-09-25)
+
+The work-log removal chain moves to the next free IDs, as the renumbering
+section at the top of this file lists. Its wording and obligations do not change.
+
+| Source       | Subject                                                                                                                                                                                                               | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Depends-On |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| DR-0013-0017 | Renumber AC-0013-0028, BR-0013-0021, EX-0013-0021, TC-0013-0036 and TC-0013-0037 to AC-0013-0030, BR-0013-0023, EX-0013-0023, TC-0013-0038 and TC-0013-0039, and ledger rows TDD-0044..TDD-0049 to TDD-0110..TDD-0115 | spec-0013     | UPDATE    | MODIFY | -           | CR-20260913-0012 and CR-20260923-0010 gave the old IDs to the optional side artifact rules first. The text of each item is unchanged. No ledger row is deleted: the six rows are appended at `todo` with no `DR-ID` and no `Evidence`, because a renumbered row keeps no evidence. Against main at `8214d0fdd`, every obligation main holds keeps its ID and text, and this chain has the same two ACs, two BRs, two EXs, two TCs and six ledger rows before and after the renumber, so none is lost or gained | -          |
+
+- Ledger: TDD-0110..TDD-0115 follow main's TDD-0109. Test file, Layer, Tier,
+  owning module and Boundary are unchanged. Selector and `BR-Ref` change only
+  in the IDs they carry: the six Selectors take the new TC prefix, and the four
+  `BR-Ref` cells that named BR-0013-0021 name BR-0013-0023. No row is deleted,
+  so no tombstone is owed.
 
 ## Triage (2026-09-23)
 
@@ -78,6 +93,7 @@ writes nothing beyond the Triage table and the stop report.
 | 2026-09-23 | DL-0010 | BR-0013-0023 and BR-0013-0022 are realized by the shipped skill text |
 | 2026-09-23 | DL-0011 | The plan names the edit path and cites spec-0004 for the order       |
 | 2026-09-23 | DL-0012 | One row per boundary: TDD-0110..TDD-0115                             |
+| 2026-09-25 | DL-0013 | The work-log removal chain moves to the next free IDs                |
 
 ## Decision Log
 
@@ -441,6 +457,43 @@ notes: TC-0013-0038 names four boundaries and TC-0013-0039 two, one ledger row e
   reason: The three files state one rule; a set-valued assertion over them observes every file that fails.
   do_not: Split one boundary by the file it is read from.
   temptation: Each file is edited separately.
+
+### DL-0013
+
+#### Meta
+
+```yaml
+id: DL-0013
+date: 2026-09-25
+primary: Ops
+tags: ["@docs", "@test"]
+compat: Improvement
+scope:
+  - spec-0013/03_Acceptance-Criteria.md (AC-0013-0030)
+  - spec-0013/04_Business-Rules.md (BR-0013-0023)
+  - spec-0013/05_Examples.md (EX-0013-0023)
+  - spec-0013/06_Test-Cases.md (TC-0013-0038, TC-0013-0039)
+  - spec-0013/tdd/test-list.md (TDD-0110..TDD-0115)
+notes: The work-log removal chain moves to the next free IDs, because main allocated the old IDs first (DR-0013-0017). Rule 4 of spec-traceability-rules.md cannot hold on both sides of the collision; this side breaks it only in commit messages that have not merged, and the renumbering section maps them.
+```
+
+#### Migration / Follow-ups
+
+- `/qfai-atdd` and `/qfai-implement` complete TDD-0110..TDD-0115 again under
+  the new IDs.
+- Commit messages written before the merge keep the old IDs. The renumbering
+  section at the top of this file maps each one.
+
+#### Rejected
+
+- option: Renumber main's side instead
+  reason: CR-20260913-0012 and CR-20260923-0010 allocated those IDs first, and main writes them into tests, evidence and four Change Requests.
+  do_not: Renumber IDs an approved Change Request allocated.
+  temptation: Main's rows are seeded todo and carry no evidence.
+- option: Keep both chains on the same IDs
+  reason: Rule 2 of spec-traceability-rules.md forbids resolving an ID collision by keeping both.
+  do_not: Let one ID name two obligations.
+  temptation: The two chains sit in different parts of the pack.
 
 ## Origin
 
