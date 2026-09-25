@@ -24,4 +24,4 @@ As a designer, I want `/qfai-discussion` to record the brand direction I choose 
 - Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0010/02_User-stories.md#us-0010-0009`
 - Retitled and restated by the brand-direction change request that
   `decisions.md#DEC-0683` records; main's text at
-  `origin/main:.qfai/specs/spec-0010/02_User-stories.md`.
+  `b5d357c14:.qfai/specs/spec-0010/02_User-stories.md`.

@@ -52,13 +52,16 @@ this run:
    question naming the files it would change and the proposed change, and
    returns `awaiting_input`.
 2. The attempt that holds the answer, received through `authorizationRefs`,
-   makes the change. It appends one `decisions.md` row, already at WIP, whose
-   Content opens `Change request:` and names every story-tree and contract file
-   it changed, and `decisions.md` when it appended any other row. The row's
+   makes the change. It appends one `decisions.md` row at WIP whose Content
+   opens `Change request:` and names every story-tree and contract file it
+   changed, and `decisions.md` when it appended any other row. The row's
    Approach cites that answer as `<runId>/<authorizationId>` with its
    `answeredBy`.
-3. A row that cites only the run's `request_scope` is refused. It is not left
-   at TODO.
+3. The same attempt moves the row to DONE once every change the row names is
+   written. The row stays at WIP only while changes it names remain for a later
+   attempt of this stage, which moves it to DONE once it writes them.
+4. A row that cites only the run's `request_scope` is refused. Leaving the row
+   at TODO does not avoid the refusal.
 
 A row present before the stage started keeps its ID, Content and Approach.
 Only a row this stage appended changes its Status.

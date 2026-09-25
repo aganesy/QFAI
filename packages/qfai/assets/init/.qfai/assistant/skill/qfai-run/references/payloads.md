@@ -5,15 +5,15 @@ exact: an unknown key is refused.
 
 ## Calls
 
-| Call                                                   | When                                          |
-| ------------------------------------------------------ | --------------------------------------------- |
-| `npx qfai workflow status [--run <runId>]`             | First, for the mode and any run in progress   |
-| `npx qfai workflow start --in <file>`                  | A new change request in mode `active`         |
-| `npx qfai workflow next --run <runId>`                 | For the routing work order, then each stage's |
-| `npx qfai workflow accept --run <runId> --in <file>`   | With a routing result or a stage result       |
-| `npx qfai workflow decision --run <runId> --in <file>` | With the operator's answer, or their `stop`   |
-| `npx qfai workflow resume --run <runId>`               | When the operator says `continue`             |
-| `npx qfai workflow finish --run <runId>`               | When `next` returns no work order             |
+| Call                                                   | When                                                  |
+| ------------------------------------------------------ | ----------------------------------------------------- |
+| `npx qfai workflow status [--run <runId>]`             | First, for the mode and any run in progress           |
+| `npx qfai workflow start --in <file>`                  | A new change request in mode `active`                 |
+| `npx qfai workflow next --run <runId>`                 | For the routing work order, then each stage's         |
+| `npx qfai workflow accept --run <runId> --in <file>`   | With a routing result or a stage result               |
+| `npx qfai workflow decision --run <runId> --in <file>` | With the operator's answer, or their `stop`           |
+| `npx qfai workflow resume --run <runId>`               | When the operator says `continue`                     |
+| `npx qfai workflow finish --run <runId>`               | When `next` reports `ready` with every stage accepted |
 
 - Each call prints one JSON document.
 - An `--in` file lies under `.qfai/run/`: the start input under
@@ -146,8 +146,8 @@ A routing or stage result carries a question as:
 ```
 
 - A value answers as `"answer": { "value": "..." }`.
-- The operator's stop is `{ "stop": true, "answeredBy": "..." }`, with no
-  question open.
+- The operator's stop is `{ "stop": true, "answeredBy": "..." }`, whether or
+  not a question is open.
 
 ## Stage result
 

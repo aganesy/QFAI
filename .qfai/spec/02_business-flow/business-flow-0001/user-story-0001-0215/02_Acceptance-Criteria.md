@@ -43,7 +43,7 @@ Scenario: verify.json keeps its fields and values
 Scenario: Verify sends each finding to its owner
   Given the final gates report findings verify did not cause
   When the verify stage returns
-  Then a spec gap, an acceptance-test defect and an implementation defect are listed as needs_repair findings, with qfai-sdd, qfai-atdd and qfai-implement as their resolving owners
+  Then a story or contract gap, an acceptance-test defect and an implementation defect are listed as needs_repair findings, with qfai-sdd, qfai-atdd and qfai-implement as their resolving owners
   And a missing environment returns the stage blocked, with the blocker stage-blocked and the operator as the one who clears it
   And verify edits no artifact another owner holds
 

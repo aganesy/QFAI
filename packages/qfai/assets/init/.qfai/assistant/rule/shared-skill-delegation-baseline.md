@@ -263,6 +263,10 @@ A blocking review that cannot be delegated because the agent budget is spent is 
 A run is one `npx qfai workflow` run, and its work orders are the ones the CLI
 issues to a stage.
 
+What authorizes a run's work, and the one target a work order binds its stage
+to:
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#what-authorizes-a-runs-work`.
+
 ### Actor history in a run
 
 - The run's history of authors, recommenders and reviewers travels with every
