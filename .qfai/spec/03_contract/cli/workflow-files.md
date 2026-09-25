@@ -214,13 +214,19 @@ internal identifier.
   `.qfai/assistant/rule/test-layers.md` maps those layers.
 - `seam-only` is never a plan stage. The core issues it from an acceptance
   result's seam request.
-- Predicates: `always`, `missing_example_needed`, `test_defect_found`,
+- Predicates: `always`, `missing_example_needed`, `diagnosis_missing_test`,
+  `test_defect_found`,
   `regression_found`, `acceptance_obligations_unmet`,
   `prototype_decision_needed`, `full_discussion_needed`.
 - `missing_example_needed` holds when the diagnosis is `missing-test` and no
   example of the bound flow states the case. When one does, the predicate is
   false and `acceptance_obligations_unmet` or the implement stage picks the
   example up.
+- `diagnosis_missing_test` holds whenever the diagnosis is `missing-test`,
+  whether or not an example states the case. The `bugfix` plan's implement
+  stage runs under it, so the case's test is written in either branch.
+- How the core decides that a UI contract serves the bound flow, for
+  `prototype_decision_needed`, is pending OQ-0194.
 - Names no plan uses and the core refuses: `repair_prepare`, `sdd_reconcile`,
   `defect_reopen`, `configure`, `research` and `ledger_reconcile_needed`.
 - None of these names reaches the operator.
@@ -316,13 +322,14 @@ Parser and schema verdicts agree on these shape cases.
 
 Rule refs: BR-0671, BR-0672, BR-0673
 
-| BR-ID   | Statement                                                                                                                                                                                                                                                             | Examples                         |
-| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| BR-0545 | The `feature` plan is story authoring, then prototyping only when a visual decision is needed, then acceptance, implement and a full verify.                                                                                                                          | EX-0001-0192-13                  |
-| BR-0546 | Every change route's last stage is a full verify, and skipping a stage never skips a test obligation.                                                                                                                                                                 | EX-0001-0192-14                  |
-| BR-0619 | The `direct` plan is a maintenance stage by `qfai-maintain`, then a full verify.                                                                                                                                                                                      | EX-0001-0198-01                  |
-| BR-0631 | The plans load from the package's `assets/defaults/workflows/` and are never installed into a project. A plan with an unknown stage, a cycle or no path to verify is refused on load as trigger (b), and a copy under the project's `.qfai/assistant/` is never read. | EX-0001-0199-09, EX-0001-0199-10 |
-| BR-0649 | Shipped schemas, plans and skills carry no private version marker and no internal identifier, and the only version they name is `qfaiVersion`.                                                                                                                        | EX-0001-0201-15                  |
-| BR-0652 | Tracked evidence under `.qfai/evidence/workflow/` holds no conversation text, secret, token or absolute path, and request text and free-text answers appear there only as keyed digests.                                                                              | EX-0001-0201-18                  |
-| BR-0653 | The five shipped schemas and the parser accept and refuse the same payloads, and the parser is the runtime authority.                                                                                                                                                 | EX-0001-0201-19                  |
-| BR-0654 | Runtime state lives only under the git-ignored `.qfai/run/`, and a run never writes `.qfai/state.json`.                                                                                                                                                               | EX-0001-0201-20                  |
+| BR-ID   | Statement                                                                                                                                                                                                                                                                                             | Examples        |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| BR-0545 | The `feature` plan is story authoring, then prototyping only when a visual decision is needed, then acceptance, implement and a full verify.                                                                                                                                                          | EX-0001-0192-13 |
+| BR-0546 | Every change route's last stage is a full verify, and skipping a stage never skips a test obligation.                                                                                                                                                                                                 | EX-0001-0192-14 |
+| BR-0619 | The `direct` plan is a maintenance stage by `qfai-maintain`, then a full verify.                                                                                                                                                                                                                      | EX-0001-0198-01 |
+| BR-0631 | The plans load from the package's `assets/defaults/workflows/` and are never installed into a project. A plan with an unknown stage, a cycle or no path to verify is refused on load as trigger (b), and a copy under the project's `.qfai/assistant/` is never read.                                 | EX-0001-0199-09 |
+| BR-0744 | The `bugfix` plan runs its implement stage under `diagnosis_missing_test`, which holds whenever the diagnosis is `missing-test`, whether or not an example already states the case, so the case's test is written in either branch; a `regression` or `defective-test` diagnosis does not satisfy it. | EX-0001-0193-13 |
+| BR-0649 | Shipped schemas, plans and skills carry no private version marker and no internal identifier, and the only version they name is `qfaiVersion`.                                                                                                                                                        | EX-0001-0201-15 |
+| BR-0652 | Tracked evidence under `.qfai/evidence/workflow/` holds no conversation text, secret, token or absolute path, and request text and free-text answers appear there only as keyed digests.                                                                                                              | EX-0001-0201-18 |
+| BR-0653 | The five shipped schemas and the parser accept and refuse the same payloads, and the parser is the runtime authority.                                                                                                                                                                                 | EX-0001-0201-19 |
+| BR-0654 | Runtime state lives only under the git-ignored `.qfai/run/`, and a run never writes `.qfai/state.json`.                                                                                                                                                                                               | EX-0001-0201-20 |

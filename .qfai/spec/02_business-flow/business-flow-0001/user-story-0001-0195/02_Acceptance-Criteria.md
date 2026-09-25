@@ -77,7 +77,7 @@ Scenario: Upstream drift outside the scope halts the run
 Scenario: A change to the story tree waits for the operator's approval
   Given a story-authoring stage of a run that would change story-tree or contract files
   When it reaches the change
-  Then it first puts one question showing the change target and the proposal, and changes no such file
-  And after the operator's answer is recorded as a `human_decision`, the stage makes the change and appends one `Change request:` row naming those files, citing that answer, at WIP
-  And the run's `request_scope` never makes the row WIP
+  Then it asks once and changes nothing: one question shows the change target and the proposal
+  And the attempt holding the operator's `human_decision` makes the change and appends one `Change request:` row naming those files, already at WIP, citing that answer
+  And a row citing only the run's `request_scope` is refused `record-unauthorized`
 ```

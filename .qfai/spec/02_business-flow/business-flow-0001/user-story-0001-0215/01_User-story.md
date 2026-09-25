@@ -22,5 +22,5 @@
 
 - Story block: US-0014-0021, which `main` added to spec-0014 (archived pre-merge
   pack at `.qfai/evidence/migration-spec-to-story/retired/spec-0014/`; main's
-  text at `origin/main:.qfai/specs/spec-0014/02_User-stories.md`).
+  text at `b5d357c14:.qfai/specs/spec-0014/02_User-stories.md`).
   `decisions.md#DEC-0745` records the carry.

@@ -39,6 +39,7 @@ const VOCABULARY: Record<string, { skill: string | string[]; operation: string }
 const PREDICATES = [
   "always",
   "missing_example_needed",
+  "diagnosis_missing_test",
   "test_defect_found",
   "regression_found",
   "acceptance_obligations_unmet",
@@ -140,6 +141,21 @@ describe("the built-in plans", () => {
       ["prototype", "prototype_decision_needed"],
       ["acceptance", "acceptance_obligations_unmet"],
       ["implement", "always"],
+      ["verify", "always"],
+    ]);
+    expect(stages.at(-1)?.operation).toBe("verify-full");
+  });
+
+  // QFAI:EX-0001-0193-13
+  it("runs the bugfix plan's implement stage on every missing-test diagnosis", async () => {
+    const { stages } = await plan("bugfix");
+    expect(stages.map((stage) => [stage.kind, stage.when])).toEqual([
+      ["diagnose", "always"],
+      ["sdd_append", "missing_example_needed"],
+      ["acceptance", "acceptance_obligations_unmet"],
+      ["implement", "diagnosis_missing_test"],
+      ["regression_fix", "regression_found"],
+      ["test_fix", "test_defect_found"],
       ["verify", "always"],
     ]);
     expect(stages.at(-1)?.operation).toBe("verify-full");

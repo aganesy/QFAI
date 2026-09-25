@@ -21,7 +21,7 @@ stages:
     kind: implement
     skill: qfai-implement
     operation: implement
-    when: missing_example_needed
+    when: diagnosis_missing_test
     after: [acceptance]
   - id: regression-fix
     kind: regression_fix

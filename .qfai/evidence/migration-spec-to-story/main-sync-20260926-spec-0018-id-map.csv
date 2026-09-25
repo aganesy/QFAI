@@ -452,7 +452,7 @@ TC-0018-0079,EX-0001-0194-03,dropped,the story tree has no test cases; the test 
 TC-0018-0080,EX-0001-0194-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0194-03
 TC-0018-0081,EX-0001-0194-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0194-04
 TC-0018-0082,EX-0001-0194-05,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0194-05
-TC-0018-0083,EX-0001-0194-02,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0194-02
+TC-0018-0083,EX-0001-0194-07,carried,a test case the story tree states as an example: a test fix missing its review receipt or its re-run receipt
 TC-0018-0084,EX-0001-0195-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-01
 TC-0018-0085,EX-0001-0195-02,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-02
 TC-0018-0086,EX-0001-0195-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-03
@@ -614,25 +614,27 @@ TC-0018-0234,EX-0001-0201-18,dropped,the story tree has no test cases; the test 
 TC-0018-0235,EX-0001-0201-19,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-19
 TC-0018-0236,EX-0001-0201-19,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-19
 TC-0018-0237,EX-0001-0201-20,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-20
--,EX-0001-0192-46,added,example the story-tree redesign needs (plan section 6)
--,EX-0001-0192-47,added,example the story-tree redesign needs (plan section 6)
--,EX-0001-0192-48,added,example the story-tree redesign needs (plan section 6)
--,EX-0001-0192-49,added,example the story-tree redesign needs (plan section 6)
--,EX-0001-0193-11,added,example the story-tree redesign needs (plan section 6)
--,EX-0001-0193-12,added,example the story-tree redesign needs (plan section 6)
--,EX-0001-0194-06,added,example the story-tree redesign needs (plan section 6)
--,EX-0001-0194-07,added,example the story-tree redesign needs (plan section 6)
--,EX-0001-0195-13,added,example the story-tree redesign needs (plan section 6)
--,EX-0001-0195-14,added,example the story-tree redesign needs (plan section 6)
--,EX-0001-0199-10,added,example the story-tree redesign needs (plan section 6)
--,BR-0662,added,rule the story-tree redesign needs (plan section 6)
--,BR-0663,added,rule the story-tree redesign needs (plan section 6)
--,BR-0664,added,rule the story-tree redesign needs (plan section 6)
--,BR-0665,added,rule the story-tree redesign needs (plan section 6)
--,BR-0666,added,rule the story-tree redesign needs (plan section 6)
--,BR-0667,added,rule the story-tree redesign needs (plan section 6)
--,AC-0001-0192-16,added,criterion for the accept-time check of story-authoring rows (plan section 6 A3)
--,AC-0001-0195-09,added,criterion for the change-request approval (user decision A4)
+-,EX-0001-0192-46,added,example the story-tree restatement needs (DEC-0751)
+-,EX-0001-0192-47,added,example the story-tree restatement needs (DEC-0751)
+-,EX-0001-0192-48,added,example the story-tree restatement needs (DEC-0749)
+-,EX-0001-0192-49,added,example the story-tree restatement needs (DEC-0754)
+-,EX-0001-0193-11,added,example the story-tree restatement needs (DEC-0755)
+-,EX-0001-0193-12,added,example the story-tree restatement needs (DEC-0750)
+-,EX-0001-0194-06,added,example the story-tree restatement needs (DEC-0754)
+-,EX-0001-0195-13,added,example the story-tree restatement needs (DEC-0748)
+-,EX-0001-0195-14,added,example the story-tree restatement needs (DEC-0748)
+-,BR-0662,added,rule the story-tree restatement needs (DEC-0749)
+-,BR-0663,added,rule the story-tree restatement needs (DEC-0751)
+-,BR-0664,added,rule the story-tree restatement needs (DEC-0751)
+-,BR-0665,added,rule the story-tree restatement needs (DEC-0748)
+-,BR-0666,added,rule the story-tree restatement needs (DEC-0755)
+-,BR-0667,added,rule the story-tree restatement needs (DEC-0750)
+-,EX-0001-0192-50,added,example the story-tree restatement needs (DEC-0776)
+-,EX-0001-0193-13,added,example the story-tree restatement needs (DEC-0777)
+-,BR-0743,added,rule the story-tree restatement needs (DEC-0776)
+-,BR-0744,added,rule the story-tree restatement needs (DEC-0777)
+-,AC-0001-0192-16,added,criterion the story-tree restatement needs (DEC-0751)
+-,AC-0001-0195-09,added,criterion the story-tree restatement needs (DEC-0748)
 DR-0018-0001,DEC-0761,carried,decision still in force
 DR-0018-0002,dropped,dropped,a spec-size signal the story tree has no use for
 DR-0018-0003,DEC-0762,carried,decision still in force
@@ -646,18 +648,18 @@ DR-0018-0010,DEC-0769,carried,decision still in force
 DR-0018-0011,DEC-0770,carried,decision still in force
 DR-0018-0012,DEC-0771,carried,decision still in force
 DR-0018-0013,DEC-0772,carried,decision still in force
-OQ-0018-0001,dropped,resolved,answered by the contract section main named; the story-tree contracts carry the answer
-OQ-0018-0002,dropped,resolved,answered by the contract section main named; the story-tree contracts carry the answer
-OQ-0018-0003,dropped,resolved,answered by the contract section main named; the story-tree contracts carry the answer
-OQ-0018-0004,dropped,resolved,answered by the contract section main named; the story-tree contracts carry the answer
-OQ-0018-0005,dropped,resolved,answered by the contract section main named; the story-tree contracts carry the answer
-OQ-0018-0006,dropped,resolved,answered by the contract section main named; the story-tree contracts carry the answer
-OQ-0018-0007,dropped,resolved,answered by the contract section main named; the story-tree contracts carry the answer
-OQ-0018-0008,dropped,resolved,answered by the contract section main named; the story-tree contracts carry the answer
-OQ-0018-0009,dropped,resolved,answered by the contract section main named; the story-tree contracts carry the answer
-OQ-0018-0010,dropped,resolved,answered by the contract section main named; the story-tree contracts carry the answer
-OQ-0018-0011,dropped,resolved,answered by the contract section main named; the story-tree contracts carry the answer
-OQ-0018-0012,dropped,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0001,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0002,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0003,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0004,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0005,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0006,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0007,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0008,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0009,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0010,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0011,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0012,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
 OQ-0018-0013,OQ-0188,carried,still deferred
 OQ-0018-0014,OQ-0189,carried,still deferred
 OQ-0018-0015,OQ-0190,carried,still deferred

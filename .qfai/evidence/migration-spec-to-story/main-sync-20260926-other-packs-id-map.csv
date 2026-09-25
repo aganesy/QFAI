@@ -218,4 +218,6 @@ spec-0002/AC-0002-0010,AC-0001-0015-01,restated,CR-20260912-0003 statement B
 spec-0002/BR-0002-0008,BR-0038,restated,CR-20260912-0003 statement A
 spec-0002/BR-0002-0010,BR-0040,restated,CR-20260912-0003 statement B
 spec-0002/EX-0002-0011,EX-0001-0015-01,restated,
+_policies/DR-0297,"DEC-0748, DEC-0755",restated,on the story tree a seeded example is a protected change and is approved through the stage's one change question (DEC-0748); when an example already states the case no story-authoring stage runs (DEC-0755)
+_policies/DR-0299,"DEC-0751, BR-0533",carried,a new story is approved once at routing; one approval per new-story slot
 all packs/06_Test-Cases.md 09_delta.md 10_Plan.md tdd/test-list.md 16_Traceability-ledger.md 01_Spec.md tables,dropped,dropped,ledger test-case delta plan and spec-pack bookkeeping

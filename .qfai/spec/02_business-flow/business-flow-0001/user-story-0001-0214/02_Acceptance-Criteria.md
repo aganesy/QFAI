@@ -51,7 +51,7 @@ Scenario: Stage 0 reuses the shared snapshot but not SDD's own check
 Scenario: An SDD-kind stage changes the tree only on the operator's answer
   Given an sdd, sdd_append or sdd_delta work order
   When the stage has a proposal for the story-tree and contract files it would change
-  Then it opens one decision question showing the change target and the proposal, with outcome awaiting_input, and changes no protected file
-  And the next attempt, receiving the answer through authorizationRefs, writes the change and appends one Change request row naming every protected file it changed, with an Approach citing that human_decision, and raises it to WIP
-  And the request_scope authorization never makes the row WIP
+  Then it asks once and changes nothing: it opens one decision question showing the change target and the proposal, with outcome awaiting_input
+  And the attempt holding the human_decision makes the change and appends one Change request row naming every protected file it changed, already at WIP, with an Approach citing that answer
+  And a row citing only request_scope is refused record-unauthorized
 ```
