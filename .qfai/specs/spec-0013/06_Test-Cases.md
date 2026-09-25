@@ -277,19 +277,19 @@ Tracked for separate implementation as OQ-0016
 - Level: integration
 - Verify SDD preflight reports ready for a pack with usable markdown when its optional `prototyping.yaml` has an invalid schema or a legacy format without a `prototyping` namespace.
 
-## TC-0013-0038: Stage 1 checks a matching routing-time approval
+## TC-0013-0052: Stage 1 checks a matching routing-time approval
 
-- EX-Ref: EX-0013-0022
+- EX-Ref: EX-0013-0036
 - AC-Refs: AC-0013-0043
 - Type: normal
 - Level: L3
 - Verify that `qfai-sdd/references/orchestrated-mode.md` and `references/sdd-triage.md` state that, inside a run, Stage 1 checks the cited `human_decision` instead of asking, state that the check passes only when the record exists, matches the row's operation and capability, and is not stale, and persist the passing row with `Authorization-Ref` and with `Approved By` copied as `answeredBy@YYYY-MM-DD`.
 - Notes: `packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts`.
 
-## TC-0013-0039: A failed approval check persists nothing
+## TC-0013-0053: A failed approval check persists nothing
 
-- EX-Ref: EX-0013-0023
-- AC-Refs: AC-0013-0029
+- EX-Ref: EX-0013-0037
+- AC-Refs: AC-0013-0044
 - Type: error
 - Level: L3
 - Verify that the Stage 1 text names the three failures (missing, mismatched, stale), states that none of them persists a triage row or asks the operator, and that each returns `awaiting_input` naming the row and the reason. Verify also that the text states when an approval is stale: the scope digest it was given under changed, the approved capability text changed, or a replan widened the scope, and that the clock alone never makes it stale.
@@ -298,7 +298,7 @@ Tracked for separate implementation as OQ-0016
 ## TC-0013-0040: The other approval-required operations keep the question
 
 - EX-Ref: EX-0013-0024
-- AC-Refs: AC-0013-0030
+- AC-Refs: AC-0013-0045
 - Type: boundary
 - Level: L3
 - Verify that the Stage 1 text keeps the approval question for exactly `DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` and `UPDATE:REMOVE`, the set held in the test, inside and outside a run, and says a routing-time authorization approves none of them. Inside a run the text states that Stage 1 asks the operator nothing itself: its stage result opens the question as a `decision` question with outcome `awaiting_input`, the answer arrives through the work order's `authorizationRefs`, and the row copies the answerer into `Approved By` as `answeredBy@YYYY-MM-DD` and carries no `Authorization-Ref`.

@@ -180,4 +180,4 @@ references run lower-to-upper only, so an `AC` may not cite a `BR`. Removed; the
 is **false against the code** by the same measurement as ruling 3 — an `ok` check registers.
 `TC-0006-0035` already says `ok`, so the TC is right and its two parents are wrong. `TDD-0037`
 implements against them. Recorded in
-`.qfai/steering/2026-08-08-chg-007-spec-0006-upstream-handoff.md` under `## Open questions`.
+`.qfai/evidence/implement-spec-0006.md#upstream-findings-and-open-questions-from-spec-0006`.

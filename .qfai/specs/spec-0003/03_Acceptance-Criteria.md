@@ -174,7 +174,6 @@ Scenario: レガシー管理ブロックからの自動移行
 | AC-0003-0015 | gitignore 管理ブロック追記                                              | REQ-0016                              | P1       |
 | AC-0003-0016 | レガシーブロック自動移行                                                | REQ-0017                              | P1       |
 | AC-0003-0017 | 4-layer asset-tree seed                                                 | REQ-0018                              | P1       |
-| AC-0003-0018 | project-root steering seed                                              | REQ-0019                              | P1       |
 | AC-0003-0019 | --upgrade-assistant-tree flag                                           | REQ-0020                              | P1       |
 | AC-0003-0020 | W-USER-EDIT-PRESERVED 出力                                              | REQ-0020                              | P1       |
 | AC-0003-0021 | migration memo authoring                                                | REQ-0021                              | P1       |
@@ -197,7 +196,7 @@ Scenario: レガシー管理ブロックからの自動移行
 | AC-0003-0038 | Independent shipped checks and a complete aggregate verdict             | REQ-0026                              | P1       |
 | AC-0003-0039 | Copilot instructions state the closed legacy window                     | REQ-0023                              | P1       |
 | AC-0003-0050 | Init and upgrade install the entry skills, their wrappers and the plans | discussion-20260923171450572#REQ-0064 | P1       |
-| AC-0003-0040 | Init writes no agents/openai.yaml                                       | discussion-20260923171450572#REQ-0051 | P1       |
+| AC-0003-0051 | Init writes no agents/openai.yaml                                       | discussion-20260923171450572#REQ-0051 | P1       |
 | AC-0003-0041 | The entry directive is prepended to AGENTS.md and CLAUDE.md             | discussion-20260923171450572#REQ-0064 | P1       |
 | AC-0003-0042 | Init names the mode in force and writes no mode key                     | discussion-20260923171450572#REQ-0059 | P1       |
 | AC-0003-0043 | The plans are refreshed when unmodified and kept when edited            | discussion-20260923171450572#REQ-0065 | P1       |
@@ -214,13 +213,6 @@ Scenario: レガシー管理ブロックからの自動移行
 - Given クリーンな新規プロジェクトディレクトリ
 - When `qfai init` を実行する
 - Then `.qfai/assistant/{constitution,manifest,catalog,process}/` の 4 ディレクトリが出荷アセットの内容で生成される。出荷アセットで満たされた layer には `.gitkeep` を書かない（空の layer にのみ空の `.gitkeep` を置く）。`.qfai/assistant/steering/` (旧層) は生成されない
-
-## AC-0003-0018: project-root steering seed
-
-- US-Refs: US-0003-0016
-- Given クリーンな新規プロジェクトディレクトリ
-- When `qfai init` を実行する
-- Then `.qfai/steering/.gitkeep` and `.qfai/steering/_templates/entry.md` are created at the project root, and no `.qfai/steering/README.md` is written. A later `qfai init` preserves a user's edit to the entry template
 
 ## AC-0003-0019: --upgrade-assistant-tree flag
 
@@ -388,12 +380,12 @@ Scenario: Init and upgrade install the entry skills, their wrappers and the plan
   And no workflow schema file is written into the project
 ```
 
-## AC-0003-0040: Init writes no agents/openai.yaml
+## AC-0003-0051: Init writes no agents/openai.yaml
 
 - US-Refs: US-0003-0029
 
 ```gherkin
-# AC-0003-0040
+# AC-0003-0051
 # Source: discussion-20260923171450572#REQ-0051
 Scenario: Init writes no agents/openai.yaml
   Given a fresh project

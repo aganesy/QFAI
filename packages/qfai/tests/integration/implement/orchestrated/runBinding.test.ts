@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { flat, readShipped, sectionOf } from "../../../helpers/shippedAssistant.js";
 
 describe("qfai-implement in a workflow run", () => {
-  it("TC-0011-0015 (TDD-0023): A Valid Run Binding Supplies the Primary Spec Without a Question", async () => {
+  it("TC-0011-0015 (TDD-0042): A Valid Run Binding Supplies the Primary Spec Without a Question", async () => {
     const text = flat(
       sectionOf(
         await readShipped("skills/qfai-implement/references/orchestrated-mode.md"),

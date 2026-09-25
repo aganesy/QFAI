@@ -69,7 +69,7 @@ correspondence module in `core/workflow/plans.ts`) and U3 (spec-0015's
 `qfai-maintain` routing entry):
 
 - the install set through the existing asset copy and wrapper sync
-  (BR-0003-0061), with no `agents/openai.yaml` (BR-0003-0050);
+  (BR-0003-0061), with no `agents/openai.yaml` (BR-0003-0062);
 - `.qfai/runs/` and `!.qfai/evidence/workflow/` in the lists of
   `core/gitignore.ts` (BR-0003-0013);
 - the entry directive through `addReviewPointer` (BR-0003-0051);
@@ -84,6 +84,38 @@ correspondence module in `core/workflow/plans.ts`) and U3 (spec-0015's
 
 Left out: the correspondence module itself (spec-0018); the routing entries
 (spec-0015); a manifest merge on a plain run (J2).
+
+### Removing the work-log seed
+
+`qfai init` stops seeding `.qfai/steering/` and leaves an existing one alone.
+This is the init part of one change across six specs. Its order is stated once,
+in spec-0004's `10_Plan.md` under "Removing the work-log surface".
+
+The change adds no architectural element. What leaves
+`packages/qfai/src/cli/commands/init.ts`:
+
+- `seedProjectSteering`, `buildProjectSteeringEntryTemplate`,
+  `summarizeSeedDrift`, `readSeedBodyForDrift` and `type SeedComparison`;
+- `normalizeNewlines` and `SEED_DRIFT_MAX_BYTES`, which only the seed code
+  reaches (`OPEN_READ_FLAGS` stays, because other readers use it);
+- the folding of `projectSteeringResult` into the run's report;
+- the work-log line that `buildCopilotInstructions` writes;
+- "steering" in the `--force` NOTE's list of what is not overwritten.
+
+`retireWithdrawnGovernedAssets` and the `.assets.lock.json` record it reads stay
+as they are. They are what deletes an unedited, recorded copy of
+`catalog/worklog-entry.schema.md` under `--force` and keeps an edited one with a
+note.
+
+The alternative considered was a new guard that refuses any write under
+`.qfai/steering/`. It was rejected because nothing writes there once the seed
+is gone: no path in `packages/qfai/src/**` names the directory.
+
+What the change leaves out:
+
+- migration or deletion of an adopter's `.qfai/steering/`;
+- any change to the retire pass or the lock record;
+- the legacy `.qfai/assistant/steering/` layout and its sunset.
 
 ## Test approach
 
@@ -103,10 +135,10 @@ Levels follow `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure
 
 **Layers.**
 
-| Layer       | What it proves                                                                                                                                                                                            | Where                                                      |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| integration | TC-0003-0060..0090: `qfai init` and a plain upgrade on temp repositories — the ignore entries, the install set and wrappers, the entry directive, the mode line, the provenance lock, the conflict report | `packages/qfai/tests/integration/init/`, one module per BR |
-| E2E         | US-0003-0029, discharged by the spec-0018 journey whose first step runs `qfai init` from the built CLI and asserts the installed entry; the upgrade half stays in the rows above                          | `packages/qfai/tests/e2e/`, annotated with both story IDs  |
+| Layer       | What it proves                                                                                                                                                                                                                | Where                                                      |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| integration | TC-0003-0063..0090, TC-0003-0091..0093: `qfai init` and a plain upgrade on temp repositories — the ignore entries, the install set and wrappers, the entry directive, the mode line, the provenance lock, the conflict report | `packages/qfai/tests/integration/init/`, one module per BR |
+| E2E         | US-0003-0029, discharged by the spec-0018 journey whose first step runs `qfai init` from the built CLI and asserts the installed entry; the upgrade half stays in the rows above                                              | `packages/qfai/tests/e2e/`, annotated with both story IDs  |
 
 No new test goes in `tests/cli/`. An integration annotation there answers no layer, and
 the files there are named by `done` rows, which an edit would make stale.
@@ -115,9 +147,9 @@ the files there are named by `done` rows, which an edit would make stale.
 
 | Module under `tests/integration/init/` | BR           | Cases                                                  |
 | -------------------------------------- | ------------ | ------------------------------------------------------ |
-| `managedGitignoreBlock.test.ts`        | BR-0003-0013 | TC-0003-0060, TC-0003-0090                             |
-| `entryInstallSet.test.ts`              | BR-0003-0061 | TC-0003-0062, TC-0003-0063, TC-0003-0064               |
-| `noOpenaiYaml.test.ts`                 | BR-0003-0050 | TC-0003-0065                                           |
+| `managedGitignoreBlock.test.ts`        | BR-0003-0013 | TC-0003-0091, TC-0003-0090                             |
+| `entryInstallSet.test.ts`              | BR-0003-0061 | TC-0003-0093, TC-0003-0063, TC-0003-0064               |
+| `noOpenaiYaml.test.ts`                 | BR-0003-0062 | TC-0003-0065                                           |
 | `entryDirective.test.ts`               | BR-0003-0051 | TC-0003-0066 to TC-0003-0070                           |
 | `modeLine.test.ts`                     | BR-0003-0052 | TC-0003-0071, TC-0003-0072, TC-0003-0073               |
 | `governedPlans.test.ts`                | BR-0003-0053 | TC-0003-0074, TC-0003-0075, TC-0003-0077               |
@@ -125,7 +157,7 @@ the files there are named by `done` rows, which an edit would make stale.
 | `conflictReport.test.ts`               | BR-0003-0055 | TC-0003-0081 to TC-0003-0084                           |
 | `forceGuidance.test.ts`                | BR-0003-0056 | TC-0003-0086                                           |
 | `forceRoutingMerge.test.ts`            | BR-0003-0057 | TC-0003-0087                                           |
-| `windowsParity.test.ts`                | BR-0003-0058 | TC-0003-0061, TC-0003-0076, TC-0003-0080, TC-0003-0088 |
+| `windowsParity.test.ts`                | BR-0003-0058 | TC-0003-0092, TC-0003-0076, TC-0003-0080, TC-0003-0088 |
 | `skippedSkillCount.test.ts`            | BR-0003-0059 | TC-0003-0089                                           |
 | `plainRunManifest.test.ts`             | BR-0003-0060 | TC-0003-0085                                           |
 
@@ -135,10 +167,10 @@ the files there are named by `done` rows, which an edit would make stale.
   the named overlays of `05_Examples.md` `## Upgrade-state fixtures`. An unknown overlay name
   fails the test. No earlier release is installed, and no snapshot tree is checked in.
 - **The exit-0 conflict matrix.** TC-0003-0083 asserts exit 0 over an edited plan, an absent
-  routing entry, a dropped reviewer and an invalid mode, one install each (DR-0003-0013).
-- **`git check-ignore` is the oracle** for the ignore entries (TC-0003-0090, TC-0003-0060 and TC-0003-0061). No case
+  routing entry, a dropped reviewer and an invalid mode, one install each (DR-0003-0033).
+- **`git check-ignore` is the oracle** for the ignore entries (TC-0003-0090, TC-0003-0091 and TC-0003-0092). No case
   counts the lines of the managed block, whose single source is `core/gitignore.ts`.
-- **Setups no other case can share:** the CRLF variants (TC-0003-0061, 0067, 0076), the
+- **Setups no other case can share:** the CRLF variants (TC-0003-0092, 0067, 0076), the
   symbolic-link refusal (0070), the rerun that writes nothing (0077) and the built CLI under a
   root with a space (0088).
 
@@ -185,14 +217,23 @@ collected test file.
 
 **Findings carried on purpose.**
 
-| Finding                                          | Why it is expected                                      | Until                            |
-| ------------------------------------------------ | ------------------------------------------------------- | -------------------------------- |
-| `QFAI-ATDD-111` for US-0003-0029                 | The journey that discharges it does not exist yet       | The tier-4 journey lands         |
-| `QFAI-ATDD-112` for TC-0003-0060..0090           | The integration tests do not exist yet                  | ATDD writes them                 |
-| The `tdd` pin of 73 errors on `tdd/test-list.md` | Pre-existing; this change appends rows and repairs none | A later change that repairs them |
+| Finding                                                    | Why it is expected                                      | Until                            |
+| ---------------------------------------------------------- | ------------------------------------------------------- | -------------------------------- |
+| `QFAI-ATDD-111` for US-0003-0029                           | The journey that discharges it does not exist yet       | The tier-4 journey lands         |
+| `QFAI-ATDD-112` for TC-0003-0063..0090, TC-0003-0091..0093 | The integration tests do not exist yet                  | ATDD writes them                 |
+| The `tdd` pin of 73 errors on `tdd/test-list.md`           | Pre-existing; this change appends rows and repairs none | A later change that repairs them |
 
 Each push to the batch's draft pull request lists these in the batch evidence, and its CI
 log is read against that list.
+
+### Tests for the work-log removal
+
+- The removal adds no test to this spec (`CR-20260925-0010`). The tests that
+  pinned the seed are deleted with it, and no test asserts that
+  `.qfai/steering/` is absent.
+- The type check fails on any import of a removed function.
+- The withdrawn schema is retired by the generic pass, which
+  `packages/qfai/tests/core/assistantAssetProvenance.test.ts` already tests.
 
 ## Dependencies
 
@@ -268,15 +309,16 @@ New obligations are discharged in `packages/qfai/tests/integration/**` per the A
 
 ## Risk mitigation
 
-| Risk                                                                                                                                       | Likelihood / impact | Mitigation                                                                                                                                              | Trigger to act                                                                                                     |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| The shipped pin change lands before the pre-build version rule, so pack verification, the leakage guard and the asset suite break together | med / high          | Ordering constraint 1 makes the pre-build rule a co-change rather than a follow-up; the asset suite is updated in the same commit                       | `pnpm verify:pack` or the leakage guard fails on a branch that only touched a shipped pin                          |
-| The structural contract gate lands after the repository's own copy of the shipped validate workflow is retired, leaving no cross-check     | med / high          | Ordering constraint 2 requires the gate with-or-before the retirement, so the eye-check is replaced before it is removed                                | The own-copy retirement appears in a diff with no gate in the same change                                          |
-| The shipped set grows before an owner is declared, so a wider create-only surface ships unowned                                            | low / high          | Ordering constraint 3 lands the ownership contract first; `SHIPPED_WORKFLOW_NAMES` is in-binary, so a new name cannot arrive by globbing the asset tree | A new `qfai-*.yml` asset appears without a matching entry in the shipped-name list                                 |
-| A refresh path re-implements `pruneMatchingEntries` instead of reusing it, splitting the prune rule in two                                 | med / med           | Ordering constraint 4 exports the helper first, which makes the no-parallel-implementation criterion satisfiable rather than aspirational               | A second prune walk appears anywhere under `src/cli/`                                                              |
-| An adopter runs `qfai init --force` to clear a skipped stage skill and loses local edits to it                                             | med / high          | The upgrade report counts the skipped skills and says `--force` replaces them with the shipped versions (BR-0003-0059)                                  | An upgrade report naming skipped skills whose project copies carry local edits, or an adopter report of lost edits |
-| The entry directive prepended to `AGENTS.md` or `CLAUDE.md` collides with the adopter's own first lines                                    | low / med           | Prepended only where no operative copy exists, through the review directive's mechanism and refusals (BR-0003-0051, DR-0003-0014)                       | An `init` run over a fixture with a hand-written directive that produces two copies                                |
-| `active` by default surprises an upgraded adopter mid-work                                                                                 | med / med           | The init summary names the mode in force, and `off` and `shadow` stay available                                                                         | An upgrade summary without the mode line                                                                           |
+| Risk                                                                                                                                       | Likelihood / impact | Mitigation                                                                                                                                                                                                                                                                                                                        | Trigger to act                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| The shipped pin change lands before the pre-build version rule, so pack verification, the leakage guard and the asset suite break together | med / high          | Ordering constraint 1 makes the pre-build rule a co-change rather than a follow-up; the asset suite is updated in the same commit                                                                                                                                                                                                 | `pnpm verify:pack` or the leakage guard fails on a branch that only touched a shipped pin                          |
+| The structural contract gate lands after the repository's own copy of the shipped validate workflow is retired, leaving no cross-check     | med / high          | Ordering constraint 2 requires the gate with-or-before the retirement, so the eye-check is replaced before it is removed                                                                                                                                                                                                          | The own-copy retirement appears in a diff with no gate in the same change                                          |
+| The shipped set grows before an owner is declared, so a wider create-only surface ships unowned                                            | low / high          | Ordering constraint 3 lands the ownership contract first; `SHIPPED_WORKFLOW_NAMES` is in-binary, so a new name cannot arrive by globbing the asset tree                                                                                                                                                                           | A new `qfai-*.yml` asset appears without a matching entry in the shipped-name list                                 |
+| A refresh path re-implements `pruneMatchingEntries` instead of reusing it, splitting the prune rule in two                                 | med / med           | Ordering constraint 4 exports the helper first, which makes the no-parallel-implementation criterion satisfiable rather than aspirational                                                                                                                                                                                         | A second prune walk appears anywhere under `src/cli/`                                                              |
+| Deleting the TC-0003-0022 tests removes a selector a live row still names, because they share files with live rows                         | med / med           | Remove only the `it` blocks whose selector names TC-0003-0022, with their annotations, in `tests/cli/init.test.ts` and `tests/integration/initSpec0003.test.ts`. Remove the `joinProjectSteering` assertions of the TC-0003-0025 tests in `initSpec0003.test.ts` and `init.test.ts` with the symbol, and leave their row as it is | `TDDLIST_SELECTOR_UNRESOLVED` on a row of this ledger that the change did not retire                               |
+| An adopter runs `qfai init --force` to clear a skipped stage skill and loses local edits to it                                             | med / high          | The upgrade report counts the skipped skills and says `--force` replaces them with the shipped versions (BR-0003-0059)                                                                                                                                                                                                            | An upgrade report naming skipped skills whose project copies carry local edits, or an adopter report of lost edits |
+| The entry directive prepended to `AGENTS.md` or `CLAUDE.md` collides with the adopter's own first lines                                    | low / med           | Prepended only where no operative copy exists, through the review directive's mechanism and refusals (BR-0003-0051, DR-0003-0034)                                                                                                                                                                                                 | An `init` run over a fixture with a hand-written directive that produces two copies                                |
+| `active` by default surprises an upgraded adopter mid-work                                                                                 | med / med           | The init summary names the mode in force, and `off` and `shadow` stay available                                                                                                                                                                                                                                                   | An upgrade summary without the mode line                                                                           |
 
 ### Intent-driven entry (CAP-0018)
 
