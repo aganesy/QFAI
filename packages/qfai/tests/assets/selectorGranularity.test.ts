@@ -80,3 +80,32 @@ describe("execution ledger selector-granularity summary", () => {
     }
   });
 });
+
+describe("execution ledger link from a Unit or Component row to its test", () => {
+  // The acceptance gate asks for no annotation on a Unit or Component case, so
+  // the row's own cells are the only link to its test. The section says so and
+  // names the findings that hold those cells to a test that is there.
+  it("names the Test file and Selector cells as the link, and what enforces it", async () => {
+    for (const file of LEDGER_PATHS) {
+      const content = unwrap(await readFile(file, "utf-8"));
+      const start = content.indexOf("## How a Unit or Component row reaches its test");
+      expect(start).toBeGreaterThanOrEqual(0);
+      const end = content.indexOf("## Status Lifecycle", start);
+      const section = content.slice(start, end);
+
+      expect(section).toContain(
+        "the `Test file` and `Selector` cells are the link from the row to its test",
+      );
+      expect(section).toContain("The test needs no annotation naming its `TC-*`");
+      for (const finding of [
+        "`TDDLIST_TEST_FILE_MISSING`",
+        "`TDDLIST_SELECTOR_UNRESOLVED`",
+        "`QFAI-TDDLIST-008`",
+        "`QFAI-TDDLIST-023`",
+      ]) {
+        expect(section).toContain(finding);
+      }
+      expect(section).toContain("The third catches an empty `Selector`");
+    }
+  });
+});

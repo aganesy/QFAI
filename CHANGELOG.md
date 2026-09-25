@@ -35,6 +35,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   written beside it, and the forward lane now names any such exemption on a
   passing run instead of reading only the compiler configuration.
 
+- **The ledger reference says how a Unit or Component row reaches its test**
+  (#2229). Its `Test file` and `Selector` cells are the link, and the test
+  needs no annotation naming its case: the acceptance gate asks for none at
+  those levels. The reference names what holds the cells to a real test.
+  `TDDLIST_TEST_FILE_MISSING` and `TDDLIST_SELECTOR_UNRESOLVED` cover a row at
+  `green`, `refactor`, `review-fix` or `done`, and `QFAI-TDDLIST-008` a `done`
+  row whose
+  evidence entry does not repeat both cells, which is what catches an empty
+  `Selector`. No check is added, so a `done` row that no file annotates is
+  not reported.
+
 ### Fixed
 
 - **The generated Copilot instructions describe the legacy layout as the
