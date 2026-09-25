@@ -7,7 +7,7 @@ against this file, so an entry here is what makes that citation checkable.
 ## ID scheme
 
 - **Spec-scoped**: `DR-0018-NNNN`. Every entry below binds only `spec-0018`.
-- **Policy-level**: `DR-0296` (a new capability is approved once, at routing) and
+- **Policy-level**: `DR-0299` (a new capability is approved once, at routing) and
   `DR-0297` (a diagnosed missing-test row is appended without a Change Request)
   are declared in `_policies/08_Decisions.md`. They are cited from here and not
   restated: an ID declared twice has two owners.
@@ -268,7 +268,7 @@ not tracked, so each entry states its reason here.
 - Date: 2026-09-24
 - Context: the 64 routing seeds become a manual release-gate eval, and 60 of
   their prompts were written in Japanese. Four seeds expect no question on a new
-  capability, which the routing-time CREATE question (DR-0296) contradicts. Four
+  capability, which the routing-time CREATE question (DR-0299) contradicts. Four
   of the classes that must never route `direct` have no seed: an environment
   setting, a SQL file, a generated file, and QFAI's own skills or constitution.
   ROUTE-028 expects a choice between two resumable runs, a state a worktree

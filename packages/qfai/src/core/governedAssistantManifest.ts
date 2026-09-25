@@ -24,7 +24,6 @@ export const SHIPPED_GOVERNED_ASSISTANT_FILES: readonly string[] = [
   "catalog/test-layers.md",
   "catalog/ui-definition-protocol.md",
   "catalog/ui-procurement.md",
-  "catalog/worklog-entry.schema.md",
   "constitution/agent-selection.md",
   "constitution/change-classification.md",
   "constitution/communication.md",

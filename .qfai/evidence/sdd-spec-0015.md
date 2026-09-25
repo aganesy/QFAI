@@ -1,11 +1,142 @@
 # Evidence: /qfai-sdd (spec-0015)
 
+This file holds one section set per `/qfai-sdd` run. The current run comes
+first; earlier runs follow under `## Prior run`, unchanged.
+
 ## Objective
+
+- Spec target: spec-0015.
+- Objective: AC-0015-0014, BR-0015-0009, BR-0015-0013 and TC-0015-0027 stop naming the "R-WORKLOG-DRIFT family pattern" and cite the justification rule directly, because `R-WORKLOG-DRIFT` leaves the reviewer justification set. Their obligation is unchanged.
+
+## Inputs reviewed
+
+- `discussion-20260923060900824` (REQ-0003, REQ-0016), read through `.qfai/evidence/sdd-batch-20260923170018664.md`.
+- `.qfai/specs/spec-0015/` and `.qfai/contracts/cli/qfai-validate.md` `## Reviewer-Gate input bundle`.
+- The Phase 2 decisions and the griller's verdict, as recorded in `## Work Orders Summary` steps 1-3 below and in the batch record's `## Pre-draft Grilling`.
+
+## Preflight summary path
+
+The report tree is not tracked, so a run is named by its id and the result is recorded here.
+
+- Run `run-20260923170018664`: ready, 17 imported requirements, no blockers. Stage 1 Triage was taken against this run.
+- Run `run-20260923172043151`, the latest: ready, 17 imported requirements, no pack gaps. Its summary differs from the earlier run's only in the run id.
+
+## Triage decisions
+
+| Source                                | Subject                                                   | Operation | Sub-op | Approved By | Rationale                                                     |
+| ------------------------------------- | --------------------------------------------------------- | --------- | ------ | ----------- | ------------------------------------------------------------- |
+| discussion-20260923060900824#REQ-0003 | Reword the "R-WORKLOG-DRIFT family pattern" in four items | UPDATE    | MODIFY | -           | Wording only. The obligation stays, and no ledger row changes |
+
+## Open questions
+
+- none
+
+## Decisions made
+
+- DR-0015-0007 / DL-0002: cite the Reviewer-Gate justification contract, `.qfai/contracts/cli/qfai-validate.md#reviewer-gate-input-bundle`.
+- DR-0015-0008 / DL-0003: replace only the citation in the four items; the obligation and the ledger are unchanged.
+- DR-0015-0009 / DL-0004: the citation resolves to the rejection sentence of the Reviewer-Gate input bundle, and BR-0015-0009's three-part content to the `R-PROMPT-SCANNER-DRIFT` row; no item is re-pointed and the section's content clause is not widened. The rejection sentence itself was narrowed on 2026-09-23 under the user's decision, in spec-0004's Reviewer Gate fix (DR-0004-0038, DR-0004-0039), not by a spec-0015 write. The architect's fix updated DR-0015-0009 to record that narrowing; it was taken without a pre-draft grilling round and adjudicated by cycle 2 (A2-DEC).
+- Recorded in this file only, because it fixes nothing in the spec pack: P3-D1 (the usage-reference check counts only what this change adds).
+
+## Work performed
+
+- Phase 2: reworded AC-0015-0014, BR-0015-0009 (bullet 3), BR-0015-0013 (bullet 4) and TC-0015-0027; recorded DR-0015-0007..0008 in `07_Decisions.md`, DL-0002..0003 in `09_delta.md` and a ledger bullet under `## Triage (2026-09-23)`.
+- Phase 2b: no row change. The reworded TC keeps its obligation, so the upstream-reset rule does not fire and TDD-0029 stays `done`. No row is added, so no `Tier` is seeded.
+- Phase 2c: `07_Decisions.md` DR-0015-0009, `09_delta.md` DL-0004 and its `## Update History` row. No contract and no obligation changed.
+- Phase 3: `10_Plan.md` is unchanged. The four rewordings change a citation, not how anything is built. Its risk row on "steering SSOT" refers to the older `.qfai/assistant/steering/` routing layout, which stays.
+- Critical Constraint 10: no finding. The plan gains nothing, so no architectural element is introduced. The earlier sections were finalized by the runs that introduced them and were not re-audited (P3-D1).
+- Phase 4: `09_delta.md` gains entry DELTA-0002 inside the existing `## Change Summary`. Its `## Update History` already holds DL-0002..0004. The Triage rows, the dated history and the CR-20260913-0007 row under `## Change Requests` stay as written; this run adds no row there, because its change record is the approved Triage set (P1-D5). Phase 4 settles no design decision, so no grilling row.
+- Reviewer Gate fix, cycle 1: spec-0004 narrowed the rejection sentence the four items cite, with the user's approval (spec-0004 DR-0004-0038 and DR-0004-0039). The catalog codes stay in it. No spec-0015 file changed.
+- Test-design review fix, cycle 1 (`test-design-analyst`, `tda-reviewfix`):
+  TC-0015-0027 and TDD-0029 were reviewed. The case changes only the rule it
+  cites, so TDD-0029 stays `done`. Nothing needed correcting, and no file of
+  the pack changed. Ledger: 53 rows before and after.
+
+## Contract executability
+
+- none
+
+### Obligation reconciliation (Phase 2c)
+
+- AC-0015-0014, BR-0015-0009, BR-0015-0013 and TC-0015-0027: CLI-VAL, directly. The
+  anchor `qfai-validate.md#reviewer-gate-input-bundle` resolves, and the
+  citation points at its rejection sentence (`:50`). That sentence covers
+  `R-REJECTED-READOPT`, the other codes the contract declares with a required
+  justification, and the codes the justification catalog registers. The
+  attribute is the finding's `justification:` field. BR-0015-0009's three-part
+  content resolves to the `R-PROMPT-SCANNER-DRIFT` row (`:127`) and its
+  rejection to `:130-132`. The eight catalog codes of BR-0015-0013 are in the
+  `:50` set, so they resolve with no join. The section's content clause is
+  unchanged, so DL-0004's rejected option stays rejected. No write to this spec
+  (DR-0015-0009).
+- API-row delta: vacuous. `_policies/05_Contracts.md` lists no API or DB
+  contract, and nothing under `.qfai/contracts/` declares a `CON-API-*` or
+  `CON-DB-*`. This phase wrote no contract, so its scope did not re-expand.
+
+## Commands executed
+
+- `node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --spec spec-0015 --format github` before and after the writes; `npx prettier --check --ignore-path .git/info/exclude` over the touched spec-0015 files; `node scripts/check-mdschema.mjs`; `node scripts/check-doc-clarity.mjs`.
+- Phase 2c and Phase 3: the same `validate` command with `--format text`; `npx prettier --write` and `npx markdownlint-cli2` over `07_Decisions.md` and `09_delta.md`; `node scripts/check-mdschema.mjs`; `node scripts/check-doc-clarity.mjs`.
+- Phase 4: `npx prettier --write .qfai/specs/spec-0015/09_delta.md`; `npx markdownlint-cli2` over the spec-0015 files this run changed; `node scripts/check-mdschema.mjs --scope all`; `node scripts/check-mermaid.mjs`; `node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --spec spec-0015 --format text`.
+
+## Validate evidence paths
+
+- `run-20260923182839403` (before any write): scoped SDD pass, 0 errors, 26 warnings, 4 info.
+- `run-20260923184017753` (after the writes): scoped SDD pass, 0 errors, 26 warnings, 4 info. No finding is new.
+- `run-20260923191433677` (after Phase 2c and Phase 3): scoped SDD pass, 0 errors, 26 warnings, 4 info. No finding is new.
+- `run-20260923193811268` (after Phase 4): scoped SDD pass, 0 errors, 26 warnings, 4 info. No finding is new. The whole-repository run is in the batch record.
+- Final run `run-20260923214113936`, scope `sdd`, whole repository,
+  after the Reviewer Gate closed: 15 errors repository-wide, all pinned and
+  pre-existing. This spec's files carry 0 errors and 1 warning. Details in the batch record.
+
+## Pre-draft Grilling
+
+| Phase | Session | Ended at             | Wrote at             | Frontier               | Evidence             |
+| ----- | ------- | -------------------- | -------------------- | ---------------------- | -------------------- |
+| 2     | run     | 2026-09-23T09:24:22Z | 2026-09-23T09:30:22Z | 2 settled, 0 escalated | #work-orders-summary |
+| 2c.1  | run     | 2026-09-23T10:05:29Z | 2026-09-23T10:09:45Z | 1 settled, 0 escalated | #work-orders-summary |
+| 3     | run     | 2026-09-23T10:05:29Z | -                    | 1 settled, 0 escalated | #work-orders-summary |
+
+- Batch record: `.qfai/evidence/sdd-batch-20260923170018664.md`.
+
+## Work Orders Summary
+
+| Step | Role (sub-agent)      | Agent instance           | Task title                                                                                                                    | Input (refs)                                                                                              | Output (refs)                                                                                                                                                                              | Status (PASS/REVISE/PENDING) |
+| ---- | --------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- |
+| 1    | requirements-reviewer | p2-griller               | grilling(2/agents): cite the justification rule by `.qfai/contracts/cli/qfai-validate.md#reviewer-gate-input-bundle`          | S15-D1                                                                                                    | The contract section is the rule's home; citing BR-0004-0017 raises `QFAI-SPACK-101` and `TRACE_DOWNSTREAM_REF`, and naming `R-REJECTED-READOPT` swaps one code for another; author agreed | PASS                         |
+| 2    | requirements-reviewer | p2-griller               | grilling(2/agents): replace only the citation in AC-0015-0014, BR-0015-0009, BR-0015-0013, TC-0015-0027                       | S15-D2                                                                                                    | The obligation is unchanged, so the rest of each text and the ledger stay; author agreed                                                                                                   | PASS                         |
+| 3    | requirements-analyst  | p2-author-0011-0013-0015 | Phase 2 and 2b draft: spec-0015                                                                                               | settled S15-D1, S15-D2                                                                                    | `03`, `04`, `06`, `07_Decisions.md`, `09_delta.md`; ledger unchanged; validate sdd `--spec spec-0015`: 0 errors, no new finding                                                            | PASS                         |
+| 4    | solution-architect    | p2c3-author              | Phase 2c and Phase 3 open decisions                                                                                           | Phase 2 texts of AC-0015-0014, BR-0015-0009, BR-0015-0013, TC-0015-0027; `10_Plan.md`; `qfai-validate.md` | P2C-D7 and P3-D1 with positions; no critical recommendation                                                                                                                                | PASS                         |
+| 5    | architecture-reviewer | p2c3-griller             | grilling(2c/agents): the citation resolves to the rejection sentence; no item is re-pointed and the contract is not edited    | P2C-D7                                                                                                    | The four items cite the rejection rule, which is the only thing the validator enforces; widening the contract would contradict a recorded contract decision; author agreed                 | PASS                         |
+| 6    | architecture-reviewer | p2c3-griller             | grilling(3/agents): the usage-reference check counts only elements this change adds; this plan gains none and stays unchanged | P3-D1                                                                                                     | The template defines an element as one "this plan introduces" (`10_Plan.md:17-20`); author agreed                                                                                          | PASS                         |
+| 7    | solution-architect    | p2c3-author              | Phase 2c and Phase 3 draft: spec-0015                                                                                         | settled steps 5-6                                                                                         | `07_Decisions.md` DR-0015-0009, `09_delta.md` DL-0004; `10_Plan.md` unchanged; Critical Constraint 10: no finding; validate sdd `--spec spec-0015`: 0 errors, no new finding               | PASS                         |
+| 8    | requirements-analyst  | p4-author                | Phase 4 delta update: spec-0015                                                                                               | `09_delta.md` DL-0002..0004, `## Triage (2026-09-23)`                                                     | `09_delta.md` `## Change Summary` DELTA-0002; markdownlint 0 errors; validate `sdd` on spec-0015: 0 errors                                                                                 | PASS                         |
+| 9    | test-design-analyst   | tda-reviewfix            | Test-design review fix, Reviewer Gate cycle 1 (F-B2)                                                                          | `.qfai/specs/spec-0015/03..06`, `tdd/test-list.md`                                                        | No correction. TC-0015-0027 changes only its citation, and TDD-0029 stays `done`                                                                                                           | PASS                         |
+| 10   | completion-reviewer   | gate-c1-completion       | Reviewer Gate cycle 1                                                                                                         | this file, `.qfai/specs/spec-0015/**`, the batch record                                                   | `review-20260923104053105` R01: REVISE — F-B1 delivery-planner Triage gate; F-B2 test-design-analyst                                                                                       | REVISE                       |
+| 11   | architecture-reviewer | gate-c1-architecture     | Reviewer Gate cycle 1                                                                                                         | this file, `.qfai/specs/spec-0015/**`, the batch record                                                   | `review-20260923104053105` R02: REVISE — DR-0296 wording                                                                                                                                   | REVISE                       |
+| 12   | qa-gatekeeper         | gate-c1-qa               | Reviewer Gate cycle 1                                                                                                         | this file, `.qfai/specs/spec-0015/**`, the batch record                                                   | `review-20260923104053105` R03: PASS                                                                                                                                                       | PASS                         |
+| 13   | completion-reviewer   | gate-c2-completion       | Reviewer Gate cycle 2                                                                                                         | this file, `.qfai/specs/spec-0015/**`, the batch record, the cycle-1 answered demands                     | `review-20260923121814105` R01: PASS, advisories only                                                                                                                                      | PASS                         |
+| 14   | architecture-reviewer | gate-c2-architecture     | Reviewer Gate cycle 2                                                                                                         | this file, `.qfai/specs/spec-0015/**`, the batch record, the cycle-1 answered demands                     | `review-20260923121814105` R02: PASS, advisories only                                                                                                                                      | PASS                         |
+| 15   | qa-gatekeeper         | gate-c2-qa               | Reviewer Gate cycle 2                                                                                                         | this file, `.qfai/specs/spec-0015/**`, the batch record, the cycle-1 answered demands                     | `review-20260923121814105` R03: PASS, advisories only; `summary.json` overall PASS                                                                                                         | PASS                         |
+
+## Gaps / Open risks
+
+- The header comment of `packages/qfai/tests/integration/validators/justificationRejectEmpty.test.ts` still names the "R-WORKLOG-DRIFT family" pattern; rewording it is left to `/qfai-implement` (DL-0003).
+- The section's content clause asks for "the Decisions row ID that triggered the finding", which `R-PROMPT-SCANNER-DRIFT` and the catalog codes do not have. DR-0015-0009 records the gap and leaves widening the clause to a later contract change, because that is the user's decision.
+
+## Final status
+
+- Final status: PASS
+- Rationale: every routed blocking reviewer returned PASS in cycle 2 (`review-20260923121814105`), and only the 15 pinned pre-existing errors remain repository-wide.
+
+## Prior run (2026-09-13)
+
+### Objective
 
 - Spec target: spec-0015.
 - Objective: bound optional pattern review to concrete coverage, without numeric targets or demands for additional abstractions. Preserve adopter manifests and mandatory obligations.
 
-## Inputs reviewed
+### Inputs reviewed
 
 - `.qfai/specs/spec-0015/` and `_policies/08_Decisions.md`, including DR-0012-002.
 - `.qfai/decisions/CR-20260913-0007-concrete-pattern-review.md`: tracked requirement capture, acceptance signals and current-session delegated implementation scope.
@@ -14,30 +145,30 @@
 - `tmp/concrete-pattern-review/{requirements-phase2,tests-phase2,architect-plan,requirements-phase4,legacy-upgrade-author,catalog-key-author}.md`: actual producer responses and owner execution logs.
 - `tmp/concrete-pattern-review/{architecture-review-round-one,completion-review-round-one,completion-review-round-two,qa-review-round-two}.md`: historical independent responses at the revisions recorded below.
 
-## Preflight summary
+### Preflight summary
 
 The report tree is not tracked, so a run is named by its id and the result is recorded here.
 
 - Run `run-20260913233536479`: ready, 16 imported requirements, no blockers or open questions.
 - This is the actual run-scoped local record. The tracked latest pointer retains its baseline fields and publishes no new private user path.
 
-## Triage decisions
+### Triage decisions
 
 | Source                                                                         | Subject                                           | Operation | Sub-op | Approved By | Rationale                                                                                                     |
 | ------------------------------------------------------------------------------ | ------------------------------------------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------- |
 | .qfai/decisions/CR-20260913-0007-concrete-pattern-review.md#requirement-source | Bound optional pattern review in spec-0015        | UPDATE    | MODIFY | -           | Retain IDs and advisory review; require rationale for concrete additions without numeric targets.             |
 | .qfai/decisions/CR-20260913-0007-concrete-pattern-review.md#requirement-source | Bound DR-0012-002 and preserved manifest settings | UPDATE    | MODIFY | -           | Retain cross-skill availability and adopter manifests; catalog bounds render old numeric targets ineffective. |
 
-## Open questions
+### Open questions
 
 - none
 
-## Decisions made
+### Decisions made
 
 - CR-20260913-0007: option 1 selected under the user's existing delegated scope, not an individual option answer. Keep optional advisory review and all independently required pairings and gates.
 - DR-0012-002: concrete-only proposals remain available across skills; numeric targets in preserved manifests do not override catalog bounds.
 
-## Work performed
+### Work performed
 
 - Stage 1: persisted primary and policy Triage plus the scoped CR. The independent delivery-planner passed this Triage gate only.
 - Phase 0: checked contract impact; no CLI, API, DB or UI contract changes.
@@ -50,11 +181,11 @@ The report tree is not tracked, so a run is named by its id and the result is re
 - The catalog bound uses the registered `pattern-doubler` key; primary synchronized its operating mirror. The existing compatibility oracle seeds an actual older catalog and its prior receipt. Normal reinit retains that catalog; forced reinit adopts the shipped bound while preserving the adopter manifest. The wrong-receipt control fails, the restored selector passes and the full suite passes all 17 tests.
 - Tracked requirement and acceptance provenance resolves to the CR. The latest concrete-pattern delta precedes unchanged older entries. Evidence scratch names are semantic; actual historical responses retain their original revisions and hashes.
 
-## Contract executability
+### Contract executability
 
 - none
 
-## Commands executed
+### Commands executed
 
 - Canonical preflight: `node packages/qfai/dist/cli/index.mjs sdd preflight --fail-on error --format json` — ready; run-scoped path above.
 - Primary baseline validation: SDD profile over all specs — FAIL, 96 errors; scoped full profile — FAIL, 61 errors. Run-scoped paths below; neither is a whole-workflow PASS.
@@ -78,7 +209,7 @@ The report tree is not tracked, so a run is named by its id and the result is re
 - Primary post-metadata validation: scoped SDD PASS, zero errors, 16 warnings and four info; `run-20260914004835925`. Scoped full FAIL, 61 errors, 67 warnings and six info; `run-20260914004837695`. Global SDD FAIL, 96 errors, 76 warnings and five info; `run-20260914004842675`. Both error sets are identical to the previous observed records; `tmp/concrete-pattern-review/post-metadata-validation-delta.log`.
 - Primary explicit-ignore-path Prettier over all changed Markdown and `git diff --check`: exit 0. The preservation comparator still passes after formatting. Logs: `tmp/concrete-pattern-review/current-markdown-{format,check}.log`.
 
-## Validate evidence
+### Validate evidence
 
 - Run `run-20260913234628207`: fail, 96 errors.
 - Run `run-20260913234645842`: fail, 61 errors.
@@ -92,7 +223,7 @@ The report tree is not tracked, so a run is named by its id and the result is re
 - `run-20260914004835925`, `run-20260914004837695` and `run-20260914004842675`: actual post-metadata runs.
 - `tmp/concrete-pattern-review/{post-metadata-sdd,post-metadata-full,post-metadata-global-sdd,post-metadata-validation-delta,current-markdown-format,current-markdown-check}.log`.
 
-## Pre-draft Grilling
+### Pre-draft Grilling
 
 | Phase    | Session | Ended at | Wrote at                     | Frontier                                                                                                                                       | Evidence                                                                                    |
 | -------- | ------- | -------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
@@ -103,7 +234,9 @@ The report tree is not tracked, so a run is named by its id and the result is re
 | 3        | skipped | -        | 2026-09-13T15:04:11Z         | empty: CR-20260913-0007, completed TC and Phase 2c fix the plan; no new architecture                                                           | tmp/concrete-pattern-review/architect-plan.md; checkpoint 2026-09-13T15:03:33Z              |
 | metadata | skipped | -        | -                            | empty: fixed approved CR supplies provenance and behavior; no new design decision                                                              | tmp/concrete-pattern-review/metadata-author.md                                              |
 
-## Work Orders Summary
+- This run had no batch record.
+
+### Work Orders Summary
 
 | Step | Role (sub-agent)      | Agent instance                     | Task title                                                 | Input (refs)                                         | Output (refs)                                                                                                                              | Status (PASS/REVISE/PENDING) |
 | ---- | --------------------- | ---------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- |
@@ -131,14 +264,14 @@ The report tree is not tracked, so a run is named by its id and the result is re
 | 22   | completion-reviewer   | -                                  | Current independent completion attestation                 | Current committed semantic snapshot                  | Pending delegated review                                                                                                                   | PENDING                      |
 | 23   | qa-gatekeeper         | -                                  | Current independent QA attestation                         | Current snapshot and fresh command evidence          | Pending delegated review                                                                                                                   | PENDING                      |
 
-## Gaps / Open risks
+### Gaps / Open risks
 
 - Stage 0 operating-memory refresh is unapplied, not refreshed or PASS. The repository requires package-source improvements and byte-mirrors shipped consumer catalogs. Filling those templates with private repository facts or changing the mirror invariant is outside this change. Repository facts are grounded in the inputs above; placeholder validation findings remain.
 - Global SDD validation retains 96 baseline errors, including legacy ledgers outside this CR. Scoped full validation retains 61, including catalog placeholders and missing historical evidence. Scoped SDD zero errors is a partial-profile PASS, not a waiver or whole-workflow PASS.
 - Physical example/TC, ledger, plan and current provenance changes are applied. Post-metadata validation retains the observed baseline errors; current independent attestations remain pending. Historical independent responses clear only their recorded revisions and scopes. The two reset rows and all 16 new seeds remain todo, not completed executing-owner cycles. The global surface-typing predicate is absent, so every active US retains its obligation.
 - Frozen broad assets have one Git-ignore archive limitation. Original Git-aware controls pass; neither observation authorizes a guard change or a claim that the frozen broad run passed.
 
-## Final status
+### Final status
 
 - Final status: REVISE
 - Rationale: the bounded behavioral checks pass, but R03 QA found a missing BR-0015-0005 to AC-0015-0009 edge. Required full scoped/global validation and Stage 0 refresh also remain incomplete. Observed GREEN and partial-profile PASS do not clear these obligations.
@@ -264,7 +397,7 @@ Apply the approved UPDATE rows of the 2026-09-24 intent-driven entry Triage to s
 | 11 | architecture-reviewer (griller) | p2-w2-griller | grilling(2/agents): X11 AC form and Source | settled recommendation and cited specifications | Decision: A heading, a `- US-Refs:` line and a `gherkin` block with `# Source:`; a modified item keeps its ID and gains no Source; reason: The reader selects blocks by info string; disagreeing: none | PASS |
 | 12 | architecture-reviewer (griller) | p2-w2-griller | grilling(2/agents): X12 BR kinds | settled recommendation and cited specifications | Decision: Contract-surface and full rules; every BR with an AC, an EX and a TC; reason: S05; `QFAI-COV-102..104`; disagreeing: none | PASS |
 | 13 | architecture-reviewer (griller) | p2-w2-griller | grilling(2/agents): X13 Relevant Requirements | settled recommendation and cited specifications | Decision: A `### discussion-20260923171450572 (2026-09-24)` table, pack-qualified; existing lists not renumbered; reason: Local numbers collide with pack numbers (spec-0004 `REQ-0043`, three local `REQ-0013`); disagreeing: none | PASS |
-| 14 | architecture-reviewer (griller) | p2-w2-griller | grilling(2/agents): X14 Recording D5, D13, D14, D18 | settled recommendation and cited specifications | Decision: The RA table: D5 and D13 cited in `## Applicable Policy` (DR-0296, DR-0297); D14 as DR-0008-0004 and DR-0011-0003; D18 as DR-0011-0004; each with a DL twin. **Plus** the J2 user answer as DR-0015-0007 with DL-0002; reason: A fresh clone cannot read the pack; two owners of one policy DR are forbidden; disagreeing: none | PASS |
+| 14 | architecture-reviewer (griller) | p2-w2-griller | grilling(2/agents): X14 Recording D5, D13, D14, D18 | settled recommendation and cited specifications | Decision: The RA table: D5 and D13 cited in `## Applicable Policy` (DR-0299, DR-0297); D14 as DR-0008-0004 and DR-0011-0015; D18 as DR-0011-0016; each with a DL twin. **Plus** the J2 user answer as DR-0015-0010 with DL-0002; reason: A fresh clone cannot read the pack; two owners of one policy DR are forbidden; disagreeing: none | PASS |
 | 15 | architecture-reviewer (griller) | p2-w2-griller | grilling(2/agents): X15 Open questions | settled recommendation and cited specifications | Decision: Each file keeps its own convention; no new OQ row; reason: Four files state rows only while unresolved; disagreeing: none | PASS |
 | 16 | architecture-reviewer (griller) | p2-w2-griller | grilling(2/agents): X16 09_delta.md | settled recommendation and cited specifications | Decision: `## Change Summary` (items, resolved pack OQs, size line where over, reserved ranges) and `## Decision Log` where a DR is added; triage rows not edited; reason: The rows are the approved record; disagreeing: none | PASS |
 | 17 | architecture-reviewer (griller) | p2-w2-griller | grilling(2/agents): X17 Level and directory of skill-text TCs | settled recommendation and cited specifications | Decision: `L3`, with the test under `packages/qfai/tests/integration/**`, never `tests/assets/**`; reason: An L3 oracle reads a shipped file, and an annotation under `tests/assets/` answers no layer (`test-layers.md` `### Annotation routing`); disagreeing: the brief (`tests/assets/**`) | PASS |
@@ -285,10 +418,10 @@ Apply the approved UPDATE rows of the 2026-09-24 intent-driven entry Triage to s
 | 32 | architecture-reviewer (griller) | p2-w2-griller | grilling(2/agents): J4 The bucket mapping | settled recommendation and cited specifications | Decision: As proposed, in the operating-baseline autopilot passage; `autopilotPolicy.ts` unchanged; reason: N15, M13; disagreeing: none | PASS |
 | 33 | architecture-reviewer (griller) | p2-w2-griller | grilling(2/agents): J5 Actor history | settled recommendation and cited specifications | Decision: As proposed; the refusal is the core's; BR-0015-0003 stands; reason: REQ-0040; disagreeing: none | PASS |
 | 34 | architecture-reviewer (griller) | p2-w2-griller | grilling(2/agents): J6 Grilling in a run | settled recommendation and cited specifications | Decision: As proposed, in the delegation baseline; that no plan invokes `qfai-grill` is held by the plan vocabulary; reason: REQ-0055; disagreeing: none | PASS |
-| 35 | architecture-reviewer (griller) | p2-w2-griller | grilling(2/agents): J7 Records, OQ, IDs, size, Phase 2b | settled recommendation and cited specifications | Decision: DR-0296 cited; OQ-0008 under `## Resolved by cited decisions (2026-09-24 intent-driven entry)`; DR-0015-0007 (J2) takes the next free DR ID after the history re-check (X09); TC budget of 14, with a size line past 50; the pinned 43 untouched; reason: X09, X14; disagreeing: none | PASS |
+| 35 | architecture-reviewer (griller) | p2-w2-griller | grilling(2/agents): J7 Records, OQ, IDs, size, Phase 2b | settled recommendation and cited specifications | Decision: DR-0299 cited; OQ-0008 under `## Resolved by cited decisions (2026-09-24 intent-driven entry)`; DR-0015-0010 (J2) takes the next free DR ID after the history re-check (X09); TC budget of 14, with a size line past 50; the pinned 43 untouched; reason: X09, X14; disagreeing: none | PASS |
 | 36 | architecture-reviewer (griller) | p2c-griller | grilling(2c.1/agents): K1 regression_fix receipts | settled recommendation and cited specifications | Decision: Contract: `regressionFix: { testId, rerunRef, reviewRef }` on a `regression_fix` result, and `invalid-input` reason `regression-fix-receipt`. BR-0018-0039 unchanged; BR-0011-0019 names the field; TC-0018-0068 gains the refusal pair; reason: D18 names the same test, and only a field carries that; it mirrors `testFix`; disagreeing: none | PASS |
 | 37 | architecture-reviewer (griller) | p2c-griller | grilling(2c.1/agents): K2 Direct-exclusion seeds | settled recommendation and cited specifications | Decision: Rewrite ROUTE-044, ROUTE-045, ROUTE-022 and ROUTE-024 to cover the four missing direct-exclusion classes while keeping the 24 fault and 64 route seed counts; reason: REQ-0007 requires a routing seed for each excluded class. Those four seeds duplicate cases already carried by ROUTE-014, ROUTE-021 or ROUTE-031 after the user chose English-only prompts, so their slots can cover environment settings, SQL files, generated files and QFAI-owned skills or constitution. Each rewritten seed forbids `direct`; disagreeing: SA proposed recording a gap and adding no seed; rejected because it would leave four required classes untested | PASS |
-| 38 | architecture-reviewer (griller) | p2c-griller | grilling(2c.1/agents): K3/K4 Non-CREATE approvals in a run | settled recommendation and cited specifications | Decision: `Authorization-Ref` is valid only on CREATE rows. Other approval-required operations keep the Stage 1 human question; the answer reaches the next attempt through `authorizationRefs`, and the row copies `answeredBy@date` into `Approved By` for the existing validator check; reason: D5 and REQ-0042/0043 require a reference for the routing-time CREATE approval, while DR-0296 preserves the existing questions for the other operations. DPOL-04 requires a recorded human answer without requiring a second carrier on those rows; one CLI-VAL change removes an unreachable Binding branch; disagreeing: RA proposed a new question kind, operation and target fields, and a Binding branch for every approval; rejected as more mechanism than the request needs | PASS |
+| 38 | architecture-reviewer (griller) | p2c-griller | grilling(2c.1/agents): K3/K4 Non-CREATE approvals in a run | settled recommendation and cited specifications | Decision: `Authorization-Ref` is valid only on CREATE rows. Other approval-required operations keep the Stage 1 human question; the answer reaches the next attempt through `authorizationRefs`, and the row copies `answeredBy@date` into `Approved By` for the existing validator check; reason: D5 and REQ-0042/0043 require a reference for the routing-time CREATE approval, while DR-0299 preserves the existing questions for the other operations. DPOL-04 requires a recorded human answer without requiring a second carrier on those rows; one CLI-VAL change removes an unreachable Binding branch; disagreeing: RA proposed a new question kind, operation and target fields, and a Binding branch for every approval; rejected as more mechanism than the request needs | PASS |
 | 39 | architecture-reviewer (griller) | p2c-griller | grilling(2c.1/agents): K5 The shared-obligation Boundary rule | settled recommendation and cited specifications | Decision: **A new rule, BR-0013-0036** (AC-Refs AC-0013-0034): a seeded row on an obligation that already has a row names a `Boundary`, and each existing sibling lacking one gains its slug, with `Status` and `Evidence` unchanged. EX-0013-0028's `BR-Ref` names BR-0013-0028 and BR-0013-0036; reason: BR-0013-0028's title says seeding changes no existing row; the slug is the one change to an existing row, so as a bullet it would contradict its own BR; disagreeing: SA (a bullet on BR-0013-0028; not taken) | PASS |
 | 40 | architecture-reviewer (griller) | p2c-griller | grilling(2c.1/agents): K6 The owner of a missing environment | settled recommendation and cited specifications | Decision: Merged. Contract: CLI-WF `### Stage result` states `resolvingOwner`'s domain, a skill a plan names or `operator`. Obligation: BR-0014-0030 is **split**. Three repair kinds return `needs_repair` with `resolvingOwner` `qfai-sdd`, `qfai-atdd` or `qfai-implement`. A missing environment is not a repair: verify returns `blocked`, blocker `stage-blocked`, cleared by `operator`. AC-0014-0027 is reworded to match; reason: The field needs a domain the core can dispatch to, and the environment case already fits the blocker set (REQ-0039); disagreeing: none | PASS |
 | 41 | architecture-reviewer (griller) | p2c-griller | grilling(2c.1/agents): K7 A blocked seam-only result | settled recommendation and cited specifications | Decision: Contract, the seam paragraph: a `blocked` or `unrun` seam-only result blocks the run like any result; the parent acceptance attempt stays open; once `resume` clears it, `next` reissues the seam-only work order as a new attempt; a `needs_repair` seam result routes by its `debts` (R1). No BR changes; one TC in spec-0011; reason: What `next` issues is the core's behaviour; disagreeing: none | PASS |

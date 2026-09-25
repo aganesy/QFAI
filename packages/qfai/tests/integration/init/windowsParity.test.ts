@@ -3,7 +3,7 @@
  *
  * CRLF comes from the fixture, never from `core.autocrlf`.
  */
-// QFAI:SPEC-0003:TC-0003-0061
+// QFAI:SPEC-0003:TC-0003-0092
 // QFAI:SPEC-0003:TC-0003-0076
 // QFAI:SPEC-0003:TC-0003-0080
 // QFAI:SPEC-0003:TC-0003-0088
@@ -30,7 +30,7 @@ async function toCrlf(file: string): Promise<void> {
 }
 
 describe("windows parity", () => {
-  it("TC-0003-0061: The previous managed block in a CRLF .gitignore", async () => {
+  it("TC-0003-0092: The previous managed block in a CRLF .gitignore", async () => {
     await withInstall(["older-gitignore"], async (root) => {
       const file = path.join(root, ".gitignore");
       await toCrlf(file);

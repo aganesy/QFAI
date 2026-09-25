@@ -5,7 +5,7 @@
  * counts its lines.
  */
 // QFAI:SPEC-0003:TC-0003-0090
-// QFAI:SPEC-0003:TC-0003-0060
+// QFAI:SPEC-0003:TC-0003-0091
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -33,7 +33,7 @@ describe("the managed gitignore block", () => {
     });
   });
 
-  it("TC-0003-0060: Upgrade over the previous managed block, then a rerun", async () => {
+  it("TC-0003-0091: Upgrade over the previous managed block, then a rerun", async () => {
     await withInstall(["older-gitignore"], async (root) => {
       await initQuietly(root);
       const upgraded = await readGitignore(root);

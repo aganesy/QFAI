@@ -21,4 +21,4 @@
 
 ## Resolved (2026-09-24 intent-driven entry)
 
-- `discussion-20260923171450572#OQ-0006` (where a triage row cites its workflow authorization) — RESOLVED by CLI-VAL `## Triage authorization reference`: an optional `Authorization-Ref` column, read by its header name and carried by a `CREATE` row only, and `Approved By` keeps its meaning. Reflected in BR-0004-0035 / AC-0004-0041.
+- `discussion-20260923171450572#OQ-0006` (where a triage row cites its workflow authorization) — RESOLVED by CLI-VAL `## Triage authorization reference`: an optional `Authorization-Ref` column, read by its header name and carried by a `CREATE` row only, and `Approved By` keeps its meaning. Reflected in BR-0004-0040 / AC-0004-0046.

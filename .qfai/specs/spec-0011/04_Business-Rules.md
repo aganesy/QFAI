@@ -59,9 +59,9 @@
 - `design-system.yaml` is the deterministic mirror of root `DESIGN.md` token tables (color / typography / radius / shadow).
 - `/qfai-implement` MUST treat it as input only — it does not regenerate token tables from per-iter HTML.
 
-## BR-0011-0009: The Stage-Skill Handover
+## BR-0011-0023: The Stage-Skill Handover
 
-- AC-Refs: AC-0011-0012
+- AC-Refs: AC-0011-0026
 
 - In mode `active`, `/qfai-implement` makes the stage-skill entry check, does only the work of a work order it is handed, and its `SKILL.md` cites `references/orchestrated-mode.md` with one line.
 
@@ -126,7 +126,7 @@
 
 - AC-Refs: AC-0011-0022
 
-- The same test turning GREEN again, plus the run's final verify, confirms a regression fix (DR-0011-0004).
+- The same test turning GREEN again, plus the run's final verify, confirms a regression fix (DR-0011-0016).
 - The stage result carries the `regressionFix` receipt, naming that test, its GREEN re-run and its independent review, and the fix and the re-run are also recorded in the run evidence.
 - The re-run is also appended to the row's evidence section as a re-verify record, in a form the ledger validator already reads. None of the row's cells is edited. Where the project's `paths.srcDir` covers the fixed code, the changed code would otherwise leave the row reported as stale, and the run's final validate would fail.
 
@@ -134,7 +134,7 @@
 
 - AC-Refs: AC-0011-0023
 
-- A test fix returns the AC or BR the expectation cites before and after the fix, with an independent review and a re-run of the test (DR-0011-0003).
+- A test fix returns the AC or BR the expectation cites before and after the fix, with an independent review and a re-run of the test (DR-0011-0015).
 - It edits none of the row's `Status`, `TC-Refs`, `Layer` and `Boundary`. `Test file` and `Selector` may change, since a wrong selector is one of the defects a test fix repairs.
 - The re-run is appended to the row's evidence section as a re-verify record, in a form the ledger validator already reads. The changed test file would otherwise leave the row reported as stale, and the run's final validate would fail.
 
@@ -157,7 +157,7 @@ that realizes each rule added on 2026-09-24.
 
 | Contract   | Section                                      | Realized by                                            |
 | ---------- | -------------------------------------------- | ------------------------------------------------------ |
-| CLI-WF     | `### host:stage-skill-handover`              | BR-0011-0009                                           |
+| CLI-WF     | `### host:stage-skill-handover`              | BR-0011-0023                                           |
 | CLI-WFFILE | `### The Operations table`, `### Vocabulary` | BR-0011-0010                                           |
 | CLI-WF     | `### Work order`                             | BR-0011-0011, BR-0011-0012                             |
 | CLI-WF     | `### Stage result`                           | BR-0011-0014, BR-0011-0015, BR-0011-0016, BR-0011-0021 |

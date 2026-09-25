@@ -68,7 +68,7 @@
 - AC-Refs: AC-0015-0014
 - When the upstream SSOT-sync-pair CI lane in spec-0004 signals drift, the Reviewer Gate MUST emit `R-PROMPT-SCANNER-DRIFT` at severity error.
 - The `justification:` field MUST be non-empty (trimmed length > 0) AND MUST contain 3 elements: (a) modified file path, (b) un-paired counterpart path, (c) the specific contract clause whose match cannot be confirmed. The 3-part contract is the SSOT shared with the spec-0004 ingestion rule (one contract, two enforcers — Reviewer-Gate is the emitter, validate is the rejector).
-- Empty / whitespace-only / structurally-incomplete `justification:` MUST be rejected by spec-0004's validate ingestion as advisory-failing error (R-WORKLOG-DRIFT family pattern reused; NFR-0115 justification-text contract reuse).
+- Empty / whitespace-only / structurally-incomplete `justification:` MUST be rejected by spec-0004's validate ingestion as advisory-failing error (the Reviewer-Gate justification contract, `.qfai/contracts/cli/qfai-validate.md#reviewer-gate-input-bundle`; NFR-0115 justification-text contract reuse).
 
 ## BR-0015-0010: Default Autopilot Policy 3-bucket contract
 
@@ -104,7 +104,7 @@
 - The eight catalog codes — `R-AUTOPILOT-POLICY-MISSING`, `R-HANDOFF-SCHEMA-DRIFT`, `R-EVIDENCE-MUTATION-UNLOGGED`, `R-DESIGN-MD-PATCH-OUT-OF-ZONE`, `R-PACK-LOCATION-DRIFT`, `R-SKILL-MANIFEST-DRIFT`, `R-EXPLORATION-CERTIFY-ATTEMPT`, `R-MOCK-HREF-DRIFT` — MUST be registered in the catalog with a mandatory non-empty `justification:` (prior-pack OQ-0109 Option A / TC-71 advisory-failing).
 - The catalog stores membership only and MUST NOT declare a per-code severity column: each code's severity belongs to the detector that emits it, and is documented per code in the `_policies/06_Glossary.md` row.
 - That constrains the stored shape, not the admission test. Which codes are eligible for registration is decided by severity class per BR-0015-0017 (warning-class advisory-only auxiliary signal stays out); that criterion is applied when the closed set is amended and MUST NOT be materialized as a field on the entry it admits. A registered code keeps whatever severity its own detector emits.
-- `qfai validate` ingestion MUST reject any catalog finding emitted with empty / whitespace-only `justification:` (advisory-failing, R-WORKLOG-DRIFT family pattern reuse). That rejection is severity error for every one of the eight without exception, because what it reports is the missing justification, not the underlying finding.
+- `qfai validate` ingestion MUST reject any catalog finding emitted with empty / whitespace-only `justification:` (advisory-failing, per the Reviewer-Gate justification contract, `.qfai/contracts/cli/qfai-validate.md#reviewer-gate-input-bundle`). That rejection is severity error for every one of the eight without exception, because what it reports is the missing justification, not the underlying finding.
 - Note: `R-DESIGN-MD-PATCH-OUT-OF-ZONE` is emitted at severity warning per REQ-0151 / the glossary row; its participation in the catalog covers presence + justification discipline, not severity-error escalation of the finding itself.
 - The Reviewer subagent prompt / tool-augmentation timing for these codes inherits the OQ-0119 carry-forward deferral and MUST NOT be resolved by this slice.
 
@@ -144,7 +144,7 @@
 - The shipped `manifest/agent-routing.yml` carries a routing entry for `qfai-run` and one for `qfai-maintain`, each with its profile, roles and routing block.
 - `qfai-run` has the orchestrator role and no authoring or reviewing phase.
 - `qfai-maintain` has an authoring phase and an independent reviewer, on the existing `default` profile. `manifest/review-profiles.yml` gains no profile.
-- This rule states what the shipped manifests carry. How an upgraded project's manifest gains the entries is DR-0015-0007's.
+- This rule states what the shipped manifests carry. How an upgraded project's manifest gains the entries is DR-0015-0010's.
 
 ## BR-0015-0019: Authorization kinds and the Default Autopilot buckets
 

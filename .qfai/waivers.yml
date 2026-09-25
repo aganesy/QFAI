@@ -39,11 +39,11 @@ waivers:
       paths: [".qfai/specs/spec-0003/tdd/test-list.md"]
     match:
       dl_ids:
-        - TDD-0095
-        - TDD-0096
-        - TDD-0097
-        - TDD-0098
-        - TDD-0099
+        - TDD-0127
+        - TDD-0128
+        - TDD-0129
+        - TDD-0130
+        - TDD-0131
         - TDD-0100
         - TDD-0101
         - TDD-0102
@@ -81,12 +81,12 @@ waivers:
       paths: [".qfai/specs/spec-0004/tdd/test-list.md"]
     match:
       dl_ids:
-        - TDD-0067
-        - TDD-0068
-        - TDD-0069
-        - TDD-0070
-        - TDD-0071
-        - TDD-0072
+        - TDD-0087
+        - TDD-0088
+        - TDD-0089
+        - TDD-0090
+        - TDD-0091
+        - TDD-0092
         - TDD-0073
         - TDD-0074
         - TDD-0075
@@ -152,9 +152,9 @@ waivers:
       paths: [".qfai/specs/spec-0011/tdd/test-list.md"]
     match:
       dl_ids:
-        - TDD-0021
-        - TDD-0022
-        - TDD-0023
+        - TDD-0040
+        - TDD-0041
+        - TDD-0042
         - TDD-0024
         - TDD-0025
         - TDD-0026
@@ -197,10 +197,10 @@ waivers:
       paths: [".qfai/specs/spec-0013/tdd/test-list.md"]
     match:
       dl_ids:
-        - TDD-0112
-        - TDD-0113
-        - TDD-0114
-        - TDD-0115
+        - TDD-0131
+        - TDD-0132
+        - TDD-0133
+        - TDD-0134
         - TDD-0116
         - TDD-0117
         - TDD-0118

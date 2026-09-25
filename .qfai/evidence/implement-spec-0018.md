@@ -552,7 +552,7 @@ Preflight: confidence high. The prior RED failure was a session-record defect. A
 | 4 | backend-engineer | /root/tdd0001_red | Verify TDD-0001 refactor stage | Cross-spec ownership and relevant-suite rules; current code | No code edit; cross-spec check and narrow test result below | PASS |
 | 5 | completion-reviewer | /root/completion_review | Review TDD-0001 specification coverage | TC-0018-0001; Round 1 phase evidence | `review-20260924182257625/R01_completion-reviewer.md` | PASS |
 | 6 | implementation-reviewer | /root/tdd0001_code_review | Review TDD-0001 code and architecture | `decide.ts`; owning Plan; Round 1 phase evidence | `review-20260924182257625/R02_implementation-reviewer.md` | REVISE |
-| 7 | solution-architect | /root/cr0001_sdd | Apply approved Plan correction | `CR-20260924-0005`; `01_Spec.md` Design; TC-0018-0001 | `10_Plan.md` exception and `09_delta.md` CR row | PASS |
+| 7 | solution-architect | /root/cr0001_sdd | Apply approved Plan correction | `CR-20260924-0007`; `01_Spec.md` Design; TC-0018-0001 | `10_Plan.md` exception and `09_delta.md` CR row | PASS |
 | 8 | architecture-reviewer | /root/cr0001_review | Review CR application | Plan, delta and CR resolution | Focused re-review after record correction | PASS |
 | 9 | completion-reviewer | /root/completion_review | Re-review TDD-0001 after Plan correction | Round 1 phase evidence; approved CR; current revision | `review-20260924205303198/R01_completion-reviewer.md` | PASS |
 | 10 | implementation-reviewer | /root/tdd0001_code_review | Re-review TDD-0001 after Plan correction | `decide.ts`; owning Plan; current revision | `review-20260924205303198/R02_implementation-reviewer.md` | PASS |
@@ -598,8 +598,8 @@ Preflight: confidence high. The prior RED failure was a session-record defect. A
 | 50 | implementation-reviewer | /root/tdd0001_code_review | Review TDD-0013 decline audit and sequence | `decide.ts`; CLI-WF/CLI-WFFILE; Round 1 evidence | `review-20260925005231037/R02_implementation-reviewer.md` | PASS |
 | 51 | orchestrator | /root | Record TDD-0013 off-boundary checkpoint | Five-test relevant suite; both reviewers PASS | Canonical command, result, revision and seal in TDD-0013 entry | PASS |
 | 52 | qa-gatekeeper | /root/qa_review | Judge TDD-0013 12-point done gate | All phase evidence, two reviews, pack seal and checkpoint | Independent final gate verdict: 12/12, no required fix | PASS |
-| 53 | architecture-reviewer | /root/tdd14_grill | Diagnose TDD-0014 owner mismatch | TC-0018-0010; ledger owner; spec plan | CR-20260925-0003 and scoped blocker record | PASS |
-| 54 | architecture-reviewer | /root/cr0001_review | Review the TDD-0014 correction request | CR-20260925-0003; blocker work log; drift protocol | Independent pre-approval review; record issue repaired | PASS |
+| 53 | architecture-reviewer | /root/tdd14_grill | Diagnose TDD-0014 owner mismatch | TC-0018-0010; ledger owner; spec plan | CR-20260925-0017 and scoped blocker record | PASS |
+| 54 | architecture-reviewer | /root/cr0001_review | Review the TDD-0014 correction request | CR-20260925-0017; blocker work log; drift protocol | Independent pre-approval review; record issue repaired | PASS |
 | 55 | test-design-analyst | /root/u1_test_design | Design TDD-0015 unknown-path boundary | TC-0018-0012; BR-0018-0008; CLI-WF route proposal | One causal assertion, observer fact and oracle plan | PASS |
 | 56 | backend-engineer | /root/tdd0001_red | Observe TDD-0015 RED | TC-0018-0012; current decide.ts | Assertion RED, neutralized PASS and restored RED in TDD-0015 entry | PASS |
 | 57 | qa-gatekeeper | /root/qa_review | Judge TDD-0015 RED | RED selector, assertion strip, hashes and revision | Independent RED phase verdict; reproduced assertion and verified revision | PASS |
@@ -624,8 +624,8 @@ Preflight: confidence high. The prior RED failure was a session-record defect. A
 | 76 | completion-reviewer | /root/completion_review | Re-review TDD-0015 specification coverage | Round 3 evidence and prior review findings | `review-20260925023352000/R01_completion-reviewer.md` | PASS |
 | 77 | implementation-reviewer | /root/tdd0001_code_review | Re-review TDD-0015 path classification | `decide.ts`; three prior bypasses; Round 3 tests | `review-20260925023352000/R02_implementation-reviewer.md` | REVISE |
 | 78 | architecture-reviewer | /root/architecture_review | grilling(S3@2026-09-24T08:42:04.624Z/agents): hand off route reference typing | Round 3 review; CLI-WF ref fields and unknown-path contract | Adopted CR/SDD ownership; lexical guesses would conflate bare paths and symbolic refs | PASS |
-| 79 | solution-architect | /root/cr0001_sdd | Draft CR-20260925-0004 | Untyped route refs; Round 3 review; 526-row impact audit | Three representation options and a 51-row blocked set | PASS |
-| 80 | orchestrator | /root | Park CR-20260925-0004 dependent todo rows | Open CR and 51-row blocked set; drift-protocol step 2 | Forty-six `todo -> blocked`; five later-status rows unchanged; blocker work log | PASS |
+| 79 | solution-architect | /root/cr0001_sdd | Draft CR-20260925-0018 | Untyped route refs; Round 3 review; 526-row impact audit | Three representation options and a 51-row blocked set | PASS |
+| 80 | orchestrator | /root | Park CR-20260925-0018 dependent todo rows | Open CR and 51-row blocked set; drift-protocol step 2 | Forty-six `todo -> blocked`; five later-status rows unchanged; blocker work log | PASS |
 | 81 | architecture-reviewer | /root/architecture_review | grilling(S4@2026-09-24T08:42:04.624Z/agents): bind direct work orders to the checked spec | CLI-WF execution context and work order; CLI-WFFILE direct plan; TDD-0026 | Use a ready snapshot with one existing spec binding, carry it to both `target` fields; leave binding selection outside this row | PASS |
 | 82 | backend-engineer | /root/tdd0001_red | Observe TDD-0026 RED | TC-0018-0016; direct plan; adopted S4 decision | One direct selector fails on missing stage progression; assertion strip passes; restored RED and hashes below | PASS |
 | 83 | qa-gatekeeper | /root/qa_review | Judge TDD-0026 RED | Restored selector, source/test hashes and RED revision | RED assertion and strip valid; tree revision moved during SDD edits, so re-observation required | REVISE |
@@ -763,11 +763,11 @@ Tests       1 failed (1)
 - Refactor decision: no code edit. The sole transition already names its guards and question fields directly; extracting helpers now would add an abstraction before another case uses it. No test file edit is needed.
 - Relevant suite: narrow suite, reverse dependency closure resolved. The new production module has no production importer; the only test importer is this row's test, and no test imports that test file.
 - Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --reporter=verbose` (cwd: `packages/qfai`).
-- Refactor verify result: exit 0; one selected test passed after applying `CR-20260924-0005`. No source or test file changed in this review fix.
+- Refactor verify result: exit 0; one selected test passed after applying `CR-20260924-0007`. No source or test file changed in this review fix.
 - Refactor verify revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8` (two consecutive calculations agreed; 2,495 path records).
 - Round 1: Review pack (attempt 1): `review-20260924182257625` (not committed).
 - Round 1: Review pack seal (attempt 1): `c8fe3a3493e4ba295c17cb6ea37da07e8a40043400305134232521bd44dcbd2b` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
-- Round 1: reviewer verdict (attempt 1): REVISE. The completion reviewer passed. The implementation reviewer found that `decide.ts` has no production consumer and the owning Plan does not record the independently required pure decision seam as an exception to its three-consumer rule. The behaviour-preserving review path applied `CR-20260924-0005`; the next review stays in Round 1.
+- Round 1: reviewer verdict (attempt 1): REVISE. The completion reviewer passed. The implementation reviewer found that `decide.ts` has no production consumer and the owning Plan does not record the independently required pure decision seam as an exception to its three-consumer rule. The behaviour-preserving review path applied `CR-20260924-0007`; the next review stays in Round 1.
 - Round 1: Review pack (attempt 2): `review-20260924205303198` (not committed).
 - Round 1: Review pack seal (attempt 2): `1339c2cbea4597d24d008416c4c6c56b34f907c6a7b8593712979be899d5c286` (four files, Markdown normalized and JSON raw).
 - Round 1: reviewer verdict (attempt 2): PASS. Both completion and implementation reviewers independently matched `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8` and audited evidence hash `bb3d6729c2a604a0c159a33b97fbfb037c69f1f7a03a1edbc27288466796313e`. The Plan now records the narrow pure-decision-function exception and its requiring obligation.
@@ -1132,7 +1132,7 @@ Tests  1 failed | 1 skipped (2)
 - Checkpoint verification revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`
 - Checkpoint verification seal: `23e1c7229e251f931727c205a6fe17e21b456536d84f5000951b1285edea3449` (the canonical revision, command and result lines above).
 
-#### Fixture correction under CR-20260924-0006
+#### Fixture correction under CR-20260924-0008
 
 - The ready-snapshot `approval` now carries `authorizationId: "authorization-4"`. `next` no longer issues an SDD work order for a CREATE approval without a persisted ID, so the fixture's ID-less approval stopped reaching SDD.
 - Before the fixture change, with the missing-ID check in `decide.ts`: exit 1; the comparison at `tests/unit/workflow/oneCreateQuestionAtRouting.test.ts:233:6` failed.
@@ -1285,7 +1285,7 @@ Restored suite: exit 0; Test Files 2 passed (2); Tests 3 passed (3).
 - Round 1: Review pack seal (attempt 1): `c0ea171f89875ed76b17a5f514b2e1aa1995ed734239e2e954e62e4ffb8470c5` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
 - Round 1: reviewer verdict (attempt 1): REVISE
 
-#### Review fix under CR-20260924-0006
+#### Review fix under CR-20260924-0008
 
 - The Round 1 blocking finding is fixed: `next` issues the SDD work order only when the CREATE approval carries a persisted `authorizationId`, and the order's `authorizationRefs` holds exactly that record's path. A missing ID opens a new `create` question instead (TDD-0527). The `SIMPLIFIED` marker that deferred this check is removed.
 - `decide.ts` TS2322 fixed: the decision branch narrows `snapshot.scopeDigest` to `string` before building the authorization record.
@@ -1861,7 +1861,7 @@ Each: ok false, proposal-refused, routing sequence 2 and events [] matched the e
 - Round 3: Review pack seal (attempt 1): `2a922e435142d870d0d564fd76a3caa6153886d9455edff620b58ea9e01d2828` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
 - Round 3: reviewer verdict (attempt 1): REVISE. Completion review passed. Implementation review confirmed all three prior fixes but reproduced an absent extensionless root path `Dockerfile` without any `facts.pathExistence` entry passing to a CREATE question. The untyped reference also admits symbolic values such as `request`, so the next step must settle path classification before another GREEN edit. Both reviewers independently recorded revision `working-tree+7191d665068aae9662f5e9ad35e036dd5ff747ba8608336d64d878c0e5e14cba` and audited evidence hash `03c9f1dd6a57b53b10fb43184beabf4458668467368439acf24008823174d733`.
 
-#### Typed route references under CR-20260925-0004
+#### Typed route references under CR-20260925-0018
 
 - Test file: `packages/qfai/tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts`
 - Selector: `TC-0018-0012 (TDD-0015): unknown-path`
@@ -2318,7 +2318,7 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `AssertionError: expected undefined to deeply equal [ { gateId: 'validate', …(2) } ]` at `tests/unit/workflow/finishObservesValidateItself.test.ts:55`
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/finishObservesValidateItself.test.ts > TC-0018-0031 (TDD-0035): A result whose gateResults claims a PASS for a gate`
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
-- Note: the selector is rewritten from the case's former input, which `CR-20260925-0006` replaced with a claimed PASS in `gateResults`.
+- Note: the selector is rewritten from the case's former input, which `CR-20260925-0020` replaced with a claimed PASS in `gateResults`.
 
 - Note: `finish` reads a `completion` fact — the in-process validate findings with the project's `failOn`, the offered verify report, the tool version, the CLI entry and policy digests, and the run's cumulative changed and uncommitted paths — and the snapshot's `completionTarget` and `start` `baseline`. An accepted stage entry gains `gateResults`, `reviewResults` and `debts`. `accept` records a submitted gate verdict as `agent_reported` on its event; `finish` returns its own validate receipt as `cli_observed` and decides the validate gate from it alone.
 
@@ -2527,7 +2527,7 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `AssertionError: expected undefined to deeply equal [ { …(7) } ]` at `tests/unit/workflow/debtBlocksCompletion.test.ts:143`
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/debtBlocksCompletion.test.ts > TC-0018-0043 (TDD-0055): Decide accept of an accepted_with_debt result whose debt names another spec as owningSpec and qfai-sdd as resolvingOwner, then finish while the finding still stands`
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
-- Note: the selector is rewritten from the case's former input, which `CR-20260925-0006` replaced with another spec as `owningSpec` and `qfai-sdd` as `resolvingOwner`.
+- Note: the selector is rewritten from the case's former input, which `CR-20260925-0020` replaced with another spec as `owningSpec` and `qfai-sdd` as `resolvingOwner`.
 
 ### TDD-0056
 
@@ -6597,7 +6597,7 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `Error: seam-1: { "ok": false, ... "reasons": [{ "reason": "schema", "subject": "workOrderId" }, ...] }`, thrown by `acceptThenNext` in `tests/e2e/workflowJourney.ts` from `throughAcceptance`: after an acceptance result asking for a seam, `next` issued no seam-only work order, because the journal fold appended that result as an accepted stage and kept no seam request; the declined half passed on its first run, already satisfied by TDD-0260
 - GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018DeliverAFeatureE2E.test.ts > US-0018-0001 (TDD-0455): one create question, then every stage from its work order, and finish qfai_done` and `✓ ... > US-0018-0001 (TDD-0455), declined: declining the create question cancels the run with nothing tracked`
 - Production files: `packages/qfai/src/core/workflow/persistence.ts` (`foldSeam`)
-- Design choice: the journeys live under `packages/qfai/tests/e2e/`, one file per story, named `spec0018<Story>E2E.test.ts`. Each runs on a `qfai init` project (`initProject`) and drives the built CLI with scripted stage results, through the helpers `workflowProject.ts` already holds and `tests/e2e/workflowJourney.ts`: accept and next, verify and finish, the fixture's own validate, and a work order's shape. Each journey carries `QFAI:SPEC-0003:US-0003-0029`, and the stage-story variants carry their own story too, as `10_Plan.md` `### Which journey discharges which stage story` assigns. `QFAI:SPEC-0004:US-0004-0040` is not carried: the validator half it names (QFAI-TRIAGE-011, spec-0004 TDD-0068 to TDD-0078 and TDD-0082) does not exist yet, so an annotation would mark a story covered that nothing verifies. Decided between agents.
+- Design choice: the journeys live under `packages/qfai/tests/e2e/`, one file per story, named `spec0018<Story>E2E.test.ts`. Each runs on a `qfai init` project (`initProject`) and drives the built CLI with scripted stage results, through the helpers `workflowProject.ts` already holds and `tests/e2e/workflowJourney.ts`: accept and next, verify and finish, the fixture's own validate, and a work order's shape. Each journey carries `QFAI:SPEC-0003:US-0003-0029`, and the stage-story variants carry their own story too, as `10_Plan.md` `### Which journey discharges which stage story` assigns. `QFAI:SPEC-0004:US-0004-0040` is not carried: the validator half it names (QFAI-TRIAGE-011, spec-0004 TDD-0088 to TDD-0078 and TDD-0082) does not exist yet, so an annotation would mark a story covered that nothing verifies. Decided between agents.
 - Production fix: the seam round trip did not survive the journal fold. `foldSeam` opens `seamRequest` from an acceptance result that carries one, instead of appending it as an accepted stage. It then closes the request when the seam-only result is accepted, so `next` reissues the acceptance stage at its next attempt. This matches the snapshot fields TDD-0057's design choice names; how the journal replays into them was left to persistence.
 
 ### TDD-0458
@@ -7353,5 +7353,5 @@ None. Before considering a source or test edit, all 18 other specs' ledgers were
 | `rg -l 'workflow/decide\|oneCreateQuestionAtRouting\|core\.workflow\.decide' packages/qfai/src packages/qfai/tests` | Only this row's test imports the new source; no other importer found |
 | Refactor verify Vitest command from `packages/qfai` | Exit 0; one selected test passed |
 | `node tmp/revision-tdd0001-refactor.mjs` from repository root, twice | Both exit 0 and report `working-tree+7d838c868b8b5e07c264bc62ca5ae61447c6c1546c04aef9ce8e8a6ddc5bfea8`; 2,494 path records |
-| Refactor verify Vitest command after `CR-20260924-0005` from `packages/qfai` | Exit 0; one selected test passed |
+| Refactor verify Vitest command after `CR-20260924-0007` from `packages/qfai` | Exit 0; one selected test passed |
 | `node tmp/revision-tdd0001-after-cr.mjs` from repository root, twice | Both exit 0 and report `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8`; 2,495 path records; temporary helper removed |

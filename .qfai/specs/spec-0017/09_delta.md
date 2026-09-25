@@ -386,3 +386,11 @@ Request applies.
 - `TC-0017-0093`..`TC-0017-0099` became `TC-0017-0094`..`TC-0017-0100`.
 - `TDD-0102`..`TDD-0109` became `TDD-0111`..`TDD-0118`.
 - Change Request records `CR-20260924-0001`, `CR-20260924-0002` and `CR-20260925-0008` became `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010`; every reference here follows them.
+
+A later `origin/main` took more of these IDs, and the intent-driven ones moved again to
+the next free ones:
+
+- `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010` became `CR-20260924-0007`,
+  `CR-20260924-0008` and `CR-20260925-0022`. `CR-20260925-0003`..`CR-20260925-0007` and
+  `CR-20260925-0015` became `CR-20260925-0017`..`CR-20260925-0021` and `CR-20260925-0023`.
+  Every reference here follows them.

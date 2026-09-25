@@ -66,9 +66,9 @@
 - When `/qfai-implement` consumes the token tables
 - Then the consumed tables equal the parsed root `DESIGN.md` tables; any drift is surfaced through the design contract validators
 
-## EX-0011-0010: A Worker Does Only Its Work Order, and an Unaddressed Request Is Passed On
+## EX-0011-0025: A Worker Does Only Its Work Order, and an Unaddressed Request Is Passed On
 
-- BR-Ref: BR-0011-0009
+- BR-Ref: BR-0011-0023
 - Given workflow mode `active` and a work order for run `run-20260924045712999`, stage instance `implement-1` and operation `implement`, bound to three ledger rows of one spec
 - When `/qfai-implement` receives it and the run, stage instance and work-order IDs all match the issued order
 - Then it works those three rows only, and says nothing to the operator

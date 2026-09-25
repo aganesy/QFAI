@@ -4,38 +4,38 @@ Rows closed under DR-0298, one entry per row.
 
 ## Ledger rows advanced
 
-### TDD-0021
+### TDD-0040
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/implement/orchestrated/stageSkillHandover.test.ts`
-- Selector: `TC-0011-0013 (TDD-0021): The Implement Stage Follows the Stage-Skill Handover`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/implement/orchestrated/stageSkillHandover.test.ts --testNamePattern='TC-0011-0013 \(TDD-0021\): The Implement Stage Follows the Stage-Skill Handover' --reporter=verbose`
+- Selector: `TC-0011-0028 (TDD-0040): The Implement Stage Follows the Stage-Skill Handover`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/implement/orchestrated/stageSkillHandover.test.ts --testNamePattern='TC-0011-0028 \(TDD-0040\): The Implement Stage Follows the Stage-Skill Handover' --reporter=verbose`
 - RED result: exit 1; `AssertionError: the ## Entry check section exists: expected '' not to be '' // Object.is equality`
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/references/orchestrated-mode.md`, `packages/qfai/tests/integration/implement/orchestrated/stageSkillHandover.test.ts`
 - Evidence file: this spec has no ATDD evidence file, and creating one owes a committed Coverage Depth Matrix (`QFAI-ATDD-133`), so the entry is recorded here.
 
-### TDD-0022
+### TDD-0041
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/implement/orchestrated/operationsTable.test.ts`
-- Selector: `TC-0011-0014 (TDD-0022): The Operations Table Lists Exactly the Implement Operations`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/implement/orchestrated/operationsTable.test.ts --testNamePattern='TC-0011-0014 \(TDD-0022\): The Operations Table Lists Exactly the Implement Operations' --reporter=verbose`
+- Selector: `TC-0011-0014 (TDD-0041): The Operations Table Lists Exactly the Implement Operations`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/implement/orchestrated/operationsTable.test.ts --testNamePattern='TC-0011-0014 \(TDD-0041\): The Operations Table Lists Exactly the Implement Operations' --reporter=verbose`
 - RED result: already satisfied: exit 0 on the first run (Tests  1 passed (1)); the asset text landed before this test was written
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/references/orchestrated-mode.md`, `packages/qfai/tests/integration/implement/orchestrated/operationsTable.test.ts`
 - Note: The Operations table this test reads was written for spec-0001 TDD-0039, before this test existed, so no RED was observed.
 - Evidence file: this spec has no ATDD evidence file, and creating one owes a committed Coverage Depth Matrix (`QFAI-ATDD-133`), so the entry is recorded here.
 
-### TDD-0023
+### TDD-0042
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/implement/orchestrated/runBinding.test.ts`
-- Selector: `TC-0011-0015 (TDD-0023): A Valid Run Binding Supplies the Primary Spec Without a Question`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/implement/orchestrated/runBinding.test.ts --testNamePattern='TC-0011-0015 \(TDD-0023\): A Valid Run Binding Supplies the Primary Spec Without a Question' --reporter=verbose`
+- Selector: `TC-0011-0015 (TDD-0042): A Valid Run Binding Supplies the Primary Spec Without a Question`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/implement/orchestrated/runBinding.test.ts --testNamePattern='TC-0011-0015 \(TDD-0042\): A Valid Run Binding Supplies the Primary Spec Without a Question' --reporter=verbose`
 - RED result: exit 1; `AssertionError: the ## The bound spec section exists: expected '' not to be '' // Object.is equality`
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/references/orchestrated-mode.md`, `packages/qfai/tests/integration/implement/orchestrated/runBinding.test.ts`
@@ -194,5 +194,5 @@ Rows closed under DR-0298, one entry per row.
 - RED result: exit 1; `AssertionError: skills/qfai-implement/SKILL.md states the carve-out on a scope-gap line: expected '' to match /scope gap/i`
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/references/change-request-reset.md`, `packages/qfai/tests/integration/implement/orchestrated/missingTestCarveOut.test.ts`
-- Reopened by: CR-20260925-0006 part A; the case asserts that each scope-gap line names `/qfai-sdd` as the skill that appends the row, with no decision ID. The `SKILL.md` line is edited in place, so the file gains no line.
+- Reopened by: CR-20260925-0020 part A; the case asserts that each scope-gap line names `/qfai-sdd` as the skill that appends the row, with no decision ID. The `SKILL.md` line is edited in place, so the file gains no line.
 - Evidence file: this spec has no ATDD evidence file, and creating one owes a committed Coverage Depth Matrix (`QFAI-ATDD-133`), so the entry is recorded here.
