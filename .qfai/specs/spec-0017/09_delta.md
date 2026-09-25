@@ -287,6 +287,13 @@ Companion rows live in the named spec's own delta; none of them is authored here
 - The active ledger records all current implementation bindings for the changed acceptance criteria and business rules. Its two unchanged package.json bindings cite TDD-0107 proof. Planned rows retain unpromoted obligations only.
 - The shipped traceability contract and validator are updated together. An unavailable diff, missing or ambiguous binding, or failed proof rejects validation.
 
+## 2026-09-25 — Bind tuning-record identifiers to their change
+
+- Change Request: CR-20260925-0021, option 1, approved by claude-code under the user's standing instruction; not a user decision.
+- TC-0017-0083 asks for three distinct run identifiers in the decision-record section recording the move. A record cannot show that runs were consecutive, so that duty stays in BR-0017-0053 and EX-0017-0067 and review of the tuning pull request holds it.
+- The tests of TDD-0032, TDD-0069 and TDD-0083 now fail on the cases their test cases reject. TDD-0032 counts the pack-lifecycle builds through the root scripts. TDD-0069 compares each project with the declared value, with the tuning overrides cleared. TDD-0083 binds identifiers to the section recording the move.
+- Ledger state: the three rows stay at `review-fix`. Each still owes a rework round from `/qfai-atdd` and a review round from `/qfai-implement` before `done`.
+
 ## Change Requests
 
 | CR ID            | Upstream artifact                            | Mode      | Approved by     | Applied at           |
@@ -294,3 +301,4 @@ Companion rows live in the named spec's own delta; none of them is authored here
 | CR-20260924-0001 | `.qfai/specs/spec-0017/04_Business-Rules.md` | re-derive | user@2026-09-24 | 2026-09-24T07:20:10Z |
 | CR-20260924-0002 | `.qfai/specs/spec-0017/06_Test-Cases.md`     | re-derive | user            | 2026-09-24T09:58:00Z |
 | CR-20260924-0004 | `.qfai/specs/spec-0017/04_Business-Rules.md` | re-derive | user            | -                    |
+| CR-20260925-0021 | `.qfai/specs/spec-0017/06_Test-Cases.md`     | re-derive | claude-code     | 2026-09-25T09:20:00Z |
